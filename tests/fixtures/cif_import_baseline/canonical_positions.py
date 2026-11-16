@@ -2,7 +2,8 @@
 
 Crysta ADR-0106 permits a different representative of the same Wyckoff orbit;
 ADR-0092 requires symmetry followers to use their rounded independent leader.
-No other reader column or saved byte is normalized here.
+The archived scalar zero of the retired absorption coefficient may be omitted.
+Every other reader column and saved byte remains exact.
 """
 
 import re
@@ -11,6 +12,7 @@ from decimal import Decimal
 import gemmi
 
 from tests.fixtures.metadata_transition import task_inputs
+from tests.fixtures.project_categories.historical_bytes import native_edi_bytes
 
 SILICON = 'docs/user/cli/pd-neut-tof_lbco-si-mcstas/project'
 PRASEODYMIUM = {
@@ -49,6 +51,11 @@ def orbit_transition(case):
 
 def reader_values(path, expected, frozen):
     expected = {name: list(values) for name, values in expected.items()}
+    retired = expected.pop('_absorption_abscor2', None)
+    if retired is not None and retired != ['0']:
+        raise ValueError(
+            'Only the retired fixed-zero absorption coefficient may leave a reader pin'
+        )
     transition = task_inputs.rows().get(path)
     if transition is not None and transition['source_commit'] == 'b9bdbf9a2':
         values = []
@@ -91,6 +98,7 @@ def reader_values(path, expected, frozen):
 
 
 def restore_representative(content, case):
+    content = native_edi_bytes(content)
     change = orbit_transition(case)
     if change is None:
         return content

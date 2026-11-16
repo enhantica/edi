@@ -26,10 +26,10 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'tools/docs'))
 sys.path.insert(0, str(ROOT / 'website'))
 
-from app_groups import Tracker, dictionary, load_case  # noqa: E402
+from app_groups import Tracker, dictionary, load_case, unrolled  # noqa: E402
 
 DICTIONARY = dictionary()
-from app_tutorial_plan import CLI_PAGES, free_lists, plan  # noqa: E402
+from app_tutorial_plan import CLI_PAGES, free_lists, plan, relations  # noqa: E402
 from render_app_tutorials import stage_sentence  # noqa: E402
 from render_cli_tutorials import stages  # noqa: E402
 
@@ -147,6 +147,14 @@ def minimizer_steps(case: str, actions: list[str]) -> list[dict]:
                 )
             )
     bound = fills(actions).get('minimizer.maxIterations')
+    # The plan sets the limit the project declares, even where no step shows it.
+    analysis = CLI / case / 'project/analysis/analysis.edi'
+    text = analysis.read_text(encoding='utf-8') if analysis.is_file() else ''
+    declared = re.search(r'(?m)^_minimizer\.max_iterations (\d+)$', text)
+    if declared and bound != declared[1]:
+        raise SystemExit(
+            f'{case}: the plan does not set the iteration limit {declared[1]} the project declares'
+        )
     needed = stage_iterations(case)
     # The limit only when a stage needs more than the app's default (the owner, 2026-11-11).
     if bound and needed > DEFAULT_MAX_ITERATIONS:
@@ -504,7 +512,7 @@ def plan_step(  # noqa: PLR0911, PLR0912, PLR0914, PLR0915 - one branch per docs
         elif ident == 'nothing-free':
             # Every fitting tutorial fixes everything on its first Analysis step: entries loaded
             # from the database can carry free marks, and each stage below frees its own group.
-            title, text = 'Fix every parameter first', ''
+            title, text = 'Start with nothing free', ''
         else:
             title, text = item['description'], ''
         del text
@@ -552,6 +560,7 @@ def plan_step(  # noqa: PLR0911, PLR0912, PLR0914, PLR0915 - one branch per docs
                 f'examples.open.{case}',
                 f'example:{case}',
             ),
+            *example_relations(case),
         ]
     if ident == 'project-details':
         name = case if len(case) <= 31 else case.split('_', 1)[1]
@@ -668,7 +677,35 @@ def plan_step(  # noqa: PLR0911, PLR0912, PLR0914, PLR0915 - one branch per docs
             stage = title.removeprefix('Fit: ')
             title = f'Fit stage {number.group(1)}' if number else 'Fit the scan'
             text = f'Press **Fit** in the status bar to fit **{stage}**.'
+        # A scan the Python tutorial stops after a few patterns and resumes is stopped and resumed
+        # here too: Stop keeps the rows already fitted, and Continue goes on from the first pattern
+        # without one.
+        stopped = (
+            []
+            if number
+            or 'should_cancel=' not in (TUTORIALS / f'{case}.py').read_text(encoding='utf-8')
+            else [
+                step(title, text, 'analysis', 'statusBar.fit.button', 'fit-running'),
+                step(
+                    'Stop the scan',
+                    'After a few patterns, press **Stop** in the status bar. The rows already '
+                    'fitted stay.',
+                    'analysis',
+                    'statusBar.fit.button',
+                    'fit-stopped',
+                ),
+            ]
+        )
+        if stopped:
+            title, text = (
+                'Resume the scan',
+                (
+                    'Press **Continue** in the status bar: the scan goes on with the first '
+                    'pattern that has no row yet, from the last fitted values.'
+                ),
+            )
         return [
+            *stopped,
             step(
                 title,
                 text,
@@ -735,7 +772,7 @@ def plan_step(  # noqa: PLR0911, PLR0912, PLR0914, PLR0915 - one branch per docs
 
 def tutorial_steps(case: str) -> list[dict]:
     """The case's docs plan as tutorial steps."""
-    source = (TUTORIALS / f'{case}.py').read_text(encoding='utf-8')
+    source = unrolled((TUTORIALS / f'{case}.py').read_text(encoding='utf-8'))
     texts = stage_texts(case, source)
     pending: list = []
     context = {'page': 'project', 'tab': '', 'category': '', 'datablock': '', 'word': ''}
@@ -794,7 +831,9 @@ def with_reasons(case: str, steps: list[dict]) -> list[dict]:
             r'(?:rows:constraints\.append=|field:constraint\.(?:id|expression)\.)(\d+).*', check
         ):
             row = str(int(m[1]) - 1) if check.startswith('rows:') else m[1]
-            return constraint_reason(ids.get(row, row))
+            # An opened example's constraint has no id step: its left-hand alias names it.
+            lhs = re.fullmatch(r'field:constraint\.expression\.\d+=(\w+)\s*=.*', check)
+            return constraint_reason(ids.get(row) or (lhs[1] if lhs else row))
         if m := re.fullmatch(
             r'(?:rows:aliases\.append=|field:alias\.id\.|pick:alias\.parameter\.)(\d+).*', check
         ):
@@ -831,7 +870,23 @@ def with_reasons(case: str, steps: list[dict]) -> list[dict]:
         s['why'] = why
     # A step the app did before the tutorial reached it asks for nothing (app_tutorial_noops.tsv);
     # dropped once every reason is known: a dropped expression can explain the steps around it.
-    steps = [s for s in steps if (case, s.get('check', '')) not in NOOPS]
+    # A constraint's expression the app suggests stays a step: the tutorial still teaches it, as
+    # the Python one does, and asks the user to check it rather than type it.
+    for s in steps:
+        check = s.get('check', '')
+        if (case, check) in NOOPS and (
+            m := re.fullmatch(r'field:constraint\.expression\.(\d+)=(.+)', check)
+        ):
+            s['text'] = (
+                f'Check that the expression of constraint {int(m[1]) + 1} reads **{m[2]}**, '
+                'as the app suggests.'
+            )
+    steps = [
+        s
+        for s in steps
+        if (case, s.get('check', '')) not in NOOPS
+        or s.get('check', '').startswith('field:constraint.expression.')
+    ]
     said = set()
     for s in steps:
         why = s.get('why', '')
@@ -841,6 +896,30 @@ def with_reasons(case: str, steps: list[dict]) -> list[dict]:
             s['text'] = f'{s["text"]} {why}'
             said.add(why)
     return steps
+
+
+def example_relations(case: str) -> list[dict]:
+    """The constraints an opened example comes with that the Python tutorial creates in its setup.
+
+    The example already holds them, so each is a step that checks its expression on Analysis >
+    Extra rather than one that types it, as the Python tutorial teaches every one of them.
+    """
+    source = (TUTORIALS / f'{case}.py').read_text(encoding='utf-8')
+    setup = source[: source.find('## Perform the analysis')]
+    created = set(re.findall(r"\.constraints\.create\(id='([^']+)'", setup))
+    return [
+        step(
+            "The example's constraints",
+            f'Check that the expression of constraint {row + 1} reads **{expression}**: the '
+            'example comes with it.',
+            'analysis',
+            f'constraint.expression.{row}',
+            f'field:constraint.expression.{row}={expression}',
+            tab='extras',
+        )
+        for row, (ident, expression) in enumerate(relations(case)[1])
+        if ident in created
+    ]
 
 
 def parameter_words(path: str, variant: str = '') -> str:

@@ -18,7 +18,7 @@ REFERENCE = json.loads((ROOT / 'tests/fixtures/report_storage/reference.json').r
 def put(path, relative, text):
     file = path / relative
     file.parent.mkdir(parents=True, exist_ok=True)
-    file.write_text(text)
+    file.write_bytes(text.encode('utf-8'))
     return file
 
 

@@ -1,7 +1,7 @@
 // Gate 7 reads the real QML view through the app bridge, outside Qt popup AX trees.
 import assert from 'node:assert/strict';
 
-export async function inspectDevelopDiagnostics(evaluate, frame, mode, record, capture) {
+export async function inspectDevelopDiagnostics(evaluate, frame, mode, record, capture, oneWorker = false) {
   assert.equal(await evaluate('typeof window.ediDevelopDiagnostics'), 'function',
     'The web app must expose ediDevelopDiagnostics to operate and inspect the real Develop dialog');
   const call = action => evaluate(`window.ediDevelopDiagnostics(${JSON.stringify(action)})`);
@@ -32,13 +32,10 @@ export async function inspectDevelopDiagnostics(evaluate, frame, mode, record, c
     const simd = diagnostics.match(/(?:WebAssembly |wasm )?SIMD:\s*(yes|no|on|off|enabled|disabled)/i)?.[1];
     assert(backend && Number.isInteger(workerCount) && simd,
       'Develop must show engine backend, actual worker count and SIMD state');
-    if (mode === 'singlethread') {
-      assert(/serial/i.test(backend) && workerCount === 1 && /^(yes|on|enabled)$/i.test(simd),
-        'The serial browser route must report one serial engine worker with SIMD');
-    } else {
-      assert(/std.?thread|thread.?pool/i.test(backend) && workerCount > 1 && /^(yes|on|enabled)$/i.test(simd),
-        'Both isolated browser routes must report the active thread backend and SIMD');
-    }
+    assert(/std.?thread|thread.?pool/i.test(backend) &&
+      (oneWorker ? workerCount===1 : workerCount>1) && /^(yes|on|enabled)$/i.test(simd),
+      oneWorker ? 'The one-worker multithread baseline must report its actual worker selection and SIMD' :
+      'Both isolated browser routes must report the active thread backend and SIMD');
     await record({...snapshot, backend, workerCount, simd, diagnostics});
     await capture();
   } finally {

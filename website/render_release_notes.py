@@ -15,12 +15,24 @@ INTERFACES = json.loads(
 NOTE = re.compile(r'^(- .+?) <!-- interfaces: ([a-z,-]+) -->[ \t]*$', re.MULTILINE)
 HEADING = re.compile(r'^#{1,6} +(.+?)[ #]*$')
 LEGACY_NOTE = re.compile(r'^(- )<!-- interfaces: ([a-z,-]+) --> (.+)$', re.MULTILINE)
+RELEASE_DATE = re.compile(r'<!-- edi release date ([0-9]{4}-[0-9]{2}-[0-9]{2}) -->')
+# Older notes repeated the version as their own first heading.
+VERSION_HEADING = re.compile(r'\A# EasyDiffraction [^\n]*\n+')
+MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+# The descriptions of the matching GitHub labels.
+DESCRIPTIONS = {
+    'desktop': 'Affects the EasyDiffraction desktop app',
+    'web': 'Affects the EasyDiffraction web app',
+    'python': 'Affects the Python API in scripts or notebooks',
+    'cli-python': 'Affects the CLI installed from the Python package',
+    'cli-standalone': 'Affects the standalone CLI executable',
+}
 
 
 def _pills(interfaces: list[str]) -> str:
     return ' '.join(
-        f'**:{icon}: {label}**{{ .ed-release-interface }}'
-        for icon, label, _ in (INTERFACES[interface] for interface in interfaces)
+        f'**:{icon}: {short}**{{ .ed-release-interface }}'
+        for icon, _, short in (INTERFACES[interface] for interface in interfaces)
     )
 
 
@@ -52,6 +64,38 @@ def _flatten_headings(body: str) -> str:
     return '\n'.join(lines)
 
 
+def _day(release: dict) -> str:
+    """The release day, e.g. ``13 Nov``: the recorded release date, else the publication date."""
+    recorded = RELEASE_DATE.search(release['body'] or '')
+    _, month, day = map(
+        int, (recorded[1] if recorded else release['published_at'][:10]).split('-')
+    )
+    return f'{day} {MONTHS[month - 1]}'
+
+
+def _title(release: dict) -> str:
+    """The release title, as GitHub shows it: tag and release day (the tag names the year)."""
+    title = f'{release["tag_name"]} ({_day(release)})'
+    return escape(title) + (' preview' if release['prerelease'] else '')
+
+
+def latest_release(pages: list[list[dict]]) -> str:
+    """The home page line naming the latest published release, or nothing before the first."""
+    releases = [
+        release
+        for page in pages
+        for release in page
+        if not release['draft'] and not release['prerelease']
+    ]
+    if not releases:
+        return ''
+    latest = max(releases, key=itemgetter('published_at'))
+    return (
+        '<p class="ed-landing__release" markdown="span">EasyDiffraction '
+        f'[{escape(latest["tag_name"])}](changelog.md) · released {_day(latest)}</p>'
+    )
+
+
 def render(pages: list[list[dict]]) -> str:
     """List public releases by publication date, with previews clearly marked."""
     releases = sorted(
@@ -62,21 +106,18 @@ def render(pages: list[list[dict]]) -> str:
     sections = [
         # The navigation shows each About page's icon (the nav-icon check).
         "---\nicon: fa5/bullhorn\n---\n\n# What's new",
-        'Changes in published EasyDiffraction releases, newest first.',
+        (
+            'Changes in published EasyDiffraction releases, newest first. '
+            'The labels show which part of EasyDiffraction a change affects:'
+        ),
+        '\n'.join(f'- {_pills([key])} {text}' for key, text in DESCRIPTIONS.items()),
     ]
     for release in releases:
-        title = escape(release['name'] or release['tag_name'])
-        date = release['published_at'][:10]
-        channel = 'Prerelease' if release['prerelease'] else 'Stable'
-        body = NOTE.sub(_label_note, release['body'] or '')
+        body = VERSION_HEADING.sub('', release['body'] or '')
+        body = NOTE.sub(_label_note, body)
         body = LEGACY_NOTE.sub(_label_legacy_note, body).strip()
         body = _flatten_headings(body)
-        sections.extend([
-            f'## {title}',
-            f'**{channel}** · {date} · [View on GitHub]({release["html_url"]})',
-            body,
-            '---',
-        ])
+        sections.extend([f'## [{_title(release)}]({release["html_url"]})', body, '---'])
     if not releases:
         sections.extend([
             'No releases have been published yet.',

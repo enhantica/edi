@@ -2,63 +2,108 @@
 
 The same staged fit as the Python tutorial, on the command line. The command line fits whatever the project marks free with `()` after a value, so each stage marks its parameters in the project's files with a text editor and runs `edi fit`, which writes the fitted values back into the project for the next stage.
 
-## Get the project
+Fit the magnetic structure of the olivine Co₂SiO₄ to constant-wavelength neutron powder data
+from D20 at ILL, measured at 2.3 K, below its ordering temperature. The cobalt moments order with
+k = 0 in the magnetic space group Pnma.1: Co1 may point in any direction, Co2 only along b.
+
+It builds the catalogue case `pd-neut-cwl_cosio-d20_2k` step by step: the same project the
+command line fits and the app's Examples open. Its two Co sites share one displacement, and the
+two FCJ asymmetry terms are tied.
+
+## Define the project
+
+Make a folder for the project, with a folder each for its structures, experiments and analysis.
+
+```console
+mkdir -p pd-neut-cwl_cosio-d20_2k/structures pd-neut-cwl_cosio-d20_2k/experiments pd-neut-cwl_cosio-d20_2k/analysis
+```
+
+Write `project.edi` in it with a text editor such as VS Code:
+
+```edi
+_edi.schema_version 3
+
+_metadata.name pd-neut-cwl_cosio-d20_2k
+_metadata.title "Co₂SiO₄ [Pnma.1] · D20 @ ILL"
+_metadata.description "Olivine at 2.3 K · Magnetic structure, k = 0"
+_metadata.authors .
+```
+
+## Define the structure
+
+Download the structure from EasyDiffraction's collection into `structures`. Its CIF gives the space group, the cell and the atom sites.
 
 === "Standalone executable"
 
     ```console
-    edi download-data pd-neut-cwl_cosio-d20_2k
+    edi download-data pd-neut-cwl_cosio-d20_2k-cosio
+    mv data/pd-neut-cwl_cosio-d20_2k-cosio.edi pd-neut-cwl_cosio-d20_2k/structures/cosio.edi
     ```
 
 === "Python package"
 
     ```console
-    python -m edi download-data pd-neut-cwl_cosio-d20_2k
+    python -m edi download-data pd-neut-cwl_cosio-d20_2k-cosio
+    mv data/pd-neut-cwl_cosio-d20_2k-cosio.edi pd-neut-cwl_cosio-d20_2k/structures/cosio.edi
     ```
 
-## Start with nothing free
+## Define the experiment
 
-The project marks what its finished fit frees. Remove every `()`, so the stages below free one group at a time.
+Download the experiment into `experiments`: the file declares the instrument, the peak profile, the background, the structures it links and the measured data.
 
-In `experiments/d20.edi`, remove the `()` from every value; they now read:
+=== "Standalone executable"
+
+    ```console
+    edi download-data pd-neut-cwl_cosio-d20_2k-d20
+    mv data/pd-neut-cwl_cosio-d20_2k-d20.edi pd-neut-cwl_cosio-d20_2k/experiments/d20.edi
+    ```
+
+=== "Python package"
+
+    ```console
+    python -m edi download-data pd-neut-cwl_cosio-d20_2k-d20
+    mv data/pd-neut-cwl_cosio-d20_2k-d20.edi pd-neut-cwl_cosio-d20_2k/experiments/d20.edi
+    ```
+
+Then write how the project is fitted in `analysis/analysis.edi`:
 
 ```edi
-_instrument.calib_twotheta_offset 0.29433
-_peak.broad_gauss_u 0.273527
-_peak.broad_gauss_v -0.589718
-_peak.broad_gauss_w 0.413007
-_peak.broad_lorentz_y 0.017548
-_peak.asym_fcj_1 0
-1 6 603.5
-2 6.5 585
+_minimizer.type crysta
+_minimizer.max_iterations 1000
+
+_fitting_mode.type single
+
+loop_
+_alias.id
+_alias.parameter_unique_name
+biso_Co1 cosio.atom_site.Co1.adp_iso
+biso_Co2 cosio.atom_site.Co2.adp_iso
+sl d20.peak.asym_fcj_1
+dl d20.peak.asym_fcj_2
+
+loop_
+_constraint.id
+_constraint.expression
+biso_Co2 "biso_Co2 = biso_Co1"
+dl "dl = sl"
+
+_edi.schema_version 3
 ```
-
-The same for every other row (15 more).
-
-In `structures/cosio.edi`, remove the `()` from every value; they now read:
-
-```edi
-_cell.length_a 10.3081
-_cell.length_b 6.00219
-_cell.length_c 4.78739
-Co1 Co 0 0 0 a 4 1 0.269 Biso
-Co2 Co 0.2809 0.25 0.9836 c 4 1 0.269 Biso
-```
-
-The same for every other row (7 more).
 
 ## Scale, 2θ zero, cell and magnetic moments
 
 The first stage frees the phase scale, the 2θ zero shift, the three cell lengths and the magnetic
 model: the moment components the magnetic space group allows (Co1 in any direction, Co2 only
 along b) and the j2 term of the Co²⁺ form factor, which sets how the magnetic intensities fall
-with angle.
+with angle. They are freed together because at 2 K many peaks are purely magnetic: the scale
+fitted alone would also absorb the error of the starting moments in those peaks, while freed
+with the moments it follows the nuclear peaks and the moments follow the magnetic ones.
 
 In `experiments/d20.edi`, add `()` after the values the stage frees:
 
 ```edi
 _instrument.calib_twotheta_offset 0.29433()
-cosio 1.81723() 1.0
+cosio 1.81723()
 ```
 
 In `structures/cosio.edi`, add `()` after the values the stage frees:
@@ -69,9 +114,8 @@ _cell.length_b 6.00219()
 _cell.length_c 4.78739()
 Co1 2() 2() 2() Mx,My,Mz
 Co2 0 2() 0 0,My,0
+Co Co2+ dipole 0()
 ```
-
-The same for every other row (1 more).
 
 === "Standalone executable"
 
@@ -89,11 +133,11 @@ The same for every other row (1 more).
 edi fit: project pd-neut-cwl_cosio-d20_2k, 1438 pts fitted / 1506 loaded, 10 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                        11.38        35.87
-      1      0.066      5.97         9.88   72.5% ↓
-      2      0.074      5.97         9.88   
-      3      0.085      5.97         9.88   
-      4      0.097      5.97         9.88   
-  done · converged · 4 iters · reduced χ² 9.88 · Rwp 5.97 % · 0.10 s
+      1      0.107      5.97         9.88   72.5% ↓
+      2      0.116      5.97         9.88   
+      3      0.128      5.97         9.88   
+      4      0.146      5.97         9.88   
+  done · converged · 4 iters · reduced χ² 9.88 · Rwp 5.97 % · 0.16 s
 
   refined parameters (10 free):
   name            parameter                                                 start        value      s.u.   change
@@ -143,17 +187,17 @@ The same for every other row (14 more).
 edi fit: project pd-neut-cwl_cosio-d20_2k, 1438 pts fitted / 1506 loaded, 26 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                         5.97         9.99
-      1      0.100      5.65         8.93   10.6% ↓
-      2      0.114      5.65         8.93   
-      3      0.127      5.65         8.93   
-      4      0.140      5.65         8.93   
-      5      0.159      5.65         8.93   
-      6      0.172      5.65         8.93   
-      7      0.182      5.65         8.93   
-      8      0.192      5.65         8.93   
-      9      0.203      5.65         8.93   
-     10      0.217      5.65         8.93   
-  done · converged · 10 iters · reduced χ² 8.93 · Rwp 5.65 % · 0.23 s
+      1      0.122      5.65         8.93   10.6% ↓
+      2      0.137      5.65         8.93   
+      3      0.158      5.65         8.93   
+      4      0.178      5.65         8.93   
+      5      0.194      5.65         8.93   
+      6      0.213      5.65         8.93   
+      7      0.229      5.65         8.93   
+      8      0.245      5.65         8.93   
+      9      0.265      5.65         8.93   
+     10      0.293      5.65         8.93   
+  done · converged · 10 iters · reduced χ² 8.93 · Rwp 5.65 % · 0.30 s
 
   refined parameters (26 free):
   name            parameter                                                 start        value      s.u.   change
@@ -194,16 +238,20 @@ edi fit: project pd-neut-cwl_cosio-d20_2k, 1438 pts fitted / 1506 loaded, 26 fre
 
 The third stage frees the atoms: each site's isotropic displacement (Co2's follows Co1's by the
 project's constraint) and the coordinates the symmetry leaves free. Co1 sits on a centre of
-symmetry, so it has none; the other sites lie on the mirror plane, except O3.
+symmetry, so it has none; the other sites lie on the mirror plane, except O3. Both are freed in
+one stage because positions and displacements change the same peak intensities: fitted apart,
+the one freed first would absorb the error of the other.
 
 In `structures/cosio.edi`, add `()` after the values the stage frees:
 
 ```edi
 Co1 Co 0 0 0 a 4 1 0.269() Biso
 Co2 Co 0.2809() 0.25 0.9836() c 4 1 0.269 Biso
+Si Si 0.0933() 0.25 0.4278() c 4 1 0.466() Biso
+O1 O 0.0896() 0.25 0.773() c 4 1 0.778() Biso
+O2 O 0.4478() 0.25 0.2179() c 4 1 0.642() Biso
+O3 O 0.1639() 0.0321() 0.2805() d 8 1 0.917() Biso
 ```
-
-The same for every other row (4 more).
 
 === "Standalone executable"
 
@@ -221,12 +269,12 @@ The same for every other row (4 more).
 edi fit: project pd-neut-cwl_cosio-d20_2k, 1438 pts fitted / 1506 loaded, 42 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                         5.65         9.03
-      1      0.082      5.59         8.86   1.8% ↓
-      2      0.093      5.59         8.86   
-      3      0.103      5.59         8.86   
-      4      0.115      5.59         8.86   
-      5      0.130      5.59         8.86   
-  done · converged · 5 iters · reduced χ² 8.86 · Rwp 5.59 % · 0.14 s
+      1      0.149      5.59         8.86   1.8% ↓
+      2      0.163      5.59         8.86   
+      3      0.173      5.59         8.86   
+      4      0.188      5.59         8.86   
+      5      0.206      5.59         8.86   
+  done · converged · 5 iters · reduced χ² 8.86 · Rwp 5.59 % · 0.22 s
 
   refined parameters (42 free):
   name            parameter                                                 start        value      s.u.   change
@@ -308,17 +356,17 @@ _peak.broad_lorentz_y 0.017548()
 edi fit: project pd-neut-cwl_cosio-d20_2k, 1438 pts fitted / 1506 loaded, 46 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                         5.59         8.89
-      1      0.094      5.58         8.86   0.3% ↓
-      2      0.106      5.58         8.86   
-      3      0.117      5.58         8.86   
-      4      0.130      5.58         8.86   
-      5      0.142      5.58         8.86   
-      6      0.155      5.58         8.86   
-      7      0.167      5.58         8.86   
-      8      0.179      5.58         8.86   
-      9      0.191      5.58         8.86   
-     10      0.208      5.58         8.86   
-  done · converged · 10 iters · reduced χ² 8.86 · Rwp 5.58 % · 0.22 s
+      1      0.139      5.58         8.86   0.3% ↓
+      2      0.152      5.58         8.86   
+      3      0.172      5.58         8.86   
+      4      0.185      5.58         8.86   
+      5      0.204      5.58         8.86   
+      6      0.218      5.58         8.86   
+      7      0.231      5.58         8.86   
+      8      0.245      5.58         8.86   
+      9      0.259      5.58         8.86   
+     10      0.287      5.58         8.86   
+  done · converged · 10 iters · reduced χ² 8.86 · Rwp 5.58 % · 0.30 s
 
   refined parameters (46 free):
   name            parameter                                                 start        value      s.u.   change
@@ -402,26 +450,26 @@ _peak.asym_fcj_1 0()
 edi fit: project pd-neut-cwl_cosio-d20_2k, 1438 pts fitted / 1506 loaded, 47 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                         5.58         8.87
-      1      0.418      5.51         8.62   2.8% ↓
-      2      0.430      5.44         8.41   2.4% ↓
-      3      0.443      5.36         8.16   2.9% ↓
-      4      0.455      5.23         7.77   4.9% ↓
-      5      0.470      4.94         6.93   10.7% ↓
-      6      0.488      4.76         6.45   6.9% ↓
-      7      0.502      4.70         6.28   2.8% ↓
-      8      0.518      4.70         6.27   0.1% ↓
-      9      0.534      4.69         6.27   
-     10      0.552      4.69         6.26   0.1% ↓
-     11      0.570      4.69         6.26   0.1% ↓
-     12      0.585      4.69         6.25   0.1% ↓
-     13      0.604      4.69         6.25   
-     14      0.622      4.69         6.25   
-     15      0.640      4.69         6.25   
-     16      0.655      4.69         6.25   
-     17      0.677      4.69         6.25   
-     18      0.692      4.69         6.25   
-     19      0.715      4.69         6.25   
-  done · converged · 19 iters · reduced χ² 6.25 · Rwp 4.69 % · 0.73 s
+      1      0.262      5.51         8.62   2.8% ↓
+      2      0.273      5.44         8.41   2.4% ↓
+      3      0.283      5.36         8.16   2.9% ↓
+      4      0.293      5.23         7.77   4.9% ↓
+      5      0.304      4.94         6.93   10.7% ↓
+      6      0.315      4.76         6.45   6.9% ↓
+      7      0.347      4.70         6.28   2.8% ↓
+      8      0.362      4.70         6.27   0.1% ↓
+      9      0.376      4.69         6.27   
+     10      0.392      4.69         6.26   0.1% ↓
+     11      0.408      4.69         6.26   0.1% ↓
+     12      0.421      4.69         6.25   0.1% ↓
+     13      0.438      4.69         6.25   
+     14      0.476      4.69         6.25   
+     15      0.492      4.69         6.25   
+     16      0.505      4.69         6.25   
+     17      0.522      4.69         6.25   
+     18      0.536      4.69         6.25   
+     19      0.561      4.69         6.25   
+  done · converged · 19 iters · reduced χ² 6.25 · Rwp 4.69 % · 0.58 s
 
   refined parameters (47 free):
   name            parameter                                                 start        value      s.u.   change

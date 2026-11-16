@@ -9835,7 +9835,9 @@ struct AssistantViewModel::State {
             next->collection=collection;next->admitted_generation=selectedGeneration;next->digest=original->digest;
             next->ordinal=original->ordinal;next->directory=original->directory;next->acquired=original->acquired;
             next->failure=original->failure;next->result=original->result;
-#if defined(Q_OS_UNIX)
+#if defined(Q_OS_UNIX) || defined(Q_OS_WIN)
+            // The same file, unchanged: a duplicate of the original descriptor (never inherited), and its
+            // identity (device and inode, or volume and file index) and contents checked as the original's.
             next->identity=original->identity;next->descriptor=duplicate_input_descriptor(original->descriptor);
             if(next->descriptor<0 || !next->current())throw std::runtime_error("The original selected input descriptor could not be retained");
 #else

@@ -52,7 +52,16 @@ def assert_catalogue_coverage(row, declared, title=None, case=None):
                 if case
                 else bool(links[0].get('aria-label', '').strip())
             ), 'Gate 3/4: every declared interface has exactly its accessible tutorial link'
-            assert not links[0].get_text(strip=True) and links[0].find('svg') is not None, (
+            visible = [
+                value.strip()
+                for value in links[0].find_all(string=True)
+                if value.strip()
+                and not any(
+                    tag.name in {'title', 'desc'} and tag.find_parent('svg') is not None
+                    for tag in value.parents
+                )
+            ]
+            assert not visible and links[0].find('svg') is not None, (
                 'Gate 3/4: declared catalog link cells use their interface icon without text'
             )
             if case:

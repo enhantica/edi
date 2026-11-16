@@ -1,8 +1,8 @@
-"""Owner 2026-11-03 catalogue delta; the earlier reference selection stays frozen.
+"""Apply the two later owner additions without rewriting the retained selection.
 
-The morning record adds the magnetic 2.3 K example after the nuclear CoSiO4
-case. The 18:45 record replaces the app/tutorial scan by the 213-frame magnetic
-scan, keeping the old project available for CLI fixtures and external references.
+ADR-0080 and tutorial_cases/contract.json carry the 2026-11-08 TbTi simulation
+and 2026-11-09 CoSiO4 HEIDI additions. The retained selection already includes
+the magnetic 2.3 K and 213-frame scan adaptations; never apply those twice.
 """
 
 import json
@@ -10,15 +10,18 @@ from pathlib import Path
 
 
 def current_cases():
-    original = json.loads((Path(__file__).parent / 'catalogue-selection.json').read_text())[
-        'cases'
-    ]
+    directory = Path(__file__).parent
+    original = json.loads((directory / 'catalogue-selection.json').read_text())['cases']
     result = []
-    for previous in original:
-        row = previous
-        if row['id'] == 'pd-neut-cwl_cosio-d20_scan':
-            row = dict(row, id='pd-neut-cwl_cosio-d20_scan-213f')
+    for row in original:
         result.append(row)
-        if row['id'] == 'pd-neut-cwl_cosio-d20':
-            result.append({'id': 'pd-neut-cwl_cosio-d20_2k', 'group': row['group']})
+        if row['id'] == 'pd-neut-cwl_lbco_simulation':
+            result.append({
+                'id': 'sc-neut-cwl_tb2ti2o7-heidi_simulation',
+                'group': 'Calculations without data',
+            })
+    result.append({'id': 'sc-neut-cwl_cosio-heidi', 'group': 'Single crystal'})
+    declared = json.loads((directory.parent / 'tutorial_cases/contract.json').read_text())['cases']
+    if [row['id'] for row in result] != declared or len(declared) != len(set(declared)):
+        raise ValueError('The historical selection admits only the two declared owner additions')
     return result

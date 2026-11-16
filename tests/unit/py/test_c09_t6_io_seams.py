@@ -67,7 +67,10 @@ def test_c09_t6_jvd_and_absorption_load_with_nontrivial_parameter_states() -> No
         assert experiment.absorption.type == 'cylinder'
         assert experiment.absorption.abscor1 is not None
         assert not hasattr(experiment.absorption, 'abscor2'), (
-            'ADR-0123 removes the second coefficient instead of keeping a fixed-zero member'
+            'The retired absorption coefficient is absent after project loading'
+        )
+        assert experiment.absorption.mu_r is None, (
+            'TOF absorption loading does not invent a cylinder mu R value'
         )
         for field in (
             'broad_lorentz_gamma_0',

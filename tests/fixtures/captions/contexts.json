@@ -1,0 +1,96 @@
+[
+  {
+    "tag": "project-basic",
+    "page": "project",
+    "tab": "basic",
+    "experiment": "measured"
+  },
+  {
+    "tag": "project-extras",
+    "page": "project",
+    "tab": "extras",
+    "experiment": "measured"
+  },
+  {
+    "tag": "structure-basic",
+    "page": "structure",
+    "tab": "basic",
+    "experiment": "measured"
+  },
+  {
+    "tag": "structure-extras-1",
+    "page": "structure",
+    "tab": "extras",
+    "experiment": "measured",
+    "part": 0,
+    "parts": 2
+  },
+  {
+    "tag": "structure-extras-2",
+    "page": "structure",
+    "tab": "extras",
+    "experiment": "measured",
+    "part": 1,
+    "parts": 2
+  },
+  {
+    "tag": "measured",
+    "page": "experiment",
+    "tab": "basic",
+    "experiment": "measured"
+  },
+  {
+    "tag": "experiment-extras",
+    "page": "experiment",
+    "tab": "extras",
+    "experiment": "measured"
+  },
+  {
+    "tag": "experiment-settings",
+    "page": "experiment",
+    "tab": "settings",
+    "experiment": "measured"
+  },
+  {
+    "tag": "analysis-basic",
+    "page": "analysis",
+    "tab": "basic",
+    "experiment": "measured"
+  },
+  {
+    "tag": "analysis-extras",
+    "page": "analysis",
+    "tab": "extras",
+    "experiment": "measured"
+  },
+  {
+    "tag": "analysis-settings",
+    "page": "analysis",
+    "tab": "settings",
+    "experiment": "measured"
+  },
+  {
+    "tag": "report-basic",
+    "page": "report",
+    "tab": "basic",
+    "experiment": "measured"
+  },
+  {
+    "tag": "cwl",
+    "page": "experiment",
+    "tab": "basic",
+    "experiment": "cwl"
+  },
+  {
+    "tag": "tof",
+    "page": "experiment",
+    "tab": "basic",
+    "experiment": "tof"
+  },
+  {
+    "tag": "single",
+    "page": "experiment",
+    "tab": "basic",
+    "experiment": "single"
+  }
+]

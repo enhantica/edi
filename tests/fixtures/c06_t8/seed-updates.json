@@ -125,7 +125,7 @@
     },
     "docs/user/cli/pd-neut-cwl_cosio-d20_scan-3f/expected.json": {
       "kind": "regression-and-retired-strategy-update",
-      "current_sha256": "db13c03cfa2ef9c7b06edc4d14f2f51a3275ad5a2e215858b24b399e991131e0",
+      "current_sha256": "a8eccfd368bdba53922ed6b14c75cc465ef81de6c564667e5fe366c6b10b996d",
       "previous_sha256": "447cefab0247ea7490de834703c4d1d48b467560d9ac78371a31d51eb0fad0ce",
       "changed_paths": [
         [
@@ -145,7 +145,8 @@
         ]
       ],
       "source_commits": [
-        "ccf7bcd5d6c23a8f4c185404af590e50ec791f0e",
+        "9d4162bb35cc1f361daf5e1e2fc0860b0def62cd",
+        "242dee6bc4b7976ba68347889c1f89c8e8ef26df",
         "19a125cdd54f45d018c8f8610cbe75c4bbac0010"
       ]
     },

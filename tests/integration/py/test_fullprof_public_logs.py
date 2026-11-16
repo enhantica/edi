@@ -49,7 +49,23 @@ def test_authoring_capture_scrubs_paths_and_preserves_program_evidence(
         'Public capture must keep its separate exit receipt'
     )
     older = logs / 'older.log'
-    older.write_text(f'Executable: {executable}\n' + numeric)
+    older.write_text(f'Executable: {executable}\n' + numeric, newline='\n')
+    windows_home = 'C:' + chr(92) + 'U' + 'sers' + chr(92) + 'example' + chr(92)
+    for separator in [chr(92), '/']:
+        spelling = windows_home.replace(chr(92), separator) + separator.join([
+            'Applications',
+            'fullprof',
+            'fp2k',
+        ])
+        scrubbed = importlib.import_module('capture_logs').public_log(
+            'Executable: ' + spelling + '\n' + numeric
+        )
+        assert spelling not in scrubbed and 'example' not in scrubbed, (
+            'Publishing a native Windows capture must remove its actual personal home prefix'
+        )
+        assert numeric in scrubbed and 'fp2k' in scrubbed, (
+            'Windows path scrubbing preserves the program name and every numerical-output byte'
+        )
     published = logs / 'published.log'
     importlib.import_module('capture_logs').copy_public_log(older, published)
     assert str(executable) not in published.read_text() and numeric in published.read_text(), (

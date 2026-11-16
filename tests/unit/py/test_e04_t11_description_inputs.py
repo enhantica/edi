@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pytest
 
+from tests.fixtures.metadata_transition import retired_source_fields
 from tests.fixtures.table_display import metadata_bytes
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -42,7 +43,7 @@ TYPED = {
 @pytest.mark.parametrize(('member', 'prior', 'current', 'retained'), INPUTS)
 def test_declared_metadata_migration_is_exact_source_only(member, prior, current, retained):
     name = BASE + member
-    raw = (ROOT / name).read_bytes()
+    raw = retired_source_fields.previous_bytes(name, (ROOT / name).read_bytes())
     assert hashlib.sha256(raw).hexdigest() == current, (
         'The positive input is the complete independently committed metadata-only replacement'
     )
@@ -81,7 +82,7 @@ def test_full_source_caller_refuses_changed_metadata_schema_or_unowned_bytes(
     tmp_path, monkeypatch, member, retained, damage
 ):
     name = BASE + member
-    raw = (ROOT / name).read_bytes()
+    raw = retired_source_fields.previous_bytes(name, (ROOT / name).read_bytes())
     path = tmp_path / name
     path.parent.mkdir(parents=True)
     path.write_bytes(raw)
@@ -119,7 +120,7 @@ def test_full_experiment_source_guard_refuses_genuine_scientific_row_changes(
     tmp_path, monkeypatch, damage
 ):
     name = BASE + 'experiments/hrpt.edi'
-    raw = (ROOT / name).read_bytes()
+    raw = retired_source_fields.previous_bytes(name, (ROOT / name).read_bytes())
     path = tmp_path / name
     path.parent.mkdir(parents=True)
     path.write_bytes(raw)
@@ -219,7 +220,7 @@ CATALOGUE_INPUTS = [
 def test_catalogue_description_pairs_preserve_whole_newer_source(
     name, prior, current, instrument, facility
 ):
-    raw = (ROOT / name).read_bytes()
+    raw = retired_source_fields.previous_bytes(name, (ROOT / name).read_bytes())
     assert hashlib.sha256(raw).hexdigest() == current, (
         'Required: catalogue description pairs preserve whole newer source.'
     )
@@ -274,7 +275,7 @@ def test_catalogue_whole_pair_refuses_unowned_or_malformed_changes(
     tmp_path, monkeypatch, pair, damage
 ):
     name, prior, current, instrument, _facility = pair
-    raw = (ROOT / name).read_bytes()
+    raw = retired_source_fields.previous_bytes(name, (ROOT / name).read_bytes())
     assert hashlib.sha256(raw).hexdigest() == current, (
         'Required: catalogue whole pair refuses unowned or malformed changes.'
     )
@@ -315,7 +316,7 @@ def test_catalogue_reversal_refuses_cross_source_pair_and_leaves_unlisted_paths_
     name, prior, current, instrument, facility
 ):
     del prior, current, instrument, facility
-    raw = (ROOT / name).read_bytes()
+    raw = retired_source_fields.previous_bytes(name, (ROOT / name).read_bytes())
     other = next(row[0] for row in CATALOGUE_INPUTS if row[0] != name)
     with pytest.raises(
         AssertionError,
@@ -344,6 +345,8 @@ def test_catalogue_reversal_refuses_cross_source_pair_and_leaves_unlisted_paths_
     ],
 )
 def test_catalogue_complete_input_pin_needs_only_its_description_lineage(project, pin):
+    if project.endswith('lbco-hrpt/project'):
+        assert_retired_source_fields_require_complete_current_and_archived_bytes()
     digest = hashlib.sha256()
     source = ROOT / project
     for path in sorted(source.rglob('*')):
@@ -364,7 +367,7 @@ def test_catalogue_reversal_refuses_real_scientific_and_data_edits(
     tmp_path, monkeypatch, pair, damage
 ):
     name, prior, current, _instrument, _facility = pair
-    raw = (ROOT / name).read_bytes()
+    raw = retired_source_fields.previous_bytes(name, (ROOT / name).read_bytes())
     assert hashlib.sha256(raw).hexdigest() == current, (
         'Required: catalogue reversal refuses real scientific and data edits.'
     )
@@ -394,3 +397,24 @@ def test_catalogue_reversal_refuses_real_scientific_and_data_edits(
         match='live descriptive input must match its entire independently archived source',
     ):
         metadata_bytes.pre_catalogue_bytes(path)
+
+
+def assert_retired_source_fields_require_complete_current_and_archived_bytes():
+    for name, row in retired_source_fields.rows().items():
+        raw = (ROOT / name).read_bytes()
+        before = retired_source_fields.previous_bytes(name, raw)
+        assert hashlib.sha256(raw).hexdigest() == row['after_sha256'], (
+            'Every release source projection binds its complete committed current input'
+        )
+        assert hashlib.sha256(before).hexdigest() == row['before_sha256'], (
+            'Every release source projection retains its complete independent older input'
+        )
+        for damaged in (
+            raw + b'# extra scientific context\n',
+            raw.replace(b'crysta', b'wrong', 1)
+            if b'crysta' in raw
+            else raw + b'_unowned.science 1.25\n',
+        ):
+            assert damaged != raw, 'Each whole-source adversary must change an unowned byte'
+            with pytest.raises(AssertionError, match='entire independently archived source'):
+                retired_source_fields.previous_bytes(name, damaged)

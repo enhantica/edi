@@ -1,5 +1,7 @@
 # ADR-0020 — The calculation worker and the publication transaction
 
+**Amended 2026-11-13:** The multithread-only browser decision (2026-11-13, ADR-0023 §3) retires the shipped owner-thread browser executor. The owner-thread option remains for independent test hosts; production browser work uses the worker thread. Earlier serial-browser preference descriptions are historical.
+
 - **Status:** Proposed (plan accepted 2026-10-02)
 - **Date:** 2026-10-02
 - **Implementation:** 🟡 Partially implemented — the worker, the transaction, the preview and the app's use of them

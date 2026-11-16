@@ -11,6 +11,7 @@ import edi
 import pytest
 
 from tests.fixtures.magnetic_pnma import commensurate, reference
+from tests.fixtures.native_process import native_executable
 from tests.fixtures.scan_csv import CONDITION_COLUMNS, assert_reported_legacy
 
 FIRST = '01_152_054p9730.dat'
@@ -68,7 +69,7 @@ def scan(root, bad=None):
     data = root / 'experiments/scan'
     data.mkdir()
     for name, temperature in [(FIRST, '54.973'), (SECOND, '55')]:
-        (data / name).write_text('TEMP ' + temperature + '\n' + points)
+        (data / name).write_text('TEMP ' + temperature + '\n' + points, newline='\n')
     analysis = root / 'analysis'
     analysis.mkdir()
     (analysis / 'analysis.edi').write_text(
@@ -77,7 +78,8 @@ def scan(root, bad=None):
         '_sequential_fit.file_pattern *.dat\n_sequential_fit.reverse false\n'
         'loop_\n_sequential_fit_extract.id\n_sequential_fit_extract.target\n'
         '_sequential_fit_extract.pattern\n_sequential_fit_extract.required\n'
-        'temperature diffrn.ambient_temperature "^TEMP\\s+([0-9.]+)" true\n'
+        'temperature diffrn.ambient_temperature "^TEMP\\s+([0-9.]+)" true\n',
+        newline='\n',
     )
     row = [f'experiments/scan/{FIRST}', '1.25', 'True', '4', '54.973', '3.125', 'nan']
     if bad == 'value':
@@ -209,8 +211,8 @@ def user_level_runs(tmp_path_factory):
     root = Path(__file__).resolve().parents[3]
     candidates = [
         os.environ.get('EDI_CLI_EXECUTABLE'),
-        root / 'build/ci-consumer/cli/easydiffraction',
-        root / 'build/ci/cli/easydiffraction',
+        native_executable(root / 'build/ci-consumer/cli/easydiffraction'),
+        native_executable(root / 'build/ci/cli/easydiffraction'),
     ]
     binary = next((str(path) for path in candidates if path and Path(path).is_file()), None)
     folder = tmp_path_factory.mktemp('user-message-levels')
@@ -257,8 +259,8 @@ def user_level_runs(tmp_path_factory):
                     check=False,
                     env={**os.environ, 'OMP_NUM_THREADS': '1', 'OPENBLAS_NUM_THREADS': '1'},
                 )
-                (work / 'stdout.txt').write_text(result.stdout)
-                (work / 'stderr.txt').write_text(result.stderr)
+                (work / 'stdout.txt').write_text(result.stdout, newline='\n')
+                (work / 'stderr.txt').write_text(result.stderr, newline='\n')
                 results[key] = result, project
     return results
 

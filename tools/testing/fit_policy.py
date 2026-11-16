@@ -417,6 +417,14 @@ def _check(entry: str, origin: str | None) -> None:
         _refuse(entry, f'its project does not resolve to a corpus case ({origin or "no origin"})')
 
 
+def _cli_fit_origin(parts: list[str], cwd: object = None) -> str | None:
+    """Read the positional operand, never a coincidental 'project' substring in argv."""
+    index = parts.index(_CLI_FIT_VERB) + 1
+    if index >= len(parts) or parts[index].startswith('-'):
+        return None
+    return str((Path(cwd or Path.cwd()) / parts[index]).resolve())
+
+
 @pytest.fixture(autouse=True, scope='session')
 def _fit_policy() -> object:
     monkey = pytest.MonkeyPatch()
@@ -474,7 +482,7 @@ def _fit_policy() -> object:
             parts = [str(p) for p in argv] if listed else str(argv).split()
             non_op = ('--help', '-h', '--version')
             if _CLI_FIT_VERB in parts and not any(f in parts for f in non_op):
-                origin = next((p for p in parts if 'fitting/' in p or 'project' in p), None)
+                origin = _cli_fit_origin(parts, kwargs.get('cwd'))
                 _check('fit (CLI)', origin)
             return _launcher(*args, **kwargs)
 
@@ -522,7 +530,12 @@ def pytest_configure(config: pytest.Config) -> None:  # noqa: ARG001
             (*git, '-C', str(clone), 'checkout', '-q', 'HEAD', '--', 'tests'), check=True
         )
         scratch = clone / 'tests' / 'fitting'
-    else:  # an explicit root outside a crysta checkout: a plain copy of the corpus itself
+    elif source == repo / 'tests' / 'fitting':
+        # SDK source exports have no .git but retain the same test/reference layout.
+        # Copy siblings too, as the Git path above does; the source stays immutable.
+        shutil.copytree(repo / 'tests', work / 'tests', symlinks=True)
+        scratch = work / 'tests' / 'fitting'
+    else:  # an explicit standalone corpus, without a declared repository layout
         scratch = work / 'tests' / 'fitting'
         shutil.copytree(source, scratch, symlinks=True)
     _source_corpus.update(

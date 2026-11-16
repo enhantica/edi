@@ -14,6 +14,7 @@ from pathlib import Path
 import edi
 import pytest
 
+from tests.fixtures.native_process import environment_bash
 from tests.fixtures.project_archive.recalculated_copy import compare_members, input_bytes
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -78,7 +79,7 @@ def run_archive_actor(case):
     assert binary.is_file(), 'Project opening gates require the actual built app test host'
     result = subprocess.run(
         [
-            'bash',
+            environment_bash(),
             str(ROOT / 'tests/fixtures/scan_views/run.sh'),
             str(binary),
             '-input',

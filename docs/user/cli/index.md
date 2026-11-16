@@ -1,13 +1,13 @@
 ---
 title: Examples
 description: >-
-  The example catalogue: 20 complete projects, each fitted or calculated from the command line, opened in the app
+  The example catalogue: 24 complete projects, each fitted or calculated from the command line, opened in the app
   and worked through in a tutorial.
 ---
 
 # Examples
 
-Twenty complete projects, from a calculation without data to sequential fits of whole scans. Each is one project
+Twenty-four complete projects, from a calculation without data to sequential fits of whole scans. Each is one project
 you can use three ways: fit it from the command line, open it in the app from the Examples on the Home page, or work
 through its tutorial, which loads the same files.
 
@@ -23,6 +23,7 @@ differently and why.
 | example | app title | tutorial |
 | --- | --- | --- |
 | [Calculation without data: La₀.₅Ba₀.₅CoO₃, HRPT](pd-neut-cwl_lbco_simulation/index.md) | La₀.₅Ba₀.₅CoO₃ [Pm-3m] · HRPT @ PSI | [pd-neut-cwl_lbco_simulation](../tutorials/pd-neut-cwl_lbco_simulation.ipynb) |
+| [Tb₂Ti₂O₇ on HEiDi](sc-neut-cwl_tb2ti2o7-heidi_simulation/index.md) | Tb₂Ti₂O₇ [Fd-3m] · HEiDi @ MLZ (FRM II) | [sc-neut-cwl_tb2ti2o7-heidi_simulation](../tutorials/sc-neut-cwl_tb2ti2o7-heidi_simulation.ipynb) |
 
 ## Constant-wavelength neutron
 
@@ -74,5 +75,6 @@ differently and why.
 | [Single-crystal fit: Tb₂Ti₂O₇, HEiDi](sc-neut-cwl_tb2ti2o7-heidi/index.md) | Tb₂Ti₂O₇ [Fd-3m] · HEiDi @ MLZ (FRM II) | [sc-neut-cwl_tb2ti2o7-heidi](../tutorials/sc-neut-cwl_tb2ti2o7-heidi.ipynb) |
 | [Single-crystal fit: Pr₂NiO₄, 5C2](sc-neut-cwl_pr2nio4-5c2/index.md) | Pr₂NiO₄ [Fmmm] · 5C2 @ LLB | [sc-neut-cwl_pr2nio4-5c2](../tutorials/sc-neut-cwl_pr2nio4-5c2.ipynb) |
 | [Single-crystal fit: taurine, SENJU](sc-neut-tof_taurine-senju/index.md) | Taurine [P2₁/c] · SENJU @ J-PARC | [sc-neut-tof_taurine-senju](../tutorials/sc-neut-tof_taurine-senju.ipynb) |
+| [Co₂SiO₄ on HEiDi](sc-neut-cwl_cosio-heidi/index.md) | Co₂SiO₄ [Pnma] at 300 K, 55 K and 2.5 K · HEiDi @ MLZ (FRM II) | [sc-neut-cwl_cosio-heidi](../tutorials/sc-neut-cwl_cosio-heidi.ipynb) |
 
 The other folders under `docs/user/cli/` are test projects: the checks fit them on every change, and each has a `README.md` saying what it tests.

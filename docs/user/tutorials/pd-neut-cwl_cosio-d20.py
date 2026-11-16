@@ -121,10 +121,13 @@ project.display.pattern('d20')
 # fits a peak asymmetry; this case's profile has none.
 
 # %%
-experiment.peak.broad_gauss_u.free = True
-experiment.peak.broad_gauss_v.free = True
-experiment.peak.broad_gauss_w.free = True
-experiment.peak.broad_lorentz_y.free = True
+for parameter in (
+    experiment.peak.broad_gauss_u,
+    experiment.peak.broad_gauss_v,
+    experiment.peak.broad_gauss_w,
+    experiment.peak.broad_lorentz_y,
+):
+    parameter.free = True
 
 # %%
 project.analysis.fit()
@@ -219,6 +222,15 @@ project.display.fit.correlations()
 
 # %%
 project.display.structure('cosio')
+
+# %% [markdown]
+# ## Report
+#
+# The HTML report draws the measured, calculated and difference patterns with the reflection
+# positions, and lists the structures, the experiments and the fit. Open it in a browser.
+
+# %%
+project.report.save_html('pd-neut-cwl_cosio-d20.html')
 
 # %% [markdown]
 # ## Save the project

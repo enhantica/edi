@@ -52,10 +52,28 @@ def plain_attributes(source, location):
         variables = {item.id for item in ast.walk(node.target) if isinstance(item, ast.Name)}
         # Attribute-name loops remain prohibited if reflection is disguised as subscription
         # or an intermediate variable; ordinary loops over datasets are still legitimate.
+        row_keys = {
+            key
+            for selector in ast.walk(node.iter)
+            if isinstance(selector, ast.Subscript)
+            and isinstance(selector.value, ast.Attribute)
+            and selector.value.attr
+            in {
+                'atom_sites',
+                'atom_site_moment',
+                'magnetic_form_factor',
+                'linked_structures',
+                'background',
+                'background_terms',
+            }
+            for key in ast.walk(selector.slice)
+        }
         strings = [
             item.value
             for item in ast.walk(node.iter)
-            if isinstance(item, ast.Constant) and isinstance(item.value, str)
+            if isinstance(item, ast.Constant)
+            and isinstance(item.value, str)
+            and item not in row_keys
         ]
         string_alias = any(
             isinstance(item, ast.Name) and item.id in string_bindings
@@ -174,3 +192,17 @@ def test_named_model_objects_are_not_mistaken_for_attribute_name_strings(collect
         f'for parameter in {collection}:\n    parameter.free = True\n',
         'model collection control',
     )
+
+
+def test_explicit_parameter_tuple_may_name_model_rows_without_reflection():
+    plain_attributes(
+        "for parameter in (structure.atom_site_moment['Co1'].crystalaxis_x, "
+        "structure.atom_site_moment['Co2'].crystalaxis_y):\n    parameter.free = True",
+        'explicit row-key parameter collection',
+    )
+    with pytest.raises(AssertionError, match='Gate 3:'):
+        plain_attributes(
+            "for name in ('crystalaxis_x', 'crystalaxis_y'):\n"
+            "    structure.atom_site_moment['Co1'][name].free = True",
+            'row key does not permit attribute reflection',
+        )

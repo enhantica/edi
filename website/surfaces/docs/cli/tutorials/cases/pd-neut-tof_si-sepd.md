@@ -2,44 +2,76 @@
 
 The same staged fit as the Python tutorial, on the command line. The command line fits whatever the project marks free with `()` after a value, so each stage marks its parameters in the project's files with a text editor and runs `edi fit`, which writes the fitted values back into the project for the next stage.
 
-## Get the project
+Fit silicon to time-of-flight neutron powder data from SEPD at Argonne, with the Jorgensen-Von
+Dreele profile.
+
+It builds the catalogue case `pd-neut-tof_si-sepd` step by step: the same project the command
+line fits and the app's Examples open.
+
+## Define the project
+
+Make a folder for the project, with a folder each for its structures, experiments and analysis.
+
+```console
+mkdir -p pd-neut-tof_si-sepd/structures pd-neut-tof_si-sepd/experiments pd-neut-tof_si-sepd/analysis
+```
+
+Write `project.edi` in it with a text editor such as VS Code:
+
+```edi
+_edi.schema_version 3
+
+_metadata.name pd-neut-tof_si-sepd
+_metadata.title "Silicon [Fd-3m] · SEPD @ Argonne"
+_metadata.description "Silicon standard · Jorgensen–Von Dreele profile · Time-of-flight neutron powder data"
+_metadata.authors .
+```
+
+## Define the structure
+
+Download the structure from EasyDiffraction's collection into `structures`. Its CIF gives the space group, the cell and the atom sites.
 
 === "Standalone executable"
 
     ```console
-    edi download-data pd-neut-tof_si-sepd
+    edi download-data pd-neut-tof_si-sepd-si
+    mv data/pd-neut-tof_si-sepd-si.edi pd-neut-tof_si-sepd/structures/si.edi
     ```
 
 === "Python package"
 
     ```console
-    python -m edi download-data pd-neut-tof_si-sepd
+    python -m edi download-data pd-neut-tof_si-sepd-si
+    mv data/pd-neut-tof_si-sepd-si.edi pd-neut-tof_si-sepd/structures/si.edi
     ```
 
-## Start with nothing free
+## Define the experiment
 
-The project marks what its finished fit frees. Remove every `()`, so the stages below free one group at a time.
+Download the experiment into `experiments`: the file declares the instrument, the peak profile, the background, the structures it links and the measured data.
 
-In `experiments/sepd.edi`, remove the `()` from every value; they now read:
+=== "Standalone executable"
+
+    ```console
+    edi download-data pd-neut-tof_si-sepd-sepd
+    mv data/pd-neut-tof_si-sepd-sepd.edi pd-neut-tof_si-sepd/experiments/sepd.edi
+    ```
+
+=== "Python package"
+
+    ```console
+    python -m edi download-data pd-neut-tof_si-sepd-sepd
+    mv data/pd-neut-tof_si-sepd-sepd.edi pd-neut-tof_si-sepd/experiments/sepd.edi
+    ```
+
+Then write how the project is fitted in `analysis/analysis.edi`:
 
 ```edi
-_instrument.calib_d_to_tof_offset 0
-_peak.decay_beta_0 0.04
-_peak.decay_beta_1 0.01
-_peak.broad_gauss_sigma_0 3
-_peak.broad_gauss_sigma_1 30
-_peak.broad_lorentz_gamma_1 3
-1 2000 120
-2 9035 120
-```
+_minimizer.type crysta
+_minimizer.max_iterations 1000
 
-The same for every other row (13 more).
+_fitting_mode.type single
 
-In `structures/si.edi`, remove the `()` from every value; they now read:
-
-```edi
-_cell.length_a 5.431
-Si Si 0.125 0.125 0.125 a 8 1 0.5 Biso
+_edi.schema_version 3
 ```
 
 ## Cell, scale and time-of-flight calibration
@@ -57,7 +89,7 @@ In `experiments/sepd.edi`, add `()` after the values the stage frees:
 
 ```edi
 _instrument.calib_d_to_tof_offset 0()
-si 600() 1.0
+si 600()
 ```
 
 In `structures/si.edi`, add `()` after the values the stage frees:
@@ -82,9 +114,9 @@ _cell.length_a 5.431()
 edi fit: project pd-neut-tof_si-sepd, 5600 pts fitted / 5600 loaded, 3 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                        52.36       204.71
-      1      0.076     10.45         8.16   96.0% ↓
-      2      0.088     10.45         8.16   
-  done · converged · 2 iters · reduced χ² 8.16 · Rwp 10.45 % · 0.10 s
+      1      0.088     10.45         8.16   96.0% ↓
+      2      0.109     10.45         8.16   
+  done · converged · 2 iters · reduced χ² 8.16 · Rwp 10.45 % · 0.12 s
 
   refined parameters (3 free):
   name            parameter                                               start        value      s.u.   change
@@ -133,8 +165,8 @@ The same for every other row (12 more).
 edi fit: project pd-neut-tof_si-sepd, 5600 pts fitted / 5600 loaded, 17 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                        10.45         8.18
-      1      0.124      7.45         4.16   49.1% ↓
-  done · converged · 1 iters · reduced χ² 4.16 · Rwp 7.45 % · 0.13 s
+      1      0.132      7.45         4.16   49.1% ↓
+  done · converged · 1 iters · reduced χ² 4.16 · Rwp 7.45 % · 0.14 s
 
   refined parameters (17 free):
   name            parameter                                               start        value      s.u.   change
@@ -191,8 +223,8 @@ _peak.broad_gauss_sigma_1 30()
 edi fit: project pd-neut-tof_si-sepd, 5600 pts fitted / 5600 loaded, 19 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                         7.45         4.16
-      1      0.109      7.42         4.13   0.8% ↓
-  done · converged · 1 iters · reduced χ² 4.13 · Rwp 7.42 % · 0.12 s
+      1      0.137      7.42         4.13   0.8% ↓
+  done · converged · 1 iters · reduced χ² 4.13 · Rwp 7.42 % · 0.15 s
 
   refined parameters (19 free):
   name            parameter                                               start        value      s.u.   change
@@ -248,8 +280,8 @@ _peak.broad_lorentz_gamma_1 3()
 edi fit: project pd-neut-tof_si-sepd, 5600 pts fitted / 5600 loaded, 20 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                         7.42         4.13
-      1      0.116      7.28         3.97   3.7% ↓
-  done · converged · 1 iters · reduced χ² 3.97 · Rwp 7.28 % · 0.13 s
+      1      0.128      7.28         3.97   3.7% ↓
+  done · converged · 1 iters · reduced χ² 3.97 · Rwp 7.28 % · 0.14 s
 
   refined parameters (20 free):
   name            parameter                                               start        value      s.u.   change
@@ -304,8 +336,8 @@ Si Si 0.125 0.125 0.125 a 8 1 0.5() Biso
 edi fit: project pd-neut-tof_si-sepd, 5600 pts fitted / 5600 loaded, 21 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                         7.28         3.98
-      1      0.122      7.28         3.97   0.2% ↓
-  done · converged · 1 iters · reduced χ² 3.97 · Rwp 7.28 % · 0.13 s
+      1      0.137      7.28         3.97   0.2% ↓
+  done · converged · 1 iters · reduced χ² 3.97 · Rwp 7.28 % · 0.15 s
 
   refined parameters (21 free):
   name            parameter                                               start        value      s.u.   change
@@ -364,8 +396,8 @@ _peak.decay_beta_1 0.01()
 edi fit: project pd-neut-tof_si-sepd, 5600 pts fitted / 5600 loaded, 23 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                         7.28         3.97
-      1      0.103      7.18         3.86   2.7% ↓
-      2      0.125      7.18         3.86   
+      1      0.102      7.18         3.86   2.7% ↓
+      2      0.124      7.18         3.86   
   done · converged · 2 iters · reduced χ² 3.86 · Rwp 7.18 % · 0.14 s
 
   refined parameters (23 free):

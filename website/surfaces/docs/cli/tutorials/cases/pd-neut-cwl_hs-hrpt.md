@@ -2,52 +2,78 @@
 
 The same staged fit as the Python tutorial, on the command line. The command line fits whatever the project marks free with `()` after a value, so each stage marks its parameters in the project's files with a text editor and runs `edi fit`, which writes the fitted values back into the project for the next stage.
 
-## Get the project
+Fit herbertsmithite, ZnCu₃(OD)₆Cl₂, a deuterated kagome antiferromagnet, to constant-wavelength
+neutron powder data from HRPT at PSI, with a pseudo-Voigt profile and Bérar-Baldinozzi
+asymmetry.
+
+It builds the catalogue case `pd-neut-cwl_hs-hrpt` step by step: the same project the command
+line fits and the app's Examples open.
+
+## Define the project
+
+Make a folder for the project, with a folder each for its structures, experiments and analysis.
+
+```console
+mkdir -p pd-neut-cwl_hs-hrpt/structures pd-neut-cwl_hs-hrpt/experiments pd-neut-cwl_hs-hrpt/analysis
+```
+
+Write `project.edi` in it with a text editor such as VS Code:
+
+```edi
+_edi.schema_version 3
+
+_metadata.name pd-neut-cwl_hs-hrpt
+_metadata.title "ZnCu₃(OD)₆Cl₂ [R-3m] · HRPT @ PSI"
+_metadata.description "Herbertsmithite · Deuterated kagome antiferromagnet · Bérar-Baldinozzi asymmetry"
+_metadata.authors .
+```
+
+## Define the structure
+
+Download the structure from EasyDiffraction's collection into `structures`. Its CIF gives the space group, the cell and the atom sites.
 
 === "Standalone executable"
 
     ```console
-    edi download-data pd-neut-cwl_hs-hrpt
+    edi download-data pd-neut-cwl_hs-hrpt-hs
+    mv data/pd-neut-cwl_hs-hrpt-hs.edi pd-neut-cwl_hs-hrpt/structures/hs.edi
     ```
 
 === "Python package"
 
     ```console
-    python -m edi download-data pd-neut-cwl_hs-hrpt
+    python -m edi download-data pd-neut-cwl_hs-hrpt-hs
+    mv data/pd-neut-cwl_hs-hrpt-hs.edi pd-neut-cwl_hs-hrpt/structures/hs.edi
     ```
 
-## Start with nothing free
+## Define the experiment
 
-The project marks what its finished fit frees. Remove every `()`, so the stages below free one group at a time.
+Download the experiment into `experiments`: the file declares the instrument, the peak profile, the background, the structures it links and the measured data.
 
-In `experiments/hrpt.edi`, remove the `()` from every value; they now read:
+=== "Standalone executable"
 
-```edi
-_instrument.calib_twotheta_offset 0
-_peak.broad_gauss_u 0.1
-_peak.broad_gauss_v -0.2
-_peak.broad_gauss_w 0.2
-_peak.mixing_eta_0 0.5
-_peak.asym_beba_a0 0
-_peak.asym_beba_b0 0
-_peak.asym_beba_a1 0
-_peak.asym_beba_b1 0
-1 4 460
-2 20 460
-```
+    ```console
+    edi download-data pd-neut-cwl_hs-hrpt-hrpt
+    mv data/pd-neut-cwl_hs-hrpt-hrpt.edi pd-neut-cwl_hs-hrpt/experiments/hrpt.edi
+    ```
 
-The same for every other row (9 more).
+=== "Python package"
 
-In `structures/hs.edi`, remove the `()` from every value; they now read:
+    ```console
+    python -m edi download-data pd-neut-cwl_hs-hrpt-hrpt
+    mv data/pd-neut-cwl_hs-hrpt-hrpt.edi pd-neut-cwl_hs-hrpt/experiments/hrpt.edi
+    ```
+
+Then write how the project is fitted in `analysis/analysis.edi`:
 
 ```edi
-_cell.length_a 6.85
-_cell.length_c 14.1
-Zn Zn 0 0 0.5 b 3 1 0.5 Biso
-Cu Cu 0.5 0 0 e 9 1 0.5 Biso
-```
+_minimizer.type crysta
+_minimizer.max_iterations 1000
 
-The same for every other row (3 more).
+_fitting_mode.type single
+
+_edi.schema_version 3
+```
 
 ## Cell, scale and 2θ zero
 
@@ -57,7 +83,7 @@ In `experiments/hrpt.edi`, add `()` after the values the stage frees:
 
 ```edi
 _instrument.calib_twotheta_offset 0()
-hs 0.5() 1.0
+hs 0.5()
 ```
 
 In `structures/hs.edi`, add `()` after the values the stage frees:
@@ -83,24 +109,24 @@ _cell.length_c 14.1()
 edi fit: project pd-neut-cwl_hs-hrpt, 3220 pts fitted / 3220 loaded, 4 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                        39.94       121.13
-      1      0.045     25.02        47.54   60.8% ↓
-      2      0.049     24.70        46.30   2.6% ↓
-      3      0.053     24.51        45.59   1.5% ↓
-      4      0.057     24.40        45.19   0.9% ↓
-      5      0.060     24.34        44.97   0.5% ↓
-      6      0.064     24.30        44.84   0.3% ↓
-      7      0.068     24.28        44.77   0.2% ↓
-      8      0.072     24.27        44.73   0.1% ↓
-      9      0.076     24.27        44.71   
-     10      0.080     24.26        44.70   
-     11      0.084     24.26        44.69   
-     12      0.088     24.26        44.69   
-     13      0.092     24.26        44.69   
-     14      0.095     24.26        44.68   
-     15      0.099     24.26        44.68   
-     16      0.103     24.26        44.68   
-     17      0.111     24.26        44.68   
-  done · converged · 17 iters · reduced χ² 44.68 · Rwp 24.26 % · 0.12 s
+      1      0.060     25.02        47.54   60.8% ↓
+      2      0.064     24.70        46.30   2.6% ↓
+      3      0.068     24.51        45.59   1.5% ↓
+      4      0.073     24.40        45.19   0.9% ↓
+      5      0.077     24.34        44.97   0.5% ↓
+      6      0.081     24.30        44.84   0.3% ↓
+      7      0.085     24.28        44.77   0.2% ↓
+      8      0.089     24.27        44.73   0.1% ↓
+      9      0.093     24.27        44.71   
+     10      0.097     24.26        44.70   
+     11      0.101     24.26        44.69   
+     12      0.105     24.26        44.69   
+     13      0.109     24.26        44.69   
+     14      0.113     24.26        44.68   
+     15      0.117     24.26        44.68   
+     16      0.121     24.26        44.68   
+     17      0.131     24.26        44.68   
+  done · converged · 17 iters · reduced χ² 44.68 · Rwp 24.26 % · 0.14 s
 
   refined parameters (4 free):
   name            parameter                                               start        value      s.u.   change
@@ -144,9 +170,9 @@ The same for every other row (8 more).
 edi fit: project pd-neut-cwl_hs-hrpt, 3220 pts fitted / 3220 loaded, 14 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                        24.26        44.82
-      1      0.053     21.75        36.02   19.6% ↓
-      2      0.064     21.75        36.02   
-  done · converged · 2 iters · reduced χ² 36.02 · Rwp 21.75 % · 0.07 s
+      1      0.074     21.75        36.02   19.6% ↓
+      2      0.085     21.75        36.02   
+  done · converged · 2 iters · reduced χ² 36.02 · Rwp 21.75 % · 0.09 s
 
   refined parameters (14 free):
   name            parameter                                               start        value      s.u.   change
@@ -201,14 +227,14 @@ _peak.mixing_eta_0 0.5()
 edi fit: project pd-neut-cwl_hs-hrpt, 3220 pts fitted / 3220 loaded, 18 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                        21.75        36.07
-      1      0.054     13.45        13.79   61.8% ↓
-      2      0.059     13.44        13.77   0.1% ↓
-      3      0.064     13.44        13.77   
-      4      0.069     13.44        13.77   
-      5      0.074     13.44        13.77   
-      6      0.078     13.44        13.77   
-      7      0.090     13.44        13.77   
-  done · converged · 7 iters · reduced χ² 13.77 · Rwp 13.44 % · 0.10 s
+      1      0.068     13.45        13.79   61.8% ↓
+      2      0.073     13.44        13.77   0.1% ↓
+      3      0.078     13.44        13.77   
+      4      0.083     13.44        13.77   
+      5      0.090     13.44        13.77   
+      6      0.098     13.44        13.77   
+      7      0.111     13.44        13.77   
+  done · converged · 7 iters · reduced χ² 13.77 · Rwp 13.44 % · 0.12 s
 
   refined parameters (18 free):
   name            parameter                                               start        value      s.u.   change
@@ -249,9 +275,15 @@ In `structures/hs.edi`, add `()` after the values the stage frees:
 ```edi
 O O 0.21() -0.21 0.06() h 18 1 0.5 Biso
 Cl Cl 0 0 0.2() c 6 1 0.5 Biso
+H 2H 0.13() -0.13 0.08() h 18 1 0.5 Biso
 ```
 
-The same for every other row (1 more).
+In `structures/hs.edi`, remove the `()` from:
+
+```edi
+_atom_sites_cartn_transform.mat_13 0.00000000000000086566
+_atom_sites_cartn_transform.mat_22 5.94311
+```
 
 === "Standalone executable"
 
@@ -269,10 +301,10 @@ The same for every other row (1 more).
 edi fit: project pd-neut-cwl_hs-hrpt, 3220 pts fitted / 3220 loaded, 23 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                        13.44        13.79
-      1      0.062      8.21         5.15   62.7% ↓
+      1      0.061      8.21         5.15   62.7% ↓
       2      0.067      8.21         5.15   
-      3      0.090      8.21         5.15   
-  done · converged · 3 iters · reduced χ² 5.15 · Rwp 8.21 % · 0.10 s
+      3      0.078      8.21         5.15   
+  done · converged · 3 iters · reduced χ² 5.15 · Rwp 8.21 % · 0.09 s
 
   refined parameters (23 free):
   name            parameter                                               start        value      s.u.   change
@@ -315,9 +347,10 @@ In `structures/hs.edi`, add `()` after the values the stage frees:
 ```edi
 Zn Zn 0 0 0.5 b 3 1 0.5() Biso
 Cu Cu 0.5 0 0 e 9 1 0.5() Biso
+O O 0.20640() -0.2064 0.06275() h 18 1 0.5() Biso
+Cl Cl 0 0 0.19762() c 6 1 0.5() Biso
+H 2H 0.13364() -0.13364 0.08701() h 18 1 0.5() Biso
 ```
-
-The same for every other row (1 more).
 
 === "Standalone executable"
 
@@ -335,9 +368,9 @@ The same for every other row (1 more).
 edi fit: project pd-neut-cwl_hs-hrpt, 3220 pts fitted / 3220 loaded, 28 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                         8.21         5.16
-      1      0.069      5.45         2.27   56.0% ↓
-      2      0.081      5.45         2.27   
-  done · converged · 2 iters · reduced χ² 2.27 · Rwp 5.45 % · 0.09 s
+      1      0.063      5.45         2.27   56.0% ↓
+      2      0.075      5.45         2.27   
+  done · converged · 2 iters · reduced χ² 2.27 · Rwp 5.45 % · 0.08 s
 
   refined parameters (28 free):
   name            parameter                                               start        value      s.u.   change
@@ -405,9 +438,9 @@ _peak.asym_beba_b1 0()
 edi fit: project pd-neut-cwl_hs-hrpt, 3220 pts fitted / 3220 loaded, 32 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                         5.45         2.27
-      1      0.068      5.30         2.15   5.3% ↓
-      2      0.074      5.30         2.15   
-      3      0.086      5.30         2.15   
+      1      0.064      5.30         2.15   5.3% ↓
+      2      0.070      5.30         2.15   
+      3      0.082      5.30         2.15   
   done · converged · 3 iters · reduced χ² 2.15 · Rwp 5.30 % · 0.09 s
 
   refined parameters (32 free):

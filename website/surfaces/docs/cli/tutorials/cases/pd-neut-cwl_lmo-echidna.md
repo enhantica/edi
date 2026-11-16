@@ -2,48 +2,100 @@
 
 The same staged fit as the Python tutorial, on the command line. The command line fits whatever the project marks free with `()` after a value, so each stage marks its parameters in the project's files with a text editor and runs `edi fit`, which writes the fitted values back into the project for the next stage.
 
-## Get the project
+Fit the layered oxide LiNiO₂ to constant-wavelength neutron powder data from ECHIDNA at ANSTO.
+Li and Ni mix between two sites, held to full occupancy by constraints, and the profile has
+Finger-Cox-Jephcoat asymmetry.
+
+It builds the catalogue case `pd-neut-cwl_lmo-echidna` step by step: the same project the command
+line fits and the app's Examples open. Li and Ni share their sites through five relations
+(displacements and occupancies).
+
+## Define the project
+
+Make a folder for the project, with a folder each for its structures, experiments and analysis.
+
+```console
+mkdir -p pd-neut-cwl_lmo-echidna/structures pd-neut-cwl_lmo-echidna/experiments pd-neut-cwl_lmo-echidna/analysis
+```
+
+Write `project.edi` in it with a text editor such as VS Code:
+
+```edi
+_edi.schema_version 3
+
+_metadata.name pd-neut-cwl_lmo-echidna
+_metadata.title "LiNiO₂ [R-3m] · ECHIDNA @ ANSTO"
+_metadata.description "Layered oxide · Li/Ni site mixing · Occupancy constraints · TCH × FCJ asymmetry"
+_metadata.authors .
+```
+
+## Define the structure
+
+Download the structure from EasyDiffraction's collection into `structures`. Its CIF gives the space group, the cell and the atom sites.
 
 === "Standalone executable"
 
     ```console
-    edi download-data pd-neut-cwl_lmo-echidna
+    edi download-data pd-neut-cwl_lmo-echidna-lmo
+    mv data/pd-neut-cwl_lmo-echidna-lmo.edi pd-neut-cwl_lmo-echidna/structures/lmo.edi
     ```
 
 === "Python package"
 
     ```console
-    python -m edi download-data pd-neut-cwl_lmo-echidna
+    python -m edi download-data pd-neut-cwl_lmo-echidna-lmo
+    mv data/pd-neut-cwl_lmo-echidna-lmo.edi pd-neut-cwl_lmo-echidna/structures/lmo.edi
     ```
 
-## Start with nothing free
+## Define the experiment
 
-The project marks what its finished fit frees. Remove every `()`, so the stages below free one group at a time.
+Download the experiment into `experiments`: the file declares the instrument, the peak profile, the background, the structures it links and the measured data.
 
-In `experiments/echidna.edi`, remove the `()` from every value; they now read:
+=== "Standalone executable"
+
+    ```console
+    edi download-data pd-neut-cwl_lmo-echidna-echidna
+    mv data/pd-neut-cwl_lmo-echidna-echidna.edi pd-neut-cwl_lmo-echidna/experiments/echidna.edi
+    ```
+
+=== "Python package"
+
+    ```console
+    python -m edi download-data pd-neut-cwl_lmo-echidna-echidna
+    mv data/pd-neut-cwl_lmo-echidna-echidna.edi pd-neut-cwl_lmo-echidna/experiments/echidna.edi
+    ```
+
+Then write how the project is fitted in `analysis/analysis.edi`:
 
 ```edi
-_instrument.calib_twotheta_offset 0
-_peak.broad_gauss_u 0.1
-_peak.broad_gauss_v -0.3
-_peak.broad_gauss_w 0.4
-_peak.broad_lorentz_y 0.1
-1 12 550
-2 30 550
+_minimizer.type crysta
+_minimizer.max_iterations 1000
+
+_fitting_mode.type single
+
+loop_
+_alias.id
+_alias.parameter_unique_name
+biso_Li1 lmo.atom_site.Li1.adp_iso
+biso_Li2 lmo.atom_site.Li2.adp_iso
+biso_Ni1 lmo.atom_site.Ni1.adp_iso
+biso_Ni2 lmo.atom_site.Ni2.adp_iso
+occ_Li1 lmo.atom_site.Li1.occupancy
+occ_Li2 lmo.atom_site.Li2.occupancy
+occ_Ni1 lmo.atom_site.Ni1.occupancy
+occ_Ni2 lmo.atom_site.Ni2.occupancy
+
+loop_
+_constraint.id
+_constraint.expression
+1 "biso_Ni1 = biso_Li1"
+2 "biso_Li2 = biso_Ni2"
+3 "occ_Ni1 = 1 - occ_Li1"
+4 "occ_Li2 = 1 - occ_Li1"
+5 "occ_Ni2 = occ_Li1"
+
+_edi.schema_version 3
 ```
-
-The same for every other row (8 more).
-
-In `structures/lmo.edi`, remove the `()` from every value; they now read:
-
-```edi
-_cell.length_a 2.88
-_cell.length_c 14.18
-O O 0 0 0.26 c 6 1 0.5 Biso
-Li1 Li 0 0 0.5 b 3 0.95 0.5 Biso
-```
-
-The same for every other row (1 more).
 
 ## Scale, 2θ zero and cell
 

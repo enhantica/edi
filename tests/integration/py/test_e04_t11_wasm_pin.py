@@ -5,6 +5,8 @@ from pathlib import Path
 
 import pytest
 
+from tests.fixtures.native_process import environment_bash
+
 ROOT = Path(__file__).resolve().parents[3]
 
 
@@ -21,7 +23,7 @@ def test_qt_recommendation_enforces_the_exact_packet_pin(tmp_path, recommended, 
     )
     result = subprocess.run(
         [
-            'bash',
+            environment_bash(),
             '-c',
             'source "$1"; wasm_check_emsdk_pin "$2"',
             'e04-pin-gate',

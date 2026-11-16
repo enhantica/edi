@@ -29,6 +29,8 @@ import sys
 import zipfile
 from pathlib import Path
 
+import gemmi
+
 ROOT = Path(__file__).resolve().parents[2]
 EXAMPLES = ROOT / 'docs/user/cli'
 METADATA = ROOT / 'app/examples/metadata.json'
@@ -227,10 +229,73 @@ def measured_pattern(text: str) -> list[tuple[str, str, str]]:
     return rows
 
 
+REFLECTION_COLUMNS = (
+    '_refln.index_h',
+    '_refln.index_k',
+    '_refln.index_l',
+    '_refln.intensity_meas',
+    '_refln.intensity_meas_su',
+)
+
+
+def measured_reflections(text: str) -> str:
+    """Export the existing measured reflection tokens, without calculated columns."""
+    block = gemmi.cif.read_string(text).sole_block()
+    # Time-of-flight reflections each have their own wavelength, which the data load needs.
+    columns = list(REFLECTION_COLUMNS)
+    if block.find_values('_refln.wavelength'):
+        columns.append('_refln.wavelength')
+    table = block.find(columns)
+    if not table:
+        return ''
+    return (
+        'data_reflections\n\nloop_\n'
+        + '\n'.join(columns)
+        + '\n'
+        + ''.join(' '.join(row) + '\n' for row in table)
+    )
+
+
+def export_measured_data(experiment: Path, output: Path, case: str, common: dict) -> int:
+    """Publish powder points or single-crystal reflections under one measured-data id."""
+    text = experiment.read_text(encoding='utf-8')
+    supplied = experiment.parent.parent.parent / 'data' / (experiment.stem + '.hkl')
+    if supplied.is_file():
+        target = output / 'data' / f'{case}-{experiment.stem}.hkl'
+        shutil.copyfile(supplied, target)
+    elif reflections := measured_reflections(text):
+        target = output / 'data' / f'{case}-{experiment.stem}.hkl'
+        target.write_text(reflections, encoding='utf-8')
+    elif pattern := measured_pattern(text):
+        target = output / 'data' / f'{case}-{experiment.stem}.xye'
+        target.write_text(''.join(' '.join(row) + '\n' for row in pattern), encoding='utf-8')
+    else:
+        return 0
+    write_sidecar(target, {'id': f'{case}-{experiment.stem}-data', **common})
+    return 1
+
+
+def export_scan(project: Path, output: Path, case: str, common: dict) -> int:
+    """Publish a scan's data files, zipped flat, so a tutorial can declare its own scan folder."""
+    analysis = '\n'.join(
+        path.read_text(encoding='utf-8') for path in sorted((project / 'analysis').glob('*.edi'))
+    )
+    declared = re.search(r'^_sequential_fit\.data_dir\s+(\S+)', analysis, flags=re.MULTILINE)
+    if not declared or not (project / declared.group(1)).is_dir():
+        return 0
+    target = output / 'data' / f'{case}-scan.zip'
+    with zipfile.ZipFile(target, 'w', zipfile.ZIP_DEFLATED) as zipped:
+        for file in sorted((project / declared.group(1)).iterdir()):
+            if file.is_file():
+                zipped.write(file, file.name)
+    write_sidecar(target, {'id': f'{case}-scan', **common})
+    return 1
+
+
 def write_sidecar(path: Path, meta: dict) -> None:
     meta = {k: v for k, v in meta.items() if v not in ('', None, [])}
     path.with_name(path.name + '.meta.json').write_text(
-        json.dumps(meta, ensure_ascii=False, indent=1) + '\n'
+        json.dumps(meta, ensure_ascii=False, indent=1) + '\n', encoding='utf-8'
     )
 
 
@@ -352,22 +417,8 @@ def populate(output: Path) -> int:
                 target, {'id': f'{example}-{experiment.stem}', 'structures': linked, **common}
             )
             count += 1
-            # Its measured pattern as a plain x y sy file, which the tutorials load from the
-            # collection (edi ADR-0080).
-            pattern = measured_pattern(experiment.read_text(errors='replace'))
-            # A single crystal's reflections as the case keeps them, a CIF _refln loop named after
-            # its experiment, which the tutorials load the same way.
-            reflections = EXAMPLES / example / 'data' / f'{experiment.stem}.hkl'
-            if reflections.is_file():
-                data = output / 'data' / f'{example}-{experiment.stem}.hkl'
-                shutil.copyfile(reflections, data)
-                write_sidecar(data, {'id': f'{example}-{experiment.stem}-data', **common})
-                count += 1
-            elif pattern:
-                data = output / 'data' / f'{example}-{experiment.stem}.xye'
-                data.write_text(''.join(' '.join(row) + '\n' for row in pattern))
-                write_sidecar(data, {'id': f'{example}-{experiment.stem}-data', **common})
-                count += 1
+            count += export_measured_data(experiment, output, example, common)
+        count += export_scan(project, output, example, common)
     # The tutorials' inputs: a structure CIF and a measured pattern, both of the CIF's sample.
     tutorial_sample = sample_facts([
         f.read_text(errors='replace') for f in sorted(TUTORIAL_FILES.glob('*.cif'))

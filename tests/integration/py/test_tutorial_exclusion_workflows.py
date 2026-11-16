@@ -1,0 +1,19 @@
+"""Whole tutorial filesystem and checker workflows retain PR integration cadence."""
+
+from tests.unit.py import test_c34_t1a_tutorial_exclusions as contract
+
+
+def test_c34_t1a_exclusion_declaration_is_exact_and_each_notebook_names_its_unblocker():
+    contract.check_c34_t1a_exclusion_declaration_is_exact_and_each_notebook_names_its_unblocker()
+
+
+def test_c34_t1a_ports_replace_deferred_switches_and_delete_only_max_workers():
+    contract.check_c34_t1a_ports_replace_deferred_switches_and_delete_only_max_workers()
+
+
+def test_c34_t1a_notebooks_are_stripped_and_execution_disabled(tmp_path):
+    contract.check_c34_t1a_notebooks_are_stripped_and_execution_disabled(tmp_path)
+
+
+def test_c34_t1a_exclusion_gate_rehearses_each_local_red_and_a_clean_checkout(tmp_path):
+    contract.check_c34_t1a_exclusion_gate_rehearses_each_local_red_and_a_clean_checkout(tmp_path)

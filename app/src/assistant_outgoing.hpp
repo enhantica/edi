@@ -94,7 +94,7 @@ inline const Field* fields(Role role, std::size_t& count) {
     case Role::Parameter: { ROWS(T("path"),T("unique_name"),N("value"),N("uncertainty"),T("file_value"),T("file_su"),B("free"),T("dependence"),B("refinable"),B("fittable"),T("fit_reason"),T("unit")); }
     case Role::Diagnostic: { ROWS(T("message"),T("code"),T("severity"),T("path"),B("actionable")); }
     case Role::Selection: { ROWS(T("collection_id"),T("generation"),A("files",File)); }
-    case Role::File: { ROWS(T("id"),T("file_id"),N("ordinal"),N("bytes"),T("format"),T("reader_hint"),B("textReadable")); }
+    case Role::File: { ROWS(T("id"),T("file_id"),T("name"),N("ordinal"),N("bytes"),T("format"),T("reader_hint"),B("textReadable")); }
     // Only the deliberately shared instruction declaration digest is public;
     // input-content hashes and source configuration/path fingerprints are not.
     case Role::Skill: { ROWS(T("id"),T("sha256")); }

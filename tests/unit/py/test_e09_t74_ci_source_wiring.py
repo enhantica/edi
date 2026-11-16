@@ -9,6 +9,8 @@ from pathlib import Path
 import pytest
 import yaml
 
+from tests.fixtures.e09_t75_workflow import expanded_jobs
+
 ROOT = Path(__file__).resolve().parents[3]
 CONSUMERS = {'audit', 'core', 'notebooks', 'cli-python', 'cli-native', 'docs', 'app'}
 
@@ -58,7 +60,7 @@ def test_every_ci_consumer_uses_one_shared_crysta_resolution():
 def crysta_token_permissions(document):
     """Inspect every App token minted for crysta, including future jobs."""
     found = []
-    for name, job in document['jobs'].items():
+    for name, job in expanded_jobs(document, ROOT):
         for step in job.get('steps', []):
             if not str(step.get('uses', '')).startswith('actions/create-github-app-token@'):
                 continue
@@ -76,9 +78,9 @@ def crysta_token_permissions(document):
             requested = {
                 key: value for key, value in inputs.items() if key.startswith('permission-')
             }
-            assert requested == {'permission-contents': 'read', 'permission-actions': 'read'}, (
+            assert requested == {'permission-contents': 'read'}, (
                 f' unit 8: crysta token step {name}/{step.get("name", "unnamed")} '
-                'may request only contents:read and actions:read for the pinned PR artifact'
+                'may request only contents:read for the shared SDK source checkout'
             )
             found.append((name, step))
     assert found, ' unit 8: CI must mint a contents:read token for crysta'
@@ -96,6 +98,7 @@ def test_crysta_app_tokens_request_only_contents_read():
     'extra',
     [
         {'permission-pull-requests': 'read'},
+        {'permission-actions': 'read'},
         {'permission-actions': 'write'},
         {'permission-contents': 'write'},
         {'permission-contents': None},
@@ -108,7 +111,6 @@ def test_crysta_token_permission_counterfactuals(extra):
         'with': {
             'repositories': 'crysta',
             'permission-contents': 'read',
-            'permission-actions': 'read',
             **extra,
         },
     }

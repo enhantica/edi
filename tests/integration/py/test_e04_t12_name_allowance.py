@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib.util
+import os
 import subprocess
 import sys
 import zipfile
@@ -121,11 +122,13 @@ def real_parameter_node(tmp_path_factory):
             'addopts=',
             '-p',
             'no:cacheprovider',
+            '--noconftest',
             '--collect-only',
             '-q',
             str(path),
         ],
         cwd=folder,
+        env={**os.environ, 'PYTEST_DISABLE_PLUGIN_AUTOLOAD': '1'},
         capture_output=True,
         text=True,
         check=False,

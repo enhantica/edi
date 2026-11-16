@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: BSD-3-Clause
-# Build the edi app for the browser (edi ADR-0023): crysta and the app, once per Qt wasm kit, then the site
+# Build the edi app for the browser (edi ADR-0023): crysta and the app, with the multithreaded Qt wasm kit, then the site
 # zip (tools/ci/wasm-pack.sh). Run in the app environment, after wasm-toolchain:
-#   pixi run -e app wasm-build                 # both builds and the zip
-#   pixi run -e app wasm-build multithread     # one build, no zip (or: singlethread)
+#   pixi run -e app wasm-build                 # the multithread build and zip
+#   pixi run -e app wasm-build multithread     # the build without packing
 #
 # crysta is compiled here for wasm — the second place edi compiles crysta after the ThreadSanitizer tree
 # (tools/ci/tsan-worker.sh), for the same reason: the prebuilt SDK is a native build. The source is the pinned
@@ -16,6 +16,11 @@
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 cd "$ROOT"
+# Refuse removed or unknown targets before configuring or compiling anything.
+if [ "$#" -gt 1 ] || { [ "$#" -eq 1 ] && [ "$1" != multithread ]; }; then
+  echo "wasm-build: only the multithread build is supported" >&2
+  exit 2
+fi
 # shellcheck source=tools/ci/wasm-env.sh
 . "$ROOT/tools/ci/wasm-env.sh"
 : "${CONDA_PREFIX:?run this in the app pixi environment: pixi run -e app wasm-build}"
@@ -63,15 +68,8 @@ else
 fi
 
 build_kit() {
-  local flavour="$1" kit threads simd owner out key
-  # Both kits compile crysta with WebAssembly SIMD, its vectorised kernels included (SLEEF), and require it, so a
-  # configure that cannot find the SIMD backend refuses instead of building scalar kernels. Only threads differ: the
-  # multithread kit runs crysta's parallel fill on its std::thread pool, the singlethread kit stays serial.
-  case "$flavour" in
-    multithread) threads=ON simd=ON owner=OFF ;;
-    singlethread) threads=OFF simd=ON owner=ON ;;
-    *) echo "wasm-build: unknown build '$flavour' (multithread, singlethread)" >&2; return 1 ;;
-  esac
+  local flavour=multithread kit threads=ON simd=ON out key
+  # Require SIMD and the thread pool; a missing vector backend must refuse configuration.
   kit="$QT/wasm_$flavour"
   wasm_check_emsdk_pin "$kit"
   out="$ROOT/build/wasm/$flavour"
@@ -98,16 +96,14 @@ build_kit() {
 
   echo "wasm-build: the app for $flavour"
   local args=(-S . -B "$out/app" -G Ninja --no-warn-unused-cli -DCMAKE_BUILD_TYPE=Release
-    -DEDI_BUILD_APP=ON -DEDI_BUILD_BINDINGS=OFF -DEDI_APP_ASSISTANT=OFF -DEDI_WORKER_OWNER_THREAD="$owner"
+    -DEDI_BUILD_APP=ON -DEDI_BUILD_BINDINGS=OFF -DEDI_APP_ASSISTANT=OFF -DEDI_WORKER_OWNER_THREAD=OFF
     -DEDI_RELEASE_VERSION= -DEDI_RELEASE_HISTORY="$ROOT/data/releases.json"
     -DQT_HOST_PATH="$HOST" -DQT_HOST_PATH_CMAKE_DIR="$HOST/lib/cmake"
     -Dcrysta_DIR="$out/crysta-prefix/lib/cmake/crysta" -DEigen3_DIR="$EIGEN_DIR")
   # The multithread build starts its Web Workers with the page: Qt's four, the calculation worker and crysta's fill pool
   # (one thread fewer than the thread policy's max(1, cores - 2) team), so a fit never waits for a browser to start
   # one. Qt passes the value to Emscripten, which evaluates it in the page.
-  if [ "$threads" = ON ]; then
-    args+=(-DQT_WASM_PTHREAD_POOL_SIZE=navigator.hardwareConcurrency+4)
-  fi
+  args+=(-DQT_WASM_PTHREAD_POOL_SIZE=navigator.hardwareConcurrency+4)
   if [ -n "${EDI_GUI_COMPONENTS_SRC:-}" ]; then
     args+=(-DFETCHCONTENT_SOURCE_DIR_GUI_COMPONENTS="$EDI_GUI_COMPONENTS_SRC")
   fi
@@ -120,12 +116,7 @@ build_kit() {
   ls -l "$out/app/app/edi_app.wasm"
 }
 
+build_kit
 if [ "$#" -eq 0 ]; then
-  build_kit multithread
-  build_kit singlethread
   bash "$ROOT/tools/ci/wasm-pack.sh"
-else
-  for flavour in "$@"; do
-    build_kit "$flavour"
-  done
 fi

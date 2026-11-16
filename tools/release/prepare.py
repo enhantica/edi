@@ -21,6 +21,7 @@ from plan import (
     release_body,
     release_date,
     release_plan,
+    release_title,
     validate_history,
     version_key,
 )
@@ -191,7 +192,7 @@ def reserve_identity(
             payload = {
                 'tag_name': 'v' + version,
                 'target_commitish': commit,
-                'name': 'edi ' + version,
+                'name': release_title(version, today.isoformat(), preview=prerelease),
                 'body': release_body('', today.isoformat()),
                 'draft': True,
                 'prerelease': prerelease,

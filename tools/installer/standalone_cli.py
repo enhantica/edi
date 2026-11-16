@@ -1,145 +1,44 @@
 # SPDX-License-Identifier: BSD-3-Clause
-"""Build and qualify a single-executable CLI release asset."""
+"""Build and qualify the native CLI release archive."""
 
 import json
 import math
 import os
-import re
 import subprocess
 import tempfile
 import zipfile
 from pathlib import Path
 
+from native_runtime import (
+    bundle_runtime,
+    linux_dependencies,
+    macos_dependencies,
+    runtime_notices,
+    verify_dependencies,
+    windows_dependencies,
+)
 from package import ROOT, SYSTEM, run, sha256
 from python_wheel import build_wheel
 
-# The operating system libraries the standalone executable may load, by exact name; anything else
-# refuses the build, which is how a library missing from a user's system is caught here. Each ships
-# with every supported system, so it is admitted, never bundled. On Windows WinHTTP carries the
-# downloads (edi ADR-0075) and names compare case-insensitively; on Linux libdl loads the system
-# libcurl only when a download needs it; on macOS the C++ runtime is the system's (the release
-# rewrites its install name to /usr/lib/libc++.1.dylib) and libSystem carries the rest.
-SYSTEM_LIBRARIES = {
-    'linux': frozenset({
-        'ld-linux-x86-64.so.2',
-        'libc.so.6',
-        'libm.so.6',
-        'libpthread.so.0',
-        'libdl.so.2',
-        'librt.so.1',
-    }),
-    'windows': frozenset({
-        'kernel32.dll',
-        'advapi32.dll',
-        'bcrypt.dll',
-        'shell32.dll',
-        'user32.dll',
-        'ole32.dll',
-        'ws2_32.dll',
-        'ucrtbase.dll',
-        'winhttp.dll',
-    }),
-    'macos': frozenset({'/usr/lib/libSystem.B.dylib', '/usr/lib/libc++.1.dylib'}),
-}
-
-
-def linux_dependencies(listing: str) -> list[str]:
-    """The NEEDED entries of `readelf -d`; a NEEDED row in another shape refuses."""
-    names = []
-    for line in listing.splitlines():
-        if '(NEEDED)' not in line:
-            continue
-        match = re.search(r'Shared library: \[(.+)\]\s*$', line)
-        if not match:
-            raise RuntimeError(f'Cannot read the dependency row {line.strip()!r}')
-        names.append(match[1])
-    return names
-
-
-def macos_dependencies(listing: str) -> list[str]:
-    """The install names `otool -L` lists after the binary's own line; another shape refuses."""
-    names = []
-    for line in listing.splitlines()[1:]:
-        if not line.strip():
-            continue
-        name, marker, _ = line.strip().partition(' (compatibility version ')
-        if not marker:
-            raise RuntimeError(f'Cannot read the dependency row {line.strip()!r}')
-        names.append(name)
-    return names
-
-
-def windows_dependencies(listing: str) -> list[str]:
-    """Every row of every dependency section `dumpbin /dependents` prints, delay-load ones too.
-
-    A section is its heading, then one name per line from the first row to the next blank line; the
-    rows are taken whole, so a name with any character is compared, never skipped.
-    """
-    lines = listing.splitlines()
-    names, sections = [], 0
-    for index, line in enumerate(lines):
-        if not re.search(r'has the following (delay load )?dependencies:\s*$', line):
-            continue
-        sections += 1
-        started = False
-        for row in lines[index + 1 :]:
-            if row.strip():
-                started = True
-                names.append(row.strip())
-            elif started:
-                break
-    if not sections:
-        raise RuntimeError('Cannot find the dependency section in the dumpbin listing')
-    return names
-
-
-def verify_dependencies(binary: Path) -> None:
-    """Admit only the exact operating system libraries named for this platform."""
-    if SYSTEM == 'linux':
-        listing = subprocess.check_output(['readelf', '-d', binary], text=True)
-        libraries = linux_dependencies(listing)
-        external = set(libraries) - SYSTEM_LIBRARIES['linux']
-    elif SYSTEM == 'macos':
-        listing = subprocess.check_output(['otool', '-L', binary], text=True)
-        libraries = macos_dependencies(listing)
-        external = set(libraries) - SYSTEM_LIBRARIES['macos']
-    else:
-        listing = subprocess.check_output(['dumpbin', '/dependents', binary], text=True)
-        libraries = windows_dependencies(listing)
-        external = {name for name in libraries if name.lower() not in SYSTEM_LIBRARIES['windows']}
-    print(f'standalone dependencies: {sorted(libraries)}', flush=True)
-    if not libraries or external:
-        raise RuntimeError(f'Cannot qualify standalone dependencies: {sorted(external)}')
+__all__ = (
+    'linux_dependencies',
+    'macos_dependencies',
+    'verify_dependencies',
+    'windows_dependencies',
+)
 
 
 def build_cli(
-    crysta: Path,
+    prefix: Path,
     work: Path,
     common: list[str],
-    engine_options: list[str],
     version: str,
     commit: str,
     platform: str,
 ) -> None:
-    """Build a lean SDK and test the exact executable carried in the ZIP."""
-    engine, prefix, cli = (work / name for name in ('cli-engine', 'cli-prefix', 'cli-build'))
+    """Build and qualify the CLI and wheel from the same SDK used by the desktop app."""
+    cli = work / 'cli-build'
     flags = list(common)
-    if SYSTEM == 'windows':
-        flags.append('-DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded')
-    run([
-        'cmake',
-        '-S',
-        crysta,
-        '-B',
-        engine,
-        *flags,
-        *engine_options,
-        '-DCRYSTA_OPENMP=OFF',
-        '-DCRYSTA_STD_THREADS=ON',
-        '-DCRYSTA_SLEEF=OFF',
-    ])
-    run(['cmake', '--build', engine, '--target', 'crysta_core', 'crysta_cli', '--parallel', '4'])
-    run(['cmake', '--install', engine, '--prefix', prefix])
     options = [
         '-DEDI_BUILD_APP=OFF',
         '-DEDI_BUILD_BINDINGS=ON',
@@ -170,26 +69,26 @@ def build_cli(
     binary = source / ('easydiffraction' + suffix)
     if SYSTEM == 'linux':
         run(['strip', '--strip-unneeded', binary])
-    elif SYSTEM == 'macos':
-        # The packaging toolchain records its own libc++ install name. Use the
-        # OS runtime and refresh the ad hoc signature before testing the ZIP.
-        run([
-            '/usr/bin/install_name_tool',
-            '-change',
-            '@rpath/libc++.1.dylib',
-            '/usr/lib/libc++.1.dylib',
-            binary,
-        ])
-        run(['/usr/bin/codesign', '--force', '--sign', '-', binary])
+    libraries = bundle_runtime(binary, prefix)
+    runtime_notices(libraries, source / 'licenses/dependencies')
     asset = work / f'EasyDiffraction-{version}-{platform}-cli.zip'
     with zipfile.ZipFile(asset, 'w', compression=zipfile.ZIP_DEFLATED) as archive:
         archive.write(binary, executable)
         archive.write(source / 'LICENSE', 'LICENSE')
-        for notice in sorted((source / 'licenses').iterdir()):
-            archive.write(notice, 'licenses/' + notice.name)
+        runtime = binary.parent if SYSTEM == 'windows' else binary.parent / '.runtime'
+        for library in sorted(runtime.iterdir()):
+            if library.is_file() and (SYSTEM != 'windows' or library.suffix.lower() == '.dll'):
+                archive.write(
+                    library, library.name if SYSTEM == 'windows' else '.runtime/' + library.name
+                )
+        for notice in sorted((source / 'licenses').rglob('*')):
+            if notice.is_file():
+                archive.write(
+                    notice, 'licenses/' + notice.relative_to(source / 'licenses').as_posix()
+                )
 
     qualify_cli(asset, executable, version)
-    build_wheel(cli, work, version, commit, platform)
+    build_wheel(cli, work, version, commit, platform, prefix)
     (work / 'cli-qualification.json').write_text(
         json.dumps({
             'version': version,

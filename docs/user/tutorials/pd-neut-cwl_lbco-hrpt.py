@@ -173,10 +173,13 @@ project.display.pattern('hrpt')
 # The profile terms now fit the widths and shapes of the peaks.
 
 # %%
-experiment.peak.broad_gauss_u.free = True
-experiment.peak.broad_gauss_v.free = True
-experiment.peak.broad_gauss_w.free = True
-experiment.peak.broad_lorentz_y.free = True
+for parameter in (
+    experiment.peak.broad_gauss_u,
+    experiment.peak.broad_gauss_v,
+    experiment.peak.broad_gauss_w,
+    experiment.peak.broad_lorentz_y,
+):
+    parameter.free = True
 
 # %%
 project.analysis.fit()
@@ -192,10 +195,8 @@ project.display.pattern('hrpt')
 # displacements change the peak intensities with angle and come last.
 
 # %%
-structure.atom_sites['La'].adp_iso.free = True
-structure.atom_sites['Ba'].adp_iso.free = True
-structure.atom_sites['Co'].adp_iso.free = True
-structure.atom_sites['O'].adp_iso.free = True
+for site in structure.atom_sites:
+    site.adp_iso.free = True
 
 # %%
 project.analysis.fit()

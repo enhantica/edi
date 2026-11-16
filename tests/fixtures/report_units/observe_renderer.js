@@ -19,6 +19,7 @@ function element(id) {
         getAttribute: () => '0', setAttribute() {},
         append(...items) { this.children.push(...items); },
         appendChild(child) { this.children.push(child); },
+        replaceChildren(...items) { this.children = [...items]; },
         addEventListener(name, action) { this.listeners[name] = action; }, querySelector: selector => element(selector),
         querySelectorAll: selector => [element(selector)],
         getBoundingClientRect: () => ({width: 800, height: 600})};
@@ -85,9 +86,28 @@ class Renderer {
         getElementById: id => element(id), querySelector: selector => element(selector.replace(/^#/, '')),
         querySelectorAll: selector => [element(selector)], createElement: tag => element(tag),
         addEventListener: (_, action) => events.push(action)};
-    const Plotly = {newPlot: (...args) => { records.plots.push(args); return Promise.resolve(); },
-        react: (...args) => { records.plots.push(args); return Promise.resolve(); }};
+    const plots = new Map();
+    const draw = (...args) => { records.plots.push(args); plots.set(args[0], args); return Promise.resolve(); };
+    const Plotly = {newPlot: draw, react: draw,
+        restyle: (figure, changes) => {
+            const plot = plots.get(figure);
+            if (!plot) throw Error('Plotly restyle must address a real delivered plot');
+            for (const [name, values] of Object.entries(changes)) {
+                plot[1].forEach((trace, index) => { trace[name] = values[index]; });
+            }
+        },
+        relayout: (figure, changes) => {
+            const plot = plots.get(figure);
+            if (!plot) throw Error('Plotly relayout must address a real delivered plot');
+            for (const [name, value] of Object.entries(changes)) {
+                const keys = name.split('.');
+                let target = plot[2];
+                for (const key of keys.slice(0, -1)) target = target[key] ??= {};
+                target[keys.at(-1)] = value;
+            }
+        }};
     const sandbox = {document, THREE, Plotly, console, JSON, Math, Promise,
+        getComputedStyle: () => ({fontSize: '16px', getPropertyValue: () => ''}),
         OrbitControls: library.EventDispatcher ? class extends library.EventDispatcher {
             constructor() { super(); this.target = new library.Vector3(); }
             update() {}

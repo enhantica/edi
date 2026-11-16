@@ -1,6 +1,6 @@
 """gate 3: preserve the frozen inventory and all original assertion code.
 
-Only the exact structure-link and queued initial-calculation adaptations are permitted.
+Only declared structure-link, queued initial-calculation and held-result Save projections apply.
 The archive stays unchanged; every other witness remains byte-identical.
 """
 
@@ -23,6 +23,7 @@ def expected_blobs(blobs):
     result = dict(blobs)
     result[adaptation.WITNESS] = adaptation.adapted_blob(blobs[adaptation.WITNESS])
     result[adaptation.GUI_WITNESS] = adaptation.adapted_gui_blob(blobs[adaptation.GUI_WITNESS])
+    result[adaptation.SAVE_WITNESS] = adaptation.adapted_save_blob(blobs[adaptation.SAVE_WITNESS])
     return result
 
 
@@ -149,3 +150,40 @@ def test_gui_adaptation_receipt_cannot_repin_a_changed_wait(tmp_path, monkeypatc
     monkeypatch.setattr(adaptation, 'HERE', tmp_path)
     with pytest.raises(AssertionError, match='only the setup wait'):
         adaptation.adapted_gui_blob(original)
+
+
+@pytest.mark.parametrize(
+    'damage', ['predicate', 'message', 'zero-anchor', 'missing-recompute', 'original-pin']
+)
+def test_save_adaptation_receipt_cannot_bless_other_witness_changes(tmp_path, monkeypatch, damage):
+    source = ROOT / 'tests/fixtures/c34_t28_baseline/api_witness_adaptation.py'
+    spec = importlib.util.spec_from_file_location('save_witness_escape', source)
+    adaptation = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(adaptation)
+    receipt = json.loads((source.parent / 'api_witness_adaptation.json').read_text())
+    original = frozen_blobs()[adaptation.SAVE_WITNESS]
+    assert (
+        adaptation.adapted_save_blob(original) == (ROOT / adaptation.SAVE_WITNESS).read_bytes()
+    ), 'The exact authorized Save projection admits before every receipt-tampering control'
+    if damage == 'original-pin':
+        receipt['save']['original_sha256'] = '0' * 64
+    else:
+        index, before, after = {
+            'predicate': (2, "'_data.intensity_calc' in edited_file", 'True'),
+            'message': (2, 'Save renews a held stale bank', 'Save ignores its held stale bank'),
+            'zero-anchor': (1, 'left 0 0', 'left 0 1'),
+            'missing-recompute': (2, '    check_computed(destination, edi)\n', ''),
+        }[damage]
+        edit = receipt['save']['replacements'][index]
+        assert before in edit['after'], (
+            'The Save escape reaches its exact declared scientific or assertion site'
+        )
+        edit['after'] = edit['after'].replace(before, after, 1)
+        changed = original.decode()
+        for replacement in receipt['save']['replacements']:
+            changed = changed.replace(replacement['before'], replacement['after'], 1)
+        receipt['save']['adapted_sha256'] = hashlib.sha256(changed.encode()).hexdigest()
+    (tmp_path / 'api_witness_adaptation.json').write_text(json.dumps(receipt), encoding='utf-8')
+    monkeypatch.setattr(adaptation, 'HERE', tmp_path)
+    with pytest.raises(AssertionError, match=r'unchanged independent|only declared'):
+        adaptation.adapted_save_blob(original)

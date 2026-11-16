@@ -10,6 +10,7 @@ import pytest
 
 from tests.fixtures.dictionary_display.constrained import project_input
 from tests.fixtures.dictionary_display.reference import display
+from tests.fixtures.parameter_notation.reference import expected_plain, scientific
 
 ROOT = Path(__file__).resolve().parents[3]
 INPUT = ROOT / 'tests/fixtures/loop_parameter_ids/line-segment'
@@ -150,6 +151,18 @@ def test_repr_follows_project_rule_and_report_always_uses_iucr(
         )
 
 
+def table_token(value, dictionary_text):
+    # Repr retains dictionary precision; report tables apply the later owner
+    # magnitude rule independently (7dea80601, 2026-11-09).
+    if scientific(value):
+        mantissa, power = expected_plain(value)
+        exponent = str(power).translate(str.maketrans('0123456789-', '⁰¹²³⁴⁵⁶⁷⁸⁹⁻'))
+        shown = format(mantissa, '.2f') + '\u00d710' + exponent
+    else:
+        shown = dictionary_text
+    return re.compile(r'(?<![0-9.])' + re.escape(shown) + r'(?![0-9.eE⁰¹²³⁴⁵⁶⁷⁸⁹])')
+
+
 @pytest.mark.parametrize(
     ('uid', 'value', 'kind', 'digits'),
     [
@@ -196,10 +209,11 @@ def test_every_numeric_category_reaches_repr_report_and_html(tmp_path, uid, valu
         group for part in parts for group in part['categories'] if group['id'] == category
     ]
     assert categories, 'Every displayed numeric category has its own report category'
-    assert token.search(json.dumps(categories, ensure_ascii=False)), (
+    report_token = table_token(value, expected)
+    assert report_token.search(json.dumps(categories, ensure_ascii=False)), (
         'The corresponding report category contains its independently formatted token'
     )
-    assert token.search(project.report.as_html()), (
+    assert report_token.search(project.report.as_html()), (
         'Each numeric category reaches its complete independently formatted HTML token'
     )
     assert parameter.value == value, 'The consumer chain preserves every original input double'

@@ -185,7 +185,10 @@ def fixed_declaration(key, letter):
 
 def owned_experiment_shape(experiment, bind):
     # The independent profile schema also owns aliases to peak coefficients.
-    for field in sorted({field for fields in PROFILES.values() for field in fields}):
+    peak_fields = {field for fields in PROFILES.values() for field in fields}
+    if experiment.experiment_type.beam_mode.name == 'CONSTANT_WAVELENGTH':
+        peak_fields.update(CWL_PEAK)
+    for field in sorted(peak_fields):
         parameter = getattr(experiment.peak, field, None)
         if parameter is not None:
             bind(f'{experiment.name}.peak.{field}', parameter)
@@ -195,11 +198,6 @@ def owned_experiment_shape(experiment, bind):
     )
     for row in links:
         bind(f'{experiment.name}.linked_structure.{row.structure_id}.scale', row.scale)
-    if experiment.experiment_type.beam_mode.name == 'CONSTANT_WAVELENGTH':
-        for field in CWL_PEAK:
-            parameter = getattr(experiment.peak, field, None)
-            if parameter is not None:
-                bind(f'{experiment.name}.peak.{field}', parameter)
     extinction = experiment.extinction
     extinction_shape = None
     if extinction is not None:

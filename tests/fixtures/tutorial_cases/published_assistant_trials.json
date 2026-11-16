@@ -1,0 +1,328 @@
+{
+  "schema": 1,
+  "summary_document": "assistant-prompt-trials",
+  "historical_export_sha256": "b388c166044da1b290a5d848d117049a15566e2961d711eb2722f30ada2e3f03",
+  "documentation": {
+    "source_commit": "b16f9867ef1de464dfed731796848eb5ba60e739",
+    "notebook_source_url": "https://colab.research.google.com/github/enhantica/edi/blob/b16f9867ef1de464dfed731796848eb5ba60e739/docs/user/tutorials/pd-neut-cwl_lbco-hrpt.ipynb",
+    "published_notebook_url": "https://easydiffraction.org/assets/tutorials/notebooks/pd-neut-cwl_lbco-hrpt.ipynb",
+    "published_notebook_sha256": "ae2202d852d810664a2081b435c46534e93bfb239f8fd3dc083c1579764d1b69"
+  },
+  "scientific_reference": {
+    "path": "docs/user/cli/pd-neut-cwl_lbco-hrpt/expected.json",
+    "sha256": "b89875d83f247a48f60fa5cbe0056ef2917a7a366375d01402fa570862b022b5",
+    "single_fit_workflow": "One fit starting with all15final free parameters and the equality constraint already present; different from five cumulative prompt stages."
+  },
+  "runtime": {
+    "edi_source": "80dc974c431aceee6f1dd4f3468847466b56d27a",
+    "sdk_source": "2b6b981e21194f9a76074742dd0e148736ca4d9b",
+    "sdk_library_sha256": "13b1c03ea1555125540e50309180f801efa927fae288e4a1380332da1765a7e3",
+    "archive_sha256": {
+      "EasyDiffraction-0.0.0-linux-x86_64-cli.zip": "8312ed189336606bd6526de374c672e37bd3daf9f6903e270b3ac4a8b7c1edf0",
+      "easydiffraction-0.0.0-cp312-abi3-linux_x86_64.whl": "457f29d8c2c69c41a599d296a2db8ff0d625fe4f1cda72dcfc2d61370b8455c5"
+    },
+    "native_binary_sha256": "93b27ca8a5ad7a444909d5b25849a45a72cf740ad18953a824e0531c430aaf64",
+    "python_binary_sha256": "cc558ded592ae3fc98a6acd0f7064e80b6d0e0ed62bd4a195d5db14ce414d799",
+    "diagnostic_only": true
+  },
+  "records": [
+    {
+      "interface": "python",
+      "model": "Codex assistant (exact backend model not exposed)",
+      "date": "2026-11-13",
+      "publication_route": "published-release",
+      "site_base": "https://easydiffraction.org/",
+      "prompt_url": "https://easydiffraction.org/python/tutorials/assistant/",
+      "prompt_text": "Fit the crystal structure of La0.5Ba0.5CoO3 to neutron powder diffraction data with\nEasyDiffraction (edi).\n\nDocumentation: https://easydiffraction.org/ (a short index for assistants:\nhttps://easydiffraction.org/llms.txt).\nWorked examples: https://easydiffraction.org/python/tutorials/ (choose the one closest to this task).\n\nThe two input files are in this folder:\n- tutorial-lbco.cif: the structure, space group P m -3 m, La and Ba sharing one site.\n- tutorial-hrpt.xye: the measured pattern, constant-wavelength neutrons on HRPT at PSI, wavelength\n  1.494 Å; columns 2θ (degrees), counts and their standard uncertainties.\n\nCreate a Jupyter notebook, ready to run, that loads both files and fits the structure in stages.\nEach stage frees one more group of parameters and keeps the ones freed before it free:\n1. the scale, the 2θ zero and the cell length a;\n2. the background points;\n3. the peak widths U, V, W and Y;\n4. the isotropic displacements (B iso) of La, Ba, Co and O.\nAfter stage 4, show the correlations. La's and Ba's B iso should move together almost exactly.\nConstrain Ba's B iso to equal La's, and fit again.\n\nAfter every fit, show the fitted parameters. At the end, give the reduced χ², Rwp and each fitted\nvalue with its standard uncertainty.\n",
+      "prompt_sha256": "53249ac2218bee3b074b03dd09dd39f234f8ba93dbfd75ecba0ea790739921cc",
+      "prompt_page_sha256": "91a3ade8f40254027a99e2cf74c760e26580d143d58876b13c48e5733220d038",
+      "status": "completed-with-findings",
+      "artifact": {
+        "name": "lbco_hrpt_prompt.ipynb",
+        "sha256": "d5f516b4e96086f3c37ebc9e21d4e145f74558fad4b4a5417e7cd2f9f535e960"
+      },
+      "execution": {
+        "exit_code": 0,
+        "edi_source": "80dc974c431aceee6f1dd4f3468847466b56d27a",
+        "sdk_source": "2b6b981e21194f9a76074742dd0e148736ca4d9b",
+        "binary_sha256": "cc558ded592ae3fc98a6acd0f7064e80b6d0e0ed62bd4a195d5db14ce414d799",
+        "diagnostic_only": true,
+        "claims_released_artifact": false,
+        "stage_captures": [
+          "python-stages"
+        ],
+        "result_capture": "python-result",
+        "executed_artifact_sha256": "e8752f568fc9f6685cc225047ce49057869cf298dc4895812f1c87da5ba81f7f"
+      },
+      "comparisons": [
+        {
+          "quantity": "n_free",
+          "value": 15.0,
+          "kind": "reference",
+          "tol_abs": 0.0,
+          "tol_rel": null,
+          "actual": 15,
+          "matches": true
+        },
+        {
+          "quantity": "rwp",
+          "value": 0.0721,
+          "kind": "reference",
+          "tol_abs": null,
+          "tol_rel": 0.05,
+          "actual": 0.07230691827834755,
+          "matches": true
+        },
+        {
+          "quantity": "param.La.adp_iso.value",
+          "value": 0.54531419,
+          "kind": "reference",
+          "tol_abs": 0.05560615664,
+          "tol_rel": null,
+          "actual": 0.5149794080059468,
+          "matches": true
+        },
+        {
+          "quantity": "param.Co.adp_iso.value",
+          "value": 0.28785926,
+          "kind": "reference",
+          "tol_abs": 0.1115348565,
+          "tol_rel": null,
+          "actual": 0.2102963406485651,
+          "matches": true
+        },
+        {
+          "quantity": "param.O.adp_iso.value",
+          "value": 1.4059563,
+          "kind": "reference",
+          "tol_abs": 0.03205091242,
+          "tol_rel": null,
+          "actual": 1.3928594003754702,
+          "matches": true
+        },
+        {
+          "quantity": "param.cell_length_a.value",
+          "value": 3.8907845,
+          "kind": "reference",
+          "tol_abs": 7.625015336e-05,
+          "tol_rel": null,
+          "actual": 3.890790643109819,
+          "matches": true
+        },
+        {
+          "quantity": "iterations",
+          "value": 5.0,
+          "kind": "regression-pin",
+          "tol_abs": 0.0,
+          "tol_rel": null,
+          "actual": 1,
+          "matches": false
+        },
+        {
+          "quantity": "reduced_chi_square",
+          "value": 1.29684855,
+          "kind": "regression-pin",
+          "tol_abs": 1e-06,
+          "tol_rel": null,
+          "actual": 1.2974095397418892,
+          "matches": false
+        }
+      ],
+      "scientific_reference_match": true,
+      "single_fit_regression_match": false,
+      "findings": [
+        "All five cumulative staged fits completed using the actual generated artifact.",
+        "All six unchanged FullProf scientific-reference rows match within their original tolerances.",
+        "The separate all-free single-fit chi-square and iteration pins do not match this five-fit trajectory; the original values and tolerances remain unchanged.",
+        "The actual La/Ba displacement correlation is -1.00. The worked tutorial explicitly describes opposite signs.",
+        "The executed Edi/SDK diagnostic artifacts are source80dc974/SDK2b, not the published release binary or the current candidate SDK."
+      ],
+      "La_Ba_Biso_correlation": -1.0,
+      "fetched_prompt_sha256": "6c052ac701021eecfbecde35503773444c6a2ba1ecc6aa9d033cbbfbf4847f3f"
+    },
+    {
+      "interface": "cli",
+      "model": "Codex assistant (exact backend model not exposed)",
+      "date": "2026-11-13",
+      "publication_route": "published-release",
+      "site_base": "https://easydiffraction.org/",
+      "prompt_url": "https://easydiffraction.org/cli/tutorials/assistant/",
+      "prompt_text": "Fit the crystal structure of La0.5Ba0.5CoO3 to neutron powder diffraction data with\nEasyDiffraction (edi).\n\nDocumentation: https://easydiffraction.org/ (a short index for assistants:\nhttps://easydiffraction.org/llms.txt).\nWorked examples: https://easydiffraction.org/cli/tutorials/ (choose the one closest to this task).\n\nThe two input files are in this folder:\n- tutorial-lbco.cif: the structure, space group P m -3 m, La and Ba sharing one site.\n- tutorial-hrpt.xye: the measured pattern, constant-wavelength neutrons on HRPT at PSI, wavelength\n  1.494 Å; columns 2θ (degrees), counts and their standard uncertainties.\n\nCreate an EasyDiffraction project, ready for edi fit, that loads both files and fits the structure\nin stages.\nEach stage frees one more group of parameters and keeps the ones freed before it free:\n1. the scale, the 2θ zero and the cell length a;\n2. the background points;\n3. the peak widths U, V, W and Y;\n4. the isotropic displacements (B iso) of La, Ba, Co and O.\nAfter stage 4, show the correlations. La's and Ba's B iso should move together almost exactly.\nConstrain Ba's B iso to equal La's, and fit again.\n\nAfter every fit, show the fitted parameters. At the end, give the reduced χ², Rwp and each fitted\nvalue with its standard uncertainty.\n",
+      "prompt_sha256": "93b73973c014c91ead8476d4ce40d78248ca4d3298524384454c19e98f55c831",
+      "prompt_page_sha256": "a0964fccf2a69955c3a0f3ea2cbcbcb3610080b9467a9a86c5576ebc73407a90",
+      "status": "completed-with-findings",
+      "artifact": {
+        "name": "cli-ready-project.zip",
+        "sha256": "4d89fd52f404b0b29cc92d8d709c503b6d0f96419a612cf265e7856f6d67caa7"
+      },
+      "execution": {
+        "exit_code": 0,
+        "edi_source": "80dc974c431aceee6f1dd4f3468847466b56d27a",
+        "sdk_source": "2b6b981e21194f9a76074742dd0e148736ca4d9b",
+        "binary_sha256": "93b27ca8a5ad7a444909d5b25849a45a72cf740ad18953a824e0531c430aaf64",
+        "diagnostic_only": true,
+        "claims_released_artifact": false,
+        "stage_captures": [
+          "cli-stage-1",
+          "cli-stage-2",
+          "cli-stage-3",
+          "cli-stage-4",
+          "cli-stage-5"
+        ],
+        "result_capture": "cli-stage-5"
+      },
+      "comparisons": [
+        {
+          "quantity": "n_free",
+          "value": 15.0,
+          "kind": "reference",
+          "tol_abs": 0.0,
+          "tol_rel": null,
+          "actual": 15.0,
+          "matches": true
+        },
+        {
+          "quantity": "rwp",
+          "value": 0.0721,
+          "kind": "reference",
+          "tol_abs": null,
+          "tol_rel": 0.05,
+          "actual": 0.0723069183,
+          "matches": true
+        },
+        {
+          "quantity": "param.La.adp_iso.value",
+          "value": 0.54531419,
+          "kind": "reference",
+          "tol_abs": 0.05560615664,
+          "tol_rel": null,
+          "actual": 0.5149773669,
+          "matches": true
+        },
+        {
+          "quantity": "param.Co.adp_iso.value",
+          "value": 0.28785926,
+          "kind": "reference",
+          "tol_abs": 0.1115348565,
+          "tol_rel": null,
+          "actual": 0.210297607,
+          "matches": true
+        },
+        {
+          "quantity": "param.O.adp_iso.value",
+          "value": 1.4059563,
+          "kind": "reference",
+          "tol_abs": 0.03205091242,
+          "tol_rel": null,
+          "actual": 1.392859705,
+          "matches": true
+        },
+        {
+          "quantity": "param.cell_length_a.value",
+          "value": 3.8907845,
+          "kind": "reference",
+          "tol_abs": 7.625015336e-05,
+          "tol_rel": null,
+          "actual": 3.890790617,
+          "matches": true
+        },
+        {
+          "quantity": "iterations",
+          "value": 5.0,
+          "kind": "regression-pin",
+          "tol_abs": 0.0,
+          "tol_rel": null,
+          "actual": 1.0,
+          "matches": false
+        },
+        {
+          "quantity": "reduced_chi_square",
+          "value": 1.29684855,
+          "kind": "regression-pin",
+          "tol_abs": 1e-06,
+          "tol_rel": null,
+          "actual": 1.29740954,
+          "matches": false
+        }
+      ],
+      "scientific_reference_match": true,
+      "single_fit_regression_match": false,
+      "findings": [
+        "All five cumulative staged fits completed using the actual generated artifact.",
+        "All six unchanged FullProf scientific-reference rows match within their original tolerances.",
+        "The separate all-free single-fit chi-square and iteration pins do not match this five-fit trajectory; the original values and tolerances remain unchanged.",
+        "The actual La/Ba displacement correlation is -1.00. The worked tutorial explicitly describes opposite signs.",
+        "The executed Edi/SDK diagnostic artifacts are source80dc974/SDK2b, not the published release binary or the current candidate SDK.",
+        "After four successful native fits the authored correlation reader incorrectly expected a data_ header and short tag names. Corrected the reader and completed only stage5 from the untouched genuine stage4 output. Earlier log retained."
+      ],
+      "La_Ba_Biso_correlation": -1.0,
+      "fetched_prompt_sha256": "d71972ebeb023c6b35bdc1c1e359a7ab1bc8abe6137b31b259104291598f6dd0"
+    }
+  ],
+  "captures": {
+    "prompt-acquisition": {
+      "text": "[\n  {\n    \"interface\": \"python\",\n    \"url\": \"https://easydiffraction.org/python/tutorials/assistant/\",\n    \"final_url\": \"https://easydiffraction.org/python/tutorials/assistant/\",\n    \"http_status\": 200,\n    \"sha256\": \"91a3ade8f40254027a99e2cf74c760e26580d143d58876b13c48e5733220d038\"\n  },\n  {\n    \"interface\": \"cli\",\n    \"url\": \"https://easydiffraction.org/cli/tutorials/assistant/\",\n    \"final_url\": \"https://easydiffraction.org/cli/tutorials/assistant/\",\n    \"http_status\": 200,\n    \"sha256\": \"a0964fccf2a69955c3a0f3ea2cbcbcb3610080b9467a9a86c5576ebc73407a90\"\n  }\n]\n",
+      "sha256": "2c10aa116d169b500f5cfe638e5bbad358816bd525c76f0dcfc6afb141050d8f"
+    },
+    "reference-acquisition": {
+      "text": "[\n  {\n    \"url\": \"https://raw.githubusercontent.com/enhantica/edi-data/main/structures/tutorial-lbco.cif\",\n    \"name\": \"tutorial-lbco.cif\",\n    \"http_status\": 200,\n    \"final_url\": \"https://raw.githubusercontent.com/enhantica/edi-data/main/structures/tutorial-lbco.cif\",\n    \"sha256\": \"00d1adc78bc31fff2e5bb124127aab91eefc889e2065c51b378a51cad02778c6\"\n  },\n  {\n    \"url\": \"https://raw.githubusercontent.com/enhantica/edi-data/main/data/tutorial-hrpt.xye\",\n    \"name\": \"tutorial-hrpt.xye\",\n    \"http_status\": 200,\n    \"final_url\": \"https://raw.githubusercontent.com/enhantica/edi-data/main/data/tutorial-hrpt.xye\",\n    \"sha256\": \"70dba3f642b394f0e7e7802a8637e0e287164562671993ee0701b813c902e360\"\n  },\n  {\n    \"url\": \"https://easydiffraction.org/python/tutorials/cases/pd-neut-cwl_lbco-hrpt/\",\n    \"name\": \"python-reference.html\",\n    \"http_status\": 200,\n    \"final_url\": \"https://easydiffraction.org/python/tutorials/cases/pd-neut-cwl_lbco-hrpt/\",\n    \"sha256\": \"ffd90f58c6e2236f5c0c4419353b22df5afcfa6acbe58d3c08f9a9b186ea7f95\"\n  },\n  {\n    \"url\": \"https://easydiffraction.org/cli/tutorials/cases/pd-neut-cwl_lbco-hrpt/\",\n    \"name\": \"cli-reference.html\",\n    \"http_status\": 200,\n    \"final_url\": \"https://easydiffraction.org/cli/tutorials/cases/pd-neut-cwl_lbco-hrpt/\",\n    \"sha256\": \"8b678c64de26a67f2986745ab735006d8b4846c6fc29b712942436ce157d5dba\"\n  },\n  {\n    \"url\": \"https://easydiffraction.org/llms.txt\",\n    \"name\": \"llms.txt\",\n    \"http_status\": 200,\n    \"final_url\": \"https://easydiffraction.org/llms.txt\",\n    \"sha256\": \"c84413d17530c9971244f52262f494bc8b205eef821b96f321c16c09dbc9fda8\"\n  }\n]\n",
+      "sha256": "bf39343bab6cd133b33563f94b51b2a8c740f707158ce5b106d843166795b89e"
+    },
+    "staged-reference": {
+      "text": "{\n  \"url\": \"https://easydiffraction.org/assets/tutorials/notebooks/pd-neut-cwl_lbco-hrpt.ipynb\",\n  \"status\": 200,\n  \"date\": \"2026-11-13T12:31:56.679955+00:00\",\n  \"sha256\": \"ae2202d852d810664a2081b435c46534e93bfb239f8fd3dc083c1579764d1b69\",\n  \"actual_published_fit_outputs\": [\n    {\n      \"cell\": 24,\n      \"source\": \"project.analysis.fit()\\nproject.display.fit.results()\",\n      \"stream\": \"edi fit: project lbco_hrpt, 3098 pts fitted / 3098 loaded, 3 free\\n   iter   time (s)   Rwp (%)  reduced \\u03c7\\u00b2   change\\n                       53.67        71.21\\n      1      0.008     12.56         3.90   94.5% \\u2193\\n      2      0.010     12.56         3.90   \\n  done \\u00b7 converged \\u00b7 2 iters \\u00b7 reduced \\u03c7\\u00b2 3.90 \\u00b7 Rwp 12.56 % \\u00b7 0.01 s\\n\"\n    },\n    {\n      \"cell\": 28,\n      \"source\": \"project.analysis.fit()\\nproject.display.fit.results()\",\n      \"stream\": \"edi fit: project lbco_hrpt, 3098 pts fitted / 3098 loaded, 8 free\\n   iter   time (s)   Rwp (%)  reduced \\u03c7\\u00b2   change\\n                       12.56         3.91\\n      1      0.008     10.92         2.95   24.4% \\u2193\\n  done \\u00b7 converged \\u00b7 1 iters \\u00b7 reduced \\u03c7\\u00b2 2.95 \\u00b7 Rwp 10.92 % \\u00b7 0.01 s\\n\"\n    },\n    {\n      \"cell\": 32,\n      \"source\": \"project.analysis.fit()\\nproject.display.fit.results()\",\n      \"stream\": \"edi fit: project lbco_hrpt, 3098 pts fitted / 3098 loaded, 12 free\\n   iter   time (s)   Rwp (%)  reduced \\u03c7\\u00b2   change\\n                       10.92         2.96\\n      1      0.011     10.75         2.86   3.2% \\u2193\\n  done \\u00b7 converged \\u00b7 1 iters \\u00b7 reduced \\u03c7\\u00b2 2.86 \\u00b7 Rwp 10.75 % \\u00b7 0.01 s\\n\"\n    },\n    {\n      \"cell\": 36,\n      \"source\": \"project.analysis.fit()\\nproject.display.fit.results()\",\n      \"stream\": \"edi fit: project lbco_hrpt, 3098 pts fitted / 3098 loaded, 16 free\\n   iter   time (s)   Rwp (%)  reduced \\u03c7\\u00b2   change\\n                       10.75         2.87\\n      1      0.013      7.23         1.30   54.7% \\u2193\\n      2      0.017      7.23         1.30   \\n  done \\u00b7 converged \\u00b7 2 iters \\u00b7 reduced \\u03c7\\u00b2 1.30 \\u00b7 Rwp 7.23 % \\u00b7 0.02 s\\n\"\n    },\n    {\n      \"cell\": 41,\n      \"source\": \"project.analysis.fit()\\nproject.display.fit.results()\",\n      \"stream\": \"edi fit: project lbco_hrpt, 3098 pts fitted / 3098 loaded, 15 free\\n   iter   time (s)   Rwp (%)  reduced \\u03c7\\u00b2   change\\n                        7.23         1.30\\n      1      0.011      7.23         1.30   \\n  done \\u00b7 converged \\u00b7 1 iters \\u00b7 reduced \\u03c7\\u00b2 1.30 \\u00b7 Rwp 7.23 % \\u00b7 0.01 s\\n\"\n    }\n  ]\n}\n",
+      "sha256": "badbc49e0236e63c6aaf16c2d835895582805d74dfc7b822598f8e0065701a2a"
+    },
+    "package-source": {
+      "text": "{\n  \"source_head\": \"80dc974c431aceee6f1dd4f3468847466b56d27a\",\n  \"sdk_source\": \"2b6b981e21194f9a76074742dd0e148736ca4d9b\",\n  \"sdk_library_sha256\": \"13b1c03ea1555125540e50309180f801efa927fae288e4a1380332da1765a7e3\",\n  \"sdk_library_unchanged\": true,\n  \"diagnostic_only\": true,\n  \"files\": {\n    \"EasyDiffraction-0.0.0-linux-x86_64-cli.zip\": \"8312ed189336606bd6526de374c672e37bd3daf9f6903e270b3ac4a8b7c1edf0\",\n    \"easydiffraction-0.0.0-cp312-abi3-linux_x86_64.whl\": \"457f29d8c2c69c41a599d296a2db8ff0d625fe4f1cda72dcfc2d61370b8455c5\"\n  }\n}\n",
+      "sha256": "b8d2eaf60ff8cc6d4f11caa40e235c0f012142c69e142e88526960d30640b871"
+    },
+    "python-stages": {
+      "text": "[\n  {\n    \"stage\": \"scale-zero-cell\",\n    \"status\": \"DONE\",\n    \"free_count\": 3,\n    \"reduced_chi_square\": 3.901928200296847,\n    \"rwp\": 0.12563901125532786,\n    \"values\": {\n      \"experiment.instrument.calib_twotheta_offset\": 0.6209079802267344,\n      \"experiment.linked_structures[lbco].scale\": 7.258601413599912,\n      \"structure.cell.length_a\": 3.890816577262409\n    },\n    \"uncertainties\": {\n      \"experiment.instrument.calib_twotheta_offset\": 0.0018382096500672255,\n      \"experiment.linked_structures[lbco].scale\": 0.03696852403918762,\n      \"structure.cell.length_a\": 6.097460019668386e-05\n    }\n  },\n  {\n    \"stage\": \"background\",\n    \"status\": \"DONE\",\n    \"free_count\": 8,\n    \"reduced_chi_square\": 2.9536023633324433,\n    \"rwp\": 0.1092219182185594,\n    \"values\": {\n      \"experiment.background[1].intensity\": 168.0846661740925,\n      \"experiment.background[2].intensity\": 168.2776361790093,\n      \"experiment.background[3].intensity\": 172.288932418249,\n      \"experiment.background[4].intensity\": 174.3398481047652,\n      \"experiment.background[5].intensity\": 176.39110990927054,\n      \"experiment.instrument.calib_twotheta_offset\": 0.6212923417930072,\n      \"experiment.linked_structures[lbco].scale\": 7.082560665391388,\n      \"structure.cell.length_a\": 3.890833907458607\n    },\n    \"uncertainties\": {\n      \"experiment.background[1].intensity\": 2.0674295691833975,\n      \"experiment.background[2].intensity\": 1.494722936623987,\n      \"experiment.background[3].intensity\": 1.069372115944556,\n      \"experiment.background[4].intensity\": 0.947774321796097,\n      \"experiment.background[5].intensity\": 1.2906475633526906,\n      \"experiment.instrument.calib_twotheta_offset\": 0.0016392085170135445,\n      \"experiment.linked_structures[lbco].scale\": 0.03266947205051915,\n      \"structure.cell.length_a\": 5.437952613857537e-05\n    }\n  },\n  {\n    \"stage\": \"profile-widths\",\n    \"status\": \"DONE\",\n    \"free_count\": 12,\n    \"reduced_chi_square\": 2.8625218472911276,\n    \"rwp\": 0.10745507022211855,\n    \"values\": {\n      \"experiment.background[1].intensity\": 168.43483596145214,\n      \"experiment.background[2].intensity\": 167.5601054233345,\n      \"experiment.background[3].intensity\": 171.15084414550773,\n      \"experiment.background[4].intensity\": 173.29844690620286,\n      \"experiment.background[5].intensity\": 175.44267553134003,\n      \"experiment.instrument.calib_twotheta_offset\": 0.6210669308002871,\n      \"experiment.linked_structures[lbco].scale\": 7.201350623123604,\n      \"experiment.peak.broad_gauss_u\": 0.08260203409293526,\n      \"experiment.peak.broad_gauss_v\": -0.10646777853626141,\n      \"experiment.peak.broad_gauss_w\": 0.10965849884981627,\n      \"experiment.peak.broad_lorentz_y\": 0.08781756590943253,\n      \"structure.cell.length_a\": 3.8908411622755916\n    },\n    \"uncertainties\": {\n      \"experiment.background[1].intensity\": 2.0367527049808394,\n      \"experiment.background[2].intensity\": 1.4797650039712733,\n      \"experiment.background[3].intensity\": 1.081429211787937,\n      \"experiment.background[4].intensity\": 0.9596363677873324,\n      \"experiment.background[5].intensity\": 1.3085533626287982,\n      \"experiment.instrument.calib_twotheta_offset\": 0.001669953065826662,\n      \"experiment.linked_structures[lbco].scale\": 0.04064862852038302,\n      \"experiment.peak.broad_gauss_u\": 0.0047576564699339866,\n      \"experiment.peak.broad_gauss_v\": 0.010422392800019007,\n      \"experiment.peak.broad_gauss_w\": 0.005167311584487067,\n      \"experiment.peak.broad_lorentz_y\": 0.0032046115117987744,\n      \"structure.cell.length_a\": 5.51340045409916e-05\n    }\n  },\n  {\n    \"stage\": \"isotropic-displacements\",\n    \"status\": \"DONE\",\n    \"free_count\": 16,\n    \"reduced_chi_square\": 1.297830749934415,\n    \"rwp\": 0.07230692515012598,\n    \"values\": {\n      \"experiment.background[1].intensity\": 169.54323089820738,\n      \"experiment.background[2].intensity\": 165.14067873921854,\n      \"experiment.background[3].intensity\": 167.26770939979093,\n      \"experiment.background[4].intensity\": 176.08545844575494,\n      \"experiment.background[5].intensity\": 171.2702860031473,\n      \"experiment.instrument.calib_twotheta_offset\": 0.6204163447165632,\n      \"experiment.linked_structures[lbco].scale\": 9.132123672739608,\n      \"experiment.peak.broad_gauss_u\": 0.08267737782775295,\n      \"experiment.peak.broad_gauss_v\": -0.11764590278975916,\n      \"experiment.peak.broad_gauss_w\": 0.12142096069770439,\n      \"experiment.peak.broad_lorentz_y\": 0.08370226968653027,\n      \"structure.atom_sites[Ba].adp_iso\": 0.5242293978905124,\n      \"structure.atom_sites[Co].adp_iso\": 0.21027812442349753,\n      \"structure.atom_sites[La].adp_iso\": 0.509281060059722,\n      \"structure.atom_sites[O].adp_iso\": 1.392861940731297,\n      \"structure.cell.length_a\": 3.890790597093252\n    },\n    \"uncertainties\": {\n      \"experiment.background[1].intensity\": 1.3719847100369442,\n      \"experiment.background[2].intensity\": 0.9995344024292859,\n      \"experiment.background[3].intensity\": 0.738376229196215,\n      \"experiment.background[4].intensity\": 0.6554357203980884,\n      \"experiment.background[5].intensity\": 0.9346665969657806,\n      \"experiment.instrument.calib_twotheta_offset\": 0.0010380954077096347,\n      \"experiment.linked_structures[lbco].scale\": 0.06427540103484611,\n      \"experiment.peak.broad_gauss_u\": 0.0031500074669393464,\n      \"experiment.peak.broad_gauss_v\": 0.006749379593770417,\n      \"experiment.peak.broad_gauss_w\": 0.003287182084295104,\n      \"experiment.peak.broad_lorentz_y\": 0.002148713090216651,\n      \"structure.atom_sites[Ba].adp_iso\": 37.34359297430498,\n      \"structure.atom_sites[Co].adp_iso\": 0.06061308863952323,\n      \"structure.atom_sites[La].adp_iso\": 22.852792159313296,\n      \"structure.atom_sites[O].adp_iso\": 0.016733370968626846,\n      \"structure.cell.length_a\": 3.813711245701039e-05\n    }\n  },\n  {\n    \"stage\": \"shared-La-Ba-displacement\",\n    \"status\": \"DONE\",\n    \"free_count\": 15,\n    \"reduced_chi_square\": 1.2974095397418892,\n    \"rwp\": 0.07230691827834755,\n    \"values\": {\n      \"experiment.background[1].intensity\": 169.54322172568183,\n      \"experiment.background[2].intensity\": 165.14069441874742,\n      \"experiment.background[3].intensity\": 167.26782512622466,\n      \"experiment.background[4].intensity\": 176.08547031868684,\n      \"experiment.background[5].intensity\": 171.2705133824635,\n      \"experiment.instrument.calib_twotheta_offset\": 0.6204170706117196,\n      \"experiment.linked_structures[lbco].scale\": 9.132134972589688,\n      \"experiment.peak.broad_gauss_u\": 0.08268402948795248,\n      \"experiment.peak.broad_gauss_v\": -0.11765577077592411,\n      \"experiment.peak.broad_gauss_w\": 0.12142391639876796,\n      \"experiment.peak.broad_lorentz_y\": 0.08370134958477823,\n      \"structure.atom_sites[Co].adp_iso\": 0.2102963406485651,\n      \"structure.atom_sites[La].adp_iso\": 0.5149794080059468,\n      \"structure.atom_sites[O].adp_iso\": 1.3928594003754702,\n      \"structure.cell.length_a\": 3.890790643109819\n    },\n    \"uncertainties\": {\n      \"experiment.background[1].intensity\": 1.3717343971289975,\n      \"experiment.background[2].intensity\": 0.9993613265669615,\n      \"experiment.background[3].intensity\": 0.7381583900343902,\n      \"experiment.background[4].intensity\": 0.6465625166543117,\n      \"experiment.background[5].intensity\": 0.9105380460972087,\n      \"experiment.instrument.calib_twotheta_offset\": 0.0010379296795963659,\n      \"experiment.linked_structures[lbco].scale\": 0.053952200820897134,\n      \"experiment.peak.broad_gauss_u\": 0.0031094816376083458,\n      \"experiment.peak.broad_gauss_v\": 0.006663347834768267,\n      \"experiment.peak.broad_gauss_w\": 0.003256477742235613,\n      \"experiment.peak.broad_lorentz_y\": 0.0021460668146272965,\n      \"structure.atom_sites[Co].adp_iso\": 0.055764526099171825,\n      \"structure.atom_sites[La].adp_iso\": 0.02779914878023448,\n      \"structure.atom_sites[O].adp_iso\": 0.016026348559303225,\n      \"structure.cell.length_a\": 3.813108692198785e-05\n    }\n  }\n]",
+      "sha256": "999f28959c752552ed251c9a806ff2a00a2873da9bc3f12fda7bb5e7466697e6"
+    },
+    "python-result": {
+      "text": "{\n  \"source_commit\": \"80dc974c431aceee6f1dd4f3468847466b56d27a\",\n  \"reduced_chi_square\": 1.2974095397418892,\n  \"rwp\": 0.07230691827834755,\n  \"free_counts\": [\n    3,\n    8,\n    12,\n    16,\n    15\n  ],\n  \"a\": 3.890790643109819,\n  \"zero\": 0.6204170706117196,\n  \"scale\": 9.132134972589688,\n  \"Biso\": {\n    \"La\": 0.5149794080059468,\n    \"Ba\": 0.5149794080059468,\n    \"Co\": 0.2102963406485651,\n    \"O\": 1.3928594003754702\n  },\n  \"values\": {\n    \"experiment.background[1].intensity\": 169.54322172568183,\n    \"experiment.background[2].intensity\": 165.14069441874742,\n    \"experiment.background[3].intensity\": 167.26782512622466,\n    \"experiment.background[4].intensity\": 176.08547031868684,\n    \"experiment.background[5].intensity\": 171.2705133824635,\n    \"experiment.instrument.calib_twotheta_offset\": 0.6204170706117196,\n    \"experiment.linked_structures[lbco].scale\": 9.132134972589688,\n    \"experiment.peak.broad_gauss_u\": 0.08268402948795248,\n    \"experiment.peak.broad_gauss_v\": -0.11765577077592411,\n    \"experiment.peak.broad_gauss_w\": 0.12142391639876796,\n    \"experiment.peak.broad_lorentz_y\": 0.08370134958477823,\n    \"structure.atom_sites[Co].adp_iso\": 0.2102963406485651,\n    \"structure.atom_sites[La].adp_iso\": 0.5149794080059468,\n    \"structure.atom_sites[O].adp_iso\": 1.3928594003754702,\n    \"structure.cell.length_a\": 3.890790643109819\n  },\n  \"uncertainties\": {\n    \"experiment.background[1].intensity\": 1.3717343971289975,\n    \"experiment.background[2].intensity\": 0.9993613265669615,\n    \"experiment.background[3].intensity\": 0.7381583900343902,\n    \"experiment.background[4].intensity\": 0.6465625166543117,\n    \"experiment.background[5].intensity\": 0.9105380460972087,\n    \"experiment.instrument.calib_twotheta_offset\": 0.0010379296795963659,\n    \"experiment.linked_structures[lbco].scale\": 0.053952200820897134,\n    \"experiment.peak.broad_gauss_u\": 0.0031094816376083458,\n    \"experiment.peak.broad_gauss_v\": 0.006663347834768267,\n    \"experiment.peak.broad_gauss_w\": 0.003256477742235613,\n    \"experiment.peak.broad_lorentz_y\": 0.0021460668146272965,\n    \"structure.atom_sites[Co].adp_iso\": 0.055764526099171825,\n    \"structure.atom_sites[La].adp_iso\": 0.02779914878023448,\n    \"structure.atom_sites[O].adp_iso\": 0.016026348559303225,\n    \"structure.cell.length_a\": 3.813108692198785e-05\n  }\n}",
+      "sha256": "8c3c606b017f59754f5530af4921e07388bb8ebf8bdc8be4d13e2ac88e75d1ac"
+    },
+    "cli-correlations": {
+      "text": "[\n  [\n    \"lbco.cell.length_a\",\n    \"lbco.atom_site.La.adp_iso\",\n    \"0.0042\"\n  ],\n  [\n    \"lbco.cell.length_a\",\n    \"lbco.atom_site.Ba.adp_iso\",\n    \"-0.0042\"\n  ],\n  [\n    \"lbco.cell.length_a\",\n    \"lbco.atom_site.Co.adp_iso\",\n    \"0.0031\"\n  ],\n  [\n    \"lbco.cell.length_a\",\n    \"lbco.atom_site.O.adp_iso\",\n    \"-0.0088\"\n  ],\n  [\n    \"lbco.cell.length_a\",\n    \"hrpt.linked_structure.lbco.scale\",\n    \"-0.0051\"\n  ],\n  [\n    \"lbco.cell.length_a\",\n    \"hrpt.instrument.calib_twotheta_offset\",\n    \"0.82\"\n  ],\n  [\n    \"lbco.cell.length_a\",\n    \"hrpt.peak.broad_gauss_u\",\n    \"0.0056\"\n  ],\n  [\n    \"lbco.cell.length_a\",\n    \"hrpt.peak.broad_gauss_v\",\n    \"0.0037\"\n  ],\n  [\n    \"lbco.cell.length_a\",\n    \"hrpt.peak.broad_gauss_w\",\n    \"-0.0079\"\n  ],\n  [\n    \"lbco.cell.length_a\",\n    \"hrpt.peak.broad_lorentz_y\",\n    \"0.0029\"\n  ],\n  [\n    \"lbco.cell.length_a\",\n    \"hrpt.background.1.intensity\",\n    \"-0.00051\"\n  ],\n  [\n    \"lbco.cell.length_a\",\n    \"hrpt.background.2.intensity\",\n    \"0.0017\"\n  ],\n  [\n    \"lbco.cell.length_a\",\n    \"hrpt.background.3.intensity\",\n    \"-0.0010\"\n  ],\n  [\n    \"lbco.cell.length_a\",\n    \"hrpt.background.4.intensity\",\n    \"-0.0033\"\n  ],\n  [\n    \"lbco.cell.length_a\",\n    \"hrpt.background.5.intensity\",\n    \"0.010\"\n  ],\n  [\n    \"lbco.atom_site.La.adp_iso\",\n    \"lbco.atom_site.Ba.adp_iso\",\n    \"-1.00\"\n  ],\n  [\n    \"lbco.atom_site.La.adp_iso\",\n    \"lbco.atom_site.Co.adp_iso\",\n    \"-0.39\"\n  ],\n  [\n    \"lbco.atom_site.La.adp_iso\",\n    \"lbco.atom_site.O.adp_iso\",\n    \"-0.29\"\n  ],\n  [\n    \"lbco.atom_site.La.adp_iso\",\n    \"hrpt.linked_structure.lbco.scale\",\n    \"-0.54\"\n  ],\n  [\n    \"lbco.atom_site.La.adp_iso\",\n    \"hrpt.instrument.calib_twotheta_offset\",\n    \"0.0011\"\n  ],\n  [\n    \"lbco.atom_site.La.adp_iso\",\n    \"hrpt.peak.broad_gauss_u\",\n    \"-0.16\"\n  ],\n  [\n    \"lbco.atom_site.La.adp_iso\",\n    \"hrpt.peak.broad_gauss_v\",\n    \"0.16\"\n  ],\n  [\n    \"lbco.atom_site.La.adp_iso\",\n    \"hrpt.peak.broad_gauss_w\",\n    \"-0.14\"\n  ],\n  [\n    \"lbco.atom_site.La.adp_iso\",\n    \"hrpt.peak.broad_lorentz_y\",\n    \"0.046\"\n  ],\n  [\n    \"lbco.atom_site.La.adp_iso\",\n    \"hrpt.background.1.intensity\",\n    \"0.0064\"\n  ],\n  [\n    \"lbco.atom_site.La.adp_iso\",\n    \"hrpt.background.2.intensity\",\n    \"0.0047\"\n  ],\n  [\n    \"lbco.atom_site.La.adp_iso\",\n    \"hrpt.background.3.intensity\",\n    \"-0.016\"\n  ],\n  [\n    \"lbco.atom_site.La.adp_iso\",\n    \"hrpt.background.4.intensity\",\n    \"-0.16\"\n  ],\n  [\n    \"lbco.atom_site.La.adp_iso\",\n    \"hrpt.background.5.intensity\",\n    \"0.23\"\n  ],\n  [\n    \"lbco.atom_site.Ba.adp_iso\",\n    \"lbco.atom_site.Co.adp_iso\",\n    \"0.39\"\n  ],\n  [\n    \"lbco.atom_site.Ba.adp_iso\",\n    \"lbco.atom_site.O.adp_iso\",\n    \"0.29\"\n  ],\n  [\n    \"lbco.atom_site.Ba.adp_iso\",\n    \"hrpt.linked_structure.lbco.scale\",\n    \"0.54\"\n  ],\n  [\n    \"lbco.atom_site.Ba.adp_iso\",\n    \"hrpt.instrument.calib_twotheta_offset\",\n    \"-0.0011\"\n  ],\n  [\n    \"lbco.atom_site.Ba.adp_iso\",\n    \"hrpt.peak.broad_gauss_u\",\n    \"0.16\"\n  ],\n  [\n    \"lbco.atom_site.Ba.adp_iso\",\n    \"hrpt.peak.broad_gauss_v\",\n    \"-0.16\"\n  ],\n  [\n    \"lbco.atom_site.Ba.adp_iso\",\n    \"hrpt.peak.broad_gauss_w\",\n    \"0.14\"\n  ],\n  [\n    \"lbco.atom_site.Ba.adp_iso\",\n    \"hrpt.peak.broad_lorentz_y\",\n    \"-0.046\"\n  ],\n  [\n    \"lbco.atom_site.Ba.adp_iso\",\n    \"hrpt.background.1.intensity\",\n    \"-0.0064\"\n  ],\n  [\n    \"lbco.atom_site.Ba.adp_iso\",\n    \"hrpt.background.2.intensity\",\n    \"-0.0047\"\n  ],\n  [\n    \"lbco.atom_site.Ba.adp_iso\",\n    \"hrpt.background.3.intensity\",\n    \"0.016\"\n  ],\n  [\n    \"lbco.atom_site.Ba.adp_iso\",\n    \"hrpt.background.4.intensity\",\n    \"0.16\"\n  ],\n  [\n    \"lbco.atom_site.Ba.adp_iso\",\n    \"hrpt.background.5.intensity\",\n    \"-0.22\"\n  ],\n  [\n    \"lbco.atom_site.Co.adp_iso\",\n    \"lbco.atom_site.O.adp_iso\",\n    \"0.39\"\n  ],\n  [\n    \"lbco.atom_site.Co.adp_iso\",\n    \"hrpt.linked_structure.lbco.scale\",\n    \"0.19\"\n  ],\n  [\n    \"lbco.atom_site.Co.adp_iso\",\n    \"hrpt.instrument.calib_twotheta_offset\",\n    \"-0.0014\"\n  ],\n  [\n    \"lbco.atom_site.Co.adp_iso\",\n    \"hrpt.peak.broad_gauss_u\",\n    \"0.011\"\n  ],\n  [\n    \"lbco.atom_site.Co.adp_iso\",\n    \"hrpt.peak.broad_gauss_v\",\n    \"-0.011\"\n  ],\n  [\n    \"lbco.atom_site.Co.adp_iso\",\n    \"hrpt.peak.broad_gauss_w\",\n    \"0.031\"\n  ],\n  [\n    \"lbco.atom_site.Co.adp_iso\",\n    \"hrpt.peak.broad_lorentz_y\",\n    \"-0.058\"\n  ],\n  [\n    \"lbco.atom_site.Co.adp_iso\",\n    \"hrpt.background.1.intensity\",\n    \"0.0024\"\n  ],\n  [\n    \"lbco.atom_site.Co.adp_iso\",\n    \"hrpt.background.2.intensity\",\n    \"-0.0047\"\n  ],\n  [\n    \"lbco.atom_site.Co.adp_iso\",\n    \"hrpt.background.3.intensity\",\n    \"0.043\"\n  ],\n  [\n    \"lbco.atom_site.Co.adp_iso\",\n    \"hrpt.background.4.intensity\",\n    \"0.084\"\n  ],\n  [\n    \"lbco.atom_site.Co.adp_iso\",\n    \"hrpt.background.5.intensity\",\n    \"-0.063\"\n  ],\n  [\n    \"lbco.atom_site.O.adp_iso\",\n    \"hrpt.linked_structure.lbco.scale\",\n    \"0.66\"\n  ],\n  [\n    \"lbco.atom_site.O.adp_iso\",\n    \"hrpt.instrument.calib_twotheta_offset\",\n    \"-0.0038\"\n  ],\n  [\n    \"lbco.atom_site.O.adp_iso\",\n    \"hrpt.peak.broad_gauss_u\",\n    \"0.056\"\n  ],\n  [\n    \"lbco.atom_site.O.adp_iso\",\n    \"hrpt.peak.broad_gauss_v\",\n    \"-0.083\"\n  ],\n  [\n    \"lbco.atom_site.O.adp_iso\",\n    \"hrpt.peak.broad_gauss_w\",\n    \"0.11\"\n  ],\n  [\n    \"lbco.atom_site.O.adp_iso\",\n    \"hrpt.peak.broad_lorentz_y\",\n    \"-0.069\"\n  ],\n  [\n    \"lbco.atom_site.O.adp_iso\",\n    \"hrpt.background.1.intensity\",\n    \"0.012\"\n  ],\n  [\n    \"lbco.atom_site.O.adp_iso\",\n    \"hrpt.background.2.intensity\",\n    \"-0.040\"\n  ],\n  [\n    \"lbco.atom_site.O.adp_iso\",\n    \"hrpt.background.3.intensity\",\n    \"-0.054\"\n  ],\n  [\n    \"lbco.atom_site.O.adp_iso\",\n    \"hrpt.background.4.intensity\",\n    \"0.14\"\n  ],\n  [\n    \"lbco.atom_site.O.adp_iso\",\n    \"hrpt.background.5.intensity\",\n    \"-0.077\"\n  ],\n  [\n    \"hrpt.linked_structure.lbco.scale\",\n    \"hrpt.instrument.calib_twotheta_offset\",\n    \"-0.000032\"\n  ],\n  [\n    \"hrpt.linked_structure.lbco.scale\",\n    \"hrpt.peak.broad_gauss_u\",\n    \"-0.0074\"\n  ],\n  [\n    \"hrpt.linked_structure.lbco.scale\",\n    \"hrpt.peak.broad_gauss_v\",\n    \"-0.069\"\n  ],\n  [\n    \"hrpt.linked_structure.lbco.scale\",\n    \"hrpt.peak.broad_gauss_w\",\n    \"0.012\"\n  ],\n  [\n    \"hrpt.linked_structure.lbco.scale\",\n    \"hrpt.peak.broad_lorentz_y\",\n    \"0.22\"\n  ],\n  [\n    \"hrpt.linked_structure.lbco.scale\",\n    \"hrpt.background.1.intensity\",\n    \"0.023\"\n  ],\n  [\n    \"hrpt.linked_structure.lbco.scale\",\n    \"hrpt.background.2.intensity\",\n    \"-0.084\"\n  ],\n  [\n    \"hrpt.linked_structure.lbco.scale\",\n    \"hrpt.background.3.intensity\",\n    \"-0.15\"\n  ],\n  [\n    \"hrpt.linked_structure.lbco.scale\",\n    \"hrpt.background.4.intensity\",\n    \"0.065\"\n  ],\n  [\n    \"hrpt.linked_structure.lbco.scale\",\n    \"hrpt.background.5.intensity\",\n    \"-0.13\"\n  ],\n  [\n    \"hrpt.instrument.calib_twotheta_offset\",\n    \"hrpt.peak.broad_gauss_u\",\n    \"0.0054\"\n  ],\n  [\n    \"hrpt.instrument.calib_twotheta_offset\",\n    \"hrpt.peak.broad_gauss_v\",\n    \"0.00043\"\n  ],\n  [\n    \"hrpt.instrument.calib_twotheta_offset\",\n    \"hrpt.peak.broad_gauss_w\",\n    \"-0.0055\"\n  ],\n  [\n    \"hrpt.instrument.calib_twotheta_offset\",\n    \"hrpt.peak.broad_lorentz_y\",\n    \"0.0018\"\n  ],\n  [\n    \"hrpt.instrument.calib_twotheta_offset\",\n    \"hrpt.background.1.intensity\",\n    \"-0.00090\"\n  ],\n  [\n    \"hrpt.instrument.calib_twotheta_offset\",\n    \"hrpt.background.2.intensity\",\n    \"0.0027\"\n  ],\n  [\n    \"hrpt.instrument.calib_twotheta_offset\",\n    \"hrpt.background.3.intensity\",\n    \"-0.0014\"\n  ],\n  [\n    \"hrpt.instrument.calib_twotheta_offset\",\n    \"hrpt.background.4.intensity\",\n    \"-0.0021\"\n  ],\n  [\n    \"hrpt.instrument.calib_twotheta_offset\",\n    \"hrpt.background.5.intensity\",\n    \"0.0085\"\n  ],\n  [\n    \"hrpt.peak.broad_gauss_u\",\n    \"hrpt.peak.broad_gauss_v\",\n    \"-0.92\"\n  ],\n  [\n    \"hrpt.peak.broad_gauss_u\",\n    \"hrpt.peak.broad_gauss_w\",\n    \"0.83\"\n  ],\n  [\n    \"hrpt.peak.broad_gauss_u\",\n    \"hrpt.peak.broad_lorentz_y\",\n    \"-0.32\"\n  ],\n  [\n    \"hrpt.peak.broad_gauss_u\",\n    \"hrpt.background.1.intensity\",\n    \"-0.0061\"\n  ],\n  [\n    \"hrpt.peak.broad_gauss_u\",\n    \"hrpt.background.2.intensity\",\n    \"0.014\"\n  ],\n  [\n    \"hrpt.peak.broad_gauss_u\",\n    \"hrpt.background.3.intensity\",\n    \"0.081\"\n  ],\n  [\n    \"hrpt.peak.broad_gauss_u\",\n    \"hrpt.background.4.intensity\",\n    \"0.089\"\n  ],\n  [\n    \"hrpt.peak.broad_gauss_u\",\n    \"hrpt.background.5.intensity\",\n    \"-0.071\"\n  ],\n  [\n    \"hrpt.peak.broad_gauss_v\",\n    \"hrpt.peak.broad_gauss_w\",\n    \"-0.90\"\n  ],\n  [\n    \"hrpt.peak.broad_gauss_v\",\n    \"hrpt.peak.broad_lorentz_y\",\n    \"0.11\"\n  ],\n  [\n    \"hrpt.peak.broad_gauss_v\",\n    \"hrpt.background.1.intensity\",\n    \"-0.0051\"\n  ],\n  [\n    \"hrpt.peak.broad_gauss_v\",\n    \"hrpt.background.2.intensity\",\n    \"0.018\"\n  ],\n  [\n    \"hrpt.peak.broad_gauss_v\",\n    \"hrpt.background.3.intensity\",\n    \"-0.017\"\n  ],\n  [\n    \"hrpt.peak.broad_gauss_v\",\n    \"hrpt.background.4.intensity\",\n    \"-0.081\"\n  ],\n  [\n    \"hrpt.peak.broad_gauss_v\",\n    \"hrpt.background.5.intensity\",\n    \"0.096\"\n  ],\n  [\n    \"hrpt.peak.broad_gauss_w\",\n    \"hrpt.peak.broad_lorentz_y\",\n    \"-0.42\"\n  ],\n  [\n    \"hrpt.peak.broad_gauss_w\",\n    \"hrpt.background.1.intensity\",\n    \"-0.0048\"\n  ],\n  [\n    \"hrpt.peak.broad_gauss_w\",\n    \"hrpt.background.2.intensity\",\n    \"0.0099\"\n  ],\n  [\n    \"hrpt.peak.broad_gauss_w\",\n    \"hrpt.background.3.intensity\",\n    \"0.068\"\n  ],\n  [\n    \"hrpt.peak.broad_gauss_w\",\n    \"hrpt.background.4.intensity\",\n    \"0.14\"\n  ],\n  [\n    \"hrpt.peak.broad_gauss_w\",\n    \"hrpt.background.5.intensity\",\n    \"-0.0054\"\n  ],\n  [\n    \"hrpt.peak.broad_lorentz_y\",\n    \"hrpt.background.1.intensity\",\n    \"0.040\"\n  ],\n  [\n    \"hrpt.peak.broad_lorentz_y\",\n    \"hrpt.background.2.intensity\",\n    \"-0.11\"\n  ],\n  [\n    \"hrpt.peak.broad_lorentz_y\",\n    \"hrpt.background.3.intensity\",\n    \"-0.24\"\n  ],\n  [\n    \"hrpt.peak.broad_lorentz_y\",\n    \"hrpt.background.4.intensity\",\n    \"-0.20\"\n  ],\n  [\n    \"hrpt.peak.broad_lorentz_y\",\n    \"hrpt.background.5.intensity\",\n    \"-0.19\"\n  ],\n  [\n    \"hrpt.background.1.intensity\",\n    \"hrpt.background.2.intensity\",\n    \"-0.37\"\n  ],\n  [\n    \"hrpt.background.1.intensity\",\n    \"hrpt.background.3.intensity\",\n    \"0.050\"\n  ],\n  [\n    \"hrpt.background.1.intensity\",\n    \"hrpt.background.4.intensity\",\n    \"-0.029\"\n  ],\n  [\n    \"hrpt.background.1.intensity\",\n    \"hrpt.background.5.intensity\",\n    \"0.00013\"\n  ],\n  [\n    \"hrpt.background.2.intensity\",\n    \"hrpt.background.3.intensity\",\n    \"-0.13\"\n  ],\n  [\n    \"hrpt.background.2.intensity\",\n    \"hrpt.background.4.intensity\",\n    \"0.076\"\n  ],\n  [\n    \"hrpt.background.2.intensity\",\n    \"hrpt.background.5.intensity\",\n    \"0.0037\"\n  ],\n  [\n    \"hrpt.background.3.intensity\",\n    \"hrpt.background.4.intensity\",\n    \"-0.26\"\n  ],\n  [\n    \"hrpt.background.3.intensity\",\n    \"hrpt.background.5.intensity\",\n    \"0.15\"\n  ],\n  [\n    \"hrpt.background.4.intensity\",\n    \"hrpt.background.5.intensity\",\n    \"-0.30\"\n  ]\n]\n",
+      "sha256": "4babfea6c2e9bd100365ef3103d53cfc3ae6448a79ef6c7ba3a0c9d18464e48e"
+    },
+    "python-stdout": {
+      "text": "[\n  \"edi fit: project lbco_hrpt_prompt, 3098 pts fitted / 3098 loaded, 3 free\\n   iter   time (s)   Rwp (%)  reduced \\u03c7\\u00b2   change\\n                       53.67        71.21\\n      1      0.022     12.56         3.90   94.5% \\u2193\\n      2      0.028     12.56         3.90   \\n  done \\u00b7 converged \\u00b7 2 iters \\u00b7 reduced \\u03c7\\u00b2 3.90 \\u00b7 Rwp 12.56 % \\u00b7 0.03 s\\n\",\n  \"edi fit: project lbco_hrpt_prompt, 3098 pts fitted / 3098 loaded, 8 free\\n   iter   time (s)   Rwp (%)  reduced \\u03c7\\u00b2   change\\n                       12.56         3.91\\n      1      0.016     10.92         2.95   24.4% \\u2193\\n  done \\u00b7 converged \\u00b7 1 iters \\u00b7 reduced \\u03c7\\u00b2 2.95 \\u00b7 Rwp 10.92 % \\u00b7 0.02 s\\n\",\n  \"edi fit: project lbco_hrpt_prompt, 3098 pts fitted / 3098 loaded, 12 free\\n   iter   time (s)   Rwp (%)  reduced \\u03c7\\u00b2   change\\n                       10.92         2.96\\n      1      0.023     10.75         2.86   3.2% \\u2193\\n  done \\u00b7 converged \\u00b7 1 iters \\u00b7 reduced \\u03c7\\u00b2 2.86 \\u00b7 Rwp 10.75 % \\u00b7 0.03 s\\n\",\n  \"edi fit: project lbco_hrpt_prompt, 3098 pts fitted / 3098 loaded, 16 free\\n   iter   time (s)   Rwp (%)  reduced \\u03c7\\u00b2   change\\n                       10.75         2.87\\n      1      0.030      7.23         1.30   54.7% \\u2193\\n      2      0.037      7.23         1.30   \\n  done \\u00b7 converged \\u00b7 2 iters \\u00b7 reduced \\u03c7\\u00b2 1.30 \\u00b7 Rwp 7.23 % \\u00b7 0.04 s\\n\",\n  \"edi fit: project lbco_hrpt_prompt, 3098 pts fitted / 3098 loaded, 15 free\\n   iter   time (s)   Rwp (%)  reduced \\u03c7\\u00b2   change\\n                        7.23         1.30\\n      1      0.024      7.23         1.30   \\n  done \\u00b7 converged \\u00b7 1 iters \\u00b7 reduced \\u03c7\\u00b2 1.30 \\u00b7 Rwp 7.23 % \\u00b7 0.03 s\\nFinal reduced chi-square: 1.2974095397418892\\nFinal Rwp: 0.07230691827834755\\nFinal fitted values and standard uncertainties:\\nexperiment.background[1].intensity 169.54322172568183 +/- 1.3717343971289975\\nexperiment.background[2].intensity 165.14069441874742 +/- 0.9993613265669615\\nexperiment.background[3].intensity 167.26782512622466 +/- 0.7381583900343902\\nexperiment.background[4].intensity 176.08547031868684 +/- 0.6465625166543117\\nexperiment.background[5].intensity 171.2705133824635 +/- 0.9105380460972087\\nexperiment.instrument.calib_twotheta_offset 0.6204170706117196 +/- 0.0010379296795963659\\nexperiment.linked_structures[lbco].scale 9.132134972589688 +/- 0.053952200820897134\\nexperiment.peak.broad_gauss_u 0.08268402948795248 +/- 0.0031094816376083458\\nexperiment.peak.broad_gauss_v -0.11765577077592411 +/- 0.006663347834768267\\nexperiment.peak.broad_gauss_w 0.12142391639876796 +/- 0.003256477742235613\\nexperiment.peak.broad_lorentz_y 0.08370134958477823 +/- 0.0021460668146272965\\nstructure.atom_sites[Co].adp_iso 0.2102963406485651 +/- 0.055764526099171825\\nstructure.atom_sites[La].adp_iso 0.5149794080059468 +/- 0.02779914878023448\\nstructure.atom_sites[O].adp_iso 1.3928594003754702 +/- 0.016026348559303225\\nstructure.cell.length_a 3.890790643109819 +/- 3.813108692198785e-05\\nSaving project to 'lbco_hrpt_python'\\nSaving report to 'lbco_hrpt_python-report.html'\\n\"\n]\n",
+      "sha256": "bb33bf6d94570bf677cf7f203856b8faa84e8fe2ae727e2cfe7216e5955d5c5f"
+    },
+    "cli-stage-1": {
+      "text": "schema=9\nrecord=fit\nstatus=done\nmode=single\nconverged=true\nn_points_loaded=3098\nn_points_fitted=3098\nn_free=3\niterations=2\nreduced_chi_square=3.9019282\nrwp=0.1256390113\nstopping_rule=chi_square_change\nstopping_value=3.229235751e-07\nlast_shift_su=0.02500165765\ndescent=multistart_prune\nfast_descent=false\nlinear_snap=false\nguarded_linear_snap=false\nlinear_snap_attempts=0\nlinear_snap_rejections=0\nlinear_snap_guard_residual_evaluations=0\nmultistart_prune=true\nmultistart_probes_started=2\nmultistart_probes_pruned=1\nmultistart_probe_iterations=6\nmultistart_survivor=ladder\nunevaluable_trials=0\nterminal_unevaluable_trials=0\nnonfinite_trials=0\nterminal_nonfinite_trials=0\nbound_active_columns=none\nzero_jacobian_columns=none\nelapsed_ms=28.072\niter.1.rwp=0.1256390315\niter.1.reduced_chi_square=3.90192946\niter.1.unevaluable_trials=0\niter.1.elapsed_ms=21.547\niter.2.rwp=0.1256390113\niter.2.reduced_chi_square=3.9019282\niter.2.unevaluable_trials=0\niter.2.elapsed_ms=25.609\nparam.calib_twotheta_offset.value=0.6209079802\nparam.calib_twotheta_offset.uncertainty=0.00183820965\nparam.cell_length_a.value=3.890816577\nparam.cell_length_a.uncertainty=6.09746002e-05\nparam.scale.value=7.258601414\nparam.scale.uncertainty=0.03696852404\nx-edi.correlations=3\n",
+      "sha256": "acd17c47499e658aed4074d7233da7a9614e57c02aa1acbb6a8431eb7c239066"
+    },
+    "cli-stage-2": {
+      "text": "schema=9\nrecord=fit\nstatus=done\nmode=single\nconverged=true\nn_points_loaded=3098\nn_points_fitted=3098\nn_free=8\niterations=1\nreduced_chi_square=2.953602363\nrwp=0.1092219182\nstopping_rule=chi_square_change\nstopping_value=5.73911052e-10\nlast_shift_su=0.001252845349\ndescent=multistart_prune\nfast_descent=false\nlinear_snap=false\nguarded_linear_snap=false\nlinear_snap_attempts=0\nlinear_snap_rejections=0\nlinear_snap_guard_residual_evaluations=0\nmultistart_prune=true\nmultistart_probes_started=2\nmultistart_probes_pruned=1\nmultistart_probe_iterations=4\nmultistart_survivor=fast_descent\nunevaluable_trials=0\nterminal_unevaluable_trials=0\nnonfinite_trials=0\nterminal_nonfinite_trials=0\nbound_active_columns=none\nzero_jacobian_columns=none\nelapsed_ms=13.600\niter.1.rwp=0.1092219182\niter.1.reduced_chi_square=2.953602363\niter.1.unevaluable_trials=0\niter.1.elapsed_ms=12.052\nparam.background[0].value=168.0846662\nparam.background[0].uncertainty=2.067429569\nparam.background[1].value=168.2776361\nparam.background[1].uncertainty=1.494722937\nparam.background[2].value=172.2889324\nparam.background[2].uncertainty=1.069372116\nparam.background[3].value=174.3398481\nparam.background[3].uncertainty=0.9477743218\nparam.background[4].value=176.3911099\nparam.background[4].uncertainty=1.290647563\nparam.calib_twotheta_offset.value=0.6212923301\nparam.calib_twotheta_offset.uncertainty=0.001639208518\nparam.cell_length_a.value=3.890833907\nparam.cell_length_a.uncertainty=5.437952616e-05\nparam.scale.value=7.082560665\nparam.scale.uncertainty=0.03266947205\nx-edi.correlations=28\n",
+      "sha256": "80f574e9ec15d6183a3efdb8677af23affed890bb2699b55d60a434e8d9decbf"
+    },
+    "cli-stage-3": {
+      "text": "schema=9\nrecord=fit\nstatus=done\nmode=single\nconverged=true\nn_points_loaded=3098\nn_points_fitted=3098\nn_free=12\niterations=1\nreduced_chi_square=2.862521847\nrwp=0.1074550702\nstopping_rule=chi_square_change\nstopping_value=1.055476978e-07\nlast_shift_su=0.0125305982\ndescent=multistart_prune\nfast_descent=false\nlinear_snap=false\nguarded_linear_snap=false\nlinear_snap_attempts=0\nlinear_snap_rejections=0\nlinear_snap_guard_residual_evaluations=0\nmultistart_prune=true\nmultistart_probes_started=2\nmultistart_probes_pruned=1\nmultistart_probe_iterations=6\nmultistart_survivor=ladder\nunevaluable_trials=0\nterminal_unevaluable_trials=0\nnonfinite_trials=0\nterminal_nonfinite_trials=0\nbound_active_columns=none\nzero_jacobian_columns=none\nelapsed_ms=17.346\niter.1.rwp=0.1074550702\niter.1.reduced_chi_square=2.862521847\niter.1.unevaluable_trials=0\niter.1.elapsed_ms=15.647\nparam.background[0].value=168.4348359\nparam.background[0].uncertainty=2.036752705\nparam.background[1].value=167.5601055\nparam.background[1].uncertainty=1.479765004\nparam.background[2].value=171.1508443\nparam.background[2].uncertainty=1.081429212\nparam.background[3].value=173.2984473\nparam.background[3].uncertainty=0.9596363687\nparam.background[4].value=175.442676\nparam.background[4].uncertainty=1.308553364\nparam.broad_gauss_u.value=0.08260203963\nparam.broad_gauss_u.uncertainty=0.004757656545\nparam.broad_gauss_v.value=-0.1064677936\nparam.broad_gauss_v.uncertainty=0.01042239303\nparam.broad_gauss_w.value=0.1096585124\nparam.broad_gauss_w.uncertainty=0.005167311785\nparam.broad_lorentz_y.value=0.0878175611\nparam.broad_lorentz_y.uncertainty=0.00320461156\nparam.calib_twotheta_offset.value=0.6210669318\nparam.calib_twotheta_offset.uncertainty=0.001669953083\nparam.cell_length_a.value=3.890841162\nparam.cell_length_a.uncertainty=5.513400455e-05\nparam.scale.value=7.201350595\nparam.scale.uncertainty=0.0406486287\nx-edi.correlations=66\n",
+      "sha256": "049a715c674147de6c236859fe92a68942dec6fe23bb61e89724561512472fb6"
+    },
+    "cli-stage-4": {
+      "text": "schema=9\nrecord=fit\nstatus=done\nmode=single\nconverged=true\nn_points_loaded=3098\nn_points_fitted=3098\nn_free=16\niterations=2\nreduced_chi_square=1.297830765\nrwp=0.07230692556\nstopping_rule=chi_square_change\nstopping_value=1.005595355e-07\nlast_shift_su=0.02018420618\ndescent=multistart_prune\nfast_descent=false\nlinear_snap=false\nguarded_linear_snap=false\nlinear_snap_attempts=0\nlinear_snap_rejections=0\nlinear_snap_guard_residual_evaluations=0\nmultistart_prune=true\nmultistart_probes_started=2\nmultistart_probes_pruned=1\nmultistart_probe_iterations=6\nmultistart_survivor=ladder\nunevaluable_trials=0\nterminal_unevaluable_trials=0\nnonfinite_trials=0\nterminal_nonfinite_trials=0\nbound_active_columns=none\nzero_jacobian_columns=none\nelapsed_ms=24.686\niter.1.rwp=0.0723069292\niter.1.reduced_chi_square=1.297830895\niter.1.unevaluable_trials=0\niter.1.elapsed_ms=18.110\niter.2.rwp=0.07230692556\niter.2.reduced_chi_square=1.297830765\niter.2.unevaluable_trials=0\niter.2.elapsed_ms=22.226\nparam.Ba.adp_iso.value=0.5245057806\nparam.Ba.adp_iso.uncertainty=36.26299651\nparam.Co.adp_iso.value=0.2102778327\nparam.Co.adp_iso.uncertainty=0.06061310234\nparam.La.adp_iso.value=0.5091105356\nparam.La.adp_iso.uncertainty=22.18790922\nparam.O.adp_iso.value=1.392861912\nparam.O.adp_iso.uncertainty=0.01673339275\nparam.background[0].value=169.5432304\nparam.background[0].uncertainty=1.371984719\nparam.background[1].value=165.1406799\nparam.background[1].uncertainty=0.9995344064\nparam.background[2].value=167.2677108\nparam.background[2].uncertainty=0.7383762323\nparam.background[3].value=176.0854569\nparam.background[3].uncertainty=0.6554356442\nparam.background[4].value=171.2702717\nparam.background[4].uncertainty=0.9346664874\nparam.broad_gauss_u.value=0.08267737692\nparam.broad_gauss_u.uncertainty=0.003150006822\nparam.broad_gauss_v.value=-0.1176458951\nparam.broad_gauss_v.uncertainty=0.006749378425\nparam.broad_gauss_w.value=0.1214209437\nparam.broad_gauss_w.uncertainty=0.003287181711\nparam.broad_lorentz_y.value=0.08370227862\nparam.broad_lorentz_y.uncertainty=0.002148713087\nparam.calib_twotheta_offset.value=0.6204163428\nparam.calib_twotheta_offset.uncertainty=0.001038095405\nparam.cell_length_a.value=3.890790597\nparam.cell_length_a.uncertainty=3.81371084e-05\nparam.scale.value=9.132122662\nparam.scale.uncertainty=0.06427555416\nx-edi.correlations=120\n",
+      "sha256": "34e4855133030620779fcc48e71a36d74cd53f9c14ff3049461cbce7e2697a9a"
+    },
+    "cli-stage-5": {
+      "text": "schema=9\nrecord=fit\nstatus=done\nmode=single\nconverged=true\nn_points_loaded=3098\nn_points_fitted=3098\nn_free=15\niterations=1\nreduced_chi_square=1.29740954\nrwp=0.0723069183\nstopping_rule=chi_square_change\nstopping_value=4.717680479e-08\nlast_shift_su=0.003655115729\ndescent=multistart_prune\nfast_descent=false\nlinear_snap=false\nguarded_linear_snap=false\nlinear_snap_attempts=0\nlinear_snap_rejections=0\nlinear_snap_guard_residual_evaluations=0\nmultistart_prune=true\nmultistart_probes_started=2\nmultistart_probes_pruned=1\nmultistart_probe_iterations=6\nmultistart_survivor=ladder\nunevaluable_trials=0\nterminal_unevaluable_trials=0\nnonfinite_trials=0\nterminal_nonfinite_trials=0\nbound_active_columns=none\nzero_jacobian_columns=none\nelapsed_ms=25.801\niter.1.rwp=0.0723069183\niter.1.reduced_chi_square=1.29740954\niter.1.unevaluable_trials=0\niter.1.elapsed_ms=23.027\nparam.Co.adp_iso.value=0.210297607\nparam.Co.adp_iso.uncertainty=0.05576458864\nparam.La.adp_iso.value=0.5149773669\nparam.La.adp_iso.uncertainty=0.02779913929\nparam.O.adp_iso.value=1.392859705\nparam.O.adp_iso.uncertainty=0.01602634829\nparam.background[0].value=169.5432358\nparam.background[0].uncertainty=1.371734393\nparam.background[1].value=165.1406669\nparam.background[1].uncertainty=0.9993613041\nparam.background[2].value=167.2677606\nparam.background[2].uncertainty=0.738158287\nparam.background[3].value=176.0854109\nparam.background[3].uncertainty=0.6465624216\nparam.background[4].value=171.2704427\nparam.background[4].uncertainty=0.9105380657\nparam.broad_gauss_u.value=0.08268169291\nparam.broad_gauss_u.uncertainty=0.003109454652\nparam.broad_gauss_v.value=-0.1176514006\nparam.broad_gauss_v.uncertainty=0.006663303633\nparam.broad_gauss_w.value=0.1214211578\nparam.broad_gauss_w.uncertainty=0.003256452925\nparam.broad_lorentz_y.value=0.08370246193\nparam.broad_lorentz_y.uncertainty=0.00214605983\nparam.calib_twotheta_offset.value=0.6204164782\nparam.calib_twotheta_offset.uncertainty=0.00103792771\nparam.cell_length_a.value=3.890790617\nparam.cell_length_a.uncertainty=3.813099955e-05\nparam.scale.value=9.132140833\nparam.scale.uncertainty=0.05395221326\nx-edi.correlations=105\n",
+      "sha256": "c57958c6014291afe3a092c4de27ae6b9f70c37f24894e100a5ddb074dacd6bf"
+    },
+    "python-correlation-display": {
+      "text": "lbco_hrpt_prompt Correlations 1 2 3 4 5 1  lbco.atom_site.La.adp_iso 2  lbco.atom_site.Ba.adp_iso -1.00 3  hrpt.peak.broad_gauss_u -0.16 0.16 4  hrpt.peak.broad_gauss_v 0.16 -0.16 -0.92 5  hrpt.peak.broad_gauss_w -0.14 0.14 0.83 -0.90",
+      "sha256": "5d4c85455455078564f111ce41a44b1cb62fe2a63091eb8f67b02f6d2ba771f0"
+    },
+    "python-execution": {
+      "text": "{\n  \"model\": \"Codex assistant (exact backend model not exposed)\",\n  \"date\": \"2026-11-13T11:51:57.952503+00:00\",\n  \"publication_route\": \"published-release\",\n  \"prompt_url\": \"https://easydiffraction.org/python/tutorials/assistant/\",\n  \"prompt_sha256\": \"6c052ac701021eecfbecde35503773444c6a2ba1ecc6aa9d033cbbfbf4847f3f\",\n  \"artifact\": \"lbco_hrpt_prompt.ipynb\",\n  \"artifact_sha256\": \"d5f516b4e96086f3c37ebc9e21d4e145f74558fad4b4a5417e7cd2f9f535e960\",\n  \"edi_source\": \"80dc974c431aceee6f1dd4f3468847466b56d27a\",\n  \"sdk_source\": \"2b6b981e21194f9a76074742dd0e148736ca4d9b\",\n  \"diagnostic_only\": true,\n  \"execution_exit\": 0\n}\n",
+      "sha256": "10f8182a91eff14e439b4d45854c69cf58bceddeae7f8da61554fec6b1748320"
+    },
+    "cli-execution": {
+      "text": "{\n  \"model\": \"Codex assistant (exact backend model not exposed)\",\n  \"date\": \"2026-11-13\",\n  \"publication_route\": \"published-release\",\n  \"prompt_url\": \"https://easydiffraction.org/cli/tutorials/assistant/\",\n  \"prompt_sha256\": \"d71972ebeb023c6b35bdc1c1e359a7ab1bc8abe6137b31b259104291598f6dd0\",\n  \"artifact\": \"cli-ready-project.zip\",\n  \"artifact_sha256\": \"4d89fd52f404b0b29cc92d8d709c503b6d0f96419a612cf265e7856f6d67caa7\",\n  \"edi_source\": \"80dc974c431aceee6f1dd4f3468847466b56d27a\",\n  \"sdk_source\": \"2b6b981e21194f9a76074742dd0e148736ca4d9b\",\n  \"diagnostic_only\": true,\n  \"execution_exit\": 0,\n  \"free_counts\": [\n    3,\n    8,\n    12,\n    16,\n    15\n  ],\n  \"stage_machine_report_sha256\": {\n    \"stage-1-machine.txt\": \"acd17c47499e658aed4074d7233da7a9614e57c02aa1acbb6a8431eb7c239066\",\n    \"stage-2-machine.txt\": \"80f574e9ec15d6183a3efdb8677af23affed890bb2699b55d60a434e8d9decbf\",\n    \"stage-3-machine.txt\": \"049a715c674147de6c236859fe92a68942dec6fe23bb61e89724561512472fb6\",\n    \"stage-4-machine.txt\": \"34e4855133030620779fcc48e71a36d74cd53f9c14ff3049461cbce7e2697a9a\",\n    \"stage-5-machine.txt\": \"c57958c6014291afe3a092c4de27ae6b9f70c37f24894e100a5ddb074dacd6bf\"\n  },\n  \"initial_helper_failure\": \"After four successful native fits the authored correlation reader incorrectly expected a data_ header and short tag names. Corrected the reader and completed only stage5 from the untouched genuine stage4 output. Earlier log retained.\",\n  \"stage4_correlation_pairs\": 120,\n  \"La_Ba_Biso_correlation\": -1.0,\n  \"reference_path\": \"docs/user/cli/pd-neut-cwl_lbco-hrpt/expected.json\",\n  \"reference_sha256\": \"b89875d83f247a48f60fa5cbe0056ef2917a7a366375d01402fa570862b022b5\",\n  \"comparisons\": [\n    {\n      \"quantity\": \"n_free\",\n      \"actual\": 15.0,\n      \"expected\": 15.0,\n      \"tol_abs\": 0.0,\n      \"tol_rel\": null,\n      \"kind\": \"reference\",\n      \"passed\": true\n    },\n    {\n      \"quantity\": \"rwp\",\n      \"actual\": 0.0723069183,\n      \"expected\": 0.0721,\n      \"tol_abs\": null,\n      \"tol_rel\": 0.05,\n      \"kind\": \"reference\",\n      \"passed\": true\n    },\n    {\n      \"quantity\": \"param.La.adp_iso.value\",\n      \"actual\": 0.5149773669,\n      \"expected\": 0.54531419,\n      \"tol_abs\": 0.05560615664,\n      \"tol_rel\": null,\n      \"kind\": \"reference\",\n      \"passed\": true\n    },\n    {\n      \"quantity\": \"param.Co.adp_iso.value\",\n      \"actual\": 0.210297607,\n      \"expected\": 0.28785926,\n      \"tol_abs\": 0.1115348565,\n      \"tol_rel\": null,\n      \"kind\": \"reference\",\n      \"passed\": true\n    },\n    {\n      \"quantity\": \"param.O.adp_iso.value\",\n      \"actual\": 1.392859705,\n      \"expected\": 1.4059563,\n      \"tol_abs\": 0.03205091242,\n      \"tol_rel\": null,\n      \"kind\": \"reference\",\n      \"passed\": true\n    },\n    {\n      \"quantity\": \"param.cell_length_a.value\",\n      \"actual\": 3.890790617,\n      \"expected\": 3.8907845,\n      \"tol_abs\": 7.625015336e-05,\n      \"tol_rel\": null,\n      \"kind\": \"reference\",\n      \"passed\": true\n    },\n    {\n      \"quantity\": \"iterations\",\n      \"actual\": 1.0,\n      \"expected\": 5.0,\n      \"tol_abs\": 0.0,\n      \"tol_rel\": null,\n      \"kind\": \"regression-pin\",\n      \"passed\": false\n    },\n    {\n      \"quantity\": \"reduced_chi_square\",\n      \"actual\": 1.29740954,\n      \"expected\": 1.29684855,\n      \"tol_abs\": 1e-06,\n      \"tol_rel\": null,\n      \"kind\": \"regression-pin\",\n      \"passed\": false\n    }\n  ],\n  \"same_numerical_workflow_as_regression_pin\": false,\n  \"scientific_regression_pass\": false\n}\n",
+      "sha256": "6d873b569647af3fcfc63f6720e34164f61a8cae6dcd0bf954edea6edd1c40ca"
+    }
+  }
+}

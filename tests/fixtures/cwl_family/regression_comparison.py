@@ -24,7 +24,7 @@ def require_reference(record, native_platform=None):
     assert record['kind'] == 'regression-pin', (
         'The engine capture must remain labelled as a regression pin'
     )
-    assert record['platform'] in {'Linux', 'Darwin'}, (
+    assert record['platform'] in {'Linux', 'Darwin', 'Windows'}, (
         'The independent retained capture records a supported native platform'
     )
     if native_platform is not None:
@@ -96,7 +96,7 @@ def require_dispatch_reference(dispatch, historical, root, native_platform):
     )
     assert (
         dispatch['sdk_manifest']['platform']
-        == {'Linux': 'linux-64', 'Darwin': 'osx-arm64'}[native_platform]
+        == {'Linux': 'linux-64', 'Darwin': 'osx-arm64', 'Windows': 'win-64'}[native_platform]
     ), 'A native pin must retain its actual SDK platform'
     from tests.fixtures.cwl_family.capture_dispatch_pins import SOURCE_OBJECTS  # noqa: PLC0415
 
@@ -142,7 +142,10 @@ def require_dispatch_reference(dispatch, historical, root, native_platform):
 
 def sdk_build_identity(manifest):
     source = manifest.get('source_sha', '')
-    archive = manifest.get('tested', {}).get('sha256', {}).get('lib/libcrysta_core.a', '')
+    archive_name = (
+        'lib/crysta_core.lib' if manifest.get('platform') == 'win-64' else 'lib/libcrysta_core.a'
+    )
+    archive = manifest.get('tested', {}).get('sha256', {}).get(archive_name, '')
     assert len(source) == 40 and set(source) <= set('0123456789abcdef'), (
         'A compiled comparison requires the SDK source identity'
     )
@@ -181,7 +184,9 @@ def compare_pin(actual, record, name, native_platform, *, native_build=None):
         model['platform'] if model else record['platform'],
         native_build=native_build,
         reference_build=(
-            sdk_build_identity(model['sdk_manifest']) if model else record.get('dispatch_build')
+            sdk_build_identity(model['sdk_manifest'])
+            if model
+            else record.get('dispatch_build', record.get('historical_build'))
         )
         if native_build is not None
         else None,
@@ -195,6 +200,13 @@ def read_reference(root, native_platform):
     )
     record = json.loads(path.read_text())
     require_reference(record, native_platform)
+    if native_platform == 'Windows':
+        manifest = record['sdk_manifest']
+        assert manifest['source_sha'] == ENGINE_SOURCE and manifest['platform'] == 'win-64', (
+            'The native Windows historical reference binds the original '
+            'compiled engine and platform'
+        )
+        record = dict(record, historical_build=sdk_build_identity(manifest))
     adaptation = root / f'tch-dispatch-{native_platform}.json'
     if adaptation.is_file():
         dispatch = json.loads(adaptation.read_text())
@@ -219,16 +231,16 @@ def rename_project(root, destination, name, token, record):
         for path in sorted(inputs.rglob('*.edi'))
     }
     assert len(hashes) == 4, 'The rename vehicle retains both complete historical input projects'
-    if record['platform'] == 'Darwin':
+    if record['platform'] in {'Darwin', 'Windows'}:
         assert hashes == record['input_sha256'], (
-            'Darwin expected and actual native runs consume identical serialized pre-change inputs'
+            'Native expected and actual runs consume identical serialized pre-change inputs'
         )
     shutil.copytree(inputs / name, destination, dirs_exist_ok=True)
     experiment = destination / 'experiments/bank.edi'
-    text = experiment.read_text()
-    lines = [line for line in text.splitlines() if line.startswith('_peak.type ')]
+    text = experiment.read_bytes()
+    lines = [line for line in text.splitlines() if line.startswith(b'_peak.type ')]
     assert len(lines) == 1, (
         'A retained rename vehicle has exactly one historical profile declaration'
     )
-    experiment.write_text(text.replace(lines[0], '_peak.type ' + token))
+    experiment.write_bytes(text.replace(lines[0], b'_peak.type ' + token.encode('ascii')))
     return destination

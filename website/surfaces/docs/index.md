@@ -24,16 +24,18 @@ hide:
 
 # Making <span class="ed-landing__accent">diffraction</span><br>data analysis and<br>modelling <span class="ed-landing__accent">easy</span> { #landing-heading }
 
-<p class="ed-landing__intro">Calculate diffraction patterns, fit your structural model to your data and understand your results. Need a hand? Select AI assistant when you install the desktop app.</p>
+<p class="ed-landing__intro">Calculate diffraction patterns and fit a structural model to your data. Need a hand? Use the AI assistant in the desktop app.</p>
 
 </div>
 
 <div class="ed-landing__actions" markdown>
 
-[Try the web app](https://app.easydiffraction.org/){ .md-button .md-button--primary }
-[Learn more](user-guide/index.md){ .md-button }
+[Download for desktop](application/desktop.md#download){ .md-button .md-button--primary }
+[Try in the browser](https://app.easydiffraction.org/){ .md-button }
 
 </div>
+
+<!-- latest-release -->
 
 
 </div>

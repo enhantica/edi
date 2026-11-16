@@ -277,3 +277,15 @@ project inventory and controls. An unknown requested project refuses. The
 independent selector unit gate covers every leaf route, aggregate fallback,
 deduplication, inventory order and unknown subjects; runtime banking does not
 replay unrelated project actors just to measure a newly added leaf.
+
+The later owner additions (TbTi simulation and CoSiO4 HEIDI independent banks)
+use the same source-only `--add-project` path. They add input and UI expectations,
+never engine outputs. The existing projects, experimental corpus, example values
+and old display rows remain exact. The contemporary magnetic input identities
+also account for the recorded ADP free-flag change and removed singular stop-rule
+field: only three source hashes and that retired analysis metadata change; all
+previous physical and displayed expectations are retained. Static scan capture
+uses the declared folder pair, rather than treating every independent fit as a
+directory scan. An incomplete pair refuses; embedded independent banks have no
+folder inventory. The current selection admits exactly the two later owner
+additions and never re-applies the already retained magnetic/scan adaptations.

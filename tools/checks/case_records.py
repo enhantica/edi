@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -58,10 +59,10 @@ def tags(root: Path, case: str) -> list[dict[str, str]] | None:
     Each is ``{facet, value, label}``: the facets and labels of ``tags.json``, the values the
     catalogue derives from the case's project (``tools/dev/example_metadata.py``).
     """
-    entry = json.loads((root / CATALOGUE).read_text())['examples'].get(case)
+    entry = json.loads((root / CATALOGUE).read_text(encoding='utf-8'))['examples'].get(case)
     if entry is None:
         return None
-    vocabulary = json.loads((root / TAGS).read_text())['tags']
+    vocabulary = json.loads((root / TAGS).read_text(encoding='utf-8'))['tags']
     values = entry.get('values', {})
     return [
         {'facet': facet, 'value': value, 'label': known.get(value, {}).get('label', '')}
@@ -75,8 +76,8 @@ def tutorials(case: str) -> dict[str, str]:
     return {
         'python': f'docs/user/tutorials/{case}.ipynb',
         'app': case,
-        'app_docs': f'docs/user/app/{case}.md',
-        'cli_docs': f'{CLI_DIR}/{case}/index.md',
+        'app_docs': f'website/surfaces/docs/application/tutorials/cases/{case}.md',
+        'cli_docs': f'{CLI_DIR.as_posix()}/{case}/index.md',
     }
 
 
@@ -99,7 +100,7 @@ def pin(expected: dict) -> dict | None:
         return None
     values = {
         name: quantity['value']
-        for name, quantity in expected.get('quantities', {}).items()
+        for name, quantity in expected.get('calc', expected).get('quantities', {}).items()
         if quantity.get('kind') == 'regression-pin'
     }
     return {**source, 'values': values}
@@ -110,13 +111,17 @@ def record(root: Path, row: dict, order: int) -> dict:
     folder = root / CLI_DIR / case
     project = folder / 'project'
     expected_path = folder / 'expected.json'
-    expected = json.loads(expected_path.read_text()) if expected_path.is_file() else {}
+    provenance = folder / 'PROVENANCE.md'
+    expected = (
+        json.loads(expected_path.read_text(encoding='utf-8')) if expected_path.is_file() else {}
+    )
     structure_from = 'hand' if row.get('structure-by-hand') is True else 'collection'
     case_tags = tags(root, case)
     return {
         'schema': SCHEMA,
         'id': case,
         'order': order,
+        'provenance': provenance.read_text(encoding='utf-8') if provenance.is_file() else None,
         # The page title, '<sample> on <instrument>', and the one-line navigation title,
         # '<short sample name> <code>' (the owner, 2026-11-08).
         'title': str(row.get('title', '')),
@@ -133,7 +138,10 @@ def record(root: Path, row: dict, order: int) -> dict:
         'data': [
             f'{case}-{f.stem}-data'
             for f in sorted((project / 'experiments').glob('*.edi'))
-            if '_data.intensity_meas' in f.read_text(errors='replace')
+            if any(
+                tag in f.read_text(encoding='utf-8')
+                for tag in ('_data.intensity_meas', '_refln.intensity_meas')
+            )
         ],
         # How every interface's tutorial gets its inputs (the owner, 2026-11-08): the structure
         # built by hand or loaded from the collection's CIF; the data from the collection, and for
@@ -177,6 +185,22 @@ REQUIRED_TUTORIALS = ('python', 'cli_docs')
 REQUIRED_INTERFACE = {'python': 'python', 'cli_docs': 'cli'}
 
 
+def pin_problems(built: dict) -> list[str]:
+    """A pin's provenance is complete only with its original identity, reason and values."""
+    entry = built['pin']
+    if not isinstance(entry, dict):
+        return [f'{built["id"]}: has no complete regression pin provenance']
+    if (
+        not isinstance(entry.get('commit'), str)
+        or not re.fullmatch(r'[0-9a-f]{40}', entry['commit'])
+        or not isinstance(entry.get('reason'), str)
+        or not entry['reason'].strip()
+        or not entry.get('values')
+    ):
+        return [f'{built["id"]}: has no complete regression pin provenance']
+    return []
+
+
 def problems(root: Path = ROOT) -> list[str]:
     """Every case without one of its record's fields or artefacts, named."""
     out = []
@@ -191,6 +215,9 @@ def problems(root: Path = ROOT) -> list[str]:
         seen.setdefault(key, built['id'])
     for built in built_records:
         case = built['id']
+        if not built['provenance']:
+            out.append(f'{case}: has no authored PROVENANCE.md disclosure')
+        out.extend(pin_problems(built))
         if not built['title'] or not built['nav_title']:
             out.append(f'{case}: {REGISTRY} gives no title or no short-name')
         if built['diffraction_lib'] is None:
@@ -223,13 +250,13 @@ def problems(root: Path = ROOT) -> list[str]:
         )
     # The app's Examples list is the catalogue: exactly the cases, tagged from the one registry.
     # The source, facility and instrument are never tags (owner record 2026-11-09).
-    listed = list(json.loads((root / CATALOGUE).read_text())['examples'])
+    listed = list(json.loads((root / CATALOGUE).read_text(encoding='utf-8'))['examples'])
     ids = [built['id'] for built in built_records]
     out.extend(
         f'{CATALOGUE}: lists {extra}, which is not a case' for extra in listed if extra not in ids
     )
     out.extend(f'{CATALOGUE}: does not list the case {case}' for case in ids if case not in listed)
-    facets = json.loads((root / TAGS).read_text())['tags']
+    facets = json.loads((root / TAGS).read_text(encoding='utf-8'))['tags']
     out.extend(
         f'{TAGS}: {facet} is a tag facet, but it is never a tag'
         for facet in ('source', 'facilities', 'instruments')

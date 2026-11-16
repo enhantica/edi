@@ -1,5 +1,7 @@
 # 0006. WASM/web parity (build & render everywhere)
 
+**Amended 2026-11-13:** Browser delivery now uses only the multithreaded kit (owner, 2026-11-13; ADR-0023 §3). The earlier two-kit account below records the original implementation; the current gate covers direct and shim-enabled isolation and explicit refusal when threading is unavailable.
+
 - **Status:** Accepted
 - **Date:** 2026-07-04
 - **Implementation:** 🟡 Partially implemented — E01 laid the single-host CMake baseline (one option-gated `qt_add_qml_module` host, desktop + WASM from one tree); the WASM build/render and the per-feature parity gate land with the app surface (E04 desktop · E07 WASM).
