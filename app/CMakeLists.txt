@@ -338,6 +338,8 @@ target_link_libraries(edi_app_module
     PRIVATE ${EDI_GUI_BASE_TARGETS} Qt6::CorePrivate Qt6::QuickPrivate Qt6::QmlModelsPrivate)
 find_package(Qt6QmlPrivate REQUIRED)
 target_link_libraries(edi_app_module PRIVATE Qt6::QmlPrivate)
+# The stall probe names the modules of its stack samples (dladdr).
+target_link_libraries(edi_app_module PRIVATE ${CMAKE_DL_LIBS})
 if(EDI_APP_ASSISTANT)
     # The assistant's math rendering; nothing else draws formulas, so a build without the assistant has no math library.
     target_link_libraries(edi_app_module PRIVATE EdiMath::JKQTMathTextEdi)
