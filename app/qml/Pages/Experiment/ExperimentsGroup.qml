@@ -16,8 +16,8 @@ import edi.app
 // the table the selected experiment's type (ExperimentTypeGroup), then Create experiment (a new experiment without
 // data, a simulation) and Load experiment (`.edi` block files, several at once, each with its type, data and
 // parameters). Each row's Data file cell loads its measured data: Load data… ▾ while it has none, the file's name and
-// ⋯ to replace it once it has (the owner, 2026-11-16). A series of joint fits is one row, opened to a grid of its
-// points × banks. Start marks the experiment a scan starts from. Create, Load and Load data are each one undoable step.
+// ⋯ to replace it once it has (the owner, 2026-11-16). A series of joint fits is one row ("100 runs × 5 banks ·
+// folder data"); its runs and banks are chosen with the Run and Bank selectors in the main view. Start marks the experiment a scan starts from. Create, Load and Load data are each one undoable step.
 SideBarGroup {
     id: group
     property var pickerLife: ({
@@ -29,9 +29,8 @@ SideBarGroup {
     // A scan project lists its datasets: No. · Fit · Datablock · File · one column per extract rule, with no
     // colour column and no remove button (one template experiment shows them all).
     readonly property bool scan: project !== null && project.scan
-    // A series of joint fits (edi ADR-0088): one row, its grid opened under the table.
+    // A series of joint fits (edi ADR-0088): one ordinary row; its runs and banks are chosen in the main view.
     readonly property bool series: project !== null && project.series
-    property bool seriesOpen: true
     // One column per extract rule, with its unit, from the table's own model. The table lays a row's cells out
     // by their place among the header's, so the header and each row repeat over the same list.
     readonly property var scanColumns: project ? project.experiments.columns : []
@@ -211,7 +210,7 @@ SideBarGroup {
                 }
                 // The data's file: the experiment's own `.edi`, which holds its data, or a scan dataset's file with
                 // "template" after the template's; Load data… ▾ without data, the file and ⋯ to replace it with data
-                // (the owner, 2026-11-16). A series' row: its caret opening the grid, its summary and file counts.
+                // (the owner, 2026-11-16). A series' row: its summary.
                 Item {
                     id: fileCell
 
@@ -224,16 +223,9 @@ SideBarGroup {
                         spacing: EaStyle.Sizes.fontPixelSize * 0.5
                         visible: !fileCell.empty
 
-                        EaComponents.ListViewButton {
-                            objectName: `experiments.seriesToggle.${row.index}`
-                            visible: group.series
-                            fontIcon: group.seriesOpen ? "caret-down" : "caret-right"
-                            ToolTip.text: group.seriesOpen ? qsTr("Hide the series' points") : qsTr("Show the series' points and banks")
-                            onClicked: group.seriesOpen = !group.seriesOpen
-                        }
                         EaComponents.ListViewLabel {
                             objectName: `experiments.file.${row.index}`
-                            width: Math.min(implicitWidth, fileCell.width - (templateTag.visible ? templateTag.width + parent.spacing : 0) - (counts.visible ? counts.width + parent.spacing : 0) - (moreButton.visible ? moreButton.width + parent.spacing : 0) - (group.series ? EaStyle.Sizes.tableRowHeight + parent.spacing : 0))
+                            width: Math.min(implicitWidth, fileCell.width - (templateTag.visible ? templateTag.width + parent.spacing : 0) - (moreButton.visible ? moreButton.width + parent.spacing : 0))
                             height: parent.height
                             horizontalAlignment: Text.AlignLeft
                             elide: Text.ElideRight
@@ -249,35 +241,6 @@ SideBarGroup {
                             elide: Text.ElideRight
                             color: EaStyle.Colors.themeAccent
                             text: Session.label("sequential_fit.template_file")
-                        }
-                        // The series' files: loaded, changed since their fit, missing.
-                        Row {
-                            id: counts
-                            readonly property var numbers: group.series && group.project && group.project.seriesRevision >= 0 ? group.project.seriesCounts() : [0, 0, 0]
-                            visible: group.series
-                            anchors.verticalCenter: parent.verticalCenter
-                            spacing: EaStyle.Sizes.fontPixelSize * 0.4
-                            Repeater {
-                                model: [{
-                                        n: counts.numbers[0],
-                                        color: EaStyle.Colors.green,
-                                        word: qsTr("loaded")
-                                    }, {
-                                        n: counts.numbers[1],
-                                        color: EaStyle.Colors.orange,
-                                        word: qsTr("changed")
-                                    }, {
-                                        n: counts.numbers[2],
-                                        color: EaStyle.Colors.red,
-                                        word: qsTr("missing")
-                                    }]
-                                delegate: EaElements.Label {
-                                    required property var modelData
-                                    visible: modelData.n > 0
-                                    color: modelData.color
-                                    text: `${modelData.n} ${modelData.word}`
-                                }
-                            }
                         }
                         // ⋯: replace the data with another file, folder or collection entry.
                         EaComponents.ListViewButton {
@@ -346,194 +309,6 @@ SideBarGroup {
                     fontIcon: "minus-circle"
                     ToolTip.text: qsTr("Remove this experiment")
                     onClicked: group.project.removeExperiment(row.index)
-                }
-            }
-        }
-
-        // A series' points × banks (the owner, 2026-11-16): each bank's file at each point, loaded, changed since the
-        // point's fit, or missing, and the point's fit. A cell shows its point and bank in the charts.
-        Column {
-            id: seriesGrid
-            objectName: "experiments.seriesGrid"
-            readonly property real cellWidth: EaStyle.Sizes.fontPixelSize * 3.2
-            readonly property real pointWidth: EaStyle.Sizes.fontPixelSize * 9
-            readonly property real fitWidth: EaStyle.Sizes.fontPixelSize * 7
-            readonly property var banks: group.project ? group.project.bankLabels : []
-            readonly property real rowWidth: pointWidth + banks.length * cellWidth + fitWidth
-            visible: group.series && group.seriesOpen
-            width: EaStyle.Sizes.sideBarContentWidth
-            spacing: EaStyle.Sizes.fontPixelSize * 0.3
-
-            Flickable {
-                id: gridFlick
-                width: parent.width
-                height: gridHeader.height + gridList.height
-                contentWidth: seriesGrid.rowWidth
-                contentHeight: height
-                flickableDirection: Flickable.HorizontalFlick
-                boundsBehavior: Flickable.StopAtBounds
-                clip: true
-                ScrollBar.horizontal: ScrollBar {
-                    policy: seriesGrid.rowWidth > gridFlick.width ? ScrollBar.AsNeeded : ScrollBar.AlwaysOff
-                }
-
-                Column {
-                    Row {
-                        id: gridHeader
-                        height: EaStyle.Sizes.tableRowHeight
-                        EaElements.Label {
-                            width: seriesGrid.pointWidth
-                            anchors.verticalCenter: parent.verticalCenter
-                            color: EaStyle.Colors.themeForegroundMinor
-                            elide: Text.ElideRight
-                            text: group.project ? group.project.seriesVariable : ""
-                        }
-                        Repeater {
-                            model: seriesGrid.banks
-                            delegate: EaElements.Label {
-                                id: bankTitle
-                                required property string modelData
-                                required property int index
-                                width: seriesGrid.cellWidth
-                                anchors.verticalCenter: parent.verticalCenter
-                                horizontalAlignment: Text.AlignHCenter
-                                color: EaStyle.Colors.themeForegroundMinor
-                                text: qsTr("Bank %1").arg(bankTitle.index + 1)
-                                HoverHandler {
-                                    id: bankHover
-                                }
-                                EaElements.ToolTip {
-                                    text: bankTitle.modelData
-                                    requested: bankHover.hovered
-                                }
-                            }
-                        }
-                        EaElements.Label {
-                            width: seriesGrid.fitWidth
-                            anchors.verticalCenter: parent.verticalCenter
-                            leftPadding: EaStyle.Sizes.fontPixelSize * 0.5
-                            color: EaStyle.Colors.themeForegroundMinor
-                            text: qsTr("Fit")
-                        }
-                    }
-                    ListView {
-                        id: gridList
-                        objectName: "experiments.seriesGrid.points"
-                        width: seriesGrid.rowWidth
-                        height: Math.min(count, 8) * EaStyle.Sizes.tableRowHeight
-                        clip: true
-                        boundsBehavior: Flickable.StopAtBounds
-                        model: group.series ? group.project.seriesPointCount : 0
-                        ScrollBar.vertical: ScrollBar {
-                            policy: gridList.count > 8 ? ScrollBar.AsNeeded : ScrollBar.AlwaysOff
-                        }
-                        delegate: Row {
-                            id: pointRow
-                            required property int index
-                            readonly property int revision: group.project ? group.project.seriesRevision : 0
-                            readonly property var cells: revision >= 0 ? group.project.pointCells(pointRow.index) : []
-                            readonly property bool current: group.project !== null && group.project.currentExperimentIndex === pointRow.index
-                            height: EaStyle.Sizes.tableRowHeight
-                            EaElements.Label {
-                                width: seriesGrid.pointWidth
-                                anchors.verticalCenter: parent.verticalCenter
-                                elide: Text.ElideRight
-                                font.bold: pointRow.current
-                                text: pointRow.revision >= 0 ? group.project.pointLabel(pointRow.index) : ""
-                            }
-                            Repeater {
-                                model: pointRow.cells
-                                delegate: Rectangle {
-                                    id: cell
-                                    required property int modelData
-                                    required property int index
-                                    objectName: `experiments.seriesCell.${pointRow.index}.${cell.index}`
-                                    readonly property bool shown: pointRow.current && group.project.currentBank === cell.index
-                                    width: seriesGrid.cellWidth
-                                    height: EaStyle.Sizes.tableRowHeight
-                                    color: "transparent"
-                                    border.width: shown ? 2 : 0
-                                    border.color: EaStyle.Colors.themeAccent
-                                    radius: EaStyle.Sizes.fontPixelSize * 0.2
-                                    // The app's icons, as the Fit column draws an outcome: loaded, changed, missing (a ring).
-                                    IconCell {
-                                        anchors.fill: parent
-                                        icon: cell.modelData === 0 ? "circle" : cell.modelData === 1 ? "adjust" : ""
-                                        ring: cell.modelData === 2
-                                        iconColor: String(cell.modelData === 0 ? EaStyle.Colors.green : cell.modelData === 1 ? EaStyle.Colors.orange : EaStyle.Colors.red)
-                                    }
-                                    MouseArea {
-                                        anchors.fill: parent
-                                        enabled: cell.modelData !== 2
-                                        cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
-                                        onClicked: group.project.showPointBank(pointRow.index, cell.index)
-                                    }
-                                }
-                            }
-                            EaElements.Label {
-                                readonly property string problem: pointRow.revision >= 0 ? group.project.pointProblem(pointRow.index) : ""
-                                readonly property string reliability: pointRow.revision >= 0 ? group.project.pointReliability(pointRow.index) : ""
-                                width: seriesGrid.fitWidth
-                                anchors.verticalCenter: parent.verticalCenter
-                                leftPadding: EaStyle.Sizes.fontPixelSize * 0.5
-                                elide: Text.ElideRight
-                                color: problem !== "" ? EaStyle.Colors.red : reliability !== "" ? String(FitOutcomes.color(group.project.pointOutcome(pointRow.index))) : EaStyle.Colors.themeForegroundMinor
-                                text: problem !== "" ? qsTr("not fitted") : reliability !== "" ? reliability : qsTr("not fitted")
-                                HoverHandler {
-                                    id: fitHover
-                                }
-                                EaElements.ToolTip {
-                                    text: parent.problem
-                                    requested: fitHover.hovered
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            // The legend, with the cells' own icons.
-            Flow {
-                width: parent.width
-                spacing: EaStyle.Sizes.fontPixelSize * 0.5
-                Repeater {
-                    model: [{
-                            icon: "circle",
-                            ring: false,
-                            color: EaStyle.Colors.green,
-                            word: qsTr("loaded")
-                        }, {
-                            icon: "adjust",
-                            ring: false,
-                            color: EaStyle.Colors.orange,
-                            word: qsTr("changed since the fit")
-                        }, {
-                            icon: "",
-                            ring: true,
-                            color: EaStyle.Colors.red,
-                            word: qsTr("missing")
-                        }]
-                    delegate: Row {
-                        required property var modelData
-                        height: EaStyle.Sizes.tableRowHeight * 0.8
-                        spacing: EaStyle.Sizes.fontPixelSize * 0.25
-                        IconCell {
-                            width: EaStyle.Sizes.fontPixelSize * 1.2
-                            icon: parent.modelData.icon
-                            ring: parent.modelData.ring
-                            iconColor: String(parent.modelData.color)
-                        }
-                        EaElements.Label {
-                            anchors.verticalCenter: parent.verticalCenter
-                            color: EaStyle.Colors.themeForegroundMinor
-                            text: parent.modelData.word
-                        }
-                    }
-                }
-                EaElements.Label {
-                    height: EaStyle.Sizes.tableRowHeight * 0.8
-                    verticalAlignment: Text.AlignVCenter
-                    color: EaStyle.Colors.themeForegroundMinor
-                    text: qsTr("· a cell shows its point and bank in the charts")
                 }
             }
         }

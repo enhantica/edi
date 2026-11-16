@@ -3762,23 +3762,13 @@ QString ProjectViewModel::seriesSummary() const {
     const auto& datasets = scan_session_->datasets();
     const int points = static_cast<int>(datasets.files.size());
     const int banks = static_cast<int>(datasets.experiments.size());
-    QString text = tr("%1 points × %2 banks").arg(points).arg(banks);
+    QString text = tr("%1 runs × %2 banks").arg(points).arg(banks);
     if (points > 0 && !project_->sequential_fit.extract.empty()) {
         const QString first = datasetRow(0).extracted.value(0), last = datasetRow(points - 1).extracted.value(0);
         if (!first.isEmpty() && !last.isEmpty()) text += QStringLiteral(" · ") + first + QStringLiteral(" – ") + last;
     }
     text += QStringLiteral(" · ") + tr("folder %1").arg(QString::fromStdString(project_->sequential_fit.data_dir));
     return text;
-}
-
-QVariantList ProjectViewModel::seriesCounts() const {
-    if (!series()) return {0, 0, 0};
-    const auto& datasets = scan_session_->datasets();
-    const int banks = static_cast<int>(datasets.experiments.size());
-    const int changed = static_cast<int>(std::count(series_changed_.begin(), series_changed_.end(), true)) * banks;
-    int missing = 0;
-    for (const auto& point : datasets.incomplete) missing += std::max(0, banks - static_cast<int>(point.files.size()));
-    return {static_cast<int>(datasets.files.size()) * banks - changed, changed, missing};
 }
 
 QString ProjectViewModel::pointName(int point) const {
@@ -3790,36 +3780,6 @@ QString ProjectViewModel::pointName(int point) const {
     return value.isEmpty() ? QString::fromStdString(datasets.files[at]) : value;
 }
 
-QString ProjectViewModel::pointLabel(int point) const {
-    if (!series() || point < 0 || point >= seriesPointCount()) return {};
-    const auto& datasets = scan_session_->datasets();
-    const auto at = static_cast<std::size_t>(point);
-    if (at >= datasets.files.size()) return QString::fromStdString(datasets.incomplete[at - datasets.files.size()].key);
-    const QString value = datasetRow(point).extracted.value(0);
-    return QString::number(point + 1) + QStringLiteral(" · ") + (value.isEmpty() ? QString::fromStdString(datasets.files[at]) : value);
-}
-
-QVariantList ProjectViewModel::pointCells(int point) const {
-    QVariantList cells;
-    if (!series() || point < 0 || point >= seriesPointCount()) return cells;
-    const auto& datasets = scan_session_->datasets();
-    const auto at = static_cast<std::size_t>(point);
-    const bool complete = at < datasets.files.size();
-    const bool changed = complete && at < series_changed_.size() && series_changed_[at];
-    for (std::size_t bank = 0; bank < datasets.experiments.size(); ++bank) cells.append(complete ? (changed ? 1 : 0) : 2);
-    return cells;
-}
-
-QString ProjectViewModel::pointOutcome(int point) const {
-    if (!series() || point < 0 || point >= static_cast<int>(scan_session_->datasets().files.size())) return {};
-    return scan_session_->outcome(point);
-}
-
-QString ProjectViewModel::pointReliability(int point) const {
-    if (!series() || point < 0 || point >= static_cast<int>(scan_session_->datasets().files.size())) return {};
-    return datasetRow(point).reliability;
-}
-
 QString ProjectViewModel::pointProblem(int point) const {
     if (!series()) return {};
     const auto& datasets = scan_session_->datasets();
@@ -3828,21 +3788,7 @@ QString ProjectViewModel::pointProblem(int point) const {
     return QString::fromStdString(datasets.incomplete[at - datasets.files.size()].reason);
 }
 
-void ProjectViewModel::showPointBank(int point, int bank) {
-    if (!series()) return;
-    setCurrentBank(bank);
-    if (point >= 0 && point < static_cast<int>(scan_session_->datasets().files.size())) setCurrentExperimentIndex(point);
-}
-
 void ProjectViewModel::syncSeries() {
-    series_changed_.clear();
-    if (series()) {
-        try {
-            series_changed_ = edi::scan_points_changed(*project_, scan_session_->datasets(), scan_session_->datasets().files);
-        } catch (const std::exception&) {
-            series_changed_.clear();  // the grid then shows every file loaded
-        }
-    }
     ++series_revision_;
     emit seriesChanged();
 }
@@ -3965,7 +3911,7 @@ void ProjectViewModel::syncDatasets() {
         return;
     }
     if (series()) {
-        // A series is one row; its points and banks are the grid's (pointCells).
+        // A series is one row; its runs and banks are chosen in the main view (the Run and Bank selectors).
         ExperimentViewModel* first = experiment_models_.value(0);
         experiment_list_->setColumns({});
         const auto row = [this](int) {
