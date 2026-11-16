@@ -86,9 +86,15 @@ Windows, with the DigiCert ONE account:
    `https://clientauth.one.digicert.com`.
 5. Delete `cert.p12` and `cert.b64` from the disk.
 
-The workflow `.github/workflows/codesign-check.yml` checks every entry without building anything: on macOS it
-imports the certificate, signs a test file and logs in to the notary service; on Windows it signs a test `.exe`
-through KeyLocker and verifies it.
+To check new credentials before a release, do it by hand. A public workflow must not hold the signing secrets
+outside the guarded installer job, so there is no separate check workflow.
+
+- macOS, with the `.p12` imported into a keychain: `security find-identity -v -p codesigning` lists the
+  identity; `codesign --force --options runtime --timestamp --sign "<identity>" <copy of a small binary>` then
+  `codesign --verify --strict` signs and checks a test file; `xcrun notarytool history --apple-id <id>
+  --password <app-specific password> --team-id W2AG9MPZ43` proves the notary login.
+- Windows, with DigiCert's `smctl` and the four `SM_` variables set: `smctl sign --simple --keypair-alias
+  <alias> --input <copy of a small .exe>` then `signtool verify /pa` signs and checks a test file.
 
 **What is signed.** macOS and Windows check only files marked as downloaded (Gatekeeper and quarantine on
 macOS, SmartScreen and the Mark of the Web on Windows); files an installer writes are not checked. So the
