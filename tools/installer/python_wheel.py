@@ -154,7 +154,7 @@ assert Path(edi.__file__).resolve().is_relative_to(Path(sys.argv[1]).resolve())
 assert edi.__build_commit__ == sys.argv[3]
 p = edi.Project.load(sys.argv[2])
 p.calculate()
-assert len(p.experiments[0].data.intensity_calc) > 0
+assert "Plotly" in p.report.as_html(offline=True)
 if first != 'system':
     context = zmq.Context()
     socket = context.socket(zmq.PAIR)
