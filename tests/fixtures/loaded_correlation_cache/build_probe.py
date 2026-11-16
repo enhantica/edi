@@ -9,6 +9,18 @@ import subprocess
 from pathlib import Path
 
 
+def probe_environment(build):
+    """Keep Windows launches on the actual Qt DLL directory selected by CMake."""
+    environment = os.environ.copy()
+    if os.name == 'nt':
+        directory = (Path(build) / 'cmake/qt-runtime-dir.txt').read_text(encoding='utf-8').strip()
+        if not directory or not Path(directory).is_absolute() or not Path(directory).is_dir():
+            raise RuntimeError('The cache probe requires its configured Qt runtime directory')
+        inherited = environment.get('PATH', '')
+        environment['PATH'] = directory + (os.pathsep + inherited if inherited else '')
+    return environment
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--root', type=Path, required=True)
