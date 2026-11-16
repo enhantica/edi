@@ -489,6 +489,11 @@ void FitViewModel::startNative(std::function<void(const edi::FitReport&, bool)> 
 
 void FitViewModel::start() {
     const QPointer<FitViewModel> self(this);
+    // With nothing free there is nothing to fit: refused before it starts, so it never reports Failed.
+    if (!native_completion_ && !running_ && project_.free_parameters().empty()) {
+        emit refused(tr("Select at least one free parameter"));
+        return;
+    }
     // Data from a data collection that is not here yet is downloaded first (edi ADR-0069); the fit starts when it has
     // arrived, unless something else started or the project changed meanwhile (the fetch's own operation).
     if (!native_completion_ && owner_.needsCollectionData()) {
@@ -801,6 +806,8 @@ void FitViewModel::sync() {
     QString reason;
     if (!measured) {
         reason = tr("A fit needs measured data: no experiment in this project has any");
+    } else if (project_.free_parameters().empty()) {
+        reason = tr("Select at least one free parameter");
     } else if (scan) {
         reason = owner_.scanRefusal();
         // Outdated results can always be fitted again (Refit; the owner, 2026-10-26).

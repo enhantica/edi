@@ -2,7 +2,6 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
-import QtQuick.Controls
 
 import EasyApplication.Gui.Style as EaStyle
 import EasyApplication.Gui.Elements as EaElements
@@ -53,60 +52,77 @@ Item {
         checked: morePopup.opened
         onClicked: morePopup.opened ? morePopup.close() : morePopup.open()
     }
-    Popup {
+    // The app's popup (EaElements.Menu: its frame and its open and close animation) in the chart's background colour,
+    // holding one row of the controls that do not fit, as they look in the toolbar, each with its tooltip (the owner,
+    // 2026-11-16). The control itself stays in the row, out of sight; its copy here acts on it.
+    EaElements.Menu {
         id: morePopup
 
+        objectName: moreButton.objectName + ".popup"
         x: Math.max(0, Math.min(moreButton.x + moreButton.width - width, lines.width - width))
         y: moreButton.y + moreButton.height + lines.spacing
-        padding: EaStyle.Sizes.fontPixelSize * 0.5
+        padding: lines.spacing * 2
+        width: overflowRow.implicitWidth + leftPadding + rightPadding
 
-        Column {
+        Binding {
+            target: morePopup.background
+            property: "color"
+            value: EaStyle.Colors.chartBackground
+        }
+
+        // The row is the menu's one item: the menu takes the children of its own list as its items.
+        Row {
+            id: overflowRow
+
             spacing: lines.spacing
 
             Repeater {
                 model: lines.overflow
 
-                // The control itself stays in the row, out of sight; here a copy acts on it.
-                delegate: Row {
+                delegate: Item {
                     id: entry
 
                     required property var modelData
                     readonly property bool box: modelData.closedTexts !== undefined
 
-                    spacing: EaStyle.Sizes.fontPixelSize * 0.5
+                    width: box ? boxCopy.width : buttonCopy.width
+                    height: AppSizes.toolbarControlSize
 
                     ToolbarComboBox {
+                        id: boxCopy
+
                         objectName: entry.box ? entry.modelData.objectName + ".overflow" : ""
                         visible: entry.box
                         enabled: entry.modelData.enabled
                         toolTip: entry.modelData.toolTip ?? ""
                         model: entry.box ? entry.modelData.model : []
                         closedTexts: entry.box ? entry.modelData.closedTexts : []
+                        closedOnly: entry.box && entry.modelData.closedOnly
                         shownIndex: entry.box ? entry.modelData.currentIndex : 0
                         onActivated: index => entry.modelData.activated(index)
                     }
                     ChartToolButton {
-                        id: copy
+                        id: buttonCopy
 
                         objectName: entry.box ? "" : entry.modelData.objectName + ".overflow"
                         visible: !entry.box
                         enabled: entry.modelData.enabled
                         available: entry.modelData.available ?? true
                         fontIcon: entry.modelData.fontIcon ?? ""
+                        toolTip: entry.modelData.toolTip ?? ""
                         checked: entry.modelData.checked ?? false
                         onClicked: entry.modelData.clicked()
 
-                        // A button drawn with a letter (view along a, b, c) has no icon: its name's last part.
+                        // A button drawn with a letter (view along a, b, c) has no icon: its letter, in its colour.
                         EaElements.Label {
                             anchors.centerIn: parent
-                            visible: copy.fontIcon === ""
+                            visible: buttonCopy.fontIcon === ""
+                            font.family: EaStyle.Fonts.ptSansBold.name
                             font.bold: true
+                            font.pixelSize: EaStyle.Sizes.fontPixelSize * 1.15
+                            color: entry.modelData.letterColor ?? EaStyle.Colors.themeForeground
                             text: String(entry.modelData.objectName).split(".").pop()
                         }
-                    }
-                    EaElements.Label {
-                        anchors.verticalCenter: parent.verticalCenter
-                        text: entry.modelData.toolTip ?? ""
                     }
                 }
             }
