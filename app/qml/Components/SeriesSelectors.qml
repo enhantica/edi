@@ -38,34 +38,13 @@ Row {
     }
     readonly property var banks: project ? project.bankLabels : []
     // Each selector's box, beside its previous and next buttons; the two share what the Rows switch leaves.
-    readonly property real boxWidth: (width - (rowsShown ? rowsSwitch.width + spacing : 0) - 4 * buttonWidth - spacing * 6) / 2
-    // Each box as wide as its longest entry, with the combo box's padding and arrow, like the chart's other boxes
-    // (the owner, 2026-11-16), and never wider than its share.
-    function longest(prefix, labels) {
-        let text = "";
-        for (let i = 0; i < labels.length; ++i) {
-            const line = `${prefix} ${i + 1} · ${labels[i]}`;
-            if (line.length > text.length)
-                text = line;
-        }
-        return text;
-    }
-    TextMetrics {
-        id: runText
-        font.family: EaStyle.Fonts.fontFamily
-        font.pixelSize: EaStyle.Sizes.fontPixelSize
-        text: row.longest(row.project ? row.project.seriesVariable : "", row.points)
-    }
-    TextMetrics {
-        id: bankText
-        font.family: EaStyle.Fonts.fontFamily
-        font.pixelSize: EaStyle.Sizes.fontPixelSize
-        text: row.longest(qsTr("Bank"), row.banks)
-    }
-    readonly property real boxPadding: EaStyle.Sizes.fontPixelSize * 4
-    readonly property real buttonWidth: EaStyle.Sizes.comboBoxHeight
+    // Two groups filling the row, as the experiment selector fills it alone: the run's and the bank's, each its box
+    // and its two buttons, a toolbar group's gap apart (the owner, 2026-11-16); one bank leaves the run the whole row.
+    readonly property real groupGap: AppSizes.toolbarSpacing * 4
+    readonly property bool twoGroups: banks.length > 1
+    readonly property real groupWidth: (width - (rowsShown ? rowsSwitch.width + groupGap : 0) - (twoGroups ? groupGap : 0)) / (twoGroups ? 2 : 1)
 
-    spacing: AppSizes.toolbarSpacing
+    spacing: groupGap
 
     // ← and → step the bank, as its buttons do, unless a text field has the keys (the owner, 2026-11-16).
     function stepBank(offset) {
@@ -131,7 +110,7 @@ Row {
     BlockSelector {
         id: pointBox
         objectName: "mainArea.series.point"
-        width: Math.min(row.boxWidth, Math.ceil(runText.advanceWidth) + row.boxPadding) + 2 * (row.buttonWidth + row.spacing)
+        width: row.groupWidth
         enabled: !(row.rowsShown && !row.byBank)
         backgroundColor: EaStyle.Colors.chartBackground
         blocks: runModel
@@ -145,7 +124,7 @@ Row {
         id: bankBox
         objectName: "mainArea.series.bank"
         visible: row.banks.length > 1
-        width: Math.min(row.boxWidth, Math.ceil(bankText.advanceWidth) + row.boxPadding) + 2 * (row.buttonWidth + row.spacing)
+        width: row.groupWidth
         enabled: !row.byBank
         backgroundColor: EaStyle.Colors.chartBackground
         blocks: bankModel
