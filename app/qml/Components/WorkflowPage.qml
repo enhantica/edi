@@ -29,6 +29,18 @@ EaComponents.ContentPage {
     // The main area's place in the page: the Structure, Experiment and Analysis pages leave it to the window's one
     // main view, drawn over it (MainView).
     readonly property Item mainArea: mainContent.parent
+    // The page's own main view (MainView), over its main area and moving with the page (edi ADR-0017 §2; the owner,
+    // 2026-11-14 item 5); null keeps the area's own tabs.
+    property Component pageView: null
+    readonly property Item pageViewItem: pageViewLoader.item
+    Loader {
+        id: pageViewLoader
+        parent: page.mainArea
+        anchors.fill: parent
+        z: 2
+        active: page.pageView !== null
+        sourceComponent: page.pageView
+    }
     property alias mainTabs: mainContent.tabs
     property alias mainItems: mainContent.items
     property alias basicItem: basicLoader.sourceComponent

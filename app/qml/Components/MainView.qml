@@ -9,18 +9,24 @@ import EasyApplication.Gui.Components as EaComponents
 
 import edi.app
 
-// The one main view of the Structure, Experiment and Analysis pages (the owner, 2026-11-10; edi ADR-0017 §2): it stays
-// where it is while the app bar's pages change only the sidebar beside it. Its tabs are every view those pages had,
-// once: Structure, Pattern, Correlations, Stacked, Map and Evolution. A page's first visit opens its own tab; later the
-// shown tab stays. The block selector above the views lists the structures on the Structure tab and the experiments on
-// the others.
+// A workflow page's own main view (edi ADR-0017 §2; the owner, 2026-11-14 item 5): each of the Structure, Experiment
+// and Analysis pages holds one, in its main area, and it moves with the page. Its tabs are the page's set (`tabKeys`)
+// out of Structure, Pattern, Correlations, Stacked, Map and Evolution: a tab that will become available is shown
+// disabled, one that is irrelevant (Stacked and Map with one dataset, Evolution without a scan) is hidden. The page's
+// first tab opens with each project; after that the shown tab stays. The block selector above the views lists the
+// structures on the Structure tab and the experiments on the others.
 EaComponents.MainContent {
     id: view
 
-    // On screen: one of the three pages is shown.
+    // On screen: its page is shown.
     property bool shown: false
-    // The page whose sidebar is shown, an AppState.Page value: its first visit opens its own tab.
-    property int page: -1
+    // The page's tabs, by key, its own first: the others are hidden.
+    property var tabKeys: ["structure", "pattern", "correlations", "stacked", "map", "evolution"]
+    readonly property var allKeys: ["structure", "pattern", "correlations", "stacked", "map", "evolution"]
+    function shows(key) {
+        return tabKeys.indexOf(key) >= 0;
+    }
+    readonly property int ownTab: Math.max(0, allKeys.indexOf(tabKeys[0]))
 
     readonly property ProjectViewModel project: Session.project
     readonly property bool hasStructures: project !== null && project.structures.count > 0
@@ -38,7 +44,7 @@ EaComponents.MainContent {
     readonly property bool correlationsShown: measured && correlationChart.available
     onCorrelationsShownChanged: {
         if (!correlationsShown && tabIndex === 2)
-            showMainTab(hasExperiments ? 1 : 0);
+            showMainTab(ownTab);
     }
 
     // The tab bar, reached from its first tab (the base names it nowhere).
@@ -52,21 +58,20 @@ EaComponents.MainContent {
         if (bar)
             bar.currentIndex = index;
     }
-    // The first visit to a page in a project selects the page's own tab, Structure on the Structure page and Pattern on
-    // the others, even with nothing to show yet; after that the tab the user is on stays across page switches until
-    // they pick another, and the view never switches by itself (the owner, 2026-11-11; edi ADR-0017 §2).
-    property var visitedPages: ({})
+    // The page's own tab opens the first time the page is shown with a project, even with nothing to show yet; after
+    // that the tab the user is on stays until they pick another, and the view never switches by itself (the owner,
+    // 2026-11-11; edi ADR-0017 §2).
+    property bool ownTabOpened: false
     function openOwnTabOnFirstVisit() {
-        if (!bar || !shown || page < 0 || visitedPages[page])
+        if (!bar || !shown || ownTabOpened)
             return;
-        visitedPages[page] = true;
-        showMainTab(page === AppState.Page.Structure ? 0 : 1);
+        ownTabOpened = true;
+        showMainTab(ownTab);
     }
     onProjectChanged: {
-        visitedPages = {};
+        ownTabOpened = false;
         openOwnTabOnFirstVisit();
     }
-    onPageChanged: openOwnTabOnFirstVisit()
     onShownChanged: {
         openOwnTabOnFirstVisit();
         Qt.callLater(showCurrentPage);
@@ -85,49 +90,56 @@ EaComponents.MainContent {
     Connections {
         target: AppState
         function onEvolutionRequested() {
-            view.showMainTab(5);
+            if (view.shows("evolution"))
+                view.showMainTab(5);
         }
     }
 
+    // A hidden tab takes no width, so the tab bar keeps no gap for it.
     tabs: [
         IconTabButton {
             id: structureTab
 
             objectName: "mainArea.tab.structure"
             text: qsTr("Structure")
+            visible: view.shows("structure")
+            width: visible ? Math.max(implicitBackgroundWidth + leftInset + rightInset, implicitContentWidth + leftPadding + rightPadding) : 0
             enabled: view.hasStructures
         },
         IconTabButton {
             objectName: "mainArea.tab.pattern"
             text: qsTr("Pattern")
+            visible: view.shows("pattern")
+            width: visible ? Math.max(implicitBackgroundWidth + leftInset + rightInset, implicitContentWidth + leftPadding + rightPadding) : 0
             enabled: view.hasExperiments
         },
         // The last fit's parameter correlations for the shown experiment.
         IconTabButton {
             objectName: "mainArea.tab.correlations"
             text: qsTr("Correlations")
+            visible: view.shows("correlations")
+            width: visible ? Math.max(implicitBackgroundWidth + leftInset + rightInset, implicitContentWidth + leftPadding + rightPadding) : 0
             enabled: view.correlationsShown
         },
-        // A scan's or a joint fit's patterns, stacked and as a map (edi ADR-0041).
+        // A scan's or a joint fit's patterns, stacked and as a map (edi ADR-0041): only with several datasets.
         IconTabButton {
             objectName: "mainArea.tab.stacked"
             text: qsTr("Stacked")
-            enabled: view.patternViews || view.singleCrystals
+            visible: view.shows("stacked") && (view.patternViews || view.singleCrystals)
+            width: visible ? Math.max(implicitBackgroundWidth + leftInset + rightInset, implicitContentWidth + leftPadding + rightPadding) : 0
         },
         IconTabButton {
             objectName: "mainArea.tab.map"
             text: qsTr("Map")
-            enabled: view.patternViews && !view.singleCrystals
+            visible: view.shows("map") && view.patternViews && !view.singleCrystals
+            width: visible ? Math.max(implicitBackgroundWidth + leftInset + rightInset, implicitContentWidth + leftPadding + rightPadding) : 0
         },
-        // A fitted parameter across a scan's datasets (edi ADR-0017 §19): shown in the sequential and independent
-        // fitting modes, enabled in a scan project (edi ADR-0046).
+        // A fitted parameter across a scan's datasets (edi ADR-0017 §19), in a scan project (edi ADR-0046).
         IconTabButton {
             objectName: "mainArea.tab.evolution"
             text: qsTr("Evolution")
-            visible: view.project !== null && view.project.scan
-            // The base tab's own width, and none while hidden, so the tab bar keeps no gap for it.
+            visible: view.shows("evolution") && view.project !== null && view.project.scan
             width: visible ? Math.max(implicitBackgroundWidth + leftInset + rightInset, implicitContentWidth + leftPadding + rightPadding) : 0
-            enabled: view.project !== null && view.project.scan
         }
     ]
     items: [

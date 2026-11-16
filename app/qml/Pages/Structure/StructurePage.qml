@@ -38,6 +38,17 @@ WorkflowPage {
         })
 
     pageName: "structure"
+    // Its own main view: Structure, and Pattern disabled until there is one (the owner, 2026-11-14 item 5).
+    pageView: Component {
+        MainView {
+            shown: page.current
+            tabKeys: ["structure", "pattern"]
+        }
+    }
+    onCurrentChanged: if (current && pageViewItem)
+        AppState.mainView = pageViewItem
+    onPageViewItemChanged: if (current && pageViewItem)
+        AppState.mainView = pageViewItem
     extrasEnabled: structure !== null
     textEnabled: structure !== null
     basicItem: Component {
@@ -67,7 +78,7 @@ WorkflowPage {
             }
             AppearanceGroup {
                 options: page.project ? page.project.structureViewOptions : null
-                controller: AppState.mainView ? AppState.mainView.structureController : null
+                controller: page.pageViewItem ? page.pageViewItem.structureController : null
                 structure: page.structure
             }
         }
