@@ -23,6 +23,13 @@ import edi.app
 Item {
     id: chart
 
+    // What the main view's Save image takes when this is the shown tab: the item, its toolbar (hidden while the image
+    // is taken), the file name, and whether the toolbar's band is cut off.
+    readonly property Item imageItem: chart
+    readonly property Item imageToolbar: toolbar
+    readonly property string imageName: "correlations"
+    readonly property bool imageCropsToolbar: true
+
     objectName: "correlations"
 
     property ProjectViewModel project: null
@@ -151,11 +158,6 @@ Item {
             toolTip: !enabled ? chart.offReason : chart.fullMatrix ? qsTr("Show the lower triangle only") : qsTr("Show the full matrix")
             checked: chart.fullMatrix
             onClicked: ApplicationInfo.correlationToggle(true)
-        }
-        SaveImageButton {
-            objectName: "correlations.toolbar.save"
-            target: chart
-            fileName: "correlations"
         }
     }
 

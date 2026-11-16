@@ -18,6 +18,13 @@ import edi.app
 Rectangle {
     id: view
 
+    // What the main view's Save image takes when this is the shown tab: the item, its toolbar (hidden while the image
+    // is taken), the file name, and whether the toolbar's band is cut off.
+    readonly property Item imageItem: view
+    readonly property Item imageToolbar: toolbarRow
+    readonly property string imageName: "structure"
+    readonly property bool imageCropsToolbar: false
+
     property StructureViewModel structure: null
     property StructureViewOptions options: null
     // The legend's width when it was last shown: the band the drawing keeps clear for it.
@@ -201,6 +208,8 @@ Rectangle {
     // The colour scheme and the toolbar, a toolbar group's spacing apart, in one line centred under the block
     // selector row (owner, 2026-10-11).
     Row {
+        id: toolbarRow
+
         x: Math.round(view.sideMargin + (view.width - view.toolbarRightInset - view.sideMargin - width) / 2)
         y: view.margin
         visible: !view.report
@@ -219,7 +228,6 @@ Rectangle {
 
             controller: controller
             options: view.options
-            saveTarget: view
         }
     }
 

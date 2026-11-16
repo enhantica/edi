@@ -19,6 +19,13 @@ import edi.app
 Item {
     id: chart
 
+    // What the main view's Save image takes when this is the shown tab: the item, its toolbar (hidden while the image
+    // is taken), the file name, and whether the toolbar's band is cut off.
+    readonly property Item imageItem: chart
+    readonly property Item imageToolbar: toolbarLines
+    readonly property string imageName: "pattern"
+    readonly property bool imageCropsToolbar: true
+
     objectName: "chart"
 
     property ExperimentViewModel experiment: null
@@ -483,8 +490,6 @@ Item {
 
             // The y titles carry the series' colours, so the legend box waits behind its button.
             legendShown: false
-            saveTarget: chart
-            saveName: "pattern"
             structureCurvesAvailable: !chart.report && controller.hasCalculated
             includedOnly: Preferences.chartIncludedOnly
             subtractBackground: Preferences.chartSubtractBackground

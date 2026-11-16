@@ -21,6 +21,13 @@ import edi.app
 Item {
     id: chart
 
+    // What the main view's Save image takes when this is the shown tab: the item, its toolbar (hidden while the image
+    // is taken), the file name, and whether the toolbar's band is cut off.
+    readonly property Item imageItem: chart
+    readonly property Item imageToolbar: viewButtons
+    readonly property string imageName: "evolution"
+    readonly property bool imageCropsToolbar: true
+
     objectName: "evolution"
 
     property ProjectViewModel project: null
@@ -206,11 +213,6 @@ Item {
             enabled: chart.project !== null
             checked: chart.project !== null && chart.project.evolutionRangeWithSu
             onClicked: chart.project.evolutionRangeWithSu = !chart.project.evolutionRangeWithSu
-        }
-        SaveImageButton {
-            objectName: "evolution.toolbar.save"
-            target: chart
-            fileName: "evolution"
         }
     }
 

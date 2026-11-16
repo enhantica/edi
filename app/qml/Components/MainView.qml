@@ -216,6 +216,8 @@ EaComponents.MainContent {
                 shown: measCalcTab.shown && measCalcTab.singleCrystal
             }
             MeasCalcChart {
+                id: measCalcPowder
+
                 anchors.fill: parent
                 visible: !measCalcTab.singleCrystal
                 experiment: measCalcTab.singleCrystal ? null : measCalcTab.experiment
@@ -226,6 +228,8 @@ EaComponents.MainContent {
             id: structureLater
         },
         EvolutionChart {
+            id: evolutionChart
+
             project: view.project
             shown: view.shown && SwipeView.isCurrentItem
         },
@@ -309,6 +313,34 @@ EaComponents.MainContent {
         target: view.children.length > 1 ? view.children[1].anchors : null
         property: "topMargin"
         value: blockSelector.reservedHeight
+    }
+
+    // Save image for the shown tab, in the main view's bottom-right corner, inset as the toolbar buttons are spaced (the
+    // owner, 2026-11-16). Each tab's view names what it saves (imageItem, imageToolbar, imageName, imageCropsToolbar).
+    SaveImageButton {
+        id: saveImage
+
+        readonly property Item source: ({
+                "structure": view.hasStructures ? structureView.imageItem : null,
+                "pattern": view.hasExperiments ? chartView.imageItem : null,
+                "meascalc": measCalcTab.available ? (measCalcTab.singleCrystal ? measCalcCrystal.imageItem : measCalcPowder.imageItem) : null,
+                "evolution": evolutionChart.imageItem,
+                "stacked": view.singleCrystals ? stackedCrystals.imageItem : stackedChart.imageItem,
+                "map": mapChart.imageItem,
+                "correlations": correlationChart.imageItem
+            })[view.currentKey] ?? null
+
+        objectName: "mainArea.saveImage"
+        anchors.right: parent.right
+        anchors.bottom: parent.bottom
+        anchors.rightMargin: AppSizes.toolbarSpacing
+        anchors.bottomMargin: AppSizes.toolbarSpacing
+        z: 2
+        visible: source !== null
+        target: source
+        toolbar: source ? source.imageToolbar : null
+        fileName: source ? source.imageName : "image"
+        cropToolbar: source ? source.imageCropsToolbar : true
     }
 
     // The Structure and Pattern tabs' empty states, as the pages had them: on the shown tab, when it has nothing to draw.
