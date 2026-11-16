@@ -4,7 +4,7 @@ icon: fa5/info-circle
 
 # About
 
-Hi, I'm Andrew Sazonov. I work at the [European Spallation Source (ESS)](https://ess.eu), in the [Data Management & Scientific Computing centre (DMSC)](https://ess.eu/data-management-scientific-computing). I started EasyDiffraction and still lead its development, together with the people who contribute code, ideas and feedback.
+Hi, I'm Andrew Sazonov. I work at the [European Spallation Source (ESS)](https://ess.eu), in the [Data Management & Scientific Computing centre (DMSC)](https://ess.eu/data-management-scientific-computing). I started EasyDiffraction and continue to lead its development, helped by the code, ideas and feedback of many others involved in the project.
 
 Before joining ESS, I worked as an instrument scientist and spent a lot of time doing experiments as a user myself. During my PhD I saw how hard it could be to get started with diffraction data analysis software. Many tools were powerful, but the learning curve was often frustratingly steep. That experience shaped the main idea behind EasyDiffraction from the very beginning: make diffraction analysis approachable, intuitive and easy to use.
 
