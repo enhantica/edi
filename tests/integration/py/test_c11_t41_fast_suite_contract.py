@@ -257,6 +257,7 @@ def test_c11_t41_edi_uses_only_the_ruled_category_language_layout() -> None:
             'tests/integration/py/',
             'tests/integration/app/',
             'tests/system/py/',
+            'tests/system/app/',
         ))
     ]
     assert not misplaced, f'test modules outside repo/category/language layout: {misplaced}'
@@ -552,6 +553,7 @@ def _assert_platform_nightly_partition(groups, tasks, jobs, active):
                 'files unless their respective inclusion switches are true'
             )
         ignores.extend([
+            '--ignore=tests/system/app',
             '--ignore=' + LICENCE_MODULE,
             '--ignore=tests/system/py/test_survey_events.py',
         ])
@@ -595,8 +597,8 @@ def test_c11_t41_edi_ci_tiers_name_pr_merge_and_local_surfaces() -> None:
         self_hosted_runners,
     )
 
-    jobs = yaml.safe_load(workflow)['jobs']
     declared = yaml.safe_load(workflow)
+    jobs = declared['jobs']
     triggers = declared.get('on', declared.get(True))
     assert {'pull_request', 'push', 'schedule', 'workflow_dispatch'} <= set(triggers), (
         'complete system selections retain PR, main, nightly and on-demand workflow triggers'
@@ -619,13 +621,16 @@ def test_c11_t41_edi_ci_tiers_name_pr_merge_and_local_surfaces() -> None:
     for group in ('quick', 'full'):
         task = groups[group]['task']
         assert task in tasks, 'both cadences retain a declared executable local test-group task'
-        assert {'unit/py', 'unit/cpp', 'integration/py', 'system'} <= set(
+        assert {'unit/py', 'unit/cpp', 'integration/py', 'system/py'} <= set(
             groups[group]['tiers']
-        ), 'Both CI cadences must retain the complete unit, integration and system selections'
+        ), 'Both cadences retain all core unit, integration and system Python selections'
         if 'system' not in jobs:
             assert 'pixi run ' + task in workflow, (
                 'Both PR and merge CI must invoke their declared executable test-group tasks'
             )
+    assert {'integration/app', 'system/app'} <= set(groups['app']['tiers']), (
+        'The Qt-qualified app cohort retains both native integration and system cases'
+    )
     if 'system' in jobs:
         # Before: one event-selected aggregator. After the parallel-jobs
         # decision: the exact same tier selection across required core and parts.
@@ -654,6 +659,7 @@ def test_c11_t41_edi_ci_tiers_name_pr_merge_and_local_surfaces() -> None:
             'tests/integration',
             'tests/system',
             '--ignore=tests/integration/app',
+            '--ignore=tests/system/app',
             '--ignore=tests/system/py/test_survey_events.py',
             '-q',
         ], 'the unsplit local group and split CI jobs must retain identical tier selections'
@@ -661,6 +667,7 @@ def test_c11_t41_edi_ci_tiers_name_pr_merge_and_local_surfaces() -> None:
             'bash',
             'tools/ci/pytest-lenient.sh',
             '--ignore=tests/integration/app',
+            '--ignore=tests/system/app',
             '--ignore=tests/system/py/test_survey_events.py',
         ], 'the local merge group retains its complete default collection outside the app tier'
         assert tasks['core-tests']['cmd'] == ['bash', 'tools/ci/core-tests.sh'], (
