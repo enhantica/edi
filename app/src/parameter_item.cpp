@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "parameter_item.hpp"
+#include "label_case.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -40,7 +41,8 @@ ParameterItem::ParameterItem(const edi::ParameterEntry& entry, ProjectEditor& ed
     // Every name the parameter shows comes from crysta's dictionary through the core's bridge.
     display_name_ = spec != nullptr ? QString::fromStdString(edi::label(uid_.toStdString())) : name_;
     display_units_ = spec != nullptr ? QString::fromStdString(edi::units_label(uid_.toStdString())) : QString();
-    short_name_ = spec != nullptr ? QString::fromStdString(edi::label(uid_.toStdString())) : name_;
+    // The short name is the field's title, so it follows the label rule; the display name stays as the dictionary writes it.
+    short_name_ = spec != nullptr ? label_case(QString::fromStdString(edi::label(uid_.toStdString()))) : name_;
     minimum_ = spec != nullptr ? spec->range.min : -std::numeric_limits<double>::infinity();
     maximum_ = spec != nullptr ? spec->range.max : std::numeric_limits<double>::infinity();
     category_icon_ = category_presentation(category_).icon;
@@ -67,7 +69,7 @@ ParameterItem::ParameterItem(const edi::DescriptorEntry& entry, ProjectEditor& e
       name_(QString::fromStdString(entry.name)) {
     display_name_ = QString::fromStdString(edi::label(entry.uid));
     display_units_ = QString::fromStdString(edi::units_label(entry.uid));
-    short_name_ = display_name_;
+    short_name_ = label_case(display_name_);
     minimum_ = -std::numeric_limits<double>::infinity();
     maximum_ = std::numeric_limits<double>::infinity();
     category_icon_ = category_presentation(category_).icon;
@@ -108,7 +110,8 @@ void ParameterItem::setElementSymbol(const QString& symbol) {
     }
 }
 
-void ParameterItem::setLabel(const QString& short_name, const QString& units) {
+void ParameterItem::setLabel(const QString& name, const QString& units) {
+    const QString short_name = label_case(name);
     if (short_name_ != short_name) {
         short_name_ = short_name;
         emit shortNameChanged();

@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "generated_category.hpp"
+#include "label_case.hpp"
 
 #include <algorithm>
 #include <set>
@@ -182,7 +183,7 @@ void GeneratedCategory::read() {
         const std::string uid = item != nullptr ? item->uid : id + "." + name;
         const bool known = edi::has_item(uid);
         names_.append(QString::fromStdString(name));
-        labels_.append(QString::fromStdString(known ? edi::label(uid) : name));
+        labels_.append(known ? label_case(QString::fromStdString(edi::label(uid))) : QString::fromStdString(name));
         units_.append(QString::fromStdString(known ? edi::units_label(uid) : std::string()));
         descriptions_.append(QString::fromStdString(known ? edi::description(uid) : std::string()));
         // The control the dictionary's type asks for: a selector shows its options, as every designed selector does.

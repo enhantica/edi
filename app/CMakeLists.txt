@@ -113,6 +113,7 @@ qt_add_qml_module(edi_app_module
         src/web_page_hooks.hpp src/web_page_hooks.cpp
         src/project_editor.hpp
         src/row_table_model.hpp src/row_table_model.cpp
+        src/label_case.hpp
         src/parameter_item.hpp src/parameter_item.cpp
         src/parameter_registry.hpp src/parameter_registry.cpp
         src/option_list_model.hpp src/option_list_model.cpp
