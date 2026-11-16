@@ -301,6 +301,8 @@ ScanTemplate scan_template_of(const Project& scan) {
                         throw std::invalid_argument("analysis/results.csv: the row's '" + column->second->name +
                                                     "' cells are not numbers");
                     }
+                    // The dataset's fit started from the template's value, as the app's Start column shows.
+                    value.start = value.value;
                     value.value = number;
                     // An undefined s.u. leaves the value without one, never 0.
                     value.uncertainty =

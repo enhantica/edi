@@ -4214,6 +4214,8 @@ std::vector<edi::Edit::ScanValue> ProjectViewModel::datasetValues(const std::vec
             throw std::invalid_argument("analysis/results.csv: the row's '" + found->second->name +
                                         "' cells are not numbers");
         }
+        // The dataset's fit started from the template's value: Start and Change read it (the owner, 2026-11-17).
+        value.start = value.value;
         value.value = number;
         // "nan": the fit gave this parameter no s.u. (it was not free in it).
         value.uncertainty = uncertainty_cell == "nan" ? std::nullopt : std::optional<double>(uncertainty);

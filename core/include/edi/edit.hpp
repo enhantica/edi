@@ -58,11 +58,14 @@ struct ScanViewValue {
     std::string unique_name;
     double value = 0.0;
     std::optional<double> uncertainty;
+    // The value the fit of this dataset started from (the template's), for the Start and Change columns; none for a
+    // parameter its results do not record.
+    std::optional<double> start;
 };
 // The existing scan-view operation split at its real write boundary. Scan Undo
 // prepares it before reversing files; ordinary Edit still resolves at execution.
 struct PreparedScanView {
-    struct Target { Parameter* parameter; double value; std::optional<double> uncertainty; };
+    struct Target { Parameter* parameter; double value; std::optional<double> uncertainty; std::optional<double> start; };
     ExperimentBase* experiment;
     std::optional<PdDataBase> data;
     std::vector<Target> targets;
@@ -73,6 +76,7 @@ struct PreparedScanView {
         for (const auto& target : targets) {
             target.parameter->value = target.value;
             target.parameter->uncertainty = target.uncertainty;
+            target.parameter->start_value = target.start;
         }
     }
 };
@@ -84,7 +88,7 @@ inline PreparedScanView prepare_scan_view(Project& project, ExperimentBase& expe
     prepared.targets.reserve(values.size());
     for (const auto& value : values) {
         if (const auto found = by_name.find(value.unique_name); found != by_name.end())
-            prepared.targets.push_back({found->second, value.value, value.uncertainty});
+            prepared.targets.push_back({found->second, value.value, value.uncertainty, value.start});
     }
     return prepared;
 }
