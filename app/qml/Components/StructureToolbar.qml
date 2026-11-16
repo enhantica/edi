@@ -126,6 +126,8 @@ Item {
 
         property int axis: 0
         readonly property string name: ["a", "b", "c"][axis]
+        // Read by the copy in the toolbar's More popup too.
+        readonly property color letterColor: !toolbar.controller ? EaStyle.Colors.themeForeground : axis === 0 ? toolbar.controller.axisColorA : axis === 1 ? toolbar.controller.axisColorB : toolbar.controller.axisColorC
 
         objectName: "structure.toolbar." + name
         toolTip: qsTr("View along %1").arg(name)
@@ -136,7 +138,7 @@ Item {
             font.family: EaStyle.Fonts.ptSansBold.name
             font.bold: true
             font.pixelSize: EaStyle.Sizes.fontPixelSize * 1.15
-            color: !toolbar.controller ? EaStyle.Colors.themeForeground : axisButton.axis === 0 ? toolbar.controller.axisColorA : axisButton.axis === 1 ? toolbar.controller.axisColorB : toolbar.controller.axisColorC
+            color: axisButton.letterColor
             text: axisButton.name
         }
     }
