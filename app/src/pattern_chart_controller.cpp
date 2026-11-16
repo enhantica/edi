@@ -1177,8 +1177,9 @@ void PatternChartController::refresh() {
     fill_band(measured, 0, shown_y_min_, plot_height_ > 0.0 ? 0.05 * (shown_y_max_ - shown_y_min_) / plot_height_ : 0.0);
     fill_band(residual, 1, residual_min_, 0.0);
     // Each bar spans its value and the pane's zero (or its bottom, when zero is below it): a fixed width on the axis,
-    // so bars widen when zoomed in, or one pixel at any zoom with thin bars (the owner, 2026-11-16). The area is filled
-    // as the band is; the outline is drawn round it.
+    // so bars widen when zoomed in, or one pixel at any zoom with thin bars (the owner, 2026-11-16). Its fill is a line
+    // barWidth wide (the bottom series) and its outline is drawn round it. One area for all the bars was not used:
+    // Qt Graphs filled the gaps between them as slivers fanned from the first point.
     const auto fill_bars = [&](const edi::PatternSeries* series, std::size_t pane, double low_edge, double high_edge) {
         if (pane >= band_series_.size() || (held && pane == 0)) return;
         const BandSeries& target = band_series_[pane];
@@ -1188,16 +1189,21 @@ void PatternChartController::refresh() {
         const double fixed = axis_ == edi::PatternAxis::Q ? 0.006 : 0.006 / (4.0 * std::numbers::pi);
         const double half = thin_bars_ ? 0.5 * pixel : std::max(fixed, 0.5 * pixel);
         const double zero = std::clamp(0.0, low_edge, high_edge);
-        QList<QPointF> upper, outline;
-        std::vector<double> base;
+        if (pixel > 0.0 && half > 0.0) {
+            const double width = std::max(1.0, 2.0 * half / pixel);
+            if (width != bar_width_) {
+                bar_width_ = width;
+                emit barWidthChanged();
+            }
+        }
+        QList<QPointF> fill, outline;
         if (bars && series != nullptr && half > 0.0) {
             for (const auto& point : series->points) {
                 if (!std::isfinite(point.x) || !std::isfinite(point.y)) continue;
                 const double low = std::min(point.y, zero), high = std::max(point.y, zero);
-                upper.append(QPointF(point.x - half, high));
-                upper.append(QPointF(point.x + half, high));
-                upper.append(QPointF(nan, nan));  // each bar its own area
-                base.insert(base.end(), {low, low, nan});
+                fill.append(QPointF(point.x, low));
+                fill.append(QPointF(point.x, high));
+                fill.append(QPointF(nan, nan));
                 for (const QPointF& corner : {QPointF(point.x - half, low), QPointF(point.x - half, high),
                                               QPointF(point.x + half, high), QPointF(point.x + half, low),
                                               QPointF(point.x - half, low), QPointF(nan, nan)}) {
@@ -1205,16 +1211,12 @@ void PatternChartController::refresh() {
                 }
             }
         }
-        if (clear_fills) {
+        if (clear_fills || !held) {
             replace(target.upper, {});
             replace(target.lower, {});
-        } else if (!held) {
-            const AreaEdges area = area_edges(upper, base, zero, 0.0);
-            replace(target.upper, area.upper);
-            replace(target.lower, area.lower);
         }
         replace(target.top, outline);
-        replace(target.bottom, {});
+        replace(target.bottom, fill);
     };
     // Measured values stay points with their error bars (the marks above); the residual is drawn as bars.
     if (bars) {

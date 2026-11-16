@@ -589,15 +589,19 @@ Item {
             lowerSeries: LineSeries {}
             Component.onCompleted: controller.setBandSeries(2, calculatedBars.upperSeries, calculatedBars.lowerSeries, calculatedBarsTop, calculatedBarsBottom)
         }
+        // Each bar's fill, a line as wide as the bar, under its outline.
+        LineSeries {
+            id: calculatedBarsBottom
+            objectName: "chart.series.calc.bars.fill"
+            color: calculatedBars.color
+            width: controller.barWidth
+            capStyle: Qt.FlatCap
+        }
         LineSeries {
             id: calculatedBarsTop
             objectName: "chart.series.calc.bars.top"
             color: chart.singleCrystal && controller.thinBars ? chart.structureColor : controller.calculatedColor
             width: 1
-        }
-        LineSeries {
-            id: calculatedBarsBottom
-            visible: false
         }
     }
 
@@ -820,11 +824,14 @@ Item {
             color: controller.residualColor
             width: 1
         }
+        // The band's lower edge, or in the Bars style each residual bar's fill, a line as wide as the bar.
         LineSeries {
             id: residualBandBottom
+            readonly property bool bars: controller.measuredStyle === "bars"
             objectName: "chart.series.resid.band.bottom"
-            color: controller.residualColor
-            width: 1
+            color: bars ? residualBand.color : controller.residualColor
+            width: bars ? controller.barWidth : 1
+            capStyle: bars ? Qt.FlatCap : Qt.SquareCap
         }
     }
 
