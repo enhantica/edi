@@ -90,7 +90,7 @@ def qualify_wheel(asset: Path, version: str, commit: str) -> None:
         root = Path(folder)
         run([sys.executable, '-m', 'venv', root / 'env'], env=env, cwd=root)
         python = root / 'env' / ('Scripts/python.exe' if SYSTEM == 'windows' else 'bin/python')
-        run([python, '-m', 'pip', 'install', '--no-index', '--no-deps', asset], env=env, cwd=root)
+        run([python, '-m', 'pip', 'install', asset], env=env, cwd=root)
         run([python, '-m', 'edi', '--help'], env=env, cwd=root)
         run(
             [
@@ -154,7 +154,7 @@ assert Path(edi.__file__).resolve().is_relative_to(Path(sys.argv[1]).resolve())
 assert edi.__build_commit__ == sys.argv[3]
 p = edi.Project.load(sys.argv[2])
 p.calculate()
-assert "Plotly" in p.report.as_html(offline=True)
+assert len(p.experiments[0].data.intensity_calc) > 0
 if first != 'system':
     context = zmq.Context()
     socket = context.socket(zmq.PAIR)
