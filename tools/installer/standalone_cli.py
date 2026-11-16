@@ -17,7 +17,7 @@ from native_runtime import (
     verify_dependencies,
     windows_dependencies,
 )
-from package import ROOT, SYSTEM, run, sha256
+from package import ROOT, SYSTEM, run, sha256, sign_windows, windows_signing
 from python_wheel import build_wheel
 
 __all__ = (
@@ -81,6 +81,8 @@ def build_cli(
         run(['strip', '--strip-unneeded', binary])
     libraries = bundle_runtime(binary, prefix)
     runtime_notices(libraries, source / 'licenses/dependencies')
+    if windows_signing():
+        sign_windows(binary)
     asset = work / f'EasyDiffraction-{version}-{platform}-cli.zip'
     with zipfile.ZipFile(asset, 'w', compression=zipfile.ZIP_DEFLATED) as archive:
         archive.write(binary, executable)

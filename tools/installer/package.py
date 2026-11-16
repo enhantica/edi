@@ -763,11 +763,72 @@ def verify_windows_signature(path: Path) -> None:
     run([signtool(), 'verify', '/pa', '/v', path])
 
 
+def windows_signing() -> bool:
+    """Signing is on for this Windows run (set by the installers workflow on main only)."""
+    return SYSTEM == 'windows' and os.environ.get('EDI_CODESIGN') == '1'
+
+
+def windows_signed(path: Path) -> bool:
+    result = subprocess.run(
+        [str(signtool()), 'verify', '/pa', '/q', str(path)], check=False, capture_output=True
+    )
+    return result.returncode == 0
+
+
+def sign_windows(path: Path) -> None:
+    """Sign through DigiCert KeyLocker with the smctl the signing action installed, then verify."""
+    (alias,) = required_environment('EDI_CODESIGN_WIN_KEYPAIR_ALIAS')
+    run([
+        'smctl', 'sign', '--simple', '--input', path, '--keypair-alias', alias,
+        '--exit-non-zero-on-fail', '--failfast',
+    ])  # fmt: skip
+    verify_windows_signature(path)
+
+
+# The installed maintenance tool is the running installer's executable segment, which binarycreator
+# rewrote; its signature needs a maintenance-tool component, which is not part of this change.
+UNSIGNED_INSTALLED = frozenset({'maintenancetool.exe'})
+
+
+def sign_windows_tree(root: Path, record: Path) -> None:
+    """Sign every unsigned executable under root and prove nothing else changed.
+
+    Vendor executables that already carry a valid signature keep their exact bytes, so the
+    vendor hashes checked before signing still describe them. The record lists each file signed
+    here with its hash before and after.
+    """
+    before = payload_manifest(root)
+    executables = sorted(path for path in root.rglob('*.exe') if path.is_file())
+    signed = {}
+    for path in executables:
+        if windows_signed(path):
+            continue
+        name = path.relative_to(root).as_posix()
+        sign_windows(path)
+        signed[name] = {'unsigned_sha256': before[name]['sha256'], 'sha256': sha256(path)}
+    after = payload_manifest(root)
+    if set(after) != set(before) or any(
+        after[name] != before[name] for name in before if name not in signed
+    ):
+        raise RuntimeError('Signing changed files other than the unsigned executables')
+    verify_windows_tree(root)
+    record.write_text(json.dumps(signed, indent=2) + '\n', encoding='utf-8')
+
+
+def verify_windows_tree(root: Path, unsigned: frozenset[str] = frozenset()) -> None:
+    """Every executable under root carries a valid signature, apart from the named exceptions."""
+    executables = sorted(path for path in root.rglob('*.exe') if path.is_file())
+    if not executables:
+        raise RuntimeError(f'No executables to verify under {root}')
+    for path in executables:
+        if path.name.lower() not in unsigned:
+            verify_windows_signature(path)
+
+
 def seal_installer(output: Path) -> None:
     """Finish a signed installer after packaging and archive it again.
 
-    macOS signs, notarises and staples here. Windows signs the installer in the workflow, so
-    this only verifies it; signtool fails on a missing or broken signature.
+    macOS signs, notarises and staples here; Windows signs and verifies.
     """
     output = output.resolve()
     metadata_path = output / 'installer.json'
@@ -776,7 +837,7 @@ def seal_installer(output: Path) -> None:
     if SYSTEM == 'macos':
         notarise_macos(installer)
     elif SYSTEM == 'windows':
-        verify_windows_signature(installer)
+        sign_windows(installer)
     else:
         raise RuntimeError('Linux installers are not signed')
     archive = archive_installer(installer, None, ad_hoc=False)
@@ -969,6 +1030,8 @@ def exercise_installer(
             or not (output / 'smoke/window.png').is_file()
         ):
             raise RuntimeError('Installed application smoke check failed')
+        if windows_signing():
+            verify_windows_tree(target, UNSIGNED_INSTALLED)
         if SYSTEM == 'linux':
             dependencies = check_linux_dependencies(target, env)
             (output / 'dependencies.json').write_text(json.dumps(dependencies, indent=2) + '\n')

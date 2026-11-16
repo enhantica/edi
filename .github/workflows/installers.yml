@@ -238,10 +238,6 @@ jobs:
         with:
           p12-file-base64: ${{ secrets.CODESIGN_MAC_CERT_P12_BASE64 }}
           p12-password: ${{ secrets.CODESIGN_MAC_CERT_P12_PASSWORD }}
-      - name: Build desktop bundle and CLI with the qualified SDK
-        run: pixi run --manifest-path tools/installer/pixi.toml python "${{ github.workspace }}/tools/installer/build.py" --crysta-source "${{ github.workspace }}/.crysta" --work "${{ github.workspace }}/build/installer" --collection "${{ github.workspace }}/.edi-data"
-        env:
-          EDI_CODESIGN_MAC_IDENTITY: ${{ runner.os == 'macOS' && vars.CODESIGN_MAC_IDENTITY || '' }}
       - name: Decode the KeyLocker client certificate
         if: env.EDI_CODESIGN == '1' && runner.os == 'Windows'
         shell: bash
@@ -250,41 +246,21 @@ jobs:
         run: |
           echo "$P12_BASE64" | base64 --decode > "$RUNNER_TEMP/client.p12"
           echo "SM_CLIENT_CERT_FILE=$(cygpath -w "$RUNNER_TEMP/client.p12")" >> "$GITHUB_ENV"
-      # The maintenance tool is written from the installer template, so signing the template signs it too.
-      - name: Sign the Windows application
+      # Without an input the action only installs smctl; build.py, standalone_cli.py and package.py
+      # sign every shipped executable with it and check each with signtool (edi ADR-0091).
+      - name: Install the KeyLocker signing tool
         if: env.EDI_CODESIGN == '1' && runner.os == 'Windows'
         uses: digicert/code-signing-software-trust-action@v1
         with:
           simple-signing-mode: true
-          input: ${{ github.workspace }}\build\installer\stage\bin\EasyDiffraction.exe
-          keypair-alias: ${{ vars.CODESIGN_WIN_KEYLOCKER_KEYPAIR_ALIAS }}
+      - name: Build desktop bundle and CLI with the qualified SDK
+        run: pixi run --manifest-path tools/installer/pixi.toml python "${{ github.workspace }}/tools/installer/build.py" --crysta-source "${{ github.workspace }}/.crysta" --work "${{ github.workspace }}/build/installer" --collection "${{ github.workspace }}/.edi-data"
         env:
-          SM_HOST: ${{ vars.CODESIGN_WIN_KEYLOCKER_HOST }}
-          SM_API_KEY: ${{ secrets.CODESIGN_WIN_KEYLOCKER_API_KEY }}
-          SM_CLIENT_CERT_PASSWORD: ${{ secrets.CODESIGN_WIN_CERT_P12_PASSWORD }}
-      - name: Sign the Windows installer template
-        if: env.EDI_CODESIGN == '1' && runner.os == 'Windows'
-        uses: digicert/code-signing-software-trust-action@v1
-        with:
-          simple-signing-mode: true
-          input: ${{ github.workspace }}\build\installer\ifw\tools\bin\installerbase.exe
-          keypair-alias: ${{ vars.CODESIGN_WIN_KEYLOCKER_KEYPAIR_ALIAS }}
-        env:
-          SM_HOST: ${{ vars.CODESIGN_WIN_KEYLOCKER_HOST }}
-          SM_API_KEY: ${{ secrets.CODESIGN_WIN_KEYLOCKER_API_KEY }}
-          SM_CLIENT_CERT_PASSWORD: ${{ secrets.CODESIGN_WIN_CERT_P12_PASSWORD }}
-      - name: Verify the Windows application and installer template signatures
-        if: env.EDI_CODESIGN == '1' && runner.os == 'Windows'
-        shell: bash
-        run: |
-          pixi run --manifest-path tools/installer/pixi.toml python - <<'PYTHON'
-          import sys
-          from pathlib import Path
-          sys.path.insert(0, 'tools/installer')
-          from package import verify_windows_signature
-          verify_windows_signature(Path('build/installer/stage/bin/EasyDiffraction.exe'))
-          verify_windows_signature(Path('build/installer/ifw/tools/bin/installerbase.exe'))
-          PYTHON
+          EDI_CODESIGN_MAC_IDENTITY: ${{ runner.os == 'macOS' && vars.CODESIGN_MAC_IDENTITY || '' }}
+          SM_HOST: ${{ env.EDI_CODESIGN == '1' && runner.os == 'Windows' && vars.CODESIGN_WIN_KEYLOCKER_HOST || '' }}
+          SM_API_KEY: ${{ env.EDI_CODESIGN == '1' && runner.os == 'Windows' && secrets.CODESIGN_WIN_KEYLOCKER_API_KEY || '' }}
+          SM_CLIENT_CERT_PASSWORD: ${{ env.EDI_CODESIGN == '1' && runner.os == 'Windows' && secrets.CODESIGN_WIN_CERT_P12_PASSWORD || '' }}
+          EDI_CODESIGN_WIN_KEYPAIR_ALIAS: ${{ runner.os == 'Windows' && vars.CODESIGN_WIN_KEYLOCKER_KEYPAIR_ALIAS || '' }}
       - name: Save installer compiler objects
         if: ${{ !cancelled() && steps.compiler-cache.outcome == 'success' }}
         uses: actions/cache/save@v4
@@ -318,25 +294,7 @@ jobs:
           QT_QUICK_BACKEND: software
       - name: Create the offline qualification installer
         run: pixi run --manifest-path tools/installer/pixi.toml python "${{ github.workspace }}/tools/installer/package.py" package --stage "${{ github.workspace }}/build/installer/stage" --tools "${{ github.workspace }}/build/installer/ifw/tools" --output "${{ github.workspace }}/build/installer/package"
-      - name: Find the offline installer
-        id: offline-installer
-        if: env.EDI_CODESIGN == '1' && runner.os == 'Windows'
-        shell: bash
-        run: |
-          name=$(sed -n 's/.*"installer": "\([^"]*\)".*/\1/p' build/installer/package/installer.json)
-          echo "path=$(cygpath -w "$PWD/build/installer/package/$name")" >> "$GITHUB_OUTPUT"
-      - name: Sign the offline Windows installer
-        if: env.EDI_CODESIGN == '1' && runner.os == 'Windows'
-        uses: digicert/code-signing-software-trust-action@v1
-        with:
-          simple-signing-mode: true
-          input: ${{ steps.offline-installer.outputs.path }}
-          keypair-alias: ${{ vars.CODESIGN_WIN_KEYLOCKER_KEYPAIR_ALIAS }}
-        env:
-          SM_HOST: ${{ vars.CODESIGN_WIN_KEYLOCKER_HOST }}
-          SM_API_KEY: ${{ secrets.CODESIGN_WIN_KEYLOCKER_API_KEY }}
-          SM_CLIENT_CERT_PASSWORD: ${{ secrets.CODESIGN_WIN_CERT_P12_PASSWORD }}
-      - name: Notarise or verify the offline installer and archive it again
+      - name: Sign the offline installer and archive it again
         if: env.EDI_CODESIGN == '1' && runner.os != 'Linux'
         run: pixi run --manifest-path tools/installer/pixi.toml python "${{ github.workspace }}/tools/installer/package.py" seal --output "${{ github.workspace }}/build/installer/package"
         env:
@@ -344,6 +302,10 @@ jobs:
           EDI_NOTARY_APPLE_ID: ${{ runner.os == 'macOS' && secrets.CODESIGN_MAC_NOTARY_APPLE_ID || '' }}
           EDI_NOTARY_PASSWORD: ${{ runner.os == 'macOS' && secrets.CODESIGN_MAC_NOTARY_PASSWORD || '' }}
           EDI_NOTARY_TEAM_ID: ${{ runner.os == 'macOS' && vars.CODESIGN_MAC_TEAM_ID || '' }}
+          SM_HOST: ${{ env.EDI_CODESIGN == '1' && runner.os == 'Windows' && vars.CODESIGN_WIN_KEYLOCKER_HOST || '' }}
+          SM_API_KEY: ${{ env.EDI_CODESIGN == '1' && runner.os == 'Windows' && secrets.CODESIGN_WIN_KEYLOCKER_API_KEY || '' }}
+          SM_CLIENT_CERT_PASSWORD: ${{ env.EDI_CODESIGN == '1' && runner.os == 'Windows' && secrets.CODESIGN_WIN_CERT_P12_PASSWORD || '' }}
+          EDI_CODESIGN_WIN_KEYPAIR_ALIAS: ${{ runner.os == 'Windows' && vars.CODESIGN_WIN_KEYLOCKER_KEYPAIR_ALIAS || '' }}
       - name: Install, launch, calculate, render and uninstall
         shell: bash
         run: |
@@ -351,25 +313,7 @@ jobs:
           pixi run --manifest-path tools/installer/pixi.toml python "${{ github.workspace }}/tools/installer/package.py" test --installer "${{ github.workspace }}/build/installer/package/$installer" --output "${{ github.workspace }}/build/installer/test"
       - name: Create the online distribution installer
         run: pixi run --manifest-path tools/installer/pixi.toml python "${{ github.workspace }}/tools/installer/package.py" package --kind online --stage "${{ github.workspace }}/build/installer/stage" --tools "${{ github.workspace }}/build/installer/ifw/tools" --output "${{ github.workspace }}/build/installer/online"
-      - name: Find the online installer
-        id: online-installer
-        if: env.EDI_CODESIGN == '1' && runner.os == 'Windows'
-        shell: bash
-        run: |
-          name=$(sed -n 's/.*"installer": "\([^"]*\)".*/\1/p' build/installer/online/installer.json)
-          echo "path=$(cygpath -w "$PWD/build/installer/online/$name")" >> "$GITHUB_OUTPUT"
-      - name: Sign the online Windows installer
-        if: env.EDI_CODESIGN == '1' && runner.os == 'Windows'
-        uses: digicert/code-signing-software-trust-action@v1
-        with:
-          simple-signing-mode: true
-          input: ${{ steps.online-installer.outputs.path }}
-          keypair-alias: ${{ vars.CODESIGN_WIN_KEYLOCKER_KEYPAIR_ALIAS }}
-        env:
-          SM_HOST: ${{ vars.CODESIGN_WIN_KEYLOCKER_HOST }}
-          SM_API_KEY: ${{ secrets.CODESIGN_WIN_KEYLOCKER_API_KEY }}
-          SM_CLIENT_CERT_PASSWORD: ${{ secrets.CODESIGN_WIN_CERT_P12_PASSWORD }}
-      - name: Notarise or verify the online installer and archive it again
+      - name: Sign the online installer and archive it again
         if: env.EDI_CODESIGN == '1' && runner.os != 'Linux'
         run: pixi run --manifest-path tools/installer/pixi.toml python "${{ github.workspace }}/tools/installer/package.py" seal --output "${{ github.workspace }}/build/installer/online"
         env:
@@ -377,6 +321,10 @@ jobs:
           EDI_NOTARY_APPLE_ID: ${{ runner.os == 'macOS' && secrets.CODESIGN_MAC_NOTARY_APPLE_ID || '' }}
           EDI_NOTARY_PASSWORD: ${{ runner.os == 'macOS' && secrets.CODESIGN_MAC_NOTARY_PASSWORD || '' }}
           EDI_NOTARY_TEAM_ID: ${{ runner.os == 'macOS' && vars.CODESIGN_MAC_TEAM_ID || '' }}
+          SM_HOST: ${{ env.EDI_CODESIGN == '1' && runner.os == 'Windows' && vars.CODESIGN_WIN_KEYLOCKER_HOST || '' }}
+          SM_API_KEY: ${{ env.EDI_CODESIGN == '1' && runner.os == 'Windows' && secrets.CODESIGN_WIN_KEYLOCKER_API_KEY || '' }}
+          SM_CLIENT_CERT_PASSWORD: ${{ env.EDI_CODESIGN == '1' && runner.os == 'Windows' && secrets.CODESIGN_WIN_CERT_P12_PASSWORD || '' }}
+          EDI_CODESIGN_WIN_KEYPAIR_ALIAS: ${{ runner.os == 'Windows' && vars.CODESIGN_WIN_KEYLOCKER_KEYPAIR_ALIAS || '' }}
       - name: Qualify the online ZIP with local component transport
         shell: bash
         run: |
