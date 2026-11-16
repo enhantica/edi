@@ -5,6 +5,7 @@ import json
 import math
 import os
 import subprocess
+import sys
 import tempfile
 import zipfile
 from pathlib import Path
@@ -56,9 +57,13 @@ def build_cli(
             '-DCMAKE_MODULE_LINKER_FLAGS=-static-libstdc++ -static-libgcc -Wl,--exclude-libs,ALL',
         ])
     if SYSTEM == 'macos':
+        # These flags replace the environment's LDFLAGS, which carried its lib directory. The SDK
+        # names its runtime libraries (sleef) without a path, so the link needs that directory.
+        env_lib = (Path(os.environ.get('CONDA_PREFIX') or sys.prefix) / 'lib').as_posix()
+        link = f'-Wl,-headerpad_max_install_names -L{env_lib}'
         options.extend([
-            '-DCMAKE_EXE_LINKER_FLAGS=-Wl,-headerpad_max_install_names',
-            '-DCMAKE_MODULE_LINKER_FLAGS=-Wl,-headerpad_max_install_names',
+            f'-DCMAKE_EXE_LINKER_FLAGS={link}',
+            f'-DCMAKE_MODULE_LINKER_FLAGS={link}',
         ])
     run(['cmake', '-S', ROOT, '-B', cli, *flags, *options])
     run(['cmake', '--build', cli, '--target', 'easydiffraction', '--parallel', '4'])
