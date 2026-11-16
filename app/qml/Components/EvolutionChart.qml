@@ -137,10 +137,11 @@ Item {
         id: scopeBox
 
         objectName: "evolution.toolbar.scope"
+        // As wide as the text it shows, as the chart's other boxes (the owner, 2026-11-16).
+        fitShown: true
         x: xBox.x + xBox.width + AppSizes.toolbarSpacing * 4
         y: xBox.y
         visible: !chart.fromReport && chart.evolution !== null && chart.evolution.series
-        width: visible ? implicitWidth : 0
         toolTip: qsTr("Parameters shared by the banks, or each bank's own")
         readonly property var entries: [qsTr("Shared"), qsTr("Per bank")]
         model: entries
@@ -155,10 +156,11 @@ Item {
         id: bankBox
 
         objectName: "evolution.toolbar.bank"
+        // As wide as the text it shows, as the chart's other boxes (the owner, 2026-11-16).
+        fitShown: true
         x: scopeBox.x + scopeBox.width + AppSizes.toolbarSpacing
         y: xBox.y
         visible: scopeBox.visible && chart.evolution.perExperiment
-        width: visible ? implicitWidth : 0
         toolTip: qsTr("Every bank's curve, or one bank's")
         readonly property var entries: chart.evolution !== null ? [qsTr("All banks")].concat(chart.evolution.experiments) : []
         model: entries
@@ -179,6 +181,14 @@ Item {
         blockKind: "parameter"
         blockIndex: chart.evolution ? chart.evolution.currentParameter : -1
         onBlockActivated: index => chart.evolution.currentParameter = index
+        // The full parameter name, which a narrow box elides in the middle (the owner, 2026-11-16).
+        HoverHandler {
+            id: parameterHover
+        }
+        EaElements.ToolTip {
+            text: chart.evolution ? chart.evolution.yTitle : ""
+            requested: parameterHover.hovered
+        }
     }
 
     // The project's two view settings, as on the pattern chart's toolbar (the owner, 2026-11-03): the error bars, and

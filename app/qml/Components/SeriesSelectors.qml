@@ -38,7 +38,31 @@ Row {
     }
     readonly property var banks: project ? project.bankLabels : []
     // Each selector's box, beside its previous and next buttons; the two share what the Rows switch leaves.
-    readonly property real boxWidth: (width - rowsSwitch.width - 4 * buttonWidth - spacing * (rowsShown ? 7 : 6)) / 2
+    readonly property real boxWidth: (width - (rowsShown ? rowsSwitch.width + spacing : 0) - 4 * buttonWidth - spacing * 6) / 2
+    // Each box as wide as its longest entry, with the combo box's padding and arrow, like the chart's other boxes
+    // (the owner, 2026-11-16), and never wider than its share.
+    function longest(prefix, labels) {
+        let text = "";
+        for (let i = 0; i < labels.length; ++i) {
+            const line = `${prefix} ${i + 1} · ${labels[i]}`;
+            if (line.length > text.length)
+                text = line;
+        }
+        return text;
+    }
+    TextMetrics {
+        id: runText
+        font.family: EaStyle.Fonts.fontFamily
+        font.pixelSize: EaStyle.Sizes.fontPixelSize
+        text: row.longest(row.project ? row.project.seriesVariable : "", row.points)
+    }
+    TextMetrics {
+        id: bankText
+        font.family: EaStyle.Fonts.fontFamily
+        font.pixelSize: EaStyle.Sizes.fontPixelSize
+        text: row.longest(qsTr("Bank"), row.banks)
+    }
+    readonly property real boxPadding: EaStyle.Sizes.fontPixelSize * 4
     readonly property real buttonWidth: EaStyle.Sizes.comboBoxHeight
 
     spacing: AppSizes.toolbarSpacing
@@ -66,12 +90,13 @@ Row {
         id: rowsSwitch
         objectName: "mainArea.series.rows"
         visible: row.rowsShown
-        width: visible ? implicitWidth : 0
         height: EaStyle.Sizes.comboBoxHeight
-        toolTip: qsTr("Rows: one bank across the series, or every bank at one point")
+        toolTip: qsTr("Rows: one bank across the series, or every bank at one run")
+        // "rows: by run" in the axes boxes' "<axis>: <value>" style, as wide as it reads (the owner, 2026-11-16).
+        fitShown: true
         readonly property var entries: [qsTr("by %1").arg(row.project ? row.project.seriesVariable.toLowerCase() : ""), qsTr("by bank")]
         model: entries
-        closedTexts: entries.map(entry => qsTr("Rows: %1").arg(entry))
+        closedTexts: entries.map(entry => qsTr("rows: %1").arg(entry))
         shownIndex: row.byBank ? 1 : 0
         onActivated: index => {
             if (row.views)
@@ -106,7 +131,7 @@ Row {
     BlockSelector {
         id: pointBox
         objectName: "mainArea.series.point"
-        width: row.boxWidth + 2 * (row.buttonWidth + row.spacing)
+        width: Math.min(row.boxWidth, Math.ceil(runText.advanceWidth) + row.boxPadding) + 2 * (row.buttonWidth + row.spacing)
         enabled: !(row.rowsShown && !row.byBank)
         backgroundColor: EaStyle.Colors.chartBackground
         blocks: runModel
@@ -120,7 +145,7 @@ Row {
         id: bankBox
         objectName: "mainArea.series.bank"
         visible: row.banks.length > 1
-        width: row.boxWidth + 2 * (row.buttonWidth + row.spacing)
+        width: Math.min(row.boxWidth, Math.ceil(bankText.advanceWidth) + row.boxPadding) + 2 * (row.buttonWidth + row.spacing)
         enabled: !row.byBank
         backgroundColor: EaStyle.Colors.chartBackground
         blocks: bankModel
