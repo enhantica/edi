@@ -122,6 +122,7 @@ nav:
           - "ADR-0085 Red s.u.": dev/adrs/0085-red-su-for-poorly-determined-parameters.md
           - "ADR-0086 Powder calculation range": dev/adrs/0086-powder-calculation-range-is-its-grid.md
           - "ADR-0091 Code signing": dev/adrs/0091-code-signing.md
+          - "ADR-0092 About page": dev/adrs/0092-about-page.md
           - dev/adrs/template.md
       - Design:
           - dev/design/api-types.md
