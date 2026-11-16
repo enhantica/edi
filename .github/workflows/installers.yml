@@ -111,8 +111,13 @@ jobs:
       EDI_INSTALLER_PREVIEW_DATE: ${{ needs.preview-version.outputs.date }}
       EDI_RELEASE_PLAN: ${{ inputs.release_plan_run && format('{0}/build/release-plan', github.workspace) || '' }}
       EDI_INSTALLER_VERSION: 0.0.${{ github.run_number }}.${{ github.run_attempt }}
-      # Signing runs on main only, never for a pull request (edi ADR-0091); build.py and package.py read it.
-      EDI_CODESIGN: ${{ github.repository == 'enhantica/edi' && github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && '1' || '' }}
+      # Signing runs only for pushes to main and release builds started on main, never for a pull request,
+      # a fork or another branch (edi ADR-0091); build.py and package.py read it.
+      EDI_CODESIGN: >-
+        ${{ github.repository == 'enhantica/edi' && github.ref == 'refs/heads/main'
+        && (github.event_name == 'push' || (github.event_name == 'workflow_dispatch'
+        && (inputs.release_plan_run != '' || inputs.prepare_preview_release)))
+        && '1' || '' }}
     steps:
       - name: Apply the prerelease version
         if: inputs.prepare_preview_release
