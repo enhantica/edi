@@ -1,0 +1,58 @@
+name: Code signing credentials check
+
+# Checks the macOS signing and notarisation secrets without building anything.
+on:
+  push:
+    branches: [codesign-mac]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  macos:
+    runs-on: macos-15
+    timeout-minutes: 15
+    steps:
+      - name: Import the certificate into a temporary keychain
+        env:
+          P12_BASE64: ${{ secrets.CODESIGN_MAC_CERT_P12_BASE64 }}
+          P12_PASSWORD: ${{ secrets.CODESIGN_MAC_CERT_P12_PASSWORD }}
+        run: |
+          keychain="$RUNNER_TEMP/signing.keychain-db"
+          echo "$P12_BASE64" | base64 --decode > "$RUNNER_TEMP/cert.p12"
+          security create-keychain -p temp "$keychain"
+          security set-keychain-settings -lut 900 "$keychain"
+          security unlock-keychain -p temp "$keychain"
+          security import "$RUNNER_TEMP/cert.p12" -k "$keychain" -P "$P12_PASSWORD" -T /usr/bin/codesign
+          rm "$RUNNER_TEMP/cert.p12"
+          security list-keychains -d user -s "$keychain" $(security list-keychains -d user | tr -d '"')
+          echo "KEYCHAIN=$keychain" >> "$GITHUB_ENV"
+
+      - name: The identity is a valid signing identity with its private key
+        env:
+          IDENTITY: ${{ vars.CODESIGN_MAC_IDENTITY }}
+          TEAM_ID: ${{ vars.CODESIGN_MAC_TEAM_ID }}
+        run: |
+          security find-identity -v -p codesigning "$KEYCHAIN" | tee identities.txt
+          grep -F "\"$IDENTITY\"" identities.txt
+          case "$IDENTITY" in *"($TEAM_ID)") ;; *) echo "identity and team id differ"; exit 1 ;; esac
+
+      - name: Sign a small test binary
+        env:
+          IDENTITY: ${{ vars.CODESIGN_MAC_IDENTITY }}
+        run: |
+          cp /bin/echo "$RUNNER_TEMP/echo-copy"
+          codesign --force --options runtime --timestamp --keychain "$KEYCHAIN" --sign "$IDENTITY" "$RUNNER_TEMP/echo-copy"
+          codesign --verify --strict --verbose=2 "$RUNNER_TEMP/echo-copy"
+
+      - name: The notarisation credentials are accepted
+        env:
+          APPLE_ID: ${{ secrets.CODESIGN_MAC_NOTARY_APPLE_ID }}
+          PASSWORD: ${{ secrets.CODESIGN_MAC_NOTARY_PASSWORD }}
+          TEAM_ID: ${{ vars.CODESIGN_MAC_TEAM_ID }}
+        run: xcrun notarytool history --apple-id "$APPLE_ID" --password "$PASSWORD" --team-id "$TEAM_ID" | head -5
+
+      - name: Remove the temporary keychain
+        if: always()
+        run: security delete-keychain "$KEYCHAIN" || true
