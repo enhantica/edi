@@ -3444,6 +3444,11 @@ BraggPdExperiment simulation_experiment(const std::string& name, const Experimen
             text += "_instrument.setup_wavelength 1.\n\n";
         }
         text += "_extinction.type none\n";
+        // A new single crystal states its admission (the owner's defaults): equivalents merged over the Laue class
+        // and systematic absences left out. Time of flight merges nothing: its equivalents are measured at their own
+        // wavelengths. A file without these items still reads as none and include.
+        text += std::string("_reflns.merge ") + (constant_wavelength ? "laue_class" : "none") + "\n";
+        text += "_reflns.absences exclude\n";
         if (!structure_ids.empty()) {
             text += "\nloop_\n_linked_structure.structure_id\n_linked_structure.scale\n";
             for (const std::string& structure_id : structure_ids) {
@@ -3761,23 +3766,52 @@ std::vector<std::string> registered_peak_types() {
 enum class ProjectLoadPolicy { Complete, Construction, SavedValues };
 std::string text_field_paragraphs(const std::vector<std::string>& lines);  // defined below
 
+namespace {
+// While a file's text is applied (project_with_file_text with a sourced sink), each of the loader's warnings is given
+// with the project file it comes from, relative to the project (`experiments/d20.edi`); empty when no one file is it.
+thread_local const SourcedWarningSink* sourced_warnings = nullptr;
+// Sets the sourced sink for one read and puts the previous one back however the read ends.
+class SourcedWarningsScope {
+   public:
+    explicit SourcedWarningsScope(const SourcedWarningSink* sink) : previous_(sourced_warnings) { sourced_warnings = sink; }
+    SourcedWarningsScope(const SourcedWarningsScope&) = delete;
+    SourcedWarningsScope& operator=(const SourcedWarningsScope&) = delete;
+    ~SourcedWarningsScope() { sourced_warnings = previous_; }
+
+   private:
+    const SourcedWarningSink* previous_;
+};
+}  // namespace
+
 // `data_root`, when given, is where a scan's data files are, for a project read from a scratch save of one.
 static Project load_project_folder(const std::string& directory, const WarningSink& on_warning,
                                    ProjectLoadPolicy policy=ProjectLoadPolicy::Complete, bool assistant_result=false,
                                    const std::string& data_root = {}) {
     const bool whole=policy==ProjectLoadPolicy::Complete;
-    // One exit for the loader's warnings — the sink when given, else stderr as before.
-    const auto warn = [&on_warning](const std::string& message) {
-        if (on_warning) {
+    // The project file being read, for a sourced sink (relative to the project; empty between files).
+    std::string source;
+    // One exit for the loader's warnings — the sourced sink while a file's text is applied, else the sink when given,
+    // else stderr as before.
+    const auto warn = [&on_warning, &source](const std::string& message) {
+        if (sourced_warnings != nullptr) {
+            (*sourced_warnings)(source, message);
+        } else if (on_warning) {
             on_warning(message);
         } else {
             std::cerr << "Warning: " << message << "\n";
         }
     };
+    const WarningSink file_warning = [&warn](const std::string& message) { warn(message); };
     const fs::path root(directory);
     if (!fs::is_directory(root)) {
         throw IoError("not a project directory: " + directory);
     }
+    const auto relative_to_root = [&root](const std::string& path) {
+        return fs::path(path).lexically_relative(root).generic_string();
+    };
+    // Which file holds each datablock, for warnings raised after the files are read.
+    std::map<std::string, std::string> structure_source;
+    std::map<std::string, std::string> experiment_source;
     // crysta's rule: each `.edi` and `.cif`, the suffix in any case, a `.cif` beside a `.edi` of its
     // name reported and not read; any other file is passed over.
     std::vector<std::string> hidden;
@@ -3786,8 +3820,10 @@ static Project load_project_folder(const std::string& directory, const WarningSi
     const std::vector<std::string> experiment_files =
         detail::project_structure_files((root / "experiments").string(), &hidden);
     for (const std::string& path : hidden) {
+        source = relative_to_root(path);
         warn(kCifReport + path + " not read: " + fs::path(path).stem().string() + ".edi in the same folder is read");
     }
+    source.clear();
     if (structure_files.empty() && whole) {
         throw IoError("project has no structures/*.edi: " + directory);
     }
@@ -3800,7 +3836,9 @@ static Project load_project_folder(const std::string& directory, const WarningSi
     // Each is read as crysta reads one, so a CIF written in one is refused.
     for (const std::string& path : structure_files) {
         const fs::path file(path);
-        Structure structure = load_structure_file(file.string(), on_warning);
+        source = relative_to_root(path);
+        Structure structure = load_structure_file(file.string(), file_warning);
+        structure_source[datablock_key(structure.name, "structure")] = source;
         if (std::any_of(project.structures.begin(), project.structures.end(),
                         [&](const std::shared_ptr<Structure>& held) {
                             return datablock_key(held->name, "structure") ==
@@ -3822,7 +3860,8 @@ static Project load_project_folder(const std::string& directory, const WarningSi
     // crysta's rule, as for structures.
     for (const std::string& path : experiment_files) {
         const fs::path file(path);
-        const Block experiment_block = edi_text_block(read_file(file.string()), file.string(), true, on_warning);
+        source = relative_to_root(path);
+        const Block experiment_block = edi_text_block(read_file(file.string()), file.string(), true, file_warning);
         if (const std::string* calculator = experiment_block.find("_calculator.type")) {
             if (*calculator != "crysta" && warned_calculators.insert(*calculator).second) {
                 warn("unsupported _calculator.type \"" + *calculator + "\" - using crysta");
@@ -3881,14 +3920,17 @@ static Project load_project_folder(const std::string& directory, const WarningSi
         if (policy!=ProjectLoadPolicy::SavedValues) {
             require_held_links(project, experiment, "project " + directory + ": ", file.string());
         }
+        experiment_source[datablock_key(experiment.name, "experiment")] = source;
         project.experiments.push_back(std::move(experiment));
     }
+    source.clear();
 
     // ADR-0036 §7: reports/report.edi, the report's settings and its saved-report rows, each checked by crysta's rules:
     // a value an item does not take, an item the category does not have and a row without a known format are refused,
     // naming them.
     const fs::path report_settings = root / "reports" / "report.edi";
     if (fs::is_regular_file(report_settings)) {
+        source = "reports/report.edi";
         const std::string where = report_settings.string();
         const Block block = parse_block(read_file(where), where, false);
         try {
@@ -3916,6 +3958,7 @@ static Project load_project_folder(const std::string& directory, const WarningSi
     }
 
     const fs::path analysis_file = root / "analysis" / "analysis.edi";
+    source = "analysis/analysis.edi";
     if (fs::is_regular_file(analysis_file)) {
         const Block block =
             parse_block(read_file(analysis_file.string()), analysis_file.string(), false);
@@ -4439,6 +4482,7 @@ static Project load_project_folder(const std::string& directory, const WarningSi
     //     rest, silently — nothing saved is substituted, and a diagnostic here fired on all
     //     prior output forever, breaking the shipped stderr-silence contracts;
     //   - an absent record defaults with the named diagnostic below.
+    source = "project.edi";
     const fs::path record_file = root / "project.edi";
     // Presence is decided IN THE NAMESPACE (symlink_status — the only query that does not
     // follow), never by is_regular_file alone: a directory, a symlink that does not resolve, a
@@ -4723,12 +4767,15 @@ static Project load_project_folder(const std::string& directory, const WarningSi
         check_scan_template_file(project, project.sequential_fit.template_file);
     }
     // Each value outside its admissible range — a fit may leave one there — is loaded and named in one
-    // warning; the app marks it red.
+    // warning; the app marks it red. Its source is the file of the datablock that holds it.
     for (const ParameterEntry& entry : parameter_entries(project)) {
         const ParameterSpec* spec = entry.parameter != nullptr ? entry.parameter->spec : nullptr;
         if (spec == nullptr) {
             continue;
         }
+        const auto& sources = entry.block_kind == "structure" ? structure_source : experiment_source;
+        const auto held = sources.find(datablock_key(entry.block_name, entry.block_kind));
+        source = held != sources.end() ? held->second : std::string();
         const double value = entry.parameter->value;
         if (value < spec->range.min || value > spec->range.max) {
             std::ostringstream message;
@@ -4740,7 +4787,8 @@ static Project load_project_folder(const std::string& directory, const WarningSi
     }
     // The declared and symmetry relations, as crysta reads them: refused when they cannot hold,
     // every parameter marked, a dependent's free flag cleared with a warning (not for the bracket of a
-    // dependent saved with its s.u.).
+    // dependent saved with its s.u.). No one file is their source.
+    source.clear();
     refresh_relations(project, warn, true);
     // A held fit's dependents take their s.u. from their relations and the seeds (crysta's rule).
     restore_dependent_uncertainties(project);
@@ -4750,6 +4798,8 @@ static Project load_project_folder(const std::string& directory, const WarningSi
         if (takes_wyckoff_letter(*structure)) {
             continue;
         }
+        const auto held = structure_source.find(datablock_key(structure->name, "structure"));
+        source = held != structure_source.end() ? held->second : std::string();
         for (const auto& site : structure->atom_sites) {
             const std::string& letter = site->wyckoff_letter.value();
             if (!letter.empty() && letter != "." && letter != "?") {
@@ -4761,6 +4811,7 @@ static Project load_project_folder(const std::string& directory, const WarningSi
     }
     // A free mark a fit could not honour (a descriptor, a value this fit's data cannot determine, one crysta cannot
     // differentiate) loads fixed, its value and s.u. kept, and is said (ADR-0053).
+    source.clear();
     for (const std::string& note : clear_unfittable_free(project)) {
         warn("crysta.domain.unfittable_free_ignored: " + note);
     }
@@ -5087,7 +5138,8 @@ std::vector<ItemVec<FitParameterCorrelation>::Ptr> numbered_correlations(
     return rows;
 }
 
-void hold_template_rows(FitResultRecord& record, const std::vector<FitParameterCorrelation>& template_rows,
+// NOLINTNEXTLINE(performance-unnecessary-value-param): a public signature callers take by value
+void hold_template_rows(FitResultRecord& record, std::vector<FitParameterCorrelation> template_rows,  // cppcheck-suppress passedByValue ; a public signature callers take by address
                         const std::vector<FitParameterCorrelation>& rows, const std::string& template_file) {
     std::map<std::string, std::vector<std::shared_ptr<const FitParameterCorrelation>>> read;
     for (const FitParameterCorrelation& row : rows) {
@@ -5563,6 +5615,12 @@ class ScratchSave {
             }
             return message;
         };
+        // A sourced sink set by the caller gets the same text as a plain one, the scratch folder taken out.
+        const SourcedWarningSink* outer = sourced_warnings;
+        const SourcedWarningSink local_sourced = [outer, &local](const std::string& file, const std::string& message) {
+            (*outer)(file, local(message));
+        };
+        const SourcedWarningsScope scope(outer != nullptr ? &local_sourced : nullptr);
         try {
             // A project still being built reads with the construction role, which keeps reference integrity.
             return load_project_folder(
@@ -5659,6 +5717,13 @@ std::string block_edi_text(const Project& project, BlockKind kind, const std::st
         case BlockKind::ANALYSIS: break;
     }
     return save.text("analysis/analysis.edi");
+}
+
+Project project_with_file_text(const Project& project, const std::string& relative, const std::string& text,
+                               const SourcedWarningSink& on_warning) {
+    // Every warning of this read goes to the sourced sink (the scratch read takes its folder out of the text).
+    const SourcedWarningsScope scope(&on_warning);
+    return project_with_file_text(project, relative, text, WarningSink{});
 }
 
 Project project_with_file_text(const Project& project, const std::string& relative, const std::string& text,

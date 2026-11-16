@@ -47,6 +47,9 @@ class IoError : public std::runtime_error {
 // unless the caller passes `on_warning`; then each message goes only to the sink. The app passes
 // one so it can show the warnings to its user.
 using WarningSink = std::function<void(const std::string&)>;
+// A warning with the project file it comes from, relative to the project (`experiments/d20.edi`), or empty when no
+// one file is its source (a relation over several).
+using SourcedWarningSink = std::function<void(const std::string& file, const std::string& message)>;
 // `path` is the project's folder, its `project.edi`, or a `.zip` of the folder (edi ADR-0052). An archive unpacks into a
 // new temporary folder first; the project then has no directory of its own (`path` empty), so its first save needs one,
 // and it reads its scan data from the unpacked folder.
@@ -125,6 +128,9 @@ std::vector<std::pair<std::string, std::string>> project_edi_files(const Project
 // The project is not touched; the copy keeps its path. Throws the loader's refusal.
 Project project_with_file_text(const Project& project, const std::string& relative, const std::string& text,
                                const WarningSink& on_warning = {});
+// The same, each warning with its source file, so the caller can tell the applied file's warnings from others'.
+Project project_with_file_text(const Project& project, const std::string& relative, const std::string& text,
+                               const SourcedWarningSink& on_warning);
 
 // The crystal system of a space-group setting, named by crysta (its resolver and
 // per-setting freedom map); throws what crysta's resolver throws for an unknown setting.
@@ -361,7 +367,7 @@ void adopt_scan_file_result(FitResultRecord& record, const std::string& file,
 // and each other file's rows in `rows`, as read, move into that file's bundle, unless a fit gave the file one. A read
 // row so keeps its id however the template's rows are numbered (I6, I7). Rows of the template file and rows naming no
 // file are dropped.
-void hold_template_rows(FitResultRecord& record, const std::vector<FitParameterCorrelation>& template_rows,
+void hold_template_rows(FitResultRecord& record, std::vector<FitParameterCorrelation> template_rows,
                         const std::vector<FitParameterCorrelation>& rows, const std::string& template_file);
 
 // Correlation pairs as a record holds them (FitResultRecord::correlations), each keeping its id; a pair with no id, or

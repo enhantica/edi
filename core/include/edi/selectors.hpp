@@ -8,6 +8,7 @@
 // rules unchanged (owner, 2026-09-27); where a rule is shared the function below reproduces it and a
 // parity test holds the two equal.
 
+#include <array>
 #include <functional>
 #include <cstdint>
 #include <optional>
@@ -164,6 +165,8 @@ std::string check_excluded_region_axis(const ExperimentBase& experiment, const s
 struct ReflectionAdmission {
     std::vector<char> status;
     std::vector<bool> excluded_by_indices;
+    // Per row why it is used or not: `used`, `excluded_indices`, `excluded_range`, `absent` or `below_cutoff`.
+    std::vector<std::string> reason;
     std::size_t measured = 0;
     std::size_t unique = 0;
     std::size_t used = 0;
@@ -174,11 +177,23 @@ struct ReflectionAdmission {
     double absent_mean_i_over_sigma = 0.0;
 };
 std::optional<ReflectionAdmission> reflection_admission(const Project& project, std::size_t experiment);
+// The class an h k l of single crystal `experiment` belongs to under its merge mode, as the admission groups and
+// excludes by: the indices themselves without merging, one key for all equivalents with a merged mode. Throws when
+// the experiment is not in the project or its structure is missing.
+std::array<int, 3> reflection_class(const Project& project, std::size_t experiment, const std::array<int, 3>& hkl);
 // The factor that brings an experiment's calculation to its data's level, every phase scale multiplied by it and
-// the background held (crysta's common_scale_factor); none without one. apply_common_scale multiplies the
-// experiment's enabled phase scales by it and says whether it changed any.
+// the background held (crysta's common scale: a powder's peak height above its baseline, a single crystal's
+// least squares); none without one. apply_common_scale first gives a powder without background points one point at
+// the measured baseline (never replacing a background, never in automatic mode), then multiplies the enabled phase
+// scales by the factor; it reports whether it scaled, whether it started the background, and how well the
+// calculated and measured peaks line up (a powder's overlap, 1 when they coincide).
+struct CommonScaleOutcome {
+    bool applied = false;
+    bool background_started = false;
+    std::optional<double> overlap;
+};
 std::optional<double> common_scale_factor(const Project& project, std::size_t experiment);
-bool apply_common_scale(Project& project, std::size_t experiment);
+CommonScaleOutcome apply_common_scale(Project& project, std::size_t experiment);
 // A simulated single crystal's resolution limit: above 0 and finite, on a constant-wavelength
 // single crystal without measured reflections; empty clears. Its reach is checked when it is calculated.
 void set_sin_theta_over_lambda_max(ExperimentBase& experiment, std::optional<double> limit);

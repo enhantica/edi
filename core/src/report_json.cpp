@@ -511,6 +511,23 @@ Value single_crystal_json(const ReportSingleCrystal& crystal, const std::vector<
                   {"meas", numbers(crystal.meas)},     {"su", numbers(crystal.su)},     {"calc", numbers(crystal.calc)},
                   {"title", crystal.title},            {"name", crystal.name},          {"x_title", crystal.x_title},
                   {"y_title", crystal.y_title},        {"hover", strings(crystal.hover)}};
+    // Why each reflection is left out and the admission's counts and agreement, when the report has them.
+    if (!crystal.reason.empty()) object.emplace_back("reason", strings(crystal.reason));
+    if (crystal.admission) {
+        const ReportAdmission& admission = *crystal.admission;
+        const auto ratio = [](const std::optional<double>& value) {
+            return value && std::isfinite(*value) ? Value(*value) : Value(nullptr);
+        };
+        object.emplace_back("admission", Object{{"measured", static_cast<double>(admission.measured)},
+                                                {"unique", static_cast<double>(admission.unique)},
+                                                {"used", static_cast<double>(admission.used)},
+                                                {"excluded", static_cast<double>(admission.excluded)},
+                                                {"absent", static_cast<double>(admission.absent)},
+                                                {"merge", admission.merge},
+                                                {"r_int", ratio(admission.r_int)},
+                                                {"r_sigma", ratio(admission.r_sigma)}});
+        object.emplace_back("statistics", crystal.statistics);
+    }
     if (browser) object.emplace_back("browser", browser_single_crystal(crystal, styles));
     return object;
 }
@@ -542,9 +559,28 @@ ReportSingleCrystal single_crystal_of(const Value& value) {
         crystal.y_title = value.at("y_title").string("y_title");
         crystal.hover = strings_of(hover, "hover");
     }
+    // A report written before the admission carried none of it: every reflection reads as used.
+    if (const Value& reason = value.get("reason"); !reason.is_null()) {
+        crystal.reason = strings_of(reason, "reason");
+    }
+    if (const Value& admission = value.get("admission"); !admission.is_null()) {
+        const auto count_of = [&admission](const char* key) {
+            return static_cast<std::size_t>(whole_number(admission.at(key), key, 0, 1e12));
+        };
+        const auto ratio_of = [&admission](const char* key) {
+            const double read = admission.at(key).number(key);
+            return std::isfinite(read) ? std::optional<double>(read) : std::nullopt;
+        };
+        crystal.admission = ReportAdmission{count_of("measured"), count_of("unique"),      count_of("used"),
+                                            count_of("excluded"), count_of("absent"),
+                                            admission.at("merge").string("merge"), ratio_of("r_int"),
+                                            ratio_of("r_sigma")};
+        crystal.statistics = value.at("statistics").string("statistics");
+    }
     const std::size_t count = crystal.meas.size();
     if (crystal.h.size() != count || crystal.k.size() != count || crystal.l.size() != count ||
-        crystal.su.size() != count || (!crystal.calc.empty() && crystal.calc.size() != count)) {
+        crystal.su.size() != count || (!crystal.calc.empty() && crystal.calc.size() != count) ||
+        (!crystal.reason.empty() && crystal.reason.size() != count)) {
         throw std::invalid_argument("report JSON: a single crystal's columns differ in length");
     }
     return crystal;

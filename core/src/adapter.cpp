@@ -4962,6 +4962,11 @@ std::optional<ReflectionAdmission> reflection_admission(const Project& project, 
     for (const crysta::ReflectionStatus status : reduced.status) {
         out.status.push_back(crysta::include_status_code(status));
         out.excluded_by_indices.push_back(status == crysta::ReflectionStatus::ExcludedHkl);
+        out.reason.emplace_back(status == crysta::ReflectionStatus::ExcludedHkl     ? "excluded_indices"
+                                : status == crysta::ReflectionStatus::ExcludedRange ? "excluded_range"
+                                : status == crysta::ReflectionStatus::Absent        ? "absent"
+                                : status == crysta::ReflectionStatus::BelowCutoff   ? "below_cutoff"
+                                                                                    : "used");
     }
     out.measured = reduced.measured;
     out.unique = reduced.unique;
@@ -4974,7 +4979,19 @@ std::optional<ReflectionAdmission> reflection_admission(const Project& project, 
     return out;
 }
 
-std::optional<double> common_scale_factor(const Project& project, std::size_t experiment) {
+std::array<int, 3> reflection_class(const Project& project, std::size_t experiment, const std::array<int, 3>& hkl) {
+    if (experiment >= project.experiments.size()) {
+        throw std::out_of_range("reflection class: no experiment " + std::to_string(experiment));
+    }
+    const BuiltExperiments banks = calculation_banks(project.experiments);
+    const crysta::Project engine(to_crysta_structures(project), experiment_list(banks));
+    return crysta::reflection_class(engine, experiment, hkl);
+}
+
+namespace {
+// crysta's estimate on the project a calculation would build; none for a project it cannot take yet (no structure,
+// an incomplete instrument).
+std::optional<crysta::CommonScaleEstimate> common_scale_estimate_of(const Project& project, std::size_t experiment) {
     if (experiment >= project.experiments.size()) {
         return std::nullopt;
     }
@@ -4983,26 +5000,46 @@ std::optional<double> common_scale_factor(const Project& project, std::size_t ex
     fill_crysta_relations(project, engine);
     engine.refine_ls_threshold_sigma = project.refine_ls_threshold_sigma;
     try {
-        return crysta::common_scale_factor(engine, experiment);
+        return crysta::common_scale_estimate(engine, experiment);
     } catch (const std::exception&) {
-        // A project that cannot be calculated yet (no structure, an incomplete instrument) has no factor.
         return std::nullopt;
     }
 }
+}  // namespace
 
-bool apply_common_scale(Project& project, std::size_t experiment) {
-    const std::optional<double> factor = common_scale_factor(project, experiment);
-    if (!factor) {
-        return false;
+std::optional<double> common_scale_factor(const Project& project, std::size_t experiment) {
+    const auto estimate = common_scale_estimate_of(project, experiment);
+    return estimate ? std::optional<double>(estimate->factor) : std::nullopt;
+}
+
+CommonScaleOutcome apply_common_scale(Project& project, std::size_t experiment) {
+    CommonScaleOutcome outcome;
+    const auto estimate = common_scale_estimate_of(project, experiment);
+    if (!estimate) {
+        return outcome;
     }
-    bool changed = false;
-    for (const auto& link : project.experiments[experiment]->linked_structures) {
-        if (link->enabled.get()) {
-            link->scale.value = link->scale.value.get() * *factor;
-            changed = true;
+    outcome.overlap = estimate->overlap;
+    ExperimentBase& bank = *project.experiments[experiment];
+    // A powder without background points starts with one at the measured baseline, so the calculation's floor sits
+    // where the data's does; an existing background, or an automatic one, is left as it is.
+    if (estimate->baseline && bank.data && !bank.calculation_only && bank.background_type == "line-segment" &&
+        bank.background.empty() && bank.background_estimate_mode.value_or("manual") != "auto") {
+        const std::vector<double>& axis = bank.data->axis();
+        if (!axis.empty()) {
+            auto point = std::make_shared<LineSegment>();
+            point->position = axis.front();
+            point->intensity.value = *estimate->baseline;
+            bank.background.push_back(point);
+            outcome.background_started = true;
         }
     }
-    return changed;
+    for (const auto& link : bank.linked_structures) {
+        if (link->enabled.get()) {
+            link->scale.value = link->scale.value.get() * estimate->factor;
+            outcome.applied = true;
+        }
+    }
+    return outcome;
 }
 
 void set_reflns_threshold_sigma(ExperimentBase& experiment, std::optional<double> sigma) {
