@@ -104,6 +104,7 @@ Rectangle {
         triadShafts: structureScene.triadShafts
         triadHeads: structureScene.triadHeads
         shared: structureScene.shared
+        polyhedra: structureScene.polyhedra
         labels: labelLayer
     }
 

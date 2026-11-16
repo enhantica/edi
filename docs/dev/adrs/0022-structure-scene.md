@@ -100,6 +100,17 @@ linked it is the elements a new atom may take. crysta lists no X-ray table, so e
 9 is asked for once per source. Every entry carries its element's colour (§4). A type outside the list, as a file may
 state it, is kept and shown as it is.
 
+### 9. Coordination polyhedra
+
+A toolbar switch and the Appearance group draw coordination polyhedra: round each drawn metal
+atom (any element but hydrogen, the noble gases and the non-metals that usually sit at the corners: B, C, N, O, F, Si,
+P, S, Cl, As, Se, Br, Te, I) with at least four bonded neighbours, the convex hull of those neighbours' centres from
+the same `_geom_bond` rows (§2: no neighbour search, and the polyhedra follow the bond settings of §8). A flat face of
+more than three corners is one fan of triangles, so a see-through face is drawn once. Each polyhedron takes its centre
+atom's colour, or grey; its opacity is 0.5 by default. Bonds can be hidden while the polyhedra stay. The structure
+file has no `_structure_view` item for them yet, so these three settings last for the session, unlike the rest of
+the appearance, which each structure saves.
+
 ## Consequences
 
 - The app's view is one renderer of this description (ADR-0017 §16): Qt Quick 3D instancing fed from C++, two draw

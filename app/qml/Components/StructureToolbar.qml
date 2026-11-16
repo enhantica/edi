@@ -62,6 +62,15 @@ Row {
         checked: toolbar.options !== null && toolbar.options.bonds
         onClicked: toolbar.options.bonds = !toolbar.options.bonds
     }
+    // Coordination polyhedra, built from the same bonds; colour and opacity are in Extra's Appearance group.
+    ChartToolButton {
+        objectName: "structure.toolbar.polyhedra"
+        visible: toolbar.controller !== null && toolbar.controller.hasSites && toolbar.controller.hasBonds
+        fontIcon: "cube"
+        toolTip: qsTr("Polyhedra")
+        checked: toolbar.options !== null && toolbar.options.polyhedra
+        onClicked: toolbar.options.polyhedra = !toolbar.options.polyhedra
+    }
     ChartToolButton {
         objectName: "structure.toolbar.cell"
         fontIcon: "vector-square"
