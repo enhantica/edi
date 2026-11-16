@@ -15,8 +15,8 @@ Sources:
   https://dictionary.iucr.org/Reflection_conditions
 - Sears neutron scattering lengths, Neutron News 3(3), 26–37 (1992).
 
-Executable checks now include single-crystal automatic scale initialization on
-project load. The engine checks also compose user exclusion with body centring.
+Executable checks include single-crystal automatic scale initialization on
+measured-data load; opening a saved project preserves its declared scale. The engine checks also compose user exclusion with body centring.
 The edi QML checks exercise powder measured-data loading and one undo, hold the
 authored linear background fixed, and inspect visible disabled Free controls and
 the plain idle Fit icon in the production host. Their generated observations
@@ -99,7 +99,13 @@ independent crystallographic operations, not symmetry engine output.
 The combined witness has raw rejected high intensities, unequal uncertainties,
 nonproportional equivalents, a weak post-merge group and nonzero factors.
 Its expected scales are closed-form inverse-variance normal equations after
-all declared admission steps, with body-centred origin Ni F²=4*(1.03)².
+all declared admission steps. For body-centred origin Ni the predictor is
+F²(hkl)=(1.03)² [1+(-1)^(h+k+l)]²: 4*(1.03)² for allowed reflections and
+exactly zero for a centring absence. When absences are included, their observed
+intensities contribute to the residual and its observation count, but to neither
+sum in the scale normal equation. This applies to every generated dataset,
+including the point-group/include secondary dataset. Changing an included
+absence's observed intensity cannot change the expected scale.
 The powder engine profile is only an input stimulus to a linear normal-equation
 invariant; no diffraction accuracy is inferred from it. Counterfactual controls
 exercise the actual gate checkers with the review's wrong algorithms or output.

@@ -75,11 +75,18 @@ def partition(rows, mode, *, centrosymmetric=False, omit=None):
 
 def summary(rows, groups, *, excluded=(), absent=(), cutoff=None, mode='laue_class'):
     reduced, rint, _ = merged(rows, groups)
-    used = [row for row in reduced if cutoff is None or row[0] > cutoff * row[1]]
+    used_indices = [
+        i for i, (mean, su) in enumerate(reduced) if cutoff is None or mean > cutoff * su
+    ]
+    used = [reduced[i] for i in used_indices]
     weights = [su**-2 for _, su in used]
-    scale = sum(w * row[0] for w, row in zip(weights, used, strict=True)) / sum(weights)
-    # Body-centred Ni at the origin: amplitude 2b, so F² = 4b².
-    scale /= 4 * 1.03**2
+    # Origin Ni at (0,0,0) and the I-centring translation (1/2,1/2,1/2):
+    # F²(hkl) = b² [1 + (-1)^(h+k+l)]². An included absence has C=0,
+    # so it stays in the residual but adds nothing to either scale sum.
+    calculated = [1.03**2 * (1 + (-1) ** sum(rows[groups[i][0]][:3])) ** 2 for i in used_indices]
+    scale = sum(
+        w * mean * calc for w, (mean, _), calc in zip(weights, used, calculated, strict=True)
+    ) / sum(w * calc**2 for w, calc in zip(weights, calculated, strict=True))
     return {
         'measured': len(rows),
         'unique': len(groups),

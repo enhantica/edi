@@ -28,6 +28,9 @@ from tests.fixtures.fitting_correctness.contracts import (
     partition,
     rich_reference,
 )
+from tests.fixtures.fitting_correctness.contracts import (
+    summary as reference_summary,
+)
 from tests.fixtures.single_crystal_edges.observe import observe
 
 ENGINE = 'edi'
@@ -98,13 +101,14 @@ def test_range_closed_endpoints_and_reversed_bounds_reach_fit(
 def require_fit(result, rows, basis=BASIS):
     values = np.array([row[3] for row in rows], dtype=float)
     sigma = np.array([row[4] for row in rows], dtype=float)
-    scale = np.dot(values, sigma**-2) / (basis * np.sum(sigma**-2))
+    predictor = np.broadcast_to(basis, values.shape)
+    scale = np.dot(values * sigma**-2, predictor) / np.dot(predictor * sigma**-2, predictor)
     links = result['after:link']
     assert len(links) == 1, 'The scale-only fit must retain its one declared phase link'
     assert float(links[0][3]) == pytest.approx(scale, rel=3e-5), (
         'The actual native fit must minimize the independently admitted weighted observations'
     )
-    chi2 = np.sum(((values - scale * basis) / sigma) ** 2) / (len(rows) - 1)
+    chi2 = np.sum(((values - scale * predictor) / sigma) ** 2) / (len(rows) - 1)
     assert float(result['chi2'][0][0]) == pytest.approx(chi2, rel=5e-5, abs=1e-6), (
         'The actual fit objective and degrees of freedom must use the reduced reflection list'
     )
@@ -574,8 +578,88 @@ def test_combined_admission_reaches_fit_and_used_statistics(native, tmp_path):
     require_summary(actual, expected)
 
 
+def reference_observations(reference, raw):
+    # The generator's reviewed means/su are inputs; predictors come independently
+    # from the physical centring sum, not from its scale formula or reported absences.
+    used = [
+        (*raw[group[0]][:3], mean, su)
+        for group, (mean, su) in zip(reference['groups'], reference['reduced'], strict=True)
+        if mean > 2 * su
+    ]
+    predictor = np.array([4 * BASIS if sum(row[:3]) % 2 == 0 else 0 for row in used])
+    return used, predictor
+
+
+def reference_protocol(scale, rows, predictor):
+    # Counterfactual reference qualification through the actual fit checker;
+    # this is neither an engine observation nor an engine-derived expectation.
+    observed = np.array([row[3] for row in rows])
+    sigma = np.array([row[4] for row in rows])
+    chi2 = np.sum(((observed - scale * predictor) / sigma) ** 2) / (len(rows) - 1)
+    return {'after:link': [['bank', 'phase', 'true', str(scale)]], 'chi2': [[str(chi2)]]}
+
+
+def require_generated_scale_references():
+    directory = Path(__file__).parents[2] / 'fixtures/fitting_correctness'
+    for filename in ('admission_reference.json', 'admission_project/reference.json'):
+        references = json.loads((directory / filename).read_text())
+        for name, reference in references.items():
+            raw = (
+                [(*row[:3], row[3] * 1.7, row[4]) for row in RICH_ROWS]
+                if name == 'replacement'
+                else RICH_ROWS
+            )
+            used, predictor = reference_observations(reference, raw)
+            require_fit(
+                reference_protocol(reference['scale'], used, predictor), used, basis=predictor
+            )
+        require_included_absence_reference(references['other'])
+
+
+def require_included_absence_reference(other):
+    used, predictor = reference_observations(other, RICH_ROWS)
+    assert np.count_nonzero(predictor == 0) == 1, (
+        'The include-policy reference retains one zero-predictor absence in its residual'
+    )
+    assert len(used) == other['used'], (
+        'An included zero-predictor observation counts toward residual degrees of freedom'
+    )
+    weights = np.array([row[4] ** -2 for row in used])
+    constant_scale = np.dot(weights, [row[3] for row in used]) / (4 * BASIS * weights.sum())
+    with pytest.raises(AssertionError, match='actual native fit'):
+        require_fit(reference_protocol(constant_scale, used, 4 * BASIS), used, basis=predictor)
+    allowed = [row for row, calc in zip(used, predictor, strict=True) if calc != 0]
+    with pytest.raises(AssertionError, match='objective and degrees of freedom'):
+        require_fit(reference_protocol(other['scale'], allowed, 4 * BASIS), used, basis=predictor)
+    changed = [tuple(row) for row in RICH_ROWS]
+    changed[9] = (*changed[9][:3], 900, changed[9][4])
+    recomputed = reference_summary(
+        changed, other['groups'], mode='point_group', absent=[9], cutoff=2
+    )
+    assert recomputed['scale'] == pytest.approx(other['scale'], rel=1e-12), (
+        'An included zero-predictor intensity changes neither '
+        'numerator nor denominator of the scale'
+    )
+    changed_used, changed_predictor = reference_observations(recomputed, changed)
+    require_fit(
+        reference_protocol(recomputed['scale'], changed_used, changed_predictor),
+        changed_used,
+        basis=changed_predictor,
+    )
+    before_chi2 = float(reference_protocol(other['scale'], used, predictor)['chi2'][0][0])
+    after_chi2 = float(
+        reference_protocol(recomputed['scale'], changed_used, changed_predictor)['chi2'][0][0]
+    )
+    expected_increase = (900**2 - 90**2) / (len(used) - 1)
+    assert after_chi2 - before_chi2 == pytest.approx(expected_increase, rel=1e-12), (
+        'An included centring absence contributes its squared residual '
+        'with unchanged scale and observation count'
+    )
+
+
 def test_gate_escape_controls_discriminate_index_merge_stats_scale_and_warning():
     # Counterfactual algorithm/observation exercises call the SAME checkers as product gates.
+    require_generated_scale_references()
     for mode in ('none', 'point_group', 'laue_class'):
         groups, excluded = partition(INDEX_ROWS, mode, omit=(1, 2, 3))
         statuses = ['x' if i in excluded else 'o' for i in range(len(INDEX_ROWS))]
