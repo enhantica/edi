@@ -1760,6 +1760,30 @@ SaveDataPlan ProjectViewModel::saveDataPlan(bool wholeTree, bool countCarried, b
     return plan;
 }
 
+QString ProjectViewModel::seriesDataNote() const {
+    if (scan_session_ == nullptr || !project_->sequential_fit.joint()) return {};
+    const edi::ScanDatasets& datasets = scan_session_->datasets();
+    QStringList parts;
+    if (!datasets.incomplete.empty()) {
+        parts << tr("%n incomplete point(s), not fitted: an experiment's file is missing or there are two", "",
+                    static_cast<int>(datasets.incomplete.size()));
+    }
+    const std::vector<bool> changed = edi::scan_points_changed(*project_, datasets, datasets.files);
+    if (const auto count = std::count(changed.begin(), changed.end(), true); count > 0) {
+        parts << tr("%n point(s) changed since they were fitted", "", static_cast<int>(count));
+    }
+    return parts.join(QStringLiteral("; "));
+}
+
+QString ProjectViewModel::presetSaveData() const {
+    const QString mode = includeDataOnSave();
+    if (mode == QLatin1String("all")) return QStringLiteral("copy");
+    if (mode == QLatin1String("linked")) return QStringLiteral("linked");
+    const LinkedInventory inventory = linkedInventory();
+    return inventory.files <= 20 && inventory.bytes <= 50LL * 1024 * 1024 ? QStringLiteral("copy")
+                                                                          : QStringLiteral("linked");
+}
+
 QString ProjectViewModel::includeDataOnSave() const {
     if (!project_->path.empty() && !settings_file_path().isEmpty()) {
         QSettings store(settings_file_path(), QSettings::IniFormat);

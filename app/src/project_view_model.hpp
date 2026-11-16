@@ -530,6 +530,13 @@ class ProjectViewModel : public QObject, public ProjectEditor {
         qint64 scanBytes = 0;
     };
     LinkedInventory linkedInventory() const;
+    // Whether the project reads data from outside its folder, and the copy-or-link choice Save as presets (edi
+    // ADR-0088 point 5): Data on save's, or by size when it asks (copied up to 20 files and 50 MB).
+    Q_INVOKABLE bool hasLinkedData() const { return linkedInventory().linked; }
+    Q_INVOKABLE QString presetSaveData() const;
+    // A series of joint fits' data state (edi ADR-0088 points 1 and 4): its incomplete points, never fitted, and the
+    // points whose files changed since they were fitted; empty when there is nothing to say.
+    Q_INVOKABLE QString seriesDataNote() const;
     /// Why a save cannot include the linked data now (an experiment's data not downloaded or not found), else empty.
     QString linkedDataUnavailable() const;
     /// The inputs a save reads from disk as found now, to tell whether they changed: the linked files and, for a save

@@ -876,10 +876,17 @@ EaComponents.ApplicationWindow {
     AppDialog {
         id: saveAsChoice
         objectName: "saveAs.choice"
-        onRejected: window.cancelAssistantSaveAs()
+        onRejected: {
+            Session.setNextSaveData("");
+            window.cancelAssistantSaveAs();
+        }
         enterAccepts: true
         property bool zip: false
         property bool copy: false
+        // Measured data (edi ADR-0088 point 5): for a project that reads data from outside its folder, copied into the
+        // project or kept linked, preset from Data on save.
+        property bool linkedData: false
+        property string dataChoice: "copy"
         readonly property Item nativeAcceptButton: opened ? standardButton(Dialog.Ok) : null
         onOpened: ApplicationInfo.windowSaveChoiceOpened()
         // A browser without the File System Access API writes no folder and moves no project onto the disk: a copy
@@ -890,8 +897,15 @@ EaComponents.ApplicationWindow {
         // About half the usual dialog width, never narrower than its content (owner, 2026-10-25).
         contentWidth: Math.max(saveAsChoiceColumn.implicitWidth, Math.round(AppSizes.messagesDialogContentWidth / 2))
         contentHeight: saveAsChoiceColumn.implicitHeight
-        onAboutToShow: ApplicationInfo.prepareProjectSaveChoice()
-        onAccepted: ApplicationInfo.acceptProjectSaveChoice()
+        onAboutToShow: {
+            linkedData = Session.project !== null && Session.project.hasLinkedData();
+            dataChoice = Session.project !== null ? Session.project.presetSaveData() : "copy";
+            ApplicationInfo.prepareProjectSaveChoice();
+        }
+        onAccepted: {
+            Session.setNextSaveData(linkedData ? dataChoice : "");
+            ApplicationInfo.acceptProjectSaveChoice();
+        }
 
         Column {
             id: saveAsChoiceColumn
@@ -940,6 +954,29 @@ EaComponents.ApplicationWindow {
                 // The check box draws the app's tooltip from this text itself.
                 ToolTip.text: qsTr("Write the project there and keep working where it is")
             }
+            Item {
+                width: 1
+                height: EaStyle.Sizes.fontPixelSize
+                visible: saveAsChoice.linkedData
+            }
+            EaElements.Label {
+                visible: saveAsChoice.linkedData
+                text: qsTr("Measured data")
+            }
+            ChoiceRadioButton {
+                objectName: "saveAs.dataCopy"
+                visible: saveAsChoice.linkedData
+                text: qsTr("Copy into the project")
+                checked: saveAsChoice.dataChoice === "copy"
+                onClicked: saveAsChoice.dataChoice = "copy"
+            }
+            ChoiceRadioButton {
+                objectName: "saveAs.dataLinked"
+                visible: saveAsChoice.linkedData
+                text: qsTr("Keep linked")
+                checked: saveAsChoice.dataChoice === "linked"
+                onClicked: saveAsChoice.dataChoice = "linked"
+            }
         }
     }
 
@@ -947,7 +984,10 @@ EaComponents.ApplicationWindow {
     // folder it is in (owner, 2026-10-25); the folder is made if it is new.
     FileDialog {
         id: saveFolder
-        onRejected: window.cancelAssistantSaveAs()
+        onRejected: {
+            Session.setNextSaveData("");
+            window.cancelAssistantSaveAs();
+        }
         function openAt(target) {
             ApplicationInfo.openProjectSavePicker(target);
         }
@@ -959,7 +999,10 @@ EaComponents.ApplicationWindow {
 
     FileDialog {
         id: saveZip
-        onRejected: window.cancelAssistantSaveAs()
+        onRejected: {
+            Session.setNextSaveData("");
+            window.cancelAssistantSaveAs();
+        }
         function openAt(target) {
             ApplicationInfo.openProjectSavePicker(target);
         }

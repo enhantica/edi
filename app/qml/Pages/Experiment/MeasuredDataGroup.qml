@@ -43,6 +43,18 @@ SideBarGroup {
             text: group.selected === null ? qsTr("Create an experiment first to load data into it") : group.replacing ? qsTr("Replace measured data of %1").arg(group.selected.name) : qsTr("Load measured data into %1").arg(group.selected.name)
         }
 
+        // A series' incomplete points and changed files (edi ADR-0088 points 1 and 4), read again with the views.
+        EaElements.Label {
+            objectName: "measuredData.seriesNote"
+            readonly property int revision: group.project && group.project.scanViews ? group.project.scanViews.revision : 0
+            readonly property string note: group.project !== null && group.project.scan && revision >= 0 ? group.project.seriesDataNote() : ""
+            visible: note !== ""
+            width: EaStyle.Sizes.sideBarContentWidth
+            wrapMode: Text.Wrap
+            color: EaStyle.Colors.red
+            text: note
+        }
+
         EaElements.SideBarButton {
             id: loadButton
             objectName: "experiments.load.data"
