@@ -32,12 +32,14 @@ bool stringSize(QStringView text, std::optional<quint64> cap, quint64& size) {
     if (!addSize(2, cap, size)) return false;
     for (qsizetype i = 0; i < text.size(); ++i) {
         const auto c = text.at(i).unicode(); quint64 n;
+        // NOLINTNEXTLINE(bugprone-branch-clone): JSON's escapes and two-byte UTF-8 share a length, not a case.
         if (c == '"' || c == '\\' || c == 8 || c == 12 || c == 10 || c == 13 || c == 9) n = 2;
         else if (c < 0x20) n = 6;
         else if (c < 0x80) n = 1;
         else if (c < 0x800) n = 2;
         else if (QChar::isHighSurrogate(c)) {
-            if (++i >= text.size() || !text.at(i).isLowSurrogate()) return false;
+            ++i;
+            if (i >= text.size() || !text.at(i).isLowSurrogate()) return false;
             n = 4;
         } else if (QChar::isLowSurrogate(c)) return false;
         else n = 3;
@@ -102,7 +104,7 @@ bool encodedSize(const QJsonValue& value, std::optional<quint64> cap, quint64& s
 bool codex_encoded_size(const QJsonValue& value, quint64 cap, quint64& size) { return encodedSize(value, cap, size); }
 bool codex_measured_size(const QJsonValue& value, quint64& size) { return encodedSize(value, std::nullopt, size); }
 quint64 codex_json_capacity(quint64 bytes) {
-    const auto header=static_cast<quint64>(sizeof(QArrayData)+alignof(std::max_align_t)+sizeof(QChar));
+    const quint64 header=sizeof(QArrayData)+alignof(std::max_align_t)+sizeof(QChar);
     if(bytes>std::numeric_limits<quint64>::max()/4)throw std::length_error("JSON backing exceeds capacity");
     // Pinned qarraydata.cpp Grow rule; header/alignment/terminator remain owned.
     return qNextPowerOfTwo(bytes+header)+header;
@@ -137,7 +139,7 @@ CodexAgent::OutputOwnerState CodexAgent::outputOwnerState() const noexcept {
 }
 void CodexAgent::maybeOwnersReleased() noexcept {
     if(outputOwnerState()!=OutputOwnerState::Released)return;
-    try {emit outputOwnersReleased();}catch(...){} // Terminal: receiver may delete this.
+    try {emit outputOwnersReleased();}catch(...){} // NOLINT(bugprone-empty-catch): terminal; the receiver may delete this.
 }
 void CodexAgent::processOwnerReleased(quint64 birth) noexcept {
     if(!release_owner_ || birth!=process_birth_)return;
@@ -149,7 +151,7 @@ CodexAgent::CodexAgent(QObject* parent,std::shared_ptr<const void> releaseOwner)
     connect(&timer_, &QTimer::timeout, this, [this] {
         const QPointer<CodexAgent> receiver(this); const auto scope = generation_;
         try { checkDeadline(); }
-        catch (...) { if (receiver && generation_ == scope) fail("The official agent deadline could not be checked."); }
+        catch (...) { if (receiver && generation_ == scope) fail("The official agent deadline could not be checked."); }  // NOLINT(clang-analyzer-core.NullDereference): receiver holds this.
     });
     timer_.start();
 }
@@ -380,7 +382,7 @@ QString CodexAgent::executable() {
         (metadata.value("ediPolicySchema")!="edi.runtime-policy/1" || metadata.value("ediFlavour")!="edi-app-server/1" ||
          metadata.value("upstreamCommit")!="092d3acd6bec3e3a14bdc7e7a2810ab628ab759d" ||
          metadata.value("sourcePatchSha256")!=policyPatch())) return {};
-    const auto executable = root + "/" + QString::fromUtf8(EDI_CODEX_RUNTIME_ENTRYPOINT);
+    auto executable = root + "/" + QString::fromUtf8(EDI_CODEX_RUNTIME_ENTRYPOINT);
     if (!QFileInfo(executable).isFile() || !QFileInfo(executable).isExecutable()) return {};
     return executable;
 }
@@ -454,7 +456,7 @@ bool CodexAgent::start(const QString& executable, const QString& workspace) {
             flushRequired(); // Can synchronously retire this exact process scope.
             if(!alive || !original || process_!=original.data() || generation_!=scope || failed_ ||
                 original->state()!=QProcess::Running || optionalUsageBackpressured())return;
-            try {emit optionalUsageReady();}catch(...){} // Optional terminal hint, never a required-write failure.
+            try {emit optionalUsageReady();}catch(...){} // NOLINT(bugprone-empty-catch): an optional hint, never a required-write failure.
         });
         connect(process, &QProcess::readyReadStandardOutput, this, [this, original = prepared, scope] { if (original) read(original.data(), scope); });
         connect(process, &QProcess::readyReadStandardError, this, [this, original = prepared, scope] {
@@ -487,7 +489,7 @@ bool CodexAgent::start(const QString& executable, const QString& workspace) {
             // Name what went wrong: the guard could not start, crashed, or stopped reading before the runtime's answer.
             static const char* const kinds[] = {"start error", "crashed", "timed out", "read error", "write error", "unknown error"};
             const auto kind = kinds[std::clamp(static_cast<int>(error), 0, 5)];
-            try { exit_detail_ = QString::fromLatin1(kind) + QStringLiteral(": ") + original->errorString(); } catch (...) {}
+            try { exit_detail_ = QString::fromLatin1(kind) + QStringLiteral(": ") + original->errorString(); } catch (...) {}  // NOLINT(bugprone-empty-catch): the detail is optional.
             fail("The official agent process could not continue (%1).");
         });
         connect(process, qOverload<int, QProcess::ExitStatus>(&QProcess::finished), this,
@@ -770,8 +772,8 @@ void CodexAgent::fail(const char* explanation, FailureKind kind) noexcept {
         if (!exit_detail_.isEmpty()) text = text.arg(exit_detail_);
         exit_detail_.clear();
         emit failed(text);
-    } catch (...) {}
-    try { if (original && original->state() != QProcess::NotRunning) original->terminate(); } catch (...) {}
+    } catch (...) {}  // NOLINT(bugprone-empty-catch): noexcept teardown; reporting is best effort.
+    try { if (original && original->state() != QProcess::NotRunning) original->terminate(); } catch (...) {}  // NOLINT(bugprone-empty-catch): noexcept teardown.
 }
 void CodexAgent::retire() {
     if (generation_ != std::numeric_limits<quint64>::max()) ++generation_;

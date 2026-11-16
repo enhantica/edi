@@ -112,8 +112,11 @@ AxisLabels axis_labels_from_text(const QString& text) {
 std::vector<double> axis_ticks(double low, double high, double step) {
     std::vector<double> ticks;
     if (!(step > 0.0) || !(high >= low) || !std::isfinite(low) || !std::isfinite(high)) return ticks;
-    for (double i = std::ceil(low / step - 1e-9); ticks.size() < 200 && i * step <= high + step * 1e-9; ++i) {
-        ticks.push_back(i * step);
+    const double first = std::ceil(low / step - 1e-9);
+    for (int k = 0; k < 200; ++k) {
+        const double tick = (first + k) * step;
+        if (tick > high + step * 1e-9) break;
+        ticks.push_back(tick);
     }
     return ticks;
 }
@@ -387,7 +390,8 @@ void PatternChartController::setViewRanges(const QList<double>& ranges) {
     const QList<double> now = viewRanges();
     bool same = true;
     for (int i = 0; i < 4; ++i) {
-        same = same && (values[i] ? std::isfinite(now[i]) && now[i] == *values[i] : !std::isfinite(now[i]));
+        const std::optional<double>& value = values[i];
+        same = same && (value.has_value() ? std::isfinite(now[i]) && now[i] == *value : !std::isfinite(now[i]));
     }
     if (same) {
         return;

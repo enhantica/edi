@@ -44,6 +44,7 @@ EvolutionParameterListModel::EvolutionParameterListModel(QObject* parent) : RowT
 void EvolutionParameterListModel::setNames(const QStringList& names) {
     QList<Row> rows;
     for (int i = 0; i < names.size(); ++i) {
+        // NOLINTNEXTLINE(performance-no-int-to-ptr): the row key is an identity, never dereferenced.
         rows.append({reinterpret_cast<const void*>(static_cast<std::uintptr_t>(i + 1)), {names[i], names[i]}});
     }
     setTableRows(rows);

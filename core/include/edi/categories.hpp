@@ -475,7 +475,7 @@ inline std::vector<Category> calculated_categories(const ExperimentBase& experim
     }
     // A powder's reflections are its designed group's (experiment_categories). Each structure's curve is written with
     // two structures or more: a single one's is the calculated pattern less the background, already in the file.
-    if (experiment.data->component_order.size() >= 2) {
+    if (experiment.data.has_value() && experiment.data->component_order.size() >= 2) {
         return {{"pd_calc", true, experiment.data->intensity_calc.size()}, {"pd_calc_overall"}};
     }
     return {};

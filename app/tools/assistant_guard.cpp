@@ -125,6 +125,7 @@ int main(int argc, char** argv) {
 #ifdef Q_OS_WIN
                 const auto size = _read(_fileno(stdin), buffer, sizeof(buffer));
 #else
+                // NOLINTNEXTLINE(clang-analyzer-unix.BlockInCriticalSection): the lock below is scoped and released.
                 const auto size = ::read(STDIN_FILENO, buffer, sizeof(buffer));
 #endif
                 if (size <= 0) {
@@ -133,7 +134,7 @@ int main(int argc, char** argv) {
                 }
                 {
                     std::unique_lock lock(mutex);
-                    writable.wait(lock, [&] { return pending < 1024 * 1024; });
+                    writable.wait(lock, [&] { return pending < std::size_t{1024} * 1024; });
                     pending += static_cast<std::size_t>(size);
                 }
                 const QByteArray bytes(buffer, size);

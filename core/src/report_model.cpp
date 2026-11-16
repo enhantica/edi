@@ -70,7 +70,7 @@ ReportValue value_of(const Parameter& parameter, const std::string& rule, std::s
     const std::optional<double>& su = parameter.uncertainty.get();
     if (su.has_value() && std::isfinite(*su) && *su != 0.0 && std::isfinite(out.value) &&
         parameter.dependence != Dependence::SymmetryFixed) {
-        out.su = *su;
+        out.su.emplace(*su);
     }
     out.text = parameter.spec != nullptr ? display_text(parameter, rule, variant) : shortest(out.value);
     // Very large or small numbers in scientific notation, as the parameter tables write them (owner record
@@ -413,6 +413,9 @@ ReportPattern pattern_of(const Project& project, std::size_t index, const Report
 // A single crystal's chart: its reflections' measured F² and s.u., and their calculated F² once calculated, with
 // the axes' titles and each point's hover by the dictionary, as the app's chart shows them (edi ADR-0051).
 ReportSingleCrystal single_crystal_of(const BraggPdExperiment& experiment, const std::string& su_rule) {
+    if (!experiment.reflections.has_value()) {
+        throw std::logic_error("a single crystal's chart needs its reflections");
+    }
     const ReflnDataBase& reflections = *experiment.reflections;
     ReportSingleCrystal out;
     if (!reflections.rectangular()) {
@@ -570,6 +573,9 @@ ReportStructure structure_of(const Structure& structure, const std::string& rule
 // least one). An excluded point is marked, not dropped: by crysta's status when the calculation is current, else by the
 // excluded regions.
 ReportTable data_table(const BraggPdExperiment& experiment) {
+    if (!experiment.data.has_value()) {
+        throw std::logic_error("a points table needs measured data");
+    }
     const PdDataBase& data = *experiment.data;
     const std::vector<double>& axis = data.axis();
     const std::vector<double>& measured = data.intensity_meas;

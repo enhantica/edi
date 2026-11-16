@@ -417,7 +417,7 @@ PlainDataRows read_plain_data(const std::string& path);
 
 /// A plain-data file read into an experiment (Load data): the experiment as it was, with the file's rows as
 /// its measured data, so its type, instrument, peak, background and excluded regions stay.
-struct PlainDataLoad {
+struct PlainDataLoad {  // NOLINT(bugprone-exception-escape): an experiment's move may throw, by the model's rule.
     BraggPdExperiment experiment;
     std::string file_name;  // the file's own name, without its directory
     std::size_t points = 0;

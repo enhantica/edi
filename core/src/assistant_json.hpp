@@ -20,12 +20,12 @@ inline constexpr std::size_t kMessageLimit = Limits::message_bytes;
 
 struct Refusal : std::runtime_error {
     std::string code;
-    Refusal(std::string kind, std::string message) : std::runtime_error(std::move(message)), code(std::move(kind)) {}
+    Refusal(std::string kind, const std::string& message) : std::runtime_error(message), code(std::move(kind)) {}
 };
 [[noreturn]] inline void refuse(const std::string& code, const std::string& message) {
     throw Refusal(code, message);
 }
-inline Reply success(J value = O{}) { return {true, {}, json::write(value)}; }
+inline Reply success(const J& value = O{}) { return {true, {}, json::write(value)}; }
 inline Reply failure(const std::string& code, const std::string& message) {
     std::string safe;
     for (const char ch : message) {

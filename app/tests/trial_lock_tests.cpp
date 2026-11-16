@@ -234,7 +234,7 @@ private slots:
             edi::ParameterAlias alias;
             alias.id = slot.parameter == la ? "b_la" : "b_ba";
             alias.parameter_unique_name = slot.unique_name;
-            source.aliases.push_back(std::move(alias));
+            source.aliases.push_back(alias);
         }
         ProjectViewModel project(std::move(source), nullptr);
         QTRY_VERIFY_WITH_TIMEOUT(!project.calculating(), 30000);

@@ -248,7 +248,8 @@ int main(int argc, char** argv) {
             if (argument == "--dry") {
                 dry = true;
             } else if (argument == "--output" || argument == "--verbosity" || argument == "--report") {
-                if (++i == argc || std::string_view(argv[i]).starts_with("--")) {
+                ++i;
+                if (i == argc || std::string_view(argv[i]).starts_with("--")) {
                     throw std::invalid_argument("missing value for " + std::string(argument));
                 }
                 const std::string_view value = argv[i];

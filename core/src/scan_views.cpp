@@ -57,6 +57,7 @@ ColourTable read_colour_map(const char* tsv, const std::string& name) {
 const std::vector<ColourTable>& colour_maps() {
     static const std::vector<ColourTable> tables = [] {
         std::vector<ColourTable> out;
+        out.reserve(detail::kColourMapCount);
         for (std::size_t i = 0; i < detail::kColourMapCount; ++i) {
             out.push_back(read_colour_map(detail::kColourMapTsvs[i], detail::kColourMapNames[i]));
         }

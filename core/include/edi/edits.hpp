@@ -23,7 +23,7 @@ namespace edi {
 inline bool project_name_has_separator(const std::string& name) {
     return name.find('/') != std::string::npos || name.find('\\') != std::string::npos;
 }
-inline const std::string& validated_project_name(const std::string& name) {
+inline std::string validated_project_name(const std::string& name) {
     if (project_name_has_separator(name)) {
         throw std::invalid_argument("project name '" + name + "' must not contain a path separator ('/' or '\\')");
     }

@@ -94,6 +94,7 @@ Stats stats(std::vector<double> samples) {
 }
 
 // One line of the run's log on stderr, written at once.
+// NOLINTNEXTLINE(cert-dcl50-cpp): printf-style, every format a literal at its call.
 void log(const char* format, ...) {
     std::va_list args;
     va_start(args, format);
@@ -189,7 +190,7 @@ int run(int argc, char** argv) {
     const QString frame_path = argc > 2 ? QString::fromLocal8Bit(argv[2]) : QString();
     const QString candidate = argc > 3 ? QString::fromLocal8Bit(argv[3]) : QStringLiteral("a");
     // The line width in pixels: 2 as the pattern chart's line, 1 where the view narrows it for close rows.
-    const double line_width = argc > 5 ? std::atof(argv[5]) : 2.0;
+    const double line_width = argc > 5 ? std::strtod(argv[5], nullptr) : 2.0;
     // b and p take the same traces and styles.
     const bool candidate_b = candidate == QLatin1String("b") || candidate == QLatin1String("p");
     QElapsedTimer read_clock;
@@ -273,7 +274,7 @@ int run(int argc, char** argv) {
     }
     idle(200);
     // The plot's pixel columns, or fewer when asked (a fourth argument, the share of them), to see how the cost scales.
-    const double share = argc > 4 ? std::atof(argv[4]) : 1.0;
+    const double share = argc > 4 ? std::strtod(argv[4], nullptr) : 1.0;
     const int columns = std::max(1, static_cast<int>(std::ceil(share * graphs->property("plotArea").toRectF().width() *
                                                                   view.devicePixelRatio())));
 
@@ -307,7 +308,7 @@ int run(int argc, char** argv) {
     const auto points_of = [&](std::size_t d) {
         QList<QPointF> list;
         const edi::ScanTrace& trace = traces[d];
-        list.reserve(static_cast<qsizetype>(2 * trace.x.size()));
+        list.reserve(2 * static_cast<qsizetype>(trace.x.size()));
         const double row = static_cast<double>(d);
         for (std::size_t k = 0; k < trace.x.size(); ++k) {
             const double y_low = row + (static_cast<double>(trace.low[k]) - low) / (high - low) * lift;
