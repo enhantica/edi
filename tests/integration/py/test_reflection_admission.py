@@ -98,6 +98,13 @@ def test_range_closed_endpoints_and_reversed_bounds_reach_fit(
     )
 
 
+def require_saved_factor(text, tag, expected):
+    assert scalar(text, tag) == pytest.approx(float(f'{expected:.6g}'), rel=1e-12, abs=1e-15), (
+        'Saved computed factors retain the independent value '
+        'at ADR-0092 six-significant-digit precision'
+    )
+
+
 def require_fit(result, rows, basis=BASIS):
     values = np.array([row[3] for row in rows], dtype=float)
     sigma = np.array([row[4] for row in rows], dtype=float)
@@ -158,23 +165,20 @@ def test_merge_modes_weighted_sigma_and_published_r_factors(native, tmp_path, mo
     reduced, r_int, r_sigma = merged(INDEX_ROWS, groups)
     require_fit(result, [(0, 0, 0, mean, su) for mean, su in reduced])
     text = (tmp_path / 'input-saved/experiments/bank.edi').read_text()
+    assert scalar(text, '_reflns.number_measured') == len(INDEX_ROWS), (
+        'The saved measured count includes every original observation before merging'
+    )
     assert scalar(text, '_reflns.number_total') == len(groups), (
         '222 merges proper rotational equivalents while retaining its Friedel orbit'
     )
     assert scalar(text, '_refine_ls.number_reflns') == len(groups), (
         'The residual uses every admitted unique observation before a cutoff is declared'
     )
-    assert scalar(text, '_reflns.R_sigma') == pytest.approx(r_sigma, rel=1e-6), (
-        'R-sigma sums merged propagated-or-scatter su over used intensities'
-    )
+    require_saved_factor(text, '_reflns.R_sigma', r_sigma)
     if mode == 'none' or r_int is None:
-        assert '_diffrn_reflns.av_R_equivalents ' not in text, (
-            'Unmerged repeats do not define a merged Rint'
-        )
+        assert '_reflns.R_int ' not in text, 'Unmerged repeats do not define a merged Rint'
     else:
-        assert scalar(text, '_diffrn_reflns.av_R_equivalents') == pytest.approx(r_int, rel=1e-6), (
-            'Rint uses original repeated intensities about their inverse-variance mean'
-        )
+        require_saved_factor(text, '_reflns.R_int', r_int)
 
 
 def test_merging_precedes_fit_cutoff(native, tmp_path):
@@ -202,9 +206,7 @@ def test_merging_precedes_fit_cutoff(native, tmp_path):
         'The used count is reported after the merged-observation cutoff'
     )
     expected_sigma = sum(row[4] for row in used) / sum(row[3] for row in used)
-    assert scalar(text, '_reflns.R_sigma') == pytest.approx(expected_sigma, rel=1e-6), (
-        'R-sigma must use only merged observations that survive the fit cutoff'
-    )
+    require_saved_factor(text, '_reflns.R_sigma', expected_sigma)
 
 
 @pytest.mark.parametrize(
@@ -228,6 +230,9 @@ def test_international_tables_absences_and_warning(tmp_path, group, rows, absent
         tmp_path / 'input', rows=rows, group=group, declarations=f'_reflns.absences {policy}\n'
     )
     text = saved(root, tmp_path / 'saved')
+    assert scalar(text, '_reflns.number_measured') == len(rows), (
+        'The saved measured count includes systematically absent observations under either policy'
+    )
     assert scalar(text, '_reflns.number_absent') == len(absent), (
         'Integral centring, serial screw and zonal glide absences must '
         'follow International Tables rules'
@@ -322,16 +327,8 @@ def test_measured_list_rint_adapter(tmp_path, kind):
         'independently enumerated point rotations'
     )
     if expected['r_int'] is not None:
-        assert scalar(text, '_diffrn_reflns.av_R_equivalents') == pytest.approx(
-            float(expected['r_int']), rel=1e-6
-        ), 'The measured-list Rint must agree with the independently computed published definition'
-
-    assert scalar(text, '_reflns.R_sigma') == pytest.approx(
-        float(expected['r_sigma_weighted']), rel=1e-6
-    ), (
-        'Measured-list R-sigma must use the independently calculated '
-        'weighted scatter and propagated uncertainty'
-    )
+        require_saved_factor(text, '_reflns.R_int', float(expected['r_int']))
+    require_saved_factor(text, '_reflns.R_sigma', float(expected['r_sigma_weighted']))
 
 
 @pytest.mark.parametrize(
@@ -564,18 +561,26 @@ def test_combined_admission_reaches_fit_and_used_statistics(native, tmp_path):
     mode = re.search(r'(?m)^_reflns\.merge\s+(\S+)', text)
     actual = {
         'mode': mode.group(1).strip('"') if mode else None,
-        'measured': len(column(text, '_refln.index_h')),
+        'measured': scalar(text, '_reflns.number_measured'),
     }
     for key, tag in {
         'unique': '_reflns.number_total',
         'used': '_refine_ls.number_reflns',
         'excluded': '_reflns.number_excluded',
         'absent': '_reflns.number_absent',
-        'rint': '_diffrn_reflns.av_R_equivalents',
+        'rint': '_reflns.R_int',
         'rsigma': '_reflns.R_sigma',
     }.items():
         actual[key] = scalar(text, tag)
-    require_summary(actual, expected)
+    expected_saved = {
+        **expected,
+        'rint': float(f'{expected["rint"]:.6g}'),
+        'rsigma': float(f'{expected["rsigma"]:.6g}'),
+    }
+    require_summary(actual, expected_saved)
+    assert len(column(text, '_refln.index_h')) == expected['measured'], (
+        'Admission statistics never remove original measured rows from the saved table'
+    )
 
 
 def reference_observations(reference, raw):
@@ -657,9 +662,16 @@ def require_included_absence_reference(other):
     )
 
 
+def require_precision_controls():
+    require_saved_factor('_reflns.R_int 0.333333', '_reflns.R_int', 1 / 3)
+    with pytest.raises(AssertionError, match='Saved computed factors'):
+        require_saved_factor('_reflns.R_int 0.333', '_reflns.R_int', 1 / 3)
+
+
 def test_gate_escape_controls_discriminate_index_merge_stats_scale_and_warning():
     # Counterfactual algorithm/observation exercises call the SAME checkers as product gates.
     require_generated_scale_references()
+    require_precision_controls()
     for mode in ('none', 'point_group', 'laue_class'):
         groups, excluded = partition(INDEX_ROWS, mode, omit=(1, 2, 3))
         statuses = ['x' if i in excluded else 'o' for i in range(len(INDEX_ROWS))]

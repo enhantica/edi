@@ -4,6 +4,7 @@ import importlib
 
 import numpy as np
 
+from tests.fixtures.fitting_correctness.admission import column
 from tests.fixtures.fitting_correctness.project import materialize
 
 ENGINE = 'edi'
@@ -17,10 +18,17 @@ def load(root, **options):
 
 def test_exclusion_survives_save_reload_without_changing_measurements(tmp_path):
     project = load(tmp_path / 'input', status=True)
+    project.save_as(tmp_path / 'declared')
+    declared = (tmp_path / 'declared/experiments/bank.edi').read_text()
+    for tag, expected in (('index_h', ['1']), ('index_k', ['0']), ('index_l', ['0'])):
+        assert column(declared, '_excluded_reflection.' + tag) == expected, (
+            'An uncalculated save preserves the complete declared exclusion tuple'
+        )
+    project.analysis.calculate()
     project.save_as(tmp_path / 'saved')
     saved = (tmp_path / 'saved/experiments/bank.edi').read_text()
-    assert '_refln.include_status' in saved, (
-        'Saving must retain the user exclusion status beside the measured reflection'
+    assert column(saved, '_refln.include_status')[0] == 'x', (
+        'A calculated save marks the user-excluded measurement in its computed status column'
     )
     reloaded = importlib.import_module(ENGINE).Project.load(tmp_path / 'saved')
     assert list(reloaded.experiments[0].refln.intensity_meas) == OBSERVED.tolist(), (
