@@ -569,7 +569,11 @@ SideBarGroup {
         title: qsTr("Load experiments from CIF or .edi files")
         fileMode: FileDialog.OpenFiles
         nameFilters: [qsTr("Experiment files (*.cif *.edi)"), qsTr("CIF files (*.cif)"), qsTr("edi block files (*.edi)")]
-        onAccepted: group.project.loadExperiments(selectedFiles)
+        currentFolder: DialogFolders.folder("loadExperiment", "")
+        onAccepted: {
+            DialogFolders.remember("loadExperiment", selectedFiles[0]);
+            group.project.loadExperiments(selectedFiles);
+        }
     }
 
     // The dialog's answer goes to the experiment and the project it was opened for, and only while that project
@@ -583,7 +587,9 @@ SideBarGroup {
         nameFilters: dataDialog.experiment && dataDialog.experiment.sampleForm === ExperimentViewModel.SingleCrystal ? [qsTr("Reflection files (*.int *.hkl *.dat *.txt)"), qsTr("All files (*)")] : [qsTr("Data files (*.xye *.xy *.dat *.txt *.csv)"), qsTr("All files (*)")]
         // Several files at once (the owner, 2026-11-04): more than one asks how to load them.
         fileMode: FileDialog.OpenFiles
+        currentFolder: DialogFolders.folder("loadData", "")
         onAccepted: {
+            DialogFolders.remember("loadData", selectedFiles[0]);
             if (selectedFiles.length > 1 && dataDialog.experiment !== null && dataDialog.project === group.project) {
                 const experiment = dataDialog.experiment;
                 const files = selectedFiles;
@@ -601,7 +607,11 @@ SideBarGroup {
         id: dataFolderDialog
         title: qsTr("Choose a folder of sequential-fit datasets")
         acceptLabel: qsTr("Use folder")
-        onAccepted: ApplicationInfo.acceptDatasetFolder(dataFolderDialog, group.project, selectedFolder)
+        currentFolder: DialogFolders.folder("loadData", "")
+        onAccepted: {
+            DialogFolders.remember("loadData", selectedFolder);
+            ApplicationInfo.acceptDatasetFolder(dataFolderDialog, group.project, selectedFolder);
+        }
     }
 
     // Load N datasets as (the owner, 2026-11-04): separate experiments, each a copy of the selected experiment's setup

@@ -908,9 +908,14 @@ QList<edi_app::TagChip> ApplicationInfo::sourceKindTags(const QStringList& kinds
     return tags;
 }
 
-QUrl ApplicationInfo::imageFolder(const QString& stored, const QString& projectPath, bool ownPlace) const {
+QUrl ApplicationInfo::rememberedFolder(const QString& stored, const QUrl& fallback) const {
     const QUrl remembered(stored);
     if (!stored.isEmpty() && remembered.isLocalFile() && QFileInfo(remembered.toLocalFile()).isDir()) return remembered;
+    return fallback;
+}
+
+QUrl ApplicationInfo::imageFolder(const QString& stored, const QString& projectPath, bool ownPlace) const {
+    if (const QUrl remembered = rememberedFolder(stored, QUrl()); !remembered.isEmpty()) return remembered;
     if (ownPlace && !projectPath.isEmpty()) {
         const QString reports = QDir(projectPath).filePath(QStringLiteral("reports"));
         if (QDir().mkpath(reports)) return QUrl::fromLocalFile(reports);
