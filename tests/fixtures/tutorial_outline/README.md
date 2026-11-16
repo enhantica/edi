@@ -11,11 +11,12 @@ independently supplied checkout. It reads source blobs, not edi notebooks. Secti
 ignores letter case; extra edi sections are allowed, and reference sections keep their order.
 A documented structural departure needs an explicit reviewed update to the mapping.
 
-The active notebook publication gate no longer compares these section outlines or requires
-the published catalogue to equal this mapping. Structural alignment is deferred to later
-tutorial work. These independently captured inputs remain available for that work; the
-current gates retain setup declarations, sequential cell ids and cleared outputs for every
-published notebook. End-to-end notebook execution remains a separate requirement.
+The active notebook chapter gate reads `current.json` and retains the published sections in order,
+with the declared empty-project-first adaptation. Co₂SiO₄ on HEiDi follows the independently
+captured single-crystal HEiDi outline at the common pinned upstream commit; its entry records
+blob `f053dbedcfaccd8f75c25e4d24c24006c412374f` and the source-byte SHA-256. This is a teaching
+outline reference and makes no claim about numerical output. Notebook execution remains a
+separate requirement.
 
 Owner correction 7101f0fd9 (2026-11-09) withdraws exact upstream fit-cycle matching
 and its prose-deviation exemption. The captured `stages.json` remains an external

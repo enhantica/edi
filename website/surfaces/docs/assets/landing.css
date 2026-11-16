@@ -17,6 +17,7 @@
   display: grid;
   grid-template-columns: minmax(0, 21rem) minmax(0, 1fr);
   --ed-hero-copy-gap: 1.4rem;
+  --ed-hero-actions-gap: 1.8rem;
   --ed-hero-gap: clamp(1.5rem, 3.2vw, 3.2rem);
   box-sizing: border-box;
   width: calc(100% + max(0px, (100vw - 61rem) / 2 - 1rem));
@@ -60,7 +61,13 @@
   line-height: 1.7;
 }
 .ed-landing__actions {
-  margin-top: 1.8rem;
+  margin-top: var(--ed-hero-actions-gap);
+}
+/* The latest release, as far below the buttons as they are below the paragraph. */
+.md-typeset .ed-landing__release {
+  margin: var(--ed-hero-actions-gap) 0 0;
+  color: var(--md-default-fg-color--light);
+  font-size: .7rem;
 }
 .ed-landing__actions p {
   display: flex;
@@ -84,18 +91,17 @@
   gap: .3em;
   padding: .24rem .51rem;
   border-radius: 999px;
-  background: var(--md-default-fg-color);
-  color: var(--md-default-bg-color);
+  background: var(--md-default-fg-color--lightest);
+  color: var(--md-default-fg-color);
   font-size: .65rem;
   line-height: 1.25;
-  font-weight: 600;
+  font-weight: 400;
   white-space: nowrap;
   text-decoration: none;
 }
 .md-typeset .ed-landing__interfaces a:hover,
 .md-typeset .ed-landing__interfaces a:focus-visible {
-  background: var(--md-primary-fg-color);
-  color: var(--md-default-bg-color);
+  color: var(--md-primary-fg-color);
   text-decoration: none;
 }
 .ed-landing__interfaces .twemoji {
@@ -155,6 +161,7 @@
 @media (max-width: 30rem) {
   .ed-landing {
     --ed-hero-copy-gap: 1.1rem;
+    --ed-hero-actions-gap: 1.3rem;
     gap: 2rem;
     padding-block: 2.2rem;
   }
@@ -164,9 +171,6 @@
   .ed-landing .ed-landing__intro {
     font-size: .85rem;
     line-height: 1.65;
-  }
-  .ed-landing__actions {
-    margin-top: 1.3rem;
   }
   .ed-landing__actions .md-button {
     flex: 1 1 8rem;

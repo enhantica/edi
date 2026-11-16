@@ -5,6 +5,7 @@
 #include <QColor>
 #include <QDir>
 #include <QFileInfo>
+#include <QImage>
 #include <QJSValue>
 #include <QVariantMap>
 #include <QObject>
@@ -263,8 +264,8 @@ class ApplicationInfo : public QObject {
     // Save image on a chart or the structure view: the grabbed image (ItemGrabResult.image) as a PNG file on the
     // desktop, or handed to the browser to download as `name`.
     // A grabbed image saved as PNG, less the top `cut` of its height (the toolbar's band, as a fraction).
-    Q_INVOKABLE bool saveImage(const QVariant& image, const QUrl& file, double cut = 0) const;
-    Q_INVOKABLE bool downloadImage(const QVariant& image, const QString& name, double cut = 0) const;
+    Q_INVOKABLE bool saveImage(const QImage& image, const QUrl& file, double cut = 0) const;
+    Q_INVOKABLE bool downloadImage(const QImage& image, const QString& name, double cut = 0) const;
     // Where Save image starts: the folder last saved to while it exists; else the project's reports folder, made
     // when missing, for a project with a place of its own; else the pictures folder.
     Q_INVOKABLE QUrl imageFolder(const QString& stored, const QString& projectPath, bool ownPlace) const;
@@ -441,6 +442,7 @@ class ApplicationInfo : public QObject {
     Q_INVOKABLE void chooseExperimentData(const QJSValue& experiment) const;
     Q_INVOKABLE void chooseDatasetFolder(QObject* picker, QObject* project, QObject* experiment) const;
     Q_INVOKABLE void acceptDatasetFolder(QObject* picker, QObject* currentProject, const QUrl& folder) const;
+    Q_INVOKABLE void formDatasetFolderOpened(const QJSValue& request, const QJSValue& folder) const;
     Q_INVOKABLE void formFilesOpened(const QJSValue& request, const QJSValue& files, bool experiments) const;
     Q_INVOKABLE void formFilesCancelled(const QJSValue& request, bool experiments) const;
     Q_INVOKABLE void acceptExperimentDataFile() const;
@@ -872,6 +874,9 @@ class ApplicationInfo : public QObject {
     Q_INVOKABLE QJSValue windowUnsavedText() const;
     /// Final guarded focus/refresh/sort/warning and visual-feedback event procedures.
     Q_INVOKABLE void finishUiEvent(int kind, const QJSValue& value) const;
+    /// Hands edi's Theme (0 light, 1 dark, 2 system) to Qt's colour scheme, so what Qt draws itself, such as the
+    /// Windows title bar's buttons, follows edi's theme; system gives the choice back to the platform.
+    Q_INVOKABLE void applyColorScheme(int theme) const;
     /// Preserve the generic loaded text item's original dirty-property relation without narrowing its type.
     Q_INVOKABLE void workflowTextItemChanged() const;
 #if EDI_APP_ASSISTANT
@@ -991,9 +996,11 @@ class ApplicationInfo : public QObject {
         const QString home = QDir::toNativeSeparators(QDir::homePath());
         return path.startsWith(home + QDir::separator()) ? QStringLiteral("~") + path.mid(home.size()) : path;
     }
-    // An online source's kinds as tags (Preferences' online sources): one {label, icon, light, dark} per kind, in the
+    // Exact numeric width-list comparison, preserving nonfinite interim layout values.
+    Q_INVOKABLE bool sameColumnWidths(const QList<double>& current, const QList<double>& wanted) const;
+    // An online source's kinds as tags (Preferences' online sources): one typed TagChip per kind, in the
     // order given, with the icon the app uses for that kind and a tone of app/examples/tags.json.
-    Q_INVOKABLE QVariantList sourceKindTags(const QStringList& kinds) const;
+    Q_INVOKABLE QList<edi_app::TagChip> sourceKindTags(const QStringList& kinds) const;
     // A local path given as text, shown as shownPath shows it.
     Q_INVOKABLE QString shownLocalPath(const QString& path) const { return shownPath(QUrl::fromLocalFile(path)); }
     Q_INVOKABLE QUrl folderOf(const QUrl& file) const {
@@ -1048,7 +1055,27 @@ class ApplicationInfo : public QObject {
     // `colour` as drawn flat on any of `backgrounds`: its lightness moved to 2:1 contrast on each, its hue kept (edi
     // ADR-0047).
     Q_INVOKABLE QColor readableColour(const QColor& colour, const QList<QColor>& backgrounds) const;
+    // Whether the Home intro and the idle logo spin may play in this run: not in a demo, test or observed run (fresh
+    // settings, --test-observer) nor with EDI_HOME_INTRO=0; EDI_HOME_INTRO=1 allows them anyway.
+    Q_PROPERTY(bool homeIntroAllowed READ homeIntroAllowed CONSTANT)
+    bool homeIntroAllowed() const;
+    // Whether the window draws the app bar under the system title bar (macOS and Windows only): not in a demo, test or
+    // observed run, whose images keep the system title bar, nor with EDI_MERGED_TITLE_BAR=0; =1 merges it anyway.
+    Q_PROPERTY(bool mergedTitleBar READ mergedTitleBar CONSTANT)
+    bool mergedTitleBar() const;
+    // In the browser the start page plays the intro (app/web/intro.js) and keeps its on/off choice in the page's
+    // storage; Preferences' Intro animation reads and writes that same value there. Elsewhere: on, nothing kept.
+    Q_INVOKABLE bool introAnimationStored() const;
+    Q_INVOKABLE void storeIntroAnimation(bool on) const;
+    // At most twice a second while the user moves, clicks, scrolls or types anywhere in the app: the Home page's idle
+    // spin waits for a pause in these.
+    Q_SIGNAL void userInput();
+
+   protected:
+    bool eventFilter(QObject* watched, QEvent* event) override;
+
    private:
+    qint64 last_input_ = 0;
     mutable QPointer<QObject> pending_project_picker_;
     mutable QPointer<QObject> dataset_folder_picker_, dataset_folder_project_, dataset_folder_experiment_;
 

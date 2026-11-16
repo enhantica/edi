@@ -132,9 +132,14 @@ def stage_delivered_corpus_project(delivered, case_id, destination):
     for child in ('experiments', 'structures', 'analysis'):
 
         def contents(root, *, descriptive=False):
+            # SDK exports can carry native CIF line endings; all other recipe bytes stay exact.
             return {
                 file.relative_to(root).as_posix(): (
-                    pre_catalogue_bytes(file) if descriptive else file.read_bytes()
+                    pre_catalogue_bytes(file)
+                    if descriptive
+                    else file.read_bytes().replace(b'\r\n', b'\n')
+                    if file.suffix == '.edi'
+                    else file.read_bytes()
                 )
                 for file in root.rglob('*')
                 if file.is_file()

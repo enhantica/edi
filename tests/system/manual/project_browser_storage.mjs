@@ -20,11 +20,11 @@ await mkdir(output, {recursive:true});
 const server = createServer(async (req, res) => {
   try {
     const pathname = new URL(req.url, 'http://localhost').pathname;
-    if (mode === 'singlethread' && pathname.endsWith('/coi-serviceworker.js')) {res.writeHead(404);res.end();return;}
     const path = resolve(site, '.' + pathname + (pathname.endsWith('/') ? 'index.html' : ''));
     assert(path.startsWith(site + sep), 'The browser gate serves only the packed app');
     const bytes = await readFile(extname(path) ? path : join(path, 'index.html'));
-    const headers = {'Content-Type':({'.html':'text/html','.js':'text/javascript','.wasm':'application/wasm','.json':'application/json','.css':'text/css','.svg':'image/svg+xml'})[extname(path)] || 'text/html'};
+    assert(mode==='multithread','Browser persistence uses a supported directly isolated multithread route');
+const headers = {'Content-Type':({'.html':'text/html','.js':'text/javascript','.wasm':'application/wasm','.json':'application/json','.css':'text/css','.svg':'image/svg+xml'})[extname(path)] || 'text/html'};
     if (mode === 'multithread') Object.assign(headers, {'Cross-Origin-Opener-Policy':'same-origin','Cross-Origin-Embedder-Policy':'require-corp'});
     res.writeHead(200, headers); res.end(bytes);
   } catch { res.writeHead(404); res.end(); }
@@ -178,7 +178,7 @@ try {
       }
       const item=await control(regex,role);console.log(mode,scenario,'click',item.node.name?.value);
       let point=item;
-      const names={'Open project…':'project.open','Save project as…':'project.saveAs','Save current state of the project':'appBar.button.save'};
+      const names={'Open project…':'project.open','Save project as…':'project.saveAs','Save the project':'appBar.button.save'};
       const groupName=/Examples$/.test(item.node.name?.value||'')?'group.examples':/Recent projects$/.test(item.node.name?.value||'')?'group.recentProjects':null;
       if(groupName){const rect=await geometry(groupName);point={x:rect.x+50,y:rect.y+15};}
       const recentLabels=[...new Set((await ax()).filter(n=>n.role?.value==='StaticText'&&/^(Continue where you left off:)| · (in this browser|on this computer)$/.test(n.name?.value||'')).map(n=>n.name.value))];
@@ -370,7 +370,7 @@ try {
         await evaluate(()=>window.__downloadBoundary.deny());await frame();
       }
       await edit('project.name','private-save-edited-'+scenario);
-      await click(/^Save current state of the project$/,'button');
+      await click(/^Save the project$/,'button');
       await page.waitForFunction(()=>window.__downloadBoundary.failures.length>0);
       await frame();
       let saveWarning;
@@ -423,7 +423,7 @@ try {
     }
     if(warningScenario){
       await edit('project.name','first-browser-save');
-      await click(/^Save current state of the project$/,'button');
+      await click(/^Save the project$/,'button');
       await awaitStored('first-browser-save');await clean();
       const first=await warning(false);
       if(scenario==='example-warning-save-as'){
@@ -439,7 +439,7 @@ try {
       await pointer(observation.warningOk);await hidden(observation.warningText);
       assert.equal((await native(observation.warningText)).visible,false,'OK must close the first-Save browser warning');
       await edit('project.name','later-browser-save');
-      await click(/^Save current state of the project$/,'button');
+      await click(/^Save the project$/,'button');
       await awaitStored('later-browser-save');await clean();
       assert.equal((await native(observation.warningText)).visible,false,'A later Save of the same project must use the short notice');
       await geometry(observation.notice);await page.keyboard.press('Escape');await frame();
@@ -448,7 +448,7 @@ try {
       await click(/Examples$/,'button');await edit('examples.search',selectedExample);
       await click(/^sc-neut-tof_taurine-senju:/,'button');await control(/^Analysis$/,'tab');
       await edit('project.name','another-project-first-save');
-      await click(/^Save current state of the project$/,'button');
+      await click(/^Save the project$/,'button');
       await awaitStored('another-project-first-save');await clean();
       const another=await warning(false);await pointer(observation.warningOk);await hidden(observation.warningText);
       const beforeStorage=await evaluate(()=>window.__downloadBoundary.storage.slice());
@@ -463,7 +463,7 @@ try {
     const name='browser-saved-'+scenario;
     await edit('project.name',name);
     const before={...events},picksBefore=await page.evaluate(()=>({...window.__storagePicks}));
-    await click(/^Save current state of the project$/,'button');
+    await click(/^Save the project$/,'button');
     const browserPlace=scenario.startsWith('example')||fallback;
     let stored;
     if(browserPlace){
@@ -522,7 +522,7 @@ try {
       const external='external-next-save-'+scenario;
       await edit('project.name',external);
       const picks=await page.evaluate(()=>({...window.__storagePicks})),counts={...events};
-      await click(/^Save current state of the project$/,'button');
+      await click(/^Save the project$/,'button');
       const deadline=Date.now()+30000;let written=[];
       while(Date.now()<deadline){try{written=pythonStore(await readFiles(true),external);break;}catch(error){if(!/requested saved or recovery state/.test(error.message))throw error;}await frame();}
       assert(written.length>0,'After Save as the picked folder or ZIP becomes the real working place');

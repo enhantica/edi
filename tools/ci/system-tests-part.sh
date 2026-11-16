@@ -24,13 +24,17 @@ own="build/test-durations-$part.json"
 if [ -f "$recorded" ]; then cp "$recorded" "$own"; else echo '{}' > "$own"; fi
 set --
 if [ "${EDI_RUN_NIGHTLY_ONLY:-false}" != true ]; then
-  nightly="$(python -c 'import json; print("\n".join(json.load(open("tests/test-groups.json"))["groups"]["nightly-only"]["paths"]))')"
+  nightly="$(python -c 'import json, sys; sys.stdout.reconfigure(newline="\n"); print("\n".join(json.load(open("tests/test-groups.json"))["groups"]["nightly-only"]["paths"]))')"
   [ -n "$nightly" ] || { echo "system-tests-part: the nightly-only group names no files" >&2; exit 2; }
   while IFS= read -r path; do set -- "$@" "--ignore=$path"; done <<< "$nightly"
 fi
+# Native app system cases run in group-app after its declared Qt build.
+set -- "$@" --ignore=tests/system/app
 # The licence checks run on the four staged surfaces, which the workflow's app and app-wasm jobs build and run them
 # on; a system part has none of them.
 set -- "$@" --ignore=tests/system/py/test_distribution_licences.py
+# The app-wasm job runs both authored and generated survey cases after wasm-toolchain.
+set -- "$@" --ignore=tests/system/py/test_survey_events.py
 exec python -m pytest tests/system -q "$@" \
     --splits "$parts" --group "$part" --splitting-algorithm least_duration \
     --durations-path "$own" --store-durations

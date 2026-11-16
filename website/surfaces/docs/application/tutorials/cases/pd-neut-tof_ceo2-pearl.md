@@ -6,6 +6,12 @@ template: gui.html
 
 The same staged fit as the Python and Command line tutorials, in the app. Its structure and experiment come from EasyDiffraction's collection with **Load ▾ From web…**, and each stage frees its parameters in the **Parameters** table on **Analysis** before the fit.
 
+Fit the CeO₂ standard to time-of-flight neutron powder data from PEARL at ISIS: the calibration
+and the profile, with a polynomial background.
+
+The project is the catalogue case `pd-neut-tof_ceo2-pearl`, the one the command line and the
+app's Examples open.
+
 ## Create a project
 
 Press **Start** on Home, then **Create a new project**, and give it a name.

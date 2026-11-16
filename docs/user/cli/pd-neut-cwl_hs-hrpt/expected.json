@@ -1,6 +1,12 @@
 {
   "schema": 1,
   "source": {
+    "pins": {
+      "commit": "ec587609746b50823c048463f353b1767cbfa5f9",
+      "reason": "Existing published pin source: Survey, GUI and docs updates for the next release. See PROVENANCE.md for the original conditions; no fit rerun.",
+      "kind": "committed-document",
+      "record_sha256": "4af17d00f9c60ab7f311831932100025ec4c1eb95e3edbde5ee66f7910d5e68b"
+    },
     "engine": "FullProf 8.40 (references); edi (regression pins)",
     "artifact": "../../../../knowledge/fitting/fullprof/pd-neut-cwl_hs-hrpt/reference.json",
     "provenance": "PROVENANCE.md"

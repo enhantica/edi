@@ -16,6 +16,8 @@ from pathlib import Path
 
 import pytest
 
+from tests.fixtures.native_process import environment_bash
+
 ROOT = Path(__file__).resolve().parents[3]
 SHIPPED = json.loads((ROOT / 'tests/fixtures/ci_cadence/shipped-policy.json').read_text())
 REPO = SHIPPED['repo']
@@ -47,7 +49,8 @@ def execute(tmp_path, mode, skip, result, *, empty=False):
         ' os.execv(sys.executable, [sys.executable, *sys.argv[1:]])\n'
         'with open(os.environ["CADENCE_ARGUMENTS"], "w") as f:\n'
         ' json.dump(sys.argv[1:],f)\n'
-        'sys.exit(int(os.environ["CADENCE_RESULT"]))\n'
+        'sys.exit(int(os.environ["CADENCE_RESULT"]))\n',
+        newline='\n',
     )
     endpoint.chmod(0o755)
     if REPO == 'crysta':
@@ -58,7 +61,7 @@ def execute(tmp_path, mode, skip, result, *, empty=False):
         else {'EDI_RUN_NIGHTLY_ONLY': str(not skip).lower()}
     )
     child = subprocess.run(
-        ['/bin/bash', str(driver), mode, *(['3'] if REPO == 'edi' else [])],
+        [environment_bash(), str(driver), mode, *(['3'] if REPO == 'edi' else [])],
         cwd=tmp_path,
         env={
             **os.environ,

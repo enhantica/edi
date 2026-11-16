@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import argparse
 import ast
+import itertools
 import json
 import re
 import sys
@@ -22,7 +23,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'website'))
 
-from app_groups import Parameter, forget, groups, load_case  # noqa: E402
+from app_groups import Parameter, forget, groups, load_case, unrolled  # noqa: E402
 from render_cli_tutorials import stages  # noqa: E402
 
 # The case that also shows loading measured data from a file on disk (owner record 2026-11-08).
@@ -67,7 +68,8 @@ def relations(case: str) -> tuple[list[tuple[str, str]], list[tuple[str, str]]]:
         text = path.read_text(encoding='utf-8')
         for loop in re.split(r'^loop_\s*$', text, flags=re.MULTILINE)[1:]:
             lines = [line.strip() for line in loop.strip().splitlines()]
-            keys = [line for line in lines if line.startswith('_')]
+            # The loop's own tags lead it; a later `_tag value` line is the file's, not the loop's.
+            keys = list(itertools.takewhile(lambda line: line.startswith('_'), lines))
             rows = [line for line in lines[len(keys) :] if line and not line.startswith('_')]
             if keys and keys[0].startswith('_alias.'):
                 for row in rows:
@@ -478,7 +480,7 @@ def grouped(paths: set[str], loops: list[str]) -> tuple[list[str], set[str]]:
 
 
 def plan(case: str) -> dict:  # noqa: PLR0912, PLR0914, PLR0915 - one plan, step by step
-    source = (ROOT / 'docs/user/tutorials' / f'{case}.py').read_text(encoding='utf-8')
+    source = unrolled((ROOT / 'docs/user/tutorials' / f'{case}.py').read_text(encoding='utf-8'))
     named, structures, experiments = blocks(source)
     exp_root = {
         name: ('experiment.' if len(experiments) == 1 else f'experiments[{name}].')
@@ -509,10 +511,10 @@ def plan(case: str) -> dict:  # noqa: PLR0912, PLR0914, PLR0915 - one plan, step
 
     shot('home', 'home', 'Start a new analysis', ['platform:light', 'theme:light'], ['home.start'])
     scan = "fitting_mode = 'sequential'" in source
-    # A calculation without data loads its project and fits nothing: open the example, look at the
+    # A calculation without data builds its project like a fit, then fits nothing: it looks at the
     # calculated pattern and the report.
     simulation = '## Perform the analysis' not in source
-    if scan or simulation:
+    if scan:
         # A scan's datasets come with its project: open the example from Project > Examples.
         shot(
             'example-open',
@@ -531,25 +533,6 @@ def plan(case: str) -> dict:  # noqa: PLR0912, PLR0914, PLR0915 - one plan, step
             ],
             ['workflow.project.mainContent'],
         )
-        if simulation:
-            shot(
-                'calculated',
-                'analysis',
-                'See the calculated pattern',
-                ['appBar.tab.analysis', 'sideBar.tab.basic', 'mainArea.tab.pattern'],
-                ['workflow.analysis.mainContent'],
-            )
-            shot(
-                'report',
-                'report',
-                'Review the report',
-                ['appBar.tab.report', 'sideBar.tab.basic'],
-                ['workflow.report.mainContent'],
-                'Main',
-            )
-            for step in steps:
-                step['capture'] = step['id'] != 'home'
-            return {'example': case, 'steps': steps}
     else:
         shot(
             'project-details',
@@ -628,9 +611,33 @@ def plan(case: str) -> dict:  # noqa: PLR0912, PLR0914, PLR0915 - one plan, step
                     ['experiments.list', 'workflow.experiment.mainContent'],
                 )
 
+    if simulation:
+        shot(
+            'calculated',
+            'analysis',
+            'See the calculated pattern',
+            ['appBar.tab.analysis', 'sideBar.tab.basic', 'mainArea.tab.pattern'],
+            ['workflow.analysis.mainContent'],
+        )
+        shot(
+            'report',
+            'report',
+            'Review the report',
+            ['appBar.tab.report', 'sideBar.tab.basic'],
+            ['workflow.report.mainContent'],
+            'Main',
+        )
+        for step in steps:
+            step['capture'] = step['id'] != 'home'
+        return {'example': case, 'steps': steps}
+
     aliases, constraints = relations(case)
     # A relation the tutorial adds in a stage is added there, not at the start.
-    created = set(re.findall(r"\.(?:aliases|constraints)\.create\(id='([^']+)'", source))
+    # The setup creates the others before the first stage, as the project starts with them.
+    stages_from = source.find('## Perform the analysis')
+    created = set(
+        re.findall(r"\.(?:aliases|constraints)\.create\(id='([^']+)'", source[stages_from:])
+    )
     aliases = [item for item in aliases if item[0] not in created]
     constraints = [item for item in constraints if item[0] not in created]
     alias_count = constraint_count = 0
@@ -882,7 +889,17 @@ def plan(case: str) -> dict:  # noqa: PLR0912, PLR0914, PLR0915 - one plan, step
             # The switch leaves no displacement free, here as on the command line.
             previous = {path for path in previous if not re.search(r'\.adp_(iso|\d\d)$', path)}
         filters, rest = grouped(paths - previous, loops)
+        # A loop frees its whole background, so a point the stage leaves fixed (one past the end of
+        # the data) is fixed again after it, in its own row.
+        looped = {
+            f'{root}background[{point.id}].intensity'
+            for item in project.experiments
+            for root in [exp_root[item.name]]
+            if root + 'background[' in filters
+            for point in item.background
+        }
         fix_filters, fix_rest = grouped(previous - paths, list(exp_root.values()))
+        fix_rest |= looped - paths
         # One experiment: its background is the whole Background category. A loop over every
         # site's displacement is the Atomic displacement category.
         categories = []
@@ -969,7 +986,7 @@ def plan(case: str) -> dict:  # noqa: PLR0912, PLR0914, PLR0915 - one plan, step
             shot(
                 'group-free-all',
                 'analysis',
-                'Free all from the header',
+                f'Free {category} from the header',
                 ['parameters.freeHeader'],
                 ['parameters.freeHeader'],
                 'Main',
@@ -992,7 +1009,7 @@ def plan(case: str) -> dict:  # noqa: PLR0912, PLR0914, PLR0915 - one plan, step
             actions += set_category(BACKGROUND, 'fixed', block if several else '')
         if fix_rest:
             actions += by_category(
-                project, sorted(fix_rest), previous, roots, 'fixed', several=several
+                project, sorted(fix_rest), previous | looped, roots, 'fixed', several=several
             )
         new_aliases = [
             (ident, unique_name(param, named))

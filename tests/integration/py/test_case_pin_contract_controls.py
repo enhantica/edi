@@ -43,7 +43,8 @@ def write_pin(root, commit, reason):
         json.dumps({
             'source': {'pins': {'commit': commit, 'reason': reason}},
             'quantities': {'authored_control': QUANTITY},
-        })
+        }),
+        newline='\n',
     )
 
 
@@ -51,7 +52,9 @@ def write_pin(root, commit, reason):
 def authored_history(tmp_path):
     directory = tmp_path / 'docs/user/cli' / CASE / 'project'
     directory.mkdir(parents=True)
-    (directory / 'project.edi').write_text('data_authored_metadata_control\n_cell.length_a 4.2\n')
+    (directory / 'project.edi').write_text(
+        'data_authored_metadata_control\n_cell.length_a 4.2\n', newline='\n'
+    )
     git(tmp_path, 'init', '--quiet')
     git(tmp_path, 'add', '--', 'docs/user/cli/' + CASE + '/project/project.edi')
     git(tmp_path, 'commit', '--quiet', '-m', 'Record an authored metadata control')
@@ -66,7 +69,7 @@ def test_a_changed_start_fails_until_re_pinned_with_a_reason(authored_history):
     root, project, previous = authored_history
     pinned_start(CASE, root)
     path = project / 'project.edi'
-    path.write_text(path.read_text().replace('4.2', '4.37'))
+    path.write_text(path.read_text().replace('4.2', '4.37'), newline='\n')
     with pytest.raises(AssertionError, match='changing any starting file'):
         pinned_start(CASE, root)
     git(root, 'add', '--', 'docs/user/cli/' + CASE + '/project/project.edi')
@@ -90,9 +93,9 @@ def test_every_start_tree_change_invalidates_the_old_regression_pin(authored_his
     if damage == 'missing':
         (project / 'project.edi').unlink()
     elif damage == 'extra':
-        (project / 'unregistered.edi').write_text('data_extra\n')
+        (project / 'unregistered.edi').write_text('data_extra\n', newline='\n')
     else:
-        (project / 'project.edi').write_text('data_changed\n')
+        (project / 'project.edi').write_text('data_changed\n', newline='\n')
     with pytest.raises(AssertionError, match='changing any starting file'):
         pinned_start(CASE, root)
 
@@ -156,7 +159,7 @@ def test_malformed_regression_pin_cannot_make_a_false_green(authored_history, da
                 'infinite-tolerance': math.inf,
                 'boolean-tolerance': True,
             }[damage]
-    path.write_text(json.dumps(document))
+    path.write_text(json.dumps(document), newline='\n')
     with pytest.raises(AssertionError, match='Gate 2:'):
         pinned_start(CASE, root)
 
@@ -173,13 +176,13 @@ def test_changing_a_pin_cannot_reuse_old_source_provenance(authored_history, sta
     path = root / 'docs/user/cli' / CASE / 'expected.json'
     document = json.loads(path.read_text())
     document['quantities']['authored_control'][field] *= 2
-    path.write_text(json.dumps(document))
+    path.write_text(json.dumps(document), newline='\n')
     if state != 'uncommitted':
         git(root, 'add', '--', 'docs/user/cli/' + CASE + '/expected.json')
         git(root, 'commit', '--quiet', '-m', 'Exercise an unexplained authored pin change')
     if state == 'later-metadata-edit':
         document['source']['note'] = 'A later metadata change cannot conceal the unexplained pin'
-        path.write_text(json.dumps(document))
+        path.write_text(json.dumps(document), newline='\n')
         git(root, 'add', '--', 'docs/user/cli/' + CASE + '/expected.json')
         git(root, 'commit', '--quiet', '-m', 'Exercise a later authored metadata change')
     with pytest.raises(AssertionError, match='fresh source provenance and a re-pin reason'):

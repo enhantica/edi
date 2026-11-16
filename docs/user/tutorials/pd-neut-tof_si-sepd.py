@@ -5,28 +5,86 @@
 # Fit silicon to time-of-flight neutron powder data from SEPD at Argonne, with the Jorgensen-Von
 # Dreele profile.
 #
-# The project is the catalogue case `pd-neut-tof_si-sepd`, the one the command line and the app's
-# Examples open.
+# It builds the catalogue case `pd-neut-tof_si-sepd` step by step: the same project the command
+# line fits and the app's Examples open.
+
+# %% [markdown]
+# ## Import the library
 
 # %%
 import easydiffraction as edi
 
 # %% [markdown]
-# ## Load the project
+# ## Define the project
+#
+# A new project is empty: it holds no structure and no experiment until you add them.
 
 # %%
-project_path = edi.download_data('pd-neut-tof_si-sepd', destination='data')
-project = edi.Project.load(project_path)
-structure = project.structures['si']
-experiment = project.experiments['sepd']
+project = edi.Project(name='pd-neut-tof_si-sepd')
 
 # %% [markdown]
-# The project marks what its fit frees. The fit below frees it in stages, so start with all of it
-# fixed.
+# ## Define the structure
+#
+# Load the structure from EasyDiffraction's collection. Its CIF gives the space group, the cell and
+# the atom sites.
 
 # %%
-for parameter in project.free_parameters:
-    parameter.free = False
+path = edi.download_data('pd-neut-tof_si-sepd-si', destination='data')
+project.structures.add_from_cif_path(path)
+structure = project.structures['si']
+
+# %%
+project.display.structure('si')
+
+# %% [markdown]
+# ## Define the experiment
+#
+# Create the experiment from a file of measured data: `add_from_data_path` reads its time-of-
+# flight, intensity and uncertainty columns. Here the file is SEPD's pattern from EasyDiffraction's
+# collection; a file of your own on disk works the same way. Then describe the instrument, the peak
+# profile, the background and the structure it links.
+
+# %%
+data_path = edi.download_data('pd-neut-tof_si-sepd-sepd-data', destination='data')
+project.experiments.add_from_data_path(
+    name='sepd',
+    data_path=data_path,
+    sample_form='powder',
+    beam_mode='time-of-flight',
+    radiation_probe='neutron',
+    scattering_type='bragg',
+)
+experiment = project.experiments['sepd']
+experiment.neutron_scattering_length = 'sears1992'
+experiment.peak.type = 'tof-jorgensen-von-dreele'
+experiment.absorption.type = 'none'
+experiment.instrument.name = 'SEPD'
+experiment.instrument.facility = 'Argonne'
+experiment.peak.cutoff_fwhm = 8.2
+experiment.peak.rise_alpha_1 = 0.5971
+experiment.peak.decay_beta_0 = 0.04
+experiment.peak.decay_beta_1 = 0.01
+experiment.peak.broad_gauss_sigma_0 = 3
+experiment.peak.broad_gauss_sigma_1 = 30
+experiment.peak.broad_lorentz_gamma_1 = 3
+experiment.instrument.setup_twotheta_bank = 144.845
+experiment.instrument.calib_d_to_tof_linear = 7476.91
+experiment.instrument.calib_d_to_tof_quadratic = -1.54
+experiment.linked_structures.create(structure_id='si', scale=600)
+experiment.background.create(position=2000, intensity=120.0)
+experiment.background.create(position=9035, intensity=120.0)
+experiment.background.create(position=9335, intensity=120.0)
+experiment.background.create(position=11915, intensity=120.0)
+experiment.background.create(position=12315, intensity=120.0)
+experiment.background.create(position=12695, intensity=120.0)
+experiment.background.create(position=13745, intensity=120.0)
+experiment.background.create(position=14410, intensity=120.0)
+experiment.background.create(position=14875, intensity=120.0)
+experiment.background.create(position=15660, intensity=120.0)
+experiment.background.create(position=23075, intensity=120.0)
+experiment.background.create(position=23515, intensity=120.0)
+experiment.background.create(position=28100, intensity=120.0)
+experiment.background.create(position=29995, intensity=120.0)
 
 # %% [markdown]
 # ## Estimate the background
@@ -149,28 +207,16 @@ project.display.fit.correlations()
 project.display.structure('si')
 
 # %% [markdown]
+# ## Report
+#
+# The HTML report draws the measured, calculated and difference patterns with the reflection
+# positions, and lists the structures, the experiments and the fit. Open it in a browser.
+
+# %%
+project.report.save_html('pd-neut-tof_si-sepd.html')
+
+# %% [markdown]
 # ## Save the project
 
 # %%
 project.save_as('pd-neut-tof_si-sepd')
-project.report.save_html('pd-neut-tof_si-sepd.html')
-
-# %% [markdown]
-# ## Your own measured data
-#
-# Measured data can also come from a file on your own disk. `add_from_data_path` reads a file of
-# time-of-flight, intensity and uncertainty columns into a new experiment, here in a project of its
-# own; the experiment then needs its instrument, profile and linked structure, as above. The file
-# here is SEPD's pattern from the collection, saved to disk first.
-
-# %%
-data_path = edi.download_data('pd-neut-tof_si-sepd-sepd-data', destination='data')
-own = edi.Project(name='own_sepd')
-own.experiments.add_from_data_path(
-    name='mine',
-    data_path=data_path,
-    sample_form='powder',
-    beam_mode='time-of-flight',
-    radiation_probe='neutron',
-)
-own.display.pattern('mine')

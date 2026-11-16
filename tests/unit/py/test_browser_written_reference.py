@@ -336,3 +336,37 @@ def test_native_value_iterable_collection_captures_named_banks_and_refuses_inven
         assert not (tmp_path / target).exists(), (
             'An incomplete or extra bank inventory must refuse before writing any capture'
         )
+
+
+@pytest.mark.parametrize('field', ['descent', 'stop_rules'])
+def test_loaded_capture_preserves_auto_and_refuses_retuned_conditions(tmp_path, field):
+    source = tmp_path / 'source'
+    (source / 'analysis').mkdir(parents=True)
+    (source / 'analysis/analysis.edi').write_text(
+        '_minimizer.max_iterations 17\n_minimizer.chi_square_tolerance 0.00025\n'
+    )
+    output = tmp_path / 'output'
+    output.mkdir()
+    conditions = {'descent': 'auto', 'stop_rules': 'chi_square_change shift_su'}
+    project = SimpleNamespace(
+        analysis=SimpleNamespace(fitting_mode='single', **conditions),
+        su_rule='iucr_99',
+        free_parameters=[None, None],
+        _minimizer_max_iterations=17,
+        _minimizer_chi_square_tolerance=0.00025,
+    )
+    good = written.capture_loaded(
+        project, source, 'lbco', {'labels': ['a', 'scale']}, output, conditions
+    )
+    assert good['descent'] == 'auto', (
+        'The actual loaded-reference boundary retains the owner-decided Auto default'
+    )
+    setattr(
+        project.analysis,
+        field,
+        'fast_descent_and_ladder' if field == 'descent' else 'chi_square_change',
+    )
+    with pytest.raises(ValueError, match='declared current descent or stop rules'):
+        written.capture_loaded(
+            project, source, 'lbco', {'labels': ['a', 'scale']}, output, conditions
+        )

@@ -107,20 +107,51 @@ def test_availability_observer_refuses_changed_support_and_table_shape(damage):
         )
     soup = BeautifulSoup(html + '</tbody></table></main>', 'html.parser')
     assert_availability(soup)
-    if damage == 'web-builtin':
-        soup.select('tbody tr')[1].find_all('td')[1].string = '✓'
-    elif damage == 'python-own-missing':
-        soup.select('tbody tr')[2].find_all('td')[2].string = '—'
-    elif damage == 'missing-row':
-        soup.select('tbody tr')[-1].decompose()
-    elif damage == 'swapped-columns':
-        soup.select('th')[1].string, soup.select('th')[2].string = (
-            'Your own assistant',
-            'Built-in assistant',
-        )
-    if damage:
-        with pytest.raises(AssertionError, match='Gate 3/4:'):
-            assert_availability(soup)
+    icons = BeautifulSoup(str(soup), 'html.parser')
+    for index, row in enumerate(icons.select('tbody tr')):
+        for column in [1, 2]:
+            available = index == 0 or column == 2
+            cell = row.find_all('td')[column]
+            cell.clear()
+            icon = icons.new_tag('span')
+            icon['aria-label'] = ('Available' if available else 'Not available') + ': control'
+            cell.append(icon)
+    assert_availability(icons)
+    for document in [soup, icons]:
+        if damage == 'web-builtin':
+            document.select('tbody tr')[1].find_all('td')[1].string = '✓'
+        elif damage == 'python-own-missing':
+            document.select('tbody tr')[2].find_all('td')[2].string = '—'
+        elif damage == 'missing-row':
+            document.select('tbody tr')[-1].decompose()
+        elif damage == 'swapped-columns':
+            document.select('th')[1].string, document.select('th')[2].string = (
+                'Your own assistant',
+                'Built-in assistant',
+            )
+        if damage:
+            with pytest.raises(AssertionError, match='Gate 3/4:'):
+                assert_availability(document)
+    if damage is None:
+        cell = icons.select('tbody tr')[0].find_all('td')[2]
+        contradiction = icons.new_tag('span')
+        contradiction['aria-label'] = 'Not available: contradicts the first label'
+        cell.append(contradiction)
+        with pytest.raises(AssertionError, match='contradict'):
+            assert_availability(icons)
+        contradiction.decompose()
+        checkbox = icons.new_tag('input', type='checkbox')
+        cell.append(checkbox)
+        with pytest.raises(AssertionError, match='contradict'):
+            assert_availability(icons)
+        checkbox.decompose()
+        cell.append('—')
+        with pytest.raises(AssertionError, match='contradict'):
+            assert_availability(icons)
+        cell.contents[-1].extract()
+        cell.select_one('[aria-label]')['aria-label'] = 'Availability: not a state label'
+        with pytest.raises(AssertionError, match='unambiguous'):
+            assert_availability(icons)
 
 
 @pytest.mark.parametrize('bold', [True, False])

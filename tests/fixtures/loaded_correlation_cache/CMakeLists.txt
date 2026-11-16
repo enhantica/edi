@@ -7,3 +7,7 @@ add_executable(cache_probe probe.cpp "${EDI_VIEW}/correlation_view_model.hpp")
 target_compile_features(cache_probe PRIVATE cxx_std_20)
 target_include_directories(cache_probe PRIVATE "${EDI_INCLUDE}" "${EDI_VIEW}")
 target_link_libraries(cache_probe PRIVATE "${EDI_CORE}" crysta::crysta Qt6::Core Qt6::Qml)
+
+# Keep the launched observer on the same Qt runtime that this target links.
+file(GENERATE OUTPUT "${CMAKE_BINARY_DIR}/qt-runtime-dir.txt"
+    CONTENT "$<TARGET_FILE_DIR:Qt6::Core>\n")

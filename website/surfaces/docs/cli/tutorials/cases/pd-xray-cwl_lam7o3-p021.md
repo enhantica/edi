@@ -2,49 +2,103 @@
 
 The same staged fit as the Python tutorial, on the command line. The command line fits whatever the project marks free with `()` after a value, so each stage marks its parameters in the project's files with a text editor and runs `edi fit`, which writes the fitted values back into the project for the next stage.
 
-## Get the project
+Fit the high-entropy perovskite La(Ti,Cr,Mn,Fe,Co,Ni,Cu)O₃, seven cations on one site, to
+synchrotron X-ray powder data from P02.1 at PETRA III.
+
+It builds the catalogue case `pd-xray-cwl_lam7o3-p021` step by step: the same project the command
+line fits and the app's Examples open. The seven metals sharing one site have one displacement,
+held by constraints.
+
+## Define the project
+
+Make a folder for the project, with a folder each for its structures, experiments and analysis.
+
+```console
+mkdir -p pd-xray-cwl_lam7o3-p021/structures pd-xray-cwl_lam7o3-p021/experiments pd-xray-cwl_lam7o3-p021/analysis
+```
+
+Write `project.edi` in it with a text editor such as VS Code:
+
+```edi
+_edi.schema_version 3
+
+_metadata.name pd-xray-cwl_lam7o3-p021
+_metadata.title "La(Ti,Cr,Mn,Fe,Co,Ni,Cu)O₃ [Pnma] · P02.1 @ PETRA III"
+_metadata.description "High-entropy perovskite · Seven cations on one site · Synchrotron X-ray"
+_metadata.authors .
+```
+
+## Define the structure
+
+Download the structure from EasyDiffraction's collection into `structures`. Its CIF gives the space group, the cell and the atom sites.
 
 === "Standalone executable"
 
     ```console
-    edi download-data pd-xray-cwl_lam7o3-p021
+    edi download-data pd-xray-cwl_lam7o3-p021-lam7o3
+    mv data/pd-xray-cwl_lam7o3-p021-lam7o3.edi pd-xray-cwl_lam7o3-p021/structures/lam7o3.edi
     ```
 
 === "Python package"
 
     ```console
-    python -m edi download-data pd-xray-cwl_lam7o3-p021
+    python -m edi download-data pd-xray-cwl_lam7o3-p021-lam7o3
+    mv data/pd-xray-cwl_lam7o3-p021-lam7o3.edi pd-xray-cwl_lam7o3-p021/structures/lam7o3.edi
     ```
 
-## Start with nothing free
+## Define the experiment
 
-The project marks what its finished fit frees. Remove every `()`, so the stages below free one group at a time.
+Download the experiment into `experiments`: the file declares the instrument, the peak profile, the background, the structures it links and the measured data.
 
-In `experiments/p021.edi`, remove the `()` from every value; they now read:
+=== "Standalone executable"
+
+    ```console
+    edi download-data pd-xray-cwl_lam7o3-p021-p021
+    mv data/pd-xray-cwl_lam7o3-p021-p021.edi pd-xray-cwl_lam7o3-p021/experiments/p021.edi
+    ```
+
+=== "Python package"
+
+    ```console
+    python -m edi download-data pd-xray-cwl_lam7o3-p021-p021
+    mv data/pd-xray-cwl_lam7o3-p021-p021.edi pd-xray-cwl_lam7o3-p021/experiments/p021.edi
+    ```
+
+Then write how the project is fitted in `analysis/analysis.edi`:
 
 ```edi
-_instrument.calib_twotheta_offset 0
-_peak.broad_gauss_u 0.04
-_peak.broad_gauss_v -0.01
-_peak.broad_gauss_w 0.001
-_peak.broad_lorentz_x 0.1
-2.0 2.0033379 300
-2.3 2.297792 300
+_minimizer.type crysta
+_minimizer.max_iterations 1000
+_minimizer.descent fast_descent
+
+_fitting_mode.type single
+
+loop_
+_alias.id
+_alias.parameter_unique_name
+biso_Ti lam7o3.atom_site.Ti.adp_iso
+biso_Cr lam7o3.atom_site.Cr.adp_iso
+biso_Mn lam7o3.atom_site.Mn.adp_iso
+biso_Fe lam7o3.atom_site.Fe.adp_iso
+biso_Co lam7o3.atom_site.Co.adp_iso
+biso_Ni lam7o3.atom_site.Ni.adp_iso
+biso_Cu lam7o3.atom_site.Cu.adp_iso
+biso_O1 lam7o3.atom_site.O1.adp_iso
+biso_O2 lam7o3.atom_site.O2.adp_iso
+
+loop_
+_constraint.id
+_constraint.expression
+1 "biso_Cr = biso_Ti"
+2 "biso_Mn = biso_Ti"
+3 "biso_Fe = biso_Ti"
+4 "biso_Co = biso_Ti"
+5 "biso_Ni = biso_Ti"
+6 "biso_Cu = biso_Ti"
+7 "biso_O2 = biso_O1"
+
+_edi.schema_version 3
 ```
-
-The same for every other row (19 more).
-
-In `structures/lam7o3.edi`, remove the `()` from every value; they now read:
-
-```edi
-_cell.length_a 5.5
-_cell.length_b 7.7
-_cell.length_c 5.5
-La La 0.48 0.25 0 c 4 1 0.5 Biso
-Ti Ti 0 0 0 a 4 0.14286 0.5 Biso
-```
-
-The same for every other row (2 more).
 
 ## Scale, 2θ zero and cell
 
@@ -54,7 +108,7 @@ In `experiments/p021.edi`, add `()` after the values the stage frees:
 
 ```edi
 _instrument.calib_twotheta_offset 0()
-lam7o3 0.000005() 1.0
+lam7o3 0.000005()
 ```
 
 In `structures/lam7o3.edi`, add `()` after the values the stage frees:
@@ -81,27 +135,27 @@ _cell.length_c 5.5()
 edi fit: project pd-xray-cwl_lam7o3-p021, 1236 pts fitted / 1459 loaded, 5 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                        60.60       246.85
-      1      0.017     42.69       122.50   50.4% ↓
-      2      0.024     38.20        98.09   19.9% ↓
-      3      0.031     35.23        83.41   15.0% ↓
-      4      0.038     34.19        78.58   5.8% ↓
-      5      0.045     33.91        77.27   1.7% ↓
-      6      0.052     33.81        76.83   0.6% ↓
-      7      0.060     33.76        76.62   0.3% ↓
-      8      0.067     33.73        76.49   0.2% ↓
-      9      0.074     33.72        76.41   0.1% ↓
-     10      0.081     33.70        76.35   0.1% ↓
-     11      0.088     33.69        76.31   0.1% ↓
-     12      0.094     33.69        76.29   
-     13      0.101     33.68        76.27   
-     14      0.107     33.68        76.26   
-     15      0.114     33.68        76.25   
-     16      0.121     33.68        76.25   
-     17      0.127     33.68        76.24   
-     18      0.134     33.68        76.24   
-     19      0.140     33.68        76.24   
-     20      0.151     33.68        76.24   
-  done · converged · 20 iters · reduced χ² 76.24 · Rwp 33.68 % · 0.16 s
+      1      0.018     42.69       122.50   50.4% ↓
+      2      0.045     38.20        98.09   19.9% ↓
+      3      0.056     35.23        83.41   15.0% ↓
+      4      0.075     34.19        78.58   5.8% ↓
+      5      0.094     33.91        77.27   1.7% ↓
+      6      0.104     33.81        76.83   0.6% ↓
+      7      0.114     33.76        76.62   0.3% ↓
+      8      0.120     33.73        76.49   0.2% ↓
+      9      0.127     33.72        76.41   0.1% ↓
+     10      0.135     33.70        76.35   0.1% ↓
+     11      0.141     33.69        76.31   0.1% ↓
+     12      0.149     33.69        76.29   
+     13      0.156     33.68        76.27   
+     14      0.162     33.68        76.26   
+     15      0.169     33.68        76.25   
+     16      0.176     33.68        76.25   
+     17      0.183     33.68        76.24   
+     18      0.201     33.68        76.24   
+     19      0.208     33.68        76.24   
+     20      0.233     33.68        76.24   
+  done · converged · 20 iters · reduced χ² 76.24 · Rwp 33.68 % · 0.25 s
 
   refined parameters (5 free):
   name            parameter                                               start        value      s.u.   change
@@ -128,6 +182,12 @@ In `experiments/p021.edi`, add `()` after the values the stage frees:
 
 The same for every other row (18 more).
 
+In `structures/lam7o3.edi`, remove the `()` from:
+
+```edi
+_atom_sites_cartn_transform.mat_11 5.4992
+```
+
 === "Standalone executable"
 
     ```console
@@ -144,22 +204,22 @@ The same for every other row (18 more).
 edi fit: project pd-xray-cwl_lam7o3-p021, 1236 pts fitted / 1459 loaded, 25 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                        33.68        77.50
-      1      0.022     10.57         7.63   90.2% ↓
-      2      0.030     10.53         7.58   0.6% ↓
-      3      0.039     10.53         7.58   0.1% ↓
-      4      0.046     10.53         7.58   
-      5      0.054     10.53         7.57   
-      6      0.061     10.53         7.57   
-      7      0.068     10.53         7.57   
-      8      0.076     10.53         7.57   
-      9      0.083     10.53         7.57   
-     10      0.091     10.53         7.57   
-     11      0.099     10.52         7.57   
-     12      0.107     10.52         7.57   
-     13      0.114     10.52         7.57   
-     14      0.122     10.52         7.57   
-     15      0.135     10.52         7.57   
-  done · converged · 15 iters · reduced χ² 7.57 · Rwp 10.52 % · 0.14 s
+      1      0.044     10.57         7.63   90.2% ↓
+      2      0.052     10.53         7.58   0.6% ↓
+      3      0.063     10.53         7.58   0.1% ↓
+      4      0.074     10.53         7.58   
+      5      0.085     10.53         7.57   
+      6      0.093     10.53         7.57   
+      7      0.100     10.53         7.57   
+      8      0.107     10.53         7.57   
+      9      0.115     10.53         7.57   
+     10      0.122     10.53         7.57   
+     11      0.129     10.52         7.57   
+     12      0.136     10.52         7.57   
+     13      0.143     10.52         7.57   
+     14      0.151     10.52         7.57   
+     15      0.164     10.52         7.57   
+  done · converged · 15 iters · reduced χ² 7.57 · Rwp 10.52 % · 0.17 s
 
   refined parameters (25 free):
   name            parameter                                               start        value      s.u.   change
@@ -224,34 +284,34 @@ _peak.broad_lorentz_x 0.1()
 edi fit: project pd-xray-cwl_lam7o3-p021, 1236 pts fitted / 1459 loaded, 29 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                        10.52         7.59
-      1      0.021      7.07         3.43   54.9% ↓
-      2      0.029      6.29         2.71   20.8% ↓
-      3      0.036      6.04         2.50   7.8% ↓
-      4      0.045      5.89         2.38   5.0% ↓
-      5      0.053      5.77         2.29   3.9% ↓
-      6      0.062      5.74         2.26   1.1% ↓
-      7      0.086      5.57         2.13   5.9% ↓
-      8      0.094      5.40         2.00   6.0% ↓
-      9      0.102      5.20         1.86   7.3% ↓
-     10      0.110      3.76         0.97   47.8% ↓
+      1      0.022      7.07         3.43   54.9% ↓
+      2      0.031      6.29         2.71   20.8% ↓
+      3      0.039      6.04         2.50   7.8% ↓
+      4      0.049      5.89         2.38   5.0% ↓
+      5      0.056      5.77         2.29   3.9% ↓
+      6      0.065      5.74         2.26   1.1% ↓
+      7      0.088      5.57         2.13   5.9% ↓
+      8      0.096      5.40         2.00   6.0% ↓
+      9      0.103      5.20         1.86   7.3% ↓
+     10      0.111      3.76         0.97   47.8% ↓
      11      0.118      3.60         0.89   8.2% ↓
-     12      0.126      3.57         0.87   1.9% ↓
-     13      0.134      3.56         0.87   0.3% ↓
-     14      0.141      3.56         0.87   0.1% ↓
-     15      0.149      3.56         0.87   0.1% ↓
-     16      0.157      3.55         0.87   0.4% ↓
-     17      0.165      3.54         0.86   1.0% ↓
-     18      0.173      3.49         0.84   2.3% ↓
-     19      0.180      3.43         0.81   3.6% ↓
-     20      0.188      3.36         0.77   4.2% ↓
-     21      0.196      3.24         0.72   6.8% ↓
-     22      0.204      3.04         0.63   12.2% ↓
-     23      0.212      2.85         0.56   12.1% ↓
-     24      0.220      2.80         0.54   3.6% ↓
-     25      0.228      2.79         0.53   0.2% ↓
-     26      0.236      2.79         0.53   
-     27      0.250      2.79         0.53   
-  done · converged · 27 iters · reduced χ² 0.53 · Rwp 2.79 % · 0.26 s
+     12      0.125      3.57         0.87   1.9% ↓
+     13      0.133      3.56         0.87   0.3% ↓
+     14      0.142      3.56         0.87   0.1% ↓
+     15      0.157      3.56         0.87   0.1% ↓
+     16      0.178      3.55         0.87   0.4% ↓
+     17      0.189      3.54         0.86   1.0% ↓
+     18      0.198      3.49         0.84   2.3% ↓
+     19      0.216      3.43         0.81   3.6% ↓
+     20      0.226      3.36         0.77   4.2% ↓
+     21      0.238      3.24         0.72   6.8% ↓
+     22      0.247      3.04         0.63   12.2% ↓
+     23      0.255      2.85         0.56   12.1% ↓
+     24      0.263      2.80         0.54   3.6% ↓
+     25      0.271      2.79         0.53   0.2% ↓
+     26      0.281      2.79         0.53   
+     27      0.315      2.79         0.53   
+  done · converged · 27 iters · reduced χ² 0.53 · Rwp 2.79 % · 0.33 s
 
   refined parameters (29 free):
   name            parameter                                               start        value      s.u.   change
@@ -324,8 +384,8 @@ _background_estimate.use_model subtract
 edi fit: project pd-xray-cwl_lam7o3-p021, 1236 pts fitted / 1459 loaded, 29 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                         2.79         0.53
-      1      0.021      2.79         0.53   
-      2      0.035      2.79         0.53   
+      1      0.023      2.79         0.53   
+      2      0.039      2.79         0.53   
   done · converged · 2 iters · reduced χ² 0.53 · Rwp 2.79 % · 0.05 s
 
   refined parameters (29 free):
@@ -377,9 +437,8 @@ In `structures/lam7o3.edi`, add `()` after the values the stage frees:
 ```edi
 La La 0.48() 0.25 0() c 4 1 0.5 Biso
 O1 O 0.51() 0.25 0.57() c 4 1 0.5 Biso
+O2 O 0.22() 0.03() 0.27() d 8 1 0.5 Biso
 ```
-
-The same for every other row (1 more).
 
 === "Standalone executable"
 
@@ -397,22 +456,22 @@ The same for every other row (1 more).
 edi fit: project pd-xray-cwl_lam7o3-p021, 1236 pts fitted / 1459 loaded, 36 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                         2.79         0.54
-      1      0.022      1.90         0.25   54.0% ↓
-      2      0.032      1.87         0.24   3.1% ↓
-      3      0.041      1.87         0.24   
-      4      0.050      1.86         0.24   0.1% ↓
-      5      0.060      1.86         0.24   0.2% ↓
-      6      0.069      1.86         0.24   0.5% ↓
-      7      0.077      1.85         0.24   1.2% ↓
-      8      0.086      1.83         0.23   2.4% ↓
-      9      0.095      1.80         0.22   2.8% ↓
-     10      0.104      1.79         0.22   1.7% ↓
-     11      0.112      1.78         0.22   0.7% ↓
-     12      0.121      1.78         0.22   0.2% ↓
-     13      0.129      1.78         0.22   
-     14      0.137      1.78         0.22   
-     15      0.152      1.78         0.22   
-  done · converged · 15 iters · reduced χ² 0.22 · Rwp 1.78 % · 0.16 s
+      1      0.029      1.90         0.25   54.0% ↓
+      2      0.038      1.87         0.24   3.1% ↓
+      3      0.046      1.87         0.24   
+      4      0.055      1.86         0.24   0.1% ↓
+      5      0.063      1.86         0.24   0.2% ↓
+      6      0.072      1.86         0.24   0.5% ↓
+      7      0.081      1.85         0.24   1.2% ↓
+      8      0.090      1.83         0.23   2.4% ↓
+      9      0.098      1.80         0.22   2.8% ↓
+     10      0.107      1.79         0.22   1.7% ↓
+     11      0.115      1.78         0.22   0.7% ↓
+     12      0.124      1.78         0.22   0.2% ↓
+     13      0.145      1.78         0.22   
+     14      0.166      1.78         0.22   
+     15      0.185      1.78         0.22   
+  done · converged · 15 iters · reduced χ² 0.22 · Rwp 1.78 % · 0.20 s
 
   refined parameters (36 free):
   name            parameter                                               start        value      s.u.   change
@@ -472,9 +531,8 @@ In `structures/lam7o3.edi`, add `()` after the values the stage frees:
 ```edi
 La La 0.476610() 0.25 0.00569() c 4 1 0.5() Biso
 Ti Ti 0 0 0 a 4 0.14286 0.5() Biso
+O1 O 0.5077() 0.25 0.5670() c 4 1 0.5() Biso
 ```
-
-The same for every other row (1 more).
 
 === "Standalone executable"
 
@@ -492,21 +550,21 @@ The same for every other row (1 more).
 edi fit: project pd-xray-cwl_lam7o3-p021, 1236 pts fitted / 1459 loaded, 39 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                         1.78         0.22
-      1      0.026      1.70         0.20   8.0% ↓
-      2      0.036      1.69         0.20   2.2% ↓
-      3      0.046      1.68         0.20   0.4% ↓
-      4      0.056      1.68         0.19   0.3% ↓
-      5      0.066      1.68         0.19   0.2% ↓
-      6      0.075      1.68         0.19   0.2% ↓
-      7      0.085      1.67         0.19   0.5% ↓
-      8      0.095      1.66         0.19   1.0% ↓
-      9      0.106      1.65         0.19   1.3% ↓
-     10      0.116      1.65         0.19   0.8% ↓
-     11      0.125      1.64         0.19   0.2% ↓
-     12      0.135      1.64         0.19   
-     13      0.145      1.64         0.19   
-     14      0.154      1.64         0.19   
-     15      0.171      1.64         0.19   
+      1      0.024      1.70         0.20   8.0% ↓
+      2      0.048      1.69         0.20   2.2% ↓
+      3      0.061      1.68         0.20   0.4% ↓
+      4      0.071      1.68         0.19   0.3% ↓
+      5      0.080      1.68         0.19   0.2% ↓
+      6      0.089      1.68         0.19   0.2% ↓
+      7      0.097      1.67         0.19   0.5% ↓
+      8      0.105      1.66         0.19   1.0% ↓
+      9      0.113      1.65         0.19   1.3% ↓
+     10      0.122      1.65         0.19   0.8% ↓
+     11      0.130      1.64         0.19   0.2% ↓
+     12      0.139      1.64         0.19   
+     13      0.147      1.64         0.19   
+     14      0.156      1.64         0.19   
+     15      0.173      1.64         0.19   
   done · converged · 15 iters · reduced χ² 0.19 · Rwp 1.64 % · 0.18 s
 
   refined parameters (39 free):

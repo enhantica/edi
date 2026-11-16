@@ -261,6 +261,7 @@ nav:
   - Survey: about/survey.md
   - Licence: about/licence.md
   - How to cite: about/citation.md
+  - Assistant prompt trials: assistant-prompt-trials.md
   - What's new: changelog.md
 plugins:
   - search

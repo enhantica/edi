@@ -2,46 +2,77 @@
 
 The same staged fit as the Python tutorial, on the command line. The command line fits whatever the project marks free with `()` after a value, so each stage marks its parameters in the project's files with a text editor and runs `edi fit`, which writes the fitted values back into the project for the next stage.
 
-## Get the project
+Fit cubic Y₂O₃ to constant-wavelength neutron powder data from SPODI at FRM II, with anisotropic
+displacement tensors whose components the site symmetry ties together.
+
+It builds the catalogue case `pd-neut-cwl_y2o3-spodi` step by step: the same project the command
+line fits and the app's Examples open.
+
+## Define the project
+
+Make a folder for the project, with a folder each for its structures, experiments and analysis.
+
+```console
+mkdir -p pd-neut-cwl_y2o3-spodi/structures pd-neut-cwl_y2o3-spodi/experiments pd-neut-cwl_y2o3-spodi/analysis
+```
+
+Write `project.edi` in it with a text editor such as VS Code:
+
+```edi
+_edi.schema_version 3
+
+_metadata.name pd-neut-cwl_y2o3-spodi
+_metadata.title "Y₂O₃ [Ia-3] · SPODI @ FRM II"
+_metadata.description "Anisotropic β tensors tied by site symmetry · Coordinates, profile and background"
+_metadata.authors .
+```
+
+## Define the structure
+
+Download the structure from EasyDiffraction's collection into `structures`. Its CIF gives the space group, the cell and the atom sites.
 
 === "Standalone executable"
 
     ```console
-    edi download-data pd-neut-cwl_y2o3-spodi
+    edi download-data pd-neut-cwl_y2o3-spodi-y2o3
+    mv data/pd-neut-cwl_y2o3-spodi-y2o3.edi pd-neut-cwl_y2o3-spodi/structures/y2o3.edi
     ```
 
 === "Python package"
 
     ```console
-    python -m edi download-data pd-neut-cwl_y2o3-spodi
+    python -m edi download-data pd-neut-cwl_y2o3-spodi-y2o3
+    mv data/pd-neut-cwl_y2o3-spodi-y2o3.edi pd-neut-cwl_y2o3-spodi/structures/y2o3.edi
     ```
 
-## Start with nothing free
+## Define the experiment
 
-The project marks what its finished fit frees. Remove every `()`, so the stages below free one group at a time.
+Download the experiment into `experiments`: the file declares the instrument, the peak profile, the background, the structures it links and the measured data.
 
-In `experiments/spodi.edi`, remove the `()` from every value; they now read:
+=== "Standalone executable"
+
+    ```console
+    edi download-data pd-neut-cwl_y2o3-spodi-spodi
+    mv data/pd-neut-cwl_y2o3-spodi-spodi.edi pd-neut-cwl_y2o3-spodi/experiments/spodi.edi
+    ```
+
+=== "Python package"
+
+    ```console
+    python -m edi download-data pd-neut-cwl_y2o3-spodi-spodi
+    mv data/pd-neut-cwl_y2o3-spodi-spodi.edi pd-neut-cwl_y2o3-spodi/experiments/spodi.edi
+    ```
+
+Then write how the project is fitted in `analysis/analysis.edi`:
 
 ```edi
-_instrument.calib_twotheta_offset 0
-_peak.broad_gauss_u 0.04
-_peak.broad_gauss_v -0.07
-_peak.broad_gauss_w 0.1
-1 12.5856 6400
-2 19.4181 6400
+_minimizer.type crysta
+_minimizer.max_iterations 1000
+
+_fitting_mode.type single
+
+_edi.schema_version 3
 ```
-
-The same for every other row (20 more).
-
-In `structures/y2o3.edi`, remove the `()` from every value; they now read:
-
-```edi
-_cell.length_a 10.61
-Y1 Y -0.03 0 0.25 d 24 1 0.49982 beta
-O1 O 0.39 0.15 0.38 e 48 1 0.49982 beta
-```
-
-The same for every other row (3 more).
 
 ## Scale, 2θ zero and cell
 
@@ -58,7 +89,7 @@ In `experiments/spodi.edi`, add `()` after the values the stage frees:
 
 ```edi
 _instrument.calib_twotheta_offset 0()
-y2o3 0.1() 1.0
+y2o3 0.1()
 ```
 
 In `structures/y2o3.edi`, add `()` after the values the stage frees:
@@ -83,9 +114,9 @@ _cell.length_a 10.61()
 edi fit: project pd-neut-cwl_y2o3-spodi, 2509 pts fitted / 3060 loaded, 3 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                         3.53         8.11
-      1      0.061      2.66         4.61   43.2% ↓
-      2      0.072      2.66         4.61   
-  done · converged · 2 iters · reduced χ² 4.61 · Rwp 2.66 % · 0.08 s
+      1      0.087      2.66         4.61   43.2% ↓
+      2      0.099      2.66         4.61   
+  done · converged · 2 iters · reduced χ² 4.61 · Rwp 2.66 % · 0.11 s
 
   refined parameters (3 free):
   name            parameter                                               start        value      s.u.   change
@@ -134,7 +165,7 @@ The same for every other row (19 more).
 edi fit: project pd-neut-cwl_y2o3-spodi, 2509 pts fitted / 3060 loaded, 24 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                         2.66         4.65
-      1      0.073      2.37         3.70   20.3% ↓
+      1      0.074      2.37         3.70   20.3% ↓
   done · converged · 1 iters · reduced χ² 3.70 · Rwp 2.37 % · 0.08 s
 
   refined parameters (24 free):
@@ -151,12 +182,12 @@ edi fit: project pd-neut-cwl_y2o3-spodi, 2509 pts fitted / 3060 loaded, 24 free
   intensity       experiment.background[19].intensity                    6.53e3      6.574e3   0.019e3   0.6% ↑
   intensity       experiment.background[1].intensity                     9.97e3      9.957e3   0.069e3   0.1% ↓
   intensity       experiment.background[20].intensity                    6.24e3      6.325e3   0.015e3   1.4% ↑
-  intensity       experiment.background[21].intensity                    6.51e3      6.535e3   0.020e3   0.4% ↑
+  intensity       experiment.background[21].intensity                    6.51e3       6.53e3    0.02e3   0.4% ↑
   intensity       experiment.background[2].intensity                     8.97e3      9.116e3   0.044e3   1.6% ↑
   intensity       experiment.background[3].intensity                     8.88e3      8.868e3   0.049e3   0.1% ↓
   intensity       experiment.background[4].intensity                     8.48e3      8.892e3   0.061e3   4.8% ↑
   intensity       experiment.background[5].intensity                     8.63e3      8.709e3   0.025e3   0.9% ↑
-  intensity       experiment.background[6].intensity                     7.96e3      7.898e3   0.020e3   0.8% ↓
+  intensity       experiment.background[6].intensity                     7.96e3       7.89e3    0.02e3   0.8% ↓
   intensity       experiment.background[7].intensity                     7.74e3      7.949e3   0.055e3   2.7% ↑
   intensity       experiment.background[8].intensity                     7.70e3      8.248e3   0.064e3   7.2% ↑
   intensity       experiment.background[9].intensity                     7.70e3      8.150e3   0.063e3   5.9% ↑
@@ -196,8 +227,8 @@ _peak.broad_gauss_w 0.1()
 edi fit: project pd-neut-cwl_y2o3-spodi, 2509 pts fitted / 3060 loaded, 27 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                         2.37         3.71
-      1      0.091      1.78         2.10   43.5% ↓
-  done · converged · 1 iters · reduced χ² 2.10 · Rwp 1.78 % · 0.10 s
+      1      0.103      1.78         2.10   43.5% ↓
+  done · converged · 1 iters · reduced χ² 2.10 · Rwp 1.78 % · 0.11 s
 
   refined parameters (27 free):
   name            parameter                                               start        value      s.u.   change
@@ -221,7 +252,7 @@ edi fit: project pd-neut-cwl_y2o3-spodi, 2509 pts fitted / 3060 loaded, 27 free
   intensity       experiment.background[6].intensity                     7.90e3      7.871e3   0.015e3   0.3% ↓
   intensity       experiment.background[7].intensity                     7.95e3      8.085e3   0.042e3   1.7% ↑
   intensity       experiment.background[8].intensity                     8.25e3      7.678e3   0.051e3   6.9% ↓
-  intensity       experiment.background[9].intensity                     8.15e3      7.637e3   0.050e3   6.3% ↓
+  intensity       experiment.background[9].intensity                     8.15e3       7.63e3    0.05e3   6.3% ↓
   2θ offset, deg  experiment.instrument.calib_twotheta_offset           -0.0438      -0.0443    0.0011   1.1% ↓
   scale           experiment.linked_structures[y2o3].scale              0.09087      0.10037   0.00039   10.5% ↑
   U, deg²         experiment.peak.broad_gauss_u                            0.04       0.0363    0.0025 ! 9.3% ↓
@@ -265,12 +296,12 @@ O1 O 0.39() 0.15() 0.38() e 48 1 0.499298 beta
 edi fit: project pd-neut-cwl_y2o3-spodi, 2509 pts fitted / 3060 loaded, 31 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                         1.78         2.10
-      1      0.105      1.45         1.39   33.9% ↓
+      1      0.109      1.45         1.39   33.9% ↓
   done · converged · 1 iters · reduced χ² 1.39 · Rwp 1.45 % · 0.12 s
 
   refined parameters (31 free):
   name            parameter                                               start        value      s.u.   change
-  intensity       experiment.background[10].intensity                    7.92e3      7.903e3   0.030e3   0.2% ↓
+  intensity       experiment.background[10].intensity                    7.92e3       7.90e3    0.03e3   0.2% ↓
   intensity       experiment.background[11].intensity                    7.77e3     7.7450e3  0.0090e3   0.3% ↓
   intensity       experiment.background[12].intensity                    7.14e3     7.1374e3  0.0078e3   0.1% ↓
   intensity       experiment.background[13].intensity                    7.09e3      7.052e3   0.011e3   0.5% ↓
@@ -284,7 +315,7 @@ edi fit: project pd-neut-cwl_y2o3-spodi, 2509 pts fitted / 3060 loaded, 31 free
   intensity       experiment.background[20].intensity                    6.30e3     6.2805e3  0.0093e3   0.4% ↓
   intensity       experiment.background[21].intensity                    6.50e3      6.520e3   0.012e3   0.4% ↑
   intensity       experiment.background[2].intensity                     9.10e3      9.100e3   0.027e3   
-  intensity       experiment.background[3].intensity                     8.88e3      8.884e3   0.030e3   
+  intensity       experiment.background[3].intensity                     8.88e3       8.88e3    0.03e3   
   intensity       experiment.background[4].intensity                     8.68e3      8.644e3   0.038e3   0.4% ↓
   intensity       experiment.background[5].intensity                     8.70e3      8.700e3   0.016e3   
   intensity       experiment.background[6].intensity                     7.87e3      7.838e3   0.013e3   0.4% ↓
@@ -320,9 +351,8 @@ In `structures/y2o3.edi`, add `()` after the values the stage frees:
 ```edi
 Y1 0.00111() 0.00111() 0.00111() 0 0 0()
 Y2 0.00111() 0.00111 0.00111 0() 0 0
+O1 0.00111() 0.00111() 0.00111() 0() 0() 0()
 ```
-
-The same for every other row (1 more).
 
 === "Standalone executable"
 
@@ -340,8 +370,8 @@ The same for every other row (1 more).
 edi fit: project pd-neut-cwl_y2o3-spodi, 2509 pts fitted / 3060 loaded, 43 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                         1.45         1.39
-      1      0.153      1.37         1.24   11.2% ↓
-  done · converged · 1 iters · reduced χ² 1.24 · Rwp 1.37 % · 0.17 s
+      1      0.112      1.37         1.24   11.2% ↓
+  done · converged · 1 iters · reduced χ² 1.24 · Rwp 1.37 % · 0.12 s
 
   refined parameters (43 free):
   name            parameter                                               start        value      s.u.   change
@@ -355,7 +385,7 @@ edi fit: project pd-neut-cwl_y2o3-spodi, 2509 pts fitted / 3060 loaded, 43 free
   intensity       experiment.background[17].intensity                    6.53e3      6.495e3   0.015e3   0.5% ↓
   intensity       experiment.background[18].intensity                    6.43e3      6.403e3   0.013e3   0.4% ↓
   intensity       experiment.background[19].intensity                    6.55e3      6.524e3   0.012e3   0.3% ↓
-  intensity       experiment.background[1].intensity                     9.96e3      9.958e3   0.040e3   
+  intensity       experiment.background[1].intensity                     9.96e3       9.95e3    0.04e3   
   intensity       experiment.background[20].intensity                    6.28e3     6.2572e3  0.0093e3   0.4% ↓
   intensity       experiment.background[21].intensity                    6.52e3      6.473e3   0.013e3   0.7% ↓
   intensity       experiment.background[2].intensity                     9.10e3      9.110e3   0.025e3   0.1% ↑

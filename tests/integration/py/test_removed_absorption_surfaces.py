@@ -5,7 +5,11 @@ from pathlib import Path
 
 import pytest
 
-from tests.fixtures.removed_absorption.surfaces import violations
+from tests.fixtures.removed_absorption.surfaces import (
+    FROZEN_STAMP_DATA,
+    compiled_violations,
+    violations,
+)
 
 ROOT = Path(__file__).resolve().parents[3]
 SCOPES = {
@@ -142,4 +146,110 @@ def test_multipattern_fullprof_inputs_keep_their_own_column(tmp_path, suffix):
     )
     assert not violations(tmp_path, ['public']), (
         'FullProf multi-pattern control inputs have a title and NPATT/W_PAT headers'
+    )
+
+
+def test_compiled_test_sources_and_included_fixtures_have_no_retired_typed_field():
+    found = compiled_violations(ROOT, ['tests'])
+    assert not found, (
+        'All C++ test sources, included fixtures and headers use the active typed domain: '
+        + '; '.join(found)
+    )
+
+
+@pytest.mark.parametrize(
+    'suffix', ['.cpp', '.cc', '.cxx', '.h', '.hpp', '.hxx', '.inc', '.ipp', '.tpp']
+)
+def test_compiled_inventory_reaches_every_source_form_and_retains_legacy_data(tmp_path, suffix):
+    source = tmp_path / ('witness' + suffix)
+    legacy = (
+        '// old.absorption.abscor2 remains an input spelling\n'
+        '/* &AbsorptionBase::abscor2 is historical prose */\n'
+        'const char* ordinary = "_absorption.abscor2 0.025";\n'
+        'const auto raw = u8R"legacy(_absorption.abscor2 "quoted" 0.025)legacy";\n'
+        "const char quote = '\\'';\n"
+    )
+    source.write_text(legacy)
+    assert not compiled_violations(tmp_path, [source.name]), (
+        'Legacy reader strings, raw input blocks and comments are preserved as data'
+    )
+    for access in (
+        'bank.absorption.abscor2;',
+        'auto& layer=bank.absorption;layer.abscor2;',
+        'auto slot=&edi::AbsorptionBase::abscor2;',
+        '#define RETIRED_SLOT abscor2\n',
+        'auto& layer=bank.absorption;layer.abs\\\ncor2;',
+    ):
+        source.write_text(legacy + access)
+        assert compiled_violations(tmp_path, [source.name]) == [source.name], (
+            'Every C++ source form rejects direct, aliased, member-pointer and macro field escapes'
+        )
+
+
+def test_frozen_reference_is_only_unchanged_historical_data(tmp_path):
+    original = ROOT / FROZEN_STAMP_DATA
+    frozen = tmp_path / FROZEN_STAMP_DATA
+    frozen.parent.mkdir(parents=True)
+    frozen.write_bytes(original.read_bytes())
+    consumer = tmp_path / 'tests/consumer.cpp'
+    consumer.write_text('int active_domain;\n')
+    assert not compiled_violations(tmp_path, ['tests']), (
+        'The immutable old codec remains valid reference data without becoming compiled code'
+    )
+    consumer.write_text(
+        '#include "fixtures/assistant_dev_integration/prechange_stamp_codec.inc"\n'
+    )
+    assert compiled_violations(tmp_path, ['tests']) == ['tests/consumer.cpp'], (
+        'A caller cannot compile the historical snapshot to bypass the current-domain inventory'
+    )
+    consumer.write_text('int active_domain;\n')
+    frozen.write_bytes(original.read_bytes() + b'\n')
+    assert compiled_violations(tmp_path, ['tests']) == [FROZEN_STAMP_DATA], (
+        'A modified historical snapshot cannot inherit the immutable-reference exception'
+    )
+
+
+def test_active_stamp_codec_projects_only_the_retired_historical_slot():
+    frozen = (
+        ROOT / 'tests/fixtures/assistant_dev_integration/prechange_stamp_codec.inc'
+    ).read_bytes()
+    projected = (
+        ROOT / 'tests/fixtures/assistant_dev_integration/active_stamp_codec.inc'
+    ).read_bytes()
+    prefix, body = projected.split(b'\n', 1)
+    assert prefix.startswith(b'// Active-domain projection'), (
+        'The compiled codec explicitly identifies its current-domain reference projection'
+    )
+    retired = b'    put_optional_parameter(out, experiment.absorption.abscor2, scope);\n'
+    assert frozen.count(retired) == 1, (
+        'The accepted historical codec contains exactly the one explicitly retired slot'
+    )
+    assert body == frozen.replace(retired, b''), (
+        'All other historical codec bytes remain independent of the current producer'
+    )
+
+
+@pytest.mark.parametrize('suffix', ['.md', '.png', '.dat', '.json', '.ipynb'])
+@pytest.mark.parametrize('spelling', ['abscor2', 'ABSCOR_2', 'ab\u017fcor 2'])
+def test_binary_prefilter_cannot_hide_unicode_case_or_mislabeled_text(tmp_path, suffix, spelling):
+    scope = tmp_path / 'public'
+    scope.mkdir()
+    path = scope / ('probe' + suffix)
+    text = (
+        json.dumps({'text': spelling}, ensure_ascii=True)
+        if suffix in {'.json', '.ipynb'}
+        else spelling
+    )
+    path.write_bytes(text.encode())
+    assert violations(tmp_path, ['public']) == [path.relative_to(tmp_path).as_posix()], (
+        'The byte prefilter preserves Unicode casefolding, escaped JSON and all file suffixes'
+    )
+
+
+def test_clean_binary_files_remain_in_the_nonexempt_surface_census(tmp_path):
+    scope = tmp_path / 'public'
+    scope.mkdir()
+    (scope / 'image.png').write_bytes(bytes(range(256)) * 10)
+    assert violations(tmp_path, ['public']) == [], (
+        'Clean binary files remain in the nonexempt surface census.'
     )

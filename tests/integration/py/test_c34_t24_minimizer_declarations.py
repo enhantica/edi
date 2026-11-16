@@ -82,7 +82,8 @@ def test_unknown_descent_error_names_the_registry(tmp_path):
     source = copy_project(tmp_path, {**FIELDS, 'descent': 'not_registered'})
     with pytest.raises((ValueError, RuntimeError)) as caught:
         engine.Project.load(source)
-    # ADR-0060's committed registry, independent of this project's parser.
+    # Crysta ADR-0125 retires both linear-snap ids; the public registry retains
+    # these three strategies, independent of this project's parser.
     for name in (
         'ladder',
         'fast_descent',

@@ -21,7 +21,9 @@ from pathlib import Path
 import pytest
 import yaml
 
+from tests.fixtures.e04_t11_wasm.cli_domains import domain, historical_bytes, input_bytes
 from tests.fixtures.metadata_transition.source_bytes import previous_bytes
+from tests.fixtures.native_process import environment_bash
 from tests.fixtures.web_parallel.numeric import uncertainty_tolerances
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -44,7 +46,7 @@ def test_public_webapp_packer_excludes_native_build_outputs(tmp_path):
     toolchain = tmp_path / 'toolchain'
     node = toolchain / 'emsdk-4.0.7/node/transport/bin/node'
     node.parent.mkdir(parents=True)
-    node.write_text('#!/bin/sh\nexit 0\n')
+    node.write_text('#!/bin/sh\nexit 0\n', newline='\n')
     node.chmod(0o755)
     # Transport inventory only: the real module/link validator has its own gates.
     native = {'engine.a', 'engine.so', 'engine.dll', 'engine.o', '_edi.pyd'}
@@ -61,7 +63,7 @@ def test_public_webapp_packer_excludes_native_build_outputs(tmp_path):
     env = {**os.environ, 'EDI_WASM_TOOLCHAIN': str(toolchain)}
     env['PATH'] = str(Path(sys.executable).parent) + os.pathsep + env['PATH']
     run = subprocess.run(
-        ['bash', str(scripts / 'wasm-pack.sh')],
+        [environment_bash(), str(scripts / 'wasm-pack.sh')],
         cwd=root,
         env=env,
         capture_output=True,
@@ -74,6 +76,13 @@ def test_public_webapp_packer_excludes_native_build_outputs(tmp_path):
     )
     with zipfile.ZipFile(root / 'build/wasm/edi-webapp.zip') as archive:
         names = archive.namelist()
+        builds = json.loads(archive.read('build.json'))
+        assert set(builds) - {'release'} == {'multithread'}, (
+            'The packed manifest exposes exactly the sole multithread kit'
+        )
+        assert not any('singlethread' in name for name in names), (
+            'A stale cached serial source tree cannot leak into the delivered site'
+        )
         assert not any(Path(name).name in native or name.startswith('build/') for name in names), (
             'public webapp packaging must exclude native libraries, objects and build trees'
         )
@@ -82,8 +91,8 @@ def test_public_webapp_packer_excludes_native_build_outputs(tmp_path):
         } == {'report/vendor/' + Path(name).name: (ROOT / name).read_bytes() for name in VENDOR}, (
             'The transport carries exactly the three declared report vendor files byte for byte'
         )
-        assert sum(Path(name).name == 'edi_app.wasm' for name in names) == 2, (
-            'excluding native objects must retain both prescribed WebAssembly transport outputs'
+        assert sum(Path(name).name == 'edi_app.wasm' for name in names) == 1, (
+            'excluding native objects retains exactly the sole multithread WebAssembly output'
         )
     docs = root / 'site'
     docs.mkdir()
@@ -93,7 +102,7 @@ def test_public_webapp_packer_excludes_native_build_outputs(tmp_path):
         path.relative_to(site): path.read_bytes() for path in site.rglob('*') if path.is_file()
     }
     placed = subprocess.run(
-        ['bash', str(ROOT / 'tools/ci/docs-webapp.sh'), str(site), str(docs)],
+        [environment_bash(), str(ROOT / 'tools/ci/docs-webapp.sh'), str(site), str(docs)],
         env=env,
         capture_output=True,
         text=True,
@@ -134,11 +143,9 @@ def test_public_webapp_packer_preserves_inventory_through_symlinked_build_parent
 def test_native_fixture_is_bound_to_the_committed_nontrivial_project():
     oracle = json.loads((FIXTURE / 'native.json').read_text())
     digest = hashlib.sha256()
-    for path in sorted((ROOT / oracle['project']).rglob('*')):
-        if path.is_file():
-            digest.update(path.relative_to(ROOT / oracle['project']).as_posix().encode() + b'\0')
-            # This native fixture was regenerated after the explicit stop-rule input.
-            digest.update(path.read_bytes())
+    for name, data in sorted(historical_bytes(input_bytes(ROOT), domain()).items()):
+        digest.update(name.encode() + b'\0')
+        digest.update(data)
     assert digest.hexdigest() == oracle['project_sha256'], (
         'numeric oracle must describe the identical committed CLI input project'
     )
@@ -246,8 +253,8 @@ def test_toolchain_tasks_declare_reproducible_pins():
     assert any(value and '3.3.0' in str(value) and '==' in str(value) for value in aqt), (
         'aqtinstall 3.3.0 must be pinned as a pixi dependency'
     )
-    assert 'wasm_singlethread' in text and 'wasm_multithread' in text, (
-        'toolchain acquisition must cover the independent single- and multi-thread kits'
+    assert 'wasm_singlethread' not in text and 'wasm_multithread' in text, (
+        'toolchain acquisition covers the sole multithread kit without acquiring a serial kit'
     )
 
 
@@ -277,7 +284,6 @@ def test_webassembly_ci_builds_uploads_and_runs_the_browser_gate():
         token in checker
         for token in (
             'export EDI_WASM_ZIP=',
-            'export EDI_WASM_CLI_SINGLETHREAD=',
             'export EDI_WASM_CLI_MULTITHREAD=',
             'python -m pytest',
         )
@@ -327,8 +333,8 @@ def test_zip_contains_two_real_modules_loader_shim_and_licences():
             not Path(name).is_absolute() and '..' not in Path(name).parts for name in names
         ), 'static-site zip paths must stay inside the published webapp folder'
         wasm = [name for name in names if name.endswith('.wasm')]
-        assert len(wasm) >= 2 and len({str(Path(name).parent) for name in wasm}) >= 2, (
-            'zip must carry separate single-thread and multithread wasm applications'
+        assert len(wasm) == 1 and 'multithread' in wasm[0] and 'singlethread' not in wasm[0], (
+            'zip carries exactly one multithread application and no serial artifact'
         )
         assert all(archive.read(name)[:8] == b'\0asm\x01\0\0\0' for name in wasm), (
             'shipped wasm entries must be actual wasm binaries'
@@ -359,12 +365,14 @@ def test_zip_contains_two_real_modules_loader_shim_and_licences():
         readmes = [name for name in names if Path(name).name.lower().startswith('readme')]
         assert readmes, 'zip must include its hosting README'
         text = '\n'.join(archive.read(name).decode() for name in readmes).lower()
-        assert ('cross-origin' in text or 'coop' in text) and 'single' in text, (
-            'hosting README must state isolation requirements and the single-thread fallback'
-        )
+        assert (
+            ('cross-origin' in text or 'coop' in text)
+            and 'multithread' in text
+            and 'sharedarraybuffer' in text
+        ), 'hosting README states threading, isolation and shared-memory requirements'
 
 
-@pytest.mark.parametrize('mode', ['singlethread', 'multithread'])
+@pytest.mark.parametrize('mode', ['multithread'])
 def test_each_build_has_browser_runtime_assets(mode):
     with zipfile.ZipFile(site_zip()) as archive:
         names = archive.namelist()

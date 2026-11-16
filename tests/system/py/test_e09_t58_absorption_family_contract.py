@@ -51,7 +51,7 @@ def _calculated_patterns(project: edi.Project) -> list[np.ndarray]:
     ids=['missing', 'first-only', 'second-only', 'none-with-coefficient', 'unknown'],
 )
 def test_absorption_family_acceptance_and_contents_match_crysta(
-    tmp_path: Path, body: str, expected: float | None
+    tmp_path: Path, capfd: pytest.CaptureFixture[str], body: str, expected: float | None
 ) -> None:
     corpus = Path(
         os.environ.get('EDI_CRYSTA_CORPUS_ROOT', str(crysta_reference_source() / 'tests/fitting'))
@@ -96,19 +96,24 @@ def test_absorption_family_acceptance_and_contents_match_crysta(
         'F4 crysta must accept and save the valid defaulted cylinder: ' + reference.stderr
     )
     project = edi.Project.load(tmp_path / 'edi')
+    diagnostics = capfd.readouterr().err
+    if '_absorption.abscor2' in body:
+        assert diagnostics.count('_absorption.abscor2 has no effect and is ignored') == 3, (
+            'F4 an older ignored coefficient must emit its declared compatibility warning'
+        )
     for experiment in project.experiments:
         absorption = experiment.absorption
         assert isinstance(absorption, edi.CylinderHewatAbsorption), (
             'F4 cylinder selection must produce the typed cylinder model family'
         )
-        assert not hasattr(absorption, 'abscor2'), (
-            'ADR-0123 ignores the retired input without restoring a live cylinder member'
+        assert absorption.abscor1 is not None and absorption.mu_r is None, (
+            'F4 a TOF cylinder must contain its active coefficient and no CW-only coefficient'
         )
-        assert absorption.abscor1 is not None, (
-            'F4 a cylinder retains its live coefficient when the input key is absent'
+        assert not hasattr(absorption, 'abscor2'), (
+            'F4 the retired coefficient must not reappear in the live model'
         )
         assert absorption.abscor1.value == pytest.approx(expected), (
-            'F4 ABSCOR1 defaults to zero and preserves supplied live values'
+            'F4 missing active coefficients default to zero without losing supplied values'
         )
     saved = tmp_path / 'edi-saved'
     project.save_as(saved)

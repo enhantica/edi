@@ -260,6 +260,9 @@ def groups(
             for parameter in members(project, block, owner)
             if offered(project, parameter) == title
         }
+        # What a stage frees is freeable then, though a later stage may fix or constrain it (the
+        # fittable rows are read from the finished project).
+        everything |= set(chosen)
         # The category's parameters that must keep their state through the action.
         left = (everything & free if fixing else everything - free) - set(chosen)
         # The fewest actions a person takes (the owner, 2026-11-11): Free · all (Fixed · all) only
@@ -307,6 +310,26 @@ def _across_blocks(
             out = [g for g in out if not (g.title == title and g.block in blocks)]
             out.append(Group(title, ''))
     return out
+
+
+TUPLE_LOOP = re.compile(
+    r'^for (\w+) in \(\n((?:    [^\n]+,\n)+)\):\n    \1\.free = (True|False)$', re.MULTILINE
+)
+
+
+def unrolled(source: str) -> str:
+    """A tutorial's loop over a tuple of named parameters as the flag lines it stands for.
+
+    The Python tutorials free a larger group of named parameters in one loop; the app pages and
+    the built-in tutorials act on the same parameters row by row or by category, so they read it
+    as its lines.
+    """
+    return TUPLE_LOOP.sub(
+        lambda m: '\n'.join(
+            f'{item.strip().rstrip(",")}.free = {m[3]}' for item in m[2].splitlines()
+        ),
+        source,
+    )
 
 
 LINE = re.compile(

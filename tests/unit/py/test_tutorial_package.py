@@ -3,11 +3,12 @@
 import ast
 import json
 import re
-import shlex
 import tomllib
 from pathlib import Path
 
 import pytest
+
+from tests.fixtures.tutorial_cases.install_cell import INSTALL_CELL, python_syntax
 
 ROOT = Path(__file__).resolve().parents[3]
 INDEX = 'https://download.easydiffraction.org/pypi/simple/'
@@ -28,9 +29,8 @@ def test_tutorial_install_is_one_plain_cell_before_the_public_import():
     for path, document in notebooks():
         cells = code_cells(document)
         installs = [cell.strip() for cell in cells if '%pip' in cell]
-        expected = ['%pip', 'install', 'easydiffraction', '--extra-index-url', INDEX]
-        if len(installs) != 1 or shlex.split(installs[0]) != expected:
-            errors.append(f'{path.name}: requires one plain install cell')
+        if len(installs) != 1 or installs[0] != INSTALL_CELL.strip():
+            errors.append(f'{path.name}: requires the published guarded install cell')
             continue
         before_import = '\n'.join(
             cells[
@@ -66,12 +66,7 @@ def test_every_tutorial_fit_is_followed_by_pattern_and_fit_results():
     }
     errors = []
     for path, document in notebooks():
-        source = '\n'.join(
-            line
-            for cell in code_cells(document)
-            for line in cell.splitlines()
-            if not line.lstrip().startswith(('%', '!'))
-        )
+        source = python_syntax('\n'.join(code_cells(document)))
         calls = sorted(
             (node for node in ast.walk(ast.parse(source)) if isinstance(node, ast.Call)),
             key=lambda node: (node.lineno, node.col_offset),
@@ -92,6 +87,14 @@ def test_every_tutorial_fit_is_followed_by_pattern_and_fit_results():
             errors.append(f'{path.name}: no fit')
         for start, end in zip(fits, [*fits[1:], len(calls)][: len(fits)], strict=True):
             seen = {dotted(call.func) for call in calls[start + 1 : end]}
+            if dotted(calls[start].func) in {'project.fit_sequential', 'project.fit_independent'}:
+                if 'on_file_complete' not in {item.arg for item in calls[start].keywords} or (
+                    'result.status.name.lower' not in seen
+                ):
+                    errors.append(
+                        f'{path.name}:{calls[start].lineno}: missing batch completion output'
+                    )
+                continue
             if not required <= seen:
                 errors.append(
                     f'{path.name}:{calls[start].lineno}: missing {sorted(required - seen)}'
@@ -116,7 +119,7 @@ def test_wheel_declares_the_public_module_package_paths():
 
 def test_notebook_rules_accept_a_plain_workflow_and_reject_missing_displays(monkeypatch):
     source = [
-        f'%pip install easydiffraction --extra-index-url {INDEX}',
+        INSTALL_CELL,
         'import easydiffraction as edi',
         "project = edi.Project(name='example')",
         'project.display.parameters.free()',
@@ -134,3 +137,25 @@ def test_notebook_rules_accept_a_plain_workflow_and_reject_missing_displays(monk
     document['cells'].insert(1, {'cell_type': 'code', 'source': 'import subprocess'})
     with pytest.raises(AssertionError, match='no setup machinery'):
         test_tutorial_install_is_one_plain_cell_before_the_public_import()
+
+
+@pytest.mark.parametrize('method', ['fit_sequential', 'fit_independent'])
+def test_batch_tutorial_output_requires_completion_progress_and_terminal_status(
+    monkeypatch, method
+):
+    source = [
+        INSTALL_CELL,
+        'import easydiffraction as edi',
+        f'result = project.{method}(on_file_complete=lambda *args: fitted.append(args))',
+        'print(result.status.name.lower(), len(fitted))',
+    ]
+    document = {'cells': [{'cell_type': 'code', 'source': cell} for cell in source]}
+    monkeypatch.setitem(globals(), 'notebooks', lambda: [(Path('batch.ipynb'), document)])
+    test_every_tutorial_fit_is_followed_by_pattern_and_fit_results()
+    document['cells'].pop()
+    with pytest.raises(AssertionError, match='batch completion output'):
+        test_every_tutorial_fit_is_followed_by_pattern_and_fit_results()
+    document['cells'].append({'cell_type': 'code', 'source': source[-1]})
+    document['cells'][2]['source'] = f'result = project.{method}()'
+    with pytest.raises(AssertionError, match='batch completion output'):
+        test_every_tutorial_fit_is_followed_by_pattern_and_fit_results()

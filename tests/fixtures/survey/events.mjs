@@ -15,14 +15,18 @@ export async function observeEvent(root,pagePath,eventPath,instant,browser) {
 const document = JSON.parse(await readFile(eventPath,'utf8'));
 const original = Array.isArray(document) ? document : document.events;
 assert(Array.isArray(original),'The single events file must declare an event list');
-const sample = original.find(event => event.start && event.end);
-assert(sample, 'The event fixture must include a dated event alongside General');
-const key = pattern => Object.keys(sample).find(name => pattern.test(name));
-const nameKey = key(/^(name|title)$/i), startKey = key(/^start/i), endKey = key(/^end/i);
-assert(nameKey && startKey && endKey,'Each event must declare its name and date window');
-const entry = (name,start,end) => ({...sample,name,title:name,[nameKey]:name,[startKey]:start,[endKey]:end});
-const entries = [...original.filter(event => event.name === 'general'),entry('Past witness','2030-05-01','2030-05-09'),entry('Window witness','2030-05-10','2030-05-12'),entry('Future witness','2030-05-13','2030-05-20')];
-const events = Array.isArray(document) ? entries : {...document,events:entries};
+assert.equal(document.schema,'edi-survey-events/1','The survey observer uses the declared event schema');
+assert(original.some(event=>event.name==='general' && event.title==='General'),
+  'General is the permanent undated choice');
+for (const event of original.filter(event=>event.name!=='general'))
+  assert(event.name && event.title && /^\d{4}-\d{2}-\d{2}$/.test(event.start) && /^\d{4}-\d{2}-\d{2}$/.test(event.end),
+    'Every named event carries its title and explicit inclusive date window');
+const entry = (name,title,start,end) => ({name,title,start,end});
+const entries = [{name:'general',title:'General'},
+  entry('past-witness','Past witness','2030-05-01','2030-05-09'),
+  entry('window-witness','Window witness','2030-05-10','2030-05-12'),
+  entry('future-witness','Future witness','2030-05-13','2030-05-20')];
+const events = {...document,events:entries};
 let fetched = false;
 const server = createServer(async (request,response) => {
   try {

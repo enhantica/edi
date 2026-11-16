@@ -22,7 +22,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT))
 
-from app_groups import Tracker, load_case, symbols  # noqa: E402
+from app_groups import Tracker, load_case, symbols, unrolled  # noqa: E402
 from checks.gui_capture import validate_bundle  # noqa: E402
 from import_gui_captures import (  # noqa: E402
     DOCS,
@@ -32,7 +32,7 @@ from import_gui_captures import (  # noqa: E402
     page,
     viewer,
 )
-from render_cli_tutorials import stages  # noqa: E402
+from render_cli_tutorials import introduction, stages  # noqa: E402
 
 sys.path.insert(0, str(ROOT.parent / 'tools/docs'))
 from app_tutorial_plan import plan  # noqa: E402
@@ -212,14 +212,20 @@ def listed(items: list[str]) -> str:
     return items[0] if len(items) == 1 else ', '.join(items[:-1]) + ' and ' + items[-1]
 
 
-def loop_groups(text: str, state: str) -> list[str]:
-    """The categories of a stage's loops that set `.free` to `state`; others refuse."""
+def loop_groups(text: str, state: str, *, part: bool = False) -> list[str]:
+    """The categories of a stage's loops that set `.free` to `state`; others refuse.
+
+    With `part` set, only the loops that pick some of a category's rows.
+    """
     groups = []
     for block in re.split(r'^(?=\S)', text, flags=re.MULTILINE):
         frees = re.search(rf'\.free = (?:not .+|{state})$', block, flags=re.MULTILINE)
         if not block.startswith('for ') or not frees or (state == 'False' and 'not ' in block):
             continue
         if re.match(r'for \w+ in list\(\w+\.background_terms\)\[:\d+\]:', block):
+            continue
+        # A loop that picks some rows (`if site.type_symbol != 'O'`) is not the whole category.
+        if bool(re.search(r'^\s+if ', block, flags=re.MULTILINE)) != part:
             continue
         title = next(
             (title for pattern, title in GROUPS if re.search(pattern, block, re.MULTILINE)), ''
@@ -245,8 +251,14 @@ def line_phrases(
         merged.setdefault(key, []).append(group.block)
     names, again, again_rows = [], [], []
     for (title, filter_word, unword, part), blocks in merged.items():
-        bold = listed([f'**{block}**' for block in blocks])
-        where = f' of {bold}, choosing each in the datablock filter' if len(owners) > 1 else ''
+        # A group over every block (app_groups._across_blocks: block '') is the table without a
+        # datablock filter, so it names no block.
+        named = [f'**{block}**' for block in blocks if block]
+        where = (
+            f' of {listed(named)}, choosing each in the datablock filter'
+            if named and len(owners) > 1
+            else ''
+        )
         if filter_word:
             names.append(f'the **{title}** parameters with **{filter_word}** in their name{where}')
         elif part:
@@ -282,6 +294,11 @@ def stage_sentence(
         for name in re.findall(r'^(?:for \w+ in )?(\w+)\.', text, flags=re.MULTILINE)
         if name in (datablocks or {})
     }
+    # A loop over the project's structures or experiments acts on every one of them, never on one
+    # datablock alone.
+    owners |= set(
+        re.findall(r'^for \w+ in project\.(structures|experiments):', text, flags=re.MULTILINE)
+    )
     # A loop setting every site's displacement type is a choice in each row on the Structure page.
     sentences += [
         f"on **Structure**, choose **{kind}** as every site's type in the **Atomic displacement** "
@@ -315,6 +332,11 @@ def stage_sentence(
                 f'filter {listed(parts)}, click the **Free** column header and choose **{word}**'
             )
         sentences.extend(again_rows)
+        sentences.extend(
+            f'tick **Free** for the {title} rows the stage names'
+            for title in dict.fromkeys(loop_groups(text, state, part=True))
+            if state == 'True'
+        )
         other = 'Fixed · all' if state == 'True' else 'Free · all'
         sentences.extend(
             f'type **{rest}** in the name filter and choose **{other}** in the same menu'
@@ -341,7 +363,9 @@ def render(case: str) -> Path:  # noqa: PLR0912, PLR0914, PLR0915 - one page, se
     manifest = {
         'actions': [{'action': a, 'scene': step['id']} for step in steps for a in step['actions']]
     }
-    source = (ROOT.parent / 'docs/user/tutorials' / f'{case}.py').read_text(encoding='utf-8')
+    source = unrolled(
+        (ROOT.parent / 'docs/user/tutorials' / f'{case}.py').read_text(encoding='utf-8')
+    )
     title = re.search(r'^# # (.+)$', source, flags=re.MULTILINE).group(1)
     declared = re.findall(
         r"^(\w+) = project\.(structures|experiments)\['([^']+)'\]$", source, flags=re.MULTILINE
@@ -374,6 +398,22 @@ def render(case: str) -> Path:  # noqa: PLR0912, PLR0914, PLR0915 - one page, se
             ),
             shown(by_id['example-open']),
         ]
+        # The constraints the Python tutorial adds in its setup come with the example: the page
+        # names them, as the Python and Command line tutorials do.
+        setup = source[: source.find('## Perform the analysis')]
+        expressions = re.findall(
+            r"\.constraints\.create\(id='[^']+', expression='([^']+)'\)", setup
+        )
+        if expressions:
+            body += [
+                "## The example's constraints\n",
+                (
+                    'The example comes with the constraints the project keeps from the start. On '
+                    '**Analysis → Extra**, **Constraints** lists them: '
+                    + ', '.join(f'**{expression}**' for expression in expressions)
+                    + '.\n'
+                ),
+            ]
         if 'calculated' in by_id:
             # A calculation without data: nothing to fit.
             body[0] = (
@@ -394,6 +434,7 @@ def render(case: str) -> Path:  # noqa: PLR0912, PLR0914, PLR0915 - one page, se
             ]
             PAGES.mkdir(parents=True, exist_ok=True)
             out = PAGES / f'{case}.md'
+            body.insert(1, introduction(source) + '\n')
             out.write_text(page(title, '\n'.join(body)), encoding='utf-8')
             return out
     else:
@@ -591,6 +632,7 @@ def render(case: str) -> Path:  # noqa: PLR0912, PLR0914, PLR0915 - one page, se
     ]
     PAGES.mkdir(parents=True, exist_ok=True)
     out = PAGES / f'{case}.md'
+    body.insert(1, introduction(source) + '\n')
     out.write_text(page(title, '\n'.join(body)), encoding='utf-8')
     if by_id.missing:
         print(

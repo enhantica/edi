@@ -5,14 +5,25 @@ import hashlib
 import importlib.util
 import json
 import os
-import subprocess
 import sys
+import time
+import uuid
 from pathlib import Path
 
 import pytest
 
 from tests.fixtures.tutorial_cases.notebook_fit import local_collection
-from tests.fixtures.tutorial_recipe.reference import boundary_contracts, significant, state_errors
+from tests.fixtures.tutorial_recipe.native import (
+    native_progress,
+    native_records,
+    run_native_observation,
+)
+from tests.fixtures.tutorial_recipe.reference import (
+    boundary_contracts,
+    recipe_action_error,
+    significant,
+    state_errors,
+)
 
 ROOT = Path(__file__).resolve().parents[3]
 RECIPES = json.loads((ROOT / 'tests/fixtures/tutorial_recipe/recipes.json').read_text())
@@ -28,62 +39,54 @@ def load_translator():
     return module
 
 
-def load_captions(translator):
-    return {
-        case: (source, translator.stage_texts(case, source))
-        for case in RECIPES
-        for source in [(ROOT / 'docs/user/tutorials' / (case + '.py')).read_text()]
-    }
-
-
 @pytest.fixture(scope='module')
-def recipe_context(tmp_path_factory, request):
-    selected = {item.originalname for item in request.session.items}
-    needs_translation = bool(
-        selected
-        & {
-            'test_every_declared_scientific_action_affects_translation_or_is_refused',
-            'test_unknown_recipe_action_is_refused_before_generation',
-        }
-    )
-    wanted = {
-        item.callspec.params['case']
-        for item in request.session.items
-        if item.originalname == 'test_builtin_pre_fit_state_equals_the_declared_docs_recipe'
+def translator():
+    module = load_translator()
+    # Loading each complete source/caption plan is a shared precondition for all
+    # translation and mutation probes. Keep failures per case so one published
+    # recipe cannot disable controls for every other tutorial.
+    module.published_recipe_baselines = {}
+    for case in RECIPES:
+        try:
+            module.published_recipe_baselines[case] = module.tutorial_steps(case)
+        except (ValueError, RuntimeError, SystemExit) as error:
+            module.published_recipe_baselines[case] = error
+    return module
+
+
+@pytest.fixture
+def captions(translator, case):
+    source = (ROOT / 'docs/user/tutorials' / (case + '.py')).read_text()
+    # Action mutation tests hold presentation constant. Captions are independent
+    # fixed fixture input, not a second invocation of the production prose parser.
+    declared = {
+        index: (title, 'Apply the declared recipe actions.')
+        for index, (title, _paths) in enumerate(RECIPES[case]['fits'], 1)
     }
-    module = load_translator() if needs_translation else None
-    return {
-        'translator': module,
-        'captions': load_captions(module) if needs_translation else None,
-        'states': observe_states(tmp_path_factory, wanted)
-        if wanted or 'test_recipe_observer_has_a_real_positive_control' in selected
-        else None,
-    }
-
-
-@pytest.fixture
-def translator(recipe_context):
-    return recipe_context['translator']
-
-
-@pytest.fixture
-def captions(recipe_context):
-    return recipe_context['captions']
-
-
-@pytest.fixture
-def states(recipe_context):
-    return recipe_context['states']
+    # This identity guard follows the producer's syntax transport only; scientific
+    # populations and mutation expectations remain the independently frozen recipe.
+    return {case: (translator.unrolled(source), declared)}
 
 
 def unchanged_captions(captions):
     def read(case, source):
         assert source == captions[case][0], (
-            'Only unchanged stage prose is reused while action inputs change'
+            'Only identical normalized source is reused while independent recipe actions change'
         )
         return copy.deepcopy(captions[case][1])
 
     return read
+
+
+@pytest.mark.parametrize('case', RECIPES)
+def test_current_published_recipe_translates_without_a_caption_substitute(case, translator):
+    baseline = translator.published_recipe_baselines[case]
+    if isinstance(baseline, BaseException):
+        raise baseline
+    assert baseline, (
+        'The complete current published recipe must translate with its actual source captions; '
+        'the independent action-mutation fixture cannot conceal a production caption failure'
+    )
 
 
 @pytest.mark.parametrize('case', RECIPES)
@@ -94,34 +97,22 @@ def test_every_declared_scientific_action_affects_translation_or_is_refused(
     recipe = RECIPES[case]['plan']
     monkeypatch.setattr(translator, 'plan', lambda _case: copy.deepcopy(recipe))
     baseline = translator.tutorial_steps(case)
+
+    def translate(changed):
+        monkeypatch.setattr(translator, 'plan', lambda _case: copy.deepcopy(changed))
+        return translator.tutorial_steps(case)
+
     ignored = []
     for index, item in enumerate(recipe['steps']):
         for action_index, action in enumerate(item['actions']):
             if not significant(item, action):
                 continue
-            damaged = copy.deepcopy(recipe)
-            del damaged['steps'][index]['actions'][action_index]
-            monkeypatch.setattr(
-                translator, 'plan', lambda _case, changed=damaged: copy.deepcopy(changed)
-            )
-            try:
-                observed = translator.tutorial_steps(case)
-            except (ValueError, RuntimeError, SystemExit) as error:
-                if any(
-                    word in str(error).casefold()
-                    for word in ['action', 'recipe', 'plan', 'translate']
-                ):
-                    continue
-                ignored.append((item['id'], action, 'unnamed refusal'))
-                continue
-            except Exception as error:  # noqa: BLE001 - arbitrary translator crashes do not prove a named refusal
-                ignored.append((item['id'], action, type(error).__name__))
-                continue
-            if observed == baseline:
-                ignored.append((item['id'], action, 'no effect'))
+            error = recipe_action_error(translate, baseline, recipe, index, action_index)
+            if error:
+                ignored.append((item['id'], action, error))
     assert not ignored, (
-        'Each declared scientific action affects translation or gets a named refusal: '
-        + repr(ignored)
+        'Scientific actions change translation, consume their exact literal target/value, '
+        'or are refused: ' + repr(ignored)
     )
 
 
@@ -130,7 +121,12 @@ def test_unknown_recipe_action_is_refused_before_generation(
     case, translator, captions, monkeypatch
 ):
     monkeypatch.setattr(translator, 'stage_texts', unchanged_captions(captions))
-    damaged = copy.deepcopy(RECIPES[case]['plan'])
+    recipe = copy.deepcopy(RECIPES[case]['plan'])
+    monkeypatch.setattr(translator, 'plan', lambda _case: copy.deepcopy(recipe))
+    assert translator.tutorial_steps(case), (
+        'The valid recipe must translate before its injected unknown action is exercised'
+    )
+    damaged = copy.deepcopy(recipe)
     damaged['steps'][-1]['actions'].append('unsupported:recipe_action_probe')
     monkeypatch.setattr(translator, 'plan', lambda _case: damaged)
     with pytest.raises(
@@ -139,8 +135,25 @@ def test_unknown_recipe_action_is_refused_before_generation(
         translator.tutorial_steps(case)
 
 
+def test_native_record_reader_keeps_diagnostic_bytes_outside_the_scientific_transport():
+    raw = b'Qt comparison: \xb7\nTUTORIAL_RECIPE_BOUNDARY {"id":"control","stage":3}\n'
+    assert native_records(raw, 'TUTORIAL_RECIPE_BOUNDARY') == [{'id': 'control', 'stage': 3}], (
+        'Non-UTF8 Qt failure diagnostics cannot disable separately valid scientific JSON records'
+    )
+    with pytest.raises(UnicodeDecodeError):
+        native_records(b'TUTORIAL_RECIPE_BOUNDARY {"id":"\xb7"}\n', 'TUTORIAL_RECIPE_BOUNDARY')
+
+
 def observe_states(tmp_path_factory, wanted):
-    runner = Path(os.environ.get('EDI_APP_TEST_RUNNER', ROOT / 'build/app/app/edi_app_tests'))
+    assert wanted <= set(RECIPES), (
+        'Native recipe selection contains only declared independent cases'
+    )
+    runner = Path(
+        os.environ.get(
+            'EDI_APP_TEST_RUNNER',
+            ROOT / 'build/app/app' / ('edi_app_tests' + ('.exe' if os.name == 'nt' else '')),
+        )
+    )
     assert runner.is_file(), 'Recipe boundary observation requires the actual Qt app test host'
     folder = tmp_path_factory.mktemp('tutorial-recipe-state')
     collection = local_collection(folder / 'collection')
@@ -152,7 +165,6 @@ def observe_states(tmp_path_factory, wanted):
         'OMP_NUM_THREADS': '1',
         'OPENBLAS_NUM_THREADS': '1',
     }
-    # This run selects only the declared semantic witnesses, not all tutorial replays.
     command = [
         str(runner),
         '-input',
@@ -162,67 +174,72 @@ def observe_states(tmp_path_factory, wanted):
         '-maxwarnings',
         '0',
     ]
-    command += ['TutorialNavigation::test_required_recipe_observer_positive_control']
-    command += [
-        'TutorialNavigation::test_required_recipe_boundary_state:' + case
-        for case in RECIPES
-        if case in wanted
+    controls = [
+        'TutorialNavigation::test_required_clock_remains_monotonic_within_the_original_window',
+        'TutorialNavigation::test_required_fit_guard_tracks_dataset_work',
+        'TutorialNavigation::test_required_menu_observer_tracks_actual_popup_visibility',
+        'TutorialNavigation::test_required_data_menu_observer_tracks_the_unmeasured_experiment',
+        'TutorialNavigation::test_required_recipe_observer_positive_control',
     ]
-    with (folder / 'native.log').open('w') as output:
-        run = subprocess.run(
-            command,
-            cwd=ROOT,
-            env=env,
-            stdout=output,
-            stderr=subprocess.STDOUT,
-            timeout=7200,
-            check=False,
+    artifacts = (
+        Path(
+            os.environ.get('EDI_TUTORIAL_ARTIFACTS', ROOT / 'build/test-artifacts/tutorial-recipe')
         )
-    text = (folder / 'native.log').read_text()
-    return {
-        'run': run,
-        'records': [
-            json.loads(line.partition('TUTORIAL_RECIPE_BOUNDARY ')[2])
-            for line in text.splitlines()
-            if 'TUTORIAL_RECIPE_BOUNDARY ' in line
-        ],
-        'folder': str(folder),
+        / uuid.uuid4().hex
+    )
+    artifacts.mkdir(parents=True)
+    (artifacts / 'source.json').write_text(
+        json.dumps(
+            {
+                'root': str(ROOT),
+                'input_folder': str(folder),
+                'runner': str(runner),
+                'runner_sha256': hashlib.sha256(runner.read_bytes()).hexdigest(),
+                'script_sha256': hashlib.sha256(
+                    (ROOT / 'tests/unit/app/tst_tutorial_navigation.qml').read_bytes()
+                ).hexdigest(),
+                'recipes_sha256': hashlib.sha256(
+                    (ROOT / 'tests/fixtures/tutorial_recipe/recipes.json').read_bytes()
+                ).hexdigest(),
+            },
+            indent=2,
+        )
+        + '\n'
+    )
+    deadline = time.monotonic() + 7200
+    runs = {
+        'controls': run_native_observation(
+            command + controls, artifacts / 'controls', env, deadline, cwd=ROOT
+        )
     }
-
-
-@pytest.mark.parametrize('case', RECIPES)
-def test_builtin_pre_fit_state_equals_the_declared_docs_recipe(case, states):
-    expected = boundary_contracts(RECIPES[case])
-    records = [r for r in states['records'] if r['id'] == case]
-    problems = []
-    for boundary in expected:
-        found = [row for row in records if row['stage'] == boundary['stage']]
-        if len(found) != 1:
-            problems.append((boundary['stage'], ['missing or duplicate actual boundary']))
-            continue
-        errors = state_errors(boundary, found[0])
-        if case == 'pd-neut-tof_si-sepd' and not found[0]['fileAlternativeSeen']:
-            errors.append('From file alternative not shown')
-        if errors:
-            problems.append((boundary['stage'], errors))
-    if len(records) != len(expected):
-        problems.append(('count', [len(records), len(expected)]))
-    assert not problems, 'Actual pre-fit state matches the independent docs recipe: ' + repr(
-        problems
-    )
-
-
-def test_recipe_observer_has_a_real_positive_control(states):
-    found = [row for row in states['records'] if row['id'] == 'observer-control']
-    assert len(found) == 1, (
-        'The boundary observer reaches an independently authored real app model'
-    )
-    assert found[0]['values']['lbco.cell.length_a'] == pytest.approx(3.89), (
-        'The passive observer reads the independent onboarding structure cell, without changing it'
-    )
-    assert found[0]['experiments'], (
-        'The passive observer reads the actual experiment text and settings'
-    )
+    for case in RECIPES:
+        if case in wanted:
+            runs[case] = run_native_observation(
+                command + ['TutorialNavigation::test_required_recipe_boundary_state:' + case],
+                artifacts / case,
+                env,
+                deadline,
+                cwd=ROOT,
+            )
+    records = []
+    transport_errors = {}
+    for case, run in runs.items():
+        try:
+            records.extend(
+                native_records(Path(run['log']).read_bytes(), 'TUTORIAL_RECIPE_BOUNDARY')
+            )
+        except (OSError, ValueError, UnicodeDecodeError) as error:
+            transport_errors[case] = str(error)
+    raw = Path(runs['controls']['log']).read_bytes()
+    return {
+        'records': records,
+        'native_runs': runs,
+        'transport_errors': transport_errors,
+        'menu_controls': native_records(raw, 'TUTORIAL_MENU_OBSERVER_CONTROL'),
+        'data_menu_controls': native_records(raw, 'TUTORIAL_DATA_MENU_CONTROL'),
+        'clock_controls': native_records(raw, 'TUTORIAL_CLOCK_CONTROL'),
+        'folder': str(artifacts),
+    }
 
 
 def declared_good_state(expected):
@@ -235,7 +252,10 @@ def declared_good_state(expected):
         analysis += 'loop_\n_constraint.expression\n' + ''.join(
             json.dumps(value) + '\n' for value in expected['constraints'].values()
         )
-    text = 'data_experiment\n'
+    text = 'data_experiment\n' + ''.join(
+        '_experiment_type.' + key + ' ' + json.dumps(value) + '\n'
+        for key, value in expected.get('experiment_types', {}).items()
+    )
     if expected['regions']:
         text += 'loop_\n_excluded_region.start\n_excluded_region.end\n' + ''.join(
             str(value['start']) + ' ' + str(value['end']) + '\n'
@@ -247,11 +267,27 @@ def declared_good_state(expected):
             for value in expected['points'].values()
         )
     settings = expected['estimate']
+    if settings:
+        text += 'loop_\n_background.id\n_background.position\n_background.intensity\n' + ''.join(
+            f'{i + 1} {7.25 + i * 0.7} {21.75 + i * 1.2}\n' for i in range(settings['n_points'])
+        )
     return {
         'free': expected['free'].copy(),
         'analysis': analysis,
+        'structures': [
+            {
+                'text': 'data_structure\nloop_\n_atom_site.id\n'
+                '_atom_site.wyckoff_letter\n'
+                + ''.join(
+                    key + ' ' + value + '\n' for key, value in expected.get('wyckoff', {}).items()
+                )
+            }
+        ]
+        if expected.get('wyckoff')
+        else [],
         'values': expected['values'].copy(),
         'targets': ['background.estimate'] * expected['estimate_calls'],
+        'applied_estimates': expected['estimate_calls'],
         'fileAlternativeSeen': True,
         'experiments': [
             {
@@ -311,7 +347,7 @@ def test_missing_action_controls_keep_the_docs_expectation(case, stage, damage):
     elif damage == 'residual':
         bad['experiments'][0]['use_model'] = 'none'
     elif damage == 'estimate':
-        bad['experiments'][0]['estimate_points'] = 0
+        bad['experiments'][0]['text'] = 'data_experiment\n'
     elif damage == 'file':
         bad['fileAlternativeSeen'] = False
     elif damage == 'estimate-action':
@@ -320,6 +356,73 @@ def test_missing_action_controls_keep_the_docs_expectation(case, stage, damage):
         'Omitting a scientific action cannot change its independent docs expectation into a pass: '
         + damage
     )
+
+
+@pytest.mark.parametrize('damage', ['peak', 'type', 'wyckoff'])
+def test_an_incorrect_default_cannot_satisfy_the_original_declared_model(damage):
+    expected = boundary_contracts(RECIPES['pd-neut-cwl_lbco-hrpt'])[0]
+    good = declared_good_state(expected)
+    assert not state_errors(expected, good), (
+        'The declared default-state control satisfies every original model obligation'
+    )
+    bad = copy.deepcopy(good)
+    if damage == 'peak':
+        bad['values']['hrpt.peak.broad_gauss_v'] += 0.2
+    elif damage == 'type':
+        bad['experiments'][0]['text'] = bad['experiments'][0]['text'].replace(
+            'powder', 'single crystal'
+        )
+    else:
+        bad['structures'][0]['text'] = bad['structures'][0]['text'].replace('La a', 'La b')
+    assert state_errors(expected, bad), (
+        'An idempotent source-write adaptation cannot admit an incorrect actual default: ' + damage
+    )
+
+
+@pytest.mark.parametrize('changed', ['page', 'scientific-source'])
+def test_page_custody_refresh_preserves_actions_and_refuses_changed_scientific_source(
+    tmp_path, changed
+):
+    from tests.fixtures.tutorial_recipe.generate import refresh_page_custody  # noqa: PLC0415
+
+    files = {
+        'website/surfaces/docs/cli/tutorials/cases/case.md': 'Original visible page.\n',
+        'docs/user/tutorials/case.py': 'The original declared scientific recipe.\n',
+    }
+    for relative, content in files.items():
+        path = tmp_path / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(content)
+    original = {
+        'case': {
+            'plan': {'steps': []},
+            'fits': [],
+            'boundaries': [],
+            'sources': {
+                relative: hashlib.sha256((tmp_path / relative).read_bytes()).hexdigest()
+                for relative in files
+            },
+        }
+    }
+    path = tmp_path / next(
+        key for key in files if key.endswith('.md' if changed == 'page' else '.py')
+    )
+    path.write_text(path.read_text() + 'A declared transport change.\n')
+    witness = copy.deepcopy(original)
+    if changed == 'page':
+        refreshed = refresh_page_custody(original, tmp_path)
+        assert (
+            refreshed['case']['plan'] == original['case']['plan']
+            and refreshed['case']['fits'] == []
+        ), 'Page custody refresh preserves every frozen scientific action and free-set expectation'
+        assert (
+            refreshed['case']['sources'][path.relative_to(tmp_path).as_posix()]
+            == hashlib.sha256(path.read_bytes()).hexdigest()
+        ), 'Page custody records the exact current published transport bytes'
+    else:
+        with pytest.raises(ValueError, match='review the recipe source'):
+            refresh_page_custody(original, tmp_path)
+    assert original == witness, 'A custody refresh never mutates its independently retained input'
 
 
 def test_docs_recipe_sources_are_unchanged():
@@ -342,3 +445,26 @@ def test_docs_recipe_sources_are_unchanged():
 def test_unclassified_actions_cannot_be_declared_inert(action):
     with pytest.raises(ValueError, match='Unclassified docs recipe action'):
         significant({'id': 'ordinary-stage'}, action)
+
+
+def test_native_progress_retires_old_fit_guards_and_ignores_diagnostic_activity():
+    step = b'TUTORIAL_REPLAY_STEP {"id":"case","step":3}\n'
+    wait = b'TUTORIAL_FIT_WAIT {"id":"case","step":3,"milliseconds":65000}\n'
+    assert native_progress(step + wait) == (('case', 3), 65), (
+        'Only the currently observed actual fit contributes its work-derived completion guard'
+    )
+    assert native_progress(step + wait + b'QWARN diagnostic activity\n') == (('case', 3), 65), (
+        'Diagnostic output cannot invent a new native progress step or restart its guard'
+    )
+    assert native_progress(step + wait + b'TUTORIAL_REPLAY_STEP {"id":"case","step":4}\n') == (
+        ('case', 4),
+        0,
+    ), 'A later ordinary action retires the earlier fit guard rather than inheriting extra time'
+    assert native_progress(step + wait + b'TUTORIAL_REPLAY_STEP {"id":"case"') == (
+        ('case', 3),
+        65,
+    ), 'An in-flight partial log write is buffered until its complete native record arrives'
+    with pytest.raises(ValueError, match='nonnegative work guard'):
+        native_progress(step + b'TUTORIAL_FIT_WAIT {"id":"case","step":3,"milliseconds":-1}\n')
+    with pytest.raises(ValueError, match='actual case and integer step'):
+        native_progress(b'TUTORIAL_REPLAY_STEP []\n')

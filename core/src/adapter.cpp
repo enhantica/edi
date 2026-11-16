@@ -3647,6 +3647,11 @@ double read_threshold_sigma(const std::string& value, const char* tag) {
     return crysta::read_threshold_sigma(value, tag);
 }
 std::string read_threshold_basis(const std::string& value) { return crysta::read_threshold_basis(value); }
+const char* single_crystal_resolution_key() { return crysta::kSinThetaOverLambdaMaxKey; }
+double read_single_crystal_resolution(const std::string& value) {
+    return crysta::read_sin_theta_over_lambda_max(value);
+}
+bool is_retired_descent(const std::string& value) { return crysta::is_retired_descent(value); }
 
 // Edi's refusals spell an id exactly as crysta's do (edi/model.hpp).
 std::string printable_id(const std::string& id) { return crysta::printable_id(id); }
@@ -6231,6 +6236,9 @@ std::vector<FitParameterCorrelation> correlation_rows(const CorrelationTable& ta
 std::vector<std::string> descent_ids() { return crysta::descent_ids(); }
 
 std::string default_descent() { return crysta::kDefaultDescent; }
+bool runs_two_trials(const std::string& descent) {
+    return descent == crysta::kAutoDescent || descent == crysta::kTwoTrialDescent;
+}
 std::string current_descent_id(const std::string& id) { return crysta::current_descent_id(id); }
 double default_chi_square_tolerance() { return crysta::kDefaultChiSquareTolerance; }
 double default_shift_tolerance() { return crysta::kDefaultShiftTolerance; }

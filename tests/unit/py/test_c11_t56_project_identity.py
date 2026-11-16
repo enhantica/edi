@@ -17,10 +17,11 @@ from pathlib import Path
 import edi
 import pytest
 
-from conftest import calculator_load_warning, corpus_case_dir
+from conftest import calculator_load_warning, corpus_case_dir, crysta_reference_source
 from tests.fixtures.fitting_modes.historical_bytes import historical_analysis
 from tests.fixtures.project_categories.historical_bytes import check_project_spacing, prior_digest
 from tests.fixtures.project_save.carried_results import carried_file_hash
+from tests.fixtures.read_access import unreadable_file
 from tests.fixtures.weight_fractions.single_phase_bytes import historical_single_fraction
 from tests.unit.py.e04_t5_calculator_bytes import without_calculator
 
@@ -71,15 +72,14 @@ def _stage_project_without_record(tmp_path: Path) -> Path:
 
 def _stage_committed_corpus_project(tmp_path: Path) -> Path:
     """Copy the corpus project's committed bytes, never a prior test's saved output."""
-    source = corpus_case_dir('si-sepd-s2') / 'project'
-    repo = next(
-        (parent for parent in (source, *source.parents) if (parent / '.git').exists()),
-        None,
-    )
-    assert repo is not None, (
-        'the criterion-5 vehicle must come from a git checkout so its committed pre-save bytes '
-        'cannot be replaced by an earlier test mutating the shared corpus worktree'
-    )
+    # The mutable per-session corpus is a scratch copy. Read its original, qualified
+    # source instead, whether that source is a checkout or the producer's SDK export.
+    repo = crysta_reference_source()
+    source = repo / 'tests/fitting/si-sepd-s2/project'
+    if not (repo / '.git').exists():
+        staged = tmp_path / 'source'
+        shutil.copytree(source, staged)
+        return staged
     relative_source = source.relative_to(repo)
     archive = subprocess.run(
         [
@@ -305,7 +305,7 @@ def test_c11_t56_bare_star_missing_token_remains_empty(
         f'_metadata.{field}',
         '?',
     )
-    (source / 'project.edi').write_text(record_text, encoding='utf-8')
+    (source / 'project.edi').write_text(record_text, encoding='utf-8', newline='\n')
 
     restored = edi.Project.load(source)
     captured = capfd.readouterr()
@@ -511,7 +511,7 @@ def test_c11_t56_present_text_record_refuses_with_state_specific_io_error(
     reason: str | None,
 ) -> None:
     source = _stage_project_without_record(tmp_path)
-    (source / 'project.edi').write_text(record_text, encoding='utf-8')
+    (source / 'project.edi').write_text(record_text, encoding='utf-8', newline='\n')
 
     _assert_record_refuses(
         source,
@@ -535,7 +535,7 @@ def test_c11_t56_semantically_invalid_datetime_refuses_at_record_boundary(
         f'_metadata.{field}',
         f'"{invalid_value}"',
     )
-    (source / 'project.edi').write_text(record_text, encoding='utf-8')
+    (source / 'project.edi').write_text(record_text, encoding='utf-8', newline='\n')
 
     _assert_record_refuses(
         source,
@@ -557,7 +557,7 @@ def test_c11_t56_valid_leap_day_datetime_remains_materializable(
         f'_metadata.{field}',
         f'"{leap_day}"',
     )
-    (source / 'project.edi').write_text(record_text, encoding='utf-8')
+    (source / 'project.edi').write_text(record_text, encoding='utf-8', newline='\n')
 
     restored = edi.Project.load(source)
     captured = capfd.readouterr()
@@ -582,6 +582,7 @@ def test_c11_t56_opaque_fit_timestamp_round_trips_byte_identically(
             OPAQUE_CORPUS_TIMESTAMP,
         ),
         encoding='utf-8',
+        newline='\n',
     )
 
     loaded = edi.Project.load(source)
@@ -676,7 +677,7 @@ def test_c11_t56_incomplete_record_restores_present_fields_and_keeps_defaults(
     record_text = REFERENCE_PROJECT_RECORD
     for field in missing_fields:
         record_text = _without_tag(record_text, f'_metadata.{field}')
-    (source / 'project.edi').write_text(record_text, encoding='utf-8')
+    (source / 'project.edi').write_text(record_text, encoding='utf-8', newline='\n')
 
     default_time_floor = datetime.now(UTC).replace(microsecond=0) - timedelta(seconds=1)
     restored = edi.Project.load(source)
@@ -719,15 +720,9 @@ def test_c11_t56_present_unreadable_record_refuses_with_io_error(
 ) -> None:
     source = _stage_project_without_record(tmp_path)
     record = source / 'project.edi'
-    record.write_text(REFERENCE_PROJECT_RECORD, encoding='utf-8')
-    record.chmod(0)
-    try:
-        assert not os.access(record, os.R_OK), (
-            'the filesystem-failure vehicle must make project.edi unreadable before loading'
-        )
+    record.write_text(REFERENCE_PROJECT_RECORD, encoding='utf-8', newline='\n')
+    with unreadable_file(record):
         _assert_record_refuses(source, capfd)
-    finally:
-        record.chmod(0o600)
 
 
 def test_c11_t56_present_directory_record_refuses_with_io_error(
@@ -778,6 +773,7 @@ def test_c11_t56_save_refuses_broken_carried_record_without_replacing_it(
     missing_target = tmp_path / 'missing-carried-record'
     record.unlink()
     record.symlink_to(missing_target)
+    before_target = record.readlink()
     before_last_modified = project.metadata.last_modified
 
     with pytest.raises(
@@ -790,7 +786,7 @@ def test_c11_t56_save_refuses_broken_carried_record_without_replacing_it(
         'a failed save must preserve the broken carried project.edi entry instead of replacing '
         'it with a metadata-only regular file'
     )
-    assert record.readlink() == missing_target, (
+    assert record.readlink() == before_target, (
         'a failed save must leave the unreadable carried project.edi link target unchanged'
     )
     assert project.metadata.last_modified == before_last_modified, (
@@ -805,25 +801,19 @@ def test_c11_t56_save_refuses_unreadable_carried_record_without_replacing_it(
     project, record = _save_project_with_record(tmp_path, capfd)
     expected_bytes = record.read_bytes()
     before_last_modified = project.metadata.last_modified
-    record.chmod(0)
-    try:
-        assert not os.access(record, os.R_OK), (
-            'the carried-record failure vehicle must remove read access before save'
-        )
+    with unreadable_file(record) as unreadable_mode:
         with pytest.raises(
             (edi.IoError, OSError, ValueError),
             match=r'project|record|read|stage|save',
         ):
             project.save()
 
-        assert record.is_file() and record.stat().st_mode & 0o777 == 0, (
+        assert record.is_file() and record.stat().st_mode & 0o777 == unreadable_mode, (
             'a failed save must preserve the unreadable carried project.edi entry and mode'
         )
         assert project.metadata.last_modified == before_last_modified, (
             'a save that cannot read its carried record must not advance live last_modified'
         )
-    finally:
-        record.chmod(0o600)
     assert record.read_bytes() == expected_bytes, (
         'a failed save must leave every byte of the unreadable carried project.edi unchanged'
     )
@@ -866,10 +856,10 @@ def require_datablock_regression_pins(tmp_path: Path) -> None:
             #  now retains the two source-declared _geom inputs. Keep
             # the old regression hash as a byte oracle for every other field.
             original = (source / relative_path).read_bytes()
-            assert original.count(b'_geom.min_bond_distance_cutoff 0.\n') == 1, (
-                ' the source structure declares one minimum bond cutoff'
-            )
-            assert original.count(b'_geom.bond_distance_inc 0.25\n') == 1, (
+            assert (
+                len(re.findall(rb'(?m)^_geom\.min_bond_distance_cutoff 0\.\r?\n', original)) == 1
+            ), ' the source structure declares one minimum bond cutoff'
+            assert len(re.findall(rb'(?m)^_geom\.bond_distance_inc 0\.25\r?\n', original)) == 1, (
                 ' the source structure declares one bond distance increment'
             )
             block = b'_geom.min_bond_distance_cutoff 0\n_geom.bond_distance_inc 0.25\n'

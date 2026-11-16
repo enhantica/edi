@@ -9,6 +9,36 @@ import subprocess
 from pathlib import Path
 
 
+def build_runtime_path(build):
+    """Read the complete activated runtime search path that built the probe."""
+    record = json.loads((Path(build) / 'runtime-path.json').read_text(encoding='utf-8'))
+    if (
+        not isinstance(record, dict)
+        or record.keys() != {'schema', 'path'}
+        or record['schema'] != 1
+        or not isinstance(record['path'], str)
+        or not record['path'].strip()
+    ):
+        raise RuntimeError('The cache probe requires its recorded build runtime PATH')
+    return record['path']
+
+
+def probe_environment(build):
+    """Keep Windows launches on the actual Qt DLL directory selected by CMake."""
+    environment = os.environ.copy()
+    if os.name == 'nt':
+        directory = (Path(build) / 'cmake/qt-runtime-dir.txt').read_text(encoding='utf-8').strip()
+        if not directory or not Path(directory).is_absolute() or not Path(directory).is_dir():
+            raise RuntimeError('The cache probe requires its configured Qt runtime directory')
+        inherited = environment.get('PATH', '')
+        environment['PATH'] = os.pathsep.join([
+            directory,
+            build_runtime_path(build),
+            *([inherited] if inherited else []),
+        ])
+    return environment
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--root', type=Path, required=True)
@@ -60,6 +90,21 @@ def main():
         ['cmake', '--build', str(args.build / 'cmake'), '--target', 'cache_probe', '-j', '2'],
         check=True,
     )
+    (args.build / 'runtime-path.json').write_text(
+        json.dumps({'schema': 1, 'path': os.environ['PATH']}) + '\n', encoding='utf-8'
+    )
+    if os.name == 'nt':
+        inspector = shutil.which('dumpbin')
+        if not inspector:
+            raise RuntimeError('The Windows compiler must provide the probe import inspector')
+        imports = subprocess.run(
+            [inspector, '/nologo', '/dependents', str(args.build / 'cmake/cache_probe.exe')],
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout
+        (args.build / 'imports.txt').write_text(imports, encoding='utf-8')
+        print('CACHE_PROBE_IMPORTS\n' + imports, flush=True)
 
 
 if __name__ == '__main__':

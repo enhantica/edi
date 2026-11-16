@@ -161,19 +161,21 @@ def test_retirement_prose_does_not_advertise_an_active_choice(tmp_path):
 def test_python_registry_and_default_match_the_owner_decision():
     engine = module()
     assert set(engine._descent_ids()) == VALID, (
-        'The live Python registry must contain exactly the three retained descents'
+        'The live Python registry contains Auto and exactly the three retained explicit descents'
     )
-    assert engine._default_descent() == 'fast_descent_and_ladder', (
-        'The engine-advertised default must be the two-probe flow'
-    )
+    assert engine._default_descent() == 'auto', 'The engine-advertised default must be Auto'
     project = engine.Project()
-    assert project.descent == project.analysis.descent == 'fast_descent_and_ladder', (
-        'Both public Python selectors must resolve an absent declaration to the two-probe flow'
+    assert project.descent == project.analysis.descent == 'auto', (
+        'Both public Python selectors must resolve an absent declaration to Auto'
     )
-    project.analysis.descent = 'ladder'
+    for explicit in ('ladder', 'fast_descent', 'fast_descent_and_ladder'):
+        project.analysis.descent = explicit
+        assert project.descent == project.analysis.descent == explicit, (
+            'Every explicit descent keeps its identity independently of the Auto default'
+        )
     project.analysis.descent = None
-    assert project.analysis.descent == 'fast_descent_and_ladder', (
-        'Clearing an explicit choice must restore the new effective default'
+    assert project.analysis.descent == 'auto', (
+        'Clearing an explicit choice must restore the Auto effective default'
     )
 
 

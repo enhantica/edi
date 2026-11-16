@@ -19,11 +19,11 @@ await mkdir(output, {recursive:true});
 const server = createServer(async (req, res) => {
   try {
     const pathname=new URL(req.url,'http://localhost').pathname;
-    if(mode==='singlethread' && pathname.endsWith('/coi-serviceworker.js')) {res.writeHead(404);res.end();return;}
     const path = resolve(site, '.' + pathname+(pathname.endsWith('/')?'index.html':''));
     assert(path.startsWith(site + sep), 'The browser gate serves only the packed app');
     const bytes = await readFile(extname(path) ? path : join(path, 'index.html'));
-    const headers = {'Content-Type':({'.html':'text/html','.js':'text/javascript','.wasm':'application/wasm'})[extname(path)] || 'text/html'};
+    assert(mode==='multithread','Browser persistence uses a supported directly isolated multithread route');
+const headers = {'Content-Type':({'.html':'text/html','.js':'text/javascript','.wasm':'application/wasm'})[extname(path)] || 'text/html'};
     if (mode === 'multithread') Object.assign(headers, {'Cross-Origin-Opener-Policy':'same-origin','Cross-Origin-Embedder-Policy':'require-corp'});
     res.writeHead(200, headers); res.end(bytes);
   } catch { res.writeHead(404); res.end(); }
@@ -211,7 +211,7 @@ try {
       assert.equal(first['reports/opaque.html'],initial['reports/opaque.html'],'Picked-folder Save retains exact report bytes');
       const picks=await page.evaluate(()=>window.__projectFolderPickCount);
       await rename('archive-folder-second');
-      await click(/^Save current state of the project$/, 'button');
+      await click(/^Save the project$/, 'button');
       await ready(()=>page.evaluate(async () => {
         const root=await window.__projectFolderReady;
         return (await (await root.getFileHandle('project.edi')).getFile()).text().then(text=>text.includes('archive-folder-second'));
