@@ -56,9 +56,19 @@ def build_cli(
             '-DCMAKE_MODULE_LINKER_FLAGS=-static-libstdc++ -static-libgcc -Wl,--exclude-libs,ALL',
         ])
     if SYSTEM == 'macos':
+        # The SDK names sleef without a path. Only the SDK's own sleef goes on the link path: the
+        # environment's lib directory would also swap the system C++ runtime for its own.
+        sleef = sorted((prefix / 'lib/crysta-runtime').glob('libsleef.*dylib'))
+        if len(sleef) != 1:
+            raise RuntimeError('The SDK must carry exactly one SLEEF runtime')
+        link_dir = work / 'cli-link'
+        link_dir.mkdir(exist_ok=True)
+        (link_dir / 'libsleef.dylib').unlink(missing_ok=True)
+        (link_dir / 'libsleef.dylib').symlink_to(sleef[0])
+        link = f'-Wl,-headerpad_max_install_names -L{link_dir.as_posix()}'
         options.extend([
-            '-DCMAKE_EXE_LINKER_FLAGS=-Wl,-headerpad_max_install_names',
-            '-DCMAKE_MODULE_LINKER_FLAGS=-Wl,-headerpad_max_install_names',
+            f'-DCMAKE_EXE_LINKER_FLAGS={link}',
+            f'-DCMAKE_MODULE_LINKER_FLAGS={link}',
         ])
     run(['cmake', '-S', ROOT, '-B', cli, *flags, *options])
     run(['cmake', '--build', cli, '--target', 'easydiffraction', '--parallel', '4'])

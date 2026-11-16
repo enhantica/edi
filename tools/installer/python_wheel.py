@@ -90,7 +90,7 @@ def qualify_wheel(asset: Path, version: str, commit: str) -> None:
         root = Path(folder)
         run([sys.executable, '-m', 'venv', root / 'env'], env=env, cwd=root)
         python = root / 'env' / ('Scripts/python.exe' if SYSTEM == 'windows' else 'bin/python')
-        run([python, '-m', 'pip', 'install', '--no-index', '--no-deps', asset], env=env, cwd=root)
+        run([python, '-m', 'pip', 'install', asset], env=env, cwd=root)
         run([python, '-m', 'edi', '--help'], env=env, cwd=root)
         run(
             [
