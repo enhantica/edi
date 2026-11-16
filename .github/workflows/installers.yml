@@ -100,8 +100,8 @@ jobs:
     # crysta-sdk. The condition is EDI_CODESIGN's below (edi ADR-0091).
     environment: >-
       ${{ github.repository == 'enhantica/edi' && github.ref == 'refs/heads/main'
-      && (github.event_name == 'push' || (github.event_name == 'workflow_dispatch'
-      && (inputs.release_plan_run != '' || inputs.prepare_preview_release)))
+      && github.event_name == 'workflow_dispatch'
+      && (inputs.release_plan_run != '' || inputs.prepare_preview_release)
       && 'codesign' || 'crysta-sdk' }}
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 90
@@ -118,12 +118,12 @@ jobs:
       EDI_INSTALLER_PREVIEW_DATE: ${{ needs.preview-version.outputs.date }}
       EDI_RELEASE_PLAN: ${{ inputs.release_plan_run && format('{0}/build/release-plan', github.workspace) || '' }}
       EDI_INSTALLER_VERSION: 0.0.${{ github.run_number }}.${{ github.run_attempt }}
-      # Signing runs only for pushes to main and release builds started on main, never for a pull request,
-      # a fork or another branch (edi ADR-0091); build.py and package.py read it.
+      # Signing runs only for release builds started on main (a release plan or a preview-release preparation),
+      # never for a push, a pull request, a fork or another branch (edi ADR-0091); build.py and package.py read it.
       EDI_CODESIGN: >-
         ${{ github.repository == 'enhantica/edi' && github.ref == 'refs/heads/main'
-        && (github.event_name == 'push' || (github.event_name == 'workflow_dispatch'
-        && (inputs.release_plan_run != '' || inputs.prepare_preview_release)))
+        && github.event_name == 'workflow_dispatch'
+        && (inputs.release_plan_run != '' || inputs.prepare_preview_release)
         && '1' || '' }}
     steps:
       - name: Apply the prerelease version

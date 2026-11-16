@@ -130,11 +130,11 @@ Framework writes the tool from the running installer, which `binarycreator` chan
    again.
 3. `signtool verify /pa` checks each signed file and the installed app of each test installation.
 
-**When signing runs.** Only for runs of the installer workflow on `main` in this repository that are pushes to
-`main` or release builds: a manual run with a release plan or a preview-release preparation. `EDI_CODESIGN` is
-set for those runs and every signing step depends on it, so a pull request, a fork, another branch or any other
-manual run never reaches the credentials. Signing runs also take the GitHub environment `codesign`, which only
-`main` may deploy to; every other run keeps `crysta-sdk`. A pull request build stays unsigned, signs the app ad hoc
+**When signing runs.** Only for release builds of the installer workflow on `main` in this repository: a manual
+run with a release plan or a preview-release preparation. `EDI_CODESIGN` is set for those runs and every signing
+step depends on it, so a push to `main`, a pull request, a fork, another branch or any other manual run builds
+unsigned and never reaches the credentials. Signing runs also take the GitHub environment `codesign`, which only
+`main` may deploy to; every other run keeps `crysta-sdk`. An unsigned build signs the app ad hoc
 as before and still runs every installer check. When signing is on, a missing credential, a refused signature
 or a rejected notarisation fails the job, and nothing is uploaded or published. Linux installers are not
 signed. Every installer check runs on the signed installers.
