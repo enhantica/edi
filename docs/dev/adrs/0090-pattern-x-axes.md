@@ -1,4 +1,4 @@
-# 0087. Pattern x axes: 2θ or TOF, d, Q and sinθ/λ
+# 0090. Pattern x axes: 2θ or TOF, d, Q and sinθ/λ
 
 - **Status:** Accepted
 - **Date:** 2026-11-15

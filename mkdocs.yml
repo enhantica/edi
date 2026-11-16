@@ -120,7 +120,7 @@ nav:
           - "ADR-0084 Two palettes": dev/adrs/0084-two-palettes-and-the-gradient-rule.md
           - "ADR-0085 Red s.u.": dev/adrs/0085-red-su-for-poorly-determined-parameters.md
           - "ADR-0086 Powder calculation range": dev/adrs/0086-powder-calculation-range-is-its-grid.md
-          - "ADR-0087 Pattern x axes": dev/adrs/0087-pattern-x-axes.md
+          - "ADR-0090 Pattern x axes": dev/adrs/0090-pattern-x-axes.md
           - dev/adrs/template.md
       - Design:
           - dev/design/api-types.md
