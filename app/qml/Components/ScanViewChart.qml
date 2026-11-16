@@ -47,6 +47,9 @@ Item {
     readonly property real sideMargin: AppSizes.mainAreaMargin
     // Where the toolbar and the block selector row above it end, from the chart's right edge.
     readonly property real toolbarRightInset: sideMargin
+    // The toolbar line's outer edges, where the block selector row above lines up with it (the owner, 2026-11-16).
+    readonly property real toolbarSpanLeft: scanToolbar.x + scanToolbar.contentSpan[0]
+    readonly property real toolbarSpanRightInset: width - (scanToolbar.x + scanToolbar.contentSpan[1])
     readonly property real titleGutter: Math.round(em * 1.6)
     // The toolbar line at the top, as the pattern chart's, and the room under it: enough for the notes above the plot
     // and for the colour bar's top label, centred on the bar's end.
@@ -330,7 +333,7 @@ Item {
             background: chart.plotBackground
             smoothRows: Preferences.scanMapSmooth
             reversed: chart.mode === "map" && chart.mapInverted
-            stackedReversed: Preferences.scanStackedReversed
+            stackedReversed: false  // the reverse button is gone (the owner, 2026-11-16): a saved preference no longer applies
             includedOnly: Preferences.chartIncludedOnly
             subtractBackground: Preferences.chartSubtractBackground
             dark: chart.colors.isDarkPalette
@@ -669,6 +672,8 @@ Item {
         rightEdge: chart.width - chart.sideMargin
 
         ToolbarComboBox {
+            // As wide as it reads, so the controls keep to one row (the owner, 2026-11-16).
+            fitShown: true
             objectName: "scanView." + chart.mode + ".toolbar.xaxis"
             toolbarGroup: "axes"
             // As the pattern chart's: d, Q and sinθ/λ once a calculation has given d, and the closed box names the
@@ -687,6 +692,8 @@ Item {
             onActivated: index => ApplicationInfo.scanChoice(index, 0)
         }
         ToolbarComboBox {
+            // As wide as it reads, so the controls keep to one row (the owner, 2026-11-16).
+            fitShown: true
             objectName: "scanView." + chart.mode + ".toolbar.rows"
             toolbarGroup: "axes"
             // The rows by the scan value, where the scan extracts one, or in order by file (a scan's datasets share a
@@ -702,6 +709,8 @@ Item {
             onActivated: index => ApplicationInfo.scanChoice(index, 1)
         }
         ToolbarComboBox {
+            // As wide as it reads, so the controls keep to one row (the owner, 2026-11-16).
+            fitShown: true
             objectName: "scanView." + chart.mode + ".toolbar.yscale"
             toolbarGroup: "axes"
             readonly property var tokens: ["linear", "sqrt", "log"]
@@ -716,6 +725,8 @@ Item {
         // The Stacked patterns' spacing, from overlaid to fully separated, a group of its own after the axes; the
         // project keeps it (the owner, 2026-10-26).
         ToolbarComboBox {
+            // As wide as it reads, so the controls keep to one row (the owner, 2026-11-16).
+            fitShown: true
             readonly property var steps: ApplicationInfo.stackedSpacings
 
             objectName: "scanView.stacked.toolbar.spacing"
@@ -742,6 +753,8 @@ Item {
             onActivated: index => ApplicationInfo.scanChoice(index, 4)
         }
         ToolbarComboBox {
+            // As wide as it reads, so the controls keep to one row (the owner, 2026-11-16).
+            fitShown: true
             readonly property var directions: ApplicationInfo.scanMapDirections
 
             objectName: "scanView.map.toolbar.direction"
@@ -775,15 +788,6 @@ Item {
                 toolTip: qsTr("Show coordinates tooltip on hover")
                 checked: Preferences.patternHoverShown
                 onClicked: ApplicationInfo.scanToggle(1)
-            }
-            // The Stacked colours in reverse order; the Map's direction is its own selector.
-            ChartToolButton {
-                objectName: "scanView.stacked.toolbar.reverse"
-                visible: chart.mode === "stacked"
-                fontIcon: "exchange-alt"
-                toolTip: qsTr("Reverse the patterns' colours")
-                checked: Preferences.scanStackedReversed
-                onClicked: ApplicationInfo.scanToggle(2)
             }
             ChartToolButton {
                 objectName: "scanView.map.toolbar.smooth"
@@ -821,8 +825,10 @@ Item {
                 checked: Preferences.chartHighlightSelected
                 onClicked: ApplicationInfo.scanToggle(6)
             }
+            // Box zoom is the Map's; Stacked zooms by the wheel and the reset (the owner, 2026-11-16).
             ChartToolButton {
                 objectName: "scanView." + chart.mode + ".toolbar.zoom"
+                visible: chart.mode === "map"
                 fontIcon: "expand"
                 toolTip: qsTr("Box zoom: drag over the plot (always on here)")
                 checked: true
@@ -834,6 +840,16 @@ Item {
                 onClicked: chart.resetZoom()
             }
         }
+        // The curve count, a small caption at the controls row's right end (the owner, 2026-11-16).
+        EaElements.Label {
+            objectName: "scanView." + chart.mode + ".progress"
+            visible: chart.scan !== null && ((chart.scan.wanted && chart.scan.loaded < chart.scan.count) || (chart.mode === "stacked" && layer.drawnDatasetCount < chart.scan.count))
+            color: chart.colors.chartLabels
+            text: chart.scan ? ((chart.scan.wanted && chart.scan.loaded < chart.scan.count ? qsTr("Reading patterns: %1 of %2").arg(chart.scan.loaded).arg(chart.scan.count) : "") + (chart.mode === "stacked" && layer.drawnDatasetCount < chart.scan.count ? (chart.scan.loaded < chart.scan.count ? " · " : "") + qsTr("Showing %1 of %2 curves").arg(layer.drawnDatasetCount).arg(chart.scan.count) : "")) : ""
+            height: EaStyle.Sizes.comboBoxHeight
+            verticalAlignment: Text.AlignVCenter
+            font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.9
+        }
     }
 
     // Above the plot, under the toolbar: how far reading has come, then what could not be read, and why the rows are
@@ -844,15 +860,6 @@ Item {
         y: chart.toolbarTop + scanToolbar.height + chart.em * 0.2
         width: Math.min(implicitWidth, parent.width - 2 * chart.sideMargin)
 
-        EaElements.Label {
-            objectName: "scanView." + chart.mode + ".progress"
-            visible: chart.scan !== null && ((chart.scan.wanted && chart.scan.loaded < chart.scan.count) || (chart.mode === "stacked" && layer.drawnDatasetCount < chart.scan.count))
-            anchors.right: parent.right
-            color: chart.colors.chartLabels
-            text: chart.scan ? ((chart.scan.wanted && chart.scan.loaded < chart.scan.count ? qsTr("Reading patterns: %1 of %2").arg(chart.scan.loaded).arg(chart.scan.count) : "") + (chart.mode === "stacked" && layer.drawnDatasetCount < chart.scan.count ? (chart.scan.loaded < chart.scan.count ? " · " : "") + qsTr("Showing %1 of %2 curves").arg(layer.drawnDatasetCount).arg(chart.scan.count) : "")) : ""
-            width: Math.min(implicitWidth, chart.width - 2 * chart.sideMargin)
-            elide: Text.ElideRight
-        }
         EaElements.Label {
             objectName: "scanView." + chart.mode + ".refused"
             visible: chart.scan !== null && chart.scan.failed > 0 && chart.hasData

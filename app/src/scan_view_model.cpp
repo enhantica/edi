@@ -158,6 +158,7 @@ void ScanViewModel::setScan(const ScanSession* session, const edi::Project* proj
             emit seriesChanged();
         }
         if (series) {
+            readSeriesBanks(project);
             publish(native_shared_, false, &ScanViewModel::nativeSharedChanged);
             publish(d_available_, true, &ScanViewModel::dAvailableChanged);
         }
@@ -410,8 +411,12 @@ void ScanViewModel::readNext() {
                         if (by_bank ? e == first + k : chosen < 0 || static_cast<std::size_t>(chosen) == e)
                             experiments.push_back(e);
                     }
-                    edi::SeriesRowPattern row = edi::series_row_pattern(
-                        *source, *datasets, point, experiments, edi::series_point_scales(*source, key));
+                    const std::vector<double> scales = edi::series_point_scales(*source, key);
+                    edi::SeriesRowPattern row = edi::series_row_pattern(*source, *datasets, point, experiments, scales);
+                    if (experiments.size() == 1) {
+                        read.bank = static_cast<int>(experiments.front());
+                        read.scale = experiments.front() < scales.size() ? scales[experiments.front()] : 1.0;
+                    }
                     if (row.d.empty()) {
                         throw std::runtime_error("the point has no pattern on d");
                     }
@@ -494,16 +499,21 @@ void ScanViewModel::deliver(std::size_t first, std::vector<Read>& done) {
         Pattern& pattern = patterns_[dataset];
         pattern.x = std::move(read.x);
         pattern.intensity = std::move(read.intensity);
-        // A series' point is read on d: its x is its d, and its excluded regions are each experiment's own.
+        // A series' point is read on d: its x is its d, and its background and excluded regions are its bank's.
         if (series_) {
             pattern.d = pattern.x;
+            pattern.bank = read.bank;
+            pattern.scale = read.scale;
+            applySeriesBank(pattern);
+        } else {
+            pattern.excluded = template_excluded_;
         }
-        pattern.excluded = series_ ? std::vector<std::pair<double, double>>{} : template_excluded_;
         placePattern(pattern);
         values_[dataset] = read.value;
         value_texts_[dataset] = read.value_text;
     }
     placeRange();
+    if (series_) publishBackground();
     // File-index rows and labels stay fixed while batches arrive; extracted values reorder them once at the end.
     if (loaded_ == count()) placeRows();
     emit loadedChanged();
@@ -594,10 +604,56 @@ bool ScanViewModel::readConversion(const edi::Project* project) {
     template_bx_ = std::move(bx);
     template_bkg_ = std::move(bs);
     template_excluded_ = std::move(excluded);
-    for (Pattern& pattern : patterns_) {
-        pattern.excluded = template_excluded_;
+    if (!series_) {
+        for (Pattern& pattern : patterns_) {
+            pattern.excluded = template_excluded_;
+        }
     }
     return true;
+}
+
+void ScanViewModel::readSeriesBanks(const edi::Project* project) {
+    bank_d_.clear();
+    bank_background_.clear();
+    bank_excluded_.clear();
+    if (project == nullptr) return;
+    for (const auto& experiment : project->experiments) {
+        std::vector<double> xs, ds, bx, bs;
+        conversion_of(*experiment, xs, ds);
+        background_of(*experiment, bx, bs);
+        // The background on d, in rising d whatever the native axis.
+        std::vector<std::pair<double, double>> on_d;
+        for (std::size_t i = 0; i < bx.size() && i < bs.size(); ++i) {
+            const double d = d_of(xs, ds, bx[i], false);
+            if (std::isfinite(d) && std::isfinite(bs[i])) on_d.emplace_back(d, bs[i]);
+        }
+        std::sort(on_d.begin(), on_d.end());
+        std::vector<double> d_column, b_column;
+        for (const auto& [d, b] : on_d) {
+            d_column.push_back(d);
+            b_column.push_back(b);
+        }
+        std::vector<std::pair<double, double>> excluded;
+        for (const auto& [a, b] : excluded_of(*experiment)) {
+            const double da = d_of(xs, ds, a, true), db = d_of(xs, ds, b, true);
+            if (std::isfinite(da) && std::isfinite(db)) excluded.emplace_back(std::min(da, db), std::max(da, db));
+        }
+        bank_d_.push_back(std::move(d_column));
+        bank_background_.push_back(std::move(b_column));
+        bank_excluded_.push_back(std::move(excluded));
+    }
+}
+
+void ScanViewModel::applySeriesBank(Pattern& pattern) const {
+    pattern.background.clear();
+    pattern.excluded.clear();
+    const auto bank = static_cast<std::size_t>(pattern.bank);
+    if (pattern.bank < 0 || bank >= bank_d_.size()) return;
+    if (bank_d_[bank].size() >= 2 && pattern.scale != 0.0 && std::isfinite(pattern.scale)) {
+        pattern.background.reserve(pattern.x.size());
+        for (const double d : pattern.x) pattern.background.push_back(d_of(bank_d_[bank], bank_background_[bank], d, false) / pattern.scale);
+    }
+    pattern.excluded = bank_excluded_[bank];
 }
 
 void ScanViewModel::setConversion(const edi::Project* project) {
@@ -605,6 +661,18 @@ void ScanViewModel::setConversion(const edi::Project* project) {
     // a scan's d axis follows the template's conversion, as the pattern chart's does.
     if (joint_) {
         setJoint(project);
+        return;
+    }
+    if (series_) {
+        readSeriesBanks(project);
+        for (Pattern& pattern : patterns_) {
+            if (pattern.x.empty()) continue;
+            applySeriesBank(pattern);
+            placePattern(pattern);
+        }
+        publishBackground();
+        ++revision_;
+        emit revisionChanged();
         return;
     }
     if (readConversion(project)) {
@@ -678,11 +746,9 @@ void ScanViewModel::setRowsByIndex(bool on) {
 void ScanViewModel::placePattern(Pattern& pattern) {
     pattern.generation = ++pattern_generation_;
     pattern.excluded_shown.clear();
-    // A scan's datasets share the template's background; a joint fit's experiment keeps its own; a series' point has
-    // none drawn.
-    if (series_) {
-        pattern.background.clear();
-    } else if (!joint_) {
+    // A scan's datasets share the template's background; a joint fit's experiment keeps its own; a series' row its
+    // bank's (applySeriesBank).
+    if (!joint_ && !series_) {
         pattern.background.clear();
         if (template_bx_.size() >= 2) {
             pattern.background.reserve(pattern.x.size());
@@ -773,7 +839,7 @@ void ScanViewModel::placeRange() {
 }
 
 void ScanViewModel::publishBackground() {
-    const bool any = series_ ? false : joint_ ? std::any_of(patterns_.begin(), patterns_.end(),
+    const bool any = joint_ || series_ ? std::any_of(patterns_.begin(), patterns_.end(),
                                           [](const Pattern& pattern) { return !pattern.background.empty(); })
                             : template_bx_.size() >= 2;
     publish(background_available_, any, &ScanViewModel::backgroundAvailableChanged);
