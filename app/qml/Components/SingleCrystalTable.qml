@@ -197,7 +197,10 @@ DataTable {
 
             TapHandler {
                 enabled: table.measured
-                onTapped: table.experiment.toggleExcludedReflection(row.model.h, row.model.k, row.model.l)
+                onTapped: {
+                    row.activated();
+                    table.experiment.toggleExcludedReflection(row.model.h, row.model.k, row.model.l);
+                }
             }
         }
     }

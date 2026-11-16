@@ -471,12 +471,69 @@
           "storage": [
             "crysta::Column<double>"
           ]
+        },
+        {
+          "member": "ExcludedRegion::axis",
+          "type": "detail::WrittenText",
+          "items": [
+            "axis"
+          ],
+          "storage": [
+            "crysta::Column<std::string>"
+          ]
         }
       ],
       "row": "ExcludedRegion",
       "legacy": [
         "_easydiffraction_excluded_region"
       ]
+    },
+    {
+      "name": "_excluded_reflection",
+      "form": "loop",
+      "columns": [
+        {
+          "member": "ExcludedReflection::id",
+          "type": "ItemKey",
+          "items": [
+            "id"
+          ],
+          "storage": [
+            "crysta::Column<std::string>"
+          ]
+        },
+        {
+          "member": "ExcludedReflection::index_h",
+          "type": "detail::Written<int>",
+          "items": [
+            "index_h"
+          ],
+          "storage": [
+            "crysta::Column<int>"
+          ]
+        },
+        {
+          "member": "ExcludedReflection::index_k",
+          "type": "detail::Written<int>",
+          "items": [
+            "index_k"
+          ],
+          "storage": [
+            "crysta::Column<int>"
+          ]
+        },
+        {
+          "member": "ExcludedReflection::index_l",
+          "type": "detail::Written<int>",
+          "items": [
+            "index_l"
+          ],
+          "storage": [
+            "crysta::Column<int>"
+          ]
+        }
+      ],
+      "row": "ExcludedReflection"
     },
     {
       "name": "_background",
@@ -1593,6 +1650,20 @@
           "type": "std::optional<std::string>",
           "items": [
             "threshold_basis"
+          ]
+        },
+        {
+          "member": "ExperimentBase::reflns_merge",
+          "type": "std::optional<std::string>",
+          "items": [
+            "merge"
+          ]
+        },
+        {
+          "member": "ExperimentBase::reflns_absences",
+          "type": "std::optional<std::string>",
+          "items": [
+            "absences"
           ]
         }
       ],
@@ -3969,12 +4040,47 @@
       "category": "_excluded_region"
     },
     {
+      "member": "ExcludedRegion::axis",
+      "type": "detail::WrittenText",
+      "category": "_excluded_region"
+    },
+    {
       "member": "ExcludedRegion::row",
       "type": "detail::RowLink",
       "part": "the row's link to its collection"
     },
     {
       "member": "ExcludedRegion::epoch",
+      "type": "detail::Epoch",
+      "part": "the row's identity as a calculation input"
+    },
+    {
+      "member": "ExcludedReflection::id",
+      "type": "ItemKey",
+      "category": "_excluded_reflection"
+    },
+    {
+      "member": "ExcludedReflection::index_h",
+      "type": "detail::Written<int>",
+      "category": "_excluded_reflection"
+    },
+    {
+      "member": "ExcludedReflection::index_k",
+      "type": "detail::Written<int>",
+      "category": "_excluded_reflection"
+    },
+    {
+      "member": "ExcludedReflection::index_l",
+      "type": "detail::Written<int>",
+      "category": "_excluded_reflection"
+    },
+    {
+      "member": "ExcludedReflection::row",
+      "type": "detail::RowLink",
+      "part": "the row's link to its collection"
+    },
+    {
+      "member": "ExcludedReflection::epoch",
       "type": "detail::Epoch",
       "part": "the row's identity as a calculation input"
     },
@@ -5100,6 +5206,23 @@
       "category": "_reflns"
     },
     {
+      "member": "ExperimentBase::reflns_merge",
+      "type": "std::optional<std::string>",
+      "category": "_reflns"
+    },
+    {
+      "member": "ExperimentBase::reflns_absences",
+      "type": "std::optional<std::string>",
+      "category": "_reflns"
+    },
+    {
+      "member": "ExperimentBase::excluded_reflections",
+      "type": "ItemVec<ExcludedReflection>",
+      "holds": [
+        "_excluded_reflection"
+      ]
+    },
+    {
       "member": "ExperimentBase::sin_theta_over_lambda_max",
       "type": "std::optional<double>",
       "category": "_data_range"
@@ -6100,6 +6223,9 @@
     ],
     "_evolution_chart": [
       "_evolution_chart"
+    ],
+    "_excluded_reflection": [
+      "_excluded_reflection"
     ],
     "_excluded_region": [
       "_excluded_region"
