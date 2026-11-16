@@ -113,6 +113,7 @@ void ScanViewModel::clear() {
     files_.clear();
     directory_.clear();
     source_.reset();
+    datasets_.reset();
     patterns_.clear();
     values_.clear();
     value_texts_.clear();
@@ -134,19 +135,42 @@ void ScanViewModel::setScan(const ScanSession* session, const edi::Project* proj
     publish(joint_, false, &ScanViewModel::jointChanged);
     publish(native_shared_, true, &ScanViewModel::nativeSharedChanged);
     publish(row_labels_, QStringList(), &ScanViewModel::rowLabelsChanged);
+    if (series_ && (session == nullptr || project == nullptr || !session->datasets().joint())) {
+        series_ = false;
+        series_experiments_.clear();
+        emit seriesChanged();
+    }
     if (session != nullptr && project != nullptr && !project->experiments.empty()) {
         files_ = session->datasets().files;
         directory_ = session->datasets().directory;
         source_ = std::make_shared<const edi::Project>(*project);
+        // A series of joint fits draws its points on d: its experiments share no native axis.
+        const bool series = session->datasets().joint();
+        datasets_ = series ? std::make_shared<const edi::ScanDatasets>(session->datasets()) : nullptr;
+        QStringList names;
+        if (series) {
+            for (const std::string& name : session->datasets().experiments) names.append(QString::fromStdString(name));
+            if (rows_experiment_ >= names.size()) rows_experiment_ = -1;
+        }
+        if (series != series_ || names != series_experiments_) {
+            series_ = series;
+            series_experiments_ = names;
+            emit seriesChanged();
+        }
+        if (series) {
+            publish(native_shared_, false, &ScanViewModel::nativeSharedChanged);
+            publish(d_available_, true, &ScanViewModel::dAvailableChanged);
+        }
         mode_ = project->experiment().effective_beam_mode();
         emit timeOfFlightChanged();
     }
-    has_values_ = source_ != nullptr && !source_->sequential_fit.extract.empty() && !extracted_title.isEmpty();
+    listing_values_ = source_ != nullptr && !source_->sequential_fit.extract.empty() && !extracted_title.isEmpty();
+    has_values_ = listing_values_ && !(rows_by_bank_ && series_);
     extracted_title_ = extracted_title;
     emit valueTitleChanged();
-    patterns_.assign(files_.size(), {});
-    values_.assign(files_.size(), kNaN);
-    value_texts_.assign(files_.size(), QString());
+    patterns_.assign(units(), {});
+    values_.assign(units(), kNaN);
+    value_texts_.assign(units(), QString());
     placeAxis();
     placeRows();
     emit countChanged();
@@ -165,6 +189,11 @@ void ScanViewModel::setJoint(const edi::Project* project) {
                        (fitting == "joint" || (fitting == "independent" && !project->sequential_fit.declared()));
     if (!joint && !joint_) {
         return;  // a scan, or nothing, stays as it is
+    }
+    if (joint && series_) {
+        series_ = false;
+        series_experiments_.clear();
+        emit seriesChanged();
     }
     // Every experiment's points as they are now; one without data draws nothing and counts as not read.
     std::vector<Pattern> next;
@@ -253,6 +282,43 @@ void ScanViewModel::setJoint(const edi::Project* project) {
     emit revisionChanged();
 }
 
+void ScanViewModel::setRowsExperiment(int experiment) {
+    const int wanted = experiment >= 0 && experiment < series_experiments_.size() ? experiment : -1;
+    if (wanted == rows_experiment_) {
+        return;
+    }
+    rows_experiment_ = wanted;
+    emit rowsExperimentChanged();
+    if (series_) {
+        restartReads();
+    }
+}
+
+// The rows read again over the same points, from the first.
+void ScanViewModel::restartReads() {
+    stop();
+    ++generation_;
+    started_ = false;
+    next_ = 0;
+    loaded_ = 0;
+    publish(failed_, 0, &ScanViewModel::failedChanged);
+    publish(error_, QString(), &ScanViewModel::errorChanged);
+    has_values_ = listing_values_ && !(rows_by_bank_ && series_);
+    emit valueTitleChanged();
+    patterns_.assign(units(), {});
+    values_.assign(units(), kNaN);
+    value_texts_.assign(units(), QString());
+    placeAxis();
+    placeRows();
+    emit countChanged();
+    emit loadedChanged();
+    ++revision_;
+    emit revisionChanged();
+    if (wanted_) {
+        start();
+    }
+}
+
 void ScanViewModel::setWanted(bool wanted) {
     if (wanted == wanted_) {
         return;
@@ -264,8 +330,35 @@ void ScanViewModel::setWanted(bool wanted) {
     }
 }
 
+void ScanViewModel::setRowsByBank(bool on) {
+    if (on == rows_by_bank_) {
+        return;
+    }
+    rows_by_bank_ = on;
+    emit rowsByBankChanged();
+    if (series_) {
+        restartReads();
+    }
+}
+
+void ScanViewModel::setSeriesFocus(int point, int bank) {
+    if (!series_) {
+        bank_point_ = std::max(0, point);
+        return;
+    }
+    if (rows_by_bank_) {
+        if (point >= 0 && point != bank_point_) {
+            bank_point_ = point;
+            restartReads();
+        }
+        return;
+    }
+    bank_point_ = std::max(0, point);
+    setRowsExperiment(bank);
+}
+
 void ScanViewModel::start() {
-    if (started_ || files_.empty()) {
+    if (started_ || units() == 0) {
         return;
     }
     started_ = true;
@@ -280,40 +373,73 @@ void ScanViewModel::stop() {
 }
 
 void ScanViewModel::readNext() {
-    if (next_ >= files_.size()) {
+    const std::size_t units = this->units();
+    if (next_ >= units) {
         return;
     }
     const std::size_t first = next_;
-    const std::size_t last = std::min(files_.size(), first + kBatch);
+    const std::size_t last = std::min(units, first + kBatch);
     next_ = last;
     const QPointer<ScanViewModel> self(this);
     const std::uint64_t generation = generation_;
     const std::shared_ptr<std::atomic<bool>> stop = stop_;
-    std::vector<std::string> batch(files_.begin() + static_cast<std::ptrdiff_t>(first),
-                                   files_.begin() + static_cast<std::ptrdiff_t>(last));
+    // By bank the units are the banks at one point; otherwise the points (or a scan's files).
+    const bool by_bank = rows_by_bank_ && series_;
+    const std::size_t at_point = by_bank ? std::min<std::size_t>(static_cast<std::size_t>(bank_point_), files_.empty() ? 0 : files_.size() - 1) : 0;
+    std::vector<std::string> batch;
+    for (std::size_t unit = first; unit < last; ++unit) {
+        batch.push_back(by_bank ? files_.at(at_point) : files_.at(unit));
+    }
     run_in_background([self, generation, stop, first, batch = std::move(batch), source = source_, directory = directory_,
-                       mode = mode_, values = has_values_] {
+                       mode = mode_, values = has_values_, datasets = datasets_, chosen = rows_experiment_, by_bank,
+                       at_point] {
         std::vector<Read> done;
-        for (const std::string& file : batch) {
+        for (std::size_t k = 0; k < batch.size(); ++k) {
+            const std::string& key = batch[k];
             if (stop->load()) {
                 break;
             }
             Read read;
-            // The pattern: unreadable, it is not drawn and is counted as such.
-            try {
-                const edi::PdDataBase data = edi::read_scan_dataset(directory, file, mode);
-                const std::vector<double>& x = data.axis();
-                const std::vector<double>& y = data.intensity_meas.get();
-                if (std::none_of(x.begin(), x.end(), [](double value) { return std::isfinite(value); })) {
-                    throw std::runtime_error("the pattern has no x range");
+            // A series' row is its point on d; its place along the series comes from the first experiment's file.
+            const std::size_t point = by_bank ? at_point : first + k;
+            const std::string file = datasets ? datasets->point_files.at(point).front() : key;
+            if (datasets) {
+                try {
+                    std::vector<std::size_t> experiments;
+                    for (std::size_t e = 0; e < datasets->experiments.size(); ++e) {
+                        if (by_bank ? e == first + k : chosen < 0 || static_cast<std::size_t>(chosen) == e)
+                            experiments.push_back(e);
+                    }
+                    edi::SeriesRowPattern row = edi::series_row_pattern(
+                        *source, *datasets, point, experiments, edi::series_point_scales(*source, key));
+                    if (row.d.empty()) {
+                        throw std::runtime_error("the point has no pattern on d");
+                    }
+                    read.x = std::move(row.d);
+                    read.intensity = std::move(row.intensity);
+                } catch (const std::exception& refusal) {
+                    read.error = QString::fromStdString(key) + QStringLiteral(": ") + QString::fromUtf8(refusal.what());
+                    done.push_back(std::move(read));
+                    continue;
                 }
-                read.x.assign(x.begin(), x.end());
-                read.intensity.assign(y.begin(), y.end());
-                read.intensity.resize(read.x.size(), kNaN);
-            } catch (const std::exception& refusal) {
-                read.error = QString::fromStdString(file) + QStringLiteral(": ") + QString::fromUtf8(refusal.what());
-                done.push_back(std::move(read));
-                continue;
+            }
+            // The pattern: unreadable, it is not drawn and is counted as such.
+            if (!datasets) {
+                try {
+                    const edi::PdDataBase data = edi::read_scan_dataset(directory, file, mode);
+                    const std::vector<double>& x = data.axis();
+                    const std::vector<double>& y = data.intensity_meas.get();
+                    if (std::none_of(x.begin(), x.end(), [](double value) { return std::isfinite(value); })) {
+                        throw std::runtime_error("the pattern has no x range");
+                    }
+                    read.x.assign(x.begin(), x.end());
+                    read.intensity.assign(y.begin(), y.end());
+                    read.intensity.resize(read.x.size(), kNaN);
+                } catch (const std::exception& refusal) {
+                    read.error = QString::fromStdString(file) + QStringLiteral(": ") + QString::fromUtf8(refusal.what());
+                    done.push_back(std::move(read));
+                    continue;
+                }
             }
             // Its place along the scan: without one the pattern is still drawn, and the rows stay by file index with
             // the reason.
@@ -368,7 +494,11 @@ void ScanViewModel::deliver(std::size_t first, std::vector<Read>& done) {
         Pattern& pattern = patterns_[dataset];
         pattern.x = std::move(read.x);
         pattern.intensity = std::move(read.intensity);
-        pattern.excluded = template_excluded_;
+        // A series' point is read on d: its x is its d, and its excluded regions are each experiment's own.
+        if (series_) {
+            pattern.d = pattern.x;
+        }
+        pattern.excluded = series_ ? std::vector<std::pair<double, double>>{} : template_excluded_;
         placePattern(pattern);
         values_[dataset] = read.value;
         value_texts_[dataset] = read.value_text;
@@ -413,6 +543,8 @@ void ScanViewModel::placeRows() {
             texts.append(unit.isEmpty() ? value : value + QLatin1Char(' ') + unit);
         } else if (joint_) {
             texts.append(static_cast<qsizetype>(i) < row_labels_.size() ? row_labels_[static_cast<qsizetype>(i)] : QString());
+        } else if (rows_by_bank_ && series_) {
+            texts.append(static_cast<qsizetype>(i) < series_experiments_.size() ? series_experiments_[static_cast<qsizetype>(i)] : QString());
         } else {
             texts.append(i < files_.size() ? QFileInfo(QString::fromStdString(files_[i])).fileName() : QString());
         }
@@ -546,8 +678,11 @@ void ScanViewModel::setRowsByIndex(bool on) {
 void ScanViewModel::placePattern(Pattern& pattern) {
     pattern.generation = ++pattern_generation_;
     pattern.excluded_shown.clear();
-    // A scan's datasets share the template's background; a joint fit's experiment keeps its own.
-    if (!joint_) {
+    // A scan's datasets share the template's background; a joint fit's experiment keeps its own; a series' point has
+    // none drawn.
+    if (series_) {
+        pattern.background.clear();
+    } else if (!joint_) {
         pattern.background.clear();
         if (template_bx_.size() >= 2) {
             pattern.background.reserve(pattern.x.size());
@@ -580,7 +715,7 @@ void ScanViewModel::placePattern(Pattern& pattern) {
             b = std::max(ca, cb);
         }
     };
-    if (joint_) {
+    if (joint_ || series_) {
         pattern.shown = pattern.d;
         std::vector<double> xs, ds;
         for (std::size_t i = 0; i < pattern.x.size() && i < pattern.d.size(); ++i) {
@@ -638,7 +773,7 @@ void ScanViewModel::placeRange() {
 }
 
 void ScanViewModel::publishBackground() {
-    const bool any = joint_ ? std::any_of(patterns_.begin(), patterns_.end(),
+    const bool any = series_ ? false : joint_ ? std::any_of(patterns_.begin(), patterns_.end(),
                                           [](const Pattern& pattern) { return !pattern.background.empty(); })
                             : template_bx_.size() >= 2;
     publish(background_available_, any, &ScanViewModel::backgroundAvailableChanged);
@@ -646,7 +781,9 @@ void ScanViewModel::publishBackground() {
 
 // Every dataset on the axis shown, its range and its title.
 void ScanViewModel::placeAxis() {
-    if (!joint_) {
+    if (series_) {
+        publish(d_available_, true, &ScanViewModel::dAvailableChanged);
+    } else if (!joint_) {
         publish(d_available_, template_x_.size() >= 2, &ScanViewModel::dAvailableChanged);
     }
     // d when asked for, and always for experiments that share no native axis, once it is given.

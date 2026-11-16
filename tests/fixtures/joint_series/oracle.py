@@ -80,7 +80,7 @@ def category(text, tag, expected, sigma, *, rule='exact'):
         row = names.index('other')
     value, error = token_pair(tokens[row])
     if rule == 'exact':
-        # ADR-0088 point 4, incorporated by ADR-0132 point 2, retains round-trip derived tokens.
+        # ADR-0088 point 4, incorporated by ADR-0133 point 2, retains round-trip derived tokens.
         assert value == pytest.approx(expected, rel=1e-10, abs=1e-10), (
             'Derived category values must retain the exact independent expression'
         )

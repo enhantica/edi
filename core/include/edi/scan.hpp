@@ -6,6 +6,7 @@
 #include <filesystem>
 #include <functional>
 #include <map>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <unordered_map>
@@ -214,6 +215,15 @@ std::vector<std::string> declare_series_of_joint_fits(Project& project, const st
 /// value; 1 where neither is a positive finite number. In project order.
 std::vector<double> series_point_scales(const Project& project, const std::string& point);
 
+/// ADR-0088: what a series of joint fits' point wrote for its experiments' own parameters, from
+/// `analysis/results_experiments.csv`, by unique parameter name: the value and its s.u. (none where the row says `nan`).
+/// Empty before the point is fitted, or for a scan of one experiment.
+struct SeriesPointValue {
+    double value = 0.0;
+    std::optional<double> uncertainty;
+};
+std::map<std::string, SeriesPointValue> series_point_values(const Project& project, const std::string& point);
+
 /// ADR-0089 point 5: the summary of one Map or Stacked row of a series over [d_min, d_max] at `columns` columns: the
 /// point's pattern of each experiment in `experiments` (places in project order), read from its file on the d axis by
 /// that experiment's calibration as fitted at the point (the template's before; crysta's rule for `_data.d_spacing`)
@@ -223,6 +233,15 @@ std::vector<double> series_point_scales(const Project& project, const std::strin
 ScanColumns series_row_columns(const Project& project, const ScanDatasets& datasets, std::size_t point,
                                const std::vector<std::size_t>& experiments, const std::vector<double>& scales,
                                double d_min, double d_max, std::size_t columns);
+
+/// ADR-0089 point 5: one row of a series as a pattern on the d axis for the Stacked and Map views: the point's pattern
+/// of each experiment in `experiments` (places in project order), put on d as series_row_columns does and divided by
+/// its entry in `scales`, the experiments' points together in order of d. Throws as series_row_columns does.
+struct SeriesRowPattern {
+    std::vector<double> d, intensity;
+};
+SeriesRowPattern series_row_pattern(const Project& project, const ScanDatasets& datasets, std::size_t point,
+                                    const std::vector<std::size_t>& experiments, const std::vector<double>& scales);
 
 /// A series of joint fits' per-experiment parameters (ADR-0089): the value columns of `analysis/results_experiments.csv`,
 /// by their names without the datablock, in the file's order; empty for a scan of one experiment or without the file.

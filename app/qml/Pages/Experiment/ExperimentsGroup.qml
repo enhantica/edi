@@ -15,9 +15,9 @@ import edi.app
 // experiments, one current, each with how the last fit ended on it (Fit) and the file its data is in; under
 // the table the selected experiment's type (ExperimentTypeGroup), then Create experiment (a new experiment without
 // data, a simulation) and Load experiment (`.edi` block files, several at once, each with its type, data and
-// parameters); measured data comes in through the Measured data group below. A row made with Create experiment reads Load data… in its Data file cell until data is loaded
-// into it: a plain two- or three-column file whose rows become its measured data. Clicking a file name loads another
-// file in its place. Create, Load and Load data are each one undoable step.
+// parameters). Each row's Data file cell loads its measured data: Load data… ▾ while it has none, the file's name and
+// ⋯ to replace it once it has (the owner, 2026-11-16). A series of joint fits is one row, opened to a grid of its
+// points × banks. Start marks the experiment a scan starts from. Create, Load and Load data are each one undoable step.
 SideBarGroup {
     id: group
     property var pickerLife: ({
@@ -29,12 +29,17 @@ SideBarGroup {
     // A scan project lists its datasets: No. · Fit · Datablock · File · one column per extract rule, with no
     // colour column and no remove button (one template experiment shows them all).
     readonly property bool scan: project !== null && project.scan
+    // A series of joint fits (edi ADR-0088): one row, its grid opened under the table.
+    readonly property bool series: project !== null && project.series
+    property bool seriesOpen: true
     // One column per extract rule, with its unit, from the table's own model. The table lays a row's cells out
     // by their place among the header's, so the header and each row repeat over the same list.
     readonly property var scanColumns: project ? project.experiments.columns : []
     // The Fit column is as wide as its title or its icon, so the Fit icon sits as close to the colour icon as the
     // Structures table's icon to its name: one margin between them, not each column's own (the owner, 2026-10-11). A
     // right margin as wide as a table's edge margin then keeps the datablock names off it (the owner, 2026-10-24).
+    // The Start column is as wide as its title.
+    readonly property real startColumnWidth: Math.ceil(startTitle.advanceWidth) + EaStyle.Sizes.tableColumnSpacing * 2
     readonly property real fitColumnWidth: Math.ceil(Math.max(fitTitle.advanceWidth, EaStyle.Sizes.fontPixelSize * 1.15)) + EaStyle.Sizes.tableColumnSpacing
 
     objectName: "group.experiments"
@@ -44,6 +49,12 @@ SideBarGroup {
     // Open at the start, unlike the category groups (owner, 2026-10-05; edi ADR-0017 §3).
     collapsed: false
 
+    TextMetrics {
+        id: startTitle
+        font.family: EaStyle.Fonts.fontFamily
+        font.pixelSize: EaStyle.Sizes.fontPixelSize
+        text: qsTr("Start")
+    }
     TextMetrics {
         id: fitTitle
         font.family: EaStyle.Fonts.fontFamily
@@ -60,15 +71,21 @@ SideBarGroup {
             defaultInfoText: qsTr("No experiments yet")
             sourceModel: group.project ? group.project.experiments : null
             marksCurrentRow: true
-            currentRow: group.project ? group.project.currentExperimentIndex : -1
+            currentRow: group.series ? 0 : group.project ? group.project.currentExperimentIndex : -1
             onRowActivated: row => ApplicationInfo.activateFormBlock(row, false)
 
-            columns: [numberColumnWidth, group.scan ? 0.001 : AppSizes.iconOnlyColumnWidth, group.scan ? AppSizes.iconOnlyColumnWidth : group.fitColumnWidth, -1, -1, group.scanColumns.length ? group.scanColumns.length * AppSizes.dataColumnWidth * 1.4 : 0.001, group.scan ? 0.001 : AppSizes.iconColumnWidth]
+            columns: [numberColumnWidth, group.scan ? group.startColumnWidth : 0.001, group.scan ? 0.001 : AppSizes.iconOnlyColumnWidth, group.scan ? AppSizes.iconOnlyColumnWidth : group.fitColumnWidth, -1, -1, group.scanColumns.length ? group.scanColumns.length * AppSizes.dataColumnWidth * 1.4 : 0.001, group.scan ? 0.001 : AppSizes.iconColumnWidth]
 
             header: EaComponents.ListViewHeader {
                 EaComponents.ListViewLabel {
                     elide: Text.ElideRight
                     horizontalAlignment: Text.AlignHCenter
+                }
+                EaComponents.ListViewLabel {
+                    elide: Text.ElideRight
+                    horizontalAlignment: Text.AlignHCenter
+                    visible: group.scan
+                    text: qsTr("Start")
                 }
                 EaComponents.ListViewLabel {
                     elide: Text.ElideRight
@@ -139,6 +156,28 @@ SideBarGroup {
                     marksCurrentRow: true
                     text: row.index + 1
                 }
+                // The experiment a scan starts from (replaces Use as template; the owner, 2026-11-16): a scan's
+                // template dataset; a series starts from its experiments' own values, its one row always marked.
+                Item {
+                    property int horizontalAlignment: Text.AlignHCenter
+                    height: parent ? parent.height : 0
+                    EaElements.RadioButton {
+                        objectName: `experiments.start.${row.index}`
+                        anchors.centerIn: parent
+                        visible: group.scan
+                        enabled: !group.series
+                        checked: group.series || row.isTemplate
+                        EaElements.ToolTip {
+                            text: group.series ? qsTr("Each point of the series starts from the previous point's fitted values") : qsTr("The sequential fit starts from this dataset's fitted values")
+                            requested: parent.hovered
+                        }
+                        onClicked: {
+                            if (!group.series && !row.isTemplate)
+                                group.project.useAsTemplate(row.index);
+                            checked = Qt.binding(() => group.series || row.isTemplate);
+                        }
+                    }
+                }
                 // The block's icon in its colour (easydiffractionbeta's colour column; ADR-0017 §8).
                 IconCell {
                     horizontalAlignment: Text.AlignHCenter
@@ -166,46 +205,113 @@ SideBarGroup {
                     objectName: `experiments.name.${row.index}`
                     horizontalAlignment: Text.AlignLeft
                     value: row.name
+                    readOnly: group.series
                     onActiveFocusChanged: ApplicationInfo.finishUiEvent(12, undefined)
                     onCommitted: text => row.experiment.name = text
                 }
-                // The data's file: the experiment's own `.edi`, which holds its data, or a scan dataset's data file,
-                // the template dataset's followed by the word "template" in the accent blue, as in the selector;
-                // Load data… without data.
+                // The data's file: the experiment's own `.edi`, which holds its data, or a scan dataset's file with
+                // "template" after the template's; Load data… ▾ without data, the file and ⋯ to replace it with data
+                // (the owner, 2026-11-16). A series' row: its caret opening the grid, its summary and file counts.
                 Item {
                     id: fileCell
 
                     property int horizontalAlignment: Text.AlignLeft
+                    readonly property bool empty: !group.scan && row.experiment !== null && row.experiment.calculationOnly
                     height: parent ? parent.height : 0
 
-                    // The data file's name, or that there is none yet: loading moved to the Load menu below (the
-                    // owner, 2026-11-03).
                     Row {
                         height: parent.height
                         spacing: EaStyle.Sizes.fontPixelSize * 0.5
+                        visible: !fileCell.empty
 
+                        EaComponents.ListViewButton {
+                            objectName: `experiments.seriesToggle.${row.index}`
+                            visible: group.series
+                            fontIcon: group.seriesOpen ? "caret-down" : "caret-right"
+                            ToolTip.text: group.seriesOpen ? qsTr("Hide the series' points") : qsTr("Show the series' points and banks")
+                            onClicked: group.seriesOpen = !group.seriesOpen
+                        }
                         EaComponents.ListViewLabel {
-                            readonly property bool empty: row.experiment !== null && row.experiment.calculationOnly
-
                             objectName: `experiments.file.${row.index}`
-                            width: Math.min(implicitWidth, fileCell.width - (templateTag.visible ? templateTag.width + parent.spacing : 0))
+                            width: Math.min(implicitWidth, fileCell.width - (templateTag.visible ? templateTag.width + parent.spacing : 0) - (counts.visible ? counts.width + parent.spacing : 0) - (moreButton.visible ? moreButton.width + parent.spacing : 0) - (group.series ? EaStyle.Sizes.tableRowHeight + parent.spacing : 0))
                             height: parent.height
                             horizontalAlignment: Text.AlignLeft
                             elide: Text.ElideRight
-                            color: empty ? EaStyle.Colors.themeForegroundMinor : EaStyle.Colors.themeForeground
-                            text: empty ? qsTr("— no data yet") : row.file
-                            ToolTip.text: empty ? qsTr("Load measured data with the Load button below") : row.file
+                            text: row.file
+                            ToolTip.text: row.file
                         }
                         EaComponents.ListViewLabel {
                             id: templateTag
                             objectName: `experiments.template.${row.index}`
-                            visible: group.scan && row.isTemplate
+                            visible: group.scan && !group.series && row.isTemplate
                             width: implicitWidth
                             height: parent.height
                             elide: Text.ElideRight
                             color: EaStyle.Colors.themeAccent
                             text: Session.label("sequential_fit.template_file")
                         }
+                        // The series' files: loaded, changed since their fit, missing.
+                        Row {
+                            id: counts
+                            readonly property var numbers: group.series && group.project && group.project.seriesRevision >= 0 ? group.project.seriesCounts() : [0, 0, 0]
+                            visible: group.series
+                            anchors.verticalCenter: parent.verticalCenter
+                            spacing: EaStyle.Sizes.fontPixelSize * 0.4
+                            Repeater {
+                                model: [{
+                                        n: counts.numbers[0],
+                                        color: EaStyle.Colors.green,
+                                        word: qsTr("loaded")
+                                    }, {
+                                        n: counts.numbers[1],
+                                        color: EaStyle.Colors.orange,
+                                        word: qsTr("changed")
+                                    }, {
+                                        n: counts.numbers[2],
+                                        color: EaStyle.Colors.red,
+                                        word: qsTr("missing")
+                                    }]
+                                delegate: EaElements.Label {
+                                    required property var modelData
+                                    visible: modelData.n > 0
+                                    color: modelData.color
+                                    text: `${modelData.n} ${modelData.word}`
+                                }
+                            }
+                        }
+                        // ⋯: replace the data with another file, folder or collection entry.
+                        EaComponents.ListViewButton {
+                            id: moreButton
+                            objectName: `experiments.dataMore.${row.index}`
+                            visible: !group.scan && row.experiment !== null && row.experiment.canLoadData
+                            fontIcon: "ellipsis-h"
+                            ToolTip.text: qsTr("Replace the measured data")
+                            onClicked: group.openDataMenu(row.experiment, moreButton, true)
+                        }
+                    }
+                    // Load data… ▾ in an empty experiment's cell (the owner, 2026-11-16).
+                    EaElements.Button {
+                        id: loadDataButton
+                        objectName: `experiments.loadData.${row.index}`
+                        visible: fileCell.empty
+                        anchors.verticalCenter: parent.verticalCenter
+                        height: parent.height * 0.85
+                        enabled: row.experiment !== null && row.experiment.canLoadData
+                        text: qsTr("Load data…")
+                        rightPadding: loadDataCaret.width + EaStyle.Sizes.fontPixelSize * 1.25
+                        // The app's caret, as the Load button below draws it (the owner, 2026-11-16).
+                        EaElements.Label {
+                            id: loadDataCaret
+                            anchors.right: parent.right
+                            anchors.rightMargin: EaStyle.Sizes.fontPixelSize * 0.75
+                            anchors.verticalCenter: parent.verticalCenter
+                            font.family: EaStyle.Fonts.iconsFamily
+                            font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.9
+                            color: loadDataButton.enabled ? EaStyle.Colors.themeForeground : EaStyle.Colors.themeForegroundDisabled
+                            text: "caret-down"
+                        }
+                        ToolTip.text: qsTr("Load measured data into %1 from a file, a folder of a series or the web").arg(row.name)
+                        onClicked: group.openDataMenu(row.experiment, loadDataButton, false)
                     }
                 }
                 // What the scan's extract rules take from the dataset, with their units.
@@ -244,27 +350,208 @@ SideBarGroup {
             }
         }
 
+        // A series' points × banks (the owner, 2026-11-16): each bank's file at each point, loaded, changed since the
+        // point's fit, or missing, and the point's fit. A cell shows its point and bank in the charts.
+        Column {
+            id: seriesGrid
+            objectName: "experiments.seriesGrid"
+            readonly property real cellWidth: EaStyle.Sizes.fontPixelSize * 3.2
+            readonly property real pointWidth: EaStyle.Sizes.fontPixelSize * 9
+            readonly property real fitWidth: EaStyle.Sizes.fontPixelSize * 7
+            readonly property var banks: group.project ? group.project.bankLabels : []
+            readonly property real rowWidth: pointWidth + banks.length * cellWidth + fitWidth
+            visible: group.series && group.seriesOpen
+            width: EaStyle.Sizes.sideBarContentWidth
+            spacing: EaStyle.Sizes.fontPixelSize * 0.3
+
+            Flickable {
+                id: gridFlick
+                width: parent.width
+                height: gridHeader.height + gridList.height
+                contentWidth: seriesGrid.rowWidth
+                contentHeight: height
+                flickableDirection: Flickable.HorizontalFlick
+                boundsBehavior: Flickable.StopAtBounds
+                clip: true
+                ScrollBar.horizontal: ScrollBar {
+                    policy: seriesGrid.rowWidth > gridFlick.width ? ScrollBar.AsNeeded : ScrollBar.AlwaysOff
+                }
+
+                Column {
+                    Row {
+                        id: gridHeader
+                        height: EaStyle.Sizes.tableRowHeight
+                        EaElements.Label {
+                            width: seriesGrid.pointWidth
+                            anchors.verticalCenter: parent.verticalCenter
+                            color: EaStyle.Colors.themeForegroundMinor
+                            elide: Text.ElideRight
+                            text: group.project ? group.project.seriesVariable : ""
+                        }
+                        Repeater {
+                            model: seriesGrid.banks
+                            delegate: EaElements.Label {
+                                id: bankTitle
+                                required property string modelData
+                                required property int index
+                                width: seriesGrid.cellWidth
+                                anchors.verticalCenter: parent.verticalCenter
+                                horizontalAlignment: Text.AlignHCenter
+                                color: EaStyle.Colors.themeForegroundMinor
+                                text: qsTr("Bank %1").arg(bankTitle.index + 1)
+                                HoverHandler {
+                                    id: bankHover
+                                }
+                                EaElements.ToolTip {
+                                    text: bankTitle.modelData
+                                    requested: bankHover.hovered
+                                }
+                            }
+                        }
+                        EaElements.Label {
+                            width: seriesGrid.fitWidth
+                            anchors.verticalCenter: parent.verticalCenter
+                            leftPadding: EaStyle.Sizes.fontPixelSize * 0.5
+                            color: EaStyle.Colors.themeForegroundMinor
+                            text: qsTr("Fit")
+                        }
+                    }
+                    ListView {
+                        id: gridList
+                        objectName: "experiments.seriesGrid.points"
+                        width: seriesGrid.rowWidth
+                        height: Math.min(count, 8) * EaStyle.Sizes.tableRowHeight
+                        clip: true
+                        boundsBehavior: Flickable.StopAtBounds
+                        model: group.series ? group.project.seriesPointCount : 0
+                        ScrollBar.vertical: ScrollBar {
+                            policy: gridList.count > 8 ? ScrollBar.AsNeeded : ScrollBar.AlwaysOff
+                        }
+                        delegate: Row {
+                            id: pointRow
+                            required property int index
+                            readonly property int revision: group.project ? group.project.seriesRevision : 0
+                            readonly property var cells: revision >= 0 ? group.project.pointCells(pointRow.index) : []
+                            readonly property bool current: group.project !== null && group.project.currentExperimentIndex === pointRow.index
+                            height: EaStyle.Sizes.tableRowHeight
+                            EaElements.Label {
+                                width: seriesGrid.pointWidth
+                                anchors.verticalCenter: parent.verticalCenter
+                                elide: Text.ElideRight
+                                font.bold: pointRow.current
+                                text: pointRow.revision >= 0 ? group.project.pointLabel(pointRow.index) : ""
+                            }
+                            Repeater {
+                                model: pointRow.cells
+                                delegate: Rectangle {
+                                    id: cell
+                                    required property int modelData
+                                    required property int index
+                                    objectName: `experiments.seriesCell.${pointRow.index}.${cell.index}`
+                                    readonly property bool shown: pointRow.current && group.project.currentBank === cell.index
+                                    width: seriesGrid.cellWidth
+                                    height: EaStyle.Sizes.tableRowHeight
+                                    color: "transparent"
+                                    border.width: shown ? 2 : 0
+                                    border.color: EaStyle.Colors.themeAccent
+                                    radius: EaStyle.Sizes.fontPixelSize * 0.2
+                                    // The app's icons, as the Fit column draws an outcome: loaded, changed, missing (a ring).
+                                    IconCell {
+                                        anchors.fill: parent
+                                        icon: cell.modelData === 0 ? "circle" : cell.modelData === 1 ? "adjust" : ""
+                                        ring: cell.modelData === 2
+                                        iconColor: String(cell.modelData === 0 ? EaStyle.Colors.green : cell.modelData === 1 ? EaStyle.Colors.orange : EaStyle.Colors.red)
+                                    }
+                                    MouseArea {
+                                        anchors.fill: parent
+                                        enabled: cell.modelData !== 2
+                                        cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
+                                        onClicked: group.project.showPointBank(pointRow.index, cell.index)
+                                    }
+                                }
+                            }
+                            EaElements.Label {
+                                readonly property string problem: pointRow.revision >= 0 ? group.project.pointProblem(pointRow.index) : ""
+                                readonly property string reliability: pointRow.revision >= 0 ? group.project.pointReliability(pointRow.index) : ""
+                                width: seriesGrid.fitWidth
+                                anchors.verticalCenter: parent.verticalCenter
+                                leftPadding: EaStyle.Sizes.fontPixelSize * 0.5
+                                elide: Text.ElideRight
+                                color: problem !== "" ? EaStyle.Colors.red : reliability !== "" ? String(FitOutcomes.color(group.project.pointOutcome(pointRow.index))) : EaStyle.Colors.themeForegroundMinor
+                                text: problem !== "" ? qsTr("not fitted") : reliability !== "" ? reliability : qsTr("not fitted")
+                                HoverHandler {
+                                    id: fitHover
+                                }
+                                EaElements.ToolTip {
+                                    text: parent.problem
+                                    requested: fitHover.hovered
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            // The legend, with the cells' own icons.
+            Flow {
+                width: parent.width
+                spacing: EaStyle.Sizes.fontPixelSize * 0.5
+                Repeater {
+                    model: [{
+                            icon: "circle",
+                            ring: false,
+                            color: EaStyle.Colors.green,
+                            word: qsTr("loaded")
+                        }, {
+                            icon: "adjust",
+                            ring: false,
+                            color: EaStyle.Colors.orange,
+                            word: qsTr("changed since the fit")
+                        }, {
+                            icon: "",
+                            ring: true,
+                            color: EaStyle.Colors.red,
+                            word: qsTr("missing")
+                        }]
+                    delegate: Row {
+                        required property var modelData
+                        height: EaStyle.Sizes.tableRowHeight * 0.8
+                        spacing: EaStyle.Sizes.fontPixelSize * 0.25
+                        IconCell {
+                            width: EaStyle.Sizes.fontPixelSize * 1.2
+                            icon: parent.modelData.icon
+                            ring: parent.modelData.ring
+                            iconColor: String(parent.modelData.color)
+                        }
+                        EaElements.Label {
+                            anchors.verticalCenter: parent.verticalCenter
+                            color: EaStyle.Colors.themeForegroundMinor
+                            text: parent.modelData.word
+                        }
+                    }
+                }
+                EaElements.Label {
+                    height: EaStyle.Sizes.tableRowHeight * 0.8
+                    verticalAlignment: Text.AlignVCenter
+                    color: EaStyle.Colors.themeForegroundMinor
+                    text: qsTr("· a cell shows its point and bank in the charts")
+                }
+            }
+        }
+
+        DataStatusRows {
+            width: EaStyle.Sizes.sideBarContentWidth
+            project: group.project
+        }
+
         ExperimentTypeGroup {
             visible: group.project !== null && group.project.currentExperiment !== null
             project: group.project
             experiment: group.project ? group.project.currentExperiment : null
             experimentIndex: group.project ? group.project.currentExperimentIndex : -1
         }
-        // A scan's template is chosen here: the selected dataset becomes it (the owner, 2026-11-04).
-        EaElements.SideBarButton {
-            objectName: "experiments.useAsTemplate"
-            visible: group.scan
-            width: EaStyle.Sizes.sideBarContentWidth
-            enabled: group.project !== null && group.project.currentExperimentIndex >= 0 && group.project.currentExperimentIndex !== group.project.templateIndex
-            fontIcon: "star"
-            text: qsTr("Use as template")
-            ToolTip.text: qsTr("Make the selected dataset the scan's template: the template experiment takes its data")
-            onClicked: group.project.useAsTemplate(group.project.currentExperimentIndex)
-        }
-
         // Create, Load ▾ and Duplicate side by side at equal widths, Create first (the owner, 2026-10-11, 2026-11-03,
-        // 2026-11-14). Load brings a full experiment from a file or from the web; measured data for the selected
-        // experiment is the Measured data group's (MeasuredDataGroup).
+        // 2026-11-14). Load brings a full experiment from a file or from the web; measured data goes in through each
+        // row's Data file cell.
         Row {
             id: buttons
 
@@ -347,6 +634,85 @@ SideBarGroup {
         }
     }
 
+    // One Load data menu for every row (the owner, 2026-11-16): the same choices as before, into the row's experiment.
+    function openDataMenu(experiment, anchor, replacing) {
+        dataMenu.target = experiment;
+        dataMenu.replacing = replacing;
+        dataMenu.popup(anchor, 0, anchor.height);
+    }
+    EaElements.Menu {
+        id: dataMenu
+        objectName: "experiments.load.dataMenu"
+        property ExperimentViewModel target: null
+        property bool replacing: false
+        bottomPadding: 0
+        // As wide as its widest item, never the row's cell: every label and hint shows whole (LoadMenuItem).
+        width: Math.max(EaStyle.Sizes.fontPixelSize * 24, implicitWidth)
+        readonly property real labelWidth: Math.max(EaStyle.Sizes.fontPixelSize * 7.5, Math.ceil(dataLabels.advanceWidth) + EaStyle.Sizes.fontPixelSize * 0.25)
+        TextMetrics {
+            id: dataLabels
+            font.family: EaStyle.Fonts.fontFamily
+            font.pixelSize: EaStyle.Sizes.fontPixelSize
+            text: qsTr("Several files as a series…")
+        }
+
+        LoadMenuHeader {
+            first: true
+            text: dataMenu.replacing ? qsTr("Replace measured data") : qsTr("Measured data")
+        }
+        LoadMenuItem {
+            objectName: "experiments.load.dataFile"
+            labelWidth: dataMenu.labelWidth
+            fontIcon: "file"
+            text: qsTr("File…")
+            hint: ".xye .xy .dat .txt .csv · .int .hkl"
+            toolTip: qsTr("One file, or several: several ask whether they are separate experiments, a scan or a series")
+            onTriggered: {
+                const target = dataMenu.target;
+                group.confirmScanReplacement(() => group.chooseData(target));
+            }
+        }
+        // Several files, asked as a series of joint fits first (the owner, 2026-11-16).
+        LoadMenuItem {
+            objectName: "experiments.load.dataSeries"
+            labelWidth: dataMenu.labelWidth
+            fontIcon: "clone"
+            text: qsTr("Several files as a series…")
+            hint: qsTr("Series of joint fits")
+            toolTip: qsTr("Choose the files of every point: they are grouped by name into one experiment per bank")
+            onTriggered: {
+                const target = dataMenu.target;
+                group.seriesWanted = true;
+                group.confirmScanReplacement(() => group.chooseData(target));
+            }
+        }
+        LoadMenuItem {
+            objectName: "experiments.load.dataFolder"
+            labelWidth: dataMenu.labelWidth
+            enabled: group.project !== null && !group.project.listingDatasetFolder
+            fontIcon: "folder-open"
+            text: qsTr("Folder as a series…")
+            hint: Session.optionLabel("fitting_mode.type", "sequential")
+            toolTip: qsTr("Load every dataset in a folder, then choose Sequential in Analysis")
+            onTriggered: {
+                const target = dataMenu.target;
+                group.confirmScanReplacement(() => ApplicationInfo.chooseDatasetFolder(dataFolderDialog, group.project, target));
+            }
+        }
+        LoadMenuItem {
+            objectName: "experiments.load.dataWeb"
+            labelWidth: dataMenu.labelWidth
+            fontIcon: "globe"
+            text: qsTr("From the web…")
+            hint: "EasyDiffraction"
+            toolTip: qsTr("Search EasyDiffraction's collection for measured data")
+            onTriggered: {
+                const target = dataMenu.target;
+                group.confirmScanReplacement(() => onlineLoad.openFor("data", target));
+            }
+        }
+    }
+
     OnlineLoadDialog {
         id: onlineLoad
         project: group.project
@@ -369,7 +735,7 @@ SideBarGroup {
         dialog.open();
     }
 
-    // Measured data for the selected experiment from a folder of datasets or from the web (MeasuredDataGroup).
+    // Measured data for the selected experiment from a folder of datasets or from the web.
     function chooseFolderForSelected() {
         if (project !== null && project.currentExperiment !== null)
             ApplicationInfo.chooseDatasetFolder(dataFolderDialog, project, project.currentExperiment);
@@ -442,6 +808,7 @@ SideBarGroup {
                 group.askDatasets(experiment, files);
                 return;
             }
+            group.seriesWanted = false;  // one file is no series
             ApplicationInfo.acceptExperimentDataFile();
         }
         onRejected: ApplicationInfo.rejectExperimentDataFile()
@@ -457,14 +824,19 @@ SideBarGroup {
     // Load N datasets as (the owner, 2026-11-04): separate experiments, each a copy of the selected experiment's setup
     // named after its file, or one experiment with a scan, the selected experiment its template and the files its
     // datasets. Up to five files default to separate experiments, more to a scan.
+    // Set by Several files as a series…: the next choice of several files is asked with that answer first.
+    property bool seriesWanted: false
     function askDatasets(experiment, files, origins = []) {
+        const series = group.seriesWanted;
+        group.seriesWanted = false;
         // Copied by default for a small set, linked above 20 files or 50 MB (the owner, 2026-11-04). Files from a data
         // collection carry their entry and digest (`origins`): linked, they are downloaded again when a fit needs them.
         const dialog = datasetsComponent.createObject(Overlay.overlay, {
             experiment: experiment,
             files: files,
             origins: origins,
-            asScan: files.length > 5,
+            asScan: !series && files.length > 5,
+            asSeries: series,
             copy: files.length <= 20 && group.project.filesBytes(files) <= 50 * 1024 * 1024
         }) as AppDialog;
         dialog.open();
@@ -500,6 +872,9 @@ SideBarGroup {
             property var files: []
             property ExperimentViewModel experiment: null
             property bool asScan: false
+            // A series of joint fits (edi ADR-0088 point 1): the files grouped by name into one experiment each, fitted
+            // point by point; its folder is linked.
+            property bool asSeries: false
             property bool copy: true
             property var origins: []
             // A scan's files are read from its folder, so a collection's files are copied for one (edi ADR-0069).
@@ -512,6 +887,10 @@ SideBarGroup {
             contentHeight: datasetsColumn.implicitHeight
             onClosed: destroy()
             onAccepted: {
+                if (group.project !== null && datasetsChoice.experiment !== null && datasetsChoice.asSeries) {
+                    group.project.loadSeriesOfJointFits(datasetsChoice.experiment, datasetsChoice.files);
+                    return;
+                }
                 if (group.project !== null && datasetsChoice.experiment !== null)
                     group.project.loadDatasets(datasetsChoice.experiment, datasetsChoice.files, datasetsChoice.asScan, datasetsChoice.copy || datasetsChoice.mustCopy, datasetsChoice.origins);
             }
@@ -527,15 +906,31 @@ SideBarGroup {
                     width: datasetsColumn.width
                     // Named by the fit each choice is for (the owner, 2026-11-04).
                     text: qsTr("Joint fit: one experiment per file, fitted together")
-                    checked: !datasetsChoice.asScan
-                    onClicked: datasetsChoice.asScan = false
+                    checked: !datasetsChoice.asScan && !datasetsChoice.asSeries
+                    onClicked: {
+                        datasetsChoice.asScan = false;
+                        datasetsChoice.asSeries = false;
+                    }
                 }
                 ChoiceRadioButton {
                     objectName: "datasets.scan"
                     width: datasetsColumn.width
                     text: qsTr("Sequential fit: one experiment for all datasets")
-                    checked: datasetsChoice.asScan
-                    onClicked: datasetsChoice.asScan = true
+                    checked: datasetsChoice.asScan && !datasetsChoice.asSeries
+                    onClicked: {
+                        datasetsChoice.asScan = true;
+                        datasetsChoice.asSeries = false;
+                    }
+                }
+                ChoiceRadioButton {
+                    objectName: "datasets.series"
+                    width: datasetsColumn.width
+                    text: qsTr("Series of joint fits: one experiment per file name pattern, each point fitted jointly")
+                    checked: datasetsChoice.asSeries
+                    onClicked: {
+                        datasetsChoice.asSeries = true;
+                        datasetsChoice.asScan = false;
+                    }
                 }
                 EaElements.Label {
                     width: datasetsColumn.width
@@ -543,8 +938,15 @@ SideBarGroup {
                     visible: datasetsChoice.asScan
                     text: qsTr("First fit the template dataset in Single mode. When it is ready, choose Sequential in Analysis to fit the folder. Evolution is available as soon as the scan is loaded.")
                 }
+                EaElements.Label {
+                    width: datasetsColumn.width
+                    wrapMode: Text.Wrap
+                    visible: datasetsChoice.asSeries
+                    text: qsTr("The files' folder is linked and each experiment shows its first point. Choose Sequential in Analysis to fit the points one after another.")
+                }
                 EaElements.CheckBox {
                     id: copyBox
+                    visible: !datasetsChoice.asSeries
                     objectName: "datasets.copy"
                     // What the choice means is its tool tip (the owner, 2026-11-04).
                     ToolTip.text: datasetsChoice.asScan ? (datasetsChoice.copy ? qsTr("The files are copied into the project's folder; the project must be saved and hold this one experiment.") : qsTr("The scan reads the files where they are; the project keeps their folder's location.")) : (datasetsChoice.copy ? qsTr("Each experiment holds its data in the project.") : datasetsChoice.origins.length > 0 ? qsTr("Each experiment keeps its collection entry and downloads the file again when a fit needs it.") : qsTr("Each experiment reads its file where it is; the project keeps the file's location."))

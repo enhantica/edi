@@ -690,6 +690,18 @@ std::optional<Session::SaveOperation> Session::beginSave(bool wholeTree, bool st
     const bool linked = plan.value(QStringLiteral("linked")).toBool();
     operation.treeReceipt = true;
     operation.inputs = project_->linkedInputsKey(operation.treeReceipt);
+    // Save as already answered for its linked data: no question about it.
+    const QString answered = std::exchange(next_save_data_, QString());
+    if (linked && (answered == QLatin1String("copy") || answered == QLatin1String("linked"))) {
+        operation.include = answered == QLatin1String("copy");
+        if (operation.include) {
+            if (const QString why = project_->linkedDataUnavailable(); !why.isEmpty()) {
+                setLastError(why);
+                return std::nullopt;
+            }
+        }
+        return operation;
+    }
     if (plan.value(QStringLiteral("ask")).toBool()) {
         if (assistant_save_origin_ != 0 || project_->assistant_save_origin_ != 0) {
             // A question nobody answers would leave the assistant's save neither done nor refused.
@@ -714,6 +726,10 @@ std::optional<Session::SaveOperation> Session::beginSave(bool wholeTree, bool st
         }
     }
     return operation;
+}
+
+void Session::setNextSaveData(const QString& choice) {
+    next_save_data_ = choice == QLatin1String("copy") || choice == QLatin1String("linked") ? choice : QString();
 }
 
 void Session::queueReplan(const SaveOperation& operation) {

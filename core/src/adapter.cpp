@@ -2806,6 +2806,37 @@ double point_value(const std::map<std::string, std::map<std::string, double>>& c
 }
 }  // namespace
 
+std::map<std::string, SeriesPointValue> series_point_values(const Project& project, const std::string& point) {
+    std::map<std::string, SeriesPointValue> values;
+    const auto cells_of = point_experiment_cells(project, point);
+    if (cells_of.empty()) {
+        return values;
+    }
+    // A per-experiment column is the parameter's results column without its experiment's name.
+    for (const NamedSlot& slot : named_slots(const_cast<Project&>(project))) {
+        const std::string column = scan_results_column(slot.unique_name);
+        const std::size_t dot = column.find('.');
+        if (dot == std::string::npos) {
+            continue;
+        }
+        const auto row = cells_of.find(column.substr(0, dot));
+        if (row == cells_of.end()) {
+            continue;
+        }
+        const std::string own = column.substr(dot + 1);
+        const auto cell = row->second.find(own);
+        if (cell == row->second.end()) {
+            continue;
+        }
+        SeriesPointValue& value = values[slot.unique_name];
+        value.value = cell->second;
+        if (const auto su = row->second.find(own + ".uncertainty"); su != row->second.end()) {
+            value.uncertainty = su->second;
+        }
+    }
+    return values;
+}
+
 std::vector<double> series_point_scales(const Project& project, const std::string& point) {
     const auto cells_of = point_experiment_cells(project, point);
     std::vector<double> scales;
@@ -2826,47 +2857,81 @@ std::vector<double> series_point_scales(const Project& project, const std::strin
     return scales;
 }
 
+namespace {
+// One experiment's pattern at a point of a series on the d axis, divided by its scale: read from its file and put on
+// d by the point's own fitted calibration (the template's before the point is fitted), crysta's rule for
+// `_data.d_spacing`.
+std::pair<std::vector<double>, std::vector<double>> series_experiment_d(
+    const Project& project, const ScanDatasets& datasets, std::size_t point, std::size_t place, double scale,
+    const std::map<std::string, std::map<std::string, double>>& cells_of) {
+    if (place >= project.experiments.size()) {
+        throw std::out_of_range("series row: no experiment at place " + std::to_string(place));
+    }
+    const BraggPdExperiment& experiment = *project.experiments[place];
+    const BeamModeEnum mode = experiment.effective_beam_mode();
+    PdDataBase data = read_scan_dataset(datasets.directory, datasets.point_files.at(point).at(place), mode);
+    const std::vector<double>& x = data.axis();
+    const std::vector<double>& y = data.intensity_meas.get();
+    const InstrumentBase& instrument = experiment.instrument;
+    const crysta::BeamModeEnum kind = mode == BeamModeEnum::CONSTANT_WAVELENGTH
+                                          ? crysta::BeamModeEnum::ConstantWavelength
+                                          : crysta::BeamModeEnum::TimeOfFlight;
+    const std::string key = datablock_key(experiment.name, "experiment");
+    const double wavelength = point_value(cells_of, key, "instrument.wavelength",
+                                          instrument.setup_wavelength ? instrument.setup_wavelength->value.get()
+                                                                      : std::numeric_limits<double>::quiet_NaN());
+    const double offset =
+        point_value(cells_of, key, "instrument.d_to_tof_offset", instrument.calib_d_to_tof_offset.value.get());
+    const double linear =
+        point_value(cells_of, key, "instrument.d_to_tof_linear", instrument.calib_d_to_tof_linear.value.get());
+    const double quadratic = point_value(cells_of, key, "instrument.d_to_tof_quadratic",
+                                         instrument.calib_d_to_tof_quadratic.value.get());
+    std::vector<double> d(std::min(x.size(), y.size()));
+    std::vector<double> intensity(d.size());
+    for (std::size_t i = 0; i < d.size(); ++i) {
+        d[i] = crysta::measured_point_d_spacing(kind, x[i], offset, linear, quadratic, wavelength);
+        intensity[i] = y[i] / scale;
+    }
+    return {std::move(d), std::move(intensity)};
+}
+}  // namespace
+
 ScanColumns series_row_columns(const Project& project, const ScanDatasets& datasets, std::size_t point,
                                const std::vector<std::size_t>& experiments, const std::vector<double>& scales,
                                double d_min, double d_max, std::size_t columns) {
-    const std::vector<std::string>& files = datasets.point_files.at(point);
-    // The point's own fitted calibration, by experiment; the model's before the point is fitted.
     const auto cells_of = point_experiment_cells(project, datasets.files.at(point));
     std::vector<ScanColumns> parts;
     parts.reserve(experiments.size());
     for (const std::size_t place : experiments) {
-        if (place >= project.experiments.size()) {
-            throw std::out_of_range("series_row_columns: no experiment at place " + std::to_string(place));
-        }
-        const BraggPdExperiment& experiment = *project.experiments[place];
-        const BeamModeEnum mode = experiment.effective_beam_mode();
-        PdDataBase data = read_scan_dataset(datasets.directory, files.at(place), mode);
-        const std::vector<double>& x = data.axis();
-        const std::vector<double>& y = data.intensity_meas.get();
-        const InstrumentBase& instrument = experiment.instrument;
-        const crysta::BeamModeEnum kind = mode == BeamModeEnum::CONSTANT_WAVELENGTH
-                                              ? crysta::BeamModeEnum::ConstantWavelength
-                                              : crysta::BeamModeEnum::TimeOfFlight;
-        const double scale = place < scales.size() ? scales[place] : 1.0;
-        const std::string key = datablock_key(experiment.name, "experiment");
-        const double wavelength = point_value(cells_of, key, "instrument.wavelength",
-                                              instrument.setup_wavelength ? instrument.setup_wavelength->value.get()
-                                                                          : std::numeric_limits<double>::quiet_NaN());
-        const double offset =
-            point_value(cells_of, key, "instrument.d_to_tof_offset", instrument.calib_d_to_tof_offset.value.get());
-        const double linear =
-            point_value(cells_of, key, "instrument.d_to_tof_linear", instrument.calib_d_to_tof_linear.value.get());
-        const double quadratic = point_value(cells_of, key, "instrument.d_to_tof_quadratic",
-                                             instrument.calib_d_to_tof_quadratic.value.get());
-        std::vector<double> d(x.size());
-        std::vector<double> intensity(y.size());
-        for (std::size_t i = 0; i < x.size() && i < y.size(); ++i) {
-            d[i] = crysta::measured_point_d_spacing(kind, x[i], offset, linear, quadratic, wavelength);
-            intensity[i] = y[i] / scale;
-        }
+        const auto [d, intensity] = series_experiment_d(project, datasets, point, place,
+                                                        place < scales.size() ? scales[place] : 1.0, cells_of);
         parts.push_back(scan_columns(d, intensity, d_min, d_max, columns));
     }
     return merge_scan_columns(parts);
+}
+
+SeriesRowPattern series_row_pattern(const Project& project, const ScanDatasets& datasets, std::size_t point,
+                                    const std::vector<std::size_t>& experiments, const std::vector<double>& scales) {
+    const auto cells_of = point_experiment_cells(project, datasets.files.at(point));
+    std::vector<std::pair<double, double>> points;
+    for (const std::size_t place : experiments) {
+        const auto [d, intensity] = series_experiment_d(project, datasets, point, place,
+                                                        place < scales.size() ? scales[place] : 1.0, cells_of);
+        for (std::size_t i = 0; i < d.size(); ++i) {
+            if (std::isfinite(d[i])) {
+                points.emplace_back(d[i], intensity[i]);
+            }
+        }
+    }
+    std::sort(points.begin(), points.end());
+    SeriesRowPattern row;
+    row.d.reserve(points.size());
+    row.intensity.reserve(points.size());
+    for (const auto& [d, intensity] : points) {
+        row.d.push_back(d);
+        row.intensity.push_back(intensity);
+    }
+    return row;
 }
 
 std::vector<std::string> evolution_experiment_parameters(const Project& project) {

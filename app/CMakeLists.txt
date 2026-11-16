@@ -104,6 +104,7 @@ qt_add_qml_module(edi_app_module
         src/engine_setup.hpp src/engine_setup.cpp
         src/demo_driver.hpp src/demo_driver.cpp src/demo_documentation.cpp
         src/run_log.hpp src/run_log.cpp
+        src/stall_probe.hpp src/stall_probe.cpp
         src/item_locator.hpp src/item_locator.cpp
         src/view_rows.hpp src/view_rows.cpp
         src/user_action_log.hpp src/user_action_log.cpp
@@ -197,6 +198,7 @@ qt_add_qml_module(edi_app_module
         qml/Components/IconLine.qml
         qml/Components/IconTabButton.qml
         qml/Components/MainAreaBlockSelector.qml
+        qml/Components/SeriesSelectors.qml
         qml/Components/MainView.qml
         qml/Components/MeasCalcChart.qml
         qml/Components/NumberLabel.qml
@@ -279,7 +281,7 @@ qt_add_qml_module(edi_app_module
         qml/Pages/Experiment/ExperimentsGroup.qml
         qml/Pages/Experiment/InstrumentGroup.qml
         qml/Pages/Experiment/LinkedStructureGroup.qml
-        qml/Pages/Experiment/MeasuredDataGroup.qml
+        qml/Pages/Experiment/DataStatusRows.qml
         qml/Pages/Experiment/MeasuredRangeGroup.qml
         qml/Pages/Experiment/PeakExtrasGroup.qml
         qml/Pages/Experiment/BackgroundExtrasGroup.qml
@@ -337,6 +339,8 @@ target_link_libraries(edi_app_module
     PRIVATE ${EDI_GUI_BASE_TARGETS} Qt6::CorePrivate Qt6::QuickPrivate Qt6::QmlModelsPrivate)
 find_package(Qt6QmlPrivate REQUIRED)
 target_link_libraries(edi_app_module PRIVATE Qt6::QmlPrivate)
+# The stall probe names the modules of its stack samples (dladdr).
+target_link_libraries(edi_app_module PRIVATE ${CMAKE_DL_LIBS})
 if(EDI_APP_ASSISTANT)
     # The assistant's math rendering; nothing else draws formulas, so a build without the assistant has no math library.
     target_link_libraries(edi_app_module PRIVATE EdiMath::JKQTMathTextEdi)

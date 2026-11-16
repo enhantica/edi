@@ -823,6 +823,32 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     }
     // A scan opened from the file EDI_DEMO_SCAN_PROJECT names, its pages, then Fit and Reset, which stop the run when
     // disabled. Run only when asked (`--demo-only scan-open-`).
+    // The scale check's GUI stall probe (EDI_STALL_PROBE): a series of joint fits, EDI_DEMO_SCAN_PROJECT, opened, its
+    // Stacked and Map views shown, fitted to the end with each view in turn, then its Evolution. Run only when asked
+    // (`--demo-only stall-`).
+    // The synthetic 100-point series opened from the examples list (its collection entry downloaded), then shown on the
+    // Experiment page with its views. Run only when asked (`--demo-only examplecheck-`).
+    if (only.startsWith(QLatin1String("examplecheck-"))) {
+        steps_.push_back({"examplecheck-1-opened",
+                          QStringList{"resize:1480x800"} + open_example("pd-neut-tof_ncaf-wish-5bank_synthetic-100p")});
+        steps_.push_back({"examplecheck-2-experiment", {"appBar.tab.experiment", basic}});
+        steps_.push_back({"examplecheck-3-stacked", {"mainArea.tab.stacked"}});
+        // An experiment without data shows Load data… in its row: its menu, open.
+        steps_.push_back({"examplecheck-4-load-data-menu", open_example("pd-neut-cwl_lbco_simulation") +
+                                                            QStringList{"appBar.tab.experiment", basic,
+                                                                        "experiments.loadData.0"}});
+    }
+    if (only.startsWith(QLatin1String("stall-"))) {
+        steps_.push_back({"stall-1-opened",
+                          {"resize:1480x800", "open-project:" + qEnvironmentVariable("EDI_DEMO_SCAN_PROJECT"),
+                           "appBar.tab.experiment", basic}});
+        steps_.push_back({"stall-2-stacked", {"mainArea.tab.stacked"}});
+        steps_.push_back({"stall-3-map", {"mainArea.tab.map"}});
+        steps_.push_back({"stall-4-fitting", {analysis, basic, "mainArea.tab.stacked", "statusBar.fit.button",
+                                              "wait-files:30", "capture-now"}});
+        steps_.push_back({"stall-5-fitting-map", {"mainArea.tab.map", "wait-files:65", "capture-now"}});
+        steps_.push_back({"stall-6-fitted", {"mainArea.tab.evolution", "wait-files:100", "wait-fit"}});
+    }
     if (only.startsWith(QLatin1String("scan-open-"))) {
         steps_.push_back({"scan-open-1-opened",
                           {"resize:1280x800", "open-project:" + qEnvironmentVariable("EDI_DEMO_SCAN_PROJECT")}});

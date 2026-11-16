@@ -282,9 +282,9 @@
         },
         {
           "title": "Open the Load menu",
-          "text": "Click **Load ▾**.",
+          "text": "Click **Load data… ▾** in its Data file cell.",
           "page": "experiment",
-          "target": "experiments.load",
+          "target": "experiments.loadData.0",
           "check": "menu:experiments.load.dataWeb"
         },
         {
@@ -5618,10 +5618,10 @@
           "check": "web-row:experiment:pd-neut-tof_si-sepd-sepd=sepd"
         },
         {
-          "title": "Open the Load menu",
-          "text": "Click **Load ▾**.",
+          "title": "Open the data menu",
+          "text": "Click **⋯** in the experiment's Data file cell.",
           "page": "experiment",
-          "target": "experiments.load",
+          "target": "experiments.dataMore.0",
           "check": "menu:experiments.load.dataFile"
         },
         {

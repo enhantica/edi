@@ -70,10 +70,6 @@ WorkflowPage {
                 id: experimentsGroup
                 project: page.project
             }
-            MeasuredDataGroup {
-                project: page.project
-                experiments: experimentsGroup
-            }
             Repeater {
                 model: page.experiment ? page.experiment.categories : null
                 delegate: CategoryGroup {

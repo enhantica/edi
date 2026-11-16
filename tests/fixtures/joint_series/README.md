@@ -37,7 +37,7 @@ The reduced fixtures check fixed atomic references separately from fitted scale 
 Live fitted checks precede mutation or adopting Save. Each series prefix retains its terminal fitted values and errors;
 weighted calculation Jacobians provide a conditional covariance reference at those full-precision fitted seeds.
 CSV pairs are independently rounded by ADR-0092's default decimal rule; derived `.edi` category tokens retain the
-exact round-trip convention of ADR-0088 point 4 / ADR-0132 point 2. Reload expectations use persisted inputs and
+exact round-trip convention of ADR-0088 point 4 / ADR-0133 point 2. Reload expectations use persisted inputs and
 persisted correlations. The angular reference identifies azimuths modulo one turn.
 
 The native crysta probe finds the CMake build whose extension bytes match the imported extension, checks the linked

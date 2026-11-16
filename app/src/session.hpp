@@ -232,6 +232,9 @@ class Session : public QObject {
     /// The answer to saveDataChoiceNeeded `request`: "copy", "linked" or "cancel". The save that asked runs again with
     /// it, unless another question was asked since or the project was replaced: then nothing is saved.
     Q_INVOKABLE void answerSaveData(int request, const QString& choice);
+    /// Save as's Measured data row (edi ADR-0088 point 5): the next save copies linked data into the project ("copy") or
+    /// keeps it linked ("linked"), answering its question in advance; anything else clears it. Used by that save only.
+    Q_INVOKABLE void setNextSaveData(const QString& choice);
     Q_INVOKABLE bool saveAs(const QUrl& directory);
     // Save as (edi ADR-0052): into the folder or the .zip `target` (a `file:` URL), as `zip` says. A project saved as a
     // .zip keeps the archive as its location and every later Save rewrites it. With `copy` the project is written
@@ -443,6 +446,7 @@ class Session : public QObject {
         SaveContinuation again;
     };
     std::optional<SaveQuestion> save_question_;
+    QString next_save_data_;  // setNextSaveData's answer for the next save, then cleared
     int save_questions_ = 0;
     quint64 save_operations_ = 0;
     // The operation for a save starting now, or none when it stops here: asked (no message) or refused (`lastError`).

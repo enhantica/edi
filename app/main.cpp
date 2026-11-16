@@ -22,6 +22,7 @@
 #include "web_page_hooks.hpp"
 #include "engine_setup.hpp"
 #include "run_log.hpp"
+#include "stall_probe.hpp"
 #include "test_observer.hpp"
 #ifndef __EMSCRIPTEN__
 void start_installer_smoke(QQuickWindow&, const QString&);
@@ -127,6 +128,8 @@ int main(int argc, char* argv[]) {
         qWarning("cannot write the run log in %s; this run logs to the terminal only",
                  qPrintable(edi_app::run_log_directory()));
     }
+    // Off unless EDI_STALL_PROBE is set; its summary is written before the log finishes.
+    edi_app::install_stall_probe(app);
     QObject::connect(&app, &QCoreApplication::aboutToQuit, &run_log, &edi_app::RunLog::finish);
     edi_app::quit_on_termination_signals();
     QQmlApplicationEngine engine;

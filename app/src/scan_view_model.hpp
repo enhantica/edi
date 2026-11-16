@@ -18,6 +18,7 @@
 
 #include "edi/presentation.hpp"
 #include "edi/model.hpp"
+#include "edi/scan.hpp"
 #include "edi/scan_views.hpp"
 
 namespace edi_app {
@@ -91,6 +92,14 @@ class ScanViewModel : public QObject {
     // Why the rows are placed by file index although the scan has an extract rule: the first dataset without a number
     // to place it by. Empty otherwise.
     Q_PROPERTY(QString rowNote READ rowNote NOTIFY rowNoteChanged)
+    // A series of joint fits (edi ADR-0089 point 5): each row a point, drawn on d from the experiment `rowsExperiment`
+    // (a place in `seriesExperiments`) or, at -1, from every experiment together, each divided by its fitted scale.
+    Q_PROPERTY(bool series READ series NOTIFY seriesChanged)
+    Q_PROPERTY(QStringList seriesExperiments READ seriesExperiments NOTIFY seriesChanged)
+    Q_PROPERTY(int rowsExperiment READ rowsExperiment WRITE setRowsExperiment NOTIFY rowsExperimentChanged)
+    // The Rows switch (the owner, 2026-11-16): rows by the series variable (one bank across the series, the bank
+    // `rowsExperiment`) or by bank (every bank at the point `bankPoint`, each its own row on d).
+    Q_PROPERTY(bool rowsByBank READ rowsByBank WRITE setRowsByBank NOTIFY rowsByBankChanged)
 
    public:
     explicit ScanViewModel(QObject* parent);
@@ -114,6 +123,15 @@ class ScanViewModel : public QObject {
     QString xTitle() const { return x_title_; }
     bool timeOfFlight() const { return mode_ != edi::BeamModeEnum::CONSTANT_WAVELENGTH; }
     bool joint() const { return joint_; }
+    bool series() const { return series_; }
+    QStringList seriesExperiments() const { return series_experiments_; }
+    int rowsExperiment() const { return rows_experiment_; }
+    void setRowsExperiment(int experiment);
+    bool rowsByBank() const { return rows_by_bank_; }
+    void setRowsByBank(bool on);
+    // The point and the bank the series' charts show: by bank the rows are the point's banks, by the variable the
+    // rows are the bank's points.
+    void setSeriesFocus(int point, int bank);
     bool nativeShared() const { return native_shared_; }
     QStringList rowLabels() const { return row_labels_; }
     QString valueTitle() const { return has_values_ ? extracted_title_ : QString(); }
@@ -208,6 +226,9 @@ class ScanViewModel : public QObject {
     void errorChanged();
     void rowNoteChanged();
     void jointChanged();
+    void seriesChanged();
+    void rowsExperimentChanged();
+    void rowsByBankChanged();
     void nativeSharedChanged();
     void rowLabelsChanged();
     void backgroundAvailableChanged();
@@ -268,6 +289,16 @@ class ScanViewModel : public QObject {
     edi::PatternAxis axis_ = edi::PatternAxis::Native;
     bool d_shown_ = false, d_available_ = false, rows_by_index_ = false, joint_ = false;
     bool native_shared_ = true, included_only_ = false, rows_by_value_ = false;
+    bool series_ = false;
+    int rows_experiment_ = -1;
+    bool rows_by_bank_ = false;
+    int bank_point_ = 0;
+    bool listing_values_ = false;  // whether the listing extracts a value, which rows by bank do not use
+    // How many rows the reads fill: the points, or a point's banks.
+    std::size_t units() const { return rows_by_bank_ && series_ ? static_cast<std::size_t>(series_experiments_.size()) : files_.size(); }
+    QStringList series_experiments_;
+    std::shared_ptr<const edi::ScanDatasets> datasets_;  // a series' points and their files
+    void restartReads();
     QStringList row_labels_;
     std::vector<double> template_x_, template_d_;  // the template's own axis and its current d column, where finite
     std::vector<double> template_bx_, template_bkg_;  // the template's axis and its calculated background, where finite

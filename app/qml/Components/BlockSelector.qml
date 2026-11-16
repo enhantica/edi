@@ -38,6 +38,9 @@ Row {
     // line carries the word "template" in the accent blue after its name, which the line elides when long.
     property string templateRole: ""
     property bool currentTemplate: false
+    // A word before the greyed number, greyed with it and followed by a dot ("Run 6 · p005"), in place of the block
+    // icon: a series' run and bank selectors (the owner, 2026-11-16).
+    property string numberPrefix: ""
 
     // A step to the previous or next block, as a pick in the box; no step past either end.
     function step(offset) {
@@ -59,7 +62,11 @@ Row {
         // A block's line, in the Experiments table's column order: its number, its icon in its colour, its fit
         // outcome, its name and a scan's template mark, on one centre line (IconLine, §10).
         function segments(index, name, nameColor, outcome, isTemplate) {
-            return ApplicationInfo.blockSegments(index, name, nameColor, outcome, isTemplate);
+            const line = ApplicationInfo.blockSegments(index, name, nameColor, outcome, isTemplate);
+            if (row.numberPrefix === "" || line.length < 2)
+                return line;
+            line[0].text = `${row.numberPrefix} ${line[0].text} ·`;
+            return [line[0]].concat(line.slice(2));
         }
 
         objectName: row.objectName ? `${row.objectName}.box` : ""
@@ -142,7 +149,7 @@ Row {
         spacing: 0
         enabled: row.blockIndex > 0
         fontIcon: "arrow-circle-up"
-        ToolTip.text: row.blockKind === "experiment" ? qsTr("Previous experiment") : row.blockKind === "parameter" ? qsTr("Previous parameter") : qsTr("Previous structure")
+        ToolTip.text: row.blockKind === "experiment" ? qsTr("Previous experiment") : row.blockKind === "parameter" ? qsTr("Previous parameter") : row.blockKind === "run" ? qsTr("Previous run") : row.blockKind === "bank" ? qsTr("Previous bank") : qsTr("Previous structure")
         autoRepeat: true
         autoRepeatDelay: 300
         autoRepeatInterval: 50
@@ -158,7 +165,7 @@ Row {
         spacing: 0
         enabled: row.blockIndex >= 0 && row.blockIndex < selector.count - 1
         fontIcon: "arrow-circle-down"
-        ToolTip.text: row.blockKind === "experiment" ? qsTr("Next experiment") : row.blockKind === "parameter" ? qsTr("Next parameter") : qsTr("Next structure")
+        ToolTip.text: row.blockKind === "experiment" ? qsTr("Next experiment") : row.blockKind === "parameter" ? qsTr("Next parameter") : row.blockKind === "run" ? qsTr("Next run") : row.blockKind === "bank" ? qsTr("Next bank") : qsTr("Next structure")
         autoRepeat: true
         autoRepeatDelay: 300
         autoRepeatInterval: 50

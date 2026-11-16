@@ -131,11 +131,46 @@ Item {
         onActivated: index => chart.evolution.xMode = index
     }
 
+    // A series of joint fits (edi ADR-0089; the owner, 2026-11-16): its shared parameters as one curve, or each bank's
+    // own as one curve per bank in the bank's colour, the Bank box showing every bank or one.
+    ToolbarComboBox {
+        id: scopeBox
+
+        objectName: "evolution.toolbar.scope"
+        x: xBox.x + xBox.width + AppSizes.toolbarSpacing * 4
+        y: xBox.y
+        visible: !chart.fromReport && chart.evolution !== null && chart.evolution.series
+        width: visible ? implicitWidth : 0
+        toolTip: qsTr("Parameters shared by the banks, or each bank's own")
+        readonly property var entries: [qsTr("Shared"), qsTr("Per bank")]
+        model: entries
+        shownIndex: chart.evolution !== null && chart.evolution.perExperiment ? 1 : 0
+        onActivated: index => {
+            if (index === 1)
+                chart.evolution.currentExperiment = -1;
+            chart.evolution.perExperiment = index === 1;
+        }
+    }
+    ToolbarComboBox {
+        id: bankBox
+
+        objectName: "evolution.toolbar.bank"
+        x: scopeBox.x + scopeBox.width + AppSizes.toolbarSpacing
+        y: xBox.y
+        visible: scopeBox.visible && chart.evolution.perExperiment
+        width: visible ? implicitWidth : 0
+        toolTip: qsTr("Every bank's curve, or one bank's")
+        readonly property var entries: chart.evolution !== null ? [qsTr("All banks")].concat(chart.evolution.experiments) : []
+        model: entries
+        shownIndex: chart.evolution !== null ? chart.evolution.currentExperiment + 1 : 0
+        onActivated: index => chart.evolution.currentExperiment = index - 1
+    }
+
     // The parameter drawn, one of those results.csv records, with the previous and next buttons.
     BlockSelector {
         objectName: "evolution.parameters"
         visible: !chart.fromReport
-        x: xBox.x + xBox.width + AppSizes.toolbarSpacing * 4
+        x: (bankBox.visible ? bankBox.x + bankBox.width : scopeBox.visible ? scopeBox.x + scopeBox.width : xBox.x + xBox.width) + AppSizes.toolbarSpacing * 4
         y: xBox.y + (xBox.height - height) / 2
         width: Math.max(0, viewButtons.x - x - AppSizes.toolbarSpacing * 4)
         backgroundColor: chart.colors.chartBackground
@@ -274,12 +309,48 @@ Item {
 
             objectName: "evolution.points"
             anchors.fill: parent
-            color: !chart.fromReport ? AppColors.experiment(0, chart.colors.isDarkPalette) : chart.reportMeasured ? (chart.colors.isDarkPalette ? chart.reportMeasured.dark : chart.reportMeasured.light) : chart.colors.themeForeground
+            color: !chart.fromReport ? AppColors.experiment(chart.evolution !== null && chart.evolution.perExperiment ? Math.max(0, chart.evolution.currentExperiment) : 0, chart.colors.isDarkPalette) : chart.reportMeasured ? (chart.colors.isDarkPalette ? chart.reportMeasured.dark : chart.reportMeasured.light) : chart.colors.themeForeground
             markerSize: 6
             xMin: axisX.min
             xMax: axisX.max
             yMin: axisY.min
             yMax: axisY.max
+        }
+        // Every bank's own curve, in the bank's colour, when a per-bank parameter shows them all.
+        Repeater {
+            model: chart.evolution !== null && !chart.fromReport ? chart.evolution.experiments.length : 0
+            delegate: MeasuredLayer {
+                id: bankLayer
+                required property int index
+                objectName: `evolution.points.bank.${bankLayer.index}`
+                anchors.fill: parent
+                color: AppColors.experiment(bankLayer.index, chart.colors.isDarkPalette)
+                markerSize: 6
+                xMin: axisX.min
+                xMax: axisX.max
+                yMin: axisY.min
+                yMax: axisY.max
+                Component.onCompleted: chart.evolution.setBankLayer(bankLayer.index, bankLayer)
+                Component.onDestruction: if (chart.evolution)
+                    chart.evolution.setBankLayer(bankLayer.index, null)
+            }
+        }
+        // The banks' colours, while every bank is shown.
+        Column {
+            objectName: "evolution.bankLegend"
+            anchors.top: parent.top
+            anchors.right: parent.right
+            anchors.margins: EaStyle.Sizes.fontPixelSize * 0.5
+            visible: chart.evolution !== null && !chart.fromReport && chart.evolution.perExperiment && chart.evolution.currentExperiment < 0
+            Repeater {
+                model: chart.evolution !== null ? chart.evolution.experiments : []
+                delegate: EaElements.Label {
+                    required property string modelData
+                    required property int index
+                    color: AppColors.experiment(index, chart.colors.isDarkPalette)
+                    text: modelData
+                }
+            }
         }
         // The shown dataset, from its own x: it moves only when the shown dataset, the x mode or the axis does. The
         // Stacked and Map charts mark it with the same look. Over the points, so the line shows across a marker too.

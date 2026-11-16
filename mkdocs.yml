@@ -198,6 +198,7 @@ nav:
           - user/guides/complete-project-loading.md
           - user/guides/reading-cif-files.md
           - user/guides/sequential-fitting-in-the-app.md
+          - user/guides/series-of-joint-fits.md
           - "Project from scratch": user/guides/projects-from-scratch-in-the-app.md
           - user/guides/the-report.md
           - user/guides/background-estimate.md

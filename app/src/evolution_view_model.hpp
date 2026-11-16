@@ -59,6 +59,13 @@ class EvolutionViewModel : public QObject {
     Q_PROPERTY(bool outOfDate READ outOfDate NOTIFY outOfDateChanged)
     // Some dataset of the scan has a row in its results: until then the chart has no axes.
     Q_PROPERTY(bool fitted READ fitted NOTIFY fittedChanged)
+    // A series of joint fits (edi ADR-0089): its parameters Shared (results.csv, one row per point) or Per experiment
+    // (results_experiments.csv), the latter for the experiment `currentExperiment` (a place in `experiments`), or at -1
+    // for every bank, one curve each on its own layer (bankLayer; the owner, 2026-11-16).
+    Q_PROPERTY(bool series READ series NOTIFY seriesChanged)
+    Q_PROPERTY(bool perExperiment READ perExperiment WRITE setPerExperiment NOTIFY perExperimentChanged)
+    Q_PROPERTY(QStringList experiments READ experiments NOTIFY seriesChanged)
+    Q_PROPERTY(int currentExperiment READ currentExperiment WRITE setCurrentExperiment NOTIFY currentExperimentChanged)
     // The layer the points are drawn on (the chart's).
     Q_PROPERTY(edi_app::MeasuredLayer* layer READ layer WRITE setLayer NOTIFY layerChanged)
 
@@ -79,6 +86,12 @@ class EvolutionViewModel : public QObject {
     void setTemplate(const edi::Project* project) { template_ = project; }
 
     EvolutionParameterListModel* parameters() const { return parameters_; }
+    bool series() const { return !experiments_.isEmpty(); }
+    bool perExperiment() const { return per_experiment_; }
+    void setPerExperiment(bool on);
+    QStringList experiments() const { return experiments_; }
+    int currentExperiment() const { return current_experiment_; }
+    void setCurrentExperiment(int index);
     int currentParameter() const { return current_; }
     void setCurrentParameter(int index);
     int xMode() const { return x_mode_; }
@@ -102,6 +115,8 @@ class EvolutionViewModel : public QObject {
     Q_INVOKABLE int datasetAt(double x, double y, double x_tolerance, double y_tolerance) const;
     // The x of a dataset's drawn point, or NaN when it has none.
     Q_INVOKABLE double datasetX(int dataset) const;
+    // The layer bank `bank` is drawn on when every bank is shown; null unregisters it.
+    Q_INVOKABLE void setBankLayer(int bank, edi_app::MeasuredLayer* layer);
     // The project's Evolution chart settings changed: the range and the drawing follow them.
     void viewSettingsChanged() { finish(); }
     bool picking() const { return picking_; }
@@ -127,6 +142,9 @@ class EvolutionViewModel : public QObject {
     void countChanged();
     void outOfDateChanged();
     void fittedChanged();
+    void seriesChanged();
+    void perExperimentChanged();
+    void currentExperimentChanged();
     void layerChanged();
 
    private:
@@ -140,6 +158,7 @@ class EvolutionViewModel : public QObject {
     struct Point {
         double x = 0.0, y = 0.0, error = 0.0;
         int dataset = -1;
+        int bank = -1;  // per bank with every bank shown: the bank's place
         friend bool operator==(const Point&, const Point&) = default;
     };
     // Before the scan has a fitted row: the fitted template's own point, its current value and s.u. at its dataset's
@@ -155,7 +174,14 @@ class EvolutionViewModel : public QObject {
 
     EvolutionParameterListModel* parameters_;
     QPointer<MeasuredLayer> layer_;
+    QList<QPointer<MeasuredLayer>> bank_layers_;
+    int bank_ = -1;  // the bank whose points a read visits now
+    bool allBanks() const { return per_experiment_ && current_experiment_ < 0; }
     QStringList names_;
+    QStringList experiments_;  // a series of joint fits' experiments, in project order; empty otherwise
+    bool per_experiment_ = false;
+    int current_experiment_ = 0;
+    void syncExperiments();
     QString extracted_title_;
     const ScanSession* session_ = nullptr;
     const edi::Project* project_ = nullptr;
