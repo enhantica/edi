@@ -92,10 +92,17 @@ jobs:
   installers:
     needs: [preview-version, crysta-sdk]
     if: >-
-      github.event.pull_request.head.repo.fork == false && !cancelled() && inputs.preview_run == ''
+      github.repository == 'enhantica/edi' && github.event.pull_request.head.repo.fork == false && !cancelled()
+      && inputs.preview_run == ''
       && (needs.preview-version.result == 'success' || needs.preview-version.result == 'skipped')
     name: installer · ${{ matrix.runner == 'windows-2022' && 'Windows' || matrix.runner == 'macos-15' && 'macOS' || 'Linux' }}
-    environment: crysta-sdk
+    # A signing run takes the codesign environment (main only); every other run, pull requests included, keeps
+    # crysta-sdk. The condition is EDI_CODESIGN's below (edi ADR-0091).
+    environment: >-
+      ${{ github.repository == 'enhantica/edi' && github.ref == 'refs/heads/main'
+      && (github.event_name == 'push' || (github.event_name == 'workflow_dispatch'
+      && (inputs.release_plan_run != '' || inputs.prepare_preview_release)))
+      && 'codesign' || 'crysta-sdk' }}
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 90
     strategy:
