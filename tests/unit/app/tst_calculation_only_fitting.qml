@@ -385,13 +385,13 @@ TestCase {
             // The engine profile is an input stimulus for a normal-equation invariant.
             // Nonproportional net observations distinguish weighting and peak ratios.
             const sigma=[1,4,2][i%3],ratio=rejectedPowderPoint(row.x)?1e10:1.2+0.35*(i%5);
-            const observed=row.intensityBkg+ratio*net;
+            const observed=row.intensityBkg+ratio*net+100+17*(i%7);
             data+=row.x+" "+observed+" "+sigma+"\n";
             rn+=net*(observed-row.intensityBkg)/(sigma*sigma); rd+=net*net/(sigma*sigma);
             if(rejectedPowderPoint(row.x)) continue;
             wn+=net*(observed-row.intensityBkg)/(sigma*sigma); wd+=net*net/(sigma*sigma);
             un+=net*(observed-row.intensityBkg); ud+=net*net;
-            if(net>peak) {peak=net;peakRatio=ratio;}
+            if(net>peak) {peak=net;peakRatio=(observed-row.intensityBkg)/net;}
         }
         restorePowderRanges(count);
         console.info("Independent scale stimuli:",JSON.stringify({weighted:wn/wd,unit:un/ud,raw:rn/rd,peak:peakRatio,admittedDenominator:wd,rawDenominator:rd}));

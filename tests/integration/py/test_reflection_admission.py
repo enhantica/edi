@@ -557,7 +557,11 @@ def test_combined_admission_reaches_fit_and_used_statistics(native, tmp_path):
         basis=4 * BASIS,
     )
     text = (tmp_path / 'input-saved/experiments/bank.edi').read_text()
-    actual = {'mode': 'laue_class', 'measured': len(column(text, '_refln.index_h'))}
+    mode = re.search(r'(?m)^_reflns\.merge\s+(\S+)', text)
+    actual = {
+        'mode': mode.group(1).strip('"') if mode else None,
+        'measured': len(column(text, '_refln.index_h')),
+    }
     for key, tag in {
         'unique': '_reflns.number_total',
         'used': '_refine_ls.number_reflns',
