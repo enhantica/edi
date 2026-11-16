@@ -7,6 +7,9 @@ set -euo pipefail
 cd "$(dirname "$0")/../.."
 root="$(pwd)"
 own="^$root/(core|cli|lib|app|assistant)/"
+# The files tools/ci/static-checks-deferred.txt lists are skipped, as sources and as headers.
+deferred="$(grep -v '^#' tools/ci/static-checks-deferred.txt | sed 's/[.]/\\./g' | paste -sd '|' -)"
+skip="^$root/(${deferred:-^})$"
 status=0
 for tree in build/app build/ci; do
     if [ ! -f "$tree/compile_commands.json" ]; then
@@ -15,8 +18,9 @@ for tree in build/app build/ci; do
     fi
 done
 # Each file once: the bindings from the core's tree, everything else from the app's.
-run-clang-tidy -quiet -p build/app -j "${EDI_TIDY_JOBS:-4}" -header-filter="$own" -warnings-as-errors='*' \
-    -extra-arg=-Wno-unknown-warning-option "^$root/(core/src|cli|app|assistant/native)/.*\.cpp$" || status=$?
-run-clang-tidy -quiet -p build/ci -j "${EDI_TIDY_JOBS:-4}" -header-filter="$own" -warnings-as-errors='*' \
-    -extra-arg=-Wno-unknown-warning-option "^$root/lib/src/.*\.cpp$" || status=$?
+run-clang-tidy -quiet -p build/app -j "${EDI_TIDY_JOBS:-4}" -header-filter="$own" -exclude-header-filter="$skip" \
+    -warnings-as-errors='*' -extra-arg=-Wno-unknown-warning-option \
+    "^$root/(?!(${deferred:-^})$)(core/src|cli|app|assistant/native)/.*\.cpp$" || status=$?
+run-clang-tidy -quiet -p build/ci -j "${EDI_TIDY_JOBS:-4}" -header-filter="$own" -exclude-header-filter="$skip" \
+    -warnings-as-errors='*' -extra-arg=-Wno-unknown-warning-option "^$root/lib/src/.*\.cpp$" || status=$?
 exit "$status"

@@ -2,8 +2,9 @@
 
 - **Status:** Accepted
 - **Date:** 2026-11-15
-- **Implementation:** 🟡 Partially implemented — the warning set, `EDI_WERROR` and the two check scripts are in place;
-  the existing findings and the CI jobs follow
+- **Implementation:** 🟡 Partially implemented — the warning set, `EDI_WERROR`, both check scripts and their CI steps
+  are in place, and every finding outside the files of decision 7 is fixed; `EDI_WERROR` turns on in CI once those
+  files are swept
 - **Priority:** High
 - **Forward constraint (binding on new features):** new C++ in edi builds without a warning under `EDI_WERROR`, and passes
   clang-tidy and cppcheck; a finding is fixed, or the line names the check it silences and why.
@@ -28,12 +29,19 @@ formatting & static analysis (Python + C++)". The owner asked for the same check
    the code has already checked (`if (self.isNull() || ...) return; self->...`). Clang keeps it there, and clang-tidy's
    analyzer checks null dereferences on every path.
 2. **`EDI_WERROR=ON` makes each of those warnings an error.** It is off for a local build and on in CI: the build scripts
-   (`core-build.sh`, `app-build.sh`, `wasm-build.sh`) pass the `EDI_WERROR` environment variable to CMake.
+   (`core-build.sh`, `app-build.sh`, `wasm-build.sh`) pass the `EDI_WERROR` environment variable to CMake. CI sets it
+   only after the files of decision 7 are swept: two of them are the model's headers (`model.hpp`, `edit.hpp`), which
+   every translation unit includes, so no file-by-file exception can keep a build green before then.
 3. **clang-tidy runs with the Clang Static Analyzer** over the same sources (`pixi run -e cpp-lint cpp-tidy`,
-   `tools/ci/cpp-tidy.sh`), with edi's `.clang-tidy`, the curated set crysta's code-quality rules use, and any finding an
-   error. A `.clang-tidy` file replaces clang-tidy's default checks, so it names `clang-analyzer-*` itself; its one
-   exception, as in crysta, is the opt-in Padding hint, which asks for members in size order and reports layout, never
-   a fault. It reads the compile commands of the app's build tree, and the core's tree for the Python bindings.
+   `tools/ci/cpp-tidy.sh`), any finding an error. edi's `.clang-tidy` holds the groups of crysta's curated set that
+   find faults: the analyzer, `bugprone`, `performance` and `cert`, with crysta's exceptions inside them. A
+   `.clang-tidy` file replaces clang-tidy's default checks, so it names `clang-analyzer-*` itself; its one exception,
+   as in crysta, is the opt-in Padding hint, which asks for members in size order and reports layout, never a fault.
+   edi also turns off `performance-enum-size`: most of its enums are Qt's (model roles counted from `Qt::UserRole`,
+   `Q_ENUM` types that QML reads), which the meta-object system handles as `int`. crysta's style groups (`readability`, `modernize`, `misc`, `cppcoreguidelines`) follow in a sweep of their own:
+   measured over edi's code they hold about 14 000 of the curated set's 15 200 findings, most of them braces around
+   one statement, implicit conversions to bool and several declarations on one line. It reads the compile commands of the app's
+   build tree, and the core's tree for the Python bindings.
 4. **cppcheck** (`pixi run -e cpp-lint cpp-cppcheck`, `tools/ci/cpp-cppcheck.sh`) checks the same sources for warning,
    performance and portability findings; any finding is an error. It reads the same compile commands as clang-tidy, so
    it sees Qt's and crysta's headers and the build's macros: without them it took Qt's smart pointers for integers and
@@ -45,6 +53,12 @@ formatting & static analysis (Python + C++)". The owner asked for the same check
 6. **A finding is fixed in the code.** Where the code is right and the check cannot see it, the line carries
    `NOLINTNEXTLINE(<check>)` or `cppcheck-suppress <id>` with its reason on the same line; no check is turned off for a
    whole file.
+7. **Files rewritten by a change in flight wait for it.** `tools/ci/static-checks-deferred.txt` lists them; clang-tidy
+   and cppcheck skip them, as sources and as headers, until that change lands, when they are swept and the list is
+   emptied. Every other file is checked.
+8. **Both checks are CI steps of the app job on Linux and macOS** ("clang-tidy with the Clang Static Analyzer (zero
+   findings)", "cppcheck (zero findings)"), after the build whose compile commands they read. They run after a failed
+   step too, so one round lists every finding.
 
 ## Consequences
 
@@ -58,5 +72,6 @@ formatting & static analysis (Python + C++)". The owner asked for the same check
 | Alternative | Verdict (why rejected / deferred) |
 |---|---|
 | The warning set on each whole target | Rejected: Qt's generated sources (moc, qmlcachegen, resources) would carry warnings edi cannot fix. |
-| A narrower clang-tidy set for edi | Rejected: one curated set for both products keeps the rules the same on both sides of the engine boundary. |
+| crysta's whole curated set at once | Deferred: its style groups would rewrite nearly every C++ file of edi while other changes are open on them; the groups that find faults go first, the style groups in a sweep of their own. |
+| A separate CI job for the checks | Rejected: it would build the app a second time for the compile commands the app job already has. |
 | clang-tidy without the analyzer | Rejected: the analyzer's path-sensitive checks (null dereference, use after move, leaks) are the reason to run it. |

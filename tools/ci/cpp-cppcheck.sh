@@ -13,10 +13,15 @@ for tree in build/app build/ci; do
         exit 1
     fi
 done
+# The files tools/ci/static-checks-deferred.txt lists are skipped, findings in them included.
+deferred=()
+while read -r path; do
+    deferred+=("--suppress=*:$path")
+done < <(grep -v '^#' tools/ci/static-checks-deferred.txt)
 check() {
     cppcheck --project="$1/compile_commands.json" "${@:2}" --enable=warning,performance,portability \
         --error-exitcode=1 --inline-suppr --suppress=missingIncludeSystem --suppress=returnByReference --quiet \
-        -j "${EDI_CPPCHECK_JOBS:-4}"
+        "${deferred[@]}" -j "${EDI_CPPCHECK_JOBS:-4}"
 }
 status=0
 # Qt's macros (emit, signals, slots) only for the code built on Qt: the core has a function named emit.
