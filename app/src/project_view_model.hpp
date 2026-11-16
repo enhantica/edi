@@ -411,6 +411,8 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     int seriesRevision() const { return series_revision_; }
     // A point's label for the selectors: its number and what it records ("3 · 15.9 K"), or its key.
     Q_INVOKABLE QString pointLabel(int point) const;
+    // The same without its number: what it records, or its key (the run selector adds the number).
+    Q_INVOKABLE QString pointName(int point) const;
     // The series' files: loaded, changed since their point's fit, missing (an incomplete point's absent files).
     Q_INVOKABLE QVariantList seriesCounts() const;
     // Each bank's file at the point: 0 loaded, 1 changed since its fit, 2 missing. Incomplete points come after the
@@ -472,6 +474,23 @@ class ProjectViewModel : public QObject, public ProjectEditor {
         std::string refusal;
     };
     const std::vector<std::pair<std::string, std::string>>& savedFiles() const;
+    // A publication that only shows a scan dataset or a series point (edi ADR-0089 point 7): the texts a save writes
+    // and the fields' save spelling are made from a copy off the GUI thread and taken when they arrive, if nothing
+    // changed meanwhile. `view_calculation_` carries the mark from the edit's publication to its calculation's.
+    void refreshTextsLater();
+    // ScanSession::templateIdentity of `project`, kept while the project is unchanged (its work stamps): a scan's start
+    // and end ask for the same template, which a scan does not change (edi ADR-0089 point 7).
+    std::string templateIdentityOf(const edi::Project& project) const;
+    struct IdentityMemo {
+        const edi::Project* project = nullptr;
+        edi::WorkStamps stamps;
+        std::string identity;
+    };
+    mutable std::optional<IdentityMemo> identity_memo_;
+    void refreshSpellingLater();
+    bool view_calculation_ = false;
+    std::uint64_t texts_request_ = 0;
+    std::uint64_t spelling_request_ = 0;
     std::string savedFile(const std::string& relative) const;
     // The same file as a save writes it without calculating: what finds the generated groups.
     std::string discoveredFile(const std::string& relative) const;

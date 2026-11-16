@@ -3781,6 +3781,15 @@ QVariantList ProjectViewModel::seriesCounts() const {
     return {static_cast<int>(datasets.files.size()) * banks - changed, changed, missing};
 }
 
+QString ProjectViewModel::pointName(int point) const {
+    if (!series() || point < 0 || point >= seriesPointCount()) return {};
+    const auto& datasets = scan_session_->datasets();
+    const auto at = static_cast<std::size_t>(point);
+    if (at >= datasets.files.size()) return QString::fromStdString(datasets.incomplete[at - datasets.files.size()].key);
+    const QString value = datasetRow(point).extracted.value(0);
+    return value.isEmpty() ? QString::fromStdString(datasets.files[at]) : value;
+}
+
 QString ProjectViewModel::pointLabel(int point) const {
     if (!series() || point < 0 || point >= seriesPointCount()) return {};
     const auto& datasets = scan_session_->datasets();
@@ -4498,7 +4507,7 @@ void ProjectViewModel::syncOutOfDate() {
     const ScanSession::Run& run = scan_ ? scan_session_->run() : ScanSession::Run{};
     if (scan_ && scanProcessed()) {
         stale = run.invalid || run.mixed ||
-                (!run.identity.empty() && run.identity != ScanSession::templateIdentity(scanTemplateOrModel()));
+                (!run.identity.empty() && run.identity != templateIdentityOf(scanTemplateOrModel()));
     }
     fit_->setOutOfDate(stale);
     evolution_->setOutOfDate(stale);
@@ -4544,7 +4553,7 @@ QString ProjectViewModel::prepareScan(bool fresh) {
     const QString warning = tr("The scan preparation changed the project, but its presentation failed. Undo or reopen before further changes.");
     editing_ = true;
     const auto release = qScopeGuard([this] { editing_ = false; });
-    run_identity_ = ScanSession::templateIdentity(scanTemplateOrModel());
+    run_identity_ = templateIdentityOf(scanTemplateOrModel());
     previous_run_.reset();
     if (!fresh) { previous_run_ = scan_session_->run(); return {}; }
     undo_history_.reserve(undo_history_.size() + 1);
@@ -6531,7 +6540,14 @@ void ProjectViewModel::publish(bool structural) {
         adjusted_ = true;
         return;
     }
+    // A shown dataset or point changes values only: no category comes or goes, and what a save writes is made off
+    // the GUI thread (refreshTextsLater, refreshSpellingLater).
+    const bool view = applying_view_ && !structural;
+    view_calculation_ = view;
+    registry_->setSpellingDeferred(view);
     publishRegistry();
+    registry_->setSpellingDeferred(false);
+    if (view) refreshSpellingLater();
     followScanDeclaration();
     for (StructureViewModel* structure : structure_models_) {
         structure->sync();
@@ -6564,9 +6580,13 @@ void ProjectViewModel::publish(bool structural) {
     publishMetadata();
     if (retired_) return;
     // What a save writes changed now, not at the recalculation: a Text read in this same turn sees it.
-    saved_files_.reset();
-    discovered_files_.reset();
-    refreshTextsAndReport();
+    if (view) {
+        refreshTextsLater();
+    } else {
+        saved_files_.reset();
+        discovered_files_.reset();
+        refreshTextsAndReport();
+    }
     if (retired_) return;
     if (fit_ != nullptr) {
         fit_->sync();
@@ -6864,8 +6884,12 @@ void ProjectViewModel::published(const edi::PreviewResult& result) {
         if (std::exchange(released_texts_due_, false)) refreshTextsAndReport();
         return;
     }
+    const bool view = std::exchange(view_calculation_, false);
+    registry_->setSpellingDeferred(view);
     publishRegistry();
+    registry_->setSpellingDeferred(false);
     if (retired_) return;
+    if (view) refreshSpellingLater();
     // The project holds the calculation now (or its refusal, with every computed category cleared): the
     // tables, the charts, the texts and the report follow, once.
     const QString error = QString::fromStdString(result.refusal);
@@ -6881,8 +6905,12 @@ void ProjectViewModel::published(const edi::PreviewResult& result) {
         if (retired_) return;
     }
     scan_views_->setConversion(project_.get());  // a scan's d axis follows the calculation, as the pattern chart's
-    saved_files_.reset();  // a save writes the calculated pattern too
-    refreshTextsAndReport();
+    if (view) {
+        refreshTextsLater();
+    } else {
+        saved_files_.reset();  // a save writes the calculated pattern too
+        refreshTextsAndReport();
+    }
     if (retired_) return;
     publishCalculating();
     if (retired_) return;
@@ -6983,6 +7011,68 @@ std::string ProjectViewModel::discoveredFile(const std::string& relative) const 
         }
     }
     return file_of(*discovered_files_, relative);
+}
+
+std::string ProjectViewModel::templateIdentityOf(const edi::Project& project) const {
+    if (identity_memo_ && identity_memo_->project == &project && edi::unchanged_since(project, identity_memo_->stamps)) {
+        return identity_memo_->identity;
+    }
+    IdentityMemo memo{&project, edi::work_stamps(project), ScanSession::templateIdentity(project)};
+    identity_memo_ = std::move(memo);
+    return identity_memo_->identity;
+}
+
+void ProjectViewModel::refreshTextsLater() {
+    // From an uncalculated copy, as discoveredFile's: the values are the shown ones; a computed category waits for the
+    // next publication that is not a view.
+    const auto copy = std::make_shared<const edi::Project>(*project_);
+    const edi::WorkStamps stamps = edi::work_stamps(*project_);
+    const std::uint64_t request = ++texts_request_;
+    const QPointer<ProjectViewModel> self(this);
+    run_in_background([self, copy, stamps, request] {
+        SavedFiles files;
+        try {
+            files = SavedFiles{edi::project_edi_files(*copy), {}};
+        } catch (const std::exception& refusal) {
+            files = refused_save(*copy, refusal.what());
+        }
+        QMetaObject::invokeMethod(
+            QCoreApplication::instance(),
+            [self, stamps, request, files = std::move(files)]() mutable {
+                if (self.isNull() || self->retired_ || request != self->texts_request_ ||
+                    !edi::unchanged_since(*self->project_, stamps)) {
+                    return;  // a newer view or an edit came meanwhile: its own publication covers it
+                }
+                self->saved_files_ = std::move(files);
+                self->refreshTextsAndReport();
+            },
+            Qt::QueuedConnection);
+    });
+}
+
+void ProjectViewModel::refreshSpellingLater() {
+    const auto copy = std::make_shared<const edi::Project>(*project_);
+    const edi::WorkStamps stamps = edi::work_stamps(*project_);
+    const std::uint64_t request = ++spelling_request_;
+    const QPointer<ProjectViewModel> self(this);
+    run_in_background([self, copy, stamps, request] {
+        std::optional<edi::SaveSpelling> spelling;
+        try {
+            spelling = edi::save_spelling(*copy);
+        } catch (const std::exception&) {
+            spelling.reset();  // the next publication that is not a view spells the fields
+        }
+        QMetaObject::invokeMethod(
+            QCoreApplication::instance(),
+            [self, stamps, request, spelling = std::move(spelling)] {
+                if (self.isNull() || self->retired_ || !spelling || request != self->spelling_request_ ||
+                    !edi::unchanged_since(*self->project_, stamps)) {
+                    return;
+                }
+                self->registry_->applySpelling(*self->project_, *spelling);
+            },
+            Qt::QueuedConnection);
+    });
 }
 
 SavedFile ProjectViewModel::savedFileFunction() const {
