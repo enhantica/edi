@@ -138,20 +138,23 @@ def test_current_trials_cannot_rewrite_the_original_failed_export(change):
 
 def test_public_summary_cites_current_receipt_and_actual_diagnostic_artifact_sources():
     document = evidence()
-    summary = ROOT / 'website/surfaces/docs' / (document['summary_document'] + '.md')
+    summary = ROOT / 'docs/dev' / (document['summary_document'] + '.md')
     text = summary.read_text(encoding='utf-8')
     assert sha256(EVIDENCE.read_bytes()) in text, (
-        'The published summary cites the exact separately recorded current authoring evidence'
+        'The contributor summary cites the exact separately recorded current authoring receipt'
+    )
+    assert 'tests/fixtures/tutorial_cases/published_assistant_trials.json' in text, (
+        'The short contributor summary must identify the canonical execution receipt'
     )
     identities = [document['documentation']['source_commit']]
     for row in document['records']:
+        assert_published_trial(ROOT, document, row, row['interface'], row['prompt_sha256'])
         identities.extend([
-            row['artifact']['sha256'],
             row['execution']['edi_source'],
             row['execution']['sdk_source'],
         ])
     assert all(identity in text for identity in identities), (
-        'The public summary distinguishes actual docs artifact Edi and SDK source identities'
+        'The contributor summary distinguishes the actual documentation, Edi and SDK sources'
     )
 
 
