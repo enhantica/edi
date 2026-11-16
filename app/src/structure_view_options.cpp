@@ -12,7 +12,8 @@ StructureViewOptions::StructureViewOptions(QObject* parent)
       atom_view_options_(new OptionListModel(this)),
       moment_form_options_(new OptionListModel(this)),
       moment_view_options_(new OptionListModel(this)),
-      polyhedra_colour_options_(new OptionListModel(this)) {
+      polyhedra_colour_options_(new OptionListModel(this)),
+      polyhedra_extent_options_(new OptionListModel(this)) {
     // Named as crysta's dictionary names them (Covalent radius, ...), never by their tokens.
     atom_view_options_->setItemOptions("structure_view.atom_view", {"covalent", "vdw", "ionic", "adp"});
     // Each shows its name from crysta's dictionary: Crystal axes, Cartesian, Spherical.
@@ -21,6 +22,9 @@ StructureViewOptions::StructureViewOptions(QObject* parent)
     // The dictionary has no polyhedra item yet: the app names them.
     polyhedra_colour_options_->setOptions({"atom", "grey"}, "atom",
                                           {QObject::tr("Atom colour").toStdString(), QObject::tr("Grey").toStdString()});
+    polyhedra_extent_options_->setOptions({"cell", "complete"}, "cell",
+                                          {QObject::tr("Inside the cell").toStdString(),
+                                           QObject::tr("Complete for atoms in the cell").toStdString()});
 }
 
 template <class T>
@@ -144,6 +148,15 @@ QString StructureViewOptions::polyhedraColour() const {
 void StructureViewOptions::setPolyhedraColour(const QString& colour) {
     if (colour == QLatin1String("atom") || colour == QLatin1String("grey")) {
         assignSession(options_.polyhedra_grey, colour == QLatin1String("grey"), &StructureViewOptions::polyhedraColourChanged);
+    }
+}
+QString StructureViewOptions::polyhedraExtent() const {
+    return options_.polyhedra_complete ? QStringLiteral("complete") : QStringLiteral("cell");
+}
+void StructureViewOptions::setPolyhedraExtent(const QString& extent) {
+    if (extent == QLatin1String("cell") || extent == QLatin1String("complete")) {
+        assignSession(options_.polyhedra_complete, extent == QLatin1String("complete"),
+                      &StructureViewOptions::polyhedraExtentChanged);
     }
 }
 void StructureViewOptions::setPolyhedraOpacity(double opacity) {

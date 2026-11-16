@@ -179,8 +179,9 @@ class ExperimentViewModel : public QObject {
     Q_INVOKABLE void setRange(double start, double end, double step);
     // A powder's measured against calculated intensity, one point per data point with both finite (the Meas vs calc
     // chart, the owner, 2026-11-16): `calc`, `meas` and `su` lists of one length, and `low` and `high`, the range both
-    // axes share; empty lists before a calculation.
-    Q_INVOKABLE QVariantMap measCalcPoints() const;
+    // axes share; empty lists before a calculation. `scale` as the pattern chart's y scale: 0 linear, 1 square root,
+    // 2 log; a point the scale cannot draw (a negative value, or zero on log) is left out.
+    Q_INVOKABLE QVariantMap measCalcPoints(int scale = 0) const;
     void setName(const QString& name);
     SampleForm sampleForm() const;
     BeamMode beamMode() const;

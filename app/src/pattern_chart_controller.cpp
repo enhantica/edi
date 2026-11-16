@@ -1089,8 +1089,15 @@ void PatternChartController::refresh() {
             y_high += padding;
         }
         // A single crystal's bars (or their lines) stand on zero, and its intensities are not negative: the range, fitted
-        // or zoomed, starts there, whatever a weak reflection's error bar reaches (the owner, 2026-11-16).
-        if (measured_drawing_ == QLatin1String("bars") && !report_ && y_high > 0.0) {
+        // or zoomed, starts there, whatever a weak reflection's error bar reaches (the owner, 2026-11-16). In any style a
+        // fitted range of non-negative values starts at zero too, its headroom only above; the residual has its own.
+        bool non_negative = experiment_ && experiment_->sampleForm() == ExperimentViewModel::SingleCrystal;
+        for (const edi::PatternSeries* series : {measured, calculated}) {
+            if (series == nullptr) continue;
+            for (const edi::PresentedPoint& point : series->points)
+                if (std::isfinite(point.y) && point.y < 0.0) non_negative = false;
+        }
+        if (y_high > 0.0 && ((fitted && non_negative) || (measured_drawing_ == QLatin1String("bars") && !report_))) {
             y_low = 0.0;
         }
         y_step = axis_step(y_low, y_high, false);

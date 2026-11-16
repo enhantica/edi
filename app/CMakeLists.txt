@@ -107,6 +107,7 @@ qt_add_qml_module(edi_app_module
         src/stall_probe.hpp src/stall_probe.cpp
         src/item_locator.hpp src/item_locator.cpp
         src/view_rows.hpp src/view_rows.cpp
+        src/toolbar_row.hpp src/toolbar_row.cpp
         src/user_action_log.hpp src/user_action_log.cpp
         src/build_version.hpp
         src/desktop_updates.hpp src/desktop_updates.cpp

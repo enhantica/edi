@@ -119,6 +119,9 @@ struct SceneOptions {
     // in its colour or grey. Held by the app for the session: the structure file has no item for them yet.
     bool polyhedra = false;
     bool polyhedra_grey = false;
+    // Inside the cell, a polyhedron's corners are the drawn atoms bonded to its centre; complete, a centre in the cell
+    // also takes the bonded atoms one cell over, so its polyhedron is whole.
+    bool polyhedra_complete = false;
     bool moments = true;        // `_structure_view.show_moments`
     double moment_scale = 0.75;  // Angstrom of arrow per Bohr magneton (`_structure_view.moment_scale`)
     MomentColours moment_colours = MomentColours::GreyedAtom;  // the app's preference

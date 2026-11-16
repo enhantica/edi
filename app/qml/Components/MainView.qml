@@ -202,7 +202,7 @@ EaComponents.MainContent {
             readonly property bool singleCrystal: experiment !== null && experiment.sampleForm === ExperimentViewModel.SingleCrystal
             readonly property var reflections: singleCrystal ? experiment.singleCrystalReflections : null
             readonly property bool available: experiment !== null && (singleCrystal ? reflections !== null && !reflections.simulated && reflections.calculated.length > 0 : !experiment.calculationOnly)
-            readonly property real toolbarRightInset: singleCrystal ? measCalcCrystal.toolbarRightInset : EaStyle.Sizes.fontPixelSize
+            readonly property real toolbarRightInset: singleCrystal ? measCalcCrystal.toolbarRightInset : measCalcPowder.toolbarRightInset
 
             SingleCrystalChart {
                 id: measCalcCrystal
@@ -323,7 +323,7 @@ EaComponents.MainContent {
         value: blockSelector.reservedHeight
     }
 
-    // Save image for the shown tab, in the main view's bottom-right corner, inset as the toolbar buttons are spaced (the
+    // Save image for the shown tab, in the main view's bottom-left corner, inset as the toolbar buttons are spaced (the
     // owner, 2026-11-16). Each tab's view names what it saves (imageItem, imageToolbar, imageName, imageCropsToolbar).
     SaveImageButton {
         id: saveImage
@@ -339,9 +339,9 @@ EaComponents.MainContent {
             })[view.currentKey] ?? null
 
         objectName: "mainArea.saveImage"
-        anchors.right: parent.right
+        anchors.left: parent.left
         anchors.bottom: parent.bottom
-        anchors.rightMargin: AppSizes.toolbarSpacing
+        anchors.leftMargin: AppSizes.toolbarSpacing
         anchors.bottomMargin: AppSizes.toolbarSpacing
         z: 2
         visible: source !== null

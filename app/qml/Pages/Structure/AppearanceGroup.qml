@@ -152,23 +152,13 @@ SideBarGroup {
                 onAccepted: commit()
                 onEditingFinished: commit()
             }
-            // Coordination polyhedra: shown (as the toolbar's switch), their colour and opacity. Kept for the session.
-            EaElements.CheckBox {
-                objectName: "structure.appearance.polyhedra"
-                width: grid.fieldWidth
-                text: qsTr("Polyhedra")
-                checked: group.options !== null && group.options.polyhedra
-                onToggled: group.options.polyhedra = checked
-            }
-            Item {
-                width: grid.fieldWidth
-                height: 1
-            }
+            // Coordination polyhedra, switched by the view's toolbar button: their colour, opacity and extent, shown while
+            // they are on. Kept for the session.
             SelectorField {
                 objectName: "structure.appearance.polyhedraColour"
                 width: grid.fieldWidth
                 label: qsTr("Polyhedra colour")
-                enabled: group.options !== null && group.options.polyhedra
+                visible: group.options !== null && group.options.polyhedra
                 options: group.options ? group.options.polyhedraColourOptions : null
                 token: group.options ? group.options.polyhedraColour : ""
                 onSelected: token => group.options.polyhedraColour = token
@@ -178,7 +168,7 @@ SideBarGroup {
 
                 objectName: "structure.appearance.polyhedraOpacity"
                 width: grid.fieldWidth
-                enabled: group.options !== null && group.options.polyhedra
+                visible: group.options !== null && group.options.polyhedra
                 parameter: group.options ? {
                     "value": group.options.polyhedraOpacity,
                     "error": 0,
@@ -201,6 +191,15 @@ SideBarGroup {
                 Component.onCompleted: FieldTitles.align(opacity)
                 onAccepted: commit()
                 onEditingFinished: commit()
+            }
+            SelectorField {
+                objectName: "structure.appearance.polyhedraExtent"
+                width: grid.fieldWidth
+                label: qsTr("Polyhedra extent")
+                visible: group.options !== null && group.options.polyhedra
+                options: group.options ? group.options.polyhedraExtentOptions : null
+                token: group.options ? group.options.polyhedraExtent : ""
+                onSelected: token => group.options.polyhedraExtent = token
             }
         }
         EaElements.Label {

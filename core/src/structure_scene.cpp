@@ -876,9 +876,61 @@ StructureScene present_structure(const SceneSource& source, const SceneOptions& 
         static const std::set<std::string> kNonMetals{"H",  "He", "B",  "C",  "N",  "O",  "F",  "Ne", "Si", "P",
                                                       "S",  "Cl", "Ar", "As", "Se", "Br", "Kr", "Te", "I",  "Xe"};
         std::vector<std::vector<Vec3>> shells(scene.atoms.size());
+        // The corners are the bonded non-metals: a metal bonded to a metal (Co-Co in an olivine) is not a corner.
+        const auto corner_atom = [&](std::size_t atom) {
+            const ScenePart& part = scene.atoms[atom].parts[scene.atoms[atom].major];
+            return kNonMetals.count(part.element) != 0;
+        };
         for (const SceneBond& bond : bond_list) {
-            shells[bond.atom_1].push_back(bond.end);
-            shells[bond.atom_2].push_back(bond.start);
+            if (corner_atom(bond.atom_2)) shells[bond.atom_1].push_back(bond.end);
+            if (corner_atom(bond.atom_1)) shells[bond.atom_2].push_back(bond.start);
+        }
+        // Complete: each pair of sites bonds up to the longest bond the geometry lists between them, and a centre takes
+        // every atom that near, one cell over included.
+        if (options.polyhedra_complete && !bond_list.empty()) {
+            std::map<std::pair<std::string, std::string>, double> reach;
+            const auto site = [&](std::size_t row) { return (*source.atom_site_id)[row]; };
+            for (std::size_t b = 0; b != bond_list.size(); ++b) {
+                const auto row_1 = static_cast<std::size_t>((*source.bond_site_1)[bond_list[b].row] - 1);
+                const auto row_2 = static_cast<std::size_t>((*source.bond_site_2)[bond_list[b].row] - 1);
+                for (const auto& key : {std::pair{site(row_1), site(row_2)}, std::pair{site(row_2), site(row_1)}}) {
+                    double& longest = reach[key];
+                    longest = std::max(longest, bond_list[b].distance);
+                }
+            }
+            std::map<std::string, bool> corner_site;
+            for (const auto& [id, type] : source.site_types) {
+                corner_site[id] = kNonMetals.count(element_of(type)) != 0;
+            }
+            const auto& m = source.cartn_matrix;
+            for (std::size_t i = 0; i != scene.atoms.size(); ++i) {
+                const SceneAtom& atom = scene.atoms[i];
+                const std::size_t centre_row = atom.parts[atom.major].row;
+                if (centre_row >= n) {
+                    continue;
+                }
+                std::vector<Vec3> found;
+                for (std::size_t row = 0; row != n; ++row) {
+                    const auto longest = reach.find({site(centre_row), site(row)});
+                    if (longest == reach.end() || !corner_site[site(row)]) {
+                        continue;
+                    }
+                    for (int ta = -1; ta <= 1; ++ta) {
+                        for (int tb = -1; tb <= 1; ++tb) {
+                            for (int tc = -1; tc <= 1; ++tc) {
+                                const Vec3 shift{m[0] * ta + m[1] * tb + m[2] * tc, m[3] * ta + m[4] * tb + m[5] * tc,
+                                                 m[6] * ta + m[7] * tb + m[8] * tc};
+                                const Vec3 point = add(row_centre(source, row), shift);
+                                const double distance = norm(sub(point, atom.centre));
+                                if (distance > 1e-6 && distance <= longest->second + 1e-4) {
+                                    found.push_back(point);
+                                }
+                            }
+                        }
+                    }
+                }
+                shells[i] = std::move(found);
+            }
         }
         for (std::size_t i = 0; i != scene.atoms.size(); ++i) {
             const SceneAtom& atom = scene.atoms[i];
@@ -895,7 +947,8 @@ StructureScene present_structure(const SceneSource& source, const SceneOptions& 
                 }
             }
             auto faces = convex_hull(corners);
-            if (faces.empty()) {
+            // Corners all in one plane (a square of four bonds) enclose nothing: no polyhedron.
+            if (faces.size() < 4) {
                 continue;
             }
             const Rgb grey{0xA0, 0xA0, 0xA0};
