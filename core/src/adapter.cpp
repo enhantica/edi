@@ -7011,9 +7011,11 @@ FitResultBase Project::fit_scan(const IterationCallback& on_iteration,
         }
         // Each file's event carries its own fit result, so its correlations are crysta's from its covariance, as a
         // single fit's are, over the template project its labels name.
+        // Where the termination cell sits in a row: by the header, since derived columns may follow the conditions.
+        auto termination_at = std::make_shared<std::optional<std::size_t>>();
         const crysta::FileResultCallback engine_file_result =
-            [this, file_history, last_file_history, completed_files, scan, &on_file_complete,
-             &cproject](const std::vector<std::string>& row, const crysta::FitResultBase& file_result) {
+            [this, file_history, last_file_history, completed_files, scan, &on_file_complete, &cproject,
+             termination_at](const std::vector<std::string>& row, const crysta::FitResultBase& file_result) {
                 ++*completed_files;
                 std::swap(*last_file_history, *file_history);
                 file_history->clear();
@@ -7025,8 +7027,19 @@ FitResultBase Project::fit_scan(const IterationCallback& on_iteration,
                 scan->results[record->file_name] = record->result;
                 scan->fitted.insert(record->file_name);
                 if (on_file_complete) {
-                    // The current driver appends the four fit-condition cells to this same row.
-                    record->termination = row.size() >= 8 ? row.back() : std::string();
+                    if (!termination_at->has_value()) {
+                        std::ifstream header_in(std::filesystem::path(cproject.path.get()) / "analysis" / "results.csv");
+                        std::string first;
+                        if (std::getline(header_in, first)) {
+                            const std::vector<std::string> columns = split_scan_row(first);
+                            const auto found = std::find(columns.begin(), columns.end(), kScanConditionColumns[3]);
+                            if (found != columns.end()) {
+                                *termination_at = static_cast<std::size_t>(found - columns.begin());
+                            }
+                        }
+                    }
+                    record->termination =
+                        termination_at->has_value() && **termination_at < row.size() ? row[**termination_at] : std::string();
                     on_file_complete(*record);
                 }
             };
