@@ -23,6 +23,13 @@ WORK_FIELDS = (
 
 
 CAPTURE_FILES = {'native.json', 'native-report.txt', 'conditioning.json', 'conditioning-raw.json'}
+PUBLIC_AUTHORITY = ['Native Save continuation', 'Auto descent context selection']
+# Exact authority-only digests of the two prior committed wording stages.
+# The public wording migration changes no condition, historical capture or work bound.
+PRIOR_AUTHORITY_DIGESTS = {
+    '0137adf33696ae380459fbcc4b1645e527add5a1c40cb5349cddb52ef683e4b1',
+    '36104b2000ac97052208d56317966352ea15cd053f57ecbd58df1cc27d145d4b',
+}
 CURRENT = {
     'conditions': {'descent': 'auto', 'stop_rules': 'chi_square_change shift_su'},
     'probe_horizon': 3,
@@ -53,7 +60,7 @@ def declaration(value=None):
         raise ValueError('Iteration domain declaration requires its exact schema fields')
     if (
         value['schema'] != 'catalogue-iteration-domains/1'
-        or value['authority'] != ['edi ADR-0023', 'crysta ADR-0130']
+        or value['authority'] != PUBLIC_AUTHORITY
         or value['current'] != CURRENT
         or not isinstance(value['historical'], dict)
         or value['historical'].keys() != {'lbco', 'ncaf'}
@@ -296,12 +303,16 @@ def write_auto_declaration():
     assert value['current'] in (old, CURRENT), (
         'Auto declaration generation retains every current work bound and stopping condition'
     )
-    assert value['authority'] in (['edi ADR-0023'], ['edi ADR-0023', 'crysta ADR-0130']), (
-        'The current declaration adds only the committed Auto descent authority'
+    authority_digest = hashlib.sha256(
+        json.dumps(value['authority'], separators=(',', ':')).encode()
+    ).hexdigest()
+    assert value['authority'] == PUBLIC_AUTHORITY or authority_digest in PRIOR_AUTHORITY_DIGESTS, (
+        'The declaration accepts only exact prior wording or its public continuation '
+        'and Auto descriptions'
     )
     history = json.dumps(value['historical'], sort_keys=True)
     value['current'] = CURRENT
-    value['authority'] = ['edi ADR-0023', 'crysta ADR-0130']
+    value['authority'] = PUBLIC_AUTHORITY
     declaration(value)
     assert json.dumps(value['historical'], sort_keys=True) == history, (
         'Auto condition generation cannot change any historical capture or its custody'

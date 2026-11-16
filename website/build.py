@@ -39,6 +39,7 @@ from render_notebook_pages import render_notebook_pages  # puts tools/checks on 
 from render_package_index import write_package_index
 from render_parameter_reference import anchor
 from render_parameter_reference import render as render_parameter_reference
+from render_release_notes import latest_release
 from render_release_notes import render as render_release_notes
 from render_tutorials import render_tutorials
 from render_workflow import render as render_workflow
@@ -1095,6 +1096,11 @@ def _release_page(number: int) -> list[dict]:
         return json.loads(response.read())
 
 
+def _with_latest_release(page: str, releases: list[list[dict]]) -> str:
+    """The home page with the latest release named below its buttons."""
+    return page.replace('<!-- latest-release -->', latest_release(releases), 1)
+
+
 def _local_releases() -> list[list[dict]] | None:
     """Fetch the release list for a local build as pages.yml does, cached for an hour.
 
@@ -1153,12 +1159,14 @@ def main() -> None:  # noqa: PLR0915 - the build, step by step
     changelog = ROOT / 'surfaces/docs/changelog.md'
     desktop = ROOT / 'surfaces/docs/application/desktop.md'
     cli = ROOT / 'surfaces/docs/cli/standalone.md'
+    home = ROOT / 'surfaces/docs/index.md'
     overviews = [
         ROOT / 'surfaces/docs' / folder / 'tutorials/index.md'
         for folder in ('user-guide', 'application', 'python', 'cli')
     ]
     originals = {
-        path: path.read_text(encoding='utf-8') for path in (changelog, desktop, cli, *overviews)
+        path: path.read_text(encoding='utf-8')
+        for path in (changelog, desktop, cli, home, *overviews)
     }
     try:
         if 'surfaces' in names:
@@ -1172,12 +1180,14 @@ def main() -> None:  # noqa: PLR0915 - the build, step by step
         if args.github_releases:
             releases = json.loads(args.github_releases.read_bytes())
             changelog.write_text(render_release_notes(releases), encoding='utf-8')
+            home.write_text(_with_latest_release(originals[home], releases), encoding='utf-8')
             desktop.write_text(render_downloads(originals[desktop], releases), encoding='utf-8')
             cli.write_text(
                 render_downloads(originals[cli], releases, kind='cli'), encoding='utf-8'
             )
         elif 'surfaces' in names and (releases := _local_releases()) is not None:
             changelog.write_text(render_release_notes(releases), encoding='utf-8')
+            home.write_text(_with_latest_release(originals[home], releases), encoding='utf-8')
         for name in names:
             _build_concept(name, shared_controls, args.base_url, output)
     finally:

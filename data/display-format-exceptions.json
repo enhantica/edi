@@ -76,7 +76,7 @@
    "reason": "the CLI fit table's time and change columns, which have no dictionary item, and a parameter path the dictionary has no item for; Rwp and the reduced chi-square take their items' formats"
   },
   {
-   "file": "lib/src/bindings.cpp",
+   "file": "core/src/selectors.cpp",
    "match": "text << std::setprecision(digits) << estimate;",
    "reason": "the shortest decimal step that regenerates a measured grid, as a save writes it; never shown"
   },

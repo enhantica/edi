@@ -72,8 +72,7 @@ def _immutable_sources():
     ]
     dependency_bytes = {path: path.read_bytes() for path in dependencies}
     candidates = real.candidates(*admitted[:2], names, banks, source)
-    immutable = copy.deepcopy((fixture, old, names, banks))
-    immutable_protocol = pickle.dumps(immutable, protocol=5)
+    immutable_protocol = pickle.dumps((fixture, old, names, banks), protocol=5)
     candidate_snapshot = copy.deepcopy(candidates)
     cache = SimpleNamespace(
         documents={},
@@ -133,9 +132,7 @@ def _immutable_sources():
             lambda path: immutable_sha(path, real.sha, cache.digests, cache.authenticated_bytes),
         )
         yield
-    assert (fixture, old, names, banks) == immutable and pickle.dumps(
-        (fixture, old, names, banks), protocol=5
-    ) == immutable_protocol, (
+    assert pickle.dumps((fixture, old, names, banks), protocol=5) == immutable_protocol, (
         'Shared authenticated source setup cannot be altered by a protocol control'
     )
     assert candidates == candidate_snapshot, (

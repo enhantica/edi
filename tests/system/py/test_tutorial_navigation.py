@@ -173,17 +173,42 @@ CASES = [
 
 # Qt executes functions in name order and data rows in their declaration order.
 CASES.sort(key=lambda value: value.partition(':')[0])
+ALL_CASES = CASES
+SHARED_FIELD_LESSONS = ('pd-neut-tof_ncaf-wish', 'pd-neut-tof_ferrite-austenite-beer')
 
 
-@pytest.fixture(scope='module')
-def navigation_actor(request, tmp_path_factory):
+def analysis_field_case(case, lesson):
+    kind, _, context = case.partition(':')
+    if kind not in {
+        'field_has_an_explicit_group_and_tab_predecessor',
+        'field_pointer_aims_at_the_input_center',
+    }:
+        return False
+    tutorial, _, index = context.rpartition('-')
+    return (
+        tutorial == lesson
+        and next(entry for entry in LESSONS if entry['id'] == lesson)['steps'][int(index) - 1][
+            'page'
+        ]
+        == 'analysis'
+    )
+
+
+CASES = [
+    case
+    for case in ALL_CASES
+    if not any(analysis_field_case(case, lesson) for lesson in SHARED_FIELD_LESSONS)
+]
+
+
+def actor_for_cases(request, tmp_path_factory, cases):
     selected = [
         'TutorialNavigation::test_' + item.callspec.params['case']
         for item in request.session.items
         if getattr(item, 'module', None) is request.module
         and item.originalname == 'test_written_tutorial_navigation'
     ]
-    order = {'TutorialNavigation::test_' + case: index for index, case in enumerate(CASES)}
+    order = {'TutorialNavigation::test_' + case: index for index, case in enumerate(cases)}
     assert selected == sorted(selected, key=order.__getitem__), (
         'Tutorial rows follow Qt function and declared data order; explicit node lists must '
         'preserve that order so each pytest row drives its own native input'
@@ -198,6 +223,11 @@ def navigation_actor(request, tmp_path_factory):
         yield actor
     finally:
         actor.close()
+
+
+@pytest.fixture(scope='module')
+def navigation_actor(request, tmp_path_factory):
+    yield from actor_for_cases(request, tmp_path_factory, CASES)
 
 
 @pytest.mark.parametrize('case', CASES)

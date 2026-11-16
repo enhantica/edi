@@ -1,11 +1,15 @@
 """Actual capture-file ordering belongs to integration; full historical qualifier retained."""
 
 import copy
+import os
+import subprocess
+from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
 
 from tests.fixtures.e04_t11_wasm import solver_vehicles, written
+from tests.fixtures.native_process import environment_bash
 from tests.unit.py.test_browser_solver_vehicles import (
     ROOT,
     StopBeforeCurrentFitError,
@@ -98,4 +102,64 @@ def test_capture_uses_two_fresh_projects_and_never_carries_historical_settings_i
     )
     assert not (destination / 'result.json').exists(), (
         'Control-flow spies stop before Save and can never produce qualification evidence'
+    )
+
+
+@pytest.mark.parametrize('capture_exit', [0, 23])
+def test_shared_capture_keeps_success_and_clears_failed_output(tmp_path, capture_exit):
+    script = (ROOT / 'tools/ci/wasm-check.sh').read_text()
+    start = script.index('status=0\nREFERENCE="$(mktemp -d')
+    provider = tmp_path / 'tools/ci/wasm-written-reference.sh'
+    provider.parent.mkdir(parents=True)
+    provider.write_text(
+        'echo -n "$1" > "$OUT/captured-path"\n'
+        'echo native-record > "$1/native-record"\nexit ' + str(capture_exit) + '\n'
+    )
+    output = tmp_path / 'output'
+    output.mkdir()
+    env = {
+        **os.environ,
+        'ROOT': str(tmp_path),
+        'OUT': str(output),
+        'SITE': 'site',
+        'DRIVER': 'driver',
+        'CHROME': 'chrome',
+    }
+    env.pop('EDI_WASM_WRITTEN_REFERENCE', None)
+    consumers = (
+        'python() { [[ "$(declare -p EDI_WASM_WRITTEN_REFERENCE)" == "declare -x"* ]] '
+        '|| return 71; '
+        'echo "python:$EDI_WASM_WRITTEN_REFERENCE" >> "$OUT/consumers"; }\n'
+        'node() { [[ "$(declare -p EDI_WASM_WRITTEN_REFERENCE)" == "declare -x"* ]] || return 72; '
+        'echo "node:$4:$EDI_WASM_WRITTEN_REFERENCE" >> "$OUT/consumers"; }\n'
+    )
+    run = subprocess.run(
+        [environment_bash(), '-c', 'set -euo pipefail\n' + consumers + script[start:]],
+        env=env,
+        text=True,
+        capture_output=True,
+        check=False,
+        timeout=5,
+    )
+    assert run.returncode == (1 if capture_exit else 0), (
+        'A failed shared capture remains a failed aggregate while independent checks continue'
+    )
+    expected = (output / 'captured-path').read_text()
+    reference = Path(expected)
+    assert reference.is_dir() and reference.resolve().is_relative_to(output.resolve()), (
+        'Every consumer receives the freshly allocated owner directory with an exported reference'
+    )
+    assert (output / 'consumers').read_text().splitlines() == [
+        'python:' + expected,
+        'node:multithread:' + expected,
+        'node:shim:' + expected,
+    ], (
+        'Both browser modes and the Python checks execute independently '
+        'after either capture outcome'
+    )
+    assert {path.name for path in reference.iterdir()} == (
+        {'native-record'} if capture_exit == 0 else set()
+    ), (
+        'Successful capture bytes survive, while every partial failed-capture byte '
+        'is removed before handoff'
     )

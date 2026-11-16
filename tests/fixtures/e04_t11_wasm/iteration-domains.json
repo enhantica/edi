@@ -1,8 +1,8 @@
 {
   "schema": "catalogue-iteration-domains/1",
   "authority": [
-    "edi ADR-0023",
-    "crysta ADR-0130"
+    "Native Save continuation",
+    "Auto descent context selection"
   ],
   "historical": {
     "lbco": {

@@ -227,6 +227,7 @@ def test_cli_scan_branch_routes_events_and_each_emission_policy(
     progress_lines = (
         'PROGRESS 1/2 · previous-file-with-a-long-name',
         'PROGRESS 2/2',
+        'FINAL 2/2',
     )
     headings = []
     rows = []
@@ -236,9 +237,9 @@ def test_cli_scan_branch_routes_events_and_each_emission_policy(
         headings.append(values)
         return 'SCAN HEADER'
 
-    def row(*values):
-        rows.append(values)
-        line = progress_lines[values[0] - 1]
+    def row(*values, final_row=False):
+        rows.append((values, final_row))
+        line = progress_lines[-1] if final_row else progress_lines[values[0] - 1]
         if values[-1]:
             return '\r' + line + (' ' * (len(progress_lines[0]) - len(line)))
         return line
@@ -304,6 +305,9 @@ def test_cli_scan_branch_routes_events_and_each_emission_policy(
         + '\r'
         + progress_lines[1]
         + ' ' * (len(progress_lines[0]) - len(progress_lines[1]))
+        + '\r'
+        + progress_lines[-1]
+        + ' ' * (len(progress_lines[0]) - len(progress_lines[-1]))
         + '\n'
     ), (
         'TTY compact scan output must erase the longer predecessor before freezing its shorter '
@@ -335,8 +339,11 @@ def test_cli_scan_branch_routes_events_and_each_emission_policy(
         (1, 2, 3.0, 1, 1, 0, 1.0, 1.0, 1.0, 'scan-1.dat'),
         (2, 2, 8.0, 2, 1, 1, 2.0, 1.0, 2.0, 'scan-2.dat'),
     ]
-    assert rows == [(*values, columns) for columns in (0, 0, 80) for values in expected_rows], (
-        'All policies render the same incremental counters, timing and fit metric'
+    assert rows == [
+        ((*values, columns), False) for columns in (0, 0, 80) for values in expected_rows
+    ] + [((*expected_rows[-1], 80), True)], (
+        'All policies retain identical incremental counters and timing; the terminal closing '
+        'row repeats the last completed file with the explicit final-summary flag'
     )
     assert rewrites == [], (
         'The shared core row now owns heading redraw and erasure; the host adds no second rewrite'
