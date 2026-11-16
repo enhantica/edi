@@ -1,7 +1,9 @@
 {
   "undocumented": {
     "components": [
-      "SaveDataGroup"
+      "SaveDataGroup",
+      "GeomGroup",
+      "MeasuredDataGroup"
     ],
     "categories": [
       "metadata",
