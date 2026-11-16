@@ -90,36 +90,39 @@ The workflow `.github/workflows/codesign-check.yml` checks every entry without b
 imports the certificate, signs a test file and logs in to the notary service; on Windows it signs a test `.exe`
 through KeyLocker and verifies it.
 
+**What is signed.** macOS and Windows check only files marked as downloaded (Gatekeeper and quarantine on
+macOS, SmartScreen and the Mark of the Web on Windows); files an installer writes are not checked. So the
+downloads are signed: the installers on both systems, the command-line `edi.exe` on Windows (its ZIP passes
+the mark to the extracted files) and the command-line `edi` on macOS. The EasyDiffraction app is signed too, on
+both systems, so it shows its publisher and passes institutional policies and antivirus checks more easily.
+The assistant runtime's helper executables and the Windows maintenance tool are not signed yet; signing the
+maintenance tool needs a maintenance-tool component carrying a signed `installerbase.exe`, since Qt Installer
+Framework writes the tool from the running installer, which `binarycreator` changes.
+
 **macOS steps**, in the installer job of `.github/workflows/installers.yml`:
 
 1. `apple-actions/import-codesign-certs` imports the `.p12` into a temporary keychain.
 2. `tools/installer/build.py` signs every executable and library inside the app bundle, then the bundle, with
    the identity and `--timestamp`, without the hardened runtime. The app is not notarised: the installer
    writes it to disk, so it is never quarantined, as with EasyDiffractionBeta.
-3. Qt Installer Framework builds the installer app. `tools/installer/package.py seal` signs it with
-   `codesign --options runtime --timestamp`, notarises it with `xcrun notarytool submit --wait` and requires the
-   status `Accepted`, staples the ticket with `xcrun stapler staple`, checks it with `codesign --verify` and
-   `spctl --assess`, and archives it again. This runs for the offline and the online installer.
+3. `tools/installer/standalone_cli.py` signs the command-line `edi` and the libraries in its `.runtime` folder
+   with `codesign --options runtime --timestamp` before archiving them, then sends the ZIP to
+   `xcrun notarytool submit --wait` and requires the status `Accepted`. A bare executable cannot be stapled, so
+   Gatekeeper looks the ticket up online.
+4. Qt Installer Framework builds the installer app. `tools/installer/package.py seal` signs it with
+   `codesign --options runtime --timestamp`, notarises it the same way, staples the ticket with
+   `xcrun stapler staple`, checks it with `codesign --verify` and `spctl --assess`, and archives it again. This
+   runs for the offline and the online installer.
 
 **Windows steps**, in the same job:
 
 1. Decode the client `.p12` and set `SM_CLIENT_CERT_FILE`. `digicert/code-signing-software-trust-action@v1` in
    simple-signing mode, without an input, installs `smctl`. `SM_HOST`, `SM_API_KEY` and
    `SM_CLIENT_CERT_PASSWORD` are set only on the steps that sign.
-2. `tools/installer/build.py` signs every unsigned `.exe` in the staged app with `smctl sign --simple` once the
-   bundled assistant runtime has passed its vendor hash check: the app, `edi_assistant_guard.exe` and the
-   runtime's helpers. Executables that already carry a valid vendor signature keep their bytes, and the build
-   fails if signing changed any other file. `build/installer/windows-signing.json` lists each file it signed
-   with its hash before and after.
-3. `tools/installer/standalone_cli.py` signs `edi.exe` before archiving the command-line download, and
-   `package.py seal` signs each installer before archiving it again.
-4. `signtool verify /pa` checks every signed file, every `.exe` in the stage, and every `.exe` of each test
-   installation, so a missed executable fails the job.
-
-The installed maintenance tool is not signed yet. Qt Installer Framework writes it from the running
-installer's executable segment, which `binarycreator` changes, so signing the installer does not reach it.
-Signing it needs a maintenance-tool component carrying a signed `installerbase.exe`, which belongs with the
-installer component changes listed above.
+2. With `smctl sign --simple`, `tools/installer/build.py` signs the app, `standalone_cli.py` signs `edi.exe`
+   before archiving the command-line download, and `package.py seal` signs each installer before archiving it
+   again.
+3. `signtool verify /pa` checks each signed file and the installed app of each test installation.
 
 **When signing runs.** Only for runs of the installer workflow on `main` in this repository: pushes to `main`
 and the release builds started there. `EDI_CODESIGN` is set for those runs and every signing step depends on
