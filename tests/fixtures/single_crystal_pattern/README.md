@@ -9,3 +9,8 @@ contribution vanishes.
 cell metric, Sears (1992) b(Co) = 2.4900 fm, Brown's Co²⁺ coefficients from the supplied engine source's committed data,
 and the CODATA 2018 magnetic-moment and electron-radius constants. F² is expressed in 10⁻²⁴ cm²; 1 fm = 0.1 × 10⁻¹² cm.
 For an unpolarised beam, nuclear and perpendicular magnetic F² add. F uses the square root of the cumulative total.
+
+`powder-colours.json` uses the immutable published powder palettes and their checked release-data hash through the
+existing chart-controls generator. The legacy `main` preference token selects the published Main palette; named future
+palette tokens use the separate owner-approved palette reference. These are display references, separate from the
+unchanged scientific reflection values.

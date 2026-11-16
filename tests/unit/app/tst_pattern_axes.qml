@@ -154,10 +154,16 @@ Item {
             verify(browser && browser.traces.length > 0, "The exported HTML supplies its plotted trace coordinates");
             const trace = browser.traces.find(row => Array.isArray(row.x) && row.x.length === expected.length && Array.isArray(row.y) && row.y.every((y, i) => Math.abs(y - expected[i].y) < 1e-8));
             verify(trace !== undefined, "The HTML's measured trace retains the independently specified intensities");
+            // Regression pin of the existing HTML renderer transport: seven significant digits.
+            // The unrounded report and Qt coordinates above still use the independent closed forms.
+            const browserExpected = expected.map(point => ({
+                        x: Number(point.x.toPrecision(7)),
+                        y: point.y
+                    }));
             checkPairs(trace.x.map((x, i) => ({
                         x,
                         y: trace.y[i]
-                    })), expected, "HTML chart");
+                    })), browserExpected, "HTML chart");
             for (const mode of ["stacked", "map"]) {
                 const figure = scanFactory.createObject(surface, {
                     project: Session.project,

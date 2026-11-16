@@ -8,6 +8,8 @@ import json
 import math
 from pathlib import Path
 
+from tests.fixtures.chart_controls.generate_bragg import published_palettes
+
 CELL = (4.3, 5.1, 6.7)
 ROWS = ((1, 0, 0, 0.25, 0.02), (0, 1, 1, 0.64, 0.03), (1, 1, 1, 1.21, 0.04), (0, 0, 2, 0.09, 0.01))
 HERE = Path(__file__).resolve().parent
@@ -24,6 +26,14 @@ def table(path, key, value):
     ).hexdigest()
 
 
+def sequential_sum(values):
+    # Preserve the original producer's declared addition order across Python sum implementations.
+    total = 0.0
+    for value in values:
+        total += value
+    return total
+
+
 def reference(engine_source):
     magnetic, digest = table(
         engine_source / 'data/scattering/magnetic_form_factor.tsv', 'ion', 'Co2+'
@@ -35,9 +45,9 @@ def reference(engine_source):
     rows = []
     for h, k, index_l, measured, su in ROWS:
         reciprocal = [index / cell for index, cell in zip((h, k, index_l), CELL, strict=True)]
-        inverse_d2 = sum(value**2 for value in reciprocal)
+        inverse_d2 = sequential_sum(value**2 for value in reciprocal)
         sine = math.sqrt(inverse_d2) / 2
-        j0 = sum(
+        j0 = sequential_sum(
             float(magnetic['j0_' + letter])
             * math.exp(-float(magnetic['j0_' + letter.lower()]) * sine**2)
             for letter in 'ABC'
@@ -71,6 +81,17 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--engine-source', type=Path, required=True)
     args = parser.parse_args()
+    (HERE / 'powder-colours.json').write_text(
+        json.dumps(
+            {
+                'source': 'Independently published powder palette reference',
+                'tokens': ['main', 'colourBlindSafe'],
+                'palettes': published_palettes(),
+            },
+            indent=2,
+        )
+        + '\n'
+    )
     (HERE / 'reference.json').write_text(
         json.dumps(reference(args.engine_source), indent=2) + '\n'
     )

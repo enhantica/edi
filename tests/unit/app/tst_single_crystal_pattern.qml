@@ -171,12 +171,16 @@ Item {
             }
             const nuclearArea = contribution(rows, false, data.squared, data.axis);
             const theme = pattern.colors.isDarkPalette ? "dark" : "light";
-            const approved = Approved.owner(SettingsProof);
-            const colours = Approved.colours(SettingsProof, Preferences.colourScheme, "structures", 2, theme === "dark", {
+            const published = JSON.parse(SettingsProof.repoText("tests/fixtures/single_crystal_pattern/powder-colours.json"));
+            const token = Preferences.colourScheme;
+            const oldIndex = published.tokens.indexOf(token);
+            const oldPalette = oldIndex >= 0 ? published.palettes[oldIndex] : null;
+            const totalColour = oldPalette ? oldPalette.roles.total_calculation[theme] : Approved.owner(SettingsProof).calc[theme];
+            const colours = oldPalette ? oldPalette[theme].slice(2, 4) : Approved.colours(SettingsProof, token, "structures", 2, theme === "dark", {
                 experiments: 1,
                 structures: 1
             });
-            verify(Qt.colorEqual(outline.color, approved.calc[theme]), "The actual total bar outline uses the independently approved powder calculation red");
+            verify(Qt.colorEqual(outline.color, totalColour), "The actual total bar outline uses the independently approved powder calculation red");
             verify(nuclearArea !== undefined, "Each calculated bar has a nuclear fill from zero to the independent nuclear contribution");
             const nuclearInk = Qt.tint("transparent", colours[0]);
             verify(Math.abs(nuclearArea.color.r - nuclearInk.r) + Math.abs(nuclearArea.color.g - nuclearInk.g) + Math.abs(nuclearArea.color.b - nuclearInk.b) < 1e-6, "The nuclear fill follows the independent approved powder structure colour");
@@ -191,18 +195,23 @@ Item {
             const icons = [];
             for (const label of labels) {
                 compare(label.segments.filter(part => part.text !== undefined).map(part => part.text).join(""), "cosio", "Every Bragg row uses the structure name without a contribution suffix");
-                icons.push(label.segments.find(part => part.icon !== undefined).icon);
+                const icon = label.segments.find(part => part.icon !== undefined);
+                verify(icon !== undefined, "Each actual Bragg label exposes its powder structure or magnetic icon");
+                icons.push(icon.icon);
+                verify(Qt.colorEqual(icon.color, colours[icon.icon === "magnet" ? 1 : 0]), "The actual Bragg tick label uses its independently approved powder contribution colour");
             }
             verify(icons.includes("layer-group") && (!data.magnetic || icons.includes("magnet")), "Actual Bragg rows distinguish nuclear and magnetic by the powder icons");
             verify(findChild(pattern, "chart.view.residual").visible, "Measured minus calculated has its own residual pane");
             const residual = Render.series(pattern).find(item => item.objectName === "chart.series.residual.bars.top" || item.objectName === "chart.series.resid.band.top");
             verify(residual !== undefined && residual.count > 0, "The residual is rendered as bars, including in calculated line mode");
+            const residualColour = oldPalette ? oldPalette.roles.difference[theme] : Approved.reference(SettingsProof).schemes.find(row => row.id === token).palette[theme].difference;
+            verify(Qt.colorEqual(residual.color, residualColour), "Residual bars use the independently approved powder grey");
             for (const row of rows) {
                 const value = data.squared ? row.measured - row.total : Math.sqrt(row.measured) - Math.sqrt(row.total);
                 const bounds = extent(residual, row[data.axis], data.axis);
                 verify(bounds !== null && Math.abs(bounds.low - Math.min(0, value)) < 1e-7 && Math.abs(bounds.high - Math.max(0, value)) < 1e-7, "Residual bars run from zero to the independently computed measured-minus-calculated value");
             }
-            const tickSeries = Render.series(findChild(pattern, "chart.view.bragg")).filter(series => /^chart\.series\.bragg\./.test(series.objectName) && series.count > 0);
+            const tickSeries = Render.series(findChild(pattern, "chart.view.bragg")).filter(series => /^chart\.series\.bragg\./.test(series.objectName) && vertices(series).length > 0);
             compare(tickSeries.length, data.magnetic ? 2 : 1, "Each actual nuclear or magnetic Bragg row has its own tick series");
             for (const series of tickSeries) {
                 const xs = vertices(series).map(point => point.x);
@@ -244,6 +253,7 @@ Item {
             const entries = Render.descendants(legend).filter(item => item.objectName === "chart.legend.entry" && item.visible && !item.bragg && item.label === "cosio");
             compare(entries.length, data.magnetic ? 2 : 1, "Each calculated contribution has a real legend row named only by its structure");
             for (const entry of entries) {
+                verify(entry.segments.some(part => part.icon === (entry.magnetic ? "magnet" : "layer-group")), "Each actual contribution legend row uses the powder structure or magnetic icon");
                 const area = contribution(reference.rows, entry.magnetic, true, "q");
                 verify(area !== undefined, "A contribution legend row has an actual drawn filled area before it is hidden");
                 click(entry);
@@ -252,7 +262,7 @@ Item {
                 tryVerify(() => !entry.hidden && area.visible && area.color.a > 0 && area.upperSeries.count > 0, 1000, "Clicking the same actual legend row restores its plotted contribution");
             }
         }
-        function test_simulation_has_calculated_bars_and_ticks_without_measured_data_data() {
+        function test_simulation_has_calculated_bars_and_ticks_without_measurements_data() {
             return [
                 {
                     tag: "nuclear",
@@ -264,7 +274,7 @@ Item {
                 }
             ];
         }
-        function test_simulation_has_calculated_bars_and_ticks_without_measured_data(data) {
+        function test_simulation_has_calculated_bars_and_ticks_without_measurements(data) {
             open(data.magnetic, true);
             tryVerify(() => Session.project.currentExperiment.singleCrystalReflections.simulated, 3000, "An experiment without measured data publishes real simulated reflections");
             axis("q");
@@ -279,11 +289,15 @@ Item {
             const layer = findChild(pattern, "chart.measured");
             verify(layer !== null && layer.count === reference.rows.length && layer.visible, "Measured points stay visible in either calculated bar style");
             verify(layer.fillColor.a > 0 && layer.fillColor.a < 1 && layer.fillColor.b > layer.fillColor.r, "Measured circles have a light blue fill and a blue outline");
+            verify(waitForPolish(layer) && waitForRendering(layer), "The actual measured layer completes a frame before pixel inspection");
             const image = grabImage(layer);
             function ink(x, y) {
                 for (let dx = -1; dx <= 1; ++dx)
                     for (let dy = -1; dy <= 1; ++dy) {
-                        const pixel = image.pixel(Math.round(x) + dx, Math.round(y) + dy);
+                        const px = Math.round(x) + dx, py = Math.round(y) + dy;
+                        if (px < 0 || py < 0 || px >= image.width || py >= image.height)
+                            continue;
+                        const pixel = image.pixel(px, py);
                         if (pixel.a > 0.6 && Math.abs(pixel.r - layer.color.r) + Math.abs(pixel.g - layer.color.g) + Math.abs(pixel.b - layer.color.b) < 0.25)
                             return true;
                     }
@@ -303,19 +317,21 @@ Item {
             const rows = [];
             for (const axis of ["q", "sine"])
                 for (const squared of [true, false])
-                    rows.push({
-                        tag: axis + "-" + (squared ? "f2" : "f"),
-                        axis,
-                        squared
-                    });
+                    for (const thin of [false, true])
+                        rows.push({
+                            tag: axis + "-" + (squared ? "f2" : "f") + "-" + (thin ? "lines" : "bars"),
+                            axis,
+                            squared,
+                            thin
+                        });
             return rows;
         }
         function test_measured_points_and_uncertainties_in_both_modes(data) {
             open(false);
             axis(data.axis);
             style(data.squared);
-            assertMeasuredPixels(data.squared, data.axis);
-            click(findChild(pattern, "chart.toolbar.thinBars"));
+            if (data.thin)
+                click(findChild(pattern, "chart.toolbar.thinBars"));
             assertMeasuredPixels(data.squared, data.axis);
         }
         function test_bar_width_and_thin_line_zoom_invariants_data() {

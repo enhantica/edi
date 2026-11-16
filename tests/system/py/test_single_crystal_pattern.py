@@ -19,13 +19,14 @@ CASES = [
     ],
     *[f'test_legend_hides_real_contributions:{kind}' for kind in ('nuclear', 'magnetic')],
     *[
-        f'test_simulation_has_calculated_bars_and_ticks_without_measured_data:{kind}'
+        f'test_simulation_has_calculated_bars_and_ticks_without_measurements:{kind}'
         for kind in ('nuclear', 'magnetic')
     ],
     *[
-        f'test_measured_points_and_uncertainties_in_both_modes:{axis}-{quantity}'
+        f'test_measured_points_and_uncertainties_in_both_modes:{axis}-{quantity}-{mode}'
         for axis in ('q', 'sine')
         for quantity in ('f2', 'f')
+        for mode in ('bars', 'lines')
     ],
     *[f'test_bar_width_and_thin_line_zoom_invariants:{axis}' for axis in ('q', 'sine')],
     *[
@@ -45,6 +46,9 @@ def test_single_crystal_pattern_from_independent_references(case):
         ROOT / 'tests/unit/app/tst_single_crystal_pattern.qml',
         'SingleCrystalPattern::' + case,
     ])
+    assert 'Could not find the following test functions' not in output, (
+        'The selected native single-crystal function must exist before product behavior is judged'
+    )
     function, _, tag = case.partition(':')
     assert status == 0, (
         'The actual single-crystal chart satisfies its physical contract: ' + output
