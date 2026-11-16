@@ -93,13 +93,14 @@ def expression(value, atoms):
     return condition_value(tree.body)
 
 
-def context_atoms(event, ref, release, platform, repository):
+def context_atoms(event, ref, release, platform, repository, *, preview=False):
     atoms = {
         'github.event_name': event,
         'github.repository': repository,
         'github.ref': ref,
         'runner.os': platform,
         'inputs.release_plan_run': '1234' if release else '',
+        'inputs.prepare_preview_release': preview,
         'env.EDI_RELEASE_PLAN': '/release-plan' if release else '',
     }
     guard = workflow()['jobs']['installers'].get('env', {}).get('EDI_CODESIGN', '')
@@ -107,8 +108,10 @@ def context_atoms(event, ref, release, platform, repository):
     return atoms
 
 
-def condition(step, event, ref, release, platform, *, repository='enhantica/edi', failed=False):
-    atoms = context_atoms(event, ref, release, platform, repository)
+def condition(  # noqa: PLR0913 - each argument is an Actions context input
+    step, event, ref, release, platform, *, repository='enhantica/edi', failed=False, preview=False
+):
+    atoms = context_atoms(event, ref, release, platform, repository, preview=preview)
     if 'EDI_CODESIGN' in step.get('env', {}):
         atoms['env.EDI_CODESIGN'] = expression(step['env']['EDI_CODESIGN'], atoms)
     value = str(step.get('if', 'success()'))
@@ -124,8 +127,10 @@ def condition(step, event, ref, release, platform, *, repository='enhantica/edi'
     return bool(expression(value, atoms))
 
 
-def private_access(step, event, ref, release, platform, *, repository='enhantica/edi'):
-    if not condition(step, event, ref, release, platform, repository=repository):
+def private_access(
+    step, event, ref, release, platform, *, repository='enhantica/edi', preview=False
+):
+    if not condition(step, event, ref, release, platform, repository=repository, preview=preview):
         return False
     values = [
         value
@@ -135,7 +140,7 @@ def private_access(step, event, ref, release, platform, *, repository='enhantica
     ]
     if not values:
         return True
-    atoms = context_atoms(event, ref, release, platform, repository)
+    atoms = context_atoms(event, ref, release, platform, repository, preview=preview)
     if 'EDI_CODESIGN' in step.get('env', {}):
         atoms['env.EDI_CODESIGN'] = expression(step['env']['EDI_CODESIGN'], atoms)
     for value in values:
@@ -201,6 +206,22 @@ def test_signing_is_present_and_never_reaches_pull_requests_or_other_branches(pl
         'Only release dispatches on main and main pushes in the original repository may '
         'access signing credentials; forbidden routes reached: ' + repr(violations)
     )
+
+
+@pytest.mark.parametrize('platform', ['macOS', 'Windows'])
+def test_non_release_main_dispatch_receives_no_signing_credentials(platform):
+    atoms = context_atoms('workflow_dispatch', 'refs/heads/main', False, platform, 'enhantica/edi')
+    assert not atoms['env.EDI_CODESIGN'], (
+        'A diagnostic main dispatch without a release plan or preview request must disable signing'
+    )
+    assert not any(
+        private_access(step, 'workflow_dispatch', 'refs/heads/main', False, platform)
+        for step in signing_steps()
+    ), 'A non-release main dispatch must receive no certificate, key or notary credentials'
+    assert any(
+        private_access(step, 'workflow_dispatch', 'refs/heads/main', False, platform, preview=True)
+        for step in signing_steps()
+    ), 'An explicit preview-release request on main must retain its signing route'
 
 
 def test_condition_observer_keeps_guard_values_and_refuses_unknown_context():
