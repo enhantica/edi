@@ -47,7 +47,23 @@ Item {
     }
     function layout() {
         ApplicationInfo.toolbarLayout();
+        ++laidOut;
     }
+    // The lines' outer edges once laid out, in this item's coordinates: where the block selector row above lines up
+    // (the owner, 2026-11-16). Counted up after each layout, so the edges are read again.
+    property int laidOut: 0
+    function extent() {
+        let low = Infinity, high = -Infinity;
+        for (let i = 0; i < children.length; ++i) {
+            const child = children[i];
+            if (!child.visible || child.width <= 0)
+                continue;
+            low = Math.min(low, child.x);
+            high = Math.max(high, child.x + child.width);
+        }
+        return isFinite(low) ? [low, high] : [leftEdge, rightEdge];
+    }
+    readonly property var contentSpan: laidOut >= 0 && width >= 0 ? extent() : [leftEdge, rightEdge]
 
     onMeasureChanged: Qt.callLater(layout)
     Component.onCompleted: layout()

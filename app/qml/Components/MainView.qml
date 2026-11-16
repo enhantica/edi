@@ -284,13 +284,21 @@ EaComponents.MainContent {
         // Where the shown view's toolbar ends, so the selector and the toolbar share one right edge.
         rightInset: ({
                 "structure": structureView.toolbarRightInset,
-                "pattern": chartView.toolbarRightInset,
+                "pattern": chartView.toolbarSpanRightInset,
                 "meascalc": measCalcTab.toolbarRightInset,
                 "correlations": correlationChart.toolbarRightInset,
-                "stacked": view.singleCrystals ? stackedCrystals.toolbarRightInset : stackedChart.toolbarRightInset,
-                "map": mapChart.toolbarRightInset,
-                "evolution": chartView.toolbarRightInset
+                "stacked": view.singleCrystals ? stackedCrystals.toolbarRightInset : stackedChart.toolbarSpanRightInset,
+                "map": mapChart.toolbarSpanRightInset,
+                "evolution": evolutionChart.toolbarSpanRightInset
             })[view.currentKey] ?? EaStyle.Sizes.fontPixelSize
+        // And where it starts: the toolbar lines' left edge, so every toolbar row shares both edges (the owner,
+        // 2026-11-16); the other views keep the main area's margin.
+        leftInset: ({
+                "pattern": chartView.toolbarSpanLeft,
+                "stacked": view.singleCrystals ? AppSizes.mainAreaMargin : stackedChart.toolbarSpanLeft,
+                "map": mapChart.toolbarSpanLeft,
+                "evolution": evolutionChart.toolbarSpanLeft
+            })[view.currentKey] ?? AppSizes.mainAreaMargin
         blocks: view.project ? (experiments ? view.project.experiments : view.project.structures) : null
         blocksTextRole: "label"
         blockKind: experiments ? "experiment" : "structure"
