@@ -41,6 +41,19 @@ SideBarGroup {
     property bool freeTitleHovered: false
     readonly property color freeTitleColor: !measured ? EaStyle.Colors.themeForegroundMinor : freeTitleHovered ? EaStyle.Colors.themeAccent : EaStyle.Colors.themeForeground
     readonly property real freeColumnWidth: Math.ceil(freeTitleText.advanceWidth + freeGap + freeArrowText.advanceWidth + freeInset) + AppSizes.fieldSpacing * 2 + EaStyle.Sizes.fontPixelSize
+    // "Same for all" (edi ADR-0087 point 3): a column with several experiments, a switch on each experiment parameter
+    // that ties it in every other experiment of its set to the template's, through alias and constraint rows.
+    readonly property bool sameShown: project !== null && project.experiments.count > 1
+    readonly property real sameColumnWidth: sameShown ? Math.ceil(sameTitleText.advanceWidth) + AppSizes.fieldSpacing * 2 + EaStyle.Sizes.fontPixelSize : 0
+    // Read again whenever the relation rows change.
+    readonly property int relationRows: project && project.analysis ? project.analysis.constraints.count + project.analysis.aliases.count : 0
+
+    TextMetrics {
+        id: sameTitleText
+        font.family: EaStyle.Fonts.fontFamily
+        font.pixelSize: EaStyle.Sizes.fontPixelSize
+        text: qsTr("Same for all")
+    }
 
     TextMetrics {
         id: freeTitleText
@@ -322,7 +335,7 @@ SideBarGroup {
             readonly property var rangeColumns: [7, 8]
             readonly property real freeWidth: group.measured ? group.freeColumnWidth : 0
             readonly property real nameMinimum: Math.min((fittedWidths[1] ?? 0) + EaStyle.Sizes.fontPixelSize, EaStyle.Sizes.fontPixelSize * 8)
-            readonly property real fittedRoom: width - rowPadding * 2 - EaStyle.Sizes.borderThickness * 2 - EaStyle.Sizes.tableColumnSpacing * (group.measured ? 9 : 8) - numberColumnWidth - freeWidth - nameMinimum
+            readonly property real fittedRoom: width - rowPadding * 2 - EaStyle.Sizes.borderThickness * 2 - EaStyle.Sizes.tableColumnSpacing * ((group.measured ? 9 : 8) + (group.sameShown ? 1 : 0)) - numberColumnWidth - freeWidth - group.sameColumnWidth - nameMinimum
             readonly property real fittedSum: fittedColumns.reduce((sum, column) => sum + (fittedWidths[column] ?? 0), 0)
             readonly property bool rangeShown: fittedRoom >= fittedSum
             readonly property var shownColumns: rangeShown ? fittedColumns : fittedColumns.filter(column => !rangeColumns.includes(column))
@@ -334,7 +347,7 @@ SideBarGroup {
             // The name takes the rest, set here rather than by the table's rule, so it follows only the table's width
             // and the measured texts, never the rows in view.
             readonly property real nameWidth: Math.max(EaStyle.Sizes.fontPixelSize * 4, Math.floor(fittedRoom + nameMinimum - shownColumns.reduce((sum, column) => sum + fittedColumn(column), 0)))
-            readonly property var wantedColumns: [numberColumnWidth, nameWidth].concat(fittedColumns.map(column => fittedColumn(column))).concat(group.measured ? [freeWidth] : [])
+            readonly property var wantedColumns: [numberColumnWidth, nameWidth].concat(fittedColumns.map(column => fittedColumn(column))).concat(group.measured ? [freeWidth] : []).concat(group.sameShown ? [group.sameColumnWidth] : [])
             // Applied a moment later: new widths remake rows and measure them again, which would otherwise feed back
             // into the widths while they are being worked out.
             function applyColumns() {
@@ -444,6 +457,13 @@ SideBarGroup {
                         project: group.project
                         filter: parameterFilter
                     }
+                }
+                EaComponents.ListViewLabel {
+                    elide: Text.ElideRight
+                    objectName: "parameters.sameHeader"
+                    visible: group.sameShown
+                    horizontalAlignment: Text.AlignHCenter
+                    text: qsTr("Same for all")
                 }
             }
 
@@ -591,6 +611,26 @@ SideBarGroup {
                         checked: row.parameter ? row.parameter.free : false
                         onToggled: row.parameter.free = checked
                         ToolTip.text: row.parameter && !row.parameter.fittable ? qsTr("Cannot be fitted: %1").arg(row.parameter.fitReason) : ""
+                    }
+                }
+                Item {
+                    property int horizontalAlignment: Text.AlignHCenter
+                    visible: group.sameShown
+                    height: parent.height
+
+                    EaComponents.ListViewCheckBox {
+                        id: sameBox
+                        anchors.fill: parent
+                        horizontalAlignment: Text.AlignHCenter
+                        objectName: `parameters.same.${row.index}`
+                        readonly property bool applies: group.sameShown && group.relationRows >= 0 && group.project.sameForAllApplies(row.parameter)
+                        visible: applies
+                        checked: applies && group.relationRows >= 0 && group.project.sameForAll(row.parameter)
+                        onToggled: {
+                            group.project.setSameForAll(row.parameter, checked);
+                            checked = Qt.binding(() => sameBox.applies && group.relationRows >= 0 && group.project.sameForAll(row.parameter));
+                        }
+                        ToolTip.text: qsTr("The same value in every experiment of the set, through a constraint each")
                     }
                 }
             }
