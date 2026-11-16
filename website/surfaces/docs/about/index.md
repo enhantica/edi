@@ -12,7 +12,7 @@ It began in 2019 as my simple mock-up of a modern, easy-to-use graphical interfa
 
 User experience has always been at the centre of the project. One encouraging milestone was very positive feedback on an intermediate interface design from the company [Design Psychology](https://www.designpsykologi.dk), which confirmed we were moving in the right direction.
 
-EasyDiffraction has also benefited from contributors, testers and users who shared ideas, reported problems, suggested improvements, or contributed code and documentation. Their support has shaped the project.
+EasyDiffraction has also benefited from contributors, testers and users who shared ideas, reported problems, suggested improvements, or contributed code and documentation. Their support has helped to shape the project.
 
 You are very welcome to take part too: use EasyDiffraction, share feedback, suggest features, report problems, contribute to the code or documentation, or simply tell us about your experience. If you are interested, write to me directly at <span class="ed-email" data-mail="dWUuc3NlQHZvbm96YXMud2VyZG5h"><noscript>andrew.sazonov [at] ess [dot] eu</noscript></span>, or use the [feedback form](community.md), with your name or anonymously. Every message is read and carefully considered.
 
