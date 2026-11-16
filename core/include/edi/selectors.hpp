@@ -155,6 +155,20 @@ void set_refine_ls_threshold_sigma(Project& project, std::optional<double> sigma
 // A simulated single crystal's resolution limit: above 0 and finite, on a constant-wavelength
 // single crystal without measured reflections; empty clears. Its reach is checked when it is calculated.
 void set_sin_theta_over_lambda_max(ExperimentBase& experiment, std::optional<double> limit);
+// A powder's calculation range as diffraction-lib names it (two_theta_* or time_of_flight_*): its grid's first
+// and last points and its step. The bounds are the grid's own, so they read the same before and after a save: a
+// maximum between two points reads back as the last point below it. Without a grid they come from the d-spacing
+// window 0.5 to 10 angstrom through the instrument, with 1000 points; a measured pattern's range is its own. No
+// step for a single point or an uneven grid.
+struct PdCalculationRange {
+    double min;
+    double max;
+    std::optional<double> step;
+};
+enum class PdRangeValue { Min, Max, Step };
+PdCalculationRange pd_calculation_range(const ExperimentBase& experiment);
+// One of the three set and the grid built again from it and the other two; refused for measured data.
+void set_pd_calculation_range(ExperimentBase& experiment, PdRangeValue which, double value);
 // The expression the threshold makes, as CIF writes it (`I>2u(I)`).
 std::string reflns_threshold_expression(const ExperimentBase& experiment);
 // Switch the background model as diffraction-lib's `_replace_background` does: the new type starts empty, and the

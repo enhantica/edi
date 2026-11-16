@@ -10,10 +10,35 @@ import edi.app
 // out and the version, composed as in About (WordmarkWithVersion), Start, and two columns of light links with icons:
 // tutorials, documentation and what's new, then Help and feedback, How to cite and About.
 Item {
+    id: home
+
+    // The wordmark the intro lands in (HomeIntro), and whether the intro is playing.
+    readonly property Wordmark wordmark: wordmarkBlock.wordmark
+    property bool introRunning: false
+
+    // The idle spin: after 30 s on Home without input, the logo turns twice, and again after each further 30 s
+    // (the owner, 2026-11-14). Always on, apart from demo and test runs, whose images stay still.
+    Timer {
+        id: idleWait
+
+        interval: 30000
+        running: ApplicationInfo.homeIntroAllowed && !home.introRunning && EaGlobals.Vars.appBarCurrentIndex === 0 && home.Window.active
+        repeat: true
+        onTriggered: home.wordmark.spin()
+    }
+    Connections {
+        target: ApplicationInfo
+        function onUserInput() {
+            if (idleWait.running)
+                idleWait.restart();
+        }
+    }
+
     Column {
         anchors.centerIn: parent
 
         WordmarkWithVersion {
+            id: wordmarkBlock
             anchors.horizontalCenter: parent.horizontalCenter
             versionObjectName: "home.version"
         }

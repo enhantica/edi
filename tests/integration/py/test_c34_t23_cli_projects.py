@@ -14,16 +14,19 @@ import hashlib
 import importlib.util
 import json
 import re
+import shlex
 import shutil
 import subprocess
 import sys
 import tomllib
 from pathlib import Path
 
+import edi
 import pytest
 import yaml
 from mkdocs.config import load_config
 
+from tests.fixtures.c06_t8.variant_name_projection import restore_variant_name
 from tests.fixtures.c34_t23_cli_projects.retaken_pins import SEEDS as RETAKEN_SEEDS
 from tests.fixtures.c34_t23_cli_projects.retaken_pins import retained_pin_bytes
 from tests.fixtures.constraint_expressions.cosio_seed_bytes import legacy_seed
@@ -31,6 +34,8 @@ from tests.fixtures.constraint_expressions.ncaf_follower_bytes import historical
 from tests.fixtures.cwl_family.historical import original_tokens
 from tests.fixtures.example_catalogue.retained_bytes import retained_bytes
 from tests.fixtures.excluded_display.historical_bytes import historical_excluded_bytes
+from tests.fixtures.metadata_transition import retired_source_fields
+from tests.fixtures.table_display.metadata_bytes import restore
 from tests.integration.py.ci_runner_contract import self_hosted_runners
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -136,28 +141,65 @@ def restore_seed_pin(project_id, live_directory, path):
         'Expected regression pins must remain materialized regular files'
     )
     raw = path.read_bytes()
-    retained = retained_bytes((live_directory / 'expected.json').relative_to(ROOT), raw)
-    if retained != raw:
+    relative = (live_directory / 'expected.json').relative_to(ROOT)
+    projected = restore_variant_name(relative, raw)
+    retained = retained_bytes(relative, raw)
+    if retained != projected:
         # The catalogue replacement already restores the original seed, before main's retake.
         path.write_bytes(retained)
     else:
+        path.write_bytes(projected)
         restore_retaken_pin(project_id, 'expected.json', path)
 
 
+def _assert_live_stop_rules(live_directory):
+    live_analysis = (live_directory / 'project/analysis/analysis.edi').read_text()
+    assert not re.search(r'(?m)^_minimizer\.stop_rule\s', live_analysis), (
+        'The current seed must use the canonical stop-rule set instead of the legacy scalar'
+    )
+    declared_sets = re.findall(r'(?m)^_minimizer\.stop_rules\s+([^\n]+)', live_analysis)
+    assert len(declared_sets) <= 1, 'Each seed declares at most one unambiguous stop-rule set'
+    if declared_sets:
+        assert ' '.join(shlex.split(declared_sets[0])).split() == [
+            'chi_square_change',
+            'shift_su',
+        ], 'An explicit retained default set must preserve both original effective stopping rules'
+    assert (
+        edi.Project.load(live_directory / 'project').analysis.stop_rules
+        == 'chi_square_change shift_su'
+    ), (
+        'ADR-0124: every live retained seed executes both effective rules, including an '
+        'omitted default'
+    )
+
+
+def _assert_historical_stop_rule(live_directory, name):
+    _assert_live_stop_rules(live_directory)
+    declared = retired_source_fields.previous_bytes(
+        (live_directory / name).relative_to(ROOT).as_posix(),
+        (live_directory / name).read_bytes(),
+    )
+    assert [
+        line.strip()
+        for line in declared.decode().splitlines()
+        if line.startswith('_minimizer.stop_rule ')
+    ] == ['_minimizer.stop_rule shift_su'], (
+        'Each retained seed declares the owner-selected Shift/s.u. rule exactly once'
+    )
+
+
 @pytest.mark.parametrize('project_id', sorted(SOURCE['projects']))
-def test_seed_regression_pin_tree_is_byte_identical_to_crysta_main(project_id, tmp_path):  # noqa: PLR0915 — one atomic source-byte witness per seed
+def test_seed_regression_pin_tree_is_byte_identical_to_crysta_main(project_id, tmp_path):
     expected = SOURCE['projects'][project_id]
     directory = CLI / PROJECT_IDS[project_id]
     assert (directory / 'project').is_dir(), ' must seed every existing crysta fitting project'
     assert not (CLI / project_id).exists(), (
         ' renamed seeds must not leave obsolete kebab-only project directories'
     )
-    from tests.fixtures.table_display.metadata_bytes import restore  # noqa: PLC0415
-
     live_directory = directory
     directory = restore(directory, tmp_path / 'retained-seed')
     paths = {
-        str(path.relative_to(directory)): path
+        path.relative_to(directory).as_posix(): path
         for path in (directory / 'project').rglob('*')
         if path.is_file()
     }
@@ -196,6 +238,7 @@ def test_seed_regression_pin_tree_is_byte_identical_to_crysta_main(project_id, t
                         '_minimizer.descent ',
                         '_minimizer.chi_square_tolerance ',
                         '_minimizer.stop_rule ',
+                        '_minimizer.stop_rules ',
                     ))
                 ]
 
@@ -214,13 +257,7 @@ def test_seed_regression_pin_tree_is_byte_identical_to_crysta_main(project_id, t
                     for line in expected_lines
                 ]
             contents = path.read_bytes()
-            assert [
-                line.strip()
-                for line in contents.decode().splitlines()
-                if line.startswith('_minimizer.stop_rule ')
-            ] == ['_minimizer.stop_rule shift_su'], (
-                'Each retained seed declares the owner-selected Shift/s.u. rule exactly once'
-            )
+            _assert_historical_stop_rule(live_directory, name)
             if project_id == 'cosio-d20-scan-3f':
                 contents = legacy_seed('analysis/analysis.edi', contents)
             assert retained_lines(contents.decode()) == expected_lines, (
@@ -278,6 +315,52 @@ def test_seed_regression_pin_tree_is_byte_identical_to_crysta_main(project_id, t
         )
 
 
+def _mutated_pin_bytes(raw, defect):
+    data = json.loads(raw)
+    quantity = next(iter(next(iter(data['variants'].values()))['quantities'].values()))
+    assert quantity['kind'] == 'regression-pin', (
+        'The mutation control must reach an existing numerical regression pin'
+    )
+    field, replacement = {
+        'value': ('value', quantity['value'] + 0.125),
+        'kind': ('kind', 'reference'),
+        'tolerance': ('tol_abs', 0.125),
+    }[defect]
+    quantity[field] = replacement
+    return (json.dumps(data, indent=2) + '\n').encode()
+
+
+def _check_original_retaken_barrier(project_id, defect):
+    row = json.loads((FIXTURES / 'retaken-pins.json').read_text())['seeds'][project_id]
+    after = row['after_text'].encode()
+    assert retained_pin_bytes(project_id, after) == row['before_text'].encode(), (
+        'The original retake control must first restore every authenticated historical byte'
+    )
+    with pytest.raises(
+        AssertionError, match=r'^A re-taken pin must equal every reviewed source byte$'
+    ):
+        retained_pin_bytes(project_id, _mutated_pin_bytes(after, defect))
+
+
+def _current_seed_rejection(project_id, defect):
+    updates = json.loads((ROOT / 'tests/fixtures/c06_t8/seed-updates.json').read_text())['files']
+    name = f'docs/user/cli/{PROJECT_IDS[project_id]}/expected.json'
+    variants = json.loads(
+        (ROOT / 'tests/fixtures/c06_t8/variant-name-projection.json').read_text()
+    )['files']
+    if defect in {'value', 'kind', 'tolerance'} and name in variants:
+        return r'^The variant rename must first authenticate every current source byte$'
+    if defect in {'value', 'kind', 'tolerance'} and name in updates:
+        assert updates[name]['kind'] == 'regression-and-retired-strategy-update', (
+            'The earlier seed barrier must be the exact declared regression transition'
+        )
+        return r'^A seed update first authenticates every current scientific and metadata byte$'
+    return (
+        r'pinned|blob ids|source tree|regular files|archived source|'
+        r'reviewed source byte|exact committed'
+    )
+
+
 @pytest.mark.parametrize('project_id', sorted(RETAKEN_SEEDS))
 @pytest.mark.parametrize('defect', ['value', 'kind', 'tolerance', 'input', 'extra', 'missing'])
 def test_retaken_seed_regression_pins_reject_byte_and_inventory_changes(
@@ -297,18 +380,8 @@ def test_retaken_seed_regression_pins_reject_byte_and_inventory_changes(
     )
     expected_file = directory / 'expected.json'
     if defect in {'value', 'kind', 'tolerance'}:
-        data = json.loads(expected_file.read_text())
-        quantity = next(iter(next(iter(data['variants'].values()))['quantities'].values()))
-        assert quantity['kind'] == 'regression-pin', (
-            'The mutation control must reach an existing numerical regression pin'
-        )
-        field, replacement = {
-            'value': ('value', quantity['value'] + 0.125),
-            'kind': ('kind', 'reference'),
-            'tolerance': ('tol_abs', 0.125),
-        }[defect]
-        quantity[field] = replacement
-        expected_file.write_text(json.dumps(data, indent=2) + '\n')
+        _check_original_retaken_barrier(project_id, defect)
+        expected_file.write_bytes(_mutated_pin_bytes(expected_file.read_bytes(), defect))
     elif defect == 'input':
         path = directory / 'project/project.edi'
         path.write_bytes(path.read_bytes() + b'\n# unexpected project byte\n')
@@ -318,10 +391,7 @@ def test_retaken_seed_regression_pins_reject_byte_and_inventory_changes(
         expected_file.unlink()
     with pytest.raises(
         AssertionError,
-        match=(
-            r'pinned|blob ids|source tree|regular files|archived source|'
-            r'reviewed source byte|exact committed'
-        ),
+        match=_current_seed_rejection(project_id, defect),
     ):
         test_seed_regression_pin_tree_is_byte_identical_to_crysta_main(
             project_id, tmp_path / 'negative'
@@ -478,7 +548,7 @@ def test_pull_request_ci_and_verify_execute_the_complete_registry():
 
 def assert_registry_wiring(manifest, workflow):
     # : before, string-only dependencies and any one CI invocation sufficed.
-    # After, resolve environment-qualified edges and require both real OS runners.
+    # After, resolve environment-qualified edges and require every native OS runner.
     runner = 'tools/checks/cli_projects.py'
     for name in ('verify', 'verify-quick', 'verify-full'):
         commands = task_commands(manifest, name)
@@ -532,7 +602,7 @@ def assert_registry_wiring(manifest, workflow):
                 commands = task_commands(manifest, invoked[1])
                 if any(runner in item and '--project' not in item for item in commands):
                     platforms.update(runner[1] for runner in self_hosted_runners(job))
-    assert platforms == {'Linux', 'macOS'}, (
+    assert platforms == {'Linux', 'macOS', 'Windows'}, (
         'required private or trusted public pull-request CI executes the full CLI registry '
         'on every OS'
     )
@@ -685,11 +755,12 @@ def test_executing_registry_accepts_lowercase_page_stems_and_seed_variants(tmp_p
         'disabled-step',
         'conditional-step',
         'wrong-os',
+        'missing-windows',
     ],
 )
 def test_hosted_registry_wiring_refuses_optional_and_wrong_platform_escapes(escape):
     # Independent contract fixture: the approved standard runners and positive SDK
-    # fork boundary must execute the complete registry on both desktop platforms.
+    # fork boundary must execute the complete registry on every desktop platform.
     manifest = tomllib.loads((ROOT / 'pixi.toml').read_text())
     job = {
         'runs-on': '${{ matrix.runner }}',
@@ -700,6 +771,7 @@ def test_hosted_registry_wiring_refuses_optional_and_wrong_platform_escapes(esca
                 'include': [
                     {'platform': 'Linux', 'runner': 'ubuntu-24.04'},
                     {'platform': 'macOS', 'runner': 'macos-15'},
+                    {'platform': 'Windows', 'runner': 'windows-2022'},
                 ]
             }
         },
@@ -725,6 +797,8 @@ def test_hosted_registry_wiring_refuses_optional_and_wrong_platform_escapes(esca
         job['steps'][0]['if'] = 'some.optional.condition'
     elif escape == 'wrong-os':
         job['strategy']['matrix']['include'][1]['runner'] = 'ubuntu-24.04'
+    elif escape == 'missing-windows':
+        job['strategy']['matrix']['include'].pop()
     with pytest.raises(AssertionError):
         assert_registry_wiring(manifest, workflow)
 

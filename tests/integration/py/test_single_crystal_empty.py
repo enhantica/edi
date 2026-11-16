@@ -7,6 +7,7 @@ from pathlib import Path
 
 import pytest
 
+from tests.fixtures.native_process import native_executable
 from tests.fixtures.single_crystal_edges.inputs import project
 from tests.fixtures.single_crystal_edges.observe import numbers, observe
 from tests.integration.py.test_single_crystal import engine
@@ -42,6 +43,7 @@ def native():
             )
             / 'single_crystal_edge_probe'
         )
+        executable = native_executable(executable)
     assert executable.is_file(), 'The empty-state gate requires the prepared real model observer'
     identity = subprocess.check_output([str(executable), '--identity'], text=True).strip()
     assert (

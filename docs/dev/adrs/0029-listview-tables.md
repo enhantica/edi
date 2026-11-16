@@ -399,3 +399,9 @@ copy-on-write storage; callers changing a returned map cannot alter the model's 
 UTF-8 conversion and hash allocation from parameter lookup and every other table consumer. The native role-map
 fixture checks shared immutable storage and mutation isolation, and the real popup check visits rows only while
 open. The NCAF switching replay exposed both paths; no chart-style change is involved.
+
+Shared report/notebook parameter-table pairs follow the owner’s later 2026-11-09
+range rule: when the value is decimal, its s.u. remains decimal too; scientific
+pairs outside that range share the value exponent. A standalone s.u. may use its
+own magnitude rule, but it must not replace the paired-table formatter. The
+existing value/s.u. boundary controls cover both signs, rules and output forms.

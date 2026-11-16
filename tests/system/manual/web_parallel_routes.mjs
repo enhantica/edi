@@ -19,12 +19,11 @@ const contract=JSON.parse(await readFile(new URL('../../fixtures/web_parallel/co
 const mime={'.html':'text/html','.js':'text/javascript','.wasm':'application/wasm','.json':'application/json','.css':'text/css','.svg':'image/svg+xml','.png':'image/png'};
 const results=[];
 let failures=0;
-for(const mode of ['singlethread','multithread','shim']) {
+for(const mode of ['multithread','shim']) {
  const headers=mode==='multithread'?{'Cross-Origin-Opener-Policy':'same-origin','Cross-Origin-Embedder-Policy':'require-corp'}:{};
  const server=createServer(async(req,res)=>{
   try {
    const pathname=decodeURIComponent(new URL(req.url,'http://localhost').pathname).replace(/^\/webapp(?=\/)/,'');
-   if(mode==='singlethread'&&pathname.endsWith('/coi-serviceworker.js')){res.writeHead(404);res.end();return;}
    const file=resolve(site,'.'+pathname+(pathname.endsWith('/')?'index.html':''));
    assert(file.startsWith(site+sep),'WebKit route server must stay inside the shipped site');
    const bytes=await readFile(file);
@@ -110,4 +109,4 @@ for(const mode of ['singlethread','multithread','shim']) {
   await navigate(second,'second-navigation-reload',true);
  } finally {await browser?.close();await new Promise(ok=>server.close(ok));}
 }
-assert.equal(failures,0,'All three WebKit routes must preserve their actual kit and isolation through the owner reload sequence');
+assert.equal(failures,0,'Both WebKit routes must preserve their actual kit and isolation through the owner reload sequence');

@@ -4,7 +4,7 @@ description: >-
   (edi ADR-0083), and point the build at them. A job using it needs the crysta-sdk job.
 inputs:
   platform:
-    description: linux-64 or osx-arm64
+    description: linux-64, osx-arm64 or win-64
     required: true
 runs:
   using: composite

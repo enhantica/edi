@@ -12,7 +12,25 @@ namespace edi_app {
 // A tag's chip as the Examples list draws it (app/examples/tags.json): its label, its icon glyph and its colour in the
 // light and the dark palette. A family or value the registry does not have gets a neutral chip labelled `fallback`.
 struct TagChip {
+    Q_GADGET
+    QML_VALUE_TYPE(tagChipData)
+    Q_PROPERTY(QString label MEMBER label CONSTANT)
+    Q_PROPERTY(QString glyph MEMBER glyph CONSTANT)
+    Q_PROPERTY(QString light MEMBER light CONSTANT)
+    Q_PROPERTY(QString dark MEMBER dark CONSTANT)
+
+   public:
     QString label, glyph, light, dark;
+};
+// One choice of a catalogue facet, including its displayed matching count.
+struct FacetOption {
+    Q_GADGET
+    QML_VALUE_TYPE(facetOption)
+    Q_PROPERTY(QString value MEMBER value CONSTANT)
+    Q_PROPERTY(QString title MEMBER title CONSTANT)
+
+   public:
+    QString value, title;
 };
 TagChip tagChip(const QString& family, const QString& value, const QString& fallback);
 class ExampleOptions : public RowTableModel {
@@ -65,7 +83,7 @@ class ExampleListModel : public RowTableModel {
     Q_INVOKABLE QString facetFilter(const QString& key) const { return facet_filters_.value(key); }
     Q_INVOKABLE void setFacetFilter(const QString& key, const QString& value);
     // One selector's choices: "All …" first, then each value with how many entries the other filters leave have it.
-    Q_INVOKABLE QVariantList facetOptions(const QString& key) const;
+    Q_INVOKABLE QList<edi_app::FacetOption> facetOptions(const QString& key) const;
     Q_INVOKABLE void clearFacets();
    signals:
     void searchTextChanged();

@@ -1,21 +1,51 @@
 name: WebAssembly caches
 description: Reuse the pinned browser toolchain and compiler outputs across CI and publication builds.
+inputs:
+  operation:
+    description: Restore before building, or save afterward even when compilation or checks fail.
+    default: restore
 runs:
   using: composite
   steps:
+    - name: Validate the cache operation
+      shell: bash
+      env:
+        OPERATION: ${{ inputs.operation }}
+      run: |
+        case "$OPERATION" in
+          restore | save) ;;
+          *) echo "Unknown WebAssembly cache operation: $OPERATION" >&2; exit 2 ;;
+        esac
     - id: compiler
       uses: ./.github/actions/ccache
       with:
         max-size: 2G
-    - uses: actions/cache@v4
+    - id: keys
+      shell: bash
+      run: |
+        echo "objects=ccache-wasm-${{ steps.compiler.outputs.key-prefix }}${{ hashFiles('tools/ci/wasm-env.sh') }}-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.job }}" >> "$GITHUB_OUTPUT"
+        echo "toolchain=edi-wasm-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('tools/ci/wasm-env.sh', 'tests/fixtures/web_parallel/package-lock.json') }}" >> "$GITHUB_OUTPUT"
+    - uses: actions/cache/restore@v4
+      if: inputs.operation == 'restore'
       with:
         path: ~/.cache/edi-ccache
-        key: ccache-wasm-${{ steps.compiler.outputs.key-prefix }}${{ hashFiles('tools/ci/wasm-env.sh') }}-${{ github.run_id }}-${{ github.run_attempt }}
+        key: ${{ steps.keys.outputs.objects }}
         restore-keys: |
           ccache-wasm-${{ steps.compiler.outputs.key-prefix }}${{ hashFiles('tools/ci/wasm-env.sh') }}-
           ccache-wasm-${{ steps.compiler.outputs.key-prefix }}
           ccache-wasm-${{ runner.os }}-${{ runner.arch }}-
-    - uses: actions/cache@v4
+    - uses: actions/cache/restore@v4
+      if: inputs.operation == 'restore'
       with:
         path: ~/.cache/edi-wasm
-        key: edi-wasm-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('tools/ci/wasm-env.sh', 'tests/fixtures/web_parallel/package-lock.json') }}
+        key: ${{ steps.keys.outputs.toolchain }}
+    - uses: actions/cache/save@v4
+      if: inputs.operation == 'save'
+      with:
+        path: ~/.cache/edi-ccache
+        key: ${{ steps.keys.outputs.objects }}
+    - uses: actions/cache/save@v4
+      if: inputs.operation == 'save'
+      with:
+        path: ~/.cache/edi-wasm
+        key: ${{ steps.keys.outputs.toolchain }}

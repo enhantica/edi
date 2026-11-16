@@ -54,3 +54,5 @@ after two consecutive iterations), and the project no longer declares the Shift/
 -m edi fit --report machine --verbosity full` linked against crysta `edab5435`, `OMP_NUM_THREADS=4`: multistart-prune
 reduced_chi_square 3.610940746 → 3.610945792; multistart-prune rwp 0.0694100442 → 0.0694100927. No `reference` value
 moved.
+
+**Renamed 2026-11-14.** The default descent is now called `fast_descent_and_ladder`, so the `multistart-prune` variant is now `fast-descent-and-ladder`. Same fit; no value moved.

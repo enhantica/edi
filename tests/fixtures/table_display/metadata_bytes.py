@@ -18,6 +18,7 @@ from pathlib import Path
 
 import gemmi
 
+from tests.fixtures.metadata_transition import retired_source_fields
 from tests.fixtures.metadata_transition.source_bytes import previous_bytes, previous_content
 from tests.fixtures.project_categories.historical_bytes import units
 
@@ -258,6 +259,7 @@ _DESCRIPTION_INPUTS = {
 
 def pre_description_bytes(name, data):
     """Reverse only individually source-proven, complete metadata migrations."""
+    data = retired_source_fields.previous_bytes(name, data)
     row = _DESCRIPTION_INPUTS.get(name)
     if row is None:
         return data
@@ -311,11 +313,12 @@ def restore(source, destination):
     migration = json.loads((ROOT / 'tests/fixtures/metadata_transition/sources.json').read_text())[
         'files'
     ]
+    updates = json.loads((ROOT / 'tests/fixtures/c06_t8/seed-updates.json').read_text())['files']
     for path in source.rglob('*'):
         if not path.is_file():
             continue
         name = path.relative_to(ROOT).as_posix()
-        if name not in pins and name not in migration:
+        if name not in pins and name not in migration and name not in updates:
             continue
         (destination / path.relative_to(source)).write_bytes(pre_catalogue_bytes(path))
     return destination

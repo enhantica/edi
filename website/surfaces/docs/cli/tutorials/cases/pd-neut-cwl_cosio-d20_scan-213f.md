@@ -2,48 +2,121 @@
 
 The same staged fit as the Python tutorial, on the command line. The command line fits whatever the project marks free with `()` after a value, so each stage marks its parameters in the project's files with a text editor and runs `edi fit`, which writes the fitted values back into the project for the next stage.
 
-## Get the project
+Fit the olivine Co₂SiO₄ with its magnetic structure to the whole D20 cooling scan, 213 patterns
+from 497.4 K down to 2.3 K, one after another and from the lowest temperature up. First the fit
+is staged on the 2.3 K pattern, the scan's template; then each later pattern starts from the
+previous result. The cobalt moments stay free at every temperature and fall towards zero near
+the Néel temperature, about 50 K.
+
+It builds the catalogue case `pd-neut-cwl_cosio-d20_scan-213f` step by step: the same project the
+command line fits and the app's Examples open. Its two Co sites share one displacement.
+
+## Define the project
+
+Make a folder for the project, with a folder each for its structures, experiments and analysis.
+
+```console
+mkdir -p pd-neut-cwl_cosio-d20_scan-213f/structures pd-neut-cwl_cosio-d20_scan-213f/experiments pd-neut-cwl_cosio-d20_scan-213f/analysis
+```
+
+Write `project.edi` in it with a text editor such as VS Code:
+
+```edi
+_edi.schema_version 3
+
+_metadata.name pd-neut-cwl_cosio-d20_scan-213f
+_metadata.title "Co₂SiO₄ [Pnma.1] · D20 @ ILL"
+_metadata.description "Cooling scan · 213 patterns from 497.4 to 2.3 K, fitted from 2.3 K up with the magnetic structure"
+_metadata.authors .
+```
+
+## Define the structure
+
+Download the structure from EasyDiffraction's collection into `structures`. Its CIF gives the space group, the cell and the atom sites.
 
 === "Standalone executable"
 
     ```console
-    edi download-data pd-neut-cwl_cosio-d20_scan-213f
+    edi download-data pd-neut-cwl_cosio-d20_scan-213f-cosio
+    mv data/pd-neut-cwl_cosio-d20_scan-213f-cosio.edi pd-neut-cwl_cosio-d20_scan-213f/structures/cosio.edi
     ```
 
 === "Python package"
 
     ```console
-    python -m edi download-data pd-neut-cwl_cosio-d20_scan-213f
+    python -m edi download-data pd-neut-cwl_cosio-d20_scan-213f-cosio
+    mv data/pd-neut-cwl_cosio-d20_scan-213f-cosio.edi pd-neut-cwl_cosio-d20_scan-213f/structures/cosio.edi
     ```
 
-## Start with nothing free
+## Define the experiment
 
-The project marks what its finished fit frees. Remove every `()`, so the stages below free one group at a time.
+Download the experiment into `experiments`: the file declares the instrument, the peak profile, the background, the structures it links and the measured data.
 
-In `experiments/d20.edi`, remove the `()` from every value; they now read:
+=== "Standalone executable"
+
+    ```console
+    edi download-data pd-neut-cwl_cosio-d20_scan-213f-d20
+    mv data/pd-neut-cwl_cosio-d20_scan-213f-d20.edi pd-neut-cwl_cosio-d20_scan-213f/experiments/d20.edi
+    ```
+
+=== "Python package"
+
+    ```console
+    python -m edi download-data pd-neut-cwl_cosio-d20_scan-213f-d20
+    mv data/pd-neut-cwl_cosio-d20_scan-213f-d20.edi pd-neut-cwl_cosio-d20_scan-213f/experiments/d20.edi
+    ```
+
+Download the scan's patterns, one archive, and unpack them into the folder the analysis declares:
+
+=== "Standalone executable"
+
+    ```console
+    edi download-data pd-neut-cwl_cosio-d20_scan-213f-scan
+    mkdir -p pd-neut-cwl_cosio-d20_scan-213f/experiments/d20_scan
+    tar -xf data/pd-neut-cwl_cosio-d20_scan-213f-scan.zip -C pd-neut-cwl_cosio-d20_scan-213f/experiments/d20_scan
+    ```
+
+=== "Python package"
+
+    ```console
+    python -m edi download-data pd-neut-cwl_cosio-d20_scan-213f-scan
+    mkdir -p pd-neut-cwl_cosio-d20_scan-213f/experiments/d20_scan
+    tar -xf data/pd-neut-cwl_cosio-d20_scan-213f-scan.zip -C pd-neut-cwl_cosio-d20_scan-213f/experiments/d20_scan
+    ```
+
+Then write how the project is fitted in `analysis/analysis.edi`:
 
 ```edi
-_instrument.calib_twotheta_offset 0.29433
-_peak.broad_gauss_u 0.273527
-_peak.broad_gauss_v -0.589718
-_peak.broad_gauss_w 0.413007
-1 6 603.5
-2 6.5 585
+_minimizer.type crysta
+_minimizer.max_iterations 1000
+_minimizer.descent fast_descent
+
+_fitting_mode.type sequential
+
+loop_
+_alias.id
+_alias.parameter_unique_name
+biso_Co1 cosio.atom_site.Co1.adp_iso
+biso_Co2 cosio.atom_site.Co2.adp_iso
+
+loop_
+_constraint.id
+_constraint.expression
+biso_Co2 "biso_Co2 = biso_Co1"
+
+_sequential_fit.data_dir experiments/d20_scan
+_sequential_fit.file_pattern *.dat
+_sequential_fit.reverse true
+
+loop_
+_sequential_fit_extract.id
+_sequential_fit_extract.target
+_sequential_fit_extract.pattern
+_sequential_fit_extract.required
+temperature diffrn.ambient_temperature ^TEMP\s+([0-9.]+) true
+
+_edi.schema_version 3
 ```
-
-The same for every other row (15 more).
-
-In `structures/cosio.edi`, remove the `()` from every value; they now read:
-
-```edi
-_cell.length_a 10.3081
-_cell.length_b 6.00219
-_cell.length_c 4.78739
-Co1 Co 0 0 0 a 4 1 0.269 Biso
-Co2 Co 0.2809 0.25 0.9836 c 4 1 0.269 Biso
-```
-
-The same for every other row (6 more).
 
 ## Scale, 2θ zero and cell
 
@@ -59,7 +132,7 @@ In `experiments/d20.edi`, add `()` after the values the stage frees:
 
 ```edi
 _instrument.calib_twotheta_offset 0.29433()
-cosio 1.81723() 1.0
+cosio 1.81723()
 ```
 
 In `structures/cosio.edi`, add `()` after the values the stage frees:
@@ -86,10 +159,10 @@ _cell.length_c 4.78739()
 edi fit: project pd-neut-cwl_cosio-d20_scan-213f, 1438 pts fitted / 1506 loaded, 5 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                        15.23        64.02
-      1      0.021     14.24        55.94   12.6% ↓
-      2      0.030     14.22        55.83   0.2% ↓
-      3      0.040     14.22        55.83   
-      4      0.056     14.22        55.83   
+      1      0.022     14.24        55.94   12.6% ↓
+      2      0.032     14.22        55.83   0.2% ↓
+      3      0.042     14.22        55.83   
+      4      0.060     14.22        55.83   
   done · converged · 4 iters · reduced χ² 55.83 · Rwp 14.22 % · 0.07 s
 
   refined parameters (5 free):
@@ -135,9 +208,9 @@ The same for every other row (14 more).
 edi fit: project pd-neut-cwl_cosio-d20_scan-213f, 1438 pts fitted / 1506 loaded, 21 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                        14.22        56.46
-      1      0.028     13.46        50.59   10.4% ↓
-      2      0.048     13.46        50.59   
-  done · converged · 2 iters · reduced χ² 50.59 · Rwp 13.46 % · 0.06 s
+      1      0.033     13.46        50.59   10.4% ↓
+      2      0.055     13.46        50.59   
+  done · converged · 2 iters · reduced χ² 50.59 · Rwp 13.46 % · 0.07 s
 
   refined parameters (21 free):
   name            parameter                                               start        value      s.u.   change
@@ -182,6 +255,13 @@ _peak.broad_gauss_v -0.589718()
 _peak.broad_gauss_w 0.413007()
 ```
 
+In `structures/cosio.edi`, remove the `()` from:
+
+```edi
+_atom_sites_cartn_transform.mat_13 0.00000000000000029333
+_atom_sites_cartn_transform.mat_23 0.00000000000000029333
+```
+
 === "Standalone executable"
 
     ```console
@@ -198,10 +278,10 @@ _peak.broad_gauss_w 0.413007()
 edi fit: project pd-neut-cwl_cosio-d20_scan-213f, 1438 pts fitted / 1506 loaded, 24 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                        13.46        50.70
-      1      0.031     13.29        49.39   2.6% ↓
-      2      0.043     13.29        49.35   0.1% ↓
-      3      0.056     13.28        49.35   
-      4      0.079     13.28        49.35   
+      1      0.035     13.29        49.39   2.6% ↓
+      2      0.052     13.29        49.35   0.1% ↓
+      3      0.061     13.28        49.35   
+      4      0.080     13.28        49.35   
   done · converged · 4 iters · reduced χ² 49.35 · Rwp 13.28 % · 0.09 s
 
   refined parameters (24 free):
@@ -247,9 +327,10 @@ In `structures/cosio.edi`, add `()` after the values the stage frees:
 ```edi
 Co2 Co 0.2809() 0.25 0.9836() c 4 1 0.269 Biso
 Si Si 0.0933() 0.25 0.4278() c 4 1 0.466 Biso
+O1 O 0.0896() 0.25 0.773() c 4 1 0.778 Biso
+O2 O 0.4478() 0.25 0.2179() c 4 1 0.642 Biso
+O3 O 0.1639() 0.0321() 0.2805() d 8 1 0.917 Biso
 ```
-
-The same for every other row (3 more).
 
 === "Standalone executable"
 
@@ -267,10 +348,10 @@ The same for every other row (3 more).
 edi fit: project pd-neut-cwl_cosio-d20_scan-213f, 1438 pts fitted / 1506 loaded, 35 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                        13.28        49.74
-      1      0.029     13.22        49.28   0.9% ↓
+      1      0.028     13.22        49.28   0.9% ↓
       2      0.041     13.22        49.27   
       3      0.051     13.22        49.27   
-      4      0.070     13.22        49.27   
+      4      0.071     13.22        49.27   
   done · converged · 4 iters · reduced χ² 49.27 · Rwp 13.22 % · 0.08 s
 
   refined parameters (35 free):
@@ -329,9 +410,10 @@ In `structures/cosio.edi`, add `()` after the values the stage frees:
 ```edi
 Co1 Co 0 0 0 a 4 1 0.269() Biso
 Si Si 0.0925() 0.25 0.4283() c 4 1 0.466() Biso
+O1 O 0.08805() 0.25 0.7770() c 4 1 0.778() Biso
+O2 O 0.44807() 0.25 0.2180() c 4 1 0.642() Biso
+O3 O 0.16277() 0.0318() 0.2807() d 8 1 0.917() Biso
 ```
-
-The same for every other row (3 more).
 
 === "Standalone executable"
 
@@ -349,11 +431,11 @@ The same for every other row (3 more).
 edi fit: project pd-neut-cwl_cosio-d20_scan-213f, 1438 pts fitted / 1506 loaded, 40 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                        13.22        49.45
-      1      0.029     13.01        47.86   3.2% ↓
-      2      0.040     13.00        47.83   0.1% ↓
-      3      0.051     13.00        47.83   
-      4      0.071     13.00        47.83   
-  done · converged · 4 iters · reduced χ² 47.83 · Rwp 13.00 % · 0.09 s
+      1      0.033     13.01        47.86   3.2% ↓
+      2      0.043     13.00        47.83   0.1% ↓
+      3      0.074     13.00        47.83   
+      4      0.097     13.00        47.83   
+  done · converged · 4 iters · reduced χ² 47.83 · Rwp 13.00 % · 0.12 s
 
   refined parameters (40 free):
   name            parameter                                               start        value      s.u.   change
@@ -418,6 +500,12 @@ Co1 0() 1() 0() Mx,My,Mz
 Co2 0 1() 0 0,My,0
 ```
 
+In `structures/cosio.edi`, remove the `()` from:
+
+```edi
+_atom_sites_cartn_transform.mat_12 0.00000000000000036776
+```
+
 === "Standalone executable"
 
     ```console
@@ -434,18 +522,18 @@ Co2 0 1() 0 0,My,0
 edi fit: project pd-neut-cwl_cosio-d20_scan-213f, 1438 pts fitted / 1506 loaded, 44 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                        13.00        47.97
-      1      0.031      5.89         9.83   79.5% ↓
-      2      0.043      4.71         6.29   36.1% ↓
-      3      0.056      4.70         6.25   0.6% ↓
-      4      0.070      4.69         6.25   0.1% ↓
-      5      0.086      4.69         6.25   
-      6      0.101      4.69         6.25   0.1% ↓
-      7      0.118      4.69         6.24   
-      8      0.131      4.69         6.24   0.1% ↓
-      9      0.146      4.69         6.24   
-     10      0.160      4.69         6.24   
-     11      0.184      4.69         6.24   
-  done · converged · 11 iters · reduced χ² 6.24 · Rwp 4.69 % · 0.20 s
+      1      0.032      5.89         9.83   79.5% ↓
+      2      0.061      4.71         6.29   36.1% ↓
+      3      0.076      4.70         6.25   0.6% ↓
+      4      0.090      4.69         6.25   0.1% ↓
+      5      0.106      4.69         6.25   
+      6      0.122      4.69         6.25   0.1% ↓
+      7      0.139      4.69         6.24   
+      8      0.152      4.69         6.24   0.1% ↓
+      9      0.169      4.69         6.24   
+     10      0.183      4.69         6.24   
+     11      0.215      4.69         6.24   
+  done · converged · 11 iters · reduced χ² 6.24 · Rwp 4.69 % · 0.23 s
 
   refined parameters (44 free):
   name            parameter                                               start        value      s.u.   change
@@ -523,19 +611,19 @@ _fitting_mode.type sequential
     ```
 
 ```text
-[░░░░░░░░░░░░░░] · 1/213 · 0% · elapsed 0s · eta 1m00s · 1 ok · 0 fail · 01_213_002p3440 · reduced χ² 6.24
-[░░░░░░░░░░░░░░] · 2/213 · 1% · elapsed 0s · eta 46s · 2 ok · 0 fail · 01_212_002p3560 · reduced χ² 5.95
-[░░░░░░░░░░░░░░] · 3/213 · 1% · elapsed 1s · eta 47s · 3 ok · 0 fail · 01_211_002p3630 · reduced χ² 6.25
-[░░░░░░░░░░░░░░] · 4/213 · 2% · elapsed 1s · eta 46s · 4 ok · 0 fail · 01_210_002p3820 · reduced χ² 6.08
-[░░░░░░░░░░░░░░] · 5/213 · 2% · elapsed 1s · eta 44s · 5 ok · 0 fail · 01_209_002p4210 · reduced χ² 6.06
-[░░░░░░░░░░░░░░] · 6/213 · 3% · elapsed 1s · eta 48s · 6 ok · 0 fail · 01_208_008p5330 · reduced χ² 5.99
+Sequential fit: pd-neut-cwl_cosio-d20_scan-213f
+
+Progress                    │  OK  Failed │ Elapsed    Left │  Chi2   Chi2 range │ File
+░░░░░░░░░░    0.5%    1/213 │   1       0 │      0s     58s │  6.20    6.20-6.20 │ 01_213_002p3440
+░░░░░░░░░░    0.9%    2/213 │   2       0 │      0s     46s │  5.90    5.90-6.20 │ 01_212_002p3560
+░░░░░░░░░░    1.4%    3/213 │   3       0 │      1s     46s │  6.30    5.90-6.30 │ 01_211_002p3630
 …
-[██████████████] · 209/213 · 98% · elapsed 48s · eta 1s · 209 ok · 0 fail · 01_005_496p5900 · reduced χ² 5.23
-[██████████████] · 210/213 · 99% · elapsed 48s · eta 1s · 210 ok · 0 fail · 01_004_497p0360 · reduced χ² 5.20
-[██████████████] · 211/213 · 99% · elapsed 48s · eta 0s · 211 ok · 0 fail · 01_003_497p2280 · reduced χ² 5.52
-[██████████████] · 212/213 · 100% · elapsed 48s · eta 0s · 212 ok · 0 fail · 01_002_497p3410 · reduced χ² 5.50
-[██████████████] · 213/213 · 100% · elapsed 49s · 213 ok · 0 fail
-scan · 213 files · 213 converged · 0 failed · reduced χ² 4.32-6.25 · 49s
+██████████   97.7%  208/213 │ 208       0 │     48s      1s │  5.40    4.70-6.30 │ 01_006_495p3740
+██████████   98.1%  209/213 │ 209       0 │     48s      1s │  5.20    4.70-6.30 │ 01_005_496p5900
+██████████   98.6%  210/213 │ 210       0 │     48s      1s │  5.20    4.70-6.30 │ 01_004_497p0360
+██████████   99.1%  211/213 │ 211       0 │     48s      0s │  5.50    4.70-6.30 │ 01_003_497p2280
+██████████   99.5%  212/213 │ 212       0 │     48s      0s │  5.50    4.70-6.30 │ 01_002_497p3410
+██████████  100.0%  213/213 │ 213       0 │     48s         │  4.30    4.30-6.30 │ 01_001_497p3790
 ```
 
 ## Report

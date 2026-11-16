@@ -129,9 +129,10 @@ TestCase {
         const control = selectors().find(item => item.objectName === "minimizer.descent");
         verify(control !== undefined, "The gate must inspect the real Minimizer descent selector");
         const rows = Probe.rows(control.options);
-        compare(JSON.stringify(rows.map(row => row.token).sort()), JSON.stringify(["fast_descent", "ladder", "multistart_prune"]), "The real GUI offers exactly the three retained descents");
-        compare(JSON.stringify(rows.filter(row => row.isDefault).map(row => row.token)), JSON.stringify(["fast_descent"]), "Only fast descent carries the GUI default role");
-        compare(control.token, "fast_descent", "The omitted project declaration selects fast descent in the GUI");
+        compare(JSON.stringify(rows.map(row => row.token).sort()), JSON.stringify(["auto", "fast_descent", "fast_descent_and_ladder", "ladder"]), "The real GUI offers Auto and exactly the three retained explicit descents");
+        compare(JSON.stringify(rows.filter(row => row.isDefault).map(row => row.token)), JSON.stringify(["auto"]), "Only Auto carries the GUI default role");
+        compare(control.token, "auto", "The omitted project declaration selects Auto in the GUI");
+        compare(rows[0].token, "auto", "The owner decision lists Auto before the explicit modes");
     }
     function test_caller_policy(data) {
         caller(data);

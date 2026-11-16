@@ -517,7 +517,7 @@ inline constexpr OptionCase kOptionCases[] = {
     {"minimizer.type", "crysta", "crysta"},
     {"minimizer.descent", "ladder", "Ladder"},
     {"minimizer.descent", "fast_descent", "Fast descent"},
-    {"minimizer.descent", "multistart_prune", "Fast descent and ladder"},
+    {"minimizer.descent", "fast_descent_and_ladder", "Fast descent and ladder"},
     {"minimizer.moments_near_zero", "try_exact_zero", "Try exact zero"},
     {"minimizer.moments_near_zero", "keep_free", "Keep free"},
     {"calculator.type", "crysta", "crysta"},

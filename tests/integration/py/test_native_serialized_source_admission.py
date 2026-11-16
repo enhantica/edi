@@ -40,7 +40,15 @@ def native():
         relative = (
             'single_crystal_edges' if case.API == 'edi' else 'tests/fixtures/single_crystal_edges'
         )
-        binary = directory / relative / 'serialized_admission_probe'
+        binary = (
+            directory
+            / relative
+            / (
+                'serialized_admission_probe.exe'
+                if os.name == 'nt'
+                else 'serialized_admission_probe'
+            )
+        )
         assert binary.is_file(), (
             'The ordinary public-model build prepares the native parser consumer before pytest'
         )

@@ -9,12 +9,14 @@ from pathlib import Path
 
 import pytest
 
+from tests.fixtures.native_process import environment_bash
+
 ROOT = Path(__file__).resolve().parents[3]
 POISON = ('CONDA_PREFIX', 'PYTHONPATH', 'CC', 'CXX', 'CFLAGS', 'LDFLAGS', 'SDKROOT')
 
 
 def executable(path, body):
-    path.write_text('#!' + sys.executable + '\n' + body)
+    path.write_text('#!' + sys.executable + '\n' + body, newline='\n')
     path.chmod(0o755)
 
 
@@ -71,7 +73,7 @@ def namespace(tmp_path, installed):
 def launch(namespace, *arguments):
     root, native, log, env = namespace
     result = subprocess.run(
-        ['bash', str(root / 'tools/dev/app-with-crysta.sh'), str(native), *arguments],
+        [environment_bash(), str(root / 'tools/dev/app-with-crysta.sh'), str(native), *arguments],
         cwd=root,
         env=env,
         capture_output=True,

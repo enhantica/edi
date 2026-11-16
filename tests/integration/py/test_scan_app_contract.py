@@ -6,13 +6,13 @@ from __future__ import annotations
 import json
 import re
 import subprocess
-import sys
 from pathlib import Path
 
 import pytest
 
 from tests.fixtures.native_ui_script.job_controls import check_job_requirements
 from tests.fixtures.native_ui_script.runner import run_javascript
+from tests.fixtures.node_runtime import environment_node
 
 ROOT = Path(__file__).resolve().parents[3]
 APP = ROOT / 'app'
@@ -227,7 +227,7 @@ def control_type(text, name):
 
 
 def javascript(program):
-    node = Path(sys.prefix) / 'bin/node'
+    node = environment_node()
     assert node.is_file(), 'Scan wiring: the declared Python environment supplies Node'
     result = run_javascript(program, timeout=5)
     assert result.returncode == 0, (

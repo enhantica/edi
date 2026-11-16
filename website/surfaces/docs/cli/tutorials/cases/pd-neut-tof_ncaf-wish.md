@@ -2,115 +2,103 @@
 
 The same staged fit as the Python tutorial, on the command line. The command line fits whatever the project marks free with `()` after a value, so each stage marks its parameters in the project's files with a text editor and runs `edi fit`, which writes the fitted values back into the project for the next stage.
 
-## Get the project
+Fit Na₂Ca₃Al₂F₁₄ to time-of-flight neutron powder data from WISH at ISIS, all five detector bank
+pairs at once. Each bank has its own calibration and profile; the structure is shared.
+
+It builds the catalogue case `pd-neut-tof_ncaf-wish` step by step: the same project the command
+line fits and the app's Examples open.
+
+## Define the project
+
+Make a folder for the project, with a folder each for its structures, experiments and analysis.
+
+```console
+mkdir -p pd-neut-tof_ncaf-wish/structures pd-neut-tof_ncaf-wish/experiments pd-neut-tof_ncaf-wish/analysis
+```
+
+Write `project.edi` in it with a text editor such as VS Code:
+
+```edi
+_edi.schema_version 3
+
+_metadata.name pd-neut-tof_ncaf-wish
+_metadata.title "Na₂Ca₃Al₂F₁₄ [I2₁3] · WISH @ ISIS"
+_metadata.description "All five detector bank pairs fitted jointly · Jorgensen–Von Dreele profile · Per-bank calibration"
+_metadata.authors .
+```
+
+## Define the structure
+
+Download the structure from EasyDiffraction's collection into `structures`. Its CIF gives the space group, the cell and the atom sites.
 
 === "Standalone executable"
 
     ```console
-    edi download-data pd-neut-tof_ncaf-wish
+    edi download-data pd-neut-tof_ncaf-wish-ncaf
+    mv data/pd-neut-tof_ncaf-wish-ncaf.edi pd-neut-tof_ncaf-wish/structures/ncaf.edi
     ```
 
 === "Python package"
 
     ```console
-    python -m edi download-data pd-neut-tof_ncaf-wish
+    python -m edi download-data pd-neut-tof_ncaf-wish-ncaf
+    mv data/pd-neut-tof_ncaf-wish-ncaf.edi pd-neut-tof_ncaf-wish/structures/ncaf.edi
     ```
 
-## Start with nothing free
+## Define the experiments
 
-The project marks what its finished fit frees. Remove every `()`, so the stages below free one group at a time.
+Download the experiments into `experiments`: each file declares its instrument, peak profile, background, the structures it links and its measured data.
 
-In `experiments/wish_1_10.edi`, remove the `()` from every value; they now read:
+=== "Standalone executable"
 
-```edi
-_instrument.calib_d_to_tof_offset 0
-_instrument.calib_d_to_tof_linear 4985.32
-2 7099.4761 210
-3 8008.2271 210
-```
+    ```console
+    edi download-data pd-neut-tof_ncaf-wish-wish_1_10
+    mv data/pd-neut-tof_ncaf-wish-wish_1_10.edi pd-neut-tof_ncaf-wish/experiments/wish_1_10.edi
+    edi download-data pd-neut-tof_ncaf-wish-wish_2_9
+    mv data/pd-neut-tof_ncaf-wish-wish_2_9.edi pd-neut-tof_ncaf-wish/experiments/wish_2_9.edi
+    edi download-data pd-neut-tof_ncaf-wish-wish_3_8
+    mv data/pd-neut-tof_ncaf-wish-wish_3_8.edi pd-neut-tof_ncaf-wish/experiments/wish_3_8.edi
+    edi download-data pd-neut-tof_ncaf-wish-wish_4_7
+    mv data/pd-neut-tof_ncaf-wish-wish_4_7.edi pd-neut-tof_ncaf-wish/experiments/wish_4_7.edi
+    edi download-data pd-neut-tof_ncaf-wish-wish_5_6
+    mv data/pd-neut-tof_ncaf-wish-wish_5_6.edi pd-neut-tof_ncaf-wish/experiments/wish_5_6.edi
+    ```
 
-The same for every other row (33 more).
+=== "Python package"
 
-In `experiments/wish_2_9.edi`, remove the `()` from every value; they now read:
+    ```console
+    python -m edi download-data pd-neut-tof_ncaf-wish-wish_1_10
+    mv data/pd-neut-tof_ncaf-wish-wish_1_10.edi pd-neut-tof_ncaf-wish/experiments/wish_1_10.edi
+    python -m edi download-data pd-neut-tof_ncaf-wish-wish_2_9
+    mv data/pd-neut-tof_ncaf-wish-wish_2_9.edi pd-neut-tof_ncaf-wish/experiments/wish_2_9.edi
+    python -m edi download-data pd-neut-tof_ncaf-wish-wish_3_8
+    mv data/pd-neut-tof_ncaf-wish-wish_3_8.edi pd-neut-tof_ncaf-wish/experiments/wish_3_8.edi
+    python -m edi download-data pd-neut-tof_ncaf-wish-wish_4_7
+    mv data/pd-neut-tof_ncaf-wish-wish_4_7.edi pd-neut-tof_ncaf-wish/experiments/wish_4_7.edi
+    python -m edi download-data pd-neut-tof_ncaf-wish-wish_5_6
+    mv data/pd-neut-tof_ncaf-wish-wish_5_6.edi pd-neut-tof_ncaf-wish/experiments/wish_5_6.edi
+    ```
 
-```edi
-_instrument.calib_d_to_tof_offset 0
-_instrument.calib_d_to_tof_linear 10389.9
-_peak.rise_alpha_0 0.053
-_peak.rise_alpha_1 0.031
-_peak.decay_beta_0 0.0061
-_peak.decay_beta_1 0.096
-_peak.broad_gauss_sigma_1 34
-_peak.broad_gauss_sigma_2 11
-_peak.broad_lorentz_gamma_1 1
-_absorption.abscor1 0
-1 7246.0732 220
-2 9265.5195 220
-```
-
-The same for every other row (21 more).
-
-In `experiments/wish_3_8.edi`, remove the `()` from every value; they now read:
-
-```edi
-_instrument.calib_d_to_tof_offset 0
-_instrument.calib_d_to_tof_linear 15105.5
-_peak.rise_alpha_0 -0.016
-_peak.rise_alpha_1 0.16
-_peak.decay_beta_0 0.0069
-_peak.decay_beta_1 0.032
-_peak.broad_gauss_sigma_1 30
-_peak.broad_gauss_sigma_2 8.3
-_absorption.abscor1 0
-1 9089.7529 240
-2 11580.4033 240
-```
-
-The same for every other row (21 more).
-
-In `experiments/wish_4_7.edi`, remove the `()` from every value; they now read:
+Then write how the project is fitted in `analysis/analysis.edi`:
 
 ```edi
-_instrument.calib_d_to_tof_offset 0
-_instrument.calib_d_to_tof_linear 18660.1
-_peak.rise_alpha_0 -0.015
-_peak.rise_alpha_1 0.16
-_peak.decay_beta_0 0.0074
-_peak.decay_beta_1 0.017
-_peak.broad_gauss_sigma_1 14
-_peak.broad_gauss_sigma_2 8.9
-_absorption.abscor1 0
-1 9089.7529 250
-2 10671.6523 250
+_minimizer.type crysta
+_minimizer.max_iterations 1000
+_minimizer.chi_square_tolerance 0.0001
+
+_fitting_mode.type joint
+
+loop_
+_joint_fit.experiment_id
+_joint_fit.weight
+wish_1_10 1
+wish_2_9 1
+wish_3_8 1
+wish_4_7 1
+wish_5_6 1
+
+_edi.schema_version 3
 ```
-
-The same for every other row (27 more).
-
-In `experiments/wish_5_6.edi`, remove the `()` from every value; they now read:
-
-```edi
-_instrument.calib_d_to_tof_offset 0
-_instrument.calib_d_to_tof_linear 20772.9
-_peak.rise_alpha_0 -0.012
-_peak.rise_alpha_1 0.14
-_peak.decay_beta_0 0.0077
-_peak.decay_beta_1 0.012
-_peak.broad_gauss_sigma_2 7.7
-_absorption.abscor1 0
-1 11136.874 260
-2 13313.3877 260
-```
-
-The same for every other row (27 more).
-
-In `structures/ncaf.edi`, remove the `()` from every value; they now read:
-
-```edi
-Ca1 Ca 0.47 0 0.25 b 12 1 0.5 Biso
-Al1 Al 0.25 0.25 0.25 a 8 1 0.5 Biso
-```
-
-The same for every other row (4 more).
 
 ## Scales and time-of-flight calibration
 
@@ -122,7 +110,7 @@ In `experiments/wish_1_10.edi`, add `()` after the values the stage frees:
 ```edi
 _instrument.calib_d_to_tof_offset 0()
 _instrument.calib_d_to_tof_linear 4985.32()
-ncaf 40() 1.0
+ncaf 40()
 ```
 
 In `experiments/wish_2_9.edi`, add `()` after the values the stage frees:
@@ -130,7 +118,7 @@ In `experiments/wish_2_9.edi`, add `()` after the values the stage frees:
 ```edi
 _instrument.calib_d_to_tof_offset 0()
 _instrument.calib_d_to_tof_linear 10389.9()
-ncaf 40() 1.0
+ncaf 40()
 ```
 
 In `experiments/wish_3_8.edi`, add `()` after the values the stage frees:
@@ -138,7 +126,7 @@ In `experiments/wish_3_8.edi`, add `()` after the values the stage frees:
 ```edi
 _instrument.calib_d_to_tof_offset 0()
 _instrument.calib_d_to_tof_linear 15105.5()
-ncaf 40() 1.0
+ncaf 40()
 ```
 
 In `experiments/wish_4_7.edi`, add `()` after the values the stage frees:
@@ -146,7 +134,7 @@ In `experiments/wish_4_7.edi`, add `()` after the values the stage frees:
 ```edi
 _instrument.calib_d_to_tof_offset 0()
 _instrument.calib_d_to_tof_linear 18660.1()
-ncaf 40() 1.0
+ncaf 40()
 ```
 
 In `experiments/wish_5_6.edi`, add `()` after the values the stage frees:
@@ -154,7 +142,7 @@ In `experiments/wish_5_6.edi`, add `()` after the values the stage frees:
 ```edi
 _instrument.calib_d_to_tof_offset 0()
 _instrument.calib_d_to_tof_linear 20772.9()
-ncaf 40() 1.0
+ncaf 40()
 ```
 
 === "Standalone executable"
@@ -173,13 +161,13 @@ ncaf 40() 1.0
 edi fit: joint project pd-neut-tof_ncaf-wish, 5 banks (wish_1_10, wish_2_9, wish_3_8, wish_4_7, wish_5_6), 18973 pts fitted / 20475 loaded, 15 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                        29.77       140.86
-      1      0.364     19.91        62.98   55.3% ↓
-      2      0.407     19.90        62.95   
-      3      0.462     19.90        62.95   
-      4      0.518     19.90        62.95   
-      5      0.575     19.90        62.95   
-      6      0.657     19.90        62.95   
-  done · converged · 6 iters · reduced χ² 62.95 · Rwp 19.90 % · 0.71 s
+      1      0.353     19.91        62.98   55.3% ↓
+      2      0.391     19.90        62.95   
+      3      0.445     19.90        62.95   
+      4      0.500     19.90        62.95   
+      5      0.552     19.90        62.95   
+      6      0.658     19.90        62.95   
+  done · converged · 6 iters · reduced χ² 62.95 · Rwp 19.90 % · 0.73 s
 
   per-bank Rwp (%):   wish_1_10 8.20   wish_2_9 19.90   wish_3_8 20.38   wish_4_7 20.84   wish_5_6 20.34
 
@@ -216,9 +204,39 @@ In `experiments/wish_1_10.edi`, add `()` after the values the stage frees:
 ```edi
 2 7099.4761 210()
 3 8008.2271 210()
+4 8816.0059 210()
+5 9724.7568 210()
+6 10532.5352 210()
+7 11710.5459 210()
+8 12619.2969 210()
+9 13393.418 210()
+10 14470.4561 210()
+11 15614.8096 210()
+12 17264.0254 210()
+13 19283.4707 210()
+14 20192.2207 210()
+15 22346.2969 210()
+16 24433.0586 210()
+17 27563.2012 210()
+18 30356.7695 210()
+19 33049.3672 210()
+20 35203.4414 210()
+21 38826.4766 210()
+22 44447.2695 210()
+23 50068.0625 210()
+24 55587.8828 210()
+25 63586.3867 210()
+26 74289.4531 210()
+27 86385.1953 210()
+28 98097.9844 210()
+29 114791.3281 210()
+30 128630.5156 210()
+31 147091.25 210()
+32 167026.9219 210()
+33 187448.0156 210()
+34 208808.5312 210()
+35 231077.7812 210()
 ```
-
-The same for every other row (32 more).
 
 In `experiments/wish_2_9.edi`, add `()` after the values the stage frees:
 
@@ -272,8 +290,8 @@ The same for every other row (26 more).
 edi fit: joint project pd-neut-tof_ncaf-wish, 5 banks (wish_1_10, wish_2_9, wish_3_8, wish_4_7, wish_5_6), 18973 pts fitted / 20475 loaded, 149 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                        19.90        63.39
-      1      1.023     13.97        31.21   50.8% ↓
-  done · converged · 1 iters · reduced χ² 31.21 · Rwp 13.97 % · 1.21 s
+      1      1.058     13.97        31.21   50.8% ↓
+  done · converged · 1 iters · reduced χ² 31.21 · Rwp 13.97 % · 1.24 s
 
   per-bank Rwp (%):   wish_1_10 6.08   wish_2_9 13.72   wish_3_8 14.60   wish_4_7 14.47   wish_5_6 14.27
 
@@ -494,19 +512,19 @@ _peak.decay_beta_1 0.012()
 edi fit: joint project pd-neut-tof_ncaf-wish, 5 banks (wish_1_10, wish_2_9, wish_3_8, wish_4_7, wish_5_6), 18973 pts fitted / 20475 loaded, 165 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                        13.97        31.24
-      1      1.106     10.41        17.36   44.4% ↓
-      2      1.220     10.30        17.00   2.1% ↓
-      3      1.337     10.26        16.85   0.9% ↓
-      4      1.457     10.24        16.80   0.3% ↓
-      5      1.592     10.23        16.78   0.1% ↓
-      6      1.729     10.23        16.77   
-      7      1.854     10.23        16.77   
-      8      1.989     10.23        16.77   
-      9      2.149     10.23        16.77   
-     10      2.265     10.23        16.77   
-     11      2.393     10.23        16.77   
-     12      2.601     10.23        16.77   
-  done · converged · 12 iters · reduced χ² 16.77 · Rwp 10.23 % · 2.82 s
+      1      1.159     10.41        17.36   44.4% ↓
+      2      1.294     10.30        17.00   2.1% ↓
+      3      1.433     10.26        16.85   0.9% ↓
+      4      1.571     10.24        16.80   0.3% ↓
+      5      1.698     10.23        16.78   0.1% ↓
+      6      1.847     10.23        16.77   
+      7      1.975     10.23        16.77   
+      8      2.108     10.23        16.77   
+      9      2.268     10.23        16.77   
+     10      2.394     10.23        16.77   
+     11      2.525     10.23        16.77   
+     12      2.747     10.23        16.77   
+  done · converged · 12 iters · reduced χ² 16.77 · Rwp 10.23 % · 2.97 s
 
   per-bank Rwp (%):   wish_1_10 6.08   wish_2_9 9.21   wish_3_8 10.49   wish_4_7 10.60   wish_5_6 10.89
 
@@ -731,20 +749,20 @@ _peak.broad_gauss_sigma_2 7.7()
 edi fit: joint project pd-neut-tof_ncaf-wish, 5 banks (wish_1_10, wish_2_9, wish_3_8, wish_4_7, wish_5_6), 18973 pts fitted / 20475 loaded, 172 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                        10.23        16.78
-      1      1.003     10.00        16.02   4.5% ↓
-      2      1.134     10.00        16.02   
-      3      1.265     10.00        16.02   
-      4      1.399     10.00        16.02   
-      5      1.549     10.00        16.02   
-      6      1.707     10.00        16.02   
-      7      1.843     10.00        16.01   
-      8      1.977      9.99        16.00   0.1% ↓
-      9      2.108      9.99        15.98   0.2% ↓
-     10      2.247      9.98        15.96   0.1% ↓
-     11      2.385      9.97        15.93   0.2% ↓
-     12      2.553      9.97        15.93   
-     13      2.753      9.97        15.93   
-  done · converged · 13 iters · reduced χ² 15.93 · Rwp 9.97 % · 2.98 s
+      1      1.050     10.00        16.02   4.5% ↓
+      2      1.216     10.00        16.02   
+      3      1.359     10.00        16.02   
+      4      1.499     10.00        16.02   
+      5      1.637     10.00        16.02   
+      6      1.811     10.00        16.02   
+      7      1.945     10.00        16.01   
+      8      2.077      9.99        16.00   0.1% ↓
+      9      2.202      9.99        15.98   0.2% ↓
+     10      2.338      9.98        15.96   0.1% ↓
+     11      2.474      9.97        15.93   0.2% ↓
+     12      2.634      9.97        15.93   
+     13      2.867      9.97        15.93   
+  done · converged · 13 iters · reduced χ² 15.93 · Rwp 9.97 % · 3.10 s
 
   per-bank Rwp (%):   wish_1_10 6.08   wish_2_9 8.65   wish_3_8 10.15   wish_4_7 10.36   wish_5_6 10.77
 
@@ -955,8 +973,8 @@ _peak.broad_lorentz_gamma_1 1()
 edi fit: joint project pd-neut-tof_ncaf-wish, 5 banks (wish_1_10, wish_2_9, wish_3_8, wish_4_7, wish_5_6), 18973 pts fitted / 20475 loaded, 173 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                         9.97        15.93
-      1      0.732      9.97        15.93   
-  done · converged · 1 iters · reduced χ² 15.93 · Rwp 9.97 % · 1.01 s
+      1      0.765      9.97        15.93   
+  done · converged · 1 iters · reduced χ² 15.93 · Rwp 9.97 % · 1.02 s
 
   per-bank Rwp (%):   wish_1_10 6.08   wish_2_9 8.65   wish_3_8 10.15   wish_4_7 10.36   wish_5_6 10.77
 
@@ -1186,10 +1204,10 @@ _absorption.abscor1 0()
 edi fit: joint project pd-neut-tof_ncaf-wish, 5 banks (wish_1_10, wish_2_9, wish_3_8, wish_4_7, wish_5_6), 18973 pts fitted / 20475 loaded, 177 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                         9.97        15.94
-      1      1.285      9.91        15.74   1.2% ↓
-      2      1.443      9.91        15.74   
-      3      1.685      9.91        15.74   
-  done · converged · 3 iters · reduced χ² 15.74 · Rwp 9.91 % · 1.95 s
+      1      1.341      9.91        15.74   1.2% ↓
+      2      1.501      9.91        15.74   
+      3      1.715      9.91        15.74   
+  done · converged · 3 iters · reduced χ² 15.74 · Rwp 9.91 % · 1.96 s
 
   per-bank Rwp (%):   wish_1_10 6.08   wish_2_9 8.53   wish_3_8 10.15   wish_4_7 10.32   wish_5_6 10.66
 
@@ -1391,9 +1409,11 @@ In `structures/ncaf.edi`, add `()` after the values the stage frees:
 ```edi
 Ca1 Ca 0.47() 0 0.25 b 12 1 0.5 Biso
 Al1 Al 0.25() 0.25 0.25 a 8 1 0.5 Biso
+Na1 Na 0.09() 0.09 0.09 a 8 1 0.5 Biso
+F1 F 0.14() 0.31() 0.12() c 24 1 0.5 Biso
+F2 F 0.36() 0.36() 0.19() c 24 1 0.5 Biso
+F3 F 0.46() 0.46 0.46 a 8 1 0.5 Biso
 ```
-
-The same for every other row (4 more).
 
 === "Standalone executable"
 
@@ -1411,10 +1431,10 @@ The same for every other row (4 more).
 edi fit: joint project pd-neut-tof_ncaf-wish, 5 banks (wish_1_10, wish_2_9, wish_3_8, wish_4_7, wish_5_6), 18973 pts fitted / 20475 loaded, 187 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                         9.91        15.75
-      1      1.484      8.07        10.43   33.8% ↓
-      2      1.708      8.07        10.43   
+      1      1.553      8.07        10.43   33.8% ↓
+      2      1.731      8.07        10.43   
       3      1.989      8.07        10.43   
-  done · converged · 3 iters · reduced χ² 10.43 · Rwp 8.07 % · 2.37 s
+  done · converged · 3 iters · reduced χ² 10.43 · Rwp 8.07 % · 2.40 s
 
   per-bank Rwp (%):   wish_1_10 4.95   wish_2_9 6.68   wish_3_8 8.27   wish_4_7 8.54   wish_5_6 8.66
 
@@ -1626,10 +1646,12 @@ In `structures/ncaf.edi`, add `()` after the values the stage frees:
 
 ```edi
 Ca1 Ca 0.46663() 0 0.25 b 12 1 0.5() Biso
+Al1 Al 0.25292() 0.25292 0.25292 a 8 1 0.5() Biso
+Na1 Na 0.08396() 0.08396 0.08396 a 8 1 0.5() Biso
 F1 F 0.137172() 0.304832() 0.11899() c 24 1 0.5() Biso
+F2 F 0.36238() 0.36343() 0.18614() c 24 1 0.5() Biso
+F3 F 0.461473() 0.461473 0.461473 a 8 1 0.5() Biso
 ```
-
-The same for every other row (2 more).
 
 === "Standalone executable"
 
@@ -1647,9 +1669,9 @@ The same for every other row (2 more).
 edi fit: joint project pd-neut-tof_ncaf-wish, 5 banks (wish_1_10, wish_2_9, wish_3_8, wish_4_7, wish_5_6), 18973 pts fitted / 20475 loaded, 193 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                         8.07        10.43
-      1      9.361      7.69         9.50   9.0% ↓
-      2     10.462      7.69         9.50   
-  done · converged · 2 iters · reduced χ² 9.50 · Rwp 7.69 % · 11.45 s
+      1      8.590      7.69         9.50   9.0% ↓
+      2      9.651      7.69         9.50   
+  done · converged · 2 iters · reduced χ² 9.50 · Rwp 7.69 % · 10.70 s
 
   per-bank Rwp (%):   wish_1_10 4.65   wish_2_9 6.44   wish_3_8 7.89   wish_4_7 8.10   wish_5_6 8.28
 

@@ -186,6 +186,9 @@ def folder(tmp_path):
 def test_first_stable_publication_creates_uploads_and_finalizes_its_own_draft(github, folder):
     PUBLISH.publish(REPO, folder)
     (release,) = github.releases.values()
+    assert release['name'] == 'v2026.11.0 (5 Nov)', (
+        'A stable draft title uses its exact tag and release day without a year or channel'
+    )
     assert release['draft'] and [a['name'] for a in release['assets']] == [
         'installer.zip',
         'release-history.json',
@@ -239,6 +242,9 @@ def test_preview_drafts_are_found_through_the_same_lookup(github, tmp_path):
     PREVIEW.publish(REPO, RELEASE, 'Notes\n', archives)
     PREVIEW.publish(REPO, RELEASE, 'Notes\n', archives)
     (release,) = github.releases.values()
+    assert release['name'] == 'v2026.11.0 (5 Nov) preview', (
+        'A preview draft retains the same tag/day format with only its short preview marker'
+    )
     assert release['draft'] and release['prerelease'] and len(release['assets']) == 1, (
         'Preview drafts are found through the same lookup.'
     )
@@ -268,6 +274,9 @@ def test_a_retry_of_the_same_source_keeps_its_reserved_version_and_date(github):
     )
     assert len(github.releases) == 3, (
         'A retry of the same source keeps its reserved version and date.'
+    )
+    assert github.by_tag_with_drafts('v2026.11.1')['name'] == 'v2026.11.1 (7 Nov) preview', (
+        'A later retry preserves the title date reserved for that exact source'
     )
 
 
@@ -368,7 +377,7 @@ def test_two_claimed_drafts_for_one_source_stay_refused(github):
         github.add({
             'tag_name': tag,
             'target_commitish': 'a' * 40,
-            'name': 'edi ' + tag[1:],
+            'name': tag + ' (7 Nov) preview',
             'body': 'Notes\n<!-- edi release date 2026-11-07 -->\n',
             'draft': True,
             'prerelease': True,
@@ -422,12 +431,12 @@ def test_a_claimed_reservation_keeps_its_tag_and_takes_its_installers(github, tm
     )
 
 
-def untagged_claimed_draft(github, commit, version, date):
+def untagged_claimed_draft(github, commit, date, title):
     """A claimed draft whose tag an edit dropped, as release 437853611 was left."""
     return github.add({
         'tag_name': 'untagged-ec5a9be5487f108b68a4',
         'target_commitish': commit,
-        'name': 'edi ' + version,
+        'name': title,
         'body': PLAN.release_body('Notes\n', date),
         'draft': True,
         'prerelease': True,
@@ -437,7 +446,7 @@ def untagged_claimed_draft(github, commit, version, date):
 
 def test_a_draft_that_lost_its_tag_is_retagged_and_takes_its_installers(github, tmp_path):
     preview = {**RELEASE, 'version': '2026.11.10', 'commit': 'a' * 40, 'date': '2026-11-07'}
-    untagged_claimed_draft(github, 'a' * 40, '2026.11.10', '2026-11-07')
+    untagged_claimed_draft(github, 'a' * 40, '2026-11-07', 'v2026.11.10 (7 Nov) preview')
     archive = tmp_path / 'installer.zip'
     archive.write_bytes(b'preview installer')
     PREVIEW.publish(
@@ -451,7 +460,7 @@ def test_a_draft_that_lost_its_tag_is_retagged_and_takes_its_installers(github, 
 
 def test_an_untagged_draft_of_another_source_is_not_taken(github, tmp_path):
     preview = {**RELEASE, 'version': '2026.11.10', 'commit': 'a' * 40, 'date': '2026-11-07'}
-    untagged_claimed_draft(github, 'f' * 40, '2026.11.10', '2026-11-07')
+    untagged_claimed_draft(github, 'f' * 40, '2026-11-07', 'v2026.11.10 (7 Nov) preview')
     archive = tmp_path / 'installer.zip'
     archive.write_bytes(b'preview installer')
     with pytest.raises(ValueError, match='another source'):

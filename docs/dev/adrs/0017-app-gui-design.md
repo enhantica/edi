@@ -1,5 +1,7 @@
 # ADR-0017 — The edi app's GUI design: layout, naming, colours and icons
 
+**Amended 2026-11-13:** As of 2026-11-13 (ADR-0023 §3), browser delivery uses only the multithreaded kit. The former single-thread-browser performance-control state is no longer a shipped variant. Existing browser geometry behavior remains unchanged.
+
 - **Status:** Proposed (the owner's ideas of 2026-09-29, confirmed one by one in the loop)
 - **Date:** 2026-09-29
 - **Implementation:** 🟡 Partial — §1–§14 are built (ideas 10 and 18 withdrawn by the owner); the two parts of

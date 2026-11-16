@@ -20,6 +20,8 @@
   /* Each button is three lines on every platform: name, system and architecture, kind and size. */
   white-space: nowrap;
 }
+/* A hovered card turns all its lines the accent colour, not only the platform name. */
+.md-typeset .ed-downloads a:is(:hover, :focus-visible) .ed-download-label small { color: inherit; }
 .md-typeset .ed-desktop-version {
   margin: 0 0 -.25rem;
   color: var(--md-default-fg-color--light);

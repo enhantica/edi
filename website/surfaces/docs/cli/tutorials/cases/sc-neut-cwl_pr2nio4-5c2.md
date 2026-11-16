@@ -2,38 +2,77 @@
 
 The same staged fit as the Python tutorial, on the command line. The command line fits whatever the project marks free with `()` after a value, so each stage marks its parameters in the project's files with a text editor and runs `edi fit`, which writes the fitted values back into the project for the next stage.
 
-## Get the project
+Fit the layered nickelate Pr₂NiO₄ to constant-wavelength neutron single-crystal data from 5C2 at
+LLB, with anisotropic displacements.
+
+It builds the catalogue case `sc-neut-cwl_pr2nio4-5c2` step by step: the same project the command
+line fits and the app's Examples open.
+
+## Define the project
+
+Make a folder for the project, with a folder each for its structures, experiments and analysis.
+
+```console
+mkdir -p sc-neut-cwl_pr2nio4-5c2/structures sc-neut-cwl_pr2nio4-5c2/experiments sc-neut-cwl_pr2nio4-5c2/analysis
+```
+
+Write `project.edi` in it with a text editor such as VS Code:
+
+```edi
+_edi.schema_version 3
+
+_metadata.name             sc-neut-cwl_pr2nio4-5c2
+_metadata.title "Pr₂NiO₄ [Fmmm] · 5C2 @ LLB"
+_metadata.description "Single crystal · Anisotropic displacements and coordinates from a rough start"
+_metadata.authors .
+_metadata.created          "22 Oct 2026 18:00:00"
+_metadata.last_modified    "22 Oct 2026 18:00:00"
+_metadata.timestamp        ?
+```
+
+## Define the structure
+
+Download the structure from EasyDiffraction's collection into `structures`. Its CIF gives the space group, the cell and the atom sites.
 
 === "Standalone executable"
 
     ```console
-    edi download-data sc-neut-cwl_pr2nio4-5c2
+    edi download-data sc-neut-cwl_pr2nio4-5c2-pr2nio4
+    mv data/sc-neut-cwl_pr2nio4-5c2-pr2nio4.edi sc-neut-cwl_pr2nio4-5c2/structures/pr2nio4.edi
     ```
 
 === "Python package"
 
     ```console
-    python -m edi download-data sc-neut-cwl_pr2nio4-5c2
+    python -m edi download-data sc-neut-cwl_pr2nio4-5c2-pr2nio4
+    mv data/sc-neut-cwl_pr2nio4-5c2-pr2nio4.edi sc-neut-cwl_pr2nio4-5c2/structures/pr2nio4.edi
     ```
 
-## Start with nothing free
+## Define the experiment
 
-The project marks what its finished fit frees. Remove every `()`, so the stages below free one group at a time.
+Download the experiment into `experiments`: the file declares the instrument, the peak profile, the background, the structures it links and the measured data.
 
-In `experiments/llb_5c2.edi`, remove the `()` from every value; they now read:
+=== "Standalone executable"
+
+    ```console
+    edi download-data sc-neut-cwl_pr2nio4-5c2-llb_5c2
+    mv data/sc-neut-cwl_pr2nio4-5c2-llb_5c2.edi sc-neut-cwl_pr2nio4-5c2/experiments/llb_5c2.edi
+    ```
+
+=== "Python package"
+
+    ```console
+    python -m edi download-data sc-neut-cwl_pr2nio4-5c2-llb_5c2
+    mv data/sc-neut-cwl_pr2nio4-5c2-llb_5c2.edi sc-neut-cwl_pr2nio4-5c2/experiments/llb_5c2.edi
+    ```
+
+Then write how the project is fitted in `analysis/analysis.edi`:
 
 ```edi
-pr2nio4 4
+_fitting_mode.type single
+
+_edi.schema_version 3
 ```
-
-In `structures/pr2nio4.edi`, remove the `()` from every value; they now read:
-
-```edi
-Pr Pr 0 0 0.362 i 8 1 0 Bani
-O2 O 0 0 0.176 i 8 0.722965 0 Bani
-```
-
-The same for every other row (6 more).
 
 ## Scale
 
@@ -61,8 +100,8 @@ pr2nio4 4()
 edi fit: project sc-neut-cwl_pr2nio4-5c2, 198 pts fitted / 198 loaded, 1 free
    iter   time (s) wR(F²) (%)  reduced χ²   change
                        115.85      6415.49
-      1      0.077      49.30      1161.93   81.9% ↓
-  done · converged · 1 iters · reduced χ² 1161.93 · wR(F²) 49.30 % · 0.09 s
+      1      0.087      49.30      1161.93   81.9% ↓
+  done · converged · 1 iters · reduced χ² 1161.93 · wR(F²) 49.30 % · 0.10 s
 
   refined parameters (1 free):
   name            parameter                                               start        value      s.u.   change
@@ -83,9 +122,8 @@ In `structures/pr2nio4.edi`, add `()` after the values the stage frees:
 ```edi
 Pr Pr 0 0 0.362() i 8 1 0 Bani
 O2 O 0 0 0.176() i 8 0.722965 0 Bani
+Od O 0.075() 0.075() 0.175() p 32 0.074654 0 Biso
 ```
-
-The same for every other row (1 more).
 
 === "Standalone executable"
 
@@ -103,28 +141,28 @@ The same for every other row (1 more).
 edi fit: project sc-neut-cwl_pr2nio4-5c2, 198 pts fitted / 198 loaded, 6 free
    iter   time (s) wR(F²) (%)  reduced χ²   change
                         49.30      1192.18
-      1      0.082      46.64      1067.00   10.5% ↓
-      2      0.091      46.63      1066.25   0.1% ↓
-      3      0.100      46.61      1065.55   0.1% ↓
-      4      0.110      46.60      1065.20   
-      5      0.119      46.60      1064.86   
-      6      0.128      46.59      1064.67   
-      7      0.137      46.59      1064.48   
-      8      0.147      46.59      1064.37   
-      9      0.157      46.58      1064.26   
-     10      0.166      46.58      1064.19   
-     11      0.176      46.58      1064.13   
-     12      0.185      46.58      1064.09   
-     13      0.195      46.58      1064.05   
-     14      0.204      46.58      1064.02   
-     15      0.214      46.58      1063.99   
-     16      0.224      46.58      1063.98   
-     17      0.232      46.58      1063.96   
-     18      0.242      46.58      1063.95   
-     19      0.251      46.58      1063.94   
-     20      0.261      46.58      1063.93   
-     21      0.273      46.58      1063.93   
-  done · converged · 21 iters · reduced χ² 1063.93 · wR(F²) 46.58 % · 0.28 s
+      1      0.099      46.64      1067.00   10.5% ↓
+      2      0.110      46.63      1066.25   0.1% ↓
+      3      0.121      46.61      1065.55   0.1% ↓
+      4      0.131      46.60      1065.20   
+      5      0.141      46.60      1064.86   
+      6      0.152      46.59      1064.67   
+      7      0.169      46.59      1064.48   
+      8      0.180      46.59      1064.37   
+      9      0.196      46.58      1064.26   
+     10      0.207      46.58      1064.19   
+     11      0.218      46.58      1064.13   
+     12      0.229      46.58      1064.09   
+     13      0.240      46.58      1064.05   
+     14      0.250      46.58      1064.02   
+     15      0.264      46.58      1063.99   
+     16      0.275      46.58      1063.98   
+     17      0.285      46.58      1063.96   
+     18      0.295      46.58      1063.95   
+     19      0.305      46.58      1063.94   
+     20      0.316      46.58      1063.93   
+     21      0.330      46.58      1063.93   
+  done · converged · 21 iters · reduced χ² 1063.93 · wR(F²) 46.58 % · 0.34 s
 
   refined parameters (6 free):
   name            parameter                                               start        value      s.u.   change
@@ -167,9 +205,9 @@ Od O 0.053() 0.068() 0.1728() p 32 0.074654 0() Biso
 edi fit: project sc-neut-cwl_pr2nio4-5c2, 198 pts fitted / 198 loaded, 7 free
    iter   time (s) wR(F²) (%)  reduced χ²   change
                         46.58      1069.50
-      1      0.076      46.51      1066.71   0.3% ↓
-      2      0.087      46.51      1066.70   
-  done · converged · 2 iters · reduced χ² 1066.70 · wR(F²) 46.51 % · 0.10 s
+      1      0.092      46.51      1066.71   0.3% ↓
+      2      0.104      46.51      1066.70   
+  done · converged · 2 iters · reduced χ² 1066.70 · wR(F²) 46.51 % · 0.12 s
 
   refined parameters (7 free):
   name            parameter                                               start        value      s.u.   change
@@ -198,9 +236,10 @@ In `structures/pr2nio4.edi`, add `()` after the values the stage frees:
 ```edi
 Pr 0() 0() 0() 0 0 0
 Ni 0() 0() 0() 0 0 0
+O1 0() 0() 0() 0() 0 0
+O2 0() 0() 0() 0 0 0
+Oi 0() 0() 0() 0 0 0
 ```
-
-The same for every other row (3 more).
 
 === "Standalone executable"
 
@@ -218,14 +257,14 @@ The same for every other row (3 more).
 edi fit: project sc-neut-cwl_pr2nio4-5c2, 198 pts fitted / 198 loaded, 23 free
    iter   time (s) wR(F²) (%)  reduced χ²   change
                         46.51      1164.23
-      1      0.102       4.29         9.89   99.2% ↓
-      2      0.114       4.27         9.79   0.9% ↓
-      3      0.126       4.26         9.76   0.3% ↓
-      4      0.138       4.26         9.75   0.1% ↓
-      5      0.150       4.26         9.75   
-      6      0.162       4.26         9.75   
-      7      0.176       4.26         9.75   
-  done · converged · 7 iters · reduced χ² 9.75 · wR(F²) 4.26 % · 0.19 s
+      1      0.131       4.29         9.89   99.2% ↓
+      2      0.148       4.27         9.79   0.9% ↓
+      3      0.163       4.26         9.76   0.3% ↓
+      4      0.180       4.26         9.75   0.1% ↓
+      5      0.197       4.26         9.75   
+      6      0.213       4.26         9.75   
+      7      0.230       4.26         9.75   
+  done · converged · 7 iters · reduced χ² 9.75 · wR(F²) 4.26 % · 0.25 s
 
   refined parameters (23 free):
   name            parameter                                               start        value      s.u.   change

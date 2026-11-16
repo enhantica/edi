@@ -58,3 +58,22 @@ runs fast descent and the ladder for three iterations each from the start and co
 Measured with `python -m edi fit --report machine --verbosity full` linked against crysta `edab5435`,
 `OMP_NUM_THREADS=4`: results[latp_288.dat].fit_result.reduced_chi_square 140761031.9 → 140761272;
 results[latp_288.dat].latp.cell.length_c 20.84993324 → 20.84994082. No `reference` value moved.
+
+**Re-pinned 2026-11-14.** `results.csv` now writes each value rounded to its uncertainty and the reduced χ² to two
+significant digits, so the χ² pins hold the row's rounded values: 142228766.8 → 140000000 (latp_312), 143756510.4 →
+140000000 (latp_304), 147598849.9 → 150000000 (latp_296), 140761272.0 → 140000000 (latp_288). The cell length c pins
+take the row's values: 20.826738 → 20.82669, 20.831573 → 20.83146, 20.838796 → 20.8388, 20.84994082 → 20.85006. The
+latp_304 move (0.13 s.u.) is already there with crysta `2b6b981`; the latp_288 move (0.14 s.u.) is not (with
+`2b6b981` it stays within the old bound) and comes from the damping changes since, the floor after a refused step and
+the restart after an undamped step, which take a different path to the same minimum. Measured with `python -m edi fit --report machine` linked against crysta
+`cfd36a55`, `OMP_NUM_THREADS=1`. No `reference` value moved.
+
+**Re-pinned 2026-11-15.** `cli_projects.py` now reads each file's result at full precision from a fresh, completed
+prefix of the scan, since `results.csv` keeps reporting precision, so the χ² pins hold the raw values: latp_312
+142228752.2, latp_304 143756683.8, latp_296 147598919.8, latp_288 142118683.2. Measured with
+`python tools/checks/cli_projects.py` linked against crysta `77f2364d`.
+
+**Re-pinned 2026-11-15, Auto descent.** crysta's default descent is now Auto: each chained point
+of a sequential fit runs fast descent alone. latp_288 settles slightly lower, χ² 141022536.2 and `length_c` 20.84994;
+the other files stay within their bounds. Measured with `python tools/checks/cli_projects.py` linked against crysta
+`5dcfe9f0`, whose fitting code is the same as `5747d2de`'s.

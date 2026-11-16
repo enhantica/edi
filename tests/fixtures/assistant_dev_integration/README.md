@@ -25,6 +25,18 @@ alias reference rejects unsupported non-cell targets rather than silently
 omitting them; it does not claim a complete independent name catalogue. Current
 native model field types and the opaque editor-record API remain shared inputs.
 
+ADR-0123 removes the ABSCOR2 model member and its stamp slot. The visible freezer
+projects only that one statement out of the original reference; it does not read
+the current codec. `stamp_codec_retirement.json` records both generated digests
+and the exact retired statement. The original source/slot-table hashes, all other
+byte traversal, peak order, aliases, finite budgets and allocation controls stay
+unchanged. No empty placeholder is inserted for a member that no longer exists.
+Run `python tests/fixtures/assistant_dev_integration/freeze_stamp_codec.py --retire-abscor2`.
+The receipt also retains the complete original frozen text, checked against its
+fixed digest, so this projection remains reproducible without the unavailable
+pre-port dev commit. Its provenance is the committed fixture at `a0a116e`; the
+current production codec is never an input to the projection.
+
 The pre-growth witness uses the unit carrier's existing ordinary new/new[]
 instrumentation to observe input-sized row containers, source strings and alias
 naming scratch, with an actual allocating positive control for each. It does not
@@ -58,3 +70,15 @@ checked out `b176b5ab`. These assistant source gates do not exist at that commit
 so that run supplies neither a green nor a red verdict for these cases. The
 adaptations follow the specific source changes above; they make no new runtime,
 SDK compatibility, or numerical correctness claim.
+
+The original `prechange_stamp_codec.inc` remains byte-identical historical data
+(SHA-256 `8b300f35b31f9f5b9bf54a5af9e4e470255f8983817ef4f463b91d46707d7800`).
+Run `freeze_stamp_codec.py --active-domain` to generate `active_stamp_codec.inc`
+from that frozen snapshot. The original upstream source revision is not required
+by this mode. Its exact one-site projection removes only the retired absorption
+optional slot, with no substituted absent marker. Every surviving traversal,
+scalar representation and field order remains the historical algorithm, with no
+bytes derived from the current encoder. Native equality and stale-publication
+controls explicitly exercise both current TOF and CW absorption coefficients.
+The source census treats the old include as hash-checked data and rejects direct
+compilation of it. Legacy reader strings remain data rather than typed members.

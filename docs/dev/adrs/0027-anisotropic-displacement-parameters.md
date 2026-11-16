@@ -61,3 +61,8 @@ app.
 | Convert in edi, with its own copy of the metric arithmetic | Rejected: two copies of one conversion drift, and crysta makes U\* the only hub. |
 | Keep storing B and convert at save | Rejected: the owner's rule is to stay in the type read until the user changes it. |
 | Six tensor columns on `AtomSite` | Rejected: diffraction-lib and CIF keep the tensor in its own loop, keyed by site. |
+
+Independent Save observations bind each distinct profile-schema field once. When the profile
+inventory includes CWL fields, the additional CWL declarations are a set union, not a second
+binding pass. Duplicate-owner/path and parameter-identity checks remain required for every
+observed slot, with the existing anisotropic repeated-Save cases retaining their references.

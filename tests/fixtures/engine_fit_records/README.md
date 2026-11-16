@@ -16,3 +16,10 @@ their comparison tolerances are unchanged.
 record's iterations, metrics and diagnostic counters remain byte-identical. Other
 registered descents retain their original corpus pins and successful status.
 Only elapsed-time fields are omitted from these records.
+
+`python -m tests.fixtures.engine_fit_records.generate --two-probe-default` writes
+`joint-two-probe-default.json` only. It records the current default's four iterations
+separately from the seven-iteration explicit ladder record, hashing that complete
+previous record and checking every original FullProf bound. The shared default-fit
+consumer uses only its iteration identity; the original full-value/uncertainty/metric
+comparisons keep using the retained ladder/tail golden at their original bounds.

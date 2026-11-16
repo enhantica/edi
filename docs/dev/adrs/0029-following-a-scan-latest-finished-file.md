@@ -1,5 +1,7 @@
 # ADR-0029 — Following a scan: the latest finished file, when the screen is ready
 
+**Amended 2026-11-13:** As of 2026-11-13 (ADR-0023 §3), only the multithreaded browser target is shipped. Serial-kit comparisons below remain dated measurements, not a supported fallback or a requirement to build it. Parallel-versus-one-worker checks use the same threaded app.
+
 - **Status:** Accepted
 - **Date:** 2026-10-10
 - **Implementation:** ✅ Implemented — the app follows a running scan by this rule on the desktop and in the browser

@@ -1,7 +1,7 @@
 .pragma library
 
 // Match a complete symbol token, so e.g. "d spacing" passes and "description" fails.
-const symbol = /^(2θ|TOF|s\.u\.|h k l|μR|σ[₀₁₂]²|x[123]{2}|[abcdfhklqrxyzαβγφθ])(?=$|[\s(:/′])/;
+const symbol = /^(2θ|χ²|λ|TOF|s\.u\.|h k l|μR|σ[₀₁₂]²|x[123]{2}|[abcdfhklqrxyz]|[αβγφθ][₀-₉0-9⁰¹²³⁴⁵⁶⁷⁸⁹]*)(?=$|[\s(:/′])/;
 
 function significant(text) {
     return symbol.test(text);

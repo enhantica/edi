@@ -1,0 +1,5 @@
+cmake_minimum_required(VERSION 3.26)
+project(edi_openmp_observer LANGUAGES CXX)
+find_package(OpenMP REQUIRED COMPONENTS CXX)
+add_library(edi_openmp_observer SHARED region.cpp)
+target_link_libraries(edi_openmp_observer PRIVATE OpenMP::OpenMP_CXX)

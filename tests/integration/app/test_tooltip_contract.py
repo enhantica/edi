@@ -138,11 +138,16 @@ def test_native_lifecycle_controls_reject_wrong_ack_totals_and_crashes(tmp_path)
 # admit factory/window/input preparation and fixture-readiness guards, never cases.
 # Any new startup statement or component initializer must be reviewed explicitly.
 SHARED_STARTUP = {
+    'tst_rendered_captions.qml',
     'tst_selector_callers.qml',
     'tst_feedback_completion.qml',
     'tst_tooltip_delay.qml',
 }
 ACTOR_STARTUP = {
+    'tst_rendered_captions.qml': (
+        'default',
+        'f7fbfd2ec26dfe9316185387f0325213d231f87cc5ba9d89ae0836c98f610198',
+    ),
     'tst_tooltip_contract.qml': (
         'default',
         'cedea5e30f863a39407b23a392b18fa8f8124e7902476c2e3ca050e0034a012c',

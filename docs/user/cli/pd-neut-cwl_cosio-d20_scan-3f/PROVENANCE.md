@@ -64,3 +64,13 @@ instead of `0.`. Included rows are unchanged, and the recorded hashes of these f
 χ² plateau tries that step once before it ends the fit. Pins retaken with `python tools/checks/cli_projects.py` linked
 against crysta `4643af79`, `OMP_NUM_THREADS=1`: results[299.394].fit_result.reduced_chi_square 4.428567680931095 →
 4.428563830815897; results[299.394].fit_result.iterations 6 → 7.
+
+**Re-pinned 2026-11-14.** `results.csv` now writes the reduced χ² to two significant digits, so the χ² pins hold the
+row's rounded values: 4.824058617 → 4.8 (52.345 K), 4.428563831 → 4.4 (299.394 K), 3.888700959 → 3.9 (497.379 K). The
+iteration counts are unchanged. Measured with `python -m edi fit --report machine` linked against crysta `cfd36a55`,
+`OMP_NUM_THREADS=1`.
+
+**Re-pinned 2026-11-15.** `cli_projects.py` now reads each file's result at full precision from a fresh, completed
+prefix of the scan, since `results.csv` keeps reporting precision, so the χ² pins hold the raw values again: 4.8 →
+4.824058617 (52.345 K), 4.4 → 4.428563831 (299.394 K), 3.9 → 3.888700036 (497.379 K). Measured with
+`python tools/checks/cli_projects.py` linked against crysta `77f2364d`.

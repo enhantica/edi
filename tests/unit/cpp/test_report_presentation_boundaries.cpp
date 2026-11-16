@@ -10,10 +10,21 @@
 #include "edi/presentation.hpp"
 #include "edi/report_html.hpp"
 
-#include "../../fixtures/chart_controls/bragg.hpp"
+#include "../../fixtures/chart_controls/bragg-current.hpp"
 
 TEST_CASE("Every structure count retains its approved Bragg colour") {
-    for (const auto& expected : figure_bragg::cases) {
+    const auto names = edi::colour_scheme_names();
+    REQUIRE_MESSAGE(names.size() == 2, "ADR-0084 advertises exactly its two approved palettes");
+    CHECK_MESSAGE((names[0] == "main" && names[1] == "colourBlindSafe"),
+                  "The boundary fixture covers the complete current palette catalogue in order");
+    for (const auto retired : {"earth", "classic", "soft", "natural"}) {
+        CAPTURE(retired);
+        CHECK_MESSAGE(!edi::colour_scheme_from_name(retired).has_value(),
+                      "A retired palette is absent from the live catalogue");
+        CHECK_MESSAGE(edi::colour_scheme_or_default(retired) == edi::ColourScheme::Main,
+                      "Every former non-colour-blind palette remains a stored-preference migration input");
+    }
+    for (const auto& expected : figure_bragg_current::cases) {
         CAPTURE(expected.scheme);
         CAPTURE(expected.count);
         CAPTURE(expected.dark);

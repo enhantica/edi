@@ -42,3 +42,18 @@ position 2 in Earth and position 1 in the other palettes (ADR-0038). The boundar
 still checks every Bragg tick, public colour lookup and label identity; its old
 five-colour structure gradient is replaced by the shared eleven-colour palette
 and the ADR's overflow shades.
+
+
+The active Bragg boundary now uses `bragg-current.hpp`, generated with
+`python -m tests.fixtures.chart_controls.generate_bragg --current`. It reads the
+approved palette document from published release commit
+`b16f9867ef1de464dfed731796848eb5ba60e739`, verifies its exact SHA-256, and applies
+the independent Oklab formulas and ADR-0084 position rule. Both active palettes
+retain every structure-count and light/dark boundary, including overflow. It never
+reads current product colour output. `owner.json` and `bragg.hpp` retain the earlier
+historical palettes unchanged; the no-argument generator still reproduces those.
+
+Python report/source-table observers now consume the same hash-checked published
+approval as the native Bragg fixture, including each palette's three curve roles.
+The historical five-palette capture remains unchanged. Role positions and independent
+Oklab overflow arithmetic continue to cover both active palettes and both themes.

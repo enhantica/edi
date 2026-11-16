@@ -285,6 +285,18 @@
         "Perform Analysis",
         "Save Project"
       ]
+    },
+    "sc-neut-cwl_cosio-heidi": {
+      "blob": "f053dbedcfaccd8f75c25e4d24c24006c412374f",
+      "sha256": "fb612ebe872a9f2ea4fc1f045f9747d7931891d28bf9cd93cb6d877002941871",
+      "sections": [
+        "Import Library",
+        "Define Project",
+        "Define Structure",
+        "Define Experiment",
+        "Perform Analysis",
+        "Report"
+      ]
     }
   }
 }

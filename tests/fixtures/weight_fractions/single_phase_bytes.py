@@ -2,12 +2,16 @@
 
 import re
 
+from tests.fixtures.project_categories.historical_bytes import native_edi_bytes
+
 COLUMN = b'_linked_structure.weight_fraction\n'
 TOKEN = re.compile(rb"'[^']*'|\"[^\"]*\"|[^\s]+")
 LOOP = re.compile(rb'(?m)^loop_\n((?:_linked_structure\.[^\n]+\n)+)((?:[^\n]+\n)+)')
 
 
 def historical_single_fraction(name, data):
+    if name.endswith('.edi'):
+        data = native_edi_bytes(data)
     if not (name.startswith('experiments/') and name.endswith('.edi')):
         return data
 

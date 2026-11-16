@@ -222,6 +222,10 @@ def _assert_model_operation_overloads(classifications: dict[str, str]) -> None:
         assert overloads, f'{route} must retain at least one public overload'
         for overload in overloads:
             unexpected = _overload_parameters(overload) - MODEL_OPERATION_OPTIONS
+            if route == 'Analysis.fit':
+                # The product facade alone may choose report emission; no numerical
+                # model option is accepted again at this call boundary.
+                unexpected -= {'verbosity'}
             assert not unexpected, (
                 f'{route} must read model state from its bound project; public overload '
                 f'{overload!r} re-accepts {sorted(unexpected)!r}'

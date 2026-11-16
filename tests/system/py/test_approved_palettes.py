@@ -17,8 +17,69 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[3]
 FIXTURE = ROOT / 'tests/fixtures/approved_palettes'
-OWNER = json.loads((ROOT / 'tests/fixtures/chart_controls/owner.json').read_text())
-PALETTES = OWNER['palettes']
+# Owner-selected coordinates in data/palettes/PROVENANCE.md (ADR-0084), frozen here.
+PALETTES = [
+    {
+        'name': 'Main',
+        'light': [
+            '#618EC8',
+            '#8B9762',
+            '#DB7A12',
+            '#2E8F8A',
+            '#C877B7',
+            '#6F5A8F',
+            '#8B5A2B',
+            '#3F7F4F',
+            '#01A2C5',
+            '#9B82E9',
+            '#958508',
+        ],
+        'dark': [
+            '#6E92CB',
+            '#94935C',
+            '#F5961A',
+            '#55B1B3',
+            '#C375C2',
+            '#AE98C2',
+            '#B8743A',
+            '#72B976',
+            '#00ABCC',
+            '#9B82E9',
+            '#B0AD19',
+        ],
+        'calc': {'light': '#E5533D', 'dark': '#F26A55'},
+    },
+    {
+        'name': 'Colour-blind safe',
+        'light': [
+            '#548CF1',
+            '#7E996B',
+            '#DD7C0F',
+            '#1E7679',
+            '#C577B1',
+            '#6F5A8F',
+            '#88541D',
+            '#4C8051',
+            '#01A2C5',
+            '#8675C8',
+            '#A29147',
+        ],
+        'dark': [
+            '#6A93F8',
+            '#BAB58E',
+            '#F99A1D',
+            '#73C2C0',
+            '#C175B6',
+            '#BAA6D2',
+            '#BC732F',
+            '#5EAE5F',
+            '#0C9EBF',
+            '#A49ADF',
+            '#BBB954',
+        ],
+        'calc': {'light': '#D04B37', 'dark': '#F1634C'},
+    },
+]
 ROLE_GREYS = json.loads((FIXTURE / 'colours.json').read_text())['palettes'][0]
 
 
@@ -166,9 +227,11 @@ def test_actual_colour_assignment_matches_approved_order_and_oklab(
         if role == 'structures' and count > 0 and place >= count:
             continue
         colours = palette[theme]
-        first = 2 if role == 'structures' and palette['name'] == 'Earth' and count else 0
+        first = 2 if role == 'structures' and count else 0
         position = first + min(place, max(0, count - 1))
-        size = first + count
+        if role == 'measured' and position >= 2:
+            position += 3
+        size = first + count + (3 if role == 'measured' and count > 2 else 0)
         expected = (
             colours[position]
             if position < 11
@@ -182,7 +245,7 @@ def test_actual_colour_assignment_matches_approved_order_and_oklab(
         'eleven-colour boundary and larger groups'
     )
     assert not mismatches, (
-        'Every shared position uses the approved order, Earth reservation '
+        'Every shared position uses the approved order, structure reservation '
         'and Oklab overflow shades; '
         f'{palette["name"]}/{theme}/{role}, (count, index, actual, expected)={mismatches}'
     )
@@ -211,7 +274,7 @@ def test_actual_role_colours_match_approved_light_and_dark(palette_probe, palett
         [str(palette_probe), token, 'roles'], capture_output=True, text=True, check=True, timeout=2
     )
     expected = [
-        (OWNER['calc'][theme] if role == 'total_calculation' else ROLE_GREYS[theme][role])
+        (palette['calc'][theme] if role == 'total_calculation' else ROLE_GREYS[theme][role])
         for theme in ('light', 'dark')
         for role in ('total_calculation', 'background', 'difference')
     ]

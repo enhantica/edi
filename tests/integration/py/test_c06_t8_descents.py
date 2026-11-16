@@ -161,19 +161,21 @@ def test_retirement_prose_does_not_advertise_an_active_choice(tmp_path):
 def test_python_registry_and_default_match_the_owner_decision():
     engine = module()
     assert set(engine._descent_ids()) == VALID, (
-        'The live Python registry must contain exactly the three retained descents'
+        'The live Python registry contains Auto and exactly the three retained explicit descents'
     )
-    assert engine._default_descent() == 'multistart_prune', (
-        'The engine-advertised default must be the two-probe flow'
-    )
+    assert engine._default_descent() == 'auto', 'The engine-advertised default must be Auto'
     project = engine.Project()
-    assert project.descent == project.analysis.descent == 'multistart_prune', (
-        'Both public Python selectors must resolve an absent declaration to the two-probe flow'
+    assert project.descent == project.analysis.descent == 'auto', (
+        'Both public Python selectors must resolve an absent declaration to Auto'
     )
-    project.analysis.descent = 'ladder'
+    for explicit in ('ladder', 'fast_descent', 'fast_descent_and_ladder'):
+        project.analysis.descent = explicit
+        assert project.descent == project.analysis.descent == explicit, (
+            'Every explicit descent keeps its identity independently of the Auto default'
+        )
     project.analysis.descent = None
-    assert project.analysis.descent == 'multistart_prune', (
-        'Clearing an explicit choice must restore the new effective default'
+    assert project.analysis.descent == 'auto', (
+        'Clearing an explicit choice must restore the Auto effective default'
     )
 
 
@@ -193,3 +195,29 @@ def test_retired_token_cannot_remain_an_active_python_selection(token, surface):
     assert owner.descent == 'fast_descent', (
         'A compatibility alias must normalize to the retained fast descent'
     )
+
+
+@pytest.mark.parametrize('surface', ['declaration', 'project', 'analysis'])
+def test_former_default_id_normalizes_and_saves_canonically_twice(tmp_path, surface):
+    engine = module()
+    if surface == 'declaration':
+        project = engine.Project.load(copied(tmp_path, 'multistart_prune'))
+    else:
+        project = engine.Project.load(copied(tmp_path, None))
+        owner = project if surface == 'project' else project.analysis
+        owner.descent = 'multistart_prune'
+    for index in range(2):
+        assert project.descent == project.analysis.descent == 'fast_descent_and_ladder', (
+            'Every former-default input must expose the canonical effective selector'
+        )
+        destination = tmp_path / f'canonical-{index}'
+        project.save_as(destination)
+        rows = re.findall(
+            r'^_minimizer\.descent\s+(\S+)\s*$',
+            (destination / 'analysis/analysis.edi').read_text(),
+            re.MULTILINE,
+        )
+        assert rows == ['fast_descent_and_ladder'], (
+            'Each save must write exactly one canonical default declaration'
+        )
+        project = engine.Project.load(destination)

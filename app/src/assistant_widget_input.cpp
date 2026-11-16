@@ -739,6 +739,20 @@ void AssistantWidgetInput::advance() noexcept {
             const auto old = injecting_; injecting_ = true;
             {
                 const auto release = qScopeGuard([self,old] { if (self) self->injecting_ = old; });
+                // A form field is typed into as a user types (owner record 2026-10-16): its text selected,
+                // then each character a real key event.
+                if (request->kind == Kind::FormText && editor->property("text").toString() != request->value) {
+                    bool typed = key(Qt::Key_A, Qt::ControlModifier);
+                    if (typed && request->value.isEmpty()) typed = key(Qt::Key_Backspace);
+                    for (const QChar character : request->value) {
+                        if (!typed) break;
+                        typed = key(0, Qt::NoModifier, QString(character));
+                    }
+                    if (!typed) {
+                        if (self && serial_ == id && request_ == request) self->fail(request,id,ControlCause::Delivery, QT_TR_NOOP("The original form field did not receive its typing"), true);
+                        return;
+                    }
+                }
                 if (editor->property("text").toString() != request->value && !editor->setProperty("text", request->value)) {
                     if (self && serial_ == id && request_ == request) self->fail(request,id,ControlCause::Commit, QT_TR_NOOP("The original draft refused its text"), true);
                     return;

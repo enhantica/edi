@@ -108,9 +108,12 @@ def _parameters(project: Any) -> list[tuple[str, Any]]:
         )
     )
     found.append(('experiment.linked_structure.scale', experiment.linked_structure.scale))
+    assert not hasattr(experiment.absorption, 'abscor2'), (
+        'ADR-0123 omits the retired member from every typed absorption metadata walk'
+    )
     found.extend(
         (f'experiment.absorption.{name}', getattr(experiment.absorption, name))
-        for name in ('abscor1', 'mu_r')
+        for name in ('abscor1',)
         if getattr(experiment.absorption, name, None) is not None
     )
     found.extend(

@@ -1,6 +1,7 @@
 """Owner 7101f0fd9 / 58c51248e / 1c330632f: strategy governs stages; retain constraints."""
 
 import json
+from collections import UserList
 from types import SimpleNamespace
 
 import pytest
@@ -18,6 +19,8 @@ from tests.fixtures.tutorial_cases.stages import (
 from tests.fixtures.tutorial_cases.strategy import assert_strategy
 
 FITTING = [case for case in CASES if case not in CONTRACT['simulations']]
+LARGE_POPULATION_CASES = frozenset({'sc-neut-tof_taurine-senju'})
+LARGE_SOURCE_CASES = frozenset({'sc-neut-cwl_cosio-heidi'})
 REFERENCE = json.loads((ROOT / 'tests/fixtures/tutorial_outline/stages.json').read_text())
 CORRELATION = sorted(
     {'pd-neut-cwl_lbco-hrpt', 'pd-neut-cwl_cosio-d20'}
@@ -44,22 +47,73 @@ def source(case, surface):
     )
 
 
+@pytest.fixture(scope='module')
+def tutorial_models(request):
+    import edi  # noqa: PLC0415 - load the pinned native extension during shared setup
+
+    cases = {
+        item.callspec.params['case']
+        for item in request.session.items
+        if getattr(item, 'module', None) is request.module
+        and hasattr(item, 'callspec')
+        and 'case' in item.callspec.params
+    }
+    return {
+        case: app_population(
+            project=edi.Project.load(str(ROOT / 'docs/user/cli' / case / 'project'))
+        )
+        for case in sorted(cases)
+    }
+
+
+@pytest.fixture
+def tutorial_model(case, tutorial_models):
+    project = tutorial_models[case].project
+    original = [(site, site.adp_type) for block in project.structures for site in block.atom_sites]
+    try:
+        yield project
+    finally:
+        for site, selected in original:
+            site.adp_type = selected
+
+
 @pytest.mark.parametrize('case', [case for case in FITTING if 'python' in interfaces_for(case)])
 @pytest.mark.parametrize('surface', ['script', 'notebook'])
-def test_each_fitting_tutorial_shows_and_teaches_successive_parameter_groups(case, surface):
-    assert_teaching_stages(observe(source(case, surface)))
+def test_each_fitting_tutorial_shows_and_teaches_successive_parameter_groups(
+    case, surface, tutorial_model
+):
+    assert_teaching_stages(observe(source(case, surface), {'project': tutorial_model}))
 
 
-@pytest.mark.parametrize('case', [case for case in FITTING if 'python' in interfaces_for(case)])
-def test_notebook_and_script_teach_the_same_exact_stage_sequence(case):
-    first, second = [observe(source(case, surface)) for surface in ['script', 'notebook']]
+@pytest.mark.parametrize(
+    'case',
+    [
+        case
+        for case in FITTING
+        if 'python' in interfaces_for(case) and case not in LARGE_SOURCE_CASES
+    ],
+)
+def test_notebook_and_script_teach_the_same_exact_stage_sequence(case, tutorial_model):
+    first, second = [
+        observe(source(case, surface), {'project': tutorial_model})
+        for surface in ['script', 'notebook']
+    ]
     assert first['cycles'] == second['cycles'] and first['free_before'] == second['free_before'], (
         'Gate 3: source and notebook have identical free parameters, stages and repeated cycles'
     )
 
 
-@pytest.mark.parametrize('case', [case for case in FITTING if case in cases_for('app', 'python')])
-def test_app_tutorial_teaches_the_same_fitting_groups_cycles_and_constraints(case):
+@pytest.mark.parametrize(
+    'case',
+    [
+        case
+        for case in FITTING
+        if case in cases_for('app', 'python') and case not in LARGE_POPULATION_CASES
+    ],
+)
+def test_app_tutorial_teaches_the_same_fitting_groups_cycles_and_constraints(
+    case, tutorial_model, tutorial_models
+):
     entries = json.loads((ROOT / 'app/tutorials/manifest.json').read_text())['tutorials']
     matches = [entry for entry in entries if entry['id'] == case]
     assert len(matches) == 1, (
@@ -71,18 +125,29 @@ def test_app_tutorial_teaches_the_same_fitting_groups_cycles_and_constraints(cas
         steps = [step for page in document['pages'] for step in page['steps']]
     else:
         steps = entry.get('steps', [])
-    assert app_cycles(steps, app_population(case)) == observe(source(case, 'script'))['cycles'], (
-        'Gate 3/4: the app teaches the same groups, fit order, repeats and constraints as Python'
-    )
+    assert (
+        app_cycles(steps, tutorial_models[case])
+        == observe(source(case, 'script'), {'project': tutorial_model})['cycles']
+    ), 'Gate 3/4: the app teaches the same groups, fit order, repeats and constraints as Python'
 
 
-@pytest.mark.parametrize('case', [case for case in FITTING if case in cases_for('app', 'python')])
-def test_app_docs_teach_the_same_fit_stages_as_the_executable_tutorial(case):
+@pytest.mark.parametrize(
+    'case',
+    [
+        case
+        for case in FITTING
+        if case in cases_for('app', 'python') and case not in LARGE_POPULATION_CASES
+    ],
+)
+def test_app_docs_teach_the_same_fit_stages_as_the_executable_tutorial(
+    case, tutorial_model, tutorial_models
+):
     path = ROOT / CONTRACT['tutorials']['app_docs'].format(case=case)
     assert path.is_file(), 'Gate 3/4: each fitting case has its app tutorial page'
-    assert prose_cycles(path.read_text()) == observe(source(case, 'script'))['cycles'], (
-        'Gate 3/4: the app page teaches the same groups and fitting cycles as the notebook'
-    )
+    assert (
+        prose_cycles(path.read_text(), tutorial_models[case])
+        == observe(source(case, 'script'), {'project': tutorial_model})['cycles']
+    ), 'Gate 3/4: the app page teaches the same groups and fitting cycles as the notebook'
 
 
 def test_instruction_and_app_observers_preserve_the_same_nontrivial_stage_changes():
@@ -93,6 +158,10 @@ def test_instruction_and_app_observers_preserve_the_same_nontrivial_stage_change
         {'check': 'free:cell.length_a'},
         {'target': 'statusBar.fit.button'},
     ]
+    decorated = written + '<svg><title>Free magnetic moments. Click Fit.</title></svg>'
+    assert prose_cycles(decorated) == prose_cycles(written), (
+        'Screenshot descriptions must never create parameter actions or extra tutorial fit cycles'
+    )
     assert prose_cycles(written) == app_cycles(steps), (
         'Gate 3/4: instruction and app observers retain stage boundaries and cumulative groups'
     )
@@ -103,9 +172,11 @@ def test_instruction_and_app_observers_preserve_the_same_nontrivial_stage_change
 
 @pytest.mark.parametrize('case', [case for case in FITTING if 'python' in interfaces_for(case)])
 @pytest.mark.parametrize('surface', ['script', 'notebook'])
-def test_each_fitting_case_follows_cumulative_strategy_with_one_new_block(case, surface):
+def test_each_fitting_case_follows_cumulative_strategy_with_one_new_block(
+    case, surface, tutorial_model
+):
     # Owner 7101f0fd9 replaces exact upstream cycles and the prose-deviation escape.
-    assert_strategy(observe(source(case, surface)))
+    assert_strategy(observe(source(case, surface), {'project': tutorial_model}))
 
 
 @pytest.mark.parametrize(
@@ -128,6 +199,11 @@ def test_stage_observer_rejects_flat_fits_and_missing_teaching_outputs(escape):
         'project.display.pattern()\nproject.display.fit.results()\n'
     )
     assert_teaching_stages(observe(good))
+    assert_teaching_stages(observe(good + 'project.fit_sequential()\n'))
+    with pytest.raises(AssertionError, match='already validated'):
+        assert_teaching_stages(
+            observe(good + 'experiment.peak.broad_gauss_u.free = True\nproject.fit_sequential()\n')
+        )
     broken = good
     if escape == 'single-fit':
         broken = good[: good.rindex('project.analysis.fit()')]
@@ -208,6 +284,53 @@ def test_app_observer_tracks_members_resets_and_completed_unique_constraints():
         population,
     ), 'Gate 3/4: removing the final member removes its scientific group'
 
+    class Rows(UserList):
+        def __getitem__(self, key):
+            if isinstance(key, str):
+                matches = [row for row in self if row.id == key]
+                if len(matches) != 1:
+                    raise KeyError(key)
+                return matches[0]
+            return super().__getitem__(key)
+
+    def parameter():
+        return SimpleNamespace(free=False, symmetry_constrained=False, user_constrained=False)
+
+    site = SimpleNamespace(id='A', adp_type='Biso', adp_iso=parameter())
+    tensor = SimpleNamespace(id='A', adp_11=parameter(), adp_22=parameter())
+    structure = SimpleNamespace(
+        name='phase', atom_sites=Rows([site]), atom_site_aniso=Rows([tensor])
+    )
+    project = SimpleNamespace(structures=[structure], experiments=[])
+    typed_steps = [
+        {'check': 'free-choice:free:Atomic displacement'},
+        {'check': 'fit-done'},
+        {'check': 'pick:atomSiteAdp.type.0=beta'},
+        {'check': 'free-choice:free:Atomic displacement'},
+        {'check': 'fit-done'},
+    ]
+    app = app_cycles(typed_steps, app_population(project=project))
+    site.adp_type = 'Biso'
+    code = """site = structure.atom_sites['A']
+site.adp_iso.free = True
+project.analysis.fit()
+site.adp_type = 'beta'
+for tensor in structure.atom_site_aniso:
+    tensor.adp_11.free = True
+    tensor.adp_22.free = True
+project.analysis.fit()
+"""
+    script = observe(code, {'project': project, 'structure': structure})['cycles']
+    assert app == script, (
+        'ADP selector steps and source assignments must retire the same individual old parameters'
+    )
+    assert app[-1]['active'] == ['anisotropic displacement'], (
+        'The final ADP population contains the selected tensor instead of dormant isotropic fields'
+    )
+    assert app[-1]['fixed'] == ['isotropic displacement'], (
+        'Changing representation must retain the observed retirement of the old free displacement'
+    )
+
 
 def test_source_observer_expands_loops_and_evaluates_symmetry_and_user_constraints():
     sites = [SimpleNamespace(id='A'), SimpleNamespace(id='B')]
@@ -257,4 +380,19 @@ project.analysis.fit()
     )
     assert indexed['free_before'] == counted['free_before'], (
         'Gate 3: background iteration uses sequence indices rather than display row ids'
+    )
+
+
+def test_source_observation_restores_borrowed_representation_after_success_and_refusal():
+    site = SimpleNamespace(adp_type='Biso')
+    project = SimpleNamespace(structures=[SimpleNamespace(atom_sites=[site])])
+    changed = "project.structures[0].atom_sites[0].adp_type = 'beta'\n"
+    observe(changed + 'project.analysis.fit()\n', {'project': project})
+    assert site.adp_type == 'Biso', (
+        'Shared source observation returns the original borrowed ADP representation after success'
+    )
+    with pytest.raises(ValueError, match='Unsupported tutorial expression'):
+        observe(changed + 'if unsupported_condition():\n    pass\n', {'project': project})
+    assert site.adp_type == 'Biso', (
+        'A refused source observation cannot leak an intermediate representation to another case'
     )

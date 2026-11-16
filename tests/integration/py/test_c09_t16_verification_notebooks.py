@@ -162,7 +162,7 @@ def _assert_reference_files(
         assert path.is_file() and not path.is_symlink(), (
             f'{page}: unresolved {constant}={filename!r}'
         )
-        relative = str(path.relative_to(ROOT))
+        relative = path.relative_to(ROOT).as_posix()
         assert relative in tracked, f'{page}: reference is not committed: {relative}'
 
 
@@ -443,19 +443,28 @@ def test_verification_sources_generate_stripped_notebooks_on_demand() -> None:
     required.update(VERIFICATION / name for name in expected_sources)
     tracked = set(_run('git', 'ls-files').stdout.splitlines())
     untracked = sorted(
-        str(path.relative_to(ROOT))
+        path.relative_to(ROOT).as_posix()
         for path in required
-        if str(path.relative_to(ROOT)) not in tracked
+        if path.relative_to(ROOT).as_posix() not in tracked
     )
     assert not untracked, f'verification sources must be committed: {untracked}'
 
-    notebook_paths = {str((VERIFICATION / name).relative_to(ROOT)) for name in expected_notebooks}
+    notebook_paths = {
+        (VERIFICATION / name).relative_to(ROOT).as_posix() for name in expected_notebooks
+    }
     assert not notebook_paths & tracked, (
         'generated verification notebooks must remain untracked derived artifacts'
     )
-    ignored = set(
-        _run('git', 'check-ignore', '--no-index', *sorted(notebook_paths)).stdout.splitlines()
+    result = subprocess.run(
+        ['git', 'check-ignore', '--no-index', '-z', '--stdin'],
+        cwd=ROOT,
+        input='\0'.join(sorted(notebook_paths)) + '\0',
+        text=True,
+        capture_output=True,
+        check=False,
     )
+    assert result.returncode == 0, 'Git must classify every declared derived notebook path'
+    ignored = set(result.stdout.rstrip('\0').split('\0'))
     assert ignored == notebook_paths, (
         'every derived verification notebook must be ignored until generated on demand'
     )
@@ -603,7 +612,7 @@ def test_ci_runs_notebooks_for_every_result_changing_surface() -> None:
                 'private notebook and docs steps remain required whenever their job executes'
             )
     else:
-        assert set(data['notebooks']['needs']) == {'changes', 'native', 'core'}, (
+        assert set(data['notebooks']['needs']) == {'changes', 'crysta-sdk', 'native', 'core'}, (
             'public notebooks wait for the common source, native producer and early core tests'
         )
         from tests.system.py.test_e04_t12_public_release import (  # noqa: PLC0415 - avoid test-module import cycles

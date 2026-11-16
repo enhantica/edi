@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <cmath>
 #include <iomanip>
+#include <limits>
 #include <locale>
 #include <map>
 #include <set>
@@ -18,6 +19,7 @@
 
 #include "edi/background_estimate.hpp"
 #include "edi/display.hpp"
+#include "edi/edit.hpp"
 #include "edi/io.hpp"
 
 namespace edi {
@@ -460,8 +462,89 @@ void set_fitting_mode(Project& project, const std::string& mode) {
 std::vector<std::string> supported_descents() { return descent_ids(); }
 
 void set_descent(Project& project, const std::string& id) {
-    validate_descent(id, "edi descent");
-    project.descent = id;
+    // The default's former id is stored under its current one.
+    const std::string current = current_descent_id(id);
+    validate_descent(current, "edi descent");
+    project.descent = current;
+}
+
+PdCalculationRange pd_calculation_range(const ExperimentBase& experiment) {
+    const bool cw = experiment.effective_beam_mode() == BeamModeEnum::CONSTANT_WAVELENGTH;
+    constexpr double nan = std::numeric_limits<double>::quiet_NaN();
+    if (experiment.data) {
+        const auto& column = (cw ? experiment.data->two_theta : experiment.data->time_of_flight).get();
+        if (column && !column->empty()) {
+            const std::vector<double>& axis = *column;
+            if (axis.size() == 1) {
+                return {axis.front(), axis.front(), std::nullopt};
+            }
+            const double estimate = (axis.back() - axis.front()) / static_cast<double>(axis.size() - 1);
+            for (std::size_t i = 1; i < axis.size(); ++i) {
+                if (std::abs((axis[i] - axis[i - 1]) - estimate) > 1e-6 * std::abs(estimate)) {
+                    return {axis.front(), axis.back(), std::nullopt};  // a non-uniform measured grid
+                }
+            }
+            // The shortest decimal step that builds the grid again point for point, as a save declares it.
+            for (int digits = 1; digits <= 17; ++digits) {
+                std::ostringstream text;
+                text.imbue(std::locale::classic());
+                text << std::setprecision(digits) << estimate;
+                std::istringstream read(text.str());
+                read.imbue(std::locale::classic());
+                double step = 0.0;
+                read >> step;
+                bool same = step > 0.0;
+                for (std::size_t i = 0; same && i < axis.size(); ++i) {
+                    const double offset = static_cast<double>(i) * step;
+                    same = axis.front() + offset == axis[i];
+                }
+                if (same) {
+                    return {axis.front(), axis.back(), step};
+                }
+            }
+            return {axis.front(), axis.back(), estimate};
+        }
+    }
+    constexpr double d_min = 0.5, d_max = 10.0, points = 1000.0;
+    const auto& instrument = experiment.instrument;
+    double low = nan, high = nan;
+    if (cw) {
+        if (instrument.setup_wavelength) {
+            const double wavelength = instrument.setup_wavelength->value.get();
+            const auto two_theta = [wavelength](double d) {
+                return 2.0 * std::asin(std::min(wavelength / (2.0 * d), 0.999999)) * 180.0 / std::acos(-1.0);
+            };
+            low = two_theta(d_max);
+            high = std::min(two_theta(d_min), 170.0);
+        }
+    } else {
+        const double offset = instrument.calib_d_to_tof_offset.value.get();
+        const double linear = instrument.calib_d_to_tof_linear.value.get();
+        const double quadratic = instrument.calib_d_to_tof_quadratic.value.get();
+        low = offset + linear * d_min + quadratic * d_min * d_min;
+        high = offset + linear * d_max + quadratic * d_max * d_max;
+    }
+    const double step = (high - low) / (points - 1.0);
+    return {low, high, std::isfinite(step) ? std::optional<double>(step) : std::nullopt};
+}
+
+void set_pd_calculation_range(ExperimentBase& experiment, PdRangeValue which, double value) {
+    if (experiment.data && !experiment.data->intensity_meas.get().empty()) {
+        throw std::invalid_argument("Cannot set the calculation range for experiment '" + experiment.name.value() +
+                                    "': it is determined by the measured data");
+    }
+    const PdCalculationRange range = pd_calculation_range(experiment);
+    double min = range.min, max = range.max;
+    double step = range.step.value_or(std::numeric_limits<double>::quiet_NaN());
+    (which == PdRangeValue::Min ? min : which == PdRangeValue::Max ? max : step) = value;
+    const bool was = experiment.calculation_only;
+    experiment.calculation_only = true;  // a grid without measured data, as a declared range loads
+    try {
+        Edit::data_range(experiment, min, max, step)();
+    } catch (...) {
+        experiment.calculation_only = was;
+        throw;
+    }
 }
 
 }  // namespace edi

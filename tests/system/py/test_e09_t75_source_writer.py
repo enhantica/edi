@@ -11,6 +11,7 @@ import tomllib
 
 import pytest
 
+from tests.fixtures.native_process import environment_bash
 from tests.integration.py import test_e09_t75_sdk_consumer as sdk
 from tests.system.py.test_e09_t74_ci_crysta_resolution import RemoteFixture
 
@@ -68,7 +69,7 @@ def test_non_diagnostic_source_writers_reach_the_checkout_and_preserve_a_holder(
         if held:
             (repo / 'build/.core-build.lock.d').mkdir()
         result = subprocess.run(
-            ['bash', '-eu', '-c', command],
+            [environment_bash(), '-eu', '-c', command],
             cwd=repo,
             env=env,
             text=True,

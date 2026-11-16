@@ -434,12 +434,11 @@ SideBarGroup {
                     }
                     LoadMenuItem {
                         objectName: "experiments.load.dataFolder"
-                        visible: !WebFiles.available
                         enabled: loadMenu.dataIntoSelected && group.project !== null && !group.project.listingDatasetFolder
                         fontIcon: "folder-open"
                         text: qsTr("From folder…")
                         hint: Session.optionLabel("fitting_mode.type", "sequential")
-                        toolTip: qsTr("Link all datasets in a folder; fit the template first, then choose Sequential in Analysis")
+                        toolTip: qsTr("Load all datasets in a folder; fit the template first, then choose Sequential in Analysis")
                         onTriggered: group.confirmScanReplacement(() => ApplicationInfo.chooseDatasetFolder(dataFolderDialog, group.project, loadMenu.selected))
                     }
                     LoadMenuItem {
@@ -521,6 +520,9 @@ SideBarGroup {
     property var webDataExperiment: null
     Connections {
         target: WebFiles
+        function onFolderOpened(request, folder) {
+            ApplicationInfo.formDatasetFolderOpened(request, folder);
+        }
         function onFilesOpened(request, files) {
             ApplicationInfo.formFilesOpened(request, files, true);
         }

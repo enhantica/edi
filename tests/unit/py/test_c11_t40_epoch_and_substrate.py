@@ -79,10 +79,11 @@ def _parameters(project: Any) -> list[tuple[str, Any]]:
         assert isinstance(absorption, edi.CylinderHewatAbsorption), (
             'every parameter-bearing absorption must retain the registered cylinder family'
         )
+        assert not hasattr(absorption, 'abscor2'), 'ADR-0123 exposes no retired cylinder member'
         found.extend(
             (f'experiment.absorption.{name}', getattr(absorption, name))
-            for name in ('abscor1', 'mu_r')
-            if getattr(absorption, name, None) is not None
+            for name in ('abscor1',)
+            if getattr(absorption, name) is not None
         )
     found.extend(
         (f'experiment.background[{index}].intensity', point.intensity)
@@ -118,7 +119,8 @@ def _cif(adp_columns: list[tuple[str, str]]) -> str:
 def test_c11_t40_every_reachable_parameter_has_surviving_metadata(
     tmp_path: Path,
 ) -> None:
-    source = make_schema_2_project(tmp_path)
+    # Metadata needs the full model and data extent, not thousands of repeated pattern rows.
+    source = make_schema_2_project(tmp_path, metadata_only=True)
     experiment = experiment_path(source)
     cylinder_text = experiment.read_text(encoding='utf-8')
     no_absorption_text = ''.join(

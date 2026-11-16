@@ -83,14 +83,17 @@ def native_resume(tmp_path_factory):
     prefix = crysta_reference_prefix()
     source = crysta_reference_source()
     native = (source / 'src/core/sequential.cpp').read_text()
-    call = 'last_result = fit_scan_file(working, on_iteration, should_cancel);'
+    call = (
+        'job.result = fit_scan_file(*worker.project, on_iteration,\n'
+        '                                           concurrent ? worker_cancel : should_cancel);'
+    )
     assert native.count(call) == 1, (
         'Stop and continue: the observer must intercept the real scan optimizer boundary once'
     )
     # A silent redundant fit inside continuation: no subscriber and no CSV append.
     injection = (
-        'if (observing && escape_enabled && index == existing.size() && '
-        '!existing.empty()) {\n            Project duplicate(working);\n    '
+        'if (observing && escape_enabled && job.index == existing.size() && '
+        '!existing.empty()) {\n            Project duplicate(*worker.project);\n    '
         '        duplicate.experiment().data = read_scan_data(scan_dir / '
         'file_names.front());\n            fit_scan_file(duplicate, {}, '
         '{});\n        }\n        ' + call

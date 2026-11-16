@@ -4,7 +4,7 @@ The Python package includes the command-line interface. You do not need to write
 
 ## Install the package
 
-Follow [Python setup](../python/setup.md) for the package and environment. The same installation provides both `import edi` and `python -m edi`.
+Follow [Python setup](../python/setup.md) for the package and environment. The same installation provides both `import easydiffraction as edi` and `python -m edi`.
 
 ## Run a command
 

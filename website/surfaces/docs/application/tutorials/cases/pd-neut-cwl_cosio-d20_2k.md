@@ -6,6 +6,14 @@ template: gui.html
 
 The same staged fit as the Python and Command line tutorials, in the app. Its structure and experiment come from EasyDiffraction's collection with **Load ▾ From web…**, and each stage frees its parameters in the **Parameters** table on **Analysis** before the fit.
 
+Fit the magnetic structure of the olivine Co₂SiO₄ to constant-wavelength neutron powder data
+from D20 at ILL, measured at 2.3 K, below its ordering temperature. The cobalt moments order with
+k = 0 in the magnetic space group Pnma.1: Co1 may point in any direction, Co2 only along b.
+
+The project is the catalogue case `pd-neut-cwl_cosio-d20_2k`, the one the command line and the
+app's Examples open. Its two Co sites share one displacement, and the two FCJ asymmetry terms are
+tied, from the start.
+
 ## Create a project
 
 Press **Start** on Home, then **Create a new project**, and give it a name.

@@ -113,6 +113,7 @@ qt_add_qml_module(edi_app_module
         src/web_page_hooks.hpp src/web_page_hooks.cpp
         src/project_editor.hpp
         src/row_table_model.hpp src/row_table_model.cpp
+        src/label_case.hpp
         src/parameter_item.hpp src/parameter_item.cpp
         src/parameter_registry.hpp src/parameter_registry.cpp
         src/option_list_model.hpp src/option_list_model.cpp
@@ -215,6 +216,7 @@ qt_add_qml_module(edi_app_module
         qml/Components/StatusBar.qml
         qml/Components/ExampleCell.qml
         qml/Components/ExampleFilters.qml
+        qml/Components/HomeIntro.qml
         qml/Components/IconLink.qml
         qml/Components/AssistantDownloadLink.qml
         qml/Components/StatusBarButton.qml
@@ -436,6 +438,10 @@ if(NOT EMSCRIPTEN)
 endif()
 
 qt_add_executable(edi_app main.cpp)
+if(APPLE)
+    target_sources(edi_app PRIVATE mac_titlebar.mm)
+    target_link_libraries(edi_app PRIVATE "-framework AppKit")
+endif()
 target_link_libraries(edi_app PRIVATE edi_app_module edi_app_moduleplugin ${EDI_GUI_BASE_TARGETS} Qt6::Svg)
 set_target_properties(edi_app PROPERTIES MACOSX_BUNDLE FALSE WIN32_EXECUTABLE TRUE)
 if(NOT EMSCRIPTEN)

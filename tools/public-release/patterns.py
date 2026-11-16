@@ -62,6 +62,7 @@ PERSONAL = [
     (re.compile(rf'{HOME}[A-Za-z0-9_.-]+/Applications/'), '<applications>/'),
     (re.compile(rf'{HOME}[A-Za-z0-9_.-]+/'), '~/'),
     (re.compile(r'/U[s]ers/[A-Za-z0-9_.-]+/'), '~/'),
+    (re.compile(r'[A-Za-z]:[\\/]U[s]ers[\\/][A-Za-z0-9_.-]+[\\/]', re.IGNORECASE), '~/'),
 ]
 RUN_POINTER = re.compile(r"[ \t]*[(,;]?\s*`?~/r[u]ns/[^\s`'\"),;]*`?\)?")
 

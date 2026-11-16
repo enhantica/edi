@@ -27,5 +27,30 @@
       "before": "        verify(Probe.computedCurrent(experiment),\n               \": an equal-write witness must start with current computed categories\");\n",
       "after": "        tryVerify(() => Probe.computedCurrent(experiment), 10000,\n                  \"GUI edit: an equal-write witness must await the initial calculation\");\n"
     }
+  },
+  "save": {
+    "kind": "save-held-results-current-contract",
+    "witness": "tests/integration/py/test_c34_t26_live_currentness.py",
+    "contract": "ADR-0052 held-result Save renewal",
+    "original_sha256": "f36c20f1a7bf53d5de64cff49bb8f029ddb4c7588b03ebaf5f4fda9c1c0c9a85",
+    "adapted_sha256": "158eaa42e631e3e0364a5c5b76e93e0a1c17d76cbeac695213d918dcdd4b6ff8",
+    "replacements": [
+      {
+        "before": "import test_c13_t4_march as march\n\n",
+        "after": "import test_c13_t4_march as march\n\nfrom tests.fixtures.project_save.computed_columns import check as check_computed\n\n"
+      },
+      {
+        "before": "    original = (source / 'experiments/experiment.edi').read_text()\n",
+        "after": "    original = (source / 'experiments/experiment.edi').read_text()\n    # The same zero background is explicit so the independent interpolation\n    # reference reaches authored anchors, without changing the Bragg witness.\n    original += (\n        '\\n_background.type line-segment\\nloop_\\n_background.id\\n'\n        '_background.position\\n_background.intensity\\n'\n        'left 0 0\\nright 180 0\\n'\n    )\n    (source / 'experiments/experiment.edi').write_text(original)\n"
+      },
+      {
+        "before": "    assert '_data.intensity_calc' not in edited_file and '_refln.index_h' not in edited_file, (\n        ' a stale bank is omitted if saved before a non-UI read'\n    )\n",
+        "after": "    assert '_data.intensity_calc' in edited_file and '_refln.index_h' in edited_file, (\n        'Save renews a held stale bank from its own saved inputs before a non-UI read'\n    )\n    check_computed(destination, edi)\n"
+      },
+      {
+        "before": "    assert '_data.intensity_calc' not in saved_text(project, tmp_path / route), (\n        ' an equal write stales a computed unit before any read'\n    )\n",
+        "after": "    assert '_data.intensity_calc' in saved_text(project, tmp_path / route), (\n        'Save renews held results after an equal dependency write before any non-UI read'\n    )\n    check_computed(tmp_path / route / 'saved', edi)\n"
+      }
+    ]
   }
 }

@@ -12,6 +12,7 @@ import tomllib
 import zipfile
 from pathlib import Path
 
+from native_runtime import bundle_runtime, dependencies, runtime_directory, runtime_notices
 from package import ROOT, SYSTEM, run, sha256
 from wheel_layout import package_files
 
@@ -22,13 +23,20 @@ TAGS = {
 }
 
 
-def write_wheel(asset: Path, extension: Path, version: str, tag: str) -> None:
+def write_wheel(
+    asset: Path, extension: Path, version: str, tag: str, notices: Path | None = None
+) -> None:
     """Write the binary wheel and its hashed RECORD using the project metadata."""
     pyproject = tomllib.loads((ROOT / 'pyproject.toml').read_text(encoding='utf-8'))
     project, requires = pyproject['project'], pyproject['tool']['edi']['wheel']['dependencies']
     metadata = f'easydiffraction-{version}.dist-info'
     files = {name: path.read_bytes() for name, path in package_files().items()}
     files[f'edi/{extension.name}'] = extension.read_bytes()
+    runtime = runtime_directory(extension)
+    for library in sorted(runtime.glob('*')):
+        if library.is_file() and (SYSTEM != 'windows' or library.suffix.lower() == '.dll'):
+            folder = 'edi/' if SYSTEM == 'windows' else 'edi/.runtime/'
+            files[folder + library.name] = library.read_bytes()
     licenses = [*project['license-files'], 'THIRD-PARTY-NOTICES']
     for path in licenses:
         files[f'{metadata}/licenses/{path}'] = (ROOT / path).read_bytes()
@@ -43,6 +51,11 @@ def write_wheel(asset: Path, extension: Path, version: str, tag: str) -> None:
     files[f'{metadata}/WHEEL'] = (
         f'Wheel-Version: 1.0\nGenerator: edi release\nRoot-Is-Purelib: false\nTag: {tag}\n'
     ).encode()
+    if notices is not None:
+        for notice in sorted(notices.rglob('*')):
+            if notice.is_file():
+                name = notice.relative_to(notices).as_posix()
+                files[f'{metadata}/licenses/native/{name}'] = notice.read_bytes()
     record = f'{metadata}/RECORD'
     with zipfile.ZipFile(asset, 'w', compression=zipfile.ZIP_DEFLATED) as archive:
         rows = []
@@ -102,6 +115,57 @@ def qualify_wheel(asset: Path, version: str, commit: str) -> None:
             env=env,
             cwd=root,
         )
+        qualify_shared_process(python, project, commit, env, root)
+
+
+def qualify_shared_process(python: Path, project: Path, commit: str, env: dict, cwd: Path) -> None:
+    """Exercise the installed wheel with PyZMQ in both library-loading orders."""
+    installed = subprocess.check_output(
+        [python, '-c', 'import sysconfig; print(sysconfig.get_paths()["purelib"])'],
+        text=True,
+        env=env,
+        cwd=cwd,
+    ).strip()
+    code = """
+import ctypes
+import sys
+import sysconfig
+from pathlib import Path
+sys.path.insert(0, sys.argv[1])
+first = sys.argv[4]
+if first == 'system':
+    if sys.platform == 'darwin':
+        runtime = '/usr/lib/libc++.1.dylib'
+    else:
+        candidates = [
+            Path('/usr/lib') / sysconfig.get_config_var('MULTIARCH') / 'libstdc++.so.6',
+            Path('/usr/lib64/libstdc++.so.6'),
+        ]
+        runtime = str(next(path for path in candidates if path.is_file()))
+    ctypes.CDLL(runtime, mode=ctypes.RTLD_GLOBAL)
+    import edi
+elif first == 'zmq':
+    import zmq
+    import edi
+else:
+    import edi
+    import zmq
+assert Path(edi.__file__).resolve().is_relative_to(Path(sys.argv[1]).resolve())
+assert edi.__build_commit__ == sys.argv[3]
+p = edi.Project.load(sys.argv[2])
+p.calculate()
+assert len(p.experiments[0].data.intensity_calc) > 0
+if first != 'system':
+    context = zmq.Context()
+    socket = context.socket(zmq.PAIR)
+    socket.close()
+    context.term()
+"""
+    orders = ('zmq', 'edi') if SYSTEM == 'windows' else ('system', 'zmq', 'edi')
+    for first in orders:
+        run(
+            [sys.executable, '-I', '-c', code, installed, project, commit, first], env=env, cwd=cwd
+        )
 
 
 def private_runtime(extension: Path) -> None:
@@ -110,6 +174,8 @@ def private_runtime(extension: Path) -> None:
     The runtime is linked in statically. Exported, its symbols bind to the system libstdc++ in a
     process that already loaded it, such as a Jupyter kernel through pyzmq, and the module crashes.
     """
+    if 'libstdc++.so.6' in dependencies(extension):
+        raise RuntimeError('The module must keep its C++ runtime private, not dynamically loaded')
     exported = subprocess.check_output(['nm', '-D', '--defined-only', extension], text=True)
     prefixes = ('_ZNSt', '_ZSt', '_ZNKSt', '__cxa_', '__gxx_')
     # Strong definitions (T, D, B, R) come from the static runtime itself; the weak template
@@ -121,24 +187,19 @@ def private_runtime(extension: Path) -> None:
         raise RuntimeError(f'The module exports C++ runtime symbols, e.g. {runtime[:3]}')
 
 
-def build_wheel(cli: Path, work: Path, version: str, commit: str, platform: str) -> None:
+def build_wheel(
+    cli: Path, work: Path, version: str, commit: str, platform: str, prefix: Path
+) -> None:
     """Build the extension with the release SDK and qualify the shipped bytes."""
     run(['cmake', '--build', cli, '--target', '_edi', '--parallel', '4'])
     (extension,) = (cli / 'python/edi').glob('_edi.pyd' if SYSTEM == 'windows' else '_edi.abi3.so')
-    if SYSTEM == 'macos':
-        run([
-            '/usr/bin/install_name_tool',
-            '-change',
-            '@rpath/libc++.1.dylib',
-            '/usr/lib/libc++.1.dylib',
-            extension,
-        ])
-        run(['/usr/bin/codesign', '--force', '--sign', '-', extension])
+    libraries = bundle_runtime(extension, prefix)
+    notices = runtime_notices(libraries, work / 'wheel-runtime-notices')
     if SYSTEM == 'linux':
         private_runtime(extension)
     tag = TAGS[SYSTEM]
     asset = work / f'easydiffraction-{version}-{tag}.whl'
-    write_wheel(asset, extension, version, tag)
+    write_wheel(asset, extension, version, tag, notices)
     qualify_wheel(asset, version, commit)
     (work / 'wheel-qualification.json').write_text(
         json.dumps({

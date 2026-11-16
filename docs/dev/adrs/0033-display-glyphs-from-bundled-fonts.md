@@ -58,3 +58,10 @@ entry naming the font that draws it, and a new legend mark needs a shape, not a 
 | A drawn filled circle for each element | Replaced by the atom icon, so the legend matches the Atom sites table |
 | Bundle a symbol font for the legend marks | Rejected: another font to load for four marks that are simpler as shapes |
 | Accept the platform fallback | Rejected: the glyphs differ by platform and macOS logs a warning for each face tried |
+
+The independent display observer decodes each C++ string token to bytes before joining adjacent
+tokens and finally decoding UTF-8. A hexadecimal escape cannot consume digits from the next
+token, while a UTF-8 glyph may span tokens or intervening comments. Escaped backslashes are
+not decoded twice. The generated source-site census is refreshed from current authored sites;
+the independently recorded font hashes and cmap ranges stay immutable. Local CMake source
+overrides must use those same verified font bytes when generating the census.

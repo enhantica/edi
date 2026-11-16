@@ -39,7 +39,8 @@ FIELDS = {
         'calib_d_to_tof_quadratic',
         'calib_d_to_tof_reciprocal',
     },
-    'absorption': {'abscor1', 'abscor2'},
+    # ADR-0123: legacy input slots are not live selector rows.
+    'absorption': {'abscor1'},
     'linked_structure': {'scale'},
     'background': {'coef', 'intensity', 'position', 'order', 'origin'},
 }
@@ -125,7 +126,6 @@ def append(result, kind, block, tag, label, value):
                 'origin',
                 'cutoff_fwhm',
                 'setup_twotheta_bank',
-                'abscor2',
                 'calib_d_to_tof_reciprocal',
             },
         })

@@ -488,7 +488,9 @@ Which atoms are drawn.
 | Option | Meaning |
 | --- | --- |
 | All | Every atom in the cell. |
-| Asymmetric unit | The atoms of the asymmetric unit. |
+| Asymmetric unit (crystal) | One atom per orbit of the space group; of a magnetic structure, of its parent group. |
+| Asymmetric unit (magnetic) | One atom per orbit of the magnetic group. |
+| Magnetic atoms | Every atom with a moment. |
 | None | No atoms. |
 
 [Names across interfaces](../user-guide/parameters.md#names-structure-view)
@@ -520,6 +522,60 @@ Whether the unit cell is drawn.
 ### Axes {#structure-view-axes}
 
 Whether the cell axes are drawn.
+
+[Names across interfaces](../user-guide/parameters.md#names-structure-view)
+
+</section>
+
+<section class="ed-parameter-entry" markdown="1" aria-labelledby="structure-view-show-moments">
+
+### Moments {#structure-view-show-moments}
+
+Whether magnetic moments are drawn as arrows.
+
+[Names across interfaces](../user-guide/parameters.md#names-structure-view)
+
+</section>
+
+<section class="ed-parameter-entry" markdown="1" aria-labelledby="structure-view-moment-form">
+
+### Moments as {#structure-view-moment-form}
+
+The form the Magnetic moments table shows and edits the moments in; they are stored in crystal-axis components whatever it is.
+
+| Option | Meaning |
+| --- | --- |
+| Crystal axes | Components along unit vectors parallel to a, b and c. |
+| Cartesian | Components along x parallel to a, z parallel to c* and y completing a right-handed set. |
+| Spherical | The modulus, the polar angle from z and the azimuthal angle from x around z, in degrees. |
+
+[Names across interfaces](../user-guide/parameters.md#names-structure-view)
+
+</section>
+
+<section class="ed-parameter-entry" markdown="1" aria-labelledby="structure-view-moment-scale">
+
+### Moment scale {#structure-view-moment-scale}
+
+The length of a moment&#x27;s arrow per Bohr magneton.
+
+**Units:** Å/μB.
+
+[Names across interfaces](../user-guide/parameters.md#names-structure-view)
+
+</section>
+
+<section class="ed-parameter-entry" markdown="1" aria-labelledby="structure-view-moment-view">
+
+### Moment view {#structure-view-moment-view}
+
+Where a moment&#x27;s arrow sits on its atom.
+
+| Option | Meaning |
+| --- | --- |
+| through atom | The arrow centred on the atom. |
+| from atom centre | The arrow starting at the atom&#x27;s centre. |
+| from atom surface | The arrow starting at the atom&#x27;s surface, its visible length proportional to the moment. |
 
 [Names across interfaces](../user-guide/parameters.md#names-structure-view)
 
@@ -655,7 +711,7 @@ Isotropic displacement of the atom, as U.
 
 ### Coincident-atom cluster {#expanded-atom-site-cluster-id}
 
-Atoms within one shared position carry the same cluster number.
+Numbers the shared positions: atoms of different sites on one position carry the same number.
 
 [Names across interfaces](../user-guide/parameters.md#names-expanded-atom-site)
 
@@ -1040,6 +1096,18 @@ The time-of-flight step of the calculation grid.
 
 </section>
 
+<section class="ed-parameter-entry" markdown="1" aria-labelledby="data-range-sin-theta-over-lambda-max">
+
+### Max sin θ/λ {#data-range-sin-theta-over-lambda-max}
+
+The resolution limit of a single crystal without measured reflections: it calculates the reflections its space group allows up to this sin θ/λ.
+
+**Units:** 1/Å.
+
+[Names across interfaces](../user-guide/parameters.md#names-data-range)
+
+</section>
+
 <section class="ed-parameter-entry" markdown="1" aria-labelledby="data-range-time-of-flight">
 
 ### Time of flight {#data-range-time-of-flight}
@@ -1347,7 +1415,7 @@ TOF calibration quadratic coefficient Dtt2 (us/A^2).
 
 ### TOF reciprocal {#instrument-calib-d-to-tof-reciprocal}
 
-TOF calibration reciprocal (1/d) coefficient (us*A); round-tripped, held fixed in the free set.
+TOF calibration reciprocal (1/d) coefficient.
 
 **Units:** µs·Å.
 
@@ -2129,18 +2197,6 @@ TOF sample absorption coefficient ABSCOR1 (muR = ABSCOR1 * lambda; refinable).
 
 </section>
 
-<section class="ed-parameter-entry" markdown="1" aria-labelledby="absorption-abscor2">
-
-### ABSCOR2 {#absorption-abscor2}
-
-TOF sample absorption lambda-power ABSCOR2 (round-tripped, held fixed; freeing it is a hard error).
-
-Read and saved, but not used in the calculation.
-
-[Equation and conventions](corrections/absorption.md#eq-hewat) · [Names across interfaces](../user-guide/parameters.md#names-absorption)
-
-</section>
-
 <section class="ed-parameter-entry" markdown="1" aria-labelledby="absorption-mu-r">
 
 ### ΜR {#absorption-mu-r}
@@ -2341,6 +2397,36 @@ The file the measured data were read from.
 
 </section>
 
+<section class="ed-parameter-entry" markdown="1" aria-labelledby="data-source-path">
+
+### Data path {#data-source-path}
+
+Where the linked measured data file lies, relative to the project when it can be.
+
+[Names across interfaces](../user-guide/parameters.md#names-data-source)
+
+</section>
+
+<section class="ed-parameter-entry" markdown="1" aria-labelledby="data-source-collection-id">
+
+### Collection entry {#data-source-collection-id}
+
+The data collection entry the measured data file is fetched from.
+
+[Names across interfaces](../user-guide/parameters.md#names-data-source)
+
+</section>
+
+<section class="ed-parameter-entry" markdown="1" aria-labelledby="data-source-digest">
+
+### Data digest {#data-source-digest}
+
+The SHA-256 of the measured data file, checked when it is fetched.
+
+[Names across interfaces](../user-guide/parameters.md#names-data-source)
+
+</section>
+
 ## <span class="ed-reference-icon" data-reference-category="data" aria-hidden="true">&#62263;</span> Measured data point {#data}
 
 The measured pattern and the values calculated at each of its points.
@@ -2478,6 +2564,16 @@ Each structure&#x27;s calculated intensity at the point, the background excluded
 
 </section>
 
+<section class="ed-parameter-entry" markdown="1" aria-labelledby="pd-calc-component-intensities-magnetic">
+
+### Structure magnetic calc {#pd-calc-component-intensities-magnetic}
+
+The magnetic part of each structure&#x27;s calculated intensity at the point: the same profile from &#124;M⊥&#124;² alone, in the order of component_intensities_net; its nuclear part is component_intensities_net less this. Present for a magnetic structure seen by neutrons.
+
+[Names across interfaces](../user-guide/parameters.md#names-pd-calc)
+
+</section>
+
 ## <span class="ed-reference-icon" data-reference-category="refln" aria-hidden="true">&#61498;</span> Reflection {#refln}
 
 The Bragg reflections of each linked structure.
@@ -2571,6 +2667,26 @@ The measured structure-factor amplitude, the square root of a single crystal&#x2
 ### F² calc {#refln-f-squared-calc}
 
 The calculated squared structure factor.
+
+[Names across interfaces](../user-guide/parameters.md#names-refln)
+
+</section>
+
+<section class="ed-parameter-entry" markdown="1" aria-labelledby="refln-f-m-perp-squared-calc">
+
+### &#124;F_M⊥&#124;² calc {#refln-f-m-perp-squared-calc}
+
+The calculated squared magnetic interaction vector of the reflection, in the units of F² calc; present for a magnetic structure seen by neutrons.
+
+[Names across interfaces](../user-guide/parameters.md#names-refln)
+
+</section>
+
+<section class="ed-parameter-entry" markdown="1" aria-labelledby="refln-f-squared-total-calc">
+
+### F² total calc {#refln-f-squared-total-calc}
+
+The calculated total squared factor of the reflection, F² calc plus &#124;F_M⊥&#124;² calc, what its peak is painted from; present for a magnetic structure seen by neutrons.
 
 [Names across interfaces](../user-guide/parameters.md#names-refln)
 
@@ -2832,6 +2948,361 @@ The pattern chart&#x27;s horizontal axis.
 
 </section>
 
+## <span class="ed-reference-icon" data-reference-category="evolution-chart" aria-hidden="true">&#61953;</span> Evolution chart {#evolution-chart}
+
+Settings of the chart of a parameter across a scan.
+
+<section class="ed-parameter-entry" markdown="1" aria-labelledby="evolution-chart-error-bars">
+
+### Error bars {#evolution-chart-error-bars}
+
+Whether the Evolution chart draws each point&#x27;s error bar.
+
+[Names across interfaces](../user-guide/parameters.md#names-evolution-chart)
+
+</section>
+
+<section class="ed-parameter-entry" markdown="1" aria-labelledby="evolution-chart-range">
+
+### Range {#evolution-chart-range}
+
+What the Evolution chart&#x27;s y range fits.
+
+| Option | Meaning |
+| --- | --- |
+| Values | The values only: a longer error bar is clipped at the plot&#x27;s edge. |
+| Values ± s.u. | The values with their error bars. |
+
+[Names across interfaces](../user-guide/parameters.md#names-evolution-chart)
+
+</section>
+
+## <span class="ed-reference-icon" data-reference-category="space-group-magn" aria-hidden="true">&#61558;</span> Magnetic space group {#space-group-magn}
+
+The magnetic space group as the file names it: BNS and OG numbers and symbols.
+
+<section class="ed-parameter-entry" markdown="1" aria-labelledby="space-group-magn-number-bns">
+
+### BNS number {#space-group-magn-number-bns}
+
+The number of the magnetic space group in the BNS setting.
+
+[Names across interfaces](../user-guide/parameters.md#names-space-group-magn)
+
+</section>
+
+<section class="ed-parameter-entry" markdown="1" aria-labelledby="space-group-magn-name-bns">
+
+### BNS symbol {#space-group-magn-name-bns}
+
+The symbol of the magnetic space group in the BNS setting.
+
+[Names across interfaces](../user-guide/parameters.md#names-space-group-magn)
+
+</section>
+
+<section class="ed-parameter-entry" markdown="1" aria-labelledby="space-group-magn-name-uni">
+
+### UNI symbol {#space-group-magn-name-uni}
+
+The unified symbol of the magnetic space group.
+
+[Names across interfaces](../user-guide/parameters.md#names-space-group-magn)
+
+</section>
+
+<section class="ed-parameter-entry" markdown="1" aria-labelledby="space-group-magn-number-og">
+
+### OG number {#space-group-magn-number-og}
+
+The number of the magnetic space group in the OG setting.
+
+[Names across interfaces](../user-guide/parameters.md#names-space-group-magn)
+
+</section>
+
+<section class="ed-parameter-entry" markdown="1" aria-labelledby="space-group-magn-name-og">
+
+### OG symbol {#space-group-magn-name-og}
+
+The symbol of the magnetic space group in the OG setting.
+
+[Names across interfaces](../user-guide/parameters.md#names-space-group-magn)
+
+</section>
+
+<section class="ed-parameter-entry" markdown="1" aria-labelledby="space-group-magn-point-group-name-uni">
+
+### Point group {#space-group-magn-point-group-name-uni}
+
+The unified symbol of the magnetic point group.
+
+[Names across interfaces](../user-guide/parameters.md#names-space-group-magn)
+
+</section>
+
+<section class="ed-parameter-entry" markdown="1" aria-labelledby="space-group-magn-point-group-number-litvin">
+
+### Point group number {#space-group-magn-point-group-number-litvin}
+
+The number of the magnetic point group in Litvin&#x27;s tables.
+
+[Names across interfaces](../user-guide/parameters.md#names-space-group-magn)
+
+</section>
+
+## <span class="ed-reference-icon" data-reference-category="space-group-magn-transforms" aria-hidden="true">&#62306;</span> Magnetic setting transform {#space-group-magn-transforms}
+
+The transforms from the structure&#x27;s setting to the BNS and OG reference settings of its magnetic group.
+
+<section class="ed-parameter-entry" markdown="1" aria-labelledby="space-group-magn-transforms-id">
+
+### Id {#space-group-magn-transforms-id}
+
+The transform&#x27;s id.
+
+[Names across interfaces](../user-guide/parameters.md#names-space-group-magn-transforms)
+
+</section>
+
+<section class="ed-parameter-entry" markdown="1" aria-labelledby="space-group-magn-transforms-pp-abc">
+
+### Transform {#space-group-magn-transforms-pp-abc}
+
+The transform (P,p) from the structure&#x27;s setting to the reference setting.
+
+[Names across interfaces](../user-guide/parameters.md#names-space-group-magn-transforms)
+
+</section>
+
+<section class="ed-parameter-entry" markdown="1" aria-labelledby="space-group-magn-transforms-source">
+
+### Setting {#space-group-magn-transforms-source}
+
+The reference setting the transform leads to: BNS or OG.
+
+[Names across interfaces](../user-guide/parameters.md#names-space-group-magn-transforms)
+
+</section>
+
+## <span class="ed-reference-icon" data-reference-category="parent-space-group" aria-hidden="true">&#63423;</span> Parent space group {#parent-space-group}
+
+The space group of the structure without magnetic order, and the transforms to its standard setting and to the magnetic cell.
+
+<section class="ed-parameter-entry" markdown="1" aria-labelledby="parent-space-group-name-h-m-alt">
+
+### Name {#parent-space-group-name-h-m-alt}
+
+The Hermann-Mauguin symbol of the parent space group.
+
+[Names across interfaces](../user-guide/parameters.md#names-parent-space-group)
+
+</section>
+
+<section class="ed-parameter-entry" markdown="1" aria-labelledby="parent-space-group-it-number">
+
+### Space-group number {#parent-space-group-it-number}
+
+The number of the parent space group in International Tables.
+
+[Names across interfaces](../user-guide/parameters.md#names-parent-space-group)
+
+</section>
+
+<section class="ed-parameter-entry" markdown="1" aria-labelledby="parent-space-group-transform-pp-abc">
+
+### To standard {#parent-space-group-transform-pp-abc}
+
+The transform (P,p) from the intended setting of the parent group to its standard setting.
+
+[Names across interfaces](../user-guide/parameters.md#names-parent-space-group)
+
+</section>
+
+<section class="ed-parameter-entry" markdown="1" aria-labelledby="parent-space-group-child-transform-pp-abc">
+
+### To magnetic cell {#parent-space-group-child-transform-pp-abc}
+
+The transform (P,p) from the intended setting of the parent group to the magnetic cell.
+
+[Names across interfaces](../user-guide/parameters.md#names-parent-space-group)
+
+</section>
+
+<section class="ed-parameter-entry" markdown="1" aria-labelledby="parent-space-group-reference-setting">
+
+### Reference setting {#parent-space-group-reference-setting}
+
+The setting the parent group is given in, as the file names it.
+
+[Names across interfaces](../user-guide/parameters.md#names-parent-space-group)
+
+</section>
+
+<section class="ed-parameter-entry" markdown="1" aria-labelledby="parent-space-group-derived">
+
+### Derived {#parent-space-group-derived}
+
+Whether crysta derived the parent group from the operations rather than reading it.
+
+[Names across interfaces](../user-guide/parameters.md#names-parent-space-group)
+
+</section>
+
+## <span class="ed-reference-icon" data-reference-category="parent-propagation-vector" aria-hidden="true">&#62219;</span> Propagation vector {#parent-propagation-vector}
+
+The propagation vectors of the magnetic order, in reciprocal-lattice units of the parent setting.
+
+<section class="ed-parameter-entry" markdown="1" aria-labelledby="parent-propagation-vector-id">
+
+### Id {#parent-propagation-vector-id}
+
+The propagation vector&#x27;s id.
+
+[Names across interfaces](../user-guide/parameters.md#names-parent-propagation-vector)
+
+</section>
+
+<section class="ed-parameter-entry" markdown="1" aria-labelledby="parent-propagation-vector-kxkykz">
+
+### K {#parent-propagation-vector-kxkykz}
+
+The propagation vector, in reciprocal-lattice units of the parent setting.
+
+[Names across interfaces](../user-guide/parameters.md#names-parent-propagation-vector)
+
+</section>
+
+## <span class="ed-reference-icon" data-reference-category="atom-site-moment" aria-hidden="true">&#61732;</span> Magnetic moment {#atom-site-moment}
+
+The magnetic moment of each magnetic atom site, in Bohr magnetons along the cell axes.
+
+<section class="ed-parameter-entry" markdown="1" aria-labelledby="atom-site-moment-label">
+
+### Label {#atom-site-moment-label}
+
+The id of the magnetic atom site the row belongs to.
+
+[Names across interfaces](../user-guide/parameters.md#names-atom-site-moment)
+
+</section>
+
+<section class="ed-parameter-entry" markdown="1" aria-labelledby="atom-site-moment-crystalaxis-x">
+
+### Mx {#atom-site-moment-crystalaxis-x}
+
+Magnetic moment component along the unit vector of the cell axis a, in Bohr magnetons.
+
+**Units:** μB.
+
+[Names across interfaces](../user-guide/parameters.md#names-atom-site-moment)
+
+</section>
+
+<section class="ed-parameter-entry" markdown="1" aria-labelledby="atom-site-moment-crystalaxis-y">
+
+### My {#atom-site-moment-crystalaxis-y}
+
+Magnetic moment component along the unit vector of the cell axis b, in Bohr magnetons.
+
+**Units:** μB.
+
+[Names across interfaces](../user-guide/parameters.md#names-atom-site-moment)
+
+</section>
+
+<section class="ed-parameter-entry" markdown="1" aria-labelledby="atom-site-moment-crystalaxis-z">
+
+### Mz {#atom-site-moment-crystalaxis-z}
+
+Magnetic moment component along the unit vector of the cell axis c, in Bohr magnetons.
+
+**Units:** μB.
+
+[Names across interfaces](../user-guide/parameters.md#names-atom-site-moment)
+
+</section>
+
+<section class="ed-parameter-entry" markdown="1" aria-labelledby="atom-site-moment-symmform">
+
+### Symmetry form {#atom-site-moment-symmform}
+
+The moment components the site symmetry allows, derived from the magnetic group.
+
+[Names across interfaces](../user-guide/parameters.md#names-atom-site-moment)
+
+</section>
+
+## <span class="ed-reference-icon" data-reference-category="magnetic-form-factor" aria-hidden="true">&#62930;</span> Magnetic form factor {#magnetic-form-factor}
+
+The magnetic ion of each atom type, the approximation its form factor takes and the weights of its &lt;j2&gt;, &lt;j4&gt; and &lt;j6&gt; terms.
+
+<section class="ed-parameter-entry" markdown="1" aria-labelledby="magnetic-form-factor-type-symbol">
+
+### Type {#magnetic-form-factor-type-symbol}
+
+The atom type the magnetic form factor applies to.
+
+[Names across interfaces](../user-guide/parameters.md#names-magnetic-form-factor)
+
+</section>
+
+<section class="ed-parameter-entry" markdown="1" aria-labelledby="magnetic-form-factor-ion">
+
+### Ion {#magnetic-form-factor-ion}
+
+The magnetic ion whose form factor the type takes, such as Co2+; absent, the type symbol&#x27;s charge or its element&#x27;s default ion.
+
+[Names across interfaces](../user-guide/parameters.md#names-magnetic-form-factor)
+
+</section>
+
+<section class="ed-parameter-entry" markdown="1" aria-labelledby="magnetic-form-factor-approximation">
+
+### Approximation {#magnetic-form-factor-approximation}
+
+Which radial integrals the form factor sums; absent, dipole when the row gives C2 and &lt;j0&gt; otherwise.
+
+| Option | Meaning |
+| --- | --- |
+| ⟨j0⟩ | The spherical form factor &lt;j0&gt; alone. |
+| Dipole ⟨j0⟩ + C₂⟨j2⟩ | The dipole approximation: &lt;j0&gt; + C2 &lt;j2&gt;, with C2 = 2/g - 1. |
+| Beyond dipole ⟨j0⟩…⟨j6⟩ | &lt;j0&gt; + C2 &lt;j2&gt; + C4 &lt;j4&gt; + C6 &lt;j6&gt;. |
+
+[Names across interfaces](../user-guide/parameters.md#names-magnetic-form-factor)
+
+</section>
+
+<section class="ed-parameter-entry" markdown="1" aria-labelledby="magnetic-form-factor-j2-coefficient">
+
+### C₂ {#magnetic-form-factor-j2-coefficient}
+
+The weight C2 of the &lt;j2&gt; term; in the dipole approximation C2 = 2/g - 1 for the Landé factor g of a moment counted against J.
+
+[Names across interfaces](../user-guide/parameters.md#names-magnetic-form-factor)
+
+</section>
+
+<section class="ed-parameter-entry" markdown="1" aria-labelledby="magnetic-form-factor-j4-coefficient">
+
+### C₄ {#magnetic-form-factor-j4-coefficient}
+
+The weight C4 of the &lt;j4&gt; term, used beyond the dipole approximation.
+
+[Names across interfaces](../user-guide/parameters.md#names-magnetic-form-factor)
+
+</section>
+
+<section class="ed-parameter-entry" markdown="1" aria-labelledby="magnetic-form-factor-j6-coefficient">
+
+### C₆ {#magnetic-form-factor-j6-coefficient}
+
+The weight C6 of the &lt;j6&gt; term, used beyond the dipole approximation.
+
+[Names across interfaces](../user-guide/parameters.md#names-magnetic-form-factor)
+
+</section>
+
 ## <span class="ed-reference-icon" data-reference-category="calculator" aria-hidden="true">&#61932;</span> Calculator {#calculator}
 
 The calculation engine an experiment names.
@@ -2896,9 +3367,44 @@ The descent strategy of the minimizer.
 
 <section class="ed-parameter-entry" markdown="1" aria-labelledby="minimizer-chi-square-tolerance">
 
-### Tolerance {#minimizer-chi-square-tolerance}
+### Χ² change tolerance {#minimizer-chi-square-tolerance}
 
 The relative change of χ² at which a fit stops.
+
+[Names across interfaces](../user-guide/parameters.md#names-minimizer)
+
+</section>
+
+<section class="ed-parameter-entry" markdown="1" aria-labelledby="minimizer-stop-rules">
+
+### Stop rules {#minimizer-stop-rules}
+
+What ends a fit as converged: chi_square_change, shift_su or both, separated by a space; the fit stops at the first one met. chi_square_change is met on the first iteration that lowers χ² by less than its tolerance, relative to χ². shift_su is met when, on two iterations in a row, every free parameter&#x27;s last shift and the shift a full undamped step would make are below its tolerance times the parameter&#x27;s s.u.
+
+[Names across interfaces](../user-guide/parameters.md#names-minimizer)
+
+</section>
+
+<section class="ed-parameter-entry" markdown="1" aria-labelledby="minimizer-shift-tolerance">
+
+### Shift/s.u. tolerance {#minimizer-shift-tolerance}
+
+The shift, in s.u., below which every free parameter&#x27;s last step ends a fit under the Shift/s.u. rule.
+
+[Names across interfaces](../user-guide/parameters.md#names-minimizer)
+
+</section>
+
+<section class="ed-parameter-entry" markdown="1" aria-labelledby="minimizer-moments-near-zero">
+
+### Magnetic moments near zero {#minimizer-moments-near-zero}
+
+Whether a fit tries free magnetic moments at exactly zero.
+
+| Option | Meaning |
+| --- | --- |
+| Try exact zero | Late in a fit, every free moment component is tried at exactly zero together and kept there when χ² is lower. |
+| Keep free | Free moments are never set to zero; near zero they end small, with an s.u. that means little there. |
 
 [Names across interfaces](../user-guide/parameters.md#names-minimizer)
 
@@ -3170,6 +3676,114 @@ When the project was last saved before the report was.
 A checksum of the saved report file.
 
 [Names across interfaces](../user-guide/parameters.md#names-report-file)
+
+</section>
+
+## <span class="ed-reference-icon" data-reference-category="space-group-symop-magn-operation" aria-hidden="true">&#62193;</span> Magnetic operator {#space-group-symop-magn-operation}
+
+The magnetic space group&#x27;s operators, each with its time-reversal sign.
+
+<section class="ed-parameter-entry" markdown="1" aria-labelledby="space-group-symop-magn-operation-id">
+
+### Id {#space-group-symop-magn-operation-id}
+
+The operator&#x27;s id.
+
+[Names across interfaces](../user-guide/parameters.md#names-space-group-symop-magn-operation)
+
+</section>
+
+<section class="ed-parameter-entry" markdown="1" aria-labelledby="space-group-symop-magn-operation-xyz">
+
+### Operation {#space-group-symop-magn-operation-xyz}
+
+The operator as x, y, z expressions followed by its time-reversal sign, +1 or -1.
+
+[Names across interfaces](../user-guide/parameters.md#names-space-group-symop-magn-operation)
+
+</section>
+
+## <span class="ed-reference-icon" data-reference-category="space-group-symop-magn-centering" aria-hidden="true">&#61618;</span> Magnetic centring vector {#space-group-symop-magn-centering}
+
+The magnetic space group&#x27;s centring translations, each with its time-reversal sign; anti-translations carry -1.
+
+<section class="ed-parameter-entry" markdown="1" aria-labelledby="space-group-symop-magn-centering-id">
+
+### Id {#space-group-symop-magn-centering-id}
+
+The centring vector&#x27;s id.
+
+[Names across interfaces](../user-guide/parameters.md#names-space-group-symop-magn-centering)
+
+</section>
+
+<section class="ed-parameter-entry" markdown="1" aria-labelledby="space-group-symop-magn-centering-xyz">
+
+### Operation {#space-group-symop-magn-centering-xyz}
+
+The centring vector as x, y, z expressions followed by its time-reversal sign, +1 or -1.
+
+[Names across interfaces](../user-guide/parameters.md#names-space-group-symop-magn-centering)
+
+</section>
+
+## <span class="ed-reference-icon" data-reference-category="expanded-atom-site-moment" aria-hidden="true">&#61732;</span> Moment in the cell {#expanded-atom-site-moment}
+
+The magnetic moment of every magnetic atom of the unit cell, generated from the sites by symmetry.
+
+<section class="ed-parameter-entry" markdown="1" aria-labelledby="expanded-atom-site-moment-atom-site-id">
+
+### Site {#expanded-atom-site-moment-atom-site-id}
+
+The atom site this atom is generated from.
+
+[Names across interfaces](../user-guide/parameters.md#names-expanded-atom-site-moment)
+
+</section>
+
+<section class="ed-parameter-entry" markdown="1" aria-labelledby="expanded-atom-site-moment-site-symmetry">
+
+### Sym {#expanded-atom-site-moment-site-symmetry}
+
+The symmetry code that generates this atom from its site.
+
+[Names across interfaces](../user-guide/parameters.md#names-expanded-atom-site-moment)
+
+</section>
+
+<section class="ed-parameter-entry" markdown="1" aria-labelledby="expanded-atom-site-moment-crystalaxis-x">
+
+### Mx {#expanded-atom-site-moment-crystalaxis-x}
+
+Moment component along the unit vector of the cell axis, in Bohr magnetons.
+
+**Units:** μB.
+
+[Names across interfaces](../user-guide/parameters.md#names-expanded-atom-site-moment)
+
+</section>
+
+<section class="ed-parameter-entry" markdown="1" aria-labelledby="expanded-atom-site-moment-crystalaxis-y">
+
+### My {#expanded-atom-site-moment-crystalaxis-y}
+
+Moment component along the unit vector of the cell axis, in Bohr magnetons.
+
+**Units:** μB.
+
+[Names across interfaces](../user-guide/parameters.md#names-expanded-atom-site-moment)
+
+</section>
+
+<section class="ed-parameter-entry" markdown="1" aria-labelledby="expanded-atom-site-moment-crystalaxis-z">
+
+### Mz {#expanded-atom-site-moment-crystalaxis-z}
+
+Moment component along the unit vector of the cell axis, in Bohr magnetons.
+
+**Units:** μB.
+
+[Names across interfaces](../user-guide/parameters.md#names-expanded-atom-site-moment)
 
 </section>
 
@@ -3456,6 +4070,36 @@ The background the fit used.
 ### Descent {#fit-result-descent}
 
 The descent strategy the fit used.
+
+[Names across interfaces](../user-guide/parameters.md#names-fit-result)
+
+</section>
+
+<section class="ed-parameter-entry" markdown="1" aria-labelledby="fit-result-stopping-rule">
+
+### Stopped by {#fit-result-stopping-rule}
+
+What stopped the fit: a stop rule (chi_square_change, shift_su), the iteration limit (max_iterations), or another stop (no_accepted_step, cancelled, polish_resumes, rounding_floor, stationary, parameter_tolerance).
+
+[Names across interfaces](../user-guide/parameters.md#names-fit-result)
+
+</section>
+
+<section class="ed-parameter-entry" markdown="1" aria-labelledby="fit-result-stopping-value">
+
+### Stopping value {#fit-result-stopping-value}
+
+The value the stopping rule tested when it was met: the relative χ² change of the stopping iteration, the largest shift over its s.u., or the iteration count at the limit.
+
+[Names across interfaces](../user-guide/parameters.md#names-fit-result)
+
+</section>
+
+<section class="ed-parameter-entry" markdown="1" aria-labelledby="fit-result-last-shift-su">
+
+### Last largest shift/s.u. {#fit-result-last-shift-su}
+
+The largest move of a free parameter in the fit&#x27;s last step, over its s.u.
 
 [Names across interfaces](../user-guide/parameters.md#names-fit-result)
 
