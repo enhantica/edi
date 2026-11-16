@@ -177,6 +177,23 @@ def condition_value(node):
 
 @pytest.mark.parametrize('platform', ['macOS', 'Windows'])
 def test_signing_is_present_and_never_reaches_pull_requests_or_other_branches(platform):
+    environment = workflow()['jobs']['installers'].get('environment')
+    if isinstance(environment, dict):
+        environment = environment.get('name')
+    for event, release, preview in [
+        ('push', False, False),
+        ('workflow_dispatch', True, False),
+        ('workflow_dispatch', False, True),
+    ]:
+        atoms = context_atoms(
+            event, 'refs/heads/main', release, platform, 'enhantica/edi', preview=preview
+        )
+        selected_environment = (
+            expression(environment, atoms) if '${{' in str(environment) else environment
+        )
+        assert selected_environment == 'codesign', (
+            'Every permitted installer signing run must select the reviewed codesign environment'
+        )
     selected = signing_steps()
     assert selected, 'Release installers must contain signing steps'
     assert any(private_access(s, 'push', 'refs/heads/main', False, platform) for s in selected), (
