@@ -3018,7 +3018,7 @@ void fill_crysta_relations(const Project& model, crysta::Project& converted) {
         converted.constraints.push_back(
             {constraint->id.value(), constraint->expression.value(), constraint->enabled.get()});
     }
-    // ADR-0086: the experiment sets cross as declared too; crysta checks and saves them.
+    // ADR-0087: the experiment sets cross as declared too; crysta checks and saves them.
     converted.experiment_sets.clear();
     for (const auto& set : model.experiment_sets) {
         converted.experiment_sets.push_back({set->id.value(), set->template_experiment_id.value()});

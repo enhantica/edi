@@ -26,11 +26,11 @@ struct ScanColumns {
 ScanColumns scan_columns(std::span<const double> x, std::span<const double> intensity, double x_min, double x_max,
                          std::size_t columns);
 
-/// A series' merged row (edi ADR-0088 point 5): per column the lowest low and highest high over its experiments'
+/// A series' merged row (edi ADR-0089 point 5): per column the lowest low and highest high over its experiments'
 /// columns, NaN only where none has a value. Parts of other widths than the first are ignored.
 ScanColumns merge_scan_columns(std::span<const ScanColumns> parts);
 
-/// The views' summaries of the rows on screen (edi ADR-0088 point 5): at most `budget` bytes of columns and keys, the
+/// The views' summaries of the rows on screen (edi ADR-0089 point 5): at most `budget` bytes of columns and keys, the
 /// least recently used dropped first; nothing else keeps them. Keys are the caller's description of a row, its range
 /// and its width. Not thread safe: the worker that builds summaries owns it.
 class ScanSummaryCache {

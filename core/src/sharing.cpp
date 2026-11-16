@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BSD-3-Clause
-// ADR-0086: the "Same for all experiments" and "Phase ratios shared" switches. They write ordinary alias and
+// ADR-0087: the "Same for all experiments" and "Phase ratios shared" switches. They write ordinary alias and
 // constraint rows and read the switch's state back from those rows' exact text; crysta parses the expressions and
 // decides what follows what (ADR-0024).
 #include "edi/sharing.hpp"

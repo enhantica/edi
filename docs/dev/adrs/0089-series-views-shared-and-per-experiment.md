@@ -1,4 +1,4 @@
-# 0088. Series views: Evolution by Shared and Per experiment, Map and Stacked by rows
+# 0089. Series views: Evolution by Shared and Per experiment, Map and Stacked by rows
 
 - **Status:** Proposed
 - **Date:** 2026-11-15
@@ -10,7 +10,7 @@
 
 ## Context
 
-A series of joint fits (ADR-0087) records `analysis/results.csv` per point and `analysis/results_experiments.csv`
+A series of joint fits (ADR-0088) records `analysis/results.csv` per point and `analysis/results_experiments.csv`
 per point and experiment (ADR-0026, "Two results files"). Evolution today lists every column of one file in one
 selector; Map and Stacked draw one row per dataset of a one-experiment scan and keep each read pattern. The owner
 asked for: one Evolution chart and one selector with two sections, Shared and Per experiment, a per-experiment
@@ -29,7 +29,7 @@ table to draw curves per dataset from. Displayed-resolution reductions are edi's
 ## Decision
 
 1. **Evolution sections.** The selector lists **Shared**: every column of `results.csv` (structure parameters and
-   structure-level derived values), and every experiment parameter made "same for all experiments" (ADR-0086),
+   structure-level derived values), and every experiment parameter made "same for all experiments" (ADR-0087),
    listed once and read from the leader's rows; then **Per experiment**: every other column of
    `results_experiments.csv`, listed once by its name without the datablock. Derived values are listed in their
    section with a "derived" mark. A one-experiment scan shows one list, as now.

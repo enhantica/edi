@@ -157,7 +157,7 @@ the existing native placement rules; only instantiated labels change.
 
 ## Amendment, 2026-11: two results files
 
-A series of joint fits (ADR-0087) fits each point jointly over several experiments. Its results are two files:
+A series of joint fits (ADR-0088) fits each point jointly over several experiments. Its results are two files:
 
 1. `analysis/results.csv`, one row per point: `point` (the text the patterns' `*` matched), the joint fit's reduced χ²,
    success and iterations, the extract rules' values, each structure parameter's value and `.uncertainty`, the fit
@@ -179,4 +179,4 @@ The scale gate extends to a series: a seeded series of 100 points × 5 patterns 
 example), run on the producer path the app uses, with peak memory after point 100 within 10 % of the peak after point
 10, the median time per point over points 91 to 100 within 1.2 times the median over points 11 to 20, and no
 GUI-thread stall over 100 ms while the app shows the run. A series of 1,000 points × 100 patterns waits for real
-example data. Views draw from per-pattern summaries (ADR-0088).
+example data. Views draw from per-pattern summaries (ADR-0089).

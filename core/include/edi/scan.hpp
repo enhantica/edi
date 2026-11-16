@@ -43,10 +43,10 @@ struct ScanDatasets {
 ScanDatasets scan_datasets(const Project& project);
 
 /// Every file of the scan's folder its datasets name: a scan's files, or a series' files of every point, incomplete
-/// points included. What copying a linked scan into the project carries and what its size counts (ADR-0087 point 3).
+/// points included. What copying a linked scan into the project carries and what its size counts (ADR-0088 point 3).
 std::vector<std::string> scan_data_files(const ScanDatasets& datasets);
 
-/// ADR-0087 point 4: for each point key of a series of joint fits, whether a file it was fitted from has changed since:
+/// ADR-0088 point 4: for each point key of a series of joint fits, whether a file it was fitted from has changed since:
 /// a `results_experiments.csv` row of the point records a size or modification time the file no longer has, or the
 /// file is gone. A point without rows is not changed. Only the named points' files are looked at; nothing is read
 /// from them. All false for a scan of one experiment or without the file.
@@ -188,7 +188,7 @@ void evolution_series(const Project& project, const ScanPlaces& places, const Sc
                       const std::vector<std::string>& parameters, bool by_value,
                       const std::function<void(std::size_t, const EvolutionPoint&)>& visit);
 
-/// ADR-0087 point 1: files of a series of joint fits grouped by name, one group per experiment. In each name the
+/// ADR-0088 point 1: files of a series of joint fits grouped by name, one group per experiment. In each name the
 /// first run of digits that differs between the names becomes `*`; names sharing the result form a group, in the
 /// order their first file comes. Names that do not split this way (one name, no differing digits, or a different
 /// number of digit runs) come back as one group per name, with the name as its pattern.
@@ -198,7 +198,7 @@ struct SeriesGroup {
 };
 std::vector<SeriesGroup> group_series_files(const std::vector<std::string>& names);
 
-/// ADR-0087 point 1: declares `project` a series of joint fits over the folder `data_dir`, one experiment per group:
+/// ADR-0088 point 1: declares `project` a series of joint fits over the folder `data_dir`, one experiment per group:
 /// the experiment `template_experiment` takes the first group's pattern and each further group a copy of it, named
 /// after its pattern (the `*` and the extension dropped, the ends trimmed of `_` and `-`, a `_copy` suffix when
 /// taken). The experiments form the experiment set `set_id`, the template first. No data file is read. Returns the
@@ -209,12 +209,12 @@ std::vector<std::string> declare_series_of_joint_fits(Project& project, const st
                                                       const std::vector<SeriesGroup>& groups,
                                                       const std::string& set_id);
 
-/// ADR-0088 point 4: each experiment's divisor in a series' merged d view at the point `point`: its first enabled
+/// ADR-0089 point 4: each experiment's divisor in a series' merged d view at the point `point`: its first enabled
 /// linked structure's scale as `analysis/results_experiments.csv` records it for the point, else the template's
 /// value; 1 where neither is a positive finite number. In project order.
 std::vector<double> series_point_scales(const Project& project, const std::string& point);
 
-/// ADR-0088 point 5: the summary of one Map or Stacked row of a series over [d_min, d_max] at `columns` columns: the
+/// ADR-0089 point 5: the summary of one Map or Stacked row of a series over [d_min, d_max] at `columns` columns: the
 /// point's pattern of each experiment in `experiments` (places in project order), read from its file on the d axis by
 /// that experiment's calibration as fitted at the point (the template's before; crysta's rule for `_data.d_spacing`)
 /// and divided by its entry in `scales`; for one
@@ -224,7 +224,7 @@ ScanColumns series_row_columns(const Project& project, const ScanDatasets& datas
                                const std::vector<std::size_t>& experiments, const std::vector<double>& scales,
                                double d_min, double d_max, std::size_t columns);
 
-/// A series of joint fits' per-experiment parameters (ADR-0088): the value columns of `analysis/results_experiments.csv`,
+/// A series of joint fits' per-experiment parameters (ADR-0089): the value columns of `analysis/results_experiments.csv`,
 /// by their names without the datablock, in the file's order; empty for a scan of one experiment or without the file.
 std::vector<std::string> evolution_experiment_parameters(const Project& project);
 

@@ -8,7 +8,7 @@
   fetched at fit start remain
 - **Priority:** High
 
-**Extended by [ADR-0087](0087-series-of-joint-fits-and-linked-data.md):** a series of joint fits is copied or linked as
+**Extended by [ADR-0088](0088-series-of-joint-fits-and-linked-data.md):** a series of joint fits is copied or linked as
 one folder, and the Save as dialog shows the per-save decision as its Measured data row.
 
 ## Context

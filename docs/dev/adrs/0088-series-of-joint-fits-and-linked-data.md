@@ -1,4 +1,4 @@
-# 0087. A series of joint fits: loading its files and linking its data
+# 0088. A series of joint fits: loading its files and linking its data
 
 - **Status:** Proposed
 - **Date:** 2026-11-15
@@ -32,7 +32,7 @@ project: GSAS-II powder data, Z-Rietveld, SasView, cryspy. NeXus containers read
    equal size: edi replaces, in each name, the first run of digits that differs between names with `*`, and names
    sharing the result form one group, one experiment per group. The dialog shows "B experiments × P points" and each
    group's pattern; the user may edit the patterns. Each experiment is a copy of the selected experiment's setup,
-   named after its group, and the experiments form an experiment set (ADR-0086). The grouping reads names only, on a
+   named after its group, and the experiments form an experiment set (ADR-0087). The grouping reads names only, on a
    worker; the first point's file of each experiment is read as that experiment's template data.
 2. **What is saved.** The scan's `data_dir` and, per experiment, its file pattern; no per-file entry, read or hash at
    Save.

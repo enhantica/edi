@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BSD-3-Clause
-// ADR-0087 point 1: grouping a selection of data files into a series of joint fits by their names alone.
+// ADR-0088 point 1: grouping a selection of data files into a series of joint fits by their names alone.
 #include <algorithm>
 #include <cctype>
 #include <cstddef>

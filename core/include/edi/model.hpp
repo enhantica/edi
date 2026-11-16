@@ -4867,7 +4867,7 @@ struct KeyTraits<SequentialExtractRule> {
     static const char* category() { return "sequential-fit extract rule"; }
 };
 
-// ADR-0087: one experiment of a series of joint fits and the file pattern its points' files
+// ADR-0088: one experiment of a series of joint fits and the file pattern its points' files
 // match; the text the pattern's one `*` matches is the point. Mirrors crysta's row.
 struct SequentialFitExperiment {
     ItemKey experiment_id;
@@ -4882,7 +4882,7 @@ struct KeyTraits<SequentialFitExperiment> {
     static const char* category() { return "sequential-fit experiment"; }
 };
 
-// ADR-0086: an experiment set, a template experiment and its members, each an ordinary experiment.
+// ADR-0087: an experiment set, a template experiment and its members, each an ordinary experiment.
 struct ExperimentSet {
     ItemKey id;
     detail::WrittenText template_experiment_id;
@@ -5042,7 +5042,7 @@ struct SequentialFitConfig {
     // The template dataset: the scan file whose data the template experiment holds (set_scan_template_file).
     std::string template_file;
     ItemVec<SequentialExtractRule> extract;  // Ids unique by construction
-    // ADR-0087: a series of joint fits, one file pattern per experiment; empty for a scan of one
+    // ADR-0088: a series of joint fits, one file pattern per experiment; empty for a scan of one
     // experiment, which reads `file_pattern`.
     ItemVec<SequentialFitExperiment> experiments;
     bool declared() const { return !data_dir.empty(); }
@@ -5393,7 +5393,7 @@ class Project : public detail::ProjectAnchor {
     // The declared parameter aliases and constraints (analysis.edi `_alias`, `_constraint`).
     ItemVec<ParameterAlias> aliases;
     ItemVec<ParameterConstraint> constraints;
-    // ADR-0086: the experiment sets and their members (analysis.edi `_experiment_set`,
+    // ADR-0087: the experiment sets and their members (analysis.edi `_experiment_set`,
     // `_experiment_set_member`).
     ItemVec<ExperimentSet> experiment_sets;
     ItemVec<ExperimentSetMember> experiment_set_members;

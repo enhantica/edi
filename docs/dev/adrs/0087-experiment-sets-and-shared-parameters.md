@@ -1,4 +1,4 @@
-# 0086. Experiment sets and parameters shared across experiments
+# 0087. Experiment sets and parameters shared across experiments
 
 - **Status:** Proposed
 - **Date:** 2026-11-15
@@ -13,7 +13,7 @@
 Several experiments of one sample are fitted together: the five bank pairs of a WISH measurement, the six datasets of
 taurine, an X-ray and a neutron pattern. Many of their parameters should take one value for all of them (a peak
 shape term of identical detectors, a wavelength), while each keeps its own scale. A series of such points
-(ADR-0087) has up to 100 experiments per point, so tying them one constraint at a time by hand does not scale. The
+(ADR-0088) has up to 100 experiments per point, so tying them one constraint at a time by hand does not scale. The
 owner asked for experiment sets (one template experiment and a table of what each member changes, like a multi-bank
 instrument file) and for a "same for all experiments" switch that makes ordinary constraints. Patterns of one sample
 should also be able to share their relative phase scales while each keeps its own overall scale.
@@ -38,7 +38,7 @@ pdffit2, bumps, lmfit, cctbx, EasyScience, diffraction-lib, SasView and the othe
 1. **Experiment sets.** A set has an id, a template experiment and its members (the template is one of them); each
    member is an ordinary experiment with its own file, as now. crysta reads, checks and writes the set (its id is not
    a datablock name; every member exists and belongs to one set). A set is made when several files are loaded as
-   separate experiments or as a series of joint fits (ADR-0087), or from existing experiments of one type (Make set…
+   separate experiments or as a series of joint fits (ADR-0088), or from existing experiments of one type (Make set…
    in the Experiments group).
 2. **What differs.** The Experiments group shows a set as one entry that opens to its members. Its Differences table
    lists, for each member, the values that differ from the template, computed when shown and only for the rows on

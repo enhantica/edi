@@ -9,7 +9,7 @@
 
 namespace edi {
 
-/// ADR-0086: the experiments a switch ties together, the leader first: the members of the experiment set the
+/// ADR-0087: the experiments a switch ties together, the leader first: the members of the experiment set the
 /// experiment belongs to, its template leading, or every experiment of the project, the first leading, when it
 /// belongs to none. Throws std::invalid_argument for an experiment the project does not hold.
 std::vector<std::string> sharing_scope(const Project& project, const std::string& experiment);

@@ -4717,7 +4717,7 @@ NB_MODULE(_edi, m) {
     nb::class_<edi::Project> project(m, "Project");
     def_parameter_walks(project);
     def_free_parameters(project);
-    // ADR-0086: experiment sets and their two switches, which write ordinary alias and constraint rows.
+    // ADR-0087: experiment sets and their two switches, which write ordinary alias and constraint rows.
     // Each handle holds the project's Python object, so it cannot outlive the project it reads.
     struct ExperimentSetRef {
         edi::Project* project = nullptr;
