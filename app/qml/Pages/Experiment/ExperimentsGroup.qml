@@ -16,8 +16,8 @@ import edi.app
 // the table the selected experiment's type (ExperimentTypeGroup), then Create experiment (a new experiment without
 // data, a simulation) and Load experiment (`.edi` block files, several at once, each with its type, data and
 // parameters). Each row's Data file cell loads its measured data: Load data… ▾ while it has none, the file's name and
-// ⋯ to replace it once it has (the owner, 2026-11-16). A series of joint fits is one row ("100 runs × 5 banks ·
-// folder data"); its runs and banks are chosen with the Run and Bank selectors in the main view. Start marks the experiment a scan starts from. Create, Load and Load data are each one undoable step.
+// ⋯ to replace it once it has (the owner, 2026-11-16). A series of joint fits lists a row per run, "5 banks" in its
+// Data file cell; its banks are chosen with the Bank selector in the main view. Start marks the experiment a scan starts from. Create, Load and Load data are each one undoable step.
 SideBarGroup {
     id: group
     property var pickerLife: ({
@@ -29,7 +29,7 @@ SideBarGroup {
     // A scan project lists its datasets: No. · Fit · Datablock · File · one column per extract rule, with no
     // colour column and no remove button (one template experiment shows them all).
     readonly property bool scan: project !== null && project.scan
-    // A series of joint fits (edi ADR-0088): one ordinary row; its runs and banks are chosen in the main view.
+    // A series of joint fits (edi ADR-0088): a row per run, as a scan's files; its banks are chosen in the main view.
     readonly property bool series: project !== null && project.series
     // One column per extract rule, with its unit, from the table's own model. The table lays a row's cells out
     // by their place among the header's, so the header and each row repeat over the same list.
@@ -70,10 +70,10 @@ SideBarGroup {
             defaultInfoText: qsTr("No experiments yet")
             sourceModel: group.project ? group.project.experiments : null
             marksCurrentRow: true
-            currentRow: group.series ? 0 : group.project ? group.project.currentExperimentIndex : -1
+            currentRow: group.project ? group.project.currentExperimentIndex : -1
             onRowActivated: row => ApplicationInfo.activateFormBlock(row, false)
 
-            columns: [numberColumnWidth, group.scan ? group.startColumnWidth : 0.001, group.scan ? 0.001 : AppSizes.iconOnlyColumnWidth, group.scan ? AppSizes.iconOnlyColumnWidth : group.fitColumnWidth, -1, -1, group.scanColumns.length ? group.scanColumns.length * AppSizes.dataColumnWidth * 1.4 : 0.001, group.scan ? 0.001 : AppSizes.iconColumnWidth]
+            columns: [numberColumnWidth, group.scan && !group.series ? group.startColumnWidth : 0.001, group.scan ? 0.001 : AppSizes.iconOnlyColumnWidth, group.scan ? AppSizes.iconOnlyColumnWidth : group.fitColumnWidth, -1, -1, group.scanColumns.length ? group.scanColumns.length * AppSizes.dataColumnWidth * 1.4 : 0.001, group.scan ? 0.001 : AppSizes.iconColumnWidth]
 
             header: EaComponents.ListViewHeader {
                 EaComponents.ListViewLabel {
@@ -83,7 +83,7 @@ SideBarGroup {
                 EaComponents.ListViewLabel {
                     elide: Text.ElideRight
                     horizontalAlignment: Text.AlignHCenter
-                    visible: group.scan
+                    visible: group.scan && !group.series
                     text: qsTr("Start")
                 }
                 EaComponents.ListViewLabel {
@@ -163,17 +163,16 @@ SideBarGroup {
                     EaElements.RadioButton {
                         objectName: `experiments.start.${row.index}`
                         anchors.centerIn: parent
-                        visible: group.scan
-                        enabled: !group.series
-                        checked: group.series || row.isTemplate
+                        visible: group.scan && !group.series
+                        checked: row.isTemplate
                         EaElements.ToolTip {
-                            text: group.series ? qsTr("Each point of the series starts from the previous point's fitted values") : qsTr("The sequential fit starts from this dataset's fitted values")
+                            text: qsTr("The sequential fit starts from this dataset's fitted values")
                             requested: parent.hovered
                         }
                         onClicked: {
-                            if (!group.series && !row.isTemplate)
+                            if (!row.isTemplate)
                                 group.project.useAsTemplate(row.index);
-                            checked = Qt.binding(() => group.series || row.isTemplate);
+                            checked = Qt.binding(() => row.isTemplate);
                         }
                     }
                 }
@@ -239,8 +238,8 @@ SideBarGroup {
                             width: implicitWidth
                             height: parent.height
                             elide: Text.ElideRight
-                            color: EaStyle.Colors.themeAccent
-                            text: Session.label("sequential_fit.template_file")
+                            color: EaStyle.Colors.themeForegroundMinor
+                            text: qsTr("Start")
                         }
                         // ⋯: replace the data with another file, folder or collection entry.
                         EaComponents.ListViewButton {

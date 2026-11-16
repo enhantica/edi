@@ -3779,20 +3779,6 @@ int ProjectViewModel::seriesPointCount() const {
     return static_cast<int>(datasets.files.size() + datasets.incomplete.size());
 }
 
-QString ProjectViewModel::seriesSummary() const {
-    if (!series()) return {};
-    const auto& datasets = scan_session_->datasets();
-    const int points = static_cast<int>(datasets.files.size());
-    const int banks = static_cast<int>(datasets.experiments.size());
-    QString text = tr("%1 runs × %2 banks").arg(points).arg(banks);
-    if (points > 0 && !project_->sequential_fit.extract.empty()) {
-        const QString first = datasetRow(0).extracted.value(0), last = datasetRow(points - 1).extracted.value(0);
-        if (!first.isEmpty() && !last.isEmpty()) text += QStringLiteral(" · ") + first + QStringLiteral(" – ") + last;
-    }
-    text += QStringLiteral(" · ") + tr("folder %1").arg(QString::fromStdString(project_->sequential_fit.data_dir));
-    return text;
-}
-
 QString ProjectViewModel::pointName(int point) const {
     if (!series() || point < 0 || point >= seriesPointCount()) return {};
     const auto& datasets = scan_session_->datasets();
@@ -3933,19 +3919,27 @@ void ProjectViewModel::syncDatasets() {
         return;
     }
     if (series()) {
-        // A series is one row; its runs and banks are chosen in the main view (the Run and Bank selectors).
+        // Every run of a series is a row, as a scan lists its files (the owner, 2026-11-16): its recorded value in the
+        // series variable's column, and in its Data file cell its one file or how many banks it has.
+        const int runs = static_cast<int>(scan_session_->datasets().files.size());
         ExperimentViewModel* first = experiment_models_.value(0);
-        experiment_list_->setColumns({});
-        const auto row = [this](int) {
-            ExperimentListModel::Dataset dataset;
+        experiment_list_->setColumns(scan_columns_);
+        const auto row = [this](int index) {
+            ExperimentListModel::Dataset dataset = datasetRow(index);
             dataset.name = seriesName();
-            dataset.file = seriesSummary();
+            dataset.is_template = false;
+            const auto& files = scan_session_->datasets().point_files;
+            const auto at = static_cast<std::size_t>(index);
+            if (at < files.size()) {
+                dataset.file = files[at].size() == 1 ? QString::fromStdString(files[at].front())
+                                                     : tr("%1 banks").arg(files[at].size());
+            }
             return dataset;
         };
-        if (experiment_list_->showsDatasets(first, 1)) {
+        if (experiment_list_->showsDatasets(first, runs)) {
             experiment_list_->datasetsChanged();
         } else {
-            experiment_list_->setDatasets(first, 1, row);
+            experiment_list_->setDatasets(first, runs, row);
         }
         syncSeries();
         syncPatternColours();
@@ -4082,13 +4076,12 @@ void ProjectViewModel::syncDataset(int index) {
     if (!scan_ || index < 0 || index >= static_cast<int>(scan_session_->datasets().files.size())) {
         return;
     }
+    experiment_list_->datasetChanged(index);
     if (series()) {
-        experiment_list_->datasetChanged(0);
         ++series_revision_;
         emit seriesChanged();
         return;
     }
-    experiment_list_->datasetChanged(index);
     if (index == current_dataset_) {
         if (ExperimentViewModel* experiment = experiment_models_.value(0)) {
             experiment->setFitOutcome(datasetRow(index).outcome);

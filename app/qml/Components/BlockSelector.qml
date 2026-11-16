@@ -63,6 +63,12 @@ Row {
         // outcome, its name and a scan's template mark, on one centre line (IconLine, §10).
         function segments(index, name, nameColor, outcome, isTemplate) {
             const line = ApplicationInfo.blockSegments(index, name, nameColor, outcome, isTemplate);
+            // The scan's starting dataset reads "Start" in the greyed text, as the Experiments table's Start column
+            // names it (the owner, 2026-11-16).
+            if (isTemplate && line.length > 0) {
+                line[line.length - 1].text = qsTr("Start");
+                line[line.length - 1].color = String(EaStyle.Colors.themeForegroundMinor);
+            }
             if (row.numberPrefix === "" || line.length < 2)
                 return line;
             line[0].text = `${row.numberPrefix} ${line[0].text} ·`;

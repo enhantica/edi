@@ -249,11 +249,10 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     Q_PROPERTY(int currentBank READ currentBank WRITE setCurrentBank NOTIFY currentBankChanged)
     Q_PROPERTY(QStringList bankLabels READ bankLabels NOTIFY seriesChanged)
     // The series' name (its experiment set, else its first structure), what its points record ("Temperature (K)",
-    // or "Run" when nothing is recorded), how many points it lists (incomplete ones last) and its one-line summary.
+    // or "Run" when nothing is recorded) and how many points it lists (incomplete ones last).
     Q_PROPERTY(QString seriesName READ seriesName NOTIFY seriesChanged)
     Q_PROPERTY(QString seriesVariable READ seriesVariable NOTIFY seriesChanged)
     Q_PROPERTY(int seriesPointCount READ seriesPointCount NOTIFY seriesChanged)
-    Q_PROPERTY(QString seriesSummary READ seriesSummary NOTIFY seriesChanged)
     // Counted up whenever a run's facts change, so a binding reading pointName or pointProblem reads them again.
     Q_PROPERTY(int seriesRevision READ seriesRevision NOTIFY seriesChanged)
     Q_PROPERTY(QString missingDataFolder READ missingDataFolder NOTIFY missingDataFolderChanged)
@@ -407,7 +406,6 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     QString seriesName() const;
     QString seriesVariable() const;
     int seriesPointCount() const;
-    QString seriesSummary() const;
     int seriesRevision() const { return series_revision_; }
     // A run's name for the Run selector, which adds its number: what it records, or its key.
     Q_INVOKABLE QString pointName(int point) const;
