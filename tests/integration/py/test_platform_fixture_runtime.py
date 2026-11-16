@@ -74,7 +74,7 @@ def test_windows_manifest_keys_retain_the_entire_reviewed_pin_and_reject_byte_ch
     )
     with pytest.raises(
         AssertionError,
-        match=r'exact committed|entire independently archived|every committed source byte',
+        match=r'^A seed update first authenticates every current scientific and metadata byte$',
     ):
         retained_bytes(key, raw + b' ')
 

@@ -6,17 +6,19 @@
         "unit/py",
         "unit/cpp",
         "integration/py",
-        "system"
+        "system/py"
       ],
       "task": "group-quick",
       "gap_to_merge": "CI on a pull request leaves out the nightly-only group's files, which only the nightly schedule runs, and the weekly-only group's, which only the Sunday schedule runs; merge-only JOBS (the macOS leg) differ otherwise"
     },
     "app": {
       "tiers": [
-        "integration/app"
+        "integration/app",
+        "system/app"
       ],
       "paths": [
-        "tests/integration/app"
+        "tests/integration/app",
+        "tests/system/app"
       ],
       "task": "group-app",
       "gap_to_merge": "none: app-verify and both app CI jobs run this group after app-build in the app environment"
@@ -26,7 +28,7 @@
         "unit/py",
         "unit/cpp",
         "integration/py",
-        "system"
+        "system/py"
       ],
       "task": "group-full",
       "gap_to_merge": "the merge selection itself"

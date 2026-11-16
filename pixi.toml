@@ -330,9 +330,9 @@ format = "ruff format ."
 # once the first test lands. depends-on core-build: from the suite imports `edi._edi` (a git-ignored
 # nanobind extension built by core-build), so the extension MUST be built before pytest — otherwise a clean
 # CI checkout / clean tree has no `_edi.so` and `import edi` fails, while a stale `.so` masks it locally.
-# The core suites leave out tests/integration/app, the app group: it needs the Qt app build and runs as
+# The core suites leave out the app group (tests/integration/app and tests/system/app): it needs the Qt app build and runs as
 # group-app after app-build (app-verify, both CI app jobs; tests/test-groups.json "app").
-test = { cmd = ["bash", "tools/ci/pytest-lenient.sh", "--ignore=tests/integration/app", "--ignore=tests/system/py/test_survey_events.py"], depends-on = ["core-build"] }
+test = { cmd = ["bash", "tools/ci/pytest-lenient.sh", "--ignore=tests/integration/app", "--ignore=tests/system/app", "--ignore=tests/system/py/test_survey_events.py"], depends-on = ["core-build"] }
 # The quick (review-time) selection runs the FULL tier set — the measured-`heavy` exclusion is
 # retired (tests/test-groups.json declares the named groups, equal on test selection). Renamed
 # from `per-commit-tests` — the owner cadence
@@ -342,7 +342,7 @@ test = { cmd = ["bash", "tools/ci/pytest-lenient.sh", "--ignore=tests/integratio
 # references (docs/dev/design/where-tests-live.md).
 quick-tests = { cmd = [
     "python", "-m", "pytest",
-    "tests/unit", "tests/integration", "tests/system", "--ignore=tests/integration/app",
+    "tests/unit", "tests/integration", "tests/system", "--ignore=tests/integration/app", "--ignore=tests/system/app",
     "--ignore=tests/system/py/test_survey_events.py",
     "-q",
 ], depends-on = ["core-build"] }
@@ -466,7 +466,7 @@ group-nightly-only = { depends-on = ["nightly-only-tests"] }
 group-weekly-only = { depends-on = ["weekly-only-tests"] }
 # Run on its own it builds first, as every app step does: the core the suite's conftest imports and the app,
 # in its own environment; app-verify runs it with --skip-deps on its one build.
-group-app = { cmd = ["python", "-m", "pytest", "tests/integration/app", "-q"], depends-on = ["core-build", { task = "app-build", environment = "app" }, { task = "onboarding-probes", environment = "app" }, { task = "onboarding-capture", environment = "app" }] }
+group-app = { cmd = ["python", "-m", "pytest", "tests/integration/app", "tests/system/app", "-q"], depends-on = ["core-build", { task = "app-build", environment = "app" }, { task = "onboarding-probes", environment = "app" }, { task = "onboarding-capture", environment = "app" }] }
 # The packed web app (wasm-build's zip): the given pytest files and the browser driver in each case, in this
 # environment (the tests import edi): tools/ci/wasm-check.sh.
 wasm-check = { cmd = ["bash", "tools/ci/wasm-check.sh"] }

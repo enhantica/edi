@@ -10,11 +10,11 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-15T22:49:45Z
+# measured_utc = 2026-11-16T03:10:12Z
 #
-# Recorded from: Final scoped release-only presentation replay; recorded tag/day, plain notes, public short-label descriptions and current installer cards; undeclared sibling/SDK inputs denied
-# Collected tests: 245381; with a reported duration: 77720
-# Module-scoped fixture costs recorded: 205
+# Recorded from: Scoped final scan-row routing and complete loaded-correlation cache matrix; CMake-selected Qt runtime transport and native platform controls; serial local Linux, unchanged per-tier bounds
+# Collected tests: 245456; with a reported duration: 77741
+# Module-scoped fixture costs recorded: 206
 #
 # Breaches are decided PER TIER against the table
 # below, which the loader validates against the code constants - a manifest must state
@@ -29,12 +29,12 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 245381
+# inventory_python = 245456
 # inventory_cpp = 0
-# inventory_measured = 176962
-# inventory_unmeasured = 68419
+# inventory_measured = 177033
+# inventory_unmeasured = 68423
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
-# inventory_pr_python = 86076
+# inventory_pr_python = 86151
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -861,7 +861,7 @@ UNMEASURED:failed-in-this-run	tests/integration/app/test_single_crystal_views.py
 0.000	tests/integration/app/test_table_about_and_scan_views.py::test_production_view_actor_executes_every_case[AboutLicenceLinks]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_table_about_and_scan_views.py::test_production_view_actor_executes_every_case[CurrentRowNumbers]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_table_about_and_scan_views.py::test_production_view_actor_executes_every_case[StructureScanViews]
-0.290	tests/integration/app/test_tooltip_contract.py::test_input_matrix_is_generated_once_and_has_unambiguous_native_selections
+UNMEASURED:failed-in-this-run	tests/integration/app/test_tooltip_contract.py::test_input_matrix_is_generated_once_and_has_unambiguous_native_selections
 0.030	tests/integration/app/test_tooltip_contract.py::test_measured_startup_keeps_the_reviewed_request_and_result_protocol
 0.010	tests/integration/app/test_tooltip_contract.py::test_native_lifecycle_controls_reject_wrong_ack_totals_and_crashes
 0.000	tests/integration/app/test_tooltip_contract.py::test_native_result_controls_reject_foreign_failed_skipped_or_absent_rows
@@ -1221,41 +1221,49 @@ UNMEASURED:failed-in-this-run	tests/integration/app/test_tooltip_contract.py::te
 0.380	tests/integration/app/test_tooltip_contract.py::test_retained_owner_contract[value_field_clearance-typed-rule-focus-only-Important]
 0.340	tests/integration/app/test_tooltip_contract.py::test_retained_owner_contract[value_field_clearance-typed-rule-focus-only-Off]
 0.010	tests/integration/app/test_tooltip_contract.py::test_streamed_actor_integrity_rejects_startup_and_request_escapes[eager-assertion-tst_feedback_completion.qml]
+0.010	tests/integration/app/test_tooltip_contract.py::test_streamed_actor_integrity_rejects_startup_and_request_escapes[eager-assertion-tst_rendered_captions.qml]
 0.010	tests/integration/app/test_tooltip_contract.py::test_streamed_actor_integrity_rejects_startup_and_request_escapes[eager-assertion-tst_selector_callers.qml]
 0.020	tests/integration/app/test_tooltip_contract.py::test_streamed_actor_integrity_rejects_startup_and_request_escapes[eager-assertion-tst_shared_tooltips.qml]
 0.010	tests/integration/app/test_tooltip_contract.py::test_streamed_actor_integrity_rejects_startup_and_request_escapes[eager-assertion-tst_tooltip_contract.qml]
 0.000	tests/integration/app/test_tooltip_contract.py::test_streamed_actor_integrity_rejects_startup_and_request_escapes[eager-assertion-tst_tooltip_delay.qml]
 0.010	tests/integration/app/test_tooltip_contract.py::test_streamed_actor_integrity_rejects_startup_and_request_escapes[eager-case-tst_feedback_completion.qml]
+0.010	tests/integration/app/test_tooltip_contract.py::test_streamed_actor_integrity_rejects_startup_and_request_escapes[eager-case-tst_rendered_captions.qml]
 0.010	tests/integration/app/test_tooltip_contract.py::test_streamed_actor_integrity_rejects_startup_and_request_escapes[eager-case-tst_selector_callers.qml]
 0.020	tests/integration/app/test_tooltip_contract.py::test_streamed_actor_integrity_rejects_startup_and_request_escapes[eager-case-tst_shared_tooltips.qml]
 0.010	tests/integration/app/test_tooltip_contract.py::test_streamed_actor_integrity_rejects_startup_and_request_escapes[eager-case-tst_tooltip_contract.qml]
 0.000	tests/integration/app/test_tooltip_contract.py::test_streamed_actor_integrity_rejects_startup_and_request_escapes[eager-case-tst_tooltip_delay.qml]
 0.010	tests/integration/app/test_tooltip_contract.py::test_streamed_actor_integrity_rejects_startup_and_request_escapes[early-end-tst_feedback_completion.qml]
+0.010	tests/integration/app/test_tooltip_contract.py::test_streamed_actor_integrity_rejects_startup_and_request_escapes[early-end-tst_rendered_captions.qml]
 0.010	tests/integration/app/test_tooltip_contract.py::test_streamed_actor_integrity_rejects_startup_and_request_escapes[early-end-tst_selector_callers.qml]
 0.020	tests/integration/app/test_tooltip_contract.py::test_streamed_actor_integrity_rejects_startup_and_request_escapes[early-end-tst_shared_tooltips.qml]
 0.010	tests/integration/app/test_tooltip_contract.py::test_streamed_actor_integrity_rejects_startup_and_request_escapes[early-end-tst_tooltip_contract.qml]
 0.000	tests/integration/app/test_tooltip_contract.py::test_streamed_actor_integrity_rejects_startup_and_request_escapes[early-end-tst_tooltip_delay.qml]
 0.010	tests/integration/app/test_tooltip_contract.py::test_streamed_actor_integrity_rejects_startup_and_request_escapes[foreign-begin-tst_feedback_completion.qml]
+0.010	tests/integration/app/test_tooltip_contract.py::test_streamed_actor_integrity_rejects_startup_and_request_escapes[foreign-begin-tst_rendered_captions.qml]
 0.010	tests/integration/app/test_tooltip_contract.py::test_streamed_actor_integrity_rejects_startup_and_request_escapes[foreign-begin-tst_selector_callers.qml]
 0.020	tests/integration/app/test_tooltip_contract.py::test_streamed_actor_integrity_rejects_startup_and_request_escapes[foreign-begin-tst_shared_tooltips.qml]
 0.010	tests/integration/app/test_tooltip_contract.py::test_streamed_actor_integrity_rejects_startup_and_request_escapes[foreign-begin-tst_tooltip_contract.qml]
 0.000	tests/integration/app/test_tooltip_contract.py::test_streamed_actor_integrity_rejects_startup_and_request_escapes[foreign-begin-tst_tooltip_delay.qml]
 0.010	tests/integration/app/test_tooltip_contract.py::test_streamed_actor_integrity_rejects_startup_and_request_escapes[indirect-startup-tst_feedback_completion.qml]
+0.010	tests/integration/app/test_tooltip_contract.py::test_streamed_actor_integrity_rejects_startup_and_request_escapes[indirect-startup-tst_rendered_captions.qml]
 0.010	tests/integration/app/test_tooltip_contract.py::test_streamed_actor_integrity_rejects_startup_and_request_escapes[indirect-startup-tst_selector_callers.qml]
 0.020	tests/integration/app/test_tooltip_contract.py::test_streamed_actor_integrity_rejects_startup_and_request_escapes[indirect-startup-tst_shared_tooltips.qml]
 0.010	tests/integration/app/test_tooltip_contract.py::test_streamed_actor_integrity_rejects_startup_and_request_escapes[indirect-startup-tst_tooltip_contract.qml]
 0.000	tests/integration/app/test_tooltip_contract.py::test_streamed_actor_integrity_rejects_startup_and_request_escapes[indirect-startup-tst_tooltip_delay.qml]
 0.010	tests/integration/app/test_tooltip_contract.py::test_streamed_actor_integrity_rejects_startup_and_request_escapes[late-begin-tst_feedback_completion.qml]
+0.010	tests/integration/app/test_tooltip_contract.py::test_streamed_actor_integrity_rejects_startup_and_request_escapes[late-begin-tst_rendered_captions.qml]
 0.010	tests/integration/app/test_tooltip_contract.py::test_streamed_actor_integrity_rejects_startup_and_request_escapes[late-begin-tst_selector_callers.qml]
 0.020	tests/integration/app/test_tooltip_contract.py::test_streamed_actor_integrity_rejects_startup_and_request_escapes[late-begin-tst_shared_tooltips.qml]
 0.010	tests/integration/app/test_tooltip_contract.py::test_streamed_actor_integrity_rejects_startup_and_request_escapes[late-begin-tst_tooltip_contract.qml]
 0.000	tests/integration/app/test_tooltip_contract.py::test_streamed_actor_integrity_rejects_startup_and_request_escapes[late-begin-tst_tooltip_delay.qml]
 0.010	tests/integration/app/test_tooltip_contract.py::test_streamed_actor_integrity_rejects_startup_and_request_escapes[startup-assertion-tst_feedback_completion.qml]
+0.010	tests/integration/app/test_tooltip_contract.py::test_streamed_actor_integrity_rejects_startup_and_request_escapes[startup-assertion-tst_rendered_captions.qml]
 0.010	tests/integration/app/test_tooltip_contract.py::test_streamed_actor_integrity_rejects_startup_and_request_escapes[startup-assertion-tst_selector_callers.qml]
 0.020	tests/integration/app/test_tooltip_contract.py::test_streamed_actor_integrity_rejects_startup_and_request_escapes[startup-assertion-tst_shared_tooltips.qml]
 0.010	tests/integration/app/test_tooltip_contract.py::test_streamed_actor_integrity_rejects_startup_and_request_escapes[startup-assertion-tst_tooltip_contract.qml]
 0.000	tests/integration/app/test_tooltip_contract.py::test_streamed_actor_integrity_rejects_startup_and_request_escapes[startup-assertion-tst_tooltip_delay.qml]
 0.010	tests/integration/app/test_tooltip_contract.py::test_streamed_actor_integrity_rejects_startup_and_request_escapes[startup-case-tst_feedback_completion.qml]
+0.010	tests/integration/app/test_tooltip_contract.py::test_streamed_actor_integrity_rejects_startup_and_request_escapes[startup-case-tst_rendered_captions.qml]
 0.010	tests/integration/app/test_tooltip_contract.py::test_streamed_actor_integrity_rejects_startup_and_request_escapes[startup-case-tst_selector_callers.qml]
 0.020	tests/integration/app/test_tooltip_contract.py::test_streamed_actor_integrity_rejects_startup_and_request_escapes[startup-case-tst_shared_tooltips.qml]
 0.010	tests/integration/app/test_tooltip_contract.py::test_streamed_actor_integrity_rejects_startup_and_request_escapes[startup-case-tst_tooltip_contract.qml]
@@ -1579,7 +1587,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_shipment.py:
 0.060	tests/integration/py/test_app_cache_closure.py::test_screen_receipt_seals_its_native_retention_recipe[browser-prepared]
 0.100	tests/integration/py/test_app_cache_closure.py::test_screen_receipt_seals_its_native_retention_recipe[desktop-cache]
 0.080	tests/integration/py/test_app_cache_closure.py::test_screen_receipt_seals_its_native_retention_recipe[desktop-prepared]
-0.500	tests/integration/py/test_app_caption_capitalisation.py::test_app_field_labels_and_table_headings_start_with_a_capital
+0.510	tests/integration/py/test_app_caption_capitalisation.py::test_app_field_labels_and_table_headings_start_with_a_capital
 0.000	tests/integration/py/test_app_fixture_host_isolation.py::test_app_fixture_prepares_only_the_requested_host[browser-receipt-screen]
 0.000	tests/integration/py/test_app_fixture_host_isolation.py::test_app_fixture_prepares_only_the_requested_host[browser-receipt-selector]
 0.000	tests/integration/py/test_app_fixture_host_isolation.py::test_app_fixture_prepares_only_the_requested_host[browser-screen]
@@ -166084,7 +166092,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_ionic_xray_factors.py::t
 0.010	tests/integration/py/test_loaded_correlation_cache.py::test_loaded_numeric_cache_tracks_current_rows_and_recorded_coefficient_writes[owner-replace-record]
 0.010	tests/integration/py/test_loaded_correlation_cache.py::test_loaded_numeric_cache_tracks_current_rows_and_recorded_coefficient_writes[owner-replace-rows]
 0.010	tests/integration/py/test_loaded_correlation_cache.py::test_loaded_numeric_cache_tracks_current_rows_and_recorded_coefficient_writes[repeat-record]
-0.014	tests/integration/py/test_loaded_correlation_cache.py::test_loaded_numeric_cache_tracks_current_rows_and_recorded_coefficient_writes[repeat-rows]
+0.013	tests/integration/py/test_loaded_correlation_cache.py::test_loaded_numeric_cache_tracks_current_rows_and_recorded_coefficient_writes[repeat-rows]
 0.010	tests/integration/py/test_loaded_correlation_cache.py::test_loaded_numeric_cache_tracks_current_rows_and_recorded_coefficient_writes[replace-undo-record]
 0.010	tests/integration/py/test_loaded_correlation_cache.py::test_loaded_numeric_cache_tracks_current_rows_and_recorded_coefficient_writes[replace-undo-rows]
 0.010	tests/integration/py/test_loaded_correlation_cache.py::test_loaded_numeric_cache_tracks_current_rows_and_recorded_coefficient_writes[same-value-write-record]
@@ -167843,7 +167851,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_plain_data_picker.py::te
 0.470	tests/integration/py/test_plain_data_picker.py::test_single_crystal_picker_retains_int_admission_and_owner_routing[False]
 0.470	tests/integration/py/test_plain_data_picker.py::test_single_crystal_picker_retains_int_admission_and_owner_routing[True]
 0.060	tests/integration/py/test_platform_fixture_runtime.py::test_authored_python_spy_reaches_declared_and_refused_argv_without_an_ambient_tool
-0.000	tests/integration/py/test_platform_fixture_runtime.py::test_windows_manifest_keys_retain_the_entire_reviewed_pin_and_reject_byte_changes[path]
+0.010	tests/integration/py/test_platform_fixture_runtime.py::test_windows_manifest_keys_retain_the_entire_reviewed_pin_and_reject_byte_changes[path]
 0.000	tests/integration/py/test_platform_fixture_runtime.py::test_windows_manifest_keys_retain_the_entire_reviewed_pin_and_reject_byte_changes[string]
 0.000	tests/integration/py/test_platform_fixture_runtime.py::test_windows_native_consumer_uses_release_executable_and_honours_exact_override
 0.000	tests/integration/py/test_platform_fixture_runtime.py::test_windows_node_uses_the_interpreter_environment_root
@@ -170819,6 +170827,22 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_xray_doublet.py::test_no
 UNMEASURED:failed-in-this-run	tests/integration/py/test_xray_doublet.py::test_second_wavelength_has_its_own_bragg_position_and_lorentz_factor
 UNMEASURED:failed-in-this-run	tests/integration/py/test_xray_doublet.py::test_zero_ratio_is_bitwise_single_wavelength_boundary
 UNMEASURED:failed-in-this-run	tests/integration/py/test_xray_page_inventory.py::test_xray_page_filename_delta_preserves_prior_pages_and_adds_exactly_three
+1.160	tests/system/app/test_rendered_caption_capitalisation.py::test_actual_rendered_captions_follow_the_capitalisation_rule[analysis-basic]
+1.120	tests/system/app/test_rendered_caption_capitalisation.py::test_actual_rendered_captions_follow_the_capitalisation_rule[analysis-extras]
+0.970	tests/system/app/test_rendered_caption_capitalisation.py::test_actual_rendered_captions_follow_the_capitalisation_rule[analysis-settings]
+2.660	tests/system/app/test_rendered_caption_capitalisation.py::test_actual_rendered_captions_follow_the_capitalisation_rule[cwl]
+1.120	tests/system/app/test_rendered_caption_capitalisation.py::test_actual_rendered_captions_follow_the_capitalisation_rule[experiment-extras]
+0.880	tests/system/app/test_rendered_caption_capitalisation.py::test_actual_rendered_captions_follow_the_capitalisation_rule[experiment-settings]
+2.580	tests/system/app/test_rendered_caption_capitalisation.py::test_actual_rendered_captions_follow_the_capitalisation_rule[measured]
+1.015	tests/system/app/test_rendered_caption_capitalisation.py::test_actual_rendered_captions_follow_the_capitalisation_rule[project-basic]
+0.890	tests/system/app/test_rendered_caption_capitalisation.py::test_actual_rendered_captions_follow_the_capitalisation_rule[project-extras]
+2.660	tests/system/app/test_rendered_caption_capitalisation.py::test_actual_rendered_captions_follow_the_capitalisation_rule[report-basic]
+1.960	tests/system/app/test_rendered_caption_capitalisation.py::test_actual_rendered_captions_follow_the_capitalisation_rule[single]
+UNMEASURED:failed-in-this-run	tests/system/app/test_rendered_caption_capitalisation.py::test_actual_rendered_captions_follow_the_capitalisation_rule[structure-basic]
+UNMEASURED:failed-in-this-run	tests/system/app/test_rendered_caption_capitalisation.py::test_actual_rendered_captions_follow_the_capitalisation_rule[structure-extras-1]
+UNMEASURED:failed-in-this-run	tests/system/app/test_rendered_caption_capitalisation.py::test_actual_rendered_captions_follow_the_capitalisation_rule[structure-extras-2]
+2.360	tests/system/app/test_rendered_caption_capitalisation.py::test_actual_rendered_captions_follow_the_capitalisation_rule[tof]
+1.490	tests/system/app/test_rendered_caption_capitalisation.py::test_rendered_probe_reaches_each_runtime_caption_escape
 UNMEASURED:not-completed-in-this-run	tests/system/py/e11_t5_original_controls/test_current_original.py::test_current_original_ordinary[composer_ime_clear]
 UNMEASURED:not-completed-in-this-run	tests/system/py/e11_t5_original_controls/test_current_original.py::test_current_original_ordinary[restore_ime_commit]
 UNMEASURED:not-completed-in-this-run	tests/system/py/e11_t5_original_controls/test_current_original.py::test_current_original_ordinary[restore_preedit_active]
@@ -244626,6 +244650,11 @@ UNMEASURED:not-completed-in-this-run	tests/unit/py/test_e11_t5_runtime_publicati
 0.000	tests/unit/py/test_inactive_weight_bytes.py::test_inactive_weight_projection_refuses_undeclared_input_rows[duplicate]
 0.000	tests/unit/py/test_inactive_weight_bytes.py::test_inactive_weight_projection_refuses_undeclared_input_rows[extra-column]
 0.000	tests/unit/py/test_inactive_weight_bytes.py::test_inactive_weight_projection_refuses_undeclared_input_rows[unknown]
+0.000	tests/unit/py/test_loaded_correlation_runtime.py::test_posix_probe_keeps_the_environment_without_a_windows_runtime_record
+0.000	tests/unit/py/test_loaded_correlation_runtime.py::test_windows_probe_prepends_the_configured_qt_directory_and_preserves_parent
+0.000	tests/unit/py/test_loaded_correlation_runtime.py::test_windows_probe_refuses_an_unusable_configured_runtime[empty]
+0.000	tests/unit/py/test_loaded_correlation_runtime.py::test_windows_probe_refuses_an_unusable_configured_runtime[missing-directory]
+0.000	tests/unit/py/test_loaded_correlation_runtime.py::test_windows_probe_refuses_an_unusable_configured_runtime[relative]
 0.000	tests/unit/py/test_machine_record_schema.py::test_malformed_engine_header_cannot_be_used_for_an_undo_record[None]
 0.000	tests/unit/py/test_machine_record_schema.py::test_malformed_engine_header_cannot_be_used_for_an_undo_record[]
 0.000	tests/unit/py/test_machine_record_schema.py::test_malformed_engine_header_cannot_be_used_for_an_undo_record[schema=0\nrecord=error\n]
@@ -244835,6 +244864,52 @@ UNMEASURED:not-completed-in-this-run	tests/unit/py/test_project_save_owned_alias
 0.000	tests/unit/py/test_release_promotion.py::test_release_retry_never_overwrites_an_existing_identity[published-missing]
 0.000	tests/unit/py/test_release_promotion.py::test_release_retry_never_overwrites_an_existing_identity[source]
 0.010	tests/unit/py/test_release_promotion.py::test_stable_release_attaches_every_platform_component_archive
+0.000	tests/unit/py/test_rendered_caption_contract.py::test_a_caption_without_valid_rendered_evidence_cannot_satisfy_the_census[changes0]
+0.000	tests/unit/py/test_rendered_caption_contract.py::test_a_caption_without_valid_rendered_evidence_cannot_satisfy_the_census[changes10]
+0.000	tests/unit/py/test_rendered_caption_contract.py::test_a_caption_without_valid_rendered_evidence_cannot_satisfy_the_census[changes11]
+0.000	tests/unit/py/test_rendered_caption_contract.py::test_a_caption_without_valid_rendered_evidence_cannot_satisfy_the_census[changes1]
+0.000	tests/unit/py/test_rendered_caption_contract.py::test_a_caption_without_valid_rendered_evidence_cannot_satisfy_the_census[changes2]
+0.000	tests/unit/py/test_rendered_caption_contract.py::test_a_caption_without_valid_rendered_evidence_cannot_satisfy_the_census[changes3]
+0.000	tests/unit/py/test_rendered_caption_contract.py::test_a_caption_without_valid_rendered_evidence_cannot_satisfy_the_census[changes4]
+0.000	tests/unit/py/test_rendered_caption_contract.py::test_a_caption_without_valid_rendered_evidence_cannot_satisfy_the_census[changes5]
+0.000	tests/unit/py/test_rendered_caption_contract.py::test_a_caption_without_valid_rendered_evidence_cannot_satisfy_the_census[changes6]
+0.000	tests/unit/py/test_rendered_caption_contract.py::test_a_caption_without_valid_rendered_evidence_cannot_satisfy_the_census[changes7]
+0.000	tests/unit/py/test_rendered_caption_contract.py::test_a_caption_without_valid_rendered_evidence_cannot_satisfy_the_census[changes8]
+0.000	tests/unit/py/test_rendered_caption_contract.py::test_a_caption_without_valid_rendered_evidence_cannot_satisfy_the_census[changes9]
+0.000	tests/unit/py/test_rendered_caption_contract.py::test_capital_prose_and_complete_scientific_tokens_are_retained[2\u03b8]
+0.000	tests/unit/py/test_rendered_caption_contract.py::test_capital_prose_and_complete_scientific_tokens_are_retained[Calculation range]
+0.000	tests/unit/py/test_rendered_caption_contract.py::test_capital_prose_and_complete_scientific_tokens_are_retained[ID]
+0.000	tests/unit/py/test_rendered_caption_contract.py::test_capital_prose_and_complete_scientific_tokens_are_retained[Name]
+0.000	tests/unit/py/test_rendered_caption_contract.py::test_capital_prose_and_complete_scientific_tokens_are_retained[Sample form]
+0.000	tests/unit/py/test_rendered_caption_contract.py::test_capital_prose_and_complete_scientific_tokens_are_retained[TOF]
+0.000	tests/unit/py/test_rendered_caption_contract.py::test_capital_prose_and_complete_scientific_tokens_are_retained[\u03b1\u2080]
+0.000	tests/unit/py/test_rendered_caption_contract.py::test_capital_prose_and_complete_scientific_tokens_are_retained[\u03b21]
+0.000	tests/unit/py/test_rendered_caption_contract.py::test_capital_prose_and_complete_scientific_tokens_are_retained[\u03bb]
+0.000	tests/unit/py/test_rendered_caption_contract.py::test_capital_prose_and_complete_scientific_tokens_are_retained[\u03c7\xb2 change tolerance]
+0.000	tests/unit/py/test_rendered_caption_contract.py::test_capital_prose_and_complete_scientific_tokens_are_retained[d spacing]
+0.000	tests/unit/py/test_rendered_caption_contract.py::test_capital_prose_and_complete_scientific_tokens_are_retained[s.u. (\u03bcB)]
+0.000	tests/unit/py/test_rendered_caption_contract.py::test_capital_prose_and_complete_scientific_tokens_are_retained[x12]
+0.000	tests/unit/py/test_rendered_caption_contract.py::test_each_received_runtime_role_is_checked_without_a_dictionary_allowlist[field]
+0.000	tests/unit/py/test_rendered_caption_contract.py::test_each_received_runtime_role_is_checked_without_a_dictionary_allowlist[group]
+0.000	tests/unit/py/test_rendered_caption_contract.py::test_each_received_runtime_role_is_checked_without_a_dictionary_allowlist[header]
+0.000	tests/unit/py/test_rendered_caption_contract.py::test_empty_or_partial_caption_payloads_fail_closed[None]
+0.000	tests/unit/py/test_rendered_caption_contract.py::test_empty_or_partial_caption_payloads_fail_closed[records1]
+0.000	tests/unit/py/test_rendered_caption_contract.py::test_empty_or_partial_caption_payloads_fail_closed[records2]
+0.000	tests/unit/py/test_rendered_caption_contract.py::test_empty_or_partial_caption_payloads_fail_closed[records3]
+0.000	tests/unit/py/test_rendered_caption_contract.py::test_empty_or_partial_caption_payloads_fail_closed[records4]
+0.000	tests/unit/py/test_rendered_caption_contract.py::test_lowercase_prose_cannot_escape_by_starting_with_a_symbol_letter[\u03b1lpha]
+0.000	tests/unit/py/test_rendered_caption_contract.py::test_lowercase_prose_cannot_escape_by_starting_with_a_symbol_letter[beam mode]
+0.000	tests/unit/py/test_rendered_caption_contract.py::test_lowercase_prose_cannot_escape_by_starting_with_a_symbol_letter[calculation range]
+0.000	tests/unit/py/test_rendered_caption_contract.py::test_lowercase_prose_cannot_escape_by_starting_with_a_symbol_letter[data quality]
+0.000	tests/unit/py/test_rendered_caption_contract.py::test_lowercase_prose_cannot_escape_by_starting_with_a_symbol_letter[description]
+0.000	tests/unit/py/test_rendered_caption_contract.py::test_lowercase_prose_cannot_escape_by_starting_with_a_symbol_letter[dimensionality]
+0.000	tests/unit/py/test_rendered_caption_contract.py::test_lowercase_prose_cannot_escape_by_starting_with_a_symbol_letter[max]
+0.000	tests/unit/py/test_rendered_caption_contract.py::test_lowercase_prose_cannot_escape_by_starting_with_a_symbol_letter[min]
+0.000	tests/unit/py/test_rendered_caption_contract.py::test_lowercase_prose_cannot_escape_by_starting_with_a_symbol_letter[polarisation]
+0.000	tests/unit/py/test_rendered_caption_contract.py::test_lowercase_prose_cannot_escape_by_starting_with_a_symbol_letter[probe]
+0.000	tests/unit/py/test_rendered_caption_contract.py::test_lowercase_prose_cannot_escape_by_starting_with_a_symbol_letter[sample form]
+0.000	tests/unit/py/test_rendered_caption_contract.py::test_lowercase_prose_cannot_escape_by_starting_with_a_symbol_letter[scattering type]
+0.000	tests/unit/py/test_rendered_caption_contract.py::test_lowercase_prose_cannot_escape_by_starting_with_a_symbol_letter[step]
 0.000	tests/unit/py/test_renderer_startup_report.py::test_complete_report_retains_backend_identity[Direct3D 11, hardware rendering-Direct3D 11--False]
 0.000	tests/unit/py/test_renderer_startup_report.py::test_complete_report_retains_backend_identity[Metal, hardware rendering-Metal--False]
 0.000	tests/unit/py/test_renderer_startup_report.py::test_complete_report_retains_backend_identity[OpenGL, renderer Apple M2, hardware rendering-OpenGL-Apple M2-False]
@@ -245465,7 +245540,7 @@ UNMEASURED:not-completed-in-this-run	tests/unit/py/test_web_science_identity.py:
 # module-cost: 0.357	tests/integration/py/test_e04_t12_name_allowance.py
 # module-cost: 0.146	tests/integration/py/test_e09_t75_sdk_consumer.py
 # module-cost: 0.574	tests/integration/py/test_independent_experiments.py
-# module-cost: 30.446	tests/integration/py/test_loaded_correlation_cache.py
+# module-cost: 25.187	tests/integration/py/test_loaded_correlation_cache.py
 # module-cost: 0.191	tests/integration/py/test_native_serialized_source_admission.py
 # module-cost: 14.337	tests/integration/py/test_parameter_table_notation.py
 # module-cost: 0.956	tests/integration/py/test_plain_data_picker.py
@@ -245480,6 +245555,7 @@ UNMEASURED:not-completed-in-this-run	tests/unit/py/test_web_science_identity.py:
 # module-cost: 6.560	tests/integration/py/test_tutorial_fit_stages.py
 # module-cost: 6.489	tests/integration/py/test_tutorial_strategy.py
 # module-cost: 2.933	tests/integration/py/test_weight_fraction_app.py
+# module-cost: 5.705	tests/system/app/test_rendered_caption_capitalisation.py
 # module-cost: 2.769	tests/system/py/test_adoption_listener_boundaries.py
 # module-cost: 11.310	tests/system/py/test_app_minimum.py
 # module-cost: 1.849	tests/system/py/test_app_receipt_current_inputs.py

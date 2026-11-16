@@ -224,10 +224,10 @@ void fit(const std::string& source, const std::string& output, bool dry,
     } else if (human && scan) {
         // The last row is the scan's summary at the count it reached, every column filled and no time left: a
         // run that fitted no new file prints it once from what the earlier runs left; on a terminal it replaces
-        // the in-place row whatever the throttle kept back (a partial or cancelled scan included).
+        // the in-place row whatever the throttle kept back (a partial or cancelled scan included). Its time is the
+        // one read at the last completed file, so the count and the time describe the same moment.
         const bool fitted_none = tally.completed == tally.prior;
         if (fitted_none || in_place) {
-            elapsed = std::chrono::duration<double>(std::chrono::steady_clock::now() - started).count();
             std::cout << edi::detail::scan_progress_row(tally.completed, total, elapsed, tally.completed - tally.prior,
                                                         tally.ok, tally.completed - tally.ok, last_chi2,
                                                         tally.chi2_min, tally.chi2_max, last_file,
