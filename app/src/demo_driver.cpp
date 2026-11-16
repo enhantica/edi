@@ -851,6 +851,12 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
         steps_.push_back({"review-13-analysis-map", {"mainArea.tab.map"}});
         steps_.push_back({"review-14-analysis-correlations", {"mainArea.tab.correlations"}});
     }
+    // A single fit's results dialog, from a fresh start (`--demo-only fitdialog-`).
+    if (only.startsWith(QLatin1String("fitdialog-"))) {
+        steps_.push_back({"fitdialog-1-single", QStringList{"resize:1480x800", "home.start", "expand:group.examples"} +
+                                                    open_example("pd-neut-cwl_lbco-hrpt") +
+                                                    QStringList{analysis, basic, "statusBar.fit.button", "wait-fit"}});
+    }
     // The review's single crystal, from a fresh start (`--demo-only reviewsc-`).
     if (only.startsWith(QLatin1String("reviewsc-"))) {
         steps_.push_back({"reviewsc-1-sc-pattern", QStringList{"resize:1480x800", "home.start", "expand:group.examples"} +
