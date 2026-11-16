@@ -4,8 +4,9 @@ icon: fa5/comments
 
 # Get in touch
 
-Ask a question, share feedback, report a problem or suggest an idea. Messages reach the same people as the app's Help
-and feedback.
+Ask a question, share feedback, report a problem or suggest an idea. Messages reach the EasyDiffraction developers, the
+same people as the app's Help and feedback, and every one is read. Give your name and e-mail if you would like an answer,
+or leave them empty to write anonymously. To write to Andrew Sazonov, who leads the project, see [About](index.md).
 
 ## Send a message
 
@@ -30,7 +31,8 @@ When you report a problem, it helps to say:
 
 ## Take the survey
 
-Have 15 minutes? The [survey](survey.md) asks how you work and what you need, and it shapes what we build next.
+Have 10-15 minutes? The [survey](survey.md) is anonymous. It asks how you work and what you need, and your answers
+shape what we build next.
 
 ## Other ways
 
