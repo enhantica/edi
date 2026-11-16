@@ -68,8 +68,10 @@ Rectangle {
     objectName: "structure.view"
     // EasyApp's chart background, as easydiffractionbeta's structure view (the owner, 2026-10-02), opaque behind
     // the 3D item, which clears to it too.
-    color: view.colors.chartBackground
+    color: view.transparentImage ? "transparent" : view.colors.chartBackground
     clip: true
+    // Save image's background (SaveImageButton): none while a transparent image is taken.
+    property bool transparentImage: false
 
     StructureViewController {
         id: controller
@@ -131,8 +133,8 @@ Rectangle {
                 importScene: structureScene
                 camera: structureScene.camera
                 environment: SceneEnvironment {
-                    backgroundMode: SceneEnvironment.Color
-                    clearColor: view.color
+                    backgroundMode: view.transparentImage ? SceneEnvironment.Transparent : SceneEnvironment.Color
+                    clearColor: view.colors.chartBackground
                     antialiasingMode: SceneEnvironment.MSAA
                     antialiasingQuality: SceneEnvironment.High
                     // Linear light out to sRGB, as three.js renders diffraction-lib's view.

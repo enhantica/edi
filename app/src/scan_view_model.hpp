@@ -16,6 +16,7 @@
 #include <utility>
 #include <vector>
 
+#include "edi/presentation.hpp"
 #include "edi/model.hpp"
 #include "edi/scan.hpp"
 #include "edi/scan_views.hpp"
@@ -44,6 +45,9 @@ class ScanViewModel : public QObject {
     // pattern chart: without one the views stay on their own axis). xMin and xMax are on the axis shown, over every
     // dataset read.
     Q_PROPERTY(bool dSpacing READ dSpacing WRITE setDSpacing NOTIFY dSpacingChanged)
+    // The x axis by token, as PatternChartController's: "native", "d_spacing", "q" or "sin_theta_over_lambda". Q and
+    // sinθ/λ are placed on d, then converted (edi::d_on_axis); dShown is true on all three.
+    Q_PROPERTY(QString xAxis READ xAxis WRITE setXAxis NOTIFY xAxisChanged)
     Q_PROPERTY(bool dShown READ dShown NOTIFY dShownChanged)
     // Whether d can be shown: a scan's template, or every experiment of a joint fit, has a current d column.
     Q_PROPERTY(bool dAvailable READ dAvailable NOTIFY dAvailableChanged)
@@ -130,8 +134,10 @@ class ScanViewModel : public QObject {
     bool rowsByValue() const { return rows_by_value_; }
     double xMin() const { return axis_min_; }
     double xMax() const { return axis_max_; }
-    bool dSpacing() const { return d_spacing_; }
+    bool dSpacing() const { return axis_ == edi::PatternAxis::DSpacing; }
     void setDSpacing(bool on);
+    QString xAxis() const;
+    void setXAxis(const QString& token);
     bool dShown() const { return d_shown_; }
     bool dAvailable() const { return d_available_; }
     bool rowsByIndex() const { return rows_by_index_; }
@@ -193,6 +199,7 @@ class ScanViewModel : public QObject {
     void timeOfFlightChanged();
     void valueTitleChanged();
     void dSpacingChanged();
+    void xAxisChanged();
     void dShownChanged();
     void dAvailableChanged();
     void rowsByIndexChanged();
@@ -270,7 +277,8 @@ class ScanViewModel : public QObject {
     QString value_problem_;  // the first dataset with no value to place its row by
     double row_min_ = 0.0, row_max_ = 1.0, row_lowest_ = 0.0, row_highest_ = 0.0;
     double axis_min_ = 0.0, axis_max_ = 1.0;
-    bool d_spacing_ = false, d_shown_ = false, d_available_ = false, rows_by_index_ = false, joint_ = false;
+    edi::PatternAxis axis_ = edi::PatternAxis::Native;
+    bool d_shown_ = false, d_available_ = false, rows_by_index_ = false, joint_ = false;
     bool native_shared_ = true, included_only_ = false, rows_by_value_ = false;
     bool series_ = false;
     int rows_experiment_ = -1;

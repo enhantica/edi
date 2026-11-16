@@ -7,6 +7,8 @@
 #include <QStringList>
 
 #include <algorithm>
+#include <cmath>
+#include <limits>
 #include <array>
 #include <exception>
 #include <filesystem>
@@ -781,6 +783,7 @@ void ExperimentViewModel::capturePattern(bool categories) {
     if (!d_charts_.isEmpty()) {
         d_source_ = edi::capture_pattern(project_, place(), edi::PatternAxis::DSpacing);
         d_source_->experiment_place = colourPlace();
+        ++d_revision_;
     }
     ++pattern_generation_;
     emit patternSourceChanged();
@@ -795,6 +798,7 @@ void ExperimentViewModel::showPattern(edi::PatternSource source, std::optional<e
     if (d_source) {
         d_source_ = std::move(d_source);
         d_source_->experiment_place = colourPlace();
+        ++d_revision_;
     }
     ++pattern_generation_;
     emit patternSourceChanged();
@@ -827,9 +831,54 @@ void ExperimentViewModel::setColourPlace(std::optional<std::size_t> place, std::
     emit patternSourceChanged();
 }
 
+QVariantMap ExperimentViewModel::measCalcPoints() const {
+    QList<double> calc, meas, su;
+    double low = std::numeric_limits<double>::infinity(), high = -low;
+    const edi::PatternSource& source = pattern_source_;
+    if (source.current && source.meas && source.calc && source.meas->size() == source.calc->size()) {
+        for (std::size_t i = 0; i < source.meas->size(); ++i) {
+            const double m = (*source.meas)[i], c = (*source.calc)[i];
+            if (!std::isfinite(m) || !std::isfinite(c)) continue;
+            const double s = source.su && i < source.su->size() ? (*source.su)[i] : qQNaN();
+            calc.append(c);
+            meas.append(m);
+            su.append(s);
+            low = std::min({low, m, c});
+            high = std::max({high, m, c});
+        }
+    }
+    if (!(high > low)) {
+        low = 0.0;
+        high = 1.0;
+    }
+    const double pad = 0.03 * (high - low);
+    return {{QStringLiteral("calc"), QVariant::fromValue(calc)},
+            {QStringLiteral("meas"), QVariant::fromValue(meas)},
+            {QStringLiteral("su"), QVariant::fromValue(su)},
+            {QStringLiteral("low"), low - pad},
+            {QStringLiteral("high"), high + pad}};
+}
+
+const edi::PatternSource& ExperimentViewModel::singleCrystalPattern(edi::PatternAxis axis, bool squared) const {
+    static const edi::PatternSource kNone;
+    if (axis != edi::PatternAxis::Q && axis != edi::PatternAxis::SinThetaOverLambda) {
+        return kNone;
+    }
+    DerivedSource& kept = single_crystal_patterns_[(axis == edi::PatternAxis::Q ? 0 : 2) + (squared ? 0 : 1)];
+    const std::size_t colour = colourPlace();
+    if (!kept.source || kept.revision != pattern_generation_ || kept.place != colour) {
+        kept.source = edi::single_crystal_pattern(project_, place(), axis, squared);
+        kept.source->experiment_place = colour;
+        kept.revision = pattern_generation_;
+        kept.place = colour;
+    }
+    return *kept.source;
+}
+
 void ExperimentViewModel::setChartAxis(const QObject* chart, edi::PatternAxis axis) {
     const bool wanted = !d_charts_.isEmpty();
-    if (axis == edi::PatternAxis::DSpacing) {
+    // Every axis but the experiment's own is drawn from the d capture.
+    if (axis != edi::PatternAxis::Native) {
         d_charts_.insert(chart);
     } else {
         d_charts_.remove(chart);
@@ -839,6 +888,7 @@ void ExperimentViewModel::setChartAxis(const QObject* chart, edi::PatternAxis ax
     } else if (!wanted) {
         d_source_ = edi::capture_pattern(project_, place(), edi::PatternAxis::DSpacing);
         d_source_->experiment_place = colourPlace();
+        ++d_revision_;
         emit patternSourceChanged();
     }
 }

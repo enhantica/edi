@@ -97,6 +97,9 @@ Column {
         uid: "structure_view.moment_form"
         options: group.options ? group.options.momentFormOptions : null
         token: group.form
+        // Greyed until a site has a moment: every site starts with none (the owner, 2026-11-14).
+        writable: group.structure !== null && group.structure.magnetic
+        disabledReason: qsTr("Choose a magnetic ion for a site to give it a moment")
         onSelected: token => group.options.momentForm = token
     }
 

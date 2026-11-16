@@ -675,7 +675,10 @@ shows without its toolbar: a chart's toolbar band is cut off the top, and the st
 hidden for the grab (the owner, 2026-11-10). The desktop's dialog starts in one folder every Save image shares and
 remembers, `Preferences.imageFolder`, the folder the last image went to; before the first, the open project's
 `reports/` folder (made when missing), or the pictures folder for a project without a place of its own. A saved report
-says so in the window's short notice, with the files and their folder.
+says so in the window's short notice, with the files and their folder. The image has a transparent background by
+default; Preferences' "Saved image background" (`Preferences.imageBackground`) keeps the chart's colour instead (the
+owner, 2026-11-01). Each view that can be saved drops its own background, and the structure view's 3D clear colour,
+only while it is grabbed.
 
 **Long structure names fit** (the owner, 2026-10-21): the panes' shared left edge moves right far enough for the
 widest tick-row label (the structure's icon and name), so a name never runs into the plot.

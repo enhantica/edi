@@ -8,6 +8,7 @@
 #include <QtNumeric>
 #include <QString>
 #include <QtQml/qqmlregistration.h>
+#include <array>
 #include <cstdint>
 #include <optional>
 #include <vector>
@@ -176,6 +177,10 @@ class ExperimentViewModel : public QObject {
     // The calculation grid of an experiment without measured data (edi::Edit::data_range): its start,
     // end and step; refused, with `lastError`, for one with data.
     Q_INVOKABLE void setRange(double start, double end, double step);
+    // A powder's measured against calculated intensity, one point per data point with both finite (the Meas vs calc
+    // chart, the owner, 2026-11-16): `calc`, `meas` and `su` lists of one length, and `low` and `high`, the range both
+    // axes share; empty lists before a calculation.
+    Q_INVOKABLE QVariantMap measCalcPoints() const;
     void setName(const QString& name);
     SampleForm sampleForm() const;
     BeamMode beamMode() const;
@@ -293,8 +298,24 @@ class ExperimentViewModel : public QObject {
     // The experiment's pattern as the chart draws it (edi ADR-0021 §1): immutable buffers, captured when
     // a calculation is published and when the experiment is first shown. On the d axis it is the d-spacing capture,
     // kept while a chart is on d; until there is one, the pattern on the experiment's own axis.
+    // A single crystal's reflections as a pattern on Q or sinθ/λ, F² or F (edi::single_crystal_pattern), made again when
+    // first asked for after the pattern changes.
+    const edi::PatternSource& singleCrystalPattern(edi::PatternAxis axis, bool squared) const;
+    // The pattern on `axis`: Q and sinθ/λ are converted from the d capture when first asked for after it changes.
     const edi::PatternSource& patternSource(edi::PatternAxis axis = edi::PatternAxis::Native) const {
-        return axis == edi::PatternAxis::DSpacing && d_source_ ? *d_source_ : pattern_source_;
+        if (axis == edi::PatternAxis::Native || !d_source_) {
+            return pattern_source_;
+        }
+        if (axis == edi::PatternAxis::DSpacing) {
+            return *d_source_;
+        }
+        DerivedSource& derived = derived_[axis == edi::PatternAxis::Q ? 0 : 1];
+        if (!derived.source || derived.revision != d_revision_ || derived.place != d_source_->experiment_place) {
+            derived.source = edi::pattern_on_axis(*d_source_, axis);
+            derived.revision = d_revision_;
+            derived.place = d_source_->experiment_place;
+        }
+        return *derived.source;
     }
     void capturePattern(bool categories = true);
     // The sidebar's categories as the experiment holds them now (edi::experiment_categories).
@@ -481,6 +502,16 @@ class ExperimentViewModel : public QObject {
     PatternModel* pattern_;
     edi::PatternSource pattern_source_;
     std::optional<edi::PatternSource> d_source_;
+    // d_source_ on the Q and sinθ/λ axes, made from the d capture of revision `revision` (patternSource).
+    struct DerivedSource {
+        std::optional<edi::PatternSource> source;
+        quint64 revision = 0;
+        std::size_t place = 0;
+    };
+    mutable std::array<DerivedSource, 2> derived_;
+    // singleCrystalPattern's, by axis (Q, sinθ/λ) and quantity (F², F), each made at pattern generation `revision`.
+    mutable std::array<DerivedSource, 4> single_crystal_patterns_;
+    quint64 d_revision_ = 0;  // counts the d captures
     BlockText* text_;
 };
 

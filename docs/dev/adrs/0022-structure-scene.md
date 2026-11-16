@@ -86,6 +86,20 @@ dimensions (the cell edge's radius and the triad scale with the fitted half heig
 surface's own identity: a sphere by its instance index, a shared-site wedge by the ordinal its texture coordinate
 carries; no distance to a centre is used. `hover_text` describes the atom as crysta gave it.
 
+### 8. Bond settings and atom types
+
+The Structure page's Extra tab has a Bond settings group (`_geom`): the minimum distance and the increment over the
+two sites' covalent radii, each crysta's default until set, and a read-only table of the bonds crysta found with
+them, the same `_geom_bond` rows the view draws. A negative or unreadable value leaves the setting as it was. The
+generic `_geom_bond` group is not shown, so the bonds appear once.
+
+A site's type is picked from the types crysta's scattering table holds for each experiment linking the structure:
+the neutron table of its scattering-length source (elements and isotopes with a length), or the X-ray form-factor
+table of its source (elements and ions). With both probes linked the list is their union, sorted; with no experiment
+linked it is the elements a new atom may take. crysta lists no X-ray table, so each element and each charge from 1 to
+9 is asked for once per source. Every entry carries its element's colour (§4). A type outside the list, as a file may
+state it, is kept and shown as it is.
+
 ## Consequences
 
 - The app's view is one renderer of this description (ADR-0017 §16): Qt Quick 3D instancing fed from C++, two draw

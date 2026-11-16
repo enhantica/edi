@@ -330,6 +330,7 @@ ProjectViewModel::ProjectViewModel(edi::Project project, QObject* parent, const 
     published_authors_ = authors();
     published_su_rule_ = suRule();
     published_pattern_d_spacing_ = patternDSpacing();
+    published_pattern_x_axis_ = patternXAxis();
     published_last_modified_ = lastModified();
     published_structure_index_ = current_structure_;
     published_experiment_index_ = current_experiment_;
@@ -689,14 +690,53 @@ void ProjectViewModel::setReportCorrelationThreshold(double threshold) {
 }
 
 void ProjectViewModel::setPatternDSpacing(bool on) {
-    edi::Project& project = *project_;
     if (on != patternDSpacing()) {
-        apply_report_setting(edi::Edit::assign(project.pattern_x_axis,
-                                        std::optional<std::string>(on ? "d_spacing" : "native")));
+        setPatternXAxis(QLatin1String(on ? "d_spacing" : "native"));
     }
 }
 
-bool ProjectViewModel::patternDSpacing() const { return project_->pattern_x_axis.value_or("native") == "d_spacing"; }
+bool ProjectViewModel::patternDSpacing() const { return patternXAxis() == QLatin1String("d_spacing"); }
+
+QString ProjectViewModel::patternXAxis() const {
+    if (!session_pattern_x_axis_.isEmpty()) {
+        return session_pattern_x_axis_;
+    }
+    return QString::fromStdString(project_->pattern_x_axis.value_or("native"));
+}
+
+void ProjectViewModel::setPatternXAxis(const QString& token) {
+    if (token == patternXAxis()) {
+        return;
+    }
+    if (token == QLatin1String("q") || token == QLatin1String("sin_theta_over_lambda")) {
+        session_pattern_x_axis_ = token;
+        published_pattern_x_axis_ = token;
+        emit patternXAxisChanged();
+        if (published_pattern_d_spacing_) {
+            published_pattern_d_spacing_ = false;
+            emit patternDSpacingChanged();
+        }
+        report_->refresh();  // the report's charts follow the axis, which no edit carries
+        return;
+    }
+    if (token != QLatin1String("native") && token != QLatin1String("d_spacing")) {
+        return;
+    }
+    const bool held = !session_pattern_x_axis_.isEmpty();
+    session_pattern_x_axis_.clear();
+    edi::Project& project = *project_;
+    if (project.pattern_x_axis.value_or("native") != token.toStdString()) {
+        apply_report_setting(edi::Edit::assign(project.pattern_x_axis, std::optional<std::string>(token.toStdString())));
+    } else if (held) {  // back from Q or sinθ/λ to the axis the project already names
+        published_pattern_x_axis_ = token;
+        emit patternXAxisChanged();
+        if (patternDSpacing() != published_pattern_d_spacing_) {
+            published_pattern_d_spacing_ = patternDSpacing();
+            emit patternDSpacingChanged();
+        }
+        report_->refresh();
+    }
+}
 
 bool ProjectViewModel::evolutionErrorBars() const { return project_->evolution_error_bars.value_or(true); }
 
@@ -881,6 +921,11 @@ void ProjectViewModel::publishMetadata() {
     if (retired_) return;
     update(published_last_modified_, lastModified(), &ProjectViewModel::lastModifiedChanged);
     if (retired_) return;
+    if (patternXAxis() != published_pattern_x_axis_) {
+        published_pattern_x_axis_ = patternXAxis();
+        emit patternXAxisChanged();
+        if (retired_) return;
+    }
     if (patternDSpacing() != published_pattern_d_spacing_) {
         published_pattern_d_spacing_ = patternDSpacing();
         emit patternDSpacingChanged();

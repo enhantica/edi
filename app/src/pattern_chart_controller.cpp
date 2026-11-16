@@ -5,6 +5,7 @@
 #include <charconv>
 #include <cmath>
 #include <limits>
+#include <numbers>
 #include <QFontMetricsF>
 #include <QStringList>
 #include <set>
@@ -456,7 +457,7 @@ void PatternChartController::setStructureCurves(bool on) {
 
 void PatternChartController::setMeasuredStyle(const QString& style) {
     const QString known = style == QLatin1String("line") || style == QLatin1String("points") ||
-                                  style == QLatin1String("linePoints")
+                                  style == QLatin1String("linePoints") || style == QLatin1String("bars")
                               ? style
                               : QStringLiteral("band");
     if (known != measured_drawing_) {
@@ -727,19 +728,62 @@ void PatternChartController::setYScale(YScale scale) {
     }
 }
 
-void PatternChartController::setDSpacing(bool on) {
-    if (on != d_spacing_) {
-        finishAnimation();
-        d_spacing_ = on;
-        x_min_.reset();  // another axis: the view starts over
-        x_max_.reset();
-        y_min_.reset();
-        y_max_.reset();
-        if (experiment_) {
-            experiment_->setChartAxis(this, axis());
-        }
+QString PatternChartController::xAxis() const {
+    const std::string_view token = edi::pattern_axis_token(axis_);
+    return QString::fromLatin1(token.data(), static_cast<qsizetype>(token.size()));
+}
+
+// An unknown token is the native axis.
+void PatternChartController::setXAxis(const QString& token) {
+    const edi::PatternAxis axis = edi::pattern_axis_from_token(token.toStdString());
+    if (axis == axis_) {
+        return;
+    }
+    const bool was_d = dSpacing();
+    finishAnimation();
+    axis_ = axis;
+    x_min_.reset();  // another axis: the view starts over
+    x_max_.reset();
+    y_min_.reset();
+    y_max_.reset();
+    if (experiment_) {
+        experiment_->setChartAxis(this, axis_);
+    }
+    emit xAxisChanged();
+    if (dSpacing() != was_d) {
         emit dSpacingChanged();
+    }
+    invalidate();
+}
+
+const edi::PatternSource& PatternChartController::shownSource() const {
+    if (experiment_->sampleForm() == ExperimentViewModel::SingleCrystal) {
+        return experiment_->singleCrystalPattern(axis_, squared_);
+    }
+    return experiment_->patternSource(axis_);
+}
+
+void PatternChartController::setThinBars(bool on) {
+    if (on != thin_bars_) {
+        thin_bars_ = on;
+        emit thinBarsChanged();
         invalidate();
+    }
+}
+
+void PatternChartController::setSquared(bool on) {
+    if (on != squared_) {
+        squared_ = on;
+        y_min_.reset();  // another quantity: the y range starts over
+        y_max_.reset();
+        emit squaredChanged();
+        invalidate();
+    }
+}
+
+void PatternChartController::setDSpacing(bool on) {
+    if (on != dSpacing()) {
+        setXAxis(QLatin1String(on ? "d_spacing" : "native"));
     }
 }
 
@@ -882,7 +926,7 @@ void PatternChartController::refresh() {
         });
     } else {
         static const edi::PatternSource kNothing;
-        const edi::PatternSource& source = experiment_ ? experiment_->patternSource(axis()) : kNothing;
+        const edi::PatternSource& source = experiment_ ? shownSource() : kNothing;
         shown_ = edi::present_pattern(source, view());
         // A range chosen on one x quantity or unit means nothing on another: the new axis starts with its full view,
         // unless the ranges held were given for the new axis (a hidden chart catching up with the shared view).
@@ -1036,7 +1080,7 @@ void PatternChartController::refresh() {
     // inside it and grows only when the curve leaves it; letting the slider go, another experiment, dataset, axis,
     // scale or x range, a fit and a reset fit it again.
     if (fitted && !animating_ && !report_) {
-        const edi::PatternSource* source = experiment_ ? &experiment_->patternSource(axis()) : nullptr;
+        const edi::PatternSource* source = experiment_ ? &shownSource() : nullptr;
         HeldRange now{experiment_, source != nullptr ? source->meas : nullptr, presented_x_, y_scale_, x_low,
                       x_high, y_low, y_high};
         if (held_range_ && experiment_ && experiment_->adjusting() && held_range_->experiment == now.experiment &&
@@ -1065,8 +1109,11 @@ void PatternChartController::refresh() {
     // The measured style (the owner, 2026-10-22): the line, the markers with their bars, or the band, measured ± s.u.
     // with the residual drawn the same way. A report's chart draws all but the band, as the report does.
     const bool band = measured_drawing_ == QLatin1String("band") && !report_;
+    // Bars (a single crystal's reflections, the owner, 2026-11-16): one filled bar per point, measured and calculated.
+    const bool bars = measured_drawing_ == QLatin1String("bars") && !report_;
     const bool line = report_ || measured_drawing_ == QLatin1String("line") || measured_drawing_ == QLatin1String("linePoints");
-    const bool marks = report_ || measured_drawing_ == QLatin1String("points") || measured_drawing_ == QLatin1String("linePoints");
+    const bool marks = report_ || measured_drawing_ == QLatin1String("points") ||
+                       measured_drawing_ == QLatin1String("linePoints") || measured_drawing_ == QLatin1String("bars");
     // While a value is dragged the measured series stand as drawn and a filled area waits for the release: Qt Graphs
     // triangulates an area each time it changes, the largest part of a step (edi ADR-0070).
     const bool held = !report_ && experiment_ && experiment_->adjusting();
@@ -1087,9 +1134,9 @@ void PatternChartController::refresh() {
         }
         measured_layer_->setData(points, low, high);
     }
-    replace(calculated_series_, calculated != nullptr ? points_of(*calculated) : QList<QPointF>());
+    replace(calculated_series_, calculated != nullptr && !bars ? points_of(*calculated) : QList<QPointF>());
     replace(background_series_, background != nullptr ? points_of(*background) : QList<QPointF>());
-    replace(residual_series_, residual != nullptr && !band ? points_of(*residual) : QList<QPointF>());
+    replace(residual_series_, residual != nullptr && !band && !bars ? points_of(*residual) : QList<QPointF>());
     // A band: its area and its two edges, each point's ends (the presentation gives a point without a finite s.u. its
     // ends at the point, so only a finite interval reaching below the log scale's domain takes the pane's bottom).
     const auto fill_band = [&](const edi::PatternSeries* series, std::size_t pane, double floor, double lift) {
@@ -1129,6 +1176,53 @@ void PatternChartController::refresh() {
     };
     fill_band(measured, 0, shown_y_min_, plot_height_ > 0.0 ? 0.05 * (shown_y_max_ - shown_y_min_) / plot_height_ : 0.0);
     fill_band(residual, 1, residual_min_, 0.0);
+    // Each bar spans its value and the pane's zero (or its bottom, when zero is below it): a fixed width on the axis,
+    // so bars widen when zoomed in, or one pixel at any zoom with thin bars (the owner, 2026-11-16). Its fill is a line
+    // barWidth wide (the bottom series) and its outline is drawn round it. One area for all the bars was not used:
+    // Qt Graphs filled the gaps between them as slivers fanned from the first point.
+    const auto fill_bars = [&](const edi::PatternSeries* series, std::size_t pane, double low_edge, double high_edge) {
+        if (pane >= band_series_.size() || (held && pane == 0)) return;
+        const BandSeries& target = band_series_[pane];
+        const double nan = std::numeric_limits<double>::quiet_NaN();
+        const double pixel = plot_width_ > 0.0 ? (shown_x_max_ - shown_x_min_) / plot_width_ : 0.0;
+        // 0.006 Å⁻¹ either side in Q, the same width in sinθ/λ = Q / (4π).
+        const double fixed = axis_ == edi::PatternAxis::Q ? 0.006 : 0.006 / (4.0 * std::numbers::pi);
+        const double half = thin_bars_ ? 0.5 * pixel : std::max(fixed, 0.5 * pixel);
+        const double zero = std::clamp(0.0, low_edge, high_edge);
+        if (pixel > 0.0 && half > 0.0) {
+            const double width = std::max(1.0, 2.0 * half / pixel);
+            if (width != bar_width_) {
+                bar_width_ = width;
+                emit barWidthChanged();
+            }
+        }
+        QList<QPointF> fill, outline;
+        if (bars && series != nullptr && half > 0.0) {
+            for (const auto& point : series->points) {
+                if (!std::isfinite(point.x) || !std::isfinite(point.y)) continue;
+                const double low = std::min(point.y, zero), high = std::max(point.y, zero);
+                fill.append(QPointF(point.x, low));
+                fill.append(QPointF(point.x, high));
+                fill.append(QPointF(nan, nan));
+                for (const QPointF& corner : {QPointF(point.x - half, low), QPointF(point.x - half, high),
+                                              QPointF(point.x + half, high), QPointF(point.x + half, low),
+                                              QPointF(point.x - half, low), QPointF(nan, nan)}) {
+                    outline.append(corner);
+                }
+            }
+        }
+        if (clear_fills || !held) {
+            replace(target.upper, {});
+            replace(target.lower, {});
+        }
+        replace(target.top, outline);
+        replace(target.bottom, fill);
+    };
+    // Measured values stay points with their error bars (the marks above); the residual is drawn as bars.
+    if (bars) {
+        fill_bars(residual, 1, residual_min_, residual_max_);
+    }
+    fill_bars(calculated, 2, shown_y_min_, shown_y_max_);
     for (std::size_t place = 0; place < ticks.size(); ++place) {
         replace(bragg_series_[static_cast<qsizetype>(place)], ticks[place]);
     }
@@ -1307,7 +1401,7 @@ QString PatternChartController::hoverAt(double x, double y, int pane, double hei
         return {};
     }
     // The values drawn, with the background subtracted when it is.
-    const edi::PatternSource source = edi::presented_source(experiment_->patternSource(axis()), view());
+    const edi::PatternSource source = edi::presented_source(shownSource(), view());
     return QString::fromStdString(edi::hover_text(source, *found->series, found->point));
 }
 
@@ -1316,7 +1410,7 @@ QString PatternChartController::hoverReadout(double x, double y, int pane, doubl
     if (!found) {
         return {};
     }
-    const edi::PatternSource source = edi::presented_source(experiment_->patternSource(axis()), view());
+    const edi::PatternSource source = edi::presented_source(shownSource(), view());
     QStringList lines;
     for (const edi::HoverLine& line : edi::hover_readout(source, *found->series, found->point)) {
         const auto piece = [this](const std::string& text, const std::string& style) {

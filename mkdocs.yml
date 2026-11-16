@@ -123,6 +123,7 @@ nav:
           - "ADR-0087 Experiment sets": dev/adrs/0087-experiment-sets-and-shared-parameters.md
           - "ADR-0088 Series loading and linked data": dev/adrs/0088-series-of-joint-fits-and-linked-data.md
           - "ADR-0089 Series views": dev/adrs/0089-series-views-shared-and-per-experiment.md
+          - "ADR-0090 Pattern x axes": dev/adrs/0090-pattern-x-axes.md
           - dev/adrs/template.md
       - Design:
           - dev/design/api-types.md
