@@ -11,7 +11,7 @@ import edi.app
 
 // A workflow page's own main view (edi ADR-0017 §2; the owner, 2026-11-14 item 5): each of the Structure, Experiment
 // and Analysis pages holds one, in its main area, and it moves with the page. Its tabs are the page's set (`tabKeys`)
-// out of Structure, Pattern, Meas vs calc, Evolution, Stacked, Map and Correlations, in the page's order: a tab that will
+// out of Structure, Pattern, Meas vs calc, Correlations, Stacked, Map and Evolution, in that order: a tab that will
 // become available is shown disabled, one that is irrelevant (Stacked and Map with one dataset, Evolution without a
 // scan) is hidden. The page's first tab opens with each project; after that the shown tab stays. The block selector
 // above the views lists the structures on the Structure tab and the experiments on the others.
@@ -21,21 +21,18 @@ EaComponents.MainContent {
     // On screen: its page is shown.
     property bool shown: false
     // The page's tabs, by key, in the page's order with its own first: the others are hidden.
-    property var tabKeys: ["structure", "pattern", "meascalc", "evolution", "stacked", "map", "correlations"]
-    // Every tab, in the order the tabs and views below are declared: an order every page's set keeps (each page's
-    // tabs are a part of it, in its own order). Structure has two places, first (the Structure page) and after Meas vs
-    // calc (the Analysis page), with the one structure view in the place the page uses. Tabs cannot be moved after
-    // they are made: the bar put them back in this order.
-    readonly property var allKeys: ["structure", "pattern", "meascalc", "structureLate", "evolution", "stacked", "map", "correlations"]
+    property var tabKeys: allKeys
+    // Every tab, in the order the tabs and views below are declared: main's order, Structure first, with Meas vs calc
+    // after Pattern (the owner, 2026-11-16). Each page's set keeps it.
+    readonly property var allKeys: ["structure", "pattern", "meascalc", "correlations", "stacked", "map", "evolution"]
     function shows(key) {
         return tabKeys.indexOf(key) >= 0;
     }
-    readonly property bool structureLate: shows("structure") && shows("pattern") && tabKeys.indexOf("structure") > tabKeys.indexOf("pattern")
     function tabOf(key) {
-        return Math.max(0, allKeys.indexOf(key === "structure" && structureLate ? "structureLate" : key));
+        return Math.max(0, allKeys.indexOf(key));
     }
     readonly property int ownTab: tabOf(tabKeys[0])
-    readonly property string currentKey: (allKeys[tabIndex] ?? "").replace("structureLate", "structure")
+    readonly property string currentKey: allKeys[tabIndex] ?? ""
 
     readonly property ProjectViewModel project: Session.project
     readonly property bool hasStructures: project !== null && project.structures.count > 0
@@ -111,7 +108,7 @@ EaComponents.MainContent {
 
             objectName: "mainArea.tab.structure"
             text: qsTr("Structure")
-            visible: view.shows("structure") && !view.structureLate
+            visible: view.shows("structure")
             width: visible ? Math.max(implicitBackgroundWidth + leftInset + rightInset, implicitContentWidth + leftPadding + rightPadding) : 0
             enabled: view.hasStructures
         },
@@ -131,20 +128,13 @@ EaComponents.MainContent {
             width: visible ? Math.max(implicitBackgroundWidth + leftInset + rightInset, implicitContentWidth + leftPadding + rightPadding) : 0
             enabled: measCalcTab.available
         },
-        // Structure in the Analysis page's place, after Meas vs calc.
+        // The last fit's parameter correlations for the shown experiment.
         IconTabButton {
-            objectName: "mainArea.tab.structure"
-            text: qsTr("Structure")
-            visible: view.shows("structure") && view.structureLate
+            objectName: "mainArea.tab.correlations"
+            text: qsTr("Correlations")
+            visible: view.shows("correlations")
             width: visible ? Math.max(implicitBackgroundWidth + leftInset + rightInset, implicitContentWidth + leftPadding + rightPadding) : 0
-            enabled: view.hasStructures
-        },
-        // A fitted parameter across a scan's datasets (edi ADR-0017 §19), in a scan project (edi ADR-0046).
-        IconTabButton {
-            objectName: "mainArea.tab.evolution"
-            text: qsTr("Evolution")
-            visible: view.shows("evolution") && view.project !== null && view.project.scan
-            width: visible ? Math.max(implicitBackgroundWidth + leftInset + rightInset, implicitContentWidth + leftPadding + rightPadding) : 0
+            enabled: view.correlationsShown
         },
         // A scan's or a joint fit's patterns, stacked and as a map (edi ADR-0041): only with several datasets.
         IconTabButton {
@@ -159,30 +149,27 @@ EaComponents.MainContent {
             visible: view.shows("map") && view.patternViews && !view.singleCrystals
             width: visible ? Math.max(implicitBackgroundWidth + leftInset + rightInset, implicitContentWidth + leftPadding + rightPadding) : 0
         },
-        // The last fit's parameter correlations for the shown experiment.
+        // A fitted parameter across a scan's datasets (edi ADR-0017 §19), in a scan project (edi ADR-0046).
         IconTabButton {
-            objectName: "mainArea.tab.correlations"
-            text: qsTr("Correlations")
-            visible: view.shows("correlations")
+            objectName: "mainArea.tab.evolution"
+            text: qsTr("Evolution")
+            visible: view.shows("evolution") && view.project !== null && view.project.scan
             width: visible ? Math.max(implicitBackgroundWidth + leftInset + rightInset, implicitContentWidth + leftPadding + rightPadding) : 0
-            enabled: view.correlationsShown
         }
     ]
     items: [
-        // The Structure tab's view, in the first place or, on the Analysis page, after Meas vs calc (structureLate).
         Item {
             id: structureFirst
 
             StructureView {
                 id: structureView
 
-                parent: view.structureLate ? structureLater : structureFirst
                 anchors.fill: parent
                 structure: view.project ? view.project.currentStructure : null
                 options: view.project ? view.project.structureViewOptions : null
                 // With no structure the tab shows only its empty state, no view and no toolbar.
                 visible: view.hasStructures
-                shown: view.shown && (view.structureLate ? structureLater : structureFirst).SwipeView.isCurrentItem
+                shown: view.shown && structureFirst.SwipeView.isCurrentItem
             }
         },
         ProjectPatternChart {
@@ -224,11 +211,8 @@ EaComponents.MainContent {
                 shown: measCalcTab.shown && !measCalcTab.singleCrystal && measCalcTab.available
             }
         },
-        Item {
-            id: structureLater
-        },
-        EvolutionChart {
-            id: evolutionChart
+        CorrelationChart {
+            id: correlationChart
 
             project: view.project
             shown: view.shown && SwipeView.isCurrentItem
@@ -265,8 +249,8 @@ EaComponents.MainContent {
             mode: "map"
             shown: view.shown && SwipeView.isCurrentItem
         },
-        CorrelationChart {
-            id: correlationChart
+        EvolutionChart {
+            id: evolutionChart
 
             project: view.project
             shown: view.shown && SwipeView.isCurrentItem
@@ -281,24 +265,8 @@ EaComponents.MainContent {
 
         visible: blocks !== null && blocks.count > 0
         areaWidth: view.width
-        // Where the shown view's toolbar ends, so the selector and the toolbar share one right edge.
-        rightInset: ({
-                "structure": structureView.toolbarRightInset,
-                "pattern": chartView.toolbarSpanRightInset,
-                "meascalc": measCalcTab.toolbarRightInset,
-                "correlations": correlationChart.toolbarRightInset,
-                "stacked": view.singleCrystals ? stackedCrystals.toolbarRightInset : stackedChart.toolbarSpanRightInset,
-                "map": mapChart.toolbarSpanRightInset,
-                "evolution": evolutionChart.toolbarSpanRightInset
-            })[view.currentKey] ?? EaStyle.Sizes.fontPixelSize
-        // And where it starts: the toolbar lines' left edge, so every toolbar row shares both edges (the owner,
-        // 2026-11-16); the other views keep the main area's margin.
-        leftInset: ({
-                "pattern": chartView.toolbarSpanLeft,
-                "stacked": view.singleCrystals ? AppSizes.mainAreaMargin : stackedChart.toolbarSpanLeft,
-                "map": mapChart.toolbarSpanLeft,
-                "evolution": evolutionChart.toolbarSpanLeft
-            })[view.currentKey] ?? AppSizes.mainAreaMargin
+        // The whole width with the standard padding on every view, the structure view's included; only the controls
+        // row below is centred (the owner, 2026-11-17).
         blocks: view.project ? (experiments ? view.project.experiments : view.project.structures) : null
         blocksTextRole: "label"
         blockKind: experiments ? "experiment" : "structure"

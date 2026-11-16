@@ -39,7 +39,7 @@ WorkflowPage {
     pageView: Component {
         MainView {
             shown: page.current
-            tabKeys: ["pattern", "meascalc", "structure", "evolution", "stacked", "map", "correlations"]
+            tabKeys: ["structure", "pattern", "meascalc", "correlations", "stacked", "map", "evolution"]
         }
     }
     onCurrentChanged: if (current && pageViewItem)
