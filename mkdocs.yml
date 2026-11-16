@@ -31,6 +31,7 @@ nav:
       - dev/public-site.md
       - dev/installers.md
       - dev/assistant-protocol.md
+      - dev/assistant-prompt-trials.md
       - Adrs:
           - dev/adrs/index.md
           - "ADR-0001 Product scope": dev/adrs/0001-product-scope-and-relation-to-crysta.md
