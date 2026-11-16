@@ -3906,12 +3906,11 @@ void ProjectViewModel::viewDatasetNow(int index, bool reread) {
     DatasetView view;
     try {
         view.values = datasetValues(scan_session_->row(*project_, index));
-        const auto& held = project_->experiment().data;
-        if (reread || !held) {
+        if (reread || !project_->experiment().data) {
             view.data = edi::read_scan_dataset(scan_session_->datasets().directory,
                                                scan_session_->datasets().files[static_cast<std::size_t>(index)],
                                                project_->experiment().effective_beam_mode());
-        } else {
+        } else if (const auto& held = project_->experiment().data) {
             view.data = *held;
         }
     } catch (const std::exception& refusal) {
@@ -4224,11 +4223,13 @@ bool ProjectViewModel::restoreScanRun(const ScanRun& run, bool restoring) {
         // Every owning copy, name resolution and projection allocation precedes
         // file reversal. No callbacks or model changes intervene before commit.
         records = run.fit_records;
-        const auto& shown_data = project_->experiment().data;
-        if (run.shown_dataset >= 0 && run.shown_dataset == projected_dataset_ &&
-            view_applied_ == view_request_ && shown_data)
-            projection.emplace(edi::detail::prepare_scan_view(*project_, project_->experiment(),
-                run.shown_values, *shown_data));
+        // The experiment is read only when a dataset is shown: a project without one has no experiment.
+        if (run.shown_dataset >= 0 && run.shown_dataset == projected_dataset_ && view_applied_ == view_request_ &&
+            !project_->experiments.empty()) {
+            if (const auto& shown_data = project_->experiment().data; shown_data)
+                projection.emplace(edi::detail::prepare_scan_view(*project_, project_->experiment(),
+                    run.shown_values, *shown_data));
+        }
         file_error = scan_session_->putFiles(*project_, run.files, &files_committed);
     } catch (...) {
         if (!files_committed) { setLastError(prepare_warning); return false; }
@@ -6051,7 +6052,8 @@ void ProjectViewModel::takeStaged(const QString& directory, const edi::Project& 
     const bool changed = edi::adopt_values(saved, staged);
     // A shown dataset is the template with that dataset's values over it, as a view builds it: built again over the
     // template the save adopted.
-    if (const auto& shown_data = project_->experiment().data; scan_template_ && scan.shown && shown_data) {
+    if (scan_template_ && scan.shown && !project_->experiments.empty() && project_->experiment().data) {
+        const auto& shown_data = project_->experiment().data;
         edi::Edit::scan_view(*project_, project_->experiment(), std::move(*scan.shown), *shown_data)();
         project_->refresh_calculated_pattern(edi::DueEstimates::Defer);
     }

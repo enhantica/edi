@@ -8,6 +8,7 @@
 
 #include "assistant_view_model.hpp"
 #include "edi/io.hpp"
+#include "edi/selectors.hpp"
 #include "engine_setup.hpp"
 #include "fit_view_model.hpp"
 #include "project_view_model.hpp"
@@ -84,6 +85,17 @@ private slots:
         QVERIFY(called);
         QCOMPARE(project.assistantProject()->metadata.name, std::string("accepted"));
         QVERIFY(!QFile::exists(destination.filePath("saved/project.edi")));
+    }
+    // A project with a structure and every experiment removed: the view model opens
+    // it, and the admission, the common scale and its application answer nothing rather than throwing.
+    void projectWithoutExperimentOpens() {
+        edi::Project bare = model();
+        while (!bare.experiments.empty()) bare.experiments.erase_at(0);  // every experiment removed
+        QVERIFY(!edi::reflection_admission(bare, 0).has_value());
+        QVERIFY(!edi::common_scale_factor(bare, 0).has_value());
+        QVERIFY(!edi::apply_common_scale(bare, 0));
+        ProjectViewModel project(bare, nullptr);
+        QVERIFY(project.assistantProject() != nullptr);
     }
     void stopKeepsOriginalOwner() {
         ProjectViewModel project(model(), nullptr);
