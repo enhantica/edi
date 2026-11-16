@@ -10,9 +10,9 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-16T18:16:45Z
+# measured_utc = 2026-11-16T18:34:07Z
 #
-# Recorded from: measured test run (15 node(s) measured once, 177054 banked, 0 stale row(s) dropped)
+# Recorded from: measured test run (3 node(s) measured once, 177066 banked, 0 stale row(s) dropped)
 # Collected tests: 245490; with a reported duration: 77762
 # Module-scoped fixture costs recorded: 206
 #
@@ -227885,9 +227885,9 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_cif_public_frames.py::test_pu
 0.000	tests/system/py/test_code_signing.py::test_signature_coverage_refuses_each_omitted_required_member[windows-offline]
 0.000	tests/system/py/test_code_signing.py::test_signature_coverage_refuses_each_omitted_required_member[windows-online]
 0.210	tests/system/py/test_code_signing.py::test_signing_entries_keep_the_exact_secret_and_variable_split
-0.580	tests/system/py/test_code_signing.py::test_signing_failure_cannot_upload_release_artifacts
-2.390	tests/system/py/test_code_signing.py::test_signing_is_present_and_never_reaches_pull_requests_or_other_branches[Windows]
-2.320	tests/system/py/test_code_signing.py::test_signing_is_present_and_never_reaches_pull_requests_or_other_branches[macOS]
+0.560	tests/system/py/test_code_signing.py::test_signing_failure_cannot_upload_release_artifacts
+3.550	tests/system/py/test_code_signing.py::test_signing_is_present_and_never_reaches_pull_requests_or_other_branches[Windows]
+3.470	tests/system/py/test_code_signing.py::test_signing_is_present_and_never_reaches_pull_requests_or_other_branches[macOS]
 0.140	tests/system/py/test_code_signing.py::test_windows_uses_digicert_simple_signing_and_verifies_declared_executables
 UNMEASURED:failed-in-this-run	tests/system/py/test_collection_app_boundaries.py::test_app_download_content_claims[absent-data]
 UNMEASURED:failed-in-this-run	tests/system/py/test_collection_app_boundaries.py::test_app_download_content_claims[absent-experiment]

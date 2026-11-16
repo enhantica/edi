@@ -149,6 +149,14 @@ def private_access(
     return any(expression(value, atoms) for value in values)
 
 
+def job_environment(event, ref, release, platform, repository, *, preview=False):
+    environment = workflow()['jobs']['installers'].get('environment')
+    if isinstance(environment, dict):
+        environment = environment.get('name')
+    atoms = context_atoms(event, ref, release, platform, repository, preview=preview)
+    return expression(environment, atoms) if '${{' in str(environment) else environment
+
+
 def condition_value(node):
     if isinstance(node, ast.Constant):
         return node.value
@@ -177,32 +185,28 @@ def condition_value(node):
 
 @pytest.mark.parametrize('platform', ['macOS', 'Windows'])
 def test_signing_is_present_and_never_reaches_pull_requests_or_other_branches(platform):
-    environment = workflow()['jobs']['installers'].get('environment')
-    if isinstance(environment, dict):
-        environment = environment.get('name')
-    for event, release, preview in [
-        ('push', False, False),
-        ('workflow_dispatch', True, False),
-        ('workflow_dispatch', False, True),
-    ]:
-        atoms = context_atoms(
-            event, 'refs/heads/main', release, platform, 'enhantica/edi', preview=preview
-        )
-        selected_environment = (
-            expression(environment, atoms) if '${{' in str(environment) else environment
-        )
-        assert selected_environment == 'codesign', (
-            'Every permitted installer signing run must select the reviewed codesign environment'
-        )
     selected = signing_steps()
     assert selected, 'Release installers must contain signing steps'
-    assert any(private_access(s, 'push', 'refs/heads/main', False, platform) for s in selected), (
-        'Main pushes must sign each supported installer platform'
-    )
-    assert any(
-        private_access(s, 'workflow_dispatch', 'refs/heads/main', True, platform) for s in selected
-    ), 'Release dispatches on main must sign each supported installer platform'
+    for release, preview in [(True, False), (False, True)]:
+        assert (
+            job_environment(
+                'workflow_dispatch',
+                'refs/heads/main',
+                release,
+                platform,
+                'enhantica/edi',
+                preview=preview,
+            )
+            == 'codesign'
+        ), 'Release-plan and preview dispatches must select the reviewed codesign environment'
+        assert any(
+            private_access(
+                step, 'workflow_dispatch', 'refs/heads/main', release, platform, preview=preview
+            )
+            for step in selected
+        ), 'Release-plan and preview dispatches must retain signing credentials on each platform'
     denied = [
+        ('push', 'refs/heads/main', False, 'enhantica/edi'),
         ('pull_request', 'refs/pull/53/merge', False, 'enhantica/edi'),
         ('pull_request', 'refs/heads/main', True, 'enhantica/edi'),
         ('push', 'refs/heads/feature', False, 'enhantica/edi'),
@@ -219,9 +223,27 @@ def test_signing_is_present_and_never_reaches_pull_requests_or_other_branches(pl
         for step in selected
         if private_access(step, event, ref, release, platform, repository=repository)
     ]
+    enabled_guards = [
+        (event, ref, release, repository)
+        for event, ref, release, repository in denied
+        if context_atoms(event, ref, release, platform, repository)['env.EDI_CODESIGN']
+    ]
+    environment_violations = [
+        (event, ref, release, repository)
+        for event, ref, release, repository in denied
+        if job_environment(event, ref, release, platform, repository) == 'codesign'
+    ]
     assert not violations, (
-        'Only release dispatches on main and main pushes in the original repository may '
+        'Only release-plan or preview dispatches on main in the original repository may '
         'access signing credentials; forbidden routes reached: ' + repr(violations)
+    )
+    assert not environment_violations, (
+        'Main pushes, PRs, forks, other branches and non-release dispatches must not receive '
+        'the codesign environment: ' + repr(environment_violations)
+    )
+    assert not enabled_guards, (
+        'Unsigned builds, including main pushes, must disable the signing flag: '
+        + repr(enabled_guards)
     )
 
 
@@ -389,9 +411,9 @@ def test_signing_failure_cannot_upload_release_artifacts():
         )
 
     for upload in uploads:
-        assert not condition(upload, 'push', 'refs/heads/main', False, 'Windows', failed=True), (
-            'A failed signing predecessor must block delivery and component uploads'
-        )
+        assert not condition(
+            upload, 'workflow_dispatch', 'refs/heads/main', True, 'Windows', failed=True
+        ), 'A failed signing predecessor must block delivery and component uploads'
 
 
 def test_prompt_trial_records_live_only_in_contributor_docs():
