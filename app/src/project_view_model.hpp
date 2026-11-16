@@ -1173,6 +1173,8 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     void followScanDeclaration();
     // Re-derives whether the scan modes can run (a single template experiment and a listed scan).
     void syncScanAdmission();
+    // The project's experiments are the scan's: one for a scan, those a series of joint fits names, in order.
+    bool seriesMatches() const;
     // Shows a dataset: its projection is read off the GUI thread and applied when ready. `refresh`: again, even
     // when it is the shown one (its results row changed).
     void viewDataset(int index, bool refresh = false);
@@ -1180,6 +1182,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // runs, its calculated pattern; or the refusal.
     struct DatasetView {
         std::optional<edi::PdDataBase> data;
+        std::vector<edi::PdDataBase> series;  // a series of joint fits' point: each experiment's file, project order
         std::vector<edi::Edit::ScanValue> values;
         std::optional<edi::FitFrame> frame;
         std::optional<edi::PatternSource> d_frame;  // the frame on d, when a chart is on d
@@ -1192,6 +1195,16 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // The same over `from`, read with `index`'s columns.
     std::vector<edi::Edit::ScanValue> datasetValues(const std::vector<std::string>& row, const edi::Project& from,
                                                     const edi::ScanResultIndex& index) const;
+    // The values dataset `index` is shown with: its results row's, and a series point's per-experiment row's over them.
+    std::vector<edi::Edit::ScanValue> pointValues(int index) const;
+    // A series point's per-experiment values (`results_experiments.csv`) over `values`, read from `project`.
+    static void overlaySeriesPoint(std::vector<edi::Edit::ScanValue>& values, const edi::Project& project,
+                                   const edi::ScanDatasets& datasets, int index);
+    // Reads dataset `index` into `view`: its file, or a series point's file of each experiment (beam modes in
+    // project order). Throws as edi::read_scan_dataset does.
+    static void readDataset(DatasetView& view, const edi::ScanDatasets& datasets, int index,
+                            const std::vector<edi::BeamModeEnum>& modes);
+    std::vector<edi::BeamModeEnum> beamModes() const;
     void syncDatasets();
     // One dataset's row in the lists (its outcome, extracted values, template tag).
     void syncDataset(int index);

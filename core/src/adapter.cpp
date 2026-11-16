@@ -2731,6 +2731,37 @@ double point_value(const std::map<std::string, std::map<std::string, double>>& c
 }
 }  // namespace
 
+std::map<std::string, SeriesPointValue> series_point_values(const Project& project, const std::string& point) {
+    std::map<std::string, SeriesPointValue> values;
+    const auto cells_of = point_experiment_cells(project, point);
+    if (cells_of.empty()) {
+        return values;
+    }
+    // A per-experiment column is the parameter's results column without its experiment's name.
+    for (const NamedSlot& slot : named_slots(const_cast<Project&>(project))) {
+        const std::string column = scan_results_column(slot.unique_name);
+        const std::size_t dot = column.find('.');
+        if (dot == std::string::npos) {
+            continue;
+        }
+        const auto row = cells_of.find(column.substr(0, dot));
+        if (row == cells_of.end()) {
+            continue;
+        }
+        const std::string own = column.substr(dot + 1);
+        const auto cell = row->second.find(own);
+        if (cell == row->second.end()) {
+            continue;
+        }
+        SeriesPointValue& value = values[slot.unique_name];
+        value.value = cell->second;
+        if (const auto su = row->second.find(own + ".uncertainty"); su != row->second.end()) {
+            value.uncertainty = su->second;
+        }
+    }
+    return values;
+}
+
 std::vector<double> series_point_scales(const Project& project, const std::string& point) {
     const auto cells_of = point_experiment_cells(project, point);
     std::vector<double> scales;

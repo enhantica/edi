@@ -1571,6 +1571,28 @@ class Edit {
         });
     }
 
+    // A series of joint fits' point shown in the model (ADR-0088): each experiment's measured data replaced by its
+    // file of the point, `data` in project order, and each named parameter given its value. All are prepared before
+    // any is written, so a point that does not match the project's experiments writes nothing.
+    static Edit series_view(Project& project, std::vector<ScanValue> values, std::vector<PdDataBase> data) {
+        auto shown = std::make_shared<std::vector<PdDataBase>>(std::move(data));
+        return Edit([&project, values = std::move(values), shown] {
+            if (shown->size() != project.experiments.size()) {
+                throw std::invalid_argument("a series point has " + std::to_string(shown->size()) +
+                                            " datasets for " + std::to_string(project.experiments.size()) +
+                                            " experiments");
+            }
+            std::vector<detail::PreparedScanView> prepared;
+            prepared.reserve(shown->size());
+            for (std::size_t at = 0; at < shown->size(); ++at) {
+                prepared.push_back(detail::prepare_scan_view(project, *project.experiments[at], values, (*shown)[at]));
+            }
+            for (detail::PreparedScanView& point : prepared) {
+                point.commit();
+            }
+        });
+    }
+
     // An edit of the relations undone (edi ADR-0024): the alias and constraint rows as they were, and each
     // parameter the edit changed back to its state then. Every parameter is resolved first, so one whose
     // row was removed since refuses with nothing written. Both complete ItemVec replacements

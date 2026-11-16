@@ -402,7 +402,8 @@ ProjectViewModel::ProjectViewModel(edi::Project project, QObject* parent, const 
     // (`_sequential_fit.template_file`; edi ADR-0017 §19): the shown state is the template from now on. The
     // designation before it is kept for the fit's Undo.
     connect(fit_, &FitViewModel::runningChanged, this, [this] {
-        if (scan_ && fit_->running() && !fit_->scanning()) {
+        // A series of joint fits has no template file (crysta refuses one), so a point fit never names one.
+        if (scan_ && fit_->running() && !fit_->scanning() && !scan_session_->datasets().joint()) {
             fit_template_before_ = TemplateState{scanTemplateOrModel().sequential_fit.template_file, scan_template_};
             fit_template_before_->run_file_known = scan_session_->runFile(*project_, fit_template_before_->run_file);
             if (projected_dataset_ >= 0) {
@@ -3667,11 +3668,24 @@ void ProjectViewModel::followScanDeclaration() {
     }
 }
 
+bool ProjectViewModel::seriesMatches() const {
+    // A scan of one experiment fits its template against each file; a series of joint fits fits every experiment
+    // it names, in project order, against its file of each point (ADR-0088).
+    if (scan_session_ == nullptr) return false;
+    const std::vector<std::string>& named = scan_session_->datasets().experiments;
+    if (named.empty()) return project_->experiments.size() == 1;
+    if (named.size() != project_->experiments.size()) return false;
+    for (std::size_t at = 0; at < named.size(); ++at) {
+        if (project_->experiments[at]->name != named[at]) return false;
+    }
+    return true;
+}
+
 void ProjectViewModel::syncScanAdmission() {
     // A scan fits one template experiment against each listed file: with another experiment loaded beside it, or
     // no scan to list, the datasets are not shown and the scan modes do not run.
     const bool listed = scan_session_ != nullptr && !scan_session_->datasets().files.empty();
-    const bool scan = scan_session_ != nullptr && project_->experiments.size() == 1 && listed;
+    const bool scan = listed && seriesMatches();
     if (scan != scan_) {
         scan_ = scan;
         if (!scan_) {
@@ -3695,7 +3709,12 @@ QString ProjectViewModel::scanRefusal() const {
     if (scan_session_ == nullptr) {
         return tr("This project declares no scan (_sequential_fit)");
     }
-    if (project_->experiments.size() != 1) {
+    if (!seriesMatches()) {
+        if (scan_session_->datasets().joint()) {
+            return tr("The series of joint fits names %1 experiments; this project has %2")
+                .arg(scan_session_->datasets().experiments.size())
+                .arg(project_->experiments.size());
+        }
         return tr("A scan fits one template experiment against each file; this project has %1 experiments")
             .arg(project_->experiments.size());
     }
@@ -3909,6 +3928,52 @@ std::vector<edi::Edit::ScanValue> ProjectViewModel::datasetValues(const std::vec
     return datasetValues(row, scanTemplateOrModel(), scan_session_->index());
 }
 
+std::vector<edi::Edit::ScanValue> ProjectViewModel::pointValues(int index) const {
+    std::vector<edi::Edit::ScanValue> values = datasetValues(scan_session_->row(*project_, index));
+    overlaySeriesPoint(values, *project_, scan_session_->datasets(), index);
+    return values;
+}
+
+void ProjectViewModel::overlaySeriesPoint(std::vector<edi::Edit::ScanValue>& values, const edi::Project& project,
+                                          const edi::ScanDatasets& datasets, int index) {
+    if (!datasets.joint() || index < 0 || index >= static_cast<int>(datasets.files.size())) {
+        return;
+    }
+    const auto own = edi::series_point_values(project, datasets.files[static_cast<std::size_t>(index)]);
+    for (edi::Edit::ScanValue& value : values) {
+        if (const auto found = own.find(value.unique_name); found != own.end()) {
+            value.value = found->second.value;
+            value.uncertainty = found->second.uncertainty;
+        }
+    }
+}
+
+void ProjectViewModel::readDataset(DatasetView& view, const edi::ScanDatasets& datasets, int index,
+                                   const std::vector<edi::BeamModeEnum>& modes) {
+    const auto at = static_cast<std::size_t>(index);
+    if (!datasets.joint()) {
+        view.data = edi::read_scan_dataset(datasets.directory, datasets.files.at(at), modes.at(0));
+        return;
+    }
+    const std::vector<std::string>& files = datasets.point_files.at(at);
+    if (files.size() != modes.size()) {
+        throw std::invalid_argument("the series point " + datasets.files.at(at) + " has " +
+                                    std::to_string(files.size()) + " files for " + std::to_string(modes.size()) +
+                                    " experiments");
+    }
+    for (std::size_t experiment = 0; experiment < files.size(); ++experiment) {
+        view.series.push_back(edi::read_scan_dataset(datasets.directory, files[experiment], modes[experiment]));
+    }
+}
+
+std::vector<edi::BeamModeEnum> ProjectViewModel::beamModes() const {
+    std::vector<edi::BeamModeEnum> modes;
+    for (const auto& experiment : project_->experiments) {
+        modes.push_back(experiment->effective_beam_mode());
+    }
+    return modes;
+}
+
 std::vector<edi::Edit::ScanValue> ProjectViewModel::datasetValues(const std::vector<std::string>& row,
                                                                   const edi::Project& template_project,
                                                                   const edi::ScanResultIndex& index) const {
@@ -4039,11 +4104,9 @@ void ProjectViewModel::viewDatasetNow(int index, bool reread) {
     view_wanted_ = index;
     DatasetView view;
     try {
-        view.values = datasetValues(scan_session_->row(*project_, index));
-        if (reread || !project_->experiment().data) {
-            view.data = edi::read_scan_dataset(scan_session_->datasets().directory,
-                                               scan_session_->datasets().files[static_cast<std::size_t>(index)],
-                                               project_->experiment().effective_beam_mode());
+        view.values = pointValues(index);
+        if (reread || !project_->experiment().data || scan_session_->datasets().joint()) {
+            readDataset(view, scan_session_->datasets(), index, beamModes());
         } else {
             view.data = *project_->experiment().data;
         }
@@ -4069,7 +4132,7 @@ void ProjectViewModel::startViewRead() {
     // thread.
     std::vector<edi::Edit::ScanValue> values;
     try {
-        values = datasetValues(scan_session_->row(*project_, index));
+        values = pointValues(index);
     } catch (const std::exception& refusal) {
         view_applied_ = request;
         const QString error = QString::fromUtf8(refusal.what());
@@ -4085,9 +4148,8 @@ void ProjectViewModel::startViewRead() {
     if (fit_ != nullptr && fit_->scanning() && !(follow_frame_ && follow_frame_->first == index)) {
         shown = *scan_template_;
     }
-    const std::string directory = scan_session_->datasets().directory;
-    const std::string file = scan_session_->datasets().files[static_cast<std::size_t>(index)];
-    const edi::BeamModeEnum mode = project_->experiment().effective_beam_mode();
+    const edi::ScanDatasets& datasets = scan_session_->datasets();
+    const std::vector<edi::BeamModeEnum> modes = beamModes();
     // A chart on d draws the shown dataset's d-spacing capture too.
     const bool d_spacing = !experiment_models_.isEmpty() && experiment_models_.front()->dSpacingWanted();
 #ifndef __EMSCRIPTEN__
@@ -4098,7 +4160,7 @@ void ProjectViewModel::startViewRead() {
         DatasetView view;
         view.values = std::move(values);
         try {
-            view.data = edi::read_scan_dataset(directory, file, mode);
+            readDataset(view, datasets, index, modes);
         } catch (const std::exception& refusal) {
             view.error = QString::fromUtf8(refusal.what());
         }
@@ -4108,14 +4170,18 @@ void ProjectViewModel::startViewRead() {
 #endif
     view_reading_ = true;
     const QPointer<ProjectViewModel> self(this);
-    run_in_background([self, request, index, directory, file, mode, d_spacing, values = std::move(values),
+    run_in_background([self, request, index, datasets, modes, d_spacing, values = std::move(values),
                        shown = std::move(shown)]() mutable {
         DatasetView view;
         view.values = std::move(values);
         try {
-            view.data = edi::read_scan_dataset(directory, file, mode);
+            readDataset(view, datasets, index, modes);
             if (shown) {
-                edi::Edit::scan_view(*shown, shown->experiment(), view.values, *view.data)();
+                if (view.data) {
+                    edi::Edit::scan_view(*shown, shown->experiment(), view.values, *view.data)();
+                } else {
+                    edi::Edit::series_view(*shown, view.values, view.series)();
+                }
                 edi::apply_relations(*shown);
                 shown->calculate();
                 view.frame = edi::FitFrame{edi::capture_pattern(*shown, 0)};
@@ -4185,7 +4251,7 @@ void ProjectViewModel::applyDatasetView(std::uint64_t request, int index, Datase
         publishCalculating();
         return;
     }
-    if (!view.data) {
+    if (!view.data && view.series.empty()) {
         setLastError(view.error);
         emit refused(view.error);
         publishCalculating();
@@ -4195,8 +4261,10 @@ void ProjectViewModel::applyDatasetView(std::uint64_t request, int index, Datase
     // Showing a dataset is not an edit: the project's modified state stays as it was.
     const bool modified = modified_;
     applying_view_ = true;
-    const QString error = apply(
-        edi::Edit::scan_view(project, project.experiment(), std::move(view.values), std::move(*view.data)), false);
+    const QString error =
+        view.data ? apply(edi::Edit::scan_view(project, project.experiment(), std::move(view.values), std::move(*view.data)),
+                          false)
+                  : apply(edi::Edit::series_view(project, std::move(view.values), std::move(view.series)), false);
     applying_view_ = false;
     setModified(modified);
     if (!error.isEmpty()) {
@@ -4244,8 +4312,12 @@ void ProjectViewModel::syncOutOfDate() {
 void ProjectViewModel::promoteShownToTemplate() {
     // The shown dataset's values become the template's, over the template's own data file (edi ADR-0017 §19).
     edi::Project promoted = *project_;
-    promoted.experiment().data = scan_template_->experiment().data;
-    promoted.experiment().calculation_only = scan_template_->experiment().calculation_only;
+    // Every experiment keeps the template's own file: a series point showed one file of each.
+    const std::size_t count = std::min(promoted.experiments.size(), scan_template_->experiments.size());
+    for (std::size_t at = 0; at < count; ++at) {
+        promoted.experiments[at]->data = scan_template_->experiments[at]->data;
+        promoted.experiments[at]->calculation_only = scan_template_->experiments[at]->calculation_only;
+    }
     scan_template_ = std::move(promoted);
 }
 
@@ -6148,6 +6220,7 @@ QString ProjectViewModel::stageScan(const QString& directory, const edi::Project
     if (scan_template_ && current_dataset_ >= 0 && project_->experiment().data && scan.refusal.isEmpty()) {
         try {
             scan.shown = datasetValues(scan.listing->row(staged, current_dataset_), staged, scan.listing->index());
+            overlaySeriesPoint(*scan.shown, staged, scan.listing->datasets(), current_dataset_);
         } catch (const std::exception& refusal) {
             return QString::fromUtf8(refusal.what());
         }
