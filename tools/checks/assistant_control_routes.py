@@ -34,7 +34,7 @@ CATEGORY_GROUPS = {
 NOT_CONTROLS = ('codex.', 'measurement.', 'workflow.', 'group.')
 # Ids the input steps use: a Kind's target, or a target an operation chooses.
 STEP = re.compile(
-    r'(?:Kind::(?:Navigate|FileLoadCue|Choose|Text|FormText)\s*,\s*|target\s*=\s*|[?:]\s*)'
+    r'(?:Kind::(?:Navigate|FileLoadCue|Choose|Text|FormText)\s*,\s*|(?:target|name)\s*=\s*|[?:]\s*)'
     r'(?:QString(?:Literal)?\()?"([a-zA-Z][A-Za-z0-9_]*\.[A-Za-z0-9_.%]*)"'
 )
 

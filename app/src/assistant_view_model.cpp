@@ -4021,6 +4021,11 @@ struct AssistantViewModel::State {
         qsizetype relation_row = 0, relation_field = 0;
         bool relation_constraint = false, relation_visible = false;
         qsizetype relation_base = 0, completed_steps = 0;
+        // The tool and arguments as admitted, so a refused cue can still run the operation as normal mode does.
+        QString fallback_tool;
+        Object fallback_args;
+        QString cue_skipped;
+        bool cue_fallback = false;
         const void* relation_key = nullptr;
         ProjectEditor::RelationAction relation_action;
         bool step_counted = false, estimate_then_names = false;
@@ -4619,6 +4624,51 @@ struct AssistantViewModel::State {
             native_records.size() == entries && (!native_call || native_call->record == record))
             try { widget_showing(false); } catch (...) {}
     }
+    // A cue is presentation: a Show actions edit refused before anything was applied runs as normal mode runs it
+    // (the same recorded edit, the same Undo) and reports the skipped cue. True when it answered the call.
+    bool widget_cue_fallback(const std::shared_ptr<NativeWidget>& run, const QString& message) noexcept {
+        const auto& tool = run->fallback_tool;
+        const bool edit_tool = tool == "set_parameters" || tool == "set_free" || tool == "add_relations";
+        if (run->cue_fallback || (!edit_tool && tool != "edit_relation") || run->completed_steps != 0 || !run->window ||
+            !native_call || native_call->may_have_written || run->call.record != native_call->record ||
+            run->call.record->answered || run->call.record->discarded || run->call.record->completed || !project ||
+            run->project != project)
+            return false;
+        if (tool == "edit_relation" && run->relation_input) return false;  // its edit already began
+        run->cue_fallback = true;
+        run->cue_skipped = message.isEmpty() ? QStringLiteral("The original control could not be shown") : message;
+        const auto receiver = run->receiver;
+        try {
+            if (tool == "edit_relation") {
+                run->relation_visible = false;
+                widget_relation_edit_apply(run);
+                return true;
+            }
+            std::vector<std::pair<std::string, bool>> before_flags;
+            auto edit = assistant_native_edit(*project->assistantProject(), tool, run->fallback_args, before_flags);
+            if (!edit) return false;
+            const auto record = native_call->record;
+            const QPointer<ProjectViewModel> target(project);
+            const auto scope = begin_own_edit();
+            native_call->may_have_written = true;
+            ProjectViewModel::EditOutcome result;
+            try { result = project->applyRecordedEdit(*edit, tool == "add_relations"); }
+            catch (...) { end_own_edit(scope); throw; }
+            end_own_edit(scope);
+            if (!receiver || receiver->state_.get() != this || !target || project != target || !native_call ||
+                native_call->record != record)
+                return true;
+            native_finish(result.applied && result.published,
+                {{"status", !result.applied ? "refused" : result.published ? "edited" : "applied_unconfirmed"},
+                 {"calculation_pending", project->calculating()}, {"cue_skipped", bounded_error(run->cue_skipped)},
+                 {"message", result.message.isEmpty() ? QString("Native edit published with Undo; calculation is asynchronous.")
+                                                      : bounded_error(result.message)}});
+            if (receiver && receiver->state_.get() == this && widget_owned(run)) widget_end(run);
+            return true;
+        } catch (...) {
+            return false;
+        }
+    }
     void widget_refuse(const std::shared_ptr<NativeWidget>& run, const QString& message,
                        std::source_location caller = std::source_location::current()) noexcept {
         if (const auto parent = run->create_parent.lock()) {
@@ -4677,6 +4727,7 @@ struct AssistantViewModel::State {
         }
         if (!widget_owned(run)) return;
         const auto receiver = run->receiver;
+        if (widget_cue_fallback(run, message)) return;
         if (run->tool == "undo_fit") {
             native_retain_fit_undo(run->call);
             try {
@@ -7269,6 +7320,7 @@ struct AssistantViewModel::State {
             {"applied",applied},{"published",published},{"complete",complete},{"atomic",!run->relation_visible},
             {"steps_completed",complete?1:0},{"uncertain",applied && !complete},
             {"calculation_pending",run->project && run->project->calculating()}};
+        if(!run->cue_skipped.isEmpty())result["cue_skipped"]=bounded_error(run->cue_skipped);
         if(complete) {
             using K=ProjectEditor::RelationAction::Kind;
             const auto kind=run->relation_action.kind;
@@ -7558,6 +7610,7 @@ struct AssistantViewModel::State {
         auto run=std::make_shared<NativeWidget>();run->call=*native_call;run->receiver=&owner;run->project=project;
         run->tool=QStringLiteral("edit_relation");run->tab=QStringLiteral("appBar.tab.analysis");run->relation_args=args;
         run->relation_visible=show_actions;run->window=show_actions?action_window:nullptr;
+        run->fallback_tool=run->tool;run->fallback_args=args;
         const auto op=args.value("operation").toString();const auto id=args.value("id").toString().toStdString();
         run->relation_constraint=op.startsWith(QLatin1String("constraint_"));run->relation_field=1;
         const auto& projectModel=*project->assistantProject();
@@ -7693,6 +7746,7 @@ struct AssistantViewModel::State {
         const bool batch=parameter_rows.size()>1;
         auto run = std::make_shared<NativeWidget>();
         run->call = *native_call; run->receiver = &owner; run->project = project; run->window = action_window; run->tool = tool;
+        run->fallback_tool = tool; run->fallback_args = args;
         if(tool=="estimate_background") {
             if(!native_estimate_target_current(run->call))throw std::runtime_error("The originally requested Estimate experiment is no longer selected");
             run->background_experiment=run->call.record->estimate_member;

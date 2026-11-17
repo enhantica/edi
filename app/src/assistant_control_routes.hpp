@@ -45,6 +45,8 @@ inline constexpr ControlRoute kControlRoutes[] = {
     {"relations.constraints", "analysis", "relations.constraints", ""},
     {"constraints.", "analysis", "relations.constraints", "constraints.list"},
     {"constraint.", "analysis", "relations.constraints", "constraints.list"},
+    // The search field of an open searchable list (the alias target's): in its popup, outside any group.
+    {"comboBox.search", "", "", ""},
 };
 
 // The route of a control id: the longest matching prefix, or nullptr for an id the table does not know.
