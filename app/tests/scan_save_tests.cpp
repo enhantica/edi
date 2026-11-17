@@ -197,10 +197,13 @@ private slots:
         const auto click = [window](QQuickItem* item) {
             QTest::mouseClick(window, Qt::LeftButton, {}, item->mapToScene(QPointF(item->width() / 2, item->height() / 2)).toPoint());
         };
-        const auto openExtras = [&](const char* page) {
+        // The page's own first group on screen first: while the pages slide, the previous page's Extra tab is still
+        // found and a click on it changes nothing here.
+        const auto openExtras = [&](const char* page, const char* group) {
             QQuickItem* tab = nullptr;
             QTRY_VERIFY_WITH_TIMEOUT((tab = shown(QString::fromLatin1(page))) && tab->isEnabled(), 20000);
             click(tab);
+            QTRY_VERIFY_WITH_TIMEOUT(shown(QString::fromLatin1(group)), 20000);
             QTRY_VERIFY_WITH_TIMEOUT((tab = shown("sideBar.tab.extras")), 20000);
             click(tab);
         };
@@ -220,7 +223,7 @@ private slots:
         QVERIFY2(session->openProject(QUrl::fromLocalFile(QStringLiteral(EDI_SOURCE_DIR "/docs/user/cli/pd-neut-cwl_lbco-hrpt/project"))), qPrintable(session->lastError()));
         QTRY_VERIFY_WITH_TIMEOUT(!session->project()->calculating(), 30000);
 
-        openExtras("appBar.tab.structure");
+        openExtras("appBar.tab.structure", "group.structures");
         // One group at a time: with auto-collapse on, expanding the next folds the one before.
         expand("group.expanded_atom_site");
         QQuickItem* atoms = nullptr;
@@ -273,7 +276,7 @@ private slots:
 
         QVERIFY2(session->openProject(QUrl::fromLocalFile(QStringLiteral(EDI_SOURCE_DIR "/docs/user/cli/pd-neut-cwl_lbco-hrpt/project"))), qPrintable(session->lastError()));
         QTRY_VERIFY_WITH_TIMEOUT(!session->project()->calculating(), 30000);
-        openExtras("appBar.tab.experiment");
+        openExtras("appBar.tab.experiment", "group.experiments");
         expand("group.refln");
         QQuickItem* reflections = nullptr;
         QTRY_VERIFY_WITH_TIMEOUT((reflections = shown("reflections.list")) && reflections->property("count").toInt() > 0, 20000);
@@ -507,7 +510,12 @@ private slots:
             for (int round = 0; round < 2; ++round) {
                 window->resize(1024, 700);
                 QQuickItem* more = nullptr;
-                QTRY_VERIFY_WITH_TIMEOUT((more = shown(toolbar + ".more")), 20000);
+                // A toolbar with fewer controls (Meas vs calc) may still fit: then it has no popup to open, and the
+                // resize alone is what must stay free of warnings.
+                if (!QTest::qWaitFor([&] { return (more = shown(toolbar + ".more")) != nullptr; }, 3000)) {
+                    window->resize(1480, 900);
+                    continue;
+                }
                 click(more);
                 QTRY_VERIFY_WITH_TIMEOUT(more->property("checked").toBool(), 5000);
                 click(more);
