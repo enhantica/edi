@@ -42,5 +42,5 @@ randomness or a changed physical result.
 The iteration regression window admits only the observed integer counts 4–5. Its
 JSON midpoint 4.5 and absolute radius 0.5 encode that interval; 4.5 is not a captured
 iteration count. Counts 3 and 6 still fail. This case-specific window does not
-change the exact same-build cross-surface report contract (crysta ADR-0057), any
+change the exact same-build cross-surface report contract, any
 other example, or any fit-quality or scientific tolerance.
