@@ -128,7 +128,7 @@ void ToolbarRow::place(QQuickItem* lines, QQuickItem* more) const {
 
 int ToolbarRow::rank(const QString& name) {
     const QByteArray last = name.section(QLatin1Char('.'), -1).toUtf8();
-    const auto it = std::find(kOrder.begin(), kOrder.end(), std::string_view(last.constData(), last.size()));
+    const auto it = std::find(kOrder.begin(), kOrder.end(), std::string_view(last.constData(), static_cast<std::size_t>(last.size())));
     if (it == kOrder.end()) return kUnlisted * 2 + 1;
     return static_cast<int>(it - kOrder.begin()) * 2;
 }
@@ -136,7 +136,7 @@ int ToolbarRow::rank(const QString& name) {
 QVariantMap ToolbarRow::layout(const QVariantList& list, double left, double right, double spacing,
                                double groupSpacing, double moreWidth) const {
     std::vector<Unit> units;
-    units.reserve(list.size());
+    units.reserve(static_cast<std::size_t>(list.size()));
     for (const QVariant& entry : list) {
         const QVariantMap map = entry.toMap();
         units.push_back({map.value(QStringLiteral("width")).toDouble(), map.value(QStringLiteral("group")).toString(),
