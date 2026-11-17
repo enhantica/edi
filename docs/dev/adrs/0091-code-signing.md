@@ -101,9 +101,9 @@ macOS, SmartScreen and the Mark of the Web on Windows); files an installer write
 downloads are signed: the installers on both systems, the command-line `edi.exe` on Windows (its ZIP passes
 the mark to the extracted files) and the command-line `edi` on macOS. The EasyDiffraction app is signed too, on
 both systems, so it shows its publisher and passes institutional policies and antivirus checks more easily.
-The assistant runtime's helper executables and the Windows maintenance tool are not signed yet; signing the
-maintenance tool needs a maintenance-tool component carrying a signed `installerbase.exe`, since Qt Installer
-Framework writes the tool from the running installer, which `binarycreator` changes.
+The assistant runtime's helper executables and the Windows maintenance tool are not signed yet; the Windows
+tool runs unsigned, and signing it would take the same component as the macOS tool below, with a signed
+`installerbase.exe`.
 
 **macOS steps**, in the installer job of `.github/workflows/installers.yml`:
 
@@ -115,7 +115,21 @@ Framework writes the tool from the running installer, which `binarycreator` chan
    with `codesign --options runtime --timestamp` before archiving them, then sends the ZIP to
    `xcrun notarytool submit --wait` and requires the status `Accepted`. A bare executable cannot be stapled, so
    Gatekeeper looks the ticket up online.
-4. Qt Installer Framework builds the installer app. `tools/installer/package.py seal` signs it with
+4. **The maintenance tool.** Qt Installer Framework normally writes `MaintenanceTool.app` on the user's Mac
+   from the running installer's binary. Once the installer carries a real signature, that copy no longer
+   matches it and macOS kills the tool, so users could not update or uninstall (the first signed release run
+   showed it). So `package.py maintenance-tool` builds the tool on its own with `binarycreator --mt`, the
+   Framework's way of making a maintenance tool for separate signing, and signs, notarises and staples it like
+   the installer. Both installers carry it in a hidden, always-installed component
+   (`org.easyscience.edi.maintenancetool`, carrying the app version like the other components, so the
+   release, preview and Pages repository checks hold), whose script calls `installer.setInstallerBaseBinary`
+   on the bundle; for a bundle the Framework moves it to the installation root unchanged instead of writing
+   its own. An update lists the component but unpacks nothing and keeps the installed tool. Packaging refuses an unsigned tool when signing is on, and each
+   test installation checks the installed tool with `codesign --verify --strict`, its Developer ID authority
+   on release builds, and its checksum against the shipped one, before running it to uninstall. Unsigned
+   builds sign the tool ad hoc and take the same path. EasyDiffractionBeta shipped a separately built tool
+   the same way on Windows.
+5. Qt Installer Framework builds the installer app. `tools/installer/package.py seal` signs it with
    `codesign --options runtime --timestamp`, notarises it the same way, staples the ticket with
    `xcrun stapler staple`, checks it with `codesign --verify` and `spctl --assess`, and archives it again. This
    runs for the offline and the online installer.

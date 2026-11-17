@@ -314,9 +314,12 @@ def test_component_identity_and_original_checksums_are_verified(tmp_path, damage
             PROMOTE.validate_repository(tmp_path, '2026.11.0')
 
 
-def component_repository(folder, version='2026.11.0'):
+def component_repository(folder, version='2026.11.0', *, platform='linux-x86_64'):
     content = '<Updates>'
-    for name in ['org.easyscience.edi', 'org.easyscience.edi.assistant']:
+    names = ['org.easyscience.edi', 'org.easyscience.edi.assistant']
+    if platform == 'macos-arm64':
+        names.append('org.easyscience.edi.maintenancetool')
+    for name in names:
         component = folder / name
         component.mkdir(parents=True)
         archive = component / f'{version}content.7z'
@@ -383,14 +386,14 @@ def test_stable_release_attaches_every_platform_component_archive(tmp_path):
         delivery.mkdir()
         if index:
             PROMOTE.pack_components(
-                component_repository(tmp_path / f'repo-{platform}'),
+                component_repository(tmp_path / f'repo-{platform}', platform=target),
                 delivery / PROMOTE.components_name('2026.11.0', target, 'stable'),
             )
     with pytest.raises(ValueError, match='all platforms together'):
         PROMOTE.stage_optional_assets(tmp_path, assets, release)
     first, target = next(iter(PROMOTE.PLATFORMS.items()))
     PROMOTE.pack_components(
-        component_repository(tmp_path / 'repo-first'),
+        component_repository(tmp_path / 'repo-first', platform=target),
         tmp_path / f'installer-{first}' / PROMOTE.components_name('2026.11.0', target, 'stable'),
     )
     PROMOTE.stage_optional_assets(tmp_path, assets, release)
