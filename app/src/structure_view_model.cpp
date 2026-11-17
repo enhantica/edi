@@ -42,7 +42,9 @@ const std::vector<edi::SpaceGroupSettingName>& space_group_settings() {
 std::vector<edi::Category> shown_categories(edi::Structure& structure) {
     std::vector<edi::Category> categories = edi::structure_categories(structure);
     // The bond cutoffs and the bonds they give: a designed group in Extra (GeomGroup.qml).
-    categories.push_back({"geom"});
+    edi::Category geom;
+    geom.id = "geom";
+    categories.push_back(std::move(geom));
     for (edi::Category& category : categories)
         if (category.id == "atom_site_aniso") category.rows = structure.atom_sites.size();
     return categories;
@@ -388,7 +390,7 @@ void AtomSiteListModel::remove(int row) {
     }
     edi::Structure& structure = structure_;
     editor_.apply_creation_control(edi::Edit::erase_atom_site(structure, static_cast<std::size_t>(row)), true,
-        {ProjectEditor::CreationAction::Kind::AtomRemove,keyAt(row)});
+        {ProjectEditor::CreationAction::Kind::AtomRemove, keyAt(row), {}, {}, 0});
 }
 
 // ---- AtomSiteAdpListModel -----------------------------------------------------------------------
