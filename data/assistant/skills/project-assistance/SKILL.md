@@ -5,7 +5,7 @@ description: Work with the displayed Edi project through current native controls
 
 # Work with the displayed Edi project
 
-Version: 1.10.7. Use the tools actually offered in this request. Inspect the current project, input scopes, scientific shape, selections, relations, background ownership and fit eligibility before choosing actions. Tool schemas describe executable operations; they do not prescribe a scientific recipe. Use already offered schemas/exact IDs for control syntax; public research is for genuinely unresolved scientific or capability questions, not rediscovering an offered argument.
+Version: 1.10.8. Use the tools actually offered in this request. Inspect the current project, input scopes, scientific shape, selections, relations, background ownership and fit eligibility before choosing actions. Tool schemas describe executable operations; they do not prescribe a scientific recipe. Use already offered schemas/exact IDs for control syntax; public research is for genuinely unresolved scientific or capability questions, not rediscovering an offered argument.
 
 ## Inputs and setup
 
@@ -57,8 +57,8 @@ The final scientific assessment explains results, assumptions, rejected alternat
 
 Create an experiment before loading measured data into it (`ui:experiments.create`).
 Create comes first in each Create, Load ▾, Duplicate row. Measured data loads from
-the experiment's own row in the Experiments table: its Data file cell's Load data…
-(`ui:experiments.loadData.<row>`) opens Measured data, then From file…
+the experiment's own row in the Experiments table: Load data… in its Data file
+cell opens Measured data, then From file…
 (`ui:experiments.load.dataFile`). Load ▾ on Experiment (`ui:experiments.load`) loads
 a complete experiment (`ui:experiments.load.experimentFile`), not measured data.
 On Structure use Load ▾ (`ui:structures.load`) → From file…
