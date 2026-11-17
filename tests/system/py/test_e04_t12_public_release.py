@@ -16,6 +16,7 @@ import lzma
 import os
 import re
 import runpy
+import shlex
 import struct
 import subprocess
 import sys
@@ -469,25 +470,31 @@ def workflows():
 
 
 def nonfork(condition):
-    # Before: every negation refused, including the owner's safe cancellation guard.
-    # After: permit only the exact !cancelled() status conjunct; positive fork
-    # admission is still mandatory, with every OR or other negation refused.
-    condition = str(condition).replace('!cancelled()', 'True')
-    if '||' in condition or '!' in condition.replace('!=', ''):
+    # Before: every OR and non-status negation refused, including qualification
+    # alternatives dominated by a trusted dispatch guard. After: every admitted
+    # route must carry a positive trusted guard; an unguarded OR arm still refuses.
+    condition = str(condition).strip().removeprefix('${{').removesuffix('}}').strip()
+    condition = condition.replace('&&', ' and ').replace('||', ' or ')
+    condition = re.sub(r'!(?!=)', ' not ', condition)
+    condition = re.sub(r'\bfalse\b', 'False', condition)
+    condition = re.sub(r'\btrue\b', 'True', condition)
+    try:
+        node = ast.parse(condition.strip(), mode='eval').body
+    except SyntaxError:
         return False
-    return any(
-        token
-        in [
-            term.strip(' ()')
-            for term in condition.replace('${{', '').replace('}}', '').split('&&')
-        ]
-        for token in (
-            'github.event.pull_request.head.repo.fork == false',
+
+    def guarded(node):
+        if isinstance(node, ast.BoolOp):
+            combine = any if isinstance(node.op, ast.And) else all
+            return combine(guarded(child) for child in node.values)
+        return ast.unparse(node) in {
+            'github.event.pull_request.head.repo.fork == False',
             'github.event.pull_request.head.repo.full_name == github.repository',
             "github.event_name == 'push'",
             "github.event_name == 'workflow_dispatch'",
-        )
-    )
+        }
+
+    return guarded(node)
 
 
 def runner_values(job):
@@ -553,7 +560,20 @@ def public_token_findings(documents):
                     disabled or nonfork(job.get('if', '')) or nonfork(step.get('if', ''))
                 ):
                     findings.append(filename + ':' + name + ':unguarded private token')
-                if private and not job.get('environment'):
+                environment = job.get('environment')
+                if isinstance(environment, dict):
+                    environment = environment.get('name')
+                public_jobs = {
+                    'pages.yml': {'publish-docs', 'publish-wasm'},
+                    'installers.yml': {'publish-installers'},
+                    'release-publish.yml': {'publish-downloads'},
+                }
+                reviewed = (
+                    environment == 'public-site'
+                    if name in public_jobs.get(filename, set())
+                    else bool(environment)
+                )
+                if private and not reviewed:
                     findings.append(filename + ':' + name + ':token outside reviewed environment')
     return findings
 
@@ -733,7 +753,7 @@ def test_webapp_artifact_allowance_refuses_native_object_escapes(defect):
     )
 
 
-def pages_operation(steps, token):
+def pages_operation(steps, token, *, condition=None):
     matches = [
         (index, step)
         for index, step in enumerate(steps)
@@ -746,12 +766,121 @@ def pages_operation(steps, token):
     ]
     assert len(matches) == 1, 'Pages requires one actual source publication operation: ' + token
     index, step = matches[0]
-    assert active(step, 'push') and not step.get('continue-on-error'), (
-        'Each Pages publication operation executes and propagates its actual failure'
+    enabled = active(step, 'push') if condition is None else step.get('if') == condition
+    assert enabled and not step.get('continue-on-error'), (
+        'Each publication operation executes in its declared leg and propagates actual failure'
     )
     return index, step
 
 
+def publication_shell_operation(steps, script):
+    index, step = pages_operation(steps, script)
+    commands = [
+        (line, shlex.split(command))
+        for line, command in enumerate(step['run'].splitlines())
+        if command.strip() and not command.lstrip().startswith('#')
+    ]
+    commands = [
+        (line, command)
+        for line, command in commands
+        if len(command) >= 2
+        and command[0] in {'bash', 'python', 'python3', 'gh'}
+        and command[1] == script
+    ]
+    assert len(commands) == 1, (
+        'Publication executes its actual helper, not a quoted or missing call'
+    )
+    line, command = commands[0]
+    assert not any(any(symbol in token for symbol in ';|&<>') for token in command), (
+        'Publication helper failures cannot be masked by shell control or redirection'
+    )
+    return (index, line), step, command
+
+
+def publication_option(command, name):
+    assert command.count(name) == 1 and command.index(name) + 1 < len(command), (
+        'The actual site assembly declares each required input exactly once: ' + name
+    )
+    return command[command.index(name) + 1]
+
+
+def public_site_boundary(publish, component, incoming, artifact_index):
+    assert (
+        publish['concurrency']['group'] == 'pages-publication'
+        and str(publish['concurrency']['cancel-in-progress']).lower() == 'false'
+    ), 'Independent public-site publication serializes without cancelling a counterpart update'
+    steps = publish['steps']
+    token_index, token = pages_operation(steps, 'actions/create-github-app-token@')
+    assert (
+        token['with']['owner'] == 'enhantica' and token['with']['repositories'] == 'edi-sites'
+    ), 'The public-site publisher mints access only to the intended site repository'
+    fetch_position, fetch, fetch_command = publication_shell_operation(
+        steps, 'tools/ci/fetch_deploy_branch.sh'
+    )
+    assembly_position, _assembly, assembly_command = publication_shell_operation(
+        steps, 'tools/ci/pages_update.py'
+    )
+    push_position, push, push_command = publication_shell_operation(
+        steps, 'tools/ci/push_deploy_branch.sh'
+    )
+    assert len(fetch_command) == 4 and fetch_command[2] == 'deploy-docs', (
+        'Counterpart content comes from the public documentation branch, never developer Pages'
+    )
+    assert (
+        publication_option(assembly_command, '--component') == component
+        and publication_option(assembly_command, '--incoming') == incoming
+        and publication_option(assembly_command, '--repo') == '$GITHUB_REPOSITORY'
+        and publication_option(assembly_command, '--base') == fetch_command[3]
+    ), 'Actual assembly overlays the addressed component onto the fetched public counterpart'
+    site = publication_option(assembly_command, '--site')
+    assert len(push_command) == 4 and push_command[2:] == [site, 'deploy-docs'], (
+        'Publication pushes exactly the assembled site to the intended public documentation branch'
+    )
+    assert (
+        artifact_index < fetch_position[0]
+        and token_index < fetch_position[0]
+        and fetch_position < assembly_position < push_position
+    ), (
+        'Each publisher receives its component, fetches its counterpart, assembles '
+        'and publishes in order'
+    )
+    expected_token = '${{ steps.' + token['id'] + '.outputs.token }}'
+    assert all(
+        step.get('env', {}).get('SITES_TOKEN') == expected_token for step in (fetch, push)
+    ), 'Fetching and publishing use the same repository-narrowed public-site token'
+
+
+def public_main_destinations(documents):
+    for filename in ('pages.yml', 'installers.yml', 'release-publish.yml'):
+        doc = documents[filename]
+        assert doc.get('permissions', {}).get('pages') != 'write', (
+            'Main public publication has no developer Pages deployment permission'
+        )
+        for job in doc['jobs'].values():
+            environment = job.get('environment')
+            if isinstance(environment, dict):
+                environment = environment.get('name')
+            assert environment != 'github-pages', (
+                'Main public publishers never enter the developers GitHub Pages environment'
+            )
+            assert job.get('permissions', {}).get('pages') != 'write', (
+                'No main publisher retains developer Pages deployment permission'
+            )
+            assert not any(
+                any(
+                    action in step.get('uses', '')
+                    for action in (
+                        'actions/deploy-pages@',
+                        'actions/upload-pages-artifact@',
+                    )
+                )
+                for step in job.get('steps', [])
+            ), 'Main public workflows never upload or deploy the developers GitHub Pages site'
+
+
+# Before: component publication required a composed Pages artifact and deploy-pages.
+# After: the addressed artifact overlays its counterpart from edi-sites/deploy-docs,
+# then the assembled site is pushed to that branch, without touching developer Pages.
 def pages_component_boundary(doc, component, producer, artifact, incoming):
     build = doc['jobs'][producer]
     steps = build['steps']
@@ -766,7 +895,7 @@ def pages_component_boundary(doc, component, producer, artifact, incoming):
         'Actual docs or wasm inputs are checked and built before their artifact is uploaded'
     )
     assert upload['with']['name'] == artifact, (
-        'Each Pages component uploads its exact addressed artifact'
+        'Each public component uploads its exact addressed artifact'
     )
     assert upload['with']['path'] == ('site' if component == 'docs' else 'build/wasm/site'), (
         'The component upload contains the real source-built publication output'
@@ -775,10 +904,6 @@ def pages_component_boundary(doc, component, producer, artifact, incoming):
     assert publish['needs'] in (producer, [producer]), (
         'Each publication waits for its own completed build'
     )
-    assert (
-        publish['concurrency']['group'] == 'pages-publication'
-        and str(publish['concurrency']['cancel-in-progress']).lower() == 'false'
-    ), 'Independent component publication serializes without cancelling a counterpart update'
     steps = publish['steps']
     download_index, download = pages_operation(steps, 'actions/download-artifact@')
     assert download['with']['name'] == artifact and download['with']['path'] == incoming, (
@@ -789,24 +914,117 @@ def pages_component_boundary(doc, component, producer, artifact, incoming):
     ) == '${{ github.run_id }}' and not download['with'].get('pattern'), (
         'Component publication cannot substitute a foreign run or merged artifact selection'
     )
-    placement_index, placement = pages_operation(steps, 'tools/ci/pages_update.py')
-    assert (
-        '--component ' + component in placement['run']
-        and '--incoming ' + incoming in placement['run']
-        and '--site site' in placement['run']
-    ), 'The site overlay owner receives the correct component and preserves its counterpart'
-    upload_index, upload = pages_operation(steps, 'actions/upload-pages-artifact@')
-    deploy_index, deploy = pages_operation(steps, 'actions/deploy-pages@')
-    assert download_index < placement_index < upload_index < deploy_index, (
-        'Each publisher downloads, overlays, uploads and deploys its actual component in order'
+    public_site_boundary(publish, component, incoming, download_index)
+
+
+def installers_publication_boundary(doc):
+    publish = doc['jobs']['publish-installers']
+    assert publish['needs'] in ('installers', ['installers']), (
+        'Public installer publication waits for actual installer qualification'
+    )
+    steps = publish['steps']
+    fresh = [
+        (index, step)
+        for index, step in enumerate(steps)
+        if 'actions/download-artifact@' in step.get('uses', '')
+        and step.get('with', {}).get('path') == 'components'
+    ]
+    assert len(fresh) == 1, 'The public installer publisher receives one addressed component set'
+    artifact_index, download = fresh[0]
+    assert download['with'] == {
+        'pattern': 'installer-components-*-${{ github.run_attempt }}',
+        'merge-multiple': 'true',
+        'path': 'components',
+    }, 'Fresh installer components belong to the current qualified attempt without foreign runs'
+    assert download.get('if') == "inputs.preview_run == ''" and not download.get(
+        'continue-on-error'
+    ), 'Fresh installer artifacts are used only without a recovered preview run'
+    recovery_index, recovery = pages_operation(
+        steps, 'tools/release/preview.py', condition="inputs.preview_run != ''"
     )
     assert (
-        upload['with']['path'] == 'site'
-        and upload['with']['name'] == 'pages-site-' + component + '-${{ github.run_attempt }}'
-    ), 'The Pages artifact binds the composed site, selected component and current attempt'
-    assert deploy['with']['artifact_name'] == upload['with']['name'], (
-        'Deployment consumes exactly the composed Pages artifact from this attempt'
+        "inputs.preview_run != ''" in recovery.get('if', '')
+        and recovery.get('env', {}).get('PREVIEW_RUN') == '${{ inputs.preview_run }}'
+        and '--run "$PREVIEW_RUN"' in recovery['run']
+        and 'mv preview/components components' in recovery['run']
+    ), 'Recovered qualified preview components feed the same public-site assembly'
+    qualification = next(
+        (
+            index
+            for index, step in enumerate(steps)
+            if 'components/testing' in step.get('run', '') and 'Updates.xml' in step.get('run', '')
+        ),
+        None,
     )
+    assert (
+        qualification is not None
+        and artifact_index < qualification
+        and steps[qualification].get('if') == "inputs.preview_run == ''"
+        and not steps[qualification].get('continue-on-error')
+    ), 'Fresh installer components retain their selected-platform metadata qualification'
+    public_site_boundary(publish, 'installers', 'components', max(recovery_index, qualification))
+
+
+def released_publication_boundary(doc):
+    publish = doc['jobs']['publish']
+    steps = publish['steps']
+    finalize_index, finalize = pages_operation(steps, '--finalize')
+    assert 'tools/release/publish_assets.py' in finalize['run'], (
+        'The published tag follows actual verified release finalization'
+    )
+    push_position, _push, command = publication_shell_operation(
+        steps, 'tools/ci/push_deploy_branch.sh'
+    )
+    assert command[2:] == ['released-webapp/webapp', 'deploy-app'], (
+        'The released web app reaches the released-app public branch, separate from main previews'
+    )
+    assert finalize_index < push_position[0], (
+        'The released app is published only after the verified release assets are finalized'
+    )
+    downloads = doc['jobs']['publish-downloads']
+    assert downloads['needs'] in ('publish', ['publish']), (
+        'Download repositories are requested only after successful release publication'
+    )
+    _, token = pages_operation(downloads['steps'], 'actions/create-github-app-token@')
+    assert (
+        token['with']['owner'] == 'enhantica' and token['with']['repositories'] == 'edi-download'
+    ), 'The download dispatch token is narrowed to the actual download repository'
+    token_index = downloads['steps'].index(token)
+    dispatch_position, dispatch, command = publication_shell_operation(
+        downloads['steps'], 'workflow'
+    )
+    assert (
+        command[:4] == ['gh', 'workflow', 'run', 'publish.yml']
+        and publication_option(command, '--repo') == 'enhantica/edi-download'
+        and publication_option(command, '--ref') == 'main'
+        and publication_option(command, '-f') == 'tag=$TAG'
+    ), 'Every release dispatches its addressed tag to the intended download publishing workflow'
+    assert (
+        token_index < dispatch_position[0]
+        and dispatch.get('env', {}).get('GH_TOKEN')
+        == '${{ steps.' + token['id'] + '.outputs.token }}'
+        and dispatch.get('env', {}).get('TAG') == '${{ needs.publish.outputs.tag }}'
+    ), 'The download dispatch consumes its own narrow token and the completed release tag'
+    published_tag_boundary(publish, finalize_index)
+
+
+def published_tag_boundary(publish, finalize_index):
+    steps = publish['steps']
+    output = publish.get('outputs', {}).get('tag', '')
+    match = re.fullmatch(r'\$\{\{ steps\.([\w-]+)\.outputs\.tag \}\}', output)
+    assert match, 'The download request is bound to an actual release-job tag output'
+    tags = [(index, step) for index, step in enumerate(steps) if step.get('id') == match[1]]
+    assert len(tags) == 1 and finalize_index < tags[0][0], (
+        'The published tag is exported only after the real release has finalized'
+    )
+    tag = tags[0][1]
+    assert (
+        active(tag, 'workflow_dispatch')
+        and not tag.get('continue-on-error')
+        and 'publication/release.json' in tag.get('run', '')
+        and 'tag=v$(' in tag['run']
+        and '$GITHUB_OUTPUT' in tag['run']
+    ), 'The actual output tag comes from the finalized immutable release metadata'
 
 
 def test_pages_builds_docs_and_publishes_the_linked_webapp():
@@ -815,6 +1033,9 @@ def test_pages_builds_docs_and_publishes_the_linked_webapp():
     doc = documents['pages.yml']
     pages_component_boundary(doc, 'docs', 'docs', 'pages-docs', 'documentation')
     pages_component_boundary(doc, 'wasm', 'wasm', 'pages-webapp', 'webapp')
+    public_main_destinations(documents)
+    installers_publication_boundary(documents['installers.yml'])
+    released_publication_boundary(documents['release-publish.yml'])
     config = yaml.load((ROOT / 'mkdocs.yml').read_text(), Loader=yaml.BaseLoader)
     address = 'https://app.easydiffraction.org/'
     assert address in json.dumps(config.get('nav', [])), (
@@ -829,29 +1050,212 @@ def test_pages_builds_docs_and_publishes_the_linked_webapp():
     assert 'site_url' in config, 'The public documentation declares its canonical published URL'
 
 
-@pytest.mark.parametrize('defect', ['missing-build', 'disabled-placement', 'upload-first'])
-def test_pages_publication_rejects_missing_or_bypassed_real_app(defect, monkeypatch):
+def damage_component_artifact(steps, defect):
+    _index, download = pages_operation(steps, 'actions/download-artifact@')
+    if defect == 'foreign-artifact':
+        download['with']['name'] = 'unrelated-component'
+    elif defect == 'foreign-run':
+        download['with']['run-id'] = '${{ inputs.another_run }}'
+    else:
+        download['with']['pattern'] = 'pages-*'
+        download['with']['merge-multiple'] = 'true'
+
+
+def damage_branch_publication(steps, defect):
+    index, push = pages_operation(steps, 'tools/ci/push_deploy_branch.sh')
+    if defect == 'publish-first':
+        steps.insert(0, steps.pop(index))
+    elif defect == 'optional-publish':
+        push['continue-on-error'] = 'true'
+    else:
+        push['run'] = push['run'].replace('deploy-docs', 'deploy-app')
+
+
+@pytest.mark.parametrize('component', ['docs', 'wasm'])
+@pytest.mark.parametrize(
+    'defect',
+    [
+        'missing-build',
+        'disabled-placement',
+        'publish-first',
+        'foreign-artifact',
+        'foreign-run',
+        'merged-artifact',
+        'wrong-source-branch',
+        'wrong-base',
+        'wrong-target-branch',
+        'placement-before-fetch',
+        'optional-publish',
+        'developer-pages',
+    ],
+)
+def test_pages_publication_rejects_missing_or_bypassed_real_app(defect, component, monkeypatch):
     import copy  # noqa: PLC0415
 
     test_pages_builds_docs_and_publishes_the_linked_webapp()
     damaged = copy.deepcopy(workflows())
-    pages = next(doc for name, doc in damaged if name == 'pages.yml')
+    pages = dict(damaged)['pages.yml']
+    steps = pages['jobs']['publish-' + component]['steps']
     if defect == 'missing-build':
-        steps = pages['jobs']['wasm']['steps']
-        steps[:] = [step for step in steps if 'wasm-build' not in step.get('run', '')]
+        build_steps = pages['jobs'][component]['steps']
+        token = 'wasm-build' if component == 'wasm' else 'site-build --require-outputs'
+        build_steps[:] = [step for step in build_steps if token not in step.get('run', '')]
+    elif defect in {'foreign-artifact', 'foreign-run', 'merged-artifact'}:
+        damage_component_artifact(steps, defect)
+    elif defect == 'developer-pages':
+        steps.append({'uses': 'actions/deploy-pages@v4'})
+    elif defect in {'publish-first', 'optional-publish', 'wrong-target-branch'}:
+        damage_branch_publication(steps, defect)
     else:
-        steps = pages['jobs']['publish-wasm']['steps']
+        _index, assembly = pages_operation(steps, 'tools/ci/pages_update.py')
         if defect == 'disabled-placement':
-            next(step for step in steps if 'tools/ci/pages_update.py' in step.get('run', ''))[
-                'if'
-            ] = 'false'
-        else:
-            index = next(
-                i
-                for i, step in enumerate(steps)
-                if 'upload-pages-artifact' in step.get('uses', '')
+            assembly['if'] = 'false'
+        elif defect == 'wrong-source-branch':
+            assembly['run'] = assembly['run'].replace(
+                'fetch_deploy_branch.sh deploy-docs', 'fetch_deploy_branch.sh deploy-app'
             )
+        elif defect == 'wrong-base':
+            assembly['run'] = assembly['run'].replace(
+                '--base "$RUNNER_TEMP/deployed"', '--base "$RUNNER_TEMP/unrelated"'
+            )
+        else:
+            assembly['run'] = '\n'.join(reversed(assembly['run'].splitlines()))
+    monkeypatch.setattr(sys.modules[__name__], 'workflows', lambda: damaged)
+    with pytest.raises(AssertionError):
+        test_pages_builds_docs_and_publishes_the_linked_webapp()
+
+
+@pytest.mark.parametrize(
+    ('workflow', 'job'),
+    [
+        ('pages.yml', 'publish-docs'),
+        ('pages.yml', 'publish-wasm'),
+        ('installers.yml', 'publish-installers'),
+        ('release-publish.yml', 'publish-downloads'),
+    ],
+)
+@pytest.mark.parametrize('defect', ['missing', 'other'])
+def test_public_site_tokens_require_the_reviewed_environment(workflow, job, defect):
+    import copy  # noqa: PLC0415
+
+    documents = workflows()
+    assert not public_token_findings(documents), (
+        'Every actual public publisher starts inside its reviewed credential boundary'
+    )
+    damaged = copy.deepcopy(documents)
+    target = dict(damaged)[workflow]['jobs'][job]
+    if defect == 'missing':
+        target.pop('environment')
+    else:
+        target['environment'] = 'github-pages'
+    assert f'{workflow}:{job}:token outside reviewed environment' in public_token_findings(
+        damaged
+    ), 'A missing or substituted environment cannot mint the public destination credential'
+
+
+@pytest.mark.parametrize(
+    'defect',
+    [
+        'missing-components',
+        'foreign-run',
+        'missing-recovery',
+        'wrong-base',
+        'wrong-target-branch',
+        'developer-pages',
+    ],
+)
+def test_public_installer_destination_rejects_bypasses(defect, monkeypatch):
+    import copy  # noqa: PLC0415
+
+    test_pages_builds_docs_and_publishes_the_linked_webapp()
+    damaged = copy.deepcopy(workflows())
+    steps = dict(damaged)['installers.yml']['jobs']['publish-installers']['steps']
+    if defect in {'missing-components', 'foreign-run'}:
+        index = next(
+            index
+            for index, step in enumerate(steps)
+            if step.get('with', {}).get('path') == 'components'
+        )
+        if defect == 'missing-components':
+            steps.pop(index)
+        else:
+            steps[index]['with']['run-id'] = '${{ inputs.another_run }}'
+    elif defect == 'missing-recovery':
+        index, _step = pages_operation(
+            steps, 'tools/release/preview.py', condition="inputs.preview_run != ''"
+        )
+        steps.pop(index)
+    elif defect == 'developer-pages':
+        steps.append({'uses': 'actions/deploy-pages@v4'})
+    else:
+        script = (
+            'tools/ci/push_deploy_branch.sh'
+            if defect == 'wrong-target-branch'
+            else 'tools/ci/pages_update.py'
+        )
+        _index, step = pages_operation(steps, script)
+        step['run'] = (
+            step['run'].replace('deploy-docs', 'deploy-app')
+            if defect == 'wrong-target-branch'
+            else step['run'].replace(
+                '--base "$RUNNER_TEMP/deployed"', '--base "$RUNNER_TEMP/unrelated"'
+            )
+        )
+    monkeypatch.setattr(sys.modules[__name__], 'workflows', lambda: damaged)
+    with pytest.raises(AssertionError):
+        test_pages_builds_docs_and_publishes_the_linked_webapp()
+
+
+@pytest.mark.parametrize(
+    'defect',
+    [
+        'no-dependency',
+        'wrong-token-repository',
+        'wrong-dispatch-repository',
+        'wrong-tag',
+        'disabled-dispatch',
+        'dispatch-first',
+        'wrong-app-branch',
+        'developer-pages',
+    ],
+)
+def test_released_public_destinations_reject_bypasses(defect, monkeypatch):
+    import copy  # noqa: PLC0415
+
+    test_pages_builds_docs_and_publishes_the_linked_webapp()
+    damaged = copy.deepcopy(workflows())
+    release = dict(damaged)['release-publish.yml']
+    downloads = release['jobs']['publish-downloads']
+    steps = downloads['steps']
+    if defect == 'no-dependency':
+        downloads['needs'] = 'unrelated-job'
+    elif defect == 'wrong-token-repository':
+        _index, token = pages_operation(steps, 'actions/create-github-app-token@')
+        token['with']['repositories'] = 'edi-sites'
+    elif defect in {
+        'wrong-dispatch-repository',
+        'wrong-tag',
+        'disabled-dispatch',
+        'dispatch-first',
+    }:
+        index, dispatch = pages_operation(steps, 'gh workflow run')
+        if defect == 'wrong-dispatch-repository':
+            dispatch['run'] = dispatch['run'].replace(
+                'enhantica/edi-download', 'enhantica/edi-sites'
+            )
+        elif defect == 'wrong-tag':
+            dispatch['env']['TAG'] = 'v-unrelated-release'
+        elif defect == 'disabled-dispatch':
+            dispatch['if'] = 'false'
+        else:
             steps.insert(0, steps.pop(index))
+    elif defect == 'wrong-app-branch':
+        _index, push = pages_operation(
+            release['jobs']['publish']['steps'], 'tools/ci/push_deploy_branch.sh'
+        )
+        push['run'] = push['run'].replace('deploy-app', 'deploy-docs')
+    else:
+        steps.append({'uses': 'actions/deploy-pages@v4'})
     monkeypatch.setattr(sys.modules[__name__], 'workflows', lambda: damaged)
     with pytest.raises(AssertionError):
         test_pages_builds_docs_and_publishes_the_linked_webapp()
