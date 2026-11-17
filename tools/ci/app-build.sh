@@ -74,7 +74,8 @@ if [ -z "${CI:-}" ] && [ "${EDI_LOCAL_COLLECTION:-}" != off ]; then
             else
                 echo "app-build: edi-data $ref not fetched (offline?); using the copy in $collection"
             fi
-        elif ! timeout 300 git clone -q --depth 1 --branch "$ref" https://github.com/enhantica/edi-data "$collection"; then
+        elif ! timeout 300 git clone -q --depth 1 --branch "$ref" \
+            https://github.com/enhantica/edi-data "$collection"; then
             echo "app-build: edi-data could not be cloned; building without a local collection" >&2
             collection=""
         fi

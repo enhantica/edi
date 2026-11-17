@@ -44,7 +44,8 @@ no database server.
   served online, and a changed file is downloaded and used once it has arrived, so no open waits for the network
   (the owner, 2026-11-17). Offline the copy serves alone. A local build reads a copy in place
   (`EDI_LOCAL_COLLECTION`, cloned into `build/edi-data` by `tools/ci/app-build.sh` from the edi-data branch
-  `EDI_LOCAL_COLLECTION_REF`, default `main`; `EDI_LOCAL_COLLECTION=off` builds without), so it behaves as the installed app. The web app, Python and the CLI have no copy.
+  `EDI_LOCAL_COLLECTION_REF`, default `main`; `EDI_LOCAL_COLLECTION=off` builds without), so it behaves as the
+  installed app. The web app, Python and the CLI have no copy.
   A row can be disabled; user rows, a name and a URL, can be added, edited and removed. The table persists in the
   settings file (`Online/sources`); a built-in row's name and URL come from the program, so an update can move them.
 - **The index.** A collection is plain files in a git repository behind one base URL, with one generated
