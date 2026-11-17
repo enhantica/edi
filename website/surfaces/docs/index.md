@@ -24,7 +24,7 @@ hide:
 
 # Making <span class="ed-landing__accent">diffraction</span><br>data analysis and<br>modelling <span class="ed-landing__accent">easy</span> { #landing-heading }
 
-<p class="ed-landing__intro">Calculate diffraction patterns and fit a structural model to your data. Need a hand? Use the AI assistant in the desktop app.</p>
+<p class="ed-landing__intro">Calculate diffraction patterns and fit a structural model to your data. Need a hand? Use the AI assistant in the desktop application.</p>
 
 </div>
 
