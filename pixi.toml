@@ -246,6 +246,8 @@ installer-check = "pixi run --manifest-path tools/installer/pixi.toml python -m 
 # and runs each step on that build: app-verify (and the verify chains that include it) through pixi's shared
 # dependency, each CI app job through `pixi run --skip-deps` (as the owner corrected it on 2026-09-29).
 app-build = { cmd = ["bash", "tools/ci/app-build.sh"]  }
+# moc for every app target, so clang-tidy can read each source that includes its own .moc (cpp-tidy).
+app-moc = { cmd = ["bash", "tools/ci/app-moc.sh"] }
 app-test-assistant-groups = { cmd = "cmake --build build/app --target assistant_real_owner_probe -j 4 && python -m pytest tests/fixtures/assistant_fixes/check_grouped_flags.py --noconftest -o addopts= -q", depends-on = ["app-build"] }
 app-test-assistant-lifetime = { cmd = "cmake --build build/app --target edi_assistant_lifetime_host -j 4 && python -m pytest tests/fixtures/assistant_fixes/check_process_lifetime.py --noconftest -o addopts= -q", depends-on = ["app-build"] }
 app-test-skill-targets = { cmd = "python tools/checks/assistant_skill_targets.py && python -m pytest tests/unit/py/test_assistant_skill_targets.py --noconftest -o addopts= -q" }

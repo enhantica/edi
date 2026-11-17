@@ -62,7 +62,8 @@ formatting & static analysis (Python + C++)". The owner asked for the same check
    and cppcheck skip them, as sources and as headers, until that change lands, when they are swept and the list is
    emptied. Every other file is checked.
 8. **Both checks are CI steps of the app job on Linux and macOS** ("clang-tidy with the Clang Static Analyzer (zero
-   findings)", "cppcheck (zero findings)"), after the build whose compile commands they read. They run after a failed
+   findings)", "cppcheck (zero findings)"), after the build whose compile commands they read, and after `app-moc` runs moc for every app target: a test runner
+   the job does not build still has its sources in those commands, and each includes its own `.moc`. They run after a failed
    step too, so one round lists every finding.
 
 ## Consequences
