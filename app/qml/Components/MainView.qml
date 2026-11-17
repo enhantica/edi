@@ -35,8 +35,10 @@ EaComponents.MainContent {
     // The tab the page opens on, whatever the tab order (the owner, 2026-11-17: Pattern on Analysis and Experiment).
     property string defaultKey: tabKeys[0]
     readonly property int ownTab: tabOf(defaultKey)
-    // The tab the user last picked on this page: it opens on that one with each later project, for the session.
-    property string chosenKey: ""
+    // The tab the user last picked on this page: it opens on that one with each later project, for the session. Kept by
+    // page in SideBarGroups, as a new project builds its pages again.
+    property string pageKey: defaultKey
+    readonly property string chosenKey: SideBarGroups.tabPick(pageKey)
     function available(key) {
         const tab = bar && key !== "" && shows(key) ? bar.itemAt(tabOf(key)) : null;
         return tab !== null && tab.enabled && tab.visible;
@@ -82,7 +84,18 @@ EaComponents.MainContent {
         if (!bar || !shown || ownTabOpened)
             return;
         ownTabOpened = true;
+        pickPending = chosenKey !== "" && !available(chosenKey);
         showMainTab(available(chosenKey) ? tabOf(chosenKey) : ownTab);
+    }
+    // The user's pick may not be available yet when the page first shows a new project (its structures still
+    // loading): the page opens on its own tab and moves to the pick once it is, unless the user picked another.
+    property bool pickPending: false
+    readonly property bool pickReady: pickPending && available(chosenKey)
+    onPickReadyChanged: {
+        if (pickReady) {
+            pickPending = false;
+            showMainTab(tabOf(chosenKey));
+        }
     }
     onProjectChanged: {
         ownTabOpened = false;
@@ -97,8 +110,10 @@ EaComponents.MainContent {
     // Only a click on a tab is the user's pick: the bar also moves by itself while a project closes and opens, and
     // that move used to overwrite the pick with the first tab.
     function keepPick() {
-        if (shown)
-            chosenKey = currentKey;
+        if (shown) {
+            SideBarGroups.setTabPick(view.pageKey, view.currentKey);
+            pickPending = false;
+        }
     }
     // The pages' list keeps its old position when the tab changes while the view is hidden (a scan project opened
     // straight onto Analysis showed the previous project's structure under the Pattern tab): put it on the current

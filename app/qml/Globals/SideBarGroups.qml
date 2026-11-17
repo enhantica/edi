@@ -22,6 +22,18 @@ QtObject {
 
     // Open as the user left it; with nothing remembered, open when it is the first group its tab shows and closed
     // otherwise: the first group of every tab of every page starts unfolded (the owner, 2026-10-25).
+    // The main-view tab the user last picked on each page, for the session: kept across projects, unlike the open
+    // groups, so a page opens the next project on that tab (the owner, 2026-11-17).
+    property var tabPicks: ({})
+    function tabPick(page) {
+        return tabPicks[page] ?? "";
+    }
+    function setTabPick(page, key) {
+        const picks = Object.assign({}, tabPicks);
+        picks[page] = key;
+        tabPicks = picks;
+    }
+
     function isOpen(key, group) {
         return ApplicationInfo.sidebarIsOpen(key, group);
     }
