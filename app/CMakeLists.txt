@@ -315,6 +315,7 @@ qt_add_qml_module(edi_app_module
         qml/Pages/Structure/AtomSiteMomentGroup.qml
         qml/Pages/Structure/MagneticFormFactorsGroup.qml
         qml/Pages/Structure/MagneticSpaceGroupGroup.qml
+        qml/Pages/Structure/PolyhedraGroup.qml
         qml/Pages/Structure/PropagationVectorsGroup.qml
         qml/Pages/Structure/AtomSitesGroup.qml
         qml/Pages/Structure/CellGroup.qml

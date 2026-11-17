@@ -36,12 +36,15 @@ Drag to rotate, use the wheel to zoom, and drag with the right mouse button to p
 | <span class="ed-reference-icon" aria-hidden="true">&#62930;</span> Atoms | Show all symmetry copies, the asymmetric unit only, or no atoms |
 | <span class="ed-reference-icon" aria-hidden="true">&#61483;</span> Labels | Show or hide atom names |
 | <span class="ed-reference-icon" aria-hidden="true">&#61633;</span> Bonds | Show or hide bonds when the structure has them |
+| <span class="ed-reference-icon" aria-hidden="true">&#63183;</span> Polyhedra | Show or hide the coordination polyhedra |
 | <span class="ed-reference-icon" aria-hidden="true">&#62923;</span> Cell | Show or hide the unit-cell outline |
 | <span class="ed-reference-icon" aria-hidden="true">&#61732;</span> Axes | Show or hide crystallographic directions |
 | <span class="ed-reference-icon" aria-hidden="true">&#61874;</span> Camera | Switch parallel/perspective projection, look along **a**, **b** or **c**, or reset the view |
 | Colour scheme | Choose the element colours used by the view and its legend |
 
 These controls change the picture; they do not change the crystallographic model.
+
+A polyhedron is drawn round each centre atom with at least four corner atoms near it, as the convex shape through those corners. By default the cations are the centres, the anions (N, O, F, S, Cl, Se, Br, Te, I) the corners, and a corner is near when the bond settings bond it to the centre; **Structure → Extra → Polyhedra** changes all three, and the colour, opacity and extent.
 
 <span id="magnetic-moments"></span>
 

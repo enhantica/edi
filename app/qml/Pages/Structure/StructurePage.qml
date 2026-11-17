@@ -83,6 +83,9 @@ WorkflowPage {
                 controller: page.pageViewItem ? page.pageViewItem.structureController : null
                 structure: page.structure
             }
+            PolyhedraGroup {
+                options: page.project ? page.project.structureViewOptions : null
+            }
         }
     }
     textItem: Component {
