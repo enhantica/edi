@@ -842,6 +842,13 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
             steps_.push_back({QStringLiteral("freecheck-%1").arg(i + 1, 2, 10, QLatin1Char('0')), actions});
         }
     }
+    // The series dialog for the synthetic example's files, grouped before it loads (`--demo-only seriesload-`).
+    if (only.startsWith(QLatin1String("seriesload-"))) {
+        const QString root = QString::fromUtf8(EDI_CLI_PROJECTS_DIR) + "/";
+        steps_.push_back({"seriesload-1-dialog", {"resize:1480x800", "open-project:" + root + "pd-neut-tof_ncaf-wish/project",
+                                                  "appBar.tab.experiment", basic,
+                                                  "ask-series:" + root + "pd-neut-tof_ncaf-wish-5bank_synthetic-100p/project/data"}});
+    }
     // The series fitted, captured before its result dialog is closed (`--demo-only fitcheck-`).
     if (only.startsWith(QLatin1String("fitcheck-"))) {
         steps_.push_back({"fitcheck-1-after-fit", {"resize:1480x800", "open-project:" + qEnvironmentVariable("EDI_DEMO_SCAN_PROJECT"),
@@ -2249,6 +2256,21 @@ bool DemoDriver::perform(const QString& action) {
         const QDir data(loaded_cli_project_ + QStringLiteral("/experiments/d20_scan"));
         if (loaded_cli_project_.isEmpty() || !QDir(data).removeRecursively()) {
             fail(QStringLiteral("step %1: the scan's data could not be removed").arg(steps_[current_].image));
+            return false;
+        }
+        return true;
+    }
+    // `ask-series:<folder>`: the datasets dialog for the folder's files as a series of joint fits.
+    if (action.startsWith(QLatin1String("ask-series:"))) {
+        const QDir folder(action.mid(QStringLiteral("ask-series:").size()));
+        QVariantList files;
+        for (const QString& name : folder.entryList(QDir::Files, QDir::Name)) {
+            files.append(QUrl::fromLocalFile(folder.filePath(name)));
+        }
+        QQuickItem* group = find(QStringLiteral("experiments.group"), false);
+        if (group == nullptr || files.isEmpty() ||
+            !QMetaObject::invokeMethod(group, "askSeries", Q_ARG(QVariant, QVariant(files)))) {
+            fail(QStringLiteral("step %1: no series dialog for %2").arg(steps_[current_].image, folder.path()));
             return false;
         }
         return true;
