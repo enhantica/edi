@@ -10081,7 +10081,10 @@ QJSValue ApplicationInfo::digitRunIsDigit(const QJSValue& text) const {
     const auto f = panelUsageEngine(this); return panelUsageDeferredMemberCall(f, panelRegex(f, QStringLiteral("^[0-9]$")), "test", [&] { return QJSValueList({text}); });
 }
 QJSValue ApplicationInfo::nameBlockIcon(const QJSValue& kind) const {
-    return QJSValue(kind.strictlyEquals(QJSValue(QStringLiteral("structure"))) ? QStringLiteral("layer-group") : kind.strictlyEquals(QJSValue(QStringLiteral("experiment"))) ? QStringLiteral("microscope") : kind.strictlyEquals(QJSValue(QStringLiteral("parameter"))) ? QStringLiteral("chart-line") : QString());
+    // A series' runs and banks are experiments' datasets: the experiment's icon (the owner, 2026-11-17).
+    const bool experiment = kind.strictlyEquals(QJSValue(QStringLiteral("experiment"))) || kind.strictlyEquals(QJSValue(QStringLiteral("run")))
+                            || kind.strictlyEquals(QJSValue(QStringLiteral("bank")));
+    return QJSValue(kind.strictlyEquals(QJSValue(QStringLiteral("structure"))) ? QStringLiteral("layer-group") : experiment ? QStringLiteral("microscope") : kind.strictlyEquals(QJSValue(QStringLiteral("parameter"))) ? QStringLiteral("chart-line") : QString());
 }
 QJSValue ApplicationInfo::nameParameterIcon(const QJSValue& name) const {
     const auto f = panelUsageEngine(this);
@@ -10733,7 +10736,9 @@ QJSValue ApplicationInfo::appColour(int kind, const QJSValue& first, const QJSVa
     }
     if (kind == 3) {
         if (first.strictlyEquals(QJSValue(QStringLiteral("structure")))) return projectInvoke(f, "colors", "structure", {second});
-        if (first.strictlyEquals(QJSValue(QStringLiteral("experiment")))) return projectInvoke(f, "colors", "experiment", {second});
+        // A series' runs and banks are its experiments' datasets: coloured as a scan's datasets are (the owner, 2026-11-17).
+        if (first.strictlyEquals(QJSValue(QStringLiteral("experiment"))) || first.strictlyEquals(QJSValue(QStringLiteral("run")))
+            || first.strictlyEquals(QJSValue(QStringLiteral("bank")))) return projectInvoke(f, "colors", "experiment", {second});
         return presentationStyle(f, "themeForegroundMinor");
     }
     const auto info = panelUsageContextRead(f, "ApplicationInfo");

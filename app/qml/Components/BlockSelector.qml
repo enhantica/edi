@@ -38,12 +38,16 @@ Row {
     // line carries the word "template" in the accent blue after its name, which the line elides when long.
     property string templateRole: ""
     property bool currentTemplate: false
-    // A word before the greyed number, greyed with it and followed by a dot ("Run 6 · p005"), in place of the block
-    // icon: a series' run and bank selectors (the owner, 2026-11-16).
+    // A word before the greyed number, greyed with it and followed by a dot ("Run 6 · p005"), the block's icon after it:
+    // a series' run and bank selectors (the owner, 2026-11-16, 2026-11-17).
     property string numberPrefix: ""
     // An entry's line drawn by the caller, `lineFor(index, text)`, in place of the block's (a parameter picker:
     // ParameterNames.pickerLine); such a line is cut only at its end, and the list widens to its widest line.
     property var lineFor: null
+    // The width that shows the chosen entry's whole line: its line, the box's padding and arrow, and the two step buttons.
+    // A row with room gives the selector this width (Evolution's parameter selector, the owner, 2026-11-17).
+    readonly property real contentWidth: Math.ceil(shownLine.fullWidth + EaStyle.Sizes.fontPixelSize * 2.5
+                                                   + (selector.indicator ? selector.indicator.width : 0)) + 2 * (up.width + spacing)
     property real lineExtraWidth: EaStyle.Sizes.fontPixelSize * 7
 
     // A step to the previous or next block, as a pick in the box; no step past either end.
@@ -69,16 +73,18 @@ Row {
             if (row.lineFor)
                 return row.lineFor(index, name);
             const line = ApplicationInfo.blockSegments(index, name, nameColor, outcome, isTemplate);
-            // The scan's starting dataset reads "Start" in the greyed text, as the Experiments table's Start column
+            // The scan's starting dataset reads "Start" in the accent, as the Experiments table's file cell
             // names it (the owner, 2026-11-16).
             if (isTemplate && line.length > 0) {
                 line[line.length - 1].text = qsTr("Start");
-                line[line.length - 1].color = String(EaStyle.Colors.themeForegroundMinor);
+                line[line.length - 1].color = String(EaStyle.Colors.themeAccent);
             }
             if (row.numberPrefix === "" || line.length < 2)
                 return line;
+            // The word before the number, the icon kept after it, coloured as the run's or bank's curve (the owner,
+            // 2026-11-17).
             line[0].text = `${row.numberPrefix} ${line[0].text} ·`;
-            return [line[0]].concat(line.slice(2));
+            return line;
         }
 
         objectName: row.objectName ? `${row.objectName}.box` : ""
@@ -105,6 +111,7 @@ Row {
             clip: true
 
             IconLine {
+                id: shownLine
                 x: EaStyle.Sizes.fontPixelSize * 0.75
                 anchors.verticalCenter: parent.verticalCenter
                 segments: selector.segments(selector.currentIndex, selector.currentText, selector.foregroundColor, row.currentOutcome, row.currentTemplate)
