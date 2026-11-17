@@ -17,7 +17,17 @@ from native_runtime import (
     verify_dependencies,
     windows_dependencies,
 )
-from package import ROOT, SYSTEM, run, sha256
+from package import (
+    ROOT,
+    SYSTEM,
+    macos_signing,
+    run,
+    sha256,
+    sign_macos_runtime,
+    sign_windows,
+    submit_for_notarisation,
+    windows_signing,
+)
 from python_wheel import build_wheel
 
 __all__ = (
@@ -81,6 +91,7 @@ def build_cli(
         run(['strip', '--strip-unneeded', binary])
     libraries = bundle_runtime(binary, prefix)
     runtime_notices(libraries, source / 'licenses/dependencies')
+    sign_cli(binary)
     asset = work / f'EasyDiffraction-{version}-{platform}-cli.zip'
     with zipfile.ZipFile(asset, 'w', compression=zipfile.ZIP_DEFLATED) as archive:
         archive.write(binary, executable)
@@ -97,6 +108,9 @@ def build_cli(
                     notice, 'licenses/' + notice.relative_to(source / 'licenses').as_posix()
                 )
 
+    if macos_signing():
+        # A bare executable cannot be stapled; Gatekeeper looks the ticket up online.
+        submit_for_notarisation(asset)
     qualify_cli(asset, executable, version)
     build_wheel(cli, work, version, commit, platform, prefix)
     (work / 'cli-qualification.json').write_text(
@@ -111,6 +125,17 @@ def build_cli(
         + '\n',
         encoding='utf-8',
     )
+
+
+def sign_cli(binary: Path) -> None:
+    """Sign before archiving, so the download holds the signed files (edi ADR-0091)."""
+    if windows_signing():
+        sign_windows(binary)
+    if macos_signing():
+        for library in sorted((binary.parent / '.runtime').iterdir()):
+            if library.is_file() and not library.is_symlink():
+                sign_macos_runtime(library)
+        sign_macos_runtime(binary)
 
 
 def qualify_cli(asset: Path, executable: str, version: str) -> None:

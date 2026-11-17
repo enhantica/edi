@@ -31,6 +31,7 @@ nav:
       - dev/public-site.md
       - dev/installers.md
       - dev/assistant-protocol.md
+      - dev/assistant-prompt-trials.md
       - Adrs:
           - dev/adrs/index.md
           - "ADR-0001 Product scope": dev/adrs/0001-product-scope-and-relation-to-crysta.md
@@ -120,6 +121,7 @@ nav:
           - "ADR-0084 Two palettes": dev/adrs/0084-two-palettes-and-the-gradient-rule.md
           - "ADR-0085 Red s.u.": dev/adrs/0085-red-su-for-poorly-determined-parameters.md
           - "ADR-0086 Powder calculation range": dev/adrs/0086-powder-calculation-range-is-its-grid.md
+          - "ADR-0091 Code signing": dev/adrs/0091-code-signing.md
           - dev/adrs/template.md
       - Design:
           - dev/design/api-types.md

@@ -27,15 +27,17 @@
   ];
 
   // Each question: its key in the answers, its kind and wording. "one" and "rating" are selects; "many" is a grid of
-  // checkboxes, where a first "None" is exclusive; "Other" in either shows a field for the user's own answer.
+  // checkboxes, where a first "None" is exclusive; "Other" in either shows a field for the user's own answer, and a
+  // `follow` choice shows a field of its own (its key and question). The survey is anonymous: it asks nobody's name.
   const sections = [
     {
-      title: 'About you',
+      title: 'About your work',
       questions: [
         { key: 'position', kind: 'one', text: 'Your position', choices: ['Student', 'PhD student', 'Postdoc', 'Staff scientist', 'Instrument scientist', 'Professor or group leader', 'Industry', 'Other'] },
         { key: 'field', kind: 'one', text: 'Your field', choices: ['Physics', 'Chemistry', 'Materials science', 'Earth sciences', 'Biology', 'Engineering', 'Other'] },
         { key: 'experience', kind: 'one', text: 'Experience with diffraction data analysis', choices: ['None yet', 'Less than a year', '1 to 3 years', '3 to 10 years', 'More than 10 years'] },
         { key: 'tools', kind: 'many', text: 'Programs you use now', choices: ['None', 'FullProf', 'GSAS-II', 'TOPAS', 'JANA', 'Other'] },
+        { key: 'platforms', kind: 'many', text: 'Platforms you work on', choices: ['Windows', 'macOS', 'Linux', 'Tablet', 'Smartphone', 'Other'], follow: { choice: 'Linux', key: 'platforms_linux', text: 'Which Linux distribution?' } },
       ],
     },
     {
@@ -72,12 +74,6 @@
       questions: [
         { key: 'comments', kind: 'area', text: 'Anything else you would like to tell us' },
       ],
-    },
-    {
-      title: 'About you (optional)',
-      key: 'contact-details',
-      note: 'All fields are optional. Leave them empty to answer anonymously.',
-      questions: [{ key: 'contact', kind: 'contact' }],
     },
   ];
 
@@ -124,6 +120,7 @@
       const grid = element('div', { class: 'ed-survey-checks', id: controlId, role: 'group' });
       for (const choice of q.choices) grid.append(element('label', {}, [element('input', { type: 'checkbox', name: q.key, value: choice }), choice]));
       const other = q.choices.includes('Other') ? otherField(q.key) : null;
+      const follow = q.follow ? element('input', { type: 'text', name: q.follow.key, placeholder: q.follow.text, 'aria-label': q.follow.text, maxlength: '200', hidden: true }) : null;
       grid.addEventListener('change', event => {
         const boxes = Array.from(grid.querySelectorAll('input'));
         // A first "None" is exclusive: ticking it clears the others, ticking another clears it.
@@ -132,8 +129,10 @@
           else boxes[0].checked = false;
         }
         if (other) other.hidden = !boxes.some(box => box.value === 'Other' && box.checked);
+        if (follow) follow.hidden = !boxes.some(box => box.value === q.follow.choice && box.checked);
       });
       cell.append(grid);
+      if (follow) cell.append(follow);
       if (other) cell.append(other);
     }
     if (q.kind === 'texts') {
@@ -188,34 +187,16 @@
         } else if (q.kind === 'many' || q.kind === 'texts') {
           const values = data.getAll(q.key).map(value => String(value).trim()).filter(Boolean);
           if (values.length) out[q.key] = values;
-        } else if (q.kind !== 'contact' && text(q.key)) {
+        } else if (text(q.key)) {
           out[q.key] = text(q.key);
         }
+        if (q.follow && text(q.follow.key) && (out[q.key] || []).includes(q.follow.choice)) out[q.follow.key] = text(q.follow.key);
         if (text(`${q.key}_other`) && (out[q.key] === 'Other' || (out[q.key] || []).includes?.('Other'))) out[`${q.key}_other`] = text(`${q.key}_other`);
       }
     }
     // "Not interested" in AI help leaves the rest of that section out.
     if (out.ai_interest === 'skip') for (const q of sections.find(s => s.key === 'ai').questions.slice(1)) delete out[q.key], delete out[`${q.key}_other`];
     return out;
-  }
-
-  // The consent first, then the e-mail, usable only while the consent is ticked, then name and affiliation side by
-  // side: inputs without a label above, their placeholders saying what they are (the owner, 2026-11-11).
-  function contactFields() {
-    const input = (type, name, text, wide) =>
-      element('div', { class: wide ? 'ed-survey-field ed-survey-wide' : 'ed-survey-field', 'data-key': name }, [element('input', { type, name, placeholder: text, 'aria-label': text })]);
-    const consent = element('input', { type: 'checkbox', name: 'consent' });
-    const email = input('email', 'email', 'E-mail', true);
-    email.querySelector('input').disabled = true;
-    consent.addEventListener('change', () => (email.querySelector('input').disabled = !consent.checked));
-    return [
-      element('div', { class: 'ed-survey-field ed-survey-wide ed-survey-consent-cell', 'data-key': 'consent' }, [
-        element('label', { class: 'ed-survey-consent' }, [consent, "I'm happy to be contacted by e-mail about my answers"]),
-      ]),
-      email,
-      input('text', 'name', 'Name', false),
-      input('text', 'affiliation', 'Affiliation', false),
-    ];
   }
 
   function build(form, events) {
@@ -229,7 +210,7 @@
       const part = element('section', { class: 'ed-survey-section', id: `survey-${section.key || section.title.toLowerCase().replace(/[^a-z]+/g, '-')}` }, [element('h2', { text: section.title })]);
       if (section.note) part.append(element('p', { class: 'ed-survey-note', text: section.note }));
       const grid = element('div', { class: 'ed-survey-grid' });
-      for (const q of section.questions) grid.append(...(q.kind === 'interfaces' ? interfaceFields(q) : q.kind === 'contact' ? contactFields() : [field(q)]));
+      for (const q of section.questions) grid.append(...(q.kind === 'interfaces' ? interfaceFields(q) : [field(q)]));
       part.append(grid);
       form.append(part);
     }
@@ -269,11 +250,6 @@
           return;
         }
         const message = { event: form.elements.event.value || 'general', answers: answers(form), app: { source: 'website', page: window.location.pathname } };
-        // Name and affiliation when filled in; the e-mail only with the consent to be contacted.
-        const contact = {};
-        for (const key of ['name', 'affiliation']) if (form.elements[key].value.trim()) contact[key] = form.elements[key].value.trim();
-        if (form.elements.email.value.trim() && form.elements.consent.checked) contact.email = form.elements.email.value.trim();
-        if (Object.keys(contact).length) message.contact = contact;
         pending = true;
         status.textContent = app.status.sending;
         let code = 0;
@@ -288,8 +264,8 @@
         status.textContent = show ? '' : words;
         if (sent) {
           form.reset();
-          form.querySelectorAll('[name$="_other"]').forEach(other => (other.hidden = true));
-          form.elements.email.disabled = true;
+          const follows = sections.flatMap(section => section.questions).filter(q => q.follow).map(q => `[name="${q.follow.key}"]`);
+          form.querySelectorAll(['[name$="_other"]', ...follows].join(', ')).forEach(other => (other.hidden = true));
         }
         if (show) show(code, words);
         pending = false;
