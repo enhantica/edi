@@ -36,18 +36,23 @@ QtObject {
     // item, `fallback` alone.
     function pickerLine(item, fallback: string): list<var> {
         if (!item)
-            return [{
+            return [
+                {
                     "text": fallback,
                     "elides": true
-                }];
-        return names.segments(item).concat([{
+                }
+            ];
+        return names.segments(item).concat([
+            {
                 "text": "·",
                 "color": String(EaStyle.Colors.themeForegroundMinor)
-            }, {
+            },
+            {
                 "text": item.path,
                 "color": String(EaStyle.Colors.themeForegroundMinor),
                 "elides": true
-            }]);
+            }
+        ]);
     }
     // What a picker's search reads for a parameter: its short name and its full name, so either finds it.
     function pickerText(item, fallback: string): string {
