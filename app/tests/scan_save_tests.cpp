@@ -136,8 +136,10 @@ private slots:
         const QString ncaf = QStringLiteral(EDI_SOURCE_DIR "/docs/user/cli/pd-neut-tof_ncaf-wish/project");
         QVERIFY2(session->openProject(QUrl::fromLocalFile(ncaf)), qPrintable(session->lastError()));
         openAnalysis();
-        QTRY_VERIFY_WITH_TIMEOUT(shown("mainArea.tab.structure") && shown("structure.view"), 20000);
+        // Analysis opens on Pattern; the Structure tab then draws its view at once.
+        QTRY_VERIFY_WITH_TIMEOUT(shown("mainArea.tab.structure") && shown("mainArea.tab.structure")->isEnabled(), 20000);
         click(shown("mainArea.tab.structure"));
+        QTRY_VERIFY_WITH_TIMEOUT(shown("structure.view"), 20000);
         QTRY_VERIFY_WITH_TIMEOUT(drawn(), 20000);
         QTRY_VERIFY_WITH_TIMEOUT(fitted(), 60000);
         // Another project opened from Analysis: its pages are built while the Project page shows.
@@ -219,8 +221,8 @@ private slots:
         QTRY_VERIFY_WITH_TIMEOUT(!session->project()->calculating(), 30000);
 
         openExtras("appBar.tab.structure");
+        // One group at a time: with auto-collapse on, expanding the next folds the one before.
         expand("group.expanded_atom_site");
-        expand("group.geom");
         QQuickItem* atoms = nullptr;
         QTRY_VERIFY_WITH_TIMEOUT((atoms = shown("generated.expanded_atom_site.list")) && atoms->property("count").toInt() > 0, 20000);
         QVERIFY(barFades(atoms));
@@ -239,6 +241,7 @@ private slots:
         }
         QVERIFY(zeros > 0);
 
+        expand("group.geom");
         QQuickItem* bonds = nullptr;
         QTRY_VERIFY_WITH_TIMEOUT((bonds = shown("geom.bonds")) && bonds->property("count").toInt() > 0, 20000);
         QVERIFY(bonds->property("readOnly").toBool());
@@ -279,6 +282,98 @@ private slots:
     }
     // Controls moving between a toolbar's row and its ⋯ popup, chart tabs switching and the popup opening and closing
     // leave no QML warning (the owner's log: attached tooltips binding on controls being moved or destroyed).
+    // A new experiment switched from powder to single crystal shows the linked structure's simulated reflections
+    // before any data, and the switch reports nothing.
+    void newSingleCrystalExperimentShowsSimulatedReflections() {
+        QQmlApplicationEngine engine;
+        edi_app::configure_engine(engine);
+        auto* session = engine.singletonInstance<edi_app::Session*>("edi.app", "Session");
+        QVERIFY(session);
+        QTemporaryDir root;
+        QVERIFY(session->createProject(QStringLiteral("sc"), {}, root.filePath(QStringLiteral("project"))));
+        edi_app::ProjectViewModel* project = session->project();
+        QVERIFY(project);
+        QVERIFY(project->createStructure());
+        QVERIFY(project->createExperiment());
+        QTRY_VERIFY_WITH_TIMEOUT(!project->calculating(), 30000);
+        const auto messages = [session] {
+            QStringList lines;
+            edi_app::WarningListModel* list = session->loadWarnings();
+            const auto roles = list->roleNames();
+            for (int row = 0; row < list->rowCount(); ++row)
+                for (const QByteArray& role : roles)
+                    lines.append(list->text(row, QString::fromUtf8(role)));
+            return lines.join(QLatin1String(" | "));
+        };
+        const int before = session->loadWarnings()->rowCount();
+        QVERIFY2(project->setExperimentType(0, QStringLiteral("sampleForm"), QStringLiteral("single crystal")),
+                 qPrintable(session->lastError()));
+        QTRY_VERIFY_WITH_TIMEOUT(!project->calculating(), 30000);
+        edi_app::ExperimentViewModel* experiment = project->currentExperiment();
+        QVERIFY(experiment);
+        QCOMPARE(experiment->sampleForm(), edi_app::ExperimentViewModel::SingleCrystal);
+        edi_app::SingleCrystalReflectionModel* reflections = experiment->singleCrystalReflections();
+        QTRY_VERIFY2_WITH_TIMEOUT(reflections->simulated() && !reflections->calculated().isEmpty(), qPrintable(messages()), 30000);
+        QVERIFY2(session->loadWarnings()->rowCount() == before, qPrintable(messages()));
+    }
+
+    // A filter that leaves a few rows shows them at once from the table's top, with no blank band easing away.
+    void filteredTableShowsItsRowsAtOnceFromTheTop() {
+        QQmlApplicationEngine engine;
+        edi_app::configure_engine(engine);
+        engine.loadFromModule("edi.app", "Main");
+        QVERIFY(!engine.rootObjects().isEmpty());
+        auto* window = qobject_cast<QQuickWindow*>(engine.rootObjects().constFirst());
+        QVERIFY(window);
+        window->resize(1480, 900);
+        window->show();
+        QVERIFY(QTest::qWaitForWindowExposed(window));
+        auto* session = engine.singletonInstance<edi_app::Session*>("edi.app", "Session");
+        QVERIFY(session);
+        QVERIFY2(session->openProject(QUrl::fromLocalFile(QStringLiteral(EDI_SOURCE_DIR "/docs/user/cli/pd-neut-cwl_lbco-hrpt/project"))), qPrintable(session->lastError()));
+        QTRY_VERIFY_WITH_TIMEOUT(!session->project()->calculating(), 30000);
+        QQuickItem* tab = nullptr;
+        QTRY_VERIFY_WITH_TIMEOUT((tab = window->contentItem()->findChild<QQuickItem*>(QStringLiteral("appBar.tab.analysis"))) && tab->isEnabled(), 20000);
+        QTest::mouseClick(window, Qt::LeftButton, {}, tab->mapToScene(QPointF(tab->width() / 2, tab->height() / 2)).toPoint());
+        QQuickItem* table = nullptr;
+        QTRY_VERIFY_WITH_TIMEOUT((table = window->contentItem()->findChild<QQuickItem*>(QStringLiteral("parameters.list"))) && table->isVisible() && table->property("count").toInt() > table->property("maxRowCountShow").toInt(), 20000);
+        // Scrolled to the end of the whole list, then filtered down to a few rows.
+        const double end = table->property("originY").toDouble() + table->property("contentHeight").toDouble() - table->height();
+        table->setProperty("contentY", end);
+        QCOMPARE(table->property("contentY").toDouble(), end);
+        auto* filter = table->property("sourceModel").value<QObject*>();
+        QVERIFY(filter);
+        QVERIFY(filter->setProperty("nameFilter", QStringLiteral("adp")));
+        QTRY_VERIFY_WITH_TIMEOUT(table->property("count").toInt() > 0 && table->property("count").toInt() <= table->property("maxRowCountShow").toInt(), 5000);
+        QCoreApplication::processEvents();
+        // At the top on the first frame after the filter, with nothing left moving.
+        QCOMPARE(table->property("contentY").toDouble(), table->property("originY").toDouble());
+        QVERIFY(!table->property("moving").toBool());
+    }
+
+    // A parameter at zero still slides by a useful step: ±0.1° for the 2θ offset, the table's floor for its kind.
+    void slidersStartWideEnoughAtZero() {
+        QQmlApplicationEngine engine;
+        edi_app::configure_engine(engine);
+        auto* session = engine.singletonInstance<edi_app::Session*>("edi.app", "Session");
+        QVERIFY(session);
+        QVERIFY2(session->openProject(QUrl::fromLocalFile(QStringLiteral(EDI_SOURCE_DIR "/docs/user/cli/pd-neut-cwl_lbco-hrpt/project"))), qPrintable(session->lastError()));
+        auto* parameters = session->project()->parameters();
+        const auto find = [parameters](const QString& path) -> edi_app::ParameterItem* {
+            for (int row = 0; row < parameters->rowCount(); ++row)
+                if (parameters->text(row, QStringLiteral("path")).endsWith(path))
+                    return qobject_cast<edi_app::ParameterItem*>(parameters->item(row, QStringLiteral("parameter")));
+            return nullptr;
+        };
+        edi_app::ParameterItem* offset = find(QStringLiteral("instrument.calib_twotheta_offset"));
+        QVERIFY(offset);
+        QVERIFY(std::abs(offset->value()) < 0.2);
+        QCOMPARE(offset->sliderHalfWidth(), std::max(0.1, std::abs(offset->value()) * 0.5));
+        edi_app::ParameterItem* length = find(QStringLiteral("cell.length_a"));
+        QVERIFY(length);
+        QCOMPARE(length->sliderHalfWidth(), 0.05);
+    }
+
     void toolbarOverflowLeavesNoQmlWarning() {
         static QStringList warnings;
         warnings.clear();
@@ -321,10 +416,10 @@ private slots:
         QTRY_VERIFY_WITH_TIMEOUT((tab = shown("appBar.tab.analysis")) && tab->isEnabled(), 20000);
         click(tab);
         // Each chart tab at a wide and a narrow window: the narrow one puts controls in the popup, which opens and closes.
-        for (const char* key : {"pattern", "meascalc", "structure", "pattern"}) {
+        for (const char* key : {"pattern", "measCalc", "structure", "pattern"}) {
             QTRY_VERIFY_WITH_TIMEOUT((tab = shown(QStringLiteral("mainArea.tab.%1").arg(QLatin1String(key)))) && tab->isEnabled(), 20000);
             click(tab);
-            const QString toolbar = QLatin1String(key) == QLatin1String("pattern") ? "chart.toolbar" : QLatin1String(key) == QLatin1String("meascalc") ? "measCalc.toolbar" : "structure.toolbar";
+            const QString toolbar = QLatin1String(key) == QLatin1String("pattern") ? "chart.toolbar" : QLatin1String(key) == QLatin1String("measCalc") ? "measCalc.toolbar" : "structure.toolbar";
             QTRY_VERIFY_WITH_TIMEOUT(shown(toolbar), 20000);
             for (int round = 0; round < 2; ++round) {
                 window->resize(1024, 700);

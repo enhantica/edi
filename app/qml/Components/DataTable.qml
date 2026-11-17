@@ -217,14 +217,29 @@ EaComponents.ListView {
         Qt.callLater(repairRows);
     }
     onCountChanged: {
+        snapIntoBounds();
         ApplicationInfo.tableColumnsChanged(false);
         Qt.callLater(repairRows);
+    }
+    // Fewer rows (a filter, a removal) leave the old scroll beyond the new end, which ListView then eases back, so the
+    // rows slid in under a blank band (the owner, 2026-11-17). The view moves at once instead: to the top when every row
+    // fits, else to the nearest position that shows rows.
+    onContentHeightChanged: snapIntoBounds()
+    onOriginYChanged: snapIntoBounds()
+    function snapIntoBounds() {
+        if (moving || dragging || flicking)
+            return;
+        const top = originY;
+        const bottom = count <= maxRowCountShow ? top : Math.max(top, originY + contentHeight - height);
+        if (contentY < top - 0.5 || contentY > bottom + 0.5)
+            contentY = Math.min(Math.max(contentY, top), bottom);
     }
     Component.onCompleted: {
         ApplicationInfo.tableApplyRuledWidths(true);
         refit();
     }
     onHeightChanged: {
+        snapIntoBounds();
         Qt.callLater(repairRows);
         Qt.callLater(keepHeaderOnTop);
     }

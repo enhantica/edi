@@ -147,6 +147,8 @@ class ParameterItem : public QObject {
     // maximum (edi::slider_limits).
     Q_INVOKABLE double sliderLower() const;
     Q_INVOKABLE double sliderUpper() const;
+    // The smallest half width for this kind of parameter (the table in parameter_item.cpp).
+    double sliderFloor() const;
     int blockIndex() const { return block_index_; }
     QString categoryIcon() const { return category_icon_; }
     QString elementSymbol() const { return element_symbol_; }

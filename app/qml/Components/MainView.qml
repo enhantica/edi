@@ -37,7 +37,6 @@ EaComponents.MainContent {
     readonly property int ownTab: tabOf(defaultKey)
     // The tab the user last picked on this page: it opens on that one with each later project, for the session.
     property string chosenKey: ""
-    property bool switching: false
     function available(key) {
         const tab = bar && key !== "" && shows(key) ? bar.itemAt(tabOf(key)) : null;
         return tab !== null && tab.enabled && tab.visible;
@@ -73,9 +72,7 @@ EaComponents.MainContent {
     function showMainTab(index) {
         if (!bar)
             return;
-        switching = true;
         bar.currentIndex = index;
-        switching = false;
     }
     // The page's own tab opens the first time the page is shown with a project, even with nothing to show yet; after
     // that the tab the user is on stays until they pick another, and the view never switches by itself (the owner,
@@ -99,10 +96,14 @@ EaComponents.MainContent {
     // A shown view slides to the new tab as the sidebar does (the owner, 2026-11-17); only a hidden one is put on it
     // at once, and again when it shows (onShownChanged).
     onTabIndexChanged: {
-        if (!switching && shown && ownTabOpened)
-            chosenKey = currentKey;
         if (!view.shown)
             Qt.callLater(showCurrentPage);
+    }
+    // Only a click on a tab is the user's pick: the bar also moves by itself while a project closes and opens, and
+    // that move used to overwrite the pick with the first tab.
+    function keepPick() {
+        if (shown)
+            chosenKey = currentKey;
     }
     // The pages' list keeps its old position when the tab changes while the view is hidden (a scan project opened
     // straight onto Analysis showed the previous project's structure under the Pattern tab): put it on the current
@@ -127,6 +128,8 @@ EaComponents.MainContent {
             id: structureTab
 
             objectName: "mainArea.tab.structure"
+
+            onClicked: view.keepPick()
             text: qsTr("Structure")
             visible: view.shows("structure")
             width: visible ? Math.max(implicitBackgroundWidth + leftInset + rightInset, implicitContentWidth + leftPadding + rightPadding) : 0
@@ -134,6 +137,7 @@ EaComponents.MainContent {
         },
         IconTabButton {
             objectName: "mainArea.tab.pattern"
+            onClicked: view.keepPick()
             text: qsTr("Pattern")
             visible: view.shows("pattern")
             width: visible ? Math.max(implicitBackgroundWidth + leftInset + rightInset, implicitContentWidth + leftPadding + rightPadding) : 0
@@ -143,6 +147,7 @@ EaComponents.MainContent {
         // owner, 2026-11-16): enabled once the shown experiment has both.
         IconTabButton {
             objectName: "mainArea.tab.measCalc"
+            onClicked: view.keepPick()
             text: qsTr("Meas vs calc")
             visible: view.shows("meascalc")
             width: visible ? Math.max(implicitBackgroundWidth + leftInset + rightInset, implicitContentWidth + leftPadding + rightPadding) : 0
@@ -151,6 +156,7 @@ EaComponents.MainContent {
         // The last fit's parameter correlations for the shown experiment.
         IconTabButton {
             objectName: "mainArea.tab.correlations"
+            onClicked: view.keepPick()
             text: qsTr("Correlations")
             visible: view.shows("correlations")
             width: visible ? Math.max(implicitBackgroundWidth + leftInset + rightInset, implicitContentWidth + leftPadding + rightPadding) : 0
@@ -159,12 +165,14 @@ EaComponents.MainContent {
         // A scan's or a joint fit's patterns, stacked and as a map (edi ADR-0041): only with several datasets.
         IconTabButton {
             objectName: "mainArea.tab.stacked"
+            onClicked: view.keepPick()
             text: qsTr("Stacked")
             visible: view.shows("stacked") && (view.patternViews || view.singleCrystals)
             width: visible ? Math.max(implicitBackgroundWidth + leftInset + rightInset, implicitContentWidth + leftPadding + rightPadding) : 0
         },
         IconTabButton {
             objectName: "mainArea.tab.map"
+            onClicked: view.keepPick()
             text: qsTr("Map")
             visible: view.shows("map") && view.patternViews && !view.singleCrystals
             width: visible ? Math.max(implicitBackgroundWidth + leftInset + rightInset, implicitContentWidth + leftPadding + rightPadding) : 0
@@ -172,6 +180,7 @@ EaComponents.MainContent {
         // A fitted parameter across a scan's datasets (edi ADR-0017 §19), in a scan project (edi ADR-0046).
         IconTabButton {
             objectName: "mainArea.tab.evolution"
+            onClicked: view.keepPick()
             text: qsTr("Evolution")
             visible: view.shows("evolution") && view.project !== null && view.project.scan
             width: visible ? Math.max(implicitBackgroundWidth + leftInset + rightInset, implicitContentWidth + leftPadding + rightPadding) : 0

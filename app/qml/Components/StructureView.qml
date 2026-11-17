@@ -39,6 +39,8 @@ Rectangle {
     // The theme colours the view draws with; a PDF's figure takes the light ones.
     property FigureColors colors: FigureColors {}
     property string reportStructure: ""
+    // Set on the Report page's preview figure: the toolbar's camera buttons; the PDF's copies draw no toolbar.
+    property bool reportToolbar: false
 
     // The moment arrows' colours follow the app's preference (edi ADR-0078).
     Binding {
@@ -103,7 +105,7 @@ Rectangle {
         viewportWidth: view.width
         viewportHeight: view.height
         // The band kept clear at the top for the toolbar: its height with its margins.
-        topBand: view.report ? 0 : toolbarRow.height + 2 * view.margin
+        topBand: view.report && !view.reportToolbar ? 0 : toolbarRow.height + 2 * view.margin
         // And at either side for the legend: its width with its margin, and a gap before the drawing. Kept while the
         // atoms are hidden, which hides the legend, so a show or hide keeps the camera (the owner, 2026-11-03).
         sideBand: view.legendWidth > 0 && controller.hasSites ? view.sideMargin + view.legendWidth + view.margin : 0
@@ -256,12 +258,13 @@ Rectangle {
         y: view.margin
         width: view.width
         height: implicitHeight
-        visible: !view.report
+        visible: !view.report || view.reportToolbar
         leftEdge: view.sideMargin
         rightEdge: view.width - view.toolbarRightInset
 
         ToolbarComboBox {
             objectName: "structure.toolbar.colors"
+            visible: !view.report
             toolTip: qsTr("Colour scheme (adjusted for contrast in labels and tables)")
             // The schemes' names as their authors spell them; the options keep diffraction-lib's tokens.
             model: ["Jmol", "VESTA"]
@@ -273,6 +276,7 @@ Rectangle {
 
             controller: controller
             options: view.options
+            features: !view.report
         }
     }
 

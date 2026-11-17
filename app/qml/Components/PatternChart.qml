@@ -35,6 +35,11 @@ Item {
     // The theme colours the chart draws with; a PDF's figure takes the light ones.
     property FigureColors colors: FigureColors {}
     property string reportExperiment: ""
+    // Set on the Report page's preview figure: its toolbar with the buttons that act on this figure alone (hover, pan,
+    // box zoom, reset); the PDF's copies leave it unset and draw no toolbar.
+    property bool reportToolbar: false
+    // The pointer, the hover read-outs and the toolbar: an app chart's, or a report preview figure's.
+    readonly property bool interactive: !chart.report || chart.reportToolbar
     // Set: the x axis is this project's `_pattern_chart.x_axis` (the Analysis page's chart, which the report follows),
     // an undoable edit saved with the project; else the chart's own choice.
     property ProjectViewModel axisProject: null
@@ -87,7 +92,7 @@ Item {
     readonly property real titleGutter: Math.round(em * 1.6)
     // The toolbar ends at the plot areas' right border, one em above the main one. A report figure has no toolbar; its
     // plot starts no closer to the frame's top than to its sides (the owner, 2026-10-13).
-    readonly property real topHeight: chart.report ? Math.max(sideMargin, rightMargin) + (chart.reliability !== "" ? Math.round(em * 1.5) : 0) : topMargin + toolbarLines.height + belowToolbar
+    readonly property real topHeight: chart.report && !chart.reportToolbar ? Math.max(sideMargin, rightMargin) + (chart.reliability !== "" ? Math.round(em * 1.5) : 0) : topMargin + toolbarLines.height + belowToolbar + (chart.reliability !== "" ? Math.round(em * 1.5) : 0)
     // A report figure's reliability text (edi::reliability_text), above its main plot at the left; the app's own
     // charts show it in the page's selector line.
     readonly property string reliability: chart.report && chart.report.model ? chart.report.reliability(chart.reportExperiment) : ""
@@ -409,12 +414,14 @@ Item {
         y: chart.topMargin
         width: chart.width
         height: implicitHeight
-        visible: !chart.report
+        visible: chart.interactive
         leftEdge: chart.toolbarLeft
         rightEdge: chart.width - chart.toolbarRightInset
 
         ToolbarComboBox {
             objectName: "chart.toolbar.yscale"
+            // An app setting: a report figure keeps the project's.
+            visible: !chart.report
             toolTip: qsTr("Y scale")
             model: [qsTr("Linear"), qsTr("Square root"), qsTr("Log")]
             // The closed box names its axis (owner, 2026-10-05), its value capitalised (the owner, 2026-10-27).
@@ -428,7 +435,7 @@ Item {
             readonly property var tokens: ["q", "sin_theta_over_lambda"]
 
             objectName: "chart.toolbar.singleCrystalXAxis"
-            visible: chart.singleCrystal
+            visible: chart.singleCrystal && !chart.report
             toolTip: qsTr("X axis")
             model: [qsTr("x: Q"), qsTr("x: %1").arg(Session.label("refln.sin_theta_over_lambda"))]
             shownIndex: Math.max(0, tokens.indexOf(controller.xAxis))
@@ -436,7 +443,7 @@ Item {
         }
         ToolbarComboBox {
             objectName: "chart.toolbar.singleCrystalQuantity"
-            visible: chart.singleCrystal
+            visible: chart.singleCrystal && !chart.report
             toolTip: qsTr("Plotted quantity")
             model: [qsTr("F²"), qsTr("F")]
             closedTexts: [qsTr("y: F²"), qsTr("y: F")]
@@ -445,7 +452,7 @@ Item {
         }
         ToolbarComboBox {
             objectName: "chart.toolbar.xaxis"
-            visible: !chart.singleCrystal
+            visible: !chart.singleCrystal && !chart.report
             // d, Q and sinθ/λ can be chosen once a calculation has given the experiment its d column (the owner,
             // 2026-10-22); the box shows the axis drawn, and names it as its list does; the d axis is "x: d-spacing"
             // in both (the owner, 2026-10-22). Q = 4π sinθ/λ and sinθ/λ come from d (the owner, 2026-11-14).
@@ -485,7 +492,7 @@ Item {
         // Bars with a width on the axis, or thin lines that stay one pixel at any zoom (the owner, 2026-11-16).
         ChartToolButton {
             objectName: "chart.toolbar.thinBars"
-            visible: chart.singleCrystal && controller.measuredStyle === "bars"
+            visible: chart.singleCrystal && controller.measuredStyle === "bars" && !chart.report
             fontIcon: "grip-lines-vertical"
             toolTip: Preferences.singleCrystalThinBars ? qsTr("Draw the reflections as bars") : qsTr("Draw the reflections as thin lines")
             checked: Preferences.singleCrystalThinBars
@@ -499,7 +506,7 @@ Item {
             structureCurvesAvailable: !chart.report && controller.hasCalculated
             // A single crystal's reflections have no excluded regions or background, and leaving their buttons out keeps
             // its controls on one row (two rows above every chart, the owner, 2026-11-16).
-            includedRangeAvailable: !chart.singleCrystal
+            includedRangeAvailable: !chart.singleCrystal && !chart.report
             includedOnly: Preferences.chartIncludedOnly
             subtractBackground: Preferences.chartSubtractBackground
             backgroundAvailable: controller.backgroundAvailable
@@ -955,7 +962,7 @@ Item {
         property real lastX: 0
 
         objectName: "chart.pointer"
-        enabled: !chart.report
+        enabled: chart.interactive
         x: mainView.x + mainView.plotArea.x
         y: mainView.y + mainView.plotArea.y
         width: mainView.plotArea.width
@@ -966,7 +973,14 @@ Item {
         onPressed: mouse => ApplicationInfo.patternPointer(mouse, 0)
         onPositionChanged: mouse => ApplicationInfo.patternPointer(mouse, 1)
         onReleased: mouse => ApplicationInfo.patternPointer(mouse, 2)
-        onWheel: wheel => controller.wheelAt(wheel.x, wheel.angleDelta.y)
+        // On the report's preview the wheel scrolls the page, not the chart.
+        onWheel: wheel => {
+            if (chart.report) {
+                wheel.accepted = false;
+                return;
+            }
+            controller.wheelAt(wheel.x, wheel.angleDelta.y);
+        }
         onExited: hoverLabel.show("", 0, 0)
 
         // The box being dragged, as the base's chart draws it (gui-components QtCharts1dBase.qml, easydiffractionbeta's
@@ -1001,7 +1015,7 @@ Item {
         y: braggView.y + braggView.plotArea.y
         width: braggView.plotArea.width
         height: braggView.plotArea.height
-        visible: braggView.visible && toolbar.hoverShown && !chart.report
+        visible: braggView.visible && toolbar.hoverShown && chart.interactive
         acceptedButtons: Qt.NoButton
         hoverEnabled: true
         onPositionChanged: mouse => hoverLabel.read(1, braggPointer, mouse)
@@ -1017,7 +1031,7 @@ Item {
         y: residualView.y + residualView.plotArea.y
         width: residualView.plotArea.width
         height: residualView.plotArea.height
-        visible: residualView.visible && toolbar.hoverShown && !chart.report
+        visible: residualView.visible && toolbar.hoverShown && chart.interactive
         acceptedButtons: Qt.NoButton
         hoverEnabled: true
         onPositionChanged: mouse => hoverLabel.read(2, residualPointer, mouse)

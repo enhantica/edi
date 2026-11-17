@@ -21,6 +21,8 @@ Item {
 
     property StructureViewController controller: null
     property StructureViewOptions options: null
+    // Off on a report's preview figure: the camera buttons only, as what is drawn is the report's.
+    property bool features: true
     readonly property real buttonSize: AppSizes.toolbarControlSize
 
     // Which atoms are drawn (the owner, 2026-11-03): the magnetic choices appear for a magnetic structure. The camera
@@ -30,7 +32,7 @@ Item {
 
         objectName: "structure.toolbar.atoms"
         toolbarGroup: "atoms"
-        visible: toolbar.controller !== null && toolbar.controller.hasSites
+        visible: toolbar.features && toolbar.controller !== null && toolbar.controller.hasSites
         // The closed box names the choice briefly; the list and the tooltip name it in full.
         readonly property var shortNames: ({
                 "all": Session.optionLabel("structure_view.atoms", "all"),
@@ -46,9 +48,30 @@ Item {
         shownIndex: Math.max(0, tokens.indexOf(toolbar.options ? toolbar.options.atoms : "all"))
         onActivated: index => toolbar.options.atoms = tokens[index]
     }
+    // How the atoms are drawn, the same setting as Extra's Appearance group: radius model or ADP ellipsoids.
+    ToolbarComboBox {
+        readonly property OptionListModel choices: toolbar.options ? toolbar.options.atomViewOptions : null
+        readonly property var tokens: choices && choices.revision >= 0 ? Array.from({ length: choices.count }, (_, i) => choices.tokenAt(i)) : []
+        readonly property var shortNames: ({
+                "covalent": qsTr("Covalent"),
+                "vdw": qsTr("vdW"),
+                "ionic": qsTr("Ionic"),
+                "adp": qsTr("ADP")
+            })
+
+        objectName: "structure.toolbar.atomView"
+        toolbarGroup: "atomView"
+        visible: toolbar.features && toolbar.controller !== null && toolbar.controller.hasSites && toolbar.options !== null && toolbar.options.atoms !== "none"
+        toolTip: qsTr("Atom view: %1").arg(currentText)
+        model: tokens.map(token => Session.optionLabel("structure_view.atom_view", token))
+        closedOnly: true
+        closedTexts: tokens.map(token => shortNames[token] ?? token)
+        shownIndex: Math.max(0, tokens.indexOf(toolbar.options ? toolbar.options.atomView : "covalent"))
+        onActivated: index => toolbar.options.atomView = tokens[index]
+    }
     ChartToolButton {
         objectName: "structure.toolbar.labels"
-        visible: toolbar.controller !== null && toolbar.controller.hasSites
+        visible: toolbar.features && toolbar.controller !== null && toolbar.controller.hasSites
         fontIcon: "tag"
         toolTip: qsTr("Labels")
         checked: toolbar.options !== null && toolbar.options.showLabels
@@ -56,7 +79,7 @@ Item {
     }
     ChartToolButton {
         objectName: "structure.toolbar.bonds"
-        visible: toolbar.controller !== null && toolbar.controller.hasSites && toolbar.controller.hasBonds
+        visible: toolbar.features && toolbar.controller !== null && toolbar.controller.hasSites && toolbar.controller.hasBonds
         fontIcon: "link"
         toolTip: qsTr("Bonds")
         checked: toolbar.options !== null && toolbar.options.bonds
@@ -65,7 +88,7 @@ Item {
     // Coordination polyhedra, defined in Extra's Polyhedra group: one click shows or hides them.
     ChartToolButton {
         objectName: "structure.toolbar.polyhedra"
-        visible: toolbar.controller !== null && toolbar.controller.hasSites && toolbar.controller.hasBonds
+        visible: toolbar.features && toolbar.controller !== null && toolbar.controller.hasSites && toolbar.controller.hasBonds
         fontIcon: "dice-d20"
         toolTip: qsTr("Polyhedra")
         checked: toolbar.options !== null && toolbar.options.polyhedra
@@ -73,6 +96,7 @@ Item {
     }
     ChartToolButton {
         objectName: "structure.toolbar.cell"
+        visible: toolbar.features
         fontIcon: "vector-square"
         toolTip: qsTr("Cell")
         checked: toolbar.options !== null && toolbar.options.cell
@@ -80,7 +104,7 @@ Item {
     }
     ChartToolButton {
         objectName: "structure.toolbar.moments"
-        visible: toolbar.controller !== null && toolbar.controller.hasMoments
+        visible: toolbar.features && toolbar.controller !== null && toolbar.controller.hasMoments
         fontIcon: "long-arrow-alt-up"
         toolTip: Session.categoryTitle("atom_site_moment")
         checked: toolbar.options !== null && toolbar.options.showMoments
@@ -88,6 +112,7 @@ Item {
     }
     ChartToolButton {
         objectName: "structure.toolbar.axes"
+        visible: toolbar.features
         fontIcon: "location-arrow"
         toolTip: qsTr("Axes")
         checked: toolbar.options !== null && toolbar.options.axes

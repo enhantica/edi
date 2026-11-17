@@ -11,7 +11,7 @@ template: gui.html
 
 ## Change the appearance
 
-On **Structure → Extra**, expand **Appearance**. Choose how atom sizes are drawn, adjust the display scale or use displacement ellipsoids. For ellipsoids, set the probability level.
+On **Structure → Extra**, expand **Appearance**. Its switches show or hide labels, bonds, polyhedra, the cell, magnetic moments and axes, as the structure view's toolbar buttons do. Choose how atom sizes are drawn, also in the toolbar's **Atom view** box, adjust the display scale or use displacement ellipsoids. For ellipsoids, set the probability level.
 
 These controls change the picture. Edit the scientific model in [Space group](space-group.md), [Cell](cell.md#enter-the-unit-cell), [Atom sites](atom-sites.md) and [Atomic displacement](atomic-displacement.md). [Scattering lengths](scattering-lengths.md) and [experiment links](../experiment/linked-structures.md) have their own controls.
 
