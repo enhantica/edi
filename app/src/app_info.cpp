@@ -7353,7 +7353,9 @@ void ApplicationInfo::tableRemeasure() const {
 }
 void ApplicationInfo::tableDataChanged(const QJSValue& topLeft, const QJSValue& bottomRight) const {
     const auto f = panelUsageEngine(this); if (!tableAlive(f, panelUsageContextRead(f, "ownerLife"))) return;
-    projectInvoke(f, "table", "refit"); if (!editorLife(f, panelUsageContextRead(f, "ownerLife"))) return;
+    // Only the named rows are measured; the columns are fitted again (through modelRevision) only when one of their
+    // widths changed. A refit for every changed row measured the whole model each time: a series' 100 runs at each
+    // fitted run, the most of the GUI thread's stalls during a fit.
     bool changed = false; const auto source = assistantContextField(f, "table", "rowWidths");
     tableForIn(f, source, [&](const QJSValue& role) {
         const auto widths = textIndex(f, assistantContextField(f, "table", "rowWidths"), role);
