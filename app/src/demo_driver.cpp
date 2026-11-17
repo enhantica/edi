@@ -831,6 +831,18 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     // The chart-consistency review's set: every chart view of the Experiment and Analysis pages for the series
     // EDI_DEMO_SCAN_PROJECT after its fit, then a single crystal's Pattern and Meas vs calc. Run only when asked
     // (`--demo-only review-`).
+    // The included range on a fitted series' Stacked and Map, both rows and every x (`--demo-only included-`).
+    if (only.startsWith(QLatin1String("included-"))) {
+        const QString open = "open-project:" + qEnvironmentVariable("EDI_DEMO_SCAN_PROJECT");
+        steps_.push_back({"included-1-stacked-byrun-q-off", {"resize:1480x800", open, analysis, basic, "mainArea.tab.stacked",
+                                                             "scanView.stacked.toolbar.xaxis", "choose:x: Q"}});
+        steps_.push_back({"included-2-stacked-byrun-q-on", {"scanView.stacked.toolbar.includedRange"}});
+        steps_.push_back({"included-3-stacked-bybank-q", {"mainArea.series.rows", "choose:by bank"}});
+        steps_.push_back({"included-5-stacked-byrun-d", {"mainArea.series.rows", "choose:by run",
+                                                          "scanView.stacked.toolbar.xaxis", "choose:x: d-spacing"}});
+        steps_.push_back({"included-6-map-byrun-q", {"mainArea.tab.map", "scanView.map.toolbar.xaxis", "choose:x: Q"}});
+        steps_.push_back({"included-7-map-bybank-q", {"mainArea.series.rows", "choose:by bank"}});
+    }
     if (only.startsWith(QLatin1String("review-"))) {
         const QString experimentTab = QStringLiteral("appBar.tab.experiment");
         // Before the fit: the Map on Q by bank (the owner's empty map, 2026-11-16), then back to d.
