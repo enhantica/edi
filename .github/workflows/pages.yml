@@ -1,3 +1,4 @@
+# dev: the developers' test site on GitHub Pages only (https://enhantica.github.io/edi/), never edi-sites.
 # The site on GitHub Pages: the public site (website/) at the root and the web app at /webapp/. The
 # contributor documentation (mkdocs.yml) is not published for now. The site is built from main (or
 # by dispatch) with the notebooks executed for rendering, which needs crysta's SDK; the web app is built
@@ -8,9 +9,7 @@ name: Pages
 
 on:
   push:
-    branches: [main]
-  release:
-    types: [published]
+    branches: [dev]
   workflow_dispatch:
     inputs:
       component:
@@ -72,7 +71,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh api --paginate --slurp "repos/$GITHUB_REPOSITORY/releases?per_page=100" > "$RUNNER_TEMP/edi-releases.json"
-          pixi run site-build --require-outputs --base-url https://easydiffraction.org/ --github-releases "$RUNNER_TEMP/edi-releases.json"
+          pixi run site-build --require-outputs --base-url https://enhantica.github.io/edi/ --github-releases "$RUNNER_TEMP/edi-releases.json"
       - name: Place the public site at the root
         run: |
           for path in dev webapp; do
@@ -168,19 +167,6 @@ jobs:
         uses: actions/deploy-pages@v4
         with:
           artifact_name: pages-site-docs-${{ github.run_attempt }}
-      - name: Mint a token for edi-sites
-        id: sites-token
-        uses: actions/create-github-app-token@v2
-        with:
-          app-id: ${{ vars.ENHANTICA_APP_ID }}
-          private-key: ${{ secrets.ENHANTICA_APP_KEY }}
-          owner: enhantica
-          repositories: edi-sites
-      # The same site for the host behind easydiffraction.org, which pulls this branch of edi-sites.
-      - name: Update the deploy-docs branch
-        env:
-          SITES_TOKEN: ${{ steps.sites-token.outputs.token }}
-        run: bash tools/ci/push_deploy_branch.sh site deploy-docs
 
   publish-wasm:
     name: publish WebAssembly
@@ -220,17 +206,3 @@ jobs:
         uses: actions/deploy-pages@v4
         with:
           artifact_name: pages-site-wasm-${{ github.run_attempt }}
-      - name: Mint a token for edi-sites
-        id: sites-token
-        uses: actions/create-github-app-token@v2
-        with:
-          app-id: ${{ vars.ENHANTICA_APP_ID }}
-          private-key: ${{ secrets.ENHANTICA_APP_KEY }}
-          owner: enhantica
-          repositories: edi-sites
-      # The whole site for easydiffraction.org, its web app a preview of main; app.easydiffraction.org takes only a
-      # release's own web app, from release-publish.yml.
-      - name: Update the deploy-docs branch
-        env:
-          SITES_TOKEN: ${{ steps.sites-token.outputs.token }}
-        run: bash tools/ci/push_deploy_branch.sh site deploy-docs
