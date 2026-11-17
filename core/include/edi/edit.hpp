@@ -1009,18 +1009,12 @@ class Edit {
     // One row added to, or removed from, one of the model's collections, by its own row type: atom
     // sites, background points, texture rows, linked structures, aliases and constraints are added;
     // those, structures and experiments are removed. `erase` refuses a row that is not there.
-    // NOLINTNEXTLINE(performance-unnecessary-value-param): a public signature callers take by address
-    static Edit append(ItemVec<AtomSite>& rows, AtomSite row) { return appending(rows, row); }  // cppcheck-suppress passedByValue ; a public signature callers take by address
-    // NOLINTNEXTLINE(performance-unnecessary-value-param): a public signature callers take by address
-    static Edit append(ItemVec<LineSegment>& rows, LineSegment row) { return appending(rows, row); }  // cppcheck-suppress passedByValue ; a public signature callers take by address
-    // NOLINTNEXTLINE(performance-unnecessary-value-param): a public signature callers take by address
-    static Edit append(ItemVec<PrefOrient>& rows, PrefOrient row) { return appending(rows, row); }  // cppcheck-suppress passedByValue ; a public signature callers take by address
-    // NOLINTNEXTLINE(performance-unnecessary-value-param): a public signature callers take by address
-    static Edit append(ItemVec<LinkedStructure>& rows, LinkedStructure row) { return appending(rows, row); }  // cppcheck-suppress passedByValue ; a public signature callers take by address
-    // NOLINTNEXTLINE(performance-unnecessary-value-param): a public signature callers take by address
-    static Edit append(ItemVec<ParameterAlias>& rows, ParameterAlias row) { return appending(rows, row); }  // cppcheck-suppress passedByValue ; a public signature callers take by address
-    // NOLINTNEXTLINE(performance-unnecessary-value-param): a public signature callers take by address
-    static Edit append(ItemVec<ParameterConstraint>& rows, ParameterConstraint row) {  // cppcheck-suppress passedByValue ; a public signature callers take by address
+    static Edit append(ItemVec<AtomSite>& rows, const AtomSite& row) { return appending(rows, row); }
+    static Edit append(ItemVec<LineSegment>& rows, const LineSegment& row) { return appending(rows, row); }
+    static Edit append(ItemVec<PrefOrient>& rows, const PrefOrient& row) { return appending(rows, row); }
+    static Edit append(ItemVec<LinkedStructure>& rows, const LinkedStructure& row) { return appending(rows, row); }
+    static Edit append(ItemVec<ParameterAlias>& rows, const ParameterAlias& row) { return appending(rows, row); }
+    static Edit append(ItemVec<ParameterConstraint>& rows, const ParameterConstraint& row) {
         return appending(rows, row);
     }
     // A site of a structure goes with its tensor row (erase_atom_site); any other row alone.
@@ -1223,8 +1217,7 @@ class Edit {
 
     // --- Loaded blocks ----------------------------------------------------------------------------
     // A loaded structure added (add_loaded_structure's rule: its name is not taken).
-    // NOLINTNEXTLINE(performance-unnecessary-value-param): a public signature callers take by address
-    static Edit add_structure(Project& project, Structure structure) {  // cppcheck-suppress passedByValue ; a public signature callers take by address
+    static Edit add_structure(Project& project, const Structure& structure) {
         return Edit(ResultOperation{}, [&project, structure = std::make_shared<Structure>(structure)] {
             add_loaded_structure(project, *structure);
             const auto* inserted=project.structures.back().get();
@@ -1274,8 +1267,7 @@ class Edit {
     }
     // The same replacement, admitting a file of several datasets: its result names the experiments at `produced`
     // (indices into `replacement`'s experiments), the first the load's target, as members of the project after it.
-    // NOLINTNEXTLINE(performance-unnecessary-value-param): a public signature callers take by address
-    static Edit replace_project(Project& project, Project replacement, std::vector<std::size_t> produced) {  // cppcheck-suppress passedByValue ; a public signature callers take by address
+    static Edit replace_project(Project& project, Project replacement, const std::vector<std::size_t>& produced) {
         auto next = std::make_shared<const Project>(std::move(replacement));
         return Edit(ResultOperation{}, [&project, next, produced] {
             replace_into(project, Project(*next));
@@ -1705,8 +1697,7 @@ class Edit {
 
     // FIRST ordinary relation edits: complete the prospective declaration inside
     // serialized execution, after Input observers and BEFORE the live assignment.
-    // NOLINTNEXTLINE(performance-unnecessary-value-param): a public signature callers take by address
-    static Edit constraint_append(Project& project, ParameterConstraint complete) {  // cppcheck-suppress passedByValue ; a public signature callers take by address
+    static Edit constraint_append(Project& project, const ParameterConstraint& complete) {
         return Edit(ResultOperation{}, [&project, complete = std::make_shared<ParameterConstraint>(complete)] {
             {
                 Project candidate = project;

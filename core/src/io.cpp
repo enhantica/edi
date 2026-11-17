@@ -5138,8 +5138,7 @@ std::vector<ItemVec<FitParameterCorrelation>::Ptr> numbered_correlations(
     return rows;
 }
 
-// NOLINTNEXTLINE(performance-unnecessary-value-param): a public signature callers take by value
-void hold_template_rows(FitResultRecord& record, std::vector<FitParameterCorrelation> template_rows,  // cppcheck-suppress passedByValue ; a public signature callers take by address
+void hold_template_rows(FitResultRecord& record, const std::vector<FitParameterCorrelation>& template_rows,
                         const std::vector<FitParameterCorrelation>& rows, const std::string& template_file) {
     std::map<std::string, std::vector<std::shared_ptr<const FitParameterCorrelation>>> read;
     for (const FitParameterCorrelation& row : rows) {
