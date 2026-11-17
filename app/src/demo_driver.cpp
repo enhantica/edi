@@ -847,6 +847,7 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
         const QString root = QString::fromUtf8(EDI_CLI_PROJECTS_DIR) + "/";
         steps_.push_back({"lbcofit-1-table", {"resize:1480x800", "open-project:" + root + "pd-neut-cwl_lbco-hrpt/project",
                                               analysis, basic, "statusBar.fit.button", "wait-fit", "choose:OK"}});
+        steps_.push_back({"lbcofit-2-alias-picker", {extras, "expand:group.alias", "reveal:group.alias", "alias.parameter.0"}});
     }
     // The moments table of a magnetic structure, with |M| and its angles (`--demo-only moments-`).
     if (only.startsWith(QLatin1String("moments-"))) {
