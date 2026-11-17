@@ -24,8 +24,10 @@
       /* The full logo at its size on the app's Home page (a 70 px mark; the owner, 2026-10-03). */
       #splash { width: 224px; }
       #still { width: 200px; display: none; }
-      /* The intro (intro.js) over the app while it starts: its words and mark placed by the script. */
-      #loading.introducing { position: fixed; inset: 0; z-index: 1; background: var(--background); }
+      /* The intro (intro.js) over the app while it starts: its words and mark placed by the script. Above every layer
+         the app's window adds, or the started app drew over the intro still playing (the owner, 2026-11-17: it
+         "stopped in the middle", and after a reload, with the app from the cache, it seemed not to play at all). */
+      #loading.introducing { position: fixed; inset: 0; z-index: 2147483647; background: var(--background); }
       .intro { position: fixed; inset: 0; color: var(--foreground); }
       .intro svg, .intro .intro-mark { position: absolute; fill: currentColor; will-change: transform, opacity; }
       .intro .intro-mark img { display: block; width: 100%; height: 100%; }
