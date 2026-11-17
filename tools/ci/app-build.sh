@@ -65,7 +65,7 @@ fi
 collection=""
 if [ -z "${CI:-}" ] && [ "${EDI_LOCAL_COLLECTION:-}" != off ]; then
     collection="${EDI_LOCAL_COLLECTION:-$ROOT/build/edi-data}"
-    ref="${EDI_LOCAL_COLLECTION_REF:-main}"
+    ref="${EDI_LOCAL_COLLECTION_REF:-dev}"
     if [ -z "${EDI_LOCAL_COLLECTION:-}" ]; then
         if [ -d "$collection/.git" ]; then
             # The build's own clone: it follows the branch asked for.
