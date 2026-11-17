@@ -55,4 +55,4 @@ The same prompt, asking for a project for `edi fit`, is on the
 [<span class="ed-interface-icons" aria-hidden="true">:fa5-terminal:</span> <span class="ed-icon-text">Command line</span>](../../cli/tutorials/assistant.md){ .ed-icon-label .ed-interface-link } tutorials. The application has an
 [AI assistant](../../user-guide/ai-assistant/index.md) built in.
 
-See the [recorded prompt trials](../../assistant-prompt-trials.md) for the tested models, dates and outcomes.
+This prompt was last checked on 13 November 2026; another assistant may take different steps.

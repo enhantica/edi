@@ -544,11 +544,13 @@ def macos_installer_template(tools: Path, output: Path) -> Path:
     return thin
 
 
-def archive_installer(installer: Path, runtime: Path | None) -> Path:
+def archive_installer(installer: Path, runtime: Path | None, *, ad_hoc: bool = True) -> Path:
     """Archive the complete bootstrap including its portable runtime libraries."""
     archive = installer.with_suffix('.zip')
+    archive.unlink(missing_ok=True)
     if SYSTEM == 'macos':
-        run(['codesign', '--force', '--deep', '--sign', '-', installer])
+        if ad_hoc:
+            run(['codesign', '--force', '--deep', '--sign', '-', installer])
         run(['ditto', '-c', '-k', '--sequesterRsrc', '--keepParent', installer, archive])
     else:
         with zipfile.ZipFile(archive, 'w', compression=zipfile.ZIP_DEFLATED) as zipped:
@@ -700,6 +702,119 @@ def package_app(
         + '\n'
     )
     return installer
+
+
+def required_environment(*names: str) -> list[str]:
+    values = [os.environ.get(name, '') for name in names]
+    missing = [name for name, value in zip(names, values, strict=True) if not value]
+    if missing:
+        raise RuntimeError('Signing needs ' + ', '.join(missing))
+    return values
+
+
+def macos_signing() -> bool:
+    """Signing is on for this macOS run (set by the installers workflow on main only)."""
+    return SYSTEM == 'macos' and os.environ.get('EDI_CODESIGN') == '1'
+
+
+def sign_macos_runtime(path: Path) -> None:
+    """Sign with the Developer ID, the hardened runtime and a timestamp, as notarisation needs."""
+    (identity,) = required_environment('EDI_CODESIGN_MAC_IDENTITY')
+    run([
+        'codesign', '--force', '--options', 'runtime', '--timestamp', '--sign', identity, path,
+    ])  # fmt: skip
+    run(['codesign', '--verify', '--strict', '--verbose=2', path])
+
+
+def submit_for_notarisation(archive: Path) -> None:
+    """Send a ZIP to Apple's notary service and require the status Accepted."""
+    apple_id, password, team = required_environment(
+        'EDI_NOTARY_APPLE_ID', 'EDI_NOTARY_PASSWORD', 'EDI_NOTARY_TEAM_ID'
+    )
+    result = subprocess.run(
+        [
+            'xcrun', 'notarytool', 'submit', archive, '--wait', '--output-format', 'json',
+            '--apple-id', apple_id, '--password', password, '--team-id', team,
+        ],
+        check=False, capture_output=True, text=True,
+    )  # fmt: skip
+    print(result.stdout, result.stderr, sep='\n', flush=True)
+    try:
+        status = json.loads(result.stdout).get('status')
+    except json.JSONDecodeError:
+        status = None
+    if result.returncode != 0 or status != 'Accepted':
+        raise RuntimeError(f'Notarisation was not accepted: {status}')
+
+
+def notarise_macos(installer: Path) -> None:
+    """Sign the installer with the hardened runtime, notarise and staple it (ADR-0091)."""
+    (identity,) = required_environment('EDI_CODESIGN_MAC_IDENTITY')
+    run([
+        'codesign', '--force', '--deep', '--options', 'runtime', '--timestamp',
+        '--sign', identity, installer,
+    ])  # fmt: skip
+    run(['codesign', '--verify', '--deep', '--strict', '--verbose=2', installer])
+    upload = installer.with_name(installer.stem + '-notarise.zip')
+    run(['ditto', '-c', '-k', '--sequesterRsrc', '--keepParent', installer, upload])
+    try:
+        submit_for_notarisation(upload)
+    finally:
+        upload.unlink()
+    run(['xcrun', 'stapler', 'staple', installer])
+    run(['xcrun', 'stapler', 'validate', installer])
+    run(['spctl', '--assess', '--type', 'execute', '--verbose=4', installer])
+
+
+def signtool() -> Path:
+    found = shutil.which('signtool')
+    if found:
+        return Path(found)
+    kits = Path(os.environ.get('PROGRAMFILES(X86)', r'C:\Program Files (x86)'))
+    kits /= 'Windows Kits/10/bin'
+    candidates = sorted(kits.glob('*/x64/signtool.exe'))
+    if not candidates:
+        raise RuntimeError('signtool is not installed')
+    return candidates[-1]
+
+
+def verify_windows_signature(path: Path) -> None:
+    run([signtool(), 'verify', '/pa', '/v', path])
+
+
+def windows_signing() -> bool:
+    """Signing is on for this Windows run (set by the installers workflow on main only)."""
+    return SYSTEM == 'windows' and os.environ.get('EDI_CODESIGN') == '1'
+
+
+def sign_windows(path: Path) -> None:
+    """Sign through DigiCert KeyLocker with the smctl the signing action installed, then verify."""
+    (alias,) = required_environment('EDI_CODESIGN_WIN_KEYPAIR_ALIAS')
+    run([
+        'smctl', 'sign', '--simple', '--input', path, '--keypair-alias', alias,
+        '--exit-non-zero-on-fail', '--failfast',
+    ])  # fmt: skip
+    verify_windows_signature(path)
+
+
+def seal_installer(output: Path) -> None:
+    """Finish a signed installer after packaging and archive it again.
+
+    macOS signs, notarises and staples here; Windows signs and verifies.
+    """
+    output = output.resolve()
+    metadata_path = output / 'installer.json'
+    metadata = json.loads(metadata_path.read_text(encoding='utf-8'))
+    installer = output / metadata['installer']
+    if SYSTEM == 'macos':
+        notarise_macos(installer)
+    elif SYSTEM == 'windows':
+        sign_windows(installer)
+    else:
+        raise RuntimeError('Linux installers are not signed')
+    archive = archive_installer(installer, None, ad_hoc=False)
+    metadata.update({'zip': archive.name, 'zip_sha256': sha256(archive)})
+    metadata_path.write_text(json.dumps(metadata, indent=2) + '\n')
 
 
 def clean_environment(home: Path) -> dict:
@@ -887,6 +1002,8 @@ def exercise_installer(
             or not (output / 'smoke/window.png').is_file()
         ):
             raise RuntimeError('Installed application smoke check failed')
+        if windows_signing():
+            verify_windows_signature(app)
         if SYSTEM == 'linux':
             dependencies = check_linux_dependencies(target, env)
             (output / 'dependencies.json').write_text(json.dumps(dependencies, indent=2) + '\n')
@@ -958,6 +1075,8 @@ def main() -> None:
     test.add_argument('--output', type=Path, required=True)
     test.add_argument('--repository')
     test.add_argument('--with-assistant', action='store_true')
+    seal = commands.add_parser('seal')
+    seal.add_argument('--output', type=Path, required=True)
     args = parser.parse_args()
     if args.command == 'relocate-linux':
         relocate_linux(args.stage, args.patchelf, args.qt_prefix)
@@ -984,6 +1103,8 @@ def main() -> None:
             (args.repository_url or urls[0]) if args.kind == 'online' else None,
             urls[1:] if args.kind == 'online' else (),
         )
+    elif args.command == 'seal':
+        seal_installer(args.output)
     else:
         exercise_installer(
             args.installer, args.output, args.repository, with_assistant=args.with_assistant

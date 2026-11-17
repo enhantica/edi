@@ -53,8 +53,9 @@ remains a failed qualification even if the application itself starts.
 
 ## Platform limits
 
-These are development installers, without a signing identity or public release step. macOS uses an
-ad-hoc signature and targets arm64; Windows targets x86-64. Linux targets x86-64 and is qualified on
+Runs on `main` sign the macOS and Windows installers and notarise the macOS one
+([ADR-0091](adrs/0091-code-signing.md)); pull request builds stay unsigned and macOS signs them ad hoc.
+macOS targets arm64; Windows targets x86-64. Linux targets x86-64 and is qualified on
 Ubuntu 24.04. The original bundled assistant package's `zsh` helper requires glibc 2.38; an app-only smoke on an older host
 does not qualify that complete upstream runtime. The installer does not replace the
 system C library or graphics drivers.

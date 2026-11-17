@@ -34,8 +34,9 @@ served users and contributors together, with the web application at `/webapp/` (
 
 ## Recorded assistant prompt trials
 
-The existing Python and command-line assistant pages cite a public authoring-trial summary.
-A trial fetches the actual published prompt and references, executes its generated artifact,
+The Python and command-line assistant pages say only when their prompt was last checked and that
+another assistant may take different steps. The trial records are a contributor page,
+[Assistant prompt trials](../assistant-prompt-trials.md), not part of the user docs. A trial fetches the actual published prompt and references, executes its generated artifact,
 and records the assistant/date, source and artifact hashes, results and comparisons. Both the
 existing prerelease-preview route and the official published-release route require this evidence;
 metadata alone does not qualify either route. Historical prerequisite failures remain immutable.

@@ -46,7 +46,16 @@ try {
   page = await browser.newPage();
   await page.clock.install({time:new Date(instant)});
   await page.clock.setFixedTime(new Date(instant));
-  await page.goto(`http://127.0.0.1:${server.address().port}/${pagePath}`);
+  const base = `http://127.0.0.1:${server.address().port}`;
+  const submissions = [];
+  await page.route(`${base}/survey`, async route => {
+    submissions.push(route.request().postDataJSON());
+    await route.fulfill({status:201,contentType:'application/json',body:'{}'});
+  });
+  await page.goto(`${base}/${pagePath}`);
+  await page.evaluate(endpoint => {
+    window.edFeedbackForm = {endpoint,status:{sending:'Sending',failed:'Failed %1'}};
+  }, `${base}/feedback`);
   const config = await readFile(join(root,'../mkdocs.yml'),'utf8');
   const scripts = config.split('extra_javascript:')[1]?.split(/^\S/m)[0] || '';
   const surveyScripts = [...scripts.matchAll(/^\s+-\s+(assets\/survey\/[^\s]+\.js(?:\?[^\s]+)?)/gm)];
@@ -64,6 +73,46 @@ try {
   assert.equal(options.some(value=>value.includes('Window witness')),expected,'The event must be offered exactly during its inclusive date window');
   assert(!options.some(value=>value.includes('Past witness')) || instant.startsWith('2030-05-09'),'Expired events must be absent');
   assert(!options.some(value=>value.includes('Future witness')) || instant.startsWith('2030-05-13'),'Future events must be absent');
+  const form = page.locator('form.ed-survey-form');
+  const privateFields = form.locator('[name="name"], [name="email"], [name="affiliation"], [name="consent"], [name="contact"], input[type="email"]');
+  assert.equal(await privateFields.count(),0,'The anonymous survey must not render contact or consent controls');
+  assert(await form.getByRole('heading',{name:'About your work',exact:true}).isVisible(),
+    'The anonymous form asks about work rather than personal identity');
+  const platforms = form.locator('[data-key="platforms"]');
+  const choices = await platforms.locator('input[type="checkbox"]').evaluateAll(boxes=>boxes.map(box=>box.value));
+  assert.deepEqual(choices,['Windows','macOS','Linux','Tablet','Smartphone','Other'],
+    'The platform question offers the six owner-declared checkbox choices');
+  const linux = platforms.getByRole('checkbox',{name:'Linux',exact:true});
+  const follow = platforms.locator('[name="platforms_linux"]');
+  assert(await follow.isHidden(),'The Linux distribution field starts hidden');
+  await platforms.getByRole('checkbox',{name:'Windows',exact:true}).check();
+  await linux.check();
+  assert(await follow.isVisible(),'Selecting Linux must reveal its distribution follow-up');
+  await follow.fill('Debian 13');
+  let answers = await form.evaluate(form=>window.edSurvey.answers(form));
+  assert.deepEqual(answers.platforms,['Windows','Linux'],'Platform answers retain multiple selected platforms');
+  assert.equal(answers.platforms_linux,'Debian 13','The selected Linux answer retains its distribution');
+  await linux.uncheck();
+  assert(await follow.isHidden(),'Deselecting Linux hides its distribution field');
+  answers = await form.evaluate(form=>window.edSurvey.answers(form));
+  assert(!('platforms_linux' in answers),'A stale hidden Linux answer must not enter the payload');
+  await linux.check();
+  await follow.fill('Debian 13');
+  await form.getByRole('button',{name:'Send',exact:true}).click();
+  await page.waitForFunction(()=>document.querySelector('form.ed-survey-form [name="platforms_linux"]').hidden,
+    {},{timeout:3000});
+  assert.equal(submissions.length,1,'One anonymous Send must produce one intercepted submission');
+  const payload = submissions[0];
+  assert.deepEqual(Object.keys(payload).sort(),['answers','app','event'],
+    'The anonymous payload contains only event, answers and application context');
+  assert.equal(payload.event,'general','The anonymous payload retains the selected event');
+  assert.deepEqual(payload.answers.platforms,['Windows','Linux'],'Submission retains platform choices');
+  assert.equal(payload.answers.platforms_linux,'Debian 13','Submission retains the selected Linux distribution');
+  for (const key of ['contact','name','email','affiliation','consent'])
+    assert(!(key in payload.answers),'Anonymous answers must not contain structured contact fields');
+  assert.equal(await platforms.locator('input:checked').count(),0,
+    'Successful submission resets the platform choices and hides the Linux follow-up');
+
 } finally {if (page) await page.context().close();await new Promise(ok=>server.close(ok));}
 }
 
