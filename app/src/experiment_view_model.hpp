@@ -417,7 +417,8 @@ class ExperimentViewModel : public QObject {
     // receipt can tell that its own pattern reached the screen.
     std::uint64_t patternGeneration() const { return pattern_generation_; }
     std::uint64_t presentedGeneration() const { return presented_generation_; }
-    void notePresented() { presented_generation_ = pattern_generation_; }
+    // A chart drew the current pattern (the Meas vs calc chart calls it from QML), so a followed fit moves on.
+    Q_INVOKABLE void notePresented() { presented_generation_ = pattern_generation_; }
     BlockText* text() const { return text_; }
     QString lastError() const { return last_error_; }
 
