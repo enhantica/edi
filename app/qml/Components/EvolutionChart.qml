@@ -45,6 +45,8 @@ Item {
     // The tab is the one the window shows; the points are drawn once it is.
     property bool shown: true
 
+    // The banks whose curves the legend hid, by name; all shown again with a new series.
+    property var hiddenBanks: []
     readonly property real em: EaStyle.Sizes.fontPixelSize
     // The main area's margin (AppSizes.mainAreaMargin), as the pattern chart's.
     readonly property real sideMargin: fromReport ? em : AppSizes.mainAreaMargin
@@ -348,6 +350,7 @@ Item {
                 objectName: `evolution.points.bank.${bankLayer.index}`
                 anchors.fill: parent
                 color: AppColors.experiment(bankLayer.index, chart.colors.isDarkPalette)
+                visible: !chart.hiddenBanks.includes(chart.evolution.experiments[bankLayer.index] ?? "")
                 markerSize: 6
                 xMin: axisX.min
                 xMax: axisX.max
@@ -364,6 +367,8 @@ Item {
             id: bankLegendRows
         }
         ChartLegend {
+            id: bankLegend
+
             objectName: "evolution.bankLegend"
             z: 1
             x: chart.em
@@ -371,12 +376,26 @@ Item {
             colors: chart.colors
             entries: bankLegendRows
             visible: chart.evolution !== null && !chart.fromReport && chart.evolution.perExperiment && chart.evolution.currentExperiment < 0
+            toggles: true
+            onToggled: key => {
+                const hidden = chart.hiddenBanks.slice();
+                const at = hidden.indexOf(key);
+                if (at >= 0)
+                    hidden.splice(at, 1);
+                else
+                    hidden.push(key);
+                chart.hiddenBanks = hidden;
+                refill();
+            }
             readonly property var banks: chart.evolution !== null ? chart.evolution.experiments : []
             readonly property bool dark: chart.colors.isDarkPalette
             function refill() {
-                bankLegendRows.setRows(banks, banks.map((name, i) => String(AppColors.experiment(i, dark))), -1);
+                bankLegendRows.setRows(banks, banks.map((name, i) => String(AppColors.experiment(i, dark))), -1, chart.hiddenBanks);
             }
-            onBanksChanged: refill()
+            onBanksChanged: {
+                chart.hiddenBanks = [];
+                refill();
+            }
             onDarkChanged: refill()
             Component.onCompleted: refill()
         }
@@ -428,7 +447,12 @@ Item {
             onPositionChanged: mouse => ApplicationInfo.evolutionPointer(mouse, 1)
             // A zoom is taken only with increasing ends and finite spans on both axes.
             onReleased: mouse => ApplicationInfo.evolutionPointer(mouse, 2)
-            onClicked: mouse => ApplicationInfo.evolutionPointer(mouse, 3)
+            // A click on a bank's legend row hides or shows that bank's curve (the owner's toggles, edi ADR-0089 point 2).
+            onClicked: mouse => {
+                if (mouse.button === Qt.LeftButton && bankLegend.visible && bankLegend.toggleAt(pointer, mouse.x, mouse.y))
+                    return;
+                ApplicationInfo.evolutionPointer(mouse, 3);
+            }
             onWheel: wheel => ApplicationInfo.evolutionPointer(wheel, 4)
 
             Binding {
