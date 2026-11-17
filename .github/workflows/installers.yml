@@ -307,8 +307,18 @@ jobs:
         env:
           QT_QPA_PLATFORM: offscreen
           QT_QUICK_BACKEND: software
+      # The installers ship this tool instead of writing one from their own binary, which a real signature
+      # forbids: Developer ID, hardened runtime and notarised on release builds, ad hoc otherwise (edi ADR-0091).
+      - name: Build and sign the macOS maintenance tool
+        if: runner.os == 'macOS'
+        run: pixi run --manifest-path tools/installer/pixi.toml python "${{ github.workspace }}/tools/installer/package.py" maintenance-tool --tools "${{ github.workspace }}/build/installer/ifw/tools" --output "${{ github.workspace }}/build/installer/maintenance"
+        env:
+          EDI_CODESIGN_MAC_IDENTITY: ${{ env.EDI_CODESIGN == '1' && vars.CODESIGN_MAC_IDENTITY || '' }}
+          EDI_NOTARY_APPLE_ID: ${{ env.EDI_CODESIGN == '1' && secrets.CODESIGN_MAC_NOTARY_APPLE_ID || '' }}
+          EDI_NOTARY_PASSWORD: ${{ env.EDI_CODESIGN == '1' && secrets.CODESIGN_MAC_NOTARY_PASSWORD || '' }}
+          EDI_NOTARY_TEAM_ID: ${{ env.EDI_CODESIGN == '1' && vars.CODESIGN_MAC_TEAM_ID || '' }}
       - name: Create the offline qualification installer
-        run: pixi run --manifest-path tools/installer/pixi.toml python "${{ github.workspace }}/tools/installer/package.py" package --stage "${{ github.workspace }}/build/installer/stage" --tools "${{ github.workspace }}/build/installer/ifw/tools" --output "${{ github.workspace }}/build/installer/package"
+        run: pixi run --manifest-path tools/installer/pixi.toml python "${{ github.workspace }}/tools/installer/package.py" package --stage "${{ github.workspace }}/build/installer/stage" --tools "${{ github.workspace }}/build/installer/ifw/tools" --output "${{ github.workspace }}/build/installer/package" ${{ runner.os == 'macOS' && format('--maintenance-tool "{0}/build/installer/maintenance/maintenance-tool/MaintenanceTool.app"', github.workspace) || '' }}
       - name: Sign the offline installer and archive it again
         if: github.event.pull_request.head.repo.fork == false && env.EDI_CODESIGN == '1' && runner.os != 'Linux'
         run: pixi run --manifest-path tools/installer/pixi.toml python "${{ github.workspace }}/tools/installer/package.py" seal --output "${{ github.workspace }}/build/installer/package"
@@ -327,7 +337,7 @@ jobs:
           installer=$(cat build/installer/package/installer.json | sed -n 's/.*"zip": "\([^"]*\)".*/\1/p')
           pixi run --manifest-path tools/installer/pixi.toml python "${{ github.workspace }}/tools/installer/package.py" test --installer "${{ github.workspace }}/build/installer/package/$installer" --output "${{ github.workspace }}/build/installer/test"
       - name: Create the online distribution installer
-        run: pixi run --manifest-path tools/installer/pixi.toml python "${{ github.workspace }}/tools/installer/package.py" package --kind online --stage "${{ github.workspace }}/build/installer/stage" --tools "${{ github.workspace }}/build/installer/ifw/tools" --output "${{ github.workspace }}/build/installer/online"
+        run: pixi run --manifest-path tools/installer/pixi.toml python "${{ github.workspace }}/tools/installer/package.py" package --kind online --stage "${{ github.workspace }}/build/installer/stage" --tools "${{ github.workspace }}/build/installer/ifw/tools" --output "${{ github.workspace }}/build/installer/online" ${{ runner.os == 'macOS' && format('--maintenance-tool "{0}/build/installer/maintenance/maintenance-tool/MaintenanceTool.app"', github.workspace) || '' }}
       - name: Sign the online installer and archive it again
         if: github.event.pull_request.head.repo.fork == false && env.EDI_CODESIGN == '1' && runner.os != 'Linux'
         run: pixi run --manifest-path tools/installer/pixi.toml python "${{ github.workspace }}/tools/installer/package.py" seal --output "${{ github.workspace }}/build/installer/online"
