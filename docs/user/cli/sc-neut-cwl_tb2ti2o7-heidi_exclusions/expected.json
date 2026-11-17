@@ -1,0 +1,20 @@
+{
+  "schema": 1,
+  "source": {
+    "engine": "derived by hand from the project's own files",
+    "provenance": "PROVENANCE.md"
+  },
+  "comparable_parameters": true,
+  "quantities": {
+    "n_free": {
+      "value": 1,
+      "kind": "reference",
+      "tol_abs": 0
+    },
+    "n_points_fitted": {
+      "value": 210,
+      "kind": "reference",
+      "tol_abs": 0
+    }
+  }
+}

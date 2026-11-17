@@ -3807,20 +3807,78 @@ NB_MODULE(_edi, m) {
                 return nb::cast(edi::views::ExtinctionNode(&self));
             },
             nb::keep_alive<0, 1>())
-        // Immutable tuple-of-pairs out — no mutable copy can exist; the replacement setter
-        // stays (ExcludedRegion items are D8's own task).
+        // Immutable tuple out — no mutable copy can exist; the replacement setter stays (ExcludedRegion
+        // items are D8's own task). A powder's region is a (start, end) pair on its pattern's axis; a
+        // single crystal's is (start, end, axis), the axis 'd_spacing' or 'sin_theta_over_lambda'.
         .def_prop_rw(
             "excluded_regions",
             [](const edi::ExperimentBase& self) {
                 nb::list out;
                 for (const auto& region : self.excluded_regions) {
-                    out.append(nb::make_tuple(region->first.get(), region->second.get()));
+                    if (region->axis.value().empty()) {
+                        out.append(nb::make_tuple(region->first.get(), region->second.get()));
+                    } else {
+                        out.append(nb::make_tuple(region->first.get(), region->second.get(),
+                                                  region->axis.value()));
+                    }
                 }
                 return nb::tuple(out);
             },
-            [](edi::ExperimentBase& self, const std::vector<std::pair<double, double>>& regions) {
-                self.excluded_regions = edi::excluded_region_rows(regions);
-            });
+            [](edi::ExperimentBase& self, const std::vector<nb::object>& regions) {
+                std::vector<std::shared_ptr<edi::ExcludedRegion>> rows;
+                rows.reserve(regions.size());
+                for (const nb::object& region : regions) {
+                    const nb::tuple item = nb::tuple(region);
+                    if (item.size() != 2 && item.size() != 3) {
+                        throw std::invalid_argument(
+                            "an excluded region is (start, end), or (start, end, axis) on a single crystal");
+                    }
+                    auto row = std::make_shared<edi::ExcludedRegion>(nb::cast<double>(item[0]),
+                                                                     nb::cast<double>(item[1]));
+                    const std::string axis = item.size() == 3 ? nb::cast<std::string>(item[2]) : std::string();
+                    row->axis = edi::check_excluded_region_axis(self, axis);
+                    rows.push_back(std::move(row));
+                }
+                self.excluded_regions.assign(std::move(rows));
+            })
+        // A single crystal's reflections left out of the fit by their indices, as (h, k, l) rows; under a
+        // merge mode the indices name their equivalents too. Assigning a list of rows replaces them all.
+        .def_prop_rw(
+            "excluded_reflections",
+            [](const edi::ExperimentBase& self) {
+                nb::list out;
+                for (const auto& row : self.excluded_reflections) {
+                    out.append(nb::make_tuple(row->index_h.get(), row->index_k.get(), row->index_l.get()));
+                }
+                return nb::tuple(out);
+            },
+            [](edi::ExperimentBase& self, const std::vector<std::tuple<int, int, int>>& rows) {
+                if (!self.reflections && !rows.empty()) {
+                    throw std::invalid_argument("only a single crystal leaves out reflections by their indices");
+                }
+                std::vector<std::shared_ptr<edi::ExcludedReflection>> made;
+                made.reserve(rows.size());
+                for (const auto& [h, k, l] : rows) {
+                    made.push_back(std::make_shared<edi::ExcludedReflection>(h, k, l));
+                }
+                self.excluded_reflections.assign(std::move(made));
+            })
+        .def_prop_rw(
+            "reflns_merge",
+            [](const edi::ExperimentBase& self) { return self.reflns_merge; },
+            [](edi::ExperimentBase& self, std::optional<std::string> mode) {
+                edi::set_reflns_merge(self, std::move(mode));
+            },
+            "How a single crystal's equivalent reflections are merged: 'none', 'point_group' or 'laue_class'; "
+            "None until set (reads as none). A time-of-flight single crystal merges nothing (_reflns.merge).")
+        .def_prop_rw(
+            "reflns_absences",
+            [](const edi::ExperimentBase& self) { return self.reflns_absences; },
+            [](edi::ExperimentBase& self, std::optional<std::string> absences) {
+                edi::set_reflns_absences(self, std::move(absences));
+            },
+            "Whether a single crystal's systematic absences are left out of the fit: 'exclude' or 'include'; "
+            "None until set (reads as include) (_reflns.absences).");
 
     static_cast<void>(nb::class_<edi::ScExperimentBase, edi::ExperimentBase>(m, "ScExperimentBase"));
 
@@ -4822,7 +4880,7 @@ NB_MODULE(_edi, m) {
                 rule.target = target;
                 rule.pattern = pattern;
                 rule.required = required;
-                self.sequential_fit.extract.push_back(std::move(rule));
+                self.sequential_fit.extract.push_back(rule);
             },
             "id"_a, "target"_a, "pattern"_a, "required"_a)
         .def_prop_ro("_sequential_extract_rows", [](const edi::Project& self) {
@@ -4843,6 +4901,42 @@ NB_MODULE(_edi, m) {
                 }
                 self.fitting_mode = value;
             })
+        .def(
+            "reflection_admission",
+            [](const edi::Project& self, const std::string& experiment) -> nb::object {
+                const std::string key = edi::KeyTraits<edi::BraggPdExperiment>::canonical(experiment);
+                for (std::size_t index = 0; index < self.experiments.size(); ++index) {
+                    if (edi::KeyTraits<edi::BraggPdExperiment>::canonical(self.experiments[index]->name) != key) {
+                        continue;
+                    }
+                    const std::optional<edi::ReflectionAdmission> reduced = edi::reflection_admission(self, index);
+                    if (!reduced) {
+                        return nb::none();
+                    }
+                    nb::dict out;
+                    out["measured"] = reduced->measured;
+                    out["unique"] = reduced->unique;
+                    out["used"] = reduced->used;
+                    out["excluded"] = reduced->excluded;
+                    out["absent"] = reduced->absent;
+                    out["r_int"] = reduced->r_int ? nb::cast(*reduced->r_int) : nb::none();
+                    out["r_sigma"] = reduced->r_sigma ? nb::cast(*reduced->r_sigma) : nb::none();
+                    out["absent_mean_i_over_sigma"] = reduced->absent_mean_i_over_sigma;
+                    nb::list status;
+                    for (const char code : reduced->status) {
+                        status.append(std::string(1, code));
+                    }
+                    out["status"] = nb::tuple(status);
+                    return out;
+                }
+                throw std::invalid_argument("the project has no experiment '" + experiment + "'");
+            },
+            nb::arg("experiment"),
+            "Which of a single crystal's measured reflections a fit uses and why (crysta's admission): the "
+            "counts measured, unique, used, excluded and absent, r_int and r_sigma (None when undefined), "
+            "the absences' mean I/su and each reflection's _refln.include_status code ('o' used, 'x' "
+            "excluded, '-' absent, '<' below the fit's cutoff); None for a powder or a single crystal "
+            "without measured reflections.")
         .def_prop_rw(
             "su_rule", [](const edi::Project& self) { return self.su_rule; },
             [](edi::Project& self, const std::string& value) {

@@ -1,0 +1,8 @@
+# The Python bindings take every check of the parent file but two, whose findings fall inside nanobind's own
+# headers, where no NOLINT can reach (ADR-0089): bugprone-exception-escape flags nanobind's noexcept wrap_move for
+# model classes whose moves copy their collections, and the analyzer's NullDereference flags nanobind's list
+# caster on a path it cannot rule out.
+InheritParentConfig: true
+Checks: >
+  -bugprone-exception-escape,
+  -clang-analyzer-core.NullDereference
