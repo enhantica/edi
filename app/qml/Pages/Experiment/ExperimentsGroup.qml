@@ -619,6 +619,13 @@ SideBarGroup {
     // datasets. Up to five files default to separate experiments, more to a scan.
     // Set by Several files as a series…: the next choice of several files is asked with that answer first.
     property bool seriesWanted: false
+    // The datasets dialog for `files` (URLs) as a series, as Several files as a series… then a choice of files opens it.
+    function askSeries(files) {
+        if (group.project === null || group.project.currentExperiment === null)
+            return;
+        group.seriesWanted = true;
+        group.askDatasets(group.project.currentExperiment, files);
+    }
     function askDatasets(experiment, files, origins = []) {
         const series = group.seriesWanted;
         group.seriesWanted = false;
@@ -668,6 +675,39 @@ SideBarGroup {
             // A series of joint fits (edi ADR-0088 point 1): the files grouped by name into one experiment each, fitted
             // point by point; its folder is linked.
             property bool asSeries: false
+            // The series' groups as a worker found them (previewSeriesGroups), shown before loading; OK waits for them.
+            property int previewRequest: 0
+            property string previewText: ""
+            property bool previewValid: false
+            function previewGroups() {
+                datasetsChoice.previewText = "";
+                datasetsChoice.previewValid = false;
+                if (datasetsChoice.asSeries && group.project !== null)
+                    datasetsChoice.previewRequest = group.project.previewSeriesGroups(datasetsChoice.files);
+            }
+            onAsSeriesChanged: previewGroups()
+            // Made already a series (Several files as a series…): grouped at once, and OK waits for it.
+            Component.onCompleted: {
+                previewGroups();
+                const ok = datasetsChoice.standardButton(Dialog.Ok);
+                if (ok)
+                    ok.enabled = datasetsChoice.acceptable;
+            }
+            Connections {
+                target: group.project
+                function onSeriesGroupsPreviewed(request, text, valid) {
+                    if (request !== datasetsChoice.previewRequest)
+                        return;
+                    datasetsChoice.previewText = text;
+                    datasetsChoice.previewValid = valid;
+                }
+            }
+            readonly property bool acceptable: !datasetsChoice.asSeries || datasetsChoice.previewValid
+            onAcceptableChanged: {
+                const ok = datasetsChoice.standardButton(Dialog.Ok);
+                if (ok)
+                    ok.enabled = datasetsChoice.acceptable;
+            }
             property bool copy: true
             property var origins: []
             // A scan's files are read from its folder, so a collection's files are copied for one (edi ADR-0069).
@@ -730,6 +770,14 @@ SideBarGroup {
                     wrapMode: Text.Wrap
                     visible: datasetsChoice.asScan
                     text: qsTr("First fit the template dataset in Single mode. When it is ready, choose Sequential in Analysis to fit the folder. Evolution is available as soon as the scan is loaded.")
+                }
+                EaElements.Label {
+                    objectName: "datasets.series.groups"
+                    width: datasetsColumn.width
+                    wrapMode: Text.Wrap
+                    visible: datasetsChoice.asSeries
+                    color: datasetsChoice.previewValid || datasetsChoice.previewText === "" ? EaStyle.Colors.themeForeground : EaStyle.Colors.red
+                    text: datasetsChoice.previewText === "" ? qsTr("Grouping the files by name") : datasetsChoice.previewText
                 }
                 EaElements.Label {
                     width: datasetsColumn.width

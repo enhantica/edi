@@ -2366,6 +2366,43 @@ void ProjectViewModel::loadDatasetFolder(ExperimentViewModel* experiment, const 
     });
 }
 
+int ProjectViewModel::previewSeriesGroups(const QList<QUrl>& files) {
+    static int requests = 0;
+    const int request = ++requests;
+    std::vector<std::string> names;
+    for (const QUrl& file : files) {
+        names.push_back(QFileInfo(file.toLocalFile()).fileName().toStdString());
+    }
+    const QPointer<ProjectViewModel> self(this);
+    run_in_background([self, request, names = std::move(names)] {
+        QString text;
+        bool valid = false;
+        try {
+            const std::vector<edi::SeriesGroup> groups = edi::group_series_files(names);
+            if (groups.size() < 2) {
+                text = tr("The file names do not split into one pattern per experiment: name each point's files alike, "
+                          "the point as the one number that changes");
+            } else {
+                QStringList patterns;
+                for (const edi::SeriesGroup& group : groups) {
+                    patterns.append(QString::fromStdString(group.pattern));
+                }
+                text = tr("%1 points, %2 experiments: %3")
+                           .arg(groups.front().files.size())
+                           .arg(groups.size())
+                           .arg(patterns.join(QStringLiteral(", ")));
+                valid = true;
+            }
+        } catch (const std::exception& problem) {
+            text = QString::fromUtf8(problem.what());
+        }
+        QMetaObject::invokeMethod(QCoreApplication::instance(), [self, request, text, valid] {
+            if (self) emit self->seriesGroupsPreviewed(request, text, valid);
+        });
+    });
+    return request;
+}
+
 bool ProjectViewModel::loadSeriesOfJointFits(ExperimentViewModel* experiment, const QList<QUrl>& files, bool copy) {
     const PublicationScope publication(*this);
     const QPointer<ProjectViewModel> self(this);
