@@ -51,7 +51,10 @@ Item {
     // The toolbar line at the top, as the pattern chart's, and the room under it: enough for the notes above the plot
     // and for the colour bar's top label, centred on the bar's end.
     readonly property real toolbarTop: em
-    readonly property real plotTop: toolbarTop + scanToolbar.height + AppSizes.mainAreaMargin
+    // With the curve count shown, it takes the standard gap under the toolbar and the plot follows a small gap below it
+    // (the owner, 2026-11-17); without it the plot is where the pattern chart's is.
+    readonly property real captionGap: Math.round(em * 0.3)
+    readonly property real plotTop: toolbarTop + scanToolbar.height + AppSizes.mainAreaMargin + (curveCount.visible ? curveCount.height + captionGap : 0)
     // The colours: the Stacked lines take the app's palette (edi ADR-0084), and the Map a colour map, Blue-Red by
     // default, an app setting. The Map's direction is the project's (Auto by default), resolved in the theme the view
     // is drawn in.
@@ -236,10 +239,12 @@ Item {
 
     // The curve count, just above the plot frame at its right edge, in the axis labels' font (the owner, 2026-11-16).
     EaElements.Label {
+        id: curveCount
+
         objectName: "scanView." + chart.mode + ".progress"
         visible: chart.scan !== null && ((chart.scan.wanted && chart.scan.loaded < chart.scan.count) || (chart.mode === "stacked" && layer.drawnDatasetCount < chart.scan.count))
         x: view.x + view.plotArea.x + view.plotArea.width - width
-        y: view.y + view.plotArea.y - height - chart.em * 0.2
+        y: chart.toolbarTop + scanToolbar.height + AppSizes.mainAreaMargin
         color: chart.colors.chartLabels
         font.pixelSize: chart.em
         text: chart.scan ? ((chart.scan.wanted && chart.scan.loaded < chart.scan.count ? qsTr("Reading patterns: %1 of %2").arg(chart.scan.loaded).arg(chart.scan.count) : "") + (chart.mode === "stacked" && layer.drawnDatasetCount < chart.scan.count ? (chart.scan.loaded < chart.scan.count ? " · " : "") + qsTr("Showing %1 of %2 curves").arg(layer.drawnDatasetCount).arg(chart.scan.count) : "")) : ""
