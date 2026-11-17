@@ -150,7 +150,7 @@ Column {
             EaComponents.ListViewLabel {
                 elide: Text.ElideRight
                 horizontalAlignment: Text.AlignRight
-                text: "|M|"
+                text: Session.label("atom_site_moment.spherical_modulus")
             }
             EaComponents.ListViewLabel {
                 elide: Text.ElideRight
@@ -317,7 +317,7 @@ Column {
         sourceModel: group.moments
 
         readonly property bool spherical: group.form === "spherical"
-        readonly property var titles: spherical ? [qsTr("|M|"), qsTr("θ (deg)"), qsTr("φ (deg)")] : [qsTr("Mx (x ‖ a)"), qsTr("My"), qsTr("Mz (z ‖ c*)")]
+        readonly property var titles: spherical ? [Session.label("atom_site_moment.spherical_modulus"), qsTr("θ (deg)"), qsTr("φ (deg)")] : [qsTr("Mx (x ‖ a)"), qsTr("My"), qsTr("Mz (z ‖ c*)")]
 
         equalColumns: true
         // In spherical form the modulus is the first component, so the |M| column takes no width and is hidden.
@@ -358,7 +358,7 @@ Column {
                 elide: Text.ElideRight
                 horizontalAlignment: Text.AlignRight
                 visible: !converted.spherical
-                text: "|M|"
+                text: Session.label("atom_site_moment.spherical_modulus")
             }
             HeaderLabel {
                 horizontalAlignment: Text.AlignRight

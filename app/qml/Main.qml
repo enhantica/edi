@@ -961,7 +961,7 @@ EaComponents.ApplicationWindow {
             }
             EaElements.Label {
                 visible: saveAsChoice.linkedData
-                text: qsTr("Measured data")
+                text: Session.categoryTitle("data")
             }
             ChoiceRadioButton {
                 objectName: "saveAs.dataCopy"
