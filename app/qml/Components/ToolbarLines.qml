@@ -59,7 +59,8 @@ Item {
 
     onMeasureChanged: Qt.callLater(lines.layout)
     // Nothing left to show: the popup closes rather than stay open empty.
-    onOverflowChanged: if (overflow.length === 0) morePopup.close()
+    onOverflowChanged: if (overflow.length === 0)
+        morePopup.close()
     Component.onCompleted: Qt.callLater(lines.collect)
 
     ChartToolButton {
