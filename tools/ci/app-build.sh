@@ -59,15 +59,22 @@ if [ -n "${EDI_GUI_COMPONENTS_SRC:-}" ]; then
 fi
 # A local build reads a copy of the edi-data collection in place, as the installed app reads the one it carries (the
 # owner, 2026-11-17; app-with-crysta and app-run use this build): cloned once into build/edi-data and brought up to
-# date when online. EDI_LOCAL_COLLECTION=off builds without one, a folder uses that copy; CI builds without.
+# date when online, from the edi-data branch EDI_LOCAL_COLLECTION_REF (default main; a dev build may take dev).
+# EDI_LOCAL_COLLECTION=off builds without one, a folder uses that copy; CI builds without. The app reads the folder
+# when it runs, so another branch needs no new configure.
 collection=""
 if [ -z "${CI:-}" ] && [ "${EDI_LOCAL_COLLECTION:-}" != off ]; then
     collection="${EDI_LOCAL_COLLECTION:-$ROOT/build/edi-data}"
+    ref="${EDI_LOCAL_COLLECTION_REF:-main}"
     if [ -z "${EDI_LOCAL_COLLECTION:-}" ]; then
         if [ -d "$collection/.git" ]; then
-            timeout 60 git -C "$collection" pull -q --ff-only ||
-                echo "app-build: edi-data not brought up to date (offline?); using the copy in $collection"
-        elif ! timeout 300 git clone -q --depth 1 https://github.com/enhantica/edi-data "$collection"; then
+            # The build's own clone: it follows the branch asked for.
+            if timeout 60 git -C "$collection" fetch -q --depth 1 origin "$ref"; then
+                git -C "$collection" checkout -q -B "$ref" FETCH_HEAD
+            else
+                echo "app-build: edi-data $ref not fetched (offline?); using the copy in $collection"
+            fi
+        elif ! timeout 300 git clone -q --depth 1 --branch "$ref" https://github.com/enhantica/edi-data "$collection"; then
             echo "app-build: edi-data could not be cloned; building without a local collection" >&2
             collection=""
         fi
