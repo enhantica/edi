@@ -8,6 +8,8 @@
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
+#include <memory>
+#include <sstream>
 #include <iterator>
 #include <random>
 #include <stdexcept>
@@ -72,22 +74,22 @@ class Sha256 {
             0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
             0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2};
         std::array<std::uint32_t, 64> w{};
-        for (int i = 0; i < 16; ++i)
+        for (std::size_t i = 0; i < 16; ++i)
             w[i] = (std::uint32_t(block_[4 * i]) << 24) | (std::uint32_t(block_[4 * i + 1]) << 16) |
                    (std::uint32_t(block_[4 * i + 2]) << 8) | std::uint32_t(block_[4 * i + 3]);
-        for (int i = 16; i < 64; ++i) {
+        for (std::size_t i = 16; i < 64; ++i) {
             const auto s0 = rotr(w[i - 15], 7) ^ rotr(w[i - 15], 18) ^ (w[i - 15] >> 3);
             const auto s1 = rotr(w[i - 2], 17) ^ rotr(w[i - 2], 19) ^ (w[i - 2] >> 10);
             w[i] = w[i - 16] + s0 + w[i - 7] + s1;
         }
         auto [a, b, c, d, e, f, g, h] = state_;
-        for (int i = 0; i < 64; ++i) {
+        for (std::size_t i = 0; i < 64; ++i) {
             const auto t1 = h + (rotr(e, 6) ^ rotr(e, 11) ^ rotr(e, 25)) + ((e & f) ^ (~e & g)) + k[i] + w[i];
             const auto t2 = (rotr(a, 2) ^ rotr(a, 13) ^ rotr(a, 22)) + ((a & b) ^ (a & c) ^ (b & c));
             h = g, g = f, f = e, e = d + t1, d = c, c = b, b = a, a = t1 + t2;
         }
         const std::array<std::uint32_t, 8> add = {a, b, c, d, e, f, g, h};
-        for (int i = 0; i < 8; ++i) state_[i] += add[i];
+        for (std::size_t i = 0; i < 8; ++i) state_[i] += add[i];
     }
     std::array<std::uint32_t, 8> state_ = {0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a,
                                            0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19};
@@ -104,7 +106,10 @@ std::string lowercase(std::string text) {
 
 std::string read_file(const fs::path& path) {
     std::ifstream in(path, std::ios::binary);
-    return {std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>()};
+    // Through rdbuf rather than istreambuf_iterator, which GCC 14 reports as a null dereference once inlined.
+    std::ostringstream text;
+    text << in.rdbuf();
+    return std::move(text).str();
 }
 
 // The project folder inside an unpacked archive's folder, as unpack_project_archive answers it: the folder itself when
@@ -140,7 +145,8 @@ void write_through_staging(const fs::path& target, std::string_view bytes) {
         const fs::path staging = private_name(target, ".partial");
         // "x" fails when anything at all has the name, a dangling link included.
 #if defined(_WIN32)
-        std::FILE* out = _wfopen(staging.c_str(), L"wbx");
+        std::FILE* out = nullptr;
+        if (_wfopen_s(&out, staging.c_str(), L"wbx") != 0) out = nullptr;
 #else
         std::FILE* out = std::fopen(staging.c_str(), "wbx");
 #endif
@@ -420,7 +426,16 @@ const std::string& default_tutorials_source() {
 std::vector<std::string> sources_for(const std::string& source, const char* variable,
                                      const std::vector<std::string>& defaults) {
     if (!source.empty()) return {source};
+#if defined(_WIN32)
+    char* given = nullptr;
+    std::size_t length = 0;
+    if (_dupenv_s(&given, &length, variable) == 0 && given != nullptr) {
+        const std::unique_ptr<char, decltype(&std::free)> held(given, &std::free);
+        if (*given != '\0') return {std::string(given)};
+    }
+#else
     if (const char* given = std::getenv(variable); given != nullptr && *given != '\0') return {given};
+#endif
     return defaults;
 }
 
@@ -430,7 +445,9 @@ Reply read_local(const std::string& url) {
     if (!fs::is_regular_file(path, ec)) return {false, {}, path + " does not exist", true};
     std::ifstream in(path, std::ios::binary);
     if (!in) return {false, {}, path + " cannot be read", false};
-    return {true, {std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>()}, {}, false};
+    std::ostringstream text;
+    text << in.rdbuf();
+    return {true, std::move(text).str(), {}, false};
 }
 
 std::string read_through(FileRead read, const Transport& transport, std::string* served) {

@@ -27,7 +27,11 @@ void check_rule(const std::string& rule) {
 #ifdef EDI_CRYSTA_SU_FORMAT
 crysta::SuRule rule_of(const std::string& rule) {
     check_rule(rule);
-    return *crysta::su_rule_from_name(rule);
+    const auto found = crysta::su_rule_from_name(rule);
+    if (!found) {
+        throw std::invalid_argument("_su_format.rule is '" + rule + "', which crysta does not know");
+    }
+    return *found;
 }
 #else
 std::string fixed(double value, int decimals) {

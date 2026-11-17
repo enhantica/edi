@@ -27,6 +27,9 @@ add_custom_target(edi_build_commit
 nanobind_add_module(_edi STABLE_ABI src/bindings.cpp "${EDI_BUILD_COMMIT_CPP}")
 add_dependencies(_edi edi_build_commit)
 target_link_libraries(_edi PRIVATE edi::core)
+# nanobind's and Python's headers come in as system headers, like Qt's and crysta's: the checks run on the
+# bindings' own code, not inside the libraries they include (ADR-0089).
+target_include_directories(_edi SYSTEM PRIVATE "${NB_DIR}/include" ${Python_INCLUDE_DIRS})
 # Emit the module PER CONFIGURATION into the build tree — six configurations sharing the one
 # source-tree lib/edi artifact relinked stale objects over one another, so runtime evidence
 # could not name the configuration it came from. lib/edi/__init__.py resolves the

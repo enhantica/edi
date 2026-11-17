@@ -113,8 +113,11 @@ AxisLabels axis_labels_from_text(const QString& text) {
 std::vector<double> axis_ticks(double low, double high, double step) {
     std::vector<double> ticks;
     if (!(step > 0.0) || !(high >= low) || !std::isfinite(low) || !std::isfinite(high)) return ticks;
-    for (double i = std::ceil(low / step - 1e-9); ticks.size() < 200 && i * step <= high + step * 1e-9; ++i) {
-        ticks.push_back(i * step);
+    const double first = std::ceil(low / step - 1e-9);
+    for (int k = 0; k < 200; ++k) {
+        const double tick = (first + k) * step;
+        if (tick > high + step * 1e-9) break;
+        ticks.push_back(tick);
     }
     return ticks;
 }
@@ -158,7 +161,6 @@ double labelled_step(double low, double high, double pixels, const QFont& font, 
 
 namespace {
 
-const double kNaN = std::numeric_limits<double>::quiet_NaN();
 constexpr double kWheelNotch = 120.0;
 constexpr double kWheelFactor = 0.8;  // one notch away from the user multiplies the x span by this
 
@@ -389,7 +391,8 @@ void PatternChartController::setViewRanges(const QList<double>& ranges) {
     const QList<double> now = viewRanges();
     bool same = true;
     for (int i = 0; i < 4; ++i) {
-        same = same && (values[i] ? std::isfinite(now[i]) && now[i] == *values[i] : !std::isfinite(now[i]));
+        const std::optional<double>& value = values[i];
+        same = same && (value.has_value() ? std::isfinite(now[i]) && now[i] == *value : !std::isfinite(now[i]));
     }
     if (same) {
         return;
@@ -1334,8 +1337,8 @@ void PatternChartController::refresh() {
             &PatternChartController::measuredColorChanged);
 
     QList<ChartBandModel::Band> bands;
-    for (const edi::ExcludedBand& band : shown_.excluded) {
-        bands.append({band.x_min, band.x_max});
+    for (const edi::ExcludedBand& excluded : shown_.excluded) {
+        bands.append({excluded.x_min, excluded.x_max});
     }
     double bragg_height = 0.0;
     for (const edi::PaneLayout& pane : shown_.layout) {
@@ -1390,11 +1393,11 @@ void PatternChartController::refresh() {
     QList<BraggLabel> labels;
     for (const edi::BraggRowLabel& label : shown_.bragg_labels) {
         // Hidden with its row's ticks, which share its style.
-        const auto ticks = std::find_if(shown_.series.begin(), shown_.series.end(), [&label](const edi::PatternSeries& series) {
+        const auto tickSeries = std::find_if(shown_.series.begin(), shown_.series.end(), [&label](const edi::PatternSeries& series) {
             return series.kind == edi::SeriesKind::BraggTicks && series.style == label.style;
         });
         labels.append({QString::fromStdString(label.text), colour_of(label.style), label.centre,
-                       ticks != shown_.series.end() && hiddenId(ticks->id), label.magnetic});
+                       tickSeries != shown_.series.end() && hiddenId(tickSeries->id), label.magnetic});
     }
     publish(bragg_labels_, labels, &PatternChartController::braggLabelsChanged);
     const bool subtractable = !report_ && experiment_ != nullptr && edi::has_background(*experiment_->experiment());

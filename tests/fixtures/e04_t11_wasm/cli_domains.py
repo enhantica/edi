@@ -21,7 +21,10 @@ PATHS = {
 PROJECT = 'docs/user/cli/pd-neut-cwl_lbco-hrpt_start-4/project'
 CONDITIONS = {'descent': 'ladder', 'stop_rules': 'chi_square_change', 'max_iterations': 1000}
 ANALYSIS = 'analysis/analysis.edi'
-SUFFIX = b'\n_minimizer.descent ladder\n_minimizer.stop_rules chi_square_change\n'
+SUFFIX = (
+    b'\n_minimizer.descent ladder\n_minimizer.stop_rules chi_square_change\n'
+    b'_minimizer.chi_square_tolerance 1e-6\n'
+)
 
 
 def fields(report):

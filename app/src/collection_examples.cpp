@@ -204,14 +204,14 @@ void CollectionExamples::fetchPaired(const QString& id, const QStringList& bases
         done({}, tr("No online source that answered holds '%1'").arg(id));
         return;
     }
-    const QString base = bases.at(at);
-    const auto url = [](const QString& base, const QString& path) {
-        QUrl out(QString::fromStdString(edi::online::location_url(base.toStdString(), path.toStdString())));
+    const QString& base = bases.at(at);
+    const auto url = [](const QString& root, const QString& path) {
+        QUrl out(QString::fromStdString(edi::online::location_url(root.toStdString(), path.toStdString())));
         return out.scheme().isEmpty() ? QUrl::fromLocalFile(out.toString()) : out;
     };
     const QPointer<CollectionExamples> receiver(this);
     fetch_url(this, network_, url(base, QStringLiteral("index.json")),
-              [receiver, id, bases, at, retried, done, progress, base, url](const QByteArray& bytes, const QString& error, bool unreachable) {
+              [receiver, id, bases, at, retried, done = std::move(done), progress = std::move(progress), base, url](const QByteArray& bytes, const QString& error, bool unreachable) {
         if (!receiver) return;
         if (!error.isEmpty()) {
             if (unreachable && at + 1 < bases.size()) receiver->fetchPaired(id, bases, at + 1, retried, done, progress);
@@ -240,15 +240,15 @@ void CollectionExamples::fetchPaired(const QString& id, const QStringList& bases
             it->sha256 = QString::fromStdString(file.sha256);
         }
         fetch_url(receiver, receiver->network_, url(base, path),
-                  [receiver, id, bases, at, retried, done, progress, file, name](const QByteArray& bytes, const QString& error, bool unreachable) {
+                  [receiver, id, bases, at, retried, done, progress, file, name](const QByteArray& data, const QString& failure, bool offline) {
             if (!receiver) return;
-            if (!error.isEmpty()) {
-                if (unreachable && at + 1 < bases.size()) receiver->fetchPaired(id, bases, at + 1, retried, done, progress);
-                else done({}, error);
+            if (!failure.isEmpty()) {
+                if (offline && at + 1 < bases.size()) receiver->fetchPaired(id, bases, at + 1, retried, done, progress);
+                else done({}, failure);
                 return;
             }
-            const QString problem = content_problem(bytes, file.bytes, QString::fromStdString(file.sha256), name);
-            if (problem.isEmpty()) done(bytes, {});
+            const QString problem = content_problem(data, file.bytes, QString::fromStdString(file.sha256), name);
+            if (problem.isEmpty()) done(data, {});
             else if (!retried) receiver->fetchPaired(id, bases, at, true, done, progress);
             else done({}, problem);
         }, [progress, expected = file.bytes](qint64 received, qint64 total) {
@@ -259,7 +259,7 @@ void CollectionExamples::fetchPaired(const QString& id, const QStringList& bases
 
 void CollectionExamples::fetchProject(const QString& id, ProjectDone done, FetchProgress progress) {
     const QString name = fileName(id);
-    fetchBytes(id, [this, name, done](const QByteArray& bytes, const QString& error) {
+    fetchBytes(id, [this, name, done = std::move(done)](const QByteArray& bytes, const QString& error) {
         if (!error.isEmpty()) {
             done({}, error);
             return;

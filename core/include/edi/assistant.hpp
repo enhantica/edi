@@ -63,7 +63,7 @@ class Controller {
     Revision revision() const;
     /// Owner-thread selected bytes, committed atomically only when no assistant work is active.
     Reply update_selected_files(std::string collection_id, std::uint64_t expected_generation,
-                                std::vector<SelectedFile> added, std::vector<std::string> removed);
+                                std::vector<SelectedFile> added, const std::vector<std::string>& removed);
     /// Trusted host ACK of this exact admitted message's handles; bytes remain task context.
     Reply consume_selected_files(const std::string& collection_id, std::uint64_t expected_generation,
                                  const std::vector<std::string>& file_ids);

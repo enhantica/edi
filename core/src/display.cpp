@@ -360,16 +360,16 @@ TextCategory text_category(const std::string& text, std::string_view id) {
             if (unit.lines.size() > 2) {
                 field.insert(field.end(), unit.lines.begin() + 2, unit.lines.end() - 1);
             }
-            for (const std::string& line : field) {
-                if (line.empty()) {
-                    breaks += value.empty() ? 0 : 1;
+            for (const std::string& piece : field) {
+                if (piece.empty()) {
+                    breaks += value.empty() ? 0U : 1U;
                     continue;
                 }
                 if (!value.empty()) {
                     value += breaks > 0 ? std::string(breaks, '\n') : std::string(" ");
                 }
                 breaks = 0;
-                value += line;
+                value += piece;
             }
         } else {
             const std::vector<std::string> values = line_values(end == std::string::npos ? std::string() : line.substr(end));
@@ -501,6 +501,34 @@ double display_step(const Parameter& parameter, std::string_view variant) {
 double display_step(std::string_view uid, double value, std::string_view variant) {
     const crysta::DictionaryItem& found = item(uid);
     return crysta::display_step(value, format_of(found, variant));
+}
+
+std::pair<double, double> slider_limits(double value, double half_width, double step, double lower, double upper) {
+    double unit = std::pow(10.0, std::floor(std::log10(half_width)));
+    if (step > unit) unit = step;
+    // Whole units are counted against a power of ten, so 379 hundredths prints as 3.79 rather than 3.7900000000000005.
+    const int exponent = static_cast<int>(std::lround(std::log10(unit)));
+    const double scale = std::pow(10.0, std::abs(exponent));
+    const auto at = [&](double units) { return exponent < 0 ? units / scale : units * scale; };
+    const auto count = [&](double x) { return exponent < 0 ? x * scale : x / scale; };
+    // A limit already on a whole unit stays there despite rounding in the division.
+    constexpr double kSlack = 1e-9;
+    const auto down = [&](double x) { return at(std::floor(count(x) + kSlack)); };
+    const auto up = [&](double x) { return at(std::ceil(count(x) - kSlack)); };
+    const double width = std::max(2.0 * half_width, unit);
+    // A value outside its range (kept as loaded) slides from the nearer limit.
+    const double centre = std::clamp(value, lower, upper);
+    double from = down(centre - half_width);
+    double to = up(centre + half_width);
+    if (from < lower) {
+        from = lower;
+        to = std::max(to, up(lower + width));
+    }
+    if (to > upper) {
+        to = upper;
+        from = std::min(from, down(upper - width));
+    }
+    return {std::max(from, lower), std::min(to, upper)};
 }
 
 FileText file_text(const Parameter& parameter, const std::string& su_rule, bool exact) {

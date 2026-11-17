@@ -142,6 +142,16 @@ void FitAgreementModel::setRecord(const edi::Project& project) {
         const std::string form = edi::token(edi::SampleFormEnum::SINGLE_CRYSTAL);
         column(QString::fromStdString(edi::label("fit_result.prof_r_factor", form)));
         column(QString::fromStdString(edi::label("fit_result.prof_wr_factor", form)));
+        // Then which reflections the fit used (crysta's admission): Rint and R-sigma in per cent, "n/a" where
+        // undefined, the merge mode and the counts.
+        column(QStringLiteral("R<sub>int</sub>"));
+        column(QStringLiteral("R<sub>sigma</sub>"));
+        column(tr("Merge"));
+        column(tr("Measured"));
+        column(tr("Unique"));
+        column(tr("Used"));
+        column(tr("Excluded"));
+        column(tr("Absent"));
         // A crystal with its own share shows its own factors; a record with no shares, its pooled ones. One with shares
         // has none for a crystal it does not hold.
         const bool shares = std::any_of(project.experiments.begin(), project.experiments.end(),
@@ -153,12 +163,30 @@ void FitAgreementModel::setRecord(const edi::Project& project) {
             const auto shown = [own, shares](const std::optional<double>& bank, const std::optional<double>& pooled) {
                 return own ? bank : shares ? std::nullopt : pooled;
             };
+            QStringList values{percent("fit_result.prof_r_factor",
+                                       shown(experiment.fit_prof_r_factor, result.prof_r_factor), form),
+                               percent("fit_result.prof_wr_factor",
+                                       shown(experiment.fit_prof_wr_factor, result.prof_wr_factor), form)};
+            std::optional<edi::ReflectionAdmission> admitted;
+            try {
+                admitted = edi::reflection_admission(project, i);
+            } catch (const std::exception&) {
+                admitted.reset();  // a project crysta cannot take shows no admission
+            }
+            const auto ratio = [](const std::optional<double>& value) {
+                return value && std::isfinite(*value) ? QString::number(*value * 100.0, 'f', 2) : QStringLiteral("n/a");
+            };
+            if (admitted) {
+                values << ratio(admitted->r_int) << ratio(admitted->r_sigma)
+                       << QString::fromStdString(edi::option_label("reflns.merge", experiment.reflns_merge.value_or("none")))
+                       << QString::number(admitted->measured) << QString::number(admitted->unique)
+                       << QString::number(admitted->used) << QString::number(admitted->excluded)
+                       << QString::number(admitted->absent);
+            } else {
+                for (int empty = 0; empty < 8; ++empty) values << QString();
+            }
             rows.append({reinterpret_cast<const void*>(static_cast<std::uintptr_t>(i + 1)),
-                         {QString::fromStdString(experiment.name.value()), static_cast<int>(i),
-                          QStringList{percent("fit_result.prof_r_factor",
-                                              shown(experiment.fit_prof_r_factor, result.prof_r_factor), form),
-                                      percent("fit_result.prof_wr_factor",
-                                              shown(experiment.fit_prof_wr_factor, result.prof_wr_factor), form)}}});
+                         {QString::fromStdString(experiment.name.value()), static_cast<int>(i), values}});
         }
         if (columns != columns_) {
             columns_ = columns;
@@ -214,7 +242,7 @@ void FitAgreementModel::setRecord(const edi::Project& project) {
     };
     std::size_t datasets = 0;
     for (std::size_t i = 0; i < project.experiments.size(); ++i) {
-        datasets += in_fit(i) ? 1 : 0;
+        datasets += in_fit(i) ? 1U : 0U;
     }
     const QStringList blank_structures(static_cast<qsizetype>(2 * ordered.size()));
     const QStringList global{percent("fit_result.prof_r_factor", result.prof_r_factor),
@@ -575,7 +603,6 @@ void FitViewModel::startImpl(std::uint64_t attempt) {
         }
         setFollowing(true);
         if (owner_.retired_) return;
-        if (owner_.retired_) return;
         job_->follow(true);
         if (owner_.retired_) return;
     }
@@ -671,7 +698,7 @@ bool FitViewModel::undo() {
     const QPointer<FitViewModel> self(this);
     restoring_ = true;
     const auto restoration = qScopeGuard([self] { if (self) self->restoring_ = false; });
-    const bool undone = owner_.applyUndo(std::move(edit), whole).isEmpty();
+    const bool undone = owner_.applyUndo(edit, whole).isEmpty();
     if (!self) return undone;
     restoring_ = false;
     if (undone && whole) {
@@ -1334,6 +1361,7 @@ void FitViewModel::presentEnded(const edi::FitReport& report, bool automatic_res
             // A fit stopped part way is not accepted: a candidate it ends goes back to the accepted state.
             if (report.status != edi::FitStatus::CANCELLED) pending_accept_ = std::make_shared<const edi::Project>(project_);
         }
+        if (!report.result) return;
         const edi::FitResultBase& result = *report.result;
         setProgress(QString::number(result.iterations),
                     QStringLiteral("%1 → %2").arg(chi(result.pre_fit.reduced_chi_square), chi(result.reduced_chi_square)),

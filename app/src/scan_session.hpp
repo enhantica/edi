@@ -35,7 +35,7 @@ class ScanSession : public QObject {
         bool last_single = false;  // a single fit on a dataset came after the run
         bool mixed = false;        // the rows came from more than one template (a Continue after an edit)
         bool invalid = false;      // a provenance file was there but did not read as one (`error` says why)
-        QString error;
+        QString error{};
     };
     // The result files a fresh run replaces, as they were (absent: none): a series' bank rows among them.
     struct Files {

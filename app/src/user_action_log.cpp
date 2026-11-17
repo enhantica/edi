@@ -251,7 +251,7 @@ void UserActionLog::focusChanged(QQuickWindow* window) {
             }
         });
     }
-}
+}  // NOLINT(clang-analyzer-cplusplus.NewDeleteLeaks): the log, its parent, owns the Once.
 
 void UserActionLog::await(QQuickItem* control) {
     delete waiting_;

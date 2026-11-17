@@ -853,3 +853,10 @@ PdExperimentBase.xray_form_factor	other-public
 ScExperimentBase.neutron_scattering_length	other-public
 ScExperimentBase.xray_dispersion	other-public
 ScExperimentBase.xray_form_factor	other-public
+BraggPdExperiment.excluded_reflections	other-public
+BraggPdExperiment.reflns_absences	other-public
+BraggPdExperiment.reflns_merge	other-public
+PdExperimentBase.excluded_reflections	other-public
+PdExperimentBase.reflns_absences	other-public
+PdExperimentBase.reflns_merge	other-public
+Project.reflection_admission	other-public

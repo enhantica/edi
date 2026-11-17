@@ -981,15 +981,23 @@ Project.display = property(_display_of)
 class _ExcludedRegions(tuple):  # noqa: SLOT001
     """An experiment's excluded regions as ``(start, end)`` pairs (diffraction-lib).
 
-    The rows of the app's Excluded regions table. ``create`` adds one; assigning a list of pairs
-    to ``experiment.excluded_regions`` replaces them all (ADR-0079).
+    The rows of the app's Excluded regions table. A single crystal's rows are
+    ``(start, end, axis)``, the axis ``'d_spacing'`` or ``'sin_theta_over_lambda'``. ``create``
+    adds one; assigning a list of rows to ``experiment.excluded_regions`` replaces them all
+    (ADR-0079).
     """
 
-    def create(self, *, start: float, end: float, id: str | None = None) -> None:
-        """Add the region from ``start`` to ``end``; an ``id`` is not kept (diffraction-lib)."""
+    def create(
+        self, *, start: float, end: float, axis: str | None = None, id: str | None = None
+    ) -> None:
+        """Add the region from ``start`` to ``end``; an ``id`` is not kept (diffraction-lib).
+
+        A single crystal's region names its ``axis``; a powder's takes none.
+        """
         del id
         experiment = self._experiment
-        experiment.excluded_regions = [*experiment.excluded_regions, (start, end)]
+        row = (start, end) if axis is None else (start, end, axis)
+        experiment.excluded_regions = [*experiment.excluded_regions, row]
 
 
 # The class that binds the native tuple property: the shared base of the powder experiments.
@@ -1011,6 +1019,51 @@ def _excluded_regions_set(self: ExperimentBase, regions) -> None:
 
 _excluded_regions_owner.excluded_regions = property(
     _excluded_regions_get, _excluded_regions_set, doc=_excluded_regions_native.__doc__
+)
+
+
+# A tuple, so a tuple of rows still compares equal; its experiment is kept in an attribute.
+class _ExcludedReflections(tuple):  # noqa: SLOT001
+    """A single crystal's reflections left out of the fit by their indices, as ``(h, k, l)`` rows.
+
+    Under a merge mode a row names its equivalents too. ``create`` adds one, ``remove`` takes one
+    out; assigning a list of rows to ``experiment.excluded_reflections`` replaces them all.
+    """
+
+    def create(self, *, h: int, k: int, l: int) -> None:  # noqa: E741
+        """Leave the reflection ``h k l`` out of the fit."""
+        experiment = self._experiment
+        experiment.excluded_reflections = [*experiment.excluded_reflections, (h, k, l)]
+
+    def remove(self, h: int, k: int, l: int) -> None:  # noqa: E741
+        """Put the listed reflection ``h k l`` back; refused when it is not listed."""
+        rows = list(self)
+        if (h, k, l) not in rows:
+            raise ValueError(f'reflection ({h}, {k}, {l}) is not excluded')
+        rows.remove((h, k, l))
+        self._experiment.excluded_reflections = rows
+
+
+_excluded_reflections_owner = next(
+    cls for cls in BraggPdExperiment.__mro__ if 'excluded_reflections' in vars(cls)
+)
+_excluded_reflections_native = vars(_excluded_reflections_owner)['excluded_reflections']
+
+
+def _excluded_reflections_get(self: ExperimentBase) -> _ExcludedReflections:
+    rows = _ExcludedReflections(_excluded_reflections_native.__get__(self))
+    rows._experiment = self
+    return rows
+
+
+def _excluded_reflections_set(self: ExperimentBase, rows) -> None:
+    _excluded_reflections_native.__set__(self, [tuple(row) for row in rows])
+
+
+_excluded_reflections_owner.excluded_reflections = property(
+    _excluded_reflections_get,
+    _excluded_reflections_set,
+    doc=_excluded_reflections_native.__doc__,
 )
 
 

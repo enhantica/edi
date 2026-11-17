@@ -302,7 +302,7 @@ int ScanSession::addRow(const edi::Project& project, const std::vector<std::stri
 }
 
 std::vector<std::string> ScanSession::row(const edi::Project& project, int dataset) const {
-    if (dataset < 0 || dataset >= static_cast<int>(index_.rows.size()) || index_.rows[dataset].offset < 0) {
+    if (dataset < 0 || dataset >= static_cast<int>(index_.rows.size()) || index_.rows[static_cast<std::size_t>(dataset)].offset < 0) {
         return {};
     }
     if (!edi::scan_state_present(analysis_dir(project) / "results.csv", "analysis/results.csv")) {
@@ -316,7 +316,7 @@ std::vector<std::string> ScanSession::row(const edi::Project& project, int datas
                                         "before");
         }
     }
-    std::vector<std::string> cells = edi::read_scan_row(project, index_.rows[dataset].offset);
+    std::vector<std::string> cells = edi::read_scan_row(project, index_.rows[static_cast<std::size_t>(dataset)].offset);
     const std::string& expected = datasets_.files[static_cast<std::size_t>(dataset)];
     if (cells.size() != index_.header.size() || edi::scan_row_file(index_, cells) != expected) {
         throw std::invalid_argument("analysis/results.csv changed under the app: the row for '" + expected +
@@ -331,15 +331,15 @@ std::vector<std::string> ScanSession::row(const edi::Project& project, int datas
 }
 
 QString ScanSession::outcome(int dataset) const {
-    if (dataset >= 0 && dataset < static_cast<int>(index_.rows.size()) && index_.rows[dataset].skipped) {
+    if (dataset >= 0 && dataset < static_cast<int>(index_.rows.size()) && index_.rows[static_cast<std::size_t>(dataset)].skipped) {
         return QStringLiteral("skipped");
     }
-    if (dataset < 0 || dataset >= static_cast<int>(index_.rows.size()) || index_.rows[dataset].offset < 0) {
+    if (dataset < 0 || dataset >= static_cast<int>(index_.rows.size()) || index_.rows[static_cast<std::size_t>(dataset)].offset < 0) {
         return {};
     }
     // From the row's own facts: converged, else the reason crysta's ledger recorded when the file was fitted; a row
     // fitted before the ledger recorded reasons did not converge for a reason no one knows now.
-    const edi::ScanResultIndex::Row& row = index_.rows[dataset];
+    const edi::ScanResultIndex::Row& row = index_.rows[static_cast<std::size_t>(dataset)];
     if (row.converged) {
         return QStringLiteral("success");
     }
@@ -387,7 +387,7 @@ std::string ScanSession::templateIdentity(const edi::Project& project) {
     // Hashed from a copy, which is never calculated: a save of a calculated project adds its computed columns and
     // categories (and a newer schema version), so the same inputs would hash differently before and after a
     // calculation, e.g. the shown model at a scan's start against the template copy at its end.
-    const edi::Project inputs = project;
+    const edi::Project inputs = project;  // NOLINT(performance-unnecessary-copy-initialization): see above.
     for (const auto& [path, body] : edi::project_edi_files(inputs)) {
         if (path == "project.edi" || path == "reports/report.edi") {
             continue;
@@ -712,10 +712,11 @@ const std::vector<std::string>* ScanSession::extracted(int dataset) const {
     if (dataset < 0 || dataset >= static_cast<int>(datasets_.files.size())) {
         return nullptr;
     }
-    if (index_.rows[dataset].offset >= 0) {
-        return &index_.rows[dataset].extracted;
+    if (index_.rows[static_cast<std::size_t>(dataset)].offset >= 0) {
+        return &index_.rows[static_cast<std::size_t>(dataset)].extracted;
     }
-    return metadata_[dataset] ? &*metadata_[dataset] : nullptr;
+    const auto& metadata = metadata_[static_cast<std::size_t>(dataset)];
+    return metadata.has_value() ? &*metadata : nullptr;
 }
 
 QString ScanSession::metadataError(int dataset) const {
@@ -773,7 +774,7 @@ void ScanSession::readWanted() {
     const QPointer<ScanSession> self(this);
     run_in_background([self, stop, source, directory, generation, batch = std::move(batch)] {
         struct Read {
-            int dataset;
+            int dataset{};
             std::vector<std::string> values;
             QString error;
         };

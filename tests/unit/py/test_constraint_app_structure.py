@@ -90,7 +90,7 @@ def test_load_warnings_reach_the_app_message_model():
     assert re.search(r'edi::load_project\([^;]*warnings\.append', session, re.DOTALL), (
         'project loading must collect the core warning sink into app messages'
     )
-    assert re.search(r'warnings_->setMessages\(warnings\)', session), (
+    assert re.search(r'warnings_->setMessages\(warnings,\s*warningSources\)', session), (
         'the replacement project must publish collected warnings to the Messages model'
     )
 

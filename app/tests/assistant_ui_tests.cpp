@@ -383,7 +383,7 @@ private slots:
                 if (auto* found = self(child, self)) return found;
             return nullptr;
         };
-        QTRY_VERIFY((titleCell = findTitle(table, findTitle)));
+        QTRY_VERIFY((titleCell = findTitle(table, findTitle)));  // NOLINT(bugprone-assignment-in-if-condition): polled until found.
         QTRY_VERIFY(table->property("onScreen").toBool());
         QTRY_VERIFY(!table->property("refitting").toBool());
         QTRY_VERIFY(titleCell->width() > 0);

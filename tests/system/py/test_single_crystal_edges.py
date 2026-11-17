@@ -335,11 +335,11 @@ def test_free_metadata_does_not_stale_reflection_values(native, tmp_path):
     )
 
 
+# Axis-qualified ranges are single-crystal inputs; see the reflection-admission gates.
 FORBIDDEN = (
     '_peak.type',
     '_background.type',
     '_data.two_theta',
-    '_excluded_region.start',
     '_absorption.type',
     '_preferred_orientation.structure_id',
 )

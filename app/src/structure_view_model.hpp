@@ -383,7 +383,7 @@ class StructureViewModel : public QObject {
     Q_PROPERTY(QVariantList bonds READ bonds NOTIFY bondsChanged)
 
    public:
-    StructureViewModel(SavedFile saved, edi::Structure& structure, ProjectEditor& editor,
+    StructureViewModel(const SavedFile& saved, edi::Structure& structure, ProjectEditor& editor,
                        ParameterRegistry& registry, QObject* parent);
     QString name() const { return name_; }
     void setName(const QString& name);

@@ -200,7 +200,7 @@ static edi::ViewWindow view_window(
 // untouched — and a write to a non-input attribute renews nothing.
 template <typename T, typename Renew>
 static auto renewing_setattr(std::vector<std::string> non_inputs, Renew renew) {
-    return [non_inputs = std::move(non_inputs), renew](nb::handle self, nb::str name,
+    return [non_inputs = std::move(non_inputs), renew](nb::handle self, const nb::str& name,
                                                        nb::handle value) {
         if (PyObject_GenericSetAttr(self.ptr(), name.ptr(), value.ptr()) != 0) {
             throw nb::python_error();
@@ -219,14 +219,6 @@ static constexpr auto renew_storage = [](auto& view) { view.storage().epoch = ed
 static constexpr auto renew_peak = [](edi::views::PeakNode& view) {
     view.experiment->peak.epoch = edi::detail::Epoch();
 };
-
-static nb::tuple names_tuple(std::span<const char* const> names) {
-    nb::list out;
-    for (const char* name : names) {
-        out.append(nb::str(name));
-    }
-    return nb::tuple(out);
-}
 
 // The Python attribute boundary is one of the three declared validation stages — a value
 // outside its spec's admissible range refuses (ValueError) instead of landing.
@@ -1011,7 +1003,7 @@ static std::string peak_token_of(const edi::ExperimentBase& experiment) {
 
 // One validation rule for the project name, whichever spelling sets it: a name lands in
 // filesystem paths at save, so a path separator refuses at the boundary.
-static const std::string& validated_project_name(const std::string& value) {
+static std::string validated_project_name(const std::string& value) {
     if (value.find('/') != std::string::npos || value.find('\\') != std::string::npos) {
         throw std::invalid_argument("project name '" + value +
                                     "' must not contain a path separator ('/' or '\\')");
@@ -1327,7 +1319,7 @@ static void def_keyed_collection(nb::class_<View>& view_cls, nb::class_<Iter>& i
             [](const View& self) { return Iter{self, edi::views::IterMode::Values}; },
             nb::keep_alive<0, 1>())
         .def("__contains__",
-             [](const View& self, nb::object key) {
+             [](const View& self, const nb::object& key) {
                  if (nb::isinstance<nb::str>(key)) {
                      return self.find_last(nb::cast<std::string>(key)) >= 0;
                  }
@@ -1339,7 +1331,7 @@ static void def_keyed_collection(nb::class_<View>& view_cls, nb::class_<Iter>& i
                  return false;
              })
         .def("__getitem__",
-             [](const View& self, nb::object key) -> nb::object {
+             [](const View& self, const nb::object& key) -> nb::object {
                  if (nb::isinstance<nb::int_>(key)) {
                      std::ptrdiff_t i = nb::cast<std::ptrdiff_t>(key);
                      const std::ptrdiff_t n = static_cast<std::ptrdiff_t>(self.vec().size());
@@ -1536,9 +1528,9 @@ static void def_collection_views(nb::module_& m) {
     experiments_view.def(
         "create",
         [](ExperimentsView& self, const std::string& name,
-           std::optional<std::string> sample_form, std::optional<std::string> beam_mode,
-           std::optional<std::string> radiation_probe,
-           std::optional<std::string> scattering_type) {
+           const std::optional<std::string>& sample_form, const std::optional<std::string>& beam_mode,
+           const std::optional<std::string>& radiation_probe,
+           const std::optional<std::string>& scattering_type) {
             // Upstream Experiments.create delegates to the factory; edi's factory is the
             // committed Python-side ExperimentFactory (D4) — delegated, never duplicated.
             nb::object from_scratch =
@@ -1598,9 +1590,9 @@ static void def_collection_views(nb::module_& m) {
     experiments_view.def(
         "add_from_data_path",
         [](ExperimentsView& self, const std::string& name, const std::filesystem::path& data_path,
-           std::optional<std::string> sample_form, std::optional<std::string> beam_mode,
-           std::optional<std::string> radiation_probe,
-           std::optional<std::string> scattering_type) {
+           const std::optional<std::string>& sample_form, const std::optional<std::string>& beam_mode,
+           const std::optional<std::string>& radiation_probe,
+           const std::optional<std::string>& scattering_type) {
             nb::object built =
                 nb::module_::import_("edi").attr("ExperimentFactory").attr("from_data_path")(
                     "name"_a = name, "data_path"_a = data_path,
@@ -1639,7 +1631,7 @@ static void def_collection_views(nb::module_& m) {
                                                                       atom_sites_iter);
     atom_sites_view.def(
         "create",
-        [](AtomSitesView& self, nb::kwargs kwargs) {
+        [](AtomSitesView& self, const nb::kwargs& kwargs) {
             // Upstream CategoryCollection.create: default-construct, then a plain setattr loop
             // routed through the bound setters.
             auto built = std::make_shared<edi::AtomSite>();
@@ -1689,7 +1681,7 @@ static void def_collection_views(nb::module_& m) {
                                                                           pref_orients_iter);
     pref_orients_view.def(
         "create",
-        [](PrefOrientsView& self, nb::kwargs kwargs) {
+        [](PrefOrientsView& self, const nb::kwargs& kwargs) {
             // Upstream CategoryCollection.create, as AtomSites.create above.
             auto built = std::make_shared<edi::PrefOrient>();
             nb::object obj = nb::cast(built);
@@ -1817,7 +1809,7 @@ static void def_collection_views(nb::module_& m) {
     constraints_view
         .def(
             "create",
-            [](ConstraintsView& self, const std::string& expression, std::optional<std::string> id) {
+            [](ConstraintsView& self, const std::string& expression, const std::optional<std::string>& id) {
                 const std::string key = id.value_or(split_constraint(expression).first);
                 if (key.empty()) {
                     throw nb::value_error(("constraint '" + expression +
@@ -2705,9 +2697,10 @@ NB_MODULE(_edi, m) {
             // diffraction-lib's name_h_m setter resets the code); a name crysta's table lacks is kept as given.
             [](edi::SpaceGroup& self, const std::string& value) {
                 change_setting(self, [&value](edi::SpaceGroup& group) {
-                    if (edi::same_space_group_name(value, group.name_h_m.value())) {
-                        group.name_h_m = value;
-                    } else if (const auto setting = edi::space_group_setting_for_name(value)) {
+                    const auto setting = edi::same_space_group_name(value, group.name_h_m.value())
+                                             ? std::nullopt
+                                             : edi::space_group_setting_for_name(value);
+                    if (setting) {
                         edi::assign_space_group_setting(group, *setting, false);
                     } else {
                         group.name_h_m = value;
@@ -2891,7 +2884,9 @@ NB_MODULE(_edi, m) {
                                                 : nb::cast<std::string>(k));
                     }
                 } else {
-                    parsed = nb::cast<std::vector<std::pair<std::string, std::string>>>(rows);
+                    for (nb::handle row : rows) {
+                        parsed.push_back(nb::cast<std::pair<std::string, std::string>>(row));
+                    }
                 }
                 edi::set_propagation_vectors(self, std::move(parsed));
             },
@@ -3294,7 +3289,7 @@ NB_MODULE(_edi, m) {
                 }
                 return nb::cast(stored);
             },
-            [](edi::views::PeakNode& self, nb::object value) {
+            [](edi::views::PeakNode& self, const nb::object& value) {
                 // The selector accepts any REGISTERED token (seam 20 / I15 — registration-live),
                 // the enum, or None (presence-tracked); an unknown token refuses fail-closed.
                 // Every switch reshapes the block to the slots the new profile carries, as the
@@ -3464,9 +3459,9 @@ NB_MODULE(_edi, m) {
         },
         [](edi::views::InstrumentNode& self, const std::string& value) { self.storage().facility = value; });
 
-    nb::class_<edi::views::CwlInstrumentBase, edi::views::InstrumentNode>(m, "CwlInstrumentBase");
-    nb::class_<edi::views::CwlPdInstrumentBase, edi::views::CwlInstrumentBase>(
-        m, "CwlPdInstrumentBase");
+    static_cast<void>(nb::class_<edi::views::CwlInstrumentBase, edi::views::InstrumentNode>(m, "CwlInstrumentBase"));
+    static_cast<void>(nb::class_<edi::views::CwlPdInstrumentBase, edi::views::CwlInstrumentBase>(
+        m, "CwlPdInstrumentBase"));
 
     nb::class_<edi::views::TofPdInstrument, edi::views::InstrumentNode> tof_pd_instrument(
         m, "TofPdInstrument");
@@ -3568,7 +3563,7 @@ NB_MODULE(_edi, m) {
         linked_structures_view, linked_structures_iter);
     linked_structures_view.def(
         "create",
-        [](edi::views::LinkedStructuresView& self, nb::kwargs kwargs) {
+        [](edi::views::LinkedStructuresView& self, const nb::kwargs& kwargs) {
             // Upstream CategoryCollection.create, as AtomSites.create.
             auto built = std::make_shared<edi::LinkedStructure>();
             nb::object obj = nb::cast(built);
@@ -3585,7 +3580,7 @@ NB_MODULE(_edi, m) {
     absorption.def("__setattr__", renewing_setattr<edi::views::AbsorptionNode>({}, renew_storage), nb::arg("name"), nb::arg("value").none());
     absorption.def_prop_rw(
         "type", [](edi::views::AbsorptionNode& self) { return self.storage().type; },
-        [](edi::views::AbsorptionNode& self, std::optional<std::string> value) {
+        [](edi::views::AbsorptionNode& self, const std::optional<std::string>& value) {
             // Review-8 F4: mutation goes through the ruled family contract — none clears the
             // family body, a typed token initialises it, anything else refuses. None spells
             // the loader's absent-means-none state. The vocabulary is beam-scoped exactly as
@@ -3826,22 +3821,80 @@ NB_MODULE(_edi, m) {
                 return nb::cast(edi::views::ExtinctionNode(&self));
             },
             nb::keep_alive<0, 1>())
-        // Immutable tuple-of-pairs out — no mutable copy can exist; the replacement setter
-        // stays (ExcludedRegion items are D8's own task).
+        // Immutable tuple out — no mutable copy can exist; the replacement setter stays (ExcludedRegion
+        // items are D8's own task). A powder's region is a (start, end) pair on its pattern's axis; a
+        // single crystal's is (start, end, axis), the axis 'd_spacing' or 'sin_theta_over_lambda'.
         .def_prop_rw(
             "excluded_regions",
             [](const edi::ExperimentBase& self) {
                 nb::list out;
                 for (const auto& region : self.excluded_regions) {
-                    out.append(nb::make_tuple(region->first.get(), region->second.get()));
+                    if (region->axis.value().empty()) {
+                        out.append(nb::make_tuple(region->first.get(), region->second.get()));
+                    } else {
+                        out.append(nb::make_tuple(region->first.get(), region->second.get(),
+                                                  region->axis.value()));
+                    }
                 }
                 return nb::tuple(out);
             },
-            [](edi::ExperimentBase& self, std::vector<std::pair<double, double>> regions) {
-                self.excluded_regions = edi::excluded_region_rows(regions);
-            });
+            [](edi::ExperimentBase& self, const std::vector<nb::object>& regions) {
+                std::vector<std::shared_ptr<edi::ExcludedRegion>> rows;
+                rows.reserve(regions.size());
+                for (const nb::object& region : regions) {
+                    const nb::tuple item = nb::tuple(region);
+                    if (item.size() != 2 && item.size() != 3) {
+                        throw std::invalid_argument(
+                            "an excluded region is (start, end), or (start, end, axis) on a single crystal");
+                    }
+                    auto row = std::make_shared<edi::ExcludedRegion>(nb::cast<double>(item[0]),
+                                                                     nb::cast<double>(item[1]));
+                    const std::string axis = item.size() == 3 ? nb::cast<std::string>(item[2]) : std::string();
+                    row->axis = edi::check_excluded_region_axis(self, axis);
+                    rows.push_back(std::move(row));
+                }
+                self.excluded_regions.assign(std::move(rows));
+            })
+        // A single crystal's reflections left out of the fit by their indices, as (h, k, l) rows; under a
+        // merge mode the indices name their equivalents too. Assigning a list of rows replaces them all.
+        .def_prop_rw(
+            "excluded_reflections",
+            [](const edi::ExperimentBase& self) {
+                nb::list out;
+                for (const auto& row : self.excluded_reflections) {
+                    out.append(nb::make_tuple(row->index_h.get(), row->index_k.get(), row->index_l.get()));
+                }
+                return nb::tuple(out);
+            },
+            [](edi::ExperimentBase& self, const std::vector<std::tuple<int, int, int>>& rows) {
+                if (!self.reflections && !rows.empty()) {
+                    throw std::invalid_argument("only a single crystal leaves out reflections by their indices");
+                }
+                std::vector<std::shared_ptr<edi::ExcludedReflection>> made;
+                made.reserve(rows.size());
+                for (const auto& [h, k, l] : rows) {
+                    made.push_back(std::make_shared<edi::ExcludedReflection>(h, k, l));
+                }
+                self.excluded_reflections.assign(std::move(made));
+            })
+        .def_prop_rw(
+            "reflns_merge",
+            [](const edi::ExperimentBase& self) { return self.reflns_merge; },
+            [](edi::ExperimentBase& self, std::optional<std::string> mode) {
+                edi::set_reflns_merge(self, std::move(mode));
+            },
+            "How a single crystal's equivalent reflections are merged: 'none', 'point_group' or 'laue_class'; "
+            "None until set (reads as none). A time-of-flight single crystal merges nothing (_reflns.merge).")
+        .def_prop_rw(
+            "reflns_absences",
+            [](const edi::ExperimentBase& self) { return self.reflns_absences; },
+            [](edi::ExperimentBase& self, std::optional<std::string> absences) {
+                edi::set_reflns_absences(self, std::move(absences));
+            },
+            "Whether a single crystal's systematic absences are left out of the fit: 'exclude' or 'include'; "
+            "None until set (reads as include) (_reflns.absences).");
 
-    nb::class_<edi::ScExperimentBase, edi::ExperimentBase>(m, "ScExperimentBase");
+    static_cast<void>(nb::class_<edi::ScExperimentBase, edi::ExperimentBase>(m, "ScExperimentBase"));
 
     // The concrete experiment leaf: the loader builds it and Python constructs it — the bases above
     // carry the shared surface, the leaf its own categories.
@@ -3989,7 +4042,7 @@ NB_MODULE(_edi, m) {
         .def_static("registry", [] { return copy_registry(*g_peak_registry); })
         .def_static(
             "register",
-            [](nb::object token_or_cls, nb::object cls, const std::string& beam_mode) {
+            [](const nb::object& token_or_cls, const nb::object& cls, const std::string& beam_mode) {
                 std::string token;
                 nb::object klass;
                 if (cls.is_none()) {
@@ -4033,7 +4086,7 @@ NB_MODULE(_edi, m) {
         .def_static("registry", [] { return copy_registry(*g_instrument_registry); })
         .def_static(
             "register",
-            [](nb::object token_or_cls, nb::object cls) {
+            [](const nb::object& token_or_cls, const nb::object& cls) {
                 std::string token;
                 nb::object klass;
                 if (cls.is_none()) {
@@ -4097,7 +4150,7 @@ NB_MODULE(_edi, m) {
         .def_static("registry", [] { return copy_registry(*g_absorption_registry); })
         .def_static(
             "register",
-            [](nb::object token_or_cls, nb::object cls) {
+            [](const nb::object& token_or_cls, const nb::object& cls) {
                 std::string token;
                 nb::object klass;
                 if (cls.is_none()) {
@@ -4365,7 +4418,7 @@ NB_MODULE(_edi, m) {
                      })
         .def_prop_ro("intensity_calc",
                      [](const edi::views::ScReflnView& self) { return readonly_array(self.calculated().intensity_calc); });
-    nb::class_<edi::views::ScCwlReflnView, edi::views::ScReflnView>(m, "CwlReflnData");
+    static_cast<void>(nb::class_<edi::views::ScCwlReflnView, edi::views::ScReflnView>(m, "CwlReflnData"));
     nb::class_<edi::views::ScTofReflnView, edi::views::ScReflnView>(m, "TofReflnData")
         .def_prop_ro("wavelength",
                      [](const edi::views::ScReflnView& self) { return copied_array(self.measured().wavelength.get()); });
@@ -4578,7 +4631,7 @@ NB_MODULE(_edi, m) {
             "Fitting time in seconds (diffraction-lib FitResultBase.fitting_time; None until a "
             "solve ran).");
 
-    nb::class_<edi::LeastSquaresFitResult, edi::FitResultBase>(m, "LeastSquaresFitResult");
+    static_cast<void>(nb::class_<edi::LeastSquaresFitResult, edi::FitResultBase>(m, "LeastSquaresFitResult"));
 
     nb::class_<edi::ProjectMetadata>(m, "ProjectMetadata")
         .def(nb::init<>())
@@ -4646,7 +4699,7 @@ NB_MODULE(_edi, m) {
                 }
                 return nb::cast(self.timestamp);
             },
-            [](edi::ProjectMetadata& self, nb::object value) {
+            [](edi::ProjectMetadata& self, const nb::object& value) {
                 self.timestamp = value.is_none() ? "" : nb::cast<std::string>(value);
             },
             "The latest fit timestamp (None until set).")
@@ -4997,7 +5050,7 @@ NB_MODULE(_edi, m) {
                 rule.target = target;
                 rule.pattern = pattern;
                 rule.required = required;
-                self.sequential_fit.extract.push_back(std::move(rule));
+                self.sequential_fit.extract.push_back(rule);
             },
             "id"_a, "target"_a, "pattern"_a, "required"_a)
         .def_prop_ro("_sequential_extract_rows", [](const edi::Project& self) {
@@ -5018,6 +5071,42 @@ NB_MODULE(_edi, m) {
                 }
                 self.fitting_mode = value;
             })
+        .def(
+            "reflection_admission",
+            [](const edi::Project& self, const std::string& experiment) -> nb::object {
+                const std::string key = edi::KeyTraits<edi::BraggPdExperiment>::canonical(experiment);
+                for (std::size_t index = 0; index < self.experiments.size(); ++index) {
+                    if (edi::KeyTraits<edi::BraggPdExperiment>::canonical(self.experiments[index]->name) != key) {
+                        continue;
+                    }
+                    const std::optional<edi::ReflectionAdmission> reduced = edi::reflection_admission(self, index);
+                    if (!reduced) {
+                        return nb::none();
+                    }
+                    nb::dict out;
+                    out["measured"] = reduced->measured;
+                    out["unique"] = reduced->unique;
+                    out["used"] = reduced->used;
+                    out["excluded"] = reduced->excluded;
+                    out["absent"] = reduced->absent;
+                    out["r_int"] = reduced->r_int ? nb::cast(*reduced->r_int) : nb::none();
+                    out["r_sigma"] = reduced->r_sigma ? nb::cast(*reduced->r_sigma) : nb::none();
+                    out["absent_mean_i_over_sigma"] = reduced->absent_mean_i_over_sigma;
+                    nb::list status;
+                    for (const char code : reduced->status) {
+                        status.append(std::string(1, code));
+                    }
+                    out["status"] = nb::tuple(status);
+                    return out;
+                }
+                throw std::invalid_argument("the project has no experiment '" + experiment + "'");
+            },
+            nb::arg("experiment"),
+            "Which of a single crystal's measured reflections a fit uses and why (crysta's admission): the "
+            "counts measured, unique, used, excluded and absent, r_int and r_sigma (None when undefined), "
+            "the absences' mean I/su and each reflection's _refln.include_status code ('o' used, 'x' "
+            "excluded, '-' absent, '<' below the fit's cutoff); None for a powder or a single crystal "
+            "without measured reflections.")
         .def_prop_rw(
             "su_rule", [](const edi::Project& self) { return self.su_rule; },
             [](edi::Project& self, const std::string& value) {

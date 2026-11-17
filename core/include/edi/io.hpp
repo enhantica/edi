@@ -47,6 +47,9 @@ class IoError : public std::runtime_error {
 // unless the caller passes `on_warning`; then each message goes only to the sink. The app passes
 // one so it can show the warnings to its user.
 using WarningSink = std::function<void(const std::string&)>;
+// A warning with the project file it comes from, relative to the project (`experiments/d20.edi`), or empty when no
+// one file is its source (a relation over several).
+using SourcedWarningSink = std::function<void(const std::string& file, const std::string& message)>;
 // `path` is the project's folder, its `project.edi`, or a `.zip` of the folder (edi ADR-0052). An archive unpacks into a
 // new temporary folder first; the project then has no directory of its own (`path` empty), so its first save needs one,
 // and it reads its scan data from the unpacked folder.
@@ -57,6 +60,9 @@ Project load_project(const std::string& path, const WarningSink& on_warning = {}
 // The original overload above remains the strict complete-model contract for non-GUI users.
 enum class ProjectLoadMode : std::uint8_t { Complete, Construction };
 Project load_project(const std::string& path, ProjectLoadMode mode, const WarningSink& on_warning = {});
+// The same, each warning with the project file it comes from, as a Text tab's edit gives them, so the app can tell
+// which warnings a later edit of that file settles.
+Project load_project(const std::string& path, ProjectLoadMode mode, const SourcedWarningSink& on_warning);
 
 // Structures and experiments enter an open project from files. Every structure and experiment
 // text these loads and the project loader read goes through one check first: crysta decides once,
@@ -125,6 +131,9 @@ std::vector<std::pair<std::string, std::string>> project_edi_files(const Project
 // The project is not touched; the copy keeps its path. Throws the loader's refusal.
 Project project_with_file_text(const Project& project, const std::string& relative, const std::string& text,
                                const WarningSink& on_warning = {});
+// The same, each warning with its source file, so the caller can tell the applied file's warnings from others'.
+Project project_with_file_text(const Project& project, const std::string& relative, const std::string& text,
+                               const SourcedWarningSink& on_warning);
 
 // The crystal system of a space-group setting, named by crysta (its resolver and
 // per-setting freedom map); throws what crysta's resolver throws for an unknown setting.
@@ -361,7 +370,7 @@ void adopt_scan_file_result(FitResultRecord& record, const std::string& file,
 // and each other file's rows in `rows`, as read, move into that file's bundle, unless a fit gave the file one. A read
 // row so keeps its id however the template's rows are numbered (I6, I7). Rows of the template file and rows naming no
 // file are dropped.
-void hold_template_rows(FitResultRecord& record, std::vector<FitParameterCorrelation> template_rows,
+void hold_template_rows(FitResultRecord& record, const std::vector<FitParameterCorrelation>& template_rows,
                         const std::vector<FitParameterCorrelation>& rows, const std::string& template_file);
 
 // Correlation pairs as a record holds them (FitResultRecord::correlations), each keeping its id; a pair with no id, or
@@ -421,7 +430,7 @@ PlainDataRows read_plain_data(const std::string& path);
 
 /// A plain-data file read into an experiment (Load data): the experiment as it was, with the file's rows as
 /// its measured data, so its type, instrument, peak, background and excluded regions stay.
-struct PlainDataLoad {
+struct PlainDataLoad {  // NOLINT(bugprone-exception-escape): an experiment's move may throw, by the model's rule.
     BraggPdExperiment experiment;
     std::string file_name;  // the file's own name, without its directory
     std::size_t points = 0;
@@ -432,9 +441,9 @@ struct PlainDataLoad {
     std::size_t derived = 0;
     // A FullProf reflection file holding several datasets (its code column): `experiment` takes the first and these
     // the rest, one experiment each named `<name>_<code>`; empty otherwise.
-    std::vector<BraggPdExperiment> more;
+    std::vector<BraggPdExperiment> more{};
     std::size_t unweighted = 0;  // FullProf reflections with an su of 0, read past
-    std::vector<std::size_t> skipped_lines;  // a plain reflection file's lines that are not reflections
+    std::vector<std::size_t> skipped_lines{};  // a plain reflection file's lines that are not reflections
 };
 /// Whether a datablock name can name its saved file (crysta's rule: ASCII letters, digits, `_` and `-`, and not
 /// a Windows reserved device name).

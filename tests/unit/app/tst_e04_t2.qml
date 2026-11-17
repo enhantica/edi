@@ -133,15 +133,16 @@ TestCase {
         ["lengthA", "lengthB", "lengthC"].forEach(name => {
             const cell = Session.project.currentStructure.cell[name];
             box.selected = cell;
-            const control = Review.find(box, "parameters.slider");
-            tryVerify(() => Math.abs(control.from - (cell.value - .05)) < 1e-10 && Math.abs(control.to - (cell.value + .05)) < 1e-10,
-                      2000, "all three lattice constants use the declared half width of 0.05 A");
+            tryVerify(() => cell.sliderLower() <= cell.value - .05 + 1e-10 && cell.sliderUpper() >= cell.value + .05 - 1e-10 && Math.abs(cell.sliderLower() * 100 - Math.round(cell.sliderLower() * 100)) < 1e-9 && Math.abs(cell.sliderUpper() * 100 - Math.round(cell.sliderUpper() * 100)) < 1e-9,
+                      2000, "All three lattice constants retain at least the declared 0.05 A half width with rounded endpoints");
         });
         const angle = Session.project.currentStructure.cell.angleAlpha;
         box.selected = angle;
-        const angleSlider = Review.find(box, "parameters.slider");
-        tryVerify(() => Math.abs(angleSlider.from - angle.value / 2) < 1e-10 && Math.abs(angleSlider.to - angle.value * 1.5) < 1e-10,
-                  2000, "cell angles retain their prior half-magnitude slider range");
+        tryVerify(() => angle.sliderLower() <= angle.value / 2 && angle.sliderUpper() >= angle.value * 1.5,
+                  2000, "Rounded angle limits contain the prior half-magnitude range");
+        const list = Review.find(box, "parameters.list");
+        list.sourceModel.nameFilter = "length_a";
+        tryCompare(list, "count", 1, 2000, "The parameter name filter selects the lattice constant whose limits are checked");
         box.selected = parameter;
         const slider = Review.find(box, "parameters.slider");
         verify(slider !== null, "note 9: selected parameter has its real slider");
@@ -151,21 +152,15 @@ TestCase {
         const ordered = fields.sort((a,b) => a.x - b.x);
         verify(ordered[0].x < slider.x && ordered[1].x >= slider.x + slider.width,
                "note 9: limit boxes flank the slider");
-        [1.2866603586797143, 2.718281828459045].forEach(value => {
+        [{value: 1.2866603586797143, lower: 1.23, upper: 1.34}, {value: 2.718281828459045, lower: 2.66, upper: 2.77}].forEach(witness => {
+            const value = witness.value;
             parameter.value = value;
-            tryVerify(() => Math.abs(slider.from - (value - .05)) < 1e-10 && Math.abs(slider.to - (value + .05)) < 1e-10,
-                      2000, "lattice slider endpoints follow the current value plus or minus 0.05 A");
-            const endpoints = [slider.from, slider.to];
-            const written = endpoints.map(endpoint => {
-                parameter.value = endpoint;
-                const result = FileSpelling.parameter(Session.project.currentStructure.text.text, "cell.length_a");
-                parameter.value = value;
-                return result;
-            });
-            tryCompare(ordered[0], "text", written[0], 2000,
-                       "The slider minimum follows file/Text numeric spelling under the active save rule");
-            tryCompare(ordered[1], "text", written[1], 2000,
-                       "The slider maximum follows file/Text numeric spelling under the active save rule");
+            tryVerify(() => Math.abs(slider.from - witness.lower) < 1e-10 && Math.abs(slider.to - witness.upper) < 1e-10,
+                      2000, "Nontrivial cell limits round outward to hundredths while containing the 0.05 A half width");
+            tryCompare(ordered[0], "text", String(witness.lower), 2000,
+                       "The rounded minimum omits trailing zeros");
+            tryCompare(ordered[1], "text", String(witness.upper), 2000,
+                       "The rounded maximum omits trailing zeros");
             compare(parameter.value, value, "note 14: rounded slider labels preserve the selected stored value");
         });
     }
@@ -173,26 +168,23 @@ TestCase {
         open(); pane("analysis", "basic");
         const box = group("parameters");
         const parameter = Session.project.currentStructure.cell.lengthA;
+        const list = Review.find(box, "parameters.list");
+        list.sourceModel.nameFilter = "length_a";
+        tryCompare(list, "count", 1, 2000, "The parameter name filter selects the lattice constant whose limits are checked");
         box.selected = parameter;
         const slider = Review.find(box, "parameters.slider");
         verify(slider !== null, "The file-spelling witness reaches the real selected slider");
         const fields = [Review.find(box, "parameters.slider.from"), Review.find(box, "parameters.slider.to")];
         verify(fields.every(field => field !== null), "Both real slider limit fields are present");
-        for (const value of [1.2866603586797143, 2.718281828459045]) {
-            parameter.value = value;
-            const endpoints = [slider.from, slider.to];
-            const written = endpoints.map(endpoint => {
-                parameter.value = endpoint;
-                const result = FileSpelling.parameter(Session.project.currentStructure.text.text, "cell.length_a");
-                parameter.value = value;
-                return result;
-            });
+        for (const witness of [{value: 1.25001, labels: ["1.2", "1.31"]}, {value: 2.75001, labels: ["2.7", "2.81"]}]) {
+            parameter.value = witness.value;
             for (let index = 0; index < 2; ++index)
-                tryCompare(fields[index], "text", written[index], 2000,
-                           "Each slider limit spells the same number as the active file/Text rule");
-            compare(parameter.value, value, "Reading slider spelling preserves the stored parameter");
+                tryCompare(fields[index], "text", witness.labels[index], 2000,
+                           "Slider endpoints use compact decimal spelling without changing their rounded value");
+            compare(parameter.value, witness.value, "Reading rounded slider labels preserves every stored digit");
         }
     }
+
     function test_effective_tolerance_and_no_calculator() {
         open(); pane("analysis", "extras");
         verify(!Ui.groupNames(Ui.page(appWindow)).includes("calculator"),

@@ -44,8 +44,10 @@
 #include <array>
 #include <atomic>
 #include <cmath>
+#include <limits>
 #include <cstdarg>
 #include <cstdio>
+#include <exception>
 #include <functional>
 #include <map>
 #include <memory>
@@ -64,6 +66,8 @@ Q_IMPORT_QML_PLUGIN(edi_appPlugin)
 
 namespace {
 
+constexpr double kInf = std::numeric_limits<double>::infinity();
+
 constexpr int kRepeats = 5;
 constexpr qint64 kBudgetMs = 10000;
 constexpr double kHopelessMs = 2000.0;
@@ -74,6 +78,7 @@ constexpr int kMaxMisses = 3;
 constexpr const char* kScan = "docs/user/cli/pd-neut-cwl_cosio-d20_scan-324f/project/experiments/d20_scan";
 constexpr const char* kPattern = "docs/user/cli/pd-xray-cwl_latp_scan-4f/project";
 
+// NOLINTNEXTLINE(cert-dcl50-cpp): printf-style, every format a literal at its call.
 void log(const char* format, ...) {
     std::va_list args;
     va_start(args, format);
@@ -117,7 +122,7 @@ QColor colour_of(std::size_t i, std::size_t count, float saturation) {
 
 struct Scan {
     std::vector<std::vector<double>> x, intensity;
-    double lo = INFINITY, hi = -INFINITY, low = INFINITY, high = -INFINITY;
+    double lo = kInf, hi = -kInf, low = kInf, high = -kInf;
 };
 
 Scan read_scan(const QString& directory) {
@@ -165,7 +170,7 @@ Shown stacked(const Scan& scan, std::size_t count, int columns, double width_px,
         const double row = static_cast<double>(d);
         // Each column's lowest value, then its highest when it differs.
         const auto add = [&](double x, float value) {
-            const double v = (value - scan.low) / span;
+            const double v = (static_cast<double>(value) - scan.low) / span;
             curve.upper.append(QPointF(x, row + v * kLift));
             lines.x.push_back(static_cast<float>((x - x_min) / (x_max - x_min) * width_px));
             lines.v.push_back(static_cast<float>(v));
@@ -187,7 +192,7 @@ Shown stacked(const Scan& scan, std::size_t count, int columns, double width_px,
 // `factor` scales every calculated column (a fit's update).
 edi::PatternSource pattern_source(const edi::PatternSource& captured, double factor) {
     edi::PatternSource source = captured;
-    const auto scaled = [factor](const edi::PatternSource::Column& column, double by) -> edi::PatternSource::Column {
+    const auto scaled = [](const edi::PatternSource::Column& column, double by) -> edi::PatternSource::Column {
         if (!column) {
             return column;
         }
@@ -277,8 +282,8 @@ Shown pattern_shown(const edi::PatternSource& source, int columns, std::optional
     for (const edi::PatternSeries& series : shown.series) {
         auto& [lo, hi] = range[static_cast<std::size_t>(series.pane)];
         for (std::size_t i = 0; i < series.points.size(); ++i) {
-            for (const double y : {series.points[i].y, i < series.bar_low.size() ? series.bar_low[i] : NAN,
-                                   i < series.bar_high.size() ? series.bar_high[i] : NAN}) {
+            for (const double y : {series.points[i].y, i < series.bar_low.size() ? series.bar_low[i] : std::nan(""),
+                                   i < series.bar_high.size() ? series.bar_high[i] : std::nan("")}) {
                 if (std::isfinite(y)) {
                     lo = std::min(lo, y);
                     hi = std::max(hi, y);
@@ -367,7 +372,7 @@ class Painted : public QQuickPaintedItem {
             QPainterPath path;
             bool drawing = false;
             for (std::size_t k = 0; k < traces[d].x.size(); ++k) {
-                const double x = traces[d].x[k], y = base - traces[d].v[k] * lift;
+                const double x = static_cast<double>(traces[d].x[k]), y = base - static_cast<double>(traces[d].v[k]) * lift;
                 if (!std::isfinite(x) || !std::isfinite(y)) {
                     drawing = false;
                 } else if (drawing) {
@@ -726,7 +731,7 @@ QString slug(QString text) {
 
 }  // namespace
 
-int main(int argc, char** argv) {
+int run(int argc, char** argv) {
     QGuiApplication app(argc, argv);
     edi_app::use_design_font();
     const QStringList arguments = QCoreApplication::arguments();
@@ -903,4 +908,13 @@ int main(int argc, char** argv) {
     }
     log("wrote %s", qPrintable(out));
     return 0;
+}
+
+int main(int argc, char** argv) {
+    try {
+        return run(argc, argv);
+    } catch (const std::exception& error) {
+        std::fprintf(stderr, "edi_app_plot_bench: %s\n", error.what());
+        return 1;
+    }
 }

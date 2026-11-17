@@ -7,6 +7,7 @@
 #include <optional>
 #include <unordered_map>
 
+#include <QRegularExpression>
 #include <QStringList>
 #include <limits>
 
@@ -66,9 +67,9 @@ ParameterItem::ParameterItem(const edi::DescriptorEntry& entry, ProjectEditor& e
       block_name_(QString::fromStdString(entry.block_name)),
       category_(QString::fromStdString(entry.category)),
       row_label_(QString::fromStdString(entry.row_label)),
-      name_(QString::fromStdString(entry.name)) {
-    display_name_ = QString::fromStdString(edi::label(entry.uid));
-    display_units_ = QString::fromStdString(edi::units_label(entry.uid));
+      name_(QString::fromStdString(entry.name)),
+      display_name_(QString::fromStdString(edi::label(entry.uid))),
+      display_units_(QString::fromStdString(edi::units_label(entry.uid))) {
     short_name_ = label_case(display_name_);
     minimum_ = -std::numeric_limits<double>::infinity();
     maximum_ = std::numeric_limits<double>::infinity();
@@ -262,7 +263,15 @@ QString ParameterItem::displayText(double value) const {
     if (parameter_->spec == nullptr) {
         return {};
     }
-    return QString::fromStdString(edi::shown_text(uid_.toStdString(), value, variant_.toStdString()));
+    QString text = QString::fromStdString(edi::shown_text(uid_.toStdString(), value, variant_.toStdString()));
+    // The limits are round numbers (sliderLower, sliderUpper), so trailing zeros only pad them: 10.2500 reads 10.25.
+    // Only a plain decimal is trimmed; a value written with a power of ten keeps its digits.
+    static const QRegularExpression plain(QStringLiteral("^-?[0-9]+\\.[0-9]+$"));
+    if (plain.match(text).hasMatch()) {
+        while (text.endsWith(QLatin1Char('0'))) text.chop(1);
+        if (text.endsWith(QLatin1Char('.'))) text.chop(1);
+    }
+    return text;
 }
 
 void ParameterItem::setPhaseIndex(int index) {
@@ -390,6 +399,14 @@ double ParameterItem::sliderHalfWidth() const {
         return kLatticeConstantSliderHalfWidth;
     }
     return std::max(std::abs(value_) * 0.5, 1e-3);
+}
+
+double ParameterItem::sliderLower() const {
+    return edi::slider_limits(value_, sliderHalfWidth(), sliderStep(), minimum_, maximum_).first;
+}
+
+double ParameterItem::sliderUpper() const {
+    return edi::slider_limits(value_, sliderHalfWidth(), sliderStep(), minimum_, maximum_).second;
 }
 
 }  // namespace edi_app
