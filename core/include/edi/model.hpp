@@ -5355,7 +5355,7 @@ class Project : public detail::ProjectAnchor {
     std::string minimizer_stop_rules;
     double minimizer_shift_tolerance = 0.0;
     // Whether a fit tries free magnetic moments at exactly zero: `try_exact_zero` or `keep_free` (empty = not
-    // declared -> try_exact_zero).
+    // declared -> keep_free).
     std::string minimizer_moments_near_zero;
     // The declared `_minimizer.type`, kept as written so a save round-trips it — an empty value
     // included (absent = not declared; a save does not add it). Only `crysta` is supported: any
