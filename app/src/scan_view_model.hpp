@@ -310,6 +310,8 @@ class ScanViewModel : public QObject {
     std::size_t units() const { return rows_by_bank_ && series_ ? static_cast<std::size_t>(series_experiments_.size()) : files_.size(); }
     QStringList series_experiments_;
     std::shared_ptr<const edi::ScanDatasets> datasets_;  // a series' points and their files
+    const ScanSession* session_ = nullptr;              // a series' session, whose index each batch of rows reads
+    edi::SeriesBankRule rule_;                          // a series' rule for its per-experiment rows
     void restartReads();
     QStringList row_labels_;
     std::vector<double> template_x_, template_d_;  // the template's own axis and its current d column, where finite

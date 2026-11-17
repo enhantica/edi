@@ -61,6 +61,10 @@ class ScanSession : public QObject {
     const edi::ScanResultIndex& index() const { return index_; }
     int place(const std::string& file) const;
     const edi::ScanPlaces& places() const { return places_; }
+    // A series' rule for its per-experiment rows, made from `project` the first time it is asked for in a load.
+    const edi::SeriesBankRule& bankRule(const edi::Project& project) const;
+    // What a reader of dataset `place`'s per-experiment rows checks them against (edi::series_point_check).
+    edi::SeriesPointCheck pointCheck(const edi::Project& project, int place) const;
     // A row a run just appended (the event's own cells): checked against the header, indexed at the file's end.
     // The dataset's place, or -1 with the refusal in `error`; a refusal leaves the index refused (`index().error`),
     // never holding part of what was read.
@@ -120,8 +124,8 @@ class ScanSession : public QObject {
     edi::ScanDatasets datasets_;
     edi::ScanPlaces places_;
     edi::ScanResultIndex index_;
-    // The header a fit of the project writes to results_experiments.csv, taken at the first live row of a load.
-    std::vector<std::string> bank_header_;
+    // A series' rule for its results_experiments.csv rows (edi::SeriesBankRule), made once per load when first asked.
+    mutable edi::SeriesBankRule bank_rule_;
     Run run_;
     std::vector<std::optional<std::vector<std::string>>> metadata_;
     std::unordered_map<int, QString> metadata_errors_;

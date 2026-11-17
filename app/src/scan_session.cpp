@@ -119,7 +119,7 @@ ScanSession::~ScanSession() { stopMetadata(); }
 
 QString ScanSession::load(const edi::Project& project) {
     stopMetadata();
-    bank_header_.clear();
+    bank_rule_ = {};
     try {
         datasets_ = edi::scan_datasets(project);
     } catch (const std::exception& refusal) {
@@ -157,7 +157,7 @@ void ScanSession::take(ScanSession& listing) {
     datasets_ = std::move(listing.datasets_);
     places_ = std::move(listing.places_);
     index_ = std::move(listing.index_);
-    bank_header_.clear();
+    bank_rule_ = std::move(listing.bank_rule_);
     run_ = std::move(listing.run_);
     source_ = std::move(listing.source_);
     metadata_.assign(datasets_.files.size(), std::nullopt);
@@ -233,6 +233,7 @@ QString ScanSession::decodeRun(const std::optional<std::string>& bytes, Run& run
 QString ScanSession::reindex(const edi::Project& project, bool writing) {
     // The old index goes first: a scan's two indexes at once would double what it holds at the end of a run.
     index_ = {};
+    bank_rule_ = {};  // made again from the project as it is now, when first asked
     index_ = edi::index_scan_results(project, datasets_, places_, writing);
     return QString::fromStdString(index_.error);
 }
@@ -276,10 +277,10 @@ int ScanSession::addRow(const edi::Project& project, const std::vector<std::stri
         // A series point's experiment rows are written before its results row: checked here as a full read checks
         // them, so a damaged row is refused live as on reopen.
         if (datasets_.joint()) {
-            if (bank_header_.empty()) {
-                bank_header_ = project.series_experiments_header();
-            }
-            edi::check_series_point_rows(project, datasets_, places_, bank_header_, dataset, row.converged);
+            edi::SeriesPointCheck check = pointCheck(project, static_cast<int>(dataset));
+            check.recorded = true;
+            check.succeeded = row.converged;
+            edi::check_series_point_rows(project, datasets_.files[dataset], check);
         }
         // The notes the run appended since the last row come first (files skipped before this one, its own note):
         // crysta notes a file before appending its row. A refusal there refuses the index below.
@@ -309,6 +310,20 @@ int ScanSession::addRow(const edi::Project& project, const std::vector<std::stri
         error = QString::fromStdString(index_.error);
         return -1;
     }
+}
+
+const edi::SeriesBankRule& ScanSession::bankRule(const edi::Project& project) const {
+    if (bank_rule_.empty() && datasets_.joint()) {
+        bank_rule_ = edi::SeriesBankRule(project);
+    }
+    return bank_rule_;
+}
+
+edi::SeriesPointCheck ScanSession::pointCheck(const edi::Project& project, int place) const {
+    if (place < 0 || !datasets_.joint()) {
+        return {};
+    }
+    return edi::series_point_check(bankRule(project), datasets_, index_, static_cast<std::size_t>(place));
 }
 
 std::vector<std::string> ScanSession::row(const edi::Project& project, int dataset) const {

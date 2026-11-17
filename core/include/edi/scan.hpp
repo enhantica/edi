@@ -6,6 +6,7 @@
 #include <filesystem>
 #include <functional>
 #include <map>
+#include <memory>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -210,10 +211,42 @@ std::vector<std::string> declare_series_of_joint_fits(Project& project, const st
                                                       const std::vector<SeriesGroup>& groups,
                                                       const std::string& set_id);
 
+/// The rule crysta's series driver holds each `analysis/results_experiments.csv` row of a recorded point to before it
+/// resumes (crysta::SeriesRowRule), made from the project as fit_scan hands it over: the full read, a live row and every
+/// read of a point's rows hold the file to this one rule, so the app accepts exactly what Continue accepts. Copies share
+/// it; a default one is no rule (not a series).
+class SeriesBankRule {
+   public:
+    SeriesBankRule() = default;
+    explicit SeriesBankRule(const Project& project);
+    bool empty() const { return rule_ == nullptr; }
+    const std::vector<std::string>& header() const;
+    /// Why `row` is refused, empty when it is admitted; `point_files`: the point's file of each experiment, project
+    /// order; `succeeded`: the point's results.csv row records success.
+    std::string refusal(const std::vector<std::string>& row, const std::vector<std::string>& point_files,
+                        bool succeeded) const;
+
+   private:
+    struct Rule;
+    std::shared_ptr<const Rule> rule_;
+};
+/// What a reader of a series point's rows knows from the results index: the rule, the point's files, whether
+/// results.csv records the point and whether its fit succeeded. A recorded point's rows must all be there and keep the
+/// rule; an unrecorded point's rows are a torn tail and are not read.
+struct SeriesPointCheck {
+    SeriesBankRule rule;
+    std::vector<std::string> files;
+    bool recorded = false;
+    bool succeeded = false;
+};
+SeriesPointCheck series_point_check(const SeriesBankRule& rule, const ScanDatasets& datasets,
+                                    const ScanResultIndex& index, std::size_t place);
+
 /// ADR-0089 point 4: each experiment's divisor in a series' merged d view at the point `point`: its first enabled
 /// linked structure's scale as `analysis/results_experiments.csv` records it for the point, else the template's
 /// value; 1 where neither is a positive finite number. In project order.
-std::vector<double> series_point_scales(const Project& project, const std::string& point);
+std::vector<double> series_point_scales(const Project& project, const std::string& point,
+                                        const SeriesPointCheck& check);
 
 /// ADR-0088: what a series of joint fits' point wrote for its experiments' own parameters, from
 /// `analysis/results_experiments.csv`, by unique parameter name: the value and its s.u. (none where the row says `nan`).
@@ -222,12 +255,11 @@ struct SeriesPointValue {
     double value = 0.0;
     std::optional<double> uncertainty;
 };
-std::map<std::string, SeriesPointValue> series_point_values(const Project& project, const std::string& point);
-/// Checks the per-experiment rows of the series point at `place`, just written, as `index_scan_results` checks every
-/// row: `expected_header` (Project::series_experiments_header), a row for each experiment, its point's own files, and
-/// numbers where due (`successful`: the point's fit succeeded). Throws, saying why.
-void check_series_point_rows(const Project& project, const ScanDatasets& datasets, const ScanPlaces& places,
-                             const std::vector<std::string>& expected_header, std::size_t place, bool successful);
+std::map<std::string, SeriesPointValue> series_point_values(const Project& project, const std::string& point,
+                                                            const SeriesPointCheck& check);
+/// Checks a recorded series point's per-experiment rows (`check`) by the rule: every experiment's row there and each
+/// admitted. Throws, saying why; changes nothing.
+void check_series_point_rows(const Project& project, const std::string& point, const SeriesPointCheck& check);
 
 /// ADR-0089 point 5: the summary of one Map or Stacked row of a series over [d_min, d_max] at `columns` columns: the
 /// point's pattern of each experiment in `experiments` (places in project order), read from its file on the d axis by
@@ -237,7 +269,7 @@ void check_series_point_rows(const Project& project, const ScanDatasets& dataset
 /// Throws std::out_of_range for a point or experiment the datasets do not hold, and as read_scan_dataset does.
 ScanColumns series_row_columns(const Project& project, const ScanDatasets& datasets, std::size_t point,
                                const std::vector<std::size_t>& experiments, const std::vector<double>& scales,
-                               double d_min, double d_max, std::size_t columns);
+                               double d_min, double d_max, std::size_t columns, const SeriesPointCheck& check);
 
 /// ADR-0089 point 5: one row of a series as a pattern on the d axis for the Stacked and Map views: the point's pattern
 /// of each experiment in `experiments` (places in project order), put on d as series_row_columns does and divided by
@@ -246,7 +278,8 @@ struct SeriesRowPattern {
     std::vector<double> d, intensity;
 };
 SeriesRowPattern series_row_pattern(const Project& project, const ScanDatasets& datasets, std::size_t point,
-                                    const std::vector<std::size_t>& experiments, const std::vector<double>& scales);
+                                    const std::vector<std::size_t>& experiments, const std::vector<double>& scales,
+                                    const SeriesPointCheck& check);
 
 /// A series of joint fits' per-experiment parameters (ADR-0089): the value columns of `analysis/results_experiments.csv`,
 /// by their names without the datablock, in the file's order; empty for a scan of one experiment or without the file.
@@ -255,12 +288,15 @@ std::vector<std::string> evolution_experiment_parameters(const Project& project)
 /// Visits each point of a per-experiment parameter of a series of joint fits, read from
 /// `analysis/results_experiments.csv`: the experiment's place in project order and the point, its x as
 /// evolution_series takes it from the point's `results.csv` row. A refused point has no points.
+/// Every recorded point's rows are held to `rule` (`datasets`: the points' files); a row it refuses throws.
 void evolution_experiment_series(const Project& project, const ScanPlaces& places, const ScanResultIndex& index,
+                                 const SeriesBankRule& rule, const ScanDatasets& datasets,
                                  const std::string& parameter, bool by_value,
                                  const std::function<void(std::size_t, const EvolutionPoint&)>& visit);
 /// The points evolution_experiment_series visits for one point (`point_key`), read through the point's own rows: a
 /// fit adds them as each point's row arrives, without reading the file again.
 void evolution_experiment_point(const Project& project, const ScanPlaces& places, const ScanResultIndex& index,
+                                const SeriesBankRule& rule, const ScanDatasets& datasets,
                                 const std::string& parameter, bool by_value, const std::string& point_key,
                                 const std::function<void(std::size_t, const EvolutionPoint&)>& visit);
 
