@@ -4482,6 +4482,11 @@ struct AssistantViewModel::State {
         // sidebar/focus operation is added before this real user action.
         if (original_widget && original_widget->tool == "save_project") original_widget->save_manual_takeover = true;
         if (original_creation) original_creation->manual_takeover = true;
+        // The user's own input cancels the operation: nothing refused from here on runs it without its cue.
+        ++native_superseding;
+        const auto takeover = qScopeGuard([this, receiver] {
+            if (receiver && receiver->state_.get() == this) --native_superseding;
+        });
         if (showing_actions) try { emit owner.actionManualTakeover(); } catch (...) {}
         if (!original_request()) return false; // A never cancels/acts through new B.
         if (manual_request_current()) native_supersede_operation(widget_outcome_error);
@@ -4615,7 +4620,16 @@ struct AssistantViewModel::State {
     static QString cue_skipped_message(const QString& reason) {
         return QObject::tr("Show actions could not show this click (%1), so it ran without the visible click.").arg(reason);
     }
+    // Only a cue that could not be shown runs without it. A cancellation, a takeover, a stale scientific context or a
+    // blocked owner refuses as it always did: nothing of the operation runs after it.
+    template <class Call>
+    bool cue_fallback_admitted(const Call& call) const noexcept {
+        return native_superseding == 0 && !native_blocked && native_call && !native_call->retiring && call.record &&
+               !call.record->retired && call.receipt && !call.receipt->retired && !call.receipt->stale &&
+               (!native_receipt || !native_receipt->stale);
+    }
     bool widget_cue_fallback(const std::shared_ptr<NativeWidget>& run, const QString& message) noexcept {
+        if (!cue_fallback_admitted(run->call)) return false;
         const auto& tool = run->fallback_tool;
         const bool edit_tool = tool == "set_parameters" || tool == "set_free" || tool == "add_relations";
         const bool own_path = tool == "edit_relation" || tool == "undo_fit" || tool == "run_fit";
@@ -4829,6 +4843,10 @@ struct AssistantViewModel::State {
     }
     void native_supersede_operation(const QString& message) noexcept {
         const QPointer<AssistantViewModel> receiver(&owner);
+        ++native_superseding;
+        const auto superseded = qScopeGuard([this, receiver] {
+            if (receiver && receiver->state_.get() == this) --native_superseding;
+        });
         const auto call = native_call;
         const auto widget = native_widget;
         const auto creation = native_create_widget;
@@ -7990,6 +8008,8 @@ struct AssistantViewModel::State {
     }
     quint64 native_serial = 0, native_accepted_serial = 0;
     bool native_blocked = false, native_discard_pending = false;
+    // Inside native_supersede_operation: a refusal then is a cancellation, never a cue to skip (cue_fallback_admitted).
+    int native_superseding = 0;
     // Fixed local first-cause facts only: no payload, identity, path or what().
     // This is diagnostic storage, never a recovery or admission authority.
     struct NativeFailure {
@@ -11829,7 +11849,7 @@ struct AssistantViewModel::State {
         }
         // A cue is presentation: when Show actions cannot reveal or cue the original control before anything was
         // applied, the operation runs as normal mode runs it (same reader, same Undo) and reports the skipped cue.
-        if (!uncertain && run->visible_delivery && run->ordinary && !run->cue_fallback && run->completed_steps == 0 &&
+        if (!uncertain && cue_fallback_admitted(run->call) && run->visible_delivery && run->ordinary && !run->cue_fallback && run->completed_steps == 0 &&
             !run->individual_tool.isEmpty() && !selection_action(run) && !run->origin_unavailable &&
             !(run->file_input && (run->file_input->consumed || run->file_input->source_changed)) &&
             !(run->control_input && run->control_input->consumed)) {
