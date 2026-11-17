@@ -3361,8 +3361,8 @@ BraggPdExperiment simulation_experiment(const std::string& name, const Experimen
                                         const std::vector<std::string>& structure_ids) {
     const bool constant_wavelength = type.beam_mode == "constant wavelength";
     if (type.sample_form == "single crystal") {
-        // A single crystal: its wavelength (constant wavelength), no extinction and no reflections until its data
-        // are loaded.
+        // A single crystal: its wavelength and resolution limit (constant wavelength), no extinction and no measured
+        // reflections until its data are loaded.
         if (type.radiation_probe != "neutron") {
             throw std::invalid_argument("a single crystal is a neutron experiment; choose neutron first");
         }
@@ -3373,6 +3373,9 @@ BraggPdExperiment simulation_experiment(const std::string& name, const Experimen
         text += "_experiment_type.scattering_type \"bragg\"\n\n";
         if (constant_wavelength) {
             text += "_instrument.setup_wavelength 1.\n\n";
+            // A resolution limit, so the reflections are calculated before any are measured (edi ADR-0049 point 6):
+            // d down to 1 Å, which wavelengths up to 2 Å still reach.
+            text += std::string(detail::single_crystal_resolution_key()) + " 0.5\n\n";
         }
         text += "_extinction.type none\n";
         if (!structure_ids.empty()) {

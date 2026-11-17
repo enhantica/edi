@@ -60,6 +60,9 @@ crysta to calculate them (ADR-0003), so a single crystal needs a model, a reader
    calculated columns (`generated_index_h` … `_l`), since the experiment holds no measured rows. Python reaches the
    limit as `experiment.data_range.sin_theta_over_lambda_max` (diffraction-lib's `ScDataRange`; None on a powder),
    and `experiment.refln` lists the generated reflections. Loading measured reflections clears the limit.
+   A constant-wavelength single crystal created without data, in the app (Create, or a sample form switched to single
+   crystal) or by `simulation_experiment`, starts with the limit 0.5 Å⁻¹ (d down to 1 Å, reached by wavelengths up
+   to 2 Å), so its Pattern tab shows the calculated reflections at once.
 
 ## Consequences
 
