@@ -314,6 +314,40 @@ private slots:
         QVERIFY2(session->loadWarnings()->rowCount() == before, qPrintable(messages()));
     }
 
+    // A filter that leaves a few rows shows them at once from the table's top, with no blank band easing away.
+    void filteredTableShowsItsRowsAtOnceFromTheTop() {
+        QQmlApplicationEngine engine;
+        edi_app::configure_engine(engine);
+        engine.loadFromModule("edi.app", "Main");
+        QVERIFY(!engine.rootObjects().isEmpty());
+        auto* window = qobject_cast<QQuickWindow*>(engine.rootObjects().constFirst());
+        QVERIFY(window);
+        window->resize(1480, 900);
+        window->show();
+        QVERIFY(QTest::qWaitForWindowExposed(window));
+        auto* session = engine.singletonInstance<edi_app::Session*>("edi.app", "Session");
+        QVERIFY(session);
+        QVERIFY2(session->openProject(QUrl::fromLocalFile(QStringLiteral(EDI_SOURCE_DIR "/docs/user/cli/pd-neut-cwl_lbco-hrpt/project"))), qPrintable(session->lastError()));
+        QTRY_VERIFY_WITH_TIMEOUT(!session->project()->calculating(), 30000);
+        QQuickItem* tab = nullptr;
+        QTRY_VERIFY_WITH_TIMEOUT((tab = window->contentItem()->findChild<QQuickItem*>(QStringLiteral("appBar.tab.analysis"))) && tab->isEnabled(), 20000);
+        QTest::mouseClick(window, Qt::LeftButton, {}, tab->mapToScene(QPointF(tab->width() / 2, tab->height() / 2)).toPoint());
+        QQuickItem* table = nullptr;
+        QTRY_VERIFY_WITH_TIMEOUT((table = window->contentItem()->findChild<QQuickItem*>(QStringLiteral("parameters.list"))) && table->isVisible() && table->property("count").toInt() > table->property("maxRowCountShow").toInt(), 20000);
+        // Scrolled to the end of the whole list, then filtered down to a few rows.
+        const double end = table->property("originY").toDouble() + table->property("contentHeight").toDouble() - table->height();
+        table->setProperty("contentY", end);
+        QCOMPARE(table->property("contentY").toDouble(), end);
+        auto* filter = table->property("sourceModel").value<QObject*>();
+        QVERIFY(filter);
+        QVERIFY(filter->setProperty("nameFilter", QStringLiteral("adp")));
+        QTRY_VERIFY_WITH_TIMEOUT(table->property("count").toInt() > 0 && table->property("count").toInt() <= table->property("maxRowCountShow").toInt(), 5000);
+        QCoreApplication::processEvents();
+        // At the top on the first frame after the filter, with nothing left moving.
+        QCOMPARE(table->property("contentY").toDouble(), table->property("originY").toDouble());
+        QVERIFY(!table->property("moving").toBool());
+    }
+
     void toolbarOverflowLeavesNoQmlWarning() {
         static QStringList warnings;
         warnings.clear();
