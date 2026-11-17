@@ -4,10 +4,10 @@
 #include <QEasingCurve>
 #include <QStringList>
 #include <algorithm>
-#include <vector>
 #include <cmath>
 #include <limits>
 #include <numbers>
+#include <vector>
 
 namespace edi_app {
 
