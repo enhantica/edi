@@ -5311,6 +5311,9 @@ struct AssistantViewModel::State {
             widget_refuse(run, QObject::tr("Finish the current manual input before revealing its parameter")); return false;
         }
         const QPointer<QQuickItem> originalField(field);
+        // One rule for every control: one the user can already see and press is pressed as it is. Layout settling, group
+        // checks and row scope only serve to bring a control into view, never to veto one already in view.
+        if (widget_input->usableTarget(*field) && widget_full_row_visible(field)) return true;
         if(!widget_settle_control_layout(run,field)) {
             if(run->receiver && run->receiver->state_.get()==this && widget_entry_owned(run,entry))
                 widget_refuse(run,QObject::tr("The original control group changed while its pending layout was settled"));
@@ -12116,6 +12119,17 @@ struct AssistantViewModel::State {
                     ancestor == run->form->property("footer").value<QQuickItem*>()));
             if (!inside) continue;
             candidates.append(item);
+        }
+        // Found nowhere in the page's sidebar, its open menu or the Create form: the one control of that name anywhere in the
+        // window that the user can see and press (a main-area toolbar, a popup) is the control.
+        if (candidates.isEmpty() && widget_input) {
+            for (auto* item : widget_items()) {
+                if (item->objectName() != name || item->window() != run->window || !item->isVisible() || !item->isEnabled() ||
+                    !widget_input->usableTarget(*item)) continue;
+                if (found) return nullptr;
+                found = item;
+            }
+            return found;
         }
         if (candidates.size() == 1) return candidates.first();
         // A table can hold a second copy of a row for a moment (measuring its columns, a delegate being replaced): the
