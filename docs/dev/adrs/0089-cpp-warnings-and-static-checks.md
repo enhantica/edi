@@ -30,8 +30,8 @@ formatting & static analysis (Python + C++)". The owner asked for the same check
    analyzer checks null dereferences on every path.
 2. **`EDI_WERROR=ON` makes each of those warnings an error.** It is off for a local build and on in CI: the build scripts
    (`core-build.sh`, `app-build.sh`, `wasm-build.sh`) pass the `EDI_WERROR` environment variable to CMake. CI sets it
-   in the core and app jobs on Linux and macOS. Windows builds with MSVC's `/W4`, a different set not swept yet, and
-   the WebAssembly build has its own Qt kits; both keep it off for now.
+   in the core jobs on Linux, macOS and Windows, where MSVC takes `/W4 /WX`, and in the app jobs, which run on Linux and
+   macOS. The WebAssembly build has its own Qt kits and keeps it off for now.
 3. **clang-tidy runs with the Clang Static Analyzer** over the same sources (`pixi run -e cpp-lint cpp-tidy`,
    `tools/ci/cpp-tidy.sh`), any finding an error. edi's `.clang-tidy` holds the groups of crysta's curated set that
    find faults: the analyzer, `bugprone`, `performance` and `cert`, with crysta's exceptions inside them. A

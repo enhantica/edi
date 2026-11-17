@@ -248,8 +248,8 @@ jobs:
     needs: [changes, native, crysta-sdk]
     env:
       CRYSTA_SOURCE_SHA: ${{ needs.changes.outputs.crysta_sha }}
-      # edi's own C++ builds without a warning on Linux and macOS (ADR-0089); MSVC's /W4 set is not swept yet.
-      EDI_WERROR: ${{ matrix.werror }}
+      # edi's own C++ builds without a warning (ADR-0089), MSVC's /W4 set included.
+      EDI_WERROR: 'ON'
     strategy:
       fail-fast: false
       matrix:
@@ -257,15 +257,12 @@ jobs:
           - platform: Linux
             runner: *linux
             sdk: linux-64
-            werror: 'ON'
           - platform: macOS
             runner: *macos
             sdk: osx-arm64
-            werror: 'ON'
           - platform: Windows
             runner: windows-2022
             sdk: win-64
-            werror: 'OFF'
     runs-on: ${{ matrix.runner }}
     defaults:
       run:

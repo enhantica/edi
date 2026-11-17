@@ -8,6 +8,7 @@
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
+#include <memory>
 #include <sstream>
 #include <iterator>
 #include <random>
@@ -144,7 +145,8 @@ void write_through_staging(const fs::path& target, std::string_view bytes) {
         const fs::path staging = private_name(target, ".partial");
         // "x" fails when anything at all has the name, a dangling link included.
 #if defined(_WIN32)
-        std::FILE* out = _wfopen(staging.c_str(), L"wbx");
+        std::FILE* out = nullptr;
+        if (_wfopen_s(&out, staging.c_str(), L"wbx") != 0) out = nullptr;
 #else
         std::FILE* out = std::fopen(staging.c_str(), "wbx");
 #endif
@@ -424,7 +426,16 @@ const std::string& default_tutorials_source() {
 std::vector<std::string> sources_for(const std::string& source, const char* variable,
                                      const std::vector<std::string>& defaults) {
     if (!source.empty()) return {source};
+#if defined(_WIN32)
+    char* given = nullptr;
+    std::size_t length = 0;
+    if (_dupenv_s(&given, &length, variable) == 0 && given != nullptr) {
+        const std::unique_ptr<char, decltype(&std::free)> held(given, &std::free);
+        if (*given != '\0') return {std::string(given)};
+    }
+#else
     if (const char* given = std::getenv(variable); given != nullptr && *given != '\0') return {given};
+#endif
     return defaults;
 }
 
