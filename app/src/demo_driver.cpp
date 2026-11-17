@@ -842,6 +842,13 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
             steps_.push_back({QStringLiteral("freecheck-%1").arg(i + 1, 2, 10, QLatin1Char('0')), actions});
         }
     }
+    // Meas vs calc during a scan's fit: it follows the fitted datasets (`--demo-only measfollow-`).
+    if (only.startsWith(QLatin1String("measfollow-"))) {
+        const QString root = QString::fromUtf8(EDI_CLI_PROJECTS_DIR) + "/";
+        steps_.push_back({"measfollow-1-early", {"resize:1480x800", "open-project:" + root + "pd-neut-cwl_cosio-d20_scan-213f/project",
+                                                 analysis, basic, "mainArea.tab.measCalc", "statusBar.fit.button", "wait-files:20"}});
+        steps_.push_back({"measfollow-2-later", {"wait-files:60"}});
+    }
     // A scan's Experiments table, scrolled near its end, its dataset selector open, and Stacked zoomed on its rows
     // (`--demo-only exptable-`).
     if (only.startsWith(QLatin1String("exptable-"))) {
