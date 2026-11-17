@@ -37,14 +37,14 @@ def selected(root=ROOT):
 
 def app_cases(root=ROOT):
     declared = [row['id'] for row in registry(root) if 'app-only' in row]
-    assert not declared, (
-        'Every user example now has its catalogue form; app-only entries are retired'
+    assert declared == ['pd-neut-tof_ncaf-wish-5bank_synthetic-100p'], (
+        'Only the declared large-series GUI example may omit tutorial forms'
     )
     actual = selected(root)
     assert actual == SELECTED, (
         'The catalogue must retain the independently declared case identities and order'
     )
-    return actual
+    return actual + declared
 
 
 def page_cases(path):

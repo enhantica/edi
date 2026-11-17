@@ -98,11 +98,12 @@ def progress_edge(text):
     area = item(text, 'statusBar.fit')
     right = property_value(area, 'anchors.right')
     observed = evaluate(
-        '[false, true].map(visible => { const tutorialStrip = {visible, left: 70}; '
+        '[[false,false],[true,false],[false,true],[true,true]].map(([visible,assistant]) => { '
+        'const tutorialStrip = {visible, left: 70}; assistantGroup.visible=assistant; '
         'return (' + right + '); })',
-        'const parent = {left: 0, right: 100};',
+        'const parent = {left: 0, right: 100};const assistantGroup={visible:false,left:40};',
     )
-    assert observed == [100, 70], (
+    assert observed == [100, 70, 40, 40], (
         'Fit uses the bar right edge normally and sits just left of the active tutorial strip'
     )
     strip = item(text, 'statusBar.tutorial')
@@ -173,12 +174,12 @@ def gesture_results(text):
     context = (
         'const Qt={LeftButton:1,RightButton:2};const width=200,height=100;'
         'const axisX={min:2,max:12},axisY={min:10,max:30};const chart={em:10,zoom:[]};'
-        'let pressX=0,pressY=0;' + functions
+        'let pressX=0,pressY=0,picking=true;' + functions
     )
     return evaluate(
         '(()=>{let results=[];('
         + property_value(pointer, 'onPressed')
-        + ')({x:40,y:25});('
+        + ')({x:40,y:25,button:1});('
         + property_value(pointer, 'onReleased')
         + ')({x:160,y:75,button:1});'
         'results.push([...chart.zoom]);('
@@ -283,7 +284,7 @@ def shortened_names(text):
     # line per item, with exactly first five / ellipsis / last five above eleven.
     counts = (0, 3, 11, 12, 162, 100000)
     rows = evaluate(
-        str(list(counts)) + '.map(count=>{return (function()' + shown + ')();})',
+        str(list(counts)) + '.map(count=>(' + shown + '))',
         '',
     )
     for count, indices in zip(counts, rows, strict=True):
@@ -343,14 +344,14 @@ def test_owner_observers_reject_live_disconnected_or_constant_consumers(channel)
         'wheel': (
             'qml/Components/EvolutionChart.qml',
             zoom_consumers,
-            'chart.zoom = [anchor',
-            'unused = [anchor',
+            'ApplicationInfo.evolutionPointer(wheel, 4)',
+            'ApplicationInfo.evolutionPointer(wheel, 2)',
         ),
         'drag': (
             'qml/Components/EvolutionChart.qml',
             zoom_consumers,
-            'else if (moved(mouse))',
-            'else if (false)',
+            'ApplicationInfo.evolutionPointer(mouse, 2)',
+            'ApplicationInfo.evolutionPointer(mouse, 1)',
         ),
         'axis': (
             'qml/Components/EvolutionChart.qml',

@@ -114,9 +114,11 @@ def test_bundled_project_load_and_save_as_use_the_writable_copy_routes():
         'Save As wiring: every platform first opens the actual format dialog',
     )
     choice = item(qml, 'saveAs.choice')
-    assert property_value(choice, 'onAccepted') == 'ApplicationInfo.acceptProjectSaveChoice()', (
-        'Save As wiring: the actual choice acceptance enters its native destination router'
-    )
+    assert re.fullmatch(
+        r'\{\s*Session.setNextSaveData\(linkedData \? dataChoice : \"\"\);\s*'
+        r'ApplicationInfo.acceptProjectSaveChoice\(\);\s*\}',
+        property_value(choice, 'onAccepted'),
+    ), 'Save As wiring: the actual choice acceptance enters its native destination router'
     accepted = block(native, 'void ApplicationInfo::acceptProjectSaveChoice(')
     for route in (
         r'projectInvoke\(frame, "Session", "downloadWebProject"\)',
@@ -149,7 +151,7 @@ def test_bundled_project_load_and_save_as_use_the_writable_copy_routes():
     )
     require(
         moving,
-        r'sealed\(operation,\s*staged\)\s*\|\|\s*!publishStaged\(staged\.folder,\s*folder,\s*true\)',
+        r'readyToWrite\(operation,\s*staged\)\s*\|\|\s*!publishStaged\(staged\.folder,\s*folder,\s*true\)',
         'Save As wiring: validation precedes publication of that same checked stage',
     )
     require(
@@ -425,7 +427,8 @@ def downloaded_control(tmp_path_factory):
     root = tmp_path_factory.mktemp('downloaded-scan-control')
     selected = {'pd-neut-cwl_cosio-d20_scan', 'pd-xray-cwl_latp-bm01_scan'}
     metadata = json.loads((ROOT / 'app/examples/metadata.json').read_text())
-    metadata['examples'] = {k: v for k, v in metadata['examples'].items() if k in selected}
+    # Retain the authored cooling inputs even when the app selects a longer series.
+    metadata['examples'] = {case: {} for case in sorted(selected)}
     metadata_file = root / 'metadata.json'
     metadata_file.write_text(json.dumps(metadata))
     script = ROOT / 'tools/data/build_collection.py'
@@ -511,7 +514,9 @@ def test_effective_bundle_contains_selected_scan_payloads(tmp_path, web, downloa
         'the declared app-only cases on each platform'
     )
     for case, count in [('pd-neut-cwl_cosio-d20_scan', 155), ('pd-xray-cwl_latp-bm01_scan', 73)]:
-        assert case in index, 'Each selected scan remains discoverable in the deployed catalogue'
+        assert any(entry.startswith(case.split('_scan')[0] + '_scan') for entry in index), (
+            'Each scan family remains discoverable in the deployed catalogue'
+        )
         assert bundled_inputs(files, case) == {}, (
             'Example datasets are downloaded rather than embedded on either platform'
         )
@@ -696,7 +701,7 @@ def test_working_copy_observer_rejects_copy_to_an_unrelated_destination(monkeypa
             'std::make_shared<edi::Project>(project_->savedModel())',
         ),
         current.replace(
-            'sealed(operation, staged) || !publishStaged',
+            'readyToWrite(operation, staged) || !publishStaged',
             'false || !publishStaged',
         ),
         current.replace(

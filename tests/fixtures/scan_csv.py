@@ -12,6 +12,15 @@ CONDITION_COLUMNS = [
 ]
 
 
+# ADR-0133: this authored two-phase scan records both Hill-Howard fractions.
+DERIVED_COLUMNS = [
+    'linked_structure.alpha.weight_fraction',
+    'linked_structure.alpha.weight_fraction.uncertainty',
+    'linked_structure.beta.weight_fraction',
+    'linked_structure.beta.weight_fraction.uncertainty',
+]
+
+
 def legacy_scan(project):
     """Split a fresh combined CSV into the historical results and provenance files."""
     path = project / 'analysis/results.csv'
@@ -20,10 +29,14 @@ def legacy_scan(project):
     with path.open(newline='') as stream:
         reader = csv.DictReader(stream)
         header, rows = reader.fieldnames, list(reader)
-    assert header[-len(CONDITION_COLUMNS) :] == CONDITION_COLUMNS, (
+    condition_at = header.index(CONDITION_COLUMNS[0])
+    assert header[condition_at : condition_at + 4] == CONDITION_COLUMNS, (
         'The legacy witness begins with the exact declared combined condition columns'
     )
-    old_header = header[: -len(CONDITION_COLUMNS)]
+    assert header[condition_at + 4 :] in ([], DERIVED_COLUMNS), (
+        'Only the declared two-phase derived pairs follow this fixture condition block'
+    )
+    old_header = header[:condition_at]
     with path.open('w', newline='') as stream:
         writer = csv.DictWriter(stream, fieldnames=old_header, extrasaction='ignore')
         writer.writeheader()
@@ -90,7 +103,10 @@ def assert_migrated_prefix(
         assert retained == historical, 'A reader-only resume retains every original row'
         assert path.read_bytes() == original_bytes, 'A reader-only resume retains every byte'
         return
-    assert header == [*original_header, *CONDITION_COLUMNS]
+    assert header in (
+        [*original_header, *CONDITION_COLUMNS],
+        [*original_header, *CONDITION_COLUMNS, *DERIVED_COLUMNS],
+    ), 'Migration appends conditions and only the declared two-phase derived pairs'
     assert len(retained) >= len(historical), 'Continue retains every historical result row'
     for actual, original in zip(retained[: len(historical)], historical, strict=True):
         assert_reported_legacy(actual, original)

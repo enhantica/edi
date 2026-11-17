@@ -14,12 +14,15 @@ from tests.fixtures.metadata_transition import (
     task_inputs,
 )
 from tests.fixtures.path_keys import repository_key
+from tests.fixtures.table_display import source_uncertainties
+from tests.fixtures.table_display.source_uncertainties import previous_bytes as uncertainties
 
 ROOT = Path(__file__).resolve().parents[3]
 HERE = Path(__file__).parent
 
 
 def previous_bytes(name, data):
+    data = uncertainties(repository_key(name), data)
     data = seed_updates.previous_bytes(name, data)
     data = pin_sources.previous_bytes(name, data)
     data = release_pin_bytes.previous_bytes(name, data)
@@ -58,6 +61,7 @@ def archived_content_pairs():
 
 
 def previous_content(data):
+    data = source_uncertainties.previous_content(data)
     data = task_inputs.previous_content(seed_updates.previous_content(data))
     before_hash = archived_content_pairs().get(hashlib.sha256(data).hexdigest())
     if before_hash is None:
