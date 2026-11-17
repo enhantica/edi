@@ -3,6 +3,7 @@
 
 import argparse
 import json
+import os
 from pathlib import Path
 from unittest.mock import patch
 
@@ -15,6 +16,7 @@ from package import (
     package_app,
     run,
     unpack_installer,
+    verify_installed_maintenance_tool,
 )
 
 
@@ -85,6 +87,8 @@ def exercise(
         )
         installed = target / marker
         try:
+            metadata = json.loads((bootstrap.parent / 'installer.json').read_text())
+            verify_installed_maintenance_tool(target, metadata)
             expected = 'first marker\n' if kind == 'offline' else 'second marker\n'
             if installed.read_text() != expected:
                 raise RuntimeError('Installer did not install the expected component')
@@ -135,6 +139,8 @@ def main() -> None:
     parser.add_argument('--tools', type=Path, required=True)
     parser.add_argument('--output', type=Path, required=True)
     args = parser.parse_args()
+    # The marker installers are never signed, release runs included (edi ADR-0091).
+    os.environ.pop('EDI_CODESIGN', None)
     check(args.tools.resolve(), args.output)
 
 

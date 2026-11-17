@@ -30,6 +30,8 @@ from urllib.parse import unquote, urlsplit
 import yaml
 from checks.gui_capture import validate_bundle
 from checks.gui_topics import validate_topics
+from contributors import load as load_contributors
+from contributors import with_contributors
 from render_downloads import render as render_downloads
 from render_experiments import render as render_experiments
 from render_experiments import write_tutorial_tables
@@ -1197,15 +1199,19 @@ def main() -> None:  # noqa: PLR0915 - the build, step by step
     desktop = ROOT / 'surfaces/docs/application/desktop.md'
     cli = ROOT / 'surfaces/docs/cli/standalone.md'
     home = ROOT / 'surfaces/docs/index.md'
+    about = ROOT / 'surfaces/docs/about/index.md'
     overviews = [
         ROOT / 'surfaces/docs' / folder / 'tutorials/index.md'
         for folder in ('user-guide', 'application', 'python', 'cli')
     ]
     originals = {
         path: path.read_text(encoding='utf-8')
-        for path in (changelog, desktop, cli, home, *overviews)
+        for path in (changelog, desktop, cli, home, about, *overviews)
     }
     try:
+        about.write_text(
+            with_contributors(originals[about], load_contributors()), encoding='utf-8'
+        )
         if 'surfaces' in names:
             TUTORIAL_PAGES[:] = render_notebook_pages(
                 ROOT.parent / 'docs/user/tutorials',

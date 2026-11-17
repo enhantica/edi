@@ -9,7 +9,7 @@
       holder.dataset.ready = 'true';
       const link = document.createElement('a');
       link.href = '#';
-      link.textContent = 'Show e-mail';
+      link.textContent = holder.dataset.label || 'Show e-mail';
       link.addEventListener('click', event => {
         if (link.dataset.shown) return;
         event.preventDefault();

@@ -22,6 +22,9 @@ SYSTEM = {'Linux': 'linux', 'Darwin': 'macos', 'Windows': 'windows'}[platform.sy
 APP_COMPONENT = 'org.easyscience.edi'
 ASSISTANT_COMPONENT = 'org.easyscience.edi.assistant'
 ASSISTANT_RUNTIME = Path('libexec/edi/codex')
+# macOS ships its maintenance tool as its own signed component, app-versioned (edi ADR-0091).
+MAINTENANCE_COMPONENT = 'org.easyscience.edi.maintenancetool'
+MAINTENANCE_TOOL = 'MaintenanceTool.app'
 SUFFIX = '.exe' if SYSTEM == 'windows' else ''
 PLATFORM_ID = {'linux': 'linux-x86_64', 'macos': 'macos-arm64', 'windows': 'windows-x86_64'}[
     SYSTEM
@@ -256,6 +259,134 @@ def write_assistant_metadata(meta: Path, version: str) -> None:
             'RequiresAdminRights': 'false',
         },
     )
+
+
+def write_maintenance_tool_metadata(meta: Path, version: str) -> None:
+    xml_file(
+        meta / 'package.xml',
+        'Package',
+        {
+            'DisplayName': 'Maintenance tool',
+            'Description': 'Updates and removes EasyDiffraction.',
+            'Version': version,
+            'ReleaseDate': datetime.datetime.now(datetime.UTC).date().isoformat(),
+            'Virtual': 'true',
+            'ForcedInstallation': 'true',
+            'RequiresAdminRights': 'false',
+            'Script': 'maintenancescript.qs',
+        },
+    )
+    shutil.copy2(ROOT / 'tools/installer/maintenancescript.qs', meta / 'maintenancescript.qs')
+
+
+def maintenance_tool_executable(bundle: Path) -> Path:
+    return bundle / 'Contents/MacOS/MaintenanceTool'
+
+
+def build_maintenance_tool(tools: Path, output: Path) -> Path:
+    """Build the macOS maintenance tool on its own and sign it (edi ADR-0091).
+
+    Without it the installer writes the tool from its own binary, which breaks a real signature,
+    and macOS kills it. Release builds sign with the Developer ID and notarise; others sign ad hoc.
+    """
+    if SYSTEM != 'macos':
+        raise RuntimeError('Only macOS builds the maintenance tool separately')
+    tools, work = tools.resolve(), output.resolve() / 'maintenance-tool'
+    if work.exists():
+        raise RuntimeError(
+            'Maintenance tool output already exists; choose a fresh output directory'
+        )
+    config = work / 'config'
+    config.mkdir(parents=True)
+    shutil.copy2(ROOT / 'app/resources/logo/App.icns', config / 'App.icns')
+    xml_file(
+        config / 'config.xml',
+        'Installer',
+        {
+            'Name': 'EasyDiffraction',
+            'Version': '1.0.0',
+            'Title': 'EasyDiffraction maintenance tool',
+            'Publisher': 'EasyScience',
+            'MaintenanceToolName': 'MaintenanceTool',
+            'InstallerApplicationIcon': 'App',
+        },
+    )
+    # --mt writes the bundle named by MaintenanceToolName into the working directory.
+    run(
+        [
+            tools / 'bin/binarycreator',
+            '--verbose',
+            '-t',
+            macos_installer_template(tools, work),
+            '--mt',
+            '-c',
+            config / 'config.xml',
+        ],
+        cwd=work,
+    )
+    bundle = work / MAINTENANCE_TOOL
+    if macos_signing():
+        notarise_macos(bundle)
+    else:
+        run(['codesign', '--force', '--sign', '-', bundle])
+    check_maintenance_tool(bundle)
+    return bundle
+
+
+def check_maintenance_tool(bundle: Path) -> None:
+    """Require a valid signature, and the Developer ID when signing is on."""
+    if not maintenance_tool_executable(bundle).is_file():
+        raise RuntimeError(f'Maintenance tool is missing: {bundle}')
+    run(['codesign', '--verify', '--strict', '--verbose=2', bundle])
+    if os.environ.get('EDI_CODESIGN') != '1':
+        return
+    result = subprocess.run(
+        ['codesign', '--display', '--verbose=2', str(bundle)],
+        check=True, capture_output=True, text=True,
+    )  # fmt: skip
+    authorities = [
+        line.removeprefix('Authority=')
+        for line in (result.stdout + result.stderr).splitlines()
+        if line.startswith('Authority=')
+    ]
+    identity = os.environ.get('EDI_CODESIGN_MAC_IDENTITY', '')
+    if not authorities or not authorities[0].startswith('Developer ID Application:'):
+        raise RuntimeError(f'Maintenance tool is not signed with a Developer ID: {authorities}')
+    if identity.startswith('Developer ID Application:') and authorities[0] != identity:
+        raise RuntimeError(f'Maintenance tool is signed by {authorities[0]}, not {identity}')
+
+
+def add_maintenance_tool(
+    packages: Path, bundle: Path | None, tools: Path, output: Path, version: str
+) -> str:
+    """Put the signed maintenance tool into its component; return its executable's checksum."""
+    if bundle is None:
+        if macos_signing():
+            raise RuntimeError('Signing needs the separately signed maintenance tool')
+        bundle = build_maintenance_tool(tools, output)
+    check_maintenance_tool(bundle)
+    meta = packages / MAINTENANCE_COMPONENT / 'meta'
+    meta.mkdir(parents=True)
+    write_maintenance_tool_metadata(meta, version)
+    target = meta.parent / 'data/maintenancetool' / MAINTENANCE_TOOL
+    target.parent.mkdir(parents=True)
+    run(['ditto', bundle, target])
+    return sha256(maintenance_tool_executable(target))
+
+
+def verify_installed_maintenance_tool(target: Path, metadata: dict) -> None:
+    """Before running it, require the installed tool to be the shipped one (edi ADR-0091)."""
+    if SYSTEM != 'macos':
+        return
+    bundle = target / MAINTENANCE_TOOL
+    check_maintenance_tool(bundle)
+    expected = metadata.get('maintenance_tool_sha256')
+    if expected and sha256(maintenance_tool_executable(bundle)) != expected:
+        raise RuntimeError(
+            'The installer wrote its own maintenance tool instead of the signed one'
+        )
+    if (target / 'maintenancetool').exists():
+        raise RuntimeError('The installer left the shipped maintenance tool in place')
 
 
 def acquire_installer_licenses(tools: Path, destination: Path) -> None:
@@ -544,11 +675,13 @@ def macos_installer_template(tools: Path, output: Path) -> Path:
     return thin
 
 
-def archive_installer(installer: Path, runtime: Path | None) -> Path:
+def archive_installer(installer: Path, runtime: Path | None, *, ad_hoc: bool = True) -> Path:
     """Archive the complete bootstrap including its portable runtime libraries."""
     archive = installer.with_suffix('.zip')
+    archive.unlink(missing_ok=True)
     if SYSTEM == 'macos':
-        run(['codesign', '--force', '--deep', '--sign', '-', installer])
+        if ad_hoc:
+            run(['codesign', '--force', '--deep', '--sign', '-', installer])
         run(['ditto', '-c', '-k', '--sequesterRsrc', '--keepParent', installer, archive])
     else:
         with zipfile.ZipFile(archive, 'w', compression=zipfile.ZIP_DEFLATED) as zipped:
@@ -620,6 +753,7 @@ def package_app(
     version: str,
     repository_url: str | None = None,
     mirrors: tuple[str, ...] = (),
+    maintenance_tool: Path | None = None,
 ) -> Path:
     if not re.fullmatch(r'[0-9]+(?:[.-][0-9]+)*', version):
         raise RuntimeError('Installer version must contain only numeric components')
@@ -644,6 +778,11 @@ def package_app(
     channel = 'stable' if inputs.get('release_history_sha256') else 'testing'
     source, template_args, tool_environment, runtime = prepare_installer_source(
         stage, tools, output, version, repository_url, mirrors, channel
+    )
+    maintenance_sha256 = (
+        add_maintenance_tool(source / 'packages', maintenance_tool, tools, output, version)
+        if SYSTEM == 'macos'
+        else None
     )
     if repository_url:
         run(
@@ -694,12 +833,126 @@ def package_app(
                 'repository_url': repository_url,
                 'edi_commit': inputs.get('edi_commit'),
                 'release_history_sha256': inputs.get('release_history_sha256'),
+                'maintenance_tool_sha256': maintenance_sha256,
             },
             indent=2,
         )
         + '\n'
     )
     return installer
+
+
+def required_environment(*names: str) -> list[str]:
+    values = [os.environ.get(name, '') for name in names]
+    missing = [name for name, value in zip(names, values, strict=True) if not value]
+    if missing:
+        raise RuntimeError('Signing needs ' + ', '.join(missing))
+    return values
+
+
+def macos_signing() -> bool:
+    """Signing is on for this macOS run (set by the installers workflow on main only)."""
+    return SYSTEM == 'macos' and os.environ.get('EDI_CODESIGN') == '1'
+
+
+def sign_macos_runtime(path: Path) -> None:
+    """Sign with the Developer ID, the hardened runtime and a timestamp, as notarisation needs."""
+    (identity,) = required_environment('EDI_CODESIGN_MAC_IDENTITY')
+    run([
+        'codesign', '--force', '--options', 'runtime', '--timestamp', '--sign', identity, path,
+    ])  # fmt: skip
+    run(['codesign', '--verify', '--strict', '--verbose=2', path])
+
+
+def submit_for_notarisation(archive: Path) -> None:
+    """Send a ZIP to Apple's notary service and require the status Accepted."""
+    apple_id, password, team = required_environment(
+        'EDI_NOTARY_APPLE_ID', 'EDI_NOTARY_PASSWORD', 'EDI_NOTARY_TEAM_ID'
+    )
+    result = subprocess.run(
+        [
+            'xcrun', 'notarytool', 'submit', archive, '--wait', '--output-format', 'json',
+            '--apple-id', apple_id, '--password', password, '--team-id', team,
+        ],
+        check=False, capture_output=True, text=True,
+    )  # fmt: skip
+    print(result.stdout, result.stderr, sep='\n', flush=True)
+    try:
+        status = json.loads(result.stdout).get('status')
+    except json.JSONDecodeError:
+        status = None
+    if result.returncode != 0 or status != 'Accepted':
+        raise RuntimeError(f'Notarisation was not accepted: {status}')
+
+
+def notarise_macos(installer: Path) -> None:
+    """Sign an app bundle with the hardened runtime, notarise and staple it (ADR-0091)."""
+    (identity,) = required_environment('EDI_CODESIGN_MAC_IDENTITY')
+    run([
+        'codesign', '--force', '--deep', '--options', 'runtime', '--timestamp',
+        '--sign', identity, installer,
+    ])  # fmt: skip
+    run(['codesign', '--verify', '--deep', '--strict', '--verbose=2', installer])
+    upload = installer.with_name(installer.stem + '-notarise.zip')
+    run(['ditto', '-c', '-k', '--sequesterRsrc', '--keepParent', installer, upload])
+    try:
+        submit_for_notarisation(upload)
+    finally:
+        upload.unlink()
+    run(['xcrun', 'stapler', 'staple', installer])
+    run(['xcrun', 'stapler', 'validate', installer])
+    run(['spctl', '--assess', '--type', 'execute', '--verbose=4', installer])
+
+
+def signtool() -> Path:
+    found = shutil.which('signtool')
+    if found:
+        return Path(found)
+    kits = Path(os.environ.get('PROGRAMFILES(X86)', r'C:\Program Files (x86)'))
+    kits /= 'Windows Kits/10/bin'
+    candidates = sorted(kits.glob('*/x64/signtool.exe'))
+    if not candidates:
+        raise RuntimeError('signtool is not installed')
+    return candidates[-1]
+
+
+def verify_windows_signature(path: Path) -> None:
+    run([signtool(), 'verify', '/pa', '/v', path])
+
+
+def windows_signing() -> bool:
+    """Signing is on for this Windows run (set by the installers workflow on main only)."""
+    return SYSTEM == 'windows' and os.environ.get('EDI_CODESIGN') == '1'
+
+
+def sign_windows(path: Path) -> None:
+    """Sign through DigiCert KeyLocker with the smctl the signing action installed, then verify."""
+    (alias,) = required_environment('EDI_CODESIGN_WIN_KEYPAIR_ALIAS')
+    run([
+        'smctl', 'sign', '--simple', '--input', path, '--keypair-alias', alias,
+        '--exit-non-zero-on-fail', '--failfast',
+    ])  # fmt: skip
+    verify_windows_signature(path)
+
+
+def seal_installer(output: Path) -> None:
+    """Finish a signed installer after packaging and archive it again.
+
+    macOS signs, notarises and staples here; Windows signs and verifies.
+    """
+    output = output.resolve()
+    metadata_path = output / 'installer.json'
+    metadata = json.loads(metadata_path.read_text(encoding='utf-8'))
+    installer = output / metadata['installer']
+    if SYSTEM == 'macos':
+        notarise_macos(installer)
+    elif SYSTEM == 'windows':
+        sign_windows(installer)
+    else:
+        raise RuntimeError('Linux installers are not signed')
+    archive = archive_installer(installer, None, ad_hoc=False)
+    metadata.update({'zip': archive.name, 'zip_sha256': sha256(archive)})
+    metadata_path.write_text(json.dumps(metadata, indent=2) + '\n')
 
 
 def clean_environment(home: Path) -> dict:
@@ -887,6 +1140,8 @@ def exercise_installer(
             or not (output / 'smoke/window.png').is_file()
         ):
             raise RuntimeError('Installed application smoke check failed')
+        if windows_signing():
+            verify_windows_signature(app)
         if SYSTEM == 'linux':
             dependencies = check_linux_dependencies(target, env)
             (output / 'dependencies.json').write_text(json.dumps(dependencies, indent=2) + '\n')
@@ -896,6 +1151,7 @@ def exercise_installer(
             if SYSTEM == 'macos'
             else 'MaintenanceTool' + SUFFIX
         )
+        verify_installed_maintenance_tool(target, metadata)
         with (output / 'uninstall.log').open('w') as log:
             run(
                 [maintenance, '--confirm-command', '--default-answer', 'purge'],
@@ -953,11 +1209,17 @@ def main() -> None:
     package.add_argument('--kind', choices=['offline', 'online'], default='offline')
     package.add_argument('--repository-url')
     package.add_argument('--channel', choices=['testing', 'stable'])
+    package.add_argument('--maintenance-tool', type=Path)
+    maintenance = commands.add_parser('maintenance-tool')
+    for option in ['--tools', '--output']:
+        maintenance.add_argument(option, type=Path, required=True)
     test = commands.add_parser('test')
     test.add_argument('--installer', type=Path, required=True)
     test.add_argument('--output', type=Path, required=True)
     test.add_argument('--repository')
     test.add_argument('--with-assistant', action='store_true')
+    seal = commands.add_parser('seal')
+    seal.add_argument('--output', type=Path, required=True)
     args = parser.parse_args()
     if args.command == 'relocate-linux':
         relocate_linux(args.stage, args.patchelf, args.qt_prefix)
@@ -983,7 +1245,12 @@ def main() -> None:
             version,
             (args.repository_url or urls[0]) if args.kind == 'online' else None,
             urls[1:] if args.kind == 'online' else (),
+            args.maintenance_tool,
         )
+    elif args.command == 'maintenance-tool':
+        build_maintenance_tool(args.tools, args.output)
+    elif args.command == 'seal':
+        seal_installer(args.output)
     else:
         exercise_installer(
             args.installer, args.output, args.repository, with_assistant=args.with_assistant

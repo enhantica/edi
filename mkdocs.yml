@@ -31,6 +31,7 @@ nav:
       - dev/public-site.md
       - dev/installers.md
       - dev/assistant-protocol.md
+      - dev/assistant-prompt-trials.md
       - Adrs:
           - dev/adrs/index.md
           - "ADR-0001 Product scope": dev/adrs/0001-product-scope-and-relation-to-crysta.md
@@ -124,6 +125,8 @@ nav:
           - "ADR-0088 Series loading and linked data": dev/adrs/0088-series-of-joint-fits-and-linked-data.md
           - "ADR-0089 Series views": dev/adrs/0089-series-views-shared-and-per-experiment.md
           - "ADR-0090 Pattern x axes": dev/adrs/0090-pattern-x-axes.md
+          - "ADR-0091 Code signing": dev/adrs/0091-code-signing.md
+          - "ADR-0092 About page": dev/adrs/0092-about-page.md
           - dev/adrs/template.md
       - Design:
           - dev/design/api-types.md

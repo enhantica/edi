@@ -29,6 +29,9 @@ After offline qualification, publish only the online installer. Initial componen
 GitHub Pages under `/repository/testing/<platform>/`. Installers are development artifacts,
 without a signing identity or public release step. The Preferences update controls use the installed
 maintenance tool; ordinary development and WebAssembly builds do not pretend to support native updates.
+**Amended 2026-11-17 (the owner):** the testing component repositories are published with the public site behind
+`https://easydiffraction.org` (edi-sites' `deploy-docs` branch, from a reviewed `public-site` environment), no longer
+on GitHub Pages, which became the developers' test site deployed from edi's `dev` branch.
 
 Extend the existing independent docs/web-app publisher rather than adding a separate site owner.
 Docs updates preserve `/webapp/`, `/repository/` and `/third-party/`; a platform repository update preserves docs,

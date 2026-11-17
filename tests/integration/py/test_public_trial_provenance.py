@@ -4,9 +4,12 @@ import hashlib
 import json
 import subprocess
 import sys
+from datetime import date
 from pathlib import Path
 
 import pytest
+
+from tests.fixtures.tutorial_cases.published_trials import assert_history
 
 ROOT = Path(__file__).resolve().parents[3]
 
@@ -98,10 +101,14 @@ def test_production_prompt_links_cite_the_truthful_historical_summary_outside_pr
     records = json.loads(
         (ROOT / 'tests/fixtures/tutorial_cases/assistant_trials.json').read_text()
     )
-    summary = ROOT / 'website/surfaces/docs' / (records['source']['document'] + '.md')
+    summary = ROOT / 'docs/dev' / (records['source']['document'] + '.md')
     text = summary.read_text(encoding='utf-8')
-    assert records['source']['commit'] in text and records['source']['sha256'] in text, (
-        'The production summary cites the exact independently recorded authoring source'
+    current = json.loads(
+        (ROOT / 'tests/fixtures/tutorial_cases/published_assistant_trials.json').read_text()
+    )
+    assert_history(ROOT, current)
+    assert 'tests/fixtures/tutorial_cases/assistant_trials.json' in text, (
+        'The contributor summary must cite the immutable historical authoring receipt'
     )
     historical = [row for row in records['records'] if row['prompt_commit'] == '557d6e703']
     assert len(historical) == 2 and {row['interface'] for row in historical} == {
@@ -114,20 +121,33 @@ def test_production_prompt_links_cite_the_truthful_historical_summary_outside_pr
             and row['pin_comparison'] == 'not reached'
             and row['artifact'] is None
         ), 'Historical attempts remain failures with no fabricated scientific artifact'
-        for field in ['date', 'model', 'prompt_commit', 'prompt_sha256']:
-            assert row[field] in text, (
-                'The truthful public summary retains each original model/date/prompt identity'
+        for value in [row['date'], row['model'].split(' (', 1)[0], row['prompt_commit']]:
+            assert value in text, (
+                'The contributor summary retains the historical date, model and prompt commit'
             )
-    assert (
-        'No preview trial is recorded' in text and 'no generated artifact was executed' in text
-    ), 'The summary clearly distinguishes historical prerequisite failure from executed science'
+    earlier = text.split('## Earlier attempts', 1)
+    assert len(earlier) == 2, 'The contributor summary must distinguish earlier failed attempts'
+    assert re.search(r'no generated artifact (?:ran|was executed)', earlier[1], re.IGNORECASE), (
+        'The historical summary must not turn prerequisite failures into executed science'
+    )
     for interface in ['python', 'cli']:
+        checked = date.fromisoformat(
+            max(row['date'] for row in current['records'] if row['interface'] == interface)
+        )
+        checked_text = f'{checked.day} {checked:%B %Y}'
         source = ROOT / 'website/surfaces/docs' / interface / 'tutorials/assistant.md'
         markdown = source.read_text(encoding='utf-8')
         outside = re.sub(r'```[^\n]*\n.*?```', '', markdown, flags=re.DOTALL)
         links = re.findall(r'\[[^\]]+\]\(([^)]+)\)', outside)
-        assert any(
-            (source.parent / link).resolve() == summary.resolve()
-            for link in links
-            if not link.startswith(('http:', 'https:'))
-        ), 'Both prompt pages link the public summary outside their immutable prompt fences'
+        assert not any(records['source']['document'] in link for link in links), (
+            'User tutorials must not link the internal prompt-trial summary'
+        )
+        note = re.findall(
+            r'^This prompt was last checked on ([^;]+); '
+            r'another assistant may take different steps[.]$',
+            outside,
+            flags=re.MULTILINE,
+        )
+        assert note == [checked_text], (
+            'Both tutorials retain one plain dated note outside the unchanged prompt text'
+        )

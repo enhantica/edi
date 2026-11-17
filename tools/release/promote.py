@@ -284,7 +284,9 @@ def components_validator(channel: str) -> Callable[[Path, str, str, str], Path |
             raise ValueError('Component archives must be regular files')
         with tempfile.TemporaryDirectory() as scratch:
             extract(archive, Path(scratch) / 'repository')
-            validate_repository(Path(scratch) / 'repository', version)
+            validate_repository(
+                Path(scratch) / 'repository', version, expected=component_names(platform)
+            )
         return archive
 
     return validate_components
@@ -314,11 +316,20 @@ def stage_optional_assets(output: Path, assets: Path, release: dict) -> None:
             shutil.copy2(archive, assets / archive.name)
 
 
+APP_COMPONENTS = frozenset({'org.easyscience.edi', 'org.easyscience.edi.assistant'})
+# macOS installs its separately signed maintenance tool from this component (edi ADR-0091).
+MAINTENANCE_COMPONENT = 'org.easyscience.edi.maintenancetool'
+
+
+def component_names(platform: str) -> frozenset[str]:
+    """The components a release repository holds for one platform."""
+    if platform == 'macos-arm64':
+        return APP_COMPONENTS | {MAINTENANCE_COMPONENT}
+    return APP_COMPONENTS
+
+
 def validate_repository(
-    folder: Path,
-    version: str,
-    *,
-    expected: frozenset[str] = frozenset({'org.easyscience.edi', 'org.easyscience.edi.assistant'}),
+    folder: Path, version: str, *, expected: frozenset[str] = APP_COMPONENTS
 ) -> None:
     """Require matching component identity and the framework's original archive checksums."""
     content = (folder / 'Updates.xml').read_bytes()
@@ -415,7 +426,9 @@ def stage(repo: str, identity: int, output: Path) -> None:
             item.name for item in (components / 'stable').iterdir()
         } != {target}:
             raise ValueError('Qualified components must contain exactly their stable platform')
-        validate_repository(components / 'stable' / target, release['version'])
+        validate_repository(
+            components / 'stable' / target, release['version'], expected=component_names(target)
+        )
         shutil.copytree(components / 'stable' / target, incoming / 'repository/stable' / target)
     stage_optional_assets(output, assets, release)
     if len(engine_sources) != 1 or not re.fullmatch(r'[0-9a-f]{40}', next(iter(engine_sources))):

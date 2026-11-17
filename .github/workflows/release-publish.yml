@@ -19,6 +19,8 @@ jobs:
     permissions:
       contents: write
       actions: write
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
     steps:
       - uses: actions/checkout@v5
         with:
@@ -78,6 +80,10 @@ jobs:
         run: python tools/release/publish_assets.py --repo "$GITHUB_REPOSITORY" --folder publication --finalize
         env:
           GH_TOKEN: ${{ github.token }}
+      # The tag publish_assets.py gave the release, for the download repositories below.
+      - name: The published release tag
+        id: tag
+        run: echo "tag=v$(python3 -c 'import json; print(json.load(open("publication/release.json"))["version"])')" >> "$GITHUB_OUTPUT"
       - name: Refresh the public release notes
         run: gh workflow run pages.yml --repo "$GITHUB_REPOSITORY" --ref main -f component=docs
         env:
@@ -99,3 +105,26 @@ jobs:
           mkdir released-webapp
           unzip -q publication/assets/EasyDiffraction-*-webapp.zip -d released-webapp
           bash tools/ci/push_deploy_branch.sh released-webapp/webapp deploy-app
+
+  # download.easydiffraction.org's update repositories come from enhantica/edi-download, which rebuilds them from a
+  # published release (edi ADR-0071): every release asks it for its own, so users get the update as soon as the
+  # release is out rather than after the next nightly run.
+  publish-downloads:
+    needs: publish
+    if: github.ref == 'refs/heads/main' && github.repository == 'enhantica/edi' && github.event.pull_request.head.repo.fork == false
+    environment: public-site
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Mint a token for edi-download
+        id: download-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ vars.ENHANTICA_APP_ID }}
+          private-key: ${{ secrets.ENHANTICA_APP_KEY }}
+          owner: enhantica
+          repositories: edi-download
+      - name: Publish this release's download repositories
+        env:
+          GH_TOKEN: ${{ steps.download-token.outputs.token }}
+          TAG: ${{ needs.publish.outputs.tag }}
+        run: gh workflow run publish.yml --repo enhantica/edi-download --ref main -f tag="$TAG"

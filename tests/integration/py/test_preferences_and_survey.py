@@ -161,12 +161,12 @@ def survey():
     config = yaml.compose((DOCS.parent / 'mkdocs.yml').read_text())
     scripts = [value for key, value in config.value if key.value == 'extra_javascript']
     assert len(scripts) == 1 and isinstance(scripts[0], yaml.SequenceNode), (
-        'Survey fields, version and contact data follow the published contract.'
+        'Survey fields and published configuration follow the anonymous form contract.'
     )
     assets = []
     for address in scripts[0].value:
         assert isinstance(address, yaml.ScalarNode) and address.tag.endswith(':str'), (
-            'Survey fields, version and contact data follow the published contract.'
+            'Survey fields and published configuration follow the anonymous form contract.'
         )
         relative = address.value.split('?', 1)[0]
         asset = DOCS / relative
@@ -192,8 +192,6 @@ def test_survey_navigation_and_question_groups():
         'tutorial',
         'missing',
         'nice',
-        'email',
-        'consent',
         '15',
     ]:
         assert phrase in source, (
@@ -222,6 +220,39 @@ def test_survey_navigation_and_question_groups():
     community = (DOCS / 'about/community.md').read_text()
     assert re.search(r'\[[^]]*[Ss]urvey[^]]*\]\([^)]*survey', community), (
         'Get in touch must link readers to the persistent survey'
+    )
+
+
+def test_survey_is_anonymous_and_declares_the_platform_followup():
+    source = survey()
+    assert 'The survey is anonymous' in source and 'About your work' in source, (
+        'The survey must explain anonymity and ask about work rather than personal identity'
+    )
+    assert not re.search(
+        r"(?:key|name)\s*:\s*['\"](?:email|name|affiliation|consent|contact)['\"]|type\s*:\s*['\"]email['\"]",
+        source,
+    ), 'The anonymous survey must not construct contact or consent controls'
+    platform = re.search(r"key: 'platforms'.*?choices: \[(.*?)\].*?follow: \{([^}]+)\}", source)
+    assert platform is not None, (
+        'The survey must include a platform checkbox question and follow-up'
+    )
+    assert re.findall(r"'([^']+)'", platform[1]) == [
+        'Windows',
+        'macOS',
+        'Linux',
+        'Tablet',
+        'Smartphone',
+        'Other',
+    ], 'The platform question must retain the six owner-declared checkbox choices'
+    assert all(
+        value in platform[2] for value in ['Linux', 'platforms_linux', 'Which Linux distribution?']
+    ), 'The distribution follow-up must belong specifically to the Linux choice'
+    message = re.search(r'const message = (.*?);', source, re.DOTALL)
+    assert message is not None and all(
+        key in message[1] for key in ['event:', 'answers:', 'app:']
+    ), 'Survey submission must keep its event, answers and application context'
+    assert not re.search(r'\b(?:contact|email|consent|affiliation|name)\s*:', message[1]), (
+        'The anonymous survey payload must omit structured contact fields'
     )
 
 

@@ -1,0 +1,18 @@
+# People who took part in the earlier EasyDiffraction projects, shown on the About page in this order (edi ADR-0092).
+# Each avatar is surfaces/docs/assets/about/contributors/<github>.png, committed with the site.
+- name: Piotr Rozyczko
+  github: rozyczko
+- name: Simon Ward
+  github: wardsimon
+- name: Mads Bertelsen
+  github: mads-bertelsen
+- name: Eric Lindgren
+  github: elindgren
+- name: Erik Fransson
+  github: erikfransson
+- name: Andrew McCluskey
+  github: arm61
+- name: Celine Durniak
+  github: celinedurniak
+- name: Mridul Seth
+  github: MridulS

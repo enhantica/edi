@@ -10,11 +10,11 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-16T14:44:14Z
+# measured_utc = 2026-11-17T13:06:32Z
 #
-# Recorded from: measured test run (592 node(s) measured once, 176641 banked, 364 stale row(s) dropped)
-# Collected tests: 245658; with a reported duration: 77488
-# Module-scoped fixture costs recorded: 208
+# Recorded from: measured test run (46 node(s) measured once, 177102 banked, 0 stale row(s) dropped)
+# Collected tests: 245578; with a reported duration: 77816
+# Module-scoped fixture costs recorded: 206
 #
 # Breaches are decided PER TIER against the table
 # below, which the loader validates against the code constants - a manifest must state
@@ -29,12 +29,12 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 245658
+# inventory_python = 245578
 # inventory_cpp = 0
-# inventory_measured = 176856
-# inventory_unmeasured = 68802
+# inventory_measured = 177148
+# inventory_unmeasured = 68430
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
-# inventory_pr_python = 86353
+# inventory_pr_python = 86273
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -167868,6 +167868,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_plain_data_picker.py::te
 0.000	tests/integration/py/test_preferences_and_survey.py::test_preferences_tab_order_and_removed_controls
 0.000	tests/integration/py/test_preferences_and_survey.py::test_stacked_uses_palette_while_map_retains_its_selector
 0.020	tests/integration/py/test_preferences_and_survey.py::test_survey_ai_questions_are_separate
+0.020	tests/integration/py/test_preferences_and_survey.py::test_survey_is_anonymous_and_declares_the_platform_followup
 0.060	tests/integration/py/test_preferences_and_survey.py::test_survey_navigation_and_question_groups
 0.000	tests/integration/py/test_production_licence_scope.py::test_development_entry_refusal_cannot_be_evaded_by_a_surface_mark[Clang]
 0.000	tests/integration/py/test_production_licence_scope.py::test_development_entry_refusal_cannot_be_evaded_by_a_surface_mark[New design helper]
@@ -227867,6 +227868,36 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_cif_public_frames.py::test_pu
 0.070	tests/system/py/test_cod_query_ownership.py::test_new_cod_query_survives_every_older_service_stage[success-old-first-list]
 0.080	tests/system/py/test_cod_query_ownership.py::test_new_cod_query_survives_every_older_service_stage[success-old-first-more]
 0.070	tests/system/py/test_cod_query_ownership.py::test_new_cod_query_survives_every_older_service_stage[success-old-first-rows]
+0.040	tests/system/py/test_code_signing.py::test_app_signing_omits_hardened_runtime_while_installer_requires_it
+0.000	tests/system/py/test_code_signing.py::test_assistant_tutorial_has_one_plain_dated_sentence[cli]
+0.000	tests/system/py/test_code_signing.py::test_assistant_tutorial_has_one_plain_dated_sentence[python]
+0.040	tests/system/py/test_code_signing.py::test_condition_observer_keeps_guard_values_and_refuses_unknown_context
+0.040	tests/system/py/test_code_signing.py::test_macos_installer_is_hardened_timestamped_notarised_stapled_and_verified
+0.000	tests/system/py/test_code_signing.py::test_non_release_main_dispatch_receives_no_signing_credentials[Windows]
+0.000	tests/system/py/test_code_signing.py::test_non_release_main_dispatch_receives_no_signing_credentials[macOS]
+0.020	tests/system/py/test_code_signing.py::test_owner_declared_app_cli_and_installer_signatures[macos-app]
+0.020	tests/system/py/test_code_signing.py::test_owner_declared_app_cli_and_installer_signatures[macos-cli]
+0.020	tests/system/py/test_code_signing.py::test_owner_declared_app_cli_and_installer_signatures[macos-offline]
+0.030	tests/system/py/test_code_signing.py::test_owner_declared_app_cli_and_installer_signatures[macos-online]
+0.060	tests/system/py/test_code_signing.py::test_owner_declared_app_cli_and_installer_signatures[windows-app]
+0.030	tests/system/py/test_code_signing.py::test_owner_declared_app_cli_and_installer_signatures[windows-cli]
+0.030	tests/system/py/test_code_signing.py::test_owner_declared_app_cli_and_installer_signatures[windows-offline]
+0.040	tests/system/py/test_code_signing.py::test_owner_declared_app_cli_and_installer_signatures[windows-online]
+0.020	tests/system/py/test_code_signing.py::test_prompt_trial_records_live_only_in_contributor_docs
+0.010	tests/system/py/test_code_signing.py::test_pull_request_bundle_build_keeps_the_internal_ad_hoc_path
+0.000	tests/system/py/test_code_signing.py::test_signature_coverage_refuses_each_omitted_required_member[macos-app]
+0.000	tests/system/py/test_code_signing.py::test_signature_coverage_refuses_each_omitted_required_member[macos-cli]
+0.000	tests/system/py/test_code_signing.py::test_signature_coverage_refuses_each_omitted_required_member[macos-offline]
+0.000	tests/system/py/test_code_signing.py::test_signature_coverage_refuses_each_omitted_required_member[macos-online]
+0.000	tests/system/py/test_code_signing.py::test_signature_coverage_refuses_each_omitted_required_member[windows-app]
+0.000	tests/system/py/test_code_signing.py::test_signature_coverage_refuses_each_omitted_required_member[windows-cli]
+0.000	tests/system/py/test_code_signing.py::test_signature_coverage_refuses_each_omitted_required_member[windows-offline]
+0.000	tests/system/py/test_code_signing.py::test_signature_coverage_refuses_each_omitted_required_member[windows-online]
+0.000	tests/system/py/test_code_signing.py::test_signing_entries_keep_the_exact_secret_and_variable_split
+0.000	tests/system/py/test_code_signing.py::test_signing_failure_cannot_upload_release_artifacts
+0.030	tests/system/py/test_code_signing.py::test_signing_is_present_and_never_reaches_pull_requests_or_other_branches[Windows]
+0.020	tests/system/py/test_code_signing.py::test_signing_is_present_and_never_reaches_pull_requests_or_other_branches[macOS]
+0.070	tests/system/py/test_code_signing.py::test_windows_uses_digicert_simple_signing_and_verifies_declared_executables
 UNMEASURED:failed-in-this-run	tests/system/py/test_collection_app_boundaries.py::test_app_download_content_claims[absent-data]
 UNMEASURED:failed-in-this-run	tests/system/py/test_collection_app_boundaries.py::test_app_download_content_claims[absent-experiment]
 0.910	tests/system/py/test_collection_app_boundaries.py::test_app_download_content_claims[absent-project]
@@ -229397,24 +229428,90 @@ UNMEASURED:not-completed-in-this-run	tests/system/py/test_e04_t11_wasm_delivery.
 0.000	tests/system/py/test_e04_t12_public_release.py::test_independent_private_pattern_controls
 1.710	tests/system/py/test_e04_t12_public_release.py::test_independent_secret_predicate_checks_every_decoded_member
 0.010	tests/system/py/test_e04_t12_public_release.py::test_live_edi_history_anchors_resolve_in_one_commit_tree
-0.080	tests/system/py/test_e04_t12_public_release.py::test_pages_builds_docs_and_publishes_the_linked_webapp
-0.170	tests/system/py/test_e04_t12_public_release.py::test_pages_publication_rejects_missing_or_bypassed_real_app[disabled-placement]
-0.170	tests/system/py/test_e04_t12_public_release.py::test_pages_publication_rejects_missing_or_bypassed_real_app[missing-build]
-0.160	tests/system/py/test_e04_t12_public_release.py::test_pages_publication_rejects_missing_or_bypassed_real_app[upload-first]
-0.160	tests/system/py/test_e04_t12_public_release.py::test_private_token_guard_is_required_in_every_job_even_off_pr[pull_request]
-0.160	tests/system/py/test_e04_t12_public_release.py::test_private_token_guard_is_required_in_every_job_even_off_pr[push]
-0.160	tests/system/py/test_e04_t12_public_release.py::test_private_token_guard_is_required_in_every_job_even_off_pr[schedule]
-0.160	tests/system/py/test_e04_t12_public_release.py::test_private_token_guard_is_required_in_every_job_even_off_pr[workflow_dispatch]
-0.080	tests/system/py/test_e04_t12_public_release.py::test_private_token_guards_still_refuse_forks_after_public_switch[disjunction]
-0.080	tests/system/py/test_e04_t12_public_release.py::test_private_token_guards_still_refuse_forks_after_public_switch[environment]
-0.080	tests/system/py/test_e04_t12_public_release.py::test_private_token_guards_still_refuse_forks_after_public_switch[negated]
-0.080	tests/system/py/test_e04_t12_public_release.py::test_private_token_guards_still_refuse_forks_after_public_switch[pages]
-0.080	tests/system/py/test_e04_t12_public_release.py::test_private_token_guards_still_refuse_forks_after_public_switch[unguarded]
+0.210	tests/system/py/test_e04_t12_public_release.py::test_pages_builds_docs_and_publishes_the_linked_webapp
+0.400	tests/system/py/test_e04_t12_public_release.py::test_pages_publication_rejects_missing_or_bypassed_real_app[developer-pages-docs]
+0.410	tests/system/py/test_e04_t12_public_release.py::test_pages_publication_rejects_missing_or_bypassed_real_app[developer-pages-wasm]
+0.410	tests/system/py/test_e04_t12_public_release.py::test_pages_publication_rejects_missing_or_bypassed_real_app[disabled-placement-docs]
+0.390	tests/system/py/test_e04_t12_public_release.py::test_pages_publication_rejects_missing_or_bypassed_real_app[disabled-placement-wasm]
+0.380	tests/system/py/test_e04_t12_public_release.py::test_pages_publication_rejects_missing_or_bypassed_real_app[foreign-artifact-docs]
+0.390	tests/system/py/test_e04_t12_public_release.py::test_pages_publication_rejects_missing_or_bypassed_real_app[foreign-artifact-wasm]
+0.390	tests/system/py/test_e04_t12_public_release.py::test_pages_publication_rejects_missing_or_bypassed_real_app[foreign-run-docs]
+0.390	tests/system/py/test_e04_t12_public_release.py::test_pages_publication_rejects_missing_or_bypassed_real_app[foreign-run-wasm]
+0.380	tests/system/py/test_e04_t12_public_release.py::test_pages_publication_rejects_missing_or_bypassed_real_app[merged-artifact-docs]
+0.390	tests/system/py/test_e04_t12_public_release.py::test_pages_publication_rejects_missing_or_bypassed_real_app[merged-artifact-wasm]
+0.400	tests/system/py/test_e04_t12_public_release.py::test_pages_publication_rejects_missing_or_bypassed_real_app[missing-build-docs]
+0.380	tests/system/py/test_e04_t12_public_release.py::test_pages_publication_rejects_missing_or_bypassed_real_app[missing-build-wasm]
+0.380	tests/system/py/test_e04_t12_public_release.py::test_pages_publication_rejects_missing_or_bypassed_real_app[optional-publish-docs]
+0.380	tests/system/py/test_e04_t12_public_release.py::test_pages_publication_rejects_missing_or_bypassed_real_app[optional-publish-wasm]
+0.460	tests/system/py/test_e04_t12_public_release.py::test_pages_publication_rejects_missing_or_bypassed_real_app[placement-before-fetch-docs]
+0.380	tests/system/py/test_e04_t12_public_release.py::test_pages_publication_rejects_missing_or_bypassed_real_app[placement-before-fetch-wasm]
+0.400	tests/system/py/test_e04_t12_public_release.py::test_pages_publication_rejects_missing_or_bypassed_real_app[publish-first-docs]
+0.390	tests/system/py/test_e04_t12_public_release.py::test_pages_publication_rejects_missing_or_bypassed_real_app[publish-first-wasm]
+0.380	tests/system/py/test_e04_t12_public_release.py::test_pages_publication_rejects_missing_or_bypassed_real_app[wrong-base-docs]
+0.380	tests/system/py/test_e04_t12_public_release.py::test_pages_publication_rejects_missing_or_bypassed_real_app[wrong-base-wasm]
+0.380	tests/system/py/test_e04_t12_public_release.py::test_pages_publication_rejects_missing_or_bypassed_real_app[wrong-source-branch-docs]
+0.380	tests/system/py/test_e04_t12_public_release.py::test_pages_publication_rejects_missing_or_bypassed_real_app[wrong-source-branch-wasm]
+0.440	tests/system/py/test_e04_t12_public_release.py::test_pages_publication_rejects_missing_or_bypassed_real_app[wrong-target-branch-docs]
+0.410	tests/system/py/test_e04_t12_public_release.py::test_pages_publication_rejects_missing_or_bypassed_real_app[wrong-target-branch-wasm]
+0.230	tests/system/py/test_e04_t12_public_release.py::test_private_token_guard_is_required_in_every_job_even_off_pr[pull_request]
+0.220	tests/system/py/test_e04_t12_public_release.py::test_private_token_guard_is_required_in_every_job_even_off_pr[push]
+0.230	tests/system/py/test_e04_t12_public_release.py::test_private_token_guard_is_required_in_every_job_even_off_pr[schedule]
+0.310	tests/system/py/test_e04_t12_public_release.py::test_private_token_guard_is_required_in_every_job_even_off_pr[workflow_dispatch]
+0.200	tests/system/py/test_e04_t12_public_release.py::test_private_token_guards_still_refuse_forks_after_public_switch[disjunction]
+0.210	tests/system/py/test_e04_t12_public_release.py::test_private_token_guards_still_refuse_forks_after_public_switch[environment]
+0.200	tests/system/py/test_e04_t12_public_release.py::test_private_token_guards_still_refuse_forks_after_public_switch[negated]
+0.200	tests/system/py/test_e04_t12_public_release.py::test_private_token_guards_still_refuse_forks_after_public_switch[pages]
+0.190	tests/system/py/test_e04_t12_public_release.py::test_private_token_guards_still_refuse_forks_after_public_switch[unguarded]
 4.840	tests/system/py/test_e04_t12_public_release.py::test_process_references_are_confined_to_test_names
 0.000	tests/system/py/test_e04_t12_public_release.py::test_production_sources_carry_bsd_spdx
-0.080	tests/system/py/test_e04_t12_public_release.py::test_public_artifacts_exclude_engine_object_code_and_runner_names
-0.070	tests/system/py/test_e04_t12_public_release.py::test_public_ci_uses_hosted_runners_and_guards_private_tokens
+UNMEASURED:failed-in-this-run	tests/system/py/test_e04_t12_public_release.py::test_public_artifacts_exclude_engine_object_code_and_runner_names
+0.250	tests/system/py/test_e04_t12_public_release.py::test_public_ci_uses_hosted_runners_and_guards_private_tokens
+0.380	tests/system/py/test_e04_t12_public_release.py::test_public_installer_destination_rejects_bypasses[developer-pages]
+0.400	tests/system/py/test_e04_t12_public_release.py::test_public_installer_destination_rejects_bypasses[foreign-run]
+0.390	tests/system/py/test_e04_t12_public_release.py::test_public_installer_destination_rejects_bypasses[missing-components]
+0.390	tests/system/py/test_e04_t12_public_release.py::test_public_installer_destination_rejects_bypasses[missing-recovery]
+0.380	tests/system/py/test_e04_t12_public_release.py::test_public_installer_destination_rejects_bypasses[wrong-base]
+0.390	tests/system/py/test_e04_t12_public_release.py::test_public_installer_destination_rejects_bypasses[wrong-target-branch]
+0.190	tests/system/py/test_e04_t12_public_release.py::test_public_site_preview_dispatch_builds_without_publication[refs/heads/dev-docs]
+0.180	tests/system/py/test_e04_t12_public_release.py::test_public_site_preview_dispatch_builds_without_publication[refs/heads/dev-wasm]
+0.190	tests/system/py/test_e04_t12_public_release.py::test_public_site_preview_dispatch_builds_without_publication[refs/tags/v2026.11.21-docs]
+0.170	tests/system/py/test_e04_t12_public_release.py::test_public_site_preview_dispatch_builds_without_publication[refs/tags/v2026.11.21-wasm]
+0.180	tests/system/py/test_e04_t12_public_release.py::test_public_site_publication_routes_reach_reviewed_environment[preview-main]
+0.180	tests/system/py/test_e04_t12_public_release.py::test_public_site_publication_routes_reach_reviewed_environment[preview-ref]
+0.190	tests/system/py/test_e04_t12_public_release.py::test_public_site_publication_routes_reach_reviewed_environment[stable-notes]
+0.180	tests/system/py/test_e04_t12_public_release.py::test_public_site_publication_routes_reach_reviewed_environment[stable-tag]
+0.200	tests/system/py/test_e04_t12_public_release.py::test_public_site_publication_routes_reject_ref_bypasses[preview-ref-disabled-refresh]
+0.180	tests/system/py/test_e04_t12_public_release.py::test_public_site_publication_routes_reject_ref_bypasses[preview-ref-missing-dispatch-trigger]
+0.190	tests/system/py/test_e04_t12_public_release.py::test_public_site_publication_routes_reject_ref_bypasses[preview-ref-publish-preview-only]
+0.180	tests/system/py/test_e04_t12_public_release.py::test_public_site_publication_routes_reject_ref_bypasses[preview-ref-publish-preview-ref]
+0.200	tests/system/py/test_e04_t12_public_release.py::test_public_site_publication_routes_reject_ref_bypasses[preview-ref-wrong-component]
+0.180	tests/system/py/test_e04_t12_public_release.py::test_public_site_publication_routes_reject_ref_bypasses[preview-ref-wrong-dispatch-ref]
+0.250	tests/system/py/test_e04_t12_public_release.py::test_public_site_publication_routes_reject_ref_bypasses[preview-ref-wrong-environment]
+0.180	tests/system/py/test_e04_t12_public_release.py::test_public_site_publication_routes_reject_ref_bypasses[stable-tag-build-main-only]
+0.180	tests/system/py/test_e04_t12_public_release.py::test_public_site_publication_routes_reject_ref_bypasses[stable-tag-build-step-main-only]
+0.180	tests/system/py/test_e04_t12_public_release.py::test_public_site_publication_routes_reject_ref_bypasses[stable-tag-missing-release-trigger]
+0.190	tests/system/py/test_e04_t12_public_release.py::test_public_site_publication_routes_reject_ref_bypasses[stable-tag-missing-sdk-dependency]
+0.180	tests/system/py/test_e04_t12_public_release.py::test_public_site_publication_routes_reject_ref_bypasses[stable-tag-publish-main-only]
+0.190	tests/system/py/test_e04_t12_public_release.py::test_public_site_publication_routes_reject_ref_bypasses[stable-tag-sdk-main-only]
+0.180	tests/system/py/test_e04_t12_public_release.py::test_public_site_publication_routes_reject_ref_bypasses[stable-tag-step-main-only]
+0.190	tests/system/py/test_e04_t12_public_release.py::test_public_site_publication_routes_reject_ref_bypasses[stable-tag-wrong-environment]
+0.190	tests/system/py/test_e04_t12_public_release.py::test_public_site_tokens_require_the_reviewed_environment[missing-installers.yml-publish-installers]
+0.190	tests/system/py/test_e04_t12_public_release.py::test_public_site_tokens_require_the_reviewed_environment[missing-pages.yml-publish-docs]
+0.190	tests/system/py/test_e04_t12_public_release.py::test_public_site_tokens_require_the_reviewed_environment[missing-pages.yml-publish-wasm]
+0.190	tests/system/py/test_e04_t12_public_release.py::test_public_site_tokens_require_the_reviewed_environment[missing-release-publish.yml-publish-downloads]
+0.190	tests/system/py/test_e04_t12_public_release.py::test_public_site_tokens_require_the_reviewed_environment[other-installers.yml-publish-installers]
+0.200	tests/system/py/test_e04_t12_public_release.py::test_public_site_tokens_require_the_reviewed_environment[other-pages.yml-publish-docs]
+0.200	tests/system/py/test_e04_t12_public_release.py::test_public_site_tokens_require_the_reviewed_environment[other-pages.yml-publish-wasm]
+0.190	tests/system/py/test_e04_t12_public_release.py::test_public_site_tokens_require_the_reviewed_environment[other-release-publish.yml-publish-downloads]
 0.000	tests/system/py/test_e04_t12_public_release.py::test_python_distribution_includes_binding_licences
+0.380	tests/system/py/test_e04_t12_public_release.py::test_released_public_destinations_reject_bypasses[developer-pages]
+0.380	tests/system/py/test_e04_t12_public_release.py::test_released_public_destinations_reject_bypasses[disabled-dispatch]
+0.420	tests/system/py/test_e04_t12_public_release.py::test_released_public_destinations_reject_bypasses[dispatch-first]
+0.450	tests/system/py/test_e04_t12_public_release.py::test_released_public_destinations_reject_bypasses[no-dependency]
+0.400	tests/system/py/test_e04_t12_public_release.py::test_released_public_destinations_reject_bypasses[wrong-app-branch]
+0.380	tests/system/py/test_e04_t12_public_release.py::test_released_public_destinations_reject_bypasses[wrong-dispatch-repository]
+0.380	tests/system/py/test_e04_t12_public_release.py::test_released_public_destinations_reject_bypasses[wrong-tag]
+0.390	tests/system/py/test_e04_t12_public_release.py::test_released_public_destinations_reject_bypasses[wrong-token-repository]
 0.190	tests/system/py/test_e04_t12_public_release.py::test_reviewed_delivery_artifacts_reject_identity_and_qualification_escapes[comment-only]
 0.170	tests/system/py/test_e04_t12_public_release.py::test_reviewed_delivery_artifacts_reject_identity_and_qualification_escapes[disabled-proof]
 0.170	tests/system/py/test_e04_t12_public_release.py::test_reviewed_delivery_artifacts_reject_identity_and_qualification_escapes[missing-proof]
@@ -229495,14 +229592,14 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_e04_t12_public_release.py::te
 0.180	tests/system/py/test_e04_t12_public_release.py::test_vendor_process_allowance_requires_exact_declared_release_bytes[data/report/vendor/plotly-cartesian-3.7.0.min.js]
 0.000	tests/system/py/test_e04_t12_public_release.py::test_vendor_process_allowance_requires_exact_declared_release_bytes[data/report/vendor/three-0.160.0-OrbitControls.js]
 0.060	tests/system/py/test_e04_t12_public_release.py::test_vendor_process_allowance_requires_exact_declared_release_bytes[data/report/vendor/three-0.160.0.module.min.js]
-0.030	tests/system/py/test_e04_t12_public_release.py::test_webapp_artifact_allowance_refuses_native_object_escapes[disabled-check]
-0.030	tests/system/py/test_e04_t12_public_release.py::test_webapp_artifact_allowance_refuses_native_object_escapes[native-name]
-0.030	tests/system/py/test_e04_t12_public_release.py::test_webapp_artifact_allowance_refuses_native_object_escapes[native-path]
-0.030	tests/system/py/test_e04_t12_public_release.py::test_webapp_artifact_allowance_refuses_native_object_escapes[no-build]
-0.030	tests/system/py/test_e04_t12_public_release.py::test_webapp_artifact_allowance_refuses_native_object_escapes[no-check]
-0.030	tests/system/py/test_e04_t12_public_release.py::test_webapp_artifact_allowance_refuses_native_object_escapes[optional-check]
-0.030	tests/system/py/test_e04_t12_public_release.py::test_webapp_artifact_allowance_refuses_native_object_escapes[other-job]
-0.030	tests/system/py/test_e04_t12_public_release.py::test_webapp_artifact_allowance_refuses_native_object_escapes[runner-name]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e04_t12_public_release.py::test_webapp_artifact_allowance_refuses_native_object_escapes[disabled-check]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e04_t12_public_release.py::test_webapp_artifact_allowance_refuses_native_object_escapes[native-name]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e04_t12_public_release.py::test_webapp_artifact_allowance_refuses_native_object_escapes[native-path]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e04_t12_public_release.py::test_webapp_artifact_allowance_refuses_native_object_escapes[no-build]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e04_t12_public_release.py::test_webapp_artifact_allowance_refuses_native_object_escapes[no-check]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e04_t12_public_release.py::test_webapp_artifact_allowance_refuses_native_object_escapes[optional-check]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e04_t12_public_release.py::test_webapp_artifact_allowance_refuses_native_object_escapes[other-job]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e04_t12_public_release.py::test_webapp_artifact_allowance_refuses_native_object_escapes[runner-name]
 0.139	tests/system/py/test_e04_t9_latency.py::test_real_publication_probe_reports_all_datasets_scenarios_and_requested_states
 0.060	tests/system/py/test_e05_t1_background_provenance.py::test_producing_background_survives_fit_save_reopen_and_settings_change[cancelled-chebyshev+chebyshev+chebyshev]
 0.070	tests/system/py/test_e05_t1_background_provenance.py::test_producing_background_survives_fit_save_reopen_and_settings_change[cancelled-chebyshev+line-segment+chebyshev]
@@ -238025,16 +238122,16 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_structure_component_curves.py
 3.970	tests/system/py/test_structure_description_workflow.py::test_structure_description_through_real_controls[magnetic_structure_bytes_survive_save_and_reload]
 3.840	tests/system/py/test_structure_description_workflow.py::test_structure_description_through_real_controls[moments_appear_and_disappear_via_atom_site_input]
 4.450	tests/system/py/test_structure_description_workflow.py::test_structure_description_through_real_controls[type_column_is_disabled_after_name]
-0.402	tests/system/py/test_survey_events.py::test_survey_event_windows_in_browser[authored-2030-05-09T23:59:59Z]
-0.240	tests/system/py/test_survey_events.py::test_survey_event_windows_in_browser[authored-2030-05-10T00:00:00Z]
-0.230	tests/system/py/test_survey_events.py::test_survey_event_windows_in_browser[authored-2030-05-11T12:00:00Z]
-0.240	tests/system/py/test_survey_events.py::test_survey_event_windows_in_browser[authored-2030-05-12T23:59:59Z]
-0.260	tests/system/py/test_survey_events.py::test_survey_event_windows_in_browser[authored-2030-05-13T00:00:00Z]
-0.230	tests/system/py/test_survey_events.py::test_survey_event_windows_in_browser[generated-2030-05-09T23:59:59Z]
-0.230	tests/system/py/test_survey_events.py::test_survey_event_windows_in_browser[generated-2030-05-10T00:00:00Z]
-0.230	tests/system/py/test_survey_events.py::test_survey_event_windows_in_browser[generated-2030-05-11T12:00:00Z]
-0.260	tests/system/py/test_survey_events.py::test_survey_event_windows_in_browser[generated-2030-05-12T23:59:59Z]
-0.570	tests/system/py/test_survey_events.py::test_survey_event_windows_in_browser[generated-2030-05-13T00:00:00Z]
+0.946	tests/system/py/test_survey_events.py::test_survey_event_windows_in_browser[authored-2030-05-09T23:59:59Z]
+0.520	tests/system/py/test_survey_events.py::test_survey_event_windows_in_browser[authored-2030-05-10T00:00:00Z]
+0.570	tests/system/py/test_survey_events.py::test_survey_event_windows_in_browser[authored-2030-05-11T12:00:00Z]
+0.730	tests/system/py/test_survey_events.py::test_survey_event_windows_in_browser[authored-2030-05-12T23:59:59Z]
+0.570	tests/system/py/test_survey_events.py::test_survey_event_windows_in_browser[authored-2030-05-13T00:00:00Z]
+0.590	tests/system/py/test_survey_events.py::test_survey_event_windows_in_browser[generated-2030-05-09T23:59:59Z]
+0.620	tests/system/py/test_survey_events.py::test_survey_event_windows_in_browser[generated-2030-05-10T00:00:00Z]
+0.630	tests/system/py/test_survey_events.py::test_survey_event_windows_in_browser[generated-2030-05-11T12:00:00Z]
+0.650	tests/system/py/test_survey_events.py::test_survey_event_windows_in_browser[generated-2030-05-12T23:59:59Z]
+0.650	tests/system/py/test_survey_events.py::test_survey_event_windows_in_browser[generated-2030-05-13T00:00:00Z]
 0.000	tests/system/py/test_thread_selector.py::test_auto_contract_refuses_wrong_admission_without_requiring_full_participation[environment-browser]
 0.000	tests/system/py/test_thread_selector.py::test_auto_contract_refuses_wrong_admission_without_requiring_full_participation[environment-desktop]
 0.000	tests/system/py/test_thread_selector.py::test_auto_contract_refuses_wrong_admission_without_requiring_full_participation[overfull-fill-browser]
@@ -238109,8 +238206,8 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_tutorial_assistant_pages.py::
 UNMEASURED:failed-in-this-run	tests/system/py/test_tutorial_assistant_pages.py::test_assistant_tutorial_downloads_resolve_and_offer_both_collection_inputs[application]
 UNMEASURED:failed-in-this-run	tests/system/py/test_tutorial_assistant_pages.py::test_assistant_tutorial_downloads_resolve_and_offer_both_collection_inputs[cli]
 UNMEASURED:failed-in-this-run	tests/system/py/test_tutorial_assistant_pages.py::test_assistant_tutorial_downloads_resolve_and_offer_both_collection_inputs[python]
-UNMEASURED:failed-in-this-run	tests/system/py/test_tutorial_assistant_pages.py::test_each_prompt_has_fresh_committed_authoring_trial_evidence[cli]
-UNMEASURED:failed-in-this-run	tests/system/py/test_tutorial_assistant_pages.py::test_each_prompt_has_fresh_committed_authoring_trial_evidence[python]
+0.204	tests/system/py/test_tutorial_assistant_pages.py::test_each_prompt_has_fresh_committed_authoring_trial_evidence[cli]
+0.140	tests/system/py/test_tutorial_assistant_pages.py::test_each_prompt_has_fresh_committed_authoring_trial_evidence[python]
 0.060	tests/system/py/test_tutorial_assistant_pages.py::test_every_literal_link_in_the_assistant_prompt_resolves[cli]
 0.079	tests/system/py/test_tutorial_assistant_pages.py::test_every_literal_link_in_the_assistant_prompt_resolves[python]
 0.000	tests/system/py/test_tutorial_assistant_pages.py::test_preview_trial_evidence_refuses_history_and_other_prompts[changed-prompt]
@@ -245693,6 +245790,28 @@ UNMEASURED:not-completed-in-this-run	tests/unit/py/test_web_science_identity.py:
 0.000	tests/unit/py/test_workflow_event_context.py::test_canonical_update_guard_uses_actual_event_context[workflow_dispatch-enhantica/edi-False-True]
 0.000	tests/unit/py/test_workflow_event_context.py::test_canonical_update_guard_uses_actual_event_context[workflow_dispatch-enhantica/edi-public-False-False]
 0.000	tests/unit/py/test_workflow_event_context.py::test_canonical_update_guard_uses_actual_event_context[workflow_dispatch-outside/edi-False-False]
+0.000	tests/unit/py/test_workflow_event_context.py::test_ref_prefix_observer_matches_documented_actions_semantics[!startsWith(github.ref, 'refs/tags/v')-refs/heads/dev-True]
+0.000	tests/unit/py/test_workflow_event_context.py::test_ref_prefix_observer_matches_documented_actions_semantics[startsWith( github.ref , "refs/tags/v" )-refs/tags/v2026.11.22-True]
+0.000	tests/unit/py/test_workflow_event_context.py::test_ref_prefix_observer_matches_documented_actions_semantics[startsWith(github.ref, 'REFS/TAGS/V')-refs/tags/v2026.11.22-True]
+0.000	tests/unit/py/test_workflow_event_context.py::test_ref_prefix_observer_matches_documented_actions_semantics[startsWith(github.ref, 'refs/tags/v')-refs/heads/main-False]
+0.000	tests/unit/py/test_workflow_event_context.py::test_ref_prefix_observer_matches_documented_actions_semantics[startsWith(github.ref, 'refs/tags/v')-refs/tags/release-v2026.11.22-False]
+0.000	tests/unit/py/test_workflow_event_context.py::test_ref_prefix_observer_matches_documented_actions_semantics[startsWith(github.ref, 'refs/tags/v')-refs/tags/v2026.11.22-True]
+0.000	tests/unit/py/test_workflow_event_context.py::test_ref_prefix_observer_still_refuses_unresolved_expressions[false && ({})-contains(github.ref, 'refs/tags/v')]
+0.000	tests/unit/py/test_workflow_event_context.py::test_ref_prefix_observer_still_refuses_unresolved_expressions[false && ({})-other.startsWith(github.ref, 'refs/tags/v')]
+0.000	tests/unit/py/test_workflow_event_context.py::test_ref_prefix_observer_still_refuses_unresolved_expressions[false && ({})-startsWith(github.ref)]
+0.000	tests/unit/py/test_workflow_event_context.py::test_ref_prefix_observer_still_refuses_unresolved_expressions[false && ({})-startsWith(github.ref, 'refs/tags/v') || github.unproven == false]
+0.000	tests/unit/py/test_workflow_event_context.py::test_ref_prefix_observer_still_refuses_unresolved_expressions[false && ({})-startsWith(github.ref, 'refs/tags/v', 'extra')]
+0.000	tests/unit/py/test_workflow_event_context.py::test_ref_prefix_observer_still_refuses_unresolved_expressions[false && ({})-startsWith(github.ref, true)]
+0.000	tests/unit/py/test_workflow_event_context.py::test_ref_prefix_observer_still_refuses_unresolved_expressions[false && ({})-startsWith(github.ref, vars.PREFIX)]
+0.000	tests/unit/py/test_workflow_event_context.py::test_ref_prefix_observer_still_refuses_unresolved_expressions[false && ({})-startsWith(github.repository, 'enhantica')]
+0.000	tests/unit/py/test_workflow_event_context.py::test_ref_prefix_observer_still_refuses_unresolved_expressions[true || ({})-contains(github.ref, 'refs/tags/v')]
+0.000	tests/unit/py/test_workflow_event_context.py::test_ref_prefix_observer_still_refuses_unresolved_expressions[true || ({})-other.startsWith(github.ref, 'refs/tags/v')]
+0.000	tests/unit/py/test_workflow_event_context.py::test_ref_prefix_observer_still_refuses_unresolved_expressions[true || ({})-startsWith(github.ref)]
+0.000	tests/unit/py/test_workflow_event_context.py::test_ref_prefix_observer_still_refuses_unresolved_expressions[true || ({})-startsWith(github.ref, 'refs/tags/v') || github.unproven == false]
+0.000	tests/unit/py/test_workflow_event_context.py::test_ref_prefix_observer_still_refuses_unresolved_expressions[true || ({})-startsWith(github.ref, 'refs/tags/v', 'extra')]
+0.000	tests/unit/py/test_workflow_event_context.py::test_ref_prefix_observer_still_refuses_unresolved_expressions[true || ({})-startsWith(github.ref, true)]
+0.000	tests/unit/py/test_workflow_event_context.py::test_ref_prefix_observer_still_refuses_unresolved_expressions[true || ({})-startsWith(github.ref, vars.PREFIX)]
+0.000	tests/unit/py/test_workflow_event_context.py::test_ref_prefix_observer_still_refuses_unresolved_expressions[true || ({})-startsWith(github.repository, 'enhantica')]
 0.000	tests/unit/py/test_workflow_event_context.py::test_unknown_condition_cannot_invent_reachability
 
 # Module-scoped fixture costs, from tools/checks/fixture_costs.py:
@@ -245874,11 +245993,11 @@ UNMEASURED:not-completed-in-this-run	tests/unit/py/test_web_science_identity.py:
 # module-cost: 8.957	tests/system/py/test_staging_cleanup.py
 # module-cost: 133.169	tests/system/py/test_status_fit_controls.py
 # module-cost: 9.952	tests/system/py/test_structure_backend.py
-# module-cost: 0.748	tests/system/py/test_survey_events.py
+# module-cost: 1.294	tests/system/py/test_survey_events.py
 # module-cost: 6.259	tests/system/py/test_thread_selector.py
 # module-cost: 44.335	tests/system/py/test_tutorial_app_lifecycle.py
 # module-cost: 135.618	tests/system/py/test_tutorial_assistant_hub.py
-# module-cost: 14.171	tests/system/py/test_tutorial_assistant_pages.py
+# module-cost: 149.476	tests/system/py/test_tutorial_assistant_pages.py
 # module-cost: 98.339	tests/system/py/test_tutorial_assistant_versions.py
 # module-cost: 14.005	tests/system/py/test_tutorial_built_tables.py
 # module-cost: 87.264	tests/system/py/test_tutorial_callout_markup.py
