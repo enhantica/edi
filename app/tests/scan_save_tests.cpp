@@ -279,6 +279,41 @@ private slots:
     }
     // Controls moving between a toolbar's row and its ⋯ popup, chart tabs switching and the popup opening and closing
     // leave no QML warning (the owner's log: attached tooltips binding on controls being moved or destroyed).
+    // A new experiment switched from powder to single crystal shows the linked structure's simulated reflections
+    // before any data, and the switch reports nothing.
+    void newSingleCrystalExperimentShowsSimulatedReflections() {
+        QQmlApplicationEngine engine;
+        edi_app::configure_engine(engine);
+        auto* session = engine.singletonInstance<edi_app::Session*>("edi.app", "Session");
+        QVERIFY(session);
+        QTemporaryDir root;
+        QVERIFY(session->createProject(QStringLiteral("sc"), {}, root.filePath(QStringLiteral("project"))));
+        edi_app::ProjectViewModel* project = session->project();
+        QVERIFY(project);
+        QVERIFY(project->createStructure());
+        QVERIFY(project->createExperiment());
+        QTRY_VERIFY_WITH_TIMEOUT(!project->calculating(), 30000);
+        const auto messages = [session] {
+            QStringList lines;
+            edi_app::WarningListModel* list = session->loadWarnings();
+            const auto roles = list->roleNames();
+            for (int row = 0; row < list->rowCount(); ++row)
+                for (const QByteArray& role : roles)
+                    lines.append(list->text(row, QString::fromUtf8(role)));
+            return lines.join(QLatin1String(" | "));
+        };
+        const int before = session->loadWarnings()->rowCount();
+        QVERIFY2(project->setExperimentType(0, QStringLiteral("sampleForm"), QStringLiteral("single crystal")),
+                 qPrintable(session->lastError()));
+        QTRY_VERIFY_WITH_TIMEOUT(!project->calculating(), 30000);
+        edi_app::ExperimentViewModel* experiment = project->currentExperiment();
+        QVERIFY(experiment);
+        QCOMPARE(experiment->sampleForm(), edi_app::ExperimentViewModel::SingleCrystal);
+        edi_app::SingleCrystalReflectionModel* reflections = experiment->singleCrystalReflections();
+        QTRY_VERIFY2_WITH_TIMEOUT(reflections->simulated() && !reflections->calculated().isEmpty(), qPrintable(messages()), 30000);
+        QVERIFY2(session->loadWarnings()->rowCount() == before, qPrintable(messages()));
+    }
+
     void toolbarOverflowLeavesNoQmlWarning() {
         static QStringList warnings;
         warnings.clear();
