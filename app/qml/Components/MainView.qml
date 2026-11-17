@@ -64,6 +64,19 @@ EaComponents.MainContent {
             showMainTab(ownTab);
     }
 
+    // A tab hidden while it is current (Stacked, Map or Evolution once the scan or the joint fit ends) leaves the bar
+    // on the page's own tab rather than on a page with nothing to show; the user's pick comes back with the tab.
+    readonly property bool currentHidden: {
+        const tab = bar && currentKey !== "" ? bar.itemAt(tabIndex) : null;
+        return tab !== null && !tab.visible;
+    }
+    onCurrentHiddenChanged: {
+        if (!currentHidden)
+            return;
+        pickPending = currentKey === chosenKey;
+        showMainTab(ownTab);
+    }
+
     // The tab bar, reached from its first tab (the base names it nowhere).
     readonly property var bar: structureTab.TabBar.tabBar
     readonly property int tabIndex: bar ? bar.currentIndex : 0
