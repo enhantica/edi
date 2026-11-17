@@ -842,6 +842,12 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
             steps_.push_back({QStringLiteral("freecheck-%1").arg(i + 1, 2, 10, QLatin1Char('0')), actions});
         }
     }
+    // A single project fitted, its parameter table after the fit (`--demo-only lbcofit-`).
+    if (only.startsWith(QLatin1String("lbcofit-"))) {
+        const QString root = QString::fromUtf8(EDI_CLI_PROJECTS_DIR) + "/";
+        steps_.push_back({"lbcofit-1-table", {"resize:1480x800", "open-project:" + root + "pd-neut-cwl_lbco-hrpt/project",
+                                              analysis, basic, "statusBar.fit.button", "wait-fit", "choose:OK"}});
+    }
     // The moments table of a magnetic structure, with |M| and its angles (`--demo-only moments-`).
     if (only.startsWith(QLatin1String("moments-"))) {
         const QString root = QString::fromUtf8(EDI_CLI_PROJECTS_DIR) + "/";
