@@ -1259,6 +1259,8 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // The values dataset `index` is shown with: its results row's, and a series point's per-experiment row's over them.
     std::vector<edi::Edit::ScanValue> pointValues(int index) const;
     // A series point's per-experiment values (`results_experiments.csv`) over `values`, read from `project`.
+    // What every row of a series' list shows alike, when it last announced them all (syncDatasets).
+    QString dataset_rows_signature_;
     static void overlaySeriesPoint(std::vector<edi::Edit::ScanValue>& values, const edi::Project& project,
                                    const edi::ScanDatasets& datasets, int index);
     // Reads dataset `index` into `view`: its file, or a series point's file of each experiment (beam modes in

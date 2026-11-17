@@ -4017,11 +4017,18 @@ void ProjectViewModel::syncDatasets() {
             }
             return dataset;
         };
+        // Listed already: a run's own change comes one row at a time (syncDataset); every row is announced again only
+        // when what all rows show changes (the series' name, the columns), never at each publication, which made the
+        // table measure every run again at each followed point.
+        const QString signature = seriesName() + QLatin1Char('|') + scan_columns_.join(QLatin1Char('|'));
         if (experiment_list_->showsDatasets(first, runs)) {
-            experiment_list_->datasetsChanged();
+            if (signature != dataset_rows_signature_) {
+                experiment_list_->datasetsChanged();
+            }
         } else {
             experiment_list_->setDatasets(first, runs, row);
         }
+        dataset_rows_signature_ = signature;
         syncSeries();
         syncPatternColours();
         return;
@@ -4764,6 +4771,7 @@ void ProjectViewModel::reloadScanResults() {
 }
 
 void ProjectViewModel::showScanResults() {
+    dataset_rows_signature_.clear();  // new results or a new template: every row again
     syncDatasets();
     evolution_->setTemplate(&scanTemplateOrModel());
     evolution_->setScan(scan_session_, project_.get(), scan_columns_.value(0));
@@ -6589,6 +6597,7 @@ void ProjectViewModel::publishTemplate() {
     if (retired_) return;
     markTemplateChanged();
     if (retired_) return;
+    dataset_rows_signature_.clear();  // new results or a new template: every row again
     syncDatasets();
     if (retired_) return;
     emit templateIndexChanged();
