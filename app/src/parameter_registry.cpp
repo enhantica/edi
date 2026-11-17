@@ -138,9 +138,10 @@ void ParameterRegistry::refreshElements(const edi::Project& project) {
     }
     // An ADP's label and units for its site's declared type, from the dictionary's variants.
     const std::unordered_map<const edi::Parameter*, std::string> variants = edi::parameter_variants(project);
-    // A phase's scale and texture take the colour of the structure they belong to, when there are several.
+    // A phase's scale and texture take the colour of the structure they belong to, as its other parameters do, one
+    // structure or several (the owner, 2026-11-17: the pickers and the table alike).
     std::unordered_map<const edi::Parameter*, int> phase;
-    if (project.structures.size() > 1) {
+    if (!project.structures.empty()) {
         std::unordered_map<std::string, int> place;
         int index = 0;
         for (const auto& structure : project.structures) {
