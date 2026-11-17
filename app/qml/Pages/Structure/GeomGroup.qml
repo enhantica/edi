@@ -138,7 +138,7 @@ Column {
                 objectName: `geom.bonds.distance.${row.index}`
                 elide: Text.ElideRight
                 horizontalAlignment: Text.AlignHCenter
-                text: Number(row.modelData.distance).toFixed(3)
+                text: Session.display("geom_bond.distance", row.modelData.distance)
             }
         }
     }
