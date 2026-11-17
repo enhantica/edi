@@ -7,6 +7,7 @@
 #include <optional>
 #include <unordered_map>
 
+#include <QRegularExpression>
 #include <QStringList>
 #include <limits>
 
@@ -264,7 +265,9 @@ QString ParameterItem::displayText(double value) const {
     }
     QString text = QString::fromStdString(edi::shown_text(uid_.toStdString(), value, variant_.toStdString()));
     // The limits are round numbers (sliderLower, sliderUpper), so trailing zeros only pad them: 10.2500 reads 10.25.
-    if (text.contains(QLatin1Char('.')) && !text.contains(QChar(0x00D7))) {
+    // Only a plain decimal is trimmed; a value written with a power of ten keeps its digits.
+    static const QRegularExpression plain(QStringLiteral("^-?[0-9]+\\.[0-9]+$"));
+    if (plain.match(text).hasMatch()) {
         while (text.endsWith(QLatin1Char('0'))) text.chop(1);
         if (text.endsWith(QLatin1Char('.'))) text.chop(1);
     }
