@@ -17,20 +17,12 @@ AFTER = 'b2c6d9b1547ed6506d2bc36cae5f9a43b748895a'
 
 
 def previous_bytes(name, data):
+    data = retention.composed_bytes(name, data)
     name = repository_key(name)
     rows = json.loads((HERE / 'joined-pin-sources.json').read_text())['files']
     row = rows.get(name)
     if row is None:
         return data
-    if hashlib.sha256(data).hexdigest() not in {
-        row['before_sha256'],
-        row['after_sha256'],
-        row.get('intermediate_sha256'),
-    }:
-        try:
-            data = retention.previous_bytes(name, data)
-        except ValueError as error:
-            raise AssertionError('Pin provenance requires every committed source byte') from error
     digest = hashlib.sha256(data).hexdigest()
     if digest == row['before_sha256']:
         return data

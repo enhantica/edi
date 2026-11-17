@@ -98,10 +98,11 @@ def input_bytes(root=ROOT):
 def historical_bytes(actual, selected):
     if ANALYSIS not in actual:
         raise ValueError('The standalone vehicle must retain its minimizer declaration')
-    actual = {
-        **actual,
-        ANALYSIS: example_inputs.previous_bytes(PROJECT + '/' + ANALYSIS, actual[ANALYSIS]),
-    }
+    try:
+        restored = example_inputs.previous_bytes(PROJECT + '/' + ANALYSIS, actual[ANALYSIS])
+    except AssertionError as error:
+        raise ValueError('The declared current minimizer input changed') from error
+    actual = {**actual, ANALYSIS: restored}
     before = dict(actual)
     row = task_inputs.rows()[PROJECT + '/' + ANALYSIS]
     if hashlib.sha256(actual[ANALYSIS]).hexdigest() != row['before_sha256']:

@@ -21,7 +21,6 @@ import gemmi
 from tests.fixtures.metadata_transition import retired_source_fields
 from tests.fixtures.metadata_transition.source_bytes import previous_bytes, previous_content
 from tests.fixtures.project_categories.historical_bytes import units
-from tests.fixtures.stop_defaults import example_inputs
 
 ROOT = Path(__file__).resolve().parents[3]
 HERE = Path(__file__).resolve().parent
@@ -319,12 +318,7 @@ def restore(source, destination):
         if not path.is_file():
             continue
         name = path.relative_to(ROOT).as_posix()
-        if (
-            name not in pins
-            and name not in migration
-            and name not in updates
-            and name not in example_inputs.rows()
-        ):
+        if name not in pins and name not in migration and name not in updates:
             continue
         (destination / path.relative_to(source)).write_bytes(pre_catalogue_bytes(path))
     return destination

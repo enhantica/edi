@@ -40,3 +40,10 @@ def previous_bytes(name, data):
 
     restore(old, current)
     return before
+
+
+def composed_bytes(name, data):
+    row = json.loads((HERE / 'retakes.json').read_text())['files'].get(repository_key(name))
+    if row is not None and hashlib.sha256(data).hexdigest() == row['after_sha256']:
+        return previous_bytes(name, data)
+    return data
