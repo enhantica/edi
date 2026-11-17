@@ -119,6 +119,8 @@ class ScanLayer : public QQuickPaintedItem {
     /// Datasets drawn by the current Stacked view, bounded by its screen height.
     const std::vector<std::size_t>& drawnDatasets() const { return drawn_datasets_; }
     int drawnDatasetCount() const { return static_cast<int>(drawn_datasets_.size()); }
+    // The rows drawn worked out again for the y range shown.
+    void syncDrawnRows();
 
     ScanViewModel* model() const { return model_; }
     void setModel(ScanViewModel* model);

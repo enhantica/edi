@@ -317,8 +317,30 @@ void ScanLayer::setXMax(double value) {
         redraw();
     }
 }
-void ScanLayer::setYMin(double value) { assign(y_min_, value, &ScanLayer::yMinChanged); }
-void ScanLayer::setYMax(double value) { assign(y_max_, value, &ScanLayer::yMaxChanged); }
+// The rows Stacked draws, and the count its caption shows, follow the y range too: a zoom, a pan or a reset of it
+// shows other rows (the owner, 2026-11-17).
+void ScanLayer::setYMin(double value) {
+    assign(y_min_, value, &ScanLayer::yMinChanged);
+    syncDrawnRows();
+}
+void ScanLayer::setYMax(double value) {
+    assign(y_max_, value, &ScanLayer::yMaxChanged);
+    syncDrawnRows();
+}
+
+void ScanLayer::syncDrawnRows() {
+    if (mode_ != QLatin1String("stacked")) {
+        return;
+    }
+    const auto drawn = drawingRows();
+    if (drawn != drawn_datasets_) {
+        const bool count_changed = drawn.size() != drawn_datasets_.size();
+        drawn_datasets_ = drawn;
+        emit drawingRowsChanged();
+        if (count_changed) emit drawnDatasetCountChanged();
+        update();
+    }
+}
 void ScanLayer::setColourScheme(const QString& scheme) {
     assign(colour_scheme_, scheme, &ScanLayer::colourSchemeChanged);
     recolour();
