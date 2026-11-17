@@ -24,6 +24,11 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--binary', type=Path, required=True)
     parser.add_argument('--output', type=Path, required=True)
+    parser.add_argument(
+        '--no-structure',
+        action='store_true',
+        help="the owner's shorter sequence: no CIF, an empty experiment, then load_data",
+    )
     args = parser.parse_args()
     binary = args.binary.resolve(strict=True)
     output = args.output.resolve()
@@ -112,7 +117,8 @@ def main():
                 driver.qml(actor, 'Session.assistant.showActions = true')
                 if not driver.qml(actor, 'Session.assistant.showActions'):
                     raise RuntimeError('Show actions did not switch back on')
-            call('load_structure', file_id=file_id('.cif'))
+            if not args.no_structure:
+                call('load_structure', file_id=file_id('.cif'))
             call('create_experiment')
             experiment = driver.qml(actor, 'Session.project.experiments.text(0, "name")')
             call(
@@ -126,10 +132,46 @@ def main():
                 for row in actor.last['ui']['project']['parameters']
                 if row['path'].endswith('instrument.setup_wavelength')
             )
-            call('set_parameters', values=[{'path': wavelength, 'value': 1.49}])
+            if not args.no_structure:
+                call('set_parameters', values=[{'path': wavelength, 'value': 1.49}])
             loaded = call('load_data', experiment=experiment, file_id=file_id('.xye'))
             mode['load_data'] = loaded
             mode['loaded'] = 'action_error' not in json.dumps(loaded)
+            if args.no_structure:
+                # The owner's sequence ends at the load.
+                mode['relations'] = mode['fitted'] = True
+                continue
+            # The owner's next steps (2026-11-17): estimate the background, read a data summary, free the cell
+            # length, the 2θ offset and the scale (the scale's row is in another category of the parameter table).
+            dataset = driver.qml(actor, 'Session.project.experiments.text(0, "name")')
+            points = 3098  # meas-lbco-hrpt.xye's rows, as the load reports them
+            owner = [
+                call('estimate_background', experiment=dataset),
+                call(
+                    'inspect_data',
+                    dataset_id=dataset,
+                    start=0,
+                    count=points,
+                    view='summary',
+                    partitions=8,
+                ),
+            ]
+            rows = actor.last['ui']['project']['parameters']
+            wanted = ('cell.length_a', 'instrument.calib_twotheta_offset', '.scale')
+            flags = [
+                {'path': row['path'], 'free': True}
+                for row in rows
+                if row.get('refinable')
+                and row.get('dependence') == 0
+                and row['path'].endswith(wanted)
+            ]
+            owner.append(call('set_free', flags=flags))
+            mode['owner'] = [
+                'action_error' not in json.dumps(reply)
+                and '"success": false' not in json.dumps(reply)
+                and 'request_stale' not in json.dumps(reply)
+                for reply in owner
+            ]
             # The owner's alias sequence: create, retarget to another parameter, remove.
             paths = [row['path'] for row in actor.last['ui']['project']['parameters']]
             offset = next(
@@ -171,6 +213,7 @@ def main():
             or not mode.get('loaded')
             or not mode.get('relations')
             or not mode.get('fitted')
+            or not all(mode.get('owner', [False]))
             for mode in summary['modes']
         )
     )
