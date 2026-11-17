@@ -468,17 +468,14 @@ ReportSingleCrystal single_crystal_of(const Project& project, std::size_t index,
 }  // namespace
 
 std::string admission_statistics(const ReportAdmission& admission) {
-    const auto ratio = [](const std::optional<double>& value) {
-        if (!value || !std::isfinite(*value)) return std::string("not available");
-        char text[32];
-        std::snprintf(text, sizeof text, "%.3f", *value);
-        return std::string(text);
+    const auto ratio = [](const char* uid, const std::optional<double>& value) {
+        return value && std::isfinite(*value) ? shown_text(uid, *value) : std::string("not available");
     };
     return "Measured " + std::to_string(admission.measured) + ", unique " + std::to_string(admission.unique) +
            ", used " + std::to_string(admission.used) + ", excluded " + std::to_string(admission.excluded) +
            ", absent " + std::to_string(admission.absent) + "; merge " +
-           option_label("reflns.merge", admission.merge) + "; Rint " + ratio(admission.r_int) + ", R-sigma " +
-           ratio(admission.r_sigma);
+           option_label("reflns.merge", admission.merge) + "; Rint " + ratio("fit_result_bank.r_int", admission.r_int) + ", R-sigma " +
+           ratio("fit_result_bank.r_sigma", admission.r_sigma);
 }
 
 std::string left_out_text(const std::string& reason) {

@@ -16,8 +16,9 @@ Column {
     readonly property var admission: experiment ? experiment.reflectionAdmission : null
     readonly property real fieldWidth: (EaStyle.Sizes.sideBarContentWidth - grid.columnSpacing) / 2
 
-    function ratio(value) {
-        return isNaN(value) ? qsTr("n/a") : Number(value).toFixed(3);
+    // An agreement factor as the dictionary shows its item, n/a when undefined.
+    function ratio(uid, value) {
+        return isNaN(value) ? qsTr("n/a") : Session.display(uid, value);
     }
 
     spacing: AppSizes.groupContentSpacing
@@ -52,7 +53,7 @@ Column {
         visible: row.admission !== null && row.admission.available
         width: EaStyle.Sizes.sideBarContentWidth
         wrapMode: Text.WordWrap
-        text: row.admission === null ? "" : qsTr("Measured %1, unique %2, used %3, excluded %4, absent %5; Rint %6, R-sigma %7").arg(row.admission.measured).arg(row.admission.unique).arg(row.admission.used).arg(row.admission.excluded).arg(row.admission.absent).arg(row.ratio(row.admission.rInt)).arg(row.ratio(row.admission.rSigma))
+        text: row.admission === null ? "" : qsTr("Measured %1, unique %2, used %3, excluded %4, absent %5; Rint %6, R-sigma %7").arg(row.admission.measured).arg(row.admission.unique).arg(row.admission.used).arg(row.admission.excluded).arg(row.admission.absent).arg(row.ratio("fit_result_bank.r_int", row.admission.rInt)).arg(row.ratio("fit_result_bank.r_sigma", row.admission.rSigma))
     }
     EaElements.Label {
         objectName: "reflns.absencesWarning"
@@ -60,6 +61,6 @@ Column {
         width: EaStyle.Sizes.sideBarContentWidth
         wrapMode: Text.WordWrap
         color: EaStyle.Colors.red
-        text: row.admission === null ? "" : qsTr("Systematic absences: %1 with mean I/su %2; the space group may be wrong").arg(row.admission.absent).arg(Number(row.admission.absentMeanIOverSigma).toFixed(1))
+        text: row.admission === null ? "" : qsTr("Systematic absences: %1 with mean I/su %2; the space group may be wrong").arg(row.admission.absent).arg(Session.display("fit_result_bank.absent_mean_i_over_su", row.admission.absentMeanIOverSigma))
     }
 }

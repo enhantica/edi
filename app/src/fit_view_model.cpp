@@ -173,11 +173,12 @@ void FitAgreementModel::setRecord(const edi::Project& project) {
             } catch (const std::exception&) {
                 admitted.reset();  // a project crysta cannot take shows no admission
             }
-            const auto ratio = [](const std::optional<double>& value) {
-                return value && std::isfinite(*value) ? QString::number(*value * 100.0, 'f', 2) : QStringLiteral("n/a");
+            const auto ratio = [](const char* uid, const std::optional<double>& value) {
+                return value && std::isfinite(*value) ? QString::fromStdString(edi::shown_text(uid, *value))
+                                                      : QStringLiteral("n/a");
             };
             if (admitted) {
-                values << ratio(admitted->r_int) << ratio(admitted->r_sigma)
+                values << ratio("fit_result_bank.r_int", admitted->r_int) << ratio("fit_result_bank.r_sigma", admitted->r_sigma)
                        << QString::fromStdString(edi::option_label("reflns.merge", experiment.reflns_merge.value_or("none")))
                        << QString::number(admitted->measured) << QString::number(admitted->unique)
                        << QString::number(admitted->used) << QString::number(admitted->excluded)
