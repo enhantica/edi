@@ -35,6 +35,8 @@ def test_scale_fit_matches_independent_weighted_linear_solution(tmp_path, case):
     expected_chi2 = np.sum(((measured - expected * basis) / sigma) ** 2) / (len(basis) - 1)
     scale.value = original * 0.71
     scale.free = True
+    model._minimizer_chi_square_tolerance = model._minimizer_chi_square_tolerance or 1e-6
+    model._minimizer_max_iterations = model._minimizer_max_iterations or 50
     result = model.analysis.fit()
     assert float(scale.value) == pytest.approx(expected, rel=2e-4, abs=2e-5), (
         'A scale fit must reach the independent weighted least-squares optimum over all '

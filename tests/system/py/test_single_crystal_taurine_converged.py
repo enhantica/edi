@@ -105,6 +105,8 @@ def test_actual_taurine_fit_matches_all_fullprof_parameters_and_uncertainties(tm
         for experiment in model.experiments
         for component in ('11', '22', '33', '12', '13', '23')
     ), 'Every dataset must start with all extinction coefficients zero, including fixed slots'
+    model._minimizer_chi_square_tolerance = model._minimizer_chi_square_tolerance or 1e-6
+    model._minimizer_max_iterations = model._minimizer_max_iterations or 50
     result = model.analysis.fit()
     distances = []
     for p in record['parameters']:

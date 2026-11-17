@@ -54,6 +54,8 @@ def test_full_covariance_reaches_dependent_writeback_and_undo(tmp_path):
     assert not math.isclose(
         REFERENCE['dependent_variance'], REFERENCE['diagonal_only_variance'], rel_tol=0.05
     ), 'discarding covariance must measurably change the dependent uncertainty'
+    project._minimizer_chi_square_tolerance = project._minimizer_chi_square_tolerance or 1e-6
+    project._minimizer_max_iterations = project._minimizer_max_iterations or 50
     project.analysis.fit()
     terms = dict(zip(('base', 'ramp', 'curve'), project.experiment.background_terms, strict=True))
     for name, expected in zip(('base', 'ramp', 'curve'), (5, 2, 3), strict=True):
@@ -117,6 +119,8 @@ def test_disabled_relation_stays_inactive_during_fit_and_can_be_reenabled(tmp_pa
         np.asarray(REFERENCE['observed']) - 4.25 * t * t,
         rcond=None,
     )[0]
+    project._minimizer_chi_square_tolerance = project._minimizer_chi_square_tolerance or 1e-6
+    project._minimizer_max_iterations = project._minimizer_max_iterations or 50
     project.analysis.fit()
     assert terms[2].coef.value == pytest.approx(4.25, abs=0, rel=0), (
         'a disabled relation must not be applied during trials or fit write-back'
@@ -138,6 +142,8 @@ def test_disabled_relation_stays_inactive_during_fit_and_can_be_reenabled(tmp_pa
         'fit undo must retain the ordinary fixed target of a disabled relation'
     )
     relation.enabled = True
+    project._minimizer_chi_square_tolerance = project._minimizer_chi_square_tolerance or 1e-6
+    project._minimizer_max_iterations = project._minimizer_max_iterations or 50
     project.analysis.fit()
     assert terms[2].coef.value == terms[0].coef.value - terms[1].coef.value, (
         'reenabling before a fit must restore the relation through all fit paths'
