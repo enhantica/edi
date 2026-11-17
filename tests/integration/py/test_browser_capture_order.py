@@ -50,7 +50,7 @@ def test_capture_uses_two_fresh_projects_and_never_carries_historical_settings_i
             analysis=Analysis(),
             su_rule='iucr_99',
             free_parameters=[None] * 193,
-            _minimizer_max_iterations=1000,
+            _minimizer_max_iterations=50,
             _minimizer_chi_square_tolerance=1e-4,
         )
         projects.append(project)

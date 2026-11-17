@@ -68,7 +68,7 @@ def control():
         'rwp': 0.125,
         'final_reduced_chi_square': 1.25,
         'iteration_domain': {
-            'conditions': {**fixture['_iteration_domain']['conditions'], 'max_iterations': 1000},
+            'conditions': {**fixture['_iteration_domain']['conditions'], 'max_iterations': 50},
             'callbacks': callbacks,
         },
     }

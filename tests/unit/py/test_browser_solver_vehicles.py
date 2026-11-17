@@ -211,7 +211,7 @@ def current(historical):
     raw['final_reduced_chi_square'] = final
     raw['iteration_domain']['conditions'] = {
         **control.fixture['_iteration_domain']['conditions'],
-        'max_iterations': 1000,
+        'max_iterations': 50,
     }
     raw['iteration_domain']['callbacks'] = raw['iteration_domain']['callbacks'][:count]
     record = {key: value for key, value in record.items() if not key.startswith('iter.')}
@@ -233,7 +233,11 @@ def current(historical):
     for column, path in control.selected.items():
         for suffix, key in (('value', 'values'), ('uncertainty', 'uncertainty')):
             record[f'param.{control.old["labels"][column]}.{suffix}'] = str(raw[key][path])
-    loaded = {**control.loaded, **control.fixture['_iteration_domain']['conditions']}
+    loaded = {
+        **control.loaded,
+        'max_iterations': 50,
+        **control.fixture['_iteration_domain']['conditions'],
+    }
     return SimpleNamespace(raw=raw, record=record, loaded=loaded, expected=expected)
 
 
@@ -670,6 +674,7 @@ def test_wasm_orchestration_checks_historical_vehicle_before_current_default(
             after = (project / 'analysis/analysis.edi').read_bytes()
             assert after == before + (
                 b'\n_minimizer.descent ladder\n_minimizer.stop_rules chi_square_change\n'
+                b'_minimizer.max_iterations 1000\n'
             ), 'The historical WASM command receives only its two declared solver additions'
             events.append('historical-executed')
             record = dict(historical.record)
@@ -728,8 +733,8 @@ def test_source_setup_cache_cannot_admit_changed_or_foreign_input(
     )
     original = path.read_bytes()
     original_digest = written.sha(path)
-    changed = original.replace(b'_minimizer.max_iterations 1000', b'_minimizer.max_iterations 999')
-    assert changed != original and before == '1000', (
+    changed = original + b'\n_minimizer.max_iterations 999\n'
+    assert changed != original and not before, (
         'The cached positive control authenticates the actual original solver declaration'
     )
     read_bytes, read_text = Path.read_bytes, Path.read_text

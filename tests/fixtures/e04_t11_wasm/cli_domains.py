@@ -7,6 +7,7 @@ from pathlib import Path
 
 from tests.fixtures.e04_t11_wasm.compare import compare
 from tests.fixtures.metadata_transition import task_inputs
+from tests.fixtures.stop_defaults import example_inputs
 
 ROOT = Path(__file__).resolve().parents[3]
 HERE = Path(__file__).parent
@@ -97,6 +98,10 @@ def input_bytes(root=ROOT):
 def historical_bytes(actual, selected):
     if ANALYSIS not in actual:
         raise ValueError('The standalone vehicle must retain its minimizer declaration')
+    actual = {
+        **actual,
+        ANALYSIS: example_inputs.previous_bytes(PROJECT + '/' + ANALYSIS, actual[ANALYSIS]),
+    }
     before = dict(actual)
     row = task_inputs.rows()[PROJECT + '/' + ANALYSIS]
     if hashlib.sha256(actual[ANALYSIS]).hexdigest() != row['before_sha256']:
@@ -118,6 +123,12 @@ def historical_bytes(actual, selected):
     return before
 
 
+def solver_suffix(original):
+    return SUFFIX + (
+        b'' if b'_minimizer.max_iterations ' in original else b'_minimizer.max_iterations 1000\n'
+    )
+
+
 def vehicle(destination):
     selected = domain()
     actual = input_bytes()
@@ -127,7 +138,7 @@ def vehicle(destination):
     for name, data in actual.items():
         path = destination / name
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_bytes(data + SUFFIX if name == ANALYSIS else data)
+        path.write_bytes(data + solver_suffix(data) if name == ANALYSIS else data)
     verify_vehicle(destination, actual)
     return selected['oracle']
 
@@ -139,7 +150,7 @@ def verify_vehicle(destination, original):
         if path.is_file()
     }
     expected = dict(original)
-    expected[ANALYSIS] += SUFFIX
+    expected[ANALYSIS] += solver_suffix(original[ANALYSIS])
     if actual != expected:
         raise ValueError('Only declared ladder and chi-square conditions enter the vehicle')
 

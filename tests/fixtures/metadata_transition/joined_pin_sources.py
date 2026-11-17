@@ -7,6 +7,7 @@ import zipfile
 from pathlib import Path
 
 from tests.fixtures.path_keys import repository_key
+from tests.fixtures.stop_defaults import retention
 
 HERE = Path(__file__).parent
 ROOT = HERE.resolve().parents[2]
@@ -21,6 +22,15 @@ def previous_bytes(name, data):
     row = rows.get(name)
     if row is None:
         return data
+    if hashlib.sha256(data).hexdigest() not in {
+        row['before_sha256'],
+        row['after_sha256'],
+        row.get('intermediate_sha256'),
+    }:
+        try:
+            data = retention.previous_bytes(name, data)
+        except ValueError as error:
+            raise AssertionError('Pin provenance requires every committed source byte') from error
     digest = hashlib.sha256(data).hexdigest()
     if digest == row['before_sha256']:
         return data

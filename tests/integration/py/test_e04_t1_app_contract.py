@@ -21,6 +21,7 @@ import yaml
 
 from tests.fixtures.e04_t1.project_actor import is_verification
 from tests.fixtures.metadata_transition.source_bytes import read_previous
+from tests.fixtures.stop_defaults import example_inputs
 from tests.integration.py.ci_runner_contract import self_hosted_runners
 
 # The published replacement also reports every spin-box indicator edit to Preferences.
@@ -808,7 +809,7 @@ def oracle_input_bytes(path):
         'sc-neut-cwl_tb2ti2o7-heidi_simulation',
         'sc-neut-cwl_cosio-heidi',
     }:
-        return path.read_bytes()
+        return example_inputs.previous_bytes(path.relative_to(ROOT), path.read_bytes())
     return read_previous(path)
 
 
