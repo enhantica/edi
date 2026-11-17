@@ -22,11 +22,9 @@ SYSTEM = {'Linux': 'linux', 'Darwin': 'macos', 'Windows': 'windows'}[platform.sy
 APP_COMPONENT = 'org.easyscience.edi'
 ASSISTANT_COMPONENT = 'org.easyscience.edi.assistant'
 ASSISTANT_RUNTIME = Path('libexec/edi/codex')
-# macOS ships its maintenance tool as its own signed component (edi ADR-0091). Its version follows
-# the Installer Framework release, so an update replaces the tool only when that changes.
+# macOS ships its maintenance tool as its own signed component, app-versioned (edi ADR-0091).
 MAINTENANCE_COMPONENT = 'org.easyscience.edi.maintenancetool'
 MAINTENANCE_TOOL = 'MaintenanceTool.app'
-MAINTENANCE_TOOL_VERSION = '4.11.0'
 SUFFIX = '.exe' if SYSTEM == 'windows' else ''
 PLATFORM_ID = {'linux': 'linux-x86_64', 'macos': 'macos-arm64', 'windows': 'windows-x86_64'}[
     SYSTEM
@@ -263,14 +261,14 @@ def write_assistant_metadata(meta: Path, version: str) -> None:
     )
 
 
-def write_maintenance_tool_metadata(meta: Path) -> None:
+def write_maintenance_tool_metadata(meta: Path, version: str) -> None:
     xml_file(
         meta / 'package.xml',
         'Package',
         {
             'DisplayName': 'Maintenance tool',
             'Description': 'Updates and removes EasyDiffraction.',
-            'Version': MAINTENANCE_TOOL_VERSION,
+            'Version': version,
             'ReleaseDate': datetime.datetime.now(datetime.UTC).date().isoformat(),
             'Virtual': 'true',
             'ForcedInstallation': 'true',
@@ -306,7 +304,7 @@ def build_maintenance_tool(tools: Path, output: Path) -> Path:
         'Installer',
         {
             'Name': 'EasyDiffraction',
-            'Version': MAINTENANCE_TOOL_VERSION,
+            'Version': '1.0.0',
             'Title': 'EasyDiffraction maintenance tool',
             'Publisher': 'EasyScience',
             'MaintenanceToolName': 'MaintenanceTool',
@@ -358,7 +356,9 @@ def check_maintenance_tool(bundle: Path) -> None:
         raise RuntimeError(f'Maintenance tool is signed by {authorities[0]}, not {identity}')
 
 
-def add_maintenance_tool(packages: Path, bundle: Path | None, tools: Path, output: Path) -> str:
+def add_maintenance_tool(
+    packages: Path, bundle: Path | None, tools: Path, output: Path, version: str
+) -> str:
     """Put the signed maintenance tool into its component; return its executable's checksum."""
     if bundle is None:
         if macos_signing():
@@ -367,7 +367,7 @@ def add_maintenance_tool(packages: Path, bundle: Path | None, tools: Path, outpu
     check_maintenance_tool(bundle)
     meta = packages / MAINTENANCE_COMPONENT / 'meta'
     meta.mkdir(parents=True)
-    write_maintenance_tool_metadata(meta)
+    write_maintenance_tool_metadata(meta, version)
     target = meta.parent / 'data/maintenancetool' / MAINTENANCE_TOOL
     target.parent.mkdir(parents=True)
     run(['ditto', bundle, target])
@@ -780,7 +780,7 @@ def package_app(
         stage, tools, output, version, repository_url, mirrors, channel
     )
     maintenance_sha256 = (
-        add_maintenance_tool(source / 'packages', maintenance_tool, tools, output)
+        add_maintenance_tool(source / 'packages', maintenance_tool, tools, output, version)
         if SYSTEM == 'macos'
         else None
     )

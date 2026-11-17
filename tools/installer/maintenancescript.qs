@@ -7,3 +7,10 @@ function Component() {
     if (installer.isInstaller() && systemInfo.kernelType === "darwin")
         installer.setInstallerBaseBinary("@TargetDir@/maintenancetool/MaintenanceTool.app");
 }
+
+// The component carries the app version, so every update lists it. An update keeps the installed tool and
+// unpacks nothing, so no copy is left behind; only a first installation unpacks the bundle.
+Component.prototype.createOperations = function () {
+    if (installer.isInstaller())
+        component.createOperations();
+};

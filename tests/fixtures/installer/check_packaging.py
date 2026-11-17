@@ -572,7 +572,7 @@ def test_signed_packaging_refuses_a_missing_maintenance_tool(tmp_path, monkeypat
         mock.patch.object(PACKAGE, 'build_maintenance_tool') as build,
         pytest.raises(RuntimeError, match='separately signed maintenance tool'),
     ):
-        PACKAGE.add_maintenance_tool(tmp_path / 'packages', None, tmp_path, tmp_path)
+        PACKAGE.add_maintenance_tool(tmp_path / 'packages', None, tmp_path, tmp_path, '1.0')
     build.assert_not_called()
 
 

@@ -322,7 +322,11 @@ def overlay_testing_feed(site: Path, feed: Path) -> None:
 
 def trim_testing_archives(repository: Path, keep: set[str]) -> None:
     archive_name = re.compile(r'^([0-9]+(?:\.[0-9]+)+)[A-Za-z_-].*\.7z(?:\.sha1)?$')
-    packages = {'org.easyscience.edi', 'org.easyscience.edi.assistant'}
+    packages = {
+        'org.easyscience.edi',
+        'org.easyscience.edi.assistant',
+        'org.easyscience.edi.maintenancetool',
+    }
     for archive in repository.glob('*/*'):
         match = archive_name.fullmatch(archive.name)
         if (
