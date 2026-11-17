@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: BSD-3-Clause
-# The warning sets for edi's own C++, the same as crysta's, and EDI_WERROR to make them errors (edi ADR-0089). They go on
+# The warning sets for edi's own C++, the same as crysta's, and EDI_WERROR to make them errors (edi ADR-0093). They go on
 # each hand-written source file, not on the targets, so Qt's generated sources, nanobind's sources and the code under
 # third_party/ build as before.
 option(EDI_WERROR "Treat warnings in edi's own C++ as errors" OFF)

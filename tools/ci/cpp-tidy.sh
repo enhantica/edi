@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: BSD-3-Clause
-# clang-tidy, the Clang Static Analyzer among its checks, over edi's own C++ (edi ADR-0089), with .clang-tidy's checks
+# clang-tidy, the Clang Static Analyzer among its checks, over edi's own C++ (edi ADR-0093), with .clang-tidy's checks
 # and any finding an error. It reads the compile commands of the app's build tree, so run app-build first; the Python
 # bindings, which that tree leaves out, come from the core's tree (core-build).
 set -euo pipefail

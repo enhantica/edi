@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: BSD-3-Clause
-# cppcheck over edi's own C++ (edi ADR-0089); any finding is an error. It reads the compile commands of the app's build
+# cppcheck over edi's own C++ (edi ADR-0093); any finding is an error. It reads the compile commands of the app's build
 # tree and, for the Python bindings, the core's, so it sees Qt's and crysta's headers and the build's macros as the
 # compiler does. returnByReference is off: it asks Qt-style getters to return their implicitly shared members (QString,
 # QStringList) by reference, where a copy is a reference count.
