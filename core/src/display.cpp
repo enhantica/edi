@@ -503,7 +503,7 @@ double display_step(std::string_view uid, double value, std::string_view variant
     return crysta::display_step(value, format_of(found, variant));
 }
 
-std::pair<double, double> slider_limits(double value, double half_width, double step) {
+std::pair<double, double> slider_limits(double value, double half_width, double step, double lower, double upper) {
     double unit = std::pow(10.0, std::floor(std::log10(half_width)));
     if (step > unit) unit = step;
     // Whole units are counted against a power of ten, so 379 hundredths prints as 3.79 rather than 3.7900000000000005.
@@ -513,7 +513,22 @@ std::pair<double, double> slider_limits(double value, double half_width, double 
     const auto count = [&](double x) { return exponent < 0 ? x * scale : x / scale; };
     // A limit already on a whole unit stays there despite rounding in the division.
     constexpr double kSlack = 1e-9;
-    return {at(std::floor(count(value - half_width) + kSlack)), at(std::ceil(count(value + half_width) - kSlack))};
+    const auto down = [&](double x) { return at(std::floor(count(x) + kSlack)); };
+    const auto up = [&](double x) { return at(std::ceil(count(x) - kSlack)); };
+    const double width = std::max(2.0 * half_width, unit);
+    // A value outside its range (kept as loaded) slides from the nearer limit.
+    const double centre = std::clamp(value, lower, upper);
+    double from = down(centre - half_width);
+    double to = up(centre + half_width);
+    if (from < lower) {
+        from = lower;
+        to = std::max(to, up(lower + width));
+    }
+    if (to > upper) {
+        to = upper;
+        from = std::min(from, down(upper - width));
+    }
+    return {std::max(from, lower), std::min(to, upper)};
 }
 
 FileText file_text(const Parameter& parameter, const std::string& su_rule, bool exact) {

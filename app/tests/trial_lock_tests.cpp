@@ -13,10 +13,13 @@
 #include <vector>
 
 #include "assistant_view_model.hpp"
+#include "edi/categories.hpp"
+#include "edi/display.hpp"
 #include "edi/io.hpp"
 #include "edi/selectors.hpp"
 #include "engine_setup.hpp"
 #include "fit_view_model.hpp"
+#include "parameter_item.hpp"
 #include "project_view_model.hpp"
 #include "session.hpp"
 
@@ -214,6 +217,38 @@ private slots:
         QCOMPARE(experiment.linked_structures.size(), std::size_t(1));
         QVERIFY(project.loadData(0, data));  // the same file again is still a load
         QVERIFY(std::abs(peakRatioOf(*project.assistantProject()) - 1.0) < 1e-6);
+    }
+    // The Analysis slider never reaches outside a parameter's admissible range. The expectations are worked by hand from
+    // the rule: value ± half width rounded outward to a whole unit, a side cut at a limit giving its width to the other.
+    void sliderStaysInsideTheLimits() {
+        const double inf = std::numeric_limits<double>::infinity();
+        const auto is = [](std::pair<double, double> got, double from, double to) {
+            return std::abs(got.first - from) < 1e-12 && std::abs(got.second - to) < 1e-12;
+        };
+        QVERIFY(is(edi::slider_limits(0.0, 1e-3, 0.01, 0.0, 10.0), 0.0, 0.01));      // B iso 0: from 0, one step up
+        QVERIFY(is(edi::slider_limits(4e-4, 1e-3, 1e-4, 0.0, 10.0), 0.0, 0.002));    // near a limit: the full width above
+        QVERIFY(is(edi::slider_limits(1.0, 0.5, 0.01, 0.0, 1.0), 0.0, 1.0));         // occupancy at its maximum: width 1 below
+        QVERIFY(is(edi::slider_limits(10.0, 5.0, 0.01, 0.0, 10.0), 0.0, 10.0));      // a width over the whole range
+        QVERIFY(is(edi::slider_limits(3.84127, 0.05, 1e-5, 0.0, inf), 3.79, 3.9));   // a cell length, inside its range
+        QVERIFY(is(edi::slider_limits(-2.0, 1.0, 0.1, -inf, inf), -3.0, -1.0));      // no limits
+        QVERIFY(is(edi::slider_limits(-1.0, 0.5, 0.01, 0.0, 10.0), 0.0, 1.0));       // a value kept below its range
+        // Every parameter of a project with values at their limits: B iso 0, occupancy 1.
+        edi::Project held = lbcoProject(std::nullopt);
+        for (const auto& site : held.structures[0]->atom_sites) {
+            site->adp_iso.value = 0.0;
+            site->occupancy.value = 1.0;
+        }
+        ProjectViewModel project(std::move(held), nullptr);
+        int checked = 0;
+        for (const edi::NamedSlot& slot : edi::named_slots(*project.assistantProject())) {
+            const ParameterItem* item = project.parameterNamed(QString::fromStdString(slot.unique_name));
+            if (item == nullptr) continue;
+            QVERIFY2(item->sliderLower() >= item->minimum() && item->sliderUpper() <= item->maximum() &&
+                         item->sliderUpper() > item->sliderLower(),
+                     slot.unique_name.c_str());
+            ++checked;
+        }
+        QVERIFY(checked > 10);
     }
     // An open's warning about a value in one file leaves Messages once a Text-tab edit of that file corrects it; a refused
     // edit changes nothing there, and Undo of the correction brings the warning back.

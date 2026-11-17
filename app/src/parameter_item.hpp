@@ -143,7 +143,8 @@ class ParameterItem : public QObject {
     // committed: a lattice constant's kLatticeConstantSliderHalfWidth (0.05 Å; the owner, 2026-10-04); any
     // other parameter's half its magnitude, at least 1e-3.
     Q_INVOKABLE double sliderHalfWidth() const;
-    // The slider's limits, value ± sliderHalfWidth rounded outward to a whole unit (edi::slider_limits).
+    // The slider's limits, value ± sliderHalfWidth rounded outward to a whole unit and kept inside minimum and
+    // maximum (edi::slider_limits).
     Q_INVOKABLE double sliderLower() const;
     Q_INVOKABLE double sliderUpper() const;
     int blockIndex() const { return block_index_; }
