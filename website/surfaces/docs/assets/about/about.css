@@ -45,3 +45,9 @@
 .md-typeset .ed-contributors-label {
   margin-left: 1rem; color: var(--md-default-fg-color--light); font-size: 0.9em; line-height: 1.45;
 }
+/* A phone too narrow for the stack and the label side by side: the label goes under the stack, so the group never
+   runs past the page; the first avatar stays under the photo. */
+@media screen and (max-width: 25em) {
+  .md-typeset .ed-contributors { flex-wrap: wrap; row-gap: 0.4rem; }
+  .md-typeset .ed-contributors-label { flex-basis: 100%; margin-left: 0; }
+}
