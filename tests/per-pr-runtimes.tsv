@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-17T16:54:17Z
+# measured_utc = 2026-11-17T18:37:16Z
 #
-# Recorded from: measured test run (3840 node(s) measured once, 176968 banked, 0 stale row(s) dropped)
-# Collected tests: 249617; with a reported duration: 80622
+# Recorded from: measured test run (13 node(s) measured once, 180795 banked, 0 stale row(s) dropped)
+# Collected tests: 249617; with a reported duration: 80623
 # Module-scoped fixture costs recorded: 208
 #
 # Breaches are decided PER TIER against the table
@@ -248843,7 +248843,7 @@ UNMEASURED:not-completed-in-this-run	tests/unit/py/test_e11_t5_runtime_publicati
 0.000	tests/unit/py/test_operation_entry_census.py::test_writable_properties_cannot_bypass_the_ownership_inventory[OnlineSearch]
 0.000	tests/unit/py/test_operation_entry_census.py::test_writable_properties_cannot_bypass_the_ownership_inventory[OnlineSourcesModel]
 0.000	tests/unit/py/test_operation_entry_census.py::test_writable_properties_cannot_bypass_the_ownership_inventory[ParameterItem]
-0.000	tests/unit/py/test_operation_entry_census.py::test_writable_properties_cannot_bypass_the_ownership_inventory[ProjectViewModel]
+0.090	tests/unit/py/test_operation_entry_census.py::test_writable_properties_cannot_bypass_the_ownership_inventory[ProjectViewModel]
 0.000	tests/unit/py/test_operation_entry_census.py::test_writable_properties_cannot_bypass_the_ownership_inventory[Session]
 UNMEASURED:not-completed-in-this-run	tests/unit/py/test_project_save_completion_reference.py::test_declared_complement_has_distinct_loaded_and_completed_boundaries
 UNMEASURED:not-completed-in-this-run	tests/unit/py/test_project_save_completion_reference.py::test_declared_expression_refuses_missing_cycles_and_unproved_forms[cycle]

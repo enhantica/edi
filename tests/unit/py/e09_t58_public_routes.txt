@@ -853,3 +853,14 @@ PdExperimentBase.xray_form_factor	other-public
 ScExperimentBase.neutron_scattering_length	other-public
 ScExperimentBase.xray_dispersion	other-public
 ScExperimentBase.xray_form_factor	other-public
+
+# Derived moment views and project-owned experiment sets.
+AtomSiteMoment.spherical	other-public
+DerivedQuantity	other-public
+DerivedQuantity.uncertainty	other-public
+DerivedQuantity.value	other-public
+Project.experiment_sets	other-public
+SphericalMoment	other-public
+SphericalMoment.azimuth	other-public
+SphericalMoment.modulus	other-public
+SphericalMoment.polar	other-public
