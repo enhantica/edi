@@ -4642,7 +4642,20 @@ struct AssistantViewModel::State {
         run->cue_fallback = true;
         run->cue_skipped = message.isEmpty() ? QStringLiteral("The original control could not be shown") : message;
         const auto receiver = run->receiver;
+        const auto record = native_call->record;
+        const auto receipt = native_call->receipt;
+        const auto rpc = native_call->rpc;
+        const QPointer<ProjectViewModel> target(project);
+        // A callback (the message handler, the helper's cleanup) may stop, take over or replace the operation: before
+        // anything runs, the original call must still be current and admitted. If it is not, whoever settled it owns
+        // the reply.
+        const auto original = [&] {
+            return receiver && receiver->state_.get() == this && native_call && native_call->record == record &&
+                   native_call->receipt == receipt && native_call->rpc == rpc && target && project == target &&
+                   !record->answered && !record->discarded && !record->completed && cue_fallback_admitted(run->call);
+        };
         try { qInfo().noquote() << "assistant: Show actions cue skipped for" << tool << "reason" << run->cue_skipped; } catch (...) {}
+        if (!original() || !widget_owned(run)) return true;
         try {
             if (tool == "edit_relation") {
                 run->relation_visible = false;
@@ -4658,6 +4671,7 @@ struct AssistantViewModel::State {
             if (tool == "run_fit") {
                 if (native_fit) return false;  // a fit already started
                 widget_end(run);
+                if (!original() || native_fit) return true;
                 try { native_start_fit_normal(); }
                 catch (const std::exception& error) {
                     if (receiver && receiver->state_.get() == this && native_call)
@@ -4668,8 +4682,7 @@ struct AssistantViewModel::State {
             std::vector<std::pair<std::string, bool>> before_flags;
             auto edit = assistant_native_edit(*project->assistantProject(), tool, run->fallback_args, before_flags);
             if (!edit) return false;
-            const auto record = native_call->record;
-            const QPointer<ProjectViewModel> target(project);
+            if (!original()) return true;
             const auto scope = begin_own_edit();
             native_call->may_have_written = true;
             ProjectViewModel::EditOutcome result;
