@@ -439,8 +439,8 @@ class PatternChartController : public QObject {
     // The style table the chart draws with: the report model's own in a report figure, else the palette's for the
     // project's experiments in the colour scheme.
     struct ScanStyles {
-        edi::ColourScheme scheme;
-        std::size_t files, structures;
+        edi::ColourScheme scheme{};
+        std::size_t files{}, structures{};
         std::vector<std::size_t> structure_positions;
         std::vector<edi::SeriesStyle> table;
     };

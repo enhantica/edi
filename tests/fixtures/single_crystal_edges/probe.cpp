@@ -23,6 +23,7 @@ std::string word(const T& item) {
 
 #ifdef EDGE_EDI
 #include "edi/categories.hpp"
+#include "edi/assistant.hpp"
 #include "edi/edit.hpp"
 #include "edi/io.hpp"
 namespace api = edi;
@@ -417,13 +418,23 @@ int main(int argc, char** argv) {
             if (action == "calc") {
                 calculate(p);
                 computed(p, "");
-            } else if (action == "fit" || action == "free") {
+            } else if (action == "fit" || action == "free" || action == "admission") {
                 const auto result = fit(p);
                 std::cout << "converged\t" << result.converged << "\nchi2\t"
                           << result.reduced_chi_square << '\n';
                 for (const auto& [key, x] : result.values)
                     std::cout << "fitted\t" << key << '\t' << x << '\n';
                 computed(p, "");
+                if (action == "admission") {
+                    save(p, output);
+#ifdef EDGE_EDI
+                    edi::work::Worker worker([](edi::work::Delivery delivery) { delivery(); });
+                    edi::assistant::Controller controller(worker, {});
+                    const auto attached = controller.attach(&p, "reflection-admission");
+                    if (!attached.ok) throw std::runtime_error(attached.code);
+                    text("inspect", controller.context());
+#endif
+                }
             } else if (action == "roundtrip") {
                 save(p, output);
                 auto restored = load(output);

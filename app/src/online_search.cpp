@@ -359,14 +359,14 @@ void OnlineSearch::search() {
                   pagingChanged();
                   if (count <= kChunk) {
                       fetch(QUrl(QString::fromStdString(edi::online::cod_search_url(root, query))),
-                            [this, generation](const QByteArray& bytes, const QString& error, bool unreachable) {
+                            [this, generation](const QByteArray& data, const QString& failure, bool offline) {
                                 if (generation != generation_) return;
-                                if (!error.isEmpty()) {
-                                    fail(error, unreachable);
+                                if (!failure.isEmpty()) {
+                                    fail(failure, offline);
                                     return;
                                 }
                                 try {
-                                    std::vector<edi::online::Entry> found = codAnswer(bytes);
+                                    std::vector<edi::online::Entry> found = codAnswer(data);
                                     total_ = static_cast<int>(found.size());
                                     finish(std::move(found));
                                 } catch (const std::exception& problem) {
@@ -376,14 +376,14 @@ void OnlineSearch::search() {
                       return;
                   }
                   fetch(QUrl(QString::fromStdString(edi::online::cod_search_url(root, query, "lst"))),
-                        [this, generation](const QByteArray& bytes, const QString& error, bool unreachable) {
+                        [this, generation](const QByteArray& data, const QString& failure, bool offline) {
                             if (generation != generation_) return;
-                            if (!error.isEmpty()) {
-                                fail(error, unreachable);
+                            if (!failure.isEmpty()) {
+                                fail(failure, offline);
                                 return;
                             }
                             pending_ids_.clear();
-                            for (const QByteArray& line : bytes.split('\n')) {
+                            for (const QByteArray& line : data.split('\n')) {
                                 const QByteArray id = line.trimmed();
                                 if (!id.isEmpty()) pending_ids_.push_back(id.toStdString());
                             }
@@ -482,7 +482,7 @@ QString write_download(QTemporaryDir& downloads, const QString& name, const QByt
         return {};
     }
     out.close();
-    return path;
+    return QString(path);
 }
 }  // namespace
 
@@ -790,13 +790,13 @@ void OnlineSearch::withIndex(const QStringList& bases, const std::function<void(
     });
 }
 
-void OnlineSearch::fetch(const QUrl& url, Bytes done) { fetch_url(this, network_, url, std::move(done)); }
-void OnlineSearch::fetchFrom(const QStringList& bases, const QString& path, Bytes done) { fetch_from(this, network_, bases, path, std::move(done)); }
+void OnlineSearch::fetch(const QUrl& url, const Bytes& done) { fetch_url(this, network_, url, done); }
+void OnlineSearch::fetchFrom(const QStringList& bases, const QString& path, const Bytes& done) { fetch_from(this, network_, bases, path, done); }
 
 // A file checked against the size and digest its index records. One that disagrees may come from a collection
 // published after the index was read: the index is read again and the file once more before the download is refused.
 void OnlineSearch::fetchChecked(const QStringList& bases, const QString& path, long long bytes, const QString& digest, const QString& name,
-                                Bytes done) {
+                                const Bytes& done) {
     fetchFrom(bases, path, [this, bases, path, bytes, digest, name, done](const QByteArray& data, const QString& error, bool unreachable) {
         if (!error.isEmpty()) {
             done({}, error, unreachable);
@@ -819,13 +819,13 @@ void OnlineSearch::fetchChecked(const QStringList& bases, const QString& path, l
                 return;
             }
             const edi::online::File file = found->files.front();
-            fetchFrom(bases, path, [file, name, done](const QByteArray& data, const QString& error, bool unreachable) {
-                if (!error.isEmpty()) {
-                    done({}, error, unreachable);
+            fetchFrom(bases, path, [file, name, done](const QByteArray& refetched, const QString& failure, bool offline) {
+                if (!failure.isEmpty()) {
+                    done({}, failure, offline);
                     return;
                 }
-                const QString again = content_problem(data, file.bytes, QString::fromStdString(file.sha256), name);
-                if (again.isEmpty()) done(data, {}, false);
+                const QString again = content_problem(refetched, file.bytes, QString::fromStdString(file.sha256), name);
+                if (again.isEmpty()) done(refetched, {}, false);
                 else done({}, again, false);
             });
         });

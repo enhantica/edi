@@ -93,29 +93,29 @@ class DemoDriver : public QObject {
     bool click_item(QQuickItem* item);
     void park_pointer();
     bool click(const QString& object_name);
-    void settle_then(std::function<void()> next);
+    void settle_then(const std::function<void()>& next);
     // Waits until the fit has ended or, with `files`, until a running scan has fitted that many files.
-    void wait_fit_then(std::function<void()> next, int waited_ms = 0, int files = -1);
+    void wait_fit_then(const std::function<void()>& next, int waited_ms = 0, int files = -1);
     // Presses only the status bar's Next until the running tutorial's last step; fails on a step Next cannot leave.
-    void tutorial_next_then(std::function<void()> next, int step = -1, int waited_ms = 0, int clicked_ms = -1);
+    void tutorial_next_then(const std::function<void()>& next, int step = -1, int waited_ms = 0, int clicked_ms = -1);
     // A fit step of a tutorial replay: the free set before the fit and the fit's outcome after it, each checked
     // against the step's expectFree and expectChi2 when the manifest gives them. False after a mismatch (failed).
     bool tutorial_fit_check(QObject* panel, int step);
     int fit_free_reported_ = -1, fit_result_reported_ = -1, sites_reported_ = -1, step_checked_ = -1, shot_step_ = -1;
     bool fit_seen_running_ = false;
     void fail(const QString& message);
-    void timed_fit_then(std::function<void()> next, int files, int stop_after);
+    void timed_fit_then(const std::function<void()>& next, int files, int stop_after);
     bool timed_reset();
     // Polls every few milliseconds until nothing is calculating, then calls `next`.
-    void idle_then(std::function<void()> next, int waited_ms = 0);
+    void idle_then(const std::function<void()>& next, int waited_ms = 0);
     // Waits until a display catching up with a scan has drawn every pattern, then until nothing is calculating.
-    void drawn_then(std::function<void()> next, int waited_ms = 0);
+    void drawn_then(const std::function<void()>& next, int waited_ms = 0);
     QString scan_work(int files) const;
     void record_time(const QString& label, qint64 ms);
     // Waits until a scan view's model has read every dataset, then calls `next`.
-    void wait_scan_then(std::function<void()> next, const QString& mode, int waited_ms = 0);
-    void wait_online_then(std::function<void()> next, int waited_ms = 0);
-    void wait_assistant_then(std::function<void()> next, int waited_ms = 0, int idle_polls = 0);
+    void wait_scan_then(const std::function<void()>& next, const QString& mode, int waited_ms = 0);
+    void wait_online_then(const std::function<void()>& next, int waited_ms = 0);
+    void wait_assistant_then(const std::function<void()>& next, int waited_ms = 0, int idle_polls = 0);
     // Applies `change` and waits for the first frame swapped after a scene synchronisation that follows it, and
     // follows `ready()` turning true when given; the milliseconds from the change to that swap, or -1 when none came.
     double frame_after(const std::function<void()>& change, const std::function<bool()>& ready = {});

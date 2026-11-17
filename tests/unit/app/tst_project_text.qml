@@ -430,5 +430,60 @@ Item {
             tryCompare(saveAsAsked, "count", 1, 5000, "Save report asks for a location when the opened source cannot be rewritten");
             compare(reportSaved.count, 0, "Reports are not published at an unchosen substitute location");
         }
+
+        function test_current_file_limit_refuses_occupancy_atomically() {
+            const block = Session.project.currentStructure;
+            const editor = openText(block), apply = applyButton();
+            const before = snapshot();
+            const lines = editor.text.split("\n");
+            const header = lines.indexOf("_atom_site.occupancy");
+            verify(header >= 0, "The independent Text-tab witness has an occupancy column");
+            let first = header;
+            while (first < lines.length && lines[first].startsWith("_")) first++;
+            let start = header;
+            while (start > 0 && lines[start-1].startsWith("_")) start--;
+            const tokens = lines[first].trim().split(/\s+/);
+            tokens[header-start] = "1.5";
+            lines[first] = tokens.join(" ");
+            editor.text = lines.join("\n");
+            tryCompare(apply, "enabled", true, 1000, "An out-of-range occupancy edit reaches the real Apply action");
+            click(apply);
+            compare(snapshot(), before, "A limit violation in the applied file leaves every parameter unchanged");
+            const warning = findChild(tab, "text.refusal");
+            verify(warning !== null && /occupancy/i.test(warning.text), "The current Text tab names its own occupancy limit refusal");
+            verify(/1|range|limit/i.test(warning.text), "The current-file refusal explains the admissible occupancy range");
+        }
+        function test_other_file_limit_posts_once_without_blocking_apply() {
+            Session.closeProject();
+            const location = SettingsProof.copyProject(proof.project());
+            const path = "structures/zz_second.edi";
+            const initial = SettingsProof.text(location, path);
+            const lines = initial.split("\n");
+            const header = lines.indexOf("_atom_site.occupancy");
+            verify(header >= 0, "The other structure has an independently bounded occupancy column");
+            let first = header, start = header;
+            while (first < lines.length && lines[first].startsWith("_")) first++;
+            while (start > 0 && lines[start-1].startsWith("_")) start--;
+            const row = lines[first].trim().split(/\s+/);
+            row[header-start] = "1.5";
+            lines[first] = row.join(" ");
+            const changed = lines.join("\n");
+            verify(changed !== initial, "The other-file witness declares an independently invalid occupancy above one in another file");
+            verify(SettingsProof.write(location, path, changed), "The disposable project retains an out-of-range item in the other structure file");
+            verify(Session.openProject(location), "A project with a warning-only parameter limit can open for correction");
+            const block = Session.project.currentStructure;
+            const editor = openText(block), apply = applyButton();
+            const edited = editor.text.replace(/(_cell.length_a\s+)\S+/, "$1" + "5.4317");
+            verify(edited !== editor.text, "The current-file edit changes a valid lattice constant");
+            for (const value of ["5.4317", "5.4318"]) {
+                editor.text = editor.text.replace(/(_cell.length_a\s+)\S+/, "$1" + value);
+                tryCompare(apply, "enabled", true, 1000, "An unrelated other-file warning leaves the Structure Apply available");
+                click(apply);
+                tryCompare(block.cell.lengthA, "value", Number(value), 1000, "A warning from another file cannot block a valid current-file Text apply");
+                compare(findChild(tab, "text.refusal").text, "", "The current Text tab does not display another file's warning as its refusal");
+                const warnings = Probe.rows(Session.loadWarnings).filter(row => /occupancy/i.test(String(row.message)));
+                compare(warnings.length, 1, "Repeated valid applies retain the other-file occupancy warning exactly once in Messages");
+            }
+        }
     }
 }

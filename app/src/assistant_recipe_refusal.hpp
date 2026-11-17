@@ -7,8 +7,8 @@ namespace edi_app {
 // Canonical mapped-schema description shared by offered schema/refusal (ADR-0057).
 inline constexpr std::string_view mapped_structure_guidance = "Use the offered create_cwl_project mapped_structure schema for tool field names; scientific guidance and source research do not change that schema. Required root keys: name, space_group, cell, atom_sites, atom_site_adps. space_group requires name_h_m and coord_system_code. cell requires length_a, length_b, length_c, angle_alpha, angle_beta, angle_gamma. Every atom_sites row requires id, type_symbol, fract_x, fract_y, fract_z, occupancy. wyckoff_letter is optional: omit it for the native automatic/default assignment, preserving an explicit source/user declaration when supplied. Every atom_site_adps row requires id and adp_type: Biso/Uiso requires adp_iso; Bani/Uani/beta requires adp_11, adp_22, adp_33, adp_12, adp_13, adp_23. Both arrays must be nonempty, with unique matching IDs and one ADP row per site. Include every required key even where the schema permits an empty string. Obtain scientific values from admitted source/current evidence; never guess or require a manual Wyckoff letter. No extra keys or substitute spellings are admitted. A mapped_structure refusal is not setup completion: inspect current state and correct the complete shape only within unchanged input/owner authority after a proved prewrite refusal; never replay partial/uncertain work or generate a CIF.";
 static_assert([] {
-    for(unsigned char c:mapped_structure_guidance)
-        if(c<0x20 || c>0x7e || c=='"' || c=='\\')return false;
+    for(const char ch:mapped_structure_guidance)
+        if(const auto c=static_cast<unsigned char>(ch); c<0x20 || c>0x7e || c=='"' || c=='\\')return false;
     return true;
 }());
 // Closed app-owned recipe identifiers, never provider text or exception what().

@@ -126,6 +126,9 @@ nav:
           - "ADR-0089 Series views": dev/adrs/0089-series-views-shared-and-per-experiment.md
           - "ADR-0090 Pattern x axes": dev/adrs/0090-pattern-x-axes.md
           - "ADR-0091 Code signing": dev/adrs/0091-code-signing.md
+          - "ADR-0089 C++ static checks": dev/adrs/0089-cpp-warnings-and-static-checks.md
+          - "ADR-0090 Common phase-scale factor": dev/adrs/0090-common-phase-scale-factor.md
+          - "ADR-0092 Single-crystal reflection admission": dev/adrs/0092-single-crystal-reflection-admission.md
           - "ADR-0092 About page": dev/adrs/0092-about-page.md
           - dev/adrs/template.md
       - Design:

@@ -18,8 +18,9 @@ target_include_directories(edi_core
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/src
-        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/miniz
 )
+# miniz is vendored code: a system header, so edi's warning set does not reach it.
+target_include_directories(edi_core SYSTEM PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/third_party/miniz)
 # miniz (core/third_party/miniz, edi ADR-0052) reads and writes project archives; without zlib's names it cannot
 # clash with the zlib Qt links.
 target_compile_definitions(edi_core PRIVATE MINIZ_NO_ZLIB_COMPATIBLE_NAMES)

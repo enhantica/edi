@@ -57,6 +57,7 @@ ColourTable read_colour_map(const char* tsv, const std::string& name) {
 const std::vector<ColourTable>& colour_maps() {
     static const std::vector<ColourTable> tables = [] {
         std::vector<ColourTable> out;
+        out.reserve(detail::kColourMapCount);
         for (std::size_t i = 0; i < detail::kColourMapCount; ++i) {
             out.push_back(read_colour_map(detail::kColourMapTsvs[i], detail::kColourMapNames[i]));
         }
@@ -294,8 +295,12 @@ std::vector<float> scan_pixel_values(std::span<const double> x, std::span<const 
         }
         const double low = std::min(xa, xb), high = std::max(xa, xb);
         const double first = std::ceil((low - x_min) / width - 0.5), last = std::floor((high - x_min) / width - 0.5);
-        for (double c = std::max(0.0, first); c <= std::min(static_cast<double>(columns) - 1.0, last); c += 1.0) {
-            const double centre = x_min + (c + 0.5) * width;
+        const double top = std::min(static_cast<double>(columns) - 1.0, last);
+        if (!(std::max(0.0, first) <= top)) {
+            continue;  // no column centre in this segment; also keeps a huge first out of the integer counter
+        }
+        for (auto c = static_cast<std::ptrdiff_t>(std::max(0.0, first)); static_cast<double>(c) <= top; ++c) {
+            const double centre = x_min + (static_cast<double>(c) + 0.5) * width;
             out[static_cast<std::size_t>(c)] = static_cast<float>(ya + (yb - ya) * (centre - xa) / (xb - xa));
         }
     }

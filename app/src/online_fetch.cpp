@@ -59,7 +59,7 @@ QString content_problem(const QByteArray& bytes, long long expected_bytes, const
 QUrl joined_url(const QString& base, const QString& path) {
     QString root = base;
     while (root.endsWith(u'/')) root.chop(1);
-    const QUrl url(root + u'/' + path);
+    QUrl url(root + u'/' + path);
     if (url.scheme().isEmpty()) return QUrl::fromLocalFile(root + u'/' + path);
     return url;
 }
@@ -68,7 +68,7 @@ namespace {
 // One step of a core read (ADR-0075): fetch the location the core names, report the result, and go on while the core
 // names another. The core decides fallback; this file only transports.
 void fetch_step(QObject* owner, QNetworkAccessManager*& manager, const std::shared_ptr<edi::online::FileRead>& read,
-                FetchDone done, FetchProgress progress) {
+                const FetchDone& done, const FetchProgress& progress) {
     const QString location = QString::fromStdString(read->url());
     QUrl url(location);
     if (url.scheme().isEmpty()) url = QUrl::fromLocalFile(location);
@@ -88,7 +88,8 @@ void fetch_step(QObject* owner, QNetworkAccessManager*& manager, const std::shar
 }
 }  // namespace
 
-void fetch_from(QObject* owner, QNetworkAccessManager*& manager, const QStringList& bases, const QString& path, FetchDone done, FetchProgress progress) {
+void fetch_from(QObject* owner, QNetworkAccessManager*& manager, const QStringList& bases, const QString& path, const FetchDone& done,
+                const FetchProgress& progress) {
     if (bases.isEmpty()) {
         done({}, QCoreApplication::translate("OnlineSearch", "No location to read %1 from").arg(path), true);
         return;
@@ -96,10 +97,11 @@ void fetch_from(QObject* owner, QNetworkAccessManager*& manager, const QStringLi
     std::vector<std::string> locations;
     for (const QString& base : bases) locations.push_back(base.toStdString());
     fetch_step(owner, manager, std::make_shared<edi::online::FileRead>(std::move(locations), path.toStdString()),
-               std::move(done), std::move(progress));
+               done, progress);
 }
 
-void fetch_url(QObject* owner, QNetworkAccessManager*& manager, const QUrl& url, FetchDone done, FetchProgress progress) {
+void fetch_url(QObject* owner, QNetworkAccessManager*& manager, const QUrl& url, const FetchDone& done,
+               const FetchProgress& progress) {
     if (url.isLocalFile() || url.scheme().isEmpty()) {
         const QString path = url.isLocalFile() ? url.toLocalFile() : url.toString();
         QTimer::singleShot(0, owner, [path, done, progress, receiver = QPointer<QObject>(owner)] {

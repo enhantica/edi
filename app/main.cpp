@@ -12,6 +12,7 @@
 #include <QSurfaceFormat>
 #include <QtQml/qqmlextensionplugin.h>
 #include <cstdio>
+#include <exception>
 #include <memory>
 #if defined(Q_OS_UNIX)
 #include <unistd.h>
@@ -33,6 +34,25 @@ double merge_mac_title_bar(QWindow* window);
 
 Q_IMPORT_QML_PLUGIN(edi_appPlugin)
 
+namespace {
+// A failure in one event's handler is logged and that event dropped; it never reaches the event loop, which would end
+// the app (a model call refusing a project it cannot take, say one without an experiment).
+class GuardedApplication final : public QGuiApplication {
+   public:
+    using QGuiApplication::QGuiApplication;
+    bool notify(QObject* receiver, QEvent* event) override {
+        try {
+            return QGuiApplication::notify(receiver, event);
+        } catch (const std::exception& error) {
+            qCritical("edi: an event handler failed and was skipped: %s", error.what());
+        } catch (...) {
+            qCritical("edi: an event handler failed and was skipped");
+        }
+        return false;
+    }
+};
+}  // namespace
+
 // Thin QML host (ADR-0009): it hosts the QML tree and wires the product core through the app-layer
 // view-models. No product logic here. One host, two build targets — desktop and WASM — from this one
 // source tree (ADR-0006).
@@ -41,7 +61,7 @@ int main(int argc, char* argv[]) {
         return *code;  // before the platform checks, so the refusal names the observer request
     }
     edi_app::select_freetype_engine(argc, argv);  // before the QGuiApplication reads the platform
-    QGuiApplication app(argc, argv);
+    GuardedApplication app(argc, argv);
 #if !defined(__EMSCRIPTEN__) && !defined(Q_OS_MACOS)
     app.setWindowIcon(QIcon(QStringLiteral(":/qt/qml/edi/app/resources/logo/App.svg")));
 #endif

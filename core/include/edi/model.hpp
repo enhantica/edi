@@ -72,7 +72,8 @@ struct HolderSlot {
     Structure* structure = nullptr;
     HolderSlot() noexcept = default;
     HolderSlot(const HolderSlot& /*other*/) noexcept {}
-    HolderSlot& operator=(const HolderSlot& /*other*/) noexcept { return *this; }
+    // NOLINTNEXTLINE(bugprone-unhandled-self-assignment,cert-oop54-cpp): keeps its own holder, so self-assignment is a no-op
+    HolderSlot& operator=(const HolderSlot& /*other*/) noexcept { return *this; }  // cppcheck-suppress operatorEqVarError ; keeps its own holder and links
     ~HolderSlot() = default;
     friend bool operator==(const HolderSlot& /*a*/, const HolderSlot& /*b*/) noexcept { return true; }
 };
@@ -117,6 +118,7 @@ class RowLink {
    public:
     RowLink() = default;
     RowLink(const RowLink&) noexcept {}
+    // NOLINTNEXTLINE(bugprone-unhandled-self-assignment,cert-oop54-cpp): keeps its own link, so self-assignment is a no-op
     RowLink& operator=(const RowLink&) noexcept { return *this; }
     ~RowLink() = default;
 
@@ -466,7 +468,7 @@ class Written {
     // The value, or an optional's contained value, read-only.
     decltype(auto) operator*() const {
         if constexpr (is_optional<T>::value) {
-            return (*state_.v());
+            return (*state_.v());  // NOLINT(bugprone-unchecked-optional-access): unchecked as std::optional's own operator*
         } else {
             return (state_.v());
         }
@@ -759,6 +761,7 @@ class Written {
                 other.drained();
             }
         }
+        // cppcheck-suppress operatorEqVarError ; the assignment copies values and keeps this object's own holder and links
         State& operator=(const State& other) noexcept(
             std::is_nothrow_copy_constructible_v<T> && std::is_nothrow_move_assignable_v<T> &&
             std::is_nothrow_copy_constructible_v<Table> &&
@@ -772,6 +775,7 @@ class Written {
             renew();  // a self-assignment is a write too
             return *this;
         }
+        // cppcheck-suppress operatorEqVarError ; the assignment copies values and keeps this object's own holder and links
         State& operator=(State&& other) noexcept(std::is_nothrow_move_assignable_v<T>) {
             if (this != &other) {
                 v() = std::move(other.v());
@@ -1083,6 +1087,7 @@ class WrittenText {
                 other.renew();
             }
         }
+        // cppcheck-suppress operatorEqVarError ; the assignment copies values and keeps this object's own holder and links
         TextState& operator=(const TextState& other) {
             if (this != &other) {
                 v() = other.v();
@@ -1090,6 +1095,7 @@ class WrittenText {
             renew();
             return *this;
         }
+        // cppcheck-suppress operatorEqVarError ; the assignment copies values and keeps this object's own holder and links
         TextState& operator=(TextState&& other) noexcept {
             if (this != &other) {
                 v() = std::move(other.v());
@@ -1136,7 +1142,7 @@ class DataSource {
     DataSource() = default;
     DataSource(const DataSource& /*other*/) noexcept {}
     // NOLINTNEXTLINE(bugprone-unhandled-self-assignment,cert-oop54-cpp) — keeps its own link
-    DataSource& operator=(const DataSource& /*other*/) noexcept { return *this; }
+    DataSource& operator=(const DataSource& /*other*/) noexcept { return *this; }  // cppcheck-suppress operatorEqVarError ; keeps its own holder and links
     ~DataSource() = default;
 
     void link(ExperimentBase& experiment, std::uint64_t node) noexcept {
@@ -1159,7 +1165,8 @@ class CategoryRef {
    public:
     CategoryRef() = default;
     CategoryRef(const CategoryRef&) noexcept {}
-    CategoryRef& operator=(const CategoryRef&) noexcept { return *this; }
+    // NOLINTNEXTLINE(bugprone-unhandled-self-assignment,cert-oop54-cpp): keeps its own attachment, so self-assignment is a no-op
+    CategoryRef& operator=(const CategoryRef&) noexcept { return *this; }  // cppcheck-suppress operatorEqVarError ; keeps its own holder and links
     ~CategoryRef() = default;
 
     void point_at(const RowLink& link) noexcept { link_ = &link; }
@@ -1467,9 +1474,11 @@ class ProjectAnchor {
    protected:
     ProjectAnchor() { open(); }
     ProjectAnchor(const ProjectAnchor& /*other*/) { open(); }
+    // NOLINTNEXTLINE(performance-noexcept-move-constructor): a move opens a fresh record, which allocates
     ProjectAnchor(ProjectAnchor&& /*other*/) { open(); }
     // NOLINTNEXTLINE(bugprone-unhandled-self-assignment,cert-oop54-cpp) — keeps its own record
-    ProjectAnchor& operator=(const ProjectAnchor& /*other*/) noexcept { return *this; }
+    ProjectAnchor& operator=(const ProjectAnchor& /*other*/) noexcept { return *this; }  // cppcheck-suppress operatorEqVarError ; keeps its own holder and links
+    // cppcheck-suppress operatorEqVarError ; the assignment copies values and keeps this object's own holder and links
     ProjectAnchor& operator=(ProjectAnchor&& /*other*/) noexcept { return *this; }
     ~ProjectAnchor();
 
@@ -1489,10 +1498,11 @@ class ProjectTail {
     ProjectTail(const ProjectTail& /*other*/) { close(); }
     ProjectTail(ProjectTail&& /*other*/) noexcept { close(); }
     // NOLINTNEXTLINE(bugprone-unhandled-self-assignment,cert-oop54-cpp) — relinks its own project
-    ProjectTail& operator=(const ProjectTail& /*other*/) noexcept {
+    ProjectTail& operator=(const ProjectTail& /*other*/) noexcept {  // cppcheck-suppress operatorEqVarError ; keeps its own holder and links
         relink();
         return *this;
     }
+    // cppcheck-suppress operatorEqVarError ; the assignment copies values and keeps this object's own holder and links
     ProjectTail& operator=(ProjectTail&& /*other*/) noexcept {
         relink();
         return *this;
@@ -1526,7 +1536,8 @@ class KeyedBase {
     KeyedBase(const KeyedBase& /*other*/) noexcept {}
     KeyedBase(KeyedBase&& /*other*/) noexcept {}
     // NOLINTNEXTLINE(bugprone-unhandled-self-assignment,cert-oop54-cpp) — keeps its own host
-    KeyedBase& operator=(const KeyedBase& /*other*/) noexcept { return *this; }
+    KeyedBase& operator=(const KeyedBase& /*other*/) noexcept { return *this; }  // cppcheck-suppress operatorEqVarError ; keeps its own holder and links
+    // cppcheck-suppress operatorEqVarError ; the assignment copies values and keeps this object's own holder and links
     KeyedBase& operator=(KeyedBase&& /*other*/) noexcept { return *this; }
     virtual ~KeyedBase() = default;
     // Admit renaming `key` — the id of one of this collection's items — to `next`, or throw. Returns
@@ -2160,7 +2171,7 @@ class ItemVec final : public detail::KeyedBase {
     // taken or another live collection holds it.
     void push_back(Ptr item) {
         std::vector<Ptr> candidate = store_.items();
-        candidate.push_back(item);
+        candidate.push_back(std::move(item));
         DefaultIds defaults(candidate);
         require_admissible(candidate, "insertion");
         std::shared_ptr<detail::Membership> record = first_record();
@@ -2168,7 +2179,7 @@ class ItemVec final : public detail::KeyedBase {
         Table& table = made ? *made : *table_;
         std::shared_ptr<crysta::detail::RowAnchor> anchor =
             crysta::detail::AnchorList::fresh(&table, &Table::anchors);
-        std::shared_ptr<detail::RowHold> hold = Table::record_of(*item, 1);
+        std::shared_ptr<detail::RowHold> hold = Table::record_of(*candidate.back(), 1);
         table.holds.reserve(candidate.size());
         typename Table::Columns columns = detail::CellHold::columns_of<T>(candidate);
         table.anchors.add_slot();  // the last step that can throw; nothing has changed yet
@@ -2181,6 +2192,7 @@ class ItemVec final : public detail::KeyedBase {
         defaults.commit();
     }
     // Appends a copy of a value.
+    // NOLINTNEXTLINE(performance-unnecessary-value-param): moved into the row for the types that move (experiments)
     void push_back(T value) { push_back(std::make_shared<T>(std::move(value))); }
     // Replaces the item at `i` (the old one is detached; a held reference survives).
     void replace_at(std::size_t i, Ptr item) {
@@ -3267,11 +3279,13 @@ struct KeyTraits<LineSegment> {
     static const char* category() { return "background point"; }
 };
 
-/// An exclusion interval with a collection-owned stored identifier (ADR-0029).
+/// An exclusion interval with a collection-owned stored identifier (ADR-0029). A powder's interval is on its
+/// pattern's axis (`axis` empty); a single crystal's names its axis, `d_spacing` or `sin_theta_over_lambda`.
 struct ExcludedRegion : std::enable_shared_from_this<ExcludedRegion> {
     ItemKey id;
     detail::Written<double> first{0.0};
     detail::Written<double> second{0.0};
+    detail::WrittenText axis;
     detail::RowLink row;
     detail::Epoch epoch;
     ExcludedRegion(double start = 0.0, double end = 0.0) : first(start), second(end) {}
@@ -3292,6 +3306,35 @@ struct RowTraits<ExcludedRegion> {
     static void link(ExcludedRegion& region, const std::shared_ptr<detail::Membership>& record) noexcept { region.row.link(record); }
     static void unlink(ExcludedRegion& region) noexcept { region.row.unlink(); }
     static const detail::RowLink* primary(const ExcludedRegion& region) noexcept { return &region.row; }
+};
+
+/// A single crystal's reflection left out of the fit by its indices (`_excluded_reflection`). The indices are
+/// reduced under the experiment's merge mode, so a merged mode leaves out the reflection's equivalents too.
+struct ExcludedReflection : std::enable_shared_from_this<ExcludedReflection> {
+    ItemKey id;
+    detail::Written<int> index_h{0};
+    detail::Written<int> index_k{0};
+    detail::Written<int> index_l{0};
+    detail::RowLink row;
+    detail::Epoch epoch;
+    ExcludedReflection(int h = 0, int k = 0, int l = 0) : index_h(h), index_k(k), index_l(l) {}
+};
+template <>
+struct KeyTraits<ExcludedReflection> {
+    static constexpr bool ordinal_defaults = true;
+    static ItemKey& key(ExcludedReflection& row) { return row.id; }
+    static const ItemKey& key(const ExcludedReflection& row) { return row.id; }
+    static std::string canonical(const std::string& id) {
+        if (id.empty()) throw std::invalid_argument("excluded-reflection id must not be empty");
+        return id;
+    }
+    static const char* category() { return "excluded reflection"; }
+};
+template <>
+struct RowTraits<ExcludedReflection> {
+    static void link(ExcludedReflection& row, const std::shared_ptr<detail::Membership>& record) noexcept { row.row.link(record); }
+    static void unlink(ExcludedReflection& row) noexcept { row.row.unlink(); }
+    static const detail::RowLink* primary(const ExcludedReflection& row) noexcept { return &row.row; }
 };
 
 // A background point is a row of its experiment's `background`.
@@ -3324,9 +3367,17 @@ namespace crysta {
 template <>
 struct RowSchema<edi::ExcludedRegion> {
     static constexpr const char* name = "_excluded_region";
-    static constexpr auto fields = std::tuple{&edi::ExcludedRegion::id, &edi::ExcludedRegion::first, &edi::ExcludedRegion::second};
-    static constexpr std::array items{"id", "start", "end"};
+    static constexpr auto fields = std::tuple{&edi::ExcludedRegion::id, &edi::ExcludedRegion::first, &edi::ExcludedRegion::second,
+                                              &edi::ExcludedRegion::axis};
+    static constexpr std::array items{"id", "start", "end", "axis"};
     static constexpr std::array legacy{"_easydiffraction_excluded_region"};
+};
+template <>
+struct RowSchema<edi::ExcludedReflection> {
+    static constexpr const char* name = "_excluded_reflection";
+    static constexpr auto fields = std::tuple{&edi::ExcludedReflection::id, &edi::ExcludedReflection::index_h,
+                                              &edi::ExcludedReflection::index_k, &edi::ExcludedReflection::index_l};
+    static constexpr std::array items{"id", "index_h", "index_k", "index_l"};
 };
 }
 
@@ -4137,10 +4188,10 @@ struct EditRecord {
 // and the declarations are unchanged.
 struct GeometrySource {
     std::string inputs;
-    std::shared_ptr<const ProjectLink> owner;
-    std::shared_ptr<const Membership> aliases;
-    std::shared_ptr<const Membership> constraints;
-    std::string relations;
+    std::shared_ptr<const ProjectLink> owner{};
+    std::shared_ptr<const Membership> aliases{};
+    std::shared_ptr<const Membership> constraints{};
+    std::string relations{};
 };
 
 // The project's handle on its EditRecord, which is never null: a copy starts its own record; an
@@ -4152,12 +4203,14 @@ class EditLog {
    public:
     EditLog() : record_(std::make_shared<EditRecord>()) {}
     EditLog(const EditLog& /*other*/) : EditLog() {}
+    // NOLINTNEXTLINE(performance-noexcept-move-constructor): the moved-from log gets a fresh record, which allocates
     EditLog(EditLog&& other) : record_(std::exchange(other.record_, std::make_shared<EditRecord>())) {}
     // NOLINTNEXTLINE(bugprone-unhandled-self-assignment,cert-oop54-cpp) — an assignment is an edit
     EditLog& operator=(const EditLog& /*other*/) noexcept {
         renew();
         return *this;
     }
+    // NOLINTNEXTLINE(performance-noexcept-move-constructor): the moved-from log gets a fresh record, which allocates
     EditLog& operator=(EditLog&& other) {
         if (this != &other) {
             record_ = std::exchange(other.record_, std::make_shared<EditRecord>());
@@ -4271,6 +4324,12 @@ struct ExperimentBase : std::enable_shared_from_this<ExperimentBase> {
     // reported R factors and counts are taken over, never which a fit uses.
     std::optional<double> reflns_threshold_sigma;
     std::optional<std::string> reflns_threshold_basis;
+    // How a single crystal's equivalent reflections are merged (`_reflns.merge`: none, point_group or laue_class)
+    // and whether its systematic absences are left out of the fit (`_reflns.absences`: exclude or include), each
+    // absent until declared (absent: none, include), and its reflections left out by their indices.
+    std::optional<std::string> reflns_merge;
+    std::optional<std::string> reflns_absences;
+    ItemVec<ExcludedReflection> excluded_reflections;
     // A data-free constant-wavelength single crystal's resolution limit (`_data_range.sin_theta_over_lambda_max`,
     // inverse angstroms): it then calculates the reflections its space group allows up to it.
     std::optional<double> sin_theta_over_lambda_max;
@@ -4482,9 +4541,9 @@ struct IterationRecord {
     int unevaluable_trials = 0;
     // The step's parameter values by edi identity path — what a live surface draws the pattern of.
     // Carried on the streamed record only (a subscriber's); the history keeps none.
-    std::map<std::string, double> values;
+    std::map<std::string, double> values{};
     /// Raw objective reported by the engine; absent when unavailable.
-    std::optional<double> objective_value;
+    std::optional<double> objective_value{};
 };
 
 
@@ -4774,6 +4833,11 @@ std::vector<std::string> extinction_type_tokens();
 std::vector<std::string> mosaic_distribution_tokens();
 // The observed threshold's bases (`intensity`, `amplitude`).
 std::vector<std::string> reflns_threshold_basis_tokens();
+// A single crystal's merge modes (`none`, `point_group`, `laue_class`), absences settings (`exclude`, `include`)
+// and excluded-region axes (`d_spacing`, `sin_theta_over_lambda`), crysta's spellings.
+std::vector<std::string> reflns_merge_tokens();
+std::vector<std::string> reflns_absences_tokens();
+std::vector<std::string> excluded_region_axis_tokens();
 std::string absorption_file_token(BeamModeEnum mode, const std::string& token);
 std::string absorption_registry_token(BeamModeEnum mode, const std::string& file_token);
 // The highest term order a background type admits, from crysta's table: 5 for `polynomial`, 23 for `chebyshev`,
@@ -5380,7 +5444,7 @@ class Project : public detail::ProjectAnchor {
     std::string minimizer_stop_rules;
     double minimizer_shift_tolerance = 0.0;
     // Whether a fit tries free magnetic moments at exactly zero: `try_exact_zero` or `keep_free` (empty = not
-    // declared -> try_exact_zero).
+    // declared -> keep_free).
     std::string minimizer_moments_near_zero;
     // The declared `_minimizer.type`, kept as written so a save round-trips it — an empty value
     // included (absent = not declared; a save does not add it). Only `crysta` is supported: any
@@ -5659,11 +5723,14 @@ inline void follow_site_references(Project* project, Structure* structure, const
         const auto block = datablock_key(structure->name.value(), "structure") + ".";
         rename_scan_results(project->fit_result, [&](const std::string& name) -> std::optional<std::string> {
             for (const char* category : {"atom_site.", "atom_site_aniso.", "atom_site_moment."}) {
-                const auto root = block + category + from + ".";
+                std::string root = block;
+                root.append(category).append(from).append(".");
                 if (name.starts_with(root)) {
                     const std::string field = name.substr(root.size());
                     if (field.find('.') == std::string::npos) {
-                        return block + category + to + "." + field;
+                        std::string renamed = block;
+                        renamed.append(category).append(to).append(".").append(field);
+                        return renamed;
                     }
                 }
             }
@@ -5873,8 +5940,9 @@ struct ReflnsCategory {
     using Owner = ExperimentBase;
     static constexpr const char* name = "_reflns";
     static constexpr auto columns =
-        std::tuple{&ExperimentBase::reflns_threshold_sigma, &ExperimentBase::reflns_threshold_basis};
-    static constexpr std::array items{"threshold_sigma", "threshold_basis"};
+        std::tuple{&ExperimentBase::reflns_threshold_sigma, &ExperimentBase::reflns_threshold_basis,
+                   &ExperimentBase::reflns_merge, &ExperimentBase::reflns_absences};
+    static constexpr std::array items{"threshold_sigma", "threshold_basis", "merge", "absences"};
 };
 static_assert(detail::one_entry_per_column(ReflnsCategory::columns, ReflnsCategory::items));
 
@@ -6293,7 +6361,7 @@ inline InstrumentBase::InstrumentBase() {
 
 // The parameter walks. Inline for the same TU-list reason as the spec attachments.
 namespace detail {
-inline std::vector<Parameter*> free_of(std::vector<Parameter*> all) {
+inline std::vector<Parameter*> free_of(const std::vector<Parameter*>& all) {
     std::vector<Parameter*> free;
     for (Parameter* parameter : all) {
         if (parameter->free) {
@@ -6353,7 +6421,7 @@ inline std::vector<Parameter*> Structure::parameters() {
 inline std::vector<Parameter*> Structure::free_parameters() { return detail::free_of(parameters()); }
 inline std::vector<Parameter*> PeakBase::parameters() {
     std::vector<Parameter*> out;
-    out.reserve(fixed_parameter_members.size()+std::count_if(optional_parameter_members.begin(),optional_parameter_members.end(),[this](auto member){return bool(this->*member);}));
+    out.reserve(fixed_parameter_members.size()+static_cast<std::size_t>(std::count_if(optional_parameter_members.begin(),optional_parameter_members.end(),[this](auto member){return bool(this->*member);})));
     for(auto member:fixed_parameter_members)out.push_back(&(this->*member));
     for(auto member:optional_parameter_members)detail::push_optional(out,this->*member);
     return out;
@@ -6521,15 +6589,21 @@ inline std::string peak_slots_mismatch(const ExperimentBase& experiment) {
                                                                         : profile.beba;
         const bool required = tag.rfind("_peak.broad_gauss_", 0) == 0 || (lorentz && profile.lorentz_xy);
         if (field.has_value() && !carried) {
-            return where + tag + " is not a parameter of _peak.type '" + declared +
-                   "': each profile carries only its own parameters";
+            std::string message = where;
+            message.append(tag).append(" is not a parameter of _peak.type '").append(declared);
+            message.append("': each profile carries only its own parameters");
+            return message;
         }
         if (!field.has_value() && required) {
-            return where + "_peak.type '" + declared + "' requires " + tag;
+            std::string message = where;
+            message.append("_peak.type '").append(declared).append("' requires ").append(tag);
+            return message;
         }
         if (field.has_value() && field->spec != nullptr && field->spec != slot.spec) {
-            return where + "the parameter in " + tag + " carries the metadata of '" + field->spec->name +
-                   "', another parameter";
+            std::string message = where;
+            message.append("the parameter in ").append(tag).append(" carries the metadata of '");
+            message.append(field->spec->name).append("', another parameter");
+            return message;
         }
     }
     return {};

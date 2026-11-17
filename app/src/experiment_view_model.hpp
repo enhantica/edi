@@ -7,6 +7,7 @@
 #include <QSet>
 #include <QtNumeric>
 #include <QString>
+#include <QStringList>
 #include <QtQml/qqmlregistration.h>
 #include <array>
 #include <cstdint>
@@ -28,6 +29,35 @@ namespace edi_app {
 
 class ParameterRegistry;
 class ProjectEditor;
+
+// Which of a single crystal's reflections the fit uses, as crysta's admission counts them: `available` is false
+// without measured reflections; Rint and R-sigma are NaN when undefined.
+struct ReflectionAdmissionSummary {
+    Q_GADGET
+    QML_VALUE_TYPE(reflectionAdmissionSummary)
+    Q_PROPERTY(bool available MEMBER available CONSTANT)
+    Q_PROPERTY(int measured MEMBER measured CONSTANT)
+    Q_PROPERTY(int unique MEMBER unique CONSTANT)
+    Q_PROPERTY(int used MEMBER used CONSTANT)
+    Q_PROPERTY(int excluded MEMBER excluded CONSTANT)
+    Q_PROPERTY(int absent MEMBER absent CONSTANT)
+    Q_PROPERTY(double rInt MEMBER rInt CONSTANT)
+    Q_PROPERTY(double rSigma MEMBER rSigma CONSTANT)
+    Q_PROPERTY(double absentMeanIOverSigma MEMBER absentMeanIOverSigma CONSTANT)
+
+   public:
+    bool available = false;
+    int measured = 0, unique = 0, used = 0, excluded = 0, absent = 0;
+    double rInt = qQNaN(), rSigma = qQNaN(), absentMeanIOverSigma = 0.0;
+    // NaN, an undefined factor, equals NaN here, so an unchanged admission is no change.
+    bool operator==(const ReflectionAdmissionSummary& other) const {
+        const auto same = [](double a, double b) { return a == b || (qIsNaN(a) && qIsNaN(b)); };
+        return available == other.available && measured == other.measured && unique == other.unique &&
+               used == other.used && excluded == other.excluded && absent == other.absent &&
+               same(rInt, other.rInt) && same(rSigma, other.rSigma) &&
+               same(absentMeanIOverSigma, other.absentMeanIOverSigma);
+    }
+};
 
 // One experiment of the project. The four type axes are read-only; the selectors offer the
 // core's supported set for the type and write through the D11 core functions; everything the
@@ -86,6 +116,17 @@ class ExperimentViewModel : public QObject {
     Q_PROPERTY(edi_app::OptionListModel* reflnsThresholdBasisOptions READ reflnsThresholdBasisOptions CONSTANT)
     Q_PROPERTY(QString reflnsThresholdExpression READ reflnsThresholdExpression NOTIFY
                    reflnsThresholdExpressionChanged)
+    // Which of a single crystal's reflections a fit uses: the merge mode and the absences setting (empty until set;
+    // none and include by default), the admission's counts and agreement (`measured`, `unique`, `used`, `excluded`,
+    // `absent`, `rInt` and `rSigma`, NaN when undefined, `absentMeanIOverSigma`), and per measured reflection its
+    // `_refln.include_status` code (o, x, -, <); empty without measured reflections.
+    Q_PROPERTY(QString reflnsMerge READ reflnsMerge WRITE setReflnsMerge NOTIFY reflnsMergeChanged)
+    Q_PROPERTY(edi_app::OptionListModel* reflnsMergeOptions READ reflnsMergeOptions CONSTANT)
+    Q_PROPERTY(QString reflnsAbsences READ reflnsAbsences WRITE setReflnsAbsences NOTIFY reflnsAbsencesChanged)
+    Q_PROPERTY(edi_app::OptionListModel* reflnsAbsencesOptions READ reflnsAbsencesOptions CONSTANT)
+    Q_PROPERTY(edi_app::OptionListModel* excludedRegionAxisOptions READ excludedRegionAxisOptions CONSTANT)
+    Q_PROPERTY(edi_app::ReflectionAdmissionSummary reflectionAdmission READ reflectionAdmission NOTIFY reflectionAdmissionChanged)
+    Q_PROPERTY(QStringList reflectionStatuses READ reflectionStatuses NOTIFY reflectionStatusesChanged)
     // The background model; another type replaces the background (edi::select_background_type).
     Q_PROPERTY(QString backgroundType READ backgroundType WRITE setBackgroundType NOTIFY backgroundTypeChanged)
     // The polynomial's origin and the Chebyshev domain's ends; NaN when the type has none.
@@ -168,7 +209,7 @@ class ExperimentViewModel : public QObject {
     enum ScatteringType { Bragg, Total };
     Q_ENUM(ScatteringType)
 
-    ExperimentViewModel(SavedFile saved, edi::Project& project, edi::ExperimentBase& experiment,
+    ExperimentViewModel(const SavedFile& saved, edi::Project& project, edi::ExperimentBase& experiment,
                         ProjectEditor& editor, ParameterRegistry& registry, QObject* parent);
 
     QString name() const { return name_; }
@@ -227,6 +268,17 @@ class ExperimentViewModel : public QObject {
     void setReflnsThresholdBasis(const QString& token);
     OptionListModel* reflnsThresholdBasisOptions() const { return reflns_threshold_basis_options_; }
     QString reflnsThresholdExpression() const { return reflns_threshold_expression_; }
+    QString reflnsMerge() const { return reflns_merge_; }
+    void setReflnsMerge(const QString& token);
+    OptionListModel* reflnsMergeOptions() const { return reflns_merge_options_; }
+    QString reflnsAbsences() const { return reflns_absences_; }
+    void setReflnsAbsences(const QString& token);
+    OptionListModel* reflnsAbsencesOptions() const { return reflns_absences_options_; }
+    OptionListModel* excludedRegionAxisOptions() const { return excluded_region_axis_options_; }
+    ReflectionAdmissionSummary reflectionAdmission() const { return reflection_admission_; }
+    QStringList reflectionStatuses() const { return reflection_statuses_; }
+    // A single crystal's reflection left out of the fit by its indices, or put back (one undo step).
+    Q_INVOKABLE void toggleExcludedReflection(int h, int k, int l);
     QString backgroundType() const { return background_type_; }
     void setBackgroundType(const QString& token);
     double backgroundOrigin() const { return background_origin_; }
@@ -392,6 +444,10 @@ class ExperimentViewModel : public QObject {
     void reflnsThresholdSigmaChanged();
     void reflnsThresholdBasisChanged();
     void reflnsThresholdExpressionChanged();
+    void reflnsMergeChanged();
+    void reflnsAbsencesChanged();
+    void reflectionAdmissionChanged();
+    void reflectionStatusesChanged();
     void backgroundTypeChanged();
     void backgroundEstimateModeChanged();
     void backgroundEstimateMethodChanged();
@@ -469,6 +525,13 @@ class ExperimentViewModel : public QObject {
     OptionListModel* reflns_threshold_basis_options_;
     double reflns_threshold_sigma_ = qQNaN();
     QString reflns_threshold_basis_, reflns_threshold_expression_;
+    OptionListModel* reflns_merge_options_;
+    OptionListModel* reflns_absences_options_;
+    OptionListModel* excluded_region_axis_options_;
+    QString reflns_merge_, reflns_absences_;
+    ReflectionAdmissionSummary reflection_admission_;
+    QStringList reflection_statuses_;
+    void syncAdmission();
     OptionListModel* background_type_options_;
     OptionListModel* background_estimate_methods_;
     OptionListModel* background_estimate_modes_;

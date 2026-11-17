@@ -27,7 +27,7 @@ struct ParameterTie {
     const Parameter* parameter = nullptr;
     TieKind kind = TieKind::Independent;
     const Parameter* leader = nullptr;  // Follows: the independent parameter it tracks
-    std::optional<double> fixed_value;  // Fixed: the constant symmetry gives it
+    std::optional<double> fixed_value{};  // Fixed: the constant symmetry gives it
 };
 
 // One row per cell parameter (a, b, c, alpha, beta, gamma), then one per atom site's fract_x,

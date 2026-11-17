@@ -80,8 +80,8 @@ struct AssistantSkillWebImport::State {
         if(!current())return;
         body.clear();status=0;const auto weak=owner;
         HttpCallbacks callbacks;
-        callbacks.headers=[weak](int code,HttpHeaders){if(auto task=weak.lock();task && task->state_->current())task->state_->status=code;};
-        callbacks.data=[weak](QByteArray bytes) {
+        callbacks.headers=[weak](int code,const HttpHeaders&){if(auto task=weak.lock();task && task->state_->current())task->state_->status=code;};
+        callbacks.data=[weak](const QByteArray& bytes) {
             if(auto task=weak.lock();task && task->state_->current())try {
                 auto& s=*task->state_;
                 if(static_cast<quint64>(bytes.size())>edi::assistant::Limits::context_bytes-static_cast<quint64>(s.body.size()))
@@ -124,7 +124,7 @@ struct AssistantSkillWebImport::State {
         const auto entries=metadata.value("tree").toArray();QSet<QString> paths,roots,names;
         for(const auto& value:entries) {
             const auto row=value.toObject();const auto path=row.value("path").toString();
-            if(!inside(path) || paths.contains(path))throw std::runtime_error("The GitHub file inventory contains an invalid or duplicate path.");paths.insert(path);
+            if(!inside(path) || paths.contains(path)){throw std::runtime_error("The GitHub file inventory contains an invalid or duplicate path.");}paths.insert(path);
             if(!subdirectory.isEmpty() && path!=subdirectory && !path.startsWith(subdirectory+'/'))continue;
             if(path=="SKILL.md" || path.endsWith("/SKILL.md")) {
                 const auto root=path=="SKILL.md"?QString():path.chopped(9);const auto name=root.isEmpty()?repository.section('/',1):root.section('/',-1);
@@ -178,8 +178,8 @@ void AssistantSkillWebImport::cancel() noexcept {state_->cancelled=true;state_->
 std::shared_ptr<AssistantSkillWebImport> AssistantSkillWebImport::start(QObject* receiver,const QUrl& url,Completion completion) {
     auto state=std::make_unique<State>();state->receiver=receiver;state->completion=std::move(completion);state->parse(url);
     auto task=std::shared_ptr<AssistantSkillWebImport>(new AssistantSkillWebImport(std::move(state)));task->state_->owner=task;
-    QTimer::singleShot(0,receiver,[weak=std::weak_ptr(task)]{if(auto task=weak.lock();task && task->state_->current())try{task->state_->resolve();}
-        catch(const std::exception& error){task->state_->finish(QString::fromUtf8(error.what()));}catch(...){task->state_->finish(QStringLiteral("The web skill source could not start."));}});
+    QTimer::singleShot(0,receiver,[weak=std::weak_ptr(task)]{if(auto alive=weak.lock();alive && alive->state_->current())try{alive->state_->resolve();}
+        catch(const std::exception& error){alive->state_->finish(QString::fromUtf8(error.what()));}catch(...){alive->state_->finish(QStringLiteral("The web skill source could not start."));}});
     return task;
 }
 #endif

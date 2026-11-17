@@ -307,7 +307,8 @@ namespace {
 // Writes one member's bytes to a new file at `path`, checking the open, the write, the flush and the close.
 void write_member(const fs::path& path, const void* data, std::size_t size, const char* name) {
 #if defined(_WIN32)
-    std::FILE* out = _wfopen(path.c_str(), L"wbx");
+    std::FILE* out = nullptr;
+    if (_wfopen_s(&out, path.c_str(), L"wbx") != 0) out = nullptr;
 #else
     std::FILE* out = std::fopen(path.c_str(), "wbx");  // a new file only: a repeated member refuses
 #endif

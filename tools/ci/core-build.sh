@@ -90,7 +90,7 @@ fi
 # The declared deployment target on every configure, as for crysta above, so edi's objects and
 # its link agree with the crysta objects they link.
 cmake -S "$SRC" -B "$EDI_BUILD_DIR" -G Ninja -DCMAKE_BUILD_TYPE=Release \
-  -DCMAKE_PREFIX_PATH="$CRYSTA_PREFIX" \
+  -DCMAKE_PREFIX_PATH="$CRYSTA_PREFIX" -DEDI_WERROR="${EDI_WERROR:-OFF}" \
   -DCMAKE_OSX_DEPLOYMENT_TARGET="${MACOSX_DEPLOYMENT_TARGET:-}"
 # A bare -j would override CMAKE_BUILD_PARALLEL_LEVEL, so its value, when set, is passed to -j.
 cmake --build "$EDI_BUILD_DIR" -j ${CMAKE_BUILD_PARALLEL_LEVEL:-}

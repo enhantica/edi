@@ -191,6 +191,8 @@ def test_declared_scan_keeps_file_results_and_weighted_mean_values(tmp_path, mod
     folder, expected = scan_files(tmp_path / mode, mode)
     project = engine.Project.load(folder)
     complete = []
+    project._minimizer_chi_square_tolerance = project._minimizer_chi_square_tolerance or 1e-6
+    project._minimizer_max_iterations = project._minimizer_max_iterations or 50
     result = project.analysis.fit(on_file_complete=complete.append)
     path = folder / 'analysis/results.csv'
     assert result.success, 'The declared scan still completes its ordinary file fits'
@@ -215,6 +217,8 @@ def test_declared_scan_keeps_file_results_and_weighted_mean_values(tmp_path, mod
 
 def test_one_non_scan_experiment_also_uses_its_isolated_fit(tmp_path):
     project = engine.Project.load(project_files(tmp_path / 'one', selected='amber'))
+    project._minimizer_chi_square_tolerance = project._minimizer_chi_square_tolerance or 1e-6
+    project._minimizer_max_iterations = project._minimizer_max_iterations or 50
     result = project.analysis.fit()
     expected = optimum(['amber'])
     actual = occupancy(project, BANKS['amber']['phase'])
@@ -289,6 +293,8 @@ def test_disabled_relation_is_not_an_independent_fit_dependency(tmp_path, draft)
         'The actual disabled relation remains disabled before fitting'
     )
     project.analysis.calculate()
+    project._minimizer_chi_square_tolerance = project._minimizer_chi_square_tolerance or 1e-6
+    project._minimizer_max_iterations = project._minimizer_max_iterations or 50
     result = project.analysis.fit()
     assert result.success, 'Disabled relations and empty drafts keep independent fits admissible'
     for name, data in BANKS.items():
@@ -335,6 +341,8 @@ def test_number_tokens_do_not_borrow_a_foreign_alias_owner(
     assert target.value == pytest.approx(dependent, rel=0, abs=1e-12), (
         'The real expression parser consumes each complete numeric literal before fitting'
     )
+    project._minimizer_chi_square_tolerance = project._minimizer_chi_square_tolerance or 1e-6
+    project._minimizer_max_iterations = project._minimizer_max_iterations or 50
     result = project.analysis.fit()
     assert result.success, (
         'A numeric exponent cannot make a local relation depend on an unused foreign alias'

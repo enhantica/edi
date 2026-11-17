@@ -248,6 +248,8 @@ jobs:
     needs: [changes, native, crysta-sdk]
     env:
       CRYSTA_SOURCE_SHA: ${{ needs.changes.outputs.crysta_sha }}
+      # edi's own C++ builds without a warning (ADR-0089), MSVC's /W4 set included.
+      EDI_WERROR: 'ON'
     strategy:
       fail-fast: false
       matrix:
@@ -712,6 +714,8 @@ jobs:
     needs: [changes, core, crysta-sdk]
     env:
       CRYSTA_SOURCE_SHA: ${{ needs.changes.outputs.crysta_sha }}
+      # edi's own C++ builds without a warning (ADR-0089).
+      EDI_WERROR: 'ON'
     strategy:
       fail-fast: false
       matrix:
@@ -828,6 +832,14 @@ jobs:
       - name: qmlformat changes nothing
         if: ${{ !cancelled() && steps.inputs.outputs.run == 'true' }}
         run: pixi run -e app --skip-deps app-format-check
+      # The C++ static checks over edi's own code (ADR-0089), on the compile commands of the two trees built above.
+      # They run after a failed step too, so one round lists every finding.
+      - name: clang-tidy with the Clang Static Analyzer (zero findings)
+        if: ${{ !cancelled() && steps.inputs.outputs.run == 'true' }}
+        run: pixi run -e cpp-lint cpp-tidy
+      - name: cppcheck (zero findings)
+        if: ${{ !cancelled() && steps.inputs.outputs.run == 'true' }}
+        run: pixi run -e cpp-lint cpp-cppcheck
       # The Qt test prerequisites, made before the tests that use them and outside their timing: standalone
       # log, feedback and browser-geometry probes, plus a documentation capture from the app just built.
       - name: Prepare the onboarding test prerequisites

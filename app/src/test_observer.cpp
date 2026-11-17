@@ -114,7 +114,7 @@ QString setting(const char* name, const char* fallback) {
 
 QString hash_values(const QList<double>& values) {
     const QByteArray bytes(reinterpret_cast<const char*>(values.constData()),
-                           static_cast<qsizetype>(values.size() * sizeof(double)));
+                           static_cast<qsizetype>(static_cast<std::size_t>(values.size()) * sizeof(double)));
     return QString::fromLatin1(QCryptographicHash::hash(bytes, QCryptographicHash::Sha256).toHex());
 }
 
@@ -280,7 +280,7 @@ void start_fit(ScreenObservation& o, const QString& mode) {
 // Open the scan, choose the pattern-update mode in Extras, then fit once the first frame is drawn.
 // Poll until `ready` holds, then run `then`: the pages are built in the background after a project opens (edi
 // ADR-0052). Past half a minute the observation ends naming `what` did not happen.
-void when_ready(ScreenObservation& o, std::function<bool()> ready, std::function<void()> then, const char* what) {
+void when_ready(ScreenObservation& o, const std::function<bool()>& ready, const std::function<void()>& then, const char* what) {
     auto* timer = new QTimer(o.window);
     auto waited = std::make_shared<QElapsedTimer>();
     waited->start();
@@ -574,7 +574,7 @@ void cycle_emit(QJsonObject event) {
 }
 
 // On the main thread, in the order the worker reported it.
-void cycle_post(QJsonObject event) {
+void cycle_post(const QJsonObject& event) {
     QMetaObject::invokeMethod(QCoreApplication::instance(), [event] { cycle_emit(event); }, Qt::QueuedConnection);
 }
 
@@ -624,7 +624,7 @@ void cycle_emit_terminal() {
     const std::vector<std::string> row =
         session != nullptr ? session->row(cycle.model->project(), cycle.model->currentExperimentIndex())
                            : std::vector<std::string>();
-    if (!row.empty()) {  // the shown dataset's recorded result, as `result` and at the top level
+    if (session != nullptr && !row.empty()) {  // the shown dataset's recorded result, as `result` and at the top level
         const edi::ScanResultIndex& index = session->index();
         const QJsonObject result{{"success", row[index.success] == "True"},
                                  {"iterations", std::stoi(row[index.iterations])},

@@ -412,15 +412,18 @@ Value browser_single_crystal(const ReportSingleCrystal& crystal, const std::vect
         const double calculated = i < crystal.calc.size() ? crystal.calc[i] : std::numeric_limits<double>::quiet_NaN();
         for (double end : {measured - uncertainty, measured + uncertainty, calculated}) if (std::isfinite(end)) { low = std::min(low, end); high = std::max(high, end); }
     }
-    double pad = (high - low) * 0.05; if (pad == 0.0 || std::isnan(pad)) pad = 1.0;
+    double pad = (high - low) * 0.05;
+    if (pad == 0.0 || std::isnan(pad)) pad = 1.0;
     Object out{{"range", Array{renderer_number(std::min(0.0, low - pad)), renderer_number(high + pad)}}};
-    if (const auto* style = browser_style(styles, "meas.0")) out.emplace_back("color", style->light); return out;
+    if (const auto* style = browser_style(styles, "meas.0")) out.emplace_back("color", style->light);
+    return out;
 }
 Value browser_evolution(const ReportEvolution& series, const std::vector<SeriesStyle>& styles) {
     Array x, y, su, text;
     for (const ReportEvolutionPoint& point : series.points) { x.emplace_back(point.x); y.emplace_back(point.y); su.emplace_back(point.su); text.emplace_back(point.text); }
     Object out{{"x", std::move(x)}, {"y", std::move(y)}, {"su", std::move(su)}, {"text", std::move(text)}, {"title", series.units.empty() ? series.name : series.name + " (" + series.units + ")"}};
-    if (const auto* style = browser_style(styles, "meas.0")) out.emplace_back("color", style->light); return out;
+    if (const auto* style = browser_style(styles, "meas.0")) out.emplace_back("color", style->light);
+    return out;
 }
 
 // A read-out's wording and its values: each piece (between '\n' and '\x1e') with a ": " ends in its value.
@@ -508,6 +511,23 @@ Value single_crystal_json(const ReportSingleCrystal& crystal, const std::vector<
                   {"meas", numbers(crystal.meas)},     {"su", numbers(crystal.su)},     {"calc", numbers(crystal.calc)},
                   {"title", crystal.title},            {"name", crystal.name},          {"x_title", crystal.x_title},
                   {"y_title", crystal.y_title},        {"hover", strings(crystal.hover)}};
+    // Why each reflection is left out and the admission's counts and agreement, when the report has them.
+    if (!crystal.reason.empty()) object.emplace_back("reason", strings(crystal.reason));
+    if (crystal.admission) {
+        const ReportAdmission& admission = *crystal.admission;
+        const auto ratio = [](const std::optional<double>& value) {
+            return value && std::isfinite(*value) ? Value(*value) : Value(nullptr);
+        };
+        object.emplace_back("admission", Object{{"measured", static_cast<double>(admission.measured)},
+                                                {"unique", static_cast<double>(admission.unique)},
+                                                {"used", static_cast<double>(admission.used)},
+                                                {"excluded", static_cast<double>(admission.excluded)},
+                                                {"absent", static_cast<double>(admission.absent)},
+                                                {"merge", admission.merge},
+                                                {"r_int", ratio(admission.r_int)},
+                                                {"r_sigma", ratio(admission.r_sigma)}});
+        object.emplace_back("statistics", crystal.statistics);
+    }
     if (browser) object.emplace_back("browser", browser_single_crystal(crystal, styles));
     return object;
 }
@@ -539,9 +559,28 @@ ReportSingleCrystal single_crystal_of(const Value& value) {
         crystal.y_title = value.at("y_title").string("y_title");
         crystal.hover = strings_of(hover, "hover");
     }
+    // A report written before the admission carried none of it: every reflection reads as used.
+    if (const Value& reason = value.get("reason"); !reason.is_null()) {
+        crystal.reason = strings_of(reason, "reason");
+    }
+    if (const Value& admission = value.get("admission"); !admission.is_null()) {
+        const auto count_of = [&admission](const char* key) {
+            return static_cast<std::size_t>(whole_number(admission.at(key), key, 0, 1e12));
+        };
+        const auto ratio_of = [&admission](const char* key) {
+            const double read = admission.at(key).number(key);
+            return std::isfinite(read) ? std::optional<double>(read) : std::nullopt;
+        };
+        crystal.admission = ReportAdmission{count_of("measured"), count_of("unique"),      count_of("used"),
+                                            count_of("excluded"), count_of("absent"),
+                                            admission.at("merge").string("merge"), ratio_of("r_int"),
+                                            ratio_of("r_sigma")};
+        crystal.statistics = value.at("statistics").string("statistics");
+    }
     const std::size_t count = crystal.meas.size();
     if (crystal.h.size() != count || crystal.k.size() != count || crystal.l.size() != count ||
-        crystal.su.size() != count || (!crystal.calc.empty() && crystal.calc.size() != count)) {
+        crystal.su.size() != count || (!crystal.calc.empty() && crystal.calc.size() != count) ||
+        (!crystal.reason.empty() && crystal.reason.size() != count)) {
         throw std::invalid_argument("report JSON: a single crystal's columns differ in length");
     }
     return crystal;
@@ -1213,12 +1252,12 @@ ReportModel report_from_json(const std::string& text) {
         const Value& fittable = item.get("fittable");
         ReportParameter& read = model.parameters.back();
         read.fittable = fittable.is_null() || fittable.boolean("fittable");
-        for (const auto& [key, text] : {std::pair{"datablock", &read.datablock}, {"category", &read.category},
+        for (const auto& [key, target] : {std::pair{"datablock", &read.datablock}, {"category", &read.category},
                                         {"entry", &read.entry}, {"name", &read.name}, {"uid", &read.uid},
                                         {"value_cell", &read.value_cell}, {"su_cell", &read.su_cell},
                                         {"start_cell", &read.start_cell}, {"min_cell", &read.min_cell},
                                         {"max_cell", &read.max_cell}}) {
-            if (const Value& field = item.get(key); !field.is_null()) *text = field.string(key);
+            if (const Value& field = item.get(key); !field.is_null()) *target = field.string(key);
         }
     }
     const Value& relations = document.get("relations");

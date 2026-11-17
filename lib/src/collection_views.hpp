@@ -115,7 +115,7 @@ inline void validate_insert(const PrefOrientsView& view, const PrefOrient& row) 
         return link->structure_id.value() == row.structure_id.value();
     });
     const std::string linked = links.size() == 1 ? links.front()->structure_id.value() : std::string();
-    for (const int index : {row.index_h, row.index_k, row.index_l}) {
+    for (const int& index : {row.index_h, row.index_k, row.index_l}) {
         if (index > kPreferredOrientationAxisBound || index < -kPreferredOrientationAxisBound) {
             fail_domain("experiment '" + view.owner->name + "'", "preferred-orientation-domain",
                         "a texture axis component exceeds the Miller-index bound " +

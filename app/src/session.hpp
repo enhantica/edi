@@ -58,13 +58,18 @@ class WarningListModel : public RowTableModel {
 
    public:
     explicit WarningListModel(QObject* parent);
-    // Replace every message with the open's warnings (a new open).
-    void setMessages(const QStringList& messages);
+    // Replace every message with the open's warnings (a new open), each with its project file when it has one.
+    void setMessages(const QStringList& messages, const QStringList& sources = {});
+    // The key of a file's warning: its origin (`load-file:` from the open, `text-apply:` from a Text-tab state), the
+    // file, then the text. With an empty text, the start every key of that file and origin shares.
+    static QString fileKey(const QString& origin, const QString& file, const QString& text);
     // List a message under `key` unless one is listed there already (a dismissed one is listed again);
     // withdraw the one under `key`; the keys listed that start with `prefix`.
     void post(const QString& key, const QString& text, const QString& severity);
     void withdraw(const QString& key);
     QStringList keys(const QString& prefix) const;
+    // Whether a message is listed under exactly `key`.
+    bool lists(const QString& key) const;
     int unviewedCount() const { return unviewed_; }
     Q_INVOKABLE void markViewed();
     // Remove one warning (by its row) or all of them.
@@ -353,7 +358,7 @@ class Session : public QObject {
     // Opens `source` (a read-only folder) from a writable copy at `target`: the project and its results are copied, and
     // a scan's data files linked, not duplicated.
     bool openCopy(const QString& source,const QString& target,const QString& example,const std::function<bool()>& afterOpen = {});
-    bool replaceProject(ProjectViewModel* project, const QStringList& warnings, const QString& example, bool nativePrepared=false, bool* committed=nullptr, quint64* committedReplacement=nullptr, bool ordinaryEmptyCreate=false, const QString& openedFrom={}, const std::shared_ptr<SessionResetInputs>& resetInputs={});
+    bool replaceProject(ProjectViewModel* project, const QStringList& warnings, const QString& example, bool nativePrepared=false, bool* committed=nullptr, quint64* committedReplacement=nullptr, bool ordinaryEmptyCreate=false, const QString& openedFrom={}, const std::shared_ptr<SessionResetInputs>& resetInputs={}, const QStringList& warningSources={});
     void setLastError(const QString& error);
     void setOpenedArchive(const QString& name);
     // edi ADR-0069: a save is an operation. Each public save route makes one at its start: it belongs to the project and
@@ -434,7 +439,7 @@ class Session : public QObject {
     qint64 example_download_received_ = 0;
     qint64 example_download_total_ = -1;
     quint64 example_request_ = 0;
-    void fetchTutorialFiles(std::function<void(const QList<QPair<QString, QByteArray>>&, const QString&)> done);
+    void fetchTutorialFiles(const std::function<void(const QList<QPair<QString, QByteArray>>&, const QString&)>& done);
     WarningListModel* warnings_;
     int project_messages_ = 0;  // the keys of the project's messages
     QString opened_example_;

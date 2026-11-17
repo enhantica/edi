@@ -333,8 +333,9 @@ void configure_engine(QQmlEngine& engine, std::unique_ptr<Session> session) {
     object->setParent(&engine);
     object->engine_bound_ = true;
     QJSEngine::setObjectOwnership(object, QJSEngine::CppOwnership);
-    (void)session.release();
-    (void)binding.release();
+    // The engine owns both from here (the session as its child, the binding through its destroyed signal).
+    (void)session.release();  // NOLINT(bugprone-unused-return-value)
+    (void)binding.release();  // NOLINT(bugprone-unused-return-value)
     configure_engine_settings(engine);
 }
 void configure_engine(QQmlEngine& engine) { configure_engine(engine, AssistantWorkReportOptions{}); }

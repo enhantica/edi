@@ -24,7 +24,7 @@ class AssistantWidgetInput final : public QObject {
  public:
     enum class Kind { Value, Text, Free, Fit, Navigate, ParameterFilter, StagedText, Scroll, Choose, SearchChoice, ContextMenu, DismissMenu, FileLoadCue, FormText };
     struct Request {
-        Kind kind;
+        Kind kind{};
         QPointer<QQuickItem> target;
         int scrollDirection = 0; // One ordinary wheel detent (+1/-1), only at the sidebar gutter.
         bool visualOnlyDisabledTarget = false;

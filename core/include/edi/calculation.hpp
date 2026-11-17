@@ -53,7 +53,7 @@ struct WorkSnapshot {
     // Where `calculate` reports its own start and end (work::EventKind::Calculating and Calculated), from
     // the thread it runs on. Empty for a calculation nothing traces; LivePreview sets it. The two events are
     // the calculation's own, so a caller that times the call sees both inside its interval.
-    std::function<void(work::EventKind)> trace;
+    std::function<void(work::EventKind)> trace{};
 };
 
 // What one calculation produced, for `publish`.

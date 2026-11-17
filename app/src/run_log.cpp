@@ -173,16 +173,16 @@ bool RunLog::start(const Header& header) {
     for (int n = 1; n <= 100 && !file_.isOpen(); ++n) {
         const QString stem = n == 1 ? base : base + QStringLiteral("-") + QString::number(n);
         const QString log = dir.filePath(stem + QStringLiteral(".log"));
-        auto lock = std::make_unique<QLockFile>(marker_path(log));
-        lock->setStaleLockTime(0);
-        if (!lock->tryLock(0)) {
+        auto marker = std::make_unique<QLockFile>(marker_path(log));
+        marker->setStaleLockTime(0);
+        if (!marker->tryLock(0)) {
             continue;  // another run holds this name
         }
         file_.setFileName(log);
         if (!file_.open(QIODevice::WriteOnly | QIODevice::NewOnly)) {
-            continue;  // a log of that name exists; the lock is released with `lock`
+            continue;  // a log of that name exists; the lock is released with `marker`
         }
-        running_ = std::move(lock);
+        running_ = std::move(marker);
         path_ = log;
     }
     if (!file_.isOpen()) {

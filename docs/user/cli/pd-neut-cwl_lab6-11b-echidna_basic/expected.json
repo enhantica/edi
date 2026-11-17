@@ -13,19 +13,19 @@
       "tol_rel": null
     },
     "rwp": {
-      "value": 0.08166125129,
+      "value": 0.08166134987,
       "kind": "regression-pin",
       "tol_abs": null,
       "tol_rel": 1e-06
     },
     "iterations": {
-      "value": 5.0,
+      "value": 3.0,
       "kind": "regression-pin",
       "tol_abs": 0.0,
       "tol_rel": null
     },
     "reduced_chi_square": {
-      "value": 8.821294726,
+      "value": 8.821316024,
       "kind": "regression-pin",
       "tol_abs": 1e-06,
       "tol_rel": null

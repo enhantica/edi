@@ -44,7 +44,7 @@ void require_populated_participants(const crysta::Project& project, const char* 
 
 // --- V3: identity rejection --------------------------------------------------------------------
 void validate_fit_request(const std::vector<double>& grid, const std::vector<double>& observed,
-                             const std::vector<double>& sigma, const Project& project) {
+                             const std::vector<double>& sigma, const Project& /*project*/) {
     if (grid.empty() || observed.empty() || sigma.empty()) {
         throw std::invalid_argument("edi fit: empty measured data (grid/observed/sigma)");
     }
@@ -438,8 +438,8 @@ FitResultBase fit_experiments_independently(Project& project, const IterationCal
         copy.aliases.assign(std::move(own_aliases));
         std::vector<ItemVec<ParameterConstraint>::Ptr> own_constraints;
         for (const auto& constraint : copy.constraints) {
-            const auto owner = constraint_owner.find(constraint->id.value());
-            if (owner != constraint_owner.end() && (owner->second == e || owner->second == every)) {
+            const auto found = constraint_owner.find(constraint->id.value());
+            if (found != constraint_owner.end() && (found->second == e || found->second == every)) {
                 own_constraints.push_back(constraint);
             }
         }
@@ -549,10 +549,10 @@ FitResultBase fit_experiments_independently(Project& project, const IterationCal
         if (combined.iterations_history.empty()) {
             combined.pre_fit = result.pre_fit;
         }
-        for (IterationRecord record : result.iterations_history) {
-            record.iteration = static_cast<int>(combined.iterations_history.size()) + 1;
-            record.elapsed_ms += combined.elapsed_ms;
-            combined.iterations_history.push_back(std::move(record));
+        for (IterationRecord step : result.iterations_history) {
+            step.iteration = static_cast<int>(combined.iterations_history.size()) + 1;
+            step.elapsed_ms += combined.elapsed_ms;
+            combined.iterations_history.push_back(std::move(step));
         }
         combined.iterations += result.iterations;
         combined.n_points_loaded += result.n_points_loaded;
@@ -576,7 +576,7 @@ FitResultBase fit_experiments_independently(Project& project, const IterationCal
         for (const auto& row : own.correlations) {
             FitParameterCorrelation copy = *row;
             copy.id = std::to_string(record.correlations.size() + 1);
-            record.correlations.push_back(std::move(copy));
+            record.correlations.push_back(copy);
         }
         message += (message.empty() ? "" : "; ") + fitted.name.value() + ": " + own.exit_reason +
                    ", reduced chi-square " +
@@ -664,13 +664,14 @@ FitResultBase Project::fit(const IterationCallback& on_iteration,
     if (experiment().reflections.has_value()) {  // a single crystal fits its own reflections
         return fit({}, {}, {}, on_iteration, on_start, should_cancel);
     }
-    if (!experiment().data.has_value() || experiment().calculation_only) {
+    const std::optional<PdDataBase>& measured = experiment().data;
+    if (!measured.has_value() || experiment().calculation_only) {
         throw std::invalid_argument("edi fit: experiment() '" + experiment().name +
                                     "' carries no measured data (a calculation-only or "
                                     "hand-assembled experiment cannot fit; pass the pattern "
                                     "explicitly to refine with one)");
     }
-    const PdDataBase& data = *experiment().data;
+    const PdDataBase& data = *measured;
     return fit(data.axis(), data.intensity_meas, data.intensity_meas_su, on_iteration, on_start,
                should_cancel);
 }

@@ -811,6 +811,7 @@ void WebStorage::refresh() {
 #endif
 }
 
+// NOLINTNEXTLINE(performance-unnecessary-value-param): the browser build moves `answer` into its job.
 void WebStorage::pickOpen(const QString& kind, const QString& root, Answer answer) {
 #if defined(Q_OS_WASM)
     edi_storage_pick_open(begin(std::move(answer)), kind.toUtf8().constData(), root.toUtf8().constData());
@@ -821,6 +822,7 @@ void WebStorage::pickOpen(const QString& kind, const QString& root, Answer answe
 #endif
 }
 
+// NOLINTNEXTLINE(performance-unnecessary-value-param): the browser build moves `answer` into its job.
 void WebStorage::pickSave(const QString& kind, const QString& suggested, const QString& startKey, Answer answer) {
 #if defined(Q_OS_WASM)
     edi_storage_pick_save(begin(std::move(answer)), kind.toUtf8().constData(), suggested.toUtf8().constData(),
@@ -833,8 +835,9 @@ void WebStorage::pickSave(const QString& kind, const QString& suggested, const Q
 #endif
 }
 
+// The browser build moves `answer` into its job.
 void WebStorage::write(const QString& key, const QString& kind, const QString& name, const QString& folder,
-                       bool recovery, Answer answer) {
+                       bool recovery, Answer answer) {  // NOLINT(performance-unnecessary-value-param)
 #if defined(Q_OS_WASM)
     const int job = begin(Reply([this, answer = std::move(answer)](const QString& json) {
         refresh();
@@ -879,6 +882,7 @@ void WebStorage::write(const QString& key, const QString& kind, const QString& n
 #endif
 }
 
+// NOLINTNEXTLINE(performance-unnecessary-value-param): the browser build moves `answer` into its job.
 void WebStorage::load(const QString& key, bool recovery, const QString& root, Answer answer) {
 #if defined(Q_OS_WASM)
     edi_storage_load(begin(std::move(answer)), key.toUtf8().constData(), recovery ? 1 : 0, root.toUtf8().constData());

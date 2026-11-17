@@ -126,7 +126,7 @@ void AliasListModel::append() {
             break;
         }
     }
-    editor_.apply_relation_control(edi::Edit::append(project.aliases, std::move(alias)), {ProjectEditor::RelationAction::Kind::AliasAppend});
+    editor_.apply_relation_control(edi::Edit::append(project.aliases, alias), {ProjectEditor::RelationAction::Kind::AliasAppend});
 }
 
 void AliasListModel::duplicate(int row) {
@@ -137,7 +137,7 @@ void AliasListModel::duplicate(int row) {
     edi::Project& project = project_;
     edi::ParameterAlias copy = *source;
     copy.id = unused_name(source->id.value() + "_", [&project](const std::string& id) { return holds_id(project.aliases, id); });
-    editor_.apply_relation_edit(edi::Edit::append(project.aliases, std::move(copy)));
+    editor_.apply_relation_edit(edi::Edit::append(project.aliases, copy));
 }
 
 void AliasListModel::remove(int row) {
@@ -249,7 +249,7 @@ void ConstraintListModel::duplicate(int row) {
     edi::ParameterConstraint copy = *source;
     copy.id = unused_name(source->id.value() + "_",
                           [&project](const std::string& id) { return holds_id(project.constraints, id); });
-    editor_.apply_relation_edit(edi::Edit::append(project.constraints, std::move(copy)));
+    editor_.apply_relation_edit(edi::Edit::append(project.constraints, copy));
 }
 
 void ConstraintListModel::remove(int row) {
@@ -308,7 +308,7 @@ void SequentialFitViewModel::sync() {
 
 // ---- AnalysisViewModel --------------------------------------------------------------------------
 
-AnalysisViewModel::AnalysisViewModel(edi::Project& project, ProjectEditor& editor, SavedFile saved, QObject* parent)
+AnalysisViewModel::AnalysisViewModel(edi::Project& project, ProjectEditor& editor, const SavedFile& saved, QObject* parent)
     : QObject(parent),
       project_(project),
       editor_(editor),
@@ -333,7 +333,7 @@ AnalysisViewModel::AnalysisViewModel(edi::Project& project, ProjectEditor& edito
                                    "chi_square_change shift_su",
                                    {"χ² change", "Shift/s.u.", "χ² change or Shift/s.u."});
     moments_near_zero_options_->setItemOptions("minimizer.moments_near_zero", {"try_exact_zero", "keep_free"},
-                                               "try_exact_zero");
+                                               "keep_free");
     minimizer_type_options_->setItemOptions("minimizer.type", edi::supported_minimizer_types());
     sync();
 }
@@ -475,7 +475,7 @@ void AnalysisViewModel::sync() {
         }
     }
     const QString zero = QString::fromStdString(
-        project_.minimizer_moments_near_zero.empty() ? std::string("try_exact_zero") : project_.minimizer_moments_near_zero);
+        project_.minimizer_moments_near_zero.empty() ? std::string("keep_free") : project_.minimizer_moments_near_zero);
     if (zero != moments_near_zero_) {
         moments_near_zero_ = zero;
         emit momentsNearZeroChanged();

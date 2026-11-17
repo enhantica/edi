@@ -12,13 +12,16 @@ import edi.app
 // `refln` of a single crystal, in the Extra tab: the Miller indices, d, sinθ/λ, the measured F² and its su,
 // the calculated F² and the normalised residual (F²meas - F²calc) / su, with the app's one rule for numbers; in time of
 // flight each reflection's wavelength; last, whether the fit uses the reflection (the fit's cutoff, F² > n su(F²), or
-// every one without), as an icon with the reason in its tooltip, as the measured data's status column. A click on a
+// every one without, or left out by an exclusion or as an absence), as an icon with the reason in its tooltip, as the
+// measured data's status column; a click on it excludes the reflection by its indices or puts it back. A click on a
 // column title sorts the rows by that column.
 DataTable {
     id: table
 
     property ExperimentViewModel experiment: null
     readonly property bool timeOfFlight: experiment !== null && experiment.beamMode === ExperimentViewModel.TimeOfFlight
+    // Measured reflections can be left out by their indices; calculated ones cannot.
+    readonly property bool measured: experiment !== null && !experiment.calculationOnly
     // The height the table may take: its own and the room the sidebar leaves under it. Its rows fill it, with half
     // a row as a scroll cue; without it the table keeps the default number of rows.
     property real spareHeight: 0
@@ -181,14 +184,26 @@ DataTable {
             full: NumberText.plainFull(row.model.wavelength)
         }
         IconCell {
-            readonly property bool used: row.model.fitUse === 1
+            // crysta's admission: o used, < at or below the fit's cutoff, x excluded by its indices or a range, - a
+            // systematic absence left out. A click leaves the reflection out by its indices, or puts it back.
+            readonly property string status: row.model.status || (row.model.fitUse === 1 ? "o" : "<")
+            readonly property bool used: status === "o"
             readonly property real cutoff: table.sourceModel ? table.sourceModel.fitCutoff : NaN
 
             horizontalAlignment: Text.AlignHCenter
             objectName: `singleCrystal.reflections.fitUse.${row.index}`
-            icon: used ? FitOutcomes.icon("success") : "minus-circle"
+            icon: used ? FitOutcomes.icon("success") : status === "x" ? "eraser" : "minus-circle"
             iconColor: String(used ? EaStyle.Colors.green : EaStyle.Colors.themeForegroundMinor)
-            toolTip: used ? (isNaN(cutoff) ? qsTr("Used by the fit (no cutoff: every reflection)") : qsTr("Used by the fit: F² > %1 s.u.").arg(Session.display("refine_ls.threshold_sigma", cutoff))) : qsTr("Left out of the fit: F² at most %1 s.u.").arg(Session.display("refine_ls.threshold_sigma", cutoff))
+            readonly property string reason: row.model.reason || (used ? "used" : "below_cutoff")
+            toolTip: (reason === "excluded_indices" ? qsTr("Left out of the fit: excluded by its indices") : reason === "excluded_range" ? qsTr("Left out of the fit: in an excluded range") : reason === "absent" ? qsTr("Left out of the fit: a systematic absence") : used ? (isNaN(cutoff) ? qsTr("Used by the fit (no cutoff: every reflection)") : qsTr("Used by the fit: F² > %1 s.u.").arg(Session.display("refine_ls.threshold_sigma", cutoff))) : isNaN(cutoff) ? qsTr("Left out of the fit") : qsTr("Left out of the fit: F² at most %1 s.u.").arg(Session.display("refine_ls.threshold_sigma", cutoff))) + (table.measured ? "\n" + qsTr("Click to exclude or include this reflection") : "")
+
+            clickable: table.measured
+
+            onClicked: {
+                row.activated();
+
+                table.experiment.toggleExcludedReflection(row.model.h, row.model.k, row.model.l);
+            }
         }
     }
 }

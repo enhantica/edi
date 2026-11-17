@@ -306,8 +306,11 @@ int main(int argc, char** argv) {
                 dry = true;
             } else if (argument == "--output" || argument == "--verbosity" || argument == "--report" ||
                        argument == "--threads" || argument == "--parallel-fits") {
-                if (!inline_value && (++i == argc || std::string_view(argv[i]).starts_with("--"))) {
-                    throw std::invalid_argument("missing value for " + std::string(argument));
+                if (!inline_value) {
+                    ++i;
+                    if (i == argc || std::string_view(argv[i]).starts_with("--")) {
+                        throw std::invalid_argument("missing value for " + std::string(argument));
+                    }
                 }
                 const std::string_view value = inline_value ? *inline_value : argv[i];
                 if (argument == "--threads") {

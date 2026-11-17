@@ -22,6 +22,7 @@
 #include <atomic>
 #include <cmath>
 #include <cstdio>
+#include <exception>
 #include <vector>
 
 #include "e04_t9/stress.hpp"
@@ -197,9 +198,7 @@ Result run(const char* candidate, const PointSet sets[2], int columns) {
     return result;
 }
 
-}  // namespace
-
-int main(int argc, char** argv) {
+int bench(int argc, char** argv) {
     if (qEnvironmentVariableIsEmpty("QT_QPA_PLATFORM")) {
         qputenv("QT_QPA_PLATFORM", "offscreen");
     }
@@ -224,4 +223,15 @@ int main(int argc, char** argv) {
         }
     }
     return failures == 0 ? 0 : 1;
+}
+
+}  // namespace
+
+int main(int argc, char** argv) {
+    try {
+        return bench(argc, argv);
+    } catch (const std::exception& error) {
+        std::fprintf(stderr, "edi_app_chart_bench: %s\n", error.what());
+        return 1;
+    }
 }

@@ -329,7 +329,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // Save report's record (ADR-0036 §7): the rows of the reports it wrote, each replacing the row of the same name,
     // then `reports/report.edi` written alone. Not an edit: no model value changes and nothing is marked modified.
     // Throws when the file cannot be written, the open project's rows then as they were.
-    void recordReportFiles(std::vector<edi::ReportFile> rows);
+    void recordReportFiles(const std::vector<edi::ReportFile>& rows);
     void setReportCorrelationThreshold(double threshold);
     bool patternDSpacing() const;
     QString patternXAxis() const;
@@ -809,6 +809,10 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // An information entry for the Messages: why an estimate with the calculated peaks set to auto subtracted or
     // ignored them (the owner, 2026-10-20).
     void information(const QString& text);
+    // The file warnings of a Text-tab state the project took, an accepted apply of `edited` or its undo, each with its
+    // file relative to the project. Another file's warnings do not block an apply; Messages lists them until an apply
+    // no longer reports them, and the edited file's earlier warnings give way to these.
+    void fileWarnings(const QString& edited, const QStringList& files, const QStringList& texts);
     void pathChanged();
     void modifiedChanged();
     void savingChanged();
@@ -871,7 +875,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     std::uint64_t assistant_save_origin_=0, project_edit_origin_=0;
     void notifyProjectEdited(std::uint64_t origin=0);
     struct WidgetParameterInput {
-        enum class Field { Value, Free, FreeGroup } field;
+        enum class Field { Value, Free, FreeGroup } field = Field::Value;
         const edi::Parameter* parameter = nullptr;
         std::vector<const edi::Parameter*> members; // Original exact free-header set; no QObject ownership.
         double value = 0;
@@ -912,6 +916,13 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     std::shared_ptr<WidgetCreationInput> prepareWidgetCreation(const CreationAction&);
     void finishWidgetCreation(const std::shared_ptr<WidgetCreationInput>&) noexcept;
     QString apply_creation_control(const edi::Edit&, bool structural, const CreationAction&) override;
+    using ScaleNotes = std::vector<std::pair<QString, edi::CommonScaleOutcome>>;
+    void noteUnscaled(const edi::ExperimentBase& experiment, const edi::CommonScaleOutcome& scaled);
+    void noteUnscaled(const QString& name, const edi::CommonScaleOutcome& scaled);
+    ScaleNotes rescaleLoaded(edi::Project& next, const std::vector<std::size_t>& produced);
+    void noteScaled(const ScaleNotes& notes);
+    // The warnings a read of `file`'s text gives for the project as it is, as fileWarnings.
+    void reportFileWarnings(const QString& file);
     struct WidgetFileInput {
         std::function<bool()> source_current;
         QUrl reader_path; // Internal immutable-byte stage for the original path-only SDK measurement reader.
@@ -995,7 +1006,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // `ownSave`: the save operation holding the project asks for its own write, which its hold admits.
     QString criticalEditRefusal(bool restoring = false, bool trial = false, bool ownSave = false) const;
     QString saveRefusal(bool admitted) const;
-    void recordReportFiles(std::vector<edi::ReportFile> rows, bool admitted);
+    void recordReportFiles(const std::vector<edi::ReportFile>& rows, bool admitted);
     // The trial lock's own plain message while an assistant trial is open, else empty (edi ADR-0055).
     QString trialLockRefusal() const;
     // The assistant edit in progress (its own-edit identity), which the trial lock admits.
@@ -1081,6 +1092,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // A Text tab's apply: the project as it was.
     struct AppliedText {
         std::shared_ptr<const edi::Project> before;
+        QString file;  // the Text tab's file, when the change was its apply
     };
     struct EmptyPopulationUndo { std::shared_ptr<edi::EmptyProjectPopulation> prepared; };
     using UndoRecord = std::variant<std::monostate, edi::RelationsUndo, AddedExperiments, AddedExperimentsWithStructures, ScanRun, LoadedData,

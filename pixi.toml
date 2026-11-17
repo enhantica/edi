@@ -25,7 +25,7 @@ PYTHONUTF8 = "1"
 # The crysta commit edi builds (edi ADR-0083): its CI packs that commit's SDK once per platform
 # (.github/workflows/crysta-sdk.yml) and every job and product uses it. `pixi run crysta-sdk-pin <sha>`
 # moves it.
-CRYSTA_COMMIT = "d0d45e2ec1e8a61325a4d2594147948307eb2f35"
+CRYSTA_COMMIT = "6bfc8f671b3058e6d2d8e0393697e19a9e50b2c9"
 # ONE ruff cache, outside every source and test tree. Same class as crysta's: ruff writes
 # `.ruff_cache` into the directory it is invoked from, and a stray cache can keep a RETIRED
 # directory alive after its tracked files are gone, tripping a layout gate on a folder that
@@ -309,8 +309,27 @@ wasm-build = { cmd = ["bash", "tools/ci/wasm-build.sh"], depends-on = [{ task = 
 # -e app app-test`, `app-ui-test` and `app-ui-bless` still run by hand.
 app-gates = { depends-on = ["app-test-scan-lines", "app-test-scan-refresh", { task = "app-build", environment = "app" }, "app-lint", "app-format-check"] }
 
+# The C++ static checks (edi ADR-0089): clang-tidy at one version on every platform, the version crysta's code-quality
+# rules pin, and cppcheck. They read the compile commands of the app's build tree (build/app), so this environment
+# holds only the tools.
+[feature.cpp-lint.dependencies]
+clang-tools = "==22.1.8"
+# clang's builtin headers (stddef.h and the rest), which clang-tidy reads.
+clang-22 = "==22.1.8"
+cppcheck = "==2.21.0"
+python = "3.14.*"  # run-clang-tidy is a Python script
+
+# The checks run in the Linux and macOS app jobs; conda-forge has no Windows bash.
+[feature.cpp-lint.target.unix.dependencies]
+bash = ">=5.2"
+
+[feature.cpp-lint.tasks]
+cpp-tidy = { cmd = ["bash", "tools/ci/cpp-tidy.sh"] }
+cpp-cppcheck = { cmd = ["bash", "tools/ci/cpp-cppcheck.sh"] }
+
 [environments]
 app = ["app"]
+cpp-lint = { features = ["cpp-lint"], no-default-feature = true }
 
 [pypi-dependencies]
 easydiffraction = { path = ".", editable = true }

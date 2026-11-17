@@ -2,6 +2,7 @@
 #pragma once
 
 #include <cstddef>
+#include <limits>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -124,6 +125,13 @@ std::vector<std::string> reflection_hover_lines(int h, int k, int l, double meas
 double display_step(const Parameter& parameter, std::string_view variant = {});
 /// The same for a value of a numeric item.
 double display_step(std::string_view uid, double value, std::string_view variant = {});
+/// The Analysis slider's limits: value ± half_width, widened outward to whole multiples of one unit of the half
+/// width's leading digit, or of `step` when that is larger, so both limit boxes read round numbers. They never leave
+/// the parameter's admissible range [`lower`, `upper`]: a side cut at a limit gives its width to the other side, and the
+/// span is at least one unit (a B iso of 0 with limits 0 and 10 slides from 0 up, never below 0).
+std::pair<double, double> slider_limits(double value, double half_width, double step,
+                                        double lower = -std::numeric_limits<double>::infinity(),
+                                        double upper = std::numeric_limits<double>::infinity());
 
 /// A parameter's value and s.u. as the project file and the Text tab spell them under `su_rule`.
 struct FileText {

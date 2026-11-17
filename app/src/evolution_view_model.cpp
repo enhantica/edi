@@ -404,7 +404,7 @@ void EvolutionViewModel::readPoints() {
                     lowest.resize(buckets);
                     highest.resize(buckets);
                 }
-                const int bucket = bucket_of(point.x, x0, span, buckets);
+                const auto bucket = static_cast<std::size_t>(bucket_of(point.x, x0, span, buckets));
                 if (!lowest[bucket] || point.y < lowest[bucket]->y) {
                     lowest[bucket] = point;
                 }
@@ -415,7 +415,7 @@ void EvolutionViewModel::readPoints() {
             for (const auto& [bank, extrema] : by_bank) {
                 const auto& [lowest, highest] = extrema;
                 std::optional<int> last;
-                for (int bucket = 0; bucket < buckets; ++bucket) {
+                for (std::size_t bucket = 0; bucket < lowest.size(); ++bucket) {
                     for (const std::optional<Point>& point : {lowest[bucket], highest[bucket]}) {
                         if (point && last != point->dataset) {
                             points_.push_back(*point);
@@ -446,7 +446,7 @@ void EvolutionViewModel::thin() {
             lowest.assign(buckets, -1);
             highest.assign(buckets, -1);
         }
-        const int bucket = bucket_of(points_[i].x, x0, span, buckets);
+        const auto bucket = static_cast<std::size_t>(bucket_of(points_[i].x, x0, span, buckets));
         if (lowest[bucket] < 0 || points_[i].y < points_[static_cast<std::size_t>(lowest[bucket])].y) {
             lowest[bucket] = static_cast<int>(i);
         }
@@ -458,7 +458,7 @@ void EvolutionViewModel::thin() {
     for (const auto& [bank, extrema] : by_bank) {
         const auto& [lowest, highest] = extrema;
         std::optional<int> last;
-        for (int bucket = 0; bucket < buckets; ++bucket) {
+        for (std::size_t bucket = 0; bucket < lowest.size(); ++bucket) {
             for (const int i : {lowest[bucket], highest[bucket]}) {
                 if (i >= 0 && last != points_[static_cast<std::size_t>(i)].dataset) {
                     kept.push_back(points_[static_cast<std::size_t>(i)]);

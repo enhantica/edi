@@ -19,10 +19,9 @@ PROJECTS = ORACLE['projects']
 
 
 def is_verification(project):
-    # App membership is the first actor route. Only retained fixtures require
-    # the legacy marker; do not invent a default for an unknown retained input.
+    # New fixtures have no retired purpose tag; only an explicit historical marker selects it.
     return project['id'] not in ORACLE['app_ids'] and (
-        project['metadata']['_metadata.purpose'] == 'verification'
+        project['metadata'].get('_metadata.purpose') == 'verification'
     )
 
 

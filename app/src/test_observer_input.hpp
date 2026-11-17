@@ -76,7 +76,7 @@ inline bool install(QObject& receiver, Receive receive, Closed closed = {}) {
         });
 #endif
     return true;
-}
+}  // NOLINT(clang-analyzer-cplusplus.NewDeleteLeaks): the notifier's parent owns it.
 }  // namespace edi_app::observer_input
 
 #endif
