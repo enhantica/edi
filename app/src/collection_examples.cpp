@@ -5,6 +5,7 @@
 #include <QDir>
 #include <QFile>
 #include <QLoggingCategory>
+#include <QScopeGuard>
 #include <QUrl>
 
 #include <stdexcept>
@@ -47,6 +48,7 @@ void CollectionExamples::refresh() {
     updated_.clear();
     failed_.clear();
     projects_ = 0;
+    checking_ = 0;
     // Every enabled source, once, whatever kinds it holds: the tutorials take a structure and a pattern, the
     // Examples list the projects.
     QList<OnlineSourcesModel::Source> sources;
@@ -96,8 +98,9 @@ void CollectionExamples::refresh() {
                           ++projects_;
                       }
                       updateNotice();
-                      if (pending_ == 0) settle();
+                      // Started first, so a request for an id only the online collection holds waits for it.
                       if (bundled) checkOnline(generation, online, index);
+                      if (pending_ == 0) settle();
                   });
     }
 }
@@ -106,9 +109,15 @@ void CollectionExamples::refresh() {
 // changed is downloaded now and used from then on; until it has arrived the bundled file serves. Offline nothing
 // changes.
 void CollectionExamples::checkOnline(int generation, const QStringList& online, const edi::online::Index& bundled) {
+    ++checking_;
     fetch_from(this, network_, online, QStringLiteral("index.json"),
                [this, generation, online, bundled](const QByteArray& bytes, const QString& error, bool) {
         if (generation != generation_) return;
+        --checking_;
+        // Whatever the answer, the requests waiting for it are answered after it.
+        const auto answered = qScopeGuard([this] {
+            if (pending_ == 0) settle();
+        });
         edi::online::Index index;
         try {
             if (!error.isEmpty()) throw std::runtime_error(error.toStdString());
@@ -153,11 +162,16 @@ void CollectionExamples::updateNotice() {
     emit noticeChanged();
 }
 
-// Every request that waited for the sources to be read gets its answer, in order; a request made while they run
-// joins the next round.
+// Every request that waited for the sources to be read gets its answer, in order: at once for an id a source holds,
+// and for any other once the online checks have answered too, so an entry published since the bundled copy is not
+// reported absent while its index is still being read. A request made while they run joins the next round.
 void CollectionExamples::settle() {
-    const QList<std::function<void()>> waiting = std::exchange(waiting_, {});
-    for (const std::function<void()>& then : waiting) then();
+    QList<std::function<void()>> ready;
+    QList<std::pair<QString, std::function<void()>>> still;
+    for (auto& [id, then] : std::exchange(waiting_, {}))
+        (known_.contains(id) || checking_ == 0 ? ready.append(std::move(then)) : still.append({id, std::move(then)}));
+    waiting_ = std::move(still);
+    for (const std::function<void()>& then : ready) then();
 }
 
 void CollectionExamples::whenRead(const QString& id, std::function<void()> then) {
@@ -165,8 +179,9 @@ void CollectionExamples::whenRead(const QString& id, std::function<void()> then)
         then();
         return;
     }
-    waiting_.append(std::move(then));
-    if (pending_ == 0) refresh();
+    waiting_.append({id, std::move(then)});
+    // A read or a check still running answers it; reading again now would drop their answers.
+    if (pending_ == 0 && checking_ == 0) refresh();
 }
 
 QString CollectionExamples::fileName(const QString& id) const {
