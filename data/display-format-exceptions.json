@@ -358,6 +358,11 @@
    "reason": "an example filter facet title; the facets move to experiment items with the metadata move"
   },
   {
+   "file": "app/src/fit_view_model.cpp",
+   "literal": "Excluded",
+   "reason": "the fit popup's column of how many reflections were left out, not the data point status of that name"
+  },
+  {
    "file": "core/src/adapter.cpp",
    "literal": "TOF",
    "reason": "the beam mode abbreviation in a diagnostic, not a label"

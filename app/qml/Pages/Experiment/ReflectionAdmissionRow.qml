@@ -8,7 +8,7 @@ import edi.app
 
 // Which of a single crystal's reflections the fit uses: how equivalents are merged and whether systematic absences
 // are left out, each blank until set (none and include by default), then the counts and agreement crysta's admission
-// gives (Rint over merged groups of two or more, shown as none when undefined).
+// gives (Rint over merged groups of two or more, shown as n/a when undefined).
 Column {
     id: row
 
@@ -17,7 +17,7 @@ Column {
     readonly property real fieldWidth: (EaStyle.Sizes.sideBarContentWidth - grid.columnSpacing) / 2
 
     function ratio(value) {
-        return isNaN(value) ? qsTr("none") : Number(value).toFixed(3);
+        return isNaN(value) ? qsTr("n/a") : Number(value).toFixed(3);
     }
 
     spacing: AppSizes.groupContentSpacing
