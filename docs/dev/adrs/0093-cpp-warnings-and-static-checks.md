@@ -1,4 +1,4 @@
-# 0089. C++ warnings as errors, clang-tidy and cppcheck
+# 0093. C++ warnings as errors, clang-tidy and cppcheck
 
 - **Status:** Accepted
 - **Date:** 2026-11-15

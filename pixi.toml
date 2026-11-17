@@ -311,7 +311,7 @@ wasm-build = { cmd = ["bash", "tools/ci/wasm-build.sh"], depends-on = [{ task = 
 # -e app app-test`, `app-ui-test` and `app-ui-bless` still run by hand.
 app-gates = { depends-on = ["app-test-scan-lines", "app-test-scan-refresh", { task = "app-build", environment = "app" }, "app-lint", "app-format-check"] }
 
-# The C++ static checks (edi ADR-0089): clang-tidy at one version on every platform, the version crysta's code-quality
+# The C++ static checks (edi ADR-0093): clang-tidy at one version on every platform, the version crysta's code-quality
 # rules pin, and cppcheck. They read the compile commands of the app's build tree (build/app), so this environment
 # holds only the tools.
 [feature.cpp-lint.dependencies]
