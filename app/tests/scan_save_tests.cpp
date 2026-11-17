@@ -348,6 +348,29 @@ private slots:
         QVERIFY(!table->property("moving").toBool());
     }
 
+    // A parameter at zero still slides by a useful step: ±0.1° for the 2θ offset, the table's floor for its kind.
+    void slidersStartWideEnoughAtZero() {
+        QQmlApplicationEngine engine;
+        edi_app::configure_engine(engine);
+        auto* session = engine.singletonInstance<edi_app::Session*>("edi.app", "Session");
+        QVERIFY(session);
+        QVERIFY2(session->openProject(QUrl::fromLocalFile(QStringLiteral(EDI_SOURCE_DIR "/docs/user/cli/pd-neut-cwl_lbco-hrpt/project"))), qPrintable(session->lastError()));
+        auto* parameters = session->project()->parameters();
+        const auto find = [parameters](const QString& path) -> edi_app::ParameterItem* {
+            for (int row = 0; row < parameters->rowCount(); ++row)
+                if (parameters->text(row, QStringLiteral("path")).endsWith(path))
+                    return qobject_cast<edi_app::ParameterItem*>(parameters->item(row, QStringLiteral("parameter")));
+            return nullptr;
+        };
+        edi_app::ParameterItem* offset = find(QStringLiteral("instrument.calib_twotheta_offset"));
+        QVERIFY(offset);
+        QVERIFY(std::abs(offset->value()) < 0.2);
+        QCOMPARE(offset->sliderHalfWidth(), std::max(0.1, std::abs(offset->value()) * 0.5));
+        edi_app::ParameterItem* length = find(QStringLiteral("cell.length_a"));
+        QVERIFY(length);
+        QCOMPARE(length->sliderHalfWidth(), 0.05);
+    }
+
     void toolbarOverflowLeavesNoQmlWarning() {
         static QStringList warnings;
         warnings.clear();
