@@ -343,7 +343,7 @@ std::uint64_t AssistantWidgetInput::start(Request request) {
     const auto original = request_;
     const auto id = ++serial_;
     choice_popup_.clear(); choice_content_.clear(); choice_row_.clear(); search_header_.clear(); search_editor_.clear(); choice_text_=std::move(optionText);
-    center_ = center; step_ = Step::Move; draft_ = false; commit_prepared_ = false; tooltip_waits_ = 0;
+    center_ = center; step_ = Step::Move; draft_ = false; commit_prepared_ = false; tooltip_waits_ = 0; choice_open_waits_ = 0;
     emit activeChanged(true);
     if (!self) return id;
     const bool ready = self->current(id);
@@ -637,14 +637,24 @@ void AssistantWidgetInput::advance() noexcept {
             if (!mouse(QEvent::MouseButtonRelease, request->kind == Kind::ContextMenu ? Qt::RightButton : Qt::LeftButton)) { if (self && serial_ == id && request_ == request) self->fail(request,id,ControlCause::Delivery, QT_TR_NOOP("The real control did not receive its release"), true); return; }
             if (!self || serial_ != id || request_ != request) return;
             if (request_->kind == Kind::Choose || request_->kind == Kind::SearchChoice) {
-                choice_popup_ = request_->target->property("popup").value<QObject*>();
-                choice_content_ = choice_popup_ ? choice_popup_->property("contentItem").value<QQuickItem*>() : nullptr;
-                if (!choice_popup_ || !choice_popup_->property("visible").toBool() || !watchChoicePopup()) { if(self)self->fail(request,id,ControlCause::Commit, QT_TR_NOOP("The genuine ComboBox popup did not open with its original completion owner"), false); return; }
-                step_ = request_->kind == Kind::SearchChoice ? Step::SearchReveal : Step::ChoiceReveal;
-                pace(click_relaxation_ms); return;
+                step_ = Step::ChoiceOpenWait; timer_.start(0); return;
             }
             if (request_->kind != Kind::ParameterFilter && request_->kind != Kind::StagedText && request_->kind != Kind::Choose && request_->kind != Kind::SearchChoice && request_->kind != Kind::FormText) { if(self)self->stop(request,id,true, {}, false); return; }
             step_ = Step::Select; pace(click_relaxation_ms); return;
+        case Step::ChoiceOpenWait: {
+            // The popup a click opens may show a frame or two later (a list rebuilt for it, a closing tooltip): wait for
+            // it, then open it directly as the combo box's own click does, before calling the click failed.
+            choice_popup_ = request->target->property("popup").value<QObject*>();
+            const bool open = choice_popup_ && choice_popup_->property("visible").toBool();
+            if (!open && choice_popup_ && choice_open_waits_ < 20) {
+                if (++choice_open_waits_ == 20) QMetaObject::invokeMethod(choice_popup_, "open");
+                timer_.start(50); return;
+            }
+            choice_content_ = choice_popup_ ? choice_popup_->property("contentItem").value<QQuickItem*>() : nullptr;
+            if (!choice_popup_ || !choice_popup_->property("visible").toBool() || !watchChoicePopup()) { if(self)self->fail(request,id,ControlCause::Commit, QT_TR_NOOP("The genuine ComboBox popup did not open with its original completion owner"), false); return; }
+            step_ = request->kind == Kind::SearchChoice ? Step::SearchReveal : Step::ChoiceReveal;
+            pace(click_relaxation_ms); return;
+        }
         case Step::SearchReveal: {
             if(!revealSearchEditor()) {if(self && serial_==id && request_==request)self->fail(request,id,ControlCause::Unavailable,QT_TR_NOOP("The original popup search editor could not be revealed"),false);return;}
             if(!self || serial_!=id || request_!=request)return;
