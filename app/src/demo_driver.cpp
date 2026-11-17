@@ -842,6 +842,13 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
             steps_.push_back({QStringLiteral("freecheck-%1").arg(i + 1, 2, 10, QLatin1Char('0')), actions});
         }
     }
+    // Map's More popup with its colour map box, on the synthetic series (`--demo-only mappopup-`).
+    if (only.startsWith(QLatin1String("mappopup-"))) {
+        const QString root = QString::fromUtf8(EDI_CLI_PROJECTS_DIR) + "/";
+        steps_.push_back({"mappopup-1-open", {"resize:1480x800", "open-project:" + root + "pd-neut-tof_ncaf-wish-5bank_synthetic-100p/project",
+                                              "appBar.tab.experiment", basic, "mainArea.tab.map", "scanView.map.toolbar.more"}});
+        steps_.push_back({"mappopup-2-list", {"scanView.map.toolbar.colourMap.overflow"}});
+    }
     // Meas vs calc during a scan's fit: it follows the fitted datasets (`--demo-only measfollow-`).
     if (only.startsWith(QLatin1String("measfollow-"))) {
         const QString root = QString::fromUtf8(EDI_CLI_PROJECTS_DIR) + "/";
