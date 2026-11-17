@@ -84,15 +84,31 @@ Item {
 
                     required property var modelData
                     readonly property bool box: modelData.closedTexts !== undefined
+                    // A colour map's box keeps its gradients in the popup too: copied as itself (the owner, 2026-11-17).
+                    readonly property bool colourMap: box && modelData.maps !== undefined
 
-                    width: box ? boxCopy.width : buttonCopy.width
+                    width: colourMap ? mapCopy.width : box ? boxCopy.width : buttonCopy.width
                     height: AppSizes.toolbarControlSize
 
+                    ColourMapComboBox {
+                        id: mapCopy
+
+                        objectName: entry.colourMap ? entry.modelData.objectName + ".overflow" : ""
+                        visible: entry.colourMap
+                        enabled: entry.colourMap && entry.modelData.enabled
+                        toolTip: entry.colourMap ? entry.modelData.toolTip ?? "" : ""
+                        maps: entry.colourMap ? entry.modelData.maps : []
+                        direction: entry.colourMap ? entry.modelData.direction : "auto"
+                        chartBackground: entry.colourMap ? entry.modelData.chartBackground : "white"
+                        dark: entry.colourMap && entry.modelData.dark
+                        shownIndex: entry.colourMap ? entry.modelData.currentIndex : 0
+                        onActivated: index => entry.modelData.activated(index)
+                    }
                     ToolbarComboBox {
                         id: boxCopy
 
-                        objectName: entry.box ? entry.modelData.objectName + ".overflow" : ""
-                        visible: entry.box
+                        objectName: entry.box && !entry.colourMap ? entry.modelData.objectName + ".overflow" : ""
+                        visible: entry.box && !entry.colourMap
                         enabled: entry.modelData.enabled
                         toolTip: entry.modelData.toolTip ?? ""
                         model: entry.box ? entry.modelData.model : []
