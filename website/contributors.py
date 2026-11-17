@@ -2,23 +2,25 @@
 """The About page's contributor row, and the command that refreshes its avatars (edi ADR-0092).
 
 The avatars are committed with the site so it builds offline. `refresh` downloads each from GitHub
-and replaces a file only with a whole PNG or JPEG image, written beside it and moved into place, so
-a cut-off download or a failed write never leaves a broken avatar; any failure keeps the old file
-and warns, so the deploy never fails on it.
+and replaces a file only with a PNG or JPEG image that decodes whole (Pillow, and pypng for a PNG's
+rows), written beside it and moved into place, so a cut-off download or a failed write never leaves
+a broken avatar; any failure keeps the old file and warns, so the deploy never fails on it.
 """
 
 from __future__ import annotations
 
 import os
-import struct
 import sys
 import urllib.request
 import zlib
 from collections.abc import Callable
 from html import escape
+from io import BytesIO
 from pathlib import Path
 
+import png
 import yaml
+from PIL import Image
 
 ROOT = Path(__file__).resolve().parent
 DATA = ROOT / 'contributors.yml'
@@ -26,9 +28,7 @@ AVATARS = ROOT / 'surfaces/docs/assets/about/contributors'
 MARKER = '<!-- contributors -->'
 TIMEOUT = 10
 # GitHub serves avatars as PNG or JPEG; the browser reads either under the .png name.
-PNG_SIGNATURE = b'\x89PNG\r\n\x1a\n'
-# The JPEG frame headers (baseline, progressive and the rarer codings): every image has one.
-JPEG_FRAMES = {0xC0, 0xC1, 0xC2, 0xC3, 0xC5, 0xC6, 0xC7, 0xC9, 0xCA, 0xCB, 0xCD, 0xCE, 0xCF}
+IMAGE_FORMATS = {'PNG', 'JPEG'}
 
 
 def load(path: Path = DATA) -> list[dict[str, str]]:
@@ -69,60 +69,38 @@ def with_contributors(page: str, people: list[dict[str, str]], avatars: Path = A
     return page.replace(MARKER, render(people, avatars))
 
 
-def _whole_png(data: bytes) -> bool:
-    """Every chunk whole with its checksum, IHDR to IEND, and the pixels one whole zlib stream."""
-    at, first, pixels = len(PNG_SIGNATURE), True, zlib.decompressobj()
-    while at + 12 <= len(data):
-        (length,) = struct.unpack('>I', data[at : at + 4])
-        kind = data[at + 4 : at + 8]
-        end = at + 12 + length
-        if end > len(data) or (first and kind != b'IHDR'):
-            return False
-        body = data[at + 8 : at + 8 + length]
-        if zlib.crc32(kind + body) != struct.unpack('>I', data[end - 4 : end])[0]:
-            return False
-        if kind == b'IDAT':
-            try:
-                pixels.decompress(body)
-            except zlib.error:
-                return False
-        if kind == b'IEND':
-            return pixels.eof
-        at, first = end, False
-    return False
+def _decoded_size(data: bytes) -> tuple[str, int, int] | None:
+    """The format and size Pillow decodes the image to, or None when it does not decode."""
+    try:
+        with Image.open(BytesIO(data)) as image:
+            image.load()
+            return image.format, image.width, image.height
+    except (OSError, ValueError, SyntaxError, Image.DecompressionBombError):
+        return None
 
 
-def _whole_jpeg(data: bytes) -> bool:
-    """Its segments whole up to the scan, a frame header among them, and the end marker last."""
-    at, frame = 2, False
-    while at + 4 <= len(data):
-        if data[at] != 0xFF:
-            return False
-        marker = data[at + 1]
-        if marker == 0xFF:  # fill byte
-            at += 1
-            continue
-        (length,) = struct.unpack('>H', data[at + 2 : at + 4])
-        if length < 2 or at + 2 + length > len(data):
-            return False
-        frame = frame or marker in JPEG_FRAMES
-        if marker == 0xDA:  # start of scan: the coded data runs to the end marker
-            return (
-                frame
-                and data.rstrip(b'\x00').endswith(b'\xff\xd9')
-                and len(data) > at + 2 + length + 2
-            )
-        at += 2 + length
-    return False
+def _png_rows(data: bytes) -> int:
+    """How many rows pypng reads from a PNG; -1 when it does not read."""
+    try:
+        _, _, rows, _ = png.Reader(bytes=data).read()
+        return sum(1 for _ in rows)
+    except (png.Error, ValueError, zlib.error):
+        return -1
 
 
 def is_image(data: bytes) -> bool:
-    """A whole PNG or JPEG image: a download cut off after its first bytes is refused."""
-    if data.startswith(PNG_SIGNATURE):
-        return _whole_png(data)
-    if data.startswith(b'\xff\xd8\xff'):
-        return _whole_jpeg(data)
-    return False
+    """A PNG or JPEG image that decodes whole, with a size: a cut-off download is refused.
+
+    Pillow decodes it. Pillow fills a PNG's missing rows with zeros, so pypng also reads a PNG,
+    which must yield every row Pillow found the image to have.
+    """
+    decoded = _decoded_size(data)
+    if decoded is None:
+        return False
+    kind, width, height = decoded
+    if kind not in IMAGE_FORMATS or width <= 0 or height <= 0:
+        return False
+    return kind != 'PNG' or _png_rows(data) == height
 
 
 def replace_file(target: Path, data: bytes) -> None:

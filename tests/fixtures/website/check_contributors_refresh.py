@@ -22,15 +22,16 @@ import contributors  # noqa: E402
 OLD = b'old avatar bytes'
 
 
-def png() -> bytes:
-    """A 1 x 1 grey PNG, chunk by chunk as the PNG specification lays it out."""
+def png(height: int = 1) -> bytes:
+    """A 1-pixel-wide grey PNG with one row, chunk by chunk as the PNG specification lays it out;
+    a taller `height` declares rows it does not hold."""
 
     def chunk(kind: bytes, body: bytes) -> bytes:
         return (
             struct.pack('>I', len(body)) + kind + body + struct.pack('>I', zlib.crc32(kind + body))
         )
 
-    header = struct.pack('>IIBBBBB', 1, 1, 8, 0, 0, 0, 0)
+    header = struct.pack('>IIBBBBB', 1, height, 8, 0, 0, 0, 0)
     return (
         b'\x89PNG\r\n\x1a\n'
         + chunk(b'IHDR', header)
@@ -74,6 +75,20 @@ def test_whole_image_replaces_and_cut_off_one_keeps(tmp_path, image):
     assert (tmp_path / 'cut.png').read_bytes() == OLD
     assert len(warnings) == 1 and warnings[0].startswith('cut:')
     assert sorted(path.name for path in tmp_path.iterdir()) == ['cut.png', 'whole.png']
+
+
+@pytest.mark.parametrize(
+    'data',
+    [png(height=4), bytes.fromhex('FFD8FFC00002FFDA000200FFD9')],
+    ids=['png-rows-missing', 'jpeg-empty-frame'],
+)
+def test_well_formed_but_undecodable_is_not_an_image(tmp_path, data):
+    """Review 2's counterexamples: each chunk or segment in place, yet no whole image in them."""
+    assert not contributors.is_image(data)
+    people = setup(tmp_path, 'odd')
+    warnings = contributors.refresh(people, tmp_path, fetching({'odd': data}))
+    assert (tmp_path / 'odd.png').read_bytes() == OLD
+    assert len(warnings) == 1
 
 
 def test_signed_header_alone_is_not_an_image():

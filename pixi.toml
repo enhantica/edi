@@ -100,6 +100,10 @@ doctest = "*"
 nodejs = "==22.23.2"
 # Screenshot contract checks decode pixels in the default test environment.
 libwebp-base = "==1.6.0"
+# The About page's avatar refresh decodes each download before it replaces a committed avatar (edi ADR-0092):
+# Pillow decodes it, and pypng confirms a PNG holds every row its header declares (Pillow pads missing rows).
+pillow = "*"
+pypng = "*"
 
 # macOS SDK 27 (Xcode 27) needs Clang and libc++ 23: with Clang 19, libc++'s <complex> no longer sees INFINITY and
 # NAN through the SDK's math.h. The Mac drivers are named directly, since the cxx-compiler metapackage holds an older
