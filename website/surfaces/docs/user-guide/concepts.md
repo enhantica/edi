@@ -71,6 +71,12 @@ A fit needs observations to compare against. A least-squares fit reduces the wei
 
 Start from a physically meaningful model. Inspect the initial pattern, allow parameters to vary deliberately, and review the result after each meaningful change. Adding more free parameters may reduce a residual without making the model more informative.
 
+## What a fit needs from you {#what-a-fit-needs-from-you}
+
+EasyDiffraction fits a model you provide. Its values may be off, but its symmetry and composition must be right: the space group, the atoms in the cell and, for a magnetic structure, the magnetic space group or propagation vector. Its starting values, such as the cell, the atom positions and the scale, must be reasonable, so that the calculated pattern already resembles the measured one. A fit then moves those values towards the observations.
+
+EasyDiffraction has no tools to find a model from the data: no structure solution and no propagation-vector search. Take the starting model from a database entry, a related compound or a structure-solution program, and load it as a CIF.
+
 ## Least squares and Bayesian analysis {#least-squares-and-bayesian-analysis}
 
 Both compare a model with observations, but summarise parameter uncertainty differently.
