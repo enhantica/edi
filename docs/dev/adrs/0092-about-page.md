@@ -47,11 +47,9 @@ presented as people who took part in the project with code, ideas and work, not 
   place of the page's `<!-- contributors -->` line while it builds, and restores the page afterwards.
 
 **Avatars.** They are stored with the site in `assets/about/contributors/<login>.png`, so the site builds offline and
-never loads from GitHub. `pixi run site-contributors` (`website/contributors.py`) downloads each from
-`https://github.com/<login>.png?size=144` with a 10 s timeout. It replaces a file only when the download is a PNG or
-JPEG image (GitHub serves either; browsers read both under the `.png` name), keeps the old file and warns otherwise.
-The website deploy workflow runs it before the site build, and that step never fails the deploy. The download
-function is passed in, so a test replaces it and never uses the network.
+never loads from GitHub. They are PNG or JPEG files from `https://github.com/<login>.png?size=144` (browsers read
+both under the `.png` name), replaced by hand when one changes. A command that refreshes them at deploy is a
+follow-up change (the owner, 2026-11-17).
 
 ### Measured contributions
 
@@ -83,8 +81,8 @@ Mads Bertelsen (all on other branches) and Simon Ward's unlinked commits are mis
 ## Consequences
 
 The page credits the earlier contributors without loading anything from GitHub at view time. Adding a person is one
-entry in `contributors.yml` and their avatar file. A changed GitHub avatar reaches the site at the next deploy; a
-failed download leaves the old one. The row and this ADR are site content only, so they ship with a site rebuild from
+entry in `contributors.yml` and their avatar file. A changed GitHub avatar reaches the site when its file is replaced.
+The row and this ADR are site content only, so they ship with a site rebuild from
 `main` and need no app release.
 
 ## Alternatives considered

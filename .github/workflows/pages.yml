@@ -67,11 +67,6 @@ jobs:
       # The repository keeps tutorial notebooks without outputs, so the site runs them before it renders them.
       - name: Run the tutorial notebooks
         run: pixi run notebooks-run
-      # A failed avatar download keeps the committed one and warns (edi ADR-0092).
-      - name: Refresh the contributors' avatars
-        continue-on-error: true
-        timeout-minutes: 3
-        run: pixi run site-contributors
       - name: Build the public site
         env:
           GH_TOKEN: ${{ github.token }}

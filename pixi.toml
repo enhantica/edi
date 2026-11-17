@@ -568,8 +568,6 @@ notebooks-run = { cmd = ["python", "website/run_notebooks.py"], depends-on = ["c
 # (`pixi run notebooks-run-with-crysta ../crysta`; docs/dev/local-crysta.md).
 notebooks-run-with-crysta = { cmd = ["bash", "tools/dev/notebooks-with-crysta.sh"] }
 site-build = "python website/build.py"
-# Download the About page contributors' avatars from GitHub; a failed download keeps the committed file.
-site-contributors = "python website/contributors.py"
 # Build the public site, then serve website/_build at http://127.0.0.1:8873/ for local preview.
 site-serve = "python website/build.py --serve"
 # Every app image of the docs site, captured in both themes from the app and imported, with its manifest
