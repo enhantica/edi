@@ -69,8 +69,10 @@ Item {
         visible: false
         fontIcon: "ellipsis-h"
         toolTip: qsTr("More chart options")
-        checked: morePopup.opened
-        onClicked: morePopup.opened ? morePopup.close() : morePopup.open()
+        // By `visible`, not `opened`: a press on this button already closes the popup (a press outside it), and
+        // `opened` turns false as the closing starts, so the click that follows opened it again.
+        checked: morePopup.visible
+        onClicked: morePopup.visible ? morePopup.close() : morePopup.open()
     }
     // The app's popup (EaElements.Menu: its frame and its open and close animation) in the chart's background colour,
     // holding one row of the controls that do not fit, as they look in the toolbar, each with its tooltip (the owner,
