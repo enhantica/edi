@@ -4065,6 +4065,9 @@ struct AssistantViewModel::State {
         std::shared_ptr<LocalInputSource> structure_origin, measurement_origin;
         QUrl measurement_path, measurement_reader_path;
         bool origin_unavailable=false;
+        // Show actions could not cue the original control: the same native operation ran without the cue.
+        QString cue_skipped;
+        bool cue_fallback=false;
 
         std::unique_ptr<QTemporaryDir> input_snapshot;
         std::shared_ptr<ProjectViewModel::WidgetCreationInput> control_input;
@@ -11386,6 +11389,7 @@ struct AssistantViewModel::State {
             result["action_field"] = run->file_input ? "file_id" : run->individual_tool == "create_experiment" ? "project" : "experiment";
         }
         if(!complete)control_append(result,run->call.record);
+        if(!run->cue_skipped.isEmpty())result["cue_skipped"]=bounded_error(run->cue_skipped);
         if(!individual_member_current(run))return result;
         if(run->result_structure) {
             const auto& name=run->result_structure->name.value();
@@ -11785,6 +11789,31 @@ struct AssistantViewModel::State {
         }
         if (run->call.record->answered || run->call.record->discarded || run->call.record->completed) {
             create_widget_end(run); return; // An original final fact is never replaced by cleanup uncertainty.
+        }
+        // A cue is presentation: when Show actions cannot reveal or cue the original control before anything was
+        // applied, the operation runs as normal mode runs it (same reader, same Undo) and reports the skipped cue.
+        if (!uncertain && run->visible_delivery && run->ordinary && !run->cue_fallback && run->completed_steps == 0 &&
+            !run->individual_tool.isEmpty() && !selection_action(run) && !run->origin_unavailable &&
+            !(run->file_input && (run->file_input->consumed || run->file_input->source_changed)) &&
+            !(run->control_input && run->control_input->consumed)) {
+            run->cue_fallback = true;
+            run->cue_skipped = message.isEmpty() ? QStringLiteral("The original control could not be shown") : message;
+            try {
+                individual_normal(run);
+            } catch (const ActionRefusal& refusal) {
+                if (receiver && receiver->state_.get() == this && create_widget_owned(run)) {
+                    try {
+                        auto result = individual_progress(run, false);
+                        result["action_error"] = refusal.error; result["action_field"] = refusal.field;
+                        native_finish(false, result);
+                    } catch (...) {}
+                }
+            } catch (...) {
+                if (receiver && receiver->state_.get() == this && create_widget_owned(run))
+                    try { native_finish(false, individual_progress(run, false)); } catch (...) {}
+            }
+            if (receiver && receiver->state_.get() == this && create_widget_owned(run)) create_widget_end(run);
+            return;
         }
         if (lcAssistantWidgetLookup().isDebugEnabled()) {
             // Only scalar facts from this original refusal; never query a control again.

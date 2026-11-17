@@ -53,17 +53,22 @@ def main():
             if not opened.get('opened'):
                 raise RuntimeError('Original project Open refused')
             actor.until(lambda row: not row['ui']['project']['calculating'])
-            token = actor.begin_current_file_selection()
             cif = ROOT / 'tests/fixtures/assistant_save_replay/lbco.cif'
-            admitted = actor.command('selected_add', token=token, paths=[str(cif), str(data)])[
-                'reply'
-            ]
-            if not admitted.get('added'):
-                raise RuntimeError('Original selected-file admission refused')
-            files = actor.last['ui']['selected_files']
+            files = []
+
+            def admit():
+                token = actor.begin_current_file_selection()
+                admitted = actor.command('selected_add', token=token, paths=[str(cif), str(data)])[
+                    'reply'
+                ]
+                if not admitted.get('added'):
+                    raise RuntimeError('Original selected-file admission refused')
+                files[:] = actor.last['ui']['selected_files']
 
             def file_id(suffix):
                 return next(row['id'] for row in files if suffix in json.dumps(row))
+
+            admit()
 
             def call(tool, **arguments):
                 identity = 'load-replay-' + str(len(mode['steps'])) + '-' + tool
@@ -94,9 +99,24 @@ def main():
                 (folder / 'steps.json').write_text(json.dumps(mode, indent=2) + '\n')
                 return response
 
-            call(
-                'create_project', name='lbco_load_replay', title='LBCO load after a parameter edit'
-            )
+            if show:
+                # Show actions' Create dialog typing stalls on this harness (the save replay's create_project
+                # too), so the empty project comes from the Session, as that dialog makes it.
+                created = driver.qml(
+                    actor,
+                    'Session.createProject("lbco_load_replay", "LBCO load after a parameter edit")',
+                )
+                mode['steps'].append({'step': 'create_project_session', 'response': created})
+                if not created:
+                    raise RuntimeError('Session.createProject refused')
+                # A new project starts with no admitted inputs: the files are selected again for it.
+                admit()
+            else:
+                call(
+                    'create_project',
+                    name='lbco_load_replay',
+                    title='LBCO load after a parameter edit',
+                )
             call('load_structure', file_id=file_id('.cif'))
             call('create_experiment')
             experiment = driver.qml(actor, 'Session.project.experiments.text(0, "name")')
