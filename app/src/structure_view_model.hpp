@@ -377,8 +377,8 @@ class StructureViewModel : public QObject {
     // The bond cutoffs (`_geom`): a bond is drawn between two sites at least the minimum distance apart and at most
     // their covalent radii plus the increment; each is crysta's default until set. And the bonds crysta computed with
     // them (`_geom_bond`), each {"site1", "site2", "distance"}, empty until the geometry is current.
-    Q_PROPERTY(double minBondDistance READ minBondDistance WRITE setMinBondDistance NOTIFY bondsChanged)
-    Q_PROPERTY(double bondDistanceIncrement READ bondDistanceIncrement WRITE setBondDistanceIncrement NOTIFY bondsChanged)
+    Q_PROPERTY(double minBondDistance READ minBondDistance WRITE setMinBondDistance NOTIFY minBondDistanceChanged)
+    Q_PROPERTY(double bondDistanceIncrement READ bondDistanceIncrement WRITE setBondDistanceIncrement NOTIFY bondDistanceIncrementChanged)
     Q_PROPERTY(QVariantList bonds READ bonds NOTIFY bondsChanged)
 
    public:
@@ -423,6 +423,8 @@ class StructureViewModel : public QObject {
     void nameChanged();
     void magneticChanged();
     void atomTypesChanged();
+    void minBondDistanceChanged();
+    void bondDistanceIncrementChanged();
     void bondsChanged();
     void magneticGroupChanged();
     void magneticGroupRefusalChanged();

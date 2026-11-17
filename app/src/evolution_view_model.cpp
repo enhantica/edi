@@ -161,6 +161,7 @@ void EvolutionViewModel::syncExperiments() {
         if (experiments_.isEmpty()) per_experiment_ = false;
         current_experiment_ = std::min(current_experiment_, static_cast<int>(experiments_.size()) - 1);
         emit seriesChanged();
+        emit experimentsChanged();
         emit perExperimentChanged();
         emit currentExperimentChanged();
         emit xTitleChanged();  // a series that records nothing is placed by its runs
@@ -214,6 +215,7 @@ bool EvolutionViewModel::syncNames() {
         current_ = current;
         emit currentParameterChanged();
         emit yTitleChanged();
+        emit yLabelChanged();
     }
     return changed;
 }
@@ -309,6 +311,7 @@ void EvolutionViewModel::setCurrentParameter(int index) {
         current_ = index;
         emit currentParameterChanged();
         emit yTitleChanged();
+        emit yLabelChanged();
         rebuild();
     }
 }

@@ -962,6 +962,7 @@ void StructureViewModel::setMinBondDistance(double distance) {
     if (std::isfinite(distance) && distance >= 0.0 && distance != minBondDistance()) {
         editor_.apply(edi::Edit::assign(structure_.geom.min_bond_distance_cutoff, distance), true);
     }
+    emit minBondDistanceChanged();
     emit bondsChanged();
 }
 
@@ -969,6 +970,7 @@ void StructureViewModel::setBondDistanceIncrement(double increment) {
     if (std::isfinite(increment) && increment >= 0.0 && increment != bondDistanceIncrement()) {
         editor_.apply(edi::Edit::assign(structure_.geom.bond_distance_inc, increment), true);
     }
+    emit bondDistanceIncrementChanged();
     emit bondsChanged();
 }
 
@@ -1016,6 +1018,8 @@ void StructureViewModel::sync() {
     emit magneticGroupChanged();
     emit parentGroupChanged();
     syncAtomTypes();
+    emit minBondDistanceChanged();
+    emit bondDistanceIncrementChanged();
     emit bondsChanged();
     categories_->setCategories(shown_categories(structure_), [this] { return text_->discoveryText().toStdString(); },
                                [this] { return edi::calculated_categories(structure_); });

@@ -3882,6 +3882,10 @@ QString ProjectViewModel::pointProblem(int point) const {
 void ProjectViewModel::syncSeries() {
     ++series_revision_;
     emit seriesChanged();
+    emit bankLabelsChanged();
+    emit seriesNameChanged();
+    emit seriesVariableChanged();
+    emit seriesPointCountChanged();
 }
 
 bool ProjectViewModel::seriesMatches() const {
@@ -3910,6 +3914,7 @@ void ProjectViewModel::syncScanAdmission() {
             scan_template_.reset();
         }
         emit scanChanged();
+        emit seriesModeChanged();
         // A scan starts on its template's row, so the selectors name a dataset from the start (the owner, 2026-11-04).
         if (scan_ && current_dataset_ < 0) {
             if (const int at = templateIndex(); at >= 0) {
@@ -4170,6 +4175,10 @@ void ProjectViewModel::syncDataset(int index) {
     if (series()) {
         ++series_revision_;
         emit seriesChanged();
+        emit bankLabelsChanged();
+        emit seriesNameChanged();
+        emit seriesVariableChanged();
+        emit seriesPointCountChanged();
         return;
     }
     if (index == current_dataset_) {

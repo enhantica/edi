@@ -245,14 +245,14 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // A series of joint fits (ADR-0088): a scan whose points each hold one file per experiment, its banks. The
     // Experiments group shows it as one ordinary row; the charts choose a run (the series
     // variable, currentExperimentIndex as for a scan) and a bank (currentBank, the experiment the side bar shows).
-    Q_PROPERTY(bool series READ series NOTIFY scanChanged)
+    Q_PROPERTY(bool series READ series NOTIFY seriesModeChanged)
     Q_PROPERTY(int currentBank READ currentBank WRITE setCurrentBank NOTIFY currentBankChanged)
-    Q_PROPERTY(QStringList bankLabels READ bankLabels NOTIFY seriesChanged)
+    Q_PROPERTY(QStringList bankLabels READ bankLabels NOTIFY bankLabelsChanged)
     // The series' name (its experiment set, else its first structure), what its points record ("Temperature (K)",
     // or "Run" when nothing is recorded) and how many points it lists (incomplete ones last).
-    Q_PROPERTY(QString seriesName READ seriesName NOTIFY seriesChanged)
-    Q_PROPERTY(QString seriesVariable READ seriesVariable NOTIFY seriesChanged)
-    Q_PROPERTY(int seriesPointCount READ seriesPointCount NOTIFY seriesChanged)
+    Q_PROPERTY(QString seriesName READ seriesName NOTIFY seriesNameChanged)
+    Q_PROPERTY(QString seriesVariable READ seriesVariable NOTIFY seriesVariableChanged)
+    Q_PROPERTY(int seriesPointCount READ seriesPointCount NOTIFY seriesPointCountChanged)
     // Counted up whenever a run's facts change, so a binding reading pointName or pointProblem reads them again.
     Q_PROPERTY(int seriesRevision READ seriesRevision NOTIFY seriesChanged)
     Q_PROPERTY(QString missingDataFolder READ missingDataFolder NOTIFY missingDataFolderChanged)
@@ -822,7 +822,12 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     void calculationStarted();
     void templateIndexChanged();
     void scanChanged();
+    void seriesModeChanged();
     void seriesChanged();
+    void bankLabelsChanged();
+    void seriesNameChanged();
+    void seriesVariableChanged();
+    void seriesPointCountChanged();
     void currentBankChanged();
     void listingDatasetFolderChanged();
     void missingDataFolderChanged();
