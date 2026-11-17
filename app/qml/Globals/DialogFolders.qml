@@ -20,6 +20,14 @@ QtObject {
     function folder(kind: string, fallback: url): url {
         return ApplicationInfo.rememberedFolder(String(folders.store.value(kind, "")), fallback);
     }
+    // A save target moved into the folder a dialog of `kind` last chose, its name kept; the target as it was otherwise.
+    function retarget(kind: string, target: url): url {
+        const text = target.toString();
+        const folder = folders.folder(kind, "").toString();
+        if (folder === "" || text === "")
+            return target;
+        return folder + text.substring(text.lastIndexOf("/"));
+    }
     // Remembers the folder holding `chosen` (a file, or a folder: its parent, where the user was looking).
     function remember(kind: string, chosen: url) {
         if (chosen.toString() !== "")

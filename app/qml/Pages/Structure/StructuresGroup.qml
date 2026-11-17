@@ -240,6 +240,10 @@ SideBarGroup {
         id: loadDialog
         title: qsTr("Load a structure from a CIF or .edi file")
         nameFilters: [qsTr("Structure files (*.cif *.edi)"), qsTr("CIF files (*.cif)"), qsTr("edi block files (*.edi)")]
-        onAccepted: group.project.loadStructure(selectedFile)
+        currentFolder: DialogFolders.folder("loadStructure", "")
+        onAccepted: {
+            DialogFolders.remember("loadStructure", selectedFile);
+            group.project.loadStructure(selectedFile);
+        }
     }
 }

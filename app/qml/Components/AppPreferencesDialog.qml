@@ -1226,7 +1226,11 @@ AppDialog {
         readonly property string intent: selection ? selection.id : ""
         readonly property var original: selection ? selection.owner : null
         title: qsTr("Choose a skill folder or collection")
-        onAccepted: ApplicationInfo.preferenceCompleteSourceSelection(false, true)
+        currentFolder: DialogFolders.folder("assistantSources", "")
+        onAccepted: {
+            DialogFolders.remember("assistantSources", selectedFolder);
+            ApplicationInfo.preferenceCompleteSourceSelection(false, true);
+        }
         onRejected: ApplicationInfo.preferenceCompleteSourceSelection(false, false)
         Component.onDestruction: ApplicationInfo.preferenceCompleteSourceSelection(false, false)
         Connections {
