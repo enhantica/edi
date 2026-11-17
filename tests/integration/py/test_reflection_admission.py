@@ -469,6 +469,8 @@ def test_assistant_inspect_project_carries_the_same_merge_statistics(native, tmp
     other = (root / 'experiments/bank.edi').read_text().replace('data_bank', 'data_other')
     other = other.replace(DECLARATIONS, '_reflns.merge point_group\n_reflns.absences include\n')
     (root / 'experiments/other.edi').write_text(other)
+    analysis = root / 'analysis/analysis.edi'
+    analysis.write_text(analysis.read_text() + '\n_fitting_mode.type joint\n')
     result = observe(native, root, 'admission')
     assert result['ok'], 'Two distinct experiments expose their own actual assistant summaries'
     context = json.loads(bytes.fromhex(result['inspect'][0][0]).decode())

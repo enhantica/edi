@@ -12,10 +12,12 @@ import gemmi
 from tests.fixtures.e04_t11_wasm import iteration_domains
 from tests.fixtures.e04_t11_wasm.cli_domains import fields
 from tests.fixtures.metadata_transition import pin_sources
+from tests.fixtures.stop_defaults import retention
 from tests.fixtures.web_parallel import numeric
 from tools.checks import cli_projects
 
 HISTORICAL = {'descent': 'ladder', 'stop_rules': 'chi_square_change'}
+HISTORICAL_TOLERANCE = 1e-6
 
 
 # Existing accepted CLI references; hashes bind their complete quantities and provenance.
@@ -50,8 +52,10 @@ def current_references(fixture, source):
         observed[name] = hashlib.sha256(actual).hexdigest()
         relative = fixture['project'].removesuffix('/project') + '/' + name
         try:
-            original = pin_sources.previous_bytes(relative, actual)
-        except AssertionError as error:
+            original = pin_sources.previous_bytes(
+                relative, retention.previous_bytes(relative, actual)
+            )
+        except (AssertionError, ValueError) as error:
             raise ValueError(
                 'Current reference or provenance differs from its declared hash'
             ) from error
@@ -86,10 +90,20 @@ def historical(fixture, raw, report):
     iteration_domains.compare_callbacks(trace.get('callbacks'), rows, fixture)
 
 
+def retained_reference_document(fixture, expected):
+    name = fixture['project'].removesuffix('/project') + '/expected.json'
+    live = (cli_projects.ROOT / name).read_bytes()
+    if json.dumps(expected, sort_keys=True, allow_nan=False) == json.dumps(
+        json.loads(live), sort_keys=True, allow_nan=False
+    ):
+        return json.loads(retention.previous_bytes(name, live))
+    return copy.deepcopy(expected)
+
+
 def current(fixture, old, raw, report, selected, expected):
     """Retain the whole raw population and the existing independent CLI references."""
     binding = reference_binding(fixture)
-    original = copy.deepcopy(expected)
+    original = retained_reference_document(fixture, expected)
     annotated = original.get('source', {}).pop('pins', None)
     if annotated is not None:
         name = fixture['project'].removesuffix('/project') + '/expected.json'
@@ -210,6 +224,8 @@ def vehicle(source, destination):
         if any(tag.lower() in selectors for tag in tags):
             raise ValueError('Historical vehicle cannot override an explicit source solver')
     suffix = b'\n_minimizer.descent ladder\n_minimizer.stop_rules chi_square_change\n'
+    if not float(block.find_value('_minimizer.chi_square_tolerance') or '0'):
+        suffix += b'_minimizer.chi_square_tolerance 1e-6\n'
     shutil.copytree(source, destination)
     (destination / analysis).write_bytes(original[analysis] + suffix)
     actual = {
