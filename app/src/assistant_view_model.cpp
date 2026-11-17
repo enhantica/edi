@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "assistant_view_model.hpp"
+#include "assistant_control_routes.hpp"
 #include "assistant_file_primitives.hpp"
 #include "assistant_history.hpp"
 #include "assistant_history_lookup.hpp"
@@ -12138,29 +12139,18 @@ struct AssistantViewModel::State {
         return false;
     }
     bool create_widget_missing_target(const std::shared_ptr<NativeCreateWidget>& run, const NativeCreateWidget::Input& step) {
-        QString groupName, tableName; qsizetype index = -1;
+        // The control's home from the one route table: its group, and its table for a row control.
+        const ControlRoute* route=control_route(step.target);
+        if(!route || !*route->group)return false;
+        const QString groupName=QString::fromLatin1(route->group), tableName=QString::fromLatin1(route->table);
         bool indexed=false;const auto requested=step.target.section('.',-1).toLongLong(&indexed);
-        if(step.target.startsWith("structures.")) {
-            groupName="group.structures";tableName="structures.list";index=indexed?requested:-1;
-            if(indexed && structure_app_action(run->individual_tool) && index!=structure_member_index(run))return false;
-        } else if(step.target.startsWith("spaceGroup."))groupName="group.space_group";
-        else if(step.target.startsWith("atomSiteAdp.")) {groupName="group.atom_site_aniso";tableName="atomSiteAdps.list";index=indexed?requested:-1;}
-        else if(step.target.startsWith("atomSite.") || step.target=="atomSites.append") {groupName="group.atom_site";tableName="atomSites.list";index=indexed?requested:-1;}
-        else if (step.target.startsWith("excludedRegion.")) {
-            groupName="group.excluded_region"; tableName="excludedRegions.list"; index=indexed?requested:-1;
-        } else if (step.target.startsWith("linkedStructure.")) {
-            groupName="group.linked_structure"; tableName="linkedStructure.list"; index=indexed?requested:-1;
-        } else if (step.target.startsWith("experiments.")) {
-            groupName="group.experiments"; tableName="experiments.list"; index=indexed?requested:-1;
-            if(indexed && !run->individual_tool.isEmpty() && index!=individual_member_index(run))return false;
-        } else if(step.target.startsWith("jointFit.weight.")) {
-            groupName="group.joint_fit";tableName="jointFit.list";index=indexed?requested:-1;
-            if(index!=individual_member_index(run))return false;
-        } else if(step.target.startsWith("extinction."))groupName="group.extinction";
-        else if(step.target.startsWith("absorption."))groupName="group.absorption";
-        else if (step.target.startsWith("peak.")) groupName="group.peak";
-        else if (step.target.startsWith("instrument.")) groupName="group.instrument";
-        else return false;
+        const qsizetype index=indexed && !tableName.isEmpty()?requested:-1;
+        // A row control of another member than the one this operation edits is never revealed.
+        if(index>=0) {
+            if(tableName=="structures.list" && structure_app_action(run->individual_tool) && index!=structure_member_index(run))return false;
+            if(tableName=="experiments.list" && !run->individual_tool.isEmpty() && index!=individual_member_index(run))return false;
+            if(tableName=="jointFit.list" && index!=individual_member_index(run))return false;
+        }
         auto* group=create_widget_named(run,groupName);
         if (!group) return false;
         if (group->property("collapsed").toBool()) {
