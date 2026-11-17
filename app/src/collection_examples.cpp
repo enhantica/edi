@@ -26,6 +26,12 @@ bool cod_service(const OnlineSourcesModel& sources, const QString& id) {
     const QUrl url(sources.urlOf(id));
     return sources.isCod(id) && !url.isLocalFile() && url.scheme() != QStringLiteral("file");
 }
+
+// A location on this computer: the copy of the collection installed with the app.
+bool local_location(const QString& base) {
+    const QUrl url(base);
+    return url.isLocalFile() || url.scheme().isEmpty() || url.scheme() == QStringLiteral("file");
+}
 }  // namespace
 
 CollectionExamples::CollectionExamples(OnlineSourcesModel* sources, QObject* parent) : QObject(parent), sources_(sources) {
@@ -38,6 +44,7 @@ CollectionExamples::~CollectionExamples() = default;
 void CollectionExamples::refresh() {
     const int generation = ++generation_;
     known_.clear();
+    updated_.clear();
     failed_.clear();
     projects_ = 0;
     // Every enabled source, once, whatever kinds it holds: the tutorials take a structure and a pattern, the
@@ -53,10 +60,18 @@ void CollectionExamples::refresh() {
     updateNotice();
     if (pending_ == 0) settle();
     for (const OnlineSourcesModel::Source& source : sources) {
-        const QStringList bases = sources_->urlsOf(source.id);
+        // A source with a copy on this computer (the app's bundled collection) is read from it at once; its online
+        // locations are only asked in the background for what is new or changed, so no open waits for the network
+        // (the owner, 2026-11-17).
+        const QStringList all = sources_->urlsOf(source.id);
+        QStringList local, online;
+        for (const QString& base : all) (local_location(base) ? local : online).append(base);
+        const bool bundled = !local.isEmpty() && !online.isEmpty();
+        const QStringList bases = bundled ? local + online : all;
+        const QStringList read = bundled ? local : all;
         const QString sourceName = source.name;
-        fetch_from(this, network_, bases, QStringLiteral("index.json"),
-                  [this, generation, bases, sourceName](const QByteArray& bytes, const QString& error, bool) {
+        fetch_from(this, network_, read, QStringLiteral("index.json"),
+                  [this, generation, bases, online, bundled, sourceName](const QByteArray& bytes, const QString& error, bool) {
                       if (generation != generation_) return;
                       --pending_;
                       edi::online::Index index;
@@ -82,8 +97,49 @@ void CollectionExamples::refresh() {
                       }
                       updateNotice();
                       if (pending_ == 0) settle();
+                      if (bundled) checkOnline(generation, online, index);
                   });
     }
+}
+
+// The online collection's index against the bundled one: an entry it adds is served from online, and a file it
+// changed is downloaded now and used from then on; until it has arrived the bundled file serves. Offline nothing
+// changes.
+void CollectionExamples::checkOnline(int generation, const QStringList& online, const edi::online::Index& bundled) {
+    fetch_from(this, network_, online, QStringLiteral("index.json"),
+               [this, generation, online, bundled](const QByteArray& bytes, const QString& error, bool) {
+        if (generation != generation_) return;
+        edi::online::Index index;
+        try {
+            if (!error.isEmpty()) throw std::runtime_error(error.toStdString());
+            index = edi::online::parse_index(bytes.toStdString());
+        } catch (const std::exception& problem) {
+            qCInfo(lcCollection, "online collection not checked: %s", problem.what());
+            return;
+        }
+        for (const edi::online::Entry& entry : index.entries) {
+            if (entry.files.empty()) continue;
+            const QString id = QString::fromStdString(entry.id);
+            const edi::online::File& file = entry.files.front();
+            const edi::online::Entry* old = edi::online::find(bundled, entry.id);
+            if (old == nullptr) {
+                if (known_.contains(id)) continue;  // an earlier source holds it
+                known_.insert(id, {online, QString::fromStdString(file.path), QString::fromStdString(entry.kind), file.bytes,
+                                   QString::fromStdString(file.sha256)});
+                if (entry.kind == "project") ++projects_;
+                continue;
+            }
+            if (old->files.empty() || (old->files.front().sha256 == file.sha256 && old->files.front().bytes == file.bytes)) continue;
+            const QString name = QString::fromStdString(edi::online::file_name(file));
+            fetch_from(this, network_, online, QString::fromStdString(file.path),
+                       [this, generation, id, file, name](const QByteArray& bytes, const QString& error, bool) {
+                if (generation != generation_ || !error.isEmpty()) return;
+                if (!content_problem(bytes, file.bytes, QString::fromStdString(file.sha256), name).isEmpty()) return;
+                updated_.insert(id, {bytes, name});
+            });
+        }
+        updateNotice();
+    });
 }
 
 void CollectionExamples::updateNotice() {
@@ -114,6 +170,7 @@ void CollectionExamples::whenRead(const QString& id, std::function<void()> then)
 }
 
 QString CollectionExamples::fileName(const QString& id) const {
+    if (const auto updated = updated_.constFind(id); updated != updated_.constEnd()) return updated->name;
     const auto it = known_.constFind(id);
     if (it == known_.constEnd()) return {};
     edi::online::File file;
@@ -125,6 +182,12 @@ void CollectionExamples::fetchBytes(const QString& id, BytesDone done, FetchProg
     const auto it = known_.constFind(id);
     if (it == known_.constEnd()) {
         done({}, tr("No online source that answered holds '%1'").arg(id));
+        return;
+    }
+    // A newer version the background check already downloaded.
+    if (const auto updated = updated_.constFind(id); updated != updated_.constEnd()) {
+        if (progress) progress(updated->bytes.size(), updated->bytes.size());
+        done(updated->bytes, {});
         return;
     }
     if (progress) progress(0, it->bytes);
