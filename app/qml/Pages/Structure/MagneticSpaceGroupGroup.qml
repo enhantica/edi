@@ -19,17 +19,20 @@ Column {
     readonly property var parent_: structure ? structure.parentGroup : ({})
 
     spacing: AppSizes.inputSpacing
-    // Four field widths to a row, as the space group's row sizes its fields, so every row stays inside the sidebar.
-    readonly property real fieldWidth: (EaStyle.Sizes.sideBarContentWidth - 3 * AppSizes.inputSpacing) / 4
+    // The BNS and UNI symbols in two equal columns, as Bond settings and Appearance pair their fields (the owner,
+    // 2026-11-17); the parent group's three fields in equal thirds.
+    readonly property real halfWidth: (EaStyle.Sizes.sideBarContentWidth - AppSizes.inputSpacing) / 2
+    readonly property real thirdWidth: (EaStyle.Sizes.sideBarContentWidth - 2 * AppSizes.inputSpacing) / 3
 
-    EaElements.GroupRow {
-        spacing: AppSizes.inputSpacing
+    Grid {
+        columns: 2
+        columnSpacing: AppSizes.inputSpacing
 
         // Searchable like the space group's name (the owner, 2026-11-03).
         SearchableComboBox {
             id: selector
             objectName: "magneticSpaceGroup.selector"
-            width: 3 * group.fieldWidth + 2 * AppSizes.inputSpacing
+            width: group.halfWidth
             title: Session.label("space_group_magn.name_bns")
             searchThreshold: 0
             model: group.structure ? group.structure.magneticGroupNames : []
@@ -46,7 +49,7 @@ Column {
         }
         ValueField {
             objectName: "magneticSpaceGroup.nameUni"
-            width: group.fieldWidth
+            width: group.halfWidth
             uid: "space_group_magn.name_uni"
             editable: false
             fieldValue: group.magnetic.name_uni ?? ""
@@ -66,21 +69,21 @@ Column {
 
         ValueField {
             objectName: "magneticSpaceGroup.parentName"
-            width: group.fieldWidth
+            width: group.thirdWidth
             uid: "parent_space_group.name_h_m_alt"
             editable: false
             fieldValue: group.parent_.name_h_m_alt ?? ""
         }
         ValueField {
             objectName: "magneticSpaceGroup.parentNumber"
-            width: group.fieldWidth
+            width: group.thirdWidth
             uid: "parent_space_group.it_number"
             editable: false
             fieldValue: group.parent_.it_number ?? ""
         }
         ValueField {
             objectName: "magneticSpaceGroup.parentTransform"
-            width: 2 * group.fieldWidth + AppSizes.inputSpacing
+            width: group.thirdWidth
             uid: "parent_space_group.transform_pp_abc"
             editable: false
             fieldValue: group.parent_.transform_pp_abc ?? ""
