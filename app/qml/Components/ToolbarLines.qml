@@ -108,10 +108,13 @@ Item {
 
                     required property var modelData
                     readonly property var control: modelData.item
-                    readonly property bool box: control?.closedTexts !== undefined
+                    // The copy is of the control's own kind, so it looks and sizes as it does in the row: the Map's
+                    // colour-map box keeps its colour bars.
+                    readonly property bool colourMap: control?.maps !== undefined
+                    readonly property bool box: control?.closedTexts !== undefined && !colourMap
 
                     visible: !!control && lines.overflow.indexOf(control) >= 0
-                    width: box ? boxCopy.width : buttonCopy.width
+                    width: colourMap ? mapCopy.width : box ? boxCopy.width : buttonCopy.width
                     height: AppSizes.toolbarControlSize
 
                     ToolbarComboBox {
@@ -124,19 +127,39 @@ Item {
                         model: entry.box ? entry.control.model : []
                         closedTexts: entry.box ? entry.control.closedTexts : []
                         closedOnly: entry.box && entry.control.closedOnly
+                        fitShown: entry.box && entry.control.fitShown
                         shownIndex: entry.box ? entry.control.currentIndex : 0
+                        onActivated: index => entry.control?.activated(index)
+                    }
+                    ColourMapComboBox {
+                        id: mapCopy
+
+                        objectName: entry.colourMap ? entry.control?.objectName + ".overflow" : ""
+                        visible: entry.colourMap
+                        enabled: entry.control?.enabled ?? false
+                        toolTip: entry.control?.toolTip ?? ""
+                        model: entry.colourMap ? entry.control.model : []
+                        closedTexts: entry.colourMap ? entry.control.closedTexts : []
+                        closedOnly: entry.colourMap && entry.control.closedOnly
+                        fitShown: entry.colourMap && entry.control.fitShown
+                        maps: entry.colourMap ? entry.control.maps : []
+                        direction: entry.colourMap ? entry.control.direction : "auto"
+                        chartBackground: entry.colourMap ? entry.control.chartBackground : "white"
+                        dark: entry.colourMap && entry.control.dark
+                        shownIndex: entry.colourMap ? entry.control.currentIndex : 0
                         onActivated: index => entry.control?.activated(index)
                     }
                     ChartToolButton {
                         id: buttonCopy
 
-                        objectName: entry.box ? "" : entry.control?.objectName + ".overflow"
-                        visible: !entry.box
+                        objectName: entry.box || entry.colourMap ? "" : entry.control?.objectName + ".overflow"
+                        visible: !entry.box && !entry.colourMap
                         enabled: entry.control?.enabled ?? false
                         available: entry.control?.available ?? true
                         fontIcon: entry.control?.fontIcon ?? ""
                         toolTip: entry.control?.toolTip ?? ""
                         checked: entry.control?.checked ?? false
+                        alert: entry.control?.alert ?? false
                         onClicked: entry.control?.clicked()
 
                         // A button drawn with a letter (view along a, b, c) has no icon: its letter, in its colour.
