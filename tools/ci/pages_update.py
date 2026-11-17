@@ -366,9 +366,21 @@ def main() -> None:
     )
     parser.add_argument('--incoming', type=Path, required=True)
     parser.add_argument('--site', type=Path, required=True)
+    # The deployed site to keep the counterpart from, when it is not the last GitHub Pages
+    # deployment: main publishes only to edi-sites and passes its deploy branch here (GitHub
+    # Pages is the dev test site).
+    parser.add_argument('--base', type=Path)
     args = parser.parse_args()
     if args.site.exists():
         raise RuntimeError('The site assembly destination must be fresh')
+    if args.base is not None:
+        if not args.base.is_dir():
+            raise RuntimeError(f'The deployed site {args.base} is not a folder')
+        print(f'Preserving the deployed site in {args.base}')
+        shutil.copytree(args.base, args.site, ignore=shutil.ignore_patterns('.git', '.htaccess'))
+        overlay_component(args.site, args.incoming, args.component)
+        check_site_size(args.site)
+        return
     response = subprocess.check_output(
         [
             'gh',

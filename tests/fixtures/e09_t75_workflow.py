@@ -34,6 +34,13 @@ def active(  # noqa: PLR0913 - each keyword is one workflow context input
     if isinstance(value, bool):
         value = 'true' if value else 'false'
     value = str(value).strip().removeprefix('${{').removesuffix('}}').strip()
+    # Resolve only the declared ref-prefix call; other calls and unresolved
+    # arguments remain in the AST and fail the bounded grammar below.
+    value = re.sub(
+        r"""(?<![\w.])startsWith\(\s*github\.ref\s*,\s*(['"])([^'"\\]*)\1\s*\)""",
+        lambda match: str(ref.casefold().startswith(match[2].casefold())).lower(),
+        value,
+    )
     # Before: every status function assumed a successful, uncancelled run. After:
     # the caller supplies preceding job results and actual run cancellation. GitHub
     # applies success() implicitly unless the condition includes a status function.
