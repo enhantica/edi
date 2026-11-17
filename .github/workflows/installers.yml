@@ -549,17 +549,16 @@ jobs:
       && inputs.publish_components && inputs.release_plan_run == '' && !github.event.repository.private
       && (needs.installers.result == 'success' || (inputs.preview_run != '' && needs.installers.result == 'skipped')) }}
     runs-on: ubuntu-24.04
+    # The public site's queue and reviewed environment, shared with pages.yml's publishers: the testing repositories
+    # join the site behind easydiffraction.org (edi-sites' deploy-docs). GitHub Pages is the developers' test site,
+    # deployed from edi's dev branch (the owner, 2026-11-17).
     concurrency:
       group: pages-publication
       cancel-in-progress: false
     permissions:
       contents: read
       actions: read
-      pages: write
-      id-token: write
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+    environment: public-site
     steps:
       - uses: actions/checkout@v5
       - name: Download tested platform repositories
@@ -616,18 +615,21 @@ jobs:
                   raise RuntimeError('Testing repositories do not match the preview feed')
           (root / 'feed.json').write_bytes(payload)
           PYTHON
+      - name: Mint a token for edi-sites
+        id: sites-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ vars.ENHANTICA_APP_ID }}
+          private-key: ${{ secrets.ENHANTICA_APP_KEY }}
+          owner: enhantica
+          repositories: edi-sites
       - name: Preserve documentation, web app and previous components
-        run: python3 tools/ci/pages_update.py --repo "$GITHUB_REPOSITORY" --component installers --incoming components --site site
         env:
-          GH_TOKEN: ${{ github.token }}
-      - name: Upload the assembled site
-        uses: actions/upload-pages-artifact@v3
-        with:
-          name: pages-site-installers-${{ github.run_attempt }}
-          path: site
-          retention-days: 90
-      - name: Deploy installers to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
-        with:
-          artifact_name: pages-site-installers-${{ github.run_attempt }}
+          SITES_TOKEN: ${{ steps.sites-token.outputs.token }}
+        run: |
+          bash tools/ci/fetch_deploy_branch.sh deploy-docs "$RUNNER_TEMP/deployed"
+          python3 tools/ci/pages_update.py --repo "$GITHUB_REPOSITORY" --component installers --incoming components --site site --base "$RUNNER_TEMP/deployed"
+      - name: Update the deploy-docs branch
+        env:
+          SITES_TOKEN: ${{ steps.sites-token.outputs.token }}
+        run: bash tools/ci/push_deploy_branch.sh site deploy-docs

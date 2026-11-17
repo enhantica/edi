@@ -141,6 +141,8 @@ jobs:
     concurrency:
       group: pages-publication
       cancel-in-progress: false
+    # The reviewed environment of every public-site publisher, which alone mints the edi-sites token.
+    environment: public-site
     runs-on: *linux
     steps:
       - uses: actions/checkout@v5
@@ -176,6 +178,8 @@ jobs:
     concurrency:
       group: pages-publication
       cancel-in-progress: false
+    # The reviewed environment of every public-site publisher, which alone mints the edi-sites token.
+    environment: public-site
     runs-on: *linux
     steps:
       - uses: actions/checkout@v5
