@@ -10,7 +10,7 @@ import edi.app
 Row {
     id: save
 
-    property Item target: null
+    property var target: null
     // The target's toolbar, hidden while the image is taken.
     property Item toolbar: null
     property string fileName: "image"

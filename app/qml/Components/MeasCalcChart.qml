@@ -46,7 +46,7 @@ Item {
     readonly property real toolbarLeft: AppSizes.mainAreaMargin
     readonly property real toolbarRightInset: width - (view.x + view.plotArea.x + view.plotArea.width)
     // Both axes' scale, as the pattern chart's y scale: 0 linear, 1 square root, 2 log.
-    property int scale: 0
+    property int axesScale: 0
     readonly property var scalePrefixes: ["", "√", "log₁₀ "]
     // The zoomed or moved ranges, [xMin, xMax, yMin, yMax]; empty: the whole data. The pointer sets it.
     property list<real> zoom: []
@@ -57,7 +57,7 @@ Item {
         if (!chart.shown)
             return;
         chart.zoom = [];
-        chart.values = chart.experiment ? chart.experiment.measCalcPoints(chart.scale) : {
+        chart.values = chart.experiment ? chart.experiment.measCalcPoints(chart.axesScale) : {
             "calc": [],
             "meas": [],
             "su": [],
@@ -86,7 +86,7 @@ Item {
         if (wanted)
             wanted.showChart(chart, true);
     }
-    onScaleChanged: refresh()
+    onAxesScaleChanged: refresh()
     onExperimentChanged: {
         register();
         refresh();
@@ -133,8 +133,8 @@ Item {
             toolTip: qsTr("Axes scale")
             model: [qsTr("Linear"), qsTr("Square root"), qsTr("Log")]
             closedTexts: [qsTr("axes: Linear"), qsTr("axes: Square root"), qsTr("axes: Log")]
-            shownIndex: chart.scale
-            onActivated: index => chart.scale = index
+            shownIndex: chart.axesScale
+            onActivated: index => chart.axesScale = index
         }
         ChartToolbar {
             id: buttons
@@ -297,7 +297,7 @@ Item {
         anchors.horizontalCenter: view.horizontalCenter
         y: view.y + view.height + chart.em * 0.5
         color: chart.colors.chartLabels
-        text: chart.scalePrefixes[chart.scale] + Session.label("data.intensity_calc")
+        text: chart.scalePrefixes[chart.axesScale] + Session.label("data.intensity_calc")
     }
     EaElements.Label {
         objectName: "measCalc.title.y"
@@ -306,7 +306,7 @@ Item {
         rotation: -90
         transformOrigin: Item.TopLeft
         color: chart.colors.chartLabels
-        text: chart.scalePrefixes[chart.scale] + Session.label("data.intensity_meas")
+        text: chart.scalePrefixes[chart.axesScale] + Session.label("data.intensity_meas")
     }
     EaElements.Label {
         anchors.centerIn: view

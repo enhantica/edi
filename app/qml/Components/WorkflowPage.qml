@@ -32,7 +32,7 @@ EaComponents.ContentPage {
     // The page's own main view (MainView), over its main area and moving with the page (edi ADR-0017 §2; the owner,
     // 2026-11-14 item 5); null keeps the area's own tabs.
     property Component pageView: null
-    readonly property Item pageViewItem: pageViewLoader.item
+    readonly property var pageViewItem: pageViewLoader.item
     Loader {
         id: pageViewLoader
         parent: page.mainArea
