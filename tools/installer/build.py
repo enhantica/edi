@@ -393,6 +393,8 @@ def build(
         '-DCMAKE_BUILD_TYPE=Release',
         f'-DPython_EXECUTABLE={sys.executable}',
         '-DCMAKE_OSX_DEPLOYMENT_TARGET=' + os.environ.get('MACOSX_DEPLOYMENT_TARGET', '14.0'),
+        # edi's own C++ warnings as errors when CI asks (ADR-0093), MSVC's /W4 set on Windows.
+        '-DEDI_WERROR=' + os.environ.get('EDI_WERROR', 'OFF'),
     ]
     if SYSTEM == 'windows':
         common.extend([
