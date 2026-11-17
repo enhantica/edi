@@ -775,6 +775,7 @@ void OnlineSearch::withIndex(const QStringList& bases, const std::function<void(
         done(cached.get(), {}, false);
         return;
     }
+    // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks): the std::function owns the lambda; the analyzer does not follow libc++'s release of it
     fetchFrom(bases, QStringLiteral("index.json"), [this, key, done](const QByteArray& bytes, const QString& error, bool unreachable) {
         if (!error.isEmpty()) {
             done(nullptr, error, unreachable);
@@ -797,6 +798,7 @@ void OnlineSearch::fetchFrom(const QStringList& bases, const QString& path, cons
 // published after the index was read: the index is read again and the file once more before the download is refused.
 void OnlineSearch::fetchChecked(const QStringList& bases, const QString& path, long long bytes, const QString& digest, const QString& name,
                                 const Bytes& done) {
+    // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks): the std::function owns the lambda; the analyzer does not follow libc++'s release of it
     fetchFrom(bases, path, [this, bases, path, bytes, digest, name, done](const QByteArray& data, const QString& error, bool unreachable) {
         if (!error.isEmpty()) {
             done({}, error, unreachable);

@@ -3,6 +3,7 @@
 #include <chrono>
 #include <charconv>
 #include <cmath>
+#include <cstddef>
 #include <filesystem>
 #include <iostream>
 #include <limits>
@@ -253,8 +254,8 @@ int main(int argc, char** argv) {
         const std::string_view argument(argv[index]);
         if (argument == "--log-level" && index + 1 < argc) {
             level = argv[++index];
-        } else if (argument.starts_with("--log-level=")) {
-            level = std::string(argument.substr(12));
+        } else if (constexpr std::string_view prefix = "--log-level="; argument.starts_with(prefix)) {
+            level.assign(argument.begin() + static_cast<std::ptrdiff_t>(prefix.size()), argument.end());
         } else {
             kept.push_back(argv[index]);
         }

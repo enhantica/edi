@@ -3764,7 +3764,13 @@ void editorFinally(const PanelUsageFrame& f, const std::function<void()>& body) 
 struct EditorFinally {
     const PanelUsageFrame& frame;
     std::function<void()> release;
-    ~EditorFinally() { editorFinally(frame, release); }
+    // A destructor must not throw: with no release set there is nothing to run, and a release that fails is dropped.
+    ~EditorFinally() {
+        try {
+            if (release) editorFinally(frame, release);
+        } catch (...) {
+        }
+    }
 };
 } // namespace
 

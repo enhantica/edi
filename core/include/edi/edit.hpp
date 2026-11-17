@@ -1178,6 +1178,7 @@ class Edit {
     // `scaled`, when given, receives what the factor did (applied, a background point started, the peaks' overlap).
     static Edit rescaled(Project& project, const ExperimentBase& experiment, Edit change,
                          const std::shared_ptr<CommonScaleOutcome>& scaled = nullptr) {
+        // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks): the std::function owns the lambda; the analyzer does not follow libc++'s release of it
         return Edit(ResultOperation{}, [&project, &experiment, change = std::move(change), scaled] {
             AppliedResult applied = change.apply_result();
             const ExperimentBase* target = applied.experiment != nullptr ? applied.experiment : &experiment;

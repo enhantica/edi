@@ -10885,7 +10885,7 @@ struct AssistantViewModel::State {
         const auto op=run->arguments.value("operation");
         if(op=="select")return selection_current(run);
         if(op=="peak_profile")return edi::effective_peak_type_view(*run->operation_member)==run->arguments.value("value").toString().toStdString();
-        if(op=="absorption_type")return (run->operation_member->absorption.type?std::string_view(*run->operation_member->absorption.type):std::string_view("none"))==run->arguments.value("value").toString().toStdString();
+        if(op=="absorption_type")return run->operation_member->absorption.type.value_or("none")==run->arguments.value("value").toString().toStdString();
         if(op=="extinction_type")return run->operation_member->extinction.type.value_or("none")==run->arguments.value("value").toString().toStdString();
         if(op=="mosaic_distribution")return run->operation_member->extinction.mosaic_distribution.value_or("")==run->arguments.value("value").toString().toStdString();
         if(op=="cutoff_fwhm")return run->operation_member->peak.cutoff_fwhm==run->arguments.value("value").toDouble();
@@ -18144,7 +18144,7 @@ bool AssistantViewModel::addWebSkillSource(const QString& token,const QUrl& url)
         original->release_skill_source_selection(token);emit skillSourcesChanged();return false;
     }
     try {
-        auto task=AssistantSkillWebImport::start(this,url,[receiver,original,proof,serial,token](std::unique_ptr<QTemporaryDir> folder,const QString& label,const QString& failure) {
+        auto task=AssistantSkillWebImport::start(this,url,[receiver,original,proof,serial,token](std::unique_ptr<QTemporaryDir> folder,[[maybe_unused]] const QString& label,const QString& failure) {
             if(!receiver || receiver->state_.get()!=original)return;
             const auto owned=[&]{return proof.input_current() && serial==original->skill_source_serial &&
                 original->skill_source_selection && original->skill_source_selection->id==token;};

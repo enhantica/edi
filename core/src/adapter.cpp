@@ -5331,8 +5331,12 @@ class CalculationTrace {
         }
     }
     ~CalculationTrace() {
-        if (snapshot_.trace) {
-            snapshot_.trace(work::EventKind::Calculated);
+        // A destructor must not throw: a trace sink that fails loses this event rather than ending the program.
+        try {
+            if (snapshot_.trace) {
+                snapshot_.trace(work::EventKind::Calculated);
+            }
+        } catch (...) {
         }
     }
     CalculationTrace(const CalculationTrace&) = delete;

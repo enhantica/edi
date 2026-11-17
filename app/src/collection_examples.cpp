@@ -148,6 +148,7 @@ void CollectionExamples::fetchPaired(const QString& id, const QStringList& bases
     };
     const QPointer<CollectionExamples> receiver(this);
     fetch_url(this, network_, url(base, QStringLiteral("index.json")),
+              // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks): the std::function owns the lambda; the analyzer does not follow libc++'s release of it
               [receiver, id, bases, at, retried, done = std::move(done), progress = std::move(progress), base, url](const QByteArray& bytes, const QString& error, bool unreachable) {
         if (!receiver) return;
         if (!error.isEmpty()) {

@@ -2255,6 +2255,7 @@ void Session::writeWebPlace(const WebPlace& place, const QString& folder, const 
     // The page writes one place's jobs in the order they are sent, so a later keep or discard is never overtaken.
     const QPointer<ProjectViewModel> project = project_;
     WebStorage::instance()->write(
+        // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks): the std::function owns the lambda; the analyzer does not follow libc++'s release of it
         place.key, place.kind, place.name, folder, false, [this, place, project, done](const WebStorageAnswer& answer) {
             if (!answer.ok) {
                 // The browser's own words ("UnknownError", "QuotaExceededError") say nothing to the user: the place
