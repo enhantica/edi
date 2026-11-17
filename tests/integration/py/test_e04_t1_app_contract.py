@@ -442,6 +442,41 @@ APP_TIER_STEPS = (
 )
 APP_IMAGE_UPLOAD_TITLE = "Upload the UI test's images and similarity maps"
 
+WINDOWS_APP_TITLE = 'app · Windows'
+WINDOWS_BUILD_TITLE = 'Build the app with MSVC, warnings as errors'
+WINDOWS_BUILD_COMMAND = (
+    'pixi run --manifest-path tools/installer/pixi.toml python '
+    'tools/ci/app-windows-build.py --crysta-source .crysta --work build/app-windows'
+)
+
+
+def assert_windows_app_build(job):
+    assert job.get('name') == WINDOWS_APP_TITLE, (
+        'gate 7: Windows build-only app job retains its independent display identity'
+    )
+    assert [runner[1] for runner in self_hosted_runners(job)] == ['Windows'], (
+        'gate 7: the separate app builder executes exactly once on Windows'
+    )
+    steps = job.get('steps', [])
+    builds = [step for step in steps if step.get('name') == WINDOWS_BUILD_TITLE]
+    assert len(builds) == 1, 'gate 7: Windows has exactly one MSVC warnings-as-errors app build'
+    assert shlex.split(builds[0].get('run', '')) == shlex.split(WINDOWS_BUILD_COMMAND), (
+        'gate 7: Windows executes the declared build-only MSVC app command'
+    )
+    forbidden = {APP_GROUP_TITLE, APP_IMAGE_UPLOAD_TITLE, *(title for title, _ in APP_TIER_STEPS)}
+    assert not forbidden.intersection(step.get('name') for step in steps), (
+        'gate 7: Windows remains build-only while Linux and macOS retain all app test tiers'
+    )
+    from tests.fixtures.e09_t75_workflow import active  # noqa: PLC0415
+
+    for event in ('pull_request', 'push', 'schedule', 'workflow_dispatch'):
+        assert active(job, event, states={'changes': 'success', 'crysta-sdk': 'success'}), (
+            'gate 7: the Windows app builder participates in every governed full event'
+        )
+        assert active(builds[0], event), (
+            'gate 7: the Windows MSVC app build step executes in every governed full event'
+        )
+
 
 def assert_nightly_app_steps(job):
     for title, task in APP_TIER_STEPS:
@@ -607,9 +642,15 @@ def test_local_and_ci_gates_reach_app_tests():
     manifest = tomllib.loads((ROOT / 'pixi.toml').read_text())
     assert_local_app_checks(manifest)
     workflow = yaml.safe_load((ROOT / '.github/workflows/ci.yml').read_text())
-    # : both desktop platforms share one matrix; keep the original gate payload.
+    # Linux/macOS keep the shared test matrix; Windows has a separate build-only job.
     app_jobs = []
+    windows_jobs = []
     for name, job in workflow['jobs'].items():
+        if name == 'app-windows' or job.get('name') == WINDOWS_APP_TITLE:
+            assert name == 'app-windows', 'gate 7: Windows has one separately identified app job'
+            assert_windows_app_build(job)
+            windows_jobs.append(name)
+            continue
         if name not in {'app', 'app-macos'} and not job.get('name', '').startswith('app · '):
             continue
         if 'WebAssembly' in job.get('name', ''):
@@ -630,6 +671,9 @@ def test_local_and_ci_gates_reach_app_tests():
         ):
             assert script in commands, f'gate 6/7: {name} invokes the shared {script} task'
 
+    assert windows_jobs == ['app-windows'], (
+        'gate 7: the dedicated Windows build-only job is present exactly once'
+    )
     assert sorted(app_jobs) == ['Linux', 'macOS'], (
         'gate 7: both desktop platforms execute app checks'
     )
