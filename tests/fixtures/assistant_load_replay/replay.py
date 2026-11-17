@@ -4,7 +4,7 @@ No model or network is used: the peer only delivers authored native tool calls. 
 (2026-11-17): create a project, load a structure CIF, create an experiment, set its wavelength on the
 Instrument group, then load measured data. Opening Instrument folds the Experiments group, so Show actions must
 open that group again before the row's Data file cell can be clicked. Exits non-zero unless load_data completes in
-both modes.
+both modes, and the alias it then creates, retargets and removes.
 """
 
 # ruff: noqa: PLR0915, PLR0914, PLW0717, B023, TRY301, BLE001, S106, E501
@@ -130,6 +130,21 @@ def main():
             loaded = call('load_data', experiment=experiment, file_id=file_id('.xye'))
             mode['load_data'] = loaded
             mode['loaded'] = 'action_error' not in json.dumps(loaded)
+            # The owner's alias sequence: create, retarget to another parameter, remove.
+            paths = [row['path'] for row in actor.last['ui']['project']['parameters']]
+            offset = next(
+                path for path in paths if path.endswith('instrument.calib_twotheta_offset')
+            )
+            relations = [
+                call('add_relations', aliases=[{'id': 'w', 'path': wavelength}]),
+                call('edit_relation', id='w', operation='alias_target', value=offset),
+                call('edit_relation', id='w', operation='alias_remove'),
+            ]
+            mode['relations'] = all(
+                'action_error' not in json.dumps(reply)
+                and '"success": false' not in json.dumps(reply)
+                for reply in relations
+            )
         except Exception as error:
             mode['driver_error'] = str(error)
         finally:
