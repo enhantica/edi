@@ -713,13 +713,24 @@ Item {
             // datablock) or by datablock (a joint fit's experiments), the owner, 2026-10-22.
             readonly property bool hasValue: chart.scan !== null && chart.scan.valueTitle !== ""
             readonly property string order: chart.scan !== null ? chart.scan.orderName : qsTr("file")
-            // Open with one entry too, so it shows how the rows are placed.
+            // Open with one entry too, so it shows how the rows are placed. A series of several banks adds Bank: one row
+            // per bank at the chosen run, in place of the separate rows switch (the owner, 2026-11-17).
             toolTip: qsTr("Y axis: the rows' places")
-            readonly property var entries: ApplicationInfo.scanRowEntries()
+            readonly property var runEntries: ApplicationInfo.scanRowEntries()
+            readonly property bool offersBanks: chart.scan !== null && chart.scan.series && chart.project !== null && chart.project.bankLabels.length > 1
+            readonly property var entries: offersBanks ? runEntries.concat([qsTr("Bank")]) : runEntries
             model: entries
-            closedTexts: ApplicationInfo.scanClosedTexts(1)
-            shownIndex: hasValue && !chart.scan.rowsByIndex ? 0 : entries.length - 1
-            onActivated: index => ApplicationInfo.scanChoice(index, 1)
+            closedTexts: offersBanks ? ApplicationInfo.scanClosedTexts(1).concat([qsTr("y: Bank")]) : ApplicationInfo.scanClosedTexts(1)
+            shownIndex: offersBanks && chart.scan.rowsByBank ? entries.length - 1 : hasValue && !chart.scan.rowsByIndex ? 0 : runEntries.length - 1
+            onActivated: index => {
+                if (offersBanks && index === entries.length - 1) {
+                    chart.scan.rowsByBank = true;
+                    return;
+                }
+                if (chart.scan !== null && chart.scan.series)
+                    chart.scan.rowsByBank = false;
+                ApplicationInfo.scanChoice(index, 1);
+            }
         }
         ToolbarComboBox {
             // As wide as it reads, so the controls keep to one row (the owner, 2026-11-16).
