@@ -136,8 +136,10 @@ private slots:
         const QString ncaf = QStringLiteral(EDI_SOURCE_DIR "/docs/user/cli/pd-neut-tof_ncaf-wish/project");
         QVERIFY2(session->openProject(QUrl::fromLocalFile(ncaf)), qPrintable(session->lastError()));
         openAnalysis();
-        QTRY_VERIFY_WITH_TIMEOUT(shown("mainArea.tab.structure") && shown("structure.view"), 20000);
+        // Analysis opens on Pattern; the Structure tab then draws its view at once.
+        QTRY_VERIFY_WITH_TIMEOUT(shown("mainArea.tab.structure") && shown("mainArea.tab.structure")->isEnabled(), 20000);
         click(shown("mainArea.tab.structure"));
+        QTRY_VERIFY_WITH_TIMEOUT(shown("structure.view"), 20000);
         QTRY_VERIFY_WITH_TIMEOUT(drawn(), 20000);
         QTRY_VERIFY_WITH_TIMEOUT(fitted(), 60000);
         // Another project opened from Analysis: its pages are built while the Project page shows.
@@ -219,8 +221,8 @@ private slots:
         QTRY_VERIFY_WITH_TIMEOUT(!session->project()->calculating(), 30000);
 
         openExtras("appBar.tab.structure");
+        // One group at a time: with auto-collapse on, expanding the next folds the one before.
         expand("group.expanded_atom_site");
-        expand("group.geom");
         QQuickItem* atoms = nullptr;
         QTRY_VERIFY_WITH_TIMEOUT((atoms = shown("generated.expanded_atom_site.list")) && atoms->property("count").toInt() > 0, 20000);
         QVERIFY(barFades(atoms));
@@ -239,6 +241,7 @@ private slots:
         }
         QVERIFY(zeros > 0);
 
+        expand("group.geom");
         QQuickItem* bonds = nullptr;
         QTRY_VERIFY_WITH_TIMEOUT((bonds = shown("geom.bonds")) && bonds->property("count").toInt() > 0, 20000);
         QVERIFY(bonds->property("readOnly").toBool());
@@ -413,10 +416,10 @@ private slots:
         QTRY_VERIFY_WITH_TIMEOUT((tab = shown("appBar.tab.analysis")) && tab->isEnabled(), 20000);
         click(tab);
         // Each chart tab at a wide and a narrow window: the narrow one puts controls in the popup, which opens and closes.
-        for (const char* key : {"pattern", "meascalc", "structure", "pattern"}) {
+        for (const char* key : {"pattern", "measCalc", "structure", "pattern"}) {
             QTRY_VERIFY_WITH_TIMEOUT((tab = shown(QStringLiteral("mainArea.tab.%1").arg(QLatin1String(key)))) && tab->isEnabled(), 20000);
             click(tab);
-            const QString toolbar = QLatin1String(key) == QLatin1String("pattern") ? "chart.toolbar" : QLatin1String(key) == QLatin1String("meascalc") ? "measCalc.toolbar" : "structure.toolbar";
+            const QString toolbar = QLatin1String(key) == QLatin1String("pattern") ? "chart.toolbar" : QLatin1String(key) == QLatin1String("measCalc") ? "measCalc.toolbar" : "structure.toolbar";
             QTRY_VERIFY_WITH_TIMEOUT(shown(toolbar), 20000);
             for (int round = 0; round < 2; ++round) {
                 window->resize(1024, 700);
