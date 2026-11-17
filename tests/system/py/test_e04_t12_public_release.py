@@ -1050,6 +1050,236 @@ def test_pages_builds_docs_and_publishes_the_linked_webapp():
     assert 'site_url' in config, 'The public documentation declares its canonical published URL'
 
 
+def publication_route_active(node, event, ref, **context):
+    """Resolve only the ref-prefix atom added by the public destination guard."""
+    observed = dict(node)
+    if 'if' in observed:
+        observed['if'] = re.sub(
+            r"startsWith\(github\.ref,\s*('(?:[^']*)'|\"(?:[^\"]*)\")\)",
+            lambda match: str(
+                ref.casefold().startswith(ast.literal_eval(match[1]).casefold())
+            ).lower(),
+            str(observed['if']),
+        )
+    return active(observed, event, ref, **context)
+
+
+def selected_pages_ref(expression, *, prerelease, preview_ref):
+    """Resolve the bounded Actions selector without assuming which ref it selects."""
+    value = expression.strip().removeprefix('${{').removesuffix('}}').strip()
+    for atom, replacement in {
+        'github.event.release.prerelease': prerelease,
+        'vars.EDI_PREVIEW_PAGES_REF': preview_ref,
+        'github.event.repository.default_branch': 'main',
+    }.items():
+        value = value.replace(atom, repr(replacement))
+    tree = ast.parse(value.replace('&&', ' and ').replace('||', ' or '), mode='eval')
+    assert all(
+        isinstance(node, (ast.Expression, ast.BoolOp, ast.And, ast.Or, ast.Constant))
+        for node in ast.walk(tree)
+    ), 'The release refresh ref must resolve from its declared release and repository inputs'
+    return eval(compile(tree, '<pages-ref>', 'eval'), {'__builtins__': {}})  # noqa: S307
+
+
+def dispatched_pages_ref(doc, route, tmp_path):
+    triggers = doc.get('on', doc.get(True, {}))
+    jobs = doc['jobs']
+    assert 'workflow_dispatch' in triggers, (
+        'Release-note refreshes can dispatch the actual Pages workflow'
+    )
+    refresh = jobs['refresh-release-notes']
+    prerelease = route != 'stable-notes'
+    assert active(refresh, 'release', 'refs/tags/v2026.11.22', prerelease=prerelease), (
+        'Both stable releases and prereleases reach the release-note dispatch job'
+    )
+    preview_ref = 'dev' if route == 'preview-ref' else 'main'
+    selected = selected_pages_ref(
+        refresh['env']['PAGES_REF'], prerelease=prerelease, preview_ref=preview_ref
+    )
+    assert selected == 'main', (
+        'Stable and prerelease notes rebuild public main even with a configured preview ref'
+    )
+    _position, step = pages_operation(refresh['steps'], 'gh workflow run pages.yml')
+    assert active(step, 'release', prerelease=prerelease), (
+        'The release-note dispatch step executes on the actual release event'
+    )
+    executable = tmp_path / 'gh'
+    executable.write_text('#!/bin/sh\nprintf "%s\\n" "$@" >> "$CAPTURE"\n')
+    executable.chmod(0o755)
+    capture = tmp_path / 'dispatch-arguments'
+    result = run(
+        'bash',
+        '-e',
+        '-c',
+        step['run'],
+        env={
+            **os.environ,
+            'PATH': str(tmp_path) + os.pathsep + os.environ['PATH'],
+            'CAPTURE': str(capture),
+            'GITHUB_REPOSITORY': 'enhantica/edi',
+            'PAGES_REF': selected,
+        },
+    )
+    require_success(result, 'the actual release-note shell dispatch must complete')
+    assert capture.is_file(), 'Release-note refresh executes the workflow dispatch command'
+    arguments = capture.read_text().splitlines()
+    assert arguments[:3] == ['workflow', 'run', 'pages.yml'], (
+        'Release-note refresh invokes the actual Pages workflow'
+    )
+    assert (
+        publication_option(arguments, '--repo') == 'enhantica/edi'
+        and publication_option(arguments, '--ref') == selected
+        and publication_option(arguments, '-f') == 'component=docs'
+    ), 'The actual dispatch preserves its configured ref and selects documentation only'
+    return selected
+
+
+def pages_route_boundary(doc, route, tmp_path):
+    # The reviewed public-site policy admits main branches and v* tags. These are
+    # independent event inputs, not a claim to observe GitHub's live settings.
+    triggers = doc.get('on', doc.get(True, {}))
+    assert 'published' in triggers.get('release', {}).get('types', []), (
+        'Published releases retain the tag build and release-note refresh routes'
+    )
+    jobs = doc['jobs']
+    if route == 'stable-tag':
+        event, ref, component = 'release', 'refs/tags/v2026.11.22', 'wasm'
+        assert publication_route_active(jobs['crysta-sdk'], event, ref, prerelease=False), (
+            'A stable release tag reaches its pinned SDK before building its own web app'
+        )
+    else:
+        selected = dispatched_pages_ref(doc, route, tmp_path)
+        event, component = 'workflow_dispatch', 'docs'
+        ref = ('refs/tags/' if selected.startswith('v') else 'refs/heads/') + selected
+
+    build, publish = jobs[component], jobs['publish-' + component]
+    assert build.get('needs') in ('crysta-sdk', ['crysta-sdk']) and publication_route_active(
+        jobs['crysta-sdk'], event, ref
+    ), 'Each real publication route reaches and waits for its pinned SDK producer'
+    assert publication_route_active(
+        build, event, ref, states={'crysta-sdk': 'success'}, component=component
+    ), 'The real stable-tag or configured-preview event reaches its component producer'
+    assert publish['needs'] in (component, [component]) and publication_route_active(
+        publish, event, ref, states={component: 'success'}, component=component
+    ), 'The real publication route waits for and reaches its own successful component artifact'
+    environment = publish.get('environment')
+    if isinstance(environment, dict):
+        environment = environment.get('name')
+    assert environment == 'public-site', (
+        'Stable-tag and configured-preview routes reach the reviewed public-site environment'
+    )
+    outcomes = {}
+    for step in [*build['steps'], *publish['steps']]:
+        assert publication_route_active(
+            step, event, ref, outputs=outcomes, component=component
+        ) and not step.get('continue-on-error'), (
+            'Build, artifact, token, assembly and push steps execute on the actual publication ref'
+        )
+        if 'id' in step:
+            outcomes[step['id'], 'outcome'] = 'success'
+    pages_component_boundary(
+        doc,
+        component,
+        component,
+        'pages-webapp' if component == 'wasm' else 'pages-docs',
+        'webapp' if component == 'wasm' else 'documentation',
+    )
+
+
+@pytest.mark.parametrize('route', ['stable-tag', 'stable-notes', 'preview-main', 'preview-ref'])
+def test_public_site_publication_routes_reach_reviewed_environment(route, tmp_path):
+    pages_route_boundary(dict(workflows())['pages.yml'], route, tmp_path)
+
+
+@pytest.mark.parametrize('component', ['docs', 'wasm'])
+@pytest.mark.parametrize('ref', ['refs/heads/dev', 'refs/tags/v2026.11.21'])
+def test_public_site_preview_dispatch_builds_without_publication(component, ref):
+    jobs = dict(workflows())['pages.yml']['jobs']
+    assert publication_route_active(
+        jobs[component],
+        'workflow_dispatch',
+        ref,
+        states={'crysta-sdk': 'success'},
+        component=component,
+    ), 'A non-main preview dispatch keeps its component build available for checking'
+    assert not publication_route_active(
+        jobs['publish-' + component],
+        'workflow_dispatch',
+        ref,
+        states={component: 'success'},
+        component=component,
+    ), 'Preview branches and dispatched tags cannot mint or push a public-site credential'
+
+
+@pytest.mark.parametrize(
+    ('route', 'defect'),
+    [
+        ('stable-tag', 'missing-release-trigger'),
+        ('stable-tag', 'sdk-main-only'),
+        ('stable-tag', 'build-main-only'),
+        ('stable-tag', 'build-step-main-only'),
+        ('stable-tag', 'missing-sdk-dependency'),
+        ('stable-tag', 'publish-main-only'),
+        ('stable-tag', 'step-main-only'),
+        ('stable-tag', 'wrong-environment'),
+        ('preview-ref', 'missing-dispatch-trigger'),
+        ('preview-ref', 'disabled-refresh'),
+        ('preview-ref', 'publish-preview-ref'),
+        ('preview-ref', 'wrong-dispatch-ref'),
+        ('preview-ref', 'wrong-component'),
+        ('preview-ref', 'publish-preview-only'),
+        ('preview-ref', 'wrong-environment'),
+    ],
+)
+def test_public_site_publication_routes_reject_ref_bypasses(route, defect, tmp_path):
+    import copy  # noqa: PLC0415
+
+    document = dict(workflows())['pages.yml']
+    pages_route_boundary(document, route, tmp_path)
+    # Each mutation replays independently, so a prior captured dispatch cannot
+    # make a removed or disabled command appear to have executed.
+    for path in tmp_path.iterdir():
+        path.unlink()
+    damaged = copy.deepcopy(document)
+    jobs = damaged['jobs']
+    component = 'wasm' if route == 'stable-tag' else 'docs'
+    main_only = "github.ref == 'refs/heads/main'"
+    triggers = damaged.get('on', damaged.get(True, {}))
+    if defect == 'missing-release-trigger':
+        triggers.pop('release')
+    elif defect == 'missing-dispatch-trigger':
+        triggers.pop('workflow_dispatch')
+    elif defect in {'sdk-main-only', 'build-main-only'}:
+        jobs['crysta-sdk' if defect == 'sdk-main-only' else component]['if'] = main_only
+    elif defect == 'build-step-main-only':
+        _index, step = pages_operation(jobs[component]['steps'], 'wasm-build')
+        step['if'] = main_only
+    elif defect == 'missing-sdk-dependency':
+        jobs[component].pop('needs')
+    elif defect in {'publish-main-only', 'publish-preview-only'}:
+        jobs['publish-' + component]['if'] = (
+            main_only if defect == 'publish-main-only' else "github.ref == 'refs/heads/dev'"
+        )
+    elif defect == 'step-main-only':
+        jobs['publish-' + component]['steps'][-1]['if'] = main_only
+    elif defect == 'wrong-environment':
+        jobs['publish-' + component]['environment'] = 'github-pages'
+    elif defect == 'disabled-refresh':
+        jobs['refresh-release-notes']['if'] = 'false'
+    elif defect == 'publish-preview-ref':
+        jobs['refresh-release-notes']['env']['PAGES_REF'] = '${{ vars.EDI_PREVIEW_PAGES_REF }}'
+    else:
+        _index, step = pages_operation(
+            jobs['refresh-release-notes']['steps'], 'gh workflow run pages.yml'
+        )
+        step['run'] = step['run'].replace(
+            '"$PAGES_REF"' if defect == 'wrong-dispatch-ref' else 'component=docs',
+            'dev' if defect == 'wrong-dispatch-ref' else 'component=wasm',
+        )
+    with pytest.raises(AssertionError):
+        pages_route_boundary(damaged, route, tmp_path)
+
+
 def damage_component_artifact(steps, defect):
     _index, download = pages_operation(steps, 'actions/download-artifact@')
     if defect == 'foreign-artifact':

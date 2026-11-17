@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-17T11:46:15Z
+# measured_utc = 2026-11-17T12:23:26Z
 #
-# Recorded from: measured test run (57 node(s) measured once, 177046 banked, 3 stale row(s) dropped)
-# Collected tests: 245533; with a reported duration: 77793
+# Recorded from: measured test run (23 node(s) measured once, 177103 banked, 0 stale row(s) dropped)
+# Collected tests: 245556; with a reported duration: 77816
 # Module-scoped fixture costs recorded: 206
 #
 # Breaches are decided PER TIER against the table
@@ -29,12 +29,12 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 245533
+# inventory_python = 245556
 # inventory_cpp = 0
-# inventory_measured = 177103
+# inventory_measured = 177126
 # inventory_unmeasured = 68430
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
-# inventory_pr_python = 86228
+# inventory_pr_python = 86251
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -229463,6 +229463,29 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_e04_t12_public_release.py::te
 0.390	tests/system/py/test_e04_t12_public_release.py::test_public_installer_destination_rejects_bypasses[missing-recovery]
 0.380	tests/system/py/test_e04_t12_public_release.py::test_public_installer_destination_rejects_bypasses[wrong-base]
 0.390	tests/system/py/test_e04_t12_public_release.py::test_public_installer_destination_rejects_bypasses[wrong-target-branch]
+1.070	tests/system/py/test_e04_t12_public_release.py::test_public_site_preview_dispatch_builds_without_publication[refs/heads/dev-docs]
+0.210	tests/system/py/test_e04_t12_public_release.py::test_public_site_preview_dispatch_builds_without_publication[refs/heads/dev-wasm]
+0.180	tests/system/py/test_e04_t12_public_release.py::test_public_site_preview_dispatch_builds_without_publication[refs/tags/v2026.11.21-docs]
+0.190	tests/system/py/test_e04_t12_public_release.py::test_public_site_preview_dispatch_builds_without_publication[refs/tags/v2026.11.21-wasm]
+0.230	tests/system/py/test_e04_t12_public_release.py::test_public_site_publication_routes_reach_reviewed_environment[preview-main]
+0.230	tests/system/py/test_e04_t12_public_release.py::test_public_site_publication_routes_reach_reviewed_environment[preview-ref]
+0.320	tests/system/py/test_e04_t12_public_release.py::test_public_site_publication_routes_reach_reviewed_environment[stable-notes]
+0.250	tests/system/py/test_e04_t12_public_release.py::test_public_site_publication_routes_reach_reviewed_environment[stable-tag]
+0.180	tests/system/py/test_e04_t12_public_release.py::test_public_site_publication_routes_reject_ref_bypasses[preview-ref-disabled-refresh]
+0.210	tests/system/py/test_e04_t12_public_release.py::test_public_site_publication_routes_reject_ref_bypasses[preview-ref-missing-dispatch-trigger]
+0.210	tests/system/py/test_e04_t12_public_release.py::test_public_site_publication_routes_reject_ref_bypasses[preview-ref-publish-preview-only]
+0.200	tests/system/py/test_e04_t12_public_release.py::test_public_site_publication_routes_reject_ref_bypasses[preview-ref-publish-preview-ref]
+0.560	tests/system/py/test_e04_t12_public_release.py::test_public_site_publication_routes_reject_ref_bypasses[preview-ref-wrong-component]
+0.200	tests/system/py/test_e04_t12_public_release.py::test_public_site_publication_routes_reject_ref_bypasses[preview-ref-wrong-dispatch-ref]
+0.210	tests/system/py/test_e04_t12_public_release.py::test_public_site_publication_routes_reject_ref_bypasses[preview-ref-wrong-environment]
+0.550	tests/system/py/test_e04_t12_public_release.py::test_public_site_publication_routes_reject_ref_bypasses[stable-tag-build-main-only]
+0.200	tests/system/py/test_e04_t12_public_release.py::test_public_site_publication_routes_reject_ref_bypasses[stable-tag-build-step-main-only]
+0.280	tests/system/py/test_e04_t12_public_release.py::test_public_site_publication_routes_reject_ref_bypasses[stable-tag-missing-release-trigger]
+0.190	tests/system/py/test_e04_t12_public_release.py::test_public_site_publication_routes_reject_ref_bypasses[stable-tag-missing-sdk-dependency]
+0.210	tests/system/py/test_e04_t12_public_release.py::test_public_site_publication_routes_reject_ref_bypasses[stable-tag-publish-main-only]
+0.230	tests/system/py/test_e04_t12_public_release.py::test_public_site_publication_routes_reject_ref_bypasses[stable-tag-sdk-main-only]
+0.190	tests/system/py/test_e04_t12_public_release.py::test_public_site_publication_routes_reject_ref_bypasses[stable-tag-step-main-only]
+0.180	tests/system/py/test_e04_t12_public_release.py::test_public_site_publication_routes_reject_ref_bypasses[stable-tag-wrong-environment]
 0.190	tests/system/py/test_e04_t12_public_release.py::test_public_site_tokens_require_the_reviewed_environment[missing-installers.yml-publish-installers]
 0.190	tests/system/py/test_e04_t12_public_release.py::test_public_site_tokens_require_the_reviewed_environment[missing-pages.yml-publish-docs]
 0.190	tests/system/py/test_e04_t12_public_release.py::test_public_site_tokens_require_the_reviewed_environment[missing-pages.yml-publish-wasm]
