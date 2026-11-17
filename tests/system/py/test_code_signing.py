@@ -629,9 +629,15 @@ def signed_members(sources, workflow_steps):
 @pytest.mark.parametrize('member', REQUIRED_SIGNED)
 def test_owner_declared_app_cli_and_installer_signatures(member, tmp_path, monkeypatch):
     if member in {'macos-offline', 'macos-online'}:
-        observe_maintenance_package(
+        source = observe_maintenance_package(
             tmp_path, monkeypatch, release=True, online=member.endswith('online')
         )
+        if member == 'macos-online':
+            from tests.system.py.maintenance_consumers import observe_consumers  # noqa: PLC0415
+
+            metadata = source / 'packages/org.easyscience.edi.maintenancetool/meta/package.xml'
+            maintenance_version = ET.parse(metadata).getroot().findtext('Version')  # noqa: S314 - generated metadata
+            observe_consumers(ROOT, tmp_path / 'consumers', maintenance_version, monkeypatch)
     sources = {
         name: (ROOT / 'tools/installer' / name).read_text()
         for name in ('build.py', 'package.py', 'standalone_cli.py')
@@ -881,6 +887,8 @@ def observe_maintenance_package(  # noqa: PLR0914, PLR0915 - one packaging trans
     assert target.name in scripts or configured, (
         'The installer override must name the packaged maintenance binary'
     )
+
+    return source
 
 
 def observe_installed_maintenance(directory, monkeypatch, failure=None):
