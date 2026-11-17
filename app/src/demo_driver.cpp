@@ -739,7 +739,6 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     // The documentation's concept figures, from the Co2SiO4 magnetic case, in both themes, each saved by Save image
     // (the owner, 2026-11-10). Run only when asked (`--demo-only concepts-`).
     if (only.startsWith(QLatin1String("concepts-"))) {
-        const QString structure = QStringLiteral("appBar.tab.structure");
         // Opened and fitted once; the dark figures are the same fit in the other theme.
         for (const QString theme : {QStringLiteral("light"), QStringLiteral("dark")}) {
             const QString name = QStringLiteral("concepts-") + theme + QStringLiteral("-");
@@ -771,7 +770,6 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     // The sidebar's pins, empty tabs and Performance row, the structure view's atom view names, in both themes (the
     // owner, 2026-11-10). Run only when asked (`--demo-only sidebar-`).
     if (only.startsWith(QLatin1String("sidebar-"))) {
-        const QString structure = QStringLiteral("appBar.tab.structure");
         const QString settings = QStringLiteral("sideBar.tab.settings");
         for (const QString theme : {QStringLiteral("light"), QStringLiteral("dark")}) {
             const QString name = QStringLiteral("sidebar-") + theme + QStringLiteral("-");
@@ -984,7 +982,6 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     // Experiment page, the experiments, the Analysis parameters and the atom sites. Run only when asked
     // (`--demo-only tablecheck-`).
     if (only.startsWith(QLatin1String("tablecheck-"))) {
-        const QString experiment = QStringLiteral("appBar.tab.experiment");
         int n = 0;
         const auto name = [&n](const QString& what) {
             return QStringLiteral("tablecheck-%1-%2").arg(++n, 2, 10, QLatin1Char('0')).arg(what);
@@ -1007,8 +1004,6 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     // Every table of the app in the light theme, on an example that fills it, each image named after its table (the
     // owner, 2026-10-27). Run only when asked (`--demo-only tableshots-`).
     if (only.startsWith(QLatin1String("tableshots-"))) {
-        const QString experiment = QStringLiteral("appBar.tab.experiment");
-        const QString structure = QStringLiteral("appBar.tab.structure");
         const auto shot = [this](const QString& table, const QStringList& actions) {
             steps_.push_back({QStringLiteral("tableshots-") + table, actions});
         };
@@ -1051,7 +1046,6 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     // Each structure's curve: the Analysis chart with the toolbar's switch on, in both themes, and the Experiment page's
     // data table with a column per structure. Run only when asked (`--demo-only curves-`).
     if (only.startsWith(QLatin1String("curves-"))) {
-        const QString experiment = QStringLiteral("appBar.tab.experiment");
         steps_.push_back({"curves-1-analysis-light",
                           QStringList{"resize:1280x960", "theme:light"} + start + open_example("pd-neut-tof_ferrite-austenite-beer")
                               + QStringList{analysis, basic, "chart.toolbar.structureCurves"}});
@@ -1063,7 +1057,6 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     // The one pattern chart on the Structure, Experiment and Analysis pages: a zoom made on one page shows on the others.
     // Run only when asked (`--demo-only onechart-`).
     if (only.startsWith(QLatin1String("onechart-"))) {
-        const QString experiment = QStringLiteral("appBar.tab.experiment");
         steps_.push_back({"onechart-1-analysis-zoomed",
                           QStringList{"resize:1280x960", "theme:light"} + start + open_example("pd-neut-tof_ferrite-austenite-beer")
                               + QStringList{analysis, basic, "drag:chart.pointer:0.74,0.05,0.80,0.95", "chart.toolbar.structureCurves"}});
@@ -1075,7 +1068,6 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     // The owner's first local test: latp_scan's three structures on the Experiment page, a zoom with each structure's
     // curve off, then the curves on and off again. Run only when asked (`--demo-only latp-`).
     if (only.startsWith(QLatin1String("latp-"))) {
-        const QString experiment = QStringLiteral("appBar.tab.experiment");
         steps_.push_back({"latp-1-experiment", {"resize:1280x960", "theme:light", "open-cli-project:pd-xray-cwl_latp_scan-4f",
                                                 experiment, basic}});
         steps_.push_back({"latp-2-zoomed", {"drag:chart.pointer:0.30,0.05,0.45,0.95"}});
@@ -1136,7 +1128,6 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     // every y scale, then cosio's one structure and ncaf's banks, each opened with its full view.
     // Run only when asked (`--demo-only retest-`).
     if (only.startsWith(QLatin1String("retest-"))) {
-        const QString experiment = QStringLiteral("appBar.tab.experiment");
         const QString yscale = QStringLiteral("chart.toolbar.yscale");
         const QString curves = QStringLiteral("chart.toolbar.structureCurves");
         steps_.push_back({"retest-01-latp-on", {"resize:1280x960", "theme:light", "open-cli-project:pd-xray-cwl_latp_scan-4f",
@@ -1517,7 +1508,6 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
         // The scan views' frames on the 324-file scan, a 162-file scan's fit with every pattern drawn (the fit waiting
         // for each, or the display catching up) against the adaptive rule (edi ADR-0029), and slider steps on LBCO
         // before and after a fit (edi ADR-0041).
-        const QString analysis = QStringLiteral("appBar.tab.analysis");
         QStringList views{"resize:1280x800", "open-cli-project:pd-neut-cwl_cosio-d20_scan-324f", analysis,
                           "mainArea.tab.stacked", "wait-scan:stacked"};
         for (const QString mode : {QStringLiteral("stacked"), QStringLiteral("map")}) {
