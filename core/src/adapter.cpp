@@ -16,6 +16,9 @@
 #include <sstream>
 #include <limits>
 #include <cmath>
+#ifndef _WIN32
+#include <sys/stat.h>
+#endif
 #include <deque>
 #include <map>
 #include <unordered_map>
@@ -2563,6 +2566,88 @@ namespace {
 // every cell after the file's own columns is a number, `nan` or empty (an undefined s.u.). A last line still being
 // written is admitted only while a fit writes. Anything else refuses, so no consumer ever mixes a fitted point's values
 // with the template's.
+// The rules a row of analysis/results_experiments.csv keeps for a consumer, the ones a resumed fit holds it to:
+// the point is one of the series', the experiment one of the project's, the file the point's own file of that
+// experiment, and every cell a number where one is due. A successful point has a finite value for each parameter its
+// experiment has (an empty cell only where the experiment lacks it); an s.u. is empty, nan or not negative; a derived
+// value or s.u. may be undefined (nan).
+struct SeriesBankRules {
+    std::vector<std::string> header;
+    std::map<std::string, std::size_t> experiment_place;   // experiment key -> project order
+    std::set<std::string> held;                            // "<experiment key>.<column>" of the parameters each has
+    std::string data_dir;
+};
+
+SeriesBankRules series_bank_rules(const Project& project, const std::vector<std::string>& header) {
+    SeriesBankRules rules;
+    rules.header = header;
+    for (std::size_t e = 0; e < project.experiments.size(); ++e) {
+        rules.experiment_place.emplace(datablock_key(project.experiments[e]->name, "experiment"), e);
+    }
+    for (const NamedSlot& slot : named_slots(const_cast<Project&>(project))) {
+        rules.held.insert(scan_results_column(slot.unique_name));
+    }
+    rules.data_dir = project.sequential_fit.data_dir;
+    return rules;
+}
+
+// Checks one row; `successful`: its point's fit succeeded. Throws, saying why, with `where`.
+void check_series_bank_row(const SeriesBankRules& rules, const ScanDatasets& datasets, const ScanPlaces& places,
+                           const std::vector<std::string>& cells, bool successful, const std::string& where) {
+    const auto refuse = [&where](const std::string& why) {
+        throw std::invalid_argument("analysis/results_experiments.csv: " + where + " " + why);
+    };
+    const std::vector<std::string>& header = rules.header;
+    if (cells.size() != header.size()) {
+        refuse("has " + std::to_string(cells.size()) + " cells for " + std::to_string(header.size()) + " columns");
+    }
+    const auto place = places.find(cells[0]);
+    if (place == places.end() || place->second >= datasets.point_files.size()) {
+        refuse("names " + cells[0] + ", which is not a point of the series");
+    }
+    const auto experiment = rules.experiment_place.find(cells[1]);
+    if (experiment == rules.experiment_place.end()) {
+        refuse("names " + cells[1] + ", which is not an experiment of the project");
+    }
+    const std::vector<std::string>& files = datasets.point_files[place->second];
+    if (experiment->second >= files.size() || cells[2] != rules.data_dir + "/" + files[experiment->second]) {
+        refuse("gives " + cells[2] + " as " + cells[1] + "'s file, which is not the point's file of that experiment");
+    }
+    const auto number = [](const std::string& cell, double& value) {
+        return cell != "nan" && parse_scan_number(cell, value) && std::isfinite(value);
+    };
+    for (std::size_t c = 3; c < cells.size(); ++c) {
+        const std::string& name = header[c];
+        const std::string& cell = cells[c];
+        double value = 0.0;
+        const bool uncertainty = name.ends_with(".uncertainty");
+        const std::string base = uncertainty ? name.substr(0, name.size() - 12) : name;
+        const bool parameter = rules.held.contains(cells[1] + "." + base) ||
+                               std::any_of(rules.experiment_place.begin(), rules.experiment_place.end(),
+                                           [&](const auto& other) { return rules.held.contains(other.first + "." + base); });
+        if (cell.empty()) {
+            // Empty only for a parameter the row's experiment lacks.
+            if (parameter && rules.held.contains(cells[1] + "." + base)) {
+                refuse("has no " + name + " for " + cells[1] + ", which has that parameter");
+            }
+            continue;
+        }
+        if (cell == "nan") {
+            // Undefined: an s.u. the fit gave none, a derived value, or anything of a point whose fit failed.
+            if (parameter && !uncertainty && successful) {
+                refuse("has no value of " + name + " in a successful point");
+            }
+            continue;
+        }
+        if (!number(cell, value)) {
+            refuse("'s " + name + " is not a number");
+        }
+        if (uncertainty && value < 0.0) {
+            refuse("'s " + name + " is negative");
+        }
+    }
+}
+
 void check_series_bank_rows(const Project& project, const ScanDatasets& datasets, const ScanPlaces& places,
                             const ScanResultIndex& index, bool writing) {
     if (!project.sequential_fit.joint()) {
@@ -2593,10 +2678,11 @@ void check_series_bank_rows(const Project& project, const ScanDatasets& datasets
         return;
     }
     const std::vector<std::string> header = split_scan_row(line);
-    constexpr std::size_t kOwn = 5;  // point, experiment, file_path, file_size, file_modified
-    if (header.size() < kOwn || header[0] != "point" || header[1] != "experiment") {
-        refuse("its header does not start with point and experiment");
+    // The header the driver writes for this project: a column missing, added or renamed is not this project's file.
+    if (header != project.series_experiments_header()) {
+        refuse("its header is not the one a fit of this project writes");
     }
+    const SeriesBankRules rules = series_bank_rules(project, header);
     std::map<std::string, std::set<std::string>> rows_of;
     std::size_t number = 1;
     while (std::getline(input, line)) {
@@ -2610,24 +2696,12 @@ void check_series_bank_rows(const Project& project, const ScanDatasets& datasets
         }
         const std::vector<std::string> cells = split_scan_row(line);
         const std::string where = "row " + std::to_string(number);
-        if (cells.size() != header.size()) {
-            refuse(where + " has " + std::to_string(cells.size()) + " cells for " + std::to_string(header.size()) +
-                   " columns");
-        }
-        if (!places.contains(cells[0])) {
-            refuse(where + " names " + cells[0] + ", which is not a point of the series");
-        }
-        if (!experiments.contains(cells[1])) {
-            refuse(where + " names " + cells[1] + ", which is not an experiment of the project");
-        }
+        const auto place = cells.empty() ? places.end() : places.find(cells[0]);
+        const bool successful = place != places.end() && place->second < index.rows.size() &&
+                                index.rows[place->second].offset >= 0 && index.rows[place->second].converged;
+        check_series_bank_row(rules, datasets, places, cells, successful, where);
         if (!rows_of[cells[0]].insert(cells[1]).second) {
             refuse(where + " repeats point " + cells[0] + " for experiment " + cells[1]);
-        }
-        for (std::size_t c = kOwn; c < cells.size(); ++c) {
-            double value = 0.0;
-            if (!cells[c].empty() && cells[c] != "nan" && !parse_scan_number(cells[c], value)) {
-                refuse(where + "'s " + header[c] + " is not a number");
-            }
         }
     }
     // By the points' own keys (`places` also leads each point's files to it).
@@ -2855,54 +2929,78 @@ std::vector<bool> scan_points_changed(const Project& project, const ScanDatasets
 }
 
 namespace {
-// One point's results_experiments.csv rows, by experiment and column: what the point's fit wrote for each
-// experiment. Empty before the point is fitted, or for a scan of one experiment.
-std::map<std::string, std::map<std::string, double>> point_experiment_cells(const Project& project,
-                                                                          const std::string& point) {
-    std::map<std::string, std::map<std::string, double>> cells_of;
+// Which file a path names now: a file renamed into its place is another file. Device and inode where the system has
+// them, else the file's last write time.
+std::string file_identity(const std::filesystem::path& path) {
+#ifndef _WIN32
+    struct stat status {};
+    if (::stat(path.c_str(), &status) == 0) {
+        return std::to_string(status.st_dev) + ":" + std::to_string(status.st_ino);
+    }
+    return {};
+#else
+    std::error_code error;
+    return std::to_string(std::filesystem::last_write_time(path, error).time_since_epoch().count());
+#endif
+}
+
+// The rows of `point` in analysis/results_experiments.csv, by experiment key, and the file's header: one row for every
+// experiment of the project, or none. Refuses a malformed, foreign or repeated row, or rows for some experiments only.
+std::map<std::string, std::vector<std::string>> point_experiment_rows(const Project& project, const std::string& point,
+                                                                      std::vector<std::string>& header_out) {
+    std::map<std::string, std::vector<std::string>> cells_of;
     const std::filesystem::path path = scan_experiments_path(project);
     if (!project.sequential_fit.joint() || !scan_state_present(path, "analysis/results_experiments.csv")) {
         return cells_of;
     }
-    // Where each point's rows start, kept per file and extended as the file grows (it is only appended to while a fit
-    // writes), so a point's rows are read by seeking, not by reading the file again (edi ADR-0089 point 7).
+    // Where each point's rows start, kept per file generation and extended as the file grows (it is only appended to
+    // while a fit writes), so a point's rows are read by seeking, not by reading the file again (edi ADR-0089
+    // point 7). A generation is the file itself and its header: a file put in its place (Reset, a refit, Undo,
+    // another project at the same path) has the index made again, whatever its size.
     struct LineIndex {
         std::filesystem::path path;
+        std::string identity;
+        std::string header_line;
         std::uintmax_t scanned = 0;
         std::vector<std::string> header;
         std::unordered_map<std::string, std::vector<std::int64_t>> starts;
     };
     static std::mutex mutex;
     static LineIndex kept;
-    std::error_code error;
-    const std::uintmax_t size = std::filesystem::file_size(path, error);
-    if (error) {
-        return cells_of;
+    const auto refuse = [&point](const std::string& why) {
+        throw std::invalid_argument("analysis/results_experiments.csv: point " + point + " " + why);
+    };
+    std::set<std::string> experiments;
+    for (const auto& experiment : project.experiments) {
+        experiments.insert(datablock_key(experiment->name, "experiment"));
     }
-    // A file replaced by other rows of the same or a larger size leaves stale starts: a row that does not belong to
-    // the point has the index made again, once, before it refuses.
     for (int attempt = 0; attempt < 2; ++attempt) {
         std::vector<std::string> header;
         std::vector<std::int64_t> starts;
         {
             const std::scoped_lock lock(mutex);
-            if (kept.path != path || size < kept.scanned || attempt > 0) {
-                kept = LineIndex{path, 0, {}, {}};
+            std::error_code error;
+            const std::uintmax_t size = std::filesystem::file_size(path, error);
+            if (error) {
+                return cells_of;
             }
             std::ifstream input(path, std::ios::binary);
-            std::string line;
-            if (kept.scanned == 0) {
-                if (!std::getline(input, line) || input.eof()) {
-                    return cells_of;
-                }
-                kept.header = split_scan_row(line);
+            std::string header_line;
+            if (!std::getline(input, header_line) || input.eof()) {
+                return cells_of;
+            }
+            const std::string identity = file_identity(path);
+            if (kept.path != path || kept.identity != identity || kept.header_line != header_line ||
+                size < kept.scanned || attempt > 0) {
+                kept = LineIndex{path, identity, header_line, 0, split_scan_row(header_line), {}};
                 if (kept.header.size() < 2 || kept.header[0] != "point" || kept.header[1] != "experiment") {
                     kept = LineIndex{};
-                    return cells_of;
+                    refuse("cannot be read: the file's header does not start with point and experiment");
                 }
                 kept.scanned = static_cast<std::uintmax_t>(input.tellg());
             }
             input.seekg(static_cast<std::streamoff>(kept.scanned));
+            std::string line;
             while (true) {
                 const std::int64_t start = input.tellg();
                 if (!std::getline(input, line) || input.eof()) {
@@ -2929,27 +3027,55 @@ std::map<std::string, std::map<std::string, double>> point_experiment_cells(cons
             }
             // The point's rows refuse rather than drop when damaged (index_scan_results checked the file as read).
             if (cells.size() != header.size()) {
-                throw std::invalid_argument("analysis/results_experiments.csv: a row of point " + point + " is malformed");
+                refuse("has a malformed row");
+            }
+            if (!experiments.contains(cells[1])) {
+                refuse("has a row for " + cells[1] + ", which is not an experiment of the project");
             }
             if (cells_of.contains(cells[1])) {
-                throw std::invalid_argument("analysis/results_experiments.csv: point " + point + " repeats experiment " +
-                                            cells[1]);
+                refuse("repeats experiment " + cells[1]);
             }
-            std::map<std::string, double>& row = cells_of[cells[1]];
-            for (std::size_t c = 2; c < cells.size(); ++c) {
-                double value = 0.0;
-                if (parse_scan_number(cells[c], value)) {
-                    row[header[c]] = value;
-                }
-            }
+            cells_of.emplace(cells[1], cells);
             input.clear();
         }
-        if (!stale) {
+        // A point has a row for every experiment or none; anything else is a stale index first, then a damaged file.
+        // No rows: the index was just extended to the end of this generation of the file, so it has none.
+        if (!stale && (cells_of.empty() || cells_of.size() == experiments.size())) {
+            header_out = header;
             return cells_of;
         }
+        if (attempt > 0 && !stale) {
+            refuse("has rows for " + std::to_string(cells_of.size()) + " of its " + std::to_string(experiments.size()) +
+                   " experiments");
+        }
     }
-    throw std::invalid_argument("analysis/results_experiments.csv: the rows of point " + point + " could not be found again");
+    refuse("could not be found again");
 }
+
+// One point's results_experiments.csv rows, by experiment and column: what the point's fit wrote for each
+// experiment. Empty before the point is fitted, or for a scan of one experiment.
+std::map<std::string, std::map<std::string, double>> point_experiment_cells(const Project& project,
+                                                                          const std::string& point) {
+    std::vector<std::string> header;
+    std::map<std::string, std::map<std::string, double>> cells_of;
+    for (const auto& [experiment, cells] : point_experiment_rows(project, point, header)) {
+        std::map<std::string, double>& row = cells_of[experiment];
+        for (std::size_t c = 5; c < cells.size(); ++c) {
+            if (cells[c].empty() || cells[c] == "nan") {
+                continue;  // a parameter the experiment lacks, or undefined
+            }
+            double value = 0.0;
+            if (!parse_scan_number(cells[c], value) || !std::isfinite(value) ||
+                (header[c].ends_with(".uncertainty") && value < 0.0)) {
+                throw std::invalid_argument("analysis/results_experiments.csv: point " + point + " has " + header[c] +
+                                            " '" + cells[c] + "' for " + experiment + ", which is not a number it may hold");
+            }
+            row[header[c]] = value;
+        }
+    }
+    return cells_of;
+}
+
 
 // A value the point's row holds for the experiment, else the model's.
 double point_value(const std::map<std::string, std::map<std::string, double>>& cells_of,
@@ -2962,6 +3088,27 @@ double point_value(const std::map<std::string, std::map<std::string, double>>& c
     return cell != row->second.end() ? cell->second : model_value;
 }
 }  // namespace
+
+void check_series_point_rows(const Project& project, const ScanDatasets& datasets, const ScanPlaces& places,
+                             const std::vector<std::string>& expected_header, std::size_t place, bool successful) {
+    if (!project.sequential_fit.joint() || place >= datasets.files.size()) {
+        return;
+    }
+    const std::string& point = datasets.files[place];
+    std::vector<std::string> header;
+    const auto rows = point_experiment_rows(project, point, header);
+    if (rows.size() != project.experiments.size()) {
+        throw std::invalid_argument("analysis/results_experiments.csv: point " + point + " is fitted but has no rows");
+    }
+    if (header != expected_header) {
+        throw std::invalid_argument("analysis/results_experiments.csv: its header is not the one a fit of this project "
+                                    "writes");
+    }
+    const SeriesBankRules rules = series_bank_rules(project, header);
+    for (const auto& [experiment, cells] : rows) {
+        check_series_bank_row(rules, datasets, places, cells, successful, "point " + point + "'s row for " + experiment);
+    }
+}
 
 std::map<std::string, SeriesPointValue> series_point_values(const Project& project, const std::string& point) {
     std::map<std::string, SeriesPointValue> values;
@@ -7224,6 +7371,27 @@ PatternSource fitted_scan_pattern(const Project& model, const crysta::Project& f
 
 // The ONE scan implementation. Both public scan entries reach it after proving their own exact
 // token, so the code stays single while the public surface stays mode-specific.
+std::vector<std::string> Project::series_experiments_header() const {
+    // The experiments as fit_scan builds them for a series, over the same structures and relations.
+    Project& self = const_cast<Project&>(*this);
+    const bool phases =
+        structures.size() > 1 || std::any_of(experiments.begin(), experiments.end(), [](const auto& experiment) {
+            return experiment->linked_structures.size() != 1 || !experiment->linked_structure().enabled.get();
+        });
+    BuiltExperiments built;
+    for (const auto& experiment_item : self.experiments) {
+        make_fit_ready(build_on_heap(built, *experiment_item));
+    }
+    crysta::Project cproject = [&]() -> crysta::Project {
+        if (phases) {
+            return crysta::Project(to_crysta_structures(self), experiment_list(built));
+        }
+        return crysta::Project(to_crysta_structure(self.structure()), experiment_list(built));
+    }();
+    fill_crysta_relations(self, cproject);
+    return crysta::series_experiments_header(cproject);
+}
+
 FitResultBase Project::fit_scan(const IterationCallback& on_iteration,
                                    const PreambleCallback& on_start,
                                    const ScanStartCallback& on_scan_start,

@@ -5323,6 +5323,9 @@ class Project : public detail::ProjectAnchor {
                               const FileCompleteCallback& on_file_complete = {},
                               const CancelCallback& should_cancel = {},
                               const FileFittedCallback& on_file_fitted = {});
+    // The header a series of joint fits of this project writes to analysis/results_experiments.csv, as crysta's
+    // driver makes it from the project fit_scan hands it: the file is read against it.
+    std::vector<std::string> series_experiments_header() const;
 
     // PLURAL storage — a collection holding one element is honest, and the in-repo
     // `experiments` precedent now has its structures half. The singular accessors below are the

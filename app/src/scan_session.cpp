@@ -119,6 +119,7 @@ ScanSession::~ScanSession() { stopMetadata(); }
 
 QString ScanSession::load(const edi::Project& project) {
     stopMetadata();
+    bank_header_.clear();
     try {
         datasets_ = edi::scan_datasets(project);
     } catch (const std::exception& refusal) {
@@ -156,6 +157,7 @@ void ScanSession::take(ScanSession& listing) {
     datasets_ = std::move(listing.datasets_);
     places_ = std::move(listing.places_);
     index_ = std::move(listing.index_);
+    bank_header_.clear();
     run_ = std::move(listing.run_);
     source_ = std::move(listing.source_);
     metadata_.assign(datasets_.files.size(), std::nullopt);
@@ -270,6 +272,14 @@ int ScanSession::addRow(const edi::Project& project, const std::vector<std::stri
         auto [dataset, row] = edi::scan_row_facts(project, places_, index_, cells);
         if (index_.rows[dataset].offset >= 0) {
             return static_cast<int>(dataset);  // indexed already, when the run's first row caught up with the file
+        }
+        // A series point's experiment rows are written before its results row: checked here as a full read checks
+        // them, so a damaged row is refused live as on reopen.
+        if (datasets_.joint()) {
+            if (bank_header_.empty()) {
+                bank_header_ = project.series_experiments_header();
+            }
+            edi::check_series_point_rows(project, datasets_, places_, bank_header_, dataset, row.converged);
         }
         // The notes the run appended since the last row come first (files skipped before this one, its own note):
         // crysta notes a file before appending its row. A refusal there refuses the index below.

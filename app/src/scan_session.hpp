@@ -120,6 +120,8 @@ class ScanSession : public QObject {
     edi::ScanDatasets datasets_;
     edi::ScanPlaces places_;
     edi::ScanResultIndex index_;
+    // The header a fit of the project writes to results_experiments.csv, taken at the first live row of a load.
+    std::vector<std::string> bank_header_;
     Run run_;
     std::vector<std::optional<std::vector<std::string>>> metadata_;
     std::unordered_map<int, QString> metadata_errors_;

@@ -223,6 +223,11 @@ struct SeriesPointValue {
     std::optional<double> uncertainty;
 };
 std::map<std::string, SeriesPointValue> series_point_values(const Project& project, const std::string& point);
+/// Checks the per-experiment rows of the series point at `place`, just written, as `index_scan_results` checks every
+/// row: `expected_header` (Project::series_experiments_header), a row for each experiment, its point's own files, and
+/// numbers where due (`successful`: the point's fit succeeded). Throws, saying why.
+void check_series_point_rows(const Project& project, const ScanDatasets& datasets, const ScanPlaces& places,
+                             const std::vector<std::string>& expected_header, std::size_t place, bool successful);
 
 /// ADR-0089 point 5: the summary of one Map or Stacked row of a series over [d_min, d_max] at `columns` columns: the
 /// point's pattern of each experiment in `experiments` (places in project order), read from its file on the d axis by
