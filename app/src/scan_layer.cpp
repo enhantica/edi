@@ -1167,8 +1167,9 @@ void ScanLayer::paint(QPainter* painter) {
             const auto& own = values(pixel.band);
             const auto& a = values(pixel.lower);
             const auto& b = values(pixel.upper);
-            // Highlighted, every row's band but the shown dataset's is blended toward the background.
-            const bool faded = highlighted() >= 0 && pixel.band != static_cast<std::size_t>(highlighted());
+            // Every row keeps its full colour: blended toward the background, a map's low intensities read as empty,
+            // and the highlighted run is marked by its label (the owner, 2026-11-17).
+            const bool faded = false;
             const double keep = faded ? faded_ : 1.0;
             QRgb* line = reinterpret_cast<QRgb*>(image.scanLine(j));
             for (int i = 0; i < pixel_columns; ++i) {
