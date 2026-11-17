@@ -116,7 +116,7 @@ private slots:
                        "_pd_meas.intensity_total\n_pd_meas.intensity_total_su\n10.0 100 10\n10.1 110 10.5\n10.2 120 11\n");
         }
         const edi::BraggPdExperiment experiment = edi::load_experiment_file(pattern.toStdString());
-        QVERIFY(experiment.data.has_value());
+        if (!experiment.data) QFAIL("the CIF loaded no measured data");
         QCOMPARE(experiment.data->intensity_meas.get().size(), std::size_t{3});
         QCOMPARE(experiment.data->intensity_meas.get()[2], 120.0);
         QCOMPARE(experiment.effective_beam_mode(), edi::BeamModeEnum::CONSTANT_WAVELENGTH);
@@ -142,7 +142,9 @@ private slots:
     static double peakRatioOf(const edi::Project& held) {
         edi::Project copy = held;
         copy.refresh_calculated_pattern();
-        const auto& data = *copy.experiments[0]->data;
+        const auto& measured = copy.experiments[0]->data;
+        if (!measured) return 0.0;
+        const auto& data = *measured;
         const auto& meas = data.intensity_meas.get();
         std::vector<double> levels;
         double calculated = -std::numeric_limits<double>::infinity();
@@ -158,7 +160,10 @@ private slots:
         return (highest - levels[levels.size() / 10]) / calculated;
     }
     static double tenthPercentile(const edi::Project& held) {
-        std::vector<double> levels = held.experiments[0]->data->intensity_meas.get();
+        const auto& measured = held.experiments[0]->data;
+        if (!measured) return 0.0;
+        std::vector<double> levels = measured->intensity_meas.get();
+        if (levels.empty()) return 0.0;
         std::sort(levels.begin(), levels.end());
         return levels[levels.size() / 10];
     }
