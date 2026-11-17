@@ -292,7 +292,7 @@ ScanTemplate scan_template_of(const Project& scan) {
                 columns.emplace(parameter.name, &parameter);
             }
             for (const NamedSlot& slot : named_slots(out.project)) {
-                Edit::ScanValue value{slot.unique_name, slot.parameter->value.get(), slot.parameter->uncertainty.get()};
+                Edit::ScanValue value{slot.unique_name, slot.parameter->value.get(), slot.parameter->uncertainty.get(), std::nullopt};
                 if (const auto column = columns.find(scan_results_column(slot.unique_name)); column != columns.end()) {
                     double number = 0.0, uncertainty = 0.0;
                     const std::string& uncertainty_cell = cells.at(column->second->uncertainty);

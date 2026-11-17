@@ -2109,7 +2109,7 @@ bool ProjectViewModel::locateDataFile(ExperimentViewModel* experiment, const QUr
     const PublicationScope publication(*this);
     const QPointer<ProjectViewModel> self(this);
     // The experiment the chooser was opened for, whatever is selected now; gone, nothing is changed.
-    const int index = experiment_models_.indexOf(experiment);
+    const int index = static_cast<int>(experiment_models_.indexOf(experiment));
     if (retired_ || !file.isLocalFile() || index < 0 || static_cast<std::size_t>(index) >= project_->experiments.size())
         return false;
     const auto refuse = [&](const QString& message) {
@@ -2412,7 +2412,7 @@ bool ProjectViewModel::loadSeriesOfJointFits(ExperimentViewModel* experiment, co
         if (self && !retired_) emit refused(message);
         return false;
     };
-    const int index = experiment_models_.indexOf(experiment);
+    const int index = static_cast<int>(experiment_models_.indexOf(experiment));
     if (index < 0) return refuse(tr("The experiment the data was chosen for is no longer in the project"));
     if (files.isEmpty()) return false;
     if (const QString refusal = editReadinessRefusal(false); !refusal.isEmpty()) return refuse(refusal);
@@ -2517,7 +2517,7 @@ bool ProjectViewModel::loadDatasets(ExperimentViewModel* experiment, const QList
         if (self && !retired_) emit refused(message);
         return false;
     };
-    const int index = experiment_models_.indexOf(experiment);
+    const int index = static_cast<int>(experiment_models_.indexOf(experiment));
     if (index < 0) return refuse(tr("The experiment the data was chosen for is no longer in the project"));
     if (files.isEmpty()) return false;
     for (const QUrl& file : files)
@@ -4237,7 +4237,7 @@ std::vector<edi::Edit::ScanValue> ProjectViewModel::datasetValues(const std::vec
     std::vector<edi::Edit::ScanValue> values;
     edi::Project& from = const_cast<edi::Project&>(template_project);
     for (const edi::NamedSlot& slot : edi::named_slots(from)) {
-        values.push_back({slot.unique_name, slot.parameter->value.get(), slot.parameter->uncertainty.get()});
+        values.push_back({slot.unique_name, slot.parameter->value.get(), slot.parameter->uncertainty.get(), std::nullopt});
     }
     if (row.empty()) {
         return values;
@@ -4644,7 +4644,7 @@ QString ProjectViewModel::resetScan() {
     run.fit_records = FitRecords{project_->fit_result, scan_template_ ? std::optional(scan_template_->fit_result) : std::nullopt};
     run.shown_dataset = projected_dataset_;
     for (const edi::NamedSlot& slot : edi::named_slots(*project_))
-        run.shown_values.push_back({slot.unique_name, slot.parameter->value.get(), slot.parameter->uncertainty.get()});
+        run.shown_values.push_back({slot.unique_name, slot.parameter->value.get(), slot.parameter->uncertainty.get(), std::nullopt});
     undo_history_.reserve(undo_history_.size() + 1);
     editing_ = true;
     const auto release = qScopeGuard([this] { editing_ = false; });

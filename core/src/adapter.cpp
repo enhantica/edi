@@ -1991,7 +1991,7 @@ ScanDatasets scan_datasets(const Project& project) {
         }
         crysta::SequentialScanPoints points = crysta::sequential_scan_points(
             config, experiments, project.path.empty() ? project.scan_data_root : project.path, project.scan_data_root);
-        ScanDatasets datasets{std::move(points.directory), {}, std::move(points.experiments), {}};
+        ScanDatasets datasets{std::move(points.directory), {}, std::move(points.experiments), {}, {}};
         for (crysta::SequentialScanPoint& point : points.points) {
             datasets.files.push_back(point.key);
             datasets.point_files.push_back(std::move(point.files));
@@ -2005,7 +2005,7 @@ ScanDatasets scan_datasets(const Project& project) {
     // listed from there, as its save carries it (crysta refuses a scan of a project without a directory).
     crysta::SequentialScanFiles files = crysta::sequential_scan_files(
         config, project.path.empty() ? project.scan_data_root : project.path, project.scan_data_root);
-    return {std::move(files.directory), std::move(files.names)};
+    return {std::move(files.directory), std::move(files.names), {}, {}, {}};
 }
 
 std::vector<std::string> scan_data_files(const ScanDatasets& datasets) {
