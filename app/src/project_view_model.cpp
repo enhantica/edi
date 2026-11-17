@@ -6673,6 +6673,27 @@ void ProjectViewModel::syncCorrelations() {
             if (retired_) return;
             return;
         }
+        // A series of joint fits keeps one matrix, the last run it fitted (crysta tags it with that run): any other run
+        // names where it is (the owner, 2026-11-17).
+        if (series()) {
+            std::string kept;
+            for (const auto& row : record.correlations) {
+                if (!row->file_path.value().empty()) {
+                    kept = row->file_path.value();
+                    break;
+                }
+            }
+            const auto at = std::find(files.begin(), files.end(), kept);
+            QString absent = tr("No correlations");
+            if (at != files.end()) {
+                const int owner = static_cast<int>(at - files.begin());
+                absent = tr("Correlations are kept only for the last run fitted, %1 %2 · %3")
+                             .arg(seriesVariable()).arg(owner + 1).arg(pointName(owner));
+            }
+            correlations_->setRows(file, {}, absent);
+            if (retired_) return;
+            return;
+        }
         // A save keeps only the template dataset's correlations (the owner, 2026-10-12): a dataset fitted before the
         // project was opened has none here.
         QString absent;
