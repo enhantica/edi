@@ -4,7 +4,6 @@
 pragma ComponentBehavior: Bound
 import QtQuick
 
-import EasyApplication.Gui.Logic as EaLogic
 import EasyApplication.Gui.Style as EaStyle
 import EasyApplication.Gui.Elements as EaElements
 
@@ -34,24 +33,9 @@ EaElements.TextInput {
         'cifDict': ''
     }
 
-    property var value: {
-        if (typeof parameter.value === 'undefined') {
-            return 0
-        } else if (typeof parameter.value === 'number') {
-            return EaLogic.Utils.toErrSinglePrecision(parameter.value, parameter.error)
-        } else {
-            return parameter.value
-        }
-    }
-    property var error: {
-        if (typeof parameter.error === 'undefined') {
-            return ''
-        } else if (typeof parameter.value === 'number') {
-            return EaLogic.Utils.toSinglePrecision(parameter.error)
-        } else {
-            return parameter.error
-        }
-    }
+    // The callers pass the value and its s.u. as text the display bridge has rounded.
+    property var value: typeof parameter.value === 'undefined' ? 0 : parameter.value
+    property var error: typeof parameter.error === 'undefined' ? '' : parameter.error
 
     property int idx: parameter.idx ?? 0
     property bool fittable: parameter.fittable ?? false
