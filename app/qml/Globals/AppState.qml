@@ -49,12 +49,14 @@ QtObject {
     property int measCalcScale: 0
     property list<real> measCalcZoom: []
     property var singleCrystalZoom: ({})
-    // A project opened, reset or closed starts with its full view (no range set, as a chart writes it); the toolbar's
-    // choices stay.
+    // A project opened, reset or closed starts with its full view (no range set, as a chart writes it, the comparison
+    // and single-crystal zooms included); the toolbar's choices stay.
     property Connections patternViewReset: Connections {
         target: Session
         function onProjectChanged() {
             ApplicationInfo.resetPatternProjectView();
+            AppState.measCalcZoom = [];
+            AppState.singleCrystalZoom = {};
         }
     }
 
