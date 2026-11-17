@@ -1,8 +1,11 @@
 // SPDX-License-Identifier: BSD-3-Clause
+#include <cmath>
+#include <functional>
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
 #include <QGuiApplication>
+#include <QImage>
 #include <QQmlApplicationEngine>
 #include <QQmlComponent>
 #include <QQmlExpression>
@@ -64,6 +67,100 @@ private slots:
         QCOMPARE(fit->elapsed(), duration + "s");
         QCOMPARE(fit->results()->text(1, "value"), duration + " s");
         for (const double time : runningTimes) QVERIFY(time <= duration.toDouble());
+    }
+    // Opened on Analysis, at once or from another project's Analysis page, the structure view draws its atoms and the
+    // parameter table fits its columns, as when the pages are visited in order.
+    void projectOpenedOnAnalysisDrawsStructureAndTable() {
+        QQmlApplicationEngine engine;
+        edi_app::configure_engine(engine);
+        engine.loadFromModule("edi.app", "Main");
+        QVERIFY(!engine.rootObjects().isEmpty());
+        auto* window = qobject_cast<QQuickWindow*>(engine.rootObjects().constFirst());
+        QVERIFY(window);
+        window->resize(1480, 900);
+        window->show();
+        QVERIFY(QTest::qWaitForWindowExposed(window));
+        auto* session = engine.singletonInstance<edi_app::Session*>("edi.app", "Session");
+        QVERIFY(session);
+        // The named item on screen: each page holds its own copy of the main view and the tables.
+        const auto shown = [window](const QString& name) -> QQuickItem* {
+            QQuickItem* result = nullptr;
+            std::function<void(QQuickItem*)> walk = [&](QQuickItem* parent) {
+                for (QQuickItem* child : parent->childItems()) {
+                    const QPointF at = child->mapToScene(QPointF());
+                    if (child->objectName() == name && child->isVisible() && at.x() >= 0 && at.x() < window->width())
+                        result = child;
+                    walk(child);
+                }
+            };
+            walk(window->contentItem());
+            return result;
+        };
+        const auto click = [window](QQuickItem* item) {
+            QTest::mouseClick(window, Qt::LeftButton, {}, item->mapToScene(QPointF(item->width() / 2, item->height() / 2)).toPoint());
+        };
+        const auto openAnalysis = [&] {
+            QQuickItem* tab = nullptr;
+            QTRY_VERIFY_WITH_TIMEOUT((tab = shown("appBar.tab.analysis")) && tab->isEnabled(), 20000);
+            click(tab);
+        };
+        // Atoms in the middle of the view: there a blank view has no letter, legend or toolbar.
+        const auto drawn = [&]() {
+            QQuickItem* view = shown("structure.view");
+            if (view == nullptr || !view->property("has3D").toBool()) return view != nullptr && view->property("atomCount").toInt() > 0;
+            const QImage image = window->grabWindow();
+            const QPointF origin = view->mapToScene(QPointF());
+            const QRect middle(int(origin.x() + view->width() * 0.2), int(origin.y() + view->height() * 0.3), int(view->width() * 0.4), int(view->height() * 0.5));
+            const QColor background = view->property("color").value<QColor>();
+            const double scale = image.width() / double(window->width());
+            int marked = 0;
+            for (int y = middle.top(); y < middle.bottom(); y += 2)
+                for (int x = middle.left(); x < middle.right(); x += 2) {
+                    const QColor pixel = image.pixelColor(int(x * scale), int(y * scale));
+                    if (std::abs(pixel.red() - background.red()) + std::abs(pixel.green() - background.green()) + std::abs(pixel.blue() - background.blue()) > 60) ++marked;
+                }
+            return marked > middle.width() * middle.height() / 4 / 50;
+        };
+        // Every column fitted: a table measured while hidden keeps all but Name at their least width.
+        const auto fitted = [&]() {
+            QQuickItem* table = shown("parameters.list");
+            if (table == nullptr || table->property("unfitted").toBool() || table->property("refitting").toBool()) return false;
+            const QVariantList widths = table->property("columnWidths").value<QJSValue>().toVariant().toList();
+            if (widths.size() < 4) return false;
+            for (qsizetype column = 2; column < widths.size(); ++column)
+                if (widths[column].toDouble() <= 12) return false;
+            return true;
+        };
+        const QString ncaf = QStringLiteral(EDI_SOURCE_DIR "/docs/user/cli/pd-neut-tof_ncaf-wish/project");
+        QVERIFY2(session->openProject(QUrl::fromLocalFile(ncaf)), qPrintable(session->lastError()));
+        openAnalysis();
+        QTRY_VERIFY_WITH_TIMEOUT(shown("mainArea.tab.structure") && shown("structure.view"), 20000);
+        click(shown("mainArea.tab.structure"));
+        QTRY_VERIFY_WITH_TIMEOUT(drawn(), 20000);
+        QTRY_VERIFY_WITH_TIMEOUT(fitted(), 60000);
+        // Another project opened from Analysis: its pages are built while the Project page shows.
+        QVERIFY2(session->openProject(QUrl::fromLocalFile(QStringLiteral(EDI_SOURCE_DIR "/app/examples/pd-xray-cwl_lif/project"))), qPrintable(session->lastError()));
+        openAnalysis();
+        QVERIFY2(session->openProject(QUrl::fromLocalFile(ncaf)), qPrintable(session->lastError()));
+        // Its Analysis page built beside the Project page, before it is shown.
+        const auto builtHidden = [window]() {
+            bool found = false;
+            std::function<void(QQuickItem*)> walk = [&](QQuickItem* parent) {
+                for (QQuickItem* child : parent->childItems()) {
+                    if (child->objectName() == "parameters.list" && child->property("count").toInt() > 200 && child->mapToScene(QPointF()).x() >= window->width())
+                        found = true;
+                    walk(child);
+                }
+            };
+            walk(window->contentItem());
+            return found;
+        };
+        QTRY_VERIFY_WITH_TIMEOUT(builtHidden(), 30000);
+        openAnalysis();
+        QTRY_VERIFY_WITH_TIMEOUT(shown("structure.view"), 20000);
+        click(shown("mainArea.tab.structure"));
+        QTRY_VERIFY_WITH_TIMEOUT(drawn(), 20000);
+        QTRY_VERIFY_WITH_TIMEOUT(fitted(), 60000);
     }
     void hiddenWorkflowPagesDeferSelection() {
         QQmlApplicationEngine engine;
