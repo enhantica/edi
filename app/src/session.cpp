@@ -263,7 +263,10 @@ bool Session::assistantSaveNotified(ProjectViewModel*) const { return false; }
 #endif
 
 Session::~Session() {
-    delete assistant_;assistant_=nullptr;
+#if EDI_APP_ASSISTANT
+    delete assistant_;  // a build without the assistant never makes one, and has no complete type to delete
+#endif
+    assistant_=nullptr;
     // QObject normally deletes children after members. The workers/models must
     // stop before archive roots remove their files.
     project_=nullptr;
@@ -1938,7 +1941,7 @@ void Session::setOpenedArchive(const QString& name) {
     }
 }
 
-bool Session::replaceProject(ProjectViewModel* project, const QStringList& warnings, const QString& example, bool nativePrepared, bool* committed, quint64* committedReplacement, bool ordinaryEmptyCreate, const QString& openedFrom, const std::shared_ptr<SessionResetInputs>& resetInputs, const QStringList& warningSources) {
+bool Session::replaceProject(ProjectViewModel* project, const QStringList& warnings, const QString& example, bool nativePrepared, bool* committed, quint64* committedReplacement, [[maybe_unused]] bool ordinaryEmptyCreate, const QString& openedFrom, [[maybe_unused]] const std::shared_ptr<SessionResetInputs>& resetInputs, const QStringList& warningSources) {
     // A save holding the open project finishes first (edi ADR-0069): nothing replaces or closes it meanwhile.
     if (const QString refusal = replacementRefusal(); !refusal.isEmpty()) {
         setLastError(refusal);

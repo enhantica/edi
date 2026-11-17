@@ -192,7 +192,7 @@ QByteArray& browser_settings_stored() {
 // ADR-0031 §3, §6: today's settings.ini carried over into the one store. Only a key the store does not hold is copied,
 // so a key is carried once and never overwritten, and the old file is left as it is. The keys that moved go to their new
 // groups.
-void carry_over_settings(const QString& old_file, const QString& store_file) {
+[[maybe_unused]] void carry_over_settings(const QString& old_file, const QString& store_file) {
     if (!QFile::exists(old_file)) {
         return;
     }

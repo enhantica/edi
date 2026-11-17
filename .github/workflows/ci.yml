@@ -902,6 +902,8 @@ jobs:
     runs-on: *linux
     env:
       CRYSTA_SOURCE_SHA: ${{ needs.changes.outputs.crysta_sha }}
+      # edi's own C++ builds without a warning under Emscripten's Clang too (ADR-0093).
+      EDI_WERROR: 'ON'
     steps:
       - uses: actions/checkout@v5
         with:

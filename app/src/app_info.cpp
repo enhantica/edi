@@ -1007,7 +1007,7 @@ QJSValue messageScriptProperty(const QPointer<QJSEngine>& engine, const QJSValue
     // The managed API leaves every thrown value pending; never catch or inspect its type.
     return value.property(name);
 }
-QJSValue messageScriptIndex(const QPointer<QJSEngine>& engine, const QJSValue& source,
+[[maybe_unused]] QJSValue messageScriptIndex(const QPointer<QJSEngine>& engine, const QJSValue& source,
                            quint32 index) {
     if (!messageScriptReady(engine)) return {};
     const QJSManagedValue value(source, engine.data());
@@ -1037,7 +1037,7 @@ QJSValue messageScriptCall(const QPointer<QJSEngine>& engine, const QJSValue& fu
     // non-Error throws. It also supplies TypeError for a non-callable managed value.
     return callable.callWithInstance(receiver, arguments);
 }
-QJSValue messageScriptArray(const QPointer<QJSEngine>& engine, const QJSValue& value) {
+[[maybe_unused]] QJSValue messageScriptArray(const QPointer<QJSEngine>& engine, const QJSValue& value) {
     if (!messageScriptReady(engine)) return {};
     const QJSValue array = messageScriptProperty(engine, engine->globalObject(), QStringLiteral("Array"));
     if (!messageScriptReady(engine)) return {};
@@ -1697,7 +1697,7 @@ QJSValue panelUsageDeferredMemberCall(const PanelUsageFrame& frame, const QJSVal
     frame.checked(); return QJSValuePrivate::fromReturnedValue(result->asReturnedValue());
 }
 
-QJSValue panelUsageView(const PanelUsageFrame& engine, QObject* panel) {
+[[maybe_unused]] QJSValue panelUsageView(const PanelUsageFrame& engine, QObject* panel) {
     return panelUsageReady(engine) ? engine->newQObject(panel) : QJSValue();
 }
 QJSValue panelUsageField(const PanelUsageFrame& engine, const QJSValue& panel, const char* property, const char* field) {
@@ -1801,7 +1801,7 @@ bool panelUsageGreater(const PanelUsageFrame& frame, const QJSValue& first, cons
     frame.checked();
     return result;
 }
-QJSValue panelAllowanceWindow(const PanelUsageFrame& engine, const QJSValue& view, const QJSValue& minutes) {
+[[maybe_unused]] QJSValue panelAllowanceWindow(const PanelUsageFrame& engine, const QJSValue& view, const QJSValue& minutes) {
     QJSValue selected(QJSValue::NullValue);
     const auto buckets = panelUsageBuckets(engine, view);
     panelUsageEach(engine, buckets, [&](const QJSValue& bucket) {
@@ -1815,12 +1815,12 @@ QJSValue panelAllowanceWindow(const PanelUsageFrame& engine, const QJSValue& vie
     });
     return panelUsageReady(engine) ? selected : QJSValue();
 }
-QJSValue panelUsageArg(const PanelUsageFrame& engine, const QJSValue& text,
+[[maybe_unused]] QJSValue panelUsageArg(const PanelUsageFrame& engine, const QJSValue& text,
                       const std::function<QJSValue()>& argument) {
     if (!panelUsageReady(engine)) return {};
     return panelUsageDeferredMemberCall(engine, text, "arg", [&] { return QJSValueList{argument()}; });
 }
-QJSValue panelUsageMath(const PanelUsageFrame& engine, const char* operation,
+[[maybe_unused]] QJSValue panelUsageMath(const PanelUsageFrame& engine, const char* operation,
                        const std::function<QJSValue()>& argument) {
     if (!panelUsageReady(engine)) return {};
     const auto math = panelUsageContextRead(engine, "Math");
@@ -1868,7 +1868,7 @@ QJSValue panelUsagePlanWord(const PanelUsageFrame& engine, const QJSValue& word)
     return panelUsageAdd(engine, head, tail);
 }
 
-QJSValue panelUsageWindowLabel(const PanelUsageFrame& engine, const QJSValue& bucket, const QJSValue& window) {
+[[maybe_unused]] QJSValue panelUsageWindowLabel(const PanelUsageFrame& engine, const QJSValue& bucket, const QJSValue& window) {
     auto duration = panelUsageRead(engine, window, "windowDurationMins");
     if (!panelUsageReady(engine)) return {};
     QJSValue label;
@@ -1931,18 +1931,18 @@ bool assistantEditorIdle(const PanelUsageFrame& frame) {
     const auto length = panelUsageRead(frame, preedit, "length");
     return panelUsageReady(frame) && length.strictlyEquals(QJSValue(0));
 }
-bool assistantDraftMatchesEditor(const PanelUsageFrame& frame, const QJSValue& draft) {
+[[maybe_unused]] bool assistantDraftMatchesEditor(const PanelUsageFrame& frame, const QJSValue& draft) {
     const auto revision = panelUsageRead(frame, draft, "revision");
     if (!assistantSameName(frame, revision, "textRevision")) return false;
     const auto text = panelUsageRead(frame, draft, "text");
     const auto current = assistantContextField(frame, "editor", "text");
     return panelUsageReady(frame) && text.strictlyEquals(current) && assistantEditorIdle(frame);
 }
-QJSValue assistantMessageText(const PanelUsageFrame& frame, double index, const char* role) {
+[[maybe_unused]] QJSValue assistantMessageText(const PanelUsageFrame& frame, double index, const char* role) {
     const auto messages = assistantContextField(frame, "assistant", "messages");
     return panelUsageMemberCall(frame, messages, "text", {QJSValue(index), QJSValue(QString::fromLatin1(role))});
 }
-bool assistantContains(const PanelUsageFrame& frame, const QJSValue& ancestor, const QJSValue& item) {
+[[maybe_unused]] bool assistantContains(const PanelUsageFrame& frame, const QJSValue& ancestor, const QJSValue& item) {
     for (QJSValue current = item; panelUsageReady(frame) && panelUsageTruth(current);
          current = panelUsageRead(frame, current, "parent")) {
         if (current.strictlyEquals(ancestor)) return true;
@@ -1952,12 +1952,12 @@ bool assistantContains(const PanelUsageFrame& frame, const QJSValue& ancestor, c
 bool assistantContainsCall(const PanelUsageFrame& frame, const QJSValue& ancestor, const QJSValue& item) {
     return panelUsageTruth(panelUsageGlobalCall(frame, "containsAssistantItem", {ancestor, item}));
 }
-void assistantIncrementEpoch(const PanelUsageFrame& frame) {
+[[maybe_unused]] void assistantIncrementEpoch(const PanelUsageFrame& frame) {
     const auto value = panelUsageContextRead(frame, "assistantFocusEpoch");
     const auto number = panelUsageNumber(frame, value);
     if (number) panelUsageContextWrite(frame, "assistantFocusEpoch", QJSValue(*number + 1));
 }
-void assistantFocusOpener(const PanelUsageFrame& frame) {
+[[maybe_unused]] void assistantFocusOpener(const PanelUsageFrame& frame) {
     const auto enabled = assistantContextField(frame, "assistantToggle", "enabled");
     if (!panelUsageReady(frame)) return;
     if (panelUsageTruth(enabled)) {
@@ -1982,7 +1982,7 @@ QJSValue assistantGeometryArray(const PanelUsageFrame& frame, const QJSValueList
     }
     return panelUsageComplete(frame, literal);
 }
-bool assistantGeometryFinite(const PanelUsageFrame& frame, const QJSValue& values) {
+[[maybe_unused]] bool assistantGeometryFinite(const PanelUsageFrame& frame, const QJSValue& values) {
     const auto number = panelUsageContextRead(frame, "Number");
     const auto predicate = panelUsageRead(frame, number, "isFinite");
     return panelUsageTruth(panelUsageMemberCall(frame, values, "every", {predicate}));
@@ -2045,7 +2045,7 @@ bool consentOwner(const PanelUsageFrame& f, const QJSValue& component, const QJS
     const auto actual = panelUsageRead(f, component, "assistant");
     return panelUsageReady(f) && owner.strictlyEquals(actual);
 }
-bool consentPanelOwner(const PanelUsageFrame& f, const QJSValue& component, const QJSValue& draft, const QJSValue& owner) {
+[[maybe_unused]] bool consentPanelOwner(const PanelUsageFrame& f, const QJSValue& component, const QJSValue& draft, const QJSValue& owner) {
     if (!consentQtObject(f, component) || !consentQtObject(f, draft) || !consentQtObject(f, owner)) return false;
     const auto actual = panelUsageRead(f, component, "assistant");
     return panelUsageReady(f) && owner.strictlyEquals(actual);
@@ -2060,7 +2060,7 @@ bool consentFieldsEqual(const PanelUsageFrame& f, const QJSValue& left, const ch
     const auto b = panelUsageRead(f, right, rightKey);
     return panelUsageReady(f) && a.strictlyEquals(b);
 }
-QJSValue consentStatus(const PanelUsageFrame& f, const char* status) {
+[[maybe_unused]] QJSValue consentStatus(const PanelUsageFrame& f, const char* status) {
     const auto literal = panelUsageLiteral(f);
     panelUsageWrite(f, literal.value, "status", QJSValue(QString::fromLatin1(status)));
     return panelUsageComplete(f, literal);
@@ -3739,7 +3739,7 @@ bool editorLife(const PanelUsageFrame& f, const QJSValue& life) { return panelUs
 bool editorOriginal(const PanelUsageFrame& f, const QJSValue& life, const QJSValue& original, const QJSValue& owner) {
     return editorLife(f, life) && assistantSameName(f, original, "draft") && assistantSameName(f, owner, "ownerToken");
 }
-QJSValue editorRecord(const PanelUsageFrame& f, bool parameter, const QJSValue& owner, const char* kind) {
+[[maybe_unused]] QJSValue editorRecord(const PanelUsageFrame& f, bool parameter, const QJSValue& owner, const char* kind) {
     const auto literal = panelUsageLiteral(f);
     panelUsageWrite(f, literal.value, "owner", owner);
     if (parameter) panelUsageWrite(f, literal.value, "item", editorGet(f, "item"));
@@ -5412,7 +5412,7 @@ bool ApplicationInfo::composerHasDraft() const {
 namespace {
 QJSValue assistantUiCallback(const PanelUsageFrame& f, uint operation,
     const std::function<QJSValue(uint)>& retained, const std::function<QJSValue(uint)>& arg);
-QJSValue choiceText(const PanelUsageFrame& f, const char* text) {
+[[maybe_unused]] QJSValue choiceText(const PanelUsageFrame& f, const char* text) {
     if (!panelUsageReady(f)) return {};
     if (auto* qml = qobject_cast<QQmlEngine*>(f.data())) qml->markCurrentFunctionAsTranslationBinding();
     return QJSValue(QCoreApplication::translate("AssistantComposer", text));
