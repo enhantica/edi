@@ -69,11 +69,40 @@ Item {
         diagonal.append(chart.values.low, chart.values.low);
         diagonal.append(chart.values.high, chart.values.high);
         legendRows.setRows(chart.experiment ? [chart.experiment.name] : [], [String(layer.color)], -1, []);
+        // Drawn: a followed sequential fit applies its next file once a shown chart has presented this one.
+        if (chart.registered !== null && chart.registered === chart.experiment)
+            chart.experiment.notePresented();
+    }
+    // While shown, the chart counts as one showing its experiment, so a running fit (a sequential fit's every
+    // dataset) keeps publishing patterns to it as it does for the Pattern tab.
+    property ExperimentViewModel registered: null
+    function register() {
+        const wanted = chart.shown ? chart.experiment : null;
+        if (chart.registered === wanted)
+            return;
+        if (chart.registered)
+            chart.registered.showChart(chart, false);
+        chart.registered = wanted;
+        if (wanted)
+            wanted.showChart(chart, true);
     }
     onScaleChanged: refresh()
-    onExperimentChanged: refresh()
-    onShownChanged: refresh()
-    Component.onCompleted: refresh()
+    onExperimentChanged: {
+        register();
+        refresh();
+    }
+    onShownChanged: {
+        register();
+        refresh();
+    }
+    Component.onCompleted: {
+        register();
+        refresh();
+    }
+    Component.onDestruction: {
+        if (chart.registered)
+            chart.registered.showChart(chart, false);
+    }
     Connections {
         target: chart.experiment
         function onPatternSourceChanged() {
