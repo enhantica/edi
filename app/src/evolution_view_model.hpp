@@ -191,6 +191,8 @@ class EvolutionViewModel : public QObject {
         std::shared_ptr<const edi::Project> project;
         edi::ScanPlaces places;
         edi::ScanResultIndex index;
+        edi::ScanDatasets datasets;
+        edi::SeriesBankRule rule;
         std::string name;
         bool by_value = false, per_experiment = false, all_banks = false;
         int experiment = -1;

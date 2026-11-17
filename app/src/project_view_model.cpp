@@ -2521,9 +2521,14 @@ bool ProjectViewModel::loadSeriesOfJointFits(ExperimentViewModel* experiment, co
                     if (error.isEmpty()) discard();
                     return;
                 }
+                // Every notification below may retire or delete the project: after each, nothing more is published,
+                // and a copied folder the project has not taken is removed.
                 self->listing_dataset_folder_ = false;
                 emit self->listingDatasetFolderChanged();
-                if (!self || self->retired_) return;
+                if (!self || self->retired_) {
+                    if (error.isEmpty()) discard();
+                    return;
+                }
                 QString refusal = error;
                 if (refusal.isEmpty() && self->revision_ != revision) {
                     refusal = tr("The project changed while the series was read: load it again");
@@ -2531,16 +2536,21 @@ bool ProjectViewModel::loadSeriesOfJointFits(ExperimentViewModel* experiment, co
                 if (refusal.isEmpty()) {
                     const PublicationScope publication(*self);
                     refusal = self->apply(edi::Edit::replace_project(*self->project_, std::move(*next)), true);
-                    if (!self || self->retired_) return;
+                    if (!self || self->retired_) {
+                        if (!refusal.isEmpty() && error.isEmpty()) discard();  // a refused series never took the copy
+                        return;
+                    }
                     if (refusal.isEmpty()) {
                         self->undo_history_.emplace_back(AppliedText{base});
                         self->syncUndo();
+                        if (!self || self->retired_) return;
                         self->syncLoadState();
                         return;
                     }
                 }
                 if (error.isEmpty()) discard();
                 self->setLastError(refusal);
+                if (!self || self->retired_) return;
                 emit self->refused(refusal);
             },
             Qt::QueuedConnection);
@@ -4230,16 +4240,24 @@ void ProjectViewModel::syncDataset(int index) {
 }
 
 int ProjectViewModel::startDataset(const edi::Project& from, const edi::ScanResultIndex& index, int dataset) {
-    if (from.fitting_mode != "sequential") {
+    if (from.fitting_mode != "sequential" || dataset < 0 || dataset >= static_cast<int>(index.rows.size()) ||
+        index.rows[static_cast<std::size_t>(dataset)].offset < 0) {
         return -1;
     }
-    for (int before = std::min(dataset, static_cast<int>(index.rows.size())) - 1; before >= 0; --before) {
-        const edi::ScanResultIndex::Row& row = index.rows[static_cast<std::size_t>(before)];
-        if (row.offset >= 0 && row.converged) {
-            return before;
+    // results.csv holds the rows in the order the points were fitted, a Continue's after the run it resumed: the
+    // start is the successful row written last before this one, wherever its point lies in the series (a point
+    // repaired on Continue starts from the run's last success, not from a neighbour fitted after it).
+    const std::int64_t own = index.rows[static_cast<std::size_t>(dataset)].offset;
+    int start = -1;
+    std::int64_t latest = -1;
+    for (std::size_t place = 0; place < index.rows.size(); ++place) {
+        const edi::ScanResultIndex::Row& row = index.rows[place];
+        if (row.converged && row.offset >= 0 && row.offset < own && row.offset > latest) {
+            latest = row.offset;
+            start = static_cast<int>(place);
         }
     }
-    return -1;
+    return start;
 }
 
 std::vector<edi::Edit::ScanValue> ProjectViewModel::pointValues(int index) const {
@@ -4247,19 +4265,21 @@ std::vector<edi::Edit::ScanValue> ProjectViewModel::pointValues(int index) const
     const int start = startDataset(from, scan_session_->index(), index);
     std::vector<edi::Edit::ScanValue> values = datasetValues(scan_session_->row(*project_, index), from,
                                                              scan_session_->index(), scan_session_->row(*project_, start));
-    overlaySeriesPoint(values, *project_, scan_session_->datasets(), index, start);
+    overlaySeriesPoint(values, *project_, scan_session_->datasets(), index, start,
+                       scan_session_->pointCheck(*project_, index), scan_session_->pointCheck(*project_, start));
     return values;
 }
 
 void ProjectViewModel::overlaySeriesPoint(std::vector<edi::Edit::ScanValue>& values, const edi::Project& project,
-                                          const edi::ScanDatasets& datasets, int index, int start) {
+                                          const edi::ScanDatasets& datasets, int index, int start,
+                                          const edi::SeriesPointCheck& own_check, const edi::SeriesPointCheck& from) {
     if (!datasets.joint() || index < 0 || index >= static_cast<int>(datasets.files.size())) {
         return;
     }
-    const auto own = edi::series_point_values(project, datasets.files[static_cast<std::size_t>(index)]);
+    const auto own = edi::series_point_values(project, datasets.files[static_cast<std::size_t>(index)], own_check);
     // A sequential point's per-experiment values started from its predecessor's rows, as its shared ones did.
     const auto started = start >= 0 && start < static_cast<int>(datasets.files.size())
-                             ? edi::series_point_values(project, datasets.files[static_cast<std::size_t>(start)])
+                             ? edi::series_point_values(project, datasets.files[static_cast<std::size_t>(start)], from)
                              : std::map<std::string, edi::SeriesPointValue>{};
     for (edi::Edit::ScanValue& value : values) {
         if (const auto found = own.find(value.unique_name); found != own.end()) {
@@ -4465,7 +4485,12 @@ void ProjectViewModel::startViewRead() {
     std::vector<edi::Edit::ScanValue> values;
     const bool overlaid = scan_session_->datasets().joint();
     const int start = startDataset(scanTemplateOrModel(), scan_session_->index(), index);
+    edi::SeriesPointCheck own_check, from_check;
     try {
+        if (overlaid) {
+            own_check = scan_session_->pointCheck(*project_, index);
+            from_check = scan_session_->pointCheck(*project_, start);
+        }
         values = datasetValues(scan_session_->row(*project_, index), scanTemplateOrModel(), scan_session_->index(),
                                scan_session_->row(*project_, start));
     } catch (const std::exception& refusal) {
@@ -4495,7 +4520,7 @@ void ProjectViewModel::startViewRead() {
         DatasetView view;
         view.values = std::move(values);
         try {
-            overlaySeriesPoint(view.values, *project_, datasets, index, start);
+            overlaySeriesPoint(view.values, *project_, datasets, index, start, own_check, from_check);
             readDataset(view, datasets, index, modes);
         } catch (const std::exception& refusal) {
             view.error = QString::fromUtf8(refusal.what());
@@ -4508,13 +4533,14 @@ void ProjectViewModel::startViewRead() {
     const QPointer<ProjectViewModel> self(this);
     // What a series point's values read beside its row: the project's paths, experiments and parameters.
     std::shared_ptr<const edi::Project> source = overlaid ? std::make_shared<const edi::Project>(*project_) : nullptr;
-    run_in_background([self, request, index, start, datasets, modes, d_spacing, values = std::move(values),
+    run_in_background([self, request, index, start, own_check, from_check, datasets, modes, d_spacing,
+                       values = std::move(values),
                        shown = std::move(shown), source = std::move(source)]() mutable {
         DatasetView view;
         view.values = std::move(values);
         try {
             if (source) {
-                overlaySeriesPoint(view.values, *source, datasets, index, start);
+                overlaySeriesPoint(view.values, *source, datasets, index, start, own_check, from_check);
             }
             readDataset(view, datasets, index, modes);
             if (shown) {
@@ -6584,7 +6610,8 @@ QString ProjectViewModel::stageScan(const QString& directory, const edi::Project
             const int start = startDataset(staged, scan.listing->index(), current_dataset_);
             scan.shown = datasetValues(scan.listing->row(staged, current_dataset_), staged, scan.listing->index(),
                                        scan.listing->row(staged, start));
-            overlaySeriesPoint(*scan.shown, staged, scan.listing->datasets(), current_dataset_, start);
+            overlaySeriesPoint(*scan.shown, staged, scan.listing->datasets(), current_dataset_, start,
+                               scan.listing->pointCheck(staged, current_dataset_), scan.listing->pointCheck(staged, start));
         } catch (const std::exception& refusal) {
             return QString::fromUtf8(refusal.what());
         }

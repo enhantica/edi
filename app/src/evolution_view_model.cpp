@@ -258,16 +258,22 @@ void EvolutionViewModel::addRow(int dataset, const std::vector<std::string>& cel
         }
         const bool by_value = x_mode_ == 0 && !extracted_title_.isEmpty();
         bool added = false;
-        edi::evolution_experiment_point(
-            *project_, session_->places(), session_->index(), names_[current_].toStdString(), by_value,
-            files[static_cast<std::size_t>(dataset)], [&](std::size_t experiment, const edi::EvolutionPoint& point) {
-                if (current_experiment_ >= 0 && experiment != static_cast<std::size_t>(current_experiment_)) {
-                    return;
-                }
-                points_.push_back({point.x, point.y, point.su, static_cast<int>(point.dataset),
-                                   allBanks() ? static_cast<int>(experiment) : -1});
-                added = true;
-            });
+        try {
+            edi::evolution_experiment_point(
+                *project_, session_->places(), session_->index(), session_->bankRule(*project_), session_->datasets(),
+                names_[current_].toStdString(), by_value, files[static_cast<std::size_t>(dataset)],
+                [&](std::size_t experiment, const edi::EvolutionPoint& point) {
+                    if (current_experiment_ >= 0 && experiment != static_cast<std::size_t>(current_experiment_)) {
+                        return;
+                    }
+                    points_.push_back({point.x, point.y, point.su, static_cast<int>(point.dataset),
+                                       allBanks() ? static_cast<int>(experiment) : -1});
+                    added = true;
+                });
+        } catch (const std::exception& refusal) {
+            emit refused(QString::fromUtf8(refusal.what()));
+            return;
+        }
         if (added) {
             finishRow();
         }
@@ -368,6 +374,10 @@ void EvolutionViewModel::rebuild() {
     read.project = std::make_shared<const edi::Project>(*project_);
     read.places = session_->places();
     read.index = session_->index();
+    read.datasets = session_->datasets();
+    if (per_experiment_) {
+        read.rule = session_->bankRule(*project_);
+    }
     read.name = names_[current_].toStdString();
     read.by_value = x_mode_ == 0 && !extracted_title_.isEmpty();
     read.per_experiment = per_experiment_;
@@ -393,8 +403,10 @@ void EvolutionViewModel::rebuild() {
                 self->points_ = std::move(points);
                 if (!error.isEmpty()) {
                     emit self->refused(error);
+                    if (!self || request != self->rebuild_request_) return;  // deleted or superseded by an observer
                 }
                 self->finish();
+                if (!self || request != self->rebuild_request_) return;
                 if (self->session_ != nullptr && self->session_->index().end != end) {
                     self->rebuild();
                 }
@@ -411,7 +423,8 @@ std::vector<EvolutionViewModel::Point> EvolutionViewModel::readPoints(const Read
     int bank = -1;
     const auto points = [&](const std::function<void(const edi::EvolutionPoint&)>& visit) {
         if (read.per_experiment) {
-            edi::evolution_experiment_series(*read.project, read.places, read.index, read.name, read.by_value,
+            edi::evolution_experiment_series(*read.project, read.places, read.index, read.rule, read.datasets,
+                                             read.name, read.by_value,
                                              [&](std::size_t experiment, const edi::EvolutionPoint& point) {
                                                  if (read.experiment < 0 ||
                                                      experiment == static_cast<std::size_t>(read.experiment)) {
@@ -545,13 +558,20 @@ void EvolutionViewModel::finish() {
             emit(this->*signal)();
         }
     };
+    // An observer may delete this view in any notification: nothing is touched after that.
+    const QPointer<EvolutionViewModel> self(this);
     update(x_min_, x_min, &EvolutionViewModel::xMinChanged);
+    if (!self) return;
     update(x_max_, x_max, &EvolutionViewModel::xMaxChanged);
+    if (!self) return;
     update(y_min_, y_min, &EvolutionViewModel::yMinChanged);
+    if (!self) return;
     update(y_max_, y_max, &EvolutionViewModel::yMaxChanged);
+    if (!self) return;
     if (static_cast<int>(points_.size()) != published_count_) {
         published_count_ = static_cast<int>(points_.size());
         emit countChanged();
+        if (!self) return;
     }
     draw();
 }
