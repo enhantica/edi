@@ -12135,11 +12135,32 @@ struct AssistantViewModel::State {
         auto* group=create_widget_named(run,groupName);
         if (!group) return false;
         if (group->property("collapsed").toBool()) {
-            auto* content=group->property("contentItem").value<QQuickItem*>();
-            if (!content) return false;
-            // Existing reveal finds this content's actual owning group/header,
-            // even when no table-row delegate exists inside collapsed content.
-            return !create_widget_reveal(run,content);
+            // Open the group as a user would: its header scrolled into view, then clicked. With one open group at a
+            // time, opening another (Instrument for a parameter) folds this one, so its row controls do not exist.
+            const QPointer<QQuickItem> title(qobject_cast<QQuickItem*>(group->property("titleArea").value<QObject*>()));
+            if (!title || title->window()!=run->window || !title->isEnabled()) return false;
+            if (!widget_input->usableTarget(*title)) return !create_widget_reveal(run,title);
+            const QPointer<QQuickItem> originalGroup(group);
+            AssistantWidgetInput::Request request;
+            request.kind=AssistantWidgetInput::Kind::Navigate;request.target=title;
+            request.current=[this,run,title] { return title && create_widget_current(run); };
+            request.prepareCommit=[] { return true; };request.finishCommit=[] {};
+            request.completed=[this,run,originalGroup](bool delivered,const QString& message,ControlCause cause) noexcept {
+                if(!create_widget_owned(run))return;
+                control_failure(run,delivered?ControlCause::None:cause);
+                try {
+                    if(!delivered || !originalGroup || originalGroup->property("collapsed").toBool()) {
+                        if(create_widget_owned(run))create_widget_refuse(run,message.isEmpty()?widget_outcome_error:message,false,"group-open");
+                        return;
+                    }
+                    QTimer::singleShot(500,&owner,[this,run] {
+                        if(!create_widget_current(run))return;
+                        try{create_widget_next(run);}catch(...){if(create_widget_owned(run))create_widget_refuse(run,widget_outcome_error,false,"group-open-next");}
+                    });
+                } catch(...) { if(create_widget_owned(run))create_widget_refuse(run,widget_outcome_error,false,"group-open-catch"); }
+            };
+            control_start(run->call,control_target(run),std::move(request));
+            return true;
         }
         auto* table=tableName.isEmpty() ? nullptr : create_widget_named(run,tableName);
         if (!table || index<0 || index>=table->property("count").toLongLong() || ++run->reveal_steps>64) return false;
