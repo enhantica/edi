@@ -12,6 +12,7 @@
 #include <optional>
 #include <vector>
 
+#include "analysis_view_model.hpp"
 #include "assistant_view_model.hpp"
 #include "edi/categories.hpp"
 #include "edi/display.hpp"
@@ -217,6 +218,18 @@ private slots:
         QCOMPARE(experiment.linked_structures.size(), std::size_t(1));
         QVERIFY(project.loadData(0, data));  // the same file again is still a load
         QVERIFY(std::abs(peakRatioOf(*project.assistantProject()) - 1.0) < 1e-6);
+    }
+    // A new project declares no minimizer settings and shows the defaults the owner chose (2026-11-17): 50 iterations,
+    // a chi-square change of 1e-4 and magnetic moments kept free.
+    void newProjectShowsTheMinimizerDefaults() {
+        Session session(nullptr);
+        QVERIFY(session.createProject(QStringLiteral("defaults"), {}));
+        const AnalysisViewModel& analysis = *session.project()->analysis();
+        QVERIFY(!analysis.hasMaxIterations());
+        QVERIFY(!analysis.hasChiSquareTolerance());
+        QCOMPARE(analysis.defaultMaxIterations(), 50);
+        QCOMPARE(analysis.defaultChiSquareTolerance(), 1e-4);
+        QCOMPARE(analysis.momentsNearZero(), QStringLiteral("keep_free"));
     }
     // The Analysis slider never reaches outside a parameter's admissible range. The expectations are worked by hand from
     // the rule: value ± half width rounded outward to a whole unit, a side cut at a limit giving its width to the other.

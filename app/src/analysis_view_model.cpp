@@ -333,7 +333,7 @@ AnalysisViewModel::AnalysisViewModel(edi::Project& project, ProjectEditor& edito
                                    "chi_square_change shift_su",
                                    {"χ² change", "Shift/s.u.", "χ² change or Shift/s.u."});
     moments_near_zero_options_->setItemOptions("minimizer.moments_near_zero", {"try_exact_zero", "keep_free"},
-                                               "try_exact_zero");
+                                               "keep_free");
     minimizer_type_options_->setItemOptions("minimizer.type", edi::supported_minimizer_types());
     sync();
 }
@@ -475,7 +475,7 @@ void AnalysisViewModel::sync() {
         }
     }
     const QString zero = QString::fromStdString(
-        project_.minimizer_moments_near_zero.empty() ? std::string("try_exact_zero") : project_.minimizer_moments_near_zero);
+        project_.minimizer_moments_near_zero.empty() ? std::string("keep_free") : project_.minimizer_moments_near_zero);
     if (zero != moments_near_zero_) {
         moments_near_zero_ = zero;
         emit momentsNearZeroChanged();
