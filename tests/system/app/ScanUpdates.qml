@@ -118,7 +118,7 @@ Item {
         function exercise(mode, tab, inspectBacklog) {
             const selector = open();
             const selection = select(selector, labels[mode]);
-            const tabName = "mainArea.analysis.tab." + (tab === "pattern" ? "fitting" : tab);
+            const tabName = "mainArea.tab." + tab;
             Ui.click(test, Probe, app, tabName);
             tryCompare(Ui.control(Probe, app, tabName), "checked", true, 1000, "The timing receipt names the actual selected chart tab");
             const fit = Session.project.fit;

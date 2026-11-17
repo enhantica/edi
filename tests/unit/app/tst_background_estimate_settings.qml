@@ -465,8 +465,9 @@ TestCase {
         const method = fields[2], peaks = fields[0];
         [method, peaks].forEach(control => {
             for (let index = 0; index < optionTokens(control).length; ++index)
-                compare(String(control.textAt(index)), String(control.textAt(index)).toLowerCase(),
-                        "Every public Background combo value must display in lower case");
+                compare(String(control.textAt(index)),
+                        optionTokens(control)[index].charAt(0).toUpperCase() + optionTokens(control)[index].slice(1),
+                        "Every Background choice capitalizes its first letter while retaining its saved token");
         });
         choose(method, "snip");
         verify(!namedField("background_estimate.smoothness").enabled,
@@ -475,8 +476,8 @@ TestCase {
         verify(namedField("background_estimate.smoothness").enabled,
                "Auto resolving to arpls must enable curve smoothness again");
         compare(String(method.token), "auto", "The resolved baseline hint must retain the saved auto token");
-        verify(/auto/.test(String(method.displayText)) && /·.*arpls/.test(String(method.displayText)),
-               "The stable baseline-method selector must display auto followed by its resolved arpls choice");
+        verify(/^Auto /.test(String(method.displayText)) && /·.*arpls/.test(String(method.displayText)),
+               "The baseline-method selector displays Auto followed by its resolved arpls choice");
         const destination = Probe.scratchProjectUrl();
         verify(Session.saveAs(destination), "All background types must save their shared and own estimate controls");
         if (kind !== "line-segment") {
