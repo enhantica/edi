@@ -41,6 +41,10 @@ Row {
     // A word before the greyed number, greyed with it and followed by a dot ("Run 6 · p005"), in place of the block
     // icon: a series' run and bank selectors (the owner, 2026-11-16).
     property string numberPrefix: ""
+    // An entry's line drawn by the caller, `lineFor(index, text)`, in place of the block's (a parameter picker:
+    // ParameterNames.pickerLine); such a line is cut only at its end, and the list widens to its widest line.
+    property var lineFor: null
+    property real lineExtraWidth: EaStyle.Sizes.fontPixelSize * 4
 
     // A step to the previous or next block, as a pick in the box; no step past either end.
     function step(offset) {
@@ -62,6 +66,8 @@ Row {
         // A block's line, in the Experiments table's column order: its number, its icon in its colour, its fit
         // outcome, its name and a scan's template mark, on one centre line (IconLine, §10).
         function segments(index, name, nameColor, outcome, isTemplate) {
+            if (row.lineFor)
+                return row.lineFor(index, name);
             const line = ApplicationInfo.blockSegments(index, name, nameColor, outcome, isTemplate);
             // The scan's starting dataset reads "Start" in the greyed text, as the Experiments table's Start column
             // names it (the owner, 2026-11-16).
@@ -82,6 +88,8 @@ Row {
         model: blocks
         textRole: blocksTextRole
         currentIndex: blockIndex
+        // A drawn line's list as wide as its widest entry and its icons, within the window.
+        popup.width: row.lineFor ? Math.min(Math.max(selector.width, selector.optionWidth + row.lineExtraWidth), selector.Window.width - popup.leftMargin - popup.rightMargin) : selector.width
         // The box follows the shared index again whenever its rows come and go: emptied for a moment (the one
         // experiment replaced by Load data, every structure put back by an Undo) it drops to no entry, and the
         // shared index, unchanged, would never set it back.
@@ -104,7 +112,7 @@ Row {
                 width: Math.max(0, Math.min(parent.width - x, selector.indicator && selector.indicator.visible && !selector.mirrored ? selector.indicator.x - parent.x - x - EaStyle.Sizes.fontPixelSize * 0.5 : parent.width - x))
                 maximumWidth: Math.max(1, width)
                 clip: true
-                elide: Text.ElideMiddle
+                elide: row.lineFor ? Text.ElideRight : Text.ElideMiddle
             }
         }
 
@@ -138,7 +146,7 @@ Row {
                     anchors.verticalCenter: parent.verticalCenter
                     segments: selector.segments(entry.index, entry.text, EaStyle.Colors.themeForeground, row.outcomeRole !== "" ? entry.model[row.outcomeRole] : "", row.templateRole !== "" && entry.model[row.templateRole] === true)
                     maximumWidth: Math.max(1, parent.width)
-                    elide: Text.ElideMiddle
+                    elide: row.lineFor ? Text.ElideRight : Text.ElideMiddle
                 }
             }
         }

@@ -123,6 +123,12 @@ class EvolutionViewModel : public QObject {
     Q_INVOKABLE double datasetX(int dataset) const;
     // How a results column reads in the selector, given whether it is a bank's own (the project's parameter names).
     void setLabeller(std::function<QString(const QString&, bool)> labeller) { labeller_ = std::move(labeller); }
+    // The parameter a results column stands for (a bank's own with `bank`), for the selector's coloured name.
+    void setFinder(std::function<QObject*(const QString&, bool)> finder) { finder_ = std::move(finder); }
+    // The parameter of the selector's entry `index`; null for a column no parameter has (a derived value).
+    Q_INVOKABLE QObject* parameterItem(int index) const {
+        return finder_ && index >= 0 && index < names_.size() ? finder_(names_[index], per_experiment_) : nullptr;
+    }
     // The layer bank `bank` is drawn on when every bank is shown; null unregisters it.
     Q_INVOKABLE void setBankLayer(int bank, edi_app::MeasuredLayer* layer);
     // The project's Evolution chart settings changed: the range and the drawing follow them.
@@ -188,6 +194,7 @@ class EvolutionViewModel : public QObject {
     QStringList names_;
     QStringList labels_;  // names_' labels, as the selector shows them
     std::function<QString(const QString&, bool)> labeller_;
+    std::function<QObject*(const QString&, bool)> finder_;
     QStringList experiments_;  // a series of joint fits' experiments, in project order; empty otherwise
     bool per_experiment_ = false;
     int current_experiment_ = 0;

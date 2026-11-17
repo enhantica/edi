@@ -3641,9 +3641,9 @@ bool ProjectViewModel::duplicateStructure() {
 
 void ProjectViewModel::loadScan() {
     evolution_ = new EvolutionViewModel(this);
-    // The Evolution selector names a parameter as the parameter table does: its block, row and name (a bank's own
-    // without the block, which the Bank box names). A column no parameter has (a derived value) keeps its name.
-    evolution_->setLabeller([this](const QString& column, bool bank) {
+    // The Evolution selector draws a parameter as the parameter table names it, then its full name, and searches both
+    // (the owner, 2026-11-17; ParameterNames.pickerLine). A column no parameter has (a derived value) keeps its name.
+    const auto find_column = [this](const QString& column, bool bank) -> ParameterItem* {
         const std::string wanted = column.toStdString();
         const std::string first = project_->experiments.empty() ? std::string() : project_->experiments.front()->name + ".";
         for (const edi::NamedSlot& slot : edi::named_slots(*project_)) {
@@ -3652,16 +3652,17 @@ void ProjectViewModel::loadScan() {
                                           own.substr(first.size()) == wanted
                                     : own == wanted;
             if (!match) continue;
-            const ParameterItem* item = registry_->find(slot.parameter);
-            if (item == nullptr) break;
-            QStringList parts;
-            if (!bank) parts.append(item->blockName());
-            if (!item->rowLabel().isEmpty() && !parts.contains(item->rowLabel())) parts.append(item->rowLabel());
-            parts.append(item->shortName());
-            parts.removeAll(QString());
-            return parts.join(QStringLiteral(" · "));
+            return registry_->find(slot.parameter);
         }
-        return QString();
+        return nullptr;
+    };
+    evolution_->setFinder([find_column](const QString& column, bool bank) -> QObject* { return find_column(column, bank); });
+    // The search text, as ParameterNames.pickerText spells it: the short name and the full name.
+    evolution_->setLabeller([find_column](const QString& column, bool bank) {
+        const ParameterItem* item = find_column(column, bank);
+        if (item == nullptr) return QString();
+        const QString row = item->rowLabel().isEmpty() ? QString() : item->rowLabel() + QLatin1Char(' ');
+        return row + item->shortName() + QStringLiteral(" · ") + item->path();
     });
     scan_views_ = new ScanViewModel(this);
     // A series' charts follow the chosen point and bank (the owner, 2026-11-16).

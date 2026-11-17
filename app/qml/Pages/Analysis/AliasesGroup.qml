@@ -18,6 +18,8 @@ Column {
 
     objectName: "relations.aliases"
     property AnalysisViewModel analysis: null
+    // For each offered parameter's coloured name (ParameterNames.pickerLine).
+    property ProjectViewModel project: null
     readonly property AliasListModel aliases: analysis ? analysis.aliases : null
 
     spacing: AppSizes.groupContentSpacing
@@ -70,9 +72,16 @@ Column {
                 value: row.model.id
                 onCommitted: text => group.aliases.setText(row.index, "id", text)
             }
-            // The base's table combo box (TableViewComboBox), searchable: a project has many parameters.
+            // The base's table combo box (TableViewComboBox), searchable: a project has many parameters. Each entry is the
+            // parameter table's coloured name and the full name, and a search finds either (the owner, 2026-11-17).
             ComboCell {
                 SearchableComboBox {
+                    id: parameterBox
+
+                    function itemOf(name) {
+                        return group.project ? group.project.parameterNamed(name) : null;
+                    }
+
                     inTable: true
                     horizontalAlignment: Text.AlignLeft
                     objectName: `alias.parameter.${row.index}`
@@ -82,6 +91,45 @@ Column {
                     displayText: row.model.parameter
                     ToolTip.text: row.model.parameter
                     onActivated: index => group.aliases.setText(row.index, "parameter", group.aliases.parameterNames[index])
+
+                    contentItem: Item {
+                        clip: true
+
+                        IconLine {
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: parent.width
+                            maximumWidth: Math.max(1, parent.width)
+                            segments: ParameterNames.pickerLine(parameterBox.itemOf(row.model.parameter), row.model.parameter)
+                        }
+                    }
+                    delegate: EaElements.MenuItem {
+                        id: entry
+
+                        required property int index
+                        required property var modelData
+                        readonly property var item: parameterBox.itemOf(modelData)
+                        readonly property bool matching: parameterBox.matches(text)
+
+                        width: entry.parent !== null ? entry.parent.width : 0
+                        height: matching ? EaStyle.Sizes.comboBoxHeight : 0
+                        opacity: matching ? 1 : 0
+                        topPadding: 0
+                        bottomPadding: 0
+                        highlighted: parameterBox.highlightedIndex === entry.index
+                        hoverEnabled: parameterBox.hoverEnabled
+                        // What the search reads: both names.
+                        text: ParameterNames.pickerText(item, modelData)
+
+                        contentItem: Item {
+                            clip: true
+
+                            IconLine {
+                                anchors.verticalCenter: parent.verticalCenter
+                                maximumWidth: Math.max(1, parent.width)
+                                segments: ParameterNames.pickerLine(entry.item, entry.modelData)
+                            }
+                        }
+                    }
                 }
             }
             EaComponents.ListViewButton {

@@ -197,7 +197,9 @@ Item {
             blockKind: "parameter"
             blockIndex: chart.evolution ? chart.evolution.currentParameter : -1
             onBlockActivated: index => chart.evolution.currentParameter = index
-            // The full parameter name, which a narrow box elides in the middle (the owner, 2026-11-16).
+            // The parameter table's coloured name and the full name (the owner, 2026-11-17).
+            lineFor: (index, text) => ParameterNames.pickerLine(chart.evolution ? chart.evolution.parameterItem(index) : null, text)
+            // The full parameter name, which a narrow box cuts at its end.
             HoverHandler {
                 id: parameterHover
             }
