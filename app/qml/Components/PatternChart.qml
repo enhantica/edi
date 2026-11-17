@@ -448,7 +448,7 @@ Item {
             objectName: "chart.toolbar.singleCrystalQuantity"
             visible: chart.singleCrystal && !chart.report
             toolTip: qsTr("Plotted quantity")
-            model: [qsTr("F²"), qsTr("F")]
+            model: [qsTr("F²"), Session.optionLabel("reflns.threshold_basis", "amplitude")]
             closedTexts: [qsTr("y: F²"), qsTr("y: F")]
             shownIndex: controller.squared ? 0 : 1
             onActivated: index => Preferences.singleCrystalPatternQuantity = index === 0 ? "f_squared" : "f"

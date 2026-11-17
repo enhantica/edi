@@ -533,11 +533,6 @@
    "reason": "the exported structure view's toggle for its moment arrows, a view setting, not the moment category"
   },
   {
-   "file": "app/qml/Components/PatternChart.qml",
-   "literal": "F",
-   "reason": "the single-crystal chart's plotted quantity, the structure-factor amplitude, not the observed threshold's basis option"
-  },
-  {
    "file": "app/qml/Main.qml",
    "literal": "Measured data",
    "reason": "the save dialog's heading for the measured data files a project links, not the data category"
