@@ -5420,6 +5420,26 @@
       "not_storage": "a fit report"
     },
     {
+      "member": "ScanFileRecord::factors",
+      "type": "std::vector<Factors>",
+      "not_storage": "a fit report"
+    },
+    {
+      "member": "Factors::experiment",
+      "type": "std::string",
+      "not_storage": "a fit report"
+    },
+    {
+      "member": "Factors::rp",
+      "type": "double",
+      "not_storage": "a fit report"
+    },
+    {
+      "member": "Factors::rwp",
+      "type": "double",
+      "not_storage": "a fit report"
+    },
+    {
       "member": "ScanPreamble::total_files",
       "type": "int",
       "not_storage": "a fit report"
