@@ -74,7 +74,9 @@ SideBarGroup {
             currentRow: group.project ? group.project.currentExperimentIndex : -1
             onRowActivated: row => ApplicationInfo.activateFormBlock(row, false)
 
-            columns: [numberColumnWidth, group.scan && !group.series ? group.startColumnWidth : 0.001, AppSizes.iconOnlyColumnWidth, group.fitColumnWidth, -1, -1, group.scanColumns.length ? group.scanColumns.length * AppSizes.dataColumnWidth * 1.4 : 0.001, group.scan ? 0.001 : AppSizes.iconColumnWidth]
+            // Datablock as wide as its header and its widest name: a narrow row cuts the data file, never the datablock
+            // (on a scan's long rows it was squeezed to its first letter, the owner, 2026-11-17).
+            columns: [numberColumnWidth, group.scan && !group.series ? group.startColumnWidth : 0.001, AppSizes.iconOnlyColumnWidth, group.fitColumnWidth, textColumnWidth("name", qsTr("Datablock")), -1, group.scanColumns.length ? group.scanColumns.length * AppSizes.dataColumnWidth * 1.4 : 0.001, group.scan ? 0.001 : AppSizes.iconColumnWidth]
 
             header: EaComponents.ListViewHeader {
                 EaComponents.ListViewLabel {
@@ -252,7 +254,8 @@ SideBarGroup {
                             width: Math.min(implicitWidth, fileCell.width - (templateTag.visible ? templateTag.width + parent.spacing : 0) - (moreButton.visible ? moreButton.width + parent.spacing : 0))
                             height: parent.height
                             horizontalAlignment: Text.AlignLeft
-                            elide: Text.ElideRight
+                            // A long file name keeps its distinguishing end, its number and extension (the owner, 2026-11-17).
+                            elide: Text.ElideMiddle
                             text: row.file
                             ToolTip.text: row.file
                         }
