@@ -831,6 +831,17 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     // The chart-consistency review's set: every chart view of the Experiment and Analysis pages for the series
     // EDI_DEMO_SCAN_PROJECT after its fit, then a single crystal's Pattern and Meas vs calc. Run only when asked
     // (`--demo-only review-`).
+    // Each project of EDI_DEMO_PROJECT_LIST (comma-separated folders) opened, for its free and fixed counts in the status
+    // bar (`--demo-only freecheck-`).
+    if (only.startsWith(QLatin1String("freecheck-"))) {
+        const QStringList folders = qEnvironmentVariable("EDI_DEMO_PROJECT_LIST").split(QLatin1Char(','), Qt::SkipEmptyParts);
+        for (qsizetype i = 0; i < folders.size(); ++i) {
+            QStringList actions;
+            if (i == 0) actions << "resize:1480x800";
+            actions << "open-project:" + folders[i] << analysis;
+            steps_.push_back({QStringLiteral("freecheck-%1").arg(i + 1, 2, 10, QLatin1Char('0')), actions});
+        }
+    }
     // The series fitted, captured before its result dialog is closed (`--demo-only fitcheck-`).
     if (only.startsWith(QLatin1String("fitcheck-"))) {
         steps_.push_back({"fitcheck-1-after-fit", {"resize:1480x800", "open-project:" + qEnvironmentVariable("EDI_DEMO_SCAN_PROJECT"),
