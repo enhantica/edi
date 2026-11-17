@@ -107,8 +107,8 @@ jobs:
           bash tools/ci/push_deploy_branch.sh released-webapp/webapp deploy-app
 
   # download.easydiffraction.org's update repositories come from enhantica/edi-download, which rebuilds them from a
-  # published release (edi ADR-0071): every release asks it for its own, so none waits for its nightly run (the
-  # conductor, 2026-11-17: two releases reached it only by hand).
+  # published release (edi ADR-0071): every release asks it for its own, so users get the update as soon as the
+  # release is out rather than after the next nightly run.
   publish-downloads:
     needs: publish
     if: github.ref == 'refs/heads/main' && github.repository == 'enhantica/edi' && github.event.pull_request.head.repo.fork == false

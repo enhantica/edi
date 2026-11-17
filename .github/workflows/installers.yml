@@ -547,11 +547,12 @@ jobs:
     if: >-
       ${{ !cancelled() && github.event_name == 'workflow_dispatch' && !inputs.windows_only
       && inputs.publish_components && inputs.release_plan_run == '' && !github.event.repository.private
+      && github.ref == 'refs/heads/main'
       && (needs.installers.result == 'success' || (inputs.preview_run != '' && needs.installers.result == 'skipped')) }}
     runs-on: ubuntu-24.04
     # The public site's queue and reviewed environment, shared with pages.yml's publishers: the testing repositories
     # join the site behind easydiffraction.org (edi-sites' deploy-docs). GitHub Pages is the developers' test site,
-    # deployed from edi's dev branch (the owner, 2026-11-17).
+    # deployed from edi's dev branch (the owner, 2026-11-17). Main only, the branch that environment admits.
     concurrency:
       group: pages-publication
       cancel-in-progress: false
