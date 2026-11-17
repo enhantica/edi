@@ -9,6 +9,8 @@
 #include <QStringList>
 #include <QTimer>
 #include <QtQml/qqmlregistration.h>
+#include <cstdint>
+#include <memory>
 #include <optional>
 #include <string>
 #include <vector>
@@ -184,14 +186,23 @@ class EvolutionViewModel : public QObject {
     bool scanRows() const;
     std::optional<Point> template_point_;
     void rebuild();
-    // The points of the current parameter's column, read from the results (throws when the read refuses).
-    void readPoints();
+    // What a rebuild reads the points from, copied so a worker can read them (rebuild).
+    struct Read {
+        std::shared_ptr<const edi::Project> project;
+        edi::ScanPlaces places;
+        edi::ScanResultIndex index;
+        std::string name;
+        bool by_value = false, per_experiment = false, all_banks = false;
+        int experiment = -1;
+    };
+    // The points of a parameter's column, read from the results (throws when the read refuses).
+    static std::vector<Point> readPoints(const Read& read);
+    std::uint64_t rebuild_request_ = 0;
     void draw();
 
     EvolutionParameterListModel* parameters_;
     QPointer<MeasuredLayer> layer_;
     QList<QPointer<MeasuredLayer>> bank_layers_;
-    int bank_ = -1;  // the bank whose points a read visits now
     bool allBanks() const { return per_experiment_ && current_experiment_ < 0; }
     QStringList names_;
     QStringList labels_;  // names_' labels, as the selector shows them
