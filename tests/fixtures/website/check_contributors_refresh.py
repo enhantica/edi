@@ -1,9 +1,10 @@
 # SPDX-License-Identifier: BSD-3-Clause
 """Refreshing the About page avatars replaces a file only with a whole image, moved into place.
 
-A download cut off after its signature, an HTTP error, a timeout, a page that is not an image or a failed write
-keeps the committed avatar and warns; the other avatars are still refreshed. The PNG is built here from the format's
-definition and the JPEG is a committed avatar, so neither comes from the code under test.
+A download cut off after its signature, an HTTP error, a timeout, a page that is not an image or a
+failed write keeps the committed avatar and warns; the other avatars are still refreshed. The PNG
+is built here from the format's definition and the JPEG is a committed avatar, so neither comes
+from the code under test.
 """
 
 import struct
@@ -25,10 +26,17 @@ def png() -> bytes:
     """A 1 x 1 grey PNG, chunk by chunk as the PNG specification lays it out."""
 
     def chunk(kind: bytes, body: bytes) -> bytes:
-        return struct.pack('>I', len(body)) + kind + body + struct.pack('>I', zlib.crc32(kind + body))
+        return (
+            struct.pack('>I', len(body)) + kind + body + struct.pack('>I', zlib.crc32(kind + body))
+        )
 
     header = struct.pack('>IIBBBBB', 1, 1, 8, 0, 0, 0, 0)
-    return b'\x89PNG\r\n\x1a\n' + chunk(b'IHDR', header) + chunk(b'IDAT', zlib.compress(b'\x00\x80')) + chunk(b'IEND', b'')
+    return (
+        b'\x89PNG\r\n\x1a\n'
+        + chunk(b'IHDR', header)
+        + chunk(b'IDAT', zlib.compress(b'\x00\x80'))
+        + chunk(b'IEND', b'')
+    )
 
 
 def jpeg() -> bytes:
@@ -47,7 +55,7 @@ def setup(tmp_path: Path, *logins: str) -> list[dict[str, str]]:
 
 def fetching(answers: dict[str, object]):
     def fetch(url: str) -> bytes:
-        answer = answers[url.split('/')[-1].split('.png')[0]]
+        answer = answers[url.rsplit('/', 1)[-1].split('.png', 1)[0]]
         if isinstance(answer, BaseException):
             raise answer
         return answer
@@ -59,7 +67,9 @@ def fetching(answers: dict[str, object]):
 def test_whole_image_replaces_and_cut_off_one_keeps(tmp_path, image):
     data = image()
     people = setup(tmp_path, 'whole', 'cut')
-    warnings = contributors.refresh(people, tmp_path, fetching({'whole': data, 'cut': data[: len(data) // 2]}))
+    warnings = contributors.refresh(
+        people, tmp_path, fetching({'whole': data, 'cut': data[: len(data) // 2]})
+    )
     assert (tmp_path / 'whole.png').read_bytes() == data
     assert (tmp_path / 'cut.png').read_bytes() == OLD
     assert len(warnings) == 1 and warnings[0].startswith('cut:')
@@ -92,10 +102,10 @@ def test_failed_download_keeps_the_avatar_and_refreshes_the_rest(tmp_path, failu
 def test_failed_replace_keeps_the_avatar_whole(tmp_path, monkeypatch):
     people = setup(tmp_path, 'locked')
 
-    def refuse(source, target):
+    def refuse(*_):
         raise PermissionError('read-only folder')
 
-    monkeypatch.setattr(contributors.os, 'replace', refuse)
+    monkeypatch.setattr(Path, 'replace', refuse)
     warnings = contributors.refresh(people, tmp_path, fetching({'locked': png()}))
     assert (tmp_path / 'locked.png').read_bytes() == OLD
     assert len(warnings) == 1 and 'could not be written' in warnings[0]
@@ -105,6 +115,8 @@ def test_failed_replace_keeps_the_avatar_whole(tmp_path, monkeypatch):
 def test_unchanged_avatar_is_not_written(tmp_path, monkeypatch):
     (tmp_path / 'same.png').write_bytes(png())
     written = []
-    monkeypatch.setattr(contributors, 'replace_file', lambda target, data: written.append(target))
-    warnings = contributors.refresh([{'name': 'same', 'github': 'same'}], tmp_path, fetching({'same': png()}))
+    monkeypatch.setattr(contributors, 'replace_file', lambda target, _data: written.append(target))
+    warnings = contributors.refresh(
+        [{'name': 'same', 'github': 'same'}], tmp_path, fetching({'same': png()})
+    )
     assert warnings == [] and written == []

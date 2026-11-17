@@ -2,9 +2,9 @@
 """The About page's contributor row, and the command that refreshes its avatars (edi ADR-0092).
 
 The avatars are committed with the site so it builds offline. `refresh` downloads each from GitHub
-and replaces a file only with a whole PNG or JPEG image, written beside it and moved into place, so a
-cut-off download or a failed write never leaves a broken avatar; any failure keeps the old file and
-warns, so the deploy never fails on it.
+and replaces a file only with a whole PNG or JPEG image, written beside it and moved into place, so
+a cut-off download or a failed write never leaves a broken avatar; any failure keeps the old file
+and warns, so the deploy never fails on it.
 """
 
 from __future__ import annotations
@@ -27,7 +27,7 @@ MARKER = '<!-- contributors -->'
 TIMEOUT = 10
 # GitHub serves avatars as PNG or JPEG; the browser reads either under the .png name.
 PNG_SIGNATURE = b'\x89PNG\r\n\x1a\n'
-# The JPEG frame headers (baseline, progressive and the rarer codings), one of which every image has.
+# The JPEG frame headers (baseline, progressive and the rarer codings): every image has one.
 JPEG_FRAMES = {0xC0, 0xC1, 0xC2, 0xC3, 0xC5, 0xC6, 0xC7, 0xC9, 0xCA, 0xCB, 0xCD, 0xCE, 0xCF}
 
 
@@ -70,7 +70,7 @@ def with_contributors(page: str, people: list[dict[str, str]], avatars: Path = A
 
 
 def _whole_png(data: bytes) -> bool:
-    """Every chunk complete with its checksum, from IHDR to IEND, and the image data a complete zlib stream."""
+    """Every chunk whole with its checksum, IHDR to IEND, and the pixels one whole zlib stream."""
     at, first, pixels = len(PNG_SIGNATURE), True, zlib.decompressobj()
     while at + 12 <= len(data):
         (length,) = struct.unpack('>I', data[at : at + 4])
@@ -93,7 +93,7 @@ def _whole_png(data: bytes) -> bool:
 
 
 def _whole_jpeg(data: bytes) -> bool:
-    """Its segments complete up to the scan, a frame header among them, and the end-of-image marker last."""
+    """Its segments whole up to the scan, a frame header among them, and the end marker last."""
     at, frame = 2, False
     while at + 4 <= len(data):
         if data[at] != 0xFF:
@@ -107,7 +107,11 @@ def _whole_jpeg(data: bytes) -> bool:
             return False
         frame = frame or marker in JPEG_FRAMES
         if marker == 0xDA:  # start of scan: the coded data runs to the end marker
-            return frame and data.rstrip(b'\x00').endswith(b'\xff\xd9') and len(data) > at + 2 + length + 2
+            return (
+                frame
+                and data.rstrip(b'\x00').endswith(b'\xff\xd9')
+                and len(data) > at + 2 + length + 2
+            )
         at += 2 + length
     return False
 
@@ -122,11 +126,11 @@ def is_image(data: bytes) -> bool:
 
 
 def replace_file(target: Path, data: bytes) -> None:
-    """Write beside the target and move into place, so the old file stays whole until the new one is."""
+    """Write beside the target, then move into place: the old file stays whole until then."""
     temporary = target.with_name(f'.{target.name}.download')
     try:
         temporary.write_bytes(data)
-        os.replace(temporary, target)
+        temporary.replace(target)
     finally:
         temporary.unlink(missing_ok=True)
 
@@ -162,7 +166,9 @@ def refresh(
         try:
             replace_file(target, data)
         except OSError as error:
-            warnings.append(f'{login}: the avatar could not be written ({error}); keeping the existing avatar')
+            warnings.append(
+                f'{login}: the avatar could not be written ({error}); keeping the existing avatar'
+            )
     return warnings
 
 
