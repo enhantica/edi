@@ -136,7 +136,7 @@ def main():
                 path for path in paths if path.endswith('instrument.calib_twotheta_offset')
             )
             relations = [
-                call('add_relations', aliases=[{'id': 'w', 'path': wavelength}]),
+                call('add_relations', aliases=[{'id': 'w', 'path': wavelength}], constraints=[]),
                 call('edit_relation', id='w', operation='alias_target', value=offset),
                 call('edit_relation', id='w', operation='alias_remove'),
             ]
@@ -152,7 +152,10 @@ def main():
                 actor.close()
             (output / 'RESULT.json').write_text(json.dumps(summary, indent=2) + '\n')
     return int(
-        any(mode.get('driver_error') or not mode.get('loaded') for mode in summary['modes'])
+        any(
+            mode.get('driver_error') or not mode.get('loaded') or not mode.get('relations')
+            for mode in summary['modes']
+        )
     )
 
 
