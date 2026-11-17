@@ -99,24 +99,19 @@ def main():
                 (folder / 'steps.json').write_text(json.dumps(mode, indent=2) + '\n')
                 return response
 
+            # Show actions' Create dialog typing stalls on this harness (the save replay's create_project too), so
+            # create_project runs with Show actions off; every later step runs in the mode under test.
             if show:
-                # Show actions' Create dialog typing stalls on this harness (the save replay's create_project
-                # too), so the empty project comes from the Session, as that dialog makes it.
-                created = driver.qml(
-                    actor,
-                    'Session.createProject("lbco_load_replay", "LBCO load after a parameter edit")',
-                )
-                mode['steps'].append({'step': 'create_project_session', 'response': created})
-                if not created:
-                    raise RuntimeError('Session.createProject refused')
-                # A new project starts with no admitted inputs: the files are selected again for it.
-                admit()
-            else:
-                call(
-                    'create_project',
-                    name='lbco_load_replay',
-                    title='LBCO load after a parameter edit',
-                )
+                driver.qml(actor, 'Session.assistant.showActions = false')
+            call(
+                'create_project',
+                name='lbco_load_replay',
+                title='LBCO load after a parameter edit',
+            )
+            if show:
+                driver.qml(actor, 'Session.assistant.showActions = true')
+                if not driver.qml(actor, 'Session.assistant.showActions'):
+                    raise RuntimeError('Show actions did not switch back on')
             call('load_structure', file_id=file_id('.cif'))
             call('create_experiment')
             experiment = driver.qml(actor, 'Session.project.experiments.text(0, "name")')
