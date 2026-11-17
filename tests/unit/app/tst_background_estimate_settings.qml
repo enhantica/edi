@@ -463,11 +463,14 @@ TestCase {
         verify(Math.abs(fields[0].width - fields[2].width) <= 1,
                "Both Background selectors must have the same grid width");
         const method = fields[2], peaks = fields[0];
+        // Dictionary option labels retain scientific acronym spelling.
+        const optionLabels = {auto: "Auto", snip: "SNIP", arpls: "arPLS", fabc: "FABC",
+                              subtract: "Subtract", ignore: "Ignore"};
         [method, peaks].forEach(control => {
             for (let index = 0; index < optionTokens(control).length; ++index)
                 compare(String(control.textAt(index)),
-                        optionTokens(control)[index].charAt(0).toUpperCase() + optionTokens(control)[index].slice(1),
-                        "Every Background choice capitalizes its first letter while retaining its saved token");
+                        optionLabels[optionTokens(control)[index]],
+                        "Every Background choice retains its dictionary label and saved token");
         });
         choose(method, "snip");
         verify(!namedField("background_estimate.smoothness").enabled,
