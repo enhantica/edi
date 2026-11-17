@@ -5,6 +5,7 @@ import importlib.util
 import io
 import json
 import os
+import shutil
 import subprocess
 import sys
 import tarfile
@@ -154,8 +155,15 @@ def test_mirror_is_enabled_only_for_production(tmp_path, channel, prefix):
     )
 
 
+def copy_bundles(command, **_):
+    # Stands in for the subprocess so the macOS tool component gets its copied bundle.
+    if command[0] == 'ditto':
+        shutil.copytree(command[1], command[2], symlinks=True)
+
+
 @pytest.mark.parametrize('channel', ['stable', 'testing'])
-def test_offline_installer_retains_default_update_repositories(tmp_path, channel):
+def test_offline_installer_retains_default_update_repositories(tmp_path, channel, monkeypatch):
+    monkeypatch.delenv('EDI_CODESIGN', raising=False)
     stage = tmp_path / 'stage'
     marker = stage / (
         'EasyDiffraction.app/Contents/MacOS/EasyDiffraction'
@@ -183,10 +191,16 @@ def test_offline_installer_retains_default_update_repositories(tmp_path, channel
         mock.patch.object(
             PACKAGE, 'macos_installer_template', return_value=tmp_path / 'installerbase'
         ),
-        mock.patch.object(PACKAGE, 'run') as builder,
+        mock.patch.object(PACKAGE, 'run', side_effect=copy_bundles) as builder,
         mock.patch.object(PACKAGE, 'archive_installer', return_value=archive),
     ):
-        PACKAGE.package_app(stage, tmp_path / 'tools', output, '2026.11.0')
+        PACKAGE.package_app(
+            stage,
+            tmp_path / 'tools',
+            output,
+            '2026.11.0',
+            maintenance_tool=signed_bundle(tmp_path),
+        )
     repositories = ElementTree.parse(output / 'source/config/config.xml').findall(
         'RemoteRepositories/Repository'
     )
@@ -197,8 +211,23 @@ def test_offline_installer_retains_default_update_repositories(tmp_path, channel
         '1',
         '1' if channel == 'stable' else '0',
     ], 'Offline maintenance retains channel mirror policy.'
-    builder.assert_called_once()
-    assert '--hybrid' in builder.call_args.args[0], 'Offline maintenance permits updates.'
+    creators = [
+        call.args[0]
+        for call in builder.call_args_list
+        if Path(call.args[0][0]).name == 'binarycreator' + PACKAGE.SUFFIX
+    ]
+    assert len(creators) == 1, 'Offline packaging builds one installer.'
+    assert '--hybrid' in creators[0], 'Offline maintenance permits updates.'
+    packages = output / 'source/packages'
+    if PACKAGE.SYSTEM == 'macos':
+        tool = packages / PACKAGE.MAINTENANCE_COMPONENT / 'data/maintenancetool'
+        assert PACKAGE.maintenance_tool_executable(tool / PACKAGE.MAINTENANCE_TOOL).is_file(), (
+            'The macOS installer carries the separately built maintenance tool.'
+        )
+    else:
+        assert not (packages / PACKAGE.MAINTENANCE_COMPONENT).exists(), (
+            'Only macOS ships the maintenance tool component.'
+        )
     assert not (output / 'repository').exists(), 'Offline packaging publishes no repository.'
 
 
