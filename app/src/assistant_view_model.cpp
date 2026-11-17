@@ -4611,6 +4611,10 @@ struct AssistantViewModel::State {
     }
     // A cue is presentation: a Show actions edit refused before anything was applied runs as normal mode runs it
     // (the same recorded edit, the same Undo) and reports the skipped cue. True when it answered the call.
+    // What the activity row and the assistant say when a click could not be shown: never a silent fallback.
+    static QString cue_skipped_message(const QString& reason) {
+        return QObject::tr("Show actions could not show this click (%1), so it ran without the visible click.").arg(reason);
+    }
     bool widget_cue_fallback(const std::shared_ptr<NativeWidget>& run, const QString& message) noexcept {
         const auto& tool = run->fallback_tool;
         const bool edit_tool = tool == "set_parameters" || tool == "set_free" || tool == "add_relations";
@@ -4624,6 +4628,7 @@ struct AssistantViewModel::State {
         run->cue_fallback = true;
         run->cue_skipped = message.isEmpty() ? QStringLiteral("The original control could not be shown") : message;
         const auto receiver = run->receiver;
+        try { qInfo().noquote() << "assistant: Show actions cue skipped for" << tool << "reason" << run->cue_skipped; } catch (...) {}
         try {
             if (tool == "edit_relation") {
                 run->relation_visible = false;
@@ -4663,7 +4668,7 @@ struct AssistantViewModel::State {
             native_finish(result.applied && result.published,
                 {{"status", !result.applied ? "refused" : result.published ? "edited" : "applied_unconfirmed"},
                  {"calculation_pending", project->calculating()}, {"cue_skipped", bounded_error(run->cue_skipped)},
-                 {"message", result.message.isEmpty() ? QString("Native edit published with Undo; calculation is asynchronous.")
+                 {"message", result.message.isEmpty() ? bounded_error(cue_skipped_message(run->cue_skipped))
                                                       : bounded_error(result.message)}});
             if (receiver && receiver->state_.get() == this && widget_owned(run)) widget_end(run);
             return true;
@@ -7308,7 +7313,10 @@ struct AssistantViewModel::State {
             {"applied",applied},{"published",published},{"complete",complete},{"atomic",!run->relation_visible},
             {"steps_completed",complete?1:0},{"uncertain",applied && !complete},
             {"calculation_pending",run->project && run->project->calculating()}};
-        if(!run->cue_skipped.isEmpty())result["cue_skipped"]=bounded_error(run->cue_skipped);
+        if(!run->cue_skipped.isEmpty()) {
+            result["cue_skipped"]=bounded_error(run->cue_skipped);
+            result["message"]=bounded_error(cue_skipped_message(run->cue_skipped));
+        }
         if(complete) {
             using K=ProjectEditor::RelationAction::Kind;
             const auto kind=run->relation_action.kind;
@@ -9306,8 +9314,12 @@ struct AssistantViewModel::State {
         if(!inspection || !inspection->data_member)return true;
         const auto view=inspection->data_view;
         const auto target=inspection->project;
-        if(!target || project!=target || !view || !target->experimentModels().contains(view) ||
-            view->experiment()!=inspection->data_member || view->patternGeneration()!=inspection->data_generation)return false;
+        if(!target || project!=target || !view || !target->experimentModels().contains(view) || view->experiment()!=inspection->data_member)
+            return false;
+        // The slice was read from the model: a chart capturing the same unchanged pattern again (a page or tab shown)
+        // moves the publication generation without changing a value, so only a changed model makes it stale.
+        if(view->patternGeneration()!=inspection->data_generation &&
+            (!inspection->stamps || !edi::unchanged_since(*target->assistantProject(),*inspection->stamps)))return false;
         for(const auto& member:target->assistantProject()->experiments)if(member.get()==inspection->data_member)return true;
         return false;
     }
@@ -11410,7 +11422,10 @@ struct AssistantViewModel::State {
             result["action_field"] = run->file_input ? "file_id" : run->individual_tool == "create_experiment" ? "project" : "experiment";
         }
         if(!complete)control_append(result,run->call.record);
-        if(!run->cue_skipped.isEmpty())result["cue_skipped"]=bounded_error(run->cue_skipped);
+        if(!run->cue_skipped.isEmpty()) {
+            result["cue_skipped"]=bounded_error(run->cue_skipped);
+            result["message"]=bounded_error(cue_skipped_message(run->cue_skipped));
+        }
         if(!individual_member_current(run))return result;
         if(run->result_structure) {
             const auto& name=run->result_structure->name.value();
@@ -11799,6 +11814,8 @@ struct AssistantViewModel::State {
         const auto receiver = run->receiver;
         const auto wanted=run->step>=0 && run->step<run->inputs.size()?run->inputs.at(run->step).target:QString{};
         work_latch_control(run->call,{},"control_refusal",branch,{},wanted);
+        // Which guard refused the cue, in the run log: the control, the branch and the reason.
+        try { qInfo().noquote() << "assistant: Show actions cue refused at" << wanted << "branch" << branch << "reason" << message; } catch (...) {}
         if(!receiver || receiver->state_.get()!=this || !create_widget_owned(run))return;
         if(run->normal_project_only && run->owner_handoff) {
             try {if(run->owner_handoff->ordinary_failure.isEmpty())run->owner_handoff->ordinary_failure=message;}catch(...) {}
@@ -11815,6 +11832,7 @@ struct AssistantViewModel::State {
             !(run->control_input && run->control_input->consumed)) {
             run->cue_fallback = true;
             run->cue_skipped = message.isEmpty() ? QStringLiteral("The original control could not be shown") : message;
+            try { qInfo().noquote() << "assistant: Show actions cue skipped for" << run->individual_tool << "reason" << run->cue_skipped; } catch (...) {}
             try {
                 individual_normal(run);
             } catch (const ActionRefusal& refusal) {
@@ -12070,6 +12088,7 @@ struct AssistantViewModel::State {
               (extrasOperation && run->inputs.at(run->step).kind==AssistantWidgetInput::Kind::FileLoadCue))));
         const QString sidebar = QStringLiteral("workflow.") + run->page + ".manualSidebar";
         QPointer<QQuickItem> menuContent;
+        QList<QQuickItem*> candidates;
         // The measured-data menu belongs to the Experiments group (each row's Data file cell opens it); Load ▾ menus
         // belong to their buttons.
         const bool dataMenu=name.startsWith("experiments.load.data");
@@ -12096,6 +12115,18 @@ struct AssistantViewModel::State {
                 inside = ancestor->objectName() == sidebar || (run->form && (ancestor == run->form->property("contentItem").value<QQuickItem*>() ||
                     ancestor == run->form->property("footer").value<QQuickItem*>()));
             if (!inside) continue;
+            candidates.append(item);
+        }
+        if (candidates.size() == 1) return candidates.first();
+        // A table can hold a second copy of a row for a moment (measuring its columns, a delegate being replaced): the
+        // one the user can see and press is the control. Two that can both be pressed stay ambiguous.
+        for (auto* item : std::as_const(candidates)) {
+            if (!item->isVisible() || !item->isEnabled() || (widget_input && !widget_input->usableTarget(*item))) continue;
+            if (found) return nullptr;
+            found = item;
+        }
+        if (!found) for (auto* item : std::as_const(candidates)) {
+            if (!item->isVisible()) continue;
             if (found) return nullptr;
             found = item;
         }
@@ -12257,7 +12288,8 @@ struct AssistantViewModel::State {
         }
         auto* table=tableName.isEmpty() ? nullptr : create_widget_named(run,tableName);
         if (!table || index<0 || index>=table->property("count").toLongLong() || ++run->reveal_steps>64) return false;
-        if (!widget_input->usableTarget(*table) && !create_widget_reveal(run,table)) return true;
+        // The row itself is scrolled into view below; the whole table need not be visible first (a long Experiments
+        // group puts its table's middle outside the sidebar).
         const QPointer<QQuickItem> original(table);const auto receiver=run->receiver;
         const QPointer<QObject> source(table->property("sourceModel").value<QObject*>());
         if(tableName=="jointFit.list" && source!=run->project->experiments())return false;
