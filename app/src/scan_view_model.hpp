@@ -95,7 +95,7 @@ class ScanViewModel : public QObject {
     // A series of joint fits (edi ADR-0089 point 5): each row a point, drawn on d from the experiment `rowsExperiment`
     // (a place in `seriesExperiments`) or, at -1, from every experiment together, each divided by its fitted scale.
     Q_PROPERTY(bool series READ series NOTIFY seriesChanged)
-    Q_PROPERTY(QStringList seriesExperiments READ seriesExperiments NOTIFY seriesChanged)
+    Q_PROPERTY(QStringList seriesExperiments READ seriesExperiments NOTIFY seriesExperimentsChanged)
     Q_PROPERTY(int rowsExperiment READ rowsExperiment WRITE setRowsExperiment NOTIFY rowsExperimentChanged)
     // The Rows switch (the owner, 2026-11-16): rows by the series variable (one bank across the series, the bank
     // `rowsExperiment`) or by bank (every bank at the point `bankPoint`, each its own row on d).
@@ -230,6 +230,7 @@ class ScanViewModel : public QObject {
     void rowNoteChanged();
     void jointChanged();
     void seriesChanged();
+    void seriesExperimentsChanged();
     void rowsExperimentChanged();
     void rowsByBankChanged();
     void nativeSharedChanged();

@@ -180,15 +180,15 @@ QString symbols_text(const std::set<std::string>& symbols) {
 }  // namespace
 QString StructureViewOptions::polyhedraCentres() const { return symbols_text(options_.polyhedra_centres); }
 void StructureViewOptions::setPolyhedraCentres(const QString& elements) {
-    assignSession(options_.polyhedra_centres, element_symbols(elements), &StructureViewOptions::polyhedraDefinitionChanged);
+    assignSession(options_.polyhedra_centres, element_symbols(elements), &StructureViewOptions::polyhedraCentresChanged);
 }
 QString StructureViewOptions::polyhedraCorners() const { return symbols_text(options_.polyhedra_corners); }
 void StructureViewOptions::setPolyhedraCorners(const QString& elements) {
-    assignSession(options_.polyhedra_corners, element_symbols(elements), &StructureViewOptions::polyhedraDefinitionChanged);
+    assignSession(options_.polyhedra_corners, element_symbols(elements), &StructureViewOptions::polyhedraCornersChanged);
 }
 void StructureViewOptions::setPolyhedraMaxDistance(double distance) {
     if (std::isfinite(distance) && distance >= 0.0) {
-        assignSession(options_.polyhedra_max_distance, distance, &StructureViewOptions::polyhedraDefinitionChanged);
+        assignSession(options_.polyhedra_max_distance, distance, &StructureViewOptions::polyhedraMaxDistanceChanged);
     }
 }
 void StructureViewOptions::setPolyhedraOpacity(double opacity) {

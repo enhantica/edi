@@ -54,7 +54,7 @@ class EvolutionViewModel : public QObject {
     Q_PROPERTY(QString xTitle READ xTitle NOTIFY xTitleChanged)
     Q_PROPERTY(QString yTitle READ yTitle NOTIFY yTitleChanged)
     // The y title as the parameter table names it (yTitle is the results column, the tooltip's full name).
-    Q_PROPERTY(QString yLabel READ yLabel NOTIFY yTitleChanged)
+    Q_PROPERTY(QString yLabel READ yLabel NOTIFY yLabelChanged)
     Q_PROPERTY(double xMin READ xMin NOTIFY xMinChanged)
     Q_PROPERTY(double xMax READ xMax NOTIFY xMaxChanged)
     Q_PROPERTY(double yMin READ yMin NOTIFY yMinChanged)
@@ -69,7 +69,7 @@ class EvolutionViewModel : public QObject {
     // for every bank, one curve each on its own layer (bankLayer; the owner, 2026-11-16).
     Q_PROPERTY(bool series READ series NOTIFY seriesChanged)
     Q_PROPERTY(bool perExperiment READ perExperiment WRITE setPerExperiment NOTIFY perExperimentChanged)
-    Q_PROPERTY(QStringList experiments READ experiments NOTIFY seriesChanged)
+    Q_PROPERTY(QStringList experiments READ experiments NOTIFY experimentsChanged)
     Q_PROPERTY(int currentExperiment READ currentExperiment WRITE setCurrentExperiment NOTIFY currentExperimentChanged)
     // The layer the points are drawn on (the chart's).
     Q_PROPERTY(edi_app::MeasuredLayer* layer READ layer WRITE setLayer NOTIFY layerChanged)
@@ -143,6 +143,7 @@ class EvolutionViewModel : public QObject {
     void pickingChanged();
     void xTitleChanged();
     void yTitleChanged();
+    void yLabelChanged();
     void xMinChanged();
     void xMaxChanged();
     void yMinChanged();
@@ -151,6 +152,7 @@ class EvolutionViewModel : public QObject {
     void outOfDateChanged();
     void fittedChanged();
     void seriesChanged();
+    void experimentsChanged();
     void perExperimentChanged();
     void currentExperimentChanged();
     void layerChanged();

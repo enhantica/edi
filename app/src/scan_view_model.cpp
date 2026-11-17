@@ -139,6 +139,7 @@ void ScanViewModel::setScan(const ScanSession* session, const edi::Project* proj
         series_ = false;
         series_experiments_.clear();
         emit seriesChanged();
+        emit seriesExperimentsChanged();
     }
     if (session != nullptr && project != nullptr && !project->experiments.empty()) {
         files_ = session->datasets().files;
@@ -156,6 +157,7 @@ void ScanViewModel::setScan(const ScanSession* session, const edi::Project* proj
             series_ = series;
             series_experiments_ = names;
             emit seriesChanged();
+            emit seriesExperimentsChanged();
         }
         if (series) {
             readSeriesBanks(project);
@@ -195,6 +197,7 @@ void ScanViewModel::setJoint(const edi::Project* project) {
         series_ = false;
         series_experiments_.clear();
         emit seriesChanged();
+        emit seriesExperimentsChanged();
     }
     // Every experiment's points as they are now; one without data draws nothing and counts as not read.
     std::vector<Pattern> next;

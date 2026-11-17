@@ -378,8 +378,8 @@ class StructureViewModel : public QObject {
     // their covalent radii plus the increment; each is crysta's default until set. And the bonds crysta computed with
     // them (`_geom_bond`), each {"site1", "site2", "symmetry1", "symmetry2", "distance"}
     // (the symmetry codes in CIF form, 1_555), empty until the geometry is current.
-    Q_PROPERTY(double minBondDistance READ minBondDistance WRITE setMinBondDistance NOTIFY bondsChanged)
-    Q_PROPERTY(double bondDistanceIncrement READ bondDistanceIncrement WRITE setBondDistanceIncrement NOTIFY bondsChanged)
+    Q_PROPERTY(double minBondDistance READ minBondDistance WRITE setMinBondDistance NOTIFY minBondDistanceChanged)
+    Q_PROPERTY(double bondDistanceIncrement READ bondDistanceIncrement WRITE setBondDistanceIncrement NOTIFY bondDistanceIncrementChanged)
     Q_PROPERTY(QVariantList bonds READ bonds NOTIFY bondsChanged)
 
    public:
@@ -424,6 +424,8 @@ class StructureViewModel : public QObject {
     void nameChanged();
     void magneticChanged();
     void atomTypesChanged();
+    void minBondDistanceChanged();
+    void bondDistanceIncrementChanged();
     void bondsChanged();
     void magneticGroupChanged();
     void magneticGroupRefusalChanged();

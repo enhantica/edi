@@ -56,9 +56,9 @@ class StructureViewOptions : public QObject {
     Q_PROPERTY(edi_app::OptionListModel* polyhedraExtentOptions READ polyhedraExtentOptions CONSTANT)
     // The polyhedra's centre and corner atoms, element symbols separated by commas or spaces ("" is the default:
     // cations as centres, anions as corners), and the longest centre-corner distance in Angstrom (0: the bond cut-offs).
-    Q_PROPERTY(QString polyhedraCentres READ polyhedraCentres WRITE setPolyhedraCentres NOTIFY polyhedraDefinitionChanged)
-    Q_PROPERTY(QString polyhedraCorners READ polyhedraCorners WRITE setPolyhedraCorners NOTIFY polyhedraDefinitionChanged)
-    Q_PROPERTY(double polyhedraMaxDistance READ polyhedraMaxDistance WRITE setPolyhedraMaxDistance NOTIFY polyhedraDefinitionChanged)
+    Q_PROPERTY(QString polyhedraCentres READ polyhedraCentres WRITE setPolyhedraCentres NOTIFY polyhedraCentresChanged)
+    Q_PROPERTY(QString polyhedraCorners READ polyhedraCorners WRITE setPolyhedraCorners NOTIFY polyhedraCornersChanged)
+    Q_PROPERTY(double polyhedraMaxDistance READ polyhedraMaxDistance WRITE setPolyhedraMaxDistance NOTIFY polyhedraMaxDistanceChanged)
     // The atom views diffraction-lib offers, for the Appearance group's selector.
     Q_PROPERTY(edi_app::OptionListModel* atomViewOptions READ atomViewOptions CONSTANT)
     Q_PROPERTY(edi_app::OptionListModel* momentFormOptions READ momentFormOptions CONSTANT)
@@ -141,7 +141,9 @@ class StructureViewOptions : public QObject {
     void polyhedraChanged();
     void polyhedraColourChanged();
     void polyhedraExtentChanged();
-    void polyhedraDefinitionChanged();
+    void polyhedraCentresChanged();
+    void polyhedraCornersChanged();
+    void polyhedraMaxDistanceChanged();
     void polyhedraOpacityChanged();  // the material's alone: nothing is presented again
     // An option a structure saves changed: what the project keeps.
     void changed();
