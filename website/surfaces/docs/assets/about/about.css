@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause */
 /* The About page's signature card: the photo in a circle beside the name, place and contact links. */
-.md-typeset .ed-signature { display: flex; align-items: center; gap: 1rem; margin: 1.5rem 0; padding-top: 1.5rem; }
+.md-typeset .ed-signature { display: flex; align-items: center; gap: 1rem; margin: 1.2rem 0 1.5rem; }
 .md-typeset .ed-signature img { width: 72px; height: 72px; border: 0; padding: 0; background: none; border-radius: 50%; object-fit: cover; flex: none; }
 .md-typeset .ed-signature-text { display: flex; flex-direction: column; gap: 0.1rem; }
 .md-typeset .ed-signature-text strong { color: var(--md-default-fg-color); }
@@ -8,14 +8,17 @@
 .md-typeset .ed-signature-links { font-size: 0.9em; }
 
 /* The earlier projects' contributors right of the name (edi ADR-0092), wrapping below the card on narrow screens.
-   On hover the avatar comes to the top, its neighbours step aside, the rest fade, and its name shows below. */
+   On hover the avatar comes to the top, its neighbours step aside, the rest fade, and its name shows below.
+   The text above is as far from the photo as the card from a wrapped row (the card's top margin equals the row gap),
+   and a wrapped row starts at the photo's left edge, so the extra space before the row sits right of the text. */
 .md-typeset .ed-signature { flex-wrap: wrap; row-gap: 1.2rem; }
+.md-typeset .ed-signature-text { margin-right: 0.6rem; }
 .md-typeset .ed-contributors {
   --ed-contributor-border: color-mix(in srgb, var(--md-default-fg-color) 18%, var(--md-default-bg-color));
-  display: flex; align-items: center; margin-left: 0.6rem;
+  display: flex; align-items: center;
 }
 .md-typeset .ed-contributors-stack { display: flex; align-items: center; }
-.md-typeset .ed-contributor { position: relative; display: block; margin-left: -30px; transition: transform 0.18s ease; }
+.md-typeset .ed-contributor { position: relative; display: block; margin-left: -44px; transition: transform 0.18s ease; }
 .md-typeset .ed-contributor:first-child { margin-left: 0; }
 .md-typeset .ed-signature .ed-contributor img {
   display: block; border: 1px solid var(--ed-contributor-border); background: var(--md-default-bg-color);

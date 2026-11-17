@@ -22,7 +22,7 @@ I'm also happy to discuss your data analysis needs or ideas for collaboration. I
 <img src="../assets/about/andrew-sazonov.jpg" alt="Andrew Sazonov" width="72" height="72">
 <div class="ed-signature-text">
 <strong>Andrew Sazonov</strong>
-<span class="ed-signature-place">European Spallation Source · DMSC</span>
+<span class="ed-signature-place">ESS · DMSC</span>
 <span class="ed-signature-links"><span class="ed-email" data-mail="dWUuc3NlQHZvbm96YXMud2VyZG5h"><noscript>andrew.sazonov [at] ess [dot] eu</noscript></span> · <a href="community/">Feedback form</a></span>
 </div>
 <!-- contributors -->

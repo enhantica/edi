@@ -20,7 +20,7 @@ the design feedback from Design Psychology, the contributors, testers and users,
 directly, the feedback form, the survey). Links to the rest of the site follow under "Where to start" and "More about
 the project".
 
-**Signature card.** Below the text: the photo in a 72 px circle, the name, "European Spallation Source · DMSC", and the
+**Signature card.** Below the text: the photo in a 72 px circle, the name, "ESS · DMSC", and the
 links "Show e-mail" and "Feedback form". The styles are in `assets/about/about.css`, loaded by the site's `extra_css`.
 
 **Protected e-mail.** The address never appears in the page's HTML. Each `.ed-email` element holds it as base64 of the
@@ -32,15 +32,17 @@ JavaScript the element's noscript text shows the address in words.
 Bertelsen, Eric Lindgren, Erik Fransson, Andrew McCluskey, Celine Durniak and Mridul Seth, in that order. They are
 presented as people who took part in the project with code, ideas and work, not ranked by any figure.
 
-- Each is an avatar at the photo's height (72 px), overlapping the previous one by 30 px, with a thin border in the
-  tooltip's border grey. Each links to the person's GitHub profile, with the name as its accessible label. The text
-  "and / contributors" stands on two lines after the last avatar, as far from it as the name from the photo.
+- Each is an avatar at the photo's height (72 px), overlapping the previous one by 44 px so the row fits right of the
+  name in the desktop content column, with a thin border in the tooltip's border grey. Each links to the person's
+  GitHub profile, with the name as its accessible label. The text "and / contributors" stands on two lines after the
+  last avatar, as far from it as the name from the photo.
 - On hover the avatar comes to the top; the avatars left of it step 12 px left and those right of it 12 px right; all
   others fade under a half-transparent layer of the background colour. Avatars right of the hovered one stack the other
   way, so none is overlapped from both sides. A tooltip below shows the name in the weight and size of the owner's
   name. The tooltip, its border and the fade layer take the theme's colours, so they are light in the light theme and
   dark in the dark theme.
-- On a narrow screen the row wraps below the card.
+- On a narrow screen the row wraps below the card, its first avatar aligned with the photo's left edge. The text above
+  is as far from the photo as the card from the wrapped row.
 - `website/contributors.yml` is the one list: name and GitHub login per person. `website/build.py` writes the row in
   place of the page's `<!-- contributors -->` line while it builds, and restores the page afterwards.
 
