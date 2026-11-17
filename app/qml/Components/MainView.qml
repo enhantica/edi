@@ -13,7 +13,8 @@ import edi.app
 // and Analysis pages holds one, in its main area, and it moves with the page. Its tabs are the page's set (`tabKeys`)
 // out of Structure, Pattern, Meas vs calc, Correlations, Stacked, Map and Evolution, in that order: a tab that will
 // become available is shown disabled, one that is irrelevant (Stacked and Map with one dataset, Evolution without a
-// scan) is hidden. The page's first tab opens with each project; after that the shown tab stays. The block selector
+// scan) is hidden. The page's default tab opens with each project, or the tab the user last picked on the page in this
+// session; after that the shown tab stays. The block selector
 // above the views lists the structures on the Structure tab and the experiments on the others.
 EaComponents.MainContent {
     id: view
@@ -31,7 +32,16 @@ EaComponents.MainContent {
     function tabOf(key) {
         return Math.max(0, allKeys.indexOf(key));
     }
-    readonly property int ownTab: tabOf(tabKeys[0])
+    // The tab the page opens on, whatever the tab order (the owner, 2026-11-17: Pattern on Analysis and Experiment).
+    property string defaultKey: tabKeys[0]
+    readonly property int ownTab: tabOf(defaultKey)
+    // The tab the user last picked on this page: it opens on that one with each later project, for the session.
+    property string chosenKey: ""
+    property bool switching: false
+    function available(key) {
+        const tab = bar && key !== "" && shows(key) ? bar.itemAt(tabOf(key)) : null;
+        return tab !== null && tab.enabled && tab.visible;
+    }
     readonly property string currentKey: allKeys[tabIndex] ?? ""
 
     readonly property ProjectViewModel project: Session.project
@@ -61,8 +71,11 @@ EaComponents.MainContent {
     readonly property var structureController: structureView.controller
 
     function showMainTab(index) {
-        if (bar)
-            bar.currentIndex = index;
+        if (!bar)
+            return;
+        switching = true;
+        bar.currentIndex = index;
+        switching = false;
     }
     // The page's own tab opens the first time the page is shown with a project, even with nothing to show yet; after
     // that the tab the user is on stays until they pick another, and the view never switches by itself (the owner,
@@ -72,7 +85,7 @@ EaComponents.MainContent {
         if (!bar || !shown || ownTabOpened)
             return;
         ownTabOpened = true;
-        showMainTab(ownTab);
+        showMainTab(available(chosenKey) ? tabOf(chosenKey) : ownTab);
     }
     onProjectChanged: {
         ownTabOpened = false;
@@ -83,7 +96,11 @@ EaComponents.MainContent {
         Qt.callLater(showCurrentPage);
     }
     onBarChanged: openOwnTabOnFirstVisit()
-    onTabIndexChanged: Qt.callLater(showCurrentPage)
+    onTabIndexChanged: {
+        if (!switching && shown && ownTabOpened)
+            chosenKey = currentKey;
+        Qt.callLater(showCurrentPage);
+    }
     // The pages' list keeps its old position when the tab changes while the view is hidden (a scan project opened
     // straight onto Analysis showed the previous project's structure under the Pattern tab): put it on the current
     // tab's page whenever the view shows or the tab changes.

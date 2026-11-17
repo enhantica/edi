@@ -43,6 +43,7 @@ WorkflowPage {
     pageView: Component {
         MainView {
             shown: page.current
+            defaultKey: "structure"
             tabKeys: ["structure", "pattern"]
         }
     }
