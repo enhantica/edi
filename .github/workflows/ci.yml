@@ -891,6 +891,62 @@ jobs:
   # packed as one site folder and uploaded as the `edi-webapp` artifact. The toolchain (Emscripten, Qt's wasm
   # kit, Eigen, Chrome) installs into the runner's ~/.cache/edi-wasm on each run. crysta is compiled for
   # wasm from the pinned SDK's source.
+  # The app compiled with MSVC and edi's warnings as errors (ADR-0093) on every run: the app jobs build and test it on
+  # Linux and macOS, and this compiles the same sources the Windows installer compiles, through the installer's own Qt,
+  # SDK and compiler settings (tools/ci/app-windows-build.py). It builds only; the app's tests run in the app jobs.
+  app-windows:
+    name: app · Windows
+    if: ${{ !cancelled() && needs.changes.result == 'success' && needs.crysta-sdk.result == 'success' && github.event.pull_request.head.repo.fork == false && inputs.core_only != true }}
+    environment: crysta-sdk
+    needs: [changes, crysta-sdk]
+    env:
+      CRYSTA_SOURCE_SHA: ${{ needs.changes.outputs.crysta_sha }}
+    runs-on: windows-2022
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - *windows-git
+      - *native-checkout
+      - *windows-checkout
+      - name: Set up the locked packaging environment
+        uses: ./.github/actions/setup-pixi
+        with:
+          manifest-path: tools/installer/pixi.toml
+      - *windows-compiler
+      - name: Turn on the compiler cache
+        run: |
+          {
+            echo "CCACHE_DIR=${{ runner.temp }}/edi-ccache"
+            echo "CCACHE_MAXSIZE=2G"
+            echo "CCACHE_COMPILERCHECK=content"
+            echo "CMAKE_C_COMPILER_LAUNCHER=ccache"
+            echo "CMAKE_CXX_COMPILER_LAUNCHER=ccache"
+          } >>"$GITHUB_ENV"
+      - uses: actions/cache/restore@v4
+        with:
+          path: ${{ runner.temp }}/edi-ccache
+          key: ccache-app-windows-${{ hashFiles('tools/installer/pixi.lock') }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            ccache-app-windows-${{ hashFiles('tools/installer/pixi.lock') }}-
+            ccache-app-windows-
+      - uses: ./.github/actions/crysta-sdk
+        with:
+          platform: win-64
+      - name: Unpack the pinned crysta source
+        run: |
+          mkdir -p .crysta
+          pixi run --manifest-path tools/installer/pixi.toml python tools/ci/crysta_source_archive.py extract "$CRYSTA_SDK_ARCHIVES/crysta-src-$CRYSTA_SOURCE_SHA.tar.gz" .crysta
+          printf '%s\n' "$CRYSTA_SOURCE_SHA" >.crysta/CRYSTA_SOURCE_SHA
+      - name: Build the app with MSVC, warnings as errors
+        run: pixi run --manifest-path tools/installer/pixi.toml python tools/ci/app-windows-build.py --crysta-source .crysta --work build/app-windows
+      - name: Save the compiler cache
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ runner.temp }}/edi-ccache
+          key: ccache-app-windows-${{ hashFiles('tools/installer/pixi.lock') }}-${{ github.run_id }}-${{ github.run_attempt }}
+
   app-wasm:
     name: app · WebAssembly
     # Browser input changes qualify the multithread kit and both isolation routes on pull requests too.

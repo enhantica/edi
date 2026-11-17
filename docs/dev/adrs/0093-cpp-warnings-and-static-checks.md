@@ -31,8 +31,9 @@ formatting & static analysis (Python + C++)". The owner asked for the same check
 2. **`EDI_WERROR=ON` makes each of those warnings an error.** It is off for a local build and on in CI: the build scripts
    (`core-build.sh`, `app-build.sh`, `wasm-build.sh`) pass the `EDI_WERROR` environment variable to CMake. CI sets it
    in the core jobs on Linux, macOS and Windows, where MSVC takes `/W4 /WX`, in the app jobs on Linux and macOS, in the
-   WebAssembly app job, and in the Windows installer build of a pull request, the one CI job that builds the app with
-   MSVC (`tools/installer/build.py` passes `EDI_WERROR` on).
+   WebAssembly app job, and in the `app · Windows` job, which compiles the app with MSVC on every run through the
+   Windows installer's own Qt, SDK and compiler settings (`tools/ci/app-windows-build.py`). The Windows installer build
+   of a pull request takes it too (`tools/installer/build.py` passes `EDI_WERROR` on).
 3. **clang-tidy runs with the Clang Static Analyzer** over the same sources (`pixi run -e cpp-lint cpp-tidy`,
    `tools/ci/cpp-tidy.sh`), any finding an error. edi's `.clang-tidy` holds the groups of crysta's curated set that
    find faults: the analyzer, `bugprone`, `performance` and `cert`, with crysta's exceptions inside them. A
@@ -65,7 +66,9 @@ formatting & static analysis (Python + C++)". The owner asked for the same check
 8. **Both checks are CI steps of the app job on Linux and macOS** ("clang-tidy with the Clang Static Analyzer (zero
    findings)", "cppcheck (zero findings)"), after the build whose compile commands they read, and after `app-moc` runs moc for every app target: a test runner
    the job does not build still has its sources in those commands, and each includes its own `.moc`. They run after a failed
-   step too, so one round lists every finding.
+   step too, so one round lists every finding. They run on Linux and macOS only: their Windows run (the MSVC compile
+   commands) and their WebAssembly run follow later, as the owner decided on 2026-11-17, while warnings as errors (2)
+   cover every platform.
 
 ## Consequences
 
