@@ -47,7 +47,8 @@ def main() -> None:
         '-DEDI_BUILD_BINDINGS=OFF',
         f'-DCMAKE_PREFIX_PATH={prefix.as_posix()};{qt.as_posix()}',
     ])
-    build.run(['cmake', '--build', app, '--target', 'edi_app', '--parallel', '4'])
+    # Every file compiles even after one fails, so one run lists every warning made an error.
+    build.run(['cmake', '--build', app, '--target', 'edi_app', '--parallel', '4', '--', '-k', '0'])
 
 
 if __name__ == '__main__':
