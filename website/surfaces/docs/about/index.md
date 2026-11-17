@@ -30,14 +30,14 @@ I'm also happy to discuss your data analysis needs or ideas for collaboration. I
 
 ## Where to start
 
-- [User guide](../user-guide/index.md): the ideas and the analysis workflow.
+- [<span class="ed-interface-icons" aria-hidden="true">:fa5-book-open:</span> <span class="ed-icon-text">User guide</span>](../user-guide/index.md){ .ed-interface-link .ed-icon-label }: the ideas and the analysis workflow.
 - [<span class="ed-interface-icons" aria-hidden="true">:fa5-desktop:</span> <span class="ed-icon-text">Application</span>](../application/index.md){ .ed-interface-link .ed-icon-label }, [<span class="ed-interface-icons" aria-hidden="true">:simple-python:</span> <span class="ed-icon-text">Python</span>](../python/index.md){ .ed-interface-link .ed-icon-label } and [<span class="ed-interface-icons" aria-hidden="true">:fa5-terminal:</span> <span class="ed-icon-text">Command line</span>](../cli/index.md){ .ed-interface-link .ed-icon-label }: how to work in each one.
-- [Physics](../physics/index.md): the models and equations behind the calculations.
+- [<span class="ed-interface-icons" aria-hidden="true">:fa5-atom:</span> <span class="ed-icon-text">Physics</span>](../physics/index.md){ .ed-interface-link .ed-icon-label }: the models and equations behind the calculations.
 
 ## More about the project
 
-- [Get in touch](community.md) with a question, a problem or an idea.
-- [Survey](survey.md): tell us how you work and what you need, anonymously.
-- [Licence](licence.md): EasyDiffraction is open source.
-- [How to cite](citation.md) EasyDiffraction and keep your analysis repeatable.
-- [What's new](../changelog.md): the releases.
+- [<span class="ed-interface-icons" aria-hidden="true">:fa5-comments:</span> <span class="ed-icon-text">Get in touch</span>](community.md){ .ed-interface-link .ed-icon-label } with a question, a problem or an idea.
+- [<span class="ed-interface-icons" aria-hidden="true">:fa5-clipboard-list:</span> <span class="ed-icon-text">Survey</span>](survey.md){ .ed-interface-link .ed-icon-label }: tell us how you work and what you need, anonymously.
+- [<span class="ed-interface-icons" aria-hidden="true">:fa5-balance-scale:</span> <span class="ed-icon-text">Licence</span>](licence.md){ .ed-interface-link .ed-icon-label }: EasyDiffraction is open source.
+- [<span class="ed-interface-icons" aria-hidden="true">:fa5-quote-right:</span> <span class="ed-icon-text">How to cite</span>](citation.md){ .ed-interface-link .ed-icon-label } EasyDiffraction and keep your analysis repeatable.
+- [<span class="ed-interface-icons" aria-hidden="true">:fa5-bullhorn:</span> <span class="ed-icon-text">What's new</span>](../changelog.md){ .ed-interface-link .ed-icon-label }: the releases.
