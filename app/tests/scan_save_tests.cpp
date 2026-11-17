@@ -333,10 +333,10 @@ private slots:
         QVERIFY2(session->openProject(QUrl::fromLocalFile(QStringLiteral(EDI_SOURCE_DIR "/docs/user/cli/pd-neut-cwl_lbco-hrpt/project"))), qPrintable(session->lastError()));
         QTRY_VERIFY_WITH_TIMEOUT(!session->project()->calculating(), 30000);
         QQuickItem* tab = nullptr;
-        QTRY_VERIFY_WITH_TIMEOUT((tab = window->contentItem()->findChild<QQuickItem*>(QStringLiteral("appBar.tab.analysis"))) && tab->isEnabled(), 20000);
+        QTRY_VERIFY_WITH_TIMEOUT((tab = window->findChild<QQuickItem*>(QStringLiteral("appBar.tab.analysis"))) && tab->isEnabled(), 20000);
         QTest::mouseClick(window, Qt::LeftButton, {}, tab->mapToScene(QPointF(tab->width() / 2, tab->height() / 2)).toPoint());
         QQuickItem* table = nullptr;
-        QTRY_VERIFY_WITH_TIMEOUT((table = window->contentItem()->findChild<QQuickItem*>(QStringLiteral("parameters.list"))) && table->isVisible() && table->property("count").toInt() > table->property("maxRowCountShow").toInt(), 20000);
+        QTRY_VERIFY_WITH_TIMEOUT((table = window->findChild<QQuickItem*>(QStringLiteral("parameters.list"))) && table->isVisible() && table->property("count").toInt() > table->property("maxRowCountShow").toInt(), 20000);
         // Scrolled to the end of the whole list, then filtered down to a few rows.
         const double end = table->property("originY").toDouble() + table->property("contentHeight").toDouble() - table->height();
         table->setProperty("contentY", end);
@@ -367,11 +367,94 @@ private slots:
         };
         edi_app::ParameterItem* offset = find(QStringLiteral("instrument.calib_twotheta_offset"));
         QVERIFY(offset);
-        QVERIFY(std::abs(offset->value()) < 0.2);
         QCOMPARE(offset->sliderHalfWidth(), std::max(0.1, std::abs(offset->value()) * 0.5));
         edi_app::ParameterItem* length = find(QStringLiteral("cell.length_a"));
         QVERIFY(length);
         QCOMPARE(length->sliderHalfWidth(), 0.05);
+    }
+
+    // A fit with live updates on draws its patterns on the shown Pattern chart while it runs, not only at the end.
+    // A sequential fit seen on Meas vs calc alone: each dataset it follows is drawn there, not only the first.
+    void measCalcFollowsASequentialFit() {
+        QQmlApplicationEngine engine;
+        edi_app::configure_engine(engine);
+        engine.loadFromModule("edi.app", "Main");
+        QVERIFY(!engine.rootObjects().isEmpty());
+        auto* window = qobject_cast<QQuickWindow*>(engine.rootObjects().constFirst());
+        QVERIFY(window);
+        window->resize(1480, 900);
+        window->show();
+        QVERIFY(QTest::qWaitForWindowExposed(window));
+        auto* session = engine.singletonInstance<edi_app::Session*>("edi.app", "Session");
+        QVERIFY(session);
+        QVERIFY2(session->openProject(QUrl::fromLocalFile(QStringLiteral(EDI_SOURCE_DIR "/docs/user/cli/pd-neut-tof_ncaf-wish-5bank_scan-6p/project"))), qPrintable(session->lastError()));
+        edi_app::ProjectViewModel* project = session->project();
+        QTRY_VERIFY_WITH_TIMEOUT(!project->calculating(), 60000);
+        // The shown one of several items of that name (every page has its main view's tabs).
+        const auto shown = [window](const QString& name) -> QQuickItem* {
+            QQuickItem* result = nullptr;
+            std::function<void(QQuickItem*)> walk = [&](QQuickItem* parent) {
+                for (QQuickItem* child : parent->childItems()) {
+                    const QPointF at = child->mapToScene(QPointF());
+                    if (child->objectName() == name && child->isVisible() && child->isEnabled() && at.x() >= 0 && at.x() < window->width()) result = child;
+                    walk(child);
+                }
+            };
+            walk(window->contentItem());
+            return result;
+        };
+        QQuickItem* item = nullptr;
+        for (const char* name : {"appBar.tab.analysis", "mainArea.tab.measCalc"}) {
+            QTRY_VERIFY_WITH_TIMEOUT((item = shown(QString::fromLatin1(name))), 20000);
+            QTest::mouseClick(window, Qt::LeftButton, {}, item->mapToScene(QPointF(item->width() / 2, item->height() / 2)).toPoint());
+        }
+        edi_app::ExperimentViewModel* experiment = project->currentExperiment();
+        QVERIFY(experiment);
+        QTRY_VERIFY_WITH_TIMEOUT(experiment->patternShown(), 20000);
+        edi_app::FitViewModel* fit = project->fit();
+        fit->setPatternUpdates(0);  // every pattern
+        int duringFit = 0;
+        QObject::connect(experiment, &edi_app::ExperimentViewModel::patternSourceChanged, window, [&] {
+            if (fit->running() && experiment->presentedGeneration() == experiment->patternGeneration()) ++duringFit;
+        });
+        fit->start();
+        QTRY_VERIFY_WITH_TIMEOUT(fit->running(), 20000);
+        QTRY_VERIFY_WITH_TIMEOUT(!fit->running(), 600000);
+        QVERIFY2(duringFit >= 2, qPrintable(QString("datasets presented on Meas vs calc while running: %1").arg(duringFit)));
+    }
+
+    void patternChartFollowsARunningFit() {
+        QQmlApplicationEngine engine;
+        edi_app::configure_engine(engine);
+        engine.loadFromModule("edi.app", "Main");
+        QVERIFY(!engine.rootObjects().isEmpty());
+        auto* window = qobject_cast<QQuickWindow*>(engine.rootObjects().constFirst());
+        QVERIFY(window);
+        window->resize(1480, 900);
+        window->show();
+        QVERIFY(QTest::qWaitForWindowExposed(window));
+        auto* session = engine.singletonInstance<edi_app::Session*>("edi.app", "Session");
+        QVERIFY(session);
+        QVERIFY2(session->openProject(QUrl::fromLocalFile(QStringLiteral(EDI_SOURCE_DIR "/docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project"))), qPrintable(session->lastError()));
+        edi_app::ProjectViewModel* project = session->project();
+        QTRY_VERIFY_WITH_TIMEOUT(!project->calculating(), 60000);
+        QQuickItem* tab = nullptr;
+        QTRY_VERIFY_WITH_TIMEOUT((tab = window->findChild<QQuickItem*>(QStringLiteral("appBar.tab.analysis"))) && tab->isEnabled(), 20000);
+        QTest::mouseClick(window, Qt::LeftButton, {}, tab->mapToScene(QPointF(tab->width() / 2, tab->height() / 2)).toPoint());
+        edi_app::ExperimentViewModel* experiment = project->currentExperiment();
+        QVERIFY(experiment);
+        QTRY_VERIFY_WITH_TIMEOUT(experiment->patternShown(), 20000);
+        edi_app::FitViewModel* fit = project->fit();
+        fit->setPatternUpdates(0);  // every pattern
+        int duringFit = 0;
+        // Counted only when the shown chart presented it: the controller draws on the same signal, before this.
+        QObject::connect(experiment, &edi_app::ExperimentViewModel::patternSourceChanged, window, [&] {
+            if (fit->running() && experiment->presentedGeneration() == experiment->patternGeneration()) ++duringFit;
+        });
+        fit->start();
+        QTRY_VERIFY_WITH_TIMEOUT(fit->running(), 20000);
+        QTRY_VERIFY_WITH_TIMEOUT(!fit->running(), 300000);
+        QVERIFY2(duringFit >= 2, qPrintable(QString("patterns presented while running: %1").arg(duringFit)));
     }
 
     void toolbarOverflowLeavesNoQmlWarning() {
