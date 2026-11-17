@@ -143,6 +143,8 @@ class ParameterItem : public QObject {
     // committed: a lattice constant's kLatticeConstantSliderHalfWidth (0.05 Å; the owner, 2026-10-04); any
     // other parameter's half its magnitude, at least 1e-3.
     Q_INVOKABLE double sliderHalfWidth() const;
+    // The smallest half width for this kind of parameter (the table in parameter_item.cpp).
+    double sliderFloor() const;
     int blockIndex() const { return block_index_; }
     QString categoryIcon() const { return category_icon_; }
     QString elementSymbol() const { return element_symbol_; }

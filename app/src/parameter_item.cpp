@@ -383,13 +383,112 @@ void ParameterItem::setLastError(const QString& error) {
 namespace {
 // The Analysis slider's half width around a lattice constant's value, in Å (the owner, 2026-10-04).
 constexpr double kLatticeConstantSliderHalfWidth = 0.05;
+
+// The slider's smallest half width by parameter kind (the owner, 2026-11-17: a zero 2θ offset slid only ±0.001): a
+// step a user would try first, so one drag shows the effect. Elsewhere the half width is half the value, never less
+// than this; `name` matches the item name or its start.
+//
+// | kind                               | items                                   | unit      | min half width | why                                        |
+// |------------------------------------|-----------------------------------------|-----------|----------------|--------------------------------------------|
+// | 2θ offset (constant wavelength)    | instrument.calib_twotheta_offset        | deg       | 0.1            | the owner's ±0.1; zero errors are ~0.01-0.1 |
+// | sample displacement, transparency  | instrument.calib_sample_*               | deg       | 0.1            | the same size of 2θ shift                  |
+// | TOF zero shift                     | instrument.calib_d_to_tof_offset        | µs        | 5              | zero shifts are a few µs                   |
+// | TOF DIFC                           | instrument.calib_d_to_tof_linear        | µs/Å      | 10             | about 0.1 % of a typical DIFC              |
+// | TOF DIFA, reciprocal               | instrument.calib_d_to_tof_quadratic, …_reciprocal | µs/Å², µs·Å | 1     | small corrections around 0                 |
+// | wavelength                         | instrument.setup_wavelength, …_2        | Å         | 0.01           | a calibration is known to ~0.001-0.01 Å     |
+// | wavelength intensity ratio         | instrument.setup_wavelength_2_to_1_ratio| —         | 0.05           | Kα2/Kα1 is about 0.5                       |
+// | polarization coefficient           | instrument.setup_polarization_coefficient | —       | 0.1            | between 0 and 1                            |
+// | monochromator 2θ                   | instrument.setup_monochromator_twotheta | deg       | 1              | a geometry angle                           |
+// | cell angles                        | cell.angle_*                            | deg       | 0.5            | a small distortion                         |
+// | fractional coordinates             | atom_site.fract_*                       | —         | 0.01           | 0.05-0.1 Å in a 5-10 Å cell                |
+// | occupancy                          | atom_site.occupancy                     | —         | 0.1            | a tenth of the 0-1 range                   |
+// | displacement B                     | atom_site.adp_iso, atom_site_aniso.*    | Å²        | 0.5            | B is usually 0.2-2 Å²                      |
+// | displacement U                     | atom_site.adp_iso, atom_site_aniso.*    | Å²        | 0.005          | U = B/8π², usually 0.003-0.03 Å²           |
+// | displacement β                     | atom_site_aniso.*                       | —         | 0.001          | β is dimensionless and small               |
+// | magnetic moments                   | atom_site_moment.crystalaxis_*          | μB        | 0.5            | moments are 0-5 μB                         |
+// | peak width U, V, W                 | peak.broad_gauss_u, _v, _w              | deg²      | 0.05           | typical values are ±0.01-0.5               |
+// | peak width X, Y                    | peak.broad_lorentz_x, _y                | deg       | 0.05           | typical values are 0-0.3                   |
+// | size and strain                    | peak.broad_*_size, peak.broad_*_strain  | —         | 0.01           | small broadening terms                     |
+// | asymmetry (FCJ S/L, D/L)           | peak.asym_fcj_*                         | —         | 0.01           | typical values are 0.005-0.05              |
+// | asymmetry (Bérar-Baldinozzi)       | peak.asym_beba_a*, _b*                  | —         | 0.05           | typical values are ±0.01-0.2               |
+// | pseudo-Voigt mixing                | peak.mixing_eta_*                       | —, 1/deg  | 0.1            | η runs from 0 to 1                         |
+// | TOF Gaussian width                 | peak.broad_gauss_sigma_*                | µs², …    | 1              | values are 0-100 in their units            |
+// | TOF Lorentzian width               | peak.broad_lorentz_gamma_*              | µs, …     | 1              | values are 0-10 in their units             |
+// | TOF rise and decay                 | peak.rise_alpha_*, peak.decay_beta_*    | —         | 0.01           | values are 0.01-1                          |
+// | background                         | background.intensity, background.coef   | counts    | 1              | at least one count; larger values use half |
+// | scale                              | linked_structure.scale                  | —         | 0.001          | scales span decades: half the value rules  |
+// | extinction coefficients            | extinction.coefficient*                 | —         | 0.01           | small corrections                          |
+// | extinction radii                   | extinction.domain_radius, crystal_radius| μm, mm    | 0.1            | a tenth of a unit                          |
+// | mosaic spread                      | extinction.mosaic_spread                | rad⁻¹     | 0.01           | small corrections                          |
+// | absorption                         | absorption.mu_r, absorption.abscor1     | —, Å⁻¹    | 0.1            | μR is usually 0-2                          |
+// | lattice constants                  | cell.length_*                           | Å         | 0.05 (fixed)   | the owner, 2026-10-04: always ±0.05 Å      |
+// | anything else                      |                                         |           | 0.001          | the earlier floor                          |
+struct SliderFloor {
+    const char* category;
+    const char* name;
+    double half_width;
+};
+constexpr SliderFloor kSliderFloors[] = {
+    {"instrument", "calib_twotheta_offset", 0.1},
+    {"instrument", "calib_sample_", 0.1},
+    {"instrument", "calib_d_to_tof_offset", 5.0},
+    {"instrument", "calib_d_to_tof_linear", 10.0},
+    {"instrument", "calib_d_to_tof_quadratic", 1.0},
+    {"instrument", "calib_d_to_tof_reciprocal", 1.0},
+    {"instrument", "setup_wavelength_2_to_1_ratio", 0.05},
+    {"instrument", "setup_wavelength", 0.01},
+    {"instrument", "setup_polarization_coefficient", 0.1},
+    {"instrument", "setup_monochromator_twotheta", 1.0},
+    {"cell", "angle_", 0.5},
+    {"atom_site", "fract_", 0.01},
+    {"atom_site", "occupancy", 0.1},
+    {"atom_site_moment", "crystalaxis_", 0.5},
+    {"peak", "broad_gauss_sigma_", 1.0},
+    {"peak", "broad_lorentz_gamma_", 1.0},
+    {"peak", "broad_gauss_size", 0.01},
+    {"peak", "broad_gauss_strain", 0.01},
+    {"peak", "broad_lorentz_size", 0.01},
+    {"peak", "broad_lorentz_strain", 0.01},
+    {"peak", "broad_gauss_", 0.05},
+    {"peak", "broad_lorentz_", 0.05},
+    {"peak", "asym_fcj_", 0.01},
+    {"peak", "asym_beba_", 0.05},
+    {"peak", "mixing_eta_", 0.1},
+    {"peak", "rise_alpha_", 0.01},
+    {"peak", "decay_beta_", 0.01},
+    {"background", "intensity", 1.0},
+    {"background", "coef", 1.0},
+    {"extinction", "coefficient", 0.01},
+    {"extinction", "domain_radius", 0.1},
+    {"extinction", "crystal_radius", 0.1},
+    {"extinction", "mosaic_spread", 0.01},
+    {"absorption", "mu_r", 0.1},
+    {"absorption", "abscor1", 0.1},
+};
+constexpr double kDefaultSliderFloor = 1e-3;
 }  // namespace
+
+double ParameterItem::sliderFloor() const {
+    if ((category_ == QLatin1String("atom_site") && name_ == QLatin1String("adp_iso")) ||
+        (category_ == QLatin1String("atom_site_aniso") && name_.startsWith(QLatin1String("adp_")))) {
+        // The site's declared type decides the size: its symbol is the label (B, U or β).
+        return short_name_.startsWith(QLatin1Char('U'), Qt::CaseInsensitive) ? 0.005
+               : short_name_.startsWith(QChar(0x03B2)) || short_name_.startsWith(QLatin1String("beta")) ? 0.001
+                                                                                                       : 0.5;
+    }
+    for (const SliderFloor& floor : kSliderFloors) {
+        if (category_ == QLatin1String(floor.category) && name_.startsWith(QLatin1String(floor.name))) {
+            return floor.half_width;
+        }
+    }
+    return kDefaultSliderFloor;
+}
 
 double ParameterItem::sliderHalfWidth() const {
     if (category_ == QLatin1String("cell") && name_.startsWith(QLatin1String("length_"))) {
         return kLatticeConstantSliderHalfWidth;
     }
-    return std::max(std::abs(value_) * 0.5, 1e-3);
+    return std::max(std::abs(value_) * 0.5, sliderFloor());
 }
 
 }  // namespace edi_app

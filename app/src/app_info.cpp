@@ -4170,9 +4170,14 @@ void ApplicationInfo::updateParameterSliderLimits() const {
     const auto value = assistantContextField(f, "selected", "value");
     const auto a = panelUsageNumber(f, value), b = panelUsageNumber(f, span);
     if (!a || !b) return;
-    panelUsageContextWrite(f, "lower", QJSValue(*a - *b));
-    const auto actual = assistantContextField(f, "selected", "value");
-    panelUsageContextWrite(f, "upper", panelUsageAdd(f, actual, span));
+    // Within the parameter's own limits (an occupancy stays in 0-1), unless the value is already outside them.
+    double lower = *a - *b, upper = *a + *b;
+    if (const auto* item = qobject_cast<const edi_app::ParameterItem*>(selected.toQObject())) {
+        if (std::isfinite(item->minimum()) && *a >= item->minimum()) lower = std::max(lower, item->minimum());
+        if (std::isfinite(item->maximum()) && *a <= item->maximum()) upper = std::min(upper, item->maximum());
+    }
+    panelUsageContextWrite(f, "lower", QJSValue(lower));
+    panelUsageContextWrite(f, "upper", QJSValue(upper));
 }
 void ApplicationInfo::parameterSliderPressed(bool destroying) const {
     const auto f = panelUsageEngine(this);
