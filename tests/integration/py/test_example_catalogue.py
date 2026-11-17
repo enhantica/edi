@@ -44,7 +44,11 @@ def app_cases(root=ROOT):
     assert actual == SELECTED, (
         'The catalogue must retain the independently declared case identities and order'
     )
-    return actual + declared
+    return [
+        row['id']
+        for row in registry(root)
+        if row.get('user-facing') is True or row['id'] in declared
+    ]
 
 
 def page_cases(path):
@@ -66,7 +70,7 @@ def test_selected_cases_and_order_match_the_independent_owner_selection(surface)
         actual = list(json.loads((ROOT / 'app/examples/metadata.json').read_text())['examples'])
     else:
         actual = page_cases((CLI if surface == 'cli-page' else TUTORIALS) / 'index.md')
-    expected = app_cases() if surface in {'registry', 'metadata'} else SELECTED
+    expected = app_cases() if surface == 'metadata' else SELECTED
     assert actual == expected, (
         'Every catalogue and the app retain the same owner-selected cases in order'
     )

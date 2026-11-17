@@ -9,7 +9,6 @@ import zipfile
 from pathlib import Path
 
 from tests.fixtures.path_keys import repository_key
-from tests.fixtures.table_display.source_uncertainties import previous_bytes as source_bytes
 
 HERE = Path(__file__).parent
 ROOT = HERE.resolve().parents[2]
@@ -22,7 +21,6 @@ def rows():
 
 
 def previous_bytes(name, data):
-    data = source_bytes(repository_key(name), data)
     row = rows().get(repository_key(name))
     if row is None:
         return data
