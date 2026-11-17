@@ -4629,7 +4629,8 @@ struct AssistantViewModel::State {
     bool widget_cue_fallback(const std::shared_ptr<NativeWidget>& run, const QString& message) noexcept {
         const auto& tool = run->fallback_tool;
         const bool edit_tool = tool == "set_parameters" || tool == "set_free" || tool == "add_relations";
-        if (run->cue_fallback || (!edit_tool && tool != "edit_relation") || run->completed_steps != 0 || !run->window ||
+        const bool own_path = tool == "edit_relation" || tool == "undo_fit" || tool == "run_fit";
+        if (run->cue_fallback || (!edit_tool && !own_path) || run->completed_steps != 0 || !run->window ||
             !native_call || native_call->may_have_written || run->call.record != native_call->record ||
             run->call.record->answered || run->call.record->discarded || run->call.record->completed || !project ||
             run->project != project)
@@ -4642,6 +4643,22 @@ struct AssistantViewModel::State {
             if (tool == "edit_relation") {
                 run->relation_visible = false;
                 widget_relation_edit_apply(run);
+                return true;
+            }
+            if (tool == "undo_fit") {
+                run->fit_undo_visible = false;
+                run->window = nullptr;
+                apply_fit_undo(run);
+                return true;
+            }
+            if (tool == "run_fit") {
+                if (native_fit) return false;  // a fit already started
+                widget_end(run);
+                try { native_start_fit_normal(); }
+                catch (const std::exception& error) {
+                    if (receiver && receiver->state_.get() == this && native_call)
+                        native_finish(false, {{"status", "refused"}, {"message", bounded_error(QString::fromUtf8(error.what()))}});
+                }
                 return true;
             }
             std::vector<std::pair<std::string, bool>> before_flags;
@@ -7543,6 +7560,7 @@ struct AssistantViewModel::State {
         auto run = std::make_shared<NativeWidget>();
         run->call = *native_call; run->receiver = &owner; run->project = project;
         run->tool = QStringLiteral("undo_fit"); run->fit_undo_visible = show_actions; run->window = show_actions ? action_window : nullptr;
+        run->fallback_tool = run->tool;
         const auto receiver = run->receiver;
         auto undo = std::make_shared<NativeFitUndo>();
         undo->receiver = receiver; undo->project = run->project;
@@ -9330,6 +9348,46 @@ struct AssistantViewModel::State {
         for(const auto& member:target->assistantProject()->experiments)if(member.get()==inspection->data_member)return true;
         return false;
     }
+    // A single or joint fit as normal mode starts it: the fit's own report answers the call.
+    void native_start_fit_normal() {
+        if (!project->fit()->available() || edi::fits_a_scan(*project->assistantProject())) {
+            native_finish(false, {{"status", "unavailable"}, {"message", "This native action supports an available single/joint fit only."}}); return;
+        }
+        auto* handle = project->fit();
+        QPointer<FitViewModel> captured = handle;
+        native_fit = handle;
+        if (!native_call) return;
+        const auto original_call = *native_call;
+        const auto receipt = original_call.receipt;
+        const auto original_scope = native_settlement_scope(original_call);
+        if (native_call) native_call->may_have_written = true;
+        try {
+            handle->startNative(native_fit_callback(captured, original_call), original_call.fit_attempt);
+        } catch (...) {
+            if (captured && captured->nativeRunning()) {
+                if (native_call) {
+                    NativeCall& held_call = *native_call;
+                    if (held_call.record == original_call.record && held_call.receipt == receipt && held_call.rpc == original_call.rpc) held_call.may_have_written = true;
+                }
+                captured->cancel();
+                if (original_scope()) native_fence();
+                return;
+            }
+            if (native_fit == captured) native_fit.clear();
+            if (native_call) {
+                NativeCall& held_call = *native_call;
+                if (held_call.record == original_call.record && held_call.receipt == receipt && held_call.rpc == original_call.rpc) held_call.may_have_written = false;
+            }
+            throw; // Preparation failed before actual submission; no future report is owed.
+        }
+        if (!captured || native_fit != captured || !native_call || native_call->record != original_call.record ||
+            native_call->receipt != receipt || native_call->rpc != original_call.rpc) return;
+        if (!captured->nativeRunning()) {
+            native_fit.clear(); native_call->may_have_written = false;
+            native_finish(false, {{"status", "refused"}, {"message", "The native fit did not start."}});
+        } else native_call->may_have_written = true;
+        return;
+    }
     void native_dispatch(const QJsonValue& rpc, const Object& params, const char*& save_stage, const QString& expectedThread, const QString& expectedTurn) {
         const auto publication=file_projection();
         if(account_confirmation_pending){(void)agent->deferServerRequest(rpc,agent->outputGeneration());return;}
@@ -9608,45 +9666,7 @@ struct AssistantViewModel::State {
                 {"calculation_pending", project->calculating()}, {"message", result.message.isEmpty() ? QString("Native edit published with Undo; calculation is asynchronous.") : bounded_error(result.message)}});
             return;
         }
-        if (name == "run_fit") {
-            if (!project->fit()->available() || edi::fits_a_scan(*project->assistantProject())) {
-                native_finish(false, {{"status", "unavailable"}, {"message", "This native action supports an available single/joint fit only."}}); return;
-            }
-            auto* handle = project->fit();
-            QPointer<FitViewModel> captured = handle;
-            native_fit = handle;
-            if (!native_call) return;
-            const auto original_call = *native_call;
-            const auto receipt = original_call.receipt;
-            const auto original_scope = native_settlement_scope(original_call);
-            if (native_call) native_call->may_have_written = true;
-            try {
-                handle->startNative(native_fit_callback(captured, original_call), original_call.fit_attempt);
-            } catch (...) {
-                if (captured && captured->nativeRunning()) {
-                    if (native_call) {
-                        NativeCall& held_call = *native_call;
-                        if (held_call.record == original_call.record && held_call.receipt == receipt && held_call.rpc == original_call.rpc) held_call.may_have_written = true;
-                    }
-                    captured->cancel();
-                    if (original_scope()) native_fence();
-                    return;
-                }
-                if (native_fit == captured) native_fit.clear();
-                if (native_call) {
-                    NativeCall& held_call = *native_call;
-                    if (held_call.record == original_call.record && held_call.receipt == receipt && held_call.rpc == original_call.rpc) held_call.may_have_written = false;
-                }
-                throw; // Preparation failed before actual submission; no future report is owed.
-            }
-            if (!captured || native_fit != captured || !native_call || native_call->record != original_call.record ||
-                native_call->receipt != receipt || native_call->rpc != original_call.rpc) return;
-            if (!captured->nativeRunning()) {
-                native_fit.clear(); native_call->may_have_written = false;
-                native_finish(false, {{"status", "refused"}, {"message", "The native fit did not start."}});
-            } else native_call->may_have_written = true;
-            return;
-        }
+        if (name == "run_fit") { native_start_fit_normal(); return; }
         throw std::runtime_error("Unimplemented native tool");
     }
 
