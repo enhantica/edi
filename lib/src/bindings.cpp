@@ -2880,7 +2880,9 @@ NB_MODULE(_edi, m) {
                                                 : nb::cast<std::string>(k));
                     }
                 } else {
-                    parsed = nb::cast<std::vector<std::pair<std::string, std::string>>>(rows);
+                    for (nb::handle row : rows) {
+                        parsed.push_back(nb::cast<std::pair<std::string, std::string>>(row));
+                    }
                 }
                 edi::set_propagation_vectors(self, std::move(parsed));
             },

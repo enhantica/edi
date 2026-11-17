@@ -43,10 +43,9 @@ formatting & static analysis (Python + C++)". The owner asked for the same check
    `performance-no-int-to-ptr`, since its Qt table models key rows by small integers. crysta's style groups (`readability`, `modernize`, `misc`, `cppcoreguidelines`) follow in a sweep of their own:
    measured over edi's code they hold about 14 000 of the curated set's 15 200 findings, most of them braces around
    one statement, implicit conversions to bool and several declarations on one line. It reads the compile commands of the app's
-   build tree, and the core's tree for the Python bindings. The bindings' own `lib/src/.clang-tidy` turns off two
-   checks whose findings fall inside nanobind's headers, where no `NOLINT` reaches: `bugprone-exception-escape` on
-   nanobind's `noexcept` move wrapper for model classes whose moves copy their collections, and the analyzer's
-   `core.NullDereference` on nanobind's list caster.
+   build tree, and the core's tree for the Python bindings. The bindings include nanobind's and Python's headers as
+   system headers, like Qt's and crysta's, so a finding inside them (nanobind's `noexcept` move wrapper, its list
+   caster) is not reported, and every check still runs on the bindings' own code.
 4. **cppcheck** (`pixi run -e cpp-lint cpp-cppcheck`, `tools/ci/cpp-cppcheck.sh`) checks the same sources for warning,
    performance and portability findings; any finding is an error. It reads the same compile commands as clang-tidy, so
    it sees Qt's and crysta's headers and the build's macros: without them it took Qt's smart pointers for integers and
