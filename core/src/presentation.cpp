@@ -1049,7 +1049,13 @@ PatternPresentation present_pattern(const PatternSource& given, const PatternVie
         for (const PatternSource::Component& component : source.components) {
             const std::vector<double>* net = column_for(component.net);
             // A single crystal has no background: its parts stand on zero, or on another part.
-            const std::vector<double>* stands_on = component.base ? column_for(component.base) : bkg;
+            // A part stacks only on a part that is shown: with the nuclear part hidden, the magnetic bars rise from zero.
+            const bool base_hidden =
+                component.base && std::find(view.hidden.begin(), view.hidden.end(), "structure/" + component.structure_id) !=
+                                      view.hidden.end();
+            const std::vector<double>* stands_on = component.base && !base_hidden ? column_for(component.base)
+                                                   : component.base                ? nullptr
+                                                                                   : bkg;
             if (!view.structure_curves || net == nullptr || (stands_on != nullptr && stands_on->size() != net->size())) {
                 continue;
             }

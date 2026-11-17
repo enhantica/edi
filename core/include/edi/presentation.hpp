@@ -162,6 +162,8 @@ struct PatternView {
     // Series (by id) still presented whose points do not count in the main pane's range: curves hidden from the
     // chart when the range is to fit the visible ones (edi ADR-0017 §15).
     std::vector<std::string> uncounted;
+    // Series (by id) hidden from the chart: a part that stands on another stands on zero while that one is hidden.
+    std::vector<std::string> hidden;
     // Every curve with the background subtracted (edi ADR-0017 §15): the measured and calculated values less the
     // calculated background at each point, the background drawn at zero and each structure's curve rising from zero;
     // the residual is unchanged. A pattern with no current background column is drawn as it is.
