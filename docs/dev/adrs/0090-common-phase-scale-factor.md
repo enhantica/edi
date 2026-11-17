@@ -13,7 +13,7 @@ factor per experiment. For a powder it matches peak heights, k = (max y_obs − 
 baseline the 10th percentile of the measured points and y_calc all phases together: when data are first loaded the
 background, cell, zero shift or wavelength is usually still off, and a least-squares factor then left the calculation
 far below the data (the owner, 2026-11-17). For a single crystal it is the weighted least-squares factor over the
-merged reflections the fit uses (ADR-0091). crysta also returns how well the calculated and measured powder peaks
+merged reflections the fit uses (ADR-0092). crysta also returns how well the calculated and measured powder peaks
 overlap. edi decides when to apply it.
 
 ## Decision

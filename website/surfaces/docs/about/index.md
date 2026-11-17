@@ -4,9 +4,28 @@ icon: fa5/info-circle
 
 # About
 
-EasyDiffraction models and fits diffraction data. Build a structural model, compare its calculated pattern with your measurements, fit the parameters you choose and save everything as one project.
+Hi, I'm Andrew Sazonov. I work at the [European Spallation Source (ESS)](https://ess.eu), in the [Data Management & Scientific Computing centre (DMSC)](https://ess.eu/data-management-scientific-computing). I started EasyDiffraction and continue to lead its development, helped by code, ideas and feedback from many other people involved in the project.
 
-Use it in your browser, on your desktop, from Python or from the command line. All of them open the same projects.
+Before joining ESS, I worked as an instrument scientist and as an experimental user, analysing a lot of diffraction data. During my PhD, I found out how hard it could be to get started with diffraction data analysis software. Many tools were powerful, but the learning curve was often frustratingly steep. That experience shaped the main idea behind EasyDiffraction from the very beginning: make diffraction analysis approachable, intuitive and easy to use.
+
+It began in 2019 as my simple mock-up of a modern, easy-to-use graphical interface. Since then it has grown into a full application, with many improvements to both its interface and its functionality. You can explore what it can do today on the [Features](../user-guide/features.md) page.
+
+User experience has always been at the centre of the project. One encouraging milestone was very positive feedback on an intermediate interface design from the company [Design Psychology](https://www.designpsykologi.dk), which confirmed we were moving in the right direction.
+
+EasyDiffraction has also benefited from contributors, testers and users who shared ideas, reported problems, suggested improvements, or contributed code and documentation. Their support has helped to shape the project.
+
+You are very welcome to take part too: use EasyDiffraction, share feedback, suggest features, report problems, contribute to the code or documentation, or simply tell us about your experience. If you are interested, write to me directly (<span class="ed-email" data-label="show e-mail" data-mail="dWUuc3NlQHZvbm96YXMud2VyZG5h"><noscript>andrew.sazonov [at] ess [dot] eu</noscript></span>), or use the [feedback form](community.md), with your name or anonymously. I read every message and do my best to reply.
+
+I'm also happy to discuss your data analysis needs or ideas for collaboration. If you are unsure whether EasyDiffraction fits your experiment, tell me what kind of data you work with. Another great way to help is the [user survey](survey.md). It is anonymous, takes about 10-15 minutes, and helps us understand what you need and what matters most to you.
+
+<div class="ed-signature">
+<img src="../assets/about/andrew-sazonov.jpg" alt="Andrew Sazonov" width="72" height="72">
+<div class="ed-signature-text">
+<strong>Andrew Sazonov</strong>
+<span class="ed-signature-place">European Spallation Source · DMSC</span>
+<span class="ed-signature-links"><span class="ed-email" data-mail="dWUuc3NlQHZvbm96YXMud2VyZG5h"><noscript>andrew.sazonov [at] ess [dot] eu</noscript></span> · <a href="community/">Feedback form</a></span>
+</div>
+</div>
 
 ## Where to start
 
@@ -17,7 +36,7 @@ Use it in your browser, on your desktop, from Python or from the command line. A
 ## More about the project
 
 - [Get in touch](community.md) with a question, a problem or an idea.
-- [Survey](survey.md): tell us how you work and what you need.
+- [Survey](survey.md): tell us how you work and what you need, anonymously.
 - [Licence](licence.md): EasyDiffraction is open source.
 - [How to cite](citation.md) EasyDiffraction and keep your analysis repeatable.
 - [What's new](../changelog.md): the releases.

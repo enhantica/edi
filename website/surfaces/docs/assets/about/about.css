@@ -1,0 +1,8 @@
+/* SPDX-License-Identifier: BSD-3-Clause */
+/* The About page's signature card: the photo in a circle beside the name, place and contact links. */
+.md-typeset .ed-signature { display: flex; align-items: center; gap: 1rem; margin: 1.5rem 0; padding-top: 1.5rem; }
+.md-typeset .ed-signature img { width: 72px; height: 72px; border: 0; padding: 0; background: none; border-radius: 50%; object-fit: cover; flex: none; }
+.md-typeset .ed-signature-text { display: flex; flex-direction: column; gap: 0.1rem; }
+.md-typeset .ed-signature-text strong { color: var(--md-default-fg-color); }
+.md-typeset .ed-signature-place { color: var(--md-default-fg-color--light); font-size: 0.9em; }
+.md-typeset .ed-signature-links { font-size: 0.9em; }

@@ -31,6 +31,7 @@ nav:
       - dev/public-site.md
       - dev/installers.md
       - dev/assistant-protocol.md
+      - dev/assistant-prompt-trials.md
       - Adrs:
           - dev/adrs/index.md
           - "ADR-0001 Product scope": dev/adrs/0001-product-scope-and-relation-to-crysta.md
@@ -122,7 +123,8 @@ nav:
           - "ADR-0086 Powder calculation range": dev/adrs/0086-powder-calculation-range-is-its-grid.md
           - "ADR-0089 C++ static checks": dev/adrs/0089-cpp-warnings-and-static-checks.md
           - "ADR-0090 Common phase-scale factor": dev/adrs/0090-common-phase-scale-factor.md
-          - "ADR-0091 Single-crystal reflection admission": dev/adrs/0091-single-crystal-reflection-admission.md
+          - "ADR-0091 Code signing": dev/adrs/0091-code-signing.md
+          - "ADR-0092 Single-crystal reflection admission": dev/adrs/0092-single-crystal-reflection-admission.md
           - dev/adrs/template.md
       - Design:
           - dev/design/api-types.md

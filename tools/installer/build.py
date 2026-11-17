@@ -25,6 +25,8 @@ from package import (
     relocate_linux,
     run,
     sha256,
+    sign_windows,
+    windows_signing,
 )
 
 __all__ = ('deployed_package_names',)
@@ -219,8 +221,22 @@ def check_macos_load_paths(bundle: Path) -> None:
         )
 
 
+def macos_signing_args() -> list[str]:
+    """Ad hoc by default; the Developer ID with a timestamp when signing is on (ADR-0091).
+
+    The app has no hardened runtime: only the downloaded installer is notarised.
+    """
+    if os.environ.get('EDI_CODESIGN') != '1':
+        return ['--sign', '-']
+    identity = os.environ.get('EDI_CODESIGN_MAC_IDENTITY', '')
+    if not identity:
+        raise RuntimeError('Signing is on but the macOS signing identity is not set')
+    return ['--timestamp', '--sign', identity]
+
+
 def sign_macos_app(bundle: Path) -> None:
     """Sign the application bundle. The upstream runtime is staged outside it."""
+    signing = macos_signing_args()
     signatures = {
         b'\xfe\xed\xfa\xce',
         b'\xfe\xed\xfa\xcf',
@@ -238,15 +254,15 @@ def sign_macos_app(bundle: Path) -> None:
         with path.open('rb') as stream:
             if stream.read(4) not in signatures:
                 continue
-        run(['codesign', '--force', '--sign', '-', path])
+        run(['codesign', '--force', *signing, path])
     for path in paths:
         if (
             path.is_dir()
             and not path.is_symlink()
             and path.suffix in {'.framework', '.app', '.bundle', '.xpc'}
         ):
-            run(['codesign', '--force', '--sign', '-', path])
-    run(['codesign', '--force', '--sign', '-', bundle])
+            run(['codesign', '--force', *signing, path])
+    run(['codesign', '--force', *signing, bundle])
     run(['codesign', '--verify', '--deep', '--strict', bundle])
 
 
@@ -440,6 +456,8 @@ def build(
         check_macos_load_paths(stage / 'EasyDiffraction.app')
         sign_macos_app(stage / 'EasyDiffraction.app')
     verify_assistant_payload(stage, app / 'app/assistant-runtime-installed.json')
+    if windows_signing():
+        sign_windows(stage / 'bin/EasyDiffraction.exe')
     (stage / 'bundle-audit.json').write_text(
         json.dumps(audit_bundle(stage), indent=2) + '\n', encoding='utf-8'
     )

@@ -303,10 +303,13 @@ def test_each_prompt_has_fresh_committed_authoring_trial_evidence(
         else:
             assert_published_trial(ROOT, current_evidence, row, interface, digest)
     soup = BeautifulSoup(page.read_text(), 'html.parser')
-    assert any(
-        unquote(urlparse(link['href']).path).rstrip('/').endswith('/' + summary)
-        for link in soup.select('main a[href]')
-    ), 'Gate 3/5: both authoring routes cite their actual public trial summary'
+    prose = soup.select_one('main').get_text(' ', strip=True)
+    assert re.search(r'last checked.*2026.*another assistant.*different steps', prose), (
+        'Gate 3/5: both tutorials carry the dated plain sentence about assistant variation'
+    )
+    assert not any(
+        summary in unquote(urlparse(link['href']).path) for link in soup.select('main a[href]')
+    ), 'Gate 3/5: user tutorials must not link internal prompt-trial records'
 
 
 def test_all_assistant_interfaces_offer_the_same_two_input_files(
