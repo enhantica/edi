@@ -31,6 +31,7 @@ from tests.fixtures.fitting_correctness.contracts import (
 from tests.fixtures.fitting_correctness.contracts import (
     summary as reference_summary,
 )
+from tests.fixtures.native_process import native_executable
 from tests.fixtures.single_crystal_edges.observe import observe
 
 ENGINE = 'edi'
@@ -57,6 +58,8 @@ def native():
     else:
         directory = Path(importlib.import_module(ENGINE)._edi.__file__).resolve().parents[2]
         executable = directory / 'single_crystal_edges/single_crystal_edge_probe'
+    if not selected:
+        executable = native_executable(executable)
     assert executable.is_file(), (
         'The admission gates require the prepared actual native-model observer'
     )

@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pytest
 
+from tests.fixtures.native_process import native_executable
 from tests.fixtures.single_crystal_edges.inputs import (
     COEFFICIENTS,
     HKLS,
@@ -66,6 +67,7 @@ def native():
         / ('single_crystal_edges' if BACKEND == 'edi' else 'tests/fixtures/single_crystal_edges')
         / 'single_crystal_edge_probe'
     )
+    executable = native_executable(executable)
     assert executable.is_file(), (
         'The public-model observer must be prepared by the normal native build '
         'before acceptance tests'
