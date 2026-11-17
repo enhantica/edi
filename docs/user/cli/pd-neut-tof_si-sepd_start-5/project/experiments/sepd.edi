@@ -20,15 +20,15 @@ _calculator.type crysta
 
 _peak.rise_alpha_0 0.
 _peak.rise_alpha_1 0.5971
-_peak.decay_beta_0 0.0408(1)
-_peak.decay_beta_1 0.0123(1)
+_peak.decay_beta_0 0.0408()
+_peak.decay_beta_1 0.0123()
 _peak.broad_lorentz_gamma_0 0.
-_peak.broad_lorentz_gamma_1 2.5489(1)
+_peak.broad_lorentz_gamma_1 2.5489()
 _peak.broad_lorentz_gamma_2 0.
 _peak.broad_lorentz_size 0.
 _peak.broad_lorentz_strain 0.
-_peak.broad_gauss_sigma_0 3.0148(1)
-_peak.broad_gauss_sigma_1 33.3451(1)
+_peak.broad_gauss_sigma_0 3.0148()
+_peak.broad_gauss_sigma_1 33.3451()
 _peak.broad_gauss_sigma_2 0.
 _peak.broad_gauss_size 0.
 _peak.broad_gauss_strain 0.
@@ -36,7 +36,7 @@ _peak.cutoff_fwhm 8.2
 _peak.type tof-jorgensen-von-dreele
 
 _instrument.setup_twotheta_bank 144.845
-_instrument.calib_d_to_tof_offset -10.0(1)
+_instrument.calib_d_to_tof_offset -10.0()
 _instrument.calib_d_to_tof_linear 7476.91
 _instrument.calib_d_to_tof_quadratic -1.54
 _instrument.calib_d_to_tof_reciprocal 0.
@@ -46,7 +46,7 @@ _absorption.type none
 loop_
 _linked_structure.structure_id
 _linked_structure.scale
-si 600.0(1)
+si 600.0()
 
 _background.type line-segment
 
@@ -54,20 +54,20 @@ loop_
 _background.id
 _background.position
 _background.intensity
-1 2000. 0.0(1)
-2 9035. 0.0(1)
-3 9335. 0.0(1)
-4 11915. 0.0(1)
-5 12315. 0.0(1)
-6 12695. 0.0(1)
-7 13745. 0.0(1)
-8 14410. 0.0(1)
-9 14875. 0.0(1)
-10 15660. 0.0(1)
-11 23075. 0.0(1)
-12 23515. 0.0(1)
-13 28100. 0.0(1)
-14 29995. 0.0(1)
+1 2000. 0.0()
+2 9035. 0.0()
+3 9335. 0.0()
+4 11915. 0.0()
+5 12315. 0.0()
+6 12695. 0.0()
+7 13745. 0.0()
+8 14410. 0.0()
+9 14875. 0.0()
+10 15660. 0.0()
+11 23075. 0.0()
+12 23515. 0.0()
+13 28100. 0.0()
+14 29995. 0.0()
 
 loop_
 _data.time_of_flight

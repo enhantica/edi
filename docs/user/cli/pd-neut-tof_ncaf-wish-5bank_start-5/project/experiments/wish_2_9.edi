@@ -18,17 +18,17 @@ _diffrn.ambient_electric_field ?
 
 _calculator.type crysta
 
-_peak.rise_alpha_0 0.040554(10)
-_peak.rise_alpha_1 0.023869(10)
-_peak.decay_beta_0 0.005322(10)
-_peak.decay_beta_1 0.083299(10)
+_peak.rise_alpha_0 0.040554()
+_peak.rise_alpha_1 0.023869()
+_peak.decay_beta_0 0.005322()
+_peak.decay_beta_1 0.083299()
 _peak.broad_gauss_sigma_0 0
-_peak.broad_gauss_sigma_1 69.8201(10)
-_peak.broad_gauss_sigma_2 23.0513(10)
+_peak.broad_gauss_sigma_1 69.8201()
+_peak.broad_gauss_sigma_2 23.0513()
 _peak.broad_gauss_size 0.
 _peak.broad_gauss_strain 0.
 _peak.broad_lorentz_gamma_0 0
-_peak.broad_lorentz_gamma_1 1.6846(10)
+_peak.broad_lorentz_gamma_1 1.6846()
 _peak.broad_lorentz_gamma_2 0
 _peak.broad_lorentz_size 0.
 _peak.broad_lorentz_strain 0.
@@ -36,13 +36,13 @@ _peak.cutoff_fwhm 8
 _peak.type tof-jorgensen-von-dreele
 
 _instrument.setup_twotheta_bank 58.33
-_instrument.calib_d_to_tof_offset 0(10)
-_instrument.calib_d_to_tof_linear 10389.9(10)
+_instrument.calib_d_to_tof_offset 0()
+_instrument.calib_d_to_tof_linear 10389.9()
 _instrument.calib_d_to_tof_quadratic 1.85233
 _instrument.calib_d_to_tof_reciprocal 0.
 
 _absorption.type cylinder
-_absorption.abscor1 0.0(10)
+_absorption.abscor1 0.0()
 
 loop_
 _excluded_region.id
@@ -54,7 +54,7 @@ _excluded_region.end
 loop_
 _linked_structure.structure_id
 _linked_structure.scale
-ncaf 36.15453(10)
+ncaf 36.15453()
 
 _background.type line-segment
 
@@ -62,28 +62,28 @@ loop_
 _background.id
 _background.position
 _background.intensity
-1 7246.0732 0(10)
-2 9265.5195 0(10)
-3 11097.9795 0(10)
-4 13080.0303 0(10)
-5 15473.4473 0(10)
-6 16931.9355 0(10)
-7 18614.8086 0(10)
-8 20596.8594 0(10)
-9 22504.1133 0(10)
-10 26169.0332 0(10)
-11 28113.6875 0(10)
-12 30320.1172 0(10)
-13 34770.3828 0(10)
-14 40155.5703 0(10)
-15 48341.8086 0(10)
-16 58540.0156 0(10)
-17 69139.8672 0(10)
-18 80953.6328 0(10)
-19 94214.6562 0(10)
-20 107677.6328 0(10)
-21 120889.3047 0(10)
-22 132602.0938 0(10)
+1 7246.0732 0()
+2 9265.5195 0()
+3 11097.9795 0()
+4 13080.0303 0()
+5 15473.4473 0()
+6 16931.9355 0()
+7 18614.8086 0()
+8 20596.8594 0()
+9 22504.1133 0()
+10 26169.0332 0()
+11 28113.6875 0()
+12 30320.1172 0()
+13 34770.3828 0()
+14 40155.5703 0()
+15 48341.8086 0()
+16 58540.0156 0()
+17 69139.8672 0()
+18 80953.6328 0()
+19 94214.6562 0()
+20 107677.6328 0()
+21 120889.3047 0()
+22 132602.0938 0()
 
 loop_
 _data.time_of_flight
