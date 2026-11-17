@@ -18,6 +18,7 @@
 #include <cmath>
 #include <deque>
 #include <map>
+#include <unordered_map>
 #include <optional>
 #include <ranges>
 #include <regex>
@@ -2863,37 +2864,91 @@ std::map<std::string, std::map<std::string, double>> point_experiment_cells(cons
     if (!project.sequential_fit.joint() || !scan_state_present(path, "analysis/results_experiments.csv")) {
         return cells_of;
     }
-    std::ifstream input(path, std::ios::binary);
-    std::string line;
-    if (!std::getline(input, line)) {
+    // Where each point's rows start, kept per file and extended as the file grows (it is only appended to while a fit
+    // writes), so a point's rows are read by seeking, not by reading the file again (edi ADR-0089 point 7).
+    struct LineIndex {
+        std::filesystem::path path;
+        std::uintmax_t scanned = 0;
+        std::vector<std::string> header;
+        std::unordered_map<std::string, std::vector<std::int64_t>> starts;
+    };
+    static std::mutex mutex;
+    static LineIndex kept;
+    std::error_code error;
+    const std::uintmax_t size = std::filesystem::file_size(path, error);
+    if (error) {
         return cells_of;
     }
-    const std::vector<std::string> header = split_scan_row(line);
-    if (header.size() < 2 || header[0] != "point" || header[1] != "experiment") {
-        return cells_of;
-    }
-    // The point's rows refuse rather than drop when damaged (index_scan_results checked the file as it was read).
-    while (std::getline(input, line) && !input.eof()) {
-        const std::vector<std::string> cells = split_scan_row(line);
-        if (cells.empty() || cells[0] != point) {
-            continue;
-        }
-        if (cells.size() != header.size()) {
-            throw std::invalid_argument("analysis/results_experiments.csv: a row of point " + point + " is malformed");
-        }
-        if (cells_of.contains(cells[1])) {
-            throw std::invalid_argument("analysis/results_experiments.csv: point " + point + " repeats experiment " +
-                                        cells[1]);
-        }
-        std::map<std::string, double>& row = cells_of[cells[1]];
-        for (std::size_t c = 2; c < cells.size(); ++c) {
-            double value = 0.0;
-            if (parse_scan_number(cells[c], value)) {
-                row[header[c]] = value;
+    // A file replaced by other rows of the same or a larger size leaves stale starts: a row that does not belong to
+    // the point has the index made again, once, before it refuses.
+    for (int attempt = 0; attempt < 2; ++attempt) {
+        std::vector<std::string> header;
+        std::vector<std::int64_t> starts;
+        {
+            const std::scoped_lock lock(mutex);
+            if (kept.path != path || size < kept.scanned || attempt > 0) {
+                kept = LineIndex{path, 0, {}, {}};
+            }
+            std::ifstream input(path, std::ios::binary);
+            std::string line;
+            if (kept.scanned == 0) {
+                if (!std::getline(input, line) || input.eof()) {
+                    return cells_of;
+                }
+                kept.header = split_scan_row(line);
+                if (kept.header.size() < 2 || kept.header[0] != "point" || kept.header[1] != "experiment") {
+                    kept = LineIndex{};
+                    return cells_of;
+                }
+                kept.scanned = static_cast<std::uintmax_t>(input.tellg());
+            }
+            input.seekg(static_cast<std::streamoff>(kept.scanned));
+            while (true) {
+                const std::int64_t start = input.tellg();
+                if (!std::getline(input, line) || input.eof()) {
+                    break;  // a last line without its break is still being written
+                }
+                kept.starts[line.substr(0, line.find(','))].push_back(start);
+                kept.scanned = static_cast<std::uintmax_t>(input.tellg());
+            }
+            header = kept.header;
+            if (const auto found = kept.starts.find(point); found != kept.starts.end()) {
+                starts = found->second;
             }
         }
+        cells_of.clear();
+        bool stale = false;
+        std::ifstream input(path, std::ios::binary);
+        std::string line;
+        for (const std::int64_t start : starts) {
+            const bool read = static_cast<bool>(input.seekg(start)) && static_cast<bool>(std::getline(input, line));
+            const std::vector<std::string> cells = read ? split_scan_row(line) : std::vector<std::string>{};
+            if (cells.empty() || cells[0] != point) {
+                stale = true;
+                break;
+            }
+            // The point's rows refuse rather than drop when damaged (index_scan_results checked the file as read).
+            if (cells.size() != header.size()) {
+                throw std::invalid_argument("analysis/results_experiments.csv: a row of point " + point + " is malformed");
+            }
+            if (cells_of.contains(cells[1])) {
+                throw std::invalid_argument("analysis/results_experiments.csv: point " + point + " repeats experiment " +
+                                            cells[1]);
+            }
+            std::map<std::string, double>& row = cells_of[cells[1]];
+            for (std::size_t c = 2; c < cells.size(); ++c) {
+                double value = 0.0;
+                if (parse_scan_number(cells[c], value)) {
+                    row[header[c]] = value;
+                }
+            }
+            input.clear();
+        }
+        if (!stale) {
+            return cells_of;
+        }
     }
-    return cells_of;
+    throw std::invalid_argument("analysis/results_experiments.csv: the rows of point " + point + " could not be found again");
 }
 
 // A value the point's row holds for the experiment, else the model's.
@@ -3118,6 +3173,48 @@ void evolution_experiment_series(const Project& project, const ScanPlaces& place
         }
         if (std::isfinite(point.x) && std::isfinite(point.y)) {
             visit(experiment->second, point);
+        }
+    }
+}
+
+void evolution_experiment_point(const Project& project, const ScanPlaces& places, const ScanResultIndex& index,
+                                const std::string& parameter, bool by_value, const std::string& point_key,
+                                const std::function<void(std::size_t, const EvolutionPoint&)>& visit) {
+    if (!project.sequential_fit.joint() || !index.error.empty()) {
+        return;
+    }
+    const auto place = places.find(point_key);
+    if (place == places.end() || place->second >= index.rows.size()) {
+        return;
+    }
+    // As evolution_experiment_series takes it: a point done and not refused, at its place or extracted value.
+    const ScanResultIndex::Row& row = index.rows[place->second];
+    if (row.offset < 0 || std::isnan(row.reduced_chi_square)) {
+        return;
+    }
+    EvolutionPoint base;
+    base.dataset = place->second;
+    base.x = static_cast<double>(place->second + 1);
+    const bool extracted = by_value && !project.sequential_fit.extract.empty() && !index.extract.empty();
+    if (extracted && (row.extracted.empty() || !parse_scan_number(row.extracted.front(), base.x))) {
+        return;
+    }
+    const auto cells_of = point_experiment_cells(project, point_key);
+    for (std::size_t e = 0; e < project.experiments.size(); ++e) {
+        const auto found = cells_of.find(datablock_key(project.experiments[e]->name, "experiment"));
+        if (found == cells_of.end()) {
+            continue;
+        }
+        const auto value = found->second.find(parameter);
+        if (value == found->second.end()) {
+            continue;  // an experiment without the parameter has an empty cell
+        }
+        EvolutionPoint point = base;
+        point.y = value->second;
+        const auto su = found->second.find(parameter + ".uncertainty");
+        point.su = su != found->second.end() ? su->second : std::numeric_limits<double>::quiet_NaN();
+        if (std::isfinite(point.x) && std::isfinite(point.y)) {
+            visit(e, point);
         }
     }
 }

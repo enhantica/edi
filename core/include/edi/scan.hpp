@@ -253,6 +253,11 @@ std::vector<std::string> evolution_experiment_parameters(const Project& project)
 void evolution_experiment_series(const Project& project, const ScanPlaces& places, const ScanResultIndex& index,
                                  const std::string& parameter, bool by_value,
                                  const std::function<void(std::size_t, const EvolutionPoint&)>& visit);
+/// The points evolution_experiment_series visits for one point (`point_key`), read through the point's own rows: a
+/// fit adds them as each point's row arrives, without reading the file again.
+void evolution_experiment_point(const Project& project, const ScanPlaces& places, const ScanResultIndex& index,
+                                const std::string& parameter, bool by_value, const std::string& point_key,
+                                const std::function<void(std::size_t, const EvolutionPoint&)>& visit);
 
 /// The template dataset (`_sequential_fit.template_file`): `file` must be one of the scan's files as its listing
 /// names them. Throws, naming the file, for anything else (crysta::check_sequential_template_file); reads no file.

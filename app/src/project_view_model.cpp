@@ -4339,11 +4339,12 @@ void ProjectViewModel::viewDatasetNow(int index, bool reread) {
 void ProjectViewModel::startViewRead() {
     const std::uint64_t request = view_request_;
     const int index = view_wanted_;
-    // The dataset's row is one line at its offset, checked again as it is read; its file is read off the GUI
-    // thread.
+    // The dataset's row is one line at its offset, checked again as it is read; its file, and a series point's
+    // experiment rows, are read off the GUI thread (edi ADR-0089 point 7).
     std::vector<edi::Edit::ScanValue> values;
+    const bool overlaid = scan_session_->datasets().joint();
     try {
-        values = pointValues(index);
+        values = datasetValues(scan_session_->row(*project_, index));
     } catch (const std::exception& refusal) {
         view_applied_ = request;
         const QString error = QString::fromUtf8(refusal.what());
@@ -4371,6 +4372,7 @@ void ProjectViewModel::startViewRead() {
         DatasetView view;
         view.values = std::move(values);
         try {
+            overlaySeriesPoint(view.values, *project_, datasets, index);
             readDataset(view, datasets, index, modes);
         } catch (const std::exception& refusal) {
             view.error = QString::fromUtf8(refusal.what());
@@ -4381,11 +4383,16 @@ void ProjectViewModel::startViewRead() {
 #endif
     view_reading_ = true;
     const QPointer<ProjectViewModel> self(this);
+    // What a series point's values read beside its row: the project's paths, experiments and parameters.
+    std::shared_ptr<const edi::Project> source = overlaid ? std::make_shared<const edi::Project>(*project_) : nullptr;
     run_in_background([self, request, index, datasets, modes, d_spacing, values = std::move(values),
-                       shown = std::move(shown)]() mutable {
+                       shown = std::move(shown), source = std::move(source)]() mutable {
         DatasetView view;
         view.values = std::move(values);
         try {
+            if (source) {
+                overlaySeriesPoint(view.values, *source, datasets, index);
+            }
             readDataset(view, datasets, index, modes);
             if (shown) {
                 if (view.data) {

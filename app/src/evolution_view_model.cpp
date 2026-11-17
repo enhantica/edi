@@ -237,11 +237,34 @@ void EvolutionViewModel::addRow(int dataset, const std::vector<std::string>& cel
     // A fresh run's first row brings the header, and with it the axes and any recorded parameter not listed yet: the
     // points are read once then; every later row adds its own point.
     // The template's own point, shown before the scan had rows, gives way to the scan's points.
-    // Per experiment the row's points are in results_experiments.csv, which the point's row follows: read them all.
-    if (!fitted_ || current_ < 0 || template_point_ || per_experiment_) {
+    if (!fitted_ || current_ < 0 || template_point_) {
         syncNames();
         syncFitted();
         rebuild();
+        return;
+    }
+    // Per experiment the row's points are in results_experiments.csv, written before the point's row: that point's
+    // rows alone are read (edi ADR-0089 point 7), as the rebuild would read them.
+    if (per_experiment_) {
+        const auto& files = session_->datasets().files;
+        if (project_ == nullptr || dataset < 0 || dataset >= static_cast<int>(files.size())) {
+            return;
+        }
+        const bool by_value = x_mode_ == 0 && !extracted_title_.isEmpty();
+        bool added = false;
+        edi::evolution_experiment_point(
+            *project_, session_->places(), session_->index(), names_[current_].toStdString(), by_value,
+            files[static_cast<std::size_t>(dataset)], [&](std::size_t experiment, const edi::EvolutionPoint& point) {
+                if (current_experiment_ >= 0 && experiment != static_cast<std::size_t>(current_experiment_)) {
+                    return;
+                }
+                points_.push_back({point.x, point.y, point.su, static_cast<int>(point.dataset),
+                                   allBanks() ? static_cast<int>(experiment) : -1});
+                added = true;
+            });
+        if (added) {
+            finishRow();
+        }
         return;
     }
     const std::string name = names_[current_].toStdString();
