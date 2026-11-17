@@ -32,8 +32,8 @@ SideBarGroup {
     property int selectedRow: -1
     property real tableViewportHeight: 0
     // The free column fits its title and the arrow after it, with a table column's padding (the owner, 2026-10-11). Its
-    // title and check boxes stand at the table's right edge, which leaves room after Max's numbers, so no extra gap is
-    // added before it (the owner, 2026-11-17).
+    // title and check boxes stand at the table's right edge, and the gap before it is the table's spacing between any two
+    // columns, as between Change and Max (the owner, 2026-11-17).
     readonly property real freeGap: 0.25 * EaStyle.Sizes.fontPixelSize
     // The arrow ends where the right-aligned check boxes do: a check box's own padding and the table's spacing before
     // the column's edge (DataTable.padForFiller).
@@ -41,7 +41,7 @@ SideBarGroup {
     // The free title's word and arrow share one colour, each with the labels' own colour transition.
     property bool freeTitleHovered: false
     readonly property color freeTitleColor: !measured ? EaStyle.Colors.themeForegroundMinor : freeTitleHovered ? EaStyle.Colors.themeAccent : EaStyle.Colors.themeForeground
-    readonly property real freeColumnWidth: Math.ceil(freeTitleText.advanceWidth + freeGap + freeArrowText.advanceWidth + freeInset) + AppSizes.fieldSpacing * 2
+    readonly property real freeColumnWidth: Math.ceil(freeTitleText.advanceWidth + freeGap + freeArrowText.advanceWidth + freeInset)
     // "Same for all" (edi ADR-0087 point 3): a switch on each experiment parameter tying it in every other experiment of
     // its set to the template's, through alias and constraint rows. Not shown for now: the parametric fit will offer it
     // through the Free box (ADR-0087, amended 2026-11-17).
