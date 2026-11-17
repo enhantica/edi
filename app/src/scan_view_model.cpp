@@ -633,9 +633,18 @@ void ScanViewModel::readSeriesBanks(const edi::Project* project) {
             d_column.push_back(d);
             b_column.push_back(b);
         }
+        // An end past this experiment's data runs on to the end of d (as good as 0 or infinity): another point's data reach a little
+        // further than the template's, and their ends are excluded too.
+        const auto end_of = [&](double x) {
+            if (const double d = d_of(xs, ds, x, false); std::isfinite(d)) return d;
+            const double clamped = d_of(xs, ds, x, true);
+            if (!std::isfinite(clamped) || ds.empty()) return clamped;
+            // Finite, so Q and sinθ/λ of either end are numbers too.
+            return clamped <= std::min(ds.front(), ds.back()) ? 1e-12 : 1e12;
+        };
         std::vector<std::pair<double, double>> excluded;
         for (const auto& [a, b] : excluded_of(*experiment)) {
-            const double da = d_of(xs, ds, a, true), db = d_of(xs, ds, b, true);
+            const double da = end_of(a), db = end_of(b);
             if (std::isfinite(da) && std::isfinite(db)) excluded.emplace_back(std::min(da, db), std::max(da, db));
         }
         bank_d_.push_back(std::move(d_column));
@@ -711,8 +720,9 @@ void ScanViewModel::setXAxis(const QString& token) {
 void ScanViewModel::setIncludedOnly(bool on) {
     if (on != included_only_) {
         included_only_ = on;
-        emit includedOnlyChanged();
+        // The range first: the chart starts over on it when told (onIncludedOnlyChanged), so it must be the new one.
         placeRange();
+        emit includedOnlyChanged();
         ++revision_;
         emit revisionChanged();
     }
@@ -791,10 +801,16 @@ void ScanViewModel::placePattern(Pattern& pattern) {
                 ds.push_back(pattern.d[i]);
             }
         }
-        for (const auto& [a, b] : pattern.excluded) {
-            const double da = d_of(xs, ds, a, true), db = d_of(xs, ds, b, true);
-            if (std::isfinite(da) && std::isfinite(db)) {
-                pattern.excluded_shown.emplace_back(std::min(da, db), std::max(da, db));
+        // A series' row is on d already and its bank's regions with it: taken as they are. Converting them through the
+        // row's own x would clamp a region past the row's end to nothing.
+        if (series_) {
+            pattern.excluded_shown = pattern.excluded;
+        } else {
+            for (const auto& [a, b] : pattern.excluded) {
+                const double da = d_of(xs, ds, a, true), db = d_of(xs, ds, b, true);
+                if (std::isfinite(da) && std::isfinite(db)) {
+                    pattern.excluded_shown.emplace_back(std::min(da, db), std::max(da, db));
+                }
             }
         }
         onAxis();
