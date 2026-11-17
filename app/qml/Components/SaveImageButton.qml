@@ -54,7 +54,9 @@ Row {
             } else {
                 dialog.grabbed = result;
                 dialog.cut = cut;
-                dialog.currentFolder = ApplicationInfo.imageFolder(Preferences.imageFolder, Session.project ? Session.project.path : "", Session.project !== null && !Session.needsSaveAs);
+                // The folder image export last chose (DialogFolders; an earlier version kept it in Preferences), else the
+                // project's reports folder or Pictures.
+                dialog.currentFolder = ApplicationInfo.imageFolder(String(DialogFolders.store.value("saveImage", Preferences.imageFolder)), Session.project ? Session.project.path : "", Session.project !== null && !Session.needsSaveAs);
                 dialog.currentFile = dialog.currentFolder + "/" + save.fileName + ".png";
                 dialog.open();
             }
@@ -80,7 +82,7 @@ Row {
         nameFilters: [qsTr("PNG images (*.png)")]
         onAccepted: {
             ApplicationInfo.saveImage(grabbed.image, selectedFile, cut);
-            Preferences.imageFolder = ApplicationInfo.folderOf(selectedFile).toString();
+            DialogFolders.remember("saveImage", selectedFile);
             grabbed = null;
         }
         onRejected: grabbed = null

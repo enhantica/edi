@@ -988,13 +988,17 @@ EaComponents.ApplicationWindow {
             Session.setNextSaveData("");
             window.cancelAssistantSaveAs();
         }
+        // In the folder a project was last saved to, unless the assistant chose the place (the owner, 2026-11-17).
         function openAt(target) {
-            ApplicationInfo.openProjectSavePicker(target);
+            ApplicationInfo.openProjectSavePicker(window.assistantSaveIntent === "" ? DialogFolders.retarget("saveProject", target) : target);
         }
         title: saveAsChoice.copy ? qsTr("Save a copy of the project as a folder") : qsTr("Save the project as a folder")
         fileMode: FileDialog.SaveFile
         acceptLabel: qsTr("Save")
-        onAccepted: ApplicationInfo.acceptProjectSavePicker(false)
+        onAccepted: {
+            DialogFolders.remember("saveProject", selectedFile);
+            ApplicationInfo.acceptProjectSavePicker(false);
+        }
     }
 
     FileDialog {
@@ -1003,15 +1007,19 @@ EaComponents.ApplicationWindow {
             Session.setNextSaveData("");
             window.cancelAssistantSaveAs();
         }
+        // In the folder a project was last saved to, unless the assistant chose the place (the owner, 2026-11-17).
         function openAt(target) {
-            ApplicationInfo.openProjectSavePicker(target);
+            ApplicationInfo.openProjectSavePicker(window.assistantSaveIntent === "" ? DialogFolders.retarget("saveProject", target) : target);
         }
         title: saveAsChoice.copy ? qsTr("Save a copy of the project as a .zip") : qsTr("Save the project as a .zip")
         fileMode: FileDialog.SaveFile
         defaultSuffix: "zip"
         nameFilters: [qsTr("Zip archives (*.zip)")]
         acceptLabel: qsTr("Save")
-        onAccepted: ApplicationInfo.acceptProjectSavePicker(true)
+        onAccepted: {
+            DialogFolders.remember("saveProject", selectedFile);
+            ApplicationInfo.acceptProjectSavePicker(true);
+        }
     }
 
     // A folder, a project.edi or a .zip dropped on the window opens it (edi ADR-0052).

@@ -908,9 +908,14 @@ QList<edi_app::TagChip> ApplicationInfo::sourceKindTags(const QStringList& kinds
     return tags;
 }
 
-QUrl ApplicationInfo::imageFolder(const QString& stored, const QString& projectPath, bool ownPlace) const {
+QUrl ApplicationInfo::rememberedFolder(const QString& stored, const QUrl& fallback) const {
     const QUrl remembered(stored);
     if (!stored.isEmpty() && remembered.isLocalFile() && QFileInfo(remembered.toLocalFile()).isDir()) return remembered;
+    return fallback;
+}
+
+QUrl ApplicationInfo::imageFolder(const QString& stored, const QString& projectPath, bool ownPlace) const {
+    if (const QUrl remembered = rememberedFolder(stored, QUrl()); !remembered.isEmpty()) return remembered;
     if (ownPlace && !projectPath.isEmpty()) {
         const QString reports = QDir(projectPath).filePath(QStringLiteral("reports"));
         if (QDir().mkpath(reports)) return QUrl::fromLocalFile(reports);
@@ -7348,7 +7353,15 @@ void ApplicationInfo::tableRemeasure() const {
 }
 void ApplicationInfo::tableDataChanged(const QJSValue& topLeft, const QJSValue& bottomRight) const {
     const auto f = panelUsageEngine(this); if (!tableAlive(f, panelUsageContextRead(f, "ownerLife"))) return;
-    projectInvoke(f, "table", "refit"); if (!editorLife(f, panelUsageContextRead(f, "ownerLife"))) return;
+    // Changed rows fit the columns again, number columns included (their widths come from the measured rows), but a
+    // table that cannot be seen is only marked unfitted and measured once it is (tableOnScreenChanged): a refit of a
+    // series' 100 runs at each fitted run, off screen, was most of the GUI thread's stalls during a fit.
+    const auto table = panelUsageContextRead(f, "table");
+    if (panelUsageTruth(panelUsageRead(f, table, "onScreen"))) {
+        projectInvoke(f, "table", "refit"); if (!editorLife(f, panelUsageContextRead(f, "ownerLife"))) return;
+    } else {
+        assistantMemberWrite(f, table, "unfitted", QJSValue(true)); if (!editorLife(f, panelUsageContextRead(f, "ownerLife"))) return;
+    }
     bool changed = false; const auto source = assistantContextField(f, "table", "rowWidths");
     tableForIn(f, source, [&](const QJSValue& role) {
         const auto widths = textIndex(f, assistantContextField(f, "table", "rowWidths"), role);
@@ -10068,7 +10081,10 @@ QJSValue ApplicationInfo::digitRunIsDigit(const QJSValue& text) const {
     const auto f = panelUsageEngine(this); return panelUsageDeferredMemberCall(f, panelRegex(f, QStringLiteral("^[0-9]$")), "test", [&] { return QJSValueList({text}); });
 }
 QJSValue ApplicationInfo::nameBlockIcon(const QJSValue& kind) const {
-    return QJSValue(kind.strictlyEquals(QJSValue(QStringLiteral("structure"))) ? QStringLiteral("layer-group") : kind.strictlyEquals(QJSValue(QStringLiteral("experiment"))) ? QStringLiteral("microscope") : kind.strictlyEquals(QJSValue(QStringLiteral("parameter"))) ? QStringLiteral("chart-line") : QString());
+    // A series' runs and banks are experiments' datasets: the experiment's icon (the owner, 2026-11-17).
+    const bool experiment = kind.strictlyEquals(QJSValue(QStringLiteral("experiment"))) || kind.strictlyEquals(QJSValue(QStringLiteral("run")))
+                            || kind.strictlyEquals(QJSValue(QStringLiteral("bank")));
+    return QJSValue(kind.strictlyEquals(QJSValue(QStringLiteral("structure"))) ? QStringLiteral("layer-group") : experiment ? QStringLiteral("microscope") : kind.strictlyEquals(QJSValue(QStringLiteral("parameter"))) ? QStringLiteral("chart-line") : QString());
 }
 QJSValue ApplicationInfo::nameParameterIcon(const QJSValue& name) const {
     const auto f = panelUsageEngine(this);
@@ -10720,7 +10736,9 @@ QJSValue ApplicationInfo::appColour(int kind, const QJSValue& first, const QJSVa
     }
     if (kind == 3) {
         if (first.strictlyEquals(QJSValue(QStringLiteral("structure")))) return projectInvoke(f, "colors", "structure", {second});
-        if (first.strictlyEquals(QJSValue(QStringLiteral("experiment")))) return projectInvoke(f, "colors", "experiment", {second});
+        // A series' runs and banks are its experiments' datasets: coloured as a scan's datasets are (the owner, 2026-11-17).
+        if (first.strictlyEquals(QJSValue(QStringLiteral("experiment"))) || first.strictlyEquals(QJSValue(QStringLiteral("run")))
+            || first.strictlyEquals(QJSValue(QStringLiteral("bank")))) return projectInvoke(f, "colors", "experiment", {second});
         return presentationStyle(f, "themeForegroundMinor");
     }
     const auto info = panelUsageContextRead(f, "ApplicationInfo");

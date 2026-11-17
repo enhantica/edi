@@ -397,13 +397,27 @@ bool Session::openExample(const QString& exampleId) {
     return false;
 }
 
+bool Session::isTemporaryPath(const QString& path) const {
+    if (path.isEmpty()) return false;
+    const QString clean = QDir::cleanPath(QFileInfo(path).absoluteFilePath());
+    const QString temporary = QDir::cleanPath(QFileInfo(QDir::tempPath()).canonicalFilePath());
+    const QString given = QDir::cleanPath(QDir::tempPath());
+    for (const QString& root : {temporary, given}) {
+        if (!root.isEmpty() && (clean == root || clean.startsWith(root + u'/'))) return true;
+    }
+    // macOS names its temporary folder through /private; a path may come either way.
+    const QString canonical = QFileInfo(clean).canonicalFilePath();
+    return !canonical.isEmpty() && !temporary.isEmpty() && canonical.startsWith(temporary + u'/');
+}
+
 bool Session::openProjectAt(const QUrl& location, const QString& example) {
     if (!location.isLocalFile()) {
         setLastError(QStringLiteral("cannot open %1: only local projects (file: URLs) can be opened")
                          .arg(location.toString()));
         return false;
     }
-    QString source = location.toLocalFile();
+    // Without a trailing separator (a path from Recent projects may end in one): the copy target is the folder's name.
+    QString source = QDir::cleanPath(location.toLocalFile());
     const PendingOpenSource pending(*this,source);
     // edi ADR-0052: a project record opens its folder; an archive is unpacked by the core into a temporary folder and
     // opens unsaved, so its first Save asks where to keep it.

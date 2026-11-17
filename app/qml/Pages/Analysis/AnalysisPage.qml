@@ -125,6 +125,7 @@ WorkflowPage {
         id: aliasesContent
         AliasesGroup {
             analysis: page.analysis
+            project: page.project
         }
     }
     Component {

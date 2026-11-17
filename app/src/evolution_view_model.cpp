@@ -17,12 +17,17 @@ namespace edi_app {
 namespace {
 
 // A point is drawn only when it and its error bar's ends are finite numbers within ±1e300, so every difference the
-// chart takes between them (its spans, ticks, hit tests and zoom boxes) is finite too.
+// chart takes between them (its spans, ticks, hit tests and zoom boxes) is finite too. An undefined s.u. (NaN: a
+// direction the data do not determine) draws the value without a bar; an infinite or negative one is not drawn.
 bool drawable(double x, double y, double error) {
     constexpr double kLimit = 1e300;
-    return std::isfinite(x) && std::isfinite(y) && std::isfinite(error) && error >= 0.0 && std::abs(x) <= kLimit &&
-           std::abs(y - error) <= kLimit && std::abs(y + error) <= kLimit;
+    const double bar = std::isnan(error) ? 0.0 : error;
+    return std::isfinite(x) && std::isfinite(y) && std::isfinite(bar) && bar >= 0.0 && std::abs(x) <= kLimit &&
+           std::abs(y - bar) <= kLimit && std::abs(y + bar) <= kLimit;
 }
+
+// The half-length of a point's bar: none for an undefined s.u.
+double bar_of(double error) { return std::isfinite(error) ? error : 0.0; }
 
 // The bucket of `x` among `buckets` over a range starting at `half_low` (halved values, so the widest finite range
 // does not overflow) with halved width `half_span`; the first bucket for a share that is not a finite number.
@@ -232,11 +237,34 @@ void EvolutionViewModel::addRow(int dataset, const std::vector<std::string>& cel
     // A fresh run's first row brings the header, and with it the axes and any recorded parameter not listed yet: the
     // points are read once then; every later row adds its own point.
     // The template's own point, shown before the scan had rows, gives way to the scan's points.
-    // Per experiment the row's points are in results_experiments.csv, which the point's row follows: read them all.
-    if (!fitted_ || current_ < 0 || template_point_ || per_experiment_) {
+    if (!fitted_ || current_ < 0 || template_point_) {
         syncNames();
         syncFitted();
         rebuild();
+        return;
+    }
+    // Per experiment the row's points are in results_experiments.csv, written before the point's row: that point's
+    // rows alone are read (edi ADR-0089 point 7), as the rebuild would read them.
+    if (per_experiment_) {
+        const auto& files = session_->datasets().files;
+        if (project_ == nullptr || dataset < 0 || dataset >= static_cast<int>(files.size())) {
+            return;
+        }
+        const bool by_value = x_mode_ == 0 && !extracted_title_.isEmpty();
+        bool added = false;
+        edi::evolution_experiment_point(
+            *project_, session_->places(), session_->index(), names_[current_].toStdString(), by_value,
+            files[static_cast<std::size_t>(dataset)], [&](std::size_t experiment, const edi::EvolutionPoint& point) {
+                if (current_experiment_ >= 0 && experiment != static_cast<std::size_t>(current_experiment_)) {
+                    return;
+                }
+                points_.push_back({point.x, point.y, point.su, static_cast<int>(point.dataset),
+                                   allBanks() ? static_cast<int>(experiment) : -1});
+                added = true;
+            });
+        if (added) {
+            finishRow();
+        }
         return;
     }
     const std::string name = names_[current_].toStdString();
@@ -251,8 +279,14 @@ void EvolutionViewModel::addRow(int dataset, const std::vector<std::string>& cel
         Point point;
         point.dataset = dataset;
         const std::optional<double> x = xOf(dataset, &extracted);
+        // An undefined s.u. (`nan`, or empty in an older file) keeps the value, drawn without a bar.
+        const std::string& su_cell = cells[parameter.uncertainty];
+        if (su_cell == "nan" || su_cell.empty()) {
+            point.error = std::numeric_limits<double>::quiet_NaN();
+        } else if (!edi::parse_scan_number(su_cell, point.error)) {
+            return;
+        }
         if (!x || cells[session_->index().chi] == "nan" || !edi::parse_scan_number(cells[parameter.value], point.y) ||
-            !edi::parse_scan_number(cells[parameter.uncertainty], point.error) ||
             !drawable(*x, point.y, point.error)) {
             return;
         }
@@ -359,11 +393,17 @@ void EvolutionViewModel::readPoints() {
                 points_.push_back({point.x, point.y, point.su, static_cast<int>(point.dataset), allBanks() ? bank_ : -1});
             });
         } else {
+            // Per bank its own extrema (one curve each): every bank keeps its excursions, and each point its bank.
             const int buckets = kThinningLimit / 2;
             const double x0 = low / 2.0, span = high / 2.0 - low / 2.0;
-            std::vector<std::optional<Point>> lowest(buckets), highest(buckets);
+            std::map<int, std::pair<std::vector<std::optional<Point>>, std::vector<std::optional<Point>>>> by_bank;
             points([&](const edi::EvolutionPoint& found) {
-                const Point point{found.x, found.y, found.su, static_cast<int>(found.dataset)};
+                const Point point{found.x, found.y, found.su, static_cast<int>(found.dataset), allBanks() ? bank_ : -1};
+                auto& [lowest, highest] = by_bank[point.bank];
+                if (lowest.empty()) {
+                    lowest.resize(buckets);
+                    highest.resize(buckets);
+                }
                 const int bucket = bucket_of(point.x, x0, span, buckets);
                 if (!lowest[bucket] || point.y < lowest[bucket]->y) {
                     lowest[bucket] = point;
@@ -372,10 +412,15 @@ void EvolutionViewModel::readPoints() {
                     highest[bucket] = point;
                 }
             });
-            for (int bucket = 0; bucket < buckets; ++bucket) {
-                for (const std::optional<Point>& point : {lowest[bucket], highest[bucket]}) {
-                    if (point && (points_.empty() || points_.back().dataset != point->dataset)) {
-                        points_.push_back(*point);
+            for (const auto& [bank, extrema] : by_bank) {
+                const auto& [lowest, highest] = extrema;
+                std::optional<int> last;
+                for (int bucket = 0; bucket < buckets; ++bucket) {
+                    for (const std::optional<Point>& point : {lowest[bucket], highest[bucket]}) {
+                        if (point && last != point->dataset) {
+                            points_.push_back(*point);
+                            last = point->dataset;
+                        }
                     }
                 }
             }
@@ -384,8 +429,9 @@ void EvolutionViewModel::readPoints() {
 }
 
 void EvolutionViewModel::thin() {
-    // Above the limit: per x bucket only the lowest and the highest point, so every excursion stays visible. The
-    // shares are taken on halved values, so the widest finite x range does not overflow.
+    // Above the limit: per x bucket only the lowest and the highest point, so every excursion stays visible; each
+    // bank's points on their own, so every bank's curve keeps its own (a point keeps its dataset and bank). The shares
+    // are taken on halved values, so the widest finite x range does not overflow.
     if (points_.size() <= static_cast<std::size_t>(kThinningLimit)) {
         return;
     }
@@ -393,8 +439,13 @@ void EvolutionViewModel::thin() {
         std::minmax_element(points_.begin(), points_.end(), [](const Point& a, const Point& b) { return a.x < b.x; });
     const double x0 = low->x / 2.0, span = high->x / 2.0 - low->x / 2.0;
     const int buckets = kThinningLimit / 2;
-    std::vector<int> lowest(buckets, -1), highest(buckets, -1);
+    std::map<int, std::pair<std::vector<int>, std::vector<int>>> by_bank;
     for (std::size_t i = 0; i < points_.size(); ++i) {
+        auto& [lowest, highest] = by_bank[points_[i].bank];
+        if (lowest.empty()) {
+            lowest.assign(buckets, -1);
+            highest.assign(buckets, -1);
+        }
         const int bucket = bucket_of(points_[i].x, x0, span, buckets);
         if (lowest[bucket] < 0 || points_[i].y < points_[static_cast<std::size_t>(lowest[bucket])].y) {
             lowest[bucket] = static_cast<int>(i);
@@ -404,10 +455,15 @@ void EvolutionViewModel::thin() {
         }
     }
     std::vector<Point> kept;
-    for (int bucket = 0; bucket < buckets; ++bucket) {
-        for (const int i : {lowest[bucket], highest[bucket]}) {
-            if (i >= 0 && (kept.empty() || kept.back().dataset != points_[static_cast<std::size_t>(i)].dataset)) {
-                kept.push_back(points_[static_cast<std::size_t>(i)]);
+    for (const auto& [bank, extrema] : by_bank) {
+        const auto& [lowest, highest] = extrema;
+        std::optional<int> last;
+        for (int bucket = 0; bucket < buckets; ++bucket) {
+            for (const int i : {lowest[bucket], highest[bucket]}) {
+                if (i >= 0 && last != points_[static_cast<std::size_t>(i)].dataset) {
+                    kept.push_back(points_[static_cast<std::size_t>(i)]);
+                    last = points_[static_cast<std::size_t>(i)].dataset;
+                }
             }
         }
     }
@@ -424,7 +480,7 @@ void EvolutionViewModel::finish() {
             x_min = std::min(x_min, point.x);
             x_max = std::max(x_max, point.x);
             // The range fits the values only unless the project asks for their error bars too (edi ADR-0017 §19).
-            const double error = range_with_errors() ? point.error : 0.0;
+            const double error = range_with_errors() ? bar_of(point.error) : 0.0;
             y_min = std::min(y_min, point.y - error);
             y_max = std::max(y_max, point.y + error);
         }
@@ -433,7 +489,7 @@ void EvolutionViewModel::finish() {
         double y_pad = std::max((y_max / 2.0 - y_min / 2.0) * 0.16, std::abs(y_max) * 1e-6 + 1e-12);
         if (points_.size() == 1) {
             // One point (the fitted template before a scan): its error bar and a little more stay in view.
-            y_pad = std::max({y_pad, 1.5 * points_.front().error, std::abs(points_.front().y) * 1e-4});
+            y_pad = std::max({y_pad, 1.5 * bar_of(points_.front().error), std::abs(points_.front().y) * 1e-4});
         }
         x_min = padded(x_min, -x_pad);
         x_max = padded(x_max, x_pad);
@@ -468,8 +524,8 @@ void EvolutionViewModel::draw() {
     for (const Point& point : points_) {
         points.append(QPointF(point.x, point.y));
         if (bars) {
-            low.append(point.y - point.error);
-            high.append(point.y + point.error);
+            low.append(point.y - bar_of(point.error));
+            high.append(point.y + bar_of(point.error));
         }
     }
     // Every bank shown: each bank's points on its own layer, the chart's own layer empty.
@@ -482,8 +538,8 @@ void EvolutionViewModel::draw() {
                 if (point.bank != bank) continue;
                 own.append(QPointF(point.x, point.y));
                 if (bars) {
-                    own_low.append(point.y - point.error);
-                    own_high.append(point.y + point.error);
+                    own_low.append(point.y - bar_of(point.error));
+                    own_high.append(point.y + bar_of(point.error));
                 }
             }
             bank_layers_[bank]->setData(own, own_low, own_high);

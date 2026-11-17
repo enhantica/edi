@@ -69,6 +69,7 @@ WorkflowPage {
         EaComponents.SideBarColumn {
             ExperimentsGroup {
                 id: experimentsGroup
+                objectName: "experiments.group"
                 project: page.project
             }
             Repeater {

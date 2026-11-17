@@ -27,8 +27,6 @@ Item {
     property real areaWidth: 0
     property real tabBarHeight: EaStyle.Sizes.tabBarHeight
     property real rightInset: margin
-    // Where the row starts, from the main area's left edge: the shown view's toolbar's left edge (the owner, 2026-11-16).
-    property real leftInset: leftMargin
 
     // The chart's own margin above its toolbar, here also above the row (PatternChart.topMargin); on the left the
     // main area's margin (owner, 2026-10-05).
@@ -37,14 +35,14 @@ Item {
     // The margin above the row and the row; the chart's own margin above its toolbar is the one below it.
     readonly property real reservedHeight: visible ? margin + height : 0
 
-    x: leftInset
+    x: leftMargin
     y: tabBarHeight + margin
-    width: areaWidth - leftInset - rightInset
+    width: areaWidth - leftMargin - rightInset
     height: selector.height
 
     // The row's band, across the main area, in the chart's background.
     Rectangle {
-        x: -placement.leftInset
+        x: -placement.leftMargin
         y: -placement.margin
         width: placement.areaWidth
         height: placement.height + 2 * placement.margin

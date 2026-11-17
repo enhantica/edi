@@ -24,8 +24,6 @@ Item {
     // The shown chart's image (SaveImageButton): the pattern chart's or the single crystal's.
     readonly property Item imageItem: holder.singleCrystal ? crystalChart.imageItem : holder.chart
     readonly property real toolbarRightInset: holder.chart ? holder.chart.toolbarRightInset : AppSizes.mainAreaMargin
-    readonly property real toolbarSpanLeft: holder.chart && holder.chart.toolbarSpanLeft !== undefined ? holder.chart.toolbarSpanLeft : AppSizes.mainAreaMargin
-    readonly property real toolbarSpanRightInset: holder.chart && holder.chart.toolbarSpanRightInset !== undefined ? holder.chart.toolbarSpanRightInset : toolbarRightInset
 
     function renew() {
         ApplicationInfo.renewPatternChart();

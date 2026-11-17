@@ -396,9 +396,6 @@ Item {
 
     // How far the plot areas' right border is from the chart's edge: the block selector row above ends there too.
     readonly property real toolbarRightInset: width - (mainView.x + mainView.plotArea.x + mainView.plotArea.width)
-    // The toolbar lines' outer edges, where the block selector row above lines up with them (the owner, 2026-11-16).
-    readonly property real toolbarSpanLeft: toolbarLines.x + toolbarLines.contentSpan[0]
-    readonly property real toolbarSpanRightInset: width - (toolbarLines.x + toolbarLines.contentSpan[1])
 
     // The toolbar, the one rule of every chart's (ToolbarLines; the owner, 2026-10-24): every control on one line,
     // centred under the block selector row, when they fit; else the comboboxes above and the buttons below. The

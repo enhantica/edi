@@ -27,6 +27,63 @@ namespace {
 constexpr std::size_t kBatch = 8;
 constexpr double kNaN = std::numeric_limits<double>::quiet_NaN();
 
+// What every series row together may hold, in bytes (edi ADR-0089 point 5): a row keeps a summary of its pattern, never
+// the pattern itself, at a resolution the series' size leaves room for.
+constexpr std::size_t kSeriesBudget = std::size_t{64} << 20;
+
+// A series row's pattern on d as the lowest and highest intensity of each of `buckets` buckets spaced evenly in log d
+// (the same relative resolution over the whole range, so a peak at small d stays as sharp as one at large d), the two
+// points of a bucket in the order of their d. A pattern with no more points than that is kept as it is.
+void summarise_series_row(std::vector<double>& d, std::vector<double>& intensity, std::size_t buckets) {
+    if (d.size() <= 2 * buckets) {
+        return;
+    }
+    double low = std::numeric_limits<double>::infinity(), high = 0.0;
+    for (const double v : d) {
+        if (std::isfinite(v) && v > 0.0) {
+            low = std::min(low, v);
+            high = std::max(high, v);
+        }
+    }
+    if (!(high > low)) {
+        return;
+    }
+    const double log_low = std::log(low), span = std::log(high) - log_low;
+    std::vector<std::ptrdiff_t> lowest(buckets, -1), highest(buckets, -1);
+    for (std::size_t i = 0; i < d.size(); ++i) {
+        if (!std::isfinite(d[i]) || d[i] <= 0.0 || !std::isfinite(intensity[i])) {
+            continue;
+        }
+        const auto bucket = std::min(buckets - 1, static_cast<std::size_t>((std::log(d[i]) - log_low) / span * buckets));
+        if (lowest[bucket] < 0 || intensity[i] < intensity[static_cast<std::size_t>(lowest[bucket])]) {
+            lowest[bucket] = static_cast<std::ptrdiff_t>(i);
+        }
+        if (highest[bucket] < 0 || intensity[i] > intensity[static_cast<std::size_t>(highest[bucket])]) {
+            highest[bucket] = static_cast<std::ptrdiff_t>(i);
+        }
+    }
+    std::vector<double> kept_d, kept_intensity;
+    kept_d.reserve(2 * buckets);
+    kept_intensity.reserve(2 * buckets);
+    for (std::size_t b = 0; b < buckets; ++b) {
+        if (lowest[b] < 0) {
+            continue;
+        }
+        auto first = static_cast<std::size_t>(lowest[b]), second = static_cast<std::size_t>(highest[b]);
+        if (d[second] < d[first]) {
+            std::swap(first, second);
+        }
+        kept_d.push_back(d[first]);
+        kept_intensity.push_back(intensity[first]);
+        if (second != first) {
+            kept_d.push_back(d[second]);
+            kept_intensity.push_back(intensity[second]);
+        }
+    }
+    d = std::move(kept_d);
+    intensity = std::move(kept_intensity);
+}
+
 // The d of a native x, linear between the conversion's rows (its axis rising or falling); NaN beyond them, or with
 // `clamp` the end row's d.
 double d_of(const std::vector<double>& xs, const std::vector<double>& ds, double x, bool clamp) {
@@ -420,6 +477,11 @@ void ScanViewModel::readNext() {
                     if (row.d.empty()) {
                         throw std::runtime_error("the point has no pattern on d");
                     }
+                    // Summarised here, off the GUI thread, and the full pattern released: every row together stays
+                    // within the budget, its x, intensity, place on the axis and background as doubles.
+                    const std::size_t rows = std::max<std::size_t>(1, by_bank ? datasets->experiments.size() : datasets->files.size());
+                    const std::size_t buckets = std::clamp<std::size_t>(kSeriesBudget / (rows * 2 * 4 * sizeof(double)), 64, 4096);
+                    summarise_series_row(row.d, row.intensity, buckets);
                     read.x = std::move(row.d);
                     read.intensity = std::move(row.intensity);
                 } catch (const std::exception& refusal) {
@@ -499,9 +561,10 @@ void ScanViewModel::deliver(std::size_t first, std::vector<Read>& done) {
         Pattern& pattern = patterns_[dataset];
         pattern.x = std::move(read.x);
         pattern.intensity = std::move(read.intensity);
-        // A series' point is read on d: its x is its d, and its background and excluded regions are its bank's.
+        // A series' point is read on d: its x is its d (placePattern takes it as such, with no copy), and its background
+        // and excluded regions are its bank's.
         if (series_) {
-            pattern.d = pattern.x;
+            pattern.d.clear();
             pattern.bank = read.bank;
             pattern.scale = read.scale;
             applySeriesBank(pattern);
@@ -633,9 +696,18 @@ void ScanViewModel::readSeriesBanks(const edi::Project* project) {
             d_column.push_back(d);
             b_column.push_back(b);
         }
+        // An end past this experiment's data runs on to the end of d (as good as 0 or infinity): another point's data reach a little
+        // further than the template's, and their ends are excluded too.
+        const auto end_of = [&](double x) {
+            if (const double d = d_of(xs, ds, x, false); std::isfinite(d)) return d;
+            const double clamped = d_of(xs, ds, x, true);
+            if (!std::isfinite(clamped) || ds.empty()) return clamped;
+            // Finite, so Q and sinθ/λ of either end are numbers too.
+            return clamped <= std::min(ds.front(), ds.back()) ? 1e-12 : 1e12;
+        };
         std::vector<std::pair<double, double>> excluded;
         for (const auto& [a, b] : excluded_of(*experiment)) {
-            const double da = d_of(xs, ds, a, true), db = d_of(xs, ds, b, true);
+            const double da = end_of(a), db = end_of(b);
             if (std::isfinite(da) && std::isfinite(db)) excluded.emplace_back(std::min(da, db), std::max(da, db));
         }
         bank_d_.push_back(std::move(d_column));
@@ -711,8 +783,9 @@ void ScanViewModel::setXAxis(const QString& token) {
 void ScanViewModel::setIncludedOnly(bool on) {
     if (on != included_only_) {
         included_only_ = on;
-        emit includedOnlyChanged();
+        // The range first: the chart starts over on it when told (onIncludedOnlyChanged), so it must be the new one.
         placeRange();
+        emit includedOnlyChanged();
         ++revision_;
         emit revisionChanged();
     }
@@ -782,7 +855,13 @@ void ScanViewModel::placePattern(Pattern& pattern) {
             b = std::max(ca, cb);
         }
     };
-    if (joint_ || series_) {
+    if (series_) {
+        pattern.shown = pattern.x;
+        pattern.excluded_shown = pattern.excluded;
+        onAxis();
+        return;
+    }
+    if (joint_) {
         pattern.shown = pattern.d;
         std::vector<double> xs, ds;
         for (std::size_t i = 0; i < pattern.x.size() && i < pattern.d.size(); ++i) {

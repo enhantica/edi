@@ -39,7 +39,8 @@ SideBarGroup {
     // right margin as wide as a table's edge margin then keeps the datablock names off it (the owner, 2026-10-24).
     // The Start column is as wide as its title.
     readonly property real startColumnWidth: Math.ceil(startTitle.advanceWidth) + EaStyle.Sizes.tableColumnSpacing * 2
-    readonly property real fitColumnWidth: Math.ceil(Math.max(fitTitle.advanceWidth, EaStyle.Sizes.fontPixelSize * 1.15)) + EaStyle.Sizes.tableColumnSpacing
+    // Its header or its check box, whichever is wider (the check box replaced the outcome icon, the owner, 2026-11-17).
+    readonly property real fitColumnWidth: Math.ceil(Math.max(fitTitle.advanceWidth, EaStyle.Sizes.fontPixelSize * 1.6)) + EaStyle.Sizes.tableColumnSpacing
 
     objectName: "group.experiments"
     title: qsTr("Experiments (%1)").arg(project ? project.experiments.count : 0)
@@ -73,18 +74,20 @@ SideBarGroup {
             currentRow: group.project ? group.project.currentExperimentIndex : -1
             onRowActivated: row => ApplicationInfo.activateFormBlock(row, false)
 
-            columns: [numberColumnWidth, group.scan && !group.series ? group.startColumnWidth : 0.001, group.scan ? 0.001 : AppSizes.iconOnlyColumnWidth, group.scan ? AppSizes.iconOnlyColumnWidth : group.fitColumnWidth, -1, -1, group.scanColumns.length ? group.scanColumns.length * AppSizes.dataColumnWidth * 1.4 : 0.001, group.scan ? 0.001 : AppSizes.iconColumnWidth]
+            columns: [numberColumnWidth, group.scan && !group.series ? group.startColumnWidth : 0.001, AppSizes.iconOnlyColumnWidth, group.fitColumnWidth, -1, -1, group.scanColumns.length ? group.scanColumns.length * AppSizes.dataColumnWidth * 1.4 : 0.001, group.scan ? 0.001 : AppSizes.iconColumnWidth]
 
             header: EaComponents.ListViewHeader {
                 EaComponents.ListViewLabel {
                     elide: Text.ElideRight
                     horizontalAlignment: Text.AlignHCenter
                 }
+                // Present whenever its cells are, empty where there is no Start: a header cell and its row's cell are
+                // both shown or both hidden, or the header row would lose or gain a column's gap and stand off its
+                // cells from there on (the owner, 2026-11-17).
                 EaComponents.ListViewLabel {
                     elide: Text.ElideRight
-                    horizontalAlignment: Text.AlignHCenter
-                    visible: group.scan && !group.series
-                    text: qsTr("Start")
+                    horizontalAlignment: Text.AlignLeft
+                    text: group.scan && !group.series ? qsTr("Start") : ""
                 }
                 EaComponents.ListViewLabel {
                     elide: Text.ElideRight
@@ -157,12 +160,14 @@ SideBarGroup {
                 }
                 // The experiment a scan starts from (replaces Use as template; the owner, 2026-11-16): a scan's
                 // template dataset; a series starts from its experiments' own values, its one row always marked.
+                // Left-aligned under its header (the owner, 2026-11-17).
                 Item {
-                    property int horizontalAlignment: Text.AlignHCenter
+                    property int horizontalAlignment: Text.AlignLeft
                     height: parent ? parent.height : 0
                     EaElements.RadioButton {
                         objectName: `experiments.start.${row.index}`
-                        anchors.centerIn: parent
+                        anchors.left: parent.left
+                        anchors.verticalCenter: parent.verticalCenter
                         visible: group.scan && !group.series
                         checked: row.isTemplate
                         EaElements.ToolTip {
@@ -180,19 +185,39 @@ SideBarGroup {
                 IconCell {
                     horizontalAlignment: Text.AlignHCenter
                     objectName: `experiments.color.${row.index}`
-                    visible: !group.scan
+                    // A scan's or a series' rows too, each in its colour as the selectors show it (the owner, 2026-11-17).
                     icon: "microscope"
                     iconColor: AppColors.experiment(row.index)
                     toolTip: qsTr("Measured pattern color")
                 }
-                // How the project's last fit ended on this experiment; "Not fitted" when it took no part.
-                IconCell {
-                    horizontalAlignment: Text.AlignLeft
-                    objectName: `experiments.fit.${row.index}`
-                    icon: FitOutcomes.icon(row.fitOutcome)
-                    iconColor: String(FitOutcomes.color(row.fitOutcome))
-                    ring: FitOutcomes.ring(row.fitOutcome)
-                    toolTip: FitOutcomes.word(row.fitOutcome)
+                // How the project's last fit ended on this experiment: the app's check box, ticked in the outcome's colour
+                // (green converged, orange a warning, red failed) and empty when it took no part (the owner, 2026-11-17).
+                // Nobody sets it: it takes no focus and its clicks go nowhere, but it keeps its colour, which a disabled
+                // check box would draw grey.
+                Item {
+                    property int horizontalAlignment: Text.AlignLeft
+                    height: parent ? parent.height : 0
+
+                    EaElements.CheckBox {
+                        id: fitBox
+                        objectName: `experiments.fit.${row.index}`
+                        anchors.left: parent.left
+                        anchors.verticalCenter: parent.verticalCenter
+                        padding: 0
+                        focusPolicy: Qt.NoFocus
+                        checked: row.fitOutcome !== "" && !FitOutcomes.ring(row.fitOutcome)
+                        color: FitOutcomes.color(row.fitOutcome)
+                        MouseArea {
+                            id: fitHover
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            acceptedButtons: Qt.AllButtons
+                        }
+                        EaElements.ToolTip {
+                            text: FitOutcomes.word(row.fitOutcome)
+                            requested: fitHover.containsMouse && text !== ""
+                        }
+                    }
                 }
                 // The datablock name, editable: a refused rename returns the cell to the stored name and shows why.
                 // Editing a name also makes its row current, as a click on the row does.
@@ -238,7 +263,8 @@ SideBarGroup {
                             width: implicitWidth
                             height: parent.height
                             elide: Text.ElideRight
-                            color: EaStyle.Colors.themeForegroundMinor
+                            // In the accent, as the run selectors show it (the owner, 2026-11-17).
+                            color: EaStyle.Colors.themeAccent
                             text: qsTr("Start")
                         }
                         // ⋯: replace the data with another file, folder or collection entry.
@@ -569,7 +595,11 @@ SideBarGroup {
         title: qsTr("Load experiments from CIF or .edi files")
         fileMode: FileDialog.OpenFiles
         nameFilters: [qsTr("Experiment files (*.cif *.edi)"), qsTr("CIF files (*.cif)"), qsTr("edi block files (*.edi)")]
-        onAccepted: group.project.loadExperiments(selectedFiles)
+        currentFolder: DialogFolders.folder("loadExperiment", "")
+        onAccepted: {
+            DialogFolders.remember("loadExperiment", selectedFiles[0]);
+            group.project.loadExperiments(selectedFiles);
+        }
     }
 
     // The dialog's answer goes to the experiment and the project it was opened for, and only while that project
@@ -583,7 +613,9 @@ SideBarGroup {
         nameFilters: dataDialog.experiment && dataDialog.experiment.sampleForm === ExperimentViewModel.SingleCrystal ? [qsTr("Reflection files (*.int *.hkl *.dat *.txt)"), qsTr("All files (*)")] : [qsTr("Data files (*.xye *.xy *.dat *.txt *.csv)"), qsTr("All files (*)")]
         // Several files at once (the owner, 2026-11-04): more than one asks how to load them.
         fileMode: FileDialog.OpenFiles
+        currentFolder: DialogFolders.folder("loadData", "")
         onAccepted: {
+            DialogFolders.remember("loadData", selectedFiles[0]);
             if (selectedFiles.length > 1 && dataDialog.experiment !== null && dataDialog.project === group.project) {
                 const experiment = dataDialog.experiment;
                 const files = selectedFiles;
@@ -601,7 +633,11 @@ SideBarGroup {
         id: dataFolderDialog
         title: qsTr("Choose a folder of sequential-fit datasets")
         acceptLabel: qsTr("Use folder")
-        onAccepted: ApplicationInfo.acceptDatasetFolder(dataFolderDialog, group.project, selectedFolder)
+        currentFolder: DialogFolders.folder("loadData", "")
+        onAccepted: {
+            DialogFolders.remember("loadData", selectedFolder);
+            ApplicationInfo.acceptDatasetFolder(dataFolderDialog, group.project, selectedFolder);
+        }
     }
 
     // Load N datasets as (the owner, 2026-11-04): separate experiments, each a copy of the selected experiment's setup
@@ -609,6 +645,13 @@ SideBarGroup {
     // datasets. Up to five files default to separate experiments, more to a scan.
     // Set by Several files as a series…: the next choice of several files is asked with that answer first.
     property bool seriesWanted: false
+    // The datasets dialog for `files` (URLs) as a series, as Several files as a series… then a choice of files opens it.
+    function askSeries(files) {
+        if (group.project === null || group.project.currentExperiment === null)
+            return;
+        group.seriesWanted = true;
+        group.askDatasets(group.project.currentExperiment, files);
+    }
     function askDatasets(experiment, files, origins = []) {
         const series = group.seriesWanted;
         group.seriesWanted = false;
@@ -658,12 +701,45 @@ SideBarGroup {
             // A series of joint fits (edi ADR-0088 point 1): the files grouped by name into one experiment each, fitted
             // point by point; its folder is linked.
             property bool asSeries: false
+            // The series' groups as a worker found them (previewSeriesGroups), shown before loading; OK waits for them.
+            property int previewRequest: 0
+            property string previewText: ""
+            property bool previewValid: false
+            function previewGroups() {
+                datasetsChoice.previewText = "";
+                datasetsChoice.previewValid = false;
+                if (datasetsChoice.asSeries && group.project !== null)
+                    datasetsChoice.previewRequest = group.project.previewSeriesGroups(datasetsChoice.files);
+            }
+            onAsSeriesChanged: previewGroups()
+            // Made already a series (Several files as a series…): grouped at once, and OK waits for it.
+            Component.onCompleted: {
+                previewGroups();
+                const ok = datasetsChoice.standardButton(Dialog.Ok);
+                if (ok)
+                    ok.enabled = datasetsChoice.acceptable;
+            }
+            Connections {
+                target: group.project
+                function onSeriesGroupsPreviewed(request, text, valid) {
+                    if (request !== datasetsChoice.previewRequest)
+                        return;
+                    datasetsChoice.previewText = text;
+                    datasetsChoice.previewValid = valid;
+                }
+            }
+            readonly property bool acceptable: !datasetsChoice.asSeries || datasetsChoice.previewValid
+            onAcceptableChanged: {
+                const ok = datasetsChoice.standardButton(Dialog.Ok);
+                if (ok)
+                    ok.enabled = datasetsChoice.acceptable;
+            }
             property bool copy: true
             property var origins: []
             // A scan's files are read from its folder, so a collection's files are copied for one (edi ADR-0069).
             // Separate experiments may keep their files linked, a powder pattern and a single crystal's reflections
             // alike; a file of several datasets is refused for linking when it is loaded.
-            readonly property bool mustCopy: datasetsChoice.asScan && datasetsChoice.origins.length > 0
+            readonly property bool mustCopy: (datasetsChoice.asScan || datasetsChoice.asSeries) && datasetsChoice.origins.length > 0
             title: qsTr("Load %1 datasets as").arg(files.length)
             standardButtons: Dialog.Ok | Dialog.Cancel
             contentWidth: AppSizes.messagesDialogContentWidth
@@ -671,7 +747,7 @@ SideBarGroup {
             onClosed: destroy()
             onAccepted: {
                 if (group.project !== null && datasetsChoice.experiment !== null && datasetsChoice.asSeries) {
-                    group.project.loadSeriesOfJointFits(datasetsChoice.experiment, datasetsChoice.files);
+                    group.project.loadSeriesOfJointFits(datasetsChoice.experiment, datasetsChoice.files, datasetsChoice.copy || datasetsChoice.mustCopy);
                     return;
                 }
                 if (group.project !== null && datasetsChoice.experiment !== null)
@@ -722,17 +798,24 @@ SideBarGroup {
                     text: qsTr("First fit the template dataset in Single mode. When it is ready, choose Sequential in Analysis to fit the folder. Evolution is available as soon as the scan is loaded.")
                 }
                 EaElements.Label {
+                    objectName: "datasets.series.groups"
                     width: datasetsColumn.width
                     wrapMode: Text.Wrap
                     visible: datasetsChoice.asSeries
-                    text: qsTr("The files' folder is linked and each experiment shows its first point. Choose Sequential in Analysis to fit the points one after another.")
+                    color: datasetsChoice.previewValid || datasetsChoice.previewText === "" ? EaStyle.Colors.themeForeground : EaStyle.Colors.red
+                    text: datasetsChoice.previewText === "" ? qsTr("Grouping the files by name") : datasetsChoice.previewText
+                }
+                EaElements.Label {
+                    width: datasetsColumn.width
+                    wrapMode: Text.Wrap
+                    visible: datasetsChoice.asSeries
+                    text: qsTr("Each experiment shows its first point. Choose Sequential in Analysis to fit the points one after another.")
                 }
                 EaElements.CheckBox {
                     id: copyBox
-                    visible: !datasetsChoice.asSeries
                     objectName: "datasets.copy"
                     // What the choice means is its tool tip (the owner, 2026-11-04).
-                    ToolTip.text: datasetsChoice.asScan ? (datasetsChoice.copy ? qsTr("The files are copied into the project's folder; the project must be saved and hold this one experiment.") : qsTr("The scan reads the files where they are; the project keeps their folder's location.")) : (datasetsChoice.copy ? qsTr("Each experiment holds its data in the project.") : datasetsChoice.origins.length > 0 ? qsTr("Each experiment keeps its collection entry and downloads the file again when a fit needs it.") : qsTr("Each experiment reads its file where it is; the project keeps the file's location."))
+                    ToolTip.text: datasetsChoice.asSeries ? (datasetsChoice.copy ? qsTr("The files are copied into the project's folder, a folder of the series' own.") : qsTr("The series reads the files where they are; the project keeps their folder's location.")) : datasetsChoice.asScan ? (datasetsChoice.copy ? qsTr("The files are copied into the project's folder; the project must be saved and hold this one experiment.") : qsTr("The scan reads the files where they are; the project keeps their folder's location.")) : (datasetsChoice.copy ? qsTr("Each experiment holds its data in the project.") : datasetsChoice.origins.length > 0 ? qsTr("Each experiment keeps its collection entry and downloads the file again when a fit needs it.") : qsTr("Each experiment reads its file where it is; the project keeps the file's location."))
                     // The same spacing as between the two choices.
                     height: jointChoice.height
                     text: qsTr("Copy data into the project")

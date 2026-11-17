@@ -11,9 +11,9 @@ import edi.app
 
 // A series of joint fits' two selectors above its charts (the owner, 2026-11-16): the series variable, labelled by
 // what the points record ("Temperature 15.9 K", "Run" when nothing is), and Bank, shown only with more than one bank;
-// each with a previous and a next button, which repeat while held. On Stacked and Map the Rows switch chooses rows by
-// the variable (one bank across the series: the variable selector inactive) or by bank (every bank at one point: the
-// Bank selector inactive). ← and → step the bank.
+// each with a previous and a next button, which repeat while held. On Stacked and Map the chart's y box chooses rows by
+// the variable or file (one bank across the series) or by bank (every bank at one point); the rows' own selector picks
+// the highlighted row, the other the shown bank or point (the owner, 2026-11-17). ← and → step the bank.
 Row {
     id: row
 
@@ -42,14 +42,14 @@ Row {
     // and its two buttons, a toolbar group's gap apart (the owner, 2026-11-16); one bank leaves the run the whole row.
     readonly property real groupGap: AppSizes.toolbarSpacing * 4
     readonly property bool twoGroups: banks.length > 1
-    readonly property real groupWidth: Math.max(EaStyle.Sizes.fontPixelSize * 8, (width - (rowsShown ? rowsSwitch.width + groupGap : 0) - (twoGroups ? groupGap : 0)) / (twoGroups ? 2 : 1))
+    readonly property real groupWidth: Math.max(EaStyle.Sizes.fontPixelSize * 8, (width - (twoGroups ? groupGap : 0)) / (twoGroups ? 2 : 1))
 
     spacing: groupGap
 
     // ← and → step the bank, as its buttons do, unless a text field has the keys (the owner, 2026-11-16).
     function stepBank(offset) {
         const next = (project ? project.currentBank : 0) + offset;
-        if (project !== null && bankBox.enabled && next >= 0 && next < banks.length)
+        if (project !== null && next >= 0 && next < banks.length)
             project.currentBank = next;
     }
     readonly property bool keysFree: Window.activeFocusItem === null || Window.activeFocusItem.cursorPosition === undefined
@@ -62,25 +62,6 @@ Row {
         sequence: "Right"
         enabled: row.visible && row.banks.length > 1 && row.keysFree
         onActivated: row.stepBank(1)
-    }
-
-    // Rows: by the variable or by bank, a toolbar drop-down as the charts' other row choices are.
-    ToolbarComboBox {
-        id: rowsSwitch
-        objectName: "mainArea.series.rows"
-        visible: row.rowsShown
-        height: EaStyle.Sizes.comboBoxHeight
-        toolTip: qsTr("Rows: one bank across the series, or every bank at one run")
-        // "rows: by run" in the axes boxes' "<axis>: <value>" style, as wide as it reads (the owner, 2026-11-16).
-        fitShown: true
-        readonly property var entries: [qsTr("by %1").arg(row.project ? row.project.seriesVariable.toLowerCase() : ""), qsTr("by bank")]
-        model: entries
-        closedTexts: entries.map(entry => qsTr("rows: %1").arg(entry))
-        shownIndex: row.byBank ? 1 : 0
-        onActivated: index => {
-            if (row.views)
-                row.views.rowsByBank = index === 1;
-        }
     }
 
     // The runs and the banks, as the block selector lists blocks: "Run 6 · p005" and "Bank 5 · wish_5_6", the word,
@@ -111,7 +92,6 @@ Row {
         id: pointBox
         objectName: "mainArea.series.point"
         width: row.groupWidth
-        enabled: !(row.rowsShown && !row.byBank)
         backgroundColor: EaStyle.Colors.chartBackground
         blocks: runModel
         blocksTextRole: "label"
@@ -125,7 +105,6 @@ Row {
         objectName: "mainArea.series.bank"
         visible: row.banks.length > 1
         width: row.groupWidth
-        enabled: !row.byBank
         backgroundColor: EaStyle.Colors.chartBackground
         blocks: bankModel
         blocksTextRole: "label"

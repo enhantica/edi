@@ -317,8 +317,30 @@ void ScanLayer::setXMax(double value) {
         redraw();
     }
 }
-void ScanLayer::setYMin(double value) { assign(y_min_, value, &ScanLayer::yMinChanged); }
-void ScanLayer::setYMax(double value) { assign(y_max_, value, &ScanLayer::yMaxChanged); }
+// The rows Stacked draws, and the count its caption shows, follow the y range too: a zoom, a pan or a reset of it
+// shows other rows (the owner, 2026-11-17).
+void ScanLayer::setYMin(double value) {
+    assign(y_min_, value, &ScanLayer::yMinChanged);
+    syncDrawnRows();
+}
+void ScanLayer::setYMax(double value) {
+    assign(y_max_, value, &ScanLayer::yMaxChanged);
+    syncDrawnRows();
+}
+
+void ScanLayer::syncDrawnRows() {
+    if (mode_ != QLatin1String("stacked")) {
+        return;
+    }
+    const auto drawn = drawingRows();
+    if (drawn != drawn_datasets_) {
+        const bool count_changed = drawn.size() != drawn_datasets_.size();
+        drawn_datasets_ = drawn;
+        emit drawingRowsChanged();
+        if (count_changed) emit drawnDatasetCountChanged();
+        update();
+    }
+}
 void ScanLayer::setColourScheme(const QString& scheme) {
     assign(colour_scheme_, scheme, &ScanLayer::colourSchemeChanged);
     recolour();
@@ -1145,8 +1167,9 @@ void ScanLayer::paint(QPainter* painter) {
             const auto& own = values(pixel.band);
             const auto& a = values(pixel.lower);
             const auto& b = values(pixel.upper);
-            // Highlighted, every row's band but the shown dataset's is blended toward the background.
-            const bool faded = highlighted() >= 0 && pixel.band != static_cast<std::size_t>(highlighted());
+            // Every row keeps its full colour: blended toward the background, a map's low intensities read as empty,
+            // and the highlighted run is marked by its label (the owner, 2026-11-17).
+            const bool faded = false;
             const double keep = faded ? faded_ : 1.0;
             QRgb* line = reinterpret_cast<QRgb*>(image.scanLine(j));
             for (int i = 0; i < pixel_columns; ++i) {

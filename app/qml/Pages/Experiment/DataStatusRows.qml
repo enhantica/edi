@@ -93,7 +93,9 @@ Column {
         property ExperimentViewModel experiment: null
         title: qsTr("Locate the experiment's data file")
         fileMode: FileDialog.OpenFile
+        currentFolder: DialogFolders.folder("loadData", "")
         onAccepted: {
+            DialogFolders.remember("loadData", selectedFile);
             if (project !== null && project === group.project)
                 project.locateDataFile(experiment, selectedFile);
         }
@@ -103,7 +105,9 @@ Column {
         property ProjectViewModel project: null
         property string missing: ""
         title: qsTr("Locate the scan's data folder")
+        currentFolder: DialogFolders.folder("loadData", "")
         onAccepted: {
+            DialogFolders.remember("loadData", selectedFolder);
             if (project !== null && project === group.project)
                 project.locateDataFolder(selectedFolder, missing);
         }

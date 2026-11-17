@@ -28,6 +28,7 @@ struct Unit {
     int rank = 0;
     bool movable = false;
     bool shown = true;
+    bool inMore = false;  // the view puts it in the More popup whatever the room
 };
 
 double rowWidth(const std::vector<Unit>& units, double spacing, double groupSpacing) {
@@ -102,7 +103,8 @@ void ToolbarRow::place(QQuickItem* lines, QQuickItem* more) const {
         input.append(QVariantMap{{QStringLiteral("width"), item->width()},
                                  {QStringLiteral("group"), map.value(QStringLiteral("group"))},
                                  {QStringLiteral("name"), item->objectName()},
-                                 {QStringLiteral("movable"), map.value(QStringLiteral("movable"))}});
+                                 {QStringLiteral("movable"), map.value(QStringLiteral("movable"))},
+                                 {QStringLiteral("inMore"), item->property("toolbarInMore").toBool()}});
     }
     const QVariantMap result = layout(input, lines->property("leftEdge").toDouble(), lines->property("rightEdge").toDouble(),
                                       lines->property("spacing").toDouble(), lines->property("groupSpacing").toDouble(),
@@ -139,11 +141,13 @@ QVariantMap ToolbarRow::layout(const QVariantList& list, double left, double rig
     units.reserve(list.size());
     for (const QVariant& entry : list) {
         const QVariantMap map = entry.toMap();
+        const bool inMore = map.value(QStringLiteral("inMore")).toBool() && map.value(QStringLiteral("movable")).toBool();
         units.push_back({map.value(QStringLiteral("width")).toDouble(), map.value(QStringLiteral("group")).toString(),
-                         rank(map.value(QStringLiteral("name")).toString()), map.value(QStringLiteral("movable")).toBool()});
+                         rank(map.value(QStringLiteral("name")).toString()), map.value(QStringLiteral("movable")).toBool(),
+                         !inMore, inMore});
     }
     const double room = right - left;
-    bool more = false;
+    bool more = std::any_of(units.begin(), units.end(), [](const Unit& unit) { return unit.inMore; });
     // With the ⋯ button the row ends in its own group.
     const auto needed = [&] { return rowWidth(units, spacing, groupSpacing) + (more ? groupSpacing + moreWidth : 0); };
     while (needed() > room) {

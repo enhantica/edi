@@ -561,7 +561,10 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     /// experiment, `experiment` the template and a copy of it for each further group, the experiments an experiment set,
     /// the folder linked and each experiment holding its first point's data. One undoable change; a project of more than
     /// one experiment, files from several folders or names that do not group refuse with why.
-    Q_INVOKABLE bool loadSeriesOfJointFits(edi_app::ExperimentViewModel* experiment, const QList<QUrl>& files);
+    Q_INVOKABLE bool loadSeriesOfJointFits(edi_app::ExperimentViewModel* experiment, const QList<QUrl>& files, bool copy = false);
+    // The files grouped by name on a worker, as loadSeriesOfJointFits will group them, for the dialog to show before it
+    // loads (edi ADR-0088 point 1); the answer comes as seriesGroupsPreviewed with the returned request number.
+    Q_INVOKABLE int previewSeriesGroups(const QList<QUrl>& files);
     /// The files' total size in bytes, for the Copy data into the project default (20 files, 50 MB).
     Q_INVOKABLE qint64 filesBytes(const QList<QUrl>& files) const;
     /// List a local folder off the GUI thread, then link its datasets through the normal scan loader.
@@ -799,6 +802,8 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // Each edit, as it is made: what keeps unsaved work follows it (the web app, edi ADR-0052 §9).
     void edited();
     void refused(const QString& message);
+    // A grouping previewSeriesGroups worked out: what it found, and whether the files make a series.
+    void seriesGroupsPreviewed(int request, const QString& text, bool valid);
     // A message for the status bar's Messages (Session lists it): a load's account, a removal's links.
     void message(const QString& text);
     // An information entry for the Messages: why an estimate with the calculated peaks set to auto subtracted or
@@ -1254,6 +1259,8 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // The values dataset `index` is shown with: its results row's, and a series point's per-experiment row's over them.
     std::vector<edi::Edit::ScanValue> pointValues(int index) const;
     // A series point's per-experiment values (`results_experiments.csv`) over `values`, read from `project`.
+    // What every row of a series' list shows alike, when it last announced them all (syncDatasets).
+    QString dataset_rows_signature_;
     static void overlaySeriesPoint(std::vector<edi::Edit::ScanValue>& values, const edi::Project& project,
                                    const edi::ScanDatasets& datasets, int index);
     // Reads dataset `index` into `view`: its file, or a series point's file of each experiment (beam modes in

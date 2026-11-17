@@ -45,6 +45,8 @@ Item {
     // The tab is the one the window shows; the points are drawn once it is.
     property bool shown: true
 
+    // The banks whose curves the legend hid, by name; all shown again with a new series.
+    property var hiddenBanks: []
     readonly property real em: EaStyle.Sizes.fontPixelSize
     // The main area's margin (AppSizes.mainAreaMargin), as the pattern chart's.
     readonly property real sideMargin: fromReport ? em : AppSizes.mainAreaMargin
@@ -53,10 +55,6 @@ Item {
     readonly property int xTicks: Math.max(2, Math.min(8, Math.round(width / (em * 6))))
     readonly property int yTicks: Math.max(2, Math.min(6, Math.floor((height - em * 7 - xTitleHeight) / (em * 2.5))))
     readonly property real toolbarRightInset: sideMargin
-    // The toolbar's outer edges, its x box on the left and its view buttons on the right, where the block selector row
-    // above lines up with it (the owner, 2026-11-16).
-    readonly property real toolbarSpanLeft: evolutionToolbar.x + evolutionToolbar.contentSpan[0]
-    readonly property real toolbarSpanRightInset: width - (evolutionToolbar.x + evolutionToolbar.contentSpan[1])
     readonly property real titleGutter: Math.round(em * 1.6)
     readonly property real xTitleHeight: Math.round(em * 1.7)
     // The zoomed ranges, [xMin, xMax, yMin, yMax]; empty: the whole data.
@@ -183,8 +181,21 @@ Item {
             toolbarGroup: "series"
             visible: !chart.fromReport && chart.evolution !== null && chart.evolution.series && chart.evolution.perExperiment
             toolTip: qsTr("Every bank's curve, or one bank's")
-            readonly property var entries: chart.evolution !== null ? [qsTr("All banks")].concat(chart.evolution.experiments) : []
+            // Each bank with the experiment icon in its curve's colour, as the legend and the Bank selector show it;
+            // All banks with the neutral icon (the owner, 2026-11-17). The base box draws $ICONS_FAMILY and $ICON_COLOR.
+            readonly property var plain: chart.evolution !== null ? [qsTr("All banks")].concat(chart.evolution.experiments) : []
+            readonly property var entries: plain.map((name, i) => {
+                const colour = i === 0 ? "$ICON_COLOR" : String(AppColors.experiment(i - 1, chart.colors.isDarkPalette));
+                return `<font face="$ICONS_FAMILY" color="${colour}">microscope</font>&nbsp;&nbsp;${name}`;
+            })
             model: entries
+            // The box measures the shown name and the icon, not the markup.
+            width: Math.ceil(Math.max(...plain.map(name => bankMetrics.advanceWidth(name)), 0) + chart.em * 1.6) + contentItemLabel.leftPadding + contentItemLabel.rightPadding + leftPadding + rightPadding
+            popup.width: width
+            FontMetrics {
+                id: bankMetrics
+                font: bankBox.font
+            }
             shownIndex: chart.evolution !== null ? chart.evolution.currentExperiment + 1 : 0
             onActivated: index => chart.evolution.currentExperiment = index - 1
         }
@@ -194,14 +205,18 @@ Item {
         BlockSelector {
             objectName: "evolution.parameters"
             visible: !chart.fromReport
-            width: chart.em * 18
+            // The chosen parameter's whole line when the row has room; on a narrow chart it gives way, cutting only the
+            // end of the full name, before any control moves into More (the owner, 2026-11-17).
+            width: Math.max(chart.em * 18, Math.min(contentWidth, chart.width - chart.em * 34))
             backgroundColor: chart.colors.chartBackground
             blocks: chart.evolution ? chart.evolution.parameters : null
             blocksTextRole: "label"
             blockKind: "parameter"
             blockIndex: chart.evolution ? chart.evolution.currentParameter : -1
             onBlockActivated: index => chart.evolution.currentParameter = index
-            // The full parameter name, which a narrow box elides in the middle (the owner, 2026-11-16).
+            // The parameter table's coloured name and the full name (the owner, 2026-11-17).
+            lineFor: (index, text) => ParameterNames.pickerLine(chart.evolution ? chart.evolution.parameterItem(index) : null, text)
+            // The full parameter name, which a narrow box cuts at its end.
             HoverHandler {
                 id: parameterHover
             }
@@ -350,6 +365,7 @@ Item {
                 objectName: `evolution.points.bank.${bankLayer.index}`
                 anchors.fill: parent
                 color: AppColors.experiment(bankLayer.index, chart.colors.isDarkPalette)
+                visible: !chart.hiddenBanks.includes(chart.evolution.experiments[bankLayer.index] ?? "")
                 markerSize: 6
                 xMin: axisX.min
                 xMax: axisX.max
@@ -366,6 +382,8 @@ Item {
             id: bankLegendRows
         }
         ChartLegend {
+            id: bankLegend
+
             objectName: "evolution.bankLegend"
             z: 1
             x: chart.em
@@ -373,12 +391,26 @@ Item {
             colors: chart.colors
             entries: bankLegendRows
             visible: chart.evolution !== null && !chart.fromReport && chart.evolution.perExperiment && chart.evolution.currentExperiment < 0
+            toggles: true
+            onToggled: key => {
+                const hidden = chart.hiddenBanks.slice();
+                const at = hidden.indexOf(key);
+                if (at >= 0)
+                    hidden.splice(at, 1);
+                else
+                    hidden.push(key);
+                chart.hiddenBanks = hidden;
+                refill();
+            }
             readonly property var banks: chart.evolution !== null ? chart.evolution.experiments : []
             readonly property bool dark: chart.colors.isDarkPalette
             function refill() {
-                bankLegendRows.setRows(banks, banks.map((name, i) => String(AppColors.experiment(i, dark))), -1);
+                bankLegendRows.setRows(banks, banks.map((name, i) => String(AppColors.experiment(i, dark))), -1, chart.hiddenBanks);
             }
-            onBanksChanged: refill()
+            onBanksChanged: {
+                chart.hiddenBanks = [];
+                refill();
+            }
             onDarkChanged: refill()
             Component.onCompleted: refill()
         }
@@ -430,7 +462,12 @@ Item {
             onPositionChanged: mouse => ApplicationInfo.evolutionPointer(mouse, 1)
             // A zoom is taken only with increasing ends and finite spans on both axes.
             onReleased: mouse => ApplicationInfo.evolutionPointer(mouse, 2)
-            onClicked: mouse => ApplicationInfo.evolutionPointer(mouse, 3)
+            // A click on a bank's legend row hides or shows that bank's curve (the owner's toggles, edi ADR-0089 point 2).
+            onClicked: mouse => {
+                if (mouse.button === Qt.LeftButton && bankLegend.visible && bankLegend.toggleAt(pointer, mouse.x, mouse.y))
+                    return;
+                ApplicationInfo.evolutionPointer(mouse, 3);
+            }
             onWheel: wheel => ApplicationInfo.evolutionPointer(wheel, 4)
 
             Binding {

@@ -31,8 +31,9 @@ SideBarGroup {
     // The selected parameter's row, kept as the filters and the rows change; -1 when it is not shown.
     property int selectedRow: -1
     property real tableViewportHeight: 0
-    // The free column fits its title and the arrow after it, with a table column's padding (the owner, 2026-10-11),
-    // and a font size more before the title, so it keeps clear of "max" (the owner, 2026-10-27).
+    // The free column fits its title and the arrow after it, with a table column's padding (the owner, 2026-10-11). Its
+    // title and check boxes stand at the table's right edge, and the gap before it is the table's spacing between any two
+    // columns, as between Change and Max (the owner, 2026-11-17).
     readonly property real freeGap: 0.25 * EaStyle.Sizes.fontPixelSize
     // The arrow ends where the right-aligned check boxes do: a check box's own padding and the table's spacing before
     // the column's edge (DataTable.padForFiller).
@@ -40,10 +41,11 @@ SideBarGroup {
     // The free title's word and arrow share one colour, each with the labels' own colour transition.
     property bool freeTitleHovered: false
     readonly property color freeTitleColor: !measured ? EaStyle.Colors.themeForegroundMinor : freeTitleHovered ? EaStyle.Colors.themeAccent : EaStyle.Colors.themeForeground
-    readonly property real freeColumnWidth: Math.ceil(freeTitleText.advanceWidth + freeGap + freeArrowText.advanceWidth + freeInset) + AppSizes.fieldSpacing * 2 + EaStyle.Sizes.fontPixelSize
-    // "Same for all" (edi ADR-0087 point 3): a column with several experiments, a switch on each experiment parameter
-    // that ties it in every other experiment of its set to the template's, through alias and constraint rows.
-    readonly property bool sameShown: project !== null && project.experiments.count > 1
+    readonly property real freeColumnWidth: Math.ceil(freeTitleText.advanceWidth + freeGap + freeArrowText.advanceWidth + freeInset)
+    // "Same for all" (edi ADR-0087 point 3): a switch on each experiment parameter tying it in every other experiment of
+    // its set to the template's, through alias and constraint rows. Not shown for now: the parametric fit will offer it
+    // through the Free box (ADR-0087, amended 2026-11-17).
+    readonly property bool sameShown: false
     readonly property real sameColumnWidth: sameShown ? Math.ceil(sameTitleText.advanceWidth) + AppSizes.fieldSpacing * 2 + EaStyle.Sizes.fontPixelSize : 0
     // Read again whenever the relation rows change.
     readonly property int relationRows: project && project.analysis ? project.analysis.constraints.count + project.analysis.aliases.count : 0
@@ -498,7 +500,9 @@ SideBarGroup {
                         id: nameLine
                         anchors.verticalCenter: parent.verticalCenter
                         maximumWidth: Math.max(1, parent.width)
-                        minimumTextWidth: EaStyle.Sizes.fontPixelSize * 3
+                        // Every row keeps its icons, so their columns line up: a name too long for the column ends
+                        // with an ellipsis instead (the owner, 2026-11-17).
+                        minimumTextWidth: 0
                         segments: ParameterNames.segments(row.parameter)
                     }
                     TapHandler {
@@ -598,14 +602,15 @@ SideBarGroup {
                 // Enabled where a fit can vary the value, or while it is free so a flag set before a change can be
                 // cleared; otherwise disabled, its tooltip naming why (edi ADR-0053).
                 Item {
-                    property int horizontalAlignment: Text.AlignHCenter
+                    // At the table's right edge, under the title's arrow (the owner, 2026-11-17).
+                    property int horizontalAlignment: Text.AlignRight
                     visible: group.measured
                     height: parent.height
 
                     EaComponents.ListViewCheckBox {
                         id: freeBox
-                        anchors.fill: parent
-                        horizontalAlignment: Text.AlignHCenter
+                        anchors.right: parent.right
+                        horizontalAlignment: Text.AlignRight
                         objectName: `parameters.free.${row.index}`
                         enabled: row.parameter !== null && (row.parameter.fittable || row.parameter.free)
                         checked: row.parameter ? row.parameter.free : false

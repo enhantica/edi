@@ -96,14 +96,17 @@ EaComponents.MainContent {
         Qt.callLater(showCurrentPage);
     }
     onBarChanged: openOwnTabOnFirstVisit()
+    // A shown view slides to the new tab as the sidebar does (the owner, 2026-11-17); only a hidden one is put on it
+    // at once, and again when it shows (onShownChanged).
     onTabIndexChanged: {
         if (!switching && shown && ownTabOpened)
             chosenKey = currentKey;
-        Qt.callLater(showCurrentPage);
+        if (!view.shown)
+            Qt.callLater(showCurrentPage);
     }
     // The pages' list keeps its old position when the tab changes while the view is hidden (a scan project opened
     // straight onto Analysis showed the previous project's structure under the Pattern tab): put it on the current
-    // tab's page whenever the view shows or the tab changes.
+    // tab's page whenever the view shows, or the tab changes while it is hidden.
     function showCurrentPage() {
         const pages = view.children.length > 1 ? view.children[1] : null;
         if (pages && pages.contentItem && pages.contentItem.positionViewAtIndex !== undefined && pages.currentIndex >= 0)

@@ -2,7 +2,7 @@ data_si
 
 _edi.schema_version 2
 
-_cell.length_a 5.431(1)
+_cell.length_a 5.431()
 _cell.length_b 5.431
 _cell.length_c 5.431
 _cell.angle_alpha 90.
@@ -26,4 +26,4 @@ _atom_site.multiplicity
 _atom_site.occupancy
 _atom_site.adp_iso
 _atom_site.adp_type
-Si Si 0.125 0.125 0.125 a 8 1. 0.5(1) Biso
+Si Si 0.125 0.125 0.125 a 8 1. 0.5() Biso

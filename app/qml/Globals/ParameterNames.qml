@@ -30,4 +30,30 @@ QtObject {
     function segments(item) {
         return ApplicationInfo.nameSegments(item);
     }
+
+    // A parameter in a picker (Evolution's selector, an alias's parameter): the parameter table's own coloured name, a
+    // dot and the full name in the greyed text, which alone may be cut at its end (the owner, 2026-11-17). Without an
+    // item, `fallback` alone.
+    function pickerLine(item, fallback: string): list<var> {
+        if (!item)
+            return [{
+                    "text": fallback,
+                    "elides": true
+                }];
+        return names.segments(item).concat([{
+                "text": "·",
+                "color": String(EaStyle.Colors.themeForegroundMinor)
+            }, {
+                "text": item.path,
+                "color": String(EaStyle.Colors.themeForegroundMinor),
+                "elides": true
+            }]);
+    }
+    // What a picker's search reads for a parameter: its short name and its full name, so either finds it.
+    function pickerText(item, fallback: string): string {
+        if (!item)
+            return fallback;
+        const row = item.rowLabel !== "" ? item.rowLabel + " " : "";
+        return `${row}${item.shortName} · ${item.path}`;
+    }
 }

@@ -269,6 +269,8 @@ class ApplicationInfo : public QObject {
     // Where Save image starts: the folder last saved to while it exists; else the project's reports folder, made
     // when missing, for a project with a place of its own; else the pictures folder.
     Q_INVOKABLE QUrl imageFolder(const QString& stored, const QString& projectPath, bool ownPlace) const;
+    // A dialog's remembered folder (`stored`, a URL) while it is still a folder on this disk, else `fallback`.
+    Q_INVOKABLE QUrl rememberedFolder(const QString& stored, const QUrl& fallback) const;
 #if EDI_APP_ASSISTANT
     /// Original Panel projection/selection on the current QML thread; no cache or canonical lookup.
     /// Borrows actual Panel/engine values; original JS errors remain pending except the projection's explicit catch.

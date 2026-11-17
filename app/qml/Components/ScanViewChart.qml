@@ -47,14 +47,14 @@ Item {
     readonly property real sideMargin: AppSizes.mainAreaMargin
     // Where the toolbar and the block selector row above it end, from the chart's right edge.
     readonly property real toolbarRightInset: sideMargin
-    // The toolbar line's outer edges, where the block selector row above lines up with it (the owner, 2026-11-16).
-    readonly property real toolbarSpanLeft: scanToolbar.x + scanToolbar.contentSpan[0]
-    readonly property real toolbarSpanRightInset: width - (scanToolbar.x + scanToolbar.contentSpan[1])
     readonly property real titleGutter: Math.round(em * 1.6)
     // The toolbar line at the top, as the pattern chart's, and the room under it: enough for the notes above the plot
     // and for the colour bar's top label, centred on the bar's end.
     readonly property real toolbarTop: em
-    readonly property real plotTop: toolbarTop + scanToolbar.height + AppSizes.mainAreaMargin
+    // With the curve count shown, it takes the standard gap under the toolbar and the plot follows a small gap below it
+    // (the owner, 2026-11-17); without it the plot is where the pattern chart's is.
+    readonly property real captionGap: Math.round(em * 0.3)
+    readonly property real plotTop: toolbarTop + scanToolbar.height + AppSizes.mainAreaMargin + (curveCount.visible ? curveCount.height + captionGap : 0)
     // The colours: the Stacked lines take the app's palette (edi ADR-0084), and the Map a colour map, Blue-Red by
     // default, an app setting. The Map's direction is the project's (Auto by default), resolved in the theme the view
     // is drawn in.
@@ -235,6 +235,19 @@ Item {
     Rectangle {
         anchors.fill: parent
         color: chart.transparentImage ? "transparent" : chart.colors.chartBackground
+    }
+
+    // The curve count, just above the plot frame at its right edge, in the axis labels' font (the owner, 2026-11-16).
+    EaElements.Label {
+        id: curveCount
+
+        objectName: "scanView." + chart.mode + ".progress"
+        visible: chart.scan !== null && ((chart.scan.wanted && chart.scan.loaded < chart.scan.count) || (chart.mode === "stacked" && layer.drawnDatasetCount < chart.scan.count))
+        x: view.x + view.plotArea.x + view.plotArea.width - width
+        y: chart.toolbarTop + scanToolbar.height + AppSizes.mainAreaMargin
+        color: chart.colors.chartLabels
+        font.pixelSize: chart.em
+        text: chart.scan ? ((chart.scan.wanted && chart.scan.loaded < chart.scan.count ? qsTr("Reading patterns: %1 of %2").arg(chart.scan.loaded).arg(chart.scan.count) : "") + (chart.mode === "stacked" && layer.drawnDatasetCount < chart.scan.count ? (chart.scan.loaded < chart.scan.count ? " · " : "") + qsTr("Showing %1 of %2 curves").arg(layer.drawnDatasetCount).arg(chart.scan.count) : "")) : ""
     }
 
     GraphsView {
@@ -700,13 +713,24 @@ Item {
             // datablock) or by datablock (a joint fit's experiments), the owner, 2026-10-22.
             readonly property bool hasValue: chart.scan !== null && chart.scan.valueTitle !== ""
             readonly property string order: chart.scan !== null ? chart.scan.orderName : qsTr("file")
-            // Open with one entry too, so it shows how the rows are placed.
+            // Open with one entry too, so it shows how the rows are placed. A series of several banks adds Bank: one row
+            // per bank at the chosen run, in place of the separate rows switch (the owner, 2026-11-17).
             toolTip: qsTr("Y axis: the rows' places")
-            readonly property var entries: ApplicationInfo.scanRowEntries()
+            readonly property var runEntries: ApplicationInfo.scanRowEntries()
+            readonly property bool offersBanks: chart.scan !== null && chart.scan.series && chart.project !== null && chart.project.bankLabels.length > 1
+            readonly property var entries: offersBanks ? runEntries.concat([qsTr("Bank")]) : runEntries
             model: entries
-            closedTexts: ApplicationInfo.scanClosedTexts(1)
-            shownIndex: hasValue && !chart.scan.rowsByIndex ? 0 : entries.length - 1
-            onActivated: index => ApplicationInfo.scanChoice(index, 1)
+            closedTexts: offersBanks ? ApplicationInfo.scanClosedTexts(1).concat([qsTr("y: Bank")]) : ApplicationInfo.scanClosedTexts(1)
+            shownIndex: offersBanks && chart.scan.rowsByBank ? entries.length - 1 : hasValue && !chart.scan.rowsByIndex ? 0 : runEntries.length - 1
+            onActivated: index => {
+                if (offersBanks && index === entries.length - 1) {
+                    chart.scan.rowsByBank = true;
+                    return;
+                }
+                if (chart.scan !== null && chart.scan.series)
+                    chart.scan.rowsByBank = false;
+                ApplicationInfo.scanChoice(index, 1);
+            }
         }
         ToolbarComboBox {
             // As wide as it reads, so the controls keep to one row (the owner, 2026-11-16).
@@ -743,6 +767,8 @@ Item {
         ColourMapComboBox {
             objectName: "scanView.map.toolbar.colourMap"
             toolbarGroup: "colours"
+            // The colours and their direction live in the More popup (the owner, 2026-11-17).
+            toolbarInMore: true
             visible: chart.mode === "map"
             toolTip: qsTr("The map's colours")
             maps: chart.mapChoices
@@ -759,6 +785,7 @@ Item {
 
             objectName: "scanView.map.toolbar.direction"
             toolbarGroup: "colours"
+            toolbarInMore: true
             visible: chart.mode === "map"
             toolTip: qsTr("Direction: Auto starts the map at the chart's background in either theme")
             model: ApplicationInfo.scanMapDirectionTitles
@@ -787,6 +814,9 @@ Item {
             // (the owner, 2026-10-27).
             ChartToolButton {
                 objectName: "scanView." + chart.mode + ".toolbar.hover"
+                // On Map in the More popup; band edges, the included range and the highlight in the row (the owner,
+                // 2026-11-17).
+                toolbarInMore: chart.mode === "map"
                 fontIcon: "comment-alt"
                 toolTip: qsTr("Show coordinates tooltip on hover")
                 checked: Preferences.patternHoverShown
@@ -833,35 +863,12 @@ Item {
                 width: 1
                 height: 1
             }
-            // Box zoom is the Map's; Stacked zooms by the wheel and the reset (the owner, 2026-11-16).
-            ChartToolButton {
-                objectName: "scanView." + chart.mode + ".toolbar.zoom"
-                visible: chart.mode === "map"
-                fontIcon: "expand"
-                toolTip: qsTr("Box zoom: drag over the plot (always on here)")
-                checked: true
-            }
+            // No box zoom: the views zoom by the wheel and reset by Home (the owner, 2026-11-16).
             ChartToolButton {
                 objectName: "scanView." + chart.mode + ".toolbar.reset"
                 fontIcon: "home"
                 toolTip: qsTr("Reset axes")
                 onClicked: chart.resetZoom()
-            }
-        }
-        // The curve count, a small caption at the controls row's right end (the owner, 2026-11-16); in an item, so the
-        // shared row places it whole.
-        Item {
-            visible: chart.scan !== null && ((chart.scan.wanted && chart.scan.loaded < chart.scan.count) || (chart.mode === "stacked" && layer.drawnDatasetCount < chart.scan.count))
-            width: progressCaption.implicitWidth
-            height: EaStyle.Sizes.comboBoxHeight
-            EaElements.Label {
-                id: progressCaption
-                objectName: "scanView." + chart.mode + ".progress"
-                color: chart.colors.chartLabels
-                text: chart.scan ? ((chart.scan.wanted && chart.scan.loaded < chart.scan.count ? qsTr("Reading patterns: %1 of %2").arg(chart.scan.loaded).arg(chart.scan.count) : "") + (chart.mode === "stacked" && layer.drawnDatasetCount < chart.scan.count ? (chart.scan.loaded < chart.scan.count ? " · " : "") + qsTr("Showing %1 of %2 curves").arg(layer.drawnDatasetCount).arg(chart.scan.count) : "")) : ""
-                height: EaStyle.Sizes.comboBoxHeight
-                verticalAlignment: Text.AlignVCenter
-                font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.9
             }
         }
     }
