@@ -45,18 +45,29 @@ Item {
     readonly property real belowToolbar: AppSizes.mainAreaMargin
     readonly property real toolbarLeft: AppSizes.mainAreaMargin
     readonly property real toolbarRightInset: width - (view.x + view.plotArea.x + view.plotArea.width)
-    // Both axes' scale, as the pattern chart's y scale: 0 linear, 1 square root, 2 log.
-    property int axesScale: 0
+    // Both axes' scale, as the pattern chart's y scale: 0 linear, 1 square root, 2 log; one for every page's copy.
+    readonly property int axesScale: AppState.measCalcScale
     readonly property var scalePrefixes: ["", "√", "log₁₀ "]
-    // The zoomed or moved ranges, [xMin, xMax, yMin, yMax]; empty: the whole data. The pointer sets it.
-    property list<real> zoom: []
+    // The zoomed or moved ranges, [xMin, xMax, yMin, yMax]; empty: the whole data. The pointer sets it, and every
+    // page's copy follows it (AppState.measCalcZoom).
+    property list<real> zoom: AppState.measCalcZoom
+    onZoomChanged: {
+        if (String(zoom) !== String(AppState.measCalcZoom))
+            AppState.measCalcZoom = zoom;
+    }
+    Connections {
+        target: AppState
+        function onMeasCalcZoomChanged() {
+            if (String(chart.zoom) !== String(AppState.measCalcZoom))
+                chart.zoom = AppState.measCalcZoom;
+        }
+    }
     // Read by the pointer helpers the single-crystal chart shares: this chart is one dataset, never stacked.
     readonly property bool stacked: false
 
     function refresh() {
         if (!chart.shown)
             return;
-        chart.zoom = [];
         chart.values = chart.experiment ? chart.experiment.measCalcPoints(chart.axesScale) : {
             "calc": [],
             "meas": [],
@@ -86,8 +97,13 @@ Item {
         if (wanted)
             wanted.showChart(chart, true);
     }
-    onAxesScaleChanged: refresh()
+    // Another scale or experiment starts from the whole data; showing the tab on another page keeps the zoom.
+    onAxesScaleChanged: {
+        chart.zoom = [];
+        refresh();
+    }
     onExperimentChanged: {
+        chart.zoom = [];
         register();
         refresh();
     }
@@ -134,7 +150,7 @@ Item {
             model: [qsTr("Linear"), qsTr("Square root"), qsTr("Log")]
             closedTexts: [qsTr("axes: Linear"), qsTr("axes: Square root"), qsTr("axes: Log")]
             shownIndex: chart.axesScale
-            onActivated: index => chart.axesScale = index
+            onActivated: index => AppState.measCalcScale = index
         }
         ChartToolbar {
             id: buttons

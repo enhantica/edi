@@ -83,8 +83,31 @@ Item {
     readonly property bool onAxis: !stacked && !reportMode && experiment !== null && !comparison
     readonly property string xItem: simulated ? "refln.sin_theta_over_lambda" : calculatedItem
     readonly property string yItem: simulated ? calculatedItem : measuredItem
-    // The shown ranges, [xMin, xMax, yMin, yMax]; empty: every reflection, on one range for both axes.
+    // The shown ranges, [xMin, xMax, yMin, yMax]; empty: every reflection, on one range for both axes. Each view's
+    // zoom is one across the pages that show it (AppState.singleCrystalZoom); a report figure keeps its own.
     property list<real> zoom: []
+    readonly property string zoomKey: reportMode ? "" : comparison ? "comparison" : stacked ? "stacked" : "axis"
+    function sharedZoom() {
+        return zoomKey !== "" ? (AppState.singleCrystalZoom[zoomKey] ?? []) : [];
+    }
+    function takeSharedZoom() {
+        if (zoomKey !== "" && String(zoom) !== String(sharedZoom()))
+            zoom = sharedZoom();
+    }
+    onZoomChanged: {
+        if (zoomKey === "" || String(zoom) === String(sharedZoom()))
+            return;
+        const next = Object.assign({}, AppState.singleCrystalZoom);
+        next[zoomKey] = Array.from(zoom);
+        AppState.singleCrystalZoom = next;
+    }
+    onZoomKeyChanged: takeSharedZoom()
+    Connections {
+        target: AppState
+        function onSingleCrystalZoomChanged() {
+            chart.takeSharedZoom();
+        }
+    }
     readonly property real fullLow: ApplicationInfo.singleFullRange(false)
     readonly property real fullHigh: ApplicationInfo.singleFullRange(true)
     // The legend: the Stacked chart's experiments, or the one experiment, each name in its points' colour.
@@ -180,7 +203,10 @@ Item {
     onXHighChanged: drawDiagonal()
     onYLowChanged: drawDiagonal()
     onYHighChanged: drawDiagonal()
-    Component.onCompleted: drawDiagonal()
+    Component.onCompleted: {
+        takeSharedZoom();
+        drawDiagonal();
+    }
     onShownChanged: redraw()
     onSquaredChanged: ApplicationInfo.singleStateChanged(0)
     onReflectionsChanged: redraw()
