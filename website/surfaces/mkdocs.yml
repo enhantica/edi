@@ -137,6 +137,7 @@ nav:
       - Magnetic operators: application/structure/magnetic-operators.md
       - Moments in the cell: application/structure/moments-in-the-cell.md
       - Appearance: application/structure/appearance.md
+      - Polyhedra: application/structure/polyhedra.md
     - Experiment:
       - application/experiment/index.md
       - Experiments: application/experiment/experiments.md
