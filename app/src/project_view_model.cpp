@@ -6193,24 +6193,26 @@ void ProjectViewModel::keepStructureView() {
     if (showing_view_ || current_structure_ < 0 || static_cast<std::size_t>(current_structure_) >= project_->structures.size()) {
         return;
     }
+    edi::Structure& shown = *project_->structures[static_cast<std::size_t>(current_structure_)];
+    std::map<std::string, std::string> view = structure_view_options_->toView();
+    // A setting the file does not save yet (a polyhedra item crysta's dictionary lacks) changes nothing here.
+    if (view == shown.view.get()) {
+        return;
+    }
     if (const auto refusal = criticalEditRefusal(); !refusal.isEmpty()) {
         showStructureView();
         setLastError(refusal);
         return;
     }
-    edi::Structure& shown = *project_->structures[static_cast<std::size_t>(current_structure_)];
-    std::map<std::string, std::string> view = structure_view_options_->toView();
-    if (view != shown.view.get()) {
-        editing_ = true;
-        const auto release = qScopeGuard([this] { editing_ = false; });
-        notifyProjectEdited();
-        if (retired_) return;
-        shown.view = std::move(view);
-        saved_files_.reset();
-        discovered_files_.reset();
-        invalidateTexts();
-        setModified(true);
-    }
+    editing_ = true;
+    const auto release = qScopeGuard([this] { editing_ = false; });
+    notifyProjectEdited();
+    if (retired_) return;
+    shown.view = std::move(view);
+    saved_files_.reset();
+    discovered_files_.reset();
+    invalidateTexts();
+    setModified(true);
 }
 
 QString ProjectViewModel::applyText(const QString& file, const QString& text) {

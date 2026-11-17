@@ -45,8 +45,8 @@ class StructureViewOptions : public QObject {
     Q_PROPERTY(edi_app::OptionListModel* momentViewOptions READ momentViewOptions CONSTANT)
     // How the arrows are coloured — "atom", "greyed" or "single" — the app's preference, not saved with a project.
     Q_PROPERTY(QString momentColours READ momentColours WRITE setMomentColours NOTIFY momentColoursChanged)
-    // Coordination polyhedra: shown, coloured "atom" (the centre's colour) or "grey", and their opacity in [0, 1]. Kept
-    // for the session: the structure file has no item for them yet.
+    // Coordination polyhedra: shown, coloured "atom" (the centre's colour) or "grey", and their opacity in [0, 1]. Saved
+    // with the structure as each has a `_structure_view` item in crysta's dictionary, kept for the session until then.
     Q_PROPERTY(bool polyhedra READ polyhedra WRITE setPolyhedra NOTIFY polyhedraChanged)
     Q_PROPERTY(QString polyhedraColour READ polyhedraColour WRITE setPolyhedraColour NOTIFY polyhedraColourChanged)
     Q_PROPERTY(double polyhedraOpacity READ polyhedraOpacity WRITE setPolyhedraOpacity NOTIFY polyhedraOpacityChanged)
@@ -154,8 +154,6 @@ class StructureViewOptions : public QObject {
     template <class T>
     void assign(T& field, T value, void (StructureViewOptions::*notify)());
     // The same for an option kept for the session only: drawn, never written to the structure.
-    template <class T>
-    void assignSession(T& field, T value, void (StructureViewOptions::*notify)());
     edi::SceneOptions options_;
     // Whether the structure states show_moments, so a structure that does not keeps its bytes.
     bool moments_declared_ = false;
