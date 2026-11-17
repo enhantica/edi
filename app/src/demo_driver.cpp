@@ -842,6 +842,18 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
             steps_.push_back({QStringLiteral("freecheck-%1").arg(i + 1, 2, 10, QLatin1Char('0')), actions});
         }
     }
+    // A scan's Experiments table, scrolled near its end, its dataset selector open, and Stacked zoomed on its rows
+    // (`--demo-only exptable-`).
+    if (only.startsWith(QLatin1String("exptable-"))) {
+        const QString root = QString::fromUtf8(EDI_CLI_PROJECTS_DIR) + "/";
+        const QString experimentTab = QStringLiteral("appBar.tab.experiment");
+        steps_.push_back({"exptable-1-top", {"resize:1480x800", "open-project:" + root + "pd-neut-cwl_cosio-d20_scan-213f/project",
+                                             experimentTab, basic}});
+        steps_.push_back({"exptable-2-scrolled", {"show:experiments.list:205:0"}});
+        steps_.push_back({"exptable-3-selector", {"mainArea.blocks.box"}});
+        steps_.push_back({"exptable-4-stacked", {"key:Escape", "mainArea.tab.stacked"}});
+        steps_.push_back({"exptable-5-stacked-zoomed", {"zoom-rows:stacked"}});
+    }
     // Structure > Extra's generated tables, each opened from folded: every one shows its rows and columns
     // (`--demo-only collapsed-`).
     if (only.startsWith(QLatin1String("collapsed-"))) {
@@ -945,6 +957,10 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
         steps_.push_back({"review-09-analysis-structure", {"mainArea.tab.structure"}});
         steps_.push_back({"review-10-analysis-evolution-shared", {"mainArea.tab.evolution"}});
         steps_.push_back({"review-11-analysis-evolution-perbank", {"evolution.toolbar.scope", "choose:Per bank"}});
+        steps_.push_back({"review-11a-perbank-picker", {"evolution.parameters.box"}});
+        steps_.push_back({"review-11b-bank-filter", {"key:Escape", "evolution.toolbar.bank"}});
+        steps_.push_back({"review-11c-bank-selector", {"key:Escape", "mainArea.series.bank.box"}});
+        steps_.push_back({"review-11d-closed", {"key:Escape"}});
         steps_.push_back({"review-12-analysis-stacked", {"mainArea.tab.stacked"}});
         steps_.push_back({"review-13-analysis-map", {"mainArea.tab.map"}});
         steps_.push_back({"review-14-analysis-correlations", {"mainArea.tab.correlations"}});
@@ -2287,6 +2303,21 @@ bool DemoDriver::perform(const QString& action) {
         const QDir data(loaded_cli_project_ + QStringLiteral("/experiments/d20_scan"));
         if (loaded_cli_project_.isEmpty() || !QDir(data).removeRecursively()) {
             fail(QStringLiteral("step %1: the scan's data could not be removed").arg(steps_[current_].image));
+            return false;
+        }
+        return true;
+    }
+    // `zoom-rows:<mode>`: the scan chart's y range halved around its middle, as a vertical zoom (the Stacked caption follows).
+    if (action.startsWith(QLatin1String("zoom-rows:"))) {
+        const QString mode = action.mid(QStringLiteral("zoom-rows:").size());
+        QQuickItem* chart = find(QStringLiteral("scanView.") + mode, false);
+        QQuickItem* layer = find(QStringLiteral("scanView.%1.layer").arg(mode), false);
+        const double low = layer != nullptr ? layer->property("yMin").toDouble() : 0.0;
+        const double high = layer != nullptr ? layer->property("yMax").toDouble() : 0.0;
+        if (chart == nullptr || !(high > low) ||
+            !QMetaObject::invokeMethod(chart, "setZoom", Q_ARG(QVariant, QVariant(QVariantList{})),
+                                       Q_ARG(QVariant, QVariant(QVariantList{low + (high - low) / 4, high - (high - low) / 4})))) {
+            fail(QStringLiteral("step %1: cannot zoom the %2 rows").arg(steps_[current_].image, mode));
             return false;
         }
         return true;
