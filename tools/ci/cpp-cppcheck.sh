@@ -33,5 +33,11 @@ check build/app --file-filter="$root/core/src/*" --file-filter="$root/cli/*" || 
 # integer to it, and moc's include guard looks unmet in the generated .moc files.
 check build/app --library=qt --suppress=CastIntegerToAddressAtReturn --suppress="preprocessorErrorDirective:*_autogen*" \
     --file-filter="$root/app/*" --file-filter="$root/assistant/native/*" || status=$?
-check build/ci --file-filter="$root/lib/src/*" --suppress="preprocessorErrorDirective:*/python3*" || status=$?
+# The bindings include nanobind's and Python's headers as system headers, which cppcheck's project import does not
+# read; without them it misreads nanobind's types. It checks them against a copy of the compile commands where those
+# two are ordinary include paths.
+mkdir -p build/ci/cppcheck
+sed -E 's#-isystem ([^ "]*(nanobind/include|include/python3[^ "/]*))#-I\1#g' build/ci/compile_commands.json \
+    > build/ci/cppcheck/compile_commands.json
+check build/ci/cppcheck --file-filter="$root/lib/src/*" --suppress="preprocessorErrorDirective:*/python3*" || status=$?
 exit "$status"

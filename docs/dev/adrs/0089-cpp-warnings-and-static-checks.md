@@ -49,7 +49,8 @@ formatting & static analysis (Python + C++)". The owner asked for the same check
 4. **cppcheck** (`pixi run -e cpp-lint cpp-cppcheck`, `tools/ci/cpp-cppcheck.sh`) checks the same sources for warning,
    performance and portability findings; any finding is an error. It reads the same compile commands as clang-tidy, so
    it sees Qt's and crysta's headers and the build's macros: without them it took Qt's smart pointers for integers and
-   reported dozens of findings that are not there. One check is off, with its reason: `returnByReference`, which asks
+   reported dozens of findings that are not there. For the bindings it reads a copy of the core tree's compile
+   commands in which nanobind's and Python's headers are ordinary include paths, since it does not read system ones. One check is off, with its reason: `returnByReference`, which asks
    Qt-style getters to return their implicitly shared members (`QString`, `QStringList`) by reference, where a copy is
    a reference count.
 5. **clang-tidy and clang-format come at one version on every platform**, the one crysta pins, from the `cpp-lint`
