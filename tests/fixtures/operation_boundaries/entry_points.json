@@ -442,8 +442,8 @@
           "overloads": 1
         },
         "previewSeriesGroups": {
-          "domain": "read-only query",
-          "proof": null,
+          "domain": "dataset-admission",
+          "proof": "tests/integration/py/test_scan_app_contract.py",
           "overloads": 1
         },
         "hasLinkedData": {
@@ -467,8 +467,8 @@
           "overloads": 1
         },
         "setPhaseRatiosShared": {
-          "domain": "synchronous model or presentation",
-          "proof": "tests/integration/py/test_scan_app_contract.py",
+          "domain": "model-publication",
+          "proof": "tests/system/py/test_joint_series_edi.py",
           "overloads": 1
         },
         "sameForAllExperiments": {
@@ -477,8 +477,8 @@
           "overloads": 1
         },
         "setSameForAllExperiments": {
-          "domain": "synchronous model or presentation",
-          "proof": "tests/integration/py/test_scan_app_contract.py",
+          "domain": "model-publication",
+          "proof": "tests/system/py/test_joint_series_edi.py",
           "overloads": 1
         },
         "sameForAllApplies": {
@@ -492,8 +492,8 @@
           "overloads": 1
         },
         "setSameForAll": {
-          "domain": "synchronous model or presentation",
-          "proof": "tests/integration/py/test_scan_app_contract.py",
+          "domain": "model-publication",
+          "proof": "tests/system/py/test_joint_series_edi.py",
           "overloads": 1
         }
       },
