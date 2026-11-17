@@ -4865,6 +4865,10 @@ Project load_project(const std::string& path, ProjectLoadMode mode, const Warnin
     }
     return load_project_folder(path, on_warning,policy);
 }
+Project load_project(const std::string& path, ProjectLoadMode mode, const SourcedWarningSink& on_warning) {
+    const SourcedWarningsScope scope(&on_warning);
+    return load_project(path, mode, WarningSink{});
+}
 
 namespace detail {
 Project load_assistant_project(const std::string& directory) {

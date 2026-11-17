@@ -729,9 +729,10 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // An information entry for the Messages: why an estimate with the calculated peaks set to auto subtracted or
     // ignored them (the owner, 2026-10-20).
     void information(const QString& text);
-    // A Text-tab apply's warnings about the project's other files (each with its file, relative to the project): they
-    // do not block the apply and are listed in Messages until an apply no longer reports them.
-    void otherFileWarnings(const QStringList& files, const QStringList& texts);
+    // The file warnings of a Text-tab state the project took, an accepted apply of `edited` or its undo, each with its
+    // file relative to the project. Another file's warnings do not block an apply; Messages lists them until an apply
+    // no longer reports them, and the edited file's earlier warnings give way to these.
+    void fileWarnings(const QString& edited, const QStringList& files, const QStringList& texts);
     void pathChanged();
     void modifiedChanged();
     void savingChanged();
@@ -833,8 +834,13 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     std::shared_ptr<WidgetCreationInput> prepareWidgetCreation(const CreationAction&);
     void finishWidgetCreation(const std::shared_ptr<WidgetCreationInput>&) noexcept;
     QString apply_creation_control(const edi::Edit&, bool structural, const CreationAction&) override;
+    using ScaleNotes = std::vector<std::pair<QString, edi::CommonScaleOutcome>>;
     void noteUnscaled(const edi::ExperimentBase& experiment, const edi::CommonScaleOutcome& scaled);
-    void rescaleLoaded(edi::Project& next, const std::vector<std::size_t>& produced);
+    void noteUnscaled(const QString& name, const edi::CommonScaleOutcome& scaled);
+    ScaleNotes rescaleLoaded(edi::Project& next, const std::vector<std::size_t>& produced);
+    void noteScaled(const ScaleNotes& notes);
+    // The warnings a read of `file`'s text gives for the project as it is, as fileWarnings.
+    void reportFileWarnings(const QString& file);
     struct WidgetFileInput {
         std::function<bool()> source_current;
         QUrl reader_path; // Internal immutable-byte stage for the original path-only SDK measurement reader.
@@ -1004,6 +1010,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // A Text tab's apply: the project as it was.
     struct AppliedText {
         std::shared_ptr<const edi::Project> before;
+        QString file;  // the Text tab's file, when the change was its apply
     };
     struct EmptyPopulationUndo { std::shared_ptr<edi::EmptyProjectPopulation> prepared; };
     using UndoRecord = std::variant<std::monostate, edi::RelationsUndo, AddedExperiments, AddedExperimentsWithStructures, ScanRun, LoadedData,

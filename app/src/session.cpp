@@ -92,12 +92,20 @@ QString newWebKey() { return QUuid::createUuid().toString(QUuid::WithoutBraces);
 
 WarningListModel::WarningListModel(QObject* parent) : RowTableModel({"message", "severity"}, parent) {}
 
-void WarningListModel::setMessages(const QStringList& messages) {
+void WarningListModel::setMessages(const QStringList& messages, const QStringList& sources) {
     messages_.clear();
     for (qsizetype i = 0; i < messages.size(); ++i) {
-        messages_.push_back({next_id_++, QStringLiteral("load:%1").arg(i), messages[i], QStringLiteral("warning")});
+        // A warning with its project file is that file's (fileKey); a Text-tab edit of the file settles it.
+        const QString source = sources.value(i);
+        const QString key = source.isEmpty() ? QStringLiteral("load:%1").arg(i) : fileKey(QStringLiteral("load-file:"), source, messages[i]);
+        if (lists(key)) continue;
+        messages_.push_back({next_id_++, key, messages[i], QStringLiteral("warning")});
     }
     changed();
+}
+
+QString WarningListModel::fileKey(const QString& origin, const QString& file, const QString& text) {
+    return origin + file + QLatin1Char(':') + text;
 }
 
 void WarningListModel::post(const QString& key, const QString& text, const QString& severity) {
@@ -120,8 +128,8 @@ void WarningListModel::withdraw(const QString& key) {
     }
 }
 
-bool WarningListModel::listsText(const QString& text) const {
-    return std::any_of(messages_.begin(), messages_.end(), [&text](const Message& message) { return message.text == text; });
+bool WarningListModel::lists(const QString& key) const {
+    return std::any_of(messages_.begin(), messages_.end(), [&key](const Message& message) { return message.key == key; });
 }
 
 QStringList WarningListModel::keys(const QString& prefix) const {
@@ -1800,12 +1808,15 @@ bool Session::open(const QString& directory,const QString& example,const std::fu
     const auto binding=replacement_generation_;const auto pathBinding=path_generation_;
     const auto preparing=[&]{return receiver && project_==before && replacement_generation_==binding && pathBinding!=UINT64_MAX && path_generation_==pathBinding;};
     QStringList warnings;
+    QStringList sources;  // each loader warning's project file, so a later Text-tab edit of that file can settle it
     QPointer<ProjectViewModel> opened;
     auto adopted=std::make_shared<bool>(false);
     try {
-        edi::Project project = edi::load_project(directory.toStdString(), edi::ProjectLoadMode::Construction, [&warnings](const std::string& message) {
+        edi::Project project = edi::load_project(directory.toStdString(), edi::ProjectLoadMode::Construction,
+                                                 edi::SourcedWarningSink([&warnings, &sources](const std::string& file, const std::string& message) {
             warnings.append(QString::fromStdString(message));
-        });
+            sources.append(QString::fromStdString(file));
+        }));
         // A project loads with any value it holds; the warnings that hold for them post once, the loader's own range
         // warnings included (the owner, 2026-10-23).
         for (const std::string& warning : edi::standing_warnings(project, false)) {
@@ -1828,11 +1839,11 @@ bool Session::open(const QString& directory,const QString& example,const std::fu
     });
     retainTemporaryRoots({QString::fromStdString(opened->project().scan_data_root)});
     connect(opened,&QObject::destroyed,this,[this]{releaseTemporaryRoots({});},Qt::QueuedConnection);
-    const auto commit=[receiver,before,binding,pathBinding,opened,warnings,example,source=directory,afterOpen,adopted] {
+    const auto commit=[receiver,before,binding,pathBinding,opened,warnings,sources,example,source=directory,afterOpen,adopted] {
         if(!receiver || !opened || receiver->project_!=before || receiver->replacement_generation_!=binding ||
             pathBinding==UINT64_MAX || receiver->path_generation_!=pathBinding)return false;
         const PendingOpenSource opening(*receiver,source);
-        if(!receiver->replaceProject(opened,warnings,example,false,adopted.get(),nullptr,false,source))return false;
+        if(!receiver->replaceProject(opened,warnings,example,false,adopted.get(),nullptr,false,source,{},sources))return false;
         return !afterOpen || afterOpen();
     };
     if(!assistantPrepareRestore(opened,directory,commit))return false;
@@ -1845,12 +1856,15 @@ bool Session::openCopy(const QString& source,const QString& target,const QString
     const auto binding=replacement_generation_;const auto pathBinding=path_generation_;
     const auto preparing=[&]{return receiver && project_==before && replacement_generation_==binding && pathBinding!=UINT64_MAX && path_generation_==pathBinding;};
     QStringList warnings;
+    QStringList sources;  // each loader warning's project file, so a later Text-tab edit of that file can settle it
     QPointer<ProjectViewModel> opened;
     auto adopted=std::make_shared<bool>(false);
     try {
-        edi::Project project = edi::load_project(source.toStdString(), edi::ProjectLoadMode::Construction, [&warnings](const std::string& message) {
+        edi::Project project = edi::load_project(source.toStdString(), edi::ProjectLoadMode::Construction,
+                                                 edi::SourcedWarningSink([&warnings, &sources](const std::string& file, const std::string& message) {
             warnings.append(QString::fromStdString(message));
-        });
+            sources.append(QString::fromStdString(file));
+        }));
         QString data;  // the scan data directory, linked rather than copied
         if (project.sequential_fit.declared()) {
             try {
@@ -1895,11 +1909,11 @@ bool Session::openCopy(const QString& source,const QString& target,const QString
     });
     retainTemporaryRoots({QString::fromStdString(opened->project().scan_data_root)});
     connect(opened,&QObject::destroyed,this,[this]{releaseTemporaryRoots({});},Qt::QueuedConnection);
-    const auto commit=[receiver,before,binding,pathBinding,opened,warnings,example,source=source,afterOpen,adopted] {
+    const auto commit=[receiver,before,binding,pathBinding,opened,warnings,sources,example,source=source,afterOpen,adopted] {
         if(!receiver || !opened || receiver->project_!=before || receiver->replacement_generation_!=binding ||
             pathBinding==UINT64_MAX || receiver->path_generation_!=pathBinding)return false;
         const PendingOpenSource opening(*receiver,source);
-        if(!receiver->replaceProject(opened,warnings,example,false,adopted.get(),nullptr,false,source))return false;
+        if(!receiver->replaceProject(opened,warnings,example,false,adopted.get(),nullptr,false,source,{},sources))return false;
         return !afterOpen || afterOpen();
     };
     if(!assistantPrepareRestore(opened,source,commit))return false;
@@ -1924,7 +1938,7 @@ void Session::setOpenedArchive(const QString& name) {
     }
 }
 
-bool Session::replaceProject(ProjectViewModel* project, const QStringList& warnings, const QString& example, bool nativePrepared, bool* committed, quint64* committedReplacement, bool ordinaryEmptyCreate, const QString& openedFrom, const std::shared_ptr<SessionResetInputs>& resetInputs) {
+bool Session::replaceProject(ProjectViewModel* project, const QStringList& warnings, const QString& example, bool nativePrepared, bool* committed, quint64* committedReplacement, bool ordinaryEmptyCreate, const QString& openedFrom, const std::shared_ptr<SessionResetInputs>& resetInputs, const QStringList& warningSources) {
     // A save holding the open project finishes first (edi ADR-0069): nothing replaces or closes it meanwhile.
     if (const QString refusal = replacementRefusal(); !refusal.isEmpty()) {
         setLastError(refusal);
@@ -2001,7 +2015,7 @@ bool Session::replaceProject(ProjectViewModel* project, const QStringList& warni
         emit openingExampleChanged();
         if (!current() || project_ != target) return false;
     }
-    warnings_->setMessages(warnings);
+    warnings_->setMessages(warnings, warningSources);
     if(!current() || project_!=target)return false;
     if (project_ != nullptr) {
         // Collection-linked data is fetched through the collections the app reads (edi ADR-0069).
@@ -2031,16 +2045,21 @@ bool Session::replaceProject(ProjectViewModel* project, const QStringList& warni
         connect(project_, &ProjectViewModel::information, this, [this](const QString& text) {
             warnings_->post(QStringLiteral("project:%1").arg(++project_messages_), text, QStringLiteral("information"));
         });
-        // Another file's warnings from a Text-tab apply: each listed once (not again when the open already listed
-        // it), and those an apply no longer reports withdrawn.
-        connect(project_, &ProjectViewModel::otherFileWarnings, this,
-                [this](const QStringList& files, const QStringList& texts) {
+        // The file warnings of a Text-tab state the project took (an accepted apply, or its undo). The edited file was
+        // read again, so its earlier warnings, from the open or an apply, give way to what this read reported. Another
+        // file's warnings are listed once (not again when the open listed them) and leave when an apply no longer
+        // reports them; another file's warnings from the open stay until that file is edited.
+        connect(project_, &ProjectViewModel::fileWarnings, this,
+                [this](const QString& edited, const QStringList& files, const QStringList& texts) {
+                    const QString load = QStringLiteral("load-file:");
                     const QString prefix = QStringLiteral("text-apply:");
+                    for (const QString& key : warnings_->keys(WarningListModel::fileKey(load, edited, {})))
+                        warnings_->withdraw(key);
                     QStringList reported;
                     for (qsizetype i = 0; i < files.size() && i < texts.size(); ++i) {
-                        const QString key = prefix + files[i] + QLatin1Char(':') + texts[i];
+                        const QString key = WarningListModel::fileKey(prefix, files[i], texts[i]);
                         reported.append(key);
-                        if (warnings_->keys(key).isEmpty() && !warnings_->listsText(texts[i])) {
+                        if (!warnings_->lists(key) && !warnings_->lists(WarningListModel::fileKey(load, files[i], texts[i]))) {
                             warnings_->post(key, texts[i], QStringLiteral("warning"));
                         }
                     }

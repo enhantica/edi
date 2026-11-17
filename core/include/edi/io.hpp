@@ -60,6 +60,9 @@ Project load_project(const std::string& path, const WarningSink& on_warning = {}
 // The original overload above remains the strict complete-model contract for non-GUI users.
 enum class ProjectLoadMode : std::uint8_t { Complete, Construction };
 Project load_project(const std::string& path, ProjectLoadMode mode, const WarningSink& on_warning = {});
+// The same, each warning with the project file it comes from, as a Text tab's edit gives them, so the app can tell
+// which warnings a later edit of that file settles.
+Project load_project(const std::string& path, ProjectLoadMode mode, const SourcedWarningSink& on_warning);
 
 // Structures and experiments enter an open project from files. Every structure and experiment
 // text these loads and the project loader read goes through one check first: crysta decides once,

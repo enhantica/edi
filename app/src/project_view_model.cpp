@@ -921,15 +921,21 @@ void ProjectViewModel::finishWidgetCreation(const std::shared_ptr<WidgetCreation
 }
 // Data loaded by replacing the project: each experiment the load produced or reloaded (`produced`, indices into
 // `next`) that holds measured data takes the common scale factor before the replacement, so the factor and the load are
-// one undo step. A saved project's opening and a collection's background fetch never come here.
-void ProjectViewModel::rescaleLoaded(edi::Project& next, const std::vector<std::size_t>& produced) {
+// one undo step. A saved project's opening and a collection's background fetch never come here. What each factor did
+// is returned for Messages, posted only once the load is published (noteScaled).
+ProjectViewModel::ScaleNotes ProjectViewModel::rescaleLoaded(edi::Project& next, const std::vector<std::size_t>& produced) {
+    ScaleNotes notes;
     for (const std::size_t i : produced) {
         if (i >= next.experiments.size()) continue;
         const edi::BraggPdExperiment& bank = *next.experiments[i];
         const bool measured = bank.reflections ? !bank.reflections->index_h.get().empty()
                                                : bank.data.has_value() && !bank.calculation_only;
-        if (measured) noteUnscaled(bank, edi::apply_common_scale(next, i));
+        if (measured) notes.emplace_back(QString::fromStdString(bank.name), edi::apply_common_scale(next, i));
     }
+    return notes;
+}
+void ProjectViewModel::noteScaled(const ScaleNotes& notes) {
+    for (const auto& [name, scaled] : notes) noteUnscaled(name, scaled);
 }
 
 // An experiment with measured data whose phase scales the common factor left as they were: one line in Messages.
@@ -939,8 +945,9 @@ void ProjectViewModel::rescaleLoaded(edi::Project& next, const std::vector<std::
 void ProjectViewModel::noteUnscaled(const edi::ExperimentBase& experiment, const edi::CommonScaleOutcome& scaled) {
     const bool measured = experiment.reflections ? !experiment.reflections->index_h.get().empty()
                                                  : experiment.data.has_value() && !experiment.calculation_only;
-    if (!measured) return;
-    const QString name = QString::fromStdString(experiment.name);
+    if (measured) noteUnscaled(QString::fromStdString(experiment.name), scaled);
+}
+void ProjectViewModel::noteUnscaled(const QString& name, const edi::CommonScaleOutcome& scaled) {
     if (scaled.background_started)
         emit information(tr("%1 had no background points: one was added at the measured baseline").arg(name));
     if (scaled.overlap && *scaled.overlap < 0.5)
@@ -1970,7 +1977,7 @@ void ProjectViewModel::adoptIncludedData(const edi::Project& linkedState, const 
         changed = true;
     }
     if (!changed) return;
-    undo_history_.emplace_back(AppliedText{std::move(before)});
+    undo_history_.emplace_back(AppliedText{std::move(before), {}});
     syncUndo();
     if (retired_) return;
     // The scan's files are the same, but a read in flight was of the linked folder: the listing and the shown
@@ -2031,7 +2038,7 @@ bool ProjectViewModel::useAsTemplate(int dataset) {
         if (stashed) scan_template_ = *before;  // refused before it wrote: the old template is still the one saved
         return refuse(error);
     }
-    undo_history_.emplace_back(AppliedText{std::move(before)});
+    undo_history_.emplace_back(AppliedText{std::move(before), {}});
     syncUndo();
     // A dataset read still in flight was of the old template: it is dropped, and the new template's row is selected.
     // The model is that row now, the template with its file's data, so it is what the selection shows.
@@ -2067,7 +2074,7 @@ bool ProjectViewModel::locateDataFolder(const QUrl& folder, const QString& missi
         emit refused(error);
         return false;
     }
-    undo_history_.emplace_back(AppliedText{std::move(before)});
+    undo_history_.emplace_back(AppliedText{std::move(before), {}});
     syncUndo();
     emit missingDataFolderChanged();
     return true;
@@ -2113,7 +2120,7 @@ bool ProjectViewModel::locateDataFile(ExperimentViewModel* experiment, const QUr
     const QString error = apply(edi::Edit::replace_project(*project_, std::move(next)), true);
     if (!self || retired_) return false;
     if (!error.isEmpty()) return refuse(error);
-    undo_history_.emplace_back(AppliedText{std::move(before)});
+    undo_history_.emplace_back(AppliedText{std::move(before), {}});
     syncUndo();
     emit missingDataFolderChanged();
     return true;
@@ -2375,14 +2382,15 @@ bool ProjectViewModel::loadDatasets(ExperimentViewModel* experiment, const QList
     const auto fileName = [](const QUrl& url) { return QFileInfo(url.toLocalFile()).fileName(); };
     // The replacement published as one undoable change.
     const auto replace = [&](edi::Project next, const std::vector<std::size_t>& produced) {
-        rescaleLoaded(next, produced);
+        const ScaleNotes notes = rescaleLoaded(next, produced);
         auto before = std::make_shared<const edi::Project>(project);
         const QString error = apply(edi::Edit::replace_project(project, std::move(next)), true);
         if (!self || retired_) return false;
         if (!error.isEmpty()) return refuse(error);
-        undo_history_.emplace_back(AppliedText{std::move(before)});
+        undo_history_.emplace_back(AppliedText{std::move(before), {}});
         syncUndo();
         syncLoadState();
+        noteScaled(notes);
         return true;
     };
     // Where each experiment's data comes from, one decision for every route (edi ADR-0069): copied, the data is held;
@@ -2482,7 +2490,8 @@ bool ProjectViewModel::loadDatasets(ExperimentViewModel* experiment, const QList
             return true;
         }
         // Each new experiment's scales brought to its data's level as if it were already in the project, before it is
-        // added: the factor and the addition are one undo step.
+        // added: the factor, any background point it started and the addition are one undo step.
+        ScaleNotes notes;
         {
             edi::Project probe(project);
             const std::size_t first = probe.experiments.size();
@@ -2493,15 +2502,24 @@ bool ProjectViewModel::loadDatasets(ExperimentViewModel* experiment, const QList
                 probe.adopt_experiments();
                 std::vector<std::size_t> produced;
                 for (std::size_t i = first; i < probe.experiments.size(); ++i) produced.push_back(i);
-                rescaleLoaded(probe, produced);
+                notes = rescaleLoaded(probe, produced);
                 for (std::size_t i = 0; i < batch.size(); ++i) {
-                    const auto& scaled = probe.experiments[first + i]->linked_structures;
+                    const edi::BraggPdExperiment& estimated = *probe.experiments[first + i];
+                    const auto& scaled = estimated.linked_structures;
                     auto& links = batch[i].linked_structures;
                     for (std::size_t l = 0; l < links.size() && l < scaled.size(); ++l)
                         links[l]->scale.value = scaled[l]->scale.value.get();
+                    // The background point the estimate started, copied: the probe's rows are its own.
+                    if (batch[i].background.empty() && !estimated.background.empty()) {
+                        std::vector<edi::ItemVec<edi::LineSegment>::Ptr> points;
+                        points.reserve(estimated.background.size());
+                        for (const auto& row : estimated.background) points.push_back(std::make_shared<edi::LineSegment>(*row));
+                        batch[i].background = edi::ItemVec<edi::LineSegment>(std::move(points));
+                    }
                 }
             } catch (const std::exception&) {
                 // A batch the project cannot take is refused by the addition below, unscaled.
+                notes.clear();
             }
         }
         const std::size_t before = project.experiments.size();
@@ -2515,6 +2533,7 @@ bool ProjectViewModel::loadDatasets(ExperimentViewModel* experiment, const QList
         if (!error.isEmpty()) return refuse(error);
         syncLoadState();
         noteAddedExperiments(before);
+        noteScaled(notes);
         setCurrentExperimentIndex(static_cast<int>(experiment_models_.size()) - 1);
         // A joint fit's experiments: Analysis switches to joint by itself (the owner, 2026-11-04).
         if (analysis_ != nullptr && project.experiments.size() > 1) analysis_->setFittingMode(QStringLiteral("joint"));
@@ -3065,10 +3084,11 @@ bool ProjectViewModel::loadData(int index, const QUrl& file) {
         std::vector<std::size_t> produced{static_cast<std::size_t>(index)};
         for (std::size_t i = held.size() - load.more.size(); i < held.size(); ++i) produced.push_back(i);
         QString error;
+        ScaleNotes notes;
         try {
             next.experiments.assign(std::move(held));
             next.adopt_experiments();
-            rescaleLoaded(next, produced);
+            notes = rescaleLoaded(next, produced);
             auto before = std::make_shared<const edi::Project>(project);
             // The admitted original file keeps its receipt: its outcome and the experiments it produced are this one
             // change's, recorded by the edit itself before anything is published.
@@ -3077,7 +3097,7 @@ bool ProjectViewModel::loadData(int index, const QUrl& file) {
             if (input && input->consumed) input->outcome = result;
             error = result.applied ? QString{} : result.message;
             if (self && !retired_ && error.isEmpty()) {
-                undo_history_.emplace_back(AppliedText{std::move(before)});
+                undo_history_.emplace_back(AppliedText{std::move(before), {}});
                 syncUndo();
             }
         } catch (const std::exception& refusal) {
@@ -3086,6 +3106,7 @@ bool ProjectViewModel::loadData(int index, const QUrl& file) {
         if (!self || retired_) return false;
         if (!error.isEmpty()) return refuse(error);
         syncLoadState();
+        noteScaled(notes);
     } else {
         LoadedData record{&experiment, std::make_shared<const edi::BraggPdExperiment>(experiment)};
         // Own the original experiment snapshot/history node before core publication.
@@ -5653,6 +5674,7 @@ void ProjectViewModel::undo() {
     // its own entry on the way (its start state is gone once restored), so only a record still there goes.
     const std::size_t depth = undo_history_.size();
     bool undone = false;
+    QString edited;  // a Text-tab apply's file, when that is what goes back
     const auto restore = [this](const edi::Edit& edit, bool structural) {
         return applyEdit(edit, structural, true).applied;
     };
@@ -5686,6 +5708,7 @@ void ProjectViewModel::undo() {
     } else if (const auto* structures = std::get_if<edi::StructuresUndo>(&undo_history_.back())) {
         undone = restore(edi::Edit::restore_structures(*project_, *structures), true);
     } else if (const auto* text = std::get_if<AppliedText>(&undo_history_.back())) {
+        edited = text->file;
         undone = apply(edi::Edit::replace_project(*project_, edi::Project(*text->before)), true).isEmpty();
     } else if (const auto* report = std::get_if<edi::ReportSettingsState>(&undo_history_.back())) {
         undone = write_report_settings(edi::Edit::report_settings(*project_, *report)).isEmpty();
@@ -5813,6 +5836,8 @@ void ProjectViewModel::undo() {
         undo_history_.pop_back();
     }
     syncUndo();
+    // A Text-tab edit taken back: the file's warnings are those of the state restored.
+    if (undone && !edited.isEmpty() && !retired_) reportFileWarnings(edited);
 }
 
 void ProjectViewModel::refreshCategories() {
@@ -5906,7 +5931,6 @@ QString ProjectViewModel::applyText(const QString& file, const QString& text) {
     } catch (const std::exception& refusal) {
         return QString::fromUtf8(refusal.what());
     }
-    emit otherFileWarnings(other_files, other_texts);
     if (!warnings.isEmpty()) {
         return warnings.join(QLatin1Char('\n'));
     }
@@ -5969,9 +5993,28 @@ QString ProjectViewModel::applyText(const QString& file, const QString& text) {
     if (!error.isEmpty()) {
         return error;
     }
-    undo_history_.emplace_back(AppliedText{std::move(before)});
+    undo_history_.emplace_back(AppliedText{std::move(before), file});
     syncUndo();
+    if (retired_) return {};
+    // Messages follow the state the project took, never a refused one.
+    emit fileWarnings(file, other_files, other_texts);
     return {};
+}
+
+void ProjectViewModel::reportFileWarnings(const QString& file) {
+    QStringList files;
+    QStringList texts;
+    const std::string relative = file.toStdString();
+    try {
+        edi::project_with_file_text(*project_, relative, savedFile(relative),
+                                    edi::SourcedWarningSink([&](const std::string& source, const std::string& warning) {
+                                        files.append(QString::fromStdString(source.empty() ? relative : source));
+                                        texts.append(QString::fromStdString(warning));
+                                    }));
+    } catch (const std::exception&) {
+        return;  // a state the reader refuses leaves Messages as they are
+    }
+    emit fileWarnings(file, files, texts);
 }
 
 QString ProjectViewModel::restoreProject(const edi::Project& accepted) {
@@ -5986,7 +6029,7 @@ QString ProjectViewModel::restoreProject(const edi::Project& accepted) {
     const auto result = applyEdit(edi::Edit::replace_project(*project_, std::move(restored)), true, true);
     QString error = result.applied ? QString{} : result.message;
     if (!error.isEmpty()) return error;
-    undo_history_.emplace_back(AppliedText{std::move(before)});
+    undo_history_.emplace_back(AppliedText{std::move(before), {}});
     syncUndo();
     return {};
 }

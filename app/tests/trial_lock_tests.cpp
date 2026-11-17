@@ -215,6 +215,76 @@ private slots:
         QVERIFY(project.loadData(0, data));  // the same file again is still a load
         QVERIFY(std::abs(peakRatioOf(*project.assistantProject()) - 1.0) < 1e-6);
     }
+    // An open's warning about a value in one file leaves Messages once a Text-tab edit of that file corrects it; a refused
+    // edit changes nothing there, and Undo of the correction brings the warning back.
+    void textEditSettlesTheOpensWarning() {
+        QTemporaryDir dir;
+        QVERIFY(dir.isValid());
+        const QDir source(QString::fromUtf8(EDI_SOURCE_DIR) + "/docs/user/cli/pd-neut-cwl_lbco-hrpt/project");
+        for (const QString& folder : {QStringLiteral("."), QStringLiteral("analysis"), QStringLiteral("structures"),
+                                     QStringLiteral("experiments")}) {
+            QVERIFY(QDir(dir.path()).mkpath(folder));
+            for (const QString& name : QDir(source.filePath(folder)).entryList({QStringLiteral("*.edi")}, QDir::Files))
+                QVERIFY(QFile::copy(source.filePath(folder + "/" + name), dir.filePath(folder + "/" + name)));
+        }
+        const QString relative = QStringLiteral("structures/lbco.edi");
+        QFile structure(dir.filePath(relative));
+        QVERIFY(structure.open(QIODevice::ReadOnly));
+        const QString good = QString::fromUtf8(structure.readAll());
+        structure.close();
+        const QString row = QStringLiteral("Co Co 0.5 0.5 0.5 b 1 0.5() Biso");
+        QVERIFY(good.contains(row));
+        QString bad = good;
+        bad.replace(row, QStringLiteral("Co Co 0.5 0.5 0.5 b 1 -0.5() Biso"));
+        QVERIFY(structure.open(QIODevice::WriteOnly | QIODevice::Truncate));
+        structure.write(bad.toUtf8());
+        structure.close();
+        Session session(nullptr);
+        QVERIFY(session.openProject(QUrl::fromLocalFile(dir.path())));
+        ProjectViewModel& project = *session.project();
+        WarningListModel& messages = *session.loadWarnings();
+        const QString opened = WarningListModel::fileKey(QStringLiteral("load-file:"), relative, {});
+        QCOMPARE(messages.keys(opened).size(), 1);
+        // A refused edit (an unknown category) leaves the warning.
+        QVERIFY(!project.applyText(relative, good + QStringLiteral("\n_no_such_category.item 1\n")).isEmpty());
+        QCOMPARE(messages.keys(opened).size(), 1);
+        QVERIFY2(project.applyText(relative, good).isEmpty(), "the corrected text applies");
+        QVERIFY(messages.keys(opened).isEmpty());
+        QVERIFY(messages.keys(QStringLiteral("text-apply:")).isEmpty());
+        project.undo();
+        QCOMPARE(messages.keys(WarningListModel::fileKey(QStringLiteral("text-apply:"), relative, {})).size(), 1);
+    }
+    // Several files loaded as separate experiments: each new one takes the scale and the one background point, the
+    // Messages line about it comes with the addition, and one Undo takes all of it back.
+    void separateExperimentsKeepTheBackgroundPoint() {
+        QTemporaryDir dir;
+        QVERIFY(dir.isValid());
+        const QString source = QString::fromUtf8(EDI_SOURCE_DIR) + "/app/tutorials/files/hrpt.xye";
+        QList<QUrl> files;
+        for (const QString& name : {QStringLiteral("first.xye"), QStringLiteral("second.xye")}) {
+            QVERIFY(QFile::copy(source, dir.filePath(name)));
+            files.append(QUrl::fromLocalFile(dir.filePath(name)));
+        }
+        ProjectViewModel project(lbcoProject(std::nullopt), nullptr);
+        QSignalSpy notes(&project, &ProjectViewModel::information);
+        QVERIFY(project.loadDatasets(project.experimentModels().value(0), files, false));
+        const edi::Project& model = *project.assistantProject();
+        QCOMPARE(model.experiments.size(), std::size_t(3));
+        int started = 0;
+        for (const auto& note : notes) started += note.at(0).toString().contains("one was added") ? 1 : 0;
+        QCOMPARE(started, 2);
+        for (std::size_t i = 1; i < model.experiments.size(); ++i) {
+            edi::Project alone = model;
+            std::vector<edi::ItemVec<edi::BraggPdExperiment>::Ptr> held{alone.experiments[i]};
+            alone.experiments.assign(std::move(held));
+            alone.adopt_experiments();
+            QCOMPARE(alone.experiments[0]->background.size(), std::size_t(1));
+            QVERIFY(std::abs(alone.experiments[0]->background[0]->intensity.value.get() - tenthPercentile(alone)) < 1e-9);
+            QVERIFY(std::abs(peakRatioOf(alone) - 1.0) < 1e-6);
+        }
+        project.undo();
+        QCOMPARE(project.assistantProject()->experiments.size(), std::size_t(1));
+    }
     // The owner's first case: the experiment's default 1 Å wavelength, so the calculated peaks miss HRPT's. The peak
     // heights still set the level, and Messages warns about the positions.
     void defaultWavelengthWarnsAndStillScales() {
