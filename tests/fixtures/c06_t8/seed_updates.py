@@ -8,6 +8,7 @@ from pathlib import Path
 
 from tests.fixtures.c06_t8.variant_name_projection import restore_variant_name
 from tests.fixtures.path_keys import repository_key
+from tests.fixtures.stop_defaults import retention
 
 HERE = Path(__file__).parent
 ROOT = HERE.parents[2]
@@ -15,6 +16,7 @@ ROOT = HERE.parents[2]
 
 def previous_bytes(name, data):
     name = repository_key(name)
+    data = retention.previous_bytes(name, data)
     data = restore_variant_name(name, data)
     row = json.loads((HERE / 'seed-updates.json').read_text())['files'].get(name)
     if row is None:
