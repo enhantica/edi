@@ -842,6 +842,13 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
             steps_.push_back({QStringLiteral("freecheck-%1").arg(i + 1, 2, 10, QLatin1Char('0')), actions});
         }
     }
+    // The moments table of a magnetic structure, with |M| and its angles (`--demo-only moments-`).
+    if (only.startsWith(QLatin1String("moments-"))) {
+        const QString root = QString::fromUtf8(EDI_CLI_PROJECTS_DIR) + "/";
+        steps_.push_back({"moments-1-crystal-axes", {"resize:1480x800", "open-project:" + root + "pd-neut-cwl_cosio-d20_2k/project",
+                                                     "appBar.tab.structure", basic, "expand:group.atom_site_moment",
+                                                     "reveal:group.atom_site_moment"}});
+    }
     // The series dialog for the synthetic example's files, grouped before it loads (`--demo-only seriesload-`).
     if (only.startsWith(QLatin1String("seriesload-"))) {
         const QString root = QString::fromUtf8(EDI_CLI_PROJECTS_DIR) + "/";
