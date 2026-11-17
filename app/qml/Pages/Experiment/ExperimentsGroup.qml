@@ -39,7 +39,8 @@ SideBarGroup {
     // right margin as wide as a table's edge margin then keeps the datablock names off it (the owner, 2026-10-24).
     // The Start column is as wide as its title.
     readonly property real startColumnWidth: Math.ceil(startTitle.advanceWidth) + EaStyle.Sizes.tableColumnSpacing * 2
-    readonly property real fitColumnWidth: Math.ceil(Math.max(fitTitle.advanceWidth, EaStyle.Sizes.fontPixelSize * 1.15)) + EaStyle.Sizes.tableColumnSpacing
+    // Its header or its check box, whichever is wider (the check box replaced the outcome icon, the owner, 2026-11-17).
+    readonly property real fitColumnWidth: Math.ceil(Math.max(fitTitle.advanceWidth, EaStyle.Sizes.fontPixelSize * 1.6)) + EaStyle.Sizes.tableColumnSpacing
 
     objectName: "group.experiments"
     title: qsTr("Experiments (%1)").arg(project ? project.experiments.count : 0)
@@ -73,18 +74,20 @@ SideBarGroup {
             currentRow: group.project ? group.project.currentExperimentIndex : -1
             onRowActivated: row => ApplicationInfo.activateFormBlock(row, false)
 
-            columns: [numberColumnWidth, group.scan && !group.series ? group.startColumnWidth : 0.001, group.scan ? 0.001 : AppSizes.iconOnlyColumnWidth, group.scan ? AppSizes.iconOnlyColumnWidth : group.fitColumnWidth, -1, -1, group.scanColumns.length ? group.scanColumns.length * AppSizes.dataColumnWidth * 1.4 : 0.001, group.scan ? 0.001 : AppSizes.iconColumnWidth]
+            columns: [numberColumnWidth, group.scan && !group.series ? group.startColumnWidth : 0.001, AppSizes.iconOnlyColumnWidth, group.fitColumnWidth, -1, -1, group.scanColumns.length ? group.scanColumns.length * AppSizes.dataColumnWidth * 1.4 : 0.001, group.scan ? 0.001 : AppSizes.iconColumnWidth]
 
             header: EaComponents.ListViewHeader {
                 EaComponents.ListViewLabel {
                     elide: Text.ElideRight
                     horizontalAlignment: Text.AlignHCenter
                 }
+                // Present whenever its cells are, empty where there is no Start: a header cell and its row's cell are
+                // both shown or both hidden, or the header row would lose or gain a column's gap and stand off its
+                // cells from there on (the owner, 2026-11-17).
                 EaComponents.ListViewLabel {
                     elide: Text.ElideRight
-                    horizontalAlignment: Text.AlignHCenter
-                    visible: group.scan && !group.series
-                    text: qsTr("Start")
+                    horizontalAlignment: Text.AlignLeft
+                    text: group.scan && !group.series ? qsTr("Start") : ""
                 }
                 EaComponents.ListViewLabel {
                     elide: Text.ElideRight
@@ -157,12 +160,14 @@ SideBarGroup {
                 }
                 // The experiment a scan starts from (replaces Use as template; the owner, 2026-11-16): a scan's
                 // template dataset; a series starts from its experiments' own values, its one row always marked.
+                // Left-aligned under its header (the owner, 2026-11-17).
                 Item {
-                    property int horizontalAlignment: Text.AlignHCenter
+                    property int horizontalAlignment: Text.AlignLeft
                     height: parent ? parent.height : 0
                     EaElements.RadioButton {
                         objectName: `experiments.start.${row.index}`
-                        anchors.centerIn: parent
+                        anchors.left: parent.left
+                        anchors.verticalCenter: parent.verticalCenter
                         visible: group.scan && !group.series
                         checked: row.isTemplate
                         EaElements.ToolTip {
@@ -180,19 +185,39 @@ SideBarGroup {
                 IconCell {
                     horizontalAlignment: Text.AlignHCenter
                     objectName: `experiments.color.${row.index}`
-                    visible: !group.scan
+                    // A scan's or a series' rows too, each in its colour as the selectors show it (the owner, 2026-11-17).
                     icon: "microscope"
                     iconColor: AppColors.experiment(row.index)
                     toolTip: qsTr("Measured pattern color")
                 }
-                // How the project's last fit ended on this experiment; "Not fitted" when it took no part.
-                IconCell {
-                    horizontalAlignment: Text.AlignLeft
-                    objectName: `experiments.fit.${row.index}`
-                    icon: FitOutcomes.icon(row.fitOutcome)
-                    iconColor: String(FitOutcomes.color(row.fitOutcome))
-                    ring: FitOutcomes.ring(row.fitOutcome)
-                    toolTip: FitOutcomes.word(row.fitOutcome)
+                // How the project's last fit ended on this experiment: the app's check box, ticked in the outcome's colour
+                // (green converged, orange a warning, red failed) and empty when it took no part (the owner, 2026-11-17).
+                // Nobody sets it: it takes no focus and its clicks go nowhere, but it keeps its colour, which a disabled
+                // check box would draw grey.
+                Item {
+                    property int horizontalAlignment: Text.AlignLeft
+                    height: parent ? parent.height : 0
+
+                    EaElements.CheckBox {
+                        id: fitBox
+                        objectName: `experiments.fit.${row.index}`
+                        anchors.left: parent.left
+                        anchors.verticalCenter: parent.verticalCenter
+                        padding: 0
+                        focusPolicy: Qt.NoFocus
+                        checked: row.fitOutcome !== "" && !FitOutcomes.ring(row.fitOutcome)
+                        color: FitOutcomes.color(row.fitOutcome)
+                        MouseArea {
+                            id: fitHover
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            acceptedButtons: Qt.AllButtons
+                        }
+                        EaElements.ToolTip {
+                            text: FitOutcomes.word(row.fitOutcome)
+                            requested: fitHover.containsMouse && text !== ""
+                        }
+                    }
                 }
                 // The datablock name, editable: a refused rename returns the cell to the stored name and shows why.
                 // Editing a name also makes its row current, as a click on the row does.
@@ -238,7 +263,8 @@ SideBarGroup {
                             width: implicitWidth
                             height: parent.height
                             elide: Text.ElideRight
-                            color: EaStyle.Colors.themeForegroundMinor
+                            // In the accent, as the run selectors show it (the owner, 2026-11-17).
+                            color: EaStyle.Colors.themeAccent
                             text: qsTr("Start")
                         }
                         // ⋯: replace the data with another file, folder or collection entry.

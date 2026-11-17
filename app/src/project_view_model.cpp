@@ -3752,10 +3752,12 @@ std::string ProjectViewModel::scanDeclaration(const edi::Project& project) {
 
 QStringList ProjectViewModel::scanColumns(const edi::Project& project) {
     QStringList columns;
+    // The rule's name with a capital, as the other headers; its unit is in each cell, as the selectors show it (the
+    // owner, 2026-11-17).
     for (const auto& rule : project.sequential_fit.extract) {
-        const QString id = QString::fromStdString(rule->id.value());
-        const QString unit = QString::fromStdString(edi::scan_target_unit(rule->target));
-        columns.append(unit.isEmpty() ? id : QStringLiteral("%1 (%2)").arg(id, unit));
+        QString id = QString::fromStdString(rule->id.value());
+        if (!id.isEmpty()) id[0] = id[0].toUpper();
+        columns.append(id);
     }
     return columns;
 }
