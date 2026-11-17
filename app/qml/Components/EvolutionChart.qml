@@ -181,8 +181,21 @@ Item {
             toolbarGroup: "series"
             visible: !chart.fromReport && chart.evolution !== null && chart.evolution.series && chart.evolution.perExperiment
             toolTip: qsTr("Every bank's curve, or one bank's")
-            readonly property var entries: chart.evolution !== null ? [qsTr("All banks")].concat(chart.evolution.experiments) : []
+            // Each bank with the experiment icon in its curve's colour, as the legend and the Bank selector show it;
+            // All banks with the neutral icon (the owner, 2026-11-17). The base box draws $ICONS_FAMILY and $ICON_COLOR.
+            readonly property var plain: chart.evolution !== null ? [qsTr("All banks")].concat(chart.evolution.experiments) : []
+            readonly property var entries: plain.map((name, i) => {
+                const colour = i === 0 ? "$ICON_COLOR" : String(AppColors.experiment(i - 1, chart.colors.isDarkPalette));
+                return `<font face="$ICONS_FAMILY" color="${colour}">microscope</font>&nbsp;&nbsp;${name}`;
+            })
             model: entries
+            // The box measures the shown name and the icon, not the markup.
+            width: Math.ceil(Math.max(...plain.map(name => bankMetrics.advanceWidth(name)), 0) + chart.em * 1.6) + contentItemLabel.leftPadding + contentItemLabel.rightPadding + leftPadding + rightPadding
+            popup.width: width
+            FontMetrics {
+                id: bankMetrics
+                font: bankBox.font
+            }
             shownIndex: chart.evolution !== null ? chart.evolution.currentExperiment + 1 : 0
             onActivated: index => chart.evolution.currentExperiment = index - 1
         }
@@ -192,7 +205,9 @@ Item {
         BlockSelector {
             objectName: "evolution.parameters"
             visible: !chart.fromReport
-            width: chart.em * 18
+            // The chosen parameter's whole line when the row has room; on a narrow chart it gives way, cutting only the
+            // end of the full name, before any control moves into More (the owner, 2026-11-17).
+            width: Math.max(chart.em * 18, Math.min(contentWidth, chart.width - chart.em * 34))
             backgroundColor: chart.colors.chartBackground
             blocks: chart.evolution ? chart.evolution.parameters : null
             blocksTextRole: "label"
