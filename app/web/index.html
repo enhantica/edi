@@ -33,7 +33,9 @@
       .intro-buttons button {
         border: none; background: none; padding: 0; color: var(--foreground); opacity: 0.6; font: 14px sans-serif; cursor: pointer;
       }
-      .intro-buttons button:hover { opacity: 1; }
+      .intro-buttons button:hover:enabled { opacity: 1; }
+      /* Skip waits for the app: shown, dimmer, until it can act (intro.js). */
+      .intro-buttons button:disabled { opacity: 0.3; cursor: default; }
     </style>
     <link rel="stylesheet" href="splash.css">
     <script>
@@ -236,6 +238,8 @@
         window.ediBuild = build;
         document.documentElement.dataset.build = build;
         console.log(`edi: the ${build} build: ${chosen.reason} (crossOriginIsolated: ${self.crossOriginIsolated})`);
+        // The intro's animations run before the app's start keeps the page busy (intro.js), for at most 2 s.
+        await Promise.race([intro().ready || Promise.resolve(), new Promise((resolve) => setTimeout(resolve, 2000))]);
         await loadScript(`${folder}/qtloader.js`);
         await loadScript(`${folder}/edi_app.js`);
         const screen = document.getElementById("screen");

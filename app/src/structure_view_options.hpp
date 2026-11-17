@@ -54,6 +54,11 @@ class StructureViewOptions : public QObject {
     // "cell", the polyhedra inside the cell, or "complete", whole for every centre in the cell.
     Q_PROPERTY(QString polyhedraExtent READ polyhedraExtent WRITE setPolyhedraExtent NOTIFY polyhedraExtentChanged)
     Q_PROPERTY(edi_app::OptionListModel* polyhedraExtentOptions READ polyhedraExtentOptions CONSTANT)
+    // The polyhedra's centre and corner atoms, element symbols separated by commas or spaces ("" is the default:
+    // cations as centres, anions as corners), and the longest centre-corner distance in Angstrom (0: the bond cut-offs).
+    Q_PROPERTY(QString polyhedraCentres READ polyhedraCentres WRITE setPolyhedraCentres NOTIFY polyhedraDefinitionChanged)
+    Q_PROPERTY(QString polyhedraCorners READ polyhedraCorners WRITE setPolyhedraCorners NOTIFY polyhedraDefinitionChanged)
+    Q_PROPERTY(double polyhedraMaxDistance READ polyhedraMaxDistance WRITE setPolyhedraMaxDistance NOTIFY polyhedraDefinitionChanged)
     // The atom views diffraction-lib offers, for the Appearance group's selector.
     Q_PROPERTY(edi_app::OptionListModel* atomViewOptions READ atomViewOptions CONSTANT)
     Q_PROPERTY(edi_app::OptionListModel* momentFormOptions READ momentFormOptions CONSTANT)
@@ -100,6 +105,12 @@ class StructureViewOptions : public QObject {
     QString polyhedraExtent() const;
     void setPolyhedraExtent(const QString& extent);  // "cell" or "complete"; anything else is ignored
     OptionListModel* polyhedraExtentOptions() const { return polyhedra_extent_options_; }
+    QString polyhedraCentres() const;
+    void setPolyhedraCentres(const QString& elements);
+    QString polyhedraCorners() const;
+    void setPolyhedraCorners(const QString& elements);
+    double polyhedraMaxDistance() const { return options_.polyhedra_max_distance; }
+    void setPolyhedraMaxDistance(double distance);  // negative or not finite is ignored
 
     // The Atoms selector's tokens, the magnetic ones only for a magnetic structure.
     Q_INVOKABLE QStringList atomChoices(bool magnetic) const;
@@ -130,6 +141,7 @@ class StructureViewOptions : public QObject {
     void polyhedraChanged();
     void polyhedraColourChanged();
     void polyhedraExtentChanged();
+    void polyhedraDefinitionChanged();
     void polyhedraOpacityChanged();  // the material's alone: nothing is presented again
     // An option a structure saves changed: what the project keeps.
     void changed();

@@ -39,9 +39,12 @@ no database server.
   when every location failed. The index, the examples, the tutorials, Python and the CLI share the rule.
   **The desktop app adds a third location, its offline copy** (the owner, 2026-11-10): the installers bundle a copy of
   the collection (about 14 MB, `EDI_BUNDLED_COLLECTION`, fetched from `enhantica/edi-data` `main` when the installer is
-  built) beside the app, and the built-in source lists it last. It is read only after the online locations are out,
-  so the examples and tutorials work offline while the online collection stays the source of updates. The web app,
-  Python and the CLI have no copy.
+  built) beside the app, and the built-in source lists it last. The examples and tutorials open from it at once; the
+  online locations are asked in the background only for what is new or changed: an example the copy lacks is then
+  served online, and a changed file is downloaded and used once it has arrived, so no open waits for the network
+  (the owner, 2026-11-17). Offline the copy serves alone. A local build reads a copy in place
+  (`EDI_LOCAL_COLLECTION`, cloned into `build/edi-data` by `tools/ci/app-build.sh` from the edi-data branch
+  `EDI_LOCAL_COLLECTION_REF`, default `main`; `EDI_LOCAL_COLLECTION=off` builds without), so it behaves as the installed app. The web app, Python and the CLI have no copy.
   A row can be disabled; user rows, a name and a URL, can be added, edited and removed. The table persists in the
   settings file (`Online/sources`); a built-in row's name and URL come from the program, so an update can move them.
 - **The index.** A collection is plain files in a git repository behind one base URL, with one generated

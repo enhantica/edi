@@ -1,9 +1,12 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "structure_view_options.hpp"
 
+#include <QRegularExpression>
+
 #include <algorithm>
 #include <cmath>
 #include <optional>
+#include <set>
 
 namespace edi_app {
 
@@ -157,6 +160,35 @@ void StructureViewOptions::setPolyhedraExtent(const QString& extent) {
     if (extent == QLatin1String("cell") || extent == QLatin1String("complete")) {
         assignSession(options_.polyhedra_complete, extent == QLatin1String("complete"),
                       &StructureViewOptions::polyhedraExtentChanged);
+    }
+}
+namespace {
+// Element symbols from a list the user typed: "Co, Si" or "Co Si"; each capitalised as a symbol is ("si" is Si).
+std::set<std::string> element_symbols(const QString& text) {
+    std::set<std::string> symbols;
+    for (QString word : text.split(QRegularExpression(QStringLiteral("[,;\\s]+")), Qt::SkipEmptyParts)) {
+        word = word.left(1).toUpper() + word.mid(1).toLower();
+        symbols.insert(word.toStdString());
+    }
+    return symbols;
+}
+QString symbols_text(const std::set<std::string>& symbols) {
+    QStringList words;
+    for (const std::string& symbol : symbols) words.append(QString::fromStdString(symbol));
+    return words.join(QStringLiteral(", "));
+}
+}  // namespace
+QString StructureViewOptions::polyhedraCentres() const { return symbols_text(options_.polyhedra_centres); }
+void StructureViewOptions::setPolyhedraCentres(const QString& elements) {
+    assignSession(options_.polyhedra_centres, element_symbols(elements), &StructureViewOptions::polyhedraDefinitionChanged);
+}
+QString StructureViewOptions::polyhedraCorners() const { return symbols_text(options_.polyhedra_corners); }
+void StructureViewOptions::setPolyhedraCorners(const QString& elements) {
+    assignSession(options_.polyhedra_corners, element_symbols(elements), &StructureViewOptions::polyhedraDefinitionChanged);
+}
+void StructureViewOptions::setPolyhedraMaxDistance(double distance) {
+    if (std::isfinite(distance) && distance >= 0.0) {
+        assignSession(options_.polyhedra_max_distance, distance, &StructureViewOptions::polyhedraDefinitionChanged);
     }
 }
 void StructureViewOptions::setPolyhedraOpacity(double opacity) {

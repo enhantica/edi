@@ -5,7 +5,7 @@
 // their icons, order and tooltips, and plotly's own toolbar is hidden. report.js draws a synthetic three-pane
 // pattern here against a stub plotly and a minimal page, and what it hands plotly and the page is compared with the
 // app's chart (app/qml/Components/PatternChart.qml: its three frames and its one-em pane gap) and its toolbar
-// (app/qml/Components/ChartToolbar.qml).
+// (app/qml/Components/ChartToolbar.qml, with Save image from the main view).
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 
@@ -26,11 +26,12 @@ const toolbarQml = readFileSync(new URL('app/qml/Components/ChartToolbar.qml', r
 const appButtons = [...toolbarQml.matchAll(/fontIcon: "([a-z-]+)"\s*\n\s*toolTip: [^\n]*?qsTr\("([^"]+)"\)/g)].map(
   ([, icon, tip]) => [icon, tip]).filter(([icon]) => !APP_ONLY.has(icon));
 expect(appButtons.length === 8, `the app's toolbar has ${appButtons.length} buttons, not the 8 this check knows`);
-// Save image is the report toolbar's last button, from its own component; the app shows it at the main view's corner.
+// Save image, from its own component: in the app it sits in the main view's corner, shared by every chart (the owner,
+// 2026-11-16); the report, with no main view, keeps it as its toolbar's last button.
 const saveQml = readFileSync(new URL('app/qml/Components/SaveImageButton.qml', root), 'utf8');
 const mainViewQml = readFileSync(new URL('app/qml/Components/MainView.qml', root), 'utf8');
 const save = saveQml.match(/fontIcon: "([a-z-]+)"\s*\n\s*toolTip: [^\n]*?qsTr\("([^"]+)"\)/);
-expect(save && mainViewQml.includes('SaveImageButton {'), "the app has no Save image button");
+expect(save && mainViewQml.includes('SaveImageButton {'), "the app's main view has no Save image button");
 if (save) appButtons.push([save[1], save[2]]);
 
 const EM = 16;

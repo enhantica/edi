@@ -62,7 +62,7 @@ Item {
         checked: toolbar.options !== null && toolbar.options.bonds
         onClicked: toolbar.options.bonds = !toolbar.options.bonds
     }
-    // Coordination polyhedra, built from the same bonds; colour and opacity are in Extra's Appearance group.
+    // Coordination polyhedra, defined in Extra's Polyhedra group: one click shows or hides them.
     ChartToolButton {
         objectName: "structure.toolbar.polyhedra"
         visible: toolbar.controller !== null && toolbar.controller.hasSites && toolbar.controller.hasBonds

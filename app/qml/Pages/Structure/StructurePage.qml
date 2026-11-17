@@ -43,6 +43,7 @@ WorkflowPage {
     pageView: Component {
         MainView {
             shown: page.current
+            defaultKey: "structure"
             tabKeys: ["structure", "pattern"]
         }
     }
@@ -81,6 +82,9 @@ WorkflowPage {
                 options: page.project ? page.project.structureViewOptions : null
                 controller: page.pageViewItem ? page.pageViewItem.structureController : null
                 structure: page.structure
+            }
+            PolyhedraGroup {
+                options: page.project ? page.project.structureViewOptions : null
             }
         }
     }
