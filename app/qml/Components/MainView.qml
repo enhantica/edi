@@ -301,7 +301,7 @@ EaComponents.MainContent {
     SaveImageButton {
         id: saveImage
 
-        readonly property Item source: ({
+        readonly property var source: ({
                 "structure": view.hasStructures ? structureView.imageItem : null,
                 "pattern": view.hasExperiments ? chartView.imageItem : null,
                 "meascalc": measCalcTab.available ? (measCalcTab.singleCrystal ? measCalcCrystal.imageItem : measCalcPowder.imageItem) : null,

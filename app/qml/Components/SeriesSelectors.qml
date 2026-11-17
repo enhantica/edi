@@ -52,7 +52,7 @@ Row {
         if (project !== null && next >= 0 && next < banks.length)
             project.currentBank = next;
     }
-    readonly property bool keysFree: Window.activeFocusItem === null || Window.activeFocusItem.cursorPosition === undefined
+    readonly property bool keysFree: Window.activeFocusItem === null || !("cursorPosition" in Window.activeFocusItem)
     Shortcut {
         sequence: "Left"
         enabled: row.visible && row.banks.length > 1 && row.keysFree

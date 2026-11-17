@@ -167,6 +167,7 @@ SideBarGroup {
                     property int horizontalAlignment: Text.AlignLeft
                     height: parent ? parent.height : 0
                     EaElements.RadioButton {
+                        id: startButton
                         objectName: `experiments.start.${row.index}`
                         anchors.left: parent.left
                         anchors.verticalCenter: parent.verticalCenter
@@ -174,7 +175,7 @@ SideBarGroup {
                         checked: row.isTemplate
                         EaElements.ToolTip {
                             text: qsTr("The sequential fit starts from this dataset's fitted values")
-                            requested: parent.hovered
+                            requested: startButton.hovered
                         }
                         onClicked: {
                             if (!row.isTemplate)
