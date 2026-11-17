@@ -388,6 +388,10 @@ struct ExperimentTypeTokens {
     std::string scattering_type = "bragg";
 };
 
+/// Every experiment type crysta computes (crysta::supported_experiment_types): the combinations the type selectors
+/// offer, each option of one selector allowed only where some type combines it with the other selectors' choices.
+std::vector<ExperimentTypeTokens> supported_experiment_types();
+
 /// A new experiment without measured data: a simulation over its beam mode's default calculation grid
 /// (`_data_range`, so calculation_only), linked to `structure_id` at scale 1 when that is not empty, with
 /// default instrument and peak values and every parameter fixed. Built from `.edi` text by the one

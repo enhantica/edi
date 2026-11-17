@@ -55,7 +55,8 @@
         "tests/system/py/test_project_transactions.py",
         "tests/system/py/test_tutorial_command_line_workflows.py",
         "tests/system/py/test_tutorial_recipe_native_states.py",
-        "tests/system/py/test_tutorial_assistant_create.py"
+        "tests/system/py/test_tutorial_assistant_create.py",
+        "tests/system/slow/seeded_series.py"
       ],
       "app_builders": [
         "tests/fixtures/plain_data/build_probe.py",
@@ -66,7 +67,11 @@
         "tests/fixtures/project_transactions/build.py"
       ],
       "task": "group-nightly-only",
-      "gap_to_merge": "Pull requests and main pushes omit these files; the nightly schedule and full manual runs retain every original app-builder witness. app_builders names the only files that may compile an app."
+      "gap_to_merge": "Pull requests and main pushes omit these files; the nightly schedule and full manual runs retain every original app-builder witness. app_builders names the only files that may compile an app.",
+      "slow_paths": [
+        "tests/system/slow/seeded_series.py"
+      ],
+      "slow_task": "slow-seeded-series"
     },
     "weekly-only": {
       "tiers": [
@@ -99,6 +104,6 @@
   "local_gap_to_merge": {
     "statement": "no gap: the review-time quick run (pixi run verify-quick) runs every ruled tier that the merge-time full run and CI-on-merge run; the surfaces differ only in platform (CI adds the macOS runner; CI leaves out the nightly-only group except on the nightly schedule, and the weekly-only group except on the Sunday schedule), not in tiers",
     "omitted_tiers": [],
-    "cost": "none \u2014 zero omitted tiers"
+    "cost": "none — zero omitted tiers"
   }
 }

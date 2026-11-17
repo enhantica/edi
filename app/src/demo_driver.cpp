@@ -748,9 +748,9 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
                                                QStringList{"preference:chartIncludedOnly=true", "preference:patternMeasuredStyle=line", "theme:light", analysis, basic,
                                                            "statusBar.fit.button", "wait-fit", "choose:OK"}
                                          : QStringList{"theme:dark", analysis};
-            steps_.push_back({name + "1-fit", open + QStringList{"mainArea.tab.pattern", "save-image:chart.toolbar.save|" + name + "refinement.png|2"}});
+            steps_.push_back({name + "1-fit", open + QStringList{"mainArea.tab.pattern", "save-image:mainArea.saveImage|" + name + "refinement.png|2"}});
             steps_.push_back({name + "2-model", {structure, "mainArea.tab.structure",
-                                                 "save-image:structure.toolbar.save|" + name + "model.png|2"}});
+                                                 "save-image:mainArea.saveImage|" + name + "model.png|2"}});
         }
         // The measured pattern alone: the fitted experiment's chart with every other curve hidden, as legend clicks
         // hide them, and so its residual and tick panes. Last, so the fitted figures come first.
@@ -764,7 +764,7 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
                 actions.append(QStringLiteral("preference:structureCurves=false"));
                 actions.append(QStringLiteral("measured-only"));
             }
-            actions.append("save-image:chart.toolbar.save|" + name + "pattern.png|2");
+            actions.append("save-image:mainArea.saveImage|" + name + "pattern.png|2");
             steps_.push_back({name + "3-pattern", actions});
         }
     }
@@ -823,6 +823,212 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     }
     // A scan opened from the file EDI_DEMO_SCAN_PROJECT names, its pages, then Fit and Reset, which stop the run when
     // disabled. Run only when asked (`--demo-only scan-open-`).
+    // The scale check's GUI stall probe (EDI_STALL_PROBE): a series of joint fits, EDI_DEMO_SCAN_PROJECT, opened, its
+    // Stacked and Map views shown, fitted to the end with each view in turn, then its Evolution. Run only when asked
+    // (`--demo-only stall-`).
+    // The synthetic 100-point series opened from the examples list (its collection entry downloaded), then shown on the
+    // Experiment page with its views. Run only when asked (`--demo-only examplecheck-`).
+    // The chart-consistency review's set: every chart view of the Experiment and Analysis pages for the series
+    // EDI_DEMO_SCAN_PROJECT after its fit, then a single crystal's Pattern and Meas vs calc. Run only when asked
+    // (`--demo-only review-`).
+    // Each project of EDI_DEMO_PROJECT_LIST (comma-separated folders) opened, for its free and fixed counts in the status
+    // bar (`--demo-only freecheck-`).
+    if (only.startsWith(QLatin1String("freecheck-"))) {
+        const QStringList folders = qEnvironmentVariable("EDI_DEMO_PROJECT_LIST").split(QLatin1Char(','), Qt::SkipEmptyParts);
+        for (qsizetype i = 0; i < folders.size(); ++i) {
+            QStringList actions;
+            if (i == 0) actions << "resize:1480x800";
+            actions << "open-project:" + folders[i] << analysis;
+            steps_.push_back({QStringLiteral("freecheck-%1").arg(i + 1, 2, 10, QLatin1Char('0')), actions});
+        }
+    }
+    // Map's More popup with its colour map box, on the synthetic series (`--demo-only mappopup-`).
+    if (only.startsWith(QLatin1String("mappopup-"))) {
+        const QString root = QString::fromUtf8(EDI_CLI_PROJECTS_DIR) + "/";
+        steps_.push_back({"mappopup-1-open", {"resize:1480x800", "open-project:" + root + "pd-neut-tof_ncaf-wish-5bank_synthetic-100p/project",
+                                              "appBar.tab.experiment", basic, "mainArea.tab.map", "scanView.map.toolbar.more"}});
+        steps_.push_back({"mappopup-2-list", {"scanView.map.toolbar.colourMap.overflow"}});
+    }
+    // Meas vs calc during a scan's fit: it follows the fitted datasets (`--demo-only measfollow-`).
+    if (only.startsWith(QLatin1String("measfollow-"))) {
+        const QString root = QString::fromUtf8(EDI_CLI_PROJECTS_DIR) + "/";
+        steps_.push_back({"measfollow-1-early", {"resize:1480x800", "open-project:" + root + "pd-neut-cwl_cosio-d20_scan-213f/project",
+                                                 analysis, basic, "mainArea.tab.measCalc", "statusBar.fit.button", "wait-files:20"}});
+        steps_.push_back({"measfollow-2-later", {"wait-files:60"}});
+    }
+    // A scan's Experiments table, scrolled near its end, its dataset selector open, and Stacked zoomed on its rows
+    // (`--demo-only exptable-`).
+    if (only.startsWith(QLatin1String("exptable-"))) {
+        const QString root = QString::fromUtf8(EDI_CLI_PROJECTS_DIR) + "/";
+        const QString experimentTab = QStringLiteral("appBar.tab.experiment");
+        steps_.push_back({"exptable-1-top", {"resize:1480x800", "open-project:" + root + "pd-neut-cwl_cosio-d20_scan-213f/project",
+                                             experimentTab, basic}});
+        steps_.push_back({"exptable-2-scrolled", {"show:experiments.list:205:0"}});
+        steps_.push_back({"exptable-3-selector", {"mainArea.blocks.box"}});
+        steps_.push_back({"exptable-4-stacked", {"key:Escape", "mainArea.tab.stacked"}});
+        steps_.push_back({"exptable-5-stacked-zoomed", {"zoom-rows:stacked"}});
+    }
+    // Structure > Extra's generated tables, each opened from folded: every one shows its rows and columns
+    // (`--demo-only collapsed-`).
+    if (only.startsWith(QLatin1String("collapsed-"))) {
+        const QString root = QString::fromUtf8(EDI_CLI_PROJECTS_DIR) + "/";
+        const QString structure = QStringLiteral("appBar.tab.structure");
+        // The tables get their rows while their groups are folded and off screen; only then are the groups opened.
+        steps_.push_back({"collapsed-0-elsewhere", {"resize:1480x800", "open-project:" + root + "pd-neut-cwl_cosio-d20_2k/project",
+                                                    structure, extras, "appBar.tab.experiment", "appBar.tab.analysis",
+                                                    "appBar.tab.project"}});
+        steps_.push_back({"collapsed-1-symop", {structure, extras, "expand:group.space_group_symop",
+                                                "assert-table:generated.space_group_symop.list"}});
+        steps_.push_back({"collapsed-2-atoms", {"expand:group.expanded_atom_site", "reveal:group.expanded_atom_site",
+                                                "assert-table:generated.expanded_atom_site.list"}});
+        steps_.push_back({"collapsed-3-moments", {"expand:group.expanded_atom_site_moment",
+                                                  "reveal:group.expanded_atom_site_moment",
+                                                  "assert-table:generated.expanded_atom_site_moment.list"}});
+    }
+    // A single project fitted, its parameter table after the fit (`--demo-only lbcofit-`).
+    if (only.startsWith(QLatin1String("lbcofit-"))) {
+        const QString root = QString::fromUtf8(EDI_CLI_PROJECTS_DIR) + "/";
+        steps_.push_back({"lbcofit-1-table", {"resize:1480x800", "open-project:" + root + "pd-neut-cwl_lbco-hrpt/project",
+                                              analysis, basic, "statusBar.fit.button", "wait-fit", "choose:OK"}});
+        steps_.push_back({"lbcofit-2-alias-picker", {extras, "expand:group.alias", "reveal:group.alias", "alias.parameter.0"}});
+    }
+    // The moments table of a magnetic structure, with |M| and its angles (`--demo-only moments-`).
+    if (only.startsWith(QLatin1String("moments-"))) {
+        const QString root = QString::fromUtf8(EDI_CLI_PROJECTS_DIR) + "/";
+        steps_.push_back({"moments-1-crystal-axes", {"resize:1480x800", "open-project:" + root + "pd-neut-cwl_cosio-d20_2k/project",
+                                                     "appBar.tab.structure", basic, "expand:group.atom_site_moment",
+                                                     "reveal:group.atom_site_moment"}});
+    }
+    // The series dialog for the synthetic example's files, grouped before it loads (`--demo-only seriesload-`).
+    if (only.startsWith(QLatin1String("seriesload-"))) {
+        const QString root = QString::fromUtf8(EDI_CLI_PROJECTS_DIR) + "/";
+        steps_.push_back({"seriesload-1-dialog", {"resize:1480x800", "open-project:" + root + "pd-neut-tof_ncaf-wish/project",
+                                                  "appBar.tab.experiment", basic,
+                                                  "ask-series:" + root + "pd-neut-tof_ncaf-wish-5bank_synthetic-100p/project/data"}});
+    }
+    // The series fitted, captured before its result dialog is closed (`--demo-only fitcheck-`).
+    if (only.startsWith(QLatin1String("fitcheck-"))) {
+        steps_.push_back({"fitcheck-1-after-fit", {"resize:1480x800", "open-project:" + qEnvironmentVariable("EDI_DEMO_SCAN_PROJECT"),
+                                                   analysis, basic, "statusBar.fit.button", "wait-files:100", "wait-fit"}});
+    }
+    // Analysis > Structure on a single fit, a joint fit and a small series, each opened straight to it
+    // (`--demo-only structcmp-`).
+    if (only.startsWith(QLatin1String("structcmp-"))) {
+        const QString root = QString::fromUtf8(EDI_CLI_PROJECTS_DIR) + "/";
+        steps_.push_back({"structcmp-1-single", {"resize:1480x800", "open-project:" + root + "pd-neut-tof_ncaf-wish/project", analysis, basic, "mainArea.tab.structure"}});
+        steps_.push_back({"structcmp-1b-single-table-later", {"mainArea.tab.pattern"}});
+        steps_.push_back({"structcmp-2-joint", {"open-project:" + root + "pd-neut-tof_ncaf-wish-5bank_start-5/project", analysis, basic, "mainArea.tab.structure"}});
+        steps_.push_back({"structcmp-3-series", {"open-project:" + root + "pd-neut-tof_ncaf-wish-5bank_scan-6p/project", analysis, basic, "mainArea.tab.structure"}});
+    }
+    // A saved, fitted series opened again: Analysis > Structure and the parameter table, then the Correlations of the
+    // first run and of the last run fitted (`--demo-only reopensaved-`).
+    if (only.startsWith(QLatin1String("reopensaved-"))) {
+        const QString open = "open-project:" + qEnvironmentVariable("EDI_DEMO_SCAN_PROJECT");
+        steps_.push_back({"reopensaved-1-structure", {"resize:1480x800", open, analysis, basic, "mainArea.tab.structure"}});
+        steps_.push_back({"reopensaved-2-structure-page", {"appBar.tab.structure"}});
+        steps_.push_back({"reopensaved-3-analysis-structure-again", {analysis, "mainArea.tab.pattern", "mainArea.tab.structure"}});
+        steps_.push_back({"reopensaved-4-correlations-last", {"mainArea.tab.stacked", "mainArea.series.point.box", "type:p099", "choose:p099", "mainArea.tab.correlations"}});
+        steps_.push_back({"reopensaved-5-evolution-picker", {"mainArea.tab.evolution", "evolution.parameters.box"}});
+        steps_.push_back({"reopensaved-6-evolution-picker-cell", {"type:cell"}});
+    }
+    // The included range on a fitted series' Stacked and Map, both rows and every x (`--demo-only included-`).
+    if (only.startsWith(QLatin1String("included-"))) {
+        const QString open = "open-project:" + qEnvironmentVariable("EDI_DEMO_SCAN_PROJECT");
+        steps_.push_back({"included-1-stacked-byrun-q-off", {"resize:1480x800", open, analysis, basic, "mainArea.tab.stacked",
+                                                             "scanView.stacked.toolbar.xaxis", "choose:x: Q"}});
+        steps_.push_back({"included-2-stacked-byrun-q-on", {"scanView.stacked.toolbar.includedRange"}});
+        steps_.push_back({"included-3-stacked-bybank-q", {"scanView.stacked.toolbar.rows", "choose:Bank"}});
+        steps_.push_back({"included-5-stacked-byrun-d", {"scanView.stacked.toolbar.rows", "choose:File",
+                                                          "scanView.stacked.toolbar.xaxis", "choose:x: d-spacing"}});
+        steps_.push_back({"included-6-map-byrun-q", {"mainArea.tab.map", "scanView.map.toolbar.xaxis", "choose:x: Q"}});
+        steps_.push_back({"included-7-map-bybank-q", {"scanView.map.toolbar.rows", "choose:Bank"}});
+    }
+    if (only.startsWith(QLatin1String("review-"))) {
+        const QString experimentTab = QStringLiteral("appBar.tab.experiment");
+        // Before the fit: the Map on Q by bank (the owner's empty map, 2026-11-16), then back to d.
+        steps_.push_back({"review-00a-prefit-map-bybank-q",
+                          {"resize:1480x800", "open-project:" + qEnvironmentVariable("EDI_DEMO_SCAN_PROJECT"),
+                           experimentTab, basic, "mainArea.tab.map", "scanView.map.toolbar.rows", "choose:Bank",
+                           "scanView.map.toolbar.xaxis", "choose:x: Q"}});
+        steps_.push_back({"review-00-fitted",
+                          {"scanView.map.toolbar.xaxis", "choose:x: d-spacing", "scanView.map.toolbar.rows", "choose:File",
+                           analysis, basic, "statusBar.fit.button", "wait-files:100", "wait-fit", "choose:OK"}});
+        steps_.push_back({"review-01-experiment-pattern", {experimentTab, basic, "mainArea.tab.pattern"}});
+        steps_.push_back({"review-02-experiment-meascalc", {"mainArea.tab.measCalc"}});
+        steps_.push_back({"review-03-experiment-stacked-byrun", {"mainArea.tab.stacked"}});
+        steps_.push_back({"review-04-experiment-stacked-bybank", {"scanView.stacked.toolbar.rows", "choose:Bank"}});
+        steps_.push_back({"review-05-experiment-map-bybank", {"mainArea.tab.map"}});
+        steps_.push_back({"review-05m-experiment-map-more", {"scanView.map.toolbar.more"}});
+        steps_.push_back({"review-05n-experiment-map-more-closed", {"scanView.map.toolbar.more"}});
+        steps_.push_back({"review-06-experiment-map-byrun", {"scanView.map.toolbar.rows", "choose:File"}});
+        steps_.push_back({"review-06b-experiment-map-byrun-q", {"scanView.map.toolbar.xaxis", "choose:x: Q"}});
+        steps_.push_back({"review-06c-experiment-map-bybank-q", {"scanView.map.toolbar.rows", "choose:Bank"}});
+        steps_.push_back({"review-06d-experiment-stacked-bybank-q", {"mainArea.tab.stacked"}});
+        steps_.push_back({"review-06e-back-to-d", {"scanView.stacked.toolbar.xaxis", "choose:x: d-spacing",
+                                                   "scanView.stacked.toolbar.rows", "choose:File"}});
+        steps_.push_back({"review-07-analysis-pattern", {analysis, basic, "mainArea.tab.pattern"}});
+        steps_.push_back({"review-08-analysis-meascalc", {"mainArea.tab.measCalc"}});
+        steps_.push_back({"review-09-analysis-structure", {"mainArea.tab.structure"}});
+        steps_.push_back({"review-10-analysis-evolution-shared", {"mainArea.tab.evolution"}});
+        steps_.push_back({"review-11-analysis-evolution-perbank", {"evolution.toolbar.scope", "choose:Per bank"}});
+        steps_.push_back({"review-11a-perbank-picker", {"evolution.parameters.box"}});
+        steps_.push_back({"review-11b-bank-filter", {"key:Escape", "evolution.toolbar.bank"}});
+        steps_.push_back({"review-11c-bank-selector", {"key:Escape", "mainArea.series.bank.box"}});
+        steps_.push_back({"review-11d-closed", {"key:Escape"}});
+        steps_.push_back({"review-12-analysis-stacked", {"mainArea.tab.stacked"}});
+        steps_.push_back({"review-13-analysis-map", {"mainArea.tab.map"}});
+        steps_.push_back({"review-14-analysis-correlations", {"mainArea.tab.correlations"}});
+        steps_.push_back({"review-14b-analysis-correlations-last-run",
+                          {"mainArea.tab.stacked", "mainArea.series.point.box", "type:p099", "choose:p099", "mainArea.tab.correlations"}});
+        steps_.push_back({"review-14c-correlations-other-run", {"mainArea.tab.stacked", "mainArea.series.point.box", "type:p050", "choose:p050", "mainArea.tab.correlations"}});
+        steps_.push_back({"review-14d-evolution-picker-full-name", {"mainArea.tab.evolution", "evolution.toolbar.scope", "choose:Shared", "evolution.parameters.box", "type:fract"}});
+        steps_.push_back({"review-14e-evolution-picker-short-name", {"key:Escape", "evolution.parameters.box", "type:biso"}});
+    }
+    // The source example opened twice, as Recent projects names it (a trailing separator): each opens a copy of its
+    // own (`--demo-only reopen-`).
+    if (only.startsWith(QLatin1String("reopen-"))) {
+        const QString source = QString::fromUtf8(EDI_CLI_PROJECTS_DIR) + "/pd-neut-tof_ncaf-wish-5bank_synthetic-100p/project/";
+        steps_.push_back({"reopen-1-first", {"resize:1480x800", "open-project:" + source, "appBar.tab.experiment", basic}});
+        steps_.push_back({"reopen-2-second", {"open-project:" + source, "appBar.tab.experiment", basic}});
+    }
+    // A single fit's results dialog, from a fresh start (`--demo-only fitdialog-`).
+    if (only.startsWith(QLatin1String("fitdialog-"))) {
+        steps_.push_back({"fitdialog-1-single", QStringList{"resize:1480x800", "home.start", "expand:group.examples"} +
+                                                    open_example("pd-neut-cwl_lbco-hrpt") +
+                                                    QStringList{analysis, basic, "statusBar.fit.button", "wait-fit"}});
+    }
+    // The review's single crystal, from a fresh start (`--demo-only reviewsc-`).
+    if (only.startsWith(QLatin1String("reviewsc-"))) {
+        steps_.push_back({"reviewsc-1-sc-pattern", QStringList{"resize:1480x800", "home.start", "expand:group.examples"} +
+                                                       open_example("sc-neut-cwl_tb2ti2o7-heidi") +
+                                                       QStringList{"appBar.tab.experiment", basic, "mainArea.tab.pattern"}});
+        steps_.push_back({"reviewsc-2-sc-meascalc", {"mainArea.tab.measCalc"}});
+    }
+    if (only.startsWith(QLatin1String("examplecheck-"))) {
+        steps_.push_back({"examplecheck-1-opened",
+                          QStringList{"resize:1480x800", "home.start", "expand:group.examples"} +
+                              open_example("pd-neut-tof_ncaf-wish-5bank_synthetic-100p")});
+        steps_.push_back({"examplecheck-2-experiment", {"appBar.tab.experiment", basic}});
+        steps_.push_back({"examplecheck-3-stacked", {"mainArea.tab.stacked"}});
+    }
+    // An experiment without data shows Load data… in its row: its menu, open, from a fresh start
+    // (`--demo-only datamenu-`).
+    if (only.startsWith(QLatin1String("datamenu-"))) {
+        steps_.push_back({"datamenu-1-open", QStringList{"resize:1480x800", "home.start", "expand:group.examples"} +
+                                                 open_example("pd-neut-cwl_lbco_simulation") +
+                                                 QStringList{"appBar.tab.experiment", basic, "experiments.loadData.0"}});
+    }
+    if (only.startsWith(QLatin1String("stall-"))) {
+        steps_.push_back({"stall-1-opened",
+                          {"resize:1480x800", "open-project:" + qEnvironmentVariable("EDI_DEMO_SCAN_PROJECT"),
+                           "appBar.tab.experiment", basic}});
+        steps_.push_back({"stall-2-stacked", {"mainArea.tab.stacked"}});
+        steps_.push_back({"stall-3-map", {"mainArea.tab.map"}});
+        steps_.push_back({"stall-4-fitting", {analysis, basic, "mainArea.tab.stacked", "statusBar.fit.button",
+                                              "wait-files:30", "capture-now"}});
+        steps_.push_back({"stall-5-fitting-map", {"mainArea.tab.map", "wait-files:65", "capture-now"}});
+        steps_.push_back({"stall-6-fitted", {"mainArea.tab.evolution", "wait-files:100", "wait-fit"}});
+    }
     if (only.startsWith(QLatin1String("scan-open-"))) {
         steps_.push_back({"scan-open-1-opened",
                           {"resize:1280x800", "open-project:" + qEnvironmentVariable("EDI_DEMO_SCAN_PROJECT")}});
@@ -2111,6 +2317,57 @@ bool DemoDriver::perform(const QString& action) {
         const QDir data(loaded_cli_project_ + QStringLiteral("/experiments/d20_scan"));
         if (loaded_cli_project_.isEmpty() || !QDir(data).removeRecursively()) {
             fail(QStringLiteral("step %1: the scan's data could not be removed").arg(steps_[current_].image));
+            return false;
+        }
+        return true;
+    }
+    // `zoom-rows:<mode>`: the scan chart's y range halved around its middle, as a vertical zoom (the Stacked caption follows).
+    if (action.startsWith(QLatin1String("zoom-rows:"))) {
+        const QString mode = action.mid(QStringLiteral("zoom-rows:").size());
+        QQuickItem* chart = find(QStringLiteral("scanView.") + mode, false);
+        QQuickItem* layer = find(QStringLiteral("scanView.%1.layer").arg(mode), false);
+        const double low = layer != nullptr ? layer->property("yMin").toDouble() : 0.0;
+        const double high = layer != nullptr ? layer->property("yMax").toDouble() : 0.0;
+        if (chart == nullptr || !(high > low) ||
+            !QMetaObject::invokeMethod(chart, "setZoom", Q_ARG(QVariant, QVariant(QVariantList{})),
+                                       Q_ARG(QVariant, QVariant(QVariantList{low + (high - low) / 4, high - (high - low) / 4})))) {
+            fail(QStringLiteral("step %1: cannot zoom the %2 rows").arg(steps_[current_].image, mode));
+            return false;
+        }
+        return true;
+    }
+    // `assert-table:<name>`: the table has rows and at least two columns with a width, as a table shown after its group
+    // was opened must (a table made inside a folded group used to open as a blank strip).
+    if (action.startsWith(QLatin1String("assert-table:"))) {
+        const QString name = action.mid(QStringLiteral("assert-table:").size());
+        QQuickItem* table = find(name, false);
+        const int rows = table != nullptr ? table->property("count").toInt() : 0;
+        int sized = 0;
+        if (table != nullptr) {
+            for (const QVariant& width : table->property("columnWidths").toList()) {
+                sized += width.toDouble() > 1.0 ? 1 : 0;
+            }
+        }
+        if (rows <= 0 || sized < 2) {
+            fail(QStringLiteral("step %1: table '%2' shows %3 rows and %4 sized columns")
+                     .arg(steps_[current_].image, name)
+                     .arg(rows)
+                     .arg(sized));
+            return false;
+        }
+        return true;
+    }
+    // `ask-series:<folder>`: the datasets dialog for the folder's files as a series of joint fits.
+    if (action.startsWith(QLatin1String("ask-series:"))) {
+        const QDir folder(action.mid(QStringLiteral("ask-series:").size()));
+        QVariantList files;
+        for (const QString& name : folder.entryList(QDir::Files, QDir::Name)) {
+            files.append(QUrl::fromLocalFile(folder.filePath(name)));
+        }
+        QQuickItem* group = find(QStringLiteral("experiments.group"), false);
+        if (group == nullptr || files.isEmpty() ||
+            !QMetaObject::invokeMethod(group, "askSeries", Q_ARG(QVariant, QVariant(files)))) {
+            fail(QStringLiteral("step %1: no series dialog for %2").arg(steps_[current_].image, folder.path()));
             return false;
         }
         return true;

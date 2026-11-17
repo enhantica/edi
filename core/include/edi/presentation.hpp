@@ -10,6 +10,7 @@
 #include <optional>
 #include <span>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include "edi/palette.hpp"
@@ -61,6 +62,8 @@ struct PatternSource {
         // A magnetic structure's magnetic part, placed as its magnetic reflections are; its
         // other component is then its nuclear part (edi ADR-0078).
         bool magnetic = false;
+        // What it stands on instead of the background: a single crystal's magnetic part stands on its nuclear part.
+        Column base;
     };
     std::vector<Component> components;
     std::vector<ExcludedBand> excluded;
@@ -71,17 +74,49 @@ struct PatternSource {
     bool d_available = false;          // a current d column, so the pattern can be shown on the d axis
 };
 
-// The x axis a pattern is captured on: the experiment's own (2θ or TOF), or d-spacing.
-enum class PatternAxis : std::uint8_t { Native, DSpacing };
+// The x axis a pattern is captured on: the experiment's own (2θ or TOF), d-spacing, Q or sinθ/λ.
+enum class PatternAxis : std::uint8_t { Native, DSpacing, Q, SinThetaOverLambda };
+
+// A d-spacing on another axis, the one conversion every pattern chart and export uses: d itself, Q = 2π/d or
+// sinθ/λ = 1/(2d), all in Å or 1/Å. The native axis and a d of 0 or less give NaN.
+double d_on_axis(PatternAxis axis, double d);
+// An axis by its token, as the app and the report name it: "native", "d_spacing", "q" or "sin_theta_over_lambda";
+// an unknown token is the native axis.
+PatternAxis pattern_axis_from_token(std::string_view token);
+std::string_view pattern_axis_token(PatternAxis axis);
+// The title of the d, Q or sinθ/λ axis, with its units: `d (Å)`, `Q (1/Å)`, `sin θ/λ (1/Å)`; empty for the native one.
+std::string pattern_axis_title(PatternAxis axis);
+// A pattern captured on the d axis, shown on `axis`: unchanged on the d axis, converted by d_on_axis onto the Q or
+// sinθ/λ axis (capture_pattern's contract); a source without a current d column is returned as it is.
+PatternSource pattern_on_axis(PatternSource on_d, PatternAxis axis);
 
 // Owner thread. The computed columns and the reflections are taken only when the experiment's
 // computed categories are current; otherwise they are absent and `current` is false.
 // On the d axis x is `_pd_data.d_spacing`, titled `d (Å)`; every column is reversed when d descends (constant
 // wavelength), so x ascends (a presented point's row then counts from the last `_data` row), and each excluded band's
 // ends and each tick's `_refln.position` are mapped to d along the data, so a tick meets its peak; a tick's readout is
-// its `_refln.d_spacing`. Without a current d column the pattern stays on its own axis.
+// its `_refln.d_spacing`. On the Q and sinθ/λ axes every value placed on the d axis is converted by d_on_axis and
+// the columns are reversed again, so x still ascends. Without a current d column the pattern stays on its own axis.
 PatternSource capture_pattern(const Project& project, std::size_t experiment_index,
                               PatternAxis axis = PatternAxis::Native);
+
+// Owner thread. A single crystal's reflections as a pattern on the Q or sinθ/λ axis (the owner, 2026-11-16): each
+// reflection one point at its sinθ/λ converted by d_on_axis (d = 1/(2 sinθ/λ)), the points sorted by x; `meas` and
+// `su` the measured F² and its s.u., `calc` the calculated F², or F, sqrt(F²meas) with s.u. su / (2 F) and Fcalc when
+// `squared` is false (NaN where F²meas is 0 or less), and `resid` meas − calc; one phase, the linked structure, with
+// a tick at every reflection and its h k l, laid out as a powder pattern's (the owner, 2026-11-16). Without measured
+// reflections, the reflections a calculation generated, calculated only. Empty, with `current` false, until the
+// experiment's computed columns are current, and for any other axis or experiment.
+// With `nuclear_share` (single_crystal_nuclear_share, one per reflection in its order) the bars split into the linked
+// structure's nuclear part and its magnetic part stacked on it, each a component, and its ticks into two rows, nuclear
+// and magnetic, as a powder pattern's (the owner, 2026-11-16); on F the bar splits in the F² proportion.
+PatternSource single_crystal_pattern(const Project& project, std::size_t experiment_index, PatternAxis axis,
+                                     bool squared, std::span<const double> nuclear_share = {});
+
+// Owner thread. Each reflection's nuclear share of its calculated F², |F_N|² / (|F_N|² + |M⊥|²), for a single crystal
+// whose linked structure has moments: crysta reports only the sum, so it is calculated once more with every moment at
+// zero, which leaves |F_N|². Empty for any other experiment, when a calculation refuses, or when no moment is set.
+std::vector<double> single_crystal_nuclear_share(const Project& project, std::size_t experiment_index);
 
 // One experiment's `_refln` rows grouped into phases, one per structure id in the order the ids first
 // appear. A phase's place is its structure's place in `structure_names` (its first place when there
@@ -127,6 +162,8 @@ struct PatternView {
     // Series (by id) still presented whose points do not count in the main pane's range: curves hidden from the
     // chart when the range is to fit the visible ones (edi ADR-0017 §15).
     std::vector<std::string> uncounted;
+    // Series (by id) hidden from the chart: a part that stands on another stands on zero while that one is hidden.
+    std::vector<std::string> hidden;
     // Every curve with the background subtracted (edi ADR-0017 §15): the measured and calculated values less the
     // calculated background at each point, the background drawn at zero and each structure's curve rising from zero;
     // the residual is unchanged. A pattern with no current background column is drawn as it is.
@@ -215,10 +252,14 @@ struct SeriesStyle {
 // With `pattern_set`, the `experiments` are one view's patterns (a scan's datasets) and take pattern_set_colour beside
 // the structures' positions, as the Stacked view colours them. With measured_place, only that measured row is
 // built; the role and structure rows are unchanged, so a scan's Pattern view need not build every dataset's style.
+// `spare_taken`, when given, are the positions the structure rows past the project's avoid instead of every held one:
+// a chart of one experiment and one structure (a single crystal's) passes those two, so a magnetic part takes the
+// colour it has in a project of that structure alone, as on the powder chart.
 std::vector<SeriesStyle> pattern_style_table(ColourScheme scheme = kDefaultColourScheme, std::size_t experiments = 3,
                                              std::size_t structures = 0, std::span<const std::size_t> positions = {},
                                              bool pattern_set = false,
-                                             std::optional<std::size_t> measured_place = std::nullopt);
+                                             std::optional<std::size_t> measured_place = std::nullopt,
+                                             std::span<const std::size_t> spare_taken = {});
 
 // The display scales. Linear: the value. Sqrt: sign(y) × sqrt(|y|). Log10: log10(y) for y > 0,
 // NaN otherwise.

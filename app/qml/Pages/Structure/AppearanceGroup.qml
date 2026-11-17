@@ -152,6 +152,55 @@ SideBarGroup {
                 onAccepted: commit()
                 onEditingFinished: commit()
             }
+            // Coordination polyhedra, switched by the view's toolbar button: their colour, opacity and extent, shown while
+            // they are on. Kept for the session.
+            SelectorField {
+                objectName: "structure.appearance.polyhedraColour"
+                width: grid.fieldWidth
+                label: qsTr("Polyhedra colour")
+                visible: group.options !== null && group.options.polyhedra
+                options: group.options ? group.options.polyhedraColourOptions : null
+                token: group.options ? group.options.polyhedraColour : ""
+                onSelected: token => group.options.polyhedraColour = token
+            }
+            EaElements.ParamTextField {
+                id: opacity
+
+                objectName: "structure.appearance.polyhedraOpacity"
+                width: grid.fieldWidth
+                visible: group.options !== null && group.options.polyhedra
+                parameter: group.options ? {
+                    "value": group.options.polyhedraOpacity,
+                    "error": 0,
+                    "enabled": true,
+                    "fittable": false,
+                    "fit": false,
+                    "name": "polyhedra_opacity",
+                    "shortPrettyName": qsTr("Polyhedra opacity"),
+                    "units": ""
+                } : ({})
+
+                // From 0 (clear) to 1 (solid); a value outside is brought to the nearest end.
+                function commit() {
+                    if (group.options !== null && text !== opacity.value) {
+                        group.options.polyhedraOpacity = Number(text);
+                        text = Qt.binding(() => opacity.value);
+                    }
+                }
+
+                Component.onCompleted: FieldTitles.align(opacity)
+                onAccepted: commit()
+                onEditingFinished: commit()
+            }
+            SelectorField {
+                objectName: "structure.appearance.polyhedraExtent"
+                width: grid.fieldWidth
+                label: qsTr("Polyhedra extent")
+                visible: group.options !== null && group.options.polyhedra
+                options: group.options ? group.options.polyhedraExtentOptions : null
+                token: group.options ? group.options.polyhedraExtent : ""
+                onSelected: token => group.options.polyhedraExtent = token
+            }
         }
         EaElements.Label {
             objectName: "structure.appearance.substituted"

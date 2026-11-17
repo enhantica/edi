@@ -13,6 +13,15 @@ EaElements.MenuItem {
     id: item
 
     property string hint: ""
+    // The labels' column, one width for every item of a menu (its widest label, at least 7.5 em): a menu as wide as
+    // its items' implicitWidth then shows every label and hint whole.
+    property real labelWidth: EaStyle.Sizes.fontPixelSize * 7.5
+    implicitWidth: leftPadding + rightPadding + EaStyle.Sizes.fontPixelSize * 1.25 + labelWidth + 2 * EaStyle.Sizes.fontPixelSize * 0.5 + (item.hint !== "" ? hintMetrics.advanceWidth + EaStyle.Sizes.fontPixelSize * 0.75 : 0)
+    TextMetrics {
+        id: hintMetrics
+        font: item.font
+        text: item.hint
+    }
     property string toolTip: ""
 
     readonly property color foreground: !item.enabled ? EaStyle.Colors.themeForegroundDisabled : item.hovered ? EaStyle.Colors.themeForegroundHovered : EaStyle.Colors.themeForeground
@@ -40,7 +49,7 @@ EaElements.MenuItem {
         }
         EaElements.Label {
             anchors.verticalCenter: parent.verticalCenter
-            width: EaStyle.Sizes.fontPixelSize * 7.5
+            width: item.labelWidth
             elide: Text.ElideRight
             font: item.font
             color: item.foreground
@@ -52,7 +61,7 @@ EaElements.MenuItem {
         EaElements.Label {
             Accessible.ignored: true
             anchors.verticalCenter: parent.verticalCenter
-            width: Math.max(0, item.availableWidth - EaStyle.Sizes.fontPixelSize * 9.75)
+            width: Math.max(0, item.availableWidth - EaStyle.Sizes.fontPixelSize * 2.25 - item.labelWidth)
             leftPadding: EaStyle.Sizes.fontPixelSize * 0.75
             elide: Text.ElideRight
             font: item.font

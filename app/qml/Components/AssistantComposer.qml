@@ -320,7 +320,12 @@ Rectangle {
         readonly property var original: selection ? selection.owner : null
         title: qsTr("Add files to the assistant")
         fileMode: FileDialog.OpenFiles
-        onAccepted: ApplicationInfo.composerAcceptFiles()
+        currentFolder: DialogFolders.folder("assistantFiles", "")
+        onAccepted: {
+            if (selectedFiles.length > 0)
+                DialogFolders.remember("assistantFiles", selectedFiles[0]);
+            ApplicationInfo.composerAcceptFiles();
+        }
         onRejected: ApplicationInfo.composerCancelFiles()
         Component.onDestruction: ApplicationInfo.composerCancelFiles()
     }

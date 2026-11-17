@@ -110,17 +110,20 @@ Column {
                 value: row.label
                 onCommitted: text => group.sites.setText(row.index, "label", text)
             }
-            // The type picked from the element table or typed into the list's search field (the owner,
-            // 2026-10-06); a type outside the table, as a file may declare it ("Co2+", "157Gd"), is shown as it is.
+            // The type picked from the types the linked experiments' scattering tables hold (isotopes for neutrons,
+            // ions for X-rays), or typed into the list's search field (the owner, 2026-10-06); a type outside the list
+            // is shown as it is. Each entry carries its element-coloured atom icon.
             ComboCell {
                 SearchableComboBox {
+                    id: typeBox
                     horizontalAlignment: Text.AlignLeft
                     objectName: `atomSite.typeSymbol.${row.index}`
                     inTable: true
                     anchors.verticalCenter: parent.verticalCenter
                     searchThreshold: 0
-                    model: ApplicationInfo.elementSymbols
-                    currentIndex: ApplicationInfo.elementSymbols.indexOf(row.typeSymbol)
+                    readonly property var types: group.structure ? group.structure.atomTypes : ApplicationInfo.elementSymbols
+                    model: types
+                    currentIndex: types.indexOf(row.typeSymbol)
                     displayText: row.typeSymbol
                     popup.width: Math.max(width, EaStyle.Sizes.fontPixelSize * 8)
                     // The site's atom icon in its element's colour just before the type, as the Analysis page's parameter
@@ -144,8 +147,34 @@ Column {
                             ]
                         }
                     }
+                    delegate: EaElements.MenuItem {
+                        id: typeEntry
+
+                        required property int index
+                        required property string modelData
+                        readonly property bool matching: typeBox.matches(modelData)
+
+                        objectName: `atomSite.typeSymbol.${row.index}.entry.${index}`
+                        width: typeEntry.parent !== null ? typeEntry.parent.width : 0
+                        height: matching ? EaStyle.Sizes.comboBoxHeight : 0
+                        opacity: matching ? 1 : 0
+                        highlighted: typeBox.highlightedIndex === index
+                        hoverEnabled: typeBox.hoverEnabled
+                        text: modelData
+                        contentItem: IconLine {
+                            segments: [
+                                {
+                                    "icon": row.fractX ? row.fractX.categoryIcon : "",
+                                    "color": AppColors.element(typeEntry.modelData)
+                                },
+                                {
+                                    "text": typeEntry.modelData
+                                }
+                            ]
+                        }
+                    }
                     onActivated: index => ApplicationInfo.scientificSelectorChanged(index, 0, () => {
-                            currentIndex = Qt.binding(() => ApplicationInfo.elementSymbols.indexOf(row.typeSymbol));
+                            currentIndex = Qt.binding(() => typeBox.types.indexOf(row.typeSymbol));
                         })
                 }
             }

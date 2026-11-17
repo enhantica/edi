@@ -558,6 +558,15 @@
      "reason": "C",
      "verdict": "public"
     },
+    "spherical": {
+     "need": {
+      "by": "deviation",
+      "ref": "D96",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
     "symmform": {
      "need": {
       "by": "deviation",
@@ -2094,6 +2103,26 @@
      "need": {
       "by": "counterpart",
       "ref": "SwitchableCategoryBase.type",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    }
+   },
+   "DerivedQuantity": {
+    "uncertainty": {
+     "need": {
+      "by": "deviation",
+      "ref": "D96",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "value": {
+     "need": {
+      "by": "deviation",
+      "ref": "D96",
       "verdict": "keep"
      },
      "reason": "C",
@@ -4873,6 +4902,15 @@
      "reason": "C",
      "verdict": "public"
     },
+    "experiment_sets": {
+     "need": {
+      "by": "deviation",
+      "ref": "D97",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
     "experiments": {
      "need": {
       "by": "counterpart",
@@ -5644,6 +5682,35 @@
      "need": {
       "by": "deviation",
       "ref": "D70",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    }
+   },
+   "SphericalMoment": {
+    "azimuth": {
+     "need": {
+      "by": "deviation",
+      "ref": "D96",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "modulus": {
+     "need": {
+      "by": "deviation",
+      "ref": "D96",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "polar": {
+     "need": {
+      "by": "deviation",
+      "ref": "D96",
       "verdict": "keep"
      },
      "reason": "C",
@@ -6919,6 +6986,15 @@
     "reason": "C",
     "verdict": "public"
    },
+   "DerivedQuantity": {
+    "need": {
+     "by": "deviation",
+     "ref": "D96",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
    "Diagnostic": {
     "need": {
      "by": "deviation",
@@ -7417,6 +7493,15 @@
     "reason": "C",
     "verdict": "public"
    },
+   "SphericalMoment": {
+    "need": {
+     "by": "deviation",
+     "ref": "D96",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
    "Structure": {
     "need": {
      "by": "counterpart",
@@ -7794,6 +7879,7 @@
     "crystalaxis_z",
     "id",
     "parameters",
+    "spherical",
     "symmform"
    ]
   },
@@ -8061,6 +8147,13 @@
     "mu_r",
     "parameters",
     "type"
+   ]
+  },
+  "DerivedQuantity": {
+   "kind": "class",
+   "members": [
+    "uncertainty",
+    "value"
    ]
   },
   "Diagnostic": {
@@ -8558,6 +8651,7 @@
     "descent",
     "display",
     "experiment",
+    "experiment_sets",
     "experiments",
     "export_zip",
     "fit",
@@ -8722,6 +8816,14 @@
    "members": [
     "id",
     "operation_xyz"
+   ]
+  },
+  "SphericalMoment": {
+   "kind": "class",
+   "members": [
+    "azimuth",
+    "modulus",
+    "polar"
    ]
   },
   "Structure": {

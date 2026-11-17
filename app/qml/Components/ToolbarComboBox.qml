@@ -36,6 +36,8 @@ EaElements.ComboBox {
     // With `closedOnly`, the closed box is as wide as its closed texts and the open list as wide as its entries, so long
     // entries do not widen the toolbar.
     property bool closedOnly: false
+    // In the shared row's More popup even when the row has room (ToolbarLines): a view's own choice.
+    property bool toolbarInMore: false
     // With `fitShown`, the closed box is as wide as the text it shows (the pattern chart's "meas" box, the owner,
     // 2026-11-08), as the axis boxes' short texts look.
     property bool fitShown: false

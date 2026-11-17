@@ -3,6 +3,7 @@
 #define EDI_APP_EVOLUTION_VIEW_MODEL_HPP
 
 #include <QObject>
+#include <functional>
 #include <QPointer>
 #include <QString>
 #include <QStringList>
@@ -29,7 +30,9 @@ class EvolutionParameterListModel : public RowTableModel {
 
    public:
     explicit EvolutionParameterListModel(QObject* parent);
-    void setNames(const QStringList& names);
+    // Each parameter's results column (`name`) and what the selector shows for it (`label`): its name as the parameter
+    // table shows it, else the column (the owner, 2026-11-16).
+    void setNames(const QStringList& names, const QStringList& labels = {});
 };
 
 // The Evolution tab (edi ADR-0017 §19): one fitted parameter across a scan's datasets, read from
@@ -50,6 +53,8 @@ class EvolutionViewModel : public QObject {
     Q_PROPERTY(QStringList xModes READ xModes CONSTANT)
     Q_PROPERTY(QString xTitle READ xTitle NOTIFY xTitleChanged)
     Q_PROPERTY(QString yTitle READ yTitle NOTIFY yTitleChanged)
+    // The y title as the parameter table names it (yTitle is the results column, the tooltip's full name).
+    Q_PROPERTY(QString yLabel READ yLabel NOTIFY yTitleChanged)
     Q_PROPERTY(double xMin READ xMin NOTIFY xMinChanged)
     Q_PROPERTY(double xMax READ xMax NOTIFY xMaxChanged)
     Q_PROPERTY(double yMin READ yMin NOTIFY yMinChanged)
@@ -59,6 +64,13 @@ class EvolutionViewModel : public QObject {
     Q_PROPERTY(bool outOfDate READ outOfDate NOTIFY outOfDateChanged)
     // Some dataset of the scan has a row in its results: until then the chart has no axes.
     Q_PROPERTY(bool fitted READ fitted NOTIFY fittedChanged)
+    // A series of joint fits (edi ADR-0089): its parameters Shared (results.csv, one row per point) or Per experiment
+    // (results_experiments.csv), the latter for the experiment `currentExperiment` (a place in `experiments`), or at -1
+    // for every bank, one curve each on its own layer (bankLayer; the owner, 2026-11-16).
+    Q_PROPERTY(bool series READ series NOTIFY seriesChanged)
+    Q_PROPERTY(bool perExperiment READ perExperiment WRITE setPerExperiment NOTIFY perExperimentChanged)
+    Q_PROPERTY(QStringList experiments READ experiments NOTIFY seriesChanged)
+    Q_PROPERTY(int currentExperiment READ currentExperiment WRITE setCurrentExperiment NOTIFY currentExperimentChanged)
     // The layer the points are drawn on (the chart's).
     Q_PROPERTY(edi_app::MeasuredLayer* layer READ layer WRITE setLayer NOTIFY layerChanged)
 
@@ -79,6 +91,12 @@ class EvolutionViewModel : public QObject {
     void setTemplate(const edi::Project* project) { template_ = project; }
 
     EvolutionParameterListModel* parameters() const { return parameters_; }
+    bool series() const { return !experiments_.isEmpty(); }
+    bool perExperiment() const { return per_experiment_; }
+    void setPerExperiment(bool on);
+    QStringList experiments() const { return experiments_; }
+    int currentExperiment() const { return current_experiment_; }
+    void setCurrentExperiment(int index);
     int currentParameter() const { return current_; }
     void setCurrentParameter(int index);
     int xMode() const { return x_mode_; }
@@ -86,6 +104,7 @@ class EvolutionViewModel : public QObject {
     QStringList xModes() const;
     QString xTitle() const;
     QString yTitle() const;
+    QString yLabel() const;
     double xMin() const { return x_min_; }
     double xMax() const { return x_max_; }
     double yMin() const { return y_min_; }
@@ -102,6 +121,16 @@ class EvolutionViewModel : public QObject {
     Q_INVOKABLE int datasetAt(double x, double y, double x_tolerance, double y_tolerance) const;
     // The x of a dataset's drawn point, or NaN when it has none.
     Q_INVOKABLE double datasetX(int dataset) const;
+    // How a results column reads in the selector, given whether it is a bank's own (the project's parameter names).
+    void setLabeller(std::function<QString(const QString&, bool)> labeller) { labeller_ = std::move(labeller); }
+    // The parameter a results column stands for (a bank's own with `bank`), for the selector's coloured name.
+    void setFinder(std::function<QObject*(const QString&, bool)> finder) { finder_ = std::move(finder); }
+    // The parameter of the selector's entry `index`; null for a column no parameter has (a derived value).
+    Q_INVOKABLE QObject* parameterItem(int index) const {
+        return finder_ && index >= 0 && index < names_.size() ? finder_(names_[index], per_experiment_) : nullptr;
+    }
+    // The layer bank `bank` is drawn on when every bank is shown; null unregisters it.
+    Q_INVOKABLE void setBankLayer(int bank, edi_app::MeasuredLayer* layer);
     // The project's Evolution chart settings changed: the range and the drawing follow them.
     void viewSettingsChanged() { finish(); }
     bool picking() const { return picking_; }
@@ -127,6 +156,9 @@ class EvolutionViewModel : public QObject {
     void countChanged();
     void outOfDateChanged();
     void fittedChanged();
+    void seriesChanged();
+    void perExperimentChanged();
+    void currentExperimentChanged();
     void layerChanged();
 
    private:
@@ -140,6 +172,7 @@ class EvolutionViewModel : public QObject {
     struct Point {
         double x = 0.0, y = 0.0, error = 0.0;
         int dataset = -1;
+        int bank = -1;  // per bank with every bank shown: the bank's place
         friend bool operator==(const Point&, const Point&) = default;
     };
     // Before the scan has a fitted row: the fitted template's own point, its current value and s.u. at its dataset's
@@ -155,7 +188,17 @@ class EvolutionViewModel : public QObject {
 
     EvolutionParameterListModel* parameters_;
     QPointer<MeasuredLayer> layer_;
+    QList<QPointer<MeasuredLayer>> bank_layers_;
+    int bank_ = -1;  // the bank whose points a read visits now
+    bool allBanks() const { return per_experiment_ && current_experiment_ < 0; }
     QStringList names_;
+    QStringList labels_;  // names_' labels, as the selector shows them
+    std::function<QString(const QString&, bool)> labeller_;
+    std::function<QObject*(const QString&, bool)> finder_;
+    QStringList experiments_;  // a series of joint fits' experiments, in project order; empty otherwise
+    bool per_experiment_ = false;
+    int current_experiment_ = 0;
+    void syncExperiments();
     QString extracted_title_;
     const ScanSession* session_ = nullptr;
     const edi::Project* project_ = nullptr;

@@ -23,6 +23,9 @@ StatusBarButton {
 
     clickable: fit !== null && (running || fit.available)
     keyIcon: running ? "stop-circle" : "play-circle"
+    // Every state's icon smaller than the word and further from the frame's left end (the owner, 2026-11-16).
+    iconPixelSize: Math.round(font.pixelSize * 0.85)
+    iconLeftPadding: Math.round(font.pixelSize * 0.8)
     // Refit while a scan's results are outdated: every file again from the template (the owner, 2026-10-26).
     valueText: fit !== null && fit.waitingForData ? qsTr("Downloading… Stop") : running ? qsTr("Stop") : fit !== null && fit.outOfDate ? qsTr("Refit") : fit !== null && fit.continuable ? qsTr("Continue") : qsTr("Fit")
     iconColor: clickable ? AppColors.fitButtonForeground : EaStyle.Colors.themeForegroundDisabled
@@ -32,6 +35,7 @@ StatusBarButton {
     outlined: !clickable
     tintsOnHover: !clickable
     // Shown only while tool tips are on, as every tool tip is.
-    ToolTip.text: qsTr("Fit the free parameters")
+    // Why it cannot fit, when it cannot (no free parameter, no measured data).
+    ToolTip.text: fit !== null && !clickable && fit.unavailableReason !== "" ? fit.unavailableReason : qsTr("Fit the free parameters")
     onClicked: running ? fit.cancel() : fit.start()
 }

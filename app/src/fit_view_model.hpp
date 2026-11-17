@@ -49,6 +49,10 @@ struct ScanSummary {
     int processed() const { return fitted + skipped; }
     double chi_min = 0.0;
     double chi_max = 0.0;
+    // The profile factors' ranges over the fitted files (each bank's, for a series of several), from this session's
+    // runs; none for rows read back from an earlier one.
+    bool factors = false;
+    double rp_min = 0.0, rp_max = 0.0, rwp_min = 0.0, rwp_max = 0.0;
     double seconds = -1.0;
     QString outcome;
 };

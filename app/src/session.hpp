@@ -192,6 +192,9 @@ class Session : public QObject {
     // Open a project from its folder, its project.edi or a .zip of the folder; only `file:` URLs (edi ADR-0052). An
     // archive unpacks into a temporary folder: the project has no folder of its own until Save asks where to keep it.
     Q_INVOKABLE bool openProject(const QUrl& location);
+    // Whether `path` lies in the system's temporary folder, where downloaded examples and working copies go: such a
+    // place is never a recent project (the owner, 2026-11-16).
+    Q_INVOKABLE bool isTemporaryPath(const QString& path) const;
     // Open a bundled example: extracted to this session's temporary directory, then opened whole.
     Q_INVOKABLE bool openExample(const QString& exampleId);
     // A new empty project; with a `location` it is saved there at once, so it is that folder's project from the start
@@ -232,6 +235,9 @@ class Session : public QObject {
     /// The answer to saveDataChoiceNeeded `request`: "copy", "linked" or "cancel". The save that asked runs again with
     /// it, unless another question was asked since or the project was replaced: then nothing is saved.
     Q_INVOKABLE void answerSaveData(int request, const QString& choice);
+    /// Save as's Measured data row (edi ADR-0088 point 5): the next save copies linked data into the project ("copy") or
+    /// keeps it linked ("linked"), answering its question in advance; anything else clears it. Used by that save only.
+    Q_INVOKABLE void setNextSaveData(const QString& choice);
     Q_INVOKABLE bool saveAs(const QUrl& directory);
     // Save as (edi ADR-0052): into the folder or the .zip `target` (a `file:` URL), as `zip` says. A project saved as a
     // .zip keeps the archive as its location and every later Save rewrites it. With `copy` the project is written
@@ -443,6 +449,7 @@ class Session : public QObject {
         SaveContinuation again;
     };
     std::optional<SaveQuestion> save_question_;
+    QString next_save_data_;  // setNextSaveData's answer for the next save, then cleared
     int save_questions_ = 0;
     quint64 save_operations_ = 0;
     // The operation for a save starting now, or none when it stops here: asked (no message) or refused (`lastError`).

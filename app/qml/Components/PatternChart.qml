@@ -19,6 +19,13 @@ import edi.app
 Item {
     id: chart
 
+    // What the main view's Save image takes when this is the shown tab: the item, its toolbar (hidden while the image
+    // is taken), the file name, and whether the toolbar's band is cut off.
+    readonly property Item imageItem: chart
+    readonly property Item imageToolbar: toolbarLines
+    readonly property string imageName: "pattern"
+    readonly property bool imageCropsToolbar: true
+
     objectName: "chart"
 
     property ExperimentViewModel experiment: null
@@ -34,6 +41,11 @@ Item {
     // "pattern" for the app's one pattern chart, whose y scale is an app setting (edi ADR-0031 §2); none for a report
     // figure, whose options are its own.
     property string settingsPage: ""
+    // A single crystal's reflections on Q or sinθ/λ (SingleCrystalChart): the x box offers the single crystal's
+    // views, a second box F² or F, and the measured styles add Bars (the owner, 2026-11-16).
+    property bool singleCrystal: false
+    // The single crystal's structure colour, its ticks' (the calculated colour until there are ticks).
+    readonly property color structureColor: controller.braggColors.length > 0 ? controller.braggColors[0] : controller.calculatedColor
     // The y scale's tokens as the settings keep them, in PatternChartController.YScale's order.
     readonly property var scaleTokens: ["linear", "sqrt", "log"]
     // The chart is on the page and the tab the window shows: its page binds it (the owner's one-redraw
@@ -276,7 +288,9 @@ Item {
         // Hiding a curve from the legend keeps the y range, or fits it to the curves still shown (Preferences).
         hiddenFitsRange: Preferences.chartHiddenRange === "fit"
         // The app's one pattern chart follows the project's x axis (which the report follows too) and the app's y scale.
-        dSpacing: chart.axisProject ? chart.axisProject.patternDSpacing : false
+        xAxis: chart.singleCrystal ? (Preferences.singleCrystalXAxis === "sin_theta_over_lambda" ? "sin_theta_over_lambda" : "q") : chart.axisProject ? chart.axisProject.patternXAxis : "native"
+        squared: Preferences.singleCrystalPatternQuantity !== "f"
+        thinBars: Preferences.singleCrystalThinBars
         includedOnly: !chart.report && Preferences.chartIncludedOnly
         subtractBackground: !chart.report && Preferences.chartSubtractBackground
         yScale: chart.settingsPage === "pattern" ? Math.max(0, chart.scaleTokens.indexOf(Preferences.patternYScale)) : PatternChartController.Linear
@@ -295,7 +309,8 @@ Item {
         backgroundSeries: backgroundLine
         residualSeries: residualLine
         // How the measured pattern is drawn, one app setting for every pattern chart; a report's chart keeps its own.
-        measuredStyle: Preferences.patternMeasuredStyle
+        // A single crystal without measured reflections draws its calculated ones as bars (the owner, 2026-11-16).
+        measuredStyle: !chart.singleCrystal ? Preferences.patternMeasuredStyle : chart.experiment !== null && chart.experiment.singleCrystalReflections.simulated ? "bars" : Preferences.singleCrystalMeasuredStyle
     }
 
     // An x label is centred under its tick; a y label ends beside the plot area.
@@ -332,9 +347,11 @@ Item {
         }
     }
 
+    // Save image's background (SaveImageButton): none while a transparent image is taken.
+    property bool transparentImage: false
     Rectangle {
         anchors.fill: parent
-        color: chart.colors.chartBackground
+        color: chart.transparentImage ? "transparent" : chart.colors.chartBackground
     }
 
     PaneGrid {
@@ -368,6 +385,8 @@ Item {
         width: mainView.plotArea.width
         height: mainView.plotArea.height
         color: controller.measuredColor
+        // A single crystal's measured points are filled light, as the band is (the owner, 2026-11-16).
+        fillColor: chart.singleCrystal ? Qt.alpha(controller.measuredColor, 0.3) : controller.measuredColor
         markerSize: 5
         xMin: controller.xMin
         xMax: controller.xMax
@@ -385,6 +404,7 @@ Item {
     ToolbarLines {
         id: toolbarLines
 
+        objectName: "chart.toolbar"
         x: 0
         y: chart.topMargin
         width: chart.width
@@ -402,43 +422,84 @@ Item {
             shownIndex: controller.yScale
             onActivated: index => ApplicationInfo.patternChoice(index, 0)
         }
+        // A single crystal's views: calc against meas (SingleCrystalChart's own), or its reflections on Q or sinθ/λ.
+        ToolbarComboBox {
+            // The comparison of measured with calculated values is the Meas vs calc tab's (the owner, 2026-11-16).
+            readonly property var tokens: ["q", "sin_theta_over_lambda"]
+
+            objectName: "chart.toolbar.singleCrystalXAxis"
+            visible: chart.singleCrystal
+            toolTip: qsTr("X axis")
+            model: [qsTr("x: Q"), qsTr("x: %1").arg(Session.label("refln.sin_theta_over_lambda"))]
+            shownIndex: Math.max(0, tokens.indexOf(controller.xAxis))
+            onActivated: index => Preferences.singleCrystalXAxis = tokens[index]
+        }
+        ToolbarComboBox {
+            objectName: "chart.toolbar.singleCrystalQuantity"
+            visible: chart.singleCrystal
+            toolTip: qsTr("Plotted quantity")
+            model: [qsTr("F²"), qsTr("F")]
+            closedTexts: [qsTr("y: F²"), qsTr("y: F")]
+            shownIndex: controller.squared ? 0 : 1
+            onActivated: index => Preferences.singleCrystalPatternQuantity = index === 0 ? "f_squared" : "f"
+        }
         ToolbarComboBox {
             objectName: "chart.toolbar.xaxis"
-            // d can be chosen once a calculation has given the experiment its d column (the owner, 2026-10-22);
-            // the box shows the axis drawn, and names it as its list does; the d axis is "x: d-spacing" in both
-            // (the owner, 2026-10-22). The axis names are the dictionary's.
+            visible: !chart.singleCrystal
+            // d, Q and sinθ/λ can be chosen once a calculation has given the experiment its d column (the owner,
+            // 2026-10-22); the box shows the axis drawn, and names it as its list does; the d axis is "x: d-spacing"
+            // in both (the owner, 2026-10-22). Q = 4π sinθ/λ and sinθ/λ come from d (the owner, 2026-11-14).
             enabled: chart.experiment !== null && controller.dAvailable
-            toolTip: controller.dAvailable ? qsTr("X axis") : qsTr("X axis: d-spacing can be chosen after a calculation")
-            readonly property var entries: [Session.label(chart.nativeAxis === "timeOfFlight" ? "data.time_of_flight" : "data.two_theta"), qsTr("x: %1").arg(Session.optionLabel("pattern_chart.x_axis", "d_spacing"))]
+            toolTip: controller.dAvailable ? qsTr("X axis") : qsTr("X axis: d-spacing, Q and sinθ/λ can be chosen after a calculation")
+            readonly property var tokens: ["native", "d_spacing", "q", "sin_theta_over_lambda"]
+            readonly property var entries: [Session.label(chart.nativeAxis === "timeOfFlight" ? "data.time_of_flight" : "data.two_theta"), qsTr("x: %1").arg(Session.optionLabel("pattern_chart.x_axis", "d_spacing")), qsTr("x: Q"), qsTr("x: %1").arg(Session.label("refln.sin_theta_over_lambda"))]
             model: entries
             closedTexts: ApplicationInfo.patternClosedTexts(false)
-            shownIndex: controller.dSpacing && controller.dAvailable ? 1 : 0
+            shownIndex: controller.dAvailable ? Math.max(0, tokens.indexOf(controller.xAxis)) : 0
             onActivated: index => ApplicationInfo.patternChoice(index, 1)
         }
         // How the measured pattern is drawn (the owner, 2026-10-22), one box of four choices named as the axis boxes
         // name theirs: the band of measured ± s.u., the default, with the residual drawn the same way; the line; the
         // points with their error bars; or both.
+        // A single crystal's reflections may also be drawn as bars, one per reflection (the owner, 2026-11-16).
         ToolbarComboBox {
-            readonly property var tokens: ["band", "line", "points", "linePoints"]
-            readonly property var entries: [qsTr("Band"), qsTr("Line"), qsTr("Points"), qsTr("Line + points")]
+            readonly property var tokens: chart.singleCrystal ? ["band", "line", "points", "linePoints", "bars"] : ["band", "line", "points", "linePoints"]
+            readonly property var entries: chart.singleCrystal ? [qsTr("Band"), qsTr("Line"), qsTr("Points"), qsTr("Line + points"), qsTr("Bars")] : [qsTr("Band"), qsTr("Line"), qsTr("Points"), qsTr("Line + points")]
 
             objectName: "chart.toolbar.measuredStyle"
+            // Its own group, apart from the axes (the owner, 2026-11-01).
+            toolbarGroup: "measured"
             visible: !chart.report
             toolTip: qsTr("How the measured data are drawn")
             model: entries
             closedTexts: ApplicationInfo.patternClosedTexts(true)
             fitShown: true
             shownIndex: Math.max(0, tokens.indexOf(controller.measuredStyle))
-            onActivated: index => ApplicationInfo.patternChoice(index, 2)
+            onActivated: index => {
+                if (chart.singleCrystal)
+                    Preferences.singleCrystalMeasuredStyle = tokens[index];
+                else
+                    ApplicationInfo.patternChoice(index, 2);
+            }
+        }
+        // Bars with a width on the axis, or thin lines that stay one pixel at any zoom (the owner, 2026-11-16).
+        ChartToolButton {
+            objectName: "chart.toolbar.thinBars"
+            visible: chart.singleCrystal && controller.measuredStyle === "bars"
+            fontIcon: "grip-lines-vertical"
+            toolTip: Preferences.singleCrystalThinBars ? qsTr("Draw the reflections as bars") : qsTr("Draw the reflections as thin lines")
+            checked: Preferences.singleCrystalThinBars
+            onClicked: Preferences.singleCrystalThinBars = !Preferences.singleCrystalThinBars
         }
         ChartToolbar {
             id: toolbar
 
             // The y titles carry the series' colours, so the legend box waits behind its button.
             legendShown: false
-            saveTarget: chart
-            saveName: "pattern"
             structureCurvesAvailable: !chart.report && controller.hasCalculated
+            // A single crystal's reflections have no excluded regions or background, and leaving their buttons out keeps
+            // its controls on one row (two rows above every chart, the owner, 2026-11-16).
+            includedRangeAvailable: !chart.singleCrystal
             includedOnly: Preferences.chartIncludedOnly
             subtractBackground: Preferences.chartSubtractBackground
             backgroundAvailable: controller.backgroundAvailable
@@ -532,6 +593,33 @@ Item {
             color: controller.calculatedColor
             width: 2
         }
+        // The calculated bars (the Bars style of a single crystal's reflections): filled as the measured band is,
+        // outlined in the calculated colour.
+        // A single crystal's are filled in its structure's colour inside the calculated (total) red outline, and drawn in
+        // that colour as thin lines (the owner, 2026-11-16).
+        AreaSeries {
+            id: calculatedBars
+            objectName: "chart.series.calc.bars"
+            color: Qt.alpha(chart.singleCrystal ? chart.structureColor : controller.calculatedColor, chart.singleCrystal ? 0.6 : 0.3)
+            borderWidth: 0
+            upperSeries: LineSeries {}
+            lowerSeries: LineSeries {}
+            Component.onCompleted: controller.setBandSeries(2, calculatedBars.upperSeries, calculatedBars.lowerSeries, calculatedBarsTop, calculatedBarsBottom)
+        }
+        // Each bar's fill, a line as wide as the bar, under its outline.
+        LineSeries {
+            id: calculatedBarsBottom
+            objectName: "chart.series.calc.bars.fill"
+            color: calculatedBars.color
+            width: controller.barWidth
+            capStyle: Qt.FlatCap
+        }
+        LineSeries {
+            id: calculatedBarsTop
+            objectName: "chart.series.calc.bars.top"
+            color: chart.singleCrystal && controller.thinBars ? chart.structureColor : controller.calculatedColor
+            width: 1
+        }
     }
 
     // A page's chart follows the app's one pattern view (edi ADR-0017 §15): its ranges and its toolbar's choices. Only
@@ -615,10 +703,13 @@ Item {
             readonly property bool drawn: controller.structureCurves && area.index < controller.structureCurveColors.length
             readonly property color lineColour: controller.structureCurveColors[index] ?? "transparent"
             readonly property color fillColour: controller.structureCurveFills[index] ?? "transparent"
+            // As bars (a single crystal's nuclear and magnetic parts), the line is each bar's fill, as wide as the bar and
+            // opaque enough to tell the two parts apart, or a thin line in the part's colour.
             property LineSeries outline: LineSeries {
                 objectName: "chart.series.structure.outline." + area.index
-                color: area.drawn ? area.lineColour : "transparent"
-                width: 1.5
+                color: !area.drawn ? "transparent" : controller.componentBars && !controller.thinBars ? Qt.alpha(area.lineColour, 0.6) : area.lineColour
+                width: controller.componentBars ? controller.barWidth : 1.5
+                capStyle: controller.componentBars ? Qt.FlatCap : Qt.SquareCap
             }
 
             objectName: "chart.series.structure." + area.index
@@ -753,11 +844,14 @@ Item {
             color: controller.residualColor
             width: 1
         }
+        // The band's lower edge, or in the Bars style each residual bar's fill, a line as wide as the bar.
         LineSeries {
             id: residualBandBottom
+            readonly property bool bars: controller.measuredStyle === "bars"
             objectName: "chart.series.resid.band.bottom"
-            color: controller.residualColor
-            width: 1
+            color: bars ? residualBand.color : controller.residualColor
+            width: bars ? controller.barWidth : 1
+            capStyle: bars ? Qt.FlatCap : Qt.SquareCap
         }
     }
 
@@ -816,9 +910,13 @@ Item {
 
     // The legend, inside the main plot's top right corner.
     // The experiment's own x axis, "twoTheta" or "timeOfFlight", and the one the pattern is drawn on, that or
-    // "dSpacing" (the toolbar's x box).
+    // "dSpacing", "q" or "sinThetaOverLambda" (the toolbar's x box).
     readonly property string nativeAxis: chart.experiment && chart.experiment.beamMode === ExperimentViewModel.TimeOfFlight ? "timeOfFlight" : "twoTheta"
-    readonly property string xAxis: controller.dSpacing ? "dSpacing" : nativeAxis
+    readonly property string xAxis: ({
+            "d_spacing": "dSpacing",
+            "q": "q",
+            "sin_theta_over_lambda": "sinThetaOverLambda"
+        })[controller.xAxis] ?? nativeAxis
 
     EaElements.Label {
         objectName: "chart.reliability"
@@ -830,8 +928,8 @@ Item {
         text: FactorText.rich(chart.reliability)
     }
 
-    // The legend starts at the top right on a 2θ axis and at the top left on a time-of-flight or d-spacing one,
-    // where the strong peaks are at the other end (owner, 2026-10-05).
+    // The legend starts at the top right on a 2θ, Q or sinθ/λ axis and at the top left on a time-of-flight or
+    // d-spacing one, where the strong peaks are at the other end (owner, 2026-10-05).
     ChartLegend {
         id: chartLegend
 
@@ -839,7 +937,7 @@ Item {
         // Over the pointer's area for its hover cue; a click reaches the pointer area, which passes it back.
         z: 1
         colors: chart.colors
-        x: chart.xAxis === "twoTheta" ? mainView.x + mainView.plotArea.x + mainView.plotArea.width - width - chart.em : mainView.x + mainView.plotArea.x + chart.em
+        x: chart.xAxis === "twoTheta" || chart.xAxis === "q" || chart.xAxis === "sinThetaOverLambda" ? mainView.x + mainView.plotArea.x + mainView.plotArea.width - width - chart.em : mainView.x + mainView.plotArea.x + chart.em
         y: mainView.y + mainView.plotArea.y + chart.em
         visible: toolbar.legendShown && controller.hasData
         entries: controller.legend

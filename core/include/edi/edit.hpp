@@ -47,6 +47,7 @@
 #include "edi/model.hpp"
 #include "edi/parameter_walk.hpp"
 #include "edi/selectors.hpp"
+#include "edi/sharing.hpp"
 #include "edi/symmetry.hpp"
 #include "edi/categories.hpp"
 
@@ -57,11 +58,14 @@ struct ScanViewValue {
     std::string unique_name;
     double value = 0.0;
     std::optional<double> uncertainty;
+    // The value the fit of this dataset started from (the template's), for the Start and Change columns; none for a
+    // parameter its results do not record.
+    std::optional<double> start;
 };
 // The existing scan-view operation split at its real write boundary. Scan Undo
 // prepares it before reversing files; ordinary Edit still resolves at execution.
 struct PreparedScanView {
-    struct Target { Parameter* parameter; double value; std::optional<double> uncertainty; };
+    struct Target { Parameter* parameter; double value; std::optional<double> uncertainty; std::optional<double> start; };
     ExperimentBase* experiment;
     std::optional<PdDataBase> data;
     std::vector<Target> targets;
@@ -72,6 +76,7 @@ struct PreparedScanView {
         for (const auto& target : targets) {
             target.parameter->value = target.value;
             target.parameter->uncertainty = target.uncertainty;
+            target.parameter->start_value = target.start;
         }
     }
 };
@@ -83,7 +88,7 @@ inline PreparedScanView prepare_scan_view(Project& project, ExperimentBase& expe
     prepared.targets.reserve(values.size());
     for (const auto& value : values) {
         if (const auto found = by_name.find(value.unique_name); found != by_name.end())
-            prepared.targets.push_back({found->second, value.value, value.uncertainty});
+            prepared.targets.push_back({found->second, value.value, value.uncertainty, value.start});
     }
     return prepared;
 }
@@ -584,6 +589,10 @@ class Edit {
     static Edit assign(std::optional<int>& field, std::optional<int> value) {
         return Edit([&field, value] { field = value; });
     }
+    // A structure's bond cutoffs (`_geom`), which record their writes.
+    static Edit assign(detail::Written<std::optional<double>>& field, std::optional<double> value) {
+        return Edit([&field, value] { field = value; });
+    }
     static Edit assign(detail::WrittenText& field, std::string value) {
         return Edit([&field, value = std::move(value)] { field = value; });
     }
@@ -993,6 +1002,20 @@ class Edit {
         return Edit([&constraint, id = std::move(id)] {
             require_model_owner<ParameterConstraint>(constraint.id, "the constraint");
             constraint.id = id;
+        });
+    }
+    // ADR-0087's switches, each the alias and constraint rows it writes or removes (edi/sharing.hpp): "Phase ratios
+    // shared" for `experiment`'s set, and "Same for all experiments" for the leader's parameter `path`.
+    static Edit phase_ratios_shared(Project& project, std::string experiment, bool on) {
+        return Edit([&project, experiment = std::move(experiment), on] { share_phase_ratios(project, experiment, on); });
+    }
+    static Edit same_for_all_experiments(Project& project, std::string experiment, std::string path, bool on) {
+        return Edit([&project, experiment = std::move(experiment), path = std::move(path), on] {
+            if (on) {
+                share_across_experiments(project, experiment, path);
+            } else {
+                unshare_across_experiments(project, experiment, path);
+            }
         });
     }
     static Edit rename_scattering_length(Structure& structure, std::string from, std::string to) {
@@ -1553,6 +1576,28 @@ class Edit {
         return Edit([&project, &experiment, values = std::move(values), shown] {
             auto prepared = detail::prepare_scan_view(project, experiment, values, *shown);
             prepared.commit();
+        });
+    }
+
+    // A series of joint fits' point shown in the model (ADR-0088): each experiment's measured data replaced by its
+    // file of the point, `data` in project order, and each named parameter given its value. All are prepared before
+    // any is written, so a point that does not match the project's experiments writes nothing.
+    static Edit series_view(Project& project, std::vector<ScanValue> values, std::vector<PdDataBase> data) {
+        auto shown = std::make_shared<std::vector<PdDataBase>>(std::move(data));
+        return Edit([&project, values = std::move(values), shown] {
+            if (shown->size() != project.experiments.size()) {
+                throw std::invalid_argument("a series point has " + std::to_string(shown->size()) +
+                                            " datasets for " + std::to_string(project.experiments.size()) +
+                                            " experiments");
+            }
+            std::vector<detail::PreparedScanView> prepared;
+            prepared.reserve(shown->size());
+            for (std::size_t at = 0; at < shown->size(); ++at) {
+                prepared.push_back(detail::prepare_scan_view(project, *project.experiments[at], values, (*shown)[at]));
+            }
+            for (detail::PreparedScanView& point : prepared) {
+                point.commit();
+            }
         });
     }
 

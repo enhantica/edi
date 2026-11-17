@@ -19,6 +19,9 @@ class MeasuredLayer : public QQuickItem {
     QML_ELEMENT
     Q_PROPERTY(QColor color READ color WRITE setColor NOTIFY colorChanged)
     Q_PROPERTY(qreal markerSize READ markerSize WRITE setMarkerSize NOTIFY markerSizeChanged)
+    // A marker's fill, set: the marker is filled with it and outlined in `color` (the owner, 2026-11-16); unset, the
+    // marker is filled with `color`.
+    Q_PROPERTY(QColor fillColor READ fillColor WRITE setFillColor NOTIFY fillColorChanged)
     Q_PROPERTY(double xMin MEMBER x_min_ NOTIFY xMinChanged)
     Q_PROPERTY(double xMax MEMBER x_max_ NOTIFY xMaxChanged)
     Q_PROPERTY(double yMin MEMBER y_min_ NOTIFY yMinChanged)
@@ -34,6 +37,8 @@ class MeasuredLayer : public QQuickItem {
     void setColor(const QColor& color);
     qreal markerSize() const { return marker_size_; }
     void setMarkerSize(qreal size);
+    QColor fillColor() const { return fill_color_; }
+    void setFillColor(const QColor& color);
     int count() const { return static_cast<int>(points_.size()); }
     int revision() const { return revision_; }
 
@@ -47,6 +52,7 @@ class MeasuredLayer : public QQuickItem {
    signals:
     void colorChanged();
     void markerSizeChanged();
+    void fillColorChanged();
     void xMinChanged();
     void xMaxChanged();
     void yMinChanged();
@@ -59,6 +65,7 @@ class MeasuredLayer : public QQuickItem {
 
    private:
     QColor color_ = Qt::black;
+    QColor fill_color_;
     qreal marker_size_ = 4.0;
     double x_min_ = 0.0, x_max_ = 1.0, y_min_ = 0.0, y_max_ = 1.0;
     QList<QPointF> points_;

@@ -80,7 +80,7 @@ endif()
 configure_file(src/app_build_info.hpp.in ${CMAKE_CURRENT_BINARY_DIR}/app_build_info.hpp @ONLY)
 
 # Singletons are marked before the module is declared: qt_add_qml_module reads the property then.
-set_source_files_properties(qml/Globals/AppState.qml qml/Globals/FactorText.qml qml/Globals/FieldTitles.qml qml/Globals/FitOutcomes.qml qml/Globals/NumberText.qml qml/Globals/ParameterNames.qml
+set_source_files_properties(qml/Globals/AppState.qml qml/Globals/DialogFolders.qml qml/Globals/FactorText.qml qml/Globals/FieldTitles.qml qml/Globals/FitOutcomes.qml qml/Globals/NumberText.qml qml/Globals/ParameterNames.qml
                             qml/Globals/Preferences.qml qml/Globals/RecentProjects.qml qml/Globals/SideBarGroups.qml qml/Globals/TypedInput.qml
                             qml/Style/AppColors.qml qml/Style/AppSizes.qml PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
 qt_add_library(edi_app_module STATIC)
@@ -104,8 +104,10 @@ qt_add_qml_module(edi_app_module
         src/engine_setup.hpp src/engine_setup.cpp
         src/demo_driver.hpp src/demo_driver.cpp src/demo_documentation.cpp
         src/run_log.hpp src/run_log.cpp
+        src/stall_probe.hpp src/stall_probe.cpp
         src/item_locator.hpp src/item_locator.cpp
         src/view_rows.hpp src/view_rows.cpp
+        src/toolbar_row.hpp src/toolbar_row.cpp
         src/user_action_log.hpp src/user_action_log.cpp
         src/build_version.hpp
         src/desktop_updates.hpp src/desktop_updates.cpp
@@ -125,6 +127,7 @@ qt_add_qml_module(edi_app_module
         src/structure_view_options.hpp src/structure_view_options.cpp
         src/structure_instances.hpp src/structure_instances.cpp
         src/shared_site_geometry.hpp src/shared_site_geometry.cpp
+        src/polyhedra_geometry.hpp src/polyhedra_geometry.cpp
         src/structure_label_layer.hpp src/structure_label_layer.cpp
         src/structure_view_controller.hpp src/structure_view_controller.cpp
         src/experiment_models.hpp src/experiment_models.cpp
@@ -196,7 +199,9 @@ qt_add_qml_module(edi_app_module
         qml/Components/IconLine.qml
         qml/Components/IconTabButton.qml
         qml/Components/MainAreaBlockSelector.qml
+        qml/Components/SeriesSelectors.qml
         qml/Components/MainView.qml
+        qml/Components/MeasCalcChart.qml
         qml/Components/NumberLabel.qml
         qml/Components/ParameterCell.qml
         qml/Components/ParameterField.qml
@@ -247,6 +252,7 @@ qt_add_qml_module(edi_app_module
         qml/Globals/FactorText.qml
         qml/Globals/FieldTitles.qml
         qml/Globals/FitOutcomes.qml
+        qml/Globals/DialogFolders.qml
         qml/Globals/NumberText.qml
         qml/Globals/ParameterNames.qml
         qml/Globals/Preferences.qml
@@ -277,6 +283,7 @@ qt_add_qml_module(edi_app_module
         qml/Pages/Experiment/ExperimentsGroup.qml
         qml/Pages/Experiment/InstrumentGroup.qml
         qml/Pages/Experiment/LinkedStructureGroup.qml
+        qml/Pages/Experiment/DataStatusRows.qml
         qml/Pages/Experiment/MeasuredRangeGroup.qml
         qml/Pages/Experiment/PeakExtrasGroup.qml
         qml/Pages/Experiment/BackgroundExtrasGroup.qml
@@ -311,6 +318,7 @@ qt_add_qml_module(edi_app_module
         qml/Pages/Structure/PropagationVectorsGroup.qml
         qml/Pages/Structure/AtomSitesGroup.qml
         qml/Pages/Structure/CellGroup.qml
+        qml/Pages/Structure/GeomGroup.qml
         qml/Pages/Structure/ScatteringLengthsGroup.qml
         qml/Pages/Structure/SpaceGroupGroup.qml
         qml/Pages/Structure/StructurePage.qml
@@ -333,6 +341,8 @@ target_link_libraries(edi_app_module
     PRIVATE ${EDI_GUI_BASE_TARGETS} Qt6::CorePrivate Qt6::QuickPrivate Qt6::QmlModelsPrivate)
 find_package(Qt6QmlPrivate REQUIRED)
 target_link_libraries(edi_app_module PRIVATE Qt6::QmlPrivate)
+# The stall probe names the modules of its stack samples (dladdr).
+target_link_libraries(edi_app_module PRIVATE ${CMAKE_DL_LIBS})
 if(EDI_APP_ASSISTANT)
     # The assistant's math rendering; nothing else draws formulas, so a build without the assistant has no math library.
     target_link_libraries(edi_app_module PRIVATE EdiMath::JKQTMathTextEdi)
@@ -373,6 +383,13 @@ endif()
 file(GLOB _cli_entries LIST_DIRECTORIES true RELATIVE ${_cli} CONFIGURE_DEPENDS ${_cli}/*)
 foreach(entry IN LISTS _cli_entries)
     if(IS_DIRECTORY ${_cli}/${entry} AND NOT entry IN_LIST _registered_ids)
+        # What a branch switch leaves of another branch's example: only files a run wrote, no project.edi. Named, not
+        # fatal, so the build goes on.
+        if(NOT EXISTS ${_cli}/${entry}/project/project.edi)
+            message(WARNING "docs/user/cli/${entry}/ holds no project (another branch's example, or files a run "
+                            "left behind): remove the folder")
+            continue()
+        endif()
         message(FATAL_ERROR "docs/user/cli/${entry}/ is not listed in docs/user/cli/projects.yml")
     endif()
 endforeach()
@@ -554,7 +571,8 @@ add_dependencies(edi_app edi_app_build_marker)
 target_link_libraries(edi_app_tests PRIVATE edi_app_module edi_app_moduleplugin ${EDI_GUI_BASE_TARGETS}
                                             Qt6::QuickTest Qt6::QmlPrivate)
 # The demo and the test observers open test projects the app does not bundle from the source tree (ADR-0048).
-set_source_files_properties(src/demo_driver.cpp src/demo_documentation.cpp PROPERTIES
+# The session opens a project in that folder as a copy, so a run never writes into a committed example.
+set_source_files_properties(src/demo_driver.cpp src/demo_documentation.cpp src/session.cpp PROPERTIES
                             COMPILE_DEFINITIONS "EDI_CLI_PROJECTS_DIR=\"${PROJECT_SOURCE_DIR}/docs/user/cli\"")
 target_compile_definitions(edi_app_tests PRIVATE
     QUICK_TEST_SOURCE_DIR="${PROJECT_SOURCE_DIR}/tests/unit/app")

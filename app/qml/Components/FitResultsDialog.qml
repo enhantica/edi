@@ -140,7 +140,9 @@ AppDialog {
 
         y: outdatedNote.visible ? outdatedNote.height + EaStyle.Sizes.fontPixelSize : 0
 
-        width: table.numberColumnWidth + AppSizes.iconOnlyColumnWidth + dialog.metricColumnWidth + dialog.valueColumnWidth + 3 * EaStyle.Sizes.tableColumnSpacing + 2 * table.rowPadding
+        // As the table measures its rows (DataTable.rowsWidth), its border included, so it never scrolls sideways (the
+        // owner, 2026-11-16).
+        width: table.numberColumnWidth + AppSizes.iconOnlyColumnWidth + dialog.metricColumnWidth + dialog.valueColumnWidth + 3 * EaStyle.Sizes.tableColumnSpacing + 2 * table.rowPadding + 2 * EaStyle.Sizes.borderThickness
         height: table.contentHeight
 
         DataTable {

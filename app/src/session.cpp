@@ -397,13 +397,27 @@ bool Session::openExample(const QString& exampleId) {
     return false;
 }
 
+bool Session::isTemporaryPath(const QString& path) const {
+    if (path.isEmpty()) return false;
+    const QString clean = QDir::cleanPath(QFileInfo(path).absoluteFilePath());
+    const QString temporary = QDir::cleanPath(QFileInfo(QDir::tempPath()).canonicalFilePath());
+    const QString given = QDir::cleanPath(QDir::tempPath());
+    for (const QString& root : {temporary, given}) {
+        if (!root.isEmpty() && (clean == root || clean.startsWith(root + u'/'))) return true;
+    }
+    // macOS names its temporary folder through /private; a path may come either way.
+    const QString canonical = QFileInfo(clean).canonicalFilePath();
+    return !canonical.isEmpty() && !temporary.isEmpty() && canonical.startsWith(temporary + u'/');
+}
+
 bool Session::openProjectAt(const QUrl& location, const QString& example) {
     if (!location.isLocalFile()) {
         setLastError(QStringLiteral("cannot open %1: only local projects (file: URLs) can be opened")
                          .arg(location.toString()));
         return false;
     }
-    QString source = location.toLocalFile();
+    // Without a trailing separator (a path from Recent projects may end in one): the copy target is the folder's name.
+    QString source = QDir::cleanPath(location.toLocalFile());
     const PendingOpenSource pending(*this,source);
     // edi ADR-0052: a project record opens its folder; an archive is unpacked by the core into a temporary folder and
     // opens unsaved, so its first Save asks where to keep it.
@@ -440,7 +454,16 @@ bool Session::openProjectAt(const QUrl& location, const QString& example) {
     // A project in a folder this user may not write (a read-only tree) runs in a temporary copy, as an example does,
     // so a fit never writes into it; Save As writes the project where the user chooses.
     const QFileInfo folder(source), analysis(source + QStringLiteral("/analysis"));
-    if (folder.isDir() && (!folder.isWritable() || (analysis.exists() && !analysis.isWritable()))) {
+    // A project in this build's own example folder opens as a copy, as a read-only one does: a run's results never
+    // land in a committed example (the owner, 2026-11-16).
+    bool sourceExample = false;
+#if defined(EDI_CLI_PROJECTS_DIR)
+    {
+        const QString examples = QDir::cleanPath(QStringLiteral(EDI_CLI_PROJECTS_DIR)) + u'/';
+        sourceExample = QDir::cleanPath(folder.absoluteFilePath()).startsWith(examples);
+    }
+#endif
+    if (folder.isDir() && (sourceExample || !folder.isWritable() || (analysis.exists() && !analysis.isWritable()))) {
         QString copyRoot;
         try { copyRoot=prepareCopyRoot("read-only"); }
         catch(const std::exception& error) { setLastError(QString::fromUtf8(error.what()));return false; }
@@ -690,6 +713,18 @@ std::optional<Session::SaveOperation> Session::beginSave(bool wholeTree, bool st
     const bool linked = plan.value(QStringLiteral("linked")).toBool();
     operation.treeReceipt = true;
     operation.inputs = project_->linkedInputsKey(operation.treeReceipt);
+    // Save as already answered for its linked data: no question about it.
+    const QString answered = std::exchange(next_save_data_, QString());
+    if (linked && (answered == QLatin1String("copy") || answered == QLatin1String("linked"))) {
+        operation.include = answered == QLatin1String("copy");
+        if (operation.include) {
+            if (const QString why = project_->linkedDataUnavailable(); !why.isEmpty()) {
+                setLastError(why);
+                return std::nullopt;
+            }
+        }
+        return operation;
+    }
     if (plan.value(QStringLiteral("ask")).toBool()) {
         if (assistant_save_origin_ != 0 || project_->assistant_save_origin_ != 0) {
             // A question nobody answers would leave the assistant's save neither done nor refused.
@@ -714,6 +749,10 @@ std::optional<Session::SaveOperation> Session::beginSave(bool wholeTree, bool st
         }
     }
     return operation;
+}
+
+void Session::setNextSaveData(const QString& choice) {
+    next_save_data_ = choice == QLatin1String("copy") || choice == QLatin1String("linked") ? choice : QString();
 }
 
 void Session::queueReplan(const SaveOperation& operation) {

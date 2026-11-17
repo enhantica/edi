@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "structure_view_options.hpp"
 
+#include <algorithm>
+#include <cmath>
 #include <optional>
 
 namespace edi_app {
@@ -9,12 +11,20 @@ StructureViewOptions::StructureViewOptions(QObject* parent)
     : QObject(parent),
       atom_view_options_(new OptionListModel(this)),
       moment_form_options_(new OptionListModel(this)),
-      moment_view_options_(new OptionListModel(this)) {
+      moment_view_options_(new OptionListModel(this)),
+      polyhedra_colour_options_(new OptionListModel(this)),
+      polyhedra_extent_options_(new OptionListModel(this)) {
     // Named as crysta's dictionary names them (Covalent radius, ...), never by their tokens.
     atom_view_options_->setItemOptions("structure_view.atom_view", {"covalent", "vdw", "ionic", "adp"});
     // Each shows its name from crysta's dictionary: Crystal axes, Cartesian, Spherical.
     moment_form_options_->setItemOptions("structure_view.moment_form", {"crystal_axes", "cartesian", "spherical"});
     moment_view_options_->setItemOptions("structure_view.moment_view", {"through_atom", "from_centre", "from_surface"});
+    // The dictionary has no polyhedra item yet: the app names them.
+    polyhedra_colour_options_->setOptions({"atom", "grey"}, "atom",
+                                          {QObject::tr("Atom colour").toStdString(), QObject::tr("Grey").toStdString()});
+    polyhedra_extent_options_->setOptions({"cell", "complete"}, "cell",
+                                          {QObject::tr("Inside the cell").toStdString(),
+                                           QObject::tr("Complete for atoms in the cell").toStdString()});
 }
 
 template <class T>
@@ -22,7 +32,17 @@ void StructureViewOptions::assign(T& field, T value, void (StructureViewOptions:
     if (field != value) {
         field = value;
         emit(this->*notify)();
+        emit drawn();
         emit changed();
+    }
+}
+
+template <class T>
+void StructureViewOptions::assignSession(T& field, T value, void (StructureViewOptions::*notify)()) {
+    if (field != value) {
+        field = value;
+        emit(this->*notify)();
+        emit drawn();
     }
 }
 
@@ -119,6 +139,33 @@ void StructureViewOptions::setAtoms(const QString& atoms) {
 void StructureViewOptions::setBonds(bool shown) { assign(options_.bonds, shown, &StructureViewOptions::bondsChanged); }
 void StructureViewOptions::setCell(bool shown) { assign(options_.cell, shown, &StructureViewOptions::cellChanged); }
 void StructureViewOptions::setAxes(bool shown) { assign(options_.axes, shown, &StructureViewOptions::axesChanged); }
+void StructureViewOptions::setPolyhedra(bool shown) {
+    assignSession(options_.polyhedra, shown, &StructureViewOptions::polyhedraChanged);
+}
+QString StructureViewOptions::polyhedraColour() const {
+    return options_.polyhedra_grey ? QStringLiteral("grey") : QStringLiteral("atom");
+}
+void StructureViewOptions::setPolyhedraColour(const QString& colour) {
+    if (colour == QLatin1String("atom") || colour == QLatin1String("grey")) {
+        assignSession(options_.polyhedra_grey, colour == QLatin1String("grey"), &StructureViewOptions::polyhedraColourChanged);
+    }
+}
+QString StructureViewOptions::polyhedraExtent() const {
+    return options_.polyhedra_complete ? QStringLiteral("complete") : QStringLiteral("cell");
+}
+void StructureViewOptions::setPolyhedraExtent(const QString& extent) {
+    if (extent == QLatin1String("cell") || extent == QLatin1String("complete")) {
+        assignSession(options_.polyhedra_complete, extent == QLatin1String("complete"),
+                      &StructureViewOptions::polyhedraExtentChanged);
+    }
+}
+void StructureViewOptions::setPolyhedraOpacity(double opacity) {
+    const double clamped = std::isfinite(opacity) ? std::clamp(opacity, 0.0, 1.0) : polyhedra_opacity_;
+    if (clamped != polyhedra_opacity_) {
+        polyhedra_opacity_ = clamped;
+        emit polyhedraOpacityChanged();
+    }
+}
 void StructureViewOptions::setShowMoments(bool shown) {
     moments_declared_ = moments_declared_ || shown != options_.moments;
     assign(options_.moments, shown, &StructureViewOptions::showMomentsChanged);

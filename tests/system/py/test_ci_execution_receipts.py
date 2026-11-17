@@ -88,9 +88,14 @@ def test_shipped_driver_executes_exact_selection_and_preserves_exit(tmp_path, mo
     frozen = json.loads(SHIPPED['files']['tests/test-groups.json'])['groups'][NIGHTLY_GROUP][
         'paths'
     ]
+    approved = json.loads((ROOT / 'tests/fixtures/joint_series/cadence.json').read_text())
+    assert set(frozen) <= set(approved['inherited_paths']), (
+        'The independent pre-feature policy must retain every shipped nightly deferral'
+    )
+    deferred = approved['inherited_paths'] + approved['slow_paths']
     ignored = [arg for arg in args if arg.startswith('--ignore=')]
     expected_ignored = (
-        ['--ignore=' + path for path in frozen] if skip and mode != 'nightly' else []
+        ['--ignore=' + path for path in deferred] if skip and mode != 'nightly' else []
     )
     if REPO == 'edi':
         # The app and app-wasm jobs execute this module on their real build outputs.

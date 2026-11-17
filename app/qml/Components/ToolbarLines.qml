@@ -1,54 +1,147 @@
 // SPDX-License-Identifier: BSD-3-Clause
+pragma ComponentBehavior: Bound
+
 import QtQuick
 
 import EasyApplication.Gui.Style as EaStyle
+import EasyApplication.Gui.Elements as EaElements
 
 import edi.app
 
-// A chart's toolbar (edi ADR-0041 §7; the owner, 2026-10-24), the one rule for the Pattern, Stacked and Map toolbars:
-// every control on one line when they all fit; otherwise every combobox on the lines above, as many as fit on each,
-// and every button on the last line. Each line is centred between `leftEdge` and `rightEdge`, the span of the block
-// selector row above the chart, so the selector and every toolbar line share one centre (the owner, 2026-10-25). A child
-// with `closedTexts` (ToolbarComboBox) is a combobox; any other visible child is a button, or a row of them kept
-// whole. Comboboxes with a different `toolbarGroup` (a string, "" when not set) are a group's spacing apart, as the
-// comboboxes are from the buttons: the axes, the Stacked spacing and the Map's colours each a group (the owner,
-// 2026-10-26).
+// The controls row above every chart and the structure view (edi ADR-0090 point 7; the owner, 2026-11-16): one row,
+// centred between `leftEdge` and `rightEdge`, the span of the selector row above it. When the row does not fit, its
+// controls move into a "More" (⋯) popup at the row's end, least important first, by one priority on every view
+// (ToolbarRow.rank). A child with `closedTexts` (ToolbarComboBox) is a combobox, one with `fontIcon` (ChartToolButton) a
+// button; a child with `toolbarUnits` (ChartToolbar, StructureToolbar) gives its own comboboxes and buttons, a spacer
+// among them starting a new group. Comboboxes of different `toolbarGroup`, and buttons of different groups, are a group's
+// spacing apart; any other child (a row of buttons) stays whole in the row.
 Item {
     id: lines
 
-    // The room the lines may take, in this item's coordinates, and its middle, where each line is centred.
     property real leftEdge: 0
     property real rightEdge: width
     readonly property real centre: (leftEdge + rightEdge) / 2
     readonly property real spacing: AppSizes.toolbarSpacing
-    // Between the comboboxes and the buttons on one line.
     readonly property real groupSpacing: EaStyle.Sizes.fontPixelSize * 0.5 + 2 * AppSizes.toolbarSpacing
-    // The controls shown, and every width the layout depends on.
-    readonly property var units: ApplicationInfo.toolbarUnits()
-    readonly property string measure: ApplicationInfo.toolbarMeasure()
-    // How many lines the controls take.
-    property int lineCount: 0
+    // Always one line now; kept for the views that read it.
+    readonly property int lineCount: 1
+    // Every control, in row order: {item, group, movable}; and those in the popup.
+    property var units: []
+    property var overflow: []
+    readonly property string measure: [leftEdge, rightEdge, visible].concat(units.map(unit => unit.item.visible ? unit.item.width : -1)).join(",")
 
-    function isComboBox(unit) {
-        return ApplicationInfo.toolbarIsComboBox(unit);
-    }
-    function groupOf(unit) {
-        return ApplicationInfo.toolbarGroupOf(unit);
-    }
-    // The gap before a combobox that follows `before` on a line.
-    function boxGap(before, unit) {
-        return ApplicationInfo.toolbarBoxGap(before, unit);
-    }
-    function widthOf(row, gap) {
-        return ApplicationInfo.toolbarRowWidth(row, gap, false);
-    }
-    function boxesWidth(row) {
-        return ApplicationInfo.toolbarRowWidth(row, undefined, true);
+    implicitHeight: AppSizes.toolbarControlSize
+
+    function collect() {
+        ToolbarRow.collect(lines, moreButton);
     }
     function layout() {
-        ApplicationInfo.toolbarLayout();
+        ToolbarRow.place(lines, moreButton);
     }
 
-    onMeasureChanged: Qt.callLater(layout)
-    Component.onCompleted: layout()
+    onMeasureChanged: Qt.callLater(lines.layout)
+    Component.onCompleted: Qt.callLater(lines.collect)
+
+    ChartToolButton {
+        id: moreButton
+
+        objectName: lines.objectName !== "" ? lines.objectName + ".more" : "toolbar.more"
+        visible: false
+        fontIcon: "ellipsis-h"
+        toolTip: qsTr("More chart options")
+        checked: morePopup.opened
+        onClicked: morePopup.opened ? morePopup.close() : morePopup.open()
+    }
+    // The app's popup (EaElements.Menu: its frame and its open and close animation) in the chart's background colour,
+    // holding one row of the controls that do not fit, as they look in the toolbar, each with its tooltip (the owner,
+    // 2026-11-16). The control itself stays in the row, out of sight; its copy here acts on it.
+    EaElements.Menu {
+        id: morePopup
+
+        objectName: moreButton.objectName + ".popup"
+        x: Math.max(0, Math.min(moreButton.x + moreButton.width - width, lines.width - width))
+        y: moreButton.y + moreButton.height + lines.spacing
+        padding: lines.spacing * 2
+        width: overflowRow.implicitWidth + leftPadding + rightPadding
+
+        Binding {
+            target: morePopup.background
+            property: "color"
+            value: EaStyle.Colors.chartBackground
+        }
+
+        // The row is the menu's one item: the menu takes the children of its own list as its items.
+        Row {
+            id: overflowRow
+
+            spacing: lines.spacing
+
+            Repeater {
+                model: lines.overflow
+
+                delegate: Item {
+                    id: entry
+
+                    required property var modelData
+                    readonly property bool box: modelData.closedTexts !== undefined
+                    // A colour map's box keeps its gradients in the popup too: copied as itself (the owner, 2026-11-17).
+                    readonly property bool colourMap: box && modelData.maps !== undefined
+
+                    width: colourMap ? mapCopy.width : box ? boxCopy.width : buttonCopy.width
+                    height: AppSizes.toolbarControlSize
+
+                    ColourMapComboBox {
+                        id: mapCopy
+
+                        objectName: entry.colourMap ? entry.modelData.objectName + ".overflow" : ""
+                        visible: entry.colourMap
+                        enabled: entry.colourMap && entry.modelData.enabled
+                        toolTip: entry.colourMap ? entry.modelData.toolTip ?? "" : ""
+                        maps: entry.colourMap ? entry.modelData.maps : []
+                        direction: entry.colourMap ? entry.modelData.direction : "auto"
+                        chartBackground: entry.colourMap ? entry.modelData.chartBackground : "white"
+                        dark: entry.colourMap && entry.modelData.dark
+                        shownIndex: entry.colourMap ? entry.modelData.currentIndex : 0
+                        onActivated: index => entry.modelData.activated(index)
+                    }
+                    ToolbarComboBox {
+                        id: boxCopy
+
+                        objectName: entry.box && !entry.colourMap ? entry.modelData.objectName + ".overflow" : ""
+                        visible: entry.box && !entry.colourMap
+                        enabled: entry.modelData.enabled
+                        toolTip: entry.modelData.toolTip ?? ""
+                        model: entry.box ? entry.modelData.model : []
+                        closedTexts: entry.box ? entry.modelData.closedTexts : []
+                        closedOnly: entry.box && entry.modelData.closedOnly
+                        shownIndex: entry.box ? entry.modelData.currentIndex : 0
+                        onActivated: index => entry.modelData.activated(index)
+                    }
+                    ChartToolButton {
+                        id: buttonCopy
+
+                        objectName: entry.box ? "" : entry.modelData.objectName + ".overflow"
+                        visible: !entry.box
+                        enabled: entry.modelData.enabled
+                        available: entry.modelData.available ?? true
+                        fontIcon: entry.modelData.fontIcon ?? ""
+                        toolTip: entry.modelData.toolTip ?? ""
+                        checked: entry.modelData.checked ?? false
+                        onClicked: entry.modelData.clicked()
+
+                        // A button drawn with a letter (view along a, b, c) has no icon: its letter, in its colour.
+                        EaElements.Label {
+                            anchors.centerIn: parent
+                            visible: buttonCopy.fontIcon === ""
+                            font.family: EaStyle.Fonts.ptSansBold.name
+                            font.bold: true
+                            font.pixelSize: EaStyle.Sizes.fontPixelSize * 1.15
+                            color: entry.modelData.letterColor ?? EaStyle.Colors.themeForeground
+                            text: String(entry.modelData.objectName).split(".").pop()
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
