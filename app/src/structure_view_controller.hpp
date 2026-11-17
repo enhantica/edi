@@ -260,6 +260,10 @@ class StructureViewController : public QObject {
     void stopAnimation();  // the pointer takes over from where the view is
     void setColor(QColor& field, const QColor& color, void (StructureViewController::*notify)());
     void placeCamera();    // the camera and the label layer, from the view
+    // Every page's view of the same structure turns, zooms and projects as one: the view this one now has goes to the
+    // others, and a view first showing a structure takes the view another already has of it.
+    void shareView();
+    const StructureViewController* viewedPeer() const;
     void placeTexts();
     void setCurrent(bool current);
     void setDetail(int drawn);

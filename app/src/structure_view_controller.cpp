@@ -4,6 +4,7 @@
 #include <QEasingCurve>
 #include <QStringList>
 #include <algorithm>
+#include <vector>
 #include <cmath>
 #include <limits>
 #include <numbers>
@@ -50,8 +51,18 @@ edi::SceneInstance arrow_part(const edi::SceneArrow& arrow, double from, double 
 
 }  // namespace
 
+namespace {
+// The live views, which share their view of a structure (shareView).
+std::vector<StructureViewController*>& live_controllers() {
+    static std::vector<StructureViewController*> live;
+    return live;
+}
+}  // namespace
+
 StructureViewController::StructureViewController(QObject* parent)
     : QObject(parent), view_animation_(new QVariantAnimation(this)), legend_(new ChartLegendModel(this)) {
+    live_controllers().push_back(this);
+    connect(this, &QObject::destroyed, [this] { std::erase(live_controllers(), this); });
     view_animation_->setStartValue(0.0);
     view_animation_->setEndValue(1.0);
     view_animation_->setEasingCurve(QEasingCurve::OutQuint);
@@ -79,6 +90,7 @@ StructureViewController::StructureViewController(QObject* parent)
     connect(view_animation_, &QVariantAnimation::finished, this, [this] {
         view_ = animation_to_;  // exactly the button's view, with no rounding of the interpolation
         placeCamera();
+        shareView();
         emit animatingChanged();
     });
     for (const auto signal : {&StructureViewController::spheresChanged, &StructureViewController::cylindersChanged,
@@ -298,6 +310,7 @@ void StructureViewController::animateTo(const edi::SceneView& target) {
     if (view_animation_duration_ <= 0) {
         view_ = target;
         placeCamera();
+        shareView();
         if (was) {
             emit animatingChanged();
         }
@@ -325,6 +338,7 @@ void StructureViewController::toggleProjection() {
     view_.projection = view_.projection == edi::Projection::Orthographic ? edi::Projection::Perspective
                                                                          : edi::Projection::Orthographic;
     placeCamera();
+    shareView();
 }
 
 void StructureViewController::viewAlong(int axis) {
@@ -345,18 +359,21 @@ void StructureViewController::rotateBy(double dx, double dy) {
     stopAnimation();
     view_ = edi::rotated(view_, dx, dy);
     placeCamera();
+    shareView();
 }
 
 void StructureViewController::zoomAt(double x, double y, int angleDelta) {
     stopAnimation();
     view_ = edi::zoomed(scene_, view_, viewport_, x, y, angleDelta);
     placeCamera();
+    shareView();
 }
 
 void StructureViewController::panBy(double dx, double dy) {
     stopAnimation();
     view_ = edi::panned(view_, dx, dy);
     placeCamera();
+    shareView();
 }
 
 QString StructureViewController::hoverAtSphere(int instanceIndex) const {
@@ -473,9 +490,13 @@ void StructureViewController::present() {
         const edi::SceneOptions options = options_ != nullptr ? options_->sceneOptions() : edi::SceneOptions{};
         scene_ = edi::present_structure(source_, options);
         if (!viewed_) {
-            const edi::Projection projection = view_.projection;
-            view_ = edi::default_view(scene_);
-            view_.projection = projection;
+            if (const StructureViewController* peer = viewedPeer(); peer != nullptr && scene_.current) {
+                view_ = peer->view_;
+            } else {
+                const edi::Projection projection = view_.projection;
+                view_ = edi::default_view(scene_);
+                view_.projection = projection;
+            }
             viewed_ = scene_.current;
         }
     }
@@ -548,6 +569,29 @@ void StructureViewController::draw() {
     ++revision_;
     emit revisionChanged();
     placeCamera();
+}
+
+const StructureViewController* StructureViewController::viewedPeer() const {
+    for (const StructureViewController* peer : live_controllers()) {
+        if (peer != this && !peer->report_ && structure_ != nullptr && peer->structure_ == structure_ && peer->viewed_) {
+            return peer;
+        }
+    }
+    return nullptr;
+}
+
+void StructureViewController::shareView() {
+    if (report_ || structure_ == nullptr) {
+        return;  // a report figure keeps the view it was saved with
+    }
+    for (StructureViewController* peer : live_controllers()) {
+        if (peer == this || peer->report_ || peer->structure_ != structure_ || !peer->viewed_) {
+            continue;
+        }
+        peer->stopAnimation();
+        peer->view_ = view_;
+        peer->placeCamera();  // a hidden view only notes it, and places its camera when shown
+    }
 }
 
 void StructureViewController::placeCamera() {
