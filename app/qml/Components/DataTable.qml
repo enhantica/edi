@@ -59,8 +59,10 @@ EaComponents.ListView {
     readonly property bool scrollsSideways: rowsWidth > width + 0.5
     contentWidth: scrollsSideways ? rowsWidth : width
     flickableDirection: scrollsSideways ? Flickable.AutoFlickDirection : Flickable.VerticalFlick
+    // The same policy as the vertical bar, so it fades when idle as every other scroll bar does.
     ScrollBar.horizontal: EaElements.ScrollBar {
-        policy: table.scrollsSideways ? ScrollBar.AlwaysOn : ScrollBar.AlwaysOff
+        policy: table.scrollsSideways ? table.scrollBarPolicy : ScrollBar.AlwaysOff
+        interactive: table.scrollBarInteractive
     }
     property bool equalColumns: false
     property var spreadColumns: []
