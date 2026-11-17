@@ -233,6 +233,11 @@
           "domain": "read-only query",
           "proof": null,
           "overloads": 1
+        },
+        "setNextSaveData": {
+          "domain": "save-operation",
+          "proof": "tests/system/py/test_sealed_publication_contract.py",
+          "overloads": 1
         }
       },
       "property_writers": {
@@ -415,6 +420,71 @@
           "domain": "read-only query",
           "proof": null,
           "overloads": 1
+        },
+        "hasLinkedData": {
+          "domain": "read-only query",
+          "proof": null,
+          "overloads": 1
+        },
+        "phaseRatiosShared": {
+          "domain": "read-only query",
+          "proof": null,
+          "overloads": 1
+        },
+        "pointName": {
+          "domain": "read-only query",
+          "proof": null,
+          "overloads": 1
+        },
+        "pointProblem": {
+          "domain": "read-only query",
+          "proof": null,
+          "overloads": 1
+        },
+        "presetSaveData": {
+          "domain": "read-only query",
+          "proof": null,
+          "overloads": 1
+        },
+        "sameForAll": {
+          "domain": "read-only query",
+          "proof": null,
+          "overloads": 1
+        },
+        "sameForAllApplies": {
+          "domain": "read-only query",
+          "proof": null,
+          "overloads": 1
+        },
+        "sameForAllExperiments": {
+          "domain": "read-only query",
+          "proof": null,
+          "overloads": 1
+        },
+        "seriesDataNote": {
+          "domain": "read-only query",
+          "proof": null,
+          "overloads": 1
+        },
+        "loadSeriesOfJointFits": {
+          "domain": "dataset-admission",
+          "proof": "tests/system/py/test_linked_experiment_payloads.py",
+          "overloads": 1
+        },
+        "setPhaseRatiosShared": {
+          "domain": "model-publication",
+          "proof": "tests/system/py/test_operation_contracts.py",
+          "overloads": 1
+        },
+        "setSameForAll": {
+          "domain": "model-publication",
+          "proof": "tests/system/py/test_operation_contracts.py",
+          "overloads": 1
+        },
+        "setSameForAllExperiments": {
+          "domain": "model-publication",
+          "proof": "tests/system/py/test_operation_contracts.py",
+          "overloads": 1
         }
       },
       "property_writers": {
@@ -492,6 +562,16 @@
           "bindings": 1,
           "domain": "synchronous model or presentation",
           "proof": "tests/unit/app/tst_scan_view_content.qml"
+        },
+        "setCurrentBank": {
+          "bindings": 1,
+          "domain": "synchronous model or presentation",
+          "proof": "tests/system/py/test_operation_contracts.py"
+        },
+        "setPatternXAxis": {
+          "bindings": 1,
+          "domain": "synchronous model or presentation",
+          "proof": "tests/system/py/test_operation_contracts.py"
         }
       }
     },
