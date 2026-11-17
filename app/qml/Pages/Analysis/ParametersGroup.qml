@@ -499,7 +499,9 @@ SideBarGroup {
                         id: nameLine
                         anchors.verticalCenter: parent.verticalCenter
                         maximumWidth: Math.max(1, parent.width)
-                        minimumTextWidth: EaStyle.Sizes.fontPixelSize * 3
+                        // Every row keeps its icons, so their columns line up: a name too long for the column ends
+                        // with an ellipsis instead (the owner, 2026-11-17).
+                        minimumTextWidth: 0
                         segments: ParameterNames.segments(row.parameter)
                     }
                     TapHandler {
