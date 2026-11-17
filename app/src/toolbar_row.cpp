@@ -15,12 +15,12 @@ namespace {
 
 // Least important first. The owner's last four (2026-11-16) end it: subtract background, the intensity scale, the x
 // axis and reset. A name not listed sits between the view options and the pointer modes.
-constexpr std::array<std::string_view, 37> kOrder{
+constexpr std::array<std::string_view, 38> kOrder{
     "hover", "highlight", "legend", "structureCurves", "includedRange", "thinBars", "errorBars", "range", "smooth",
-    "reverse", "labels", "moments", "polyhedra", "bonds", "axes", "cell", "projection", "a", "b", "c", "atoms",
-    "colors", "measuredStyle", "direction", "colourMap", "spacing", "rows", "singleCrystalQuantity", "quantity", "pan",
-    "zoom", "subtractBackground", "yscale", "scale", "xaxis", "singleCrystalXAxis", "reset"};
-constexpr int kUnlisted = 27;
+    "reverse", "labels", "moments", "polyhedra", "bonds", "axes", "cell", "projection", "a", "b", "c", "atomView",
+    "atoms", "colors", "measuredStyle", "direction", "colourMap", "spacing", "rows", "singleCrystalQuantity",
+    "quantity", "pan", "zoom", "subtractBackground", "yscale", "scale", "xaxis", "singleCrystalXAxis", "reset"};
+constexpr int kUnlisted = 28;
 
 struct Unit {
     double width = 0;

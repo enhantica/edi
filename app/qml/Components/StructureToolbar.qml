@@ -46,6 +46,27 @@ Item {
         shownIndex: Math.max(0, tokens.indexOf(toolbar.options ? toolbar.options.atoms : "all"))
         onActivated: index => toolbar.options.atoms = tokens[index]
     }
+    // How the atoms are drawn, the same setting as Extra's Appearance group: radius model or ADP ellipsoids.
+    ToolbarComboBox {
+        readonly property OptionListModel choices: toolbar.options ? toolbar.options.atomViewOptions : null
+        readonly property var tokens: choices && choices.revision >= 0 ? Array.from({ length: choices.count }, (_, i) => choices.tokenAt(i)) : []
+        readonly property var shortNames: ({
+                "covalent": qsTr("Covalent"),
+                "vdw": qsTr("vdW"),
+                "ionic": qsTr("Ionic"),
+                "adp": qsTr("ADP")
+            })
+
+        objectName: "structure.toolbar.atomView"
+        toolbarGroup: "atomView"
+        visible: toolbar.controller !== null && toolbar.controller.hasSites && toolbar.options !== null && toolbar.options.atoms !== "none"
+        toolTip: qsTr("Atom view: %1").arg(currentText)
+        model: tokens.map(token => Session.optionLabel("structure_view.atom_view", token))
+        closedOnly: true
+        closedTexts: tokens.map(token => shortNames[token] ?? token)
+        shownIndex: Math.max(0, tokens.indexOf(toolbar.options ? toolbar.options.atomView : "covalent"))
+        onActivated: index => toolbar.options.atomView = tokens[index]
+    }
     ChartToolButton {
         objectName: "structure.toolbar.labels"
         visible: toolbar.controller !== null && toolbar.controller.hasSites
