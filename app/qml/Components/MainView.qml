@@ -64,11 +64,12 @@ EaComponents.MainContent {
             showMainTab(ownTab);
     }
 
-    // A tab hidden while it is current (Stacked, Map or Evolution once the scan or the joint fit ends) leaves the bar
-    // on the page's own tab rather than on a page with nothing to show; the user's pick comes back with the tab.
+    // A tab hidden or disabled while it is current (Stacked, Map or Evolution once the scan or the joint fit ends, Meas
+    // vs calc for an experiment without both values) leaves the bar on the page's own tab rather than on a page with
+    // nothing to show; the user's pick comes back with the tab.
     readonly property bool currentHidden: {
         const tab = bar && currentKey !== "" ? bar.itemAt(tabIndex) : null;
-        return tab !== null && !tab.visible;
+        return tab !== null && (!tab.visible || !tab.enabled);
     }
     onCurrentHiddenChanged: {
         if (!currentHidden)
@@ -248,17 +249,18 @@ EaComponents.MainContent {
 
                 objectName: "singleCrystal.measCalc"
                 anchors.fill: parent
-                visible: measCalcTab.singleCrystal
+                // Nothing of an experiment without both values is drawn, not even the previous experiment's points.
+                visible: measCalcTab.singleCrystal && measCalcTab.available
                 comparison: true
                 experiment: measCalcTab.singleCrystal ? measCalcTab.experiment : null
                 project: view.project
-                shown: measCalcTab.shown && measCalcTab.singleCrystal
+                shown: measCalcTab.shown && measCalcTab.singleCrystal && measCalcTab.available
             }
             MeasCalcChart {
                 id: measCalcPowder
 
                 anchors.fill: parent
-                visible: !measCalcTab.singleCrystal
+                visible: !measCalcTab.singleCrystal && measCalcTab.available
                 experiment: measCalcTab.singleCrystal ? null : measCalcTab.experiment
                 shown: measCalcTab.shown && !measCalcTab.singleCrystal && measCalcTab.available
             }

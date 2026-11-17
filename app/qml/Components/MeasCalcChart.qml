@@ -66,8 +66,22 @@ Item {
     readonly property bool stacked: false
 
     function refresh() {
-        if (!chart.shown)
+        // Not drawn: nothing of a previous experiment stays behind to show under the next one's name.
+        if (!chart.shown) {
+            if (chart.hasData) {
+                chart.values = {
+                    "calc": [],
+                    "meas": [],
+                    "su": [],
+                    "low": 0,
+                    "high": 1
+                };
+                layer.setPoints([], [], []);
+                diagonal.clear();
+                legendRows.setRows([], [], -1, []);
+            }
             return;
+        }
         chart.values = chart.experiment ? chart.experiment.measCalcPoints(chart.axesScale) : {
             "calc": [],
             "meas": [],
