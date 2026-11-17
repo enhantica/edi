@@ -93,7 +93,7 @@ Column {
                     anchors.verticalCenter: parent.verticalCenter
                     // Each entry as the search reads it, so the list is measured on what it shows.
                     model: parameterBox.names.map(name => ParameterNames.pickerText(parameterBox.itemOf(name), name))
-                    popup.width: Math.min(Math.max(parameterBox.width, parameterBox.optionWidth + EaStyle.Sizes.fontPixelSize * 4), parameterBox.Window.width - popup.leftMargin - popup.rightMargin)
+                    popup.width: Math.min(Math.max(parameterBox.width, parameterBox.optionWidth + EaStyle.Sizes.fontPixelSize * 7), parameterBox.Window.width - popup.leftMargin - popup.rightMargin)
                     currentIndex: parameterBox.names.indexOf(row.model.parameter)
                     displayText: row.model.parameter
                     ToolTip.text: row.model.parameter

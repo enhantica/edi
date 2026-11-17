@@ -44,7 +44,7 @@ Row {
     // An entry's line drawn by the caller, `lineFor(index, text)`, in place of the block's (a parameter picker:
     // ParameterNames.pickerLine); such a line is cut only at its end, and the list widens to its widest line.
     property var lineFor: null
-    property real lineExtraWidth: EaStyle.Sizes.fontPixelSize * 4
+    property real lineExtraWidth: EaStyle.Sizes.fontPixelSize * 7
 
     // A step to the previous or next block, as a pick in the box; no step past either end.
     function step(offset) {
