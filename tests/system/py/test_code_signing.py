@@ -3,7 +3,11 @@
 
 import ast
 import copy
+import importlib.util
+import json
 import re
+import subprocess
+import xml.etree.ElementTree as ET  # noqa: S405 - locally generated IFW XML
 from functools import cache
 from pathlib import Path
 from types import SimpleNamespace
@@ -327,7 +331,11 @@ def test_condition_observer_keeps_guard_values_and_refuses_unknown_context():
         )
 
 
-def test_pull_request_bundle_build_keeps_the_internal_ad_hoc_path():
+def test_pull_request_bundle_build_keeps_the_internal_ad_hoc_path(tmp_path, monkeypatch):
+    for online in (False, True):
+        observe_maintenance_package(
+            tmp_path / str(online), monkeypatch, release=False, online=online
+        )
     candidates = [
         step
         for step in steps()
@@ -395,7 +403,12 @@ def test_signing_entries_keep_the_exact_secret_and_variable_split():
     )
 
 
-def test_macos_installer_is_hardened_timestamped_notarised_stapled_and_verified():
+def test_macos_installer_is_hardened_timestamped_notarised_stapled_and_verified(
+    tmp_path, monkeypatch
+):
+    observe_installed_maintenance(tmp_path / 'valid', monkeypatch)
+    for failure in ('verify', 'authority'):
+        observe_installed_maintenance(tmp_path / failure, monkeypatch, failure=failure)
     text = executable_text()
     for command in [
         'codesign',
@@ -437,7 +450,12 @@ def test_windows_uses_digicert_simple_signing_and_verifies_declared_executables(
     )
 
 
-def test_signing_failure_cannot_upload_release_artifacts():
+def test_signing_failure_cannot_upload_release_artifacts(tmp_path, monkeypatch):
+    for failure in ('sign', 'verify'):
+        with pytest.raises(subprocess.CalledProcessError):
+            observe_maintenance_package(
+                tmp_path / failure, monkeypatch, release=True, online=False, failure=failure
+            )
     selected = signing_steps()
     assert selected, 'Release publication must have required signing predecessors'
     assert all(s.get('continue-on-error', 'false') == 'false' for s in selected), (
@@ -466,9 +484,10 @@ def test_signing_failure_cannot_upload_release_artifacts():
         )
 
     for upload in uploads:
-        assert not condition(
-            upload, 'workflow_dispatch', 'refs/heads/main', True, 'Windows', failed=True
-        ), 'A failed signing predecessor must block delivery and component uploads'
+        for platform in ('Windows', 'macOS'):
+            assert not condition(
+                upload, 'workflow_dispatch', 'refs/heads/main', True, platform, failed=True
+            ), 'A failed signing predecessor must block delivery and component uploads'
 
 
 def test_prompt_trial_records_live_only_in_contributor_docs():
@@ -608,7 +627,17 @@ def signed_members(sources, workflow_steps):
 
 
 @pytest.mark.parametrize('member', REQUIRED_SIGNED)
-def test_owner_declared_app_cli_and_installer_signatures(member):
+def test_owner_declared_app_cli_and_installer_signatures(member, tmp_path, monkeypatch):
+    if member in {'macos-offline', 'macos-online'}:
+        source = observe_maintenance_package(
+            tmp_path, monkeypatch, release=True, online=member.endswith('online')
+        )
+        if member == 'macos-online':
+            from tests.system.py.maintenance_consumers import observe_consumers  # noqa: PLC0415
+
+            metadata = source / 'packages/org.easyscience.edi.maintenancetool/meta/package.xml'
+            maintenance_version = ET.parse(metadata).getroot().findtext('Version')  # noqa: S314 - generated metadata
+            observe_consumers(ROOT, tmp_path / 'consumers', maintenance_version, monkeypatch)
     sources = {
         name: (ROOT / 'tools/installer' / name).read_text()
         for name in ('build.py', 'package.py', 'standalone_cli.py')
@@ -665,3 +694,290 @@ def seal_installer():
         'Omitting a required signing route must remain detectable for each declared member: '
         + omitted
     )
+
+
+MAC_IDENTITY = 'Developer ID Application: European Spallation Source Eric (W2AG9MPZ43)'
+
+
+def observe_maintenance_package(  # noqa: PLR0914, PLR0915 - one packaging transaction
+    directory, monkeypatch, *, release, online, failure=None
+):
+    spec = importlib.util.spec_from_file_location(
+        'maintenance_package', ROOT / 'tools/installer/package.py'
+    )
+    package = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(package)
+    stage, tools, output = [directory / name for name in ('stage', 'ifw', 'output')]
+    app = stage / 'EasyDiffraction.app/Contents/MacOS/EasyDiffraction'
+    app.parent.mkdir(parents=True)
+    app.write_bytes(b'application')
+    assistant = stage / 'libexec/edi/codex/helper'
+    assistant.parent.mkdir(parents=True)
+    assistant.write_bytes(b'optional helper')
+    template = tools / 'bin/installerbase'
+    template.parent.mkdir(parents=True)
+    template.write_bytes(b'IFW arm64 template')
+    template.chmod(0o755)
+    events = []
+    selected = [
+        step
+        for step in steps()
+        if re.search(r'package[.]py.* maintenance-tool ', step.get('run', ''))
+    ]
+    assert len(selected) == 1, (
+        'The workflow must build the macOS maintenance tool once before both installers'
+    )
+    build_step = selected[0]
+    event, ref = (
+        ('workflow_dispatch', 'refs/heads/main')
+        if release
+        else ('pull_request', 'refs/pull/54/merge')
+    )
+    assert condition(build_step, event, ref, release, 'macOS'), (
+        'Both release and PR macOS builds must prepare a maintenance tool'
+    )
+    assert not private_access(build_step, 'pull_request', 'refs/pull/54/merge', False, 'macOS'), (
+        'PR maintenance builds must receive no effective private signing credentials'
+    )
+    for folder in ('package', 'online'):
+        consumers = [
+            step
+            for step in steps()
+            if re.search(r'package[.]py.* package ', step.get('run', ''))
+            and 'build/installer/' + folder + '"' in step.get('run', '')
+        ]
+        assert len(consumers) == 1 and '--maintenance-tool' in consumers[0]['run'], (
+            'Both macOS installer transports must consume the separately built maintenance tool'
+        )
+        assert steps().index(build_step) < steps().index(consumers[0]), (
+            'The separately built maintenance tool must precede each installer package step'
+        )
+
+    def maintenance_target(args):
+        return args and any(
+            word in Path(str(args[-1])).name.lower() for word in ('maintenance', 'installerbase')
+        )
+
+    def command(args, **_kwargs):
+        args = list(map(str, args))
+        events.append(args)
+        if args[0] == 'codesign' and maintenance_target(args):
+            signing = '--sign' in args
+            verifying = '--verify' in args
+            if (failure == 'sign' and signing) or (failure == 'verify' and verifying):
+                raise subprocess.CalledProcessError(1, args)
+        if Path(args[0]).name == 'binarycreator':
+            destination = (
+                Path(_kwargs['cwd']) / 'MaintenanceTool.app' if '--mt' in args else Path(args[-1])
+            )
+            if destination.suffix == '.app':
+                executable = destination / 'Contents/MacOS' / destination.stem
+                executable.parent.mkdir(parents=True, exist_ok=True)
+                executable.write_bytes(b'IFW generated binary')
+            else:
+                destination.parent.mkdir(parents=True, exist_ok=True)
+                destination.write_bytes(b'IFW generated binary')
+        if args[0] == 'ditto':
+            if '-c' in args:
+                Path(args[-1]).write_bytes(b'notary archive')
+            else:
+                package.shutil.copytree(args[-2], args[-1])
+        return SimpleNamespace(
+            returncode=0,
+            stdout=json.dumps({'status': 'Accepted'}) if 'notarytool' in args else '',
+            stderr='Authority=' + MAC_IDENTITY,
+        )
+
+    def archive(installer, _runtime, **_kwargs):
+        events.append(['archive', str(installer)])
+        path = installer.with_suffix('.zip')
+        path.write_bytes(b'archive')
+        return path
+
+    with monkeypatch.context() as patch:
+        patch.setattr(package, 'SYSTEM', 'macos')
+        patch.setattr(package, 'PLATFORM_ID', 'macos-arm64')
+        patch.setattr(package, 'run', command)
+        patch.setattr(package.subprocess, 'run', command)
+        patch.setattr(package.subprocess, 'check_output', lambda *_a, **_kw: 'arm64')
+        patch.setattr(package, 'archive_installer', archive)
+        patch.setenv('EDI_CODESIGN', '1' if release else '')
+        patch.setenv('EDI_CODESIGN_MAC_IDENTITY', MAC_IDENTITY)
+        for name in ('EDI_NOTARY_APPLE_ID', 'EDI_NOTARY_PASSWORD', 'EDI_NOTARY_TEAM_ID'):
+            patch.setenv(name, 'offline-fake')
+        assert hasattr(package, 'build_maintenance_tool'), (
+            'macOS must build a maintenance tool separately from the distribution installers'
+        )
+        bundle = package.build_maintenance_tool(tools, directory / 'maintenance')
+        package.package_app(
+            stage,
+            tools,
+            output,
+            '2026.11.1',
+            repository_url='file:///local-components/' if online else None,
+            maintenance_tool=bundle,
+        )
+
+    signed = [
+        args
+        for args in events
+        if args[0] == 'codesign' and '--sign' in args and maintenance_target(args)
+    ]
+    assert signed, 'Both macOS transports must sign a separate maintenance binary before packaging'
+    target = Path(signed[0][-1])
+    assert target != template and target.exists(), (
+        'The installed maintenance binary must be separate from the IFW template'
+    )
+    assert template.read_bytes() == b'IFW arm64 template', (
+        'Maintenance preparation must preserve the original IFW template'
+    )
+    sign = signed[0]
+    assert sign[sign.index('--sign') + 1] == (MAC_IDENTITY if release else '-'), (
+        'Maintenance signing must use the ADR-0091 identity for release and ad hoc for PRs'
+    )
+    if release:
+        assert {'--options', 'runtime', '--timestamp'} <= set(sign), (
+            'Release maintenance signing requires hardened runtime and a timestamp'
+        )
+        verified = [
+            args
+            for args in events
+            if args[0] == 'codesign'
+            and '--verify' in args
+            and '--strict' in args
+            and args[-1] == str(target)
+        ]
+        assert verified, (
+            'A release maintenance signature must pass strict verification before packaging'
+        )
+    creators = [
+        args
+        for args in events
+        if Path(args[0]).name == 'binarycreator'
+        and any(flag in args for flag in ('--hybrid', '--online-only'))
+    ]
+    assert creators and events.index(sign) < events.index(creators[-1]), (
+        'Maintenance signing must finish before the distribution binarycreator runs'
+    )
+    if release:
+        assert events.index(verified[-1]) < events.index(creators[-1]), (
+            'A failed maintenance verification must stop before IFW embeds the payload'
+        )
+    source = output / 'source'
+    configurations = list(source.rglob('config.xml'))
+    assert configurations, 'Both transports must produce an IFW configuration'
+    scripts = '\n'.join(path.read_text() for path in source.rglob('*.qs'))
+    configured = any(
+        ET.parse(path).getroot().findtext('MaintenanceToolBinary')  # noqa: S314 - generated XML
+        for path in configurations
+    )
+    assert configured or 'installer.setInstallerBaseBinary(' in scripts, (
+        'IFW must install the supplied binary rather than regenerate it from the signed installer'
+    )
+    payloads = [
+        path
+        for path in source.glob('packages/*/data/**/*')
+        if path.is_file() and path.name == 'MaintenanceTool'
+    ]
+    assert payloads, 'The separately signed maintenance binary must reach the package payload'
+    assert all(
+        path.read_bytes() == (target / 'Contents/MacOS/MaintenanceTool').read_bytes()
+        for path in payloads
+    ), 'The packaged maintenance binary must retain its signed bytes'
+    assert target.name in scripts or configured, (
+        'The installer override must name the packaged maintenance binary'
+    )
+
+    return source
+
+
+def observe_installed_maintenance(directory, monkeypatch, failure=None):
+    spec = importlib.util.spec_from_file_location(
+        'installed_package', ROOT / 'tools/installer/package.py'
+    )
+    package = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(package)
+    installer = directory / 'installer.app'
+    executable = installer / 'Contents/MacOS/installer'
+    executable.parent.mkdir(parents=True)
+    executable.write_bytes(b'installer')
+    output = directory / 'exercise'
+    target = output / 'installed app'
+    maintenance = target / 'MaintenanceTool.app/Contents/MacOS/MaintenanceTool'
+    events = []
+
+    def command(args, **_kwargs):
+        args = list(map(str, args))
+        events.append(args)
+        if args[0] == 'codesign' and '--verify' in args and failure == 'verify':
+            raise subprocess.CalledProcessError(1, args)
+        if 'install' in args:
+            maintenance.parent.mkdir(parents=True)
+            maintenance.write_bytes(b'signed maintenance')
+            app = target / 'EasyDiffraction.app/Contents/MacOS/EasyDiffraction'
+            app.parent.mkdir(parents=True)
+            app.write_bytes(b'app')
+            (target / 'payload-manifest.json').write_text('{}')
+        if '--testmode' in args:
+            smoke = Path(args[-1])
+            smoke.mkdir()
+            (smoke / 'window.png').write_bytes(b'window')
+            (smoke / 'result.json').write_text(
+                json.dumps({
+                    'passed': True,
+                    'assistant_available': False,
+                    'svg_images': ['image.svg'],
+                })
+            )
+        if 'purge' in args:
+            package.shutil.rmtree(target)
+        authority = (
+            'Developer ID Application: Someone Else (OTHERTEAM)'
+            if failure == 'authority'
+            else MAC_IDENTITY
+        )
+        return SimpleNamespace(returncode=0, stdout='', stderr='Authority=' + authority + '\n')
+
+    with monkeypatch.context() as patch:
+        patch.setattr(package, 'SYSTEM', 'macos')
+        patch.setattr(package, 'run', command)
+        patch.setattr(package.subprocess, 'run', command)
+        patch.setattr(package.subprocess, 'check_output', lambda args, **_kw: command(args).stderr)
+        patch.setenv('EDI_CODESIGN', '1')
+        patch.setenv('EDI_CODESIGN_MAC_IDENTITY', MAC_IDENTITY)
+        if failure:
+            with pytest.raises((RuntimeError, subprocess.CalledProcessError)):
+                package.exercise_installer(installer, output)
+            assert not any('purge' in args for args in events), (
+                'An invalid installed signature or wrong Developer ID must stop '
+                'before executing MaintenanceTool'
+            )
+        else:
+            package.exercise_installer(installer, output)
+            verified = [
+                args
+                for args in events
+                if args[0] == 'codesign'
+                and '--verify' in args
+                and '--strict' in args
+                and args[-1] in {str(maintenance), str(maintenance.parents[2])}
+            ]
+            assert verified, (
+                'Release qualification must strictly verify the installed maintenance tool'
+            )
+            displayed = [
+                args
+                for args in events
+                if args[0] == 'codesign'
+                and any(flag in args for flag in ('--display', '-d', '-dv', '-dvv'))
+            ]
+            assert displayed, (
+                'Installed maintenance qualification must inspect its Developer ID authority'
+            )
+            purge = next(args for args in events if 'purge' in args)
+            assert events.index(verified[-1]) < events.index(purge) and events.index(
+                displayed[-1]
+            ) < events.index(purge), (
+                'Installed signature and Developer ID checks must both precede '
+                'maintenance execution'
+            )

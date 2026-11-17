@@ -5,6 +5,7 @@ import importlib.util
 import io
 import json
 import os
+import shutil
 import subprocess
 import sys
 import tarfile
@@ -154,8 +155,15 @@ def test_mirror_is_enabled_only_for_production(tmp_path, channel, prefix):
     )
 
 
+def copy_bundles(command, **_):
+    # Stands in for the subprocess so the macOS tool component gets its copied bundle.
+    if command[0] == 'ditto':
+        shutil.copytree(command[1], command[2], symlinks=True)
+
+
 @pytest.mark.parametrize('channel', ['stable', 'testing'])
-def test_offline_installer_retains_default_update_repositories(tmp_path, channel):
+def test_offline_installer_retains_default_update_repositories(tmp_path, channel, monkeypatch):
+    monkeypatch.delenv('EDI_CODESIGN', raising=False)
     stage = tmp_path / 'stage'
     marker = stage / (
         'EasyDiffraction.app/Contents/MacOS/EasyDiffraction'
@@ -183,10 +191,16 @@ def test_offline_installer_retains_default_update_repositories(tmp_path, channel
         mock.patch.object(
             PACKAGE, 'macos_installer_template', return_value=tmp_path / 'installerbase'
         ),
-        mock.patch.object(PACKAGE, 'run') as builder,
+        mock.patch.object(PACKAGE, 'run', side_effect=copy_bundles) as builder,
         mock.patch.object(PACKAGE, 'archive_installer', return_value=archive),
     ):
-        PACKAGE.package_app(stage, tmp_path / 'tools', output, '2026.11.0')
+        PACKAGE.package_app(
+            stage,
+            tmp_path / 'tools',
+            output,
+            '2026.11.0',
+            maintenance_tool=signed_bundle(tmp_path),
+        )
     repositories = ElementTree.parse(output / 'source/config/config.xml').findall(
         'RemoteRepositories/Repository'
     )
@@ -197,8 +211,23 @@ def test_offline_installer_retains_default_update_repositories(tmp_path, channel
         '1',
         '1' if channel == 'stable' else '0',
     ], 'Offline maintenance retains channel mirror policy.'
-    builder.assert_called_once()
-    assert '--hybrid' in builder.call_args.args[0], 'Offline maintenance permits updates.'
+    creators = [
+        call.args[0]
+        for call in builder.call_args_list
+        if Path(call.args[0][0]).name == 'binarycreator' + PACKAGE.SUFFIX
+    ]
+    assert len(creators) == 1, 'Offline packaging builds one installer.'
+    assert '--hybrid' in creators[0], 'Offline maintenance permits updates.'
+    packages = output / 'source/packages'
+    if PACKAGE.SYSTEM == 'macos':
+        tool = packages / PACKAGE.MAINTENANCE_COMPONENT / 'data/maintenancetool'
+        assert PACKAGE.maintenance_tool_executable(tool / PACKAGE.MAINTENANCE_TOOL).is_file(), (
+            'The macOS installer carries the separately built maintenance tool.'
+        )
+    else:
+        assert not (packages / PACKAGE.MAINTENANCE_COMPONENT).exists(), (
+            'Only macOS ships the maintenance tool component.'
+        )
     assert not (output / 'repository').exists(), 'Offline packaging publishes no repository.'
 
 
@@ -563,3 +592,88 @@ def test_windows_runtime_only_coalesces_identical_copies(tmp_path, different):
         assert 'Different Windows runtime copies found' in result.stderr, (
             'Windows runtime only coalesces identical copies.'
         )
+
+
+def test_signed_packaging_refuses_a_missing_maintenance_tool(tmp_path, monkeypatch):
+    monkeypatch.setattr(PACKAGE, 'SYSTEM', 'macos')
+    monkeypatch.setenv('EDI_CODESIGN', '1')
+    with (
+        mock.patch.object(PACKAGE, 'build_maintenance_tool') as build,
+        pytest.raises(RuntimeError, match='separately signed maintenance tool'),
+    ):
+        PACKAGE.add_maintenance_tool(tmp_path / 'packages', None, tmp_path, tmp_path, '1.0')
+    build.assert_not_called()
+
+
+def signed_bundle(tmp_path):
+    bundle = tmp_path / PACKAGE.MAINTENANCE_TOOL
+    executable = PACKAGE.maintenance_tool_executable(bundle)
+    executable.parent.mkdir(parents=True)
+    executable.write_bytes(b'signed tool')
+    return bundle
+
+
+@pytest.mark.parametrize(
+    ('authority', 'accepted'),
+    [
+        ('Developer ID Application: European Spallation Source Eric (W2AG9MPZ43)', True),
+        ('Developer ID Application: Someone Else (AAAAAAAAAA)', False),
+        ('Apple Development: European Spallation Source Eric (W2AG9MPZ43)', False),
+        (None, False),
+    ],
+)
+def test_signed_maintenance_tool_needs_the_developer_id(
+    tmp_path, monkeypatch, authority, accepted
+):
+    monkeypatch.setenv('EDI_CODESIGN', '1')
+    monkeypatch.setenv(
+        'EDI_CODESIGN_MAC_IDENTITY',
+        'Developer ID Application: European Spallation Source Eric (W2AG9MPZ43)',
+    )
+    display = '' if authority is None else f'Authority={authority}\nAuthority=Apple Root CA\n'
+    result = subprocess.CompletedProcess([], 0, stdout='', stderr=display)
+    with (
+        mock.patch.object(PACKAGE, 'run') as verify,
+        mock.patch.object(PACKAGE.subprocess, 'run', return_value=result),
+    ):
+        if accepted:
+            PACKAGE.check_maintenance_tool(signed_bundle(tmp_path))
+        else:
+            with pytest.raises(RuntimeError, match='Maintenance tool is'):
+                PACKAGE.check_maintenance_tool(signed_bundle(tmp_path))
+    assert '--strict' in verify.call_args_list[0].args[0]
+
+
+def test_unsigned_build_checks_only_the_ad_hoc_signature(tmp_path, monkeypatch):
+    monkeypatch.delenv('EDI_CODESIGN', raising=False)
+    with (
+        mock.patch.object(PACKAGE, 'run') as verify,
+        mock.patch.object(PACKAGE.subprocess, 'run') as display,
+    ):
+        PACKAGE.check_maintenance_tool(signed_bundle(tmp_path))
+    verify.assert_called_once()
+    display.assert_not_called()
+
+
+@pytest.mark.parametrize('damage', ['written', 'left'])
+def test_installed_maintenance_tool_must_be_the_shipped_one(tmp_path, monkeypatch, damage):
+    monkeypatch.setattr(PACKAGE, 'SYSTEM', 'macos')
+    monkeypatch.delenv('EDI_CODESIGN', raising=False)
+    bundle = signed_bundle(tmp_path)
+    expected = PACKAGE.sha256(PACKAGE.maintenance_tool_executable(bundle))
+    if damage == 'written':
+        PACKAGE.maintenance_tool_executable(bundle).write_bytes(b'written by the installer')
+    else:
+        (tmp_path / 'maintenancetool').mkdir()
+    with mock.patch.object(PACKAGE, 'run'), pytest.raises(RuntimeError, match='maintenance tool'):
+        PACKAGE.verify_installed_maintenance_tool(tmp_path, {'maintenance_tool_sha256': expected})
+
+
+def test_installed_maintenance_tool_check_passes_for_the_shipped_tool(tmp_path, monkeypatch):
+    monkeypatch.setattr(PACKAGE, 'SYSTEM', 'macos')
+    monkeypatch.delenv('EDI_CODESIGN', raising=False)
+    bundle = signed_bundle(tmp_path)
+    expected = PACKAGE.sha256(PACKAGE.maintenance_tool_executable(bundle))
+    with mock.patch.object(PACKAGE, 'run') as verify:
+        PACKAGE.verify_installed_maintenance_tool(tmp_path, {'maintenance_tool_sha256': expected})
+    assert verify.call_args.args[0][:3] == ['codesign', '--verify', '--strict']

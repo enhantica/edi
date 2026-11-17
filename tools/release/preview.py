@@ -8,7 +8,15 @@ import subprocess
 import tempfile
 from pathlib import Path
 
-from promote import PLATFORMS, ROOT, api, digest, extract, validate_repository
+from promote import (
+    MAINTENANCE_COMPONENT,
+    PLATFORMS,
+    ROOT,
+    api,
+    digest,
+    extract,
+    validate_repository,
+)
 
 
 def qualified_run(repo: str, branch: str, run_id: int) -> tuple[dict, list[dict], int]:
@@ -138,10 +146,10 @@ def copy_preview(
         raise ValueError(f'Preview delivery identity or qualification differs: {platform}')
     repository = components / 'testing' / platform
     packages = frozenset(item.name for item in repository.iterdir() if item.is_dir())
-    if packages not in (
-        {'org.easyscience.edi'},
-        {'org.easyscience.edi', 'org.easyscience.edi.assistant'},
-    ):
+    allowed = [{'org.easyscience.edi'}, {'org.easyscience.edi', 'org.easyscience.edi.assistant'}]
+    if platform == 'macos-arm64':
+        allowed = [names | {MAINTENANCE_COMPONENT} for names in allowed]
+    if packages not in allowed:
         raise ValueError(f'Unknown preview component set: {platform}')
     validate_repository(repository, version, expected=packages)
     shutil.copytree(repository, output / 'components' / 'testing' / platform)

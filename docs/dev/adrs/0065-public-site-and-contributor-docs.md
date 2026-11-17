@@ -21,6 +21,9 @@ served users and contributors together, with the web application at `/webapp/` (
 - GitHub Pages publishes three parts at <https://enhantica.github.io/edi/>: the public site at the root, the MkDocs
   documentation (`mkdocs.yml`, `docs/`, executed notebooks included) at `/dev/`, and the web application at `/webapp/`.
   The public site may not own `/dev/` or `/webapp/`; the Pages workflow refuses it.
+  **Amended 2026-11-17 (the owner):** `main` publishes the site and its web app only to edi-sites' `deploy-docs` branch,
+  behind <https://easydiffraction.org>, each publish keeping the other half from that branch; it no longer deploys to
+  GitHub Pages, which became the developers' test site, deployed from edi's `dev` branch.
 - The app's Documentation link, What's new's link to the full page (ADR-0067) and its parameter help links (ADR-0061)
   point at the public site.
 - Dictionary descriptions copied into the parameter reference leave out development task labels.
