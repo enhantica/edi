@@ -64,6 +64,9 @@ EaComponents.ListView {
         policy: table.scrollsSideways ? table.scrollBarPolicy : ScrollBar.AlwaysOff
         interactive: table.scrollBarInteractive
     }
+    // A table of values the user does not edit (calculated, or read from a file): its rows take no hover tint and its
+    // value cells (CellLabel, NumberLabel) the grey of a cell shown, not edited, so editable tables stand out.
+    property bool readOnly: false
     property bool equalColumns: false
     property var spreadColumns: []
     // The column margin is separate from the cell's own measured insets (ADR-0029).

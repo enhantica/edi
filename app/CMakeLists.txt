@@ -192,6 +192,7 @@ qt_add_qml_module(edi_app_module
         qml/Components/HeaderLabel.qml
         qml/Components/ChartToolButton.qml
         qml/Components/SaveImageButton.qml
+        qml/Components/CellLabel.qml
         qml/Components/ChartToolbar.qml
         qml/Components/ColourMapBar.qml
         qml/Components/ColourMapComboBox.qml

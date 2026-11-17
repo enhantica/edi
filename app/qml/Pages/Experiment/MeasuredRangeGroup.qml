@@ -77,6 +77,7 @@ Column {
     DataTable {
         id: table
         objectName: "data.list"
+        readOnly: true
         visible: group.experiment !== null && !group.experiment.calculationOnly
         defaultInfoText: qsTr("No measured points yet")
         sourceModel: visible ? group.experiment.pattern : null
@@ -198,7 +199,7 @@ Column {
             // header.
             Repeater {
                 model: ApplicationInfo.nativeListProjection(2)
-                delegate: EaComponents.ListViewLabel {
+                delegate: CellLabel {
                     elide: Text.ElideRight
                     required property var modelData
                     horizontalAlignment: Text.AlignHCenter
