@@ -21,6 +21,8 @@ TestCase {
         sidebarPane = null;
         appWindow = application.createObject(null);
         verify(appWindow !== null, "Saved estimation settings must use the production app window");
+        appWindow.requestActivate();
+        tryCompare(appWindow, "active", true, 2000, "Background controls receive input in the active app window");
         verify(waitForRendering(appWindow.contentItem), "The settings window must render");
     }
     function cleanup() {
@@ -162,6 +164,7 @@ TestCase {
         for (let step = 0; step < index; ++step)
             verify(SettingsProof.key(control, Qt.Key_Down), "The option list must receive actual navigation input");
         verify(SettingsProof.key(control, Qt.Key_Return), "Return must activate the actual saved estimate option");
+        tryCompare(control, "token", token, 1000, "The actual keyboard choice publishes its requested saved token");
     }
     function valueField(labels, identity) {
         const fields = objects(sidebarPane, "label").filter(control => Ui.inPane(control) &&
