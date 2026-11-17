@@ -831,6 +831,31 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     // The chart-consistency review's set: every chart view of the Experiment and Analysis pages for the series
     // EDI_DEMO_SCAN_PROJECT after its fit, then a single crystal's Pattern and Meas vs calc. Run only when asked
     // (`--demo-only review-`).
+    // The series fitted, captured before its result dialog is closed (`--demo-only fitcheck-`).
+    if (only.startsWith(QLatin1String("fitcheck-"))) {
+        steps_.push_back({"fitcheck-1-after-fit", {"resize:1480x800", "open-project:" + qEnvironmentVariable("EDI_DEMO_SCAN_PROJECT"),
+                                                   analysis, basic, "statusBar.fit.button", "wait-files:100", "wait-fit"}});
+    }
+    // Analysis > Structure on a single fit, a joint fit and a small series, each opened straight to it
+    // (`--demo-only structcmp-`).
+    if (only.startsWith(QLatin1String("structcmp-"))) {
+        const QString root = QString::fromUtf8(EDI_CLI_PROJECTS_DIR) + "/";
+        steps_.push_back({"structcmp-1-single", {"resize:1480x800", "open-project:" + root + "pd-neut-tof_ncaf-wish/project", analysis, basic, "mainArea.tab.structure"}});
+        steps_.push_back({"structcmp-1b-single-table-later", {"mainArea.tab.pattern"}});
+        steps_.push_back({"structcmp-2-joint", {"open-project:" + root + "pd-neut-tof_ncaf-wish-5bank_start-5/project", analysis, basic, "mainArea.tab.structure"}});
+        steps_.push_back({"structcmp-3-series", {"open-project:" + root + "pd-neut-tof_ncaf-wish-5bank_scan-6p/project", analysis, basic, "mainArea.tab.structure"}});
+    }
+    // A saved, fitted series opened again: Analysis > Structure and the parameter table, then the Correlations of the
+    // first run and of the last run fitted (`--demo-only reopensaved-`).
+    if (only.startsWith(QLatin1String("reopensaved-"))) {
+        const QString open = "open-project:" + qEnvironmentVariable("EDI_DEMO_SCAN_PROJECT");
+        steps_.push_back({"reopensaved-1-structure", {"resize:1480x800", open, analysis, basic, "mainArea.tab.structure"}});
+        steps_.push_back({"reopensaved-2-structure-page", {"appBar.tab.structure"}});
+        steps_.push_back({"reopensaved-3-analysis-structure-again", {analysis, "mainArea.tab.pattern", "mainArea.tab.structure"}});
+        steps_.push_back({"reopensaved-4-correlations-last", {"mainArea.tab.stacked", "mainArea.series.point.box", "type:p099", "choose:p099", "mainArea.tab.correlations"}});
+        steps_.push_back({"reopensaved-5-evolution-picker", {"mainArea.tab.evolution", "evolution.parameters.box"}});
+        steps_.push_back({"reopensaved-6-evolution-picker-cell", {"type:cell"}});
+    }
     // The included range on a fitted series' Stacked and Map, both rows and every x (`--demo-only included-`).
     if (only.startsWith(QLatin1String("included-"))) {
         const QString open = "open-project:" + qEnvironmentVariable("EDI_DEMO_SCAN_PROJECT");
@@ -874,6 +899,11 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
         steps_.push_back({"review-12-analysis-stacked", {"mainArea.tab.stacked"}});
         steps_.push_back({"review-13-analysis-map", {"mainArea.tab.map"}});
         steps_.push_back({"review-14-analysis-correlations", {"mainArea.tab.correlations"}});
+        steps_.push_back({"review-14b-analysis-correlations-last-run",
+                          {"mainArea.tab.stacked", "mainArea.series.point.box", "type:p099", "choose:p099", "mainArea.tab.correlations"}});
+        steps_.push_back({"review-14c-correlations-other-run", {"mainArea.tab.stacked", "mainArea.series.point.box", "type:p050", "choose:p050", "mainArea.tab.correlations"}});
+        steps_.push_back({"review-14d-evolution-picker-full-name", {"mainArea.tab.evolution", "evolution.toolbar.scope", "choose:Shared", "evolution.parameters.box", "type:fract"}});
+        steps_.push_back({"review-14e-evolution-picker-short-name", {"key:Escape", "evolution.parameters.box", "type:biso"}});
     }
     // The source example opened twice, as Recent projects names it (a trailing separator): each opens a copy of its
     // own (`--demo-only reopen-`).
