@@ -1050,20 +1050,6 @@ def test_pages_builds_docs_and_publishes_the_linked_webapp():
     assert 'site_url' in config, 'The public documentation declares its canonical published URL'
 
 
-def publication_route_active(node, event, ref, **context):
-    """Resolve only the ref-prefix atom added by the public destination guard."""
-    observed = dict(node)
-    if 'if' in observed:
-        observed['if'] = re.sub(
-            r"startsWith\(github\.ref,\s*('(?:[^']*)'|\"(?:[^\"]*)\")\)",
-            lambda match: str(
-                ref.casefold().startswith(ast.literal_eval(match[1]).casefold())
-            ).lower(),
-            str(observed['if']),
-        )
-    return active(observed, event, ref, **context)
-
-
 def selected_pages_ref(expression, *, prerelease, preview_ref):
     """Resolve the bounded Actions selector without assuming which ref it selects."""
     value = expression.strip().removeprefix('${{').removesuffix('}}').strip()
@@ -1144,7 +1130,7 @@ def pages_route_boundary(doc, route, tmp_path):
     jobs = doc['jobs']
     if route == 'stable-tag':
         event, ref, component = 'release', 'refs/tags/v2026.11.22', 'wasm'
-        assert publication_route_active(jobs['crysta-sdk'], event, ref, prerelease=False), (
+        assert active(jobs['crysta-sdk'], event, ref, prerelease=False), (
             'A stable release tag reaches its pinned SDK before building its own web app'
         )
     else:
@@ -1153,13 +1139,13 @@ def pages_route_boundary(doc, route, tmp_path):
         ref = ('refs/tags/' if selected.startswith('v') else 'refs/heads/') + selected
 
     build, publish = jobs[component], jobs['publish-' + component]
-    assert build.get('needs') in ('crysta-sdk', ['crysta-sdk']) and publication_route_active(
+    assert build.get('needs') in ('crysta-sdk', ['crysta-sdk']) and active(
         jobs['crysta-sdk'], event, ref
     ), 'Each real publication route reaches and waits for its pinned SDK producer'
-    assert publication_route_active(
-        build, event, ref, states={'crysta-sdk': 'success'}, component=component
-    ), 'The real stable-tag or configured-preview event reaches its component producer'
-    assert publish['needs'] in (component, [component]) and publication_route_active(
+    assert active(build, event, ref, states={'crysta-sdk': 'success'}, component=component), (
+        'The real stable-tag or configured-preview event reaches its component producer'
+    )
+    assert publish['needs'] in (component, [component]) and active(
         publish, event, ref, states={component: 'success'}, component=component
     ), 'The real publication route waits for and reaches its own successful component artifact'
     environment = publish.get('environment')
@@ -1170,11 +1156,9 @@ def pages_route_boundary(doc, route, tmp_path):
     )
     outcomes = {}
     for step in [*build['steps'], *publish['steps']]:
-        assert publication_route_active(
-            step, event, ref, outputs=outcomes, component=component
-        ) and not step.get('continue-on-error'), (
-            'Build, artifact, token, assembly and push steps execute on the actual publication ref'
-        )
+        assert active(step, event, ref, outputs=outcomes, component=component) and not step.get(
+            'continue-on-error'
+        ), 'Build, artifact, token, assembly and push steps execute on the actual publication ref'
         if 'id' in step:
             outcomes[step['id'], 'outcome'] = 'success'
     pages_component_boundary(
@@ -1195,14 +1179,14 @@ def test_public_site_publication_routes_reach_reviewed_environment(route, tmp_pa
 @pytest.mark.parametrize('ref', ['refs/heads/dev', 'refs/tags/v2026.11.21'])
 def test_public_site_preview_dispatch_builds_without_publication(component, ref):
     jobs = dict(workflows())['pages.yml']['jobs']
-    assert publication_route_active(
+    assert active(
         jobs[component],
         'workflow_dispatch',
         ref,
         states={'crysta-sdk': 'success'},
         component=component,
     ), 'A non-main preview dispatch keeps its component build available for checking'
-    assert not publication_route_active(
+    assert not active(
         jobs['publish-' + component],
         'workflow_dispatch',
         ref,
