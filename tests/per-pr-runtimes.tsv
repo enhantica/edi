@@ -10,9 +10,9 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-17T20:17:54Z
+# measured_utc = 2026-11-17T22:51:38Z
 #
-# Recorded from: measured test run (960 node(s) measured once, 179163 banked, 0 stale row(s) dropped)
+# Recorded from: measured test run (1 node(s) measured once, 180122 banked, 0 stale row(s) dropped)
 # Collected tests: 248835; with a reported duration: 80000
 # Module-scoped fixture costs recorded: 206
 #
@@ -167670,7 +167670,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_e05_t1_physical_domain.p
 0.050	tests/integration/py/test_example_catalogue.py::test_old_projects_keep_their_files_pins_and_execution[pd-neut-tof_ncaf-wish-5bank_start-fullprof]
 0.030	tests/integration/py/test_example_catalogue.py::test_old_projects_keep_their_files_pins_and_execution[pd-neut-tof_si-sepd_start-2]
 0.030	tests/integration/py/test_example_catalogue.py::test_old_projects_keep_their_files_pins_and_execution[pd-neut-tof_si-sepd_start-5]
-0.020	tests/integration/py/test_example_catalogue.py::test_old_projects_keep_their_files_pins_and_execution[pd-xray-cwl_lif_single]
+0.070	tests/integration/py/test_example_catalogue.py::test_old_projects_keep_their_files_pins_and_execution[pd-xray-cwl_lif_single]
 0.030	tests/integration/py/test_example_catalogue.py::test_old_projects_keep_their_files_pins_and_execution[pd-xray-cwl_pbso4-lab_round-robin]
 0.000	tests/integration/py/test_example_catalogue.py::test_selected_cases_and_order_match_the_independent_owner_selection[cli-page]
 0.030	tests/integration/py/test_example_catalogue.py::test_selected_cases_and_order_match_the_independent_owner_selection[metadata]

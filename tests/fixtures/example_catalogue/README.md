@@ -77,3 +77,10 @@ For older fixture projects whose stopped-fit pins were retaken in `198fa5775`, r
 It binds the original expected file from the immutable retention inventory to that committed
 retake. The complete schema, independent reference rows, kinds and tolerances must be unchanged;
 only explicitly labelled regression values may differ. Unrelated retained projects stay untouched.
+
+`PYTHONPATH=. python -m tests.fixtures.example_catalogue.capture_lif_iterations` archives
+LiF's committed `fc877e53` iteration-window change against the unchanged original retention
+hash. It accepts only the exact change from five iterations at zero tolerance to midpoint
+4.5/radius 0.5; every other field, quality bound and independent reference stays exact.
+The retention gate authenticates the complete replacement before restoring the archived
+original bytes, and exercises altered replacements through the same byte checker.
