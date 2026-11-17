@@ -175,4 +175,26 @@ Column {
         ToolTip.text: enabled ? "" : qsTr("Every structure of the project is linked already: create or load another on the Structure page")
         onClicked: group.rows.append()
     }
+
+    // "Phase ratios shared" (edi ADR-0087, #36): the other experiments of this one's set keep their own overall scale
+    // and follow its ratios between the phases, through alias and constraint rows. Shown with several experiments and
+    // several linked structures; a refusal (every scale zero, members linking other structures) says why.
+    EaElements.CheckBox {
+        id: phaseRatios
+
+        // Read again whenever the relation rows change.
+        readonly property int relations: group.project && group.project.analysis ? group.project.analysis.constraints.count + group.project.analysis.aliases.count : 0
+        readonly property int index: group.project ? group.project.currentExperimentIndex : -1
+
+        objectName: "linkedStructure.phaseRatiosShared"
+        visible: group.project !== null && group.project.experiments.count > 1 && group.rows !== null && group.rows.count > 1
+        text: qsTr("Phase ratios shared")
+        checked: relations >= 0 && index >= 0 && group.project.phaseRatiosShared(index)
+        ToolTip.text: qsTr("The set's other experiments keep their own overall scale and follow this experiment's ratios between the phases")
+        onToggled: {
+            const wanted = checked;
+            group.project.setPhaseRatiosShared(index, wanted);
+            checked = Qt.binding(() => relations >= 0 && index >= 0 && group.project.phaseRatiosShared(index));
+        }
+    }
 }

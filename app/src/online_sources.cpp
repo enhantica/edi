@@ -18,9 +18,10 @@ namespace {
 const QString kStoreKey = QStringLiteral("Online/sources");
 const QStringList kAllKinds{QStringLiteral("structure"), QStringLiteral("experiment"), QStringLiteral("data"), QStringLiteral("project")};
 
-// The copy of the EasyDiffraction collection the desktop app installs beside itself (EDI_BUNDLED_COLLECTION), when
-// there is one: the source's last location, read only after an outage of the online ones, so the app has its examples
-// offline while the online collection stays the source of updates (the owner, 2026-11-10; edi ADR-0068).
+// The copy of the EasyDiffraction collection the desktop app installs beside itself (EDI_BUNDLED_COLLECTION), or a local
+// build reads in place (EDI_LOCAL_COLLECTION), when there is one: the source's last location here. The examples open
+// from it at once and the online locations are asked only for what is new or changed (CollectionExamples; the owner,
+// 2026-11-10 and 2026-11-17; edi ADR-0068).
 QStringList bundled_collection() {
 #if defined(EDI_APP_BUNDLED_COLLECTION)
     const QString folder = QDir::cleanPath(QDir(QCoreApplication::applicationDirPath()).filePath(QStringLiteral(EDI_APP_BUNDLED_COLLECTION)));

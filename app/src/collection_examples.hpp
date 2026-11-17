@@ -13,6 +13,7 @@
 #include <functional>
 #include <memory>
 
+#include "edi/online_index.hpp"
 #include "online_fetch.hpp"
 
 class QNetworkAccessManager;
@@ -67,10 +68,17 @@ private:
     void updateNotice();
     void fetchPaired(const QString& id, const QStringList& bases, int at, bool retried, BytesDone done, FetchProgress progress);
     void settle();
+    void checkOnline(int generation, const QStringList& online, const edi::online::Index& bundled);
 
     QPointer<OnlineSourcesModel> sources_;
     QNetworkAccessManager* network_ = nullptr;
     QHash<QString, Known> known_;
+    struct Updated {
+        QByteArray bytes;
+        QString name;
+    };
+    /// Files the online collection changed since the bundled copy, downloaded in the background, by entry id.
+    QHash<QString, Updated> updated_;
     QStringList failed_;
     int projects_ = 0;
     int pending_ = 0;

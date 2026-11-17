@@ -1,0 +1,11 @@
+{
+  "claim": "Saved-project byte-retention regression pin, not a numerical correctness oracle",
+  "input": "ui_input.js",
+  "generator": "generate.py with the pre-feature app; see the magnetic structures ADR",
+  "files": {
+    "analysis/analysis.edi": "6173a86499505ca1bedf146179641b3a57c3db6ebc83b8c13b5068911d7fb22d",
+    "experiments/d20.edi": "61cd88eb053182d024c852f44028af9d1afad84dcdb53346160150128e17e1bc",
+    "project.edi": "b383fadfacb339594b2934e30a1a6dd9f5bf4e09688b6233c70615e8d9e3664a",
+    "structures/cosio.edi": "7e27fccbf5be99d2025654f1c754a488096993f1c18f9b9fb8b610d87f31f152"
+  }
+}

@@ -642,6 +642,65 @@ SceneSource capture_scene(const Structure& structure) {
     return source;
 }
 
+std::vector<std::array<std::uint32_t, 3>> convex_hull(const std::vector<Vec3>& points) {
+    std::vector<std::array<std::uint32_t, 3>> faces;
+    const std::size_t n = points.size();
+    if (n < 4 || n > 64) {
+        return faces;
+    }
+    double size = 0.0;
+    for (const Vec3& point : points) {
+        size = std::max(size, norm(sub(point, points[0])));
+    }
+    const double eps = 1e-6 * std::max(size, 1.0);
+    std::set<std::vector<std::size_t>> planes;  // each face's points, found once
+    for (std::size_t i = 0; i < n; ++i) {
+        for (std::size_t j = i + 1; j < n; ++j) {
+            for (std::size_t k = j + 1; k < n; ++k) {
+                Vec3 normal = cross(sub(points[j], points[i]), sub(points[k], points[i]));
+                const double length = norm(normal);
+                if (length < eps * eps) {
+                    continue;
+                }
+                normal = mul(normal, 1.0 / length);
+                std::vector<std::size_t> on;
+                bool above = false, below = false;
+                for (std::size_t m = 0; m < n; ++m) {
+                    const double d = dot(sub(points[m], points[i]), normal);
+                    if (std::abs(d) <= eps) {
+                        on.push_back(m);
+                    } else {
+                        (d > 0.0 ? above : below) = true;
+                    }
+                }
+                if ((above && below) || !planes.insert(on).second) {
+                    continue;
+                }
+                if (above) {
+                    normal = mul(normal, -1.0);  // outwards: away from the other points
+                }
+                // The face's points in turn about its centre, counter-clockwise seen from outside, as one fan.
+                Vec3 centre;
+                for (const std::size_t m : on) {
+                    centre = add(centre, points[m]);
+                }
+                centre = mul(centre, 1.0 / static_cast<double>(on.size()));
+                const Vec3 u = mul(sub(points[on[0]], centre), 1.0 / std::max(norm(sub(points[on[0]], centre)), eps));
+                const Vec3 v = cross(normal, u);
+                std::sort(on.begin(), on.end(), [&](std::size_t a, std::size_t b) {
+                    const Vec3 pa = sub(points[a], centre), pb = sub(points[b], centre);
+                    return std::atan2(dot(pa, v), dot(pa, u)) < std::atan2(dot(pb, v), dot(pb, u));
+                });
+                for (std::size_t m = 1; m + 1 < on.size(); ++m) {
+                    faces.push_back({static_cast<std::uint32_t>(on[0]), static_cast<std::uint32_t>(on[m]),
+                                     static_cast<std::uint32_t>(on[m + 1])});
+                }
+            }
+        }
+    }
+    return faces;
+}
+
 StructureScene present_structure(const SceneSource& source, const SceneOptions& options) {
     StructureScene scene;
     scene.current = source.current;
@@ -786,8 +845,9 @@ StructureScene present_structure(const SceneSource& source, const SceneOptions& 
     substituted.erase(std::unique(substituted.begin(), substituted.end()), substituted.end());
     scene.substituted_elements = std::move(substituted);
 
-    // I7: one bond per `_geom_bond` row; an id naming no row is skipped.
-    if (options.bonds) {
+    // I7: one bond per `_geom_bond` row; an id naming no row is skipped. The polyhedra read them when bonds are hidden.
+    std::vector<SceneBond> bond_list;
+    if (options.bonds || options.polyhedra) {
         const std::size_t bonds = std::min({column_size(source.bond_site_1), column_size(source.bond_site_2),
                                             column_size(source.bond_distance)});
         for (std::size_t b = 0; b != bonds; ++b) {
@@ -807,8 +867,115 @@ StructureScene present_structure(const SceneSource& source, const SceneOptions& 
             const SceneAtom& atom_2 = scene.atoms[bond.atom_2];
             bond.color_1 = atom_1.parts[atom_1.major].color;
             bond.color_2 = atom_2.parts[atom_2.major].color;
-            scene.bonds.push_back(bond);
+            bond_list.push_back(bond);
         }
+    }
+    if (options.polyhedra) {
+        // The centres and corners by element, as VESTA and Jmol let the user set them: by default the usual anions are the
+        // corners and every other element a centre, so a silicate's SiO4 tetrahedra show beside its metals' octahedra. A
+        // metal bonded to a metal (Co-Co in an olivine) is not a corner.
+        static const std::set<std::string> kAnions{"N", "O", "F", "S", "Cl", "Se", "Br", "Te", "I"};
+        const std::set<std::string>& corners_by_element = options.polyhedra_corners.empty() ? kAnions : options.polyhedra_corners;
+        const auto corner_element = [&](const std::string& element) { return corners_by_element.count(element) != 0; };
+        const auto centre_element = [&](const std::string& element) {
+            if (element.empty()) return false;
+            return options.polyhedra_centres.empty() ? !corner_element(element) && element != "H"
+                                                     : options.polyhedra_centres.count(element) != 0;
+        };
+        std::vector<std::vector<Vec3>> shells(scene.atoms.size());
+        const auto corner_atom = [&](std::size_t atom) {
+            return corner_element(scene.atoms[atom].parts[scene.atoms[atom].major].element);
+        };
+        const double max_distance = options.polyhedra_max_distance > 0.0 ? options.polyhedra_max_distance : 0.0;
+        if (max_distance > 0.0 && !options.polyhedra_complete) {
+            // Inside the cell, within the distance: the drawn corner atoms near each centre.
+            for (std::size_t i = 0; i != scene.atoms.size(); ++i) {
+                for (std::size_t j = 0; j != scene.atoms.size(); ++j) {
+                    if (i == j || !corner_atom(j)) continue;
+                    const double distance = norm(sub(scene.atoms[j].centre, scene.atoms[i].centre));
+                    if (distance > 1e-6 && distance <= max_distance + 1e-4) shells[i].push_back(scene.atoms[j].centre);
+                }
+            }
+        } else if (max_distance == 0.0) {
+            for (const SceneBond& bond : bond_list) {
+                if (corner_atom(bond.atom_2)) shells[bond.atom_1].push_back(bond.end);
+                if (corner_atom(bond.atom_1)) shells[bond.atom_2].push_back(bond.start);
+            }
+        }
+        // Complete: a centre takes every corner atom that near, one cell over included. Near is within the distance, or
+        // up to the longest bond the geometry lists between the two sites.
+        if (options.polyhedra_complete && (max_distance > 0.0 || !bond_list.empty())) {
+            std::map<std::pair<std::string, std::string>, double> reach;
+            const auto site = [&](std::size_t row) { return (*source.atom_site_id)[row]; };
+            for (std::size_t b = 0; b != bond_list.size() && max_distance == 0.0; ++b) {
+                const auto row_1 = static_cast<std::size_t>((*source.bond_site_1)[bond_list[b].row] - 1);
+                const auto row_2 = static_cast<std::size_t>((*source.bond_site_2)[bond_list[b].row] - 1);
+                for (const auto& key : {std::pair{site(row_1), site(row_2)}, std::pair{site(row_2), site(row_1)}}) {
+                    double& longest = reach[key];
+                    longest = std::max(longest, bond_list[b].distance);
+                }
+            }
+            std::map<std::string, bool> corner_site;
+            for (const auto& [id, type] : source.site_types) {
+                corner_site[id] = corner_element(element_of(type));
+            }
+            const auto& m = source.cartn_matrix;
+            for (std::size_t i = 0; i != scene.atoms.size(); ++i) {
+                const SceneAtom& atom = scene.atoms[i];
+                const std::size_t centre_row = atom.parts[atom.major].row;
+                if (centre_row >= n) {
+                    continue;
+                }
+                std::vector<Vec3> found;
+                for (std::size_t row = 0; row != n; ++row) {
+                    if (!corner_site[site(row)]) continue;
+                    double limit = max_distance;
+                    if (limit == 0.0) {
+                        const auto longest = reach.find({site(centre_row), site(row)});
+                        if (longest == reach.end()) continue;
+                        limit = longest->second;
+                    }
+                    for (int ta = -1; ta <= 1; ++ta) {
+                        for (int tb = -1; tb <= 1; ++tb) {
+                            for (int tc = -1; tc <= 1; ++tc) {
+                                const Vec3 shift{m[0] * ta + m[1] * tb + m[2] * tc, m[3] * ta + m[4] * tb + m[5] * tc,
+                                                 m[6] * ta + m[7] * tb + m[8] * tc};
+                                const Vec3 point = add(row_centre(source, row), shift);
+                                const double distance = norm(sub(point, atom.centre));
+                                if (distance > 1e-6 && distance <= limit + 1e-4) {
+                                    found.push_back(point);
+                                }
+                            }
+                        }
+                    }
+                }
+                shells[i] = std::move(found);
+            }
+        }
+        for (std::size_t i = 0; i != scene.atoms.size(); ++i) {
+            const SceneAtom& atom = scene.atoms[i];
+            const ScenePart& part = atom.parts[atom.major];
+            if ((!atom.drawn && options.atoms != AtomSubset::None) || shells[i].size() < 4 || !centre_element(part.element)) {
+                continue;
+            }
+            std::vector<Vec3> corners;
+            for (const Vec3& point : shells[i]) {
+                if (std::none_of(corners.begin(), corners.end(),
+                                 [&](const Vec3& kept) { return norm(sub(kept, point)) < 1e-6; })) {
+                    corners.push_back(point);
+                }
+            }
+            auto faces = convex_hull(corners);
+            // Corners all in one plane (a square of four bonds) enclose nothing: no polyhedron.
+            if (faces.size() < 4) {
+                continue;
+            }
+            const Rgb grey{0xA0, 0xA0, 0xA0};
+            scene.polyhedra.push_back({i, options.polyhedra_grey ? grey : part.color, std::move(corners), std::move(faces)});
+        }
+    }
+    if (options.bonds) {
+        scene.bonds = std::move(bond_list);
     }
 
     // I2: the 12 edges, along a, then b, then c, each group ordered by the other two indices.

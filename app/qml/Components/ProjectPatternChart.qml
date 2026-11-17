@@ -21,7 +21,11 @@ Item {
     property PatternChart chart: null
     // A single crystal has reflections, not a pattern: its F²calc-vs-F²meas chart shows instead.
     readonly property bool singleCrystal: experiment !== null && experiment.sampleForm === ExperimentViewModel.SingleCrystal
+    // The shown chart's image (SaveImageButton): the pattern chart's or the single crystal's.
+    readonly property Item imageItem: holder.singleCrystal ? crystalChart.imageItem : holder.chart
     readonly property real toolbarRightInset: holder.chart ? holder.chart.toolbarRightInset : AppSizes.mainAreaMargin
+    readonly property real toolbarSpanLeft: holder.chart && holder.chart.toolbarSpanLeft !== undefined ? holder.chart.toolbarSpanLeft : AppSizes.mainAreaMargin
+    readonly property real toolbarSpanRightInset: holder.chart && holder.chart.toolbarSpanRightInset !== undefined ? holder.chart.toolbarSpanRightInset : toolbarRightInset
 
     function renew() {
         ApplicationInfo.renewPatternChart();
@@ -55,6 +59,8 @@ Item {
         z: 1
 
         SingleCrystalChart {
+            id: crystalChart
+
             anchors.fill: parent
             experiment: holder.singleCrystal ? holder.experiment : null
             // The project too: another one shows the curves its legend hid.

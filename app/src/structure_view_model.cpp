@@ -41,6 +41,8 @@ const std::vector<edi::SpaceGroupSettingName>& space_group_settings() {
 // any ADP type, so its count is the sites', not the anisotropic tensors' the core loop holds (the owner, 2026-11-04).
 std::vector<edi::Category> shown_categories(edi::Structure& structure) {
     std::vector<edi::Category> categories = edi::structure_categories(structure);
+    // The bond cutoffs and the bonds they give: a designed group in Extra (GeomGroup.qml).
+    categories.push_back({"geom"});
     for (edi::Category& category : categories)
         if (category.id == "atom_site_aniso") category.rows = structure.atom_sites.size();
     return categories;
@@ -865,12 +867,14 @@ StructureViewModel::StructureViewModel(SavedFile saved, edi::Structure& structur
                           [saved, &structure] { return saved.discovered(std::filesystem::path(edi::entity_path("", "structure", structure.name)).generic_string()); })) {
     categories_->setCategories(shown_categories(structure_), [this] { return text_->discoveryText().toStdString(); },
                                [this] { return edi::calculated_categories(structure_); });
+    syncAtomTypes();
     captureScene();
 }
 
 void StructureViewModel::captureScene() {
     scene_source_ = edi::capture_scene(structure_);
     emit sceneSourceChanged();
+    emit bondsChanged();
 }
 
 void StructureViewModel::markSceneStale() {
@@ -943,6 +947,57 @@ ParentGroupView StructureViewModel::parentGroup() const {
                            QString::fromStdString(parent.transform_pp_abc), differs};
 }
 
+double StructureViewModel::minBondDistance() const {
+    return structure_.geom.min_bond_distance_cutoff.get().value_or(edi::default_min_bond_distance_cutoff());
+}
+
+double StructureViewModel::bondDistanceIncrement() const {
+    return structure_.geom.bond_distance_inc.get().value_or(edi::default_bond_distance_inc());
+}
+
+// A cutoff is a distance: a negative or non-finite one leaves it as it was.
+void StructureViewModel::setMinBondDistance(double distance) {
+    if (std::isfinite(distance) && distance >= 0.0 && distance != minBondDistance()) {
+        editor_.apply(edi::Edit::assign(structure_.geom.min_bond_distance_cutoff, distance), true);
+    }
+    emit bondsChanged();
+}
+
+void StructureViewModel::setBondDistanceIncrement(double increment) {
+    if (std::isfinite(increment) && increment >= 0.0 && increment != bondDistanceIncrement()) {
+        editor_.apply(edi::Edit::assign(structure_.geom.bond_distance_inc, increment), true);
+    }
+    emit bondsChanged();
+}
+
+QVariantList StructureViewModel::bonds() const {
+    QVariantList out;
+    if (!structure_.geometry_current()) {
+        return out;
+    }
+    const edi::GeomBonds& bonds = structure_.geometry.geom_bond;
+    for (std::size_t b = 0; b < bonds.size(); ++b) {
+        out.append(QVariantMap{{QStringLiteral("site1"), QString::fromStdString(bonds.atom_site_label_1[b])},
+                               {QStringLiteral("site2"), QString::fromStdString(bonds.atom_site_label_2[b])},
+                               {QStringLiteral("symmetry1"), QString::fromStdString(bonds.site_symmetry_1[b])},
+                               {QStringLiteral("symmetry2"), QString::fromStdString(bonds.site_symmetry_2[b])},
+                               {QStringLiteral("distance"), bonds.distance[b]}});
+    }
+    return out;
+}
+
+void StructureViewModel::syncAtomTypes() {
+    const edi::Project* project = editor_.currentProject();
+    QStringList types;
+    for (const std::string& type : project ? edi::atom_types(*project, structure_) : std::vector<std::string>{}) {
+        types.append(QString::fromStdString(type));
+    }
+    if (types != atom_types_) {
+        atom_types_ = types;
+        emit atomTypesChanged();
+    }
+}
+
 void StructureViewModel::sync() {
     const QString name = QString::fromStdString(structure_.name);
     if (name != name_) {
@@ -960,6 +1015,8 @@ void StructureViewModel::sync() {
     emit magneticChanged();
     emit magneticGroupChanged();
     emit parentGroupChanged();
+    syncAtomTypes();
+    emit bondsChanged();
     categories_->setCategories(shown_categories(structure_), [this] { return text_->discoveryText().toStdString(); },
                                [this] { return edi::calculated_categories(structure_); });
 }

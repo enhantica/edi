@@ -8,6 +8,7 @@
 #include <memory>
 #include <vector>
 #include "edi/calculation.hpp"
+#include "edi/display.hpp"
 #include <unordered_map>
 #include <unordered_set>
 #include <string>
@@ -41,6 +42,11 @@ class ParameterRegistry : public QObject {
     // Whether these already-published fileValue/fileSu pairs describe this exact
     // live owner. Inspection never recalculates its save-spelling decision.
     bool fileTextCurrent(const edi::Project& project) const noexcept;
+    // A publication that only shows a scan dataset or a series point (edi ADR-0089 point 7): publish leaves the
+    // save spelling, which writes the whole project, to applySpelling, computed from a copy off the GUI thread; until
+    // then the file text is not current.
+    void setSpellingDeferred(bool deferred) { spelling_deferred_ = deferred; }
+    void applySpelling(edi::Project& project, const edi::SaveSpelling& spelling);
 
    signals:
     // After a rebuild that added or removed items; removed ones are deleted later.
@@ -64,6 +70,8 @@ class ParameterRegistry : public QObject {
     void refreshFittability(edi::Project& project);
     void refreshEstimated(const edi::Project& project);
     void refreshSpelling(const edi::Project& project);
+    void setSpelling(const edi::Project& project, const edi::SaveSpelling& spelling);
+    bool spelling_deferred_ = false;
     void refreshDefiniteness(const edi::Project& project);
     ProjectEditor& editor_;
     QList<ParameterItem*> items_;

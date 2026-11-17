@@ -35,6 +35,18 @@ WorkflowPage {
         })
 
     pageName: "analysis"
+    // Its own main view: every view (the owner, 2026-11-14 item 5).
+    pageView: Component {
+        MainView {
+            shown: page.current
+            defaultKey: "pattern"
+            tabKeys: ["structure", "pattern", "meascalc", "correlations", "stacked", "map", "evolution"]
+        }
+    }
+    onCurrentChanged: if (current && pageViewItem)
+        AppState.mainView = pageViewItem
+    onPageViewItemChanged: if (current && pageViewItem)
+        AppState.mainView = pageViewItem
     extrasEnabled: analysis !== null
     textEnabled: analysis !== null
     basicItem: Component {

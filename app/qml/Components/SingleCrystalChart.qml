@@ -21,6 +21,13 @@ import edi.app
 Item {
     id: chart
 
+    // What the main view's Save image takes when this is the shown tab: the item, its toolbar (hidden while the image
+    // is taken), the file name, and whether the toolbar's band is cut off.
+    readonly property Item imageItem: chart.onAxis ? axisChart : chart
+    readonly property Item imageToolbar: chart.onAxis ? axisChart.imageToolbar : toolbar
+    readonly property string imageName: chart.onAxis ? "pattern" : chart.stacked ? "stacked" : "single-crystal"
+    readonly property bool imageCropsToolbar: true
+
     objectName: "singleCrystal.chart"
 
     property ExperimentViewModel experiment: null
@@ -70,6 +77,10 @@ Item {
     readonly property string measuredItem: squared ? "refln.intensity_meas" : "refln.f_meas"
     // Reflections calculated without measured ones: the calculated value against sin(θ)/λ, without the y = x line.
     readonly property bool simulated: !stacked && !reportMode && reflections !== null && reflections.simulated
+    // On the Pattern tab the reflections are a pattern on Q or sinθ/λ (the owner, 2026-11-16), drawn by the pattern
+    // chart over this one; on the Meas vs calc tab (`comparison`) measured against calculated values, with the y = x line.
+    property bool comparison: false
+    readonly property bool onAxis: !stacked && !reportMode && experiment !== null && !comparison
     readonly property string xItem: simulated ? "refln.sin_theta_over_lambda" : calculatedItem
     readonly property string yItem: simulated ? calculatedItem : measuredItem
     // The shown ranges, [xMin, xMax, yMin, yMax]; empty: every reflection, on one range for both axes.
@@ -211,14 +222,19 @@ Item {
         text: chart.reportMode ? chart.reportData.title : ""
     }
 
-    // The toolbar line, centred as the pattern chart's: what both axes plot, then the pattern chart's buttons.
-    Row {
+    // The controls row (ToolbarLines), as the pattern chart's: what both axes plot, then the pattern chart's buttons.
+    // Hidden while the reflections are drawn on an axis: the pattern chart below has its own.
+    ToolbarLines {
         id: toolbar
 
-        visible: !chart.reportMode
-        x: Math.round(chart.toolbarLeft + (chart.width - chart.toolbarRightInset - chart.toolbarLeft - width) / 2)
+        objectName: "singleCrystal.toolbar"
+        visible: !chart.reportMode && !chart.onAxis
+        x: 0
         y: chart.topMargin
-        spacing: EaStyle.Sizes.fontPixelSize * 0.5 + 2 * AppSizes.toolbarSpacing
+        width: chart.width
+        height: implicitHeight
+        leftEdge: chart.toolbarLeft
+        rightEdge: chart.width - chart.toolbarRightInset
 
         ToolbarComboBox {
             objectName: "singleCrystal.toolbar.quantity"
@@ -238,8 +254,6 @@ Item {
             legendShown: chart.stacked ? true : Preferences.patternLegendShown
             onLegendShownChanged: ApplicationInfo.singleStateChanged(2)
             includedRangeAvailable: false
-            saveTarget: chart
-            saveName: chart.stacked ? "stacked" : "single-crystal"
             hoverShown: Preferences.patternHoverShown
             onHoverShownChanged: Preferences.patternHoverShown = hoverShown
             pointerMode: Preferences.patternPointerMode
@@ -435,6 +449,7 @@ Item {
                 z: chart.highlight && index === chart.selectedIndex ? 1 : 0
                 opacity: chart.highlight && index !== chart.selectedIndex ? Preferences.chartFadedOpacity : 1
                 color: AppColors.experiment(index, chart.colors.isDarkPalette)
+                fillColor: Qt.alpha(color, 0.3)
                 markerSize: 5
                 xMin: axisX.min
                 xMax: axisX.max
@@ -461,6 +476,7 @@ Item {
                     anchors.fill: parent
                     opacity: chart.leftOutOpacity
                     color: stackedLayer.color
+                    fillColor: stackedLayer.fillColor
                     markerSize: 5
                     xMin: axisX.min
                     xMax: axisX.max
@@ -476,6 +492,8 @@ Item {
             visible: !chart.stacked && !(chart.experiment && chart.hiddenRows.includes(chart.experiment.name))
             anchors.fill: parent
             color: AppColors.experiment(0, chart.colors.isDarkPalette)
+            // Filled light, as the pattern band is (the owner, 2026-11-16).
+            fillColor: Qt.alpha(color, 0.3)
             markerSize: 5
             xMin: axisX.min
             xMax: axisX.max
@@ -491,6 +509,7 @@ Item {
             anchors.fill: parent
             opacity: chart.leftOutOpacity
             color: layer.color
+            fillColor: layer.fillColor
             markerSize: 5
             xMin: axisX.min
             xMax: axisX.max
@@ -553,5 +572,17 @@ Item {
                 }
             }
         }
+    }
+
+    // The reflections on Q or sinθ/λ, with the pattern chart's styles, Bars and colours (onAxis).
+    PatternChart {
+        id: axisChart
+
+        anchors.fill: parent
+        visible: chart.onAxis
+        shown: chart.shown && chart.onAxis
+        experiment: chart.onAxis ? chart.experiment : null
+        singleCrystal: true
+        colors: chart.colors
     }
 }

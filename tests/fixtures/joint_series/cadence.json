@@ -1,0 +1,24 @@
+{
+  "pre_feature_source": "7ed17b57213c4c8fbb1595a94b55794c64ec5fce",
+  "policy_blob": "5095f27852dd6360675175a75c855dbad7f420df",
+  "inherited_paths": [
+    "tests/system/py/test_scan_app_execution.py",
+    "tests/system/py/test_scan_accident_paths.py",
+    "tests/system/py/test_plain_data_app.py",
+    "tests/system/py/test_c34_t28_value_storage.py",
+    "tests/system/py/test_cwl_live_parameter_count.py",
+    "tests/system/py/test_web_parallel_build.py",
+    "tests/system/py/test_thread_selector.py",
+    "tests/system/py/test_app_receipt_current_inputs.py",
+    "tests/system/py/test_scan_screen.py",
+    "tests/system/py/test_sequential_scan_performance.py",
+    "tests/system/py/test_scan_native_boundary.py",
+    "tests/system/py/test_scan_correlation_save_stability.py",
+    "tests/system/py/test_shared_correlation_app_state.py",
+    "tests/system/py/test_project_transactions.py"
+  ],
+  "slow_paths": [
+    "tests/system/slow/seeded_series.py"
+  ],
+  "authority": "Owner decision 6c4f7a9d9: hundred points and five WISH banks in the slow cadence only."
+}

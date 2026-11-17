@@ -124,6 +124,8 @@ bool ReportViewModel::build() const {
     if (edi::colour_scheme_from_name(colour_scheme_.toStdString())) {
         choices.colour_scheme = colour_scheme_.toStdString();
     }
+    // The pattern chart's x axis, also one the project file cannot name yet (Q, sinθ/λ).
+    choices.x_axis = project_.patternXAxis().toStdString();
     const int shown = project_.currentExperimentIndex();
     if (!project_.scan() && shown > 0 && static_cast<std::size_t>(shown) < project.experiments.size()) {
         choices.correlation_experiment = project.experiments[static_cast<std::size_t>(shown)]->name.value();

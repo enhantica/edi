@@ -388,7 +388,7 @@ def by_hand_steps(source: str) -> list[dict]:  # noqa: PLR0915 - one setup, step
             ['experimentType'],
         )
     )
-    actions = ['experiments.load', 'experiments.load.dataWeb']
+    actions = ['experiments.loadData.0', 'experiments.load.dataWeb']
     actions += ['fill:onlineLoad.field.id=' + data, 'onlineLoad.search', 'wait-online']
     steps.extend((
         step(
@@ -651,8 +651,8 @@ def plan(case: str) -> dict:  # noqa: PLR0912, PLR0914, PLR0915 - one plan, step
             [
                 'appBar.tab.experiment',
                 'sideBar.tab.basic',
-                'reveal:experiments.load',
-                'experiments.load',
+                'reveal:experiments.dataMore.0',
+                'experiments.dataMore.0',
             ],
             ['experiments.load.dataFile'],
         )

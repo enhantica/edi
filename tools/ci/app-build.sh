@@ -57,6 +57,27 @@ args=(-S . -B build/app -G Ninja -DCMAKE_BUILD_TYPE=Release
 if [ -n "${EDI_GUI_COMPONENTS_SRC:-}" ]; then
     args+=(-DFETCHCONTENT_SOURCE_DIR_GUI_COMPONENTS="$EDI_GUI_COMPONENTS_SRC")
 fi
+# A local build reads a copy of the edi-data collection in place, as the installed app reads the one it carries (the
+# owner, 2026-11-17; app-with-crysta and app-run use this build): cloned once into build/edi-data and brought up to
+# date when online. EDI_LOCAL_COLLECTION=off builds without one, a folder uses that copy; CI builds without.
+collection=""
+if [ -z "${CI:-}" ] && [ "${EDI_LOCAL_COLLECTION:-}" != off ]; then
+    collection="${EDI_LOCAL_COLLECTION:-$ROOT/build/edi-data}"
+    if [ -z "${EDI_LOCAL_COLLECTION:-}" ]; then
+        if [ -d "$collection/.git" ]; then
+            timeout 60 git -C "$collection" pull -q --ff-only ||
+                echo "app-build: edi-data not brought up to date (offline?); using the copy in $collection"
+        elif ! timeout 300 git clone -q --depth 1 https://github.com/enhantica/edi-data "$collection"; then
+            echo "app-build: edi-data could not be cloned; building without a local collection" >&2
+            collection=""
+        fi
+    fi
+    if [ -n "$collection" ] && [ ! -f "$collection/index.json" ]; then
+        echo "app-build: $collection has no index.json; building without a local collection" >&2
+        collection=""
+    fi
+fi
+[ -z "$collection" ] || args+=(-DEDI_LOCAL_COLLECTION="$collection")
 BUILD_KEY="$(
     {
         printf 'cxx=%s\n' "$(command -v "${CXX:-c++}" 2>/dev/null || echo '?')"

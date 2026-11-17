@@ -45,6 +45,20 @@ class StructureViewOptions : public QObject {
     Q_PROPERTY(edi_app::OptionListModel* momentViewOptions READ momentViewOptions CONSTANT)
     // How the arrows are coloured — "atom", "greyed" or "single" — the app's preference, not saved with a project.
     Q_PROPERTY(QString momentColours READ momentColours WRITE setMomentColours NOTIFY momentColoursChanged)
+    // Coordination polyhedra: shown, coloured "atom" (the centre's colour) or "grey", and their opacity in [0, 1]. Kept
+    // for the session: the structure file has no item for them yet.
+    Q_PROPERTY(bool polyhedra READ polyhedra WRITE setPolyhedra NOTIFY polyhedraChanged)
+    Q_PROPERTY(QString polyhedraColour READ polyhedraColour WRITE setPolyhedraColour NOTIFY polyhedraColourChanged)
+    Q_PROPERTY(double polyhedraOpacity READ polyhedraOpacity WRITE setPolyhedraOpacity NOTIFY polyhedraOpacityChanged)
+    Q_PROPERTY(edi_app::OptionListModel* polyhedraColourOptions READ polyhedraColourOptions CONSTANT)
+    // "cell", the polyhedra inside the cell, or "complete", whole for every centre in the cell.
+    Q_PROPERTY(QString polyhedraExtent READ polyhedraExtent WRITE setPolyhedraExtent NOTIFY polyhedraExtentChanged)
+    Q_PROPERTY(edi_app::OptionListModel* polyhedraExtentOptions READ polyhedraExtentOptions CONSTANT)
+    // The polyhedra's centre and corner atoms, element symbols separated by commas or spaces ("" is the default:
+    // cations as centres, anions as corners), and the longest centre-corner distance in Angstrom (0: the bond cut-offs).
+    Q_PROPERTY(QString polyhedraCentres READ polyhedraCentres WRITE setPolyhedraCentres NOTIFY polyhedraDefinitionChanged)
+    Q_PROPERTY(QString polyhedraCorners READ polyhedraCorners WRITE setPolyhedraCorners NOTIFY polyhedraDefinitionChanged)
+    Q_PROPERTY(double polyhedraMaxDistance READ polyhedraMaxDistance WRITE setPolyhedraMaxDistance NOTIFY polyhedraDefinitionChanged)
     // The atom views diffraction-lib offers, for the Appearance group's selector.
     Q_PROPERTY(edi_app::OptionListModel* atomViewOptions READ atomViewOptions CONSTANT)
     Q_PROPERTY(edi_app::OptionListModel* momentFormOptions READ momentFormOptions CONSTANT)
@@ -81,6 +95,22 @@ class StructureViewOptions : public QObject {
     void setMomentView(const QString& view);  // one of the three; anything else is ignored
     OptionListModel* momentViewOptions() const { return moment_view_options_; }
     void setMomentForm(const QString& form);  // one of the three; anything else is ignored
+    bool polyhedra() const { return options_.polyhedra; }
+    void setPolyhedra(bool shown);
+    QString polyhedraColour() const;
+    void setPolyhedraColour(const QString& colour);  // "atom" or "grey"; anything else is ignored
+    double polyhedraOpacity() const { return polyhedra_opacity_; }
+    OptionListModel* polyhedraColourOptions() const { return polyhedra_colour_options_; }
+    void setPolyhedraOpacity(double opacity);  // clamped to [0, 1]
+    QString polyhedraExtent() const;
+    void setPolyhedraExtent(const QString& extent);  // "cell" or "complete"; anything else is ignored
+    OptionListModel* polyhedraExtentOptions() const { return polyhedra_extent_options_; }
+    QString polyhedraCentres() const;
+    void setPolyhedraCentres(const QString& elements);
+    QString polyhedraCorners() const;
+    void setPolyhedraCorners(const QString& elements);
+    double polyhedraMaxDistance() const { return options_.polyhedra_max_distance; }
+    void setPolyhedraMaxDistance(double distance);  // negative or not finite is ignored
 
     // The Atoms selector's tokens, the magnetic ones only for a magnetic structure.
     Q_INVOKABLE QStringList atomChoices(bool magnetic) const;
@@ -108,19 +138,32 @@ class StructureViewOptions : public QObject {
     void momentFormChanged();
     void momentViewChanged();
     void momentColoursChanged();
-    // Any option changed: what the views re-present on.
+    void polyhedraChanged();
+    void polyhedraColourChanged();
+    void polyhedraExtentChanged();
+    void polyhedraDefinitionChanged();
+    void polyhedraOpacityChanged();  // the material's alone: nothing is presented again
+    // An option a structure saves changed: what the project keeps.
     void changed();
+    // Any option the views draw changed, a saved one or a session one (the polyhedra): what they present again on.
+    void drawn();
 
    private:
     template <class T>
     void assign(T& field, T value, void (StructureViewOptions::*notify)());
+    // The same for an option kept for the session only: drawn, never written to the structure.
+    template <class T>
+    void assignSession(T& field, T value, void (StructureViewOptions::*notify)());
     edi::SceneOptions options_;
     // Whether the structure states show_moments, so a structure that does not keeps its bytes.
     bool moments_declared_ = false;
     OptionListModel* atom_view_options_;
     OptionListModel* moment_form_options_;
     OptionListModel* moment_view_options_;
+    OptionListModel* polyhedra_colour_options_;
+    OptionListModel* polyhedra_extent_options_;
     QString moment_form_ = QStringLiteral("crystal_axes");
+    double polyhedra_opacity_ = 0.5;
 };
 
 }  // namespace edi_app

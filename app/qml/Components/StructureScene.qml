@@ -21,6 +21,7 @@ Node {
     readonly property StructureInstances triadShafts: shaftsTable
     readonly property StructureInstances triadHeads: headsTable
     readonly property SharedSiteGeometry shared: sharedGeometry
+    readonly property PolyhedraGeometry polyhedra: polyhedraGeometry
     // The orthographic projection through Qt's orthographic camera, the perspective one (with its screen pan)
     // through a custom camera: both are the core's projection, and Qt picks parallel rays in the first.
     readonly property Camera camera: scene.controller && scene.controller.projection === "perspective" ? perspectiveCamera : orthographicCamera
@@ -142,6 +143,27 @@ Node {
             segments: scene.controller.cylinderSegments
         }
         materials: [solid]
+    }
+    // The coordination polyhedra, see-through at the chosen opacity, both sides of each face drawn.
+    Model {
+        objectName: "structure.view.polyhedra"
+        visible: polyhedraGeometry.count > 0
+        geometry: PolyhedraGeometry {
+            id: polyhedraGeometry
+        }
+        materials: [
+            PrincipledMaterial {
+                baseColor: "white"
+                vertexColorsEnabled: true
+                cullMode: Material.NoCulling
+                alphaMode: PrincipledMaterial.Blend
+                opacity: scene.controller && scene.controller.options ? scene.controller.options.polyhedraOpacity : 0.5
+                depthDrawMode: Material.NeverDepthDraw
+                metalness: 0
+                roughness: scene.roughness
+                specularAmount: scene.specularAmount
+            }
+        ]
     }
     Model {
         id: sharedModel

@@ -17,6 +17,7 @@
 #include "edi/structure_scene.hpp"
 #include "report_view_model.hpp"
 #include "shared_site_geometry.hpp"
+#include "polyhedra_geometry.hpp"
 #include "structure_instances.hpp"
 #include "structure_label_layer.hpp"
 #include "structure_view_model.hpp"
@@ -57,6 +58,7 @@ class StructureViewController : public QObject {
     Q_PROPERTY(edi_app::StructureInstances* triadShafts MEMBER triad_shafts_ NOTIFY triadShaftsChanged)
     Q_PROPERTY(edi_app::StructureInstances* triadHeads MEMBER triad_heads_ NOTIFY triadHeadsChanged)
     Q_PROPERTY(edi_app::SharedSiteGeometry* shared MEMBER shared_ NOTIFY sharedChanged)
+    Q_PROPERTY(edi_app::PolyhedraGeometry* polyhedra MEMBER polyhedra_ NOTIFY polyhedraChanged)
     Q_PROPERTY(edi_app::StructureLabelLayer* labels MEMBER labels_ NOTIFY labelsChanged)
     // What the view shows.
     Q_PROPERTY(bool current READ current NOTIFY currentChanged)
@@ -217,6 +219,7 @@ class StructureViewController : public QObject {
     void triadShaftsChanged();
     void triadHeadsChanged();
     void sharedChanged();
+    void polyhedraChanged();
     void labelsChanged();
     void atomCountChanged();
     void bondCountChanged();
@@ -271,6 +274,7 @@ class StructureViewController : public QObject {
     StructureInstances* triad_shafts_ = nullptr;
     StructureInstances* triad_heads_ = nullptr;
     SharedSiteGeometry* shared_ = nullptr;
+    PolyhedraGeometry* polyhedra_ = nullptr;
     StructureLabelLayer* labels_ = nullptr;
     QMetaObject::Connection source_connection_, stale_connection_, options_connection_;
 

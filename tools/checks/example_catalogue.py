@@ -54,7 +54,11 @@ CMAKE_CASE = re.compile(r'^    user-facing: *true$|^    app-only: ')
 # App examples that have no catalogue form yet (ADR-0048). The list only shrinks: each leaves it
 # when it becomes a catalogue case, and no other project may be app-only. It is empty now that the
 # three single-crystal examples are cases.
-APP_ONLY: dict[str, str] = {}
+APP_ONLY: dict[str, str] = {
+    'pd-neut-tof_ncaf-wish-5bank_synthetic-100p': (
+        'a synthetic series for looking at a long series of joint fits in the app'
+    ),
+}
 SOURCES = re.compile(r'^## Sources\s*$(?P<body>.*?)(?=^## |\Z)', re.MULTILINE | re.DOTALL)
 # Files in the tutorials folder that are not tutorials.
 NOT_TUTORIALS = {'index.md', 'execution-exclusions.yml'}

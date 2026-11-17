@@ -1,0 +1,14 @@
+_metadata.name             pd-neut-cwl_cosio-d20
+_metadata.title            "Co₂SiO₄ [Pnma] · D20 @ ILL"
+_metadata.description
+;
+Olivine · Coordinates, displacements and oxygen occupancies
+;
+_metadata.authors          .
+_metadata.created          "15 Nov 2026 22:57:52"
+_metadata.last_modified    "15 Nov 2026 22:57:53"
+_metadata.timestamp        ?
+
+_su_format.rule iucr_99
+
+_edi.schema_version 3

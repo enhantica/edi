@@ -32,6 +32,7 @@
 #include <variant>
 #include <vector>
 
+#include "edi/sharing.hpp"
 #include "scan_progress.hpp"
 #include "edi/online_fetch.hpp"
 #include "edi/online_index.hpp"
@@ -2610,7 +2611,10 @@ NB_MODULE(_edi, m) {
         .def_prop_rw(
             "id", [](const edi::AtomSiteMoment& self) { return self.id.value(); },
             [](edi::AtomSiteMoment& self, std::string value) { self.id = std::move(value); })
-        .def_prop_ro("symmform", [](const edi::AtomSiteMoment& self) { return self.symmform.value(); });
+        .def_prop_ro("symmform", [](const edi::AtomSiteMoment& self) { return self.symmform.value(); })
+        .def_prop_ro(
+            "spherical", [](const edi::AtomSiteMoment& self) { return edi::spherical_moment(self); },
+            "The moment's spherical form with its s.u., computed by crysta; read-only.");
     def_parameter_walks(atom_site_moment);
     def_parameter_field(atom_site_moment, "crystalaxis_x", &edi::AtomSiteMoment::crystalaxis_x);
     def_parameter_field(atom_site_moment, "crystalaxis_y", &edi::AtomSiteMoment::crystalaxis_y);
@@ -3542,6 +3546,14 @@ NB_MODULE(_edi, m) {
         "weight_fraction", [](const edi::LinkedStructure& self) { return edi::weight_fraction(self); },
         "The phase's Hill-Howard weight fraction in its experiment and its uncertainty, derived from the "
         "current model; None when it takes no part or belongs to no project.");
+    nb::class_<edi::DerivedQuantity>(m, "DerivedQuantity", "A derived value and its s.u., read-only.")
+        .def_ro("value", &edi::DerivedQuantity::value, "The derived value.")
+        .def_ro("uncertainty", &edi::DerivedQuantity::uncertainty,
+                "Its standard uncertainty, or None when nothing determines one.");
+    nb::class_<edi::SphericalMoment>(m, "SphericalMoment", "A moment's spherical form, read-only.")
+        .def_ro("modulus", &edi::SphericalMoment::modulus, "The moment's size, in uB.")
+        .def_ro("polar", &edi::SphericalMoment::polar, "Its angle from +z (along c*), in degrees.")
+        .def_ro("azimuth", &edi::SphericalMoment::azimuthal, "Its angle about z from +x (along a), in degrees.");
     nb::class_<edi::WeightFraction>(m, "WeightFraction", "A derived weight fraction, read-only.")
         .def_ro("value", &edi::WeightFraction::value, "The weight fraction, 0 to 1.")
         .def_ro("uncertainty", &edi::WeightFraction::uncertainty,
@@ -4705,6 +4717,162 @@ NB_MODULE(_edi, m) {
     nb::class_<edi::Project> project(m, "Project");
     def_parameter_walks(project);
     def_free_parameters(project);
+    // ADR-0087: experiment sets and their two switches, which write ordinary alias and constraint rows.
+    // Each handle holds the project's Python object, so it cannot outlive the project it reads.
+    struct ExperimentSetRef {
+        edi::Project* project = nullptr;
+        nb::object owner;
+        std::string id;
+        std::string leader() const {
+            for (const auto& set : project->experiment_sets) {
+                if (set->id.value() == id) {
+                    return set->template_experiment_id.value();
+                }
+            }
+            throw nb::key_error(("no experiment set '" + id + "'").c_str());
+        }
+    };
+    struct ExperimentSetsRef {
+        edi::Project* project = nullptr;
+        nb::object owner;
+    };
+    nb::class_<ExperimentSetRef>(m, "ExperimentSet", "An experiment set: a template experiment and its members.")
+        .def_prop_ro("id", [](const ExperimentSetRef& self) { return self.id; })
+        .def_prop_ro("template", [](const ExperimentSetRef& self) { return self.leader(); })
+        .def_prop_ro("members",
+                     [](const ExperimentSetRef& self) {
+                         std::vector<std::string> members;
+                         for (const auto& member : self.project->experiment_set_members) {
+                             if (member->set_id.value() == self.id) {
+                                 members.push_back(member->experiment_id.value());
+                             }
+                         }
+                         return members;
+                     })
+        .def(
+            "share",
+            [](const ExperimentSetRef& self, const std::string& path) {
+                edi::share_across_experiments(*self.project, self.leader(), path);
+            },
+            "path"_a, "Make a parameter (its name without the datablock) the same for all members.")
+        .def(
+            "unshare",
+            [](const ExperimentSetRef& self, const std::string& path) {
+                edi::unshare_across_experiments(*self.project, self.leader(), path);
+            },
+            "path"_a, "Remove the rows share wrote for the parameter.")
+        .def_prop_ro(
+            "shared",
+            [](const ExperimentSetRef& self) {
+                // Every parameter of the template the switch reads as on, by its name without the datablock.
+                const std::string leader = self.leader();
+                const std::string prefix = edi::datablock_key(leader, "experiment") + ".";
+                std::vector<std::string> paths;
+                for (const auto& alias : self.project->aliases) {
+                    const std::string& name = alias->parameter_unique_name.value();
+                    if (name.rfind(prefix, 0) == 0) {
+                        const std::string path = name.substr(prefix.size());
+                        if (std::find(paths.begin(), paths.end(), path) == paths.end() &&
+                            edi::shared_across_experiments(*self.project, leader, path)) {
+                            paths.push_back(path);
+                        }
+                    }
+                }
+                return paths;
+            },
+            "The parameters the members share, by their names without the datablock.")
+        .def_prop_rw(
+            "phase_ratios_shared",
+            [](const ExperimentSetRef& self) { return edi::phase_ratios_shared(*self.project, self.leader()); },
+            [](const ExperimentSetRef& self, bool on) { edi::share_phase_ratios(*self.project, self.leader(), on); },
+            "Whether the members' patterns share their phase ratios, each keeping its own overall scale.");
+    nb::class_<ExperimentSetsRef>(m, "ExperimentSets", "A project's experiment sets.")
+        .def(
+            "create",
+            [](const ExperimentSetsRef& self, const std::string& id, const std::string& template_experiment,
+               const std::vector<std::string>& members) {
+                edi::Project& project = *self.project;
+                std::vector<std::string> all = members;
+                if (std::find(all.begin(), all.end(), template_experiment) == all.end()) {
+                    all.insert(all.begin(), template_experiment);  // the template is a member
+                }
+                // The whole set is checked before anything is added, so a refusal changes nothing.
+                for (const auto& set : project.experiment_sets) {
+                    if (set->id.value() == id) {
+                        throw nb::value_error(("experiment set '" + id + "' already exists").c_str());
+                    }
+                }
+                for (std::size_t k = 0; k < all.size(); ++k) {
+                    const std::string& name = all[k];
+                    if (std::find(all.begin(), all.begin() + static_cast<std::ptrdiff_t>(k), name) !=
+                        all.begin() + static_cast<std::ptrdiff_t>(k)) {
+                        throw nb::value_error(("experiment '" + name + "' is listed twice").c_str());
+                    }
+                    const bool known = std::any_of(project.experiments.begin(), project.experiments.end(),
+                                                   [&name](const auto& experiment) {
+                                                       return experiment->name.value() == name;
+                                                   });
+                    if (!known) {
+                        throw nb::value_error(("the project has no experiment '" + name + "'").c_str());
+                    }
+                    for (const auto& member : project.experiment_set_members) {
+                        if (member->experiment_id.value() == name) {
+                            throw nb::value_error(("experiment '" + name + "' is already in set '" +
+                                                   member->set_id.value() + "'")
+                                                      .c_str());
+                        }
+                    }
+                }
+                const std::vector<edi::ItemVec<edi::ExperimentSet>::Ptr> sets_before(
+                    project.experiment_sets.begin(), project.experiment_sets.end());
+                const std::vector<edi::ItemVec<edi::ExperimentSetMember>::Ptr> members_before(
+                    project.experiment_set_members.begin(), project.experiment_set_members.end());
+                try {
+                    edi::ExperimentSet set;
+                    set.id = id;
+                    set.template_experiment_id = template_experiment;
+                    project.experiment_sets.push_back(std::move(set));
+                    for (const std::string& name : all) {
+                        edi::ExperimentSetMember member;
+                        member.experiment_id = name;
+                        member.set_id = id;
+                        project.experiment_set_members.push_back(std::move(member));
+                    }
+                } catch (...) {
+                    project.experiment_sets.assign(sets_before);
+                    project.experiment_set_members.assign(members_before);
+                    throw;
+                }
+                return ExperimentSetRef{self.project, self.owner, id};
+            },
+            nb::kw_only(), "id"_a, "template"_a, "members"_a,
+            "Group experiments made from one template; each member stays an ordinary experiment.")
+        .def("__len__", [](const ExperimentSetsRef& self) { return self.project->experiment_sets.size(); })
+        .def("keys",
+             [](const ExperimentSetsRef& self) {
+                 std::vector<std::string> ids;
+                 for (const auto& set : self.project->experiment_sets) {
+                     ids.push_back(set->id.value());
+                 }
+                 return ids;
+             })
+        .def("__getitem__",
+             [](const ExperimentSetsRef& self, const std::string& id) {
+                 ExperimentSetRef ref{self.project, self.owner, id};
+                 static_cast<void>(ref.leader());  // refuses an unknown id
+                 return ref;
+             })
+        .def("__iter__", [](const ExperimentSetsRef& self) {
+            nb::list out;
+            for (const auto& set : self.project->experiment_sets) {
+                out.append(ExperimentSetRef{self.project, self.owner, set->id.value()});
+            }
+            return out.attr("__iter__")();
+        });
+    project.def_prop_ro(
+        "experiment_sets",
+        [](nb::handle self) { return ExperimentSetsRef{nb::cast<edi::Project*>(self), nb::borrow(self)}; },
+        "The project's experiment sets.");
     project.def(nb::init<>())
         // NAMED construction — the port's spelling
         // `Project(name='si_sepd')`. The positional `Project(structure, experiment)` constructor

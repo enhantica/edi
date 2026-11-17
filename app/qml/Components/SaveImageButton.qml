@@ -2,36 +2,34 @@
 import QtQuick
 import QtQuick.Dialogs
 
-import EasyApplication.Gui.Style as EaStyle
-
 import edi.app
 
-// Save image, the last button of a chart's or the structure view's toolbar, in its own group (the owner,
-// 2026-11-08): a PNG of `target` as shown, without its toolbar. The desktop asks where to save it, starting in the one
-// folder every Save image remembers, at first the project's reports folder (the owner, 2026-11-10); the browser
-// downloads it.
+// Save image, one button in the main view's bottom-left corner for the shown tab (the owner, 2026-11-16): a PNG of
+// `target` as shown, without its `toolbar`. The desktop asks where to save it, starting in the one folder every Save
+// image remembers, at first the project's reports folder (the owner, 2026-11-10); the browser downloads it.
 Row {
     id: save
 
     property Item target: null
+    // The target's toolbar, hidden while the image is taken.
+    property Item toolbar: null
     property string fileName: "image"
     // Whether the band the toolbar takes at the top of `target` is cut off: a chart's toolbar has its own band, the
     // structure view's floats over the scene, which stays whole.
     property bool cropToolbar: true
 
-    // The toolbar line this button is in: its ancestor that `target` holds directly.
     function toolbarLine() {
-        for (let item = save; item !== null; item = item.parent) {
-            if (item.parent === save.target)
-                return item;
-        }
-        return null;
+        return save.target !== null ? save.toolbar : null;
     }
     // The image as Save image takes it, handed to `done` with the share of its height to cut off at the top: the
     // toolbar is hidden for the grab, and a chart's toolbar band is cut. `scale` renders it larger, sharp.
+    // A target with a `transparentImage` property drops its background while it is grabbed, as Preferences asks.
     function capture(done, scale) {
         const line = toolbarLine();
         const shownOpacity = line ? line.opacity : 1;
+        const clears = save.target !== null && save.target.transparentImage !== undefined;
+        if (clears)
+            save.target.transparentImage = Preferences.imageBackground !== "chart";
         // Below the toolbar's band when it is at the top, as a fraction of the height.
         const cut = line && cropToolbar && line.y + line.height < target.height / 2 ? (line.y + line.height) / target.height : 0;
         if (line)
@@ -39,6 +37,8 @@ Row {
         save.target.grabToImage(result => {
             if (line)
                 line.opacity = shownOpacity;
+            if (clears)
+                save.target.transparentImage = false;
             done(result, cut);
         }, Qt.size(Math.round(target.width * (scale || 1)), Math.round(target.height * (scale || 1))));
     }
@@ -61,12 +61,6 @@ Row {
         });
     }
 
-    spacing: AppSizes.toolbarSpacing
-
-    Item {
-        width: EaStyle.Sizes.fontPixelSize * 0.5
-        height: 1
-    }
     ChartToolButton {
         objectName: save.objectName + ".button"
         fontIcon: "camera"
