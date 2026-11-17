@@ -2404,9 +2404,8 @@ int ProjectViewModel::previewSeriesGroups(const QList<QUrl>& files) {
 }
 
 bool ProjectViewModel::loadSeriesOfJointFits(ExperimentViewModel* experiment, const QList<QUrl>& files, bool copy) {
-    const PublicationScope publication(*this);
     const QPointer<ProjectViewModel> self(this);
-    if (retired_) return false;
+    if (retired_ || listing_dataset_folder_) return false;
     const auto refuse = [&](const QString& message) {
         setLastError(message);
         if (self && !retired_) emit refused(message);
@@ -2416,8 +2415,7 @@ bool ProjectViewModel::loadSeriesOfJointFits(ExperimentViewModel* experiment, co
     if (index < 0) return refuse(tr("The experiment the data was chosen for is no longer in the project"));
     if (files.isEmpty()) return false;
     if (const QString refusal = editReadinessRefusal(false); !refusal.isEmpty()) return refuse(refusal);
-    edi::Project& project = *project_;
-    if (project.experiments.size() != 1)
+    if (project_->experiments.size() != 1)
         return refuse(tr("A series of joint fits starts from a project of one experiment, its template"));
     QString folder;
     std::vector<std::string> names;
@@ -2428,82 +2426,125 @@ bool ProjectViewModel::loadSeriesOfJointFits(ExperimentViewModel* experiment, co
         if (info.absolutePath() != folder) return refuse(tr("The files of a series of joint fits come from one folder"));
         names.push_back(info.fileName().toStdString());
     }
-    const std::vector<edi::SeriesGroup> groups = edi::group_series_files(names);
-    if (groups.size() < 2)
-        return refuse(tr("The file names do not split into one pattern per experiment: name each point's files alike, "
-                         "the point as the one number that changes"));
-    // Copied (edi ADR-0088 point 3, as a scan's): the files go into scans/<name> in the project's folder, or a working
-    // folder before the project has one; linked, the series reads the files' own folder.
-    QString declared = declared_folder(project.path, folder);
-    QString directory, freshRoot, target;
-    const auto discard = [&] {
-        if (!freshRoot.isEmpty()) edi::remove_archive_directory(freshRoot.toStdString());
-        else if (!target.isEmpty()) QDir(target).removeRecursively();
-    };
-    if (copy) {
-        directory = QString::fromStdString(project.path.empty() ? project.scan_data_root : project.path);
-        if (directory.isEmpty()) {
-            try {
-                freshRoot = QString::fromStdString(edi::fresh_archive_directory("scan-data"));
-                directory = freshRoot;
-            } catch (const std::exception& error) {
-                return refuse(tr("A working folder for the datasets could not be made: %1").arg(QString::fromUtf8(error.what())));
-            }
-        }
-        if (!QFileInfo(directory).isDir()) return refuse(tr("The project's data folder is unavailable"));
-        const QDir root(directory);
-        const QString name = QStringLiteral("series");
-        QString relative = QStringLiteral("scans/") + name;
-        for (int n = 2; root.exists(relative); ++n) relative = QStringLiteral("scans/%1_%2").arg(name).arg(n);
-        target = root.filePath(relative);
-        if (!root.mkpath(relative)) {
-            discard();
-            return refuse(tr("The folder %1 could not be made in the project").arg(relative));
-        }
-        for (const std::string& file : names) {
-            const QString base = QString::fromStdString(file);
-            if (!QFile::copy(QDir(folder).filePath(base), QDir(target).filePath(base))) {
-                discard();
-                return refuse(tr("%1 could not be copied into the project").arg(base));
-            }
-        }
-        folder = target;
-        declared = relative;
-    }
-    edi::Project next(project);
-    next.sequential_fit = edi::SequentialFitConfig{};
-    if (copy && next.path.empty()) next.scan_data_root = directory.toStdString();
-    try {
-        const std::vector<std::string> made = edi::declare_series_of_joint_fits(
-            next, next.experiments.front()->name, declared.toStdString(), groups, "series");
-        // Each experiment shows its first point's pattern; the fit reads every point from the folder.
-        std::vector<edi::ItemVec<edi::BraggPdExperiment>::Ptr> held;
-        for (std::size_t g = 0; g < next.experiments.size(); ++g) {
-            if (g >= made.size()) {
-                held.push_back(next.experiments[g]);
-                continue;
-            }
-            const std::string path = (std::filesystem::path(folder.toStdString()) / groups[g].files.front()).string();
-            edi::PlainDataLoad read = edi::experiment_with_plain_data(*next.experiments[g], path, false);
-            held.push_back(std::make_shared<edi::BraggPdExperiment>(std::move(read.experiment)));
-        }
-        next.experiments.assign(std::move(held));
-        next.adopt_experiments();
-        next.fitting_mode = "sequential";
-    } catch (const std::exception& problem) {
-        discard();
-        return refuse(tr("The series could not be made: %1").arg(QString::fromUtf8(problem.what())));
-    }
-    auto before = std::make_shared<const edi::Project>(project);
-    const QString error = apply(edi::Edit::replace_project(project, std::move(next)), true);
+    // Grouping, copying every file and reading each experiment's first pattern take as long as the series is large:
+    // they run on a worker over a copy of the project, and the result is applied here if nothing changed meanwhile
+    // (edi ADR-0089 point 7). Load stays disabled until then.
+    listing_dataset_folder_ = true;
+    emit listingDatasetFolderChanged();
     if (!self || retired_) return false;
-    if (!error.isEmpty()) {
-        discard();
-        return refuse(error);
-    }
-    undo_history_.emplace_back(AppliedText{std::move(before)});
-    syncUndo();
-    syncLoadState();
+    auto base = std::make_shared<const edi::Project>(*project_);
+    const quint64 revision = revision_;
+    run_in_background([self, base, revision, folder, names = std::move(names), copy]() mutable {
+        auto next = std::make_shared<edi::Project>(*base);
+        QString error, freshRoot, target;
+        const auto discard = [&] {
+            if (!freshRoot.isEmpty()) edi::remove_archive_directory(freshRoot.toStdString());
+            else if (!target.isEmpty()) QDir(target).removeRecursively();
+        };
+        [&] {
+            const std::vector<edi::SeriesGroup> groups = edi::group_series_files(names);
+            if (groups.size() < 2) {
+                error = tr("The file names do not split into one pattern per experiment: name each point's files alike, "
+                           "the point as the one number that changes");
+                return;
+            }
+            // Copied (edi ADR-0088 point 3, as a scan's): the files go into scans/<name> in the project's folder, or a
+            // working folder before the project has one; linked, the series reads the files' own folder.
+            QString declared = declared_folder(base->path, folder);
+            QString directory, from = folder;
+            if (copy) {
+                directory = QString::fromStdString(base->path.empty() ? base->scan_data_root : base->path);
+                if (directory.isEmpty()) {
+                    try {
+                        freshRoot = QString::fromStdString(edi::fresh_archive_directory("scan-data"));
+                        directory = freshRoot;
+                    } catch (const std::exception& problem) {
+                        error = tr("A working folder for the datasets could not be made: %1").arg(QString::fromUtf8(problem.what()));
+                        return;
+                    }
+                }
+                if (!QFileInfo(directory).isDir()) {
+                    error = tr("The project's data folder is unavailable");
+                    return;
+                }
+                const QDir root(directory);
+                const QString name = QStringLiteral("series");
+                QString relative = QStringLiteral("scans/") + name;
+                for (int n = 2; root.exists(relative); ++n) relative = QStringLiteral("scans/%1_%2").arg(name).arg(n);
+                target = root.filePath(relative);
+                if (!root.mkpath(relative)) {
+                    error = tr("The folder %1 could not be made in the project").arg(relative);
+                    return;
+                }
+                for (const std::string& file : names) {
+                    const QString base_name = QString::fromStdString(file);
+                    if (!QFile::copy(QDir(from).filePath(base_name), QDir(target).filePath(base_name))) {
+                        error = tr("%1 could not be copied into the project").arg(base_name);
+                        return;
+                    }
+                }
+                from = target;
+                declared = relative;
+            }
+            next->sequential_fit = edi::SequentialFitConfig{};
+            if (copy && next->path.empty()) next->scan_data_root = directory.toStdString();
+            try {
+                const std::vector<std::string> made = edi::declare_series_of_joint_fits(
+                    *next, next->experiments.front()->name, declared.toStdString(), groups, "series");
+                // Each experiment shows its first point's pattern; the fit reads every point from the folder.
+                std::vector<edi::ItemVec<edi::BraggPdExperiment>::Ptr> held;
+                for (std::size_t g = 0; g < next->experiments.size(); ++g) {
+                    if (g >= made.size()) {
+                        held.push_back(next->experiments[g]);
+                        continue;
+                    }
+                    const std::string path = (std::filesystem::path(from.toStdString()) / groups[g].files.front()).string();
+                    edi::PlainDataLoad read = edi::experiment_with_plain_data(*next->experiments[g], path, false);
+                    held.push_back(std::make_shared<edi::BraggPdExperiment>(std::move(read.experiment)));
+                }
+                next->experiments.assign(std::move(held));
+                next->adopt_experiments();
+                next->fitting_mode = "sequential";
+            } catch (const std::exception& problem) {
+                error = tr("The series could not be made: %1").arg(QString::fromUtf8(problem.what()));
+            }
+        }();
+        if (!error.isEmpty()) discard();
+        QMetaObject::invokeMethod(
+            QCoreApplication::instance(),
+            [self, base, revision, next, error, freshRoot, target]() mutable {
+                const auto discard = [&] {
+                    if (!freshRoot.isEmpty()) edi::remove_archive_directory(freshRoot.toStdString());
+                    else if (!target.isEmpty()) QDir(target).removeRecursively();
+                };
+                if (!self || self->retired_) {
+                    if (error.isEmpty()) discard();
+                    return;
+                }
+                self->listing_dataset_folder_ = false;
+                emit self->listingDatasetFolderChanged();
+                if (!self || self->retired_) return;
+                QString refusal = error;
+                if (refusal.isEmpty() && self->revision_ != revision) {
+                    refusal = tr("The project changed while the series was read: load it again");
+                }
+                if (refusal.isEmpty()) {
+                    const PublicationScope publication(*self);
+                    refusal = self->apply(edi::Edit::replace_project(*self->project_, std::move(*next)), true);
+                    if (!self || self->retired_) return;
+                    if (refusal.isEmpty()) {
+                        self->undo_history_.emplace_back(AppliedText{base});
+                        self->syncUndo();
+                        self->syncLoadState();
+                        return;
+                    }
+                }
+                if (error.isEmpty()) discard();
+                self->setLastError(refusal);
+                emit self->refused(refusal);
+            },
+            Qt::QueuedConnection);
+    });
     return true;
 }
 
@@ -4188,24 +4229,42 @@ void ProjectViewModel::syncDataset(int index) {
     }
 }
 
-std::vector<edi::Edit::ScanValue> ProjectViewModel::datasetValues(const std::vector<std::string>& row) const {
-    return datasetValues(row, scanTemplateOrModel(), scan_session_->index());
+int ProjectViewModel::startDataset(const edi::Project& from, const edi::ScanResultIndex& index, int dataset) {
+    if (from.fitting_mode != "sequential") {
+        return -1;
+    }
+    for (int before = std::min(dataset, static_cast<int>(index.rows.size())) - 1; before >= 0; --before) {
+        const edi::ScanResultIndex::Row& row = index.rows[static_cast<std::size_t>(before)];
+        if (row.offset >= 0 && row.converged) {
+            return before;
+        }
+    }
+    return -1;
 }
 
 std::vector<edi::Edit::ScanValue> ProjectViewModel::pointValues(int index) const {
-    std::vector<edi::Edit::ScanValue> values = datasetValues(scan_session_->row(*project_, index));
-    overlaySeriesPoint(values, *project_, scan_session_->datasets(), index);
+    const edi::Project& from = scanTemplateOrModel();
+    const int start = startDataset(from, scan_session_->index(), index);
+    std::vector<edi::Edit::ScanValue> values = datasetValues(scan_session_->row(*project_, index), from,
+                                                             scan_session_->index(), scan_session_->row(*project_, start));
+    overlaySeriesPoint(values, *project_, scan_session_->datasets(), index, start);
     return values;
 }
 
 void ProjectViewModel::overlaySeriesPoint(std::vector<edi::Edit::ScanValue>& values, const edi::Project& project,
-                                          const edi::ScanDatasets& datasets, int index) {
+                                          const edi::ScanDatasets& datasets, int index, int start) {
     if (!datasets.joint() || index < 0 || index >= static_cast<int>(datasets.files.size())) {
         return;
     }
     const auto own = edi::series_point_values(project, datasets.files[static_cast<std::size_t>(index)]);
+    // A sequential point's per-experiment values started from its predecessor's rows, as its shared ones did.
+    const auto started = start >= 0 && start < static_cast<int>(datasets.files.size())
+                             ? edi::series_point_values(project, datasets.files[static_cast<std::size_t>(start)])
+                             : std::map<std::string, edi::SeriesPointValue>{};
     for (edi::Edit::ScanValue& value : values) {
         if (const auto found = own.find(value.unique_name); found != own.end()) {
+            const auto from = started.find(value.unique_name);
+            value.start = from != started.end() ? from->second.value : value.value;
             value.value = found->second.value;
             value.uncertainty = found->second.uncertainty;
         }
@@ -4240,7 +4299,8 @@ std::vector<edi::BeamModeEnum> ProjectViewModel::beamModes() const {
 
 std::vector<edi::Edit::ScanValue> ProjectViewModel::datasetValues(const std::vector<std::string>& row,
                                                                   const edi::Project& template_project,
-                                                                  const edi::ScanResultIndex& index) const {
+                                                                  const edi::ScanResultIndex& index,
+                                                                  const std::vector<std::string>& start_row) const {
     // Every parameter at the template's state, then the results row's value and uncertainty over it. The row was
     // checked as it was read: a cell that does not convert now refuses, never falling back to the template's value.
     std::vector<edi::Edit::ScanValue> values;
@@ -4270,8 +4330,14 @@ std::vector<edi::Edit::ScanValue> ProjectViewModel::datasetValues(const std::vec
             throw std::invalid_argument("analysis/results.csv: the row's '" + found->second->name +
                                         "' cells are not numbers");
         }
-        // The dataset's fit started from the template's value: Start and Change read it (the owner, 2026-11-17).
-        value.start = value.value;
+        // Where the dataset's fit started: its predecessor's written cell in a sequential scan, else the template's
+        // value. Start and Change read it (the owner, 2026-11-17).
+        double started = value.value;
+        if (!start_row.empty() && !edi::parse_scan_number(start_row[found->second->value], started)) {
+            throw std::invalid_argument("analysis/results.csv: the starting row's '" + found->second->name +
+                                        "' cell is not a number");
+        }
+        value.start = started;
         value.value = number;
         // "nan": the fit gave this parameter no s.u. (it was not free in it).
         value.uncertainty = uncertainty_cell == "nan" ? std::nullopt : std::optional<double>(uncertainty);
@@ -4398,8 +4464,10 @@ void ProjectViewModel::startViewRead() {
     // experiment rows, are read off the GUI thread (edi ADR-0089 point 7).
     std::vector<edi::Edit::ScanValue> values;
     const bool overlaid = scan_session_->datasets().joint();
+    const int start = startDataset(scanTemplateOrModel(), scan_session_->index(), index);
     try {
-        values = datasetValues(scan_session_->row(*project_, index));
+        values = datasetValues(scan_session_->row(*project_, index), scanTemplateOrModel(), scan_session_->index(),
+                               scan_session_->row(*project_, start));
     } catch (const std::exception& refusal) {
         view_applied_ = request;
         const QString error = QString::fromUtf8(refusal.what());
@@ -4427,7 +4495,7 @@ void ProjectViewModel::startViewRead() {
         DatasetView view;
         view.values = std::move(values);
         try {
-            overlaySeriesPoint(view.values, *project_, datasets, index);
+            overlaySeriesPoint(view.values, *project_, datasets, index, start);
             readDataset(view, datasets, index, modes);
         } catch (const std::exception& refusal) {
             view.error = QString::fromUtf8(refusal.what());
@@ -4440,13 +4508,13 @@ void ProjectViewModel::startViewRead() {
     const QPointer<ProjectViewModel> self(this);
     // What a series point's values read beside its row: the project's paths, experiments and parameters.
     std::shared_ptr<const edi::Project> source = overlaid ? std::make_shared<const edi::Project>(*project_) : nullptr;
-    run_in_background([self, request, index, datasets, modes, d_spacing, values = std::move(values),
+    run_in_background([self, request, index, start, datasets, modes, d_spacing, values = std::move(values),
                        shown = std::move(shown), source = std::move(source)]() mutable {
         DatasetView view;
         view.values = std::move(values);
         try {
             if (source) {
-                overlaySeriesPoint(view.values, *source, datasets, index);
+                overlaySeriesPoint(view.values, *source, datasets, index, start);
             }
             readDataset(view, datasets, index, modes);
             if (shown) {
@@ -6513,8 +6581,10 @@ QString ProjectViewModel::stageScan(const QString& directory, const edi::Project
     scan.refusal = scan.listing->load(staged);
     if (scan_template_ && current_dataset_ >= 0 && project_->experiment().data && scan.refusal.isEmpty()) {
         try {
-            scan.shown = datasetValues(scan.listing->row(staged, current_dataset_), staged, scan.listing->index());
-            overlaySeriesPoint(*scan.shown, staged, scan.listing->datasets(), current_dataset_);
+            const int start = startDataset(staged, scan.listing->index(), current_dataset_);
+            scan.shown = datasetValues(scan.listing->row(staged, current_dataset_), staged, scan.listing->index(),
+                                       scan.listing->row(staged, start));
+            overlaySeriesPoint(*scan.shown, staged, scan.listing->datasets(), current_dataset_, start);
         } catch (const std::exception& refusal) {
             return QString::fromUtf8(refusal.what());
         }

@@ -1256,18 +1256,24 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     };
     // Applies a projection read for request `request`, unless a newer one was asked for since.
     void applyDatasetView(std::uint64_t request, int index, DatasetView view);
-    // The values a dataset is shown with: the template's, with its results row's over them.
-    std::vector<edi::Edit::ScanValue> datasetValues(const std::vector<std::string>& row) const;
-    // The same over `from`, read with `index`'s columns.
+    // The values a dataset is shown with: `from`'s, with its results row's over them, read with `index`'s columns.
+    // `start_row`: the results row of the dataset the fit started from (startDataset), whose cells are each value's
+    // start; empty: the template's values are.
     std::vector<edi::Edit::ScanValue> datasetValues(const std::vector<std::string>& row, const edi::Project& from,
-                                                    const edi::ScanResultIndex& index) const;
+                                                    const edi::ScanResultIndex& index,
+                                                    const std::vector<std::string>& start_row = {}) const;
+    // The dataset a sequential fit started dataset `dataset` from: the last one before it, in fitting order, whose
+    // fit succeeded (crysta ADR-0131 point 3, as the scan driver seeds); -1 when it started from the template (the
+    // first, one with no successful predecessor, or any dataset of an independent scan).
+    static int startDataset(const edi::Project& from, const edi::ScanResultIndex& index, int dataset);
     // The values dataset `index` is shown with: its results row's, and a series point's per-experiment row's over them.
     std::vector<edi::Edit::ScanValue> pointValues(int index) const;
     // A series point's per-experiment values (`results_experiments.csv`) over `values`, read from `project`.
     // What every row of a series' list shows alike, when it last announced them all (syncDatasets).
     QString dataset_rows_signature_;
+    // `start`: the point its fit started from (startDataset), whose rows are the starts; -1: the template's values.
     static void overlaySeriesPoint(std::vector<edi::Edit::ScanValue>& values, const edi::Project& project,
-                                   const edi::ScanDatasets& datasets, int index);
+                                   const edi::ScanDatasets& datasets, int index, int start = -1);
     // Reads dataset `index` into `view`: its file, or a series point's file of each experiment (beam modes in
     // project order). Throws as edi::read_scan_dataset does.
     static void readDataset(DatasetView& view, const edi::ScanDatasets& datasets, int index,
