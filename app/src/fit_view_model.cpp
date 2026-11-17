@@ -975,12 +975,15 @@ bool FitViewModel::waitsForView(int mode) const {
 }
 
 bool FitViewModel::viewReady() const {
-    // A pattern chart once the last view asked for is applied; with no pattern chart, a Stacked view or Map with no
-    // dataset read pending, in every update mode.
+    // A pattern chart once the last view asked for is applied; a Stacked view or Map with no dataset read pending, in
+    // every update mode. With neither (Meas vs calc, Correlations, Structure, Evolution, another page) the followed
+    // file's model still follows at the chosen cadence, so those views and the parameter table move with the fit (the
+    // owner, 2026-11-17); the fit does not wait for them (waitsForView).
     if (owner_.patternShown()) {
         return owner_.followReady();
     }
-    return owner_.scanViewShown() && owner_.viewSettled();
+    // Settled, as for Stacked and Map: no read in flight, the last view asked for applied.
+    return owner_.viewSettled();
 }
 
 std::uint64_t FitViewModel::handOver(const std::string& file) {
