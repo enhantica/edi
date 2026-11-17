@@ -1,8 +1,53 @@
 /* SPDX-License-Identifier: BSD-3-Clause */
 /* The About page's signature card: the photo in a circle beside the name, place and contact links. */
-.md-typeset .ed-signature { display: flex; align-items: center; gap: 1rem; margin: 1.5rem 0; padding-top: 1.5rem; }
+.md-typeset .ed-signature { display: flex; align-items: center; gap: 1rem; margin: 1.2rem 0 1.5rem; }
 .md-typeset .ed-signature img { width: 72px; height: 72px; border: 0; padding: 0; background: none; border-radius: 50%; object-fit: cover; flex: none; }
 .md-typeset .ed-signature-text { display: flex; flex-direction: column; gap: 0.1rem; }
 .md-typeset .ed-signature-text strong { color: var(--md-default-fg-color); }
 .md-typeset .ed-signature-place { color: var(--md-default-fg-color--light); font-size: 0.9em; }
 .md-typeset .ed-signature-links { font-size: 0.9em; }
+
+/* The earlier projects' contributors right of the name (edi ADR-0092), wrapping below the card on narrow screens.
+   On hover the avatar comes to the top, its neighbours step aside, the rest fade, and its name shows below.
+   The text above is as far from the photo as the card from a wrapped row (the card's top margin equals the row gap),
+   and a wrapped row starts at the photo's left edge, so the extra space before the row sits right of the text. */
+.md-typeset .ed-signature { flex-wrap: wrap; row-gap: 1.2rem; }
+.md-typeset .ed-signature-text { margin-right: 0.6rem; }
+.md-typeset .ed-contributors {
+  --ed-contributor-border: color-mix(in srgb, var(--md-default-fg-color) 18%, var(--md-default-bg-color));
+  display: flex; align-items: center;
+}
+.md-typeset .ed-contributors-stack { display: flex; align-items: center; }
+.md-typeset .ed-contributor { position: relative; display: block; margin-left: -44px; transition: transform 0.18s ease; }
+.md-typeset .ed-contributor:first-child { margin-left: 0; }
+.md-typeset .ed-signature .ed-contributor img {
+  display: block; border: 1px solid var(--ed-contributor-border); background: var(--md-default-bg-color);
+}
+.md-typeset .ed-contributor::after {
+  content: ""; position: absolute; inset: 0; border-radius: 50%; background: transparent; transition: background 0.18s;
+}
+.md-typeset .ed-contributor-name {
+  display: none; position: absolute; top: calc(100% + 8px); left: 50%; transform: translateX(-50%); z-index: 9;
+  padding: 0.25em 0.6em; border: 1px solid var(--ed-contributor-border); border-radius: 6px;
+  background: color-mix(in srgb, var(--md-default-fg-color) 4%, var(--md-default-bg-color));
+  box-shadow: 0 2px 6px rgb(0 0 0 / 8%); color: var(--md-default-fg-color); font-weight: 700; white-space: nowrap;
+}
+.md-typeset .ed-contributors-stack:hover .ed-contributor { transform: translateX(-12px); }
+.md-typeset .ed-contributors-stack .ed-contributor:hover ~ .ed-contributor {
+  transform: translateX(12px); z-index: calc(50 - var(--i));
+}
+.md-typeset .ed-contributors-stack .ed-contributor:hover { transform: translateX(0); z-index: 60; }
+.md-typeset .ed-contributors-stack:hover .ed-contributor:not(:hover)::after {
+  background: color-mix(in srgb, var(--md-default-bg-color) 55%, transparent);
+}
+.md-typeset .ed-contributor:hover .ed-contributor-name,
+.md-typeset .ed-contributor:focus-visible .ed-contributor-name { display: block; }
+.md-typeset .ed-contributors-label {
+  margin-left: 1rem; color: var(--md-default-fg-color--light); font-size: 0.9em; line-height: 1.45;
+}
+/* A phone too narrow for the stack and the label side by side: the label goes under the stack, so the group never
+   runs past the page; the first avatar stays under the photo. */
+@media screen and (max-width: 25em) {
+  .md-typeset .ed-contributors { flex-wrap: wrap; row-gap: 0.4rem; }
+  .md-typeset .ed-contributors-label { flex-basis: 100%; margin-left: 0; }
+}
