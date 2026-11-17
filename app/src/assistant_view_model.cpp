@@ -11635,7 +11635,11 @@ struct AssistantViewModel::State {
             }
             else if(structure_app_action(name)) {} // Final original structure control cue was appended above.
             else if(name=="load_structure") { run->inputs.push_back({Kind::Navigate,"structures.load"}); run->inputs.push_back({Kind::Navigate,"structures.load.file"}); }
-            else if(name=="load_data") { run->inputs.push_back({Kind::Navigate,"experiments.load"}); run->inputs.push_back({Kind::Navigate,"experiments.load.dataFile"}); }
+            else if(name=="load_data") {
+                // Measured data load from the experiment's own Data file cell, not from Load ▾ (which loads experiments).
+                run->inputs.push_back({Kind::Navigate,QString("experiments.loadData.%1").arg(individual_member_index(run))});
+                run->inputs.push_back({Kind::Navigate,"experiments.load.dataFile"});
+            }
             else if(name=="create_experiment")run->inputs.push_back({Kind::Navigate,"experiments.create"});
             else {
                 const auto axis=args.value("axis").toString(),token=args.value("token").toString();
@@ -11899,7 +11903,7 @@ struct AssistantViewModel::State {
         if(!receiver || receiver->state_.get()!=this)return;
         const QPointer<ExperimentViewModel> targetExperiment=measured && row?qobject_cast<ExperimentViewModel*>(row->property("experiment").value<QObject*>()):nullptr;
         if(!receiver || receiver->state_.get()!=this)return;
-        const QPointer<QObject> menu(group->findChild<QObject*>(measured?QStringLiteral("experiments.load.menu"):QStringLiteral("structures.load.menu")));
+        const QPointer<QObject> menu(group->findChild<QObject*>(measured?QStringLiteral("experiments.load.dataMenu"):QStringLiteral("structures.load.menu")));
         const auto targetCurrent=[this,run,load,row,targetExperiment,target_name,measured,menu] {
             const auto runReceiver=run->receiver;
             if(!runReceiver || runReceiver->state_.get()!=this || !load)return false;
@@ -11909,7 +11913,8 @@ struct AssistantViewModel::State {
             const auto content=menu?menu->property("contentItem").value<QQuickItem*>():nullptr;
             if(!menu || !menu->property("visible").toBool() || !content || !content->isAncestorOf(load))return false;
             if(!measured)return true;
-            if(!row || !targetExperiment || menu->property("selected").value<QObject*>()!=targetExperiment)return false;
+            // The data menu names the experiment its row opened it for.
+            if(!row || !targetExperiment || menu->property("target").value<QObject*>()!=targetExperiment)return false;
             const auto member=row->property("experiment").value<QObject*>();
             if(!runReceiver || runReceiver->state_.get()!=this || !row || !targetExperiment || member!=targetExperiment)return false;
             const bool current=create_widget_current(run);
@@ -12019,14 +12024,17 @@ struct AssistantViewModel::State {
               (extrasOperation && run->inputs.at(run->step).kind==AssistantWidgetInput::Kind::FileLoadCue))));
         const QString sidebar = QStringLiteral("workflow.") + run->page + ".manualSidebar";
         QPointer<QQuickItem> menuContent;
-        const auto loadButton=name.startsWith("experiments.load.")?QStringLiteral("experiments.load"):
+        // The measured-data menu belongs to the Experiments group (each row's Data file cell opens it); Load ▾ menus
+        // belong to their buttons.
+        const bool dataMenu=name.startsWith("experiments.load.data");
+        const auto loadButton=dataMenu?QStringLiteral("group.experiments"):name.startsWith("experiments.load.")?QStringLiteral("experiments.load"):
             name.startsWith("structures.load.")?QStringLiteral("structures.load"):QString();
         if(!loadButton.isEmpty())for(auto* button:widget_items()) {
             if(button->objectName()!=loadButton || button->window()!=run->window)continue;
             bool original=false;
             for(auto* parent=button;parent;parent=parent->parentItem())if(parent->objectName()==sidebar)original=true;
             if(!original)continue;
-            const auto menu=button->findChild<QObject*>(loadButton+".menu");
+            const auto menu=button->findChild<QObject*>(dataMenu?QStringLiteral("experiments.load.dataMenu"):loadButton+".menu");
             if(menu && menu->property("visible").toBool())menuContent=menu->property("contentItem").value<QQuickItem*>();
         }
         for (auto* item : widget_items()) {
@@ -12609,7 +12617,7 @@ struct AssistantViewModel::State {
             }
             add(Kind::Navigate,"appBar.tab.experiment");add(Kind::Navigate,"sideBar.tab.basic");add(Kind::Navigate,"experiments.create");
             add(Kind::Choose,"experimentType.beamMode");add(Kind::Choose,"experimentType.radiationProbe");
-            add(Kind::Navigate,"experiments.load");add(Kind::Navigate,"experiments.load.dataFile");add(Kind::Text,"experiments.name.0",QString::fromStdString(experiment.name.value()));
+            add(Kind::Navigate,"experiments.loadData.0");add(Kind::Navigate,"experiments.load.dataFile");add(Kind::Text,"experiments.name.0",QString::fromStdString(experiment.name.value()));
             for(const auto tier:{CategoryListModel::Basic,CategoryListModel::Extras})for(const auto* category:experiment_order) {
                 if(category_presentation(QString::fromStdString(category->id)).tier!=tier)continue;
                 if(category->id=="background") {
