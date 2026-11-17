@@ -842,6 +842,20 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
             steps_.push_back({QStringLiteral("freecheck-%1").arg(i + 1, 2, 10, QLatin1Char('0')), actions});
         }
     }
+    // Structure > Extra's generated tables, each opened from folded: every one shows its rows and columns
+    // (`--demo-only collapsed-`).
+    if (only.startsWith(QLatin1String("collapsed-"))) {
+        const QString root = QString::fromUtf8(EDI_CLI_PROJECTS_DIR) + "/";
+        const QString structure = QStringLiteral("appBar.tab.structure");
+        steps_.push_back({"collapsed-1-symop", {"resize:1480x800", "open-project:" + root + "pd-neut-cwl_cosio-d20_2k/project",
+                                                structure, extras, "expand:group.space_group_symop",
+                                                "assert-table:generated.space_group_symop.list"}});
+        steps_.push_back({"collapsed-2-atoms", {"expand:group.expanded_atom_site", "reveal:group.expanded_atom_site",
+                                                "assert-table:generated.expanded_atom_site.list"}});
+        steps_.push_back({"collapsed-3-moments", {"expand:group.expanded_atom_site_moment",
+                                                  "reveal:group.expanded_atom_site_moment",
+                                                  "assert-table:generated.expanded_atom_site_moment.list"}});
+    }
     // A single project fitted, its parameter table after the fit (`--demo-only lbcofit-`).
     if (only.startsWith(QLatin1String("lbcofit-"))) {
         const QString root = QString::fromUtf8(EDI_CLI_PROJECTS_DIR) + "/";
@@ -2270,6 +2284,27 @@ bool DemoDriver::perform(const QString& action) {
         const QDir data(loaded_cli_project_ + QStringLiteral("/experiments/d20_scan"));
         if (loaded_cli_project_.isEmpty() || !QDir(data).removeRecursively()) {
             fail(QStringLiteral("step %1: the scan's data could not be removed").arg(steps_[current_].image));
+            return false;
+        }
+        return true;
+    }
+    // `assert-table:<name>`: the table has rows and at least two columns with a width, as a table shown after its group
+    // was opened must (a table made inside a folded group used to open as a blank strip).
+    if (action.startsWith(QLatin1String("assert-table:"))) {
+        const QString name = action.mid(QStringLiteral("assert-table:").size());
+        QQuickItem* table = find(name, false);
+        const int rows = table != nullptr ? table->property("count").toInt() : 0;
+        int sized = 0;
+        if (table != nullptr) {
+            for (const QVariant& width : table->property("columnWidths").toList()) {
+                sized += width.toDouble() > 1.0 ? 1 : 0;
+            }
+        }
+        if (rows <= 0 || sized < 2) {
+            fail(QStringLiteral("step %1: table '%2' shows %3 rows and %4 sized columns")
+                     .arg(steps_[current_].image, name)
+                     .arg(rows)
+                     .arg(sized));
             return false;
         }
         return true;
