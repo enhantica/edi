@@ -386,6 +386,8 @@ Item {
 
             objectName: "evolution.bankLegend"
             z: 1
+            // A bank's name at most a tenth of the chart and about 100 px, cut in its middle (the owner, 2026-11-17).
+            maximumLabelWidth: Math.round(Math.min(chart.width * 0.1, chart.em * 7.5))
             x: chart.em
             y: chart.em
             colors: chart.colors

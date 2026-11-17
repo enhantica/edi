@@ -477,7 +477,8 @@ Item {
         property: "rowLabelsRoom"
         when: chart.shown
         restoreMode: Binding.RestoreNone
-        value: chart.scan !== null && chart.scan.rowTextsRevision >= 0 ? Math.ceil(labelIcon.implicitWidth + chart.em * 0.5 + chart.scan.widestRowText(chart.shownLabelDatasets, labelBold.font)) : 0
+        // At most a tenth of the chart and about 100 px: a longer name is cut in its middle (the owner, 2026-11-17).
+        value: chart.scan !== null && chart.scan.rowTextsRevision >= 0 ? Math.min(Math.ceil(labelIcon.implicitWidth + chart.em * 0.5 + chart.scan.widestRowText(chart.shownLabelDatasets, labelBold.font)), Math.round(Math.min(chart.width * 0.1, chart.em * 7.5))) : 0
     }
     // The row label's pieces as IconLine draws them: the icon a label of the icon font, measured by the width it takes
     // (an icon is measured in the font of an item drawing it, never one built from the family alone).
@@ -504,6 +505,8 @@ Item {
         // Instantiate only labels that fit in the visible plot, never one item per scan file.
         model: chart.shown ? chart.shownLabelDatasets.length : 0
         delegate: IconLine {
+            id: rowLabel
+
             required property int index
             readonly property int dataset: chart.shownLabelDatasets[index] ?? -1
             // Only a label shown has its text: the others, hidden while the rows are too close, lay out nothing.
@@ -530,10 +533,22 @@ Item {
                 },
                 {
                     "text": rowText,
-                    "bold": marked
+                    "bold": marked,
+                    "elides": true
                 }
             ]
+            // Within the labels' room, a long name cut in its middle so its distinguishing end (the number and the
+            // extension) stays; the whole name in the tooltip (the owner, 2026-11-17).
+            maximumWidth: chart.rowLabelsRoom
+            elide: Text.ElideMiddle
             x: Math.max(0, plot.x - width - chart.rowLabelGap)
+            HoverHandler {
+                id: rowLabelHover
+            }
+            EaElements.ToolTip {
+                text: rowLabel.rowText
+                requested: rowLabelHover.hovered && rowLabel.rowText !== ""
+            }
             // On Stacked a label stands on its curve's baseline, its bottom at the row (the owner, 2026-10-22); on the
             // Map it is centred on its band.
             y: plot.y + (axisY.max - at) / (axisY.max - axisY.min) * plot.height - (chart.mode === "stacked" ? height : height / 2)
