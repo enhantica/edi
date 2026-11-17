@@ -46,13 +46,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        # dev builds only the web app, which needs the Linux SDK alone.
         include:
           - platform: linux-64
             runner: ubuntu-24.04
-          - platform: osx-arm64
-            runner: macos-15
-          - platform: win-64
-            runner: windows-2022
     runs-on: ${{ matrix.runner }}
     defaults:
       run:
