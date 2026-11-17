@@ -426,7 +426,7 @@ bool AssistantWorkReports::artifactCurrent(const Object& artifact,QStringView st
 }
 
 QVariantMap AssistantWorkReports::capture(bool automaticTrigger,const AssistantWorkReportCoverage& counts,QStringView storageRoot,
-        const std::function<AssistantWorkReportSnapshot(quint64)>& build,const QString& expectedScope,quint64 expectedRevision,bool projectionBlocked) {
+        [[maybe_unused]] const std::function<AssistantWorkReportSnapshot(quint64)>& build,const QString& expectedScope,quint64 expectedRevision,bool projectionBlocked) {
     // The original worker and owner-thread completion retain their own snapshots.
     struct WorkCapture {
         std::shared_ptr<WriterWorkerLease> lease;

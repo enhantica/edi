@@ -26,7 +26,8 @@ formatting & static analysis (Python + C++)". The owner asked for the same check
    system headers. The Python bindings take crysta's base set (`-Wall -Wextra -Wpedantic`), as crysta's bindings do,
    since nanobind's headers are not system headers there. In the code built on Qt (the app host and the assistant
    adapter) GCC's `-Wnull-dereference` is off: GCC reports it after inlining Qt's smart pointers and containers, on paths
-   the code has already checked (`if (self.isNull() || ...) return; self->...`). Clang keeps it there, and clang-tidy's
+   the code has already checked (`if (self.isNull() || ...) return; self->...`). MSVC's unreachable-code warning (C4702) is off there too: its optimizer reports it inside Qt's private
+   headers once their templates are inlined, where treating them as external headers does not reach. Clang keeps it there, and clang-tidy's
    analyzer checks null dereferences on every path.
 2. **`EDI_WERROR=ON` makes each of those warnings an error.** It is off for a local build and on in CI: the build scripts
    (`core-build.sh`, `app-build.sh`, `wasm-build.sh`) pass the `EDI_WERROR` environment variable to CMake. CI sets it

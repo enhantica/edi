@@ -31,7 +31,8 @@ endif()
 # Applies the warnings to every C++ source of the TARGETS under edi's own directories (core, cli, lib, app, assistant),
 # leaving out the hidden test tiers and third_party/. BASE takes the base set. QT marks targets built on Qt: there GCC
 # reports -Wnull-dereference after inlining Qt's smart pointers and containers, on paths the code has already checked,
-# so it is off on GCC; Clang keeps it, and clang-tidy's analyzer checks null dereferences on every path.
+# so it is off on GCC; Clang keeps it, and clang-tidy's analyzer checks null dereferences on every path. MSVC's C4702
+# is off there too, for the same reason in Qt's private headers.
 function(edi_apply_warnings)
     cmake_parse_arguments(PARSE_ARGV 0 arg "QT;BASE" "" "TARGETS")
     if(arg_BASE)
@@ -41,6 +42,11 @@ function(edi_apply_warnings)
     endif()
     if(arg_QT AND CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
         list(APPEND warnings -Wno-null-dereference)
+    endif()
+    # MSVC's optimizer reports unreachable code (C4702) inside Qt's private headers once their templates are inlined
+    # here; it is a code-generation warning, which treating them as external headers does not reach.
+    if(arg_QT AND MSVC)
+        list(APPEND warnings /wd4702)
     endif()
     set(own "^${PROJECT_SOURCE_DIR}/(core|cli|lib|app|assistant)/")
     set(skip "^${PROJECT_SOURCE_DIR}/(core/third_party|third_party)/")
