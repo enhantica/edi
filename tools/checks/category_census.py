@@ -114,6 +114,7 @@ NOT_MODEL = {
     'SphericalMoment': "a moment's spherical form, derived from the model on each read",
     'FitPreamble': 'a fit report',
     'ScanFileRecord': 'a fit report',
+    'Factors': 'a fit report',
     'ScanPreamble': 'a fit report',
     'BankMetric': 'a fit report',
     'FitResultBase': 'a fit report',
