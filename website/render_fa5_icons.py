@@ -42,6 +42,7 @@ NAMES = [
     'cube',
     'database',
     'desktop',
+    'dice-d20',
     'dot-circle',
     'download',
     'eraser',

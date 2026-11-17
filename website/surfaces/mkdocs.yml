@@ -33,20 +33,20 @@ theme:
     - content.code.copy
     - content.tabs.link
 extra_css:
-  - assets/brand-colors.css?v=1
-  - assets/wordmark.css?v=header-2
-  - assets/site-components.css?v=tables-5
-  - assets/experiment-tags.css?v=5
-  - assets/parameter-reference.css?v=3
-  - assets/about/about.css?v=5
+  - assets/brand-colors.css
+  - assets/wordmark.css
+  - assets/site-components.css
+  - assets/experiment-tags.css
+  - assets/parameter-reference.css
+  - assets/about/about.css
 extra_javascript:
-  - assets/example-catalogue.js?v=7
+  - assets/example-catalogue.js
   # Written by build.py from the app's settings.
   - assets/feedback-form.js
-  - assets/contact-form.js?v=3
-  - assets/survey/survey.js?v=10
-  - assets/about/email-link.js?v=2
-  - assets/code-breaks.js?v=2
+  - assets/contact-form.js
+  - assets/survey/survey.js
+  - assets/about/email-link.js
+  - assets/code-breaks.js
 extra:
   interface_icons:
     Application: [fa5/desktop]
@@ -139,6 +139,7 @@ nav:
       - Magnetic operators: application/structure/magnetic-operators.md
       - Moments in the cell: application/structure/moments-in-the-cell.md
       - Appearance: application/structure/appearance.md
+      - Polyhedra: application/structure/polyhedra.md
     - Experiment:
       - application/experiment/index.md
       - Experiments: application/experiment/experiments.md
