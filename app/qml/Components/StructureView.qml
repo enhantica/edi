@@ -116,6 +116,44 @@ Rectangle {
         labels: labelLayer
     }
 
+    // A view shown while its page is still sliding in gets no new frame once the page stops (a project opened on
+    // Analysis showed only the axis letters until a resize): it asks for frames until it stays in place.
+    Timer {
+        id: frameRequest
+
+        property point last: Qt.point(NaN, NaN)
+        property int left: 0
+
+        interval: 50
+        repeat: true
+        onTriggered: {
+            if (!view.view3d) {
+                stop();
+                return;
+            }
+            view.view3d.update();
+            const at = view.view3d.mapToItem(null, 0, 0);
+            if ((at.x === last.x && at.y === last.y) || --left <= 0)
+                stop();
+            last = at;
+        }
+    }
+    function requestFrames() {
+        frameRequest.last = Qt.point(NaN, NaN);
+        frameRequest.left = 40;
+        frameRequest.restart();
+    }
+    Connections {
+        target: controller
+        function onRevisionChanged() {
+            view.requestFrames();
+        }
+        function onActiveChanged() {
+            if (controller.active)
+                view.requestFrames();
+        }
+    }
+
     // The scene, on every platform; the View3D below draws it where there is a 3D API.
     StructureScene {
         id: structureScene
