@@ -4,7 +4,7 @@ No model or network is used: the peer only delivers authored native tool calls. 
 (2026-11-17): create a project, load a structure CIF, create an experiment, set its wavelength on the
 Instrument group, then load measured data. Opening Instrument folds the Experiments group, so Show actions must
 open that group again before the row's Data file cell can be clicked. Exits non-zero unless load_data completes in
-both modes, and the alias it then creates, retargets and removes.
+both modes, and the alias it then creates, retargets and removes, and a trial fit and its Undo.
 """
 
 # ruff: noqa: PLR0915, PLR0914, PLW0717, B023, TRY301, BLE001, S106, E501
@@ -145,6 +145,20 @@ def main():
                 and '"success": false' not in json.dumps(reply)
                 for reply in relations
             )
+            # A trial fit of the scale and its Undo, as the owner runs them after loading.
+            scale = [
+                {'path': row['path'], 'free': True}
+                for row in actor.last['ui']['project']['parameters']
+                if row['path'].endswith('.scale')
+                and row.get('refinable')
+                and row.get('dependence') == 0
+            ]
+            fitted = [call('set_free', flags=scale), call('run_fit'), call('undo_fit')]
+            mode['fitted'] = all(
+                'action_error' not in json.dumps(reply)
+                and '"success": false' not in json.dumps(reply)
+                for reply in fitted
+            )
         except Exception as error:
             mode['driver_error'] = str(error)
         finally:
@@ -153,7 +167,10 @@ def main():
             (output / 'RESULT.json').write_text(json.dumps(summary, indent=2) + '\n')
     return int(
         any(
-            mode.get('driver_error') or not mode.get('loaded') or not mode.get('relations')
+            mode.get('driver_error')
+            or not mode.get('loaded')
+            or not mode.get('relations')
+            or not mode.get('fitted')
             for mode in summary['modes']
         )
     )
