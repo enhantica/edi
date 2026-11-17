@@ -58,6 +58,8 @@ Item {
     readonly property var contentSpan: laidOut >= 0 && units.length >= 0 && overflow.length >= 0 && width >= 0 ? extent() : [leftEdge, rightEdge]
 
     onMeasureChanged: Qt.callLater(lines.layout)
+    // Nothing left to show: the popup closes rather than stay open empty.
+    onOverflowChanged: if (overflow.length === 0) morePopup.close()
     Component.onCompleted: Qt.callLater(lines.collect)
 
     ChartToolButton {
@@ -94,42 +96,46 @@ Item {
 
             spacing: lines.spacing
 
+            // One copy per movable control, made once and shown while its control is in the popup: copies made and
+            // destroyed on every resize left their tooltips binding to deleted controls (QML warnings).
             Repeater {
-                model: lines.overflow
+                model: lines.units.filter(unit => unit.movable)
 
                 delegate: Item {
                     id: entry
 
                     required property var modelData
-                    readonly property bool box: modelData.closedTexts !== undefined
+                    readonly property var control: modelData.item
+                    readonly property bool box: control?.closedTexts !== undefined
 
+                    visible: !!control && lines.overflow.indexOf(control) >= 0
                     width: box ? boxCopy.width : buttonCopy.width
                     height: AppSizes.toolbarControlSize
 
                     ToolbarComboBox {
                         id: boxCopy
 
-                        objectName: entry.box ? entry.modelData.objectName + ".overflow" : ""
+                        objectName: entry.box ? entry.control?.objectName + ".overflow" : ""
                         visible: entry.box
-                        enabled: entry.modelData.enabled
-                        toolTip: entry.modelData.toolTip ?? ""
-                        model: entry.box ? entry.modelData.model : []
-                        closedTexts: entry.box ? entry.modelData.closedTexts : []
-                        closedOnly: entry.box && entry.modelData.closedOnly
-                        shownIndex: entry.box ? entry.modelData.currentIndex : 0
-                        onActivated: index => entry.modelData.activated(index)
+                        enabled: entry.control?.enabled ?? false
+                        toolTip: entry.control?.toolTip ?? ""
+                        model: entry.box ? entry.control.model : []
+                        closedTexts: entry.box ? entry.control.closedTexts : []
+                        closedOnly: entry.box && entry.control.closedOnly
+                        shownIndex: entry.box ? entry.control.currentIndex : 0
+                        onActivated: index => entry.control?.activated(index)
                     }
                     ChartToolButton {
                         id: buttonCopy
 
-                        objectName: entry.box ? "" : entry.modelData.objectName + ".overflow"
+                        objectName: entry.box ? "" : entry.control?.objectName + ".overflow"
                         visible: !entry.box
-                        enabled: entry.modelData.enabled
-                        available: entry.modelData.available ?? true
-                        fontIcon: entry.modelData.fontIcon ?? ""
-                        toolTip: entry.modelData.toolTip ?? ""
-                        checked: entry.modelData.checked ?? false
-                        onClicked: entry.modelData.clicked()
+                        enabled: entry.control?.enabled ?? false
+                        available: entry.control?.available ?? true
+                        fontIcon: entry.control?.fontIcon ?? ""
+                        toolTip: entry.control?.toolTip ?? ""
+                        checked: entry.control?.checked ?? false
+                        onClicked: entry.control?.clicked()
 
                         // A button drawn with a letter (view along a, b, c) has no icon: its letter, in its colour.
                         EaElements.Label {
@@ -138,8 +144,8 @@ Item {
                             font.family: EaStyle.Fonts.ptSansBold.name
                             font.bold: true
                             font.pixelSize: EaStyle.Sizes.fontPixelSize * 1.15
-                            color: entry.modelData.letterColor ?? EaStyle.Colors.themeForeground
-                            text: String(entry.modelData.objectName).split(".").pop()
+                            color: entry.control?.letterColor ?? EaStyle.Colors.themeForeground
+                            text: String(entry.control?.objectName).split(".").pop()
                         }
                     }
                 }
