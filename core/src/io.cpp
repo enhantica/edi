@@ -701,6 +701,33 @@ const std::string& loop_cell(const Loop& loop, const std::vector<std::string>& r
     return row[static_cast<std::size_t>(column)];
 }
 
+// An excluded region's cells as written; axis and id are null when the region does not give them.
+struct ExcludedRegionText {
+    const std::string* start = nullptr;
+    const std::string* end = nullptr;
+    const std::string* axis = nullptr;
+    const std::string* id = nullptr;
+};
+
+// The block's excluded regions: each row of the `_excluded_region` loop, or the one region its items give.
+std::vector<ExcludedRegionText> excluded_region_rows(const Block& block, const std::string& where) {
+    std::vector<ExcludedRegionText> rows;
+    if (const Loop* excluded = block.loop_with("_excluded_region.start"); excluded != nullptr) {
+        const auto optional = [&](const std::vector<std::string>& row, const char* tag) -> const std::string* {
+            return excluded->column(tag) >= 0 ? &loop_cell(*excluded, row, tag, where) : nullptr;
+        };
+        for (const auto& row : excluded->rows) {
+            rows.push_back({&loop_cell(*excluded, row, "_excluded_region.start", where),
+                            &loop_cell(*excluded, row, "_excluded_region.end", where),
+                            optional(row, "_excluded_region.axis"), optional(row, "_excluded_region.id")});
+        }
+    } else if (const std::string* start = block.find("_excluded_region.start"); start != nullptr) {
+        rows.push_back({start, &block.require("_excluded_region.end", where), block.find("_excluded_region.axis"),
+                        block.find("_excluded_region.id")});
+    }
+    return rows;
+}
+
 // ---- unknown-tag policy -------------------------------------------------------------------
 
 // The reference's unknown-tag rule is TWO-SIDED, and edi mirrors both halves:
@@ -2021,23 +2048,22 @@ BraggPdExperiment single_crystal_from_block(const Block& block, const std::strin
     } catch (const std::invalid_argument& error) {
         fail_domain(where, "reflns-admission", error.what());
     }
-    if (const Loop* excluded = block.loop_with("_excluded_region.start"); excluded != nullptr) {
-        if (excluded->column("_excluded_region.axis") < 0) {
-            fail_schema(where, "missing-loop-column",
-                        "a single crystal's _excluded_region names its axis (_excluded_region.axis d_spacing or "
-                        "sin_theta_over_lambda) on every row");
-        }
+    // One region may be written as items rather than a loop; either way each names its axis.
+    if (const std::vector<ExcludedRegionText> rows = excluded_region_rows(block, where); !rows.empty()) {
         std::vector<std::shared_ptr<ExcludedRegion>> regions;
-        for (const auto& row : excluded->rows) {
-            ExcludedRegion region(to_double(loop_cell(*excluded, row, "_excluded_region.start", where), where),
-                                  to_double(loop_cell(*excluded, row, "_excluded_region.end", where), where));
+        for (const ExcludedRegionText& row : rows) {
+            if (row.axis == nullptr) {
+                fail_schema(where, "missing-loop-column",
+                            "a single crystal's _excluded_region names its axis (_excluded_region.axis d_spacing or "
+                            "sin_theta_over_lambda) on every row");
+            }
+            ExcludedRegion region(to_double(*row.start, where), to_double(*row.end, where));
             try {
-                region.axis = detail::read_region_axis(loop_cell(*excluded, row, "_excluded_region.axis", where));
+                region.axis = detail::read_region_axis(*row.axis);
             } catch (const std::invalid_argument& error) {
                 fail_domain(where, "excluded-region-axis", error.what());
             }
-            if (excluded->column("_excluded_region.id") >= 0)
-                region.id = loop_cell(*excluded, row, "_excluded_region.id", where);
+            if (row.id != nullptr) region.id = *row.id;
             regions.push_back(std::make_shared<ExcludedRegion>(region));
         }
         try {
@@ -2652,21 +2678,16 @@ BraggPdExperiment parse_experiment_block(const Block& block, const std::string& 
         fail_schema(where, "single-crystal-category-on-powder",
                     "_excluded_reflection on a powder: only a single crystal leaves out reflections by their indices");
     }
-    const Loop* excluded = block.loop_with("_excluded_region.start");
-    if (excluded != nullptr && excluded->column("_excluded_region.axis") >= 0) {
-        fail_schema(where, "single-crystal-item-on-powder",
-                    "_excluded_region.axis on a powder, whose excluded regions are on its pattern's axis");
-    }
-    if (excluded != nullptr) {
+    // One region may be written as items rather than a loop, on the pattern's own axis.
+    if (const std::vector<ExcludedRegionText> rows = excluded_region_rows(block, where); !rows.empty()) {
         std::vector<std::shared_ptr<ExcludedRegion>> regions;
-        for (const auto& row : excluded->rows) {
-            const double start = to_double(loop_cell(*excluded, row, "_excluded_region.start", where),
-                                           where);
-            const double end =
-                to_double(loop_cell(*excluded, row, "_excluded_region.end", where), where);
-            ExcludedRegion region(start, end);
-            if (excluded->column("_excluded_region.id") >= 0)
-                region.id = loop_cell(*excluded, row, "_excluded_region.id", where);
+        for (const ExcludedRegionText& row : rows) {
+            if (row.axis != nullptr) {
+                fail_schema(where, "single-crystal-item-on-powder",
+                            "_excluded_region.axis on a powder, whose excluded regions are on its pattern's axis");
+            }
+            ExcludedRegion region(to_double(*row.start, where), to_double(*row.end, where));
+            if (row.id != nullptr) region.id = *row.id;
             regions.push_back(std::make_shared<ExcludedRegion>(region));
         }
         experiment.excluded_regions.assign(std::move(regions));

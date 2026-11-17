@@ -231,6 +231,31 @@ private slots:
         QCOMPARE(analysis.defaultChiSquareTolerance(), 1e-4);
         QCOMPARE(analysis.momentsNearZero(), QStringLiteral("keep_free"));
     }
+    // One excluded region may be written as items instead of a loop; it is read, not passed over.
+    void excludedRegionWrittenAsItemsIsRead() {
+        const edi::Project held = lbcoProject(std::nullopt);
+        const std::string relative = "experiments/hrpt.edi";
+        std::string text;
+        for (const auto& [name, file] : edi::project_edi_files(held)) {
+            if (name == relative) text = file;
+        }
+        QVERIFY(!text.empty());
+        QVERIFY(text.find("_excluded_region") == std::string::npos);
+        text += "\n_excluded_region.start 10\n_excluded_region.end 12.5\n";
+        const edi::Project read = edi::project_with_file_text(held, relative, text);
+        const auto& regions = read.experiments[0]->excluded_regions;
+        QCOMPARE(regions.size(), std::size_t(1));
+        QCOMPARE(regions[0]->first.get(), 10.0);
+        QCOMPARE(regions[0]->second.get(), 12.5);
+        // A powder's region is on its pattern's axis: naming one is refused, written either way.
+        bool refused = false;
+        try {
+            edi::project_with_file_text(held, relative, text + "_excluded_region.axis d_spacing\n");
+        } catch (const std::exception&) {
+            refused = true;
+        }
+        QVERIFY(refused);
+    }
     // The Analysis slider never reaches outside a parameter's admissible range. The expectations are worked by hand from
     // the rule: value ± half width rounded outward to a whole unit, a side cut at a limit giving its width to the other.
     void sliderStaysInsideTheLimits() {
