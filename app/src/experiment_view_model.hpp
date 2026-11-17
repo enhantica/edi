@@ -411,6 +411,8 @@ class ExperimentViewModel : public QObject {
     // the window shows): a followed scan file counts as drawn only while one is (edi ADR-0029).
     bool patternShown() const { return !shown_charts_.isEmpty(); }
     void setChartShown(const QObject* chart, bool shown);
+    // For a QML chart without a controller (Meas vs calc): a shown chart keeps a running fit publishing patterns.
+    Q_INVOKABLE void showChart(QObject* chart, bool shown) { setChartShown(chart, shown); }
     // Each new pattern source has the next generation; a shown chart notes the one it drew, so a followed file's
     // receipt can tell that its own pattern reached the screen.
     std::uint64_t patternGeneration() const { return pattern_generation_; }
