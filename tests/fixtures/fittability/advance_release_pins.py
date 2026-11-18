@@ -51,11 +51,13 @@ def main():  # noqa: PLR0914 - one sealed transition keeps its evidence together
     changes = json.loads(changes_path.read_text())
     for row in rows:
         case, rule = row['case'], row['rule']
-        if row.get('projection_error') not in (
+        if row.get('projection_error') not in {
             None,
-            'A live descriptive input must match its entire independently archived source, '
-            'including every scientific byte',
-        ):
+            (
+                'A live descriptive input must match its entire independently archived source, '
+                'including every scientific byte'
+            ),
+        }:
             raise ValueError(
                 'Only the independently repaired archival composition may be replayed'
             )

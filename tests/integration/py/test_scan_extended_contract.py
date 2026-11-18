@@ -94,11 +94,11 @@ def assert_structure_selector(text):
     observed = javascript(
         'const project={structures:{tag:"structures"},experiments:{tag:"experiments"},'
         'currentStructureIndex:2,currentExperimentIndex:5};const seen=[];'
-        'for(const tabIndex of [0,1,2,3,4,5]){'
+        'const keys=["structure","pattern","meascalc","correlations","stacked","map","evolution"];'
+        'for(const tabIndex of [0,1,2,3,4,5,6]){'
         'project.currentStructureIndex=2;project.currentExperimentIndex=5;'
-        'const view={project,tabIndex};view.structureShown=('
-        + property_value(text, 'structureShown')
-        + ');'
+        'const currentKey=keys[tabIndex];const view={project,tabIndex,currentKey};'
+        'view.structureShown=(' + property_value(text, 'structureShown') + ');'
         'const experiments=(' + property_value(selector, 'experiments') + ');'
         'seen.push([('
         + expressions['blocks']
@@ -114,7 +114,7 @@ def assert_structure_selector(text):
     assert observed == [
         ['structures', 2, 'structure'],
         [7, 5],
-        *[['experiments', 5, 'experiment'], [2, 7]] * 5,
+        *[['experiments', 5, 'experiment'], [2, 7]] * 6,
     ], (
         'The shared main view selects structures only on Structure, experiments on every '
         'other tab, and changes only the chosen collection index'
@@ -141,7 +141,7 @@ def test_empty_selectors_are_hidden_on_experiment_and_structure_pages():
     assert_structure_selector(main)
     for original, replacement in (
         ('!view.structureShown', 'view.structureShown'),
-        ('tabIndex === 0', 'tabIndex === 1'),
+        ('currentKey === "structure"', 'currentKey === "pattern"'),
         (
             'view.project.currentExperimentIndex : view.project.currentStructureIndex',
             'view.project.currentStructureIndex : view.project.currentExperimentIndex',
