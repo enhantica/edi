@@ -340,7 +340,9 @@ function(edi_bundle_assistant_runtime)
     else()
         set(EDI_CODEX_INSTALL_RELATIVE "../${EDI_CODEX_INSTALL_DESTINATION}")
     endif()
-    set(check "${CMAKE_CURRENT_BINARY_DIR}/verify_assistant_runtime_${publication}.cmake")
+    # The verifier's own form is in its name: one that checks file kinds per list (_edi_runtime_not_kind) is a new
+    # file beside an older build's, which stays as that build wrote it.
+    set(check "${CMAKE_CURRENT_BINARY_DIR}/verify_assistant_runtime_${publication}.listed.cmake")
     set(check_contents "# Generated from the digest-verified official archive and owned legal resources.\n")
     # Every member's kind in one interpreter run per kind (_edi_runtime_not_kind), into a listing of this run's own.
     set(all_paths "")
