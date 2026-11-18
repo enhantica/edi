@@ -1258,14 +1258,15 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     void applyDatasetView(std::uint64_t request, int index, DatasetView view);
     // The values a dataset is shown with: `from`'s, with its results row's over them, read with `index`'s columns.
     // `start_row`: the results row of the dataset the fit started from (startDataset), whose cells are each value's
-    // start; empty: the template's values are.
+    // start; empty: the template's values are. `start_known` false: no start is given (Start and Change blank).
     std::vector<edi::Edit::ScanValue> datasetValues(const std::vector<std::string>& row, const edi::Project& from,
                                                     const edi::ScanResultIndex& index,
-                                                    const std::vector<std::string>& start_row = {}) const;
-    // The dataset a sequential fit started dataset `dataset` from: the successful one whose results row was written
-    // last before its own (crysta ADR-0131 point 3, as the scan driver seeds, a Continue included); -1 when it
-    // started from the template (the first, one with no successful predecessor, an unfitted dataset, or any dataset
-    // of an independent scan).
+                                                    const std::vector<std::string>& start_row = {},
+                                                    bool start_known = true) const;
+    // The dataset a sequential fit started dataset `dataset` from (crysta ADR-0131 point 3): -1 the template (the
+    // first, one with no successful predecessor, an unfitted dataset, or any dataset of an independent scan);
+    // kStartUnknown where the saved rows cannot prove it (a Continue filled points in out of order).
+    static constexpr int kStartUnknown = -2;
     static int startDataset(const edi::Project& from, const edi::ScanResultIndex& index, int dataset);
     // The values dataset `index` is shown with: its results row's, and a series point's per-experiment row's over them.
     std::vector<edi::Edit::ScanValue> pointValues(int index) const;

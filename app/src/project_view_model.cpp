@@ -4244,27 +4244,38 @@ int ProjectViewModel::startDataset(const edi::Project& from, const edi::ScanResu
         index.rows[static_cast<std::size_t>(dataset)].offset < 0) {
         return -1;
     }
-    // results.csv holds the rows in the order the points were fitted, a Continue's after the run it resumed: the
-    // start is the successful row written last before this one, wherever its point lies in the series (a point
-    // repaired on Continue starts from the run's last success, not from a neighbour fitted after it).
+    // A run fits the points in order, each from the last success before it; a Continue starts from the last
+    // stored success and may fill earlier points after later ones. The saved rows prove a start only where both
+    // readings agree: every row written before this one is of an earlier point, and the success written last
+    // among them is also the latest earlier point's. Elsewhere the start is not known (crysta ADR-0131 point 3).
     const std::int64_t own = index.rows[static_cast<std::size_t>(dataset)].offset;
-    int start = -1;
+    int by_order = -1, by_place = -1;
     std::int64_t latest = -1;
     for (std::size_t place = 0; place < index.rows.size(); ++place) {
         const edi::ScanResultIndex::Row& row = index.rows[place];
-        if (row.converged && row.offset >= 0 && row.offset < own && row.offset > latest) {
-            latest = row.offset;
-            start = static_cast<int>(place);
+        if (row.offset < 0 || row.offset >= own) {
+            continue;
+        }
+        if (static_cast<int>(place) > dataset) {
+            return kStartUnknown;  // a later point was written first: a Continue filled this one in
+        }
+        if (row.converged) {
+            by_place = static_cast<int>(place);
+            if (row.offset > latest) {
+                latest = row.offset;
+                by_order = static_cast<int>(place);
+            }
         }
     }
-    return start;
+    return by_order == by_place ? by_order : kStartUnknown;
 }
 
 std::vector<edi::Edit::ScanValue> ProjectViewModel::pointValues(int index) const {
     const edi::Project& from = scanTemplateOrModel();
     const int start = startDataset(from, scan_session_->index(), index);
-    std::vector<edi::Edit::ScanValue> values = datasetValues(scan_session_->row(*project_, index), from,
-                                                             scan_session_->index(), scan_session_->row(*project_, start));
+    std::vector<edi::Edit::ScanValue> values =
+        datasetValues(scan_session_->row(*project_, index), from, scan_session_->index(),
+                      scan_session_->row(*project_, start), start != kStartUnknown);
     overlaySeriesPoint(values, *project_, scan_session_->datasets(), index, start,
                        scan_session_->pointCheck(*project_, index), scan_session_->pointCheck(*project_, start));
     return values;
@@ -4284,7 +4295,9 @@ void ProjectViewModel::overlaySeriesPoint(std::vector<edi::Edit::ScanValue>& val
     for (edi::Edit::ScanValue& value : values) {
         if (const auto found = own.find(value.unique_name); found != own.end()) {
             const auto from = started.find(value.unique_name);
-            value.start = from != started.end() ? from->second.value : value.value;
+            if (start != kStartUnknown) {
+                value.start = from != started.end() ? from->second.value : value.value;
+            }
             value.value = found->second.value;
             value.uncertainty = found->second.uncertainty;
         }
@@ -4320,7 +4333,8 @@ std::vector<edi::BeamModeEnum> ProjectViewModel::beamModes() const {
 std::vector<edi::Edit::ScanValue> ProjectViewModel::datasetValues(const std::vector<std::string>& row,
                                                                   const edi::Project& template_project,
                                                                   const edi::ScanResultIndex& index,
-                                                                  const std::vector<std::string>& start_row) const {
+                                                                  const std::vector<std::string>& start_row,
+                                                                  bool start_known) const {
     // Every parameter at the template's state, then the results row's value and uncertainty over it. The row was
     // checked as it was read: a cell that does not convert now refuses, never falling back to the template's value.
     std::vector<edi::Edit::ScanValue> values;
@@ -4357,7 +4371,9 @@ std::vector<edi::Edit::ScanValue> ProjectViewModel::datasetValues(const std::vec
             throw std::invalid_argument("analysis/results.csv: the starting row's '" + found->second->name +
                                         "' cell is not a number");
         }
-        value.start = started;
+        if (start_known) {
+            value.start = started;
+        }
         value.value = number;
         // "nan": the fit gave this parameter no s.u. (it was not free in it).
         value.uncertainty = uncertainty_cell == "nan" ? std::nullopt : std::optional<double>(uncertainty);
@@ -4492,7 +4508,7 @@ void ProjectViewModel::startViewRead() {
             from_check = scan_session_->pointCheck(*project_, start);
         }
         values = datasetValues(scan_session_->row(*project_, index), scanTemplateOrModel(), scan_session_->index(),
-                               scan_session_->row(*project_, start));
+                               scan_session_->row(*project_, start), start != kStartUnknown);
     } catch (const std::exception& refusal) {
         view_applied_ = request;
         const QString error = QString::fromUtf8(refusal.what());
@@ -6609,7 +6625,7 @@ QString ProjectViewModel::stageScan(const QString& directory, const edi::Project
         try {
             const int start = startDataset(staged, scan.listing->index(), current_dataset_);
             scan.shown = datasetValues(scan.listing->row(staged, current_dataset_), staged, scan.listing->index(),
-                                       scan.listing->row(staged, start));
+                                       scan.listing->row(staged, start), start != kStartUnknown);
             overlaySeriesPoint(*scan.shown, staged, scan.listing->datasets(), current_dataset_, start,
                                scan.listing->pointCheck(staged, current_dataset_), scan.listing->pointCheck(staged, start));
         } catch (const std::exception& refusal) {
