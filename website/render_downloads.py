@@ -7,6 +7,19 @@ from operator import itemgetter
 
 PLATFORMS = ('macos-arm64', 'windows-x86_64', 'linux-x86_64')
 TAG = re.compile(r'v([0-9]{4})\.(0[1-9]|1[0-2])\.(0|[1-9][0-9]*)')
+# The desktop installers' downloads: a disk image on macOS, the installer itself on Windows, a ZIP
+# on Linux; releases before single-file installers had a ZIP everywhere.
+SUFFIXES = {'macos-arm64': ('.dmg', '.zip'), 'windows-x86_64': ('.exe', '.zip')}
+
+
+def asset_url(sizes: dict, tag: str, stem: str, platform: str) -> str | None:
+    """The uploaded asset of one download, preferring the platform's current file type."""
+    suffixes = SUFFIXES.get(platform, ('.zip',)) if not stem.endswith('-cli') else ('.zip',)
+    for suffix in suffixes:
+        url = f'https://github.com/enhantica/edi/releases/download/{tag}/{stem}{suffix}'
+        if url in sizes:
+            return url
+    return None
 
 
 def render(page: str, pages: list[list[dict]], *, kind: str = 'online') -> str:
@@ -32,12 +45,11 @@ def render(page: str, pages: list[list[dict]], *, kind: str = 'online') -> str:
         installers = {}
         for each in kinds:
             for platform in PLATFORMS:
-                url = (
-                    f'https://github.com/enhantica/edi/releases/download/{tag}/'
-                    f'EasyDiffraction-{version}-{platform}-{each}.zip'
+                found = asset_url(
+                    sizes, tag, f'EasyDiffraction-{version}-{platform}-{each}', platform
                 )
-                if url in sizes:
-                    installers[platform, each] = url, sizes[url]
+                if found:
+                    installers[platform, each] = found, sizes[found]
         if any(each == kinds[0] for _, each in installers):
             rank = not release['prerelease'], tuple(map(int, match.groups()))
             candidates.append((rank, version, installers, release['published_at']))

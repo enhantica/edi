@@ -1,4 +1,4 @@
-name: Prepare calendar release
+name: Prepare release
 
 on:
   workflow_dispatch:
@@ -31,3 +31,9 @@ jobs:
           path: release-plan
           if-no-files-found: error
           retention-days: 90
+      # A preparation that fails after reserving its version deletes that empty draft again.
+      - name: Delete the reservation of a failed preparation
+        if: failure() || cancelled()
+        run: python tools/release/prepare.py --repo "$GITHUB_REPOSITORY" --withdraw stable-reservation
+        env:
+          GH_TOKEN: ${{ secrets.GH_API_PERSONAL_ACCESS_TOKEN }}

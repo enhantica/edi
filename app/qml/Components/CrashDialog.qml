@@ -6,8 +6,9 @@ import EasyApplication.Gui.Elements as EaElements
 
 import edi.app
 
-// After a run that did not quit normally (ADR-0062): offers to report the problem with that run's log through Help and
-// feedback, or to leave it. Either way the crashed run is not offered again.
+// After a run that did not quit normally (ADR-0062): the same choices as every error popup (ErrorDialog), Send to
+// developers (Help and feedback as a problem with that run's log and what went wrong) or OK. Either way the crashed run
+// is not offered again.
 AppDialog {
     id: dialog
 
@@ -39,8 +40,8 @@ AppDialog {
 
             EaElements.Button {
                 objectName: "crash.dismiss"
-                fontIcon: "times"
-                text: qsTr("Not now")
+                fontIcon: "check"
+                text: qsTr("OK")
                 onClicked: {
                     RunLog.dismissCrash();
                     dialog.close();
@@ -49,9 +50,9 @@ AppDialog {
             EaElements.Button {
                 objectName: "crash.report"
                 fontIcon: "paper-plane"
-                text: qsTr("Report the problem")
+                text: qsTr("Send to developers")
                 onClicked: {
-                    AppState.feedbackRequested("problem", RunLog.crashedLogText());
+                    AppState.crashReported(RunLog.crashedLogText(), qsTr("%1 closed unexpectedly.").arg(ApplicationInfo.name) + (RunLog.crashedDiagnostic() !== "" ? "\n" + RunLog.crashedDiagnostic() : ""));
                     dialog.close();
                 }
             }

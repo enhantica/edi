@@ -134,7 +134,6 @@ nav:
           - dev/design/scan-view-timings.md
           - "Scan renderer": dev/design/scan-renderer-interface.md
           - "Scan updates": dev/design/scan-update-interface.md
-          - "Public release": dev/public-release-checklist.md
           - "Where tests live": dev/design/where-tests-live.md
       - Requirements:
           - "RWG requirements": dev/requirements/rwg-edi-coverage.md

@@ -22,9 +22,9 @@ def module(path):
 
 PROMOTE = module(Path('tools/release/promote.py'))
 PAGES = module(Path('tools/ci/pages_update.py'))
-APP = 'org.easyscience.edi'
-ASSISTANT = 'org.easyscience.edi.assistant'
-MAINTENANCE = 'org.easyscience.edi.maintenancetool'
+APP = 'org.easydiffraction.app'
+ASSISTANT = 'org.easydiffraction.app.assistant'
+MAINTENANCE = 'org.easydiffraction.app.maintenancetool'
 
 
 def sha1(path):
@@ -56,7 +56,7 @@ def repository(folder, versions):
     [
         ('macos-arm64', {APP, ASSISTANT, MAINTENANCE}),
         ('linux-x86_64', {APP, ASSISTANT}),
-        ('windows-x86_64', {APP, ASSISTANT}),
+        ('windows-x86_64', {APP, ASSISTANT, MAINTENANCE}),
     ],
 )
 def test_release_admits_exactly_each_platform_component_set(tmp_path, platform, names):
@@ -64,7 +64,7 @@ def test_release_admits_exactly_each_platform_component_set(tmp_path, platform, 
     PROMOTE.validate_repository(folder, '2026.11.3', expected=PROMOTE.component_names(platform))
 
 
-def test_release_refuses_the_maintenance_component_off_macos(tmp_path):
+def test_release_refuses_the_maintenance_component_on_linux(tmp_path):
     folder = repository(tmp_path / 'r', dict.fromkeys([APP, ASSISTANT, MAINTENANCE], '2026.11.3'))
     with pytest.raises(ValueError, match='does not match'):
         PROMOTE.validate_repository(
@@ -72,11 +72,12 @@ def test_release_refuses_the_maintenance_component_off_macos(tmp_path):
         )
 
 
-def test_release_refuses_macos_without_its_maintenance_component(tmp_path):
+@pytest.mark.parametrize('platform', ['macos-arm64', 'windows-x86_64'])
+def test_release_refuses_a_platform_without_its_maintenance_component(tmp_path, platform):
     folder = repository(tmp_path / 'r', dict.fromkeys([APP, ASSISTANT], '2026.11.3'))
     with pytest.raises(ValueError, match='does not match'):
         PROMOTE.validate_repository(
-            folder, '2026.11.3', expected=PROMOTE.component_names('macos-arm64')
+            folder, '2026.11.3', expected=PROMOTE.component_names(platform)
         )
 
 
@@ -106,12 +107,12 @@ def preview_delivery(tmp_path, platform, names):
     version, commit = '2026.11.3', 'a' * 40
     delivery = tmp_path / 'delivery'
     delivery.mkdir()
-    name = f'EasyDiffraction-{version}-{platform}-online.zip'
+    name = PROMOTE.installer_name(version, platform, 'online')
     (delivery / name).write_bytes(b'installer')
     url = policy['primary_base'] + policy['repository_paths']['testing'].format(platform=platform)
     metadata = {
-        'zip': name,
-        'zip_sha256': hashlib.sha256(b'installer').hexdigest(),
+        'download': name,
+        'download_sha256': hashlib.sha256(b'installer').hexdigest(),
         'version': version,
         'platform': platform,
         'kind': 'online',
@@ -135,10 +136,11 @@ def preview_delivery(tmp_path, platform, names):
         ('macos-arm64', {APP, ASSISTANT, MAINTENANCE}, True),
         ('linux-x86_64', {APP, ASSISTANT}, True),
         ('linux-x86_64', {APP, MAINTENANCE}, False),
-        ('windows-x86_64', {APP, ASSISTANT, MAINTENANCE}, False),
+        ('windows-x86_64', {APP, ASSISTANT, MAINTENANCE}, True),
+        ('windows-x86_64', {APP, ASSISTANT}, False),
     ],
 )
-def test_preview_recovery_admits_the_maintenance_component_on_macos_only(
+def test_preview_recovery_admits_the_maintenance_component_on_macos_and_windows(
     tmp_path, platform, names, accepted
 ):
     preview, delivery, components, version, commit = preview_delivery(tmp_path, platform, names)

@@ -233,6 +233,14 @@ EaComponents.ApplicationWindow {
         }
     }
 
+    // In the browser, System follows the page's prefers-color-scheme, which can change while the app runs.
+    Timer {
+        interval: 1000
+        repeat: true
+        running: Qt.platform.os === "wasm" && EaStyle.Colors.theme === 2
+        onTriggered: ApplicationInfo.applyColorScheme(EaStyle.Colors.theme)
+    }
+
     property string updateNotifiedVersion: ""
     Connections {
         target: DesktopUpdates
@@ -555,6 +563,8 @@ EaComponents.ApplicationWindow {
     }
 
     statusBar: StatusBar {
+        id: appStatusBar
+
         assistantChatShown: window.assistantPanelVisible && window.assistantPanelShown
         assistantManualTakeover: window.assistantManualTakeover
         objectName: "statusBar"
@@ -562,6 +572,37 @@ EaComponents.ApplicationWindow {
         pagesWanted: window.pagesWanted
         tutorial: tutorialPanel
         onUpdateRequested: updateAvailableNotice.open()
+    }
+
+    // The rare "Enjoying EasyDiffraction?" bar, just above the status bar (edi ADR-0063).
+    LikesBar {
+        id: likesBar
+
+        // At the window's bottom edge: standing on the status bar while it shows (its strip is the window's bottom
+        // statusBarHeight), at the very bottom while it is hidden (Home with no project), never over it.
+        parent: window.contentItem
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.bottom: parent.bottom
+        anchors.bottomMargin: appStatusBar.visible ? EaStyle.Sizes.statusBarHeight : 0
+        z: 50  // above the window's overlay hosts (the sidebar host is 20)
+        fit: Session.project ? Session.project.fit : null
+        tutorialRunning: AppState.tutorialRunning
+        survey: surveyBar
+    }
+    // The survey invitation, in the same place; never in the same session as the likes bar.
+    SurveyBar {
+        id: surveyBar
+
+        parent: window.contentItem
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.bottom: parent.bottom
+        anchors.bottomMargin: appStatusBar.visible ? EaStyle.Sizes.statusBarHeight : 0
+        z: 50
+        likes: likesBar
+        fit: Session.project ? Session.project.fit : null
+        tutorialRunning: AppState.tutorialRunning
     }
 
     AppPreferencesDialog {
@@ -730,6 +771,15 @@ EaComponents.ApplicationWindow {
         target: AppState
         function onFeedbackRequested(kind, log) {
             feedbackDialog.openAs(kind, log);
+        }
+        function onUpdateDialogRequested() {
+            updateAvailableNotice.open();
+        }
+        function onCrashReported(log, text) {
+            feedbackDialog.openAs("problem", log, text, []);
+        }
+        function onProblemReported(message, file) {
+            feedbackDialog.openAs("problem", "", message, file === "" ? [] : [ApplicationInfo.fileAttachment(file, true)]);
         }
         function onTutorialRequested(tutorial) {
             tutorialPanel.start(tutorial);
@@ -1016,8 +1066,11 @@ EaComponents.ApplicationWindow {
     }
 
     // A folder, a project.edi or a .zip dropped on the window opens it (edi ADR-0052).
+    // Not while Help and feedback is open: a file dropped there is an attachment (FeedbackDialog.qml).
     DropArea {
+        objectName: "window.projectDrop"
         anchors.fill: parent
+        enabled: !feedbackDialog.visible
         onDropped: drop => ApplicationInfo.dropProject(drop)
     }
 
@@ -1127,22 +1180,10 @@ EaComponents.ApplicationWindow {
             onTriggered: webNotice.close()
         }
     }
-    AppDialog {
+    ErrorDialog {
         id: webFilesError
         objectName: "webFiles.error"
-        property string message
         title: qsTr("The browser could not use the file")
-        standardButtons: Dialog.Ok
-        contentWidth: AppSizes.messagesDialogContentWidth
-        contentHeight: webFilesErrorText.implicitHeight
-
-        EaElements.Label {
-            id: webFilesErrorText
-            objectName: "webFiles.error.message"
-            width: webFilesError.contentWidth
-            wrapMode: Text.Wrap
-            text: webFilesError.message
-        }
     }
 
     // A created project that could not be saved at its location stays open, unsaved; this says why. Here, not on the
@@ -1153,39 +1194,18 @@ EaComponents.ApplicationWindow {
             createError.open();
         }
     }
-    AppDialog {
+    ErrorDialog {
         id: createError
         objectName: "create.error"
         title: qsTr("The project was not saved")
-        standardButtons: Dialog.Ok
-        contentWidth: AppSizes.messagesDialogContentWidth
-        contentHeight: createErrorText.implicitHeight
-
-        EaElements.Label {
-            id: createErrorText
-            width: createError.contentWidth
-            wrapMode: Text.Wrap
-            text: Session.lastError
-        }
+        message: Session.lastError
     }
 
-    AppDialog {
+    ErrorDialog {
         id: saveError
         objectName: "save.error"
         title: qsTr("The project was not saved")
-        standardButtons: Dialog.Ok
-        // Sized explicitly, as the Messages dialog and with its width (edi ADR-0017 §13), the message wrapped
-        // inside it: a dialog sized by its wrapping label, or narrower than its own button row, is a binding
-        // loop on its implicit width.
-        contentWidth: AppSizes.messagesDialogContentWidth
-        contentHeight: saveErrorText.implicitHeight
-
-        EaElements.Label {
-            id: saveErrorText
-            width: saveError.contentWidth
-            wrapMode: Text.Wrap
-            text: Session.lastError
-        }
+        message: Session.lastError
     }
 
     // A save asks first (edi ADR-0069): above 100 MB, or with the project set to ask, the user chooses whether a scan's
@@ -1252,38 +1272,22 @@ EaComponents.ApplicationWindow {
     FitResultsDialog {
         id: fitResults
     }
-    AppDialog {
+    ErrorDialog {
         id: fitError
         objectName: "fit.error"
-        property string message: ""
         title: qsTr("The fit did not run")
-        standardButtons: Dialog.Ok
-        contentWidth: AppSizes.messagesDialogContentWidth
-        contentHeight: fitErrorText.implicitHeight
-
-        EaElements.Label {
-            id: fitErrorText
-            width: fitError.contentWidth
-            wrapMode: Text.Wrap
-            text: fitError.message
-        }
     }
     // A refused open (a project, an example) or a refused change of the project (a load of experiments, a structure
     // or data, …) always says why: never a silent no-op (the owner, 2026-10-11).
-    AppDialog {
+    ErrorDialog {
         id: refusal
         objectName: "refusal.dialog"
-        property string message: ""
-        parent: Overlay.overlay
-        standardButtons: Dialog.Ok
-        contentWidth: AppSizes.messagesDialogContentWidth
-        contentHeight: refusalText.implicitHeight
-
-        EaElements.Label {
-            id: refusalText
-            width: refusal.contentWidth
-            wrapMode: Text.Wrap
-            text: refusal.message
+    }
+    // An error nothing else caught, from the application's event loop: said, never a silent close.
+    Connections {
+        target: RunLog
+        function onErrorCaught(message) {
+            refusal.show(qsTr("Something went wrong"), message, "");
         }
     }
     Connections {
@@ -1291,13 +1295,17 @@ EaComponents.ApplicationWindow {
         function onProjectChanged() {
             window.assistantEmptyManualTakeover = false;
         }
-        function onLoadFailed(message) {
+        function onLoadFailed(message, file) {
+            // The project member edi could not read goes with the problem when the user sends it.
+            refusal.file = file || "";
             ApplicationInfo.windowFailure(1, message);
         }
     }
     Connections {
         target: Session.project
         function onRefused(message) {
+            // A file edi could not read goes with the problem when the user sends it.
+            refusal.file = Session.project.takeRefusedFile(message);
             ApplicationInfo.windowFailure(2, message);
         }
     }

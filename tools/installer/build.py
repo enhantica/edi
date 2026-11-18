@@ -20,6 +20,7 @@ from package import (
     SYSTEM,
     collect_dependency_licenses,
     deployed_package_names,
+    macos_signing,
     payload_manifest,
     read_release_plan,
     relocate_linux,
@@ -237,16 +238,7 @@ def macos_signing_args() -> list[str]:
 def sign_macos_app(bundle: Path) -> None:
     """Sign the application bundle. The upstream runtime is staged outside it."""
     signing = macos_signing_args()
-    signatures = {
-        b'\xfe\xed\xfa\xce',
-        b'\xfe\xed\xfa\xcf',
-        b'\xce\xfa\xed\xfe',
-        b'\xcf\xfa\xed\xfe',
-        b'\xca\xfe\xba\xbe',
-        b'\xbe\xba\xfe\xca',
-        b'\xca\xfe\xba\xbf',
-        b'\xbf\xba\xfe\xca',
-    }
+    signatures = MACHO_MAGIC
     paths = sorted(bundle.rglob('*'), key=lambda path: len(path.parts), reverse=True)
     for path in paths:
         if path.is_symlink() or not path.is_file():
@@ -264,6 +256,48 @@ def sign_macos_app(bundle: Path) -> None:
             run(['codesign', '--force', *signing, path])
     run(['codesign', '--force', *signing, bundle])
     run(['codesign', '--verify', '--deep', '--strict', bundle])
+
+
+MACHO_MAGIC = frozenset({
+    b'\xfe\xed\xfa\xce', b'\xfe\xed\xfa\xcf', b'\xce\xfa\xed\xfe', b'\xcf\xfa\xed\xfe',
+    b'\xca\xfe\xba\xbe', b'\xbe\xba\xfe\xca', b'\xca\xfe\xba\xbf', b'\xbf\xba\xfe\xca',
+})  # fmt: skip
+
+
+def release_executables(stage: Path) -> list[Path]:
+    """The programs a release signs outside the macOS app bundle (edi ADR-0091).
+
+    Windows: every .exe in the stage (the app, the assistant guard and the assistant runtime's
+    helpers). macOS: every Mach-O file of the assistant runtime, which lives beside the app.
+    """
+    if SYSTEM == 'windows':
+        return sorted(path for path in stage.rglob('*.exe') if path.is_file())
+    if SYSTEM != 'macos':
+        return []
+    found = []
+    for path in sorted((stage / 'libexec').rglob('*')):
+        if path.is_symlink() or not path.is_file():
+            continue
+        with path.open('rb') as stream:
+            if stream.read(4) in MACHO_MAGIC:
+                found.append(path)
+    return found
+
+
+def sign_release_executables(stage: Path) -> list[Path]:
+    """Sign and verify the programs outside the app bundle; on a release only."""
+    if not (macos_signing() or windows_signing()):
+        return []
+    executables = release_executables(stage)
+    if not executables:
+        raise RuntimeError('Signing found no executables to sign in the stage')
+    for path in executables:
+        if SYSTEM == 'windows':
+            sign_windows(path)
+        else:
+            run(['codesign', '--force', *macos_signing_args(), path])
+            run(['codesign', '--verify', '--strict', '--verbose=2', path])
+    return executables
 
 
 def verify_assistant_payload(stage: Path, expected: Path) -> None:
@@ -455,9 +489,9 @@ def build(
         drop_macos_build_rpaths(stage / 'EasyDiffraction.app')
         check_macos_load_paths(stage / 'EasyDiffraction.app')
         sign_macos_app(stage / 'EasyDiffraction.app')
+    # The runtime's upstream bytes are checked before the release signature changes them.
     verify_assistant_payload(stage, app / 'app/assistant-runtime-installed.json')
-    if windows_signing():
-        sign_windows(stage / 'bin/EasyDiffraction.exe')
+    sign_release_executables(stage)
     (stage / 'bundle-audit.json').write_text(
         json.dumps(audit_bundle(stage), indent=2) + '\n', encoding='utf-8'
     )

@@ -6,7 +6,7 @@
 # as CI's `app · WebAssembly` job builds it and placed into the site (ADR-0023). A dispatch may name a
 # crysta commit to build the web app from instead of the pinned SDK, for a preview of unreleased crysta work;
 # the notebooks are then published unexecuted, as the native build would use the pin.
-name: Pages
+name: Docs site
 
 on:
   push:

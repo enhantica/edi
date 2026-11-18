@@ -15,7 +15,12 @@ from pathlib import Path
 import pytest
 import yaml
 
-from tests.fixtures.ci_cadence.identity_migrations import MIGRATIONS, SCAN_DELIVERY_NODES
+from tests.fixtures.ci_cadence.identity_migrations import (
+    MIGRATIONS,
+    PUBLIC_BOOTSTRAP_INPUTS,
+    PUBLIC_BOOTSTRAP_REPLACEMENTS,
+    SCAN_DELIVERY_NODES,
+)
 from tests.fixtures.ci_cadence.inventory import identity
 from tests.system.py.ci_execution_contract import (
     contexts,
@@ -486,9 +491,69 @@ def test_inventory_migrations_name_frozen_witnesses_and_available_successors():
     )
 
 
+def test_public_bootstrap_migrations_retain_frozen_inputs_and_live_successors():
+    previous = {
+        node
+        for node in SHIPPED['nodes']
+        if 'test_e04_t12_cut_configuration.py::' in node
+        or node.endswith((
+            '::test_cutover_resnapshots_newer_main_without_mutating_source',
+            '::test_cutover_checklist_covers_settings_and_owner_boundary',
+            '::test_e04_t12_transformed_snapshot_keeps_the_content_workflow_observer',
+        ))
+    }
+    assert previous and previous <= set(MIGRATIONS), (
+        'Public bootstrap: every independently frozen bootstrap witness has an explicit migration'
+    )
+    for old in PUBLIC_BOOTSTRAP_INPUTS:
+        assert set(MIGRATIONS[old]) == set(PUBLIC_BOOTSTRAP_REPLACEMENTS), (
+            'Public bootstrap: all aliases in the retired kit share the complete absence contract'
+        )
+    current = set(nodes())
+    successors = {target for old in previous for target in MIGRATIONS[old]}
+    assert successors <= current and not successors & set(MIGRATIONS), (
+        'Public bootstrap: bootstrap successors are collected live witnesses, never aliases'
+    )
+    for tool in ('cutover.py', 'snapshot.py', 'spdx.py'):
+        assert any(target.endswith('[' + tool + ']') for target in successors), (
+            'Public bootstrap: bootstrap migrations retain each retired-executable absence witness'
+        )
+    assert any(
+        target.endswith('::test_current_public_workflows_keep_the_content_observer')
+        for target in successors
+    ), 'Public bootstrap: current workflow mutation coverage survives retiring the snapshotter'
+    for name in (
+        'test_production_sources_carry_bsd_spdx',
+        'test_scrub_is_repeatable_and_preserves_sdk_use',
+    ):
+        assert any(node.endswith('::' + name) for node in current), (
+            'Public bootstrap: retiring bootstrap tools retains live SPDX and scrub witnesses'
+        )
+
+
+@pytest.mark.parametrize('tool', ['cutover.py', 'snapshot.py', 'spdx.py'])
+def test_bootstrap_migrations_refuse_each_missing_tool_witness(tool):
+    # All retired aliases share this contract, proven above. Exercise each distinct
+    # missing-successor class once instead of repeating identical inventory walks.
+    inventory = nodes()
+    groups = json.loads(POLICY.read_text())['groups']
+    required = PUBLIC_BOOTSTRAP_REPLACEMENTS
+    missing = next(node for node in required if node.endswith('[' + tool + ']'))
+    for group in ('quick', 'full'):
+        selected = expand(groups[group], inventory) + expand(groups['app'], inventory)
+        assert not selection_errors({'nodes': selected}, inventory, required), (
+            'Public bootstrap: ordinary execution retains all retired-tool absence witnesses'
+        )
+        damaged = [node for node in inventory if node != missing]
+        selected = expand(groups[group], damaged) + expand(groups['app'], damaged)
+        assert 'omitted' in selection_errors({'nodes': selected}, damaged, required), (
+            'Public bootstrap: deleting any distinct tool witness makes inventory retention refuse'
+        )
+
+
 @pytest.mark.parametrize(
     'retired',
-    list(MIGRATIONS),
+    [old for old in MIGRATIONS if old not in PUBLIC_BOOTSTRAP_INPUTS],
     ids=[
         'desktop-linux',
         'desktop-macos',
@@ -511,6 +576,7 @@ def test_inventory_migrations_name_frozen_witnesses_and_available_successors():
         'linked-parent',
         'linked-fit',
         'linked-save',
+        'current-public-workflows',
     ],
 )
 def test_inventory_migration_refuses_every_dropped_successor(retired):

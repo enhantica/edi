@@ -509,6 +509,10 @@ class ProjectViewModel : public QObject, public ProjectEditor {
                                   bool copy = true, const QList<edi_app::CollectionOrigin>& origins = {});
     /// The files' total size in bytes, for the Copy data into the project default (20 files, 50 MB).
     Q_INVOKABLE qint64 filesBytes(const QList<QUrl>& files) const;
+    // Asked while `refused` is announced: the file the load making that refusal failed on, for the error popup to
+    // attach when the user sends the problem (edi ADR-0062), or empty (a refusal after the file was read, such as a
+    // name clash, or one no load makes). `message` is not read.
+    Q_INVOKABLE QString takeRefusedFile(const QString& message);
     /// List a local folder off the GUI thread, then link its datasets through the normal scan loader.
     Q_INVOKABLE void loadDatasetFolder(edi_app::ExperimentViewModel* experiment, const QUrl& folder, bool copy = false);
     Q_PROPERTY(bool listingDatasetFolder READ listingDatasetFolder NOTIFY listingDatasetFolderChanged)
@@ -1254,6 +1258,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     bool modified_ = false;
     quint64 revision_ = 0;
     QString last_error_;
+    void announceRefused(const QString& message);  // every `refused`, with the file it attaches
     QString published_name_, published_title_, published_description_, published_last_modified_;
     QString published_authors_, published_su_rule_;
     bool published_pattern_d_spacing_ = false;

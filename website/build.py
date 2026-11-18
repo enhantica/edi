@@ -1017,20 +1017,55 @@ def _feedback_dialog_texts(qml: str) -> dict:
         r'\+ " " \+ qsTr\("([^"]*)"\)',
         'the privacy line',
     )
-    # What the app's form says while sending and after the answer, and the label of its button
-    # once sent.
-    status = one(
-        r'text: dialog\.sending \? qsTr\("([^"]*)"\) : dialog\.sent \? qsTr\("([^"]*)"\) : '
-        r'dialog\.lastStatus === 429 \? '
-        r'qsTr\("([^"]*)"\) : dialog\.lastStatus === 0 \? qsTr\("([^"]*)"\) : qsTr\("([^"]*)"\)',
-        'the sending status texts',
+    # What the app's form says while sending and after the answer, in its status line's order:
+    # sending, sent (then "But …" for a file the service did not keep), too many, not sent with a
+    # reason, no connection, refused with a reason, failed.
+    line = one(
+        r'objectName: "feedback\.status"[^\n]*\n(?:[^\n]*\n){0,6}?'
+        r'\s*text: dialog\.sending \?([^\n]*)',
+        'the status line',
     )
+    status_texts = re.findall(r'qsTr\("([^"]*)"\)', line.group(1))
+    if len(status_texts) != 8:
+        raise SystemExit(f'FeedbackDialog.qml: expected 8 status texts, found {len(status_texts)}')
     close = one(r'text: dialog\.sent \? qsTr\("([^"]*)"\)', 'the Close button').group(1)
+    attach = one(
+        r'objectName: "feedback\.files\.add"[^}]*?text: qsTr\("([^"]+)"\)'
+        r'\s*ToolTip\.text: qsTr\("([^"]+)"\)',
+        'the Attach files link',
+    )
+    files = {
+        'attach': attach.group(1),
+        'tooltip': attach.group(2),
+        'remove': one(
+            r'objectName: "feedback\.files\.remove\.[^}]*?text: qsTr\("([^"]+)"\)',
+            'the Remove link',
+        ).group(1),
+        'unreadable': one(
+            r'qsTr\("(Not attached, could not be read: %1)"\)', 'the unreadable-file line'
+        ).group(1),
+        'refused': one(
+            r'objectName: "feedback\.files\.error"[^}]*?qsTr\("([^"]+)"\)', 'the limit line'
+        ).group(1),
+        'notAttached': one(r'qsTr\("(%1 was not attached)"\)', 'the not-attached text').group(1),
+        'notAttachedMany': one(r'qsTr\("(%1 were not attached)"\)', 'the not-attached text').group(
+            1
+        ),
+    }
+    copy_report = one(
+        r'objectName: "feedback\.copyReport"[^}]*?text: qsTr\("([^"]+)"\)', 'Copy report'
+    ).group(1)
     return {
         'status': dict(
-            zip(('sending', 'sent', 'tooMany', 'offline', 'failed'), status.groups(), strict=True)
+            zip(
+                ('sending', 'sent', 'but', 'tooMany', 'notSent', 'offline', 'refused', 'failed'),
+                status_texts,
+                strict=True,
+            )
         ),
         'close': close,
+        'files': files,
+        'copyReport': copy_report,
         'reasons': [{'value': value, 'text': text} for value, text in reasons],
         'contact': contact,
         'subject': by_kind('objectName: "feedback.subject"', 'the subject prompts'),
@@ -1051,8 +1086,18 @@ def _write_feedback_form(built: Path) -> None:
         (ROOT.parent / 'app/qml/Components/FeedbackDialog.qml').read_text(encoding='utf-8')
     )
     form = {'endpoint': found[0], **texts}
+    # The app's own message rules (limits, the report text, which files a 201 kept), wrapped so the
+    # page has one name for them.
+    payload = (ROOT.parent / 'app/feedback/Payload.js').read_text(encoding='utf-8')
+    payload = payload.replace('.pragma library\n', '', 1)
     (built / 'assets/feedback-form.js').write_text(
-        f'window.edFeedbackForm = {json.dumps(form, ensure_ascii=False)};\n', encoding='utf-8'
+        f'window.edFeedbackForm = {json.dumps(form, ensure_ascii=False)};\n'
+        'window.edFeedbackPayload = (function () {\n'
+        f'{payload}\n'
+        '  return { filesProblem, reportText, unconfirmedFiles, maxFiles, maxFileBytes,\n'
+        '           maxTotalBytes };\n'
+        '})();\n',
+        encoding='utf-8',
     )
 
 

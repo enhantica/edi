@@ -41,10 +41,11 @@ TestCase {
         verify(control.enabled && control.width > 0 && control.height > 0, "The Home action is enabled and has an input rectangle");
         mouseClick(control, control.width / 2, control.height / 2);
     }
+    // Retain the frozen native selector; the owner now specifies four links per column.
     function test_six_links_have_icons_and_two_columns() {
-        const labels = ["Tutorials", "What's new", "Documentation", "Help and feedback", "How to cite", "About " + ApplicationInfo.name];
+        const labels = ["Tutorials", "Documentation", "What's new", "How to cite", "Help and feedback", "Enjoying EasyDiffraction?", "Take the user survey", "About " + ApplicationInfo.name];
         const controls = labels.map(label => button(label));
-        verify(/^(external-link(?:-alt)?|arrow-up-right-from-square|square-arrow-up-right|up-right-from-square)$/.test(controls[2].fontIcon), "Documentation carries the app's external-resource icon, not a book or internal-action icon");
+        verify(/^(external-link(?:-alt)?|arrow-up-right-from-square|square-arrow-up-right|up-right-from-square)$/.test(controls[1].fontIcon), "Documentation carries the app's external-resource icon, not a book or internal-action icon");
         const points = controls.map(control => control.mapToItem(app.contentItem, 0, 0));
         for (const control of controls) {
             verify(typeof control.fontIcon === "string" && control.fontIcon.length > 0, "Each Home link has its own leading icon");
@@ -56,15 +57,15 @@ TestCase {
         }
         const text = Render.texts(app.contentItem).map(item => item.text);
         verify(!text.includes("Learn") && !text.includes("Contact and about"), "The two Home link columns have no Learn or Contact and about headers");
-        for (let i = 0; i < 3; ++i) {
+        for (let i = 0; i < 4; ++i) {
             verify(Math.abs(points[i].x - points[0].x) < 1, "First-column links occupy one column");
-            verify(Math.abs(points[i + 3].x - points[3].x) < 1, "Second-column links occupy the second column");
+            verify(Math.abs(points[i + 4].x - points[4].x) < 1, "Second-column links occupy the second column");
             if (i > 0) {
                 verify(points[i].y > points[i - 1].y, "First-column links occur in the agreed vertical order");
-                verify(points[i + 3].y > points[i + 2].y, "Second-column links occur in the agreed vertical order");
+                verify(points[i + 4].y > points[i + 3].y, "Second-column links occur in the agreed vertical order");
             }
         }
-        verify(points[3].x > points[0].x, "The second link column follows the first horizontally");
+        verify(points[4].x > points[0].x, "The second link column follows the first horizontally");
     }
     function test_public_documentation_destinations_data() {
         return [

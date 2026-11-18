@@ -112,6 +112,7 @@
     "app/qml/Components/AssistantMessage.qml",
     "app/qml/Components/AssistantSkillsDialog.qml",
     "app/qml/Components/AssistantTrial.qml",
+    "app/qml/Components/FeedbackDialog.qml",
     "app/qml/Components/ScanViewChart.qml",
     "app/qml/Components/SelectorField.qml",
     "app/qml/Components/TutorialPanel.qml",
@@ -369,6 +370,9 @@
    "code": "U+2013",
    "font": "PT Sans",
    "sites": [
+    "app/qml/Components/AppPreferencesDialog.qml",
+    "app/qml/Components/SurveyBar.qml",
+    "app/qml/Pages/Home/HomePage.qml",
     "app/src/app_info.cpp",
     "app/src/assistant_native_create.cpp",
     "app/src/assistant_native_tools.cpp",

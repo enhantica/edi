@@ -46,6 +46,25 @@ struct RunReport {
     QString graphics;
 };
 
+/// A file for Help and feedback to attach (edi ADR-0063): its `name`, `type`, `size` (of what is attached), base64
+/// `data`, and whether it was `cut` to the 5 MB limit for one attachment.
+struct FeedbackFile {
+    Q_GADGET
+    QML_VALUE_TYPE(feedbackFile)
+    Q_PROPERTY(QString name MEMBER name CONSTANT)
+    Q_PROPERTY(QString type MEMBER type CONSTANT)
+    Q_PROPERTY(qint64 size MEMBER size CONSTANT)
+    Q_PROPERTY(QString data MEMBER data CONSTANT)
+    Q_PROPERTY(bool cut MEMBER cut CONSTANT)
+
+   public:
+    QString name;
+    QString type;
+    qint64 size = 0;
+    QString data;
+    bool cut = false;
+};
+
 /// The log of one app run (ADR-0062): every Qt message of the app, its QML and its calls into crysta, at the chosen
 /// level, to the terminal and to `logs/session-<date>-<time>.log` in the app's data folder. The last three runs are
 /// kept. A run holds a lock file beside its log while it runs; a lock file whose process is gone at the next start
@@ -97,6 +116,9 @@ class RunLog : public QObject {
     QString crashedLog() const { return crashed_log_; }
     /// The crashed run's log text, for a report.
     Q_INVOKABLE QString crashedLogText() const;
+    /// What went wrong in the crashed run, for a report's text: its last error record (FATAL, else ERROR, else
+    /// WARNING), as `LEVEL source: message (location)`; empty when its log holds none.
+    Q_INVOKABLE QString crashedDiagnostic() const;
     /// Forgets the crashed run once its report is sent or declined.
     Q_INVOKABLE void dismissCrash();
     /// This run's log text so far, for a report; empty without a file.
@@ -116,10 +138,14 @@ class RunLog : public QObject {
     static void install(RunLog* log);
     static RunLog* instance();
     static RunLog* create(QQmlEngine*, QJSEngine*);
+    /// An error nothing else caught (the application's event loop): logged as Critical, then shown in the error popup
+    /// through errorCaught, on the next turn of the event loop (edi ADR-0062).
+    static void reportCaught(const QString& message);
 
    signals:
     void levelChanged();
     void crashedLogChanged();
+    void errorCaught(const QString& message);
 
    private:
     bool wanted(QtMsgType type) const;

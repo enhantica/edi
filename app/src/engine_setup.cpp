@@ -247,7 +247,7 @@ static void configure_engine_settings(QQmlEngine& engine) {
                                    ? QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation)
                                    : fresh_config_dir();
     QDir().mkpath(config_dir);
-    // ADR-0031 §3: the one store, QSettings' ini file of the user scope (organisation EasyScience, application
+    // ADR-0031 §3: the one store, QSettings' ini file of the user scope (organisation and application
     // EasyDiffraction), with today's settings.ini carried over once; a demo or a test run's user scope is its fresh
     // folder (use_fresh_settings), and the browser keeps its storage.
     QString settings_file = QDir(config_dir).filePath(QStringLiteral("settings.ini"));
@@ -291,10 +291,57 @@ static void configure_engine_settings(QQmlEngine& engine) {
 
 QString settings_file_path() { return configured_settings_file(); }
 
+QString settings_organisation() { return QStringLiteral("EasyDiffraction"); }
+
+QString legacy_settings_organisation() { return QStringLiteral("EasyScience"); }
+
 QString settings_store_path() {
-    const QSettings store(QSettings::IniFormat, QSettings::UserScope, QStringLiteral("EasyScience"),
+    const QSettings store(QSettings::IniFormat, QSettings::UserScope, settings_organisation(),
                           QStringLiteral("EasyDiffraction"));
     return store.fileName();
+}
+
+void migrate_legacy_settings() {
+#if !defined(Q_OS_WASM)
+    if (!fresh_config_dir().isEmpty()) {
+        return;
+    }
+    const QString store = settings_store_path();
+    const QString legacy = QSettings(QSettings::IniFormat, QSettings::UserScope, legacy_settings_organisation(),
+                                     QStringLiteral("EasyDiffraction"))
+                               .fileName();
+    if (QFileInfo(store).size() == 0 && QFileInfo(legacy).size() > 0) {
+        QDir().mkpath(QFileInfo(store).absolutePath());
+        QFile::remove(store);
+        if (!QFile::copy(legacy, store)) {
+            qWarning("cannot carry the settings over from %s", qPrintable(legacy));
+        }
+    }
+    // The folders QStandardPaths names after the organisation: assistant data, logs and the older settings.ini.
+    const QList<QStandardPaths::StandardLocation> locations = {
+        QStandardPaths::AppLocalDataLocation, QStandardPaths::AppDataLocation, QStandardPaths::AppConfigLocation};
+    QStringList current;
+    for (const auto location : locations) {
+        current.append(QStandardPaths::writableLocation(location));
+    }
+    const QString organisation = QCoreApplication::organizationName();
+    QCoreApplication::setOrganizationName(legacy_settings_organisation());
+    QStringList old;
+    for (const auto location : locations) {
+        old.append(QStandardPaths::writableLocation(location));
+    }
+    QCoreApplication::setOrganizationName(organisation);
+    for (qsizetype i = 0; i < current.size(); ++i) {
+        if (old[i].isEmpty() || current[i].isEmpty() || old[i] == current[i] || QFileInfo::exists(current[i]) ||
+            !QFileInfo(old[i]).isDir()) {
+            continue;
+        }
+        QDir().mkpath(QFileInfo(current[i]).absolutePath());
+        if (!QDir().rename(old[i], current[i])) {
+            qWarning("cannot move %s to %s", qPrintable(old[i]), qPrintable(current[i]));
+        }
+    }
+#endif
 }
 
 void store_settings_now() {
@@ -432,8 +479,10 @@ void select_freetype_engine(int argc, char** argv) {
         platform = "cocoa";
     }
 #elif defined(Q_OS_WIN)
+    // Dark window frames: Qt draws the title bar's buttons itself (main.cpp), and with them gives minimise and
+    // maximise a subtle light-on-dark hover in dark mode instead of a light one. Not when a platform was chosen.
     if (platform.isEmpty()) {
-        platform = "windows";
+        platform = "windows:darkmode=2";
     }
 #endif
     if (platform.isEmpty()) {

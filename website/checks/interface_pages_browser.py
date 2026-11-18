@@ -123,7 +123,8 @@ Math.abs(ratio-.012)<.00001;
                 "[...document.querySelectorAll('.ed-downloads a.md-button')].every(link => "
                 "(link.getAttribute('aria-disabled') === 'true' ? !link.hasAttribute('href') : "
                 "link.href.startsWith('https://github.com/enhantica/edi/releases/download/') && "
-                "link.href.endsWith(link.dataset.downloadPlatform + '-online.zip')) && "
+                '/-online\\.(zip|dmg|exe)$/.test(link.href) && '
+                "link.href.includes(link.dataset.downloadPlatform + '-online.')) && "
                 "link.querySelector('svg[aria-hidden=true] path') && "
                 "link.querySelector('.ed-download-label small').textContent.trim());"
             )

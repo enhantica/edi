@@ -25,8 +25,13 @@ When you report a problem, it helps to say:
 </div>
 <input type="text" name="subject">
 <textarea name="message" required></textarea>
+<div class="ed-contact-files">
+<button type="button" class="ed-contact-attach"></button>
+<input type="file" name="files" multiple hidden>
+<ul class="ed-contact-file-list"></ul>
+<p class="ed-contact-file-error" role="alert"></p>
+</div>
 <button type="submit">Send</button>
-<p class="ed-contact-note"></p>
 </form>
 
 ## Take the survey

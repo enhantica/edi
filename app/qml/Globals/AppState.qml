@@ -104,6 +104,16 @@ QtObject {
     // Help and feedback, asked for from Home, About or the crash popup: the window's form opens on `kind` ("feedback",
     // "question", "problem" or "idea"), with `log` attached instead of this run's when it is not empty (Main.qml).
     signal feedbackRequested(string kind, string log)
+    // An error popup's Send to developers (edi ADR-0062): the form opens as a problem with `message`, this run's log and
+    // `file`, the file edi could not read, attached when not empty.
+    signal problemReported(string message, string file)
+    // The post-crash popup's Send to developers: the form opens as a problem with the crashed run's `log` and `text`
+    // (what went wrong, RunLog.crashedDiagnostic) filled in.
+    signal crashReported(string log, string text)
+    // Home's "Enjoying EasyDiffraction?": the likes bar now, whatever its timing rule (owner, 2026-11-17).
+    signal likesRequested
+    // Home's Update available link: the update dialog the status bar opens on the other pages.
+    signal updateDialogRequested
     // What's new, asked for from Home (Main.qml).
     signal whatsNewRequested
     // A built-in tutorial to run (its manifest entry), asked for from Home's Tutorials; the window's panel runs it.

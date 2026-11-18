@@ -148,6 +148,7 @@ qt_add_qml_module(edi_app_module
         src/report_pdf.hpp src/report_pdf.cpp
         src/project_view_model.hpp src/project_view_model.cpp
         src/session.hpp src/session.cpp
+        src/load_attempt.hpp src/load_attempt.cpp
         src/online_sources.hpp src/online_sources.cpp
         src/collection_origin.hpp
         src/online_search.hpp src/online_search.cpp
@@ -159,7 +160,12 @@ qt_add_qml_module(edi_app_module
     QML_FILES
         qml/Main.qml
         feedback/Payload.js
+        feedback/Likes.js
         qml/Components/AppDialog.qml
+        qml/Components/ErrorDialog.qml
+        qml/Components/LikesBar.qml
+        qml/Components/SurveyBar.qml
+        qml/Components/BarButton.qml
         qml/Components/AppPreferencesDialog.qml
         qml/Components/LoadMenuHeader.qml
         qml/Components/LoadMenuItem.qml
@@ -515,6 +521,8 @@ set_target_properties(edi_app_ui_compare PROPERTIES WIN32_EXECUTABLE FALSE MACOS
 # compiled in, over the same edi.app module and engine setup the host uses. The cases are the tests
 # lane's; a glob keeps the two lanes off one file. Never linked into edi_app.
 file(GLOB EDI_APP_TEST_SUPPORT CONFIGURE_DEPENDS ${PROJECT_SOURCE_DIR}/tests/unit/app/test_*.cpp)
+# The implementation's own support for its visible cases in tests/fixtures/app_cases (`edi_app_tests -input tests/fixtures/app_cases`).
+list(APPEND EDI_APP_TEST_SUPPORT ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_drop_events.cpp)
 # The runner prints the commit it was built from (`<sha>-dirty` when tracked files differed), so the latency
 # bank attributes the frame times it prints to a revision; regenerated on every build, as lib's.
 set(EDI_APP_BUILD_COMMIT_CPP "${CMAKE_BINARY_DIR}/edi_app_build_commit.cpp")
@@ -568,7 +576,7 @@ if(EDI_DEPLOY_APP AND APPLE)
     set_source_files_properties("${app_icon}" PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
     set_target_properties(edi_app PROPERTIES MACOSX_BUNDLE_ICON_FILE App.icns)
     set_target_properties(edi_app PROPERTIES MACOSX_BUNDLE TRUE OUTPUT_NAME EasyDiffraction
-        MACOSX_BUNDLE_GUI_IDENTIFIER org.easyscience.easydiffraction
+        MACOSX_BUNDLE_GUI_IDENTIFIER org.easydiffraction.app
         MACOSX_BUNDLE_BUNDLE_NAME EasyDiffraction)
     set(CMAKE_INSTALL_BINDIR EasyDiffraction.app/Contents/MacOS)
     set(CMAKE_INSTALL_LIBEXECDIR EasyDiffraction.app/Contents/libexec)
@@ -651,6 +659,17 @@ add_dependencies(edi_trial_lock_tests edi_app_build_commit)
 set_target_properties(edi_trial_lock_tests PROPERTIES AUTOMOC ON WIN32_EXECUTABLE FALSE MACOSX_BUNDLE FALSE)
 if(TARGET edi_assistant_native)
     target_link_libraries(edi_trial_lock_tests PRIVATE edi_assistant_native)
+endif()
+
+# Which file an error report attaches, over every load route (ADR-0063).
+qt_add_executable(edi_load_attempt_tests tests/load_attempt_tests.cpp)
+target_link_libraries(edi_load_attempt_tests PRIVATE edi_app_module edi_app_moduleplugin ${EDI_GUI_BASE_TARGETS} Qt6::QuickTest)
+target_compile_definitions(edi_load_attempt_tests PRIVATE EDI_SOURCE_DIR="${PROJECT_SOURCE_DIR}")
+target_sources(edi_load_attempt_tests PRIVATE "${EDI_APP_BUILD_COMMIT_CPP}")
+add_dependencies(edi_load_attempt_tests edi_app_build_commit)
+set_target_properties(edi_load_attempt_tests PROPERTIES AUTOMOC ON WIN32_EXECUTABLE FALSE MACOSX_BUNDLE FALSE)
+if(TARGET edi_assistant_native)
+    target_link_libraries(edi_load_attempt_tests PRIVATE edi_assistant_native)
 endif()
 
 qt_add_executable(edi_assistant_ui_tests tests/assistant_ui_tests.cpp)

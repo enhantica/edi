@@ -5,6 +5,7 @@
 #include <QPair>
 #include <QByteArray>
 #include <QObject>
+#include <QTemporaryDir>
 #include <QPointer>
 #include <QScopeGuard>
 #include <optional>
@@ -41,6 +42,8 @@ class QJSEngine;
 #include "web_storage.hpp"
 
 namespace edi_app {
+
+class LoadAttempt;
 
 // The app's one list of messages (edi ADR-0017 §14): the warnings the last open reported and the errors the
 // views used to show in red — a calculation refusal, one row per distinct refusal — and information entries (why an
@@ -191,6 +194,8 @@ class Session : public QObject {
 
     // Open a project from its folder, its project.edi or a .zip of the folder; only `file:` URLs (edi ADR-0052). An
     // archive unpacks into a temporary folder: the project has no folder of its own until Save asks where to keep it.
+    // The file the last reported load failure carried (loadFailed), empty when it carried none. Forgotten once asked for.
+    Q_INVOKABLE QString takeFailedFile();
     Q_INVOKABLE bool openProject(const QUrl& location);
     // Open a bundled example: extracted to this session's temporary directory, then opened whole.
     Q_INVOKABLE bool openExample(const QString& exampleId);
@@ -324,8 +329,9 @@ class Session : public QObject {
     void colourSchemeChanged();
     void lastErrorChanged();
     // A project or an example could not be opened: every refused open says why (the window shows it), never a silent
-    // no-op.
-    void loadFailed(const QString& message);
+    // no-op. `file` is a copy of the project member whose reading failed, for the error popup to attach when the user
+    // sends the problem; empty when no single file is to blame. takeFailedFile returns the same path.
+    void loadFailed(const QString& message, const QString& file);
     // The web app wrote the project into its place (`kind`: "browser", "folder" or "zip"), or downloaded it as `name`.
     void webSaved(const QString& kind);
     // `fromFile`: the project came from a file the user may want to replace.
@@ -420,6 +426,9 @@ class Session : public QObject {
     bool assistantSaveNotified(ProjectViewModel*) const;
     ProjectViewModel* project_ = nullptr;
     QString last_error_;
+    QString report(LoadAttempt* attempt);
+    QString failed_file_;  // the last reported failure's file (takeFailedFile)
+    std::vector<std::unique_ptr<QTemporaryDir>> failed_copies_;  // every reported failure's copy (report)
     ExampleListModel* examples_;
     OnlineSourcesModel* online_sources_ = nullptr;
     OnlineSearch* online_search_ = nullptr;

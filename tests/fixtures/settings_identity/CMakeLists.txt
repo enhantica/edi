@@ -1,0 +1,7 @@
+cmake_minimum_required(VERSION 3.25)
+project(settings_identity_probe LANGUAGES CXX)
+set(CMAKE_CXX_STANDARD 20)
+find_package(Qt6 REQUIRED COMPONENTS Core)
+add_executable(settings_identity_probe probe.cpp)
+target_include_directories(settings_identity_probe PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")
+target_link_libraries(settings_identity_probe PRIVATE Qt6::Core)

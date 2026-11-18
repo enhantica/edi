@@ -1,7 +1,7 @@
 # The public-content check (tools/public-release/content_check.py): every push and pull request, so
 # nothing that is not fit to publish reaches the repository's files, commit messages or pull requests.
 # It needs no token and no secret, so a fork's pull request runs it too.
-name: content check
+name: Content check
 
 on:
   push:

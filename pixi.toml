@@ -251,6 +251,7 @@ app-test-assistant-lifetime = { cmd = "cmake --build build/app --target edi_assi
 app-test-skill-targets = { cmd = "python tools/checks/assistant_skill_targets.py && python -m pytest tests/unit/py/test_assistant_skill_targets.py --noconftest -o addopts= -q" }
 app-test-assistant-ui = { cmd = "cmake --build build/app --target edi_assistant_ui_tests -j 4 && QT_QPA_PLATFORM=offscreen build/app/app/edi_assistant_ui_tests", depends-on = ["app-build"] }
 app-test-trial-lock = { cmd = "cmake --build build/app --target edi_trial_lock_tests -j 4 && QT_QPA_PLATFORM=offscreen build/app/app/edi_trial_lock_tests", depends-on = ["app-build"] }
+app-test-load-attempts = { cmd = "cmake --build build/app --target edi_load_attempt_tests -j 4 && QT_QPA_PLATFORM=offscreen build/app/app/edi_load_attempt_tests", depends-on = ["app-build"] }
 # Build, then start the app: `pixi run -e app app` (arguments pass through: `pixi run -e app app --demo out/`).
 app = { cmd = "EDI_APP_TARGETS=edi_app bash tools/ci/app-build.sh && bash tools/ci/app-run.sh"  }
 # Start the already-built app with no build and no network check.
@@ -325,6 +326,8 @@ zensical = "==0.0.73"
 check = "ruff check ."
 format-check = "ruff format --check ."
 format = "ruff format ."
+# The CI lint job's checks, every one reported (tools/ci/lint.sh); the pre-push hook in .githooks runs it.
+lint = { cmd = ["bash", "tools/ci/lint.sh"] }
 # --- tests --------------------------------------------------------------------------- Exit code 5 (= no
 # tests collected) is tolerated so the gate is green on the pre-code skeleton and tightens automatically
 # once the first test lands. depends-on core-build: from the suite imports `edi._edi` (a git-ignored

@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "session.hpp"
+#include "load_attempt.hpp"
 #include "label_case.hpp"
 #include "assistant_result.hpp"
 #include "../../core/src/canonical_encoding.hpp"
@@ -13,6 +14,7 @@
 #include <QDirIterator>
 #include <QFile>
 #include <QFileInfo>
+#include <QTemporaryDir>
 #include <QStandardPaths>
 #include <QPair>
 #include <QPointer>
@@ -361,6 +363,7 @@ void Session::releaseTemporaryRoots(const QStringList& candidates,const QString&
 }
 
 bool Session::openProject(const QUrl& location) {
+    LoadAttempt attempt(this);
     const QPointer<Session> receiver(this);
     const QPointer<ProjectViewModel> before(project_);
     const auto binding=replacement_generation_;
@@ -376,11 +379,12 @@ bool Session::openProject(const QUrl& location) {
     if(!receiver || replacement_generation_!=binding || project_!=before)return false;
     const auto message=last_error_.isEmpty()?tr("The project at %1 could not be opened").arg(location.toLocalFile().isEmpty()?location.toString():location.toLocalFile()):last_error_;
     if(!receiver || replacement_generation_!=binding || project_!=before)return false;
-    emit loadFailed(message);
+    emit loadFailed(message, report(&attempt));
     return false;
 }
 
 bool Session::openExample(const QString& exampleId) {
+    LoadAttempt attempt(this);
     const QPointer<Session> receiver(this);
     const QPointer<ProjectViewModel> before(project_);
     const auto binding=replacement_generation_;
@@ -393,7 +397,7 @@ bool Session::openExample(const QString& exampleId) {
     if(!receiver || replacement_generation_!=binding || project_!=before)return false;
     const auto message=last_error_.isEmpty()?tr("The example %1 could not be opened").arg(exampleId):last_error_;
     if(!receiver || replacement_generation_!=binding || project_!=before)return false;
-    emit loadFailed(message);
+    emit loadFailed(message, report(&attempt));
     return false;
 }
 
@@ -1285,7 +1289,7 @@ bool Session::openExampleNamed(const QString& exampleId) {
     if (!receiver || receiver->example_request_ != request) return true;
     emit exampleDownloadProgressChanged();
     if (!receiver || receiver->example_request_ != request) return true;
-    const auto finish = [receiver, exampleId, request](bool opened, const QString& message) {
+    const auto finish = [receiver, exampleId, request](bool opened, const QString& message, const QString& file = {}) {
         if (!receiver || receiver->example_request_ != request || !receiver->opening_example_) return;
         receiver->opening_example_ = false;
         emit receiver->openingExampleChanged();
@@ -1293,7 +1297,7 @@ bool Session::openExampleNamed(const QString& exampleId) {
         if (!opened && !message.isEmpty()) {
             receiver->setLastError(message);
             if (!receiver || receiver->example_request_ != request) return;
-            emit receiver->loadFailed(message);
+            emit receiver->loadFailed(message, file.isEmpty() ? receiver->report(nullptr) : file);
             if (!receiver || receiver->example_request_ != request) return;
         }
         emit receiver->exampleOpenFinished(exampleId, opened);
@@ -1333,13 +1337,21 @@ bool Session::openExampleNamed(const QString& exampleId) {
                 return;
             }
             receiver->aside_next_ = aside;
-            const bool opened = receiver->openProjectAt(archive, exampleId);
+            // The downloaded project's read is this request's own attempt: only a file it failed on goes with it.
+            QString failed;
+            bool opened = false;
+            {
+                LoadAttempt attempt(receiver);
+                opened = receiver->openProjectAt(archive, exampleId);
+                if (!receiver) return;
+                if (!opened) failed = receiver->report(&attempt);
+            }
             receiver->aside_next_ = false;
             if (opened) qCInfo(lcApp, "example opened: %s", qPrintable(exampleId));
             else qCWarning(lcApp, "example %s: %s could not be opened: %s", qPrintable(exampleId), qPrintable(archive.toLocalFile()), qPrintable(receiver->last_error_));
             finish(opened, opened ? QString()
                    : tr("The example %1, downloaded to %2, could not be opened%3")
-                         .arg(exampleId, archive.toLocalFile(), receiver->last_error_.isEmpty() ? QString() : QStringLiteral(": ") + receiver->last_error_));
+                         .arg(exampleId, archive.toLocalFile(), receiver->last_error_.isEmpty() ? QString() : QStringLiteral(": ") + receiver->last_error_), failed);
         }, [receiver, request, current](qint64 received, qint64 total) {
             if (!receiver || receiver->example_request_ != request || !current()) return;
             receiver->example_download_received_ = std::max<qint64>(0, received);
@@ -1811,7 +1823,7 @@ bool Session::open(const QString& directory,const QString& example,const std::fu
         }
         opened = new ProjectViewModel(std::move(project), this, colour_scheme_);
     } catch (const std::exception& refusal) {
-        if(preparing())setLastError(QString::fromUtf8(refusal.what())); // Never overwrite a successor's error.
+        if(preparing()){if(auto* attempt=LoadAttempt::current(this))attempt->keep(); setLastError(QString::fromUtf8(refusal.what()));} // Never overwrite a successor's error.
         return false;
     }
     if(!preparing()) {
@@ -1852,6 +1864,7 @@ bool Session::openCopy(const QString& source,const QString& target,const QString
                 data = QString::fromStdString(edi::scan_datasets(project).directory);
             } catch (const std::exception&) {
                 data.clear();  // no scan directory resolves: everything is copied
+                edi::take_failed_file();  // not this open's failure
             }
         }
         if(QFileInfo::exists(target))throw std::runtime_error("The independent temporary copy target already exists");
@@ -1878,7 +1891,7 @@ bool Session::openCopy(const QString& source,const QString& target,const QString
         }
         opened = new ProjectViewModel(std::move(project), this, colour_scheme_);
     } catch (const std::exception& refusal) {
-        if(preparing())setLastError(QString::fromUtf8(refusal.what())); // Never overwrite a successor's error.
+        if(preparing()){if(auto* attempt=LoadAttempt::current(this))attempt->keep(); setLastError(QString::fromUtf8(refusal.what()));} // Never overwrite a successor's error.
         return false;
     }
     if(!preparing()) {
@@ -2116,7 +2129,7 @@ void Session::openWebProject(const QString& kind) {
     } catch (const std::exception& refusal) {
         if(!current())return;
         setLastError(QString::fromUtf8(refusal.what()));
-        if(current())emit loadFailed(last_error_);
+        if(current())emit loadFailed(last_error_, report(nullptr));
         return;
     }
     WebStorage::instance()->pickOpen(kind, root, webOpenAnswer(root));
@@ -2136,7 +2149,7 @@ std::function<bool(const WebStorageAnswer&)> Session::openRequest(const QString&
             if(!current())return false;
             if(!answer.cancelled) {
                 setLastError(answer.message);
-                if(current())emit loadFailed(last_error_);
+                if(current())emit loadFailed(last_error_, report(nullptr));
             }
             return false;
         }
@@ -2146,7 +2159,7 @@ std::function<bool(const WebStorageAnswer&)> Session::openRequest(const QString&
             const auto message=tr("%1 was not opened: the open project was changed while it was read. Open it again to replace the project.").arg(answer.name);
             if(!current())return false;
             setLastError(message);
-            if(current())emit loadFailed(last_error_);
+            if(current())emit loadFailed(last_error_, report(nullptr));
             return false;
         }
         return true;
@@ -2160,6 +2173,7 @@ WebStorage::Answer Session::webOpenAnswer(const QString& root, bool fromFile, bo
         const PendingOpenSource pending(*this,answer.path);
         const QPointer<ProjectViewModel> before(project_);const auto beforeBinding=replacement_generation_;
         const WebPlace place{answer.key,answer.kind,answer.name};
+        LoadAttempt attempt(this);
         if(!openWebCopy(answer.path,place)) {
             if(!receiver || project_!=before || replacement_generation_!=beforeBinding)return;
             // A failed parse owns no replacement. A false publication after
@@ -2167,7 +2181,7 @@ WebStorage::Answer Session::webOpenAnswer(const QString& root, bool fromFile, bo
             if(web_copy_!=root)QDir(root).removeRecursively();
             if(!receiver || project_!=before || replacement_generation_!=beforeBinding)return;
             const auto message=last_error_;
-            emit loadFailed(message);
+            emit loadFailed(message, report(&attempt));
             return;
         }
         const QPointer<ProjectViewModel> target(project_);const auto binding=replacement_generation_;const auto pathBinding=path_generation_;
@@ -2196,7 +2210,7 @@ void Session::openStoredProject(const QString& key, bool recovery) {
     }catch(const std::exception& refusal) {
         if(!current())return;
         setLastError(QString::fromUtf8(refusal.what()));
-        if(current())emit loadFailed(last_error_);
+        if(current())emit loadFailed(last_error_, report(nullptr));
         return;
     }
     WebStorage::instance()->load(key,recovery,root,webOpenAnswer(root,false,recovery));
@@ -2618,4 +2632,19 @@ bool Session::completeAssistantSaveAs(const QString& token,const QUrl& target,bo
     auto choice=std::move(assistant_save_choice_);
     return choice->accepted && choice->accepted(target,zip,copy);
 }
+}
+
+// The file a reported failure carries: its own attempt's (none for a refusal that read no file). Its copy lasts as
+// long as the session: another failure, even one reported while this one is still being announced, never removes
+// a file a popup may attach. Each is one project member.
+QString edi_app::Session::report(LoadAttempt* attempt) {
+    std::unique_ptr<QTemporaryDir> copy;
+    failed_file_ = attempt ? attempt->release(copy) : QString();
+    if (copy) failed_copies_.push_back(std::move(copy));
+    return failed_file_;
+}
+
+QString edi_app::Session::takeFailedFile() {
+    const QString path = std::exchange(failed_file_, {});
+    return !path.isEmpty() && QFileInfo(path).isFile() ? path : QString();
 }

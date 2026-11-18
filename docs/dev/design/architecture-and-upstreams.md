@@ -15,7 +15,7 @@ pattern simulation, CIF/`.edi` I/O, reporting) delivered as a **desktop app** an
                                 ▼
                               edi
         core/ (C++ product core → crysta; ADR-0009)   app/ (QML, one C++ host: desktop+wasm)
-        lib/ (import edi — thin bindings)   cli/ (C++, Python-free)   shared/ (session)   docs/
+        lib/ (import edi — thin bindings)   cli/ (C++, Python-free)   docs/
 ```
 
 ## Upstream 1 — crysta (compute engine)
@@ -61,7 +61,7 @@ both the desktop and WASM targets; the base's PySide-wheel path is not used by e
 
 - The GUI base's **target architecture** — the injection seams (`ApplicationInfo`, page model,
   optional services), the façade pattern (settings/charts), and the dual-build model — is the design
-  edi's `app/` and `shared/` should consume:
+  edi's `app/` should consume:
   [architecture-target.md](https://github.com/easyscience/gui-components/tree/master/audit/design/architecture-target.md).
 - **Modern-Qt/QML guidelines** ([synced here](modern-qt-guidelines.md)) — the rules edi's QML must
   follow (unversioned imports, no private `.impl`, qsTr, WASM façades, testing).

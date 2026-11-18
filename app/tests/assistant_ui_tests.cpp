@@ -413,7 +413,8 @@ private slots:
         assistant.setShowActions(true);
         engine.rootContext()->setContextProperty("testAssistant", &assistant);
         QQmlComponent component(&engine);
-        component.setData("import QtQuick\nimport QtQuick.Controls\nimport edi.app\nApplicationWindow { width: 1200; height: 200; visible: true; footer: StatusBar { assistantChatShown: true } }", QUrl());
+        // The status bar is never shown on Home (owner, 2026-11-17), so the window starts on the next page.
+        component.setData("import QtQuick\nimport QtQuick.Controls\nimport EasyApplication.Gui.Globals as EaGlobals\nimport edi.app\nApplicationWindow { width: 1200; height: 200; visible: true; footer: StatusBar { assistantChatShown: true } Component.onCompleted: EaGlobals.Vars.appBarCurrentIndex = 1 }", QUrl());
         QScopedPointer<QObject> bar(component.create());
         QVERIFY2(bar, qPrintable(component.errorString()));
         auto* window = qobject_cast<QQuickWindow*>(bar.data());
