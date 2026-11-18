@@ -8,7 +8,11 @@ contribution vanishes.
 [generate.py](generate.py) writes these inputs and `reference.json` without importing the app. It uses the reciprocal
 cell metric, Sears (1992) b(Co) = 2.4900 fm, Brown's Co²⁺ coefficients from the supplied engine source's committed data,
 and the CODATA 2018 magnetic-moment and electron-radius constants. F² is expressed in 10⁻²⁴ cm²; 1 fm = 0.1 × 10⁻¹² cm.
-For an unpolarised beam, nuclear and perpendicular magnetic F² add. F uses the square root of the cumulative total.
+For an unpolarised beam, nuclear and perpendicular magnetic F² add. The independent squared nuclear and total
+intensities remain N and T in `reference.json`. [ADR-0090](../../../docs/dev/adrs/0090-pattern-x-axes.md) defines the
+F display: the total is √T and the nuclear boundary is √T × N/T, with the magnetic segment above it. The F² display
+uses N and T directly. Bar and thin-line expectations apply this display convention to the unchanged physical references;
+a zero total has a zero boundary.
 
 `powder-colours.json` uses the immutable published powder palettes and their checked release-data hash through the
 existing chart-controls generator. The legacy `main` preference token selects the published Main palette; named future

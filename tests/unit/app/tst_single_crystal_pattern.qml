@@ -131,8 +131,11 @@ Item {
                     if (magnetic && row.magnetic < 1e-12)
                         return true;
                     const bounds = extent(series, row[axis], axis);
-                    const low = magnetic ? (squared ? row.nuclear : Math.sqrt(row.nuclear)) : 0;
-                    const high = magnetic ? (squared ? row.total : Math.sqrt(row.total)) : (squared ? row.nuclear : Math.sqrt(row.nuclear));
+                    // ADR-0090: F displays the independent F² proportions inside sqrt(T).
+                    const total = squared ? row.total : Math.sqrt(row.total);
+                    const nuclear = squared ? row.nuclear : (row.total > 0 ? total * row.nuclear / row.total : 0);
+                    const low = magnetic ? nuclear : 0;
+                    const high = magnetic ? total : nuclear;
                     return bounds && Math.abs(bounds.high - high) < 1e-7 && Math.abs(bounds.low - low) < 1e-7;
                 }));
         }
@@ -173,7 +176,7 @@ Item {
             compare(before.constraints, data.mode === "alias" ? [] : [["mz", expression]], "The real model retains the declared fixed or expression constraint");
             axis(data.axis);
             style(data.squared);
-            verify(contribution(reference.rows, false, data.squared, data.axis) !== undefined, "The nuclear counterfactual remains the independent nonmagnetic structure factor despite nonzero moment relations");
+            verify(contribution(reference.rows, false, data.squared, data.axis) !== undefined, "Despite moment relations, nuclear strokes match the independent intensity under the declared F²-proportional display");
             verify(contribution(reference.rows, true, data.squared, data.axis) !== undefined, "The constrained magnetic fill remains nonzero and stacks to the independent unpolarised total in either reciprocal axis and quantity");
             compare(SettingsProof.momentRelationFacts(Session.project), before, "Calculating the nuclear counterfactual preserves original moments, alias paths and constraint expressions");
         }
@@ -220,7 +223,7 @@ Item {
             verify(Math.abs(nuclearArea.color.r - nuclearInk.r) + Math.abs(nuclearArea.color.g - nuclearInk.g) + Math.abs(nuclearArea.color.b - nuclearInk.b) < 1e-6, "The nuclear fill follows the independent approved powder structure colour");
             if (data.magnetic) {
                 const magneticArea = contribution(rows, true, data.squared, data.axis);
-                verify(magneticArea !== undefined, "The magnetic fill stacks above nuclear and reaches the independent total; F uses cumulative square roots");
+                verify(magneticArea !== undefined, "The magnetic fill stacks above nuclear to the independent total; F preserves the F² proportions");
                 const magneticInk = Qt.tint("transparent", colours[1]);
                 verify(Math.abs(magneticArea.color.r - magneticInk.r) + Math.abs(magneticArea.color.g - magneticInk.g) + Math.abs(magneticArea.color.b - magneticInk.b) < 1e-6, "The magnetic fill follows the independent approved powder magnetic contribution colour");
             }
@@ -257,11 +260,14 @@ Item {
                     if (magnetic && row.magnetic < 1e-12)
                         return true;
                     const bounds = extent(series, row[data.axis], data.axis);
-                    const low = magnetic ? (data.squared ? row.nuclear : Math.sqrt(row.nuclear)) : 0;
-                    const high = magnetic ? (data.squared ? row.total : Math.sqrt(row.total)) : (data.squared ? row.nuclear : Math.sqrt(row.nuclear));
+                    // ADR-0090: F displays the independent F² proportions inside sqrt(T).
+                    const total = data.squared ? row.total : Math.sqrt(row.total);
+                    const nuclear = data.squared ? row.nuclear : (row.total > 0 ? total * row.nuclear / row.total : 0);
+                    const low = magnetic ? nuclear : 0;
+                    const high = magnetic ? total : nuclear;
                     return bounds && Math.abs(bounds.low - low) < 1e-7 && Math.abs(bounds.high - high) < 1e-7;
                 });
-            verify(lines.some(line => matches(line, false) && Qt.colorEqual(line.color, colours[0])), "Thin mode renders the independently calculated nuclear line in its powder colour");
+            verify(lines.some(line => matches(line, false) && Qt.colorEqual(line.color, colours[0])), "Thin mode renders the independently projected nuclear segment in its powder colour");
             if (data.magnetic)
                 verify(lines.some(line => matches(line, true) && Qt.colorEqual(line.color, colours[1])), "Thin mode renders the magnetic line stacked over nuclear in its powder colour");
         }

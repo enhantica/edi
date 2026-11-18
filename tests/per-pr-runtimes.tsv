@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-18T02:05:36Z
+# measured_utc = 2026-11-18T04:19:29Z
 #
-# Recorded from: measured test run (20 node(s) measured once, 180808 banked, 0 stale row(s) dropped)
-# Collected tests: 249637; with a reported duration: 80637
+# Recorded from: measured test run (20 node(s) measured once, 180814 banked, 0 stale row(s) dropped)
+# Collected tests: 249637; with a reported duration: 80649
 # Module-scoped fixture costs recorded: 209
 #
 # Breaches are decided PER TIER against the table
@@ -31,8 +31,8 @@
 # measurement nobody took and which passes every tier threshold.
 # inventory_python = 249637
 # inventory_cpp = 0
-# inventory_measured = 180822
-# inventory_unmeasured = 68815
+# inventory_measured = 180834
+# inventory_unmeasured = 68803
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
 # inventory_pr_python = 87452
 
@@ -241824,27 +241824,27 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_simulation_parameter_filters.
 3.260	tests/system/py/test_single_crystal_pattern.py::test_single_crystal_pattern_from_independent_references[test_bar_width_and_thin_line_zoom_invariants:sine]
 4.830	tests/system/py/test_single_crystal_pattern.py::test_single_crystal_pattern_from_independent_references[test_comparison_quantities_remain_separate_from_pattern:magnetic]
 4.360	tests/system/py/test_single_crystal_pattern.py::test_single_crystal_pattern_from_independent_references[test_comparison_quantities_remain_separate_from_pattern:nuclear]
-2.210	tests/system/py/test_single_crystal_pattern.py::test_single_crystal_pattern_from_independent_references[test_constrained_moment_nuclear_counterfactual:alias-q-f2]
-UNMEASURED:failed-in-this-run	tests/system/py/test_single_crystal_pattern.py::test_single_crystal_pattern_from_independent_references[test_constrained_moment_nuclear_counterfactual:alias-q-f]
-3.440	tests/system/py/test_single_crystal_pattern.py::test_single_crystal_pattern_from_independent_references[test_constrained_moment_nuclear_counterfactual:alias-sine-f2]
-UNMEASURED:failed-in-this-run	tests/system/py/test_single_crystal_pattern.py::test_single_crystal_pattern_from_independent_references[test_constrained_moment_nuclear_counterfactual:alias-sine-f]
-2.180	tests/system/py/test_single_crystal_pattern.py::test_single_crystal_pattern_from_independent_references[test_constrained_moment_nuclear_counterfactual:expression-q-f2]
-UNMEASURED:failed-in-this-run	tests/system/py/test_single_crystal_pattern.py::test_single_crystal_pattern_from_independent_references[test_constrained_moment_nuclear_counterfactual:expression-q-f]
-2.790	tests/system/py/test_single_crystal_pattern.py::test_single_crystal_pattern_from_independent_references[test_constrained_moment_nuclear_counterfactual:expression-sine-f2]
-UNMEASURED:failed-in-this-run	tests/system/py/test_single_crystal_pattern.py::test_single_crystal_pattern_from_independent_references[test_constrained_moment_nuclear_counterfactual:expression-sine-f]
-3.879	tests/system/py/test_single_crystal_pattern.py::test_single_crystal_pattern_from_independent_references[test_constrained_moment_nuclear_counterfactual:fixed-q-f2]
-UNMEASURED:failed-in-this-run	tests/system/py/test_single_crystal_pattern.py::test_single_crystal_pattern_from_independent_references[test_constrained_moment_nuclear_counterfactual:fixed-q-f]
-2.720	tests/system/py/test_single_crystal_pattern.py::test_single_crystal_pattern_from_independent_references[test_constrained_moment_nuclear_counterfactual:fixed-sine-f2]
-UNMEASURED:failed-in-this-run	tests/system/py/test_single_crystal_pattern.py::test_single_crystal_pattern_from_independent_references[test_constrained_moment_nuclear_counterfactual:fixed-sine-f]
+1.780	tests/system/py/test_single_crystal_pattern.py::test_single_crystal_pattern_from_independent_references[test_constrained_moment_nuclear_counterfactual:alias-q-f2]
+1.970	tests/system/py/test_single_crystal_pattern.py::test_single_crystal_pattern_from_independent_references[test_constrained_moment_nuclear_counterfactual:alias-q-f]
+2.060	tests/system/py/test_single_crystal_pattern.py::test_single_crystal_pattern_from_independent_references[test_constrained_moment_nuclear_counterfactual:alias-sine-f2]
+2.390	tests/system/py/test_single_crystal_pattern.py::test_single_crystal_pattern_from_independent_references[test_constrained_moment_nuclear_counterfactual:alias-sine-f]
+1.530	tests/system/py/test_single_crystal_pattern.py::test_single_crystal_pattern_from_independent_references[test_constrained_moment_nuclear_counterfactual:expression-q-f2]
+1.950	tests/system/py/test_single_crystal_pattern.py::test_single_crystal_pattern_from_independent_references[test_constrained_moment_nuclear_counterfactual:expression-q-f]
+1.930	tests/system/py/test_single_crystal_pattern.py::test_single_crystal_pattern_from_independent_references[test_constrained_moment_nuclear_counterfactual:expression-sine-f2]
+2.430	tests/system/py/test_single_crystal_pattern.py::test_single_crystal_pattern_from_independent_references[test_constrained_moment_nuclear_counterfactual:expression-sine-f]
+2.176	tests/system/py/test_single_crystal_pattern.py::test_single_crystal_pattern_from_independent_references[test_constrained_moment_nuclear_counterfactual:fixed-q-f2]
+2.160	tests/system/py/test_single_crystal_pattern.py::test_single_crystal_pattern_from_independent_references[test_constrained_moment_nuclear_counterfactual:fixed-q-f]
+1.980	tests/system/py/test_single_crystal_pattern.py::test_single_crystal_pattern_from_independent_references[test_constrained_moment_nuclear_counterfactual:fixed-sine-f2]
+2.530	tests/system/py/test_single_crystal_pattern.py::test_single_crystal_pattern_from_independent_references[test_constrained_moment_nuclear_counterfactual:fixed-sine-f]
 UNMEASURED:failed-in-this-run	tests/system/py/test_single_crystal_pattern.py::test_single_crystal_pattern_from_independent_references[test_creating_single_crystal_experiment_immediately_draws_simulated_bars]
-UNMEASURED:failed-in-this-run	tests/system/py/test_single_crystal_pattern.py::test_single_crystal_pattern_from_independent_references[test_independent_reflections_and_stacked_contributions:magnetic-q-f2]
-UNMEASURED:failed-in-this-run	tests/system/py/test_single_crystal_pattern.py::test_single_crystal_pattern_from_independent_references[test_independent_reflections_and_stacked_contributions:magnetic-q-f]
-UNMEASURED:failed-in-this-run	tests/system/py/test_single_crystal_pattern.py::test_single_crystal_pattern_from_independent_references[test_independent_reflections_and_stacked_contributions:magnetic-sine-f2]
-UNMEASURED:failed-in-this-run	tests/system/py/test_single_crystal_pattern.py::test_single_crystal_pattern_from_independent_references[test_independent_reflections_and_stacked_contributions:magnetic-sine-f]
-3.100	tests/system/py/test_single_crystal_pattern.py::test_single_crystal_pattern_from_independent_references[test_independent_reflections_and_stacked_contributions:nuclear-q-f2]
-UNMEASURED:failed-in-this-run	tests/system/py/test_single_crystal_pattern.py::test_single_crystal_pattern_from_independent_references[test_independent_reflections_and_stacked_contributions:nuclear-q-f]
-2.930	tests/system/py/test_single_crystal_pattern.py::test_single_crystal_pattern_from_independent_references[test_independent_reflections_and_stacked_contributions:nuclear-sine-f2]
-UNMEASURED:failed-in-this-run	tests/system/py/test_single_crystal_pattern.py::test_single_crystal_pattern_from_independent_references[test_independent_reflections_and_stacked_contributions:nuclear-sine-f]
+1.630	tests/system/py/test_single_crystal_pattern.py::test_single_crystal_pattern_from_independent_references[test_independent_reflections_and_stacked_contributions:magnetic-q-f2]
+1.960	tests/system/py/test_single_crystal_pattern.py::test_single_crystal_pattern_from_independent_references[test_independent_reflections_and_stacked_contributions:magnetic-q-f]
+2.080	tests/system/py/test_single_crystal_pattern.py::test_single_crystal_pattern_from_independent_references[test_independent_reflections_and_stacked_contributions:magnetic-sine-f2]
+2.420	tests/system/py/test_single_crystal_pattern.py::test_single_crystal_pattern_from_independent_references[test_independent_reflections_and_stacked_contributions:magnetic-sine-f]
+1.690	tests/system/py/test_single_crystal_pattern.py::test_single_crystal_pattern_from_independent_references[test_independent_reflections_and_stacked_contributions:nuclear-q-f2]
+2.130	tests/system/py/test_single_crystal_pattern.py::test_single_crystal_pattern_from_independent_references[test_independent_reflections_and_stacked_contributions:nuclear-q-f]
+2.140	tests/system/py/test_single_crystal_pattern.py::test_single_crystal_pattern_from_independent_references[test_independent_reflections_and_stacked_contributions:nuclear-sine-f2]
+2.430	tests/system/py/test_single_crystal_pattern.py::test_single_crystal_pattern_from_independent_references[test_independent_reflections_and_stacked_contributions:nuclear-sine-f]
 UNMEASURED:failed-in-this-run	tests/system/py/test_single_crystal_pattern.py::test_single_crystal_pattern_from_independent_references[test_legend_hides_real_contributions:magnetic]
 UNMEASURED:failed-in-this-run	tests/system/py/test_single_crystal_pattern.py::test_single_crystal_pattern_from_independent_references[test_legend_hides_real_contributions:nuclear]
 UNMEASURED:failed-in-this-run	tests/system/py/test_single_crystal_pattern.py::test_single_crystal_pattern_from_independent_references[test_measured_points_and_uncertainties_in_both_modes:q-f-bars]
@@ -249847,7 +249847,7 @@ UNMEASURED:not-completed-in-this-run	tests/unit/py/test_web_science_identity.py:
 # module-cost: 7.237	tests/system/py/test_shared_correlation_app_state.py
 # module-cost: 71.426	tests/system/py/test_sidebar_defaults.py
 # module-cost: 13.305	tests/system/py/test_simulation_parameter_filters.py
-# module-cost: 1.231	tests/system/py/test_single_crystal_pattern.py
+# module-cost: 0.734	tests/system/py/test_single_crystal_pattern.py
 # module-cost: 12.615	tests/system/py/test_slider_pointer_release.py
 # module-cost: 5.110	tests/system/py/test_slider_release_contract.py
 # module-cost: 28.755	tests/system/py/test_stacked_line_quality.py
