@@ -141,10 +141,10 @@ void CollectionExamples::checkOnline(int generation, const QStringList& online, 
             if (old->files.empty() || (old->files.front().sha256 == file.sha256 && old->files.front().bytes == file.bytes)) continue;
             const QString name = QString::fromStdString(edi::online::file_name(file));
             fetch_from(this, network_, online, QString::fromStdString(file.path),
-                       [this, generation, id, file, name](const QByteArray& bytes, const QString& error, bool) {
-                if (generation != generation_ || !error.isEmpty()) return;
-                if (!content_problem(bytes, file.bytes, QString::fromStdString(file.sha256), name).isEmpty()) return;
-                updated_.insert(id, {bytes, name});
+                       [this, generation, id, file, name](const QByteArray& fetched, const QString& fetchError, bool) {
+                if (generation != generation_ || !fetchError.isEmpty()) return;
+                if (!content_problem(fetched, file.bytes, QString::fromStdString(file.sha256), name).isEmpty()) return;
+                updated_.insert(id, {fetched, name});
             });
         }
         updateNotice();

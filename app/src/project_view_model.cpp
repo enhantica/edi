@@ -2605,12 +2605,12 @@ bool ProjectViewModel::loadSeriesOfJointFits(ExperimentViewModel* experiment, co
         QMetaObject::invokeMethod(
             QCoreApplication::instance(),
             [self, base, revision, next, error, freshRoot, target]() mutable {
-                const auto discard = [&] {
+                const auto discardCopy = [&] {
                     if (!freshRoot.isEmpty()) edi::remove_archive_directory(freshRoot.toStdString());
                     else if (!target.isEmpty()) QDir(target).removeRecursively();
                 };
                 if (!self || self->retired_) {
-                    if (error.isEmpty()) discard();
+                    if (error.isEmpty()) discardCopy();
                     return;
                 }
                 // Every notification below may retire or delete the project: after each, nothing more is published,
@@ -2618,7 +2618,7 @@ bool ProjectViewModel::loadSeriesOfJointFits(ExperimentViewModel* experiment, co
                 self->listing_dataset_folder_ = false;
                 emit self->listingDatasetFolderChanged();
                 if (!self || self->retired_) {
-                    if (error.isEmpty()) discard();
+                    if (error.isEmpty()) discardCopy();
                     return;
                 }
                 QString refusal = error;
@@ -2629,7 +2629,7 @@ bool ProjectViewModel::loadSeriesOfJointFits(ExperimentViewModel* experiment, co
                     const PublicationScope publication(*self);
                     refusal = self->apply(edi::Edit::replace_project(*self->project_, std::move(*next)), true);
                     if (!self || self->retired_) {
-                        if (!refusal.isEmpty() && error.isEmpty()) discard();  // a refused series never took the copy
+                        if (!refusal.isEmpty() && error.isEmpty()) discardCopy();  // a refused series never took the copy
                         return;
                     }
                     if (refusal.isEmpty()) {
@@ -2640,7 +2640,7 @@ bool ProjectViewModel::loadSeriesOfJointFits(ExperimentViewModel* experiment, co
                         return;
                     }
                 }
-                if (error.isEmpty()) discard();
+                if (error.isEmpty()) discardCopy();
                 self->setLastError(refusal);
                 if (!self || self->retired_) return;
                 self->announceRefused(refusal);
@@ -4459,9 +4459,9 @@ void ProjectViewModel::overlaySeriesPoint(std::vector<edi::Edit::ScanValue>& val
                              : std::map<std::string, edi::SeriesPointValue>{};
     for (edi::Edit::ScanValue& value : values) {
         if (const auto found = own.find(value.unique_name); found != own.end()) {
-            const auto from = started.find(value.unique_name);
+            const auto startedAt = started.find(value.unique_name);
             if (start != kStartUnknown) {
-                value.start = from != started.end() ? from->second.value : value.value;
+                value.start = startedAt != started.end() ? startedAt->second.value : value.value;
             }
             value.value = found->second.value;
             value.uncertainty = found->second.uncertainty;

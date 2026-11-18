@@ -876,12 +876,12 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     // (`--demo-only collapsed-`).
     if (only.startsWith(QLatin1String("collapsed-"))) {
         const QString root = QString::fromUtf8(EDI_CLI_PROJECTS_DIR) + "/";
-        const QString structure = QStringLiteral("appBar.tab.structure");
+        const QString structureTab = QStringLiteral("appBar.tab.structure");
         // The tables get their rows while their groups are folded and off screen; only then are the groups opened.
         steps_.push_back({"collapsed-0-elsewhere", {"resize:1480x800", "open-project:" + root + "pd-neut-cwl_cosio-d20_2k/project",
-                                                    structure, extras, "appBar.tab.experiment", "appBar.tab.analysis",
+                                                    structureTab, extras, "appBar.tab.experiment", "appBar.tab.analysis",
                                                     "appBar.tab.project"}});
-        steps_.push_back({"collapsed-1-symop", {structure, extras, "expand:group.space_group_symop",
+        steps_.push_back({"collapsed-1-symop", {structureTab, extras, "expand:group.space_group_symop",
                                                 "assert-table:generated.space_group_symop.list"}});
         steps_.push_back({"collapsed-2-atoms", {"expand:group.expanded_atom_site", "reveal:group.expanded_atom_site",
                                                 "assert-table:generated.expanded_atom_site.list"}});
