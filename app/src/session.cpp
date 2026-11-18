@@ -92,6 +92,28 @@ QString newWebKey() { return QUuid::createUuid().toString(QUuid::WithoutBraces);
 
 // ---- WarningListModel ---------------------------------------------------------------------------
 
+namespace {
+// A CIF import's notes as the messages list says them: crysta's code (which Python and the command line keep for
+// filtering) left out, crysta named as the app, and the propagation vector a magnetic CIF leaves out said in words.
+QString plain_message(QString text) {
+    static const QString cif_code = QStringLiteral("crysta.schema.cif_items_not_read: ");
+    if (!text.contains(cif_code)) return text;
+    text.remove(cif_code);
+    const std::pair<const char*, const char*> plain[] = {
+        {"k = 0, as the group is grey",
+         "the propagation vector is taken as k = 0: the file gives none, and a grey group allows no other"},
+        {"k = 0, as the identity transform fixes it",
+         "the propagation vector is taken as k = 0: the file gives none, and its parent-to-child transform implies it"},
+        {"no crysta item has these names", "EasyDiffraction has no items with these names"},
+        {"crysta calculates these values itself", "EasyDiffraction calculates these values itself"},
+        {"crysta cannot tell an empty, ? or . text from one left out, so it reads the item as left out",
+         "an empty, ? or . text cannot be told from a value left out, so the item is read as left out"},
+    };
+    for (const auto& [from, to] : plain) text.replace(QLatin1String(from), QLatin1String(to));
+    return text;
+}
+}  // namespace
+
 WarningListModel::WarningListModel(QObject* parent) : RowTableModel({"message", "severity"}, parent) {}
 
 void WarningListModel::setMessages(const QStringList& messages, const QStringList& sources) {
@@ -101,7 +123,7 @@ void WarningListModel::setMessages(const QStringList& messages, const QStringLis
         const QString source = sources.value(i);
         const QString key = source.isEmpty() ? QStringLiteral("load:%1").arg(i) : fileKey(QStringLiteral("load-file:"), source, messages[i]);
         if (lists(key)) continue;
-        messages_.push_back({next_id_++, key, messages[i], QStringLiteral("warning")});
+        messages_.push_back({next_id_++, key, plain_message(messages[i]), QStringLiteral("warning")});
     }
     changed();
 }
@@ -116,7 +138,7 @@ void WarningListModel::post(const QString& key, const QString& text, const QStri
             return;
         }
     }
-    messages_.push_back({next_id_++, key, text, severity});
+    messages_.push_back({next_id_++, key, plain_message(text), severity});
     changed();
 }
 
