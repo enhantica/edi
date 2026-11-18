@@ -504,6 +504,7 @@ void PatternChartController::setBraggSeries(int place, QXYSeries* series) {
 }
 
 void PatternChartController::setExperiment(ExperimentViewModel* experiment) {
+    keeps_panes_ = false;
     if (experiment == experiment_) {
         return;
     }
@@ -1144,6 +1145,38 @@ void PatternChartController::refresh() {
     publish(y_tick_, y_step, &PatternChartController::yTickIntervalChanged);
     publish(y_anchor_, y_anchor, &PatternChartController::yTickAnchorChanged);
 
+    // The frame first (ADR-0096 rule 5): the panes the chart shows and the tick series it needs are published before
+    // any series takes its points, so a frame never shows the data without its Bragg rows or residual axes. Within one
+    // experiment a pane stays while a dataset's calculation is still to come (the next dataset of a scan), so the
+    // layout does not move when the calculation arrives.
+    // The series' colours come from the same table as the legend and the row labels, so they change whenever the
+    // drawing does: another experiment or project, a structure added, a palette. More structures than tick series:
+    // the chart makes the rest, each handed over in turn.
+    QList<QColor> bragg_colours;
+    for (const edi::SeriesStyle& style : table) {
+        if (style.key.starts_with("bragg.")) {
+            bragg_colours.append(colour_of(style.key));
+        }
+    }
+    publish(bragg_colors_, bragg_colours, &PatternChartController::braggColorsChanged);
+    double bragg_height = 0.0;
+    for (const edi::PaneLayout& pane : shown_.layout) {
+        if (pane.pane == edi::Pane::Bragg) {
+            bragg_height = pane.fixed_px;
+        }
+    }
+    // A pane whose every series is hidden goes with them: the tick rows when all are hidden, the residual's pane when
+    // it is.
+    const bool pending = !report_ && keeps_panes_ && measured != nullptr && calculated == nullptr;
+    const int rows_now = shown_rows > 0 ? rows : 0;
+    publish(bragg_rows_, pending && rows_now == 0 ? bragg_rows_ : rows_now, &PatternChartController::braggRowsChanged);
+    publish(bragg_height_, pending && bragg_height == 0.0 ? bragg_height_ : bragg_height,
+            &PatternChartController::braggHeightChanged);
+    publish(has_residual_, (residual != nullptr && !hiddenId(residual->id)) || (pending && has_residual_),
+            &PatternChartController::hasResidualChanged);
+    publish(has_data_, measured != nullptr || calculated != nullptr, &PatternChartController::hasDataChanged);
+    keeps_panes_ = true;
+
     // The measured style (the owner, 2026-10-22): the line, the markers with their bars, or the band, measured ± s.u.
     // with the residual drawn the same way. A report's chart draws all but the band, as the report does.
     const bool band = measured_drawing_ == QLatin1String("band") && !report_;
@@ -1325,16 +1358,6 @@ void PatternChartController::refresh() {
     publish(structure_curve_fills_, curve_fills, &PatternChartController::structureCurveFillsChanged);
     publish(structure_curve_colors_, curve_colours, &PatternChartController::structureCurveColorsChanged);
     publish(has_calculated_, calculated != nullptr, &PatternChartController::hasCalculatedChanged);
-    // The series' colours come from the same table as the legend and the row labels, so they change whenever the
-    // drawing does: another experiment or project, a structure added, a palette. More structures than tick series:
-    // the chart makes the rest, each handed over in turn.
-    QList<QColor> bragg_colours;
-    for (const edi::SeriesStyle& style : table) {
-        if (style.key.starts_with("bragg.")) {
-            bragg_colours.append(colour_of(style.key));
-        }
-    }
-    publish(bragg_colors_, bragg_colours, &PatternChartController::braggColorsChanged);
     publish(calculated_color_, colour_of("calc"), &PatternChartController::calculatedColorChanged);
     publish(background_color_, colour_of("bkg"), &PatternChartController::backgroundColorChanged);
     publish(residual_color_, colour_of("resid"), &PatternChartController::residualColorChanged);
@@ -1346,20 +1369,8 @@ void PatternChartController::refresh() {
     for (const edi::ExcludedBand& excluded : shown_.excluded) {
         bands.append({excluded.x_min, excluded.x_max});
     }
-    double bragg_height = 0.0;
-    for (const edi::PaneLayout& pane : shown_.layout) {
-        if (pane.pane == edi::Pane::Bragg) {
-            bragg_height = pane.fixed_px;
-        }
-    }
     excluded_bands_->setBands(bands);
     legend_->setEntries(legend);
-    // A pane whose every series is hidden goes with them: the tick rows when all are hidden, the residual's pane when
-    // it is.
-    publish(bragg_rows_, shown_rows > 0 ? rows : 0, &PatternChartController::braggRowsChanged);
-    publish(bragg_height_, bragg_height, &PatternChartController::braggHeightChanged);
-    publish(has_residual_, residual != nullptr && !hiddenId(residual->id), &PatternChartController::hasResidualChanged);
-    publish(has_data_, measured != nullptr || calculated != nullptr, &PatternChartController::hasDataChanged);
     publish(current_, shown_.current, &PatternChartController::currentChanged);
     publish(d_available_, report_ != nullptr || (experiment_ && experiment_->patternSource().d_available),
             &PatternChartController::dAvailableChanged);

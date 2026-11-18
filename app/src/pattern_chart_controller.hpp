@@ -510,6 +510,9 @@ class PatternChartController : public QObject {
     double x_tick_ = 0.0, x_anchor_ = 0.0, y_tick_ = 0.0, y_anchor_ = 0.0, residual_tick_ = 0.0;
     int bragg_rows_ = 0, revision_ = 0;
     bool has_residual_ = false, has_data_ = false, current_ = false;
+    // Whether the panes shown may stay while a dataset's calculation is to come: false until the first refresh of an
+    // experiment (ADR-0096 rule 5).
+    bool keeps_panes_ = false;
     QString x_title_, y_title_, residual_title_;
     QColor measured_color_, calculated_color_, background_color_, residual_color_, excluded_color_;
     QList<QColor> bragg_colors_;
