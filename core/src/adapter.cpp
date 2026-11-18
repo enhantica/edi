@@ -2350,6 +2350,15 @@ ScanPlaces scan_places(const ScanDatasets& datasets) {
     return places;
 }
 
+// The columns crysta derives from the fitted values rather than fits (series_layout's derived_columns): a moment's
+// spherical form and a linked structure's weight fraction. Their value may be undefined in a converged row.
+static bool scan_derived_column(const std::string& name) {
+    for (const char* suffix : {".spherical_modulus", ".spherical_polar", ".spherical_azimuthal", ".weight_fraction"}) {
+        if (name.ends_with(suffix)) return true;
+    }
+    return false;
+}
+
 std::string scan_row_file(const ScanResultIndex& index, const std::vector<std::string>& cells) {
     const std::string& path = cells.at(index.file);
     std::string_view name(path);
@@ -2431,6 +2440,11 @@ std::pair<std::size_t, ScanResultIndex::Row> scan_row_facts(const Project& /*pro
         const bool value_undefined = value_cell == "nan" || value_cell.empty();
         if (!value_undefined && (!parse_scan_number(value_cell, value) || !std::isfinite(value))) {
             refuse("has no finite value for '" + parameter.name + "'");
+        }
+        // A fitted parameter of a converged row has a value, as crysta's Continue requires of the same row: only the
+        // derived columns (a moment's spherical form, a linked structure's weight fraction) may be undefined.
+        if (value_undefined && row.converged && !scan_derived_column(parameter.name)) {
+            refuse("has no value for the fitted parameter '" + parameter.name + "'");
         }
         const std::string& su_cell = cells[parameter.uncertainty];
         if (su_cell != "nan" && !su_cell.empty() && (!number(su_cell, uncertainty) || uncertainty < 0.0)) {
