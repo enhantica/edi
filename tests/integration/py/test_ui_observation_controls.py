@@ -10,6 +10,7 @@ from tests.integration.py.ui_responsiveness_oracle import (
     hidden_refreshes,
     work_delivery,
 )
+from tests.integration.py.ui_trace_controls import enrich_frames, enrich_views
 
 
 def frame_trace():
@@ -54,7 +55,7 @@ def frame_trace():
                     'axes': ['x', 'intensity', 'residual'],
                     'geometry': copy.deepcopy(geometry),
                 })
-    return sorted(rows, key=operator.itemgetter('t_ms'))
+    return enrich_frames(sorted(rows, key=operator.itemgetter('t_ms')))
 
 
 def test_complete_first_frame_control_is_admitted():
@@ -113,7 +114,7 @@ def view_trace():
             'generation': generation,
         }
 
-    return [
+    return enrich_views([
         {'event': 'clock', 'gui_thread': 'gui'},
         {'event': 'step', 'name': 'fit-running', 't_ms': 0},
         {
@@ -156,7 +157,7 @@ def view_trace():
             'last': 3,
             'rows': 10,
         },
-    ]
+    ])
 
 
 def test_complete_hidden_and_delivery_control_is_admitted():

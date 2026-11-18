@@ -2,6 +2,8 @@
 
 import math
 
+from tests.integration.py import ui_causal_witnesses as causal
+
 
 def require(condition, message):
     assert condition, 'UI observation must satisfy the declared requirement: ' + message
@@ -55,14 +57,15 @@ def timing(trace, scenario, steps, *, control=False):
                 'measurement markers pair by identity',
             )
             require(row['t_ms'] >= pending['t_ms'], 'measurement duration is nonnegative')
-            spans.append((pending['t_ms'], row['t_ms']))
+            spans.append((pending['t_ms'], row['t_ms'], row['id']))
             pending = None
     require(pending is None, 'an unmatched marker cannot hide the rest of the run')
+    causal.exclusions(trace, spans)
     gaps = []
     for left, right in zip(ticks, ticks[1:], strict=False):
         if right < begin['t_ms'] or left > end['t_ms']:
             continue
-        excluded = sum(max(0, min(right, stop) - max(left, start)) for start, stop in spans)
+        excluded = sum(max(0, min(right, stop) - max(left, start)) for start, stop, _ in spans)
         gaps.append(max(0, right - left - excluded - 10))
     if control:
         block, release = one(trace, 'block-begin'), one(trace, 'block-end')
@@ -76,9 +79,11 @@ def timing(trace, scenario, steps, *, control=False):
         )
         require(release['t_ms'] - block['t_ms'] >= 150, 'the control really blocks for 150 ms')
         require(
-            all(stop <= block['t_ms'] or start >= release['t_ms'] for start, stop in spans),
+            all(stop <= block['t_ms'] or start >= release['t_ms'] for start, stop, _ in spans),
             'the block cannot be excluded as measurement-tool work',
         )
+    if control:
+        causal.block_interval(trace, ticks, spans)
     require(max(gaps) <= 100, 'U8 permits no counted gap strictly over 100 ms')
 
 
@@ -89,6 +94,7 @@ def indexed(rows):
 
 
 def hidden_refreshes(trace, kinds):
+    causal.lifecycle(trace, kinds)
     census = indexed(one(trace, 'census')['views'])
     require(
         set(kinds) <= {row['kind'] for row in census.values()},
@@ -158,6 +164,7 @@ def hidden_refreshes(trace, kinds):
 
 
 def work_delivery(trace):
+    causal.delivery(trace)
     gui = one(trace, 'clock')['gui_thread']
     builds = [row for row in events(trace, 'build') if row['scales']]
     require(bool(builds), 'real data-sized builders are observed')
@@ -216,12 +223,17 @@ def work_delivery(trace):
         'U3 incremental edits never reset the row set',
     )
     require(
-        any(0 <= row['first'] <= row['last'] < row['rows'] - 1 for row in edits),
+        all(
+            0 <= row['first'] <= row['last'] < row['rows']
+            and row['last'] - row['first'] + 1 < row['rows']
+            for row in edits
+        ),
         'the range witness is strictly smaller than the whole model',
     )
 
 
 def first_frames(trace):
+    causal.rendered_navigation(trace)
     navigations = events(trace, 'step')
     requests = [row['request'] for row in navigations]
     require(
@@ -239,7 +251,8 @@ def first_frames(trace):
             'each navigation has one first and settled frame',
         )
         first, settled = first_rows[0], settled_rows[0]
-        following = [row for row in renders if row['t_ms'] >= nav['t_ms']]
+        issued = causal.unique(trace, 'action', request=nav['request'])
+        following = [row for row in renders if row['t_ms'] >= issued['t_ms']]
         require(
             bool(following) and first['frame'] == following[0]['frame'],
             'U7 observes the first actual swap without a ready predicate or settle timer',

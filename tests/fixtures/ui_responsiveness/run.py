@@ -56,7 +56,6 @@ def collect(app, output, scan, series, *, archive=None):
                 'XDG_CONFIG_HOME': str(settings),
                 'XDG_DATA_HOME': str(settings),
                 'OMP_NUM_THREADS': '1',
-                'EDI_DEMO_DELAY_MS': '100',
                 'EDI_DEMO_SCAN_PROJECT': str(series if name == 'e58-series' else scan),
             }
             env.pop('EDI_STALL_PROBE_STACKS', None)

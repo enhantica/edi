@@ -90,3 +90,55 @@ The dataset observation must change in each navigation direction.
 These names are the producer/checker interface; the hidden assertions and
 negative controls stay in the hidden tiers. The producer must observe real
 callbacks; a precomputed successful trace is not a substitute.
+
+## Causal witness requirements
+
+The callbacks are passive observations at native operations, not driver-issued
+success labels. The driver installs observers before input. Each `step` carries
+its issued `request`; a separate `action` records the issuance clock, name and
+`before_selection`. A `state` with that request samples the actual active page,
+tab, selected bank/dataset (`selection`), and loaded `input` identity. Series
+states also sample `fitting` and `completed`. Ordinary and control runs must use
+the same content identity. Pattern input issuance follows the 100 ms schedule,
+allowing at most one nominal timer tick of jitter; completion labels cannot
+start the first-frame clock. The producer does not set `EDI_DEMO_DELAY_MS`,
+which belongs to the existing blocking helper rather than the action timer.
+
+Exclusion spans match `measurement-enter` and `measurement-leave` from the
+actual `QQuickWindow::grabWindow` or `compare-images` callback. Both carry the
+same `id`, `callback`, GUI `thread` and exact endpoint timestamps as the markers.
+A reentrant application operation or timer delivery inside them invalidates
+the exclusion. The control's violating timer interval must contain the actual
+GUI block and its recovery; an unrelated later stall does not qualify.
+
+A separate `hierarchy` walks initialized native/QML view objects and includes
+`active_page`, `active_tab`, and `objects` with `view`, normalized metaobject
+`type`, `initialized`, enclosing `page`, `tab`, and `ancestors_shown`. Normalize
+the QML generated type suffix through its metaobject ancestry. The known view
+types are the values in `contract.json`; do not select objects by counter
+registration. Reconcile this enumeration with registered counters and both
+snapshots. Every claimed kind needs a hidden instance; Analysis Pattern and its
+sidebar may be shown. Creation of previously lazy instances precedes the hide
+snapshot; retained instances are included too. Every hidden instance receives
+an `invalidate` for each real `data-change`, carrying the generation and
+`after_hash` of the actual changed model content. Changes record `before_hash`
+and `after_hash`, forming a continuous, nonidentical content history. Counter
+values at show equal their final hidden values; timestamps order hide, changes,
+show and catch-up. The positive catch-up consumes the newest invalidation.
+
+`contract.json` names the data-sized `builders` from the approved inventory.
+Every request/build/completion/delivery/discard/supersede/swap carries `builder`,
+`view`, `generation` and its actual clock. `build` and `built` bracket execution
+and record its native thread regardless of any `scales` label. Exercise both
+old and replacement requests for every builder: the old result completes after
+the new result, is discarded, and cannot deliver or swap. A current result
+completes, delivers and swaps on its matching real render clock. Every
+incremental `model-change` records `changed_range`, sampled from the actual
+changed rows, for comparison to the emitted bounds; last-row edits are valid.
+
+Both first and settled geometry observations bind the request and actual
+render clock. A `presented` event records the requested `dataset` and uploaded
+`generation`; the settled `render` itself records those values. Its geometry
+cannot predate that presentation. Each frame includes a `visible` map with
+effective visibility for all six geometry entries. Positive rectangles from
+invisible panes and copied geometry from an unrendered frame are insufficient.

@@ -106,5 +106,19 @@
     "V12": "ReportPreview",
     "V13": "ReportTable",
     "V16": "Assistant"
-  }
+  },
+  "builders": [
+    "pattern-capture",
+    "pattern-presentation",
+    "meas-calc",
+    "reflections",
+    "scan-reduce",
+    "scan-measure",
+    "scan-snapshot",
+    "evolution-snapshot",
+    "report",
+    "results-index",
+    "parameter-filter",
+    "assistant-context"
+  ]
 }

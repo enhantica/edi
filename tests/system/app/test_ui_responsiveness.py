@@ -9,6 +9,7 @@ from pathlib import Path
 
 import pytest
 
+from tests.integration.py.ui_causal_witnesses import actions
 from tests.integration.py.ui_responsiveness_oracle import (
     events,
     first_frames,
@@ -65,12 +66,22 @@ def observations():
 @pytest.mark.parametrize('scenario', CONTRACT['scenarios'])
 def test_actual_watchdog_and_blocking_control(observations, scenario):
     traces, manifest = observations
+    for trace in (traces[scenario], traces[scenario + '-control']):
+        actions(trace, scenario, CONTRACT['scenarios'][scenario])
+        validate_input(trace, scenario, manifest)
+    assert (
+        one(traces[scenario], 'input')['identity']
+        == one(traces[scenario + '-control'], 'input')['identity']
+    ), 'Blocking controls must use the same actual scenario input as their ordinary run'
     timing(traces[scenario], scenario, CONTRACT['scenarios'][scenario])
     with pytest.raises(AssertionError, match='U8 permits no counted gap'):
         timing(
             traces[scenario + '-control'], scenario, CONTRACT['scenarios'][scenario], control=True
         )
-    observed_input = one(traces[scenario], 'input')
+
+
+def validate_input(trace, scenario, manifest):
+    observed_input = one(trace, 'input')
     if scenario in {'e58-pages', 'e58-pattern'}:
         assert observed_input['patterns'] == (43802 if manifest['full_scan'] else 4000), (
             'The app must actually load the declared scan scale'
@@ -86,7 +97,7 @@ def test_actual_watchdog_and_blocking_control(observations, scenario):
         assert observed_input['points'] == 100 and observed_input['banks'] == 5, (
             'The end-transition scenario must run the actual one-hundred-point five-bank series'
         )
-        assert one(traces[scenario], 'fit-finished')['completed'] == 100, (
+        assert one(trace, 'fit-finished')['completed'] == 100, (
             'The complete series must finish before the end transition is judged'
         )
 

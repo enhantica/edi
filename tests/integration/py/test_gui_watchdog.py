@@ -35,6 +35,20 @@ def trace_for(interval, markers=()):
     for i, (start, stop) in enumerate(markers):
         rows.extend([
             {'event': 'tool-begin', 't_ms': start, 'id': i},
+            {
+                'event': 'measurement-enter',
+                't_ms': start,
+                'id': i,
+                'callback': 'QQuickWindow::grabWindow',
+                'thread': 'gui',
+            },
+            {
+                'event': 'measurement-leave',
+                't_ms': stop,
+                'id': i,
+                'callback': 'QQuickWindow::grabWindow',
+                'thread': 'gui',
+            },
             {'event': 'tool-end', 't_ms': stop, 'id': i},
         ])
     return sorted(rows, key=operator.itemgetter('t_ms'))
@@ -48,7 +62,7 @@ CASES = [
     ('fraction-over-boundary', 110.25, (), False),
     ('excluded-grab', 170, ((20, 90),), True),
     ('straddle-keeps-app-block', 170, ((20, 70),), False),
-    ('marker-spans-tick', 110, ((95, 115),), True),
+    ('marker-reaches-tick-boundary', 110, ((95, 110),), True),
     ('multiple-tools', 170, ((15, 45), (80, 110)), True),
 ]
 
