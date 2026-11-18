@@ -1259,8 +1259,9 @@ def exercise_installer(
     )
 
 
-# A hosted runner's first start of a freshly installed app can take long (a cold disk, a font cache, a macOS
-# signature check), so the smoke run has two minutes and one more try after a timeout; a failure is not retried.
+# A hosted runner's first start of a freshly installed app can take long (a cold disk, a font
+# cache, a macOS signature check), so the smoke run has two minutes and one more try after a
+# timeout; a failure is not retried.
 SMOKE_TIMEOUT = 120
 SMOKE_TRIES = 2
 
@@ -1280,11 +1281,12 @@ def smoke_installed_app(app: Path, output: Path, env: dict, home: Path) -> None:
                     stderr=subprocess.STDOUT,
                     timeout=SMOKE_TIMEOUT,
                 )
-                return
             except subprocess.TimeoutExpired:
                 if attempt == SMOKE_TRIES:
                     raise
                 print(f'smoke run timed out after {SMOKE_TIMEOUT} s; trying once more', flush=True)
+            else:
+                return
 
 
 def relocate_linux(stage: Path, patchelf: Path, qt_prefix: Path) -> None:
