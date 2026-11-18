@@ -46,13 +46,19 @@ Item {
             appWindow.requestActivate();
             tryCompare(appWindow, "active", true, 2000, "Actual toolbar input reaches the active application window");
         }
-        function showPage(name) {
+        function showPage(name, hasPattern = true) {
             Ui.click(test, Probe, appWindow, "appBar.tab." + name);
             page = Render.descendants(appWindow.contentItem).find(item => item.pageName === name && item.current);
             verify(page !== undefined && page.Window.window === appWindow, "The actual current page belongs to the application window");
-            const charts = Render.descendants(page).filter(item => item.objectName === "chart" && item.report === null && item.visible && item.shown);
-            compare(charts.length, 1, "The current page holds its one app-owned pattern chart");
-            verify(charts[0].Window.window === appWindow, "The reparented chart has the actual application window before input");
+            const view = page.pageViewItem;
+            verify(view !== null && Render.descendants(page.mainArea).includes(view), "The toolbar belongs to the selected page's own main view");
+            if (hasPattern)
+                Ui.click(test, Probe, appWindow, "mainArea.tab.pattern");
+            tryCompare(view, "currentKey", "pattern", 1000, "The toolbar observer selects this page's Pattern tab");
+            const charts = () => Render.descendants(view).filter(item => item.objectName === "chart" && item.report === null && item.visible && item.shown);
+            tryVerify(() => charts().length === (hasPattern ? 1 : 0), 2000, "A populated Pattern tab shows one chart and an empty experiment shows none");
+            if (hasPattern)
+                verify(charts()[0].Window.window === appWindow, "The page-owned chart has the actual application window before input");
         }
         function clickToggle(toggle) {
             tryVerify(() => !Ui.moving(appWindow.contentItem), 2000, "The chart finishes moving before its toolbar receives input");
@@ -145,7 +151,7 @@ Item {
             verify(Session.createProject("Empty pattern", "Toolbar visibility witness"), "The empty-chart witness creates a real unsaved project");
             verify(Session.project.createStructure(), "The real Experiment page is available before any experiment is created");
             compare(Session.project.experiments.count, 0, "The no-calculated-pattern witness has no experiment");
-            showPage("experiment");
+            showPage("experiment", false);
             const emptyToggle = structureToggle(page);
             verify(emptyToggle !== undefined && !emptyToggle.visible, "The app-owned structure-curve toggle stays hidden without a calculated pattern");
             openAnalysis();

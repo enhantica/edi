@@ -70,9 +70,12 @@ Item {
                 candidate.visible = candidate === page;
                 candidate.current = candidate === page;
             }
-            const tabs = Array.from(page.mainTabs), at = tabs.findIndex(tab => tab.text === tabName);
-            verify(at >= 0 && tabs[at].enabled, "The actual workflow page exposes the requested quantity's tab");
-            page.showMainTab(at);
+            const view = page.pageViewItem;
+            verify(view !== null && Render.descendants(page.mainArea).includes(view), "The quantity selector belongs to this page's own main view");
+            const tabs = Array.from(view.tabs), at = tabs.findIndex(tab => tab.text === tabName);
+            verify(at >= 0 && tabs[at].visible && tabs[at].enabled, "The actual workflow main view exposes the requested quantity's tab");
+            view.showMainTab(at);
+            tryCompare(view, "currentKey", tabName.toLowerCase(), 1000, "The page-owned view selects the requested physical quantity's tab");
             tryVerify(() => !Ui.moving(page), 1500, "The selected real tab finishes layout before axis input");
             surface.Window.window.update();
             verify(waitForPolish(page) && waitForRendering(page), "The real quantity selector has a completed visible frame");
@@ -87,7 +90,7 @@ Item {
                 objectName = "evolution.toolbar.x";
             else
                 objectName = "scanView." + tab.toLowerCase() + ".toolbar." + (quantity === "x" ? "xaxis" : quantity === "rows" ? "rows" : "yscale");
-            const item = findChild(page, objectName);
+            const item = findChild(page.pageViewItem, objectName);
             verify(item !== null && item.count > 1, "Every actual selector for the same physical quantity is present: " + route + " / " + quantity);
             return item;
         }
