@@ -206,6 +206,13 @@ ReportViewModel::Built ReportViewModel::make(const Inputs& inputs) {
     QVariant root = built.model;
     strip(root, QString());
     built.model = root.toMap();
+    // The pattern style table holds a style per dataset (tens of thousands for a long scan, most of the model); the
+    // QML preview reads only the measured style, the charts read the table from reportModel().
+    QVariantList measured;
+    for (const QVariant& style : built.model.value(QStringLiteral("pattern_styles")).toList()) {
+        if (style.toMap().value(QStringLiteral("key")).toString() == QLatin1String("meas.0")) measured.append(style);
+    }
+    built.model.insert(QStringLiteral("pattern_styles"), measured);
     // The saved reports are judged against what each format's writer would write now (savedReports).
     const edi::ReportModel* judged = &built.report;
     if (edi::chooses_presentation(built.options)) {
