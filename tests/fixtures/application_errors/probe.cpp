@@ -40,7 +40,7 @@ public:
 };
 
 int main(int argc, char** argv) {
-    Application app(argc, argv);
+    GuardedApplication app(argc, argv);
     Receiver receiver;
     receiver.unknown = argc > 1 && QString::fromLocal8Bit(argv[1]) == "unknown";
     QEvent bad(QEvent::User);
