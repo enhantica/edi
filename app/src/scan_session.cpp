@@ -404,16 +404,20 @@ std::string ScanSession::templateIdentity(const edi::Project& project) {
     // `_fit_parameter_correlation` loop, its last category), nor its results (`_fit_result`, `_fit_result_bank`,
     // `_fit_parameter`). The minimizer's settings are part of it: rows fitted under
     // another bound or descent are another generation.
+    // Hashed from a copy, which is never calculated: a save of a calculated project adds its computed columns and
+    // categories (and a newer schema version), so the same inputs would hash differently before and after a
+    // calculation, e.g. the shown model at a scan's start against the template copy at its end.
+    const edi::Project inputs = project;
+    return templateIdentity(edi::project_edi_files(inputs));
+}
+
+std::string ScanSession::templateIdentity(const std::vector<std::pair<std::string, std::string>>& files) {
     QCryptographicHash hash(QCryptographicHash::Sha256);
     const auto add = [&hash](std::string_view line) {
         hash.addData(QByteArrayView(line.data(), static_cast<qsizetype>(line.size())));
         hash.addData(QByteArrayView("\n", 1));
     };
-    // Hashed from a copy, which is never calculated: a save of a calculated project adds its computed columns and
-    // categories (and a newer schema version), so the same inputs would hash differently before and after a
-    // calculation, e.g. the shown model at a scan's start against the template copy at its end.
-    const edi::Project inputs = project;
-    for (const auto& [path, body] : edi::project_edi_files(inputs)) {
+    for (const auto& [path, body] : files) {
         if (path == "project.edi" || path == "reports/report.edi") {
             continue;
         }

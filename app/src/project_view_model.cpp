@@ -7256,19 +7256,26 @@ void ProjectViewModel::refreshTextsLater() {
     const QPointer<ProjectViewModel> self(this);
     run_in_background([self, copy, stamps, request] {
         SavedFiles files;
+        std::string identity;
         try {
             files = SavedFiles{edi::project_edi_files(*copy), {}};
+            // The scan's template identity from the same files, so a fit's start finds it made (edi ADR-0089
+            // point 7: no save of the whole project on the GUI thread as a run starts).
+            identity = ScanSession::templateIdentity(files.files);
         } catch (const std::exception& refusal) {
             files = refused_save(*copy, refusal.what());
         }
         QMetaObject::invokeMethod(
             QCoreApplication::instance(),
-            [self, stamps, request, files = std::move(files)]() mutable {
+            [self, stamps, request, files = std::move(files), identity = std::move(identity)]() mutable {
                 if (self.isNull() || self->retired_ || request != self->texts_request_ ||
                     !edi::unchanged_since(*self->project_, stamps)) {
                     return;  // a newer view or an edit came meanwhile: its own publication covers it
                 }
                 self->saved_files_ = std::move(files);
+                if (!identity.empty()) {
+                    self->identity_memo_ = IdentityMemo{self->project_.get(), stamps, std::move(identity)};
+                }
                 self->refreshTextsAndReport();
             },
             Qt::QueuedConnection);

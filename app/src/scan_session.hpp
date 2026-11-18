@@ -85,6 +85,8 @@ class ScanSession : public QObject {
     // A digest of what the template saves as (its structures, experiments and analysis): equal digests, equal
     // templates.
     static std::string templateIdentity(const edi::Project& project);
+    // The same from the project's saved files (edi::project_edi_files of an uncalculated copy), made elsewhere.
+    static std::string templateIdentity(const std::vector<std::pair<std::string, std::string>>& files);
 
     // A fresh run's start or Reset fits: reads the three result files and sets them aside, all or none; the
     // in-memory provenance goes with them. The refusal, if any; a refusal that could not put everything back says
