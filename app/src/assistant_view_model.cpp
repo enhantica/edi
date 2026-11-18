@@ -4027,6 +4027,9 @@ struct AssistantViewModel::State {
         qsizetype relation_row = 0, relation_field = 0;
         bool relation_constraint = false, relation_visible = false;
         qsizetype relation_base = 0, completed_steps = 0;
+        // An alias add_relations appended whose parameter is not chosen yet: removed if the run stops there, so no alias
+        // is left on the selector's default target.
+        const void* partial_alias = nullptr;
         // The tool and arguments as admitted, so a refused cue can still run the operation as normal mode does.
         QString fallback_tool;
         Object fallback_args;
@@ -4724,8 +4727,24 @@ struct AssistantViewModel::State {
             return false;
         }
     }
+    // The alias add_relations appended and left on its default target, removed when the run stops before choosing
+    // its parameter; only that exact row, still in the project.
+    void drop_partial_alias(const std::shared_ptr<NativeWidget>& run) noexcept {
+        const void* partial = std::exchange(run->partial_alias, nullptr);
+        if (!partial || run->tool != "add_relations" || !run->project) return;
+        try {
+            const auto& aliases = run->project->assistantProject()->aliases;
+            for (std::size_t at = 0; at < aliases.size(); ++at) {
+                if (aliases[at].get() == partial) {
+                    run->project->analysis()->aliases()->remove(static_cast<int>(at));
+                    return;
+                }
+            }
+        } catch (...) {}  // the original refusal stands; a later reread shows the row
+    }
     void widget_refuse(const std::shared_ptr<NativeWidget>& run, const QString& message,
                        std::source_location caller = std::source_location::current()) noexcept {
+        drop_partial_alias(run);
         if (const auto parent = run->create_parent.lock()) {
             if (!widget_owned(run)) return;
             const auto receiver = run->receiver;
@@ -7209,7 +7228,10 @@ struct AssistantViewModel::State {
         const auto& expected = input->expected;
         using Action = ProjectEditor::RelationAction;
         switch (expected.kind) {
-        case Action::Kind::AliasAppend: actual = position + 1 == static_cast<qsizetype>(declaration.aliases.size()); break;
+        case Action::Kind::AliasAppend:
+            actual = position + 1 == static_cast<qsizetype>(declaration.aliases.size());
+            if (actual) run->partial_alias = declaration.aliases[static_cast<std::size_t>(position)].get();
+            break;
         case Action::Kind::ConstraintAppend: {
             actual = position < static_cast<qsizetype>(declaration.constraints.size()) &&
                 declaration.constraints[static_cast<std::size_t>(position)].get() == input->applied_result.constraint &&
@@ -7219,7 +7241,10 @@ struct AssistantViewModel::State {
             break;
         }
         case Action::Kind::AliasId: actual = position < static_cast<qsizetype>(declaration.aliases.size()) && declaration.aliases[static_cast<std::size_t>(position)].get() == expected.row && declaration.aliases[static_cast<std::size_t>(position)]->id.value() == expected.text.toStdString(); break;
-        case Action::Kind::AliasParameter: actual = position < static_cast<qsizetype>(declaration.aliases.size()) && declaration.aliases[static_cast<std::size_t>(position)].get() == expected.row && declaration.aliases[static_cast<std::size_t>(position)]->parameter_unique_name.value() == expected.text.toStdString(); break;
+        case Action::Kind::AliasParameter:
+            actual = position < static_cast<qsizetype>(declaration.aliases.size()) && declaration.aliases[static_cast<std::size_t>(position)].get() == expected.row && declaration.aliases[static_cast<std::size_t>(position)]->parameter_unique_name.value() == expected.text.toStdString();
+            if (actual && delivered && input->outcome.published) run->partial_alias = nullptr;
+            break;
         case Action::Kind::ConstraintId: actual = position < static_cast<qsizetype>(declaration.constraints.size()) && declaration.constraints[static_cast<std::size_t>(position)].get() == expected.row && declaration.constraints[static_cast<std::size_t>(position)]->id.value() == expected.text.toStdString(); break;
         case Action::Kind::ConstraintExpression: actual = position < static_cast<qsizetype>(declaration.constraints.size()) && declaration.constraints[static_cast<std::size_t>(position)].get() == expected.row && declaration.constraints[static_cast<std::size_t>(position)]->expression.value() == expected.text.toStdString(); break;
         case Action::Kind::ConstraintEnabled: actual = position < static_cast<qsizetype>(declaration.constraints.size()) && declaration.constraints[static_cast<std::size_t>(position)].get() == expected.row && declaration.constraints[static_cast<std::size_t>(position)]->enabled.get() == expected.enabled; break;
