@@ -17,6 +17,7 @@ from tests.fixtures.cif_import_baseline.canonical_positions import (
     reader_values,
     restore_representative,
 )
+from tests.fixtures.table_display import source_uncertainties
 
 BASE = Path(__file__).resolve().parents[2] / 'fixtures/cif_import_baseline'
 PINS = json.loads(gzip.decompress((BASE / 'readers-before.json.gz').read_bytes()))
@@ -52,6 +53,10 @@ def test_main_reader_model_regression_pin_changes_only_published_parameter_state
         else:
             expected[name] = transition['after']
     expected = reader_values(row['path'], expected, row['values'])
+    original = reference.source_path(row['path'])
+    expected = source_uncertainties.reader_values(
+        original.relative_to(case.ROOT).as_posix(), expected, original.read_bytes()
+    )
     published = Path(row['path']).suffix.lower() == '.cif'
     assert set(actual) == set(expected), (
         'The regression pin retains exactly the declared saved model fields'
@@ -65,6 +70,11 @@ def test_main_reader_model_regression_pin_changes_only_published_parameter_state
             if published:
                 original = re.sub(r'\([^)]*\)', '', before)
                 current = re.sub(r'\([^)]*\)', '', after)
+            elif before.endswith('()'):
+                assert after.endswith('()'), (
+                    'The native empty-uncertainty save retains its declared free marker'
+                )
+                original, current = before[:-2], after[:-2]
             else:
                 original, current = before, after
             try:
