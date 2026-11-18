@@ -3162,13 +3162,6 @@ void projectCreationRelease(const PanelUsageFrame& frame, const QJSValue& token)
 }
 QJSValue projectCallback(const PanelUsageFrame& frame, uint operation, const std::function<QJSValue(uint)>& captured) {
     if (operation == 20) {
-        // A CIF or magnetic CIF dropped on the window is a structure for the open project, as Load structure takes
-        // one (its refusal says why); anything else is a project to open.
-        const QString path = captured(0).toString().toLower();
-        const auto project = assistantContextField(frame, "Session", "project");
-        if ((path.endsWith(QLatin1String(".cif")) || path.endsWith(QLatin1String(".mcif"))) && consentQtObject(frame, project)) {
-            return panelUsageMemberCall(frame, project, "loadStructure", {captured(0)});
-        }
         const auto session = panelUsageContextRead(frame, "Session");
         return panelUsageMemberCall(frame, session, "openProject", {captured(0)});
     }
@@ -3543,6 +3536,23 @@ void ApplicationInfo::acceptProjectSavePicker(bool zip) const {
     if (!saved) projectInvoke(frame, "saveError", "open");
     projectInvoke(frame, "AppState", "saveAsFinished", {QJSValue(saved)});
 }
+namespace {
+// A structure file, which a window drop loads into the open project as Load structure does: a CIF or magnetic CIF, or
+// an .edi block that is a structure (a cell, no experiment type), never a project record.
+bool dropped_structure(const QUrl& url) {
+    const QFileInfo file(url.toLocalFile());
+    const QString suffix = file.suffix().toLower();
+    if (suffix == QLatin1String("cif") || suffix == QLatin1String("mcif")) return true;
+    if (suffix != QLatin1String("edi") || file.fileName().compare(QLatin1String("project.edi"), Qt::CaseInsensitive) == 0) {
+        return false;
+    }
+    QFile text(file.filePath());
+    if (!file.isFile() || !text.open(QIODevice::ReadOnly)) return false;
+    const QByteArray head = text.read(1 << 16);
+    return head.contains("_cell.length_a") && !head.contains("_experiment_type.");
+}
+}  // namespace
+
 void ApplicationInfo::dropProject(const QJSValue& drop) const {
     const auto frame = panelUsageEngine(this);
     const auto hasUrls = panelUsageRead(frame, drop, "hasUrls");
@@ -3552,6 +3562,13 @@ void ApplicationInfo::dropProject(const QJSValue& drop) const {
     panelUsageMemberCall(frame, drop, "accept");
     const auto actualUrls = panelUsageRead(frame, drop, "urls");
     const auto url = panelUsageIndex(frame, actualUrls, 0);
+    // A structure goes into the project the drop was made on, now: it replaces nothing, so no unsaved-changes guard
+    // and no deferred action that could find another project by then. Anything else opens as a project.
+    const auto project = assistantContextField(frame, "Session", "project");
+    if (dropped_structure(url.toVariant().toUrl()) && consentQtObject(frame, project)) {
+        panelUsageMemberCall(frame, project, "loadStructure", {url});
+        return;
+    }
     const auto action = panelUsageClosure(frame, 20, {url});
     projectInvoke(frame, "AppState", "afterChanges", {action});
 }

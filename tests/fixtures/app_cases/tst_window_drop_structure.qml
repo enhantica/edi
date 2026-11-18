@@ -43,4 +43,17 @@ TestCase {
         tryCompare(project.structures, "count", before + 1, 10000);
         compare(Session.project, project, "the open project stays open");
     }
+
+    // A structure .edi is a structure too; the project the drop was made on keeps it.
+    function test_b_a_structure_edi_dropped_on_the_window_becomes_a_structure() {
+        const project = Session.project;
+        const before = project.structures.count;
+        ApplicationInfo.dropProject({
+            "hasUrls": true,
+            "urls": [Qt.resolvedUrl("../constraint_initial_context/project/structures/phase.edi")],
+            "accept": () => {}
+        });
+        tryCompare(project.structures, "count", before + 1, 10000);
+        compare(Session.project, project);
+    }
 }
