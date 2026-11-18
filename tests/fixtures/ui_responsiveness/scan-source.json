@@ -1,0 +1,12 @@
+{
+  "archive_sha256": "8a49c250a70181f32424aea38e87edf9054a12aa2916c8e0d60d85946f9cc305",
+  "members": {
+    "44k_data/scan-0514_pilatus_integrated_0000.xy": "8fb0e7ca0ed87431cf6165a1d474084b80fc61c1b2eae44804a29a9d009b6938",
+    "44k_project/analysis/analysis.edi": "e75ac8f39d414a22f8abf3e9af074d9c1cdf151ac61e695cba2391162607b471",
+    "44k_project/structures/CaCO3.edi": "a0c30743a6111196d9b56e4aacbc8eb1c48389c7c9d00f149f393100ce684a42",
+    "44k_project/structures/ZnO.edi": "5f74519460a4adc610830114200583c9869b8d1d8aeab5a6bc21a12c946367de",
+    "44k_project/experiments/scan-0514_pilatus_integrated_avg.edi": "3102bcda1dd89a831a487a82da082e9e352b7bf587b8b1b043f747ff8cd58089",
+    "44k_project/reports/report.edi": "ccf0a412ae4f61ed0be46e8e7b010680a5b9da02d43db3e3ae88aded07f44ffc",
+    "44k_project/project.edi": "565bbf00aa30cd7af74d5a524b5b1a074b6019b7e76cf331758d238ed623a09b"
+  }
+}
