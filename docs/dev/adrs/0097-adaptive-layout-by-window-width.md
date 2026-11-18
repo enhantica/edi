@@ -13,11 +13,11 @@
 edi runs on a phone browser, a tablet, a laptop and a large monitor (the web app and the desktop app share the QML).
 Today the window has a minimum size of 1024 × 640 logical pixels (`AppSizes.minimumAppWidth`; a browser window
 below it shows an "Increase the window size" overlay), the sidebar's width is bound to the distance from the window's
-right edge to the centre of the app bar's Experiment tab (`Main.qml`, the owner's 2026-10-22 rule, which this ADR
-replaces), table columns size themselves from their contents (ADR-0029) and visibly jump as values change, and only
-the status bar (ADR-0017 §17: items give way from the end, keys shown only when all fit) and the chart toolbars
-(ADR-0090 point 7: controls move to a ⋯ popup least important first, by one priority list) adapt. The owner asked (2026-11-18) for layouts that adapt to the screen size the
-way web pages do, with fixed column widths, elided text and scientific notation instead of jumping columns, and a
+right edge to the centre of the app bar's Experiment tab, a rule this ADR replaces, table columns size themselves from
+their contents (ADR-0029) and visibly jump as values change, and only the status bar (ADR-0017 §17: items give way
+from the end, keys shown only when all fit) and the chart toolbars (ADR-0090 point 7: controls move to a ⋯ popup least
+important first, by one priority list) adapt. The owner asked (2026-11-18) for layouts that adapt to the screen size
+the way web pages do, with fixed column widths, elided text and scientific notation instead of jumping columns, and a
 sidebar whose width is chosen automatically from a few fixed ratios, never dragged.
 
 ## Decision
