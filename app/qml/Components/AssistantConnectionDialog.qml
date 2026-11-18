@@ -86,8 +86,11 @@ AppDialog {
         function onDraftAdmissionReadyChanged() {
             dialog.scheduleAcceptedOffer();
         }
+        // The disclosed context is made again only while the dialog is shown (opening it makes it afresh): a hidden
+        // dialog does not follow every change of a running fit.
         function onContextPreviewChanged() {
-            ApplicationInfo.connectionPresentationChanged(2);
+            if (dialog.opened)
+                ApplicationInfo.connectionPresentationChanged(2);
         }
         function onLastErrorChanged() {
             dialog.showConnectionFailureIfFinished();
