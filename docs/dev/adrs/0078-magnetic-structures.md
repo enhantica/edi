@@ -49,9 +49,9 @@ without computing any of them itself.
   table lacks, is greyed out. C₂'s tooltip gives the Landé g it stands for, C₂ = 2/g − 1. The core holds a type's
   form factor as a keyed row (`magnetic_form_factor`) only once an edit or a file declares it; a row back at the
   defaults (its own ion, ⟨j0⟩, every coefficient 0 and fixed) is removed, so the file says nothing it does not need.
-- **Crystal or Magnetic** (the owner, 2026-11-18, replacing the 2026-11-14 rule; the owner's 2026-11-14 request was
-  *"Create → crystal or magnetic structure, magnetic groups shown only then"*, and the "moments group always present"
-  rule recorded here before was a conductor proposal taken without objection, not an owner decision). The Structures
+- **Crystal or Magnetic** (the owner, 2026-11-18). This replaces the 2026-11-14 rule that every structure lists the
+  moments group, which was not the owner's decision: the owner's 2026-11-14 request was *"Create → crystal or magnetic
+  structure, magnetic groups shown only then"*. The Structures
   table has a column after Type: Crystal or Magnetic, for an atom-based structure. Create makes Crystal, and a Crystal
   structure shows no magnetic group, the moments included. Switching to Magnetic sets the grey group of the current
   space group (Pnma → Pnma1′, BNS 62.442): every moment is zero by symmetry until a magnetic subgroup is chosen (CoSiO:
@@ -70,7 +70,7 @@ without computing any of them itself.
   with time reversal ignored) is the ordinary space group whose IT number is the BNS number's first part, in the
   setting the BNS transform gives. edi derives that table setting when it reads the structure and gives it to crysta
   as the structure's space group, so Wyckoff letters, multiplicities and coordinate ties come from the table and the
-  cell and positions stay fittable (crysta ADR-0108 I5). No `_space_group` is written for a Magnetic structure. A type
+  cell and positions stay fittable. No `_space_group` is written for a Magnetic structure. A type
   IV group (its anti-translation makes the family a different lattice) and a setting the table does not hold keep the
   operators-only mode below.
 - **Files.** Each sidebar group maps to one magnetic CIF category, as the crystal groups map to theirs (COMCIFS
