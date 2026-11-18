@@ -2,16 +2,21 @@
 
 import hashlib
 import importlib.util
+import sys
 from pathlib import Path
+from unittest import mock
 
 import pytest
+
+from tools.release import plan
 
 ROOT = Path(__file__).resolve().parents[3]
 SPEC = importlib.util.spec_from_file_location(
     'archive_size_promotion', ROOT / 'tools/release/promote.py'
 )
 PROMOTE = importlib.util.module_from_spec(SPEC)
-SPEC.loader.exec_module(PROMOTE)
+with mock.patch.dict(sys.modules, {'plan': plan}):
+    SPEC.loader.exec_module(PROMOTE)
 VERSION = '2026.11.24'
 APP = 'org.easydiffraction.app'
 ASSISTANT = APP + '.assistant'

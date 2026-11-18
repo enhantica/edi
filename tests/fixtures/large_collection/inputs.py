@@ -22,7 +22,11 @@ def generate(folder):
     for name in ('small', 'large'):
         path = online / 'projects' / (name + '.zip')
         entries.append({
-            'id': 'bundle-' + name,
+            'id': (
+                'pd-neut-cwl_lbco-hrpt'
+                if name == 'small'
+                else 'pd-neut-tof_ncaf-wish-5bank_synthetic-100p'
+            ),
             'kind': 'project',
             'name': name.title() + ' collection example',
             'files': [
@@ -34,10 +38,30 @@ def generate(folder):
                 }
             ],
         })
+    (online / 'data').mkdir()
+    for name in ('small', 'large'):
+        payload = b'17.5 4.25 0.5\n18.25 9.75 1.5\n'
+        if name == 'large':
+            payload += b'#' + b'x' * 6_000_000 + b'\n'
+        path = online / 'data' / (name + '.xye')
+        path.write_bytes(payload)
+        entries.append({
+            'id': name + '-data',
+            'kind': 'data',
+            'files': [
+                {
+                    'path': 'data/' + path.name,
+                    'format': 'xye',
+                    'bytes': len(payload),
+                    'sha256': hashlib.sha256(payload).hexdigest(),
+                }
+            ],
+        })
     (online / 'index.json').write_text(
         json.dumps({'schema': 'edi-data-index/1', 'entries': entries})
     )
     bundle = folder / 'bundle'
     shutil.copytree(online, bundle)
     (bundle / 'projects/large.zip').unlink()
+    (bundle / 'data/large.xye').unlink()
     return online, bundle

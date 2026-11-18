@@ -54,18 +54,20 @@ def installed_collection(tmp_path_factory):
     return online, installed[0].parent
 
 
-def test_bundle_omits_large_payload(installed_collection):
+@pytest.mark.parametrize('relative', ['projects/large.zip', 'data/large.xye'])
+def test_bundle_omits_large_payload(installed_collection, relative):
     _online, installed = installed_collection
-    assert not (installed / 'projects/large.zip').exists(), (
+    assert not (installed / relative).exists(), (
         'ADR-0068: items above approximately five MB are excluded from the desktop bundle'
     )
 
 
-def test_bundle_keeps_small_payload_byte_for_byte(installed_collection):
+@pytest.mark.parametrize('relative', ['projects/small.zip', 'data/small.xye'])
+def test_bundle_keeps_small_payload_byte_for_byte(installed_collection, relative):
     online, installed = installed_collection
-    assert (installed / 'projects/small.zip').read_bytes() == (
-        online / 'projects/small.zip'
-    ).read_bytes(), 'ADR-0068: small examples remain installed unchanged for fully offline opening'
+    assert (installed / relative).read_bytes() == (online / relative).read_bytes(), (
+        'ADR-0068: small examples remain installed unchanged for fully offline opening'
+    )
 
 
 def test_bundle_retains_large_example_discovery(installed_collection):
@@ -74,6 +76,4 @@ def test_bundle_retains_large_example_discovery(installed_collection):
     actual = json.loads((installed / 'index.json').read_text())['entries']
     assert {row['id']: row['files'] for row in actual} == {
         row['id']: row['files'] for row in expected
-    }, (
-        'ADR-0068: omitted payloads keep ids, remote paths, sizes and digests for first open'
-    )
+    }, 'ADR-0068: omitted payloads keep ids, remote paths, sizes and digests for first open'
