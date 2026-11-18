@@ -651,8 +651,10 @@ if(EDI_BUNDLED_COLLECTION AND NOT EMSCRIPTEN)
         if(relative MATCHES "^\\.git(hub)?(/|$)")
             continue()
         endif()
+        # Only an item (a file in one of the item folders) can be left out; the index and the other files at the
+        # collection's root are what finds them, and are always installed.
         file(SIZE "${EDI_BUNDLED_COLLECTION}/${relative}" edi_collection_bytes)
-        if(edi_collection_bytes GREATER EDI_BUNDLED_ITEM_LIMIT)
+        if(relative MATCHES "^(structures|experiments|data|projects)/" AND edi_collection_bytes GREATER EDI_BUNDLED_ITEM_LIMIT)
             continue()
         endif()
         get_filename_component(edi_collection_subdirectory "${relative}" DIRECTORY)
