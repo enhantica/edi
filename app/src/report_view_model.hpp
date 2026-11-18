@@ -10,8 +10,11 @@
 #include <QStringList>
 #include <QUrl>
 #include <QVariantMap>
+#include <cstdint>
+#include <memory>
 #include <optional>
 #include <string>
+#include <vector>
 #include <QtQml/qqmlregistration.h>
 
 #include "edi/report_html.hpp"
@@ -139,8 +142,35 @@ class ReportViewModel : public QObject {
     void saveFailed(const QString& message);
 
    private:
-    // Builds the model from the project; whether it changed.
+    // What a build reads, taken on the GUI thread: a copy of the report's input and the app's choices.
+    struct Inputs {
+        std::shared_ptr<const edi::Project> input;
+        edi::ReportOverrides choices;
+        bool vesta = false;
+        std::vector<std::size_t> colour_positions;
+        std::vector<std::string> formats;  // the formats of the saved reports on disk, whose digests are judged
+        bool embed = false;
+        std::shared_ptr<const edi::ReportLibraries> libraries;
+    };
+    // What a build makes, on any thread: the model, its JSON and QML text, and the saved reports' digests.
+    struct Built {
+        edi::ReportModel report;
+        std::string json;
+        QVariantMap model;
+        edi::ReportOptions options;
+        std::optional<edi::ReportModel> judged;
+        std::optional<std::string> cif_digest;
+        QHash<QString, QString> digests;  // by format
+    };
+    Inputs prepare() const;
+    static Built make(const Inputs& inputs);
+    // Takes a build's results; whether the model changed.
+    bool adopt(Built&& built) const;
+    // Builds the model from the project now, on the GUI thread (a save, or a read while the page is hidden); whether
+    // it changed.
     bool build() const;
+    // Builds the model on a worker and announces it when it lands, unless a newer request replaced it (ADR-0096 rule 3).
+    void requestBuild();
     // A read while a change is pending builds the model first. A model the read changed is announced afterwards, so
     // the readers that read it before (the chart controllers) read it again.
     void ensureBuilt() const;
@@ -181,6 +211,9 @@ class ReportViewModel : public QObject {
     mutable edi::ReportOptions options_;
     mutable std::optional<edi::ReportModel> judged_;
     mutable std::optional<std::string> cif_digest_;
+    mutable QHash<QString, QString> digests_;  // the saved reports' digests by format, from the last build
+    mutable std::uint64_t build_generation_ = 0;
+    mutable bool building_ = false;
     QHash<QString, QImage> figures_;  // setFigure's images, which the next save takes
 };
 

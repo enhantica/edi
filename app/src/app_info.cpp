@@ -8673,7 +8673,7 @@ QJSValue ApplicationInfo::reportTableLayout() const {
     const auto out = controlEmptyArray(f);
     for (int column = 0; panelUsageReady(f) && assistantRelation(f, QJSValue(double(column)), panelUsageContextRead(f, "columnCount"), 0); ++column) {
         double numbers = 0, others = 0; QJSValue left(0), right(0), plain(0);
-        panelUsageEach(f, panelUsageContextRead(f, "rows"), [&](const QJSValue& row) {
+        const auto measure = [&](const QJSValue& row) {
             const auto text = tableNullish(textIndex(f, row, QJSValue(double(column))), QJSValue(QStringLiteral("")));
             if (text.strictlyEquals(QJSValue(QStringLiteral("")))) return panelUsageReady(f);
             const auto parts = projectInvoke(f, "table", "split", {text});
@@ -8683,7 +8683,15 @@ QJSValue ApplicationInfo::reportTableLayout() const {
                 right = numberMath(f, "max", [&] { return QJSValueList{right, projectInvoke(f, "metrics", "advanceWidth", {panelUsageRead(f, parts, "right")})}; });
             } else ++others;
             plain = numberMath(f, "max", [&] { return QJSValueList{plain, projectInvoke(f, "metrics", "advanceWidth", {text})}; }); return panelUsageReady(f);
-        });
+        };
+        // A long table (an experiment's data points) is measured on 200 rows spread over it, not on every row.
+        constexpr int kSample = 200;
+        const auto rows = panelUsageContextRead(f, "rows");
+        const int total = panelUsageRead(f, rows, "length").toInt();
+        for (int k = 0; panelUsageReady(f) && k < std::min(total, kSample); ++k) {
+            const int index = total > kSample ? static_cast<int>(static_cast<long long>(k) * total / kSample) : k;
+            if (!measure(textIndex(f, rows, QJSValue(index)))) break;
+        }
         const bool numeric = numbers > 0 && others == 0; QJSValue header(0);
         if (!panelUsageTruth(panelUsageContextRead(f, "keyValue"))) header = projectInvoke(f, "metrics", "advanceWidth", {textIndex(f, panelUsageContextRead(f, "columns"), QJSValue(double(column)))});
         QJSValue content;

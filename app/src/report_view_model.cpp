@@ -3,6 +3,8 @@
 #include <QScopeGuard>
 
 #include <QByteArray>
+#include <QCoreApplication>
+#include <QPointer>
 #include <QDateTime>
 #include <QDir>
 #include <QLocale>
@@ -17,6 +19,7 @@
 #include <string>
 #include <utility>
 
+#include "background.hpp"
 #include "correlation_view_model.hpp"
 #include "edi/io.hpp"
 #include "edi/report_html.hpp"
@@ -24,6 +27,7 @@
 #include "fit_view_model.hpp"
 #include "project_view_model.hpp"
 #include "report_pdf.hpp"
+#include "ui_probe.hpp"
 #include "web_files.hpp"
 
 namespace edi_app {
@@ -92,16 +96,15 @@ void ReportViewModel::refresh() {
     if (!active_) {
         return;
     }
-    if (build()) {
-        publishModel();
-    }
-    emit savedReportsChanged();
+    requestBuild();
 }
 
 void ReportViewModel::ensureBuilt() const {
-    if (dirty_ && build()) {
-        auto* self = const_cast<ReportViewModel*>(this);  // NOLINT(cppcoreguidelines-pro-type-const-cast)
-        QMetaObject::invokeMethod(self, [self] { self->publishModel(); }, Qt::QueuedConnection);
+    // A read asks a worker for the model and reads the last one until the new one lands (ADR-0096 rule 3): the
+    // preview reads the model as its page is shown, before the page's active binding has turned. Only a save builds
+    // here (saveReport).
+    if (dirty_ && !building_) {
+        const_cast<ReportViewModel*>(this)->requestBuild();  // NOLINT(cppcoreguidelines-pro-type-const-cast)
     }
 }
 
@@ -114,13 +117,13 @@ void ReportViewModel::publishModel() {
     }
 }
 
-bool ReportViewModel::build() const {
-    dirty_ = false;
+ReportViewModel::Inputs ReportViewModel::prepare() const {
     // The project's report settings (ADR-0036 §7) and the app's choices, given as the CLI and Python give them: the
     // Preferences' palette and, of a fit of several experiments, the experiment the Analysis page shows; then the
     // blocks' positions in the palette and the structure view's element colours.
     const edi::Project& project = project_.project();
-    edi::ReportOverrides choices;
+    Inputs inputs;
+    edi::ReportOverrides& choices = inputs.choices;
     if (edi::colour_scheme_from_name(colour_scheme_.toStdString())) {
         choices.colour_scheme = colour_scheme_.toStdString();
     }
@@ -130,28 +133,39 @@ bool ReportViewModel::build() const {
     if (!project_.scan() && shown > 0 && static_cast<std::size_t>(shown) < project.experiments.size()) {
         choices.correlation_experiment = project.experiments[static_cast<std::size_t>(shown)]->name.value();
     }
-    judged_.reset();
-    cif_digest_.reset();
-    edi::ReportModel next;
+    const StructureViewOptions* view = project_.structureViewOptions();
+    inputs.vesta = view != nullptr && view->colorScheme() == QLatin1String("vesta");
+    inputs.colour_positions = project_.colourPositions();
+    inputs.input = std::make_shared<const edi::Project>(reportInput());
+    const QDir reports(reportsDirectory());
+    for (const auto& file : project.report_files) {
+        if (reports.exists(QString::fromStdString(file->name.value()))) {
+            inputs.formats.push_back(file->format.value());
+        }
+    }
+    inputs.embed = embedLibraries();
+    if (inputs.embed) {
+        if (const edi::ReportLibraries* read = libraries()) {
+            inputs.libraries = std::make_shared<const edi::ReportLibraries>(*read);
+        }
+    }
+    return inputs;
+}
+
+ReportViewModel::Built ReportViewModel::make(const Inputs& inputs) {
+    Built built;
     try {
-        options_ = edi::effective_report_options(project, choices);
-        const StructureViewOptions* view = project_.structureViewOptions();
-        const bool vesta = view != nullptr && view->colorScheme() == QLatin1String("vesta");
-        options_.element_colours = vesta ? edi::ColorScheme::Vesta : edi::ColorScheme::Jmol;
-        options_.colour_positions = project_.colourPositions();
-        next = edi::build_report(reportInput(), options_);
+        built.options = edi::effective_report_options(*inputs.input, inputs.choices);
+        built.options.element_colours = inputs.vesta ? edi::ColorScheme::Vesta : edi::ColorScheme::Jmol;
+        built.options.colour_positions = inputs.colour_positions;
+        built.report = edi::build_report(*inputs.input, built.options);
     } catch (const std::exception&) {  // NOLINT(bugprone-empty-catch) — a project the builder refuses shows no report
-        options_ = {};
-        next = {};
+        built.options = {};
+        built.report = {};
     }
-    std::string json = edi::report_to_json(next);
-    if (json == json_) {
-        return false;
-    }
-    json_ = std::move(json);
-    report_ = std::move(next);
+    built.json = edi::report_to_json(built.report);
     // The text sections' values for QML; the charts read report_ through their controllers.
-    edi::ReportModel text = report_;
+    edi::ReportModel text = built.report;
     for (edi::ReportStructure& structure : text.structures) {
         structure.scene = {};
         structure.view = {};
@@ -160,8 +174,89 @@ bool ReportViewModel::build() const {
     for (edi::ReportExperiment& experiment : text.experiments) {
         experiment.pattern = {};
     }
-    model_ = QJsonDocument::fromJson(QByteArray::fromStdString(edi::report_to_json(text))).toVariant().toMap();
+    built.model = QJsonDocument::fromJson(QByteArray::fromStdString(edi::report_to_json(text))).toVariant().toMap();
+    // The saved reports are judged against what each format's writer would write now (savedReports).
+    const edi::ReportModel* judged = &built.report;
+    if (edi::chooses_presentation(built.options)) {
+        try {
+            built.judged = edi::build_report(*inputs.input, edi::report_file_options(built.options));
+        } catch (const std::exception&) {  // NOLINT(bugprone-empty-catch) — as above: no report
+            built.judged = edi::ReportModel{};
+        }
+        judged = &*built.judged;
+    }
+    static const edi::ReportLibraries kOnline;
+    for (const std::string& format : inputs.formats) {
+        const QString key = QString::fromStdString(format);
+        if (built.digests.contains(key)) continue;
+        if (format == "cif") {
+            try {
+                built.cif_digest = edi::fnv1a64(edi::cif_report_text(*inputs.input));
+            } catch (const std::exception&) {  // NOLINT(bugprone-empty-catch) — no CIF report: judged out of date
+                built.cif_digest = std::string();
+            }
+            built.digests.insert(key, QString::fromStdString(*built.cif_digest));
+        } else {
+            const edi::ReportLibraries& used = format == "html" && inputs.libraries ? *inputs.libraries : kOnline;
+            built.digests.insert(key, QString::fromStdString(edi::report_digest(*judged, format, used)));
+        }
+    }
+    return built;
+}
+
+bool ReportViewModel::adopt(Built&& built) const {
+    options_ = std::move(built.options);
+    judged_ = std::move(built.judged);
+    cif_digest_ = std::move(built.cif_digest);
+    digests_ = std::move(built.digests);
+    if (built.json == json_) {
+        return false;
+    }
+    json_ = std::move(built.json);
+    report_ = std::move(built.report);
+    model_ = std::move(built.model);
     return true;
+}
+
+bool ReportViewModel::build() const {
+    dirty_ = false;
+    building_ = false;
+    ++build_generation_;  // a build in flight is no longer wanted
+    judged_.reset();
+    cif_digest_.reset();
+    digests_.clear();
+    return adopt(make(prepare()));
+}
+
+void ReportViewModel::requestBuild() {
+    dirty_ = false;
+    const std::uint64_t generation = ++build_generation_;
+    if (building_) {
+        ui_trace("supersede", {{"view", "V12/report"}, {"old", static_cast<double>(generation - 1)},
+                               {"replacement", static_cast<double>(generation)}});
+    }
+    building_ = true;
+    ui_trace("request", {{"view", "V12/report"}, {"generation", static_cast<double>(generation)}});
+    const QPointer<ReportViewModel> self(this);
+    run_in_background([self, generation, inputs = prepare()]() {
+        ui_trace("build", {{"view", "V12/report"}, {"thread", ui_trace_thread()}, {"scales", true}});
+        auto built = std::make_shared<Built>(make(inputs));
+        QMetaObject::invokeMethod(
+            QCoreApplication::instance(),
+            [self, generation, built]() {
+                if (!self || generation != self->build_generation_) {
+                    return;  // a newer request replaced it, or the page is gone
+                }
+                ui_trace("deliver", {{"view", "V12/report"}, {"generation", static_cast<double>(generation)}});
+                self->building_ = false;
+                if (self->adopt(std::move(*built))) {
+                    self->publishModel();
+                    if (!self) return;
+                }
+                emit self->savedReportsChanged();
+            },
+            Qt::QueuedConnection);
+    });
 }
 
 const edi::ReportPattern* ReportViewModel::pattern(const QString& experiment) const {
@@ -329,12 +424,16 @@ QList<SavedReport> ReportViewModel::savedReports() const {
         if (!reports.exists(name)) {
             state = QStringLiteral("missing");
         } else {
-            // The digest of what the format's writer would write now, the HTML with the libraries the project embeds.
-            const edi::ReportLibraries* embedded = format == "html" && embedLibraries() ? libraries() : nullptr;
-            static const edi::ReportLibraries kOnline;
-            const std::string digest = format == "cif" ? cifDigest()
-                                                       : edi::report_digest(judged(), format,
-                                                                            embedded != nullptr ? *embedded : kOnline);
+            // The digest of what the format's writer would write now, made with the last build when it judged this
+            // format, else here (a read before any build).
+            const QString known = digests_.value(QString::fromStdString(format));
+            std::string digest = known.toStdString();
+            if (!digests_.contains(QString::fromStdString(format))) {
+                const edi::ReportLibraries* embedded = format == "html" && embedLibraries() ? libraries() : nullptr;
+                static const edi::ReportLibraries kOnline;
+                digest = format == "cif" ? cifDigest()
+                                         : edi::report_digest(judged(), format, embedded != nullptr ? *embedded : kOnline);
+            }
             if (digest != file->digest.value()) {
                 state = QStringLiteral("out of date");
             }
@@ -366,7 +465,10 @@ void ReportViewModel::saveReport(const QString& fontFamily) {
     if (project_.retired_) return;
     // The figures belong to this save only, whatever it ends in.
     const QHash<QString, QImage> images = std::exchange(figures_, {});
-    ensureBuilt();
+    // A save writes what the project is now: it builds here when a build is owed or still on a worker.
+    if ((dirty_ || building_) && build()) {
+        QMetaObject::invokeMethod(this, [this] { publishModel(); }, Qt::QueuedConnection);
+    }
     const edi::Project& project = project_.project();
     const QString base = fileStem();
     const QDir reports(reportsDirectory());
