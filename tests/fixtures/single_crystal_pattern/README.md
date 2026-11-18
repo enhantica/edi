@@ -14,3 +14,9 @@ For an unpolarised beam, nuclear and perpendicular magnetic F² add. F uses the 
 existing chart-controls generator. The legacy `main` preference token selects the published Main palette; named future
 palette tokens use the separate owner-approved palette reference. These are display references, separate from the
 unchanged scientific reflection values.
+
+The data-free input explicitly sets a 0.35 Å⁻¹ sinθ/λ resolution limit, within
+1/λ for the declared wavelength. Counterfactual witnesses reuse the same physical
+reference with a moment alias, a fixed `mz = 2` relation, or `mz = 1 + 1`.
+They inspect the real plotted nuclear and magnetic strokes and require the original
+moment, alias and constraint rows to survive the nuclear-only calculation unchanged.

@@ -16,12 +16,15 @@ ROOT = Path(__file__).resolve().parents[3]
 def native(case):
     binary = Path(os.environ.get('EDI_APP_TEST_RUNNER', ROOT / 'build/app/app/edi_app_tests'))
     assert binary.is_file(), 'Report completion requires the actual native Qt host'
-    status, output = capture([
-        binary,
-        '-input',
-        ROOT / 'tests/unit/app/tst_report_completion.qml',
-        'ReportCompletion::' + case,
-    ])
+    status, output = capture(
+        [
+            binary,
+            '-input',
+            ROOT / 'tests/unit/app/tst_report_completion.qml',
+            'ReportCompletion::' + case,
+        ],
+        env={**os.environ, 'OMP_NUM_THREADS': '1', 'OPENBLAS_NUM_THREADS': '1'},
+    )
     assert 'Could not find the following test functions' not in output, (
         'The requested Report function exists before product behavior is judged'
     )

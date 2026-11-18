@@ -10,11 +10,11 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-17T18:37:16Z
+# measured_utc = 2026-11-18T02:05:36Z
 #
-# Recorded from: measured test run (13 node(s) measured once, 180795 banked, 0 stale row(s) dropped)
-# Collected tests: 249617; with a reported duration: 80623
-# Module-scoped fixture costs recorded: 208
+# Recorded from: measured test run (20 node(s) measured once, 180808 banked, 0 stale row(s) dropped)
+# Collected tests: 249637; with a reported duration: 80637
+# Module-scoped fixture costs recorded: 209
 #
 # Breaches are decided PER TIER against the table
 # below, which the loader validates against the code constants - a manifest must state
@@ -29,12 +29,12 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 249617
+# inventory_python = 249637
 # inventory_cpp = 0
-# inventory_measured = 180808
-# inventory_unmeasured = 68809
+# inventory_measured = 180822
+# inventory_unmeasured = 68815
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
-# inventory_pr_python = 87432
+# inventory_pr_python = 87452
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -237765,6 +237765,14 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_plain_data_app.py::test_scan_
 0.400	tests/system/py/test_plain_data_app.py::test_single_fit_in_scan_shows_saves_and_undoes_its_own_matrix[after-scan-sequential]
 0.140	tests/system/py/test_plain_data_app.py::test_single_fit_in_scan_shows_saves_and_undoes_its_own_matrix[fresh-independent]
 1.103	tests/system/py/test_plain_data_app.py::test_single_fit_in_scan_shows_saves_and_undoes_its_own_matrix[fresh-sequential]
+1.300	tests/system/py/test_polyhedra_neighbourhood.py::test_polyhedra_independent_geometry[test_affine_shell_volume:coplanar-hexagon]
+0.930	tests/system/py/test_polyhedra_neighbourhood.py::test_polyhedra_independent_geometry[test_affine_shell_volume:coplanar-square]
+1.070	tests/system/py/test_polyhedra_neighbourhood.py::test_polyhedra_independent_geometry[test_affine_shell_volume:cube]
+1.430	tests/system/py/test_polyhedra_neighbourhood.py::test_polyhedra_independent_geometry[test_affine_shell_volume:octahedron]
+1.110	tests/system/py/test_polyhedra_neighbourhood.py::test_polyhedra_independent_geometry[test_complete_periodic_neighbourhood:orthogonal-bonds]
+1.110	tests/system/py/test_polyhedra_neighbourhood.py::test_polyhedra_independent_geometry[test_complete_periodic_neighbourhood:orthogonal-distance]
+0.870	tests/system/py/test_polyhedra_neighbourhood.py::test_polyhedra_independent_geometry[test_complete_periodic_neighbourhood:skew-bonds]
+0.900	tests/system/py/test_polyhedra_neighbourhood.py::test_polyhedra_independent_geometry[test_complete_periodic_neighbourhood:skew-distance]
 0.120	tests/system/py/test_positional_trial_domains.py::test_coordinate_domain_fit_rejects_invalid_proposal_and_keeps_valid_state[cold-analysis-displacement]
 0.130	tests/system/py/test_positional_trial_domains.py::test_coordinate_domain_fit_rejects_invalid_proposal_and_keeps_valid_state[cold-analysis-march-fraction]
 UNMEASURED:failed-in-this-run	tests/system/py/test_positional_trial_domains.py::test_coordinate_domain_fit_rejects_invalid_proposal_and_keeps_valid_state[cold-analysis-march-r]
@@ -241816,6 +241824,18 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_simulation_parameter_filters.
 3.260	tests/system/py/test_single_crystal_pattern.py::test_single_crystal_pattern_from_independent_references[test_bar_width_and_thin_line_zoom_invariants:sine]
 4.830	tests/system/py/test_single_crystal_pattern.py::test_single_crystal_pattern_from_independent_references[test_comparison_quantities_remain_separate_from_pattern:magnetic]
 4.360	tests/system/py/test_single_crystal_pattern.py::test_single_crystal_pattern_from_independent_references[test_comparison_quantities_remain_separate_from_pattern:nuclear]
+2.210	tests/system/py/test_single_crystal_pattern.py::test_single_crystal_pattern_from_independent_references[test_constrained_moment_nuclear_counterfactual:alias-q-f2]
+UNMEASURED:failed-in-this-run	tests/system/py/test_single_crystal_pattern.py::test_single_crystal_pattern_from_independent_references[test_constrained_moment_nuclear_counterfactual:alias-q-f]
+3.440	tests/system/py/test_single_crystal_pattern.py::test_single_crystal_pattern_from_independent_references[test_constrained_moment_nuclear_counterfactual:alias-sine-f2]
+UNMEASURED:failed-in-this-run	tests/system/py/test_single_crystal_pattern.py::test_single_crystal_pattern_from_independent_references[test_constrained_moment_nuclear_counterfactual:alias-sine-f]
+2.180	tests/system/py/test_single_crystal_pattern.py::test_single_crystal_pattern_from_independent_references[test_constrained_moment_nuclear_counterfactual:expression-q-f2]
+UNMEASURED:failed-in-this-run	tests/system/py/test_single_crystal_pattern.py::test_single_crystal_pattern_from_independent_references[test_constrained_moment_nuclear_counterfactual:expression-q-f]
+2.790	tests/system/py/test_single_crystal_pattern.py::test_single_crystal_pattern_from_independent_references[test_constrained_moment_nuclear_counterfactual:expression-sine-f2]
+UNMEASURED:failed-in-this-run	tests/system/py/test_single_crystal_pattern.py::test_single_crystal_pattern_from_independent_references[test_constrained_moment_nuclear_counterfactual:expression-sine-f]
+3.879	tests/system/py/test_single_crystal_pattern.py::test_single_crystal_pattern_from_independent_references[test_constrained_moment_nuclear_counterfactual:fixed-q-f2]
+UNMEASURED:failed-in-this-run	tests/system/py/test_single_crystal_pattern.py::test_single_crystal_pattern_from_independent_references[test_constrained_moment_nuclear_counterfactual:fixed-q-f]
+2.720	tests/system/py/test_single_crystal_pattern.py::test_single_crystal_pattern_from_independent_references[test_constrained_moment_nuclear_counterfactual:fixed-sine-f2]
+UNMEASURED:failed-in-this-run	tests/system/py/test_single_crystal_pattern.py::test_single_crystal_pattern_from_independent_references[test_constrained_moment_nuclear_counterfactual:fixed-sine-f]
 UNMEASURED:failed-in-this-run	tests/system/py/test_single_crystal_pattern.py::test_single_crystal_pattern_from_independent_references[test_creating_single_crystal_experiment_immediately_draws_simulated_bars]
 UNMEASURED:failed-in-this-run	tests/system/py/test_single_crystal_pattern.py::test_single_crystal_pattern_from_independent_references[test_independent_reflections_and_stacked_contributions:magnetic-q-f2]
 UNMEASURED:failed-in-this-run	tests/system/py/test_single_crystal_pattern.py::test_single_crystal_pattern_from_independent_references[test_independent_reflections_and_stacked_contributions:magnetic-q-f]
@@ -249827,6 +249847,7 @@ UNMEASURED:not-completed-in-this-run	tests/unit/py/test_web_science_identity.py:
 # module-cost: 7.237	tests/system/py/test_shared_correlation_app_state.py
 # module-cost: 71.426	tests/system/py/test_sidebar_defaults.py
 # module-cost: 13.305	tests/system/py/test_simulation_parameter_filters.py
+# module-cost: 1.231	tests/system/py/test_single_crystal_pattern.py
 # module-cost: 12.615	tests/system/py/test_slider_pointer_release.py
 # module-cost: 5.110	tests/system/py/test_slider_release_contract.py
 # module-cost: 28.755	tests/system/py/test_stacked_line_quality.py

@@ -40,12 +40,16 @@ Item {
         property var pattern
         property var page
         property var root
+        property var mainView
         readonly property var reference: JSON.parse(SettingsProof.repoText("tests/fixtures/single_crystal_pattern/reference.json"))
         function cleanup() {
             if (page)
                 page.destroy();
-            if (scene)
+            if (scene && !mainView)
                 scene.destroy();
+            if (mainView)
+                mainView.destroy();
+            mainView = null;
             page = scene = pattern = null;
             Session.closeProject();
         }
@@ -64,6 +68,9 @@ Item {
                 length: control.count
             }, (_, i) => control.textAt(i)).findIndex(predicate);
             verify(index >= 0, "The real single-crystal selector offers the required quantity or style");
+            // Existing defaults need no popup round-trip; changed choices still use real input.
+            if (control.currentIndex === index)
+                return;
             click(control);
             tryCompare(control.popup, "opened", true, 1000, "Actual input opens the single-crystal choices");
             const list = control.popup.contentItem;
@@ -73,12 +80,12 @@ Item {
             mouseClick(entry, entry.width / 2, entry.height / 2);
             tryCompare(control.popup, "visible", false, 1000, "The real single-crystal choice closes its popup");
         }
-        function open(magnetic, simulation = false) {
+        function open(magnetic, simulation = false, relations = "") {
             Preferences.resetToDefaults();
             root = SettingsProof.copyProject(Qt.resolvedUrl("../../fixtures/legacy_structure_project/compact-project"));
             verify(SettingsProof.write(root, "structures/cosio.edi", SettingsProof.repoText("tests/fixtures/single_crystal_pattern/" + (magnetic ? "magnetic" : "nuclear") + ".edi")), "The actor supplies its independently declared single-atom structure");
             verify(SettingsProof.write(root, "experiments/d20.edi", SettingsProof.repoText("tests/fixtures/single_crystal_pattern/" + (simulation ? "simulation" : "measured") + ".edi")), "The actor supplies its independently declared single-crystal input");
-            verify(SettingsProof.write(root, "analysis/analysis.edi", "_edi.schema_version 3\n_fitting_mode.type single\n"), "The single-atom input has no aliases to removed sites");
+            verify(SettingsProof.write(root, "analysis/analysis.edi", "_edi.schema_version 3\n_fitting_mode.type single\n" + relations), "The single-atom input declares only its intended current moment relations");
             verify(Session.openProject(root), "The real project loader opens the independent single-crystal input");
             tryCompare(Session.project, "calculating", false, 10000, "The actual single-crystal calculation finishes before plotting");
             scene = chartFactory.createObject(surface, {
@@ -117,17 +124,16 @@ Item {
                 width: Math.max(...points.map(p => p.x)) - Math.min(...points.map(p => p.x))
             } : null;
         }
-        function areas() {
-            return Render.series(pattern).filter(series => series.visible && series.upperSeries && series.lowerSeries && series.color.a > 0);
-        }
         function contribution(rows, magnetic, squared, axis) {
-            return areas().find(area => rows.every(row => {
+            // Bars are vertical thick LineSeries strokes: inspect the actual renderer
+            // input rather than the deliberately empty Qt Graphs area edges.
+            return Render.series(pattern).filter(series => series.visible && (/^chart\.series\.structure\.outline\./.test(series.objectName) || (!magnetic && series.objectName === "chart.series.calc.bars.fill")) && series.color.a > 0).find(series => rows.every(row => {
                     if (magnetic && row.magnetic < 1e-12)
                         return true;
-                    const x = row[axis], top = extent(area.upperSeries, x, axis), bottom = extent(area.lowerSeries, x, axis);
+                    const bounds = extent(series, row[axis], axis);
                     const low = magnetic ? (squared ? row.nuclear : Math.sqrt(row.nuclear)) : 0;
                     const high = magnetic ? (squared ? row.total : Math.sqrt(row.total)) : (squared ? row.nuclear : Math.sqrt(row.nuclear));
-                    return top && bottom && Math.abs(top.high - high) < 1e-7 && Math.abs(bottom.low - low) < 1e-7;
+                    return bounds && Math.abs(bounds.high - high) < 1e-7 && Math.abs(bounds.low - low) < 1e-7;
                 }));
         }
         function cases() {
@@ -142,6 +148,34 @@ Item {
                             squared
                         });
             return rows;
+        }
+        function test_constrained_moment_nuclear_counterfactual_data() {
+            const rows = [];
+            for (const mode of ["fixed", "expression", "alias"])
+                for (const axis of ["q", "sine"])
+                    for (const squared of [true, false])
+                        rows.push({
+                            tag: mode + "-" + axis + "-" + (squared ? "f2" : "f"),
+                            mode,
+                            axis,
+                            squared
+                        });
+            return rows;
+        }
+        function test_constrained_moment_nuclear_counterfactual(data) {
+            const aliases = "loop_\n_alias.id\n_alias.parameter_unique_name\nmz cosio.atom_site_moment.Co1.crystalaxis_z\n";
+            const expression = data.mode === "expression" ? "mz = 1 + 1" : "mz = 2";
+            const relations = aliases + (data.mode === "alias" ? "" : 'loop_\n_constraint.id\n_constraint.expression\nmz "' + expression + '"\n');
+            open(true, false, relations);
+            const before = SettingsProof.momentRelationFacts(Session.project);
+            compare(before.moments, [[0, 0, 2]], "The declared nonzero constrained or aliased moment is present before plotting");
+            compare(before.aliases, [["mz", "cosio.atom_site_moment.Co1.crystalaxis_z"]], "The real model retains the declared moment alias");
+            compare(before.constraints, data.mode === "alias" ? [] : [["mz", expression]], "The real model retains the declared fixed or expression constraint");
+            axis(data.axis);
+            style(data.squared);
+            verify(contribution(reference.rows, false, data.squared, data.axis) !== undefined, "The nuclear counterfactual remains the independent nonmagnetic structure factor despite nonzero moment relations");
+            verify(contribution(reference.rows, true, data.squared, data.axis) !== undefined, "The constrained magnetic fill remains nonzero and stacks to the independent unpolarised total in either reciprocal axis and quantity");
+            compare(SettingsProof.momentRelationFacts(Session.project), before, "Calculating the nuclear counterfactual preserves original moments, alias paths and constraint expressions");
         }
         function test_independent_reflections_and_stacked_contributions_data() {
             return cases();
@@ -250,16 +284,23 @@ Item {
             click(findChild(pattern, "chart.toolbar.legend"));
             const legend = findChild(pattern, "chart.legend");
             tryCompare(legend, "visible", true, 1000, "The actual legend opens from its toolbar button");
-            const entries = Render.descendants(legend).filter(item => item.objectName === "chart.legend.entry" && item.visible && !item.bragg && item.label === "cosio");
+            let entries;
+            tryVerify(() => {
+                entries = Render.descendants(legend).filter(item => item.objectName === "chart.legend.entry" && item.visible && item.bragg && item.label === "cosio");
+                return entries.length === (data.magnetic ? 2 : 1);
+            }, 1000, "The actual legend finishes drawing each named contribution row before input");
             compare(entries.length, data.magnetic ? 2 : 1, "Each calculated contribution has a real legend row named only by its structure");
-            for (const entry of entries) {
+            const keys = entries.map(entry => entry.key);
+            const rowFor = key => Render.descendants(legend).find(item => item.objectName === "chart.legend.entry" && item.visible && item.key === key);
+            for (const key of keys) {
+                const entry = rowFor(key);
                 verify(entry.segments.some(part => part.icon === (entry.magnetic ? "magnet" : "layer-group")), "Each actual contribution legend row uses the powder structure or magnetic icon");
                 const area = contribution(reference.rows, entry.magnetic, true, "q");
-                verify(area !== undefined, "A contribution legend row has an actual drawn filled area before it is hidden");
+                verify(area !== undefined, "A contribution legend row has actual drawn contribution strokes before it is hidden");
                 click(entry);
-                tryVerify(() => entry.hidden && (!area.visible || area.color.a === 0 || area.upperSeries.count === 0), 1000, "Clicking the actual legend row hides its contribution in the real graph");
-                click(entry);
-                tryVerify(() => !entry.hidden && area.visible && area.color.a > 0 && area.upperSeries.count > 0, 1000, "Clicking the same actual legend row restores its plotted contribution");
+                tryVerify(() => rowFor(key) && rowFor(key).hidden && (!area.visible || area.color.a === 0 || vertices(area).length === 0), 1000, "Clicking the actual legend row hides its contribution in the real graph");
+                click(rowFor(key));
+                tryVerify(() => rowFor(key) && !rowFor(key).hidden && area.visible && area.color.a > 0 && vertices(area).length > 0, 1000, "Clicking the refreshed actual legend row restores its plotted contribution");
             }
         }
         function test_simulation_has_calculated_bars_and_ticks_without_measurements_data() {
@@ -279,7 +320,7 @@ Item {
             tryVerify(() => Session.project.currentExperiment.singleCrystalReflections.simulated, 3000, "An experiment without measured data publishes real simulated reflections");
             axis("q");
             const line = Render.series(pattern).find(item => item.objectName === "chart.series.calc.bars.top");
-            verify(line !== undefined && line.count > 0, "An empty single-crystal experiment renders its calculated reflection bars");
+            verify(line !== undefined && vertices(line).length > 0, "An empty single-crystal experiment renders its calculated reflection bars");
             compare(PatternProof.measured(pattern).length, 0, "A simulation invents no measured points");
             verify(!findChild(pattern, "chart.view.residual").visible, "A simulation has no residual pane without measurements");
             const labels = Render.descendants(pattern).filter(item => item.objectName === "chart.bragg.label" && item.visible);
@@ -290,6 +331,9 @@ Item {
             verify(layer !== null && layer.count === reference.rows.length && layer.visible, "Measured points stay visible in either calculated bar style");
             verify(layer.fillColor.a > 0 && layer.fillColor.a < 1 && layer.fillColor.b > layer.fillColor.r, "Measured circles have a light blue fill and a blue outline");
             verify(waitForPolish(layer) && waitForRendering(layer), "The actual measured layer completes a frame before pixel inspection");
+            const pointer = findChild(pattern, "chart.pointer"), initialRange = layer.xMax - layer.xMin;
+            mouseWheel(pointer, pointer.width / 2, pointer.height / 2, 0, -240);
+            tryVerify(() => layer.xMax - layer.xMin > initialRange, 1000, "Real zoom-out input places boundary reflections inside the pixel viewport");
             const image = grabImage(layer);
             function ink(x, y) {
                 for (let dx = -1; dx <= 1; ++dx)
@@ -387,7 +431,15 @@ Item {
             open(data.magnetic);
             axis("q");
             style(true);
-            choose(findChild(pattern, "chart.toolbar.singleCrystalXAxis"), text => /Meas vs calc/.test(text));
+            scene.destroy();
+            scene = null;
+            pattern = null;
+            mainView = Qt.createQmlObject('import edi.app; MainView { width: 1100; height: 800; shown: true; tabKeys: ["pattern", "meascalc"]; defaultKey: "pattern"; pageKey: "comparison-acceptance" }', surface);
+            verify(mainView !== null && waitForPolish(mainView), "The comparison actor uses the real main-view tab host");
+            click(findChild(mainView, "mainArea.tab.measCalc"));
+            tryCompare(mainView, "currentKey", "meascalc", 1500, "Actual comparison-tab input selects the supported independent view");
+            scene = findChild(mainView, "singleCrystal.measCalc");
+            verify(scene !== null && waitForRendering(scene), "The comparison tab renders its actual single-crystal chart");
             const box = findChild(scene, "singleCrystal.toolbar.quantity");
             choose(box, text => text === "F");
             const layer = findChild(scene, "singleCrystal.points");
@@ -399,7 +451,10 @@ Item {
             }
             const diagonal = Render.series(scene).find(series => series.count === 2 && vertices(series).length === 2 && vertices(series).every(point => point.x === point.y));
             verify(diagonal !== undefined && vertices(diagonal)[0].x !== vertices(diagonal)[1].x, "The comparison draws its actual nondegenerate y equals x line");
-            axis("q");
+            click(findChild(mainView, "mainArea.tab.pattern"));
+            tryCompare(mainView, "currentKey", "pattern", 1500, "Actual tab input returns to the independent Pattern view");
+            pattern = Render.descendants(mainView).find(item => item.objectName === "chart" && item.visible && item.singleCrystal === true);
+            verify(pattern !== undefined, "Returning to Pattern restores its real reciprocal-axis chart");
             compare(findChild(pattern, "chart.toolbar.singleCrystalQuantity").currentText, "F²", "Changing comparison to F preserves the Pattern tab's independent F² setting");
         }
         function test_powder_comparison_has_one_point_per_data_row_and_identity_line() {

@@ -17,12 +17,15 @@ def test_real_saved_image_background(kind, background):
     binary = Path(os.environ.get('EDI_APP_TEST_RUNNER', ROOT / 'build/app/app/edi_app_tests'))
     assert binary.is_file(), 'Saved-image acceptance requires the actual Qt app test host'
     case = 'SavedImageAlpha::test_saved_png_background_follows_preferences'
-    status, output = capture([
-        binary,
-        '-input',
-        ROOT / 'tests/unit/app/tst_saved_image_alpha.qml',
-        f'{case}:{kind}-{background}',
-    ])
+    status, output = capture(
+        [
+            binary,
+            '-input',
+            ROOT / 'tests/unit/app/tst_saved_image_alpha.qml',
+            f'{case}:{kind}-{background}',
+        ],
+        env={**os.environ, 'OMP_NUM_THREADS': '1', 'OPENBLAS_NUM_THREADS': '1'},
+    )
     assert status == 0, 'The actual camera and Preferences workflow completes: ' + output
     assert f'{case}({kind}-{background})' in output and '0 failed' in output, (
         'The requested real saved-image witness completes without an empty selector'

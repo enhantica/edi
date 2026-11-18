@@ -21,19 +21,24 @@ CASES = [
 def test_real_structure_appearance_completion(case):
     binary = Path(os.environ.get('EDI_APP_TEST_RUNNER', ROOT / 'build/app/app/edi_app_tests'))
     assert binary.is_file(), 'Structure appearance acceptance requires the current native Qt host'
-    status, output = capture([
-        binary,
-        '-input',
-        ROOT / 'tests/unit/app/tst_structure_appearance_completion.qml',
-        'StructureAppearanceCompletion::' + case,
-    ])
+    status, output = capture(
+        [
+            binary,
+            '-input',
+            ROOT / 'tests/unit/app/tst_structure_appearance_completion.qml',
+            'StructureAppearanceCompletion::' + case,
+        ],
+        env={**os.environ, 'OMP_NUM_THREADS': '1', 'OPENBLAS_NUM_THREADS': '1'},
+    )
     assert 'Could not find the following test functions' not in output, (
         'The requested appearance function exists before product behavior is judged'
     )
     assert status == 0, (
         'The real Structure appearance satisfies the persistence and rendering contract: ' + output
     )
-    assert case + '()' in output and '0 failed' in output, (
+    function, _, tag = case.partition(':')
+    expected = f'{function}({tag})' if tag else f'{function}()'
+    assert expected in output and '0 failed' in output, (
         'The requested appearance function reaches its actual native assertions'
     )
     assert 'SKIP' not in output, 'Every actual appearance contract executes with real graphics'
