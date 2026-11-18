@@ -226,7 +226,8 @@ class EvolutionViewModel : public QObject {
     void finishRow();
     // The x of a dataset: its first extracted value, or its place in the scan from 1; nullopt when not finite.
     std::optional<double> xOf(int dataset, const std::vector<std::string>* extracted) const;
-    void finish();
+    // Publishes the points; false when an observer deleted this view meanwhile (nothing may touch it then).
+    bool finish();
     bool range_with_errors() const {
         return project_ != nullptr && project_->evolution_range.value_or("values") == "values_su";
     }

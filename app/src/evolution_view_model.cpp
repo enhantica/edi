@@ -70,8 +70,9 @@ EvolutionViewModel::EvolutionViewModel(QObject* parent)
     connect(&row_redraw_, &QTimer::timeout, this, [this] {
         if (row_redraw_due_) {
             row_redraw_due_ = false;
-            finish();
-            row_redraw_.start();
+            if (finish()) {
+                row_redraw_.start();
+            }
         }
     });
 }
@@ -81,8 +82,9 @@ void EvolutionViewModel::finishRow() {
         row_redraw_due_ = true;
         return;
     }
-    finish();
-    row_redraw_.start();
+    if (finish()) {  // false: an observer deleted this view while it published
+        row_redraw_.start();
+    }
 }
 
 void EvolutionViewModel::setScan(const ScanSession* session, const edi::Project* project,
@@ -525,7 +527,7 @@ void EvolutionViewModel::thin() {
     points_ = std::move(kept);
 }
 
-void EvolutionViewModel::finish() {
+bool EvolutionViewModel::finish() {
     thin();
     double x_min = 0.0, x_max = 1.0, y_min = 0.0, y_max = 1.0;
     if (!points_.empty()) {
@@ -561,19 +563,20 @@ void EvolutionViewModel::finish() {
     // An observer may delete this view in any notification: nothing is touched after that.
     const QPointer<EvolutionViewModel> self(this);
     update(x_min_, x_min, &EvolutionViewModel::xMinChanged);
-    if (!self) return;
+    if (!self) return false;
     update(x_max_, x_max, &EvolutionViewModel::xMaxChanged);
-    if (!self) return;
+    if (!self) return false;
     update(y_min_, y_min, &EvolutionViewModel::yMinChanged);
-    if (!self) return;
+    if (!self) return false;
     update(y_max_, y_max, &EvolutionViewModel::yMaxChanged);
-    if (!self) return;
+    if (!self) return false;
     if (static_cast<int>(points_.size()) != published_count_) {
         published_count_ = static_cast<int>(points_.size());
         emit countChanged();
-        if (!self) return;
+        if (!self) return false;
     }
     draw();
+    return static_cast<bool>(self);
 }
 
 void EvolutionViewModel::draw() {
