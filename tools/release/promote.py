@@ -356,6 +356,10 @@ def validate_repository(
     folder: Path, version: str, *, expected: frozenset[str] = APP_COMPONENTS
 ) -> None:
     """Require matching component identity and the framework's original archive checksums."""
+    # Publication copies the whole tree, so every file in it meets the size limit, listed or not.
+    for path in sorted(folder.rglob('*')):
+        if path.is_file():
+            require_archive_size(path)
     content = (folder / 'Updates.xml').read_bytes()
     if len(content) > 1024 * 1024 or b'<!' in content:
         raise ValueError('Component metadata must be bounded without declarations')
