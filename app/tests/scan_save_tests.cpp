@@ -711,6 +711,7 @@ private slots:
                 QVERIFY(QMetaObject::invokeMethod(labels, "itemAt", Q_RETURN_ARG(QQuickItem*, first), Q_ARG(int, 0)));
                 QPointer<QQuickItem> original(first);
                 layer->setCurrent(dataset);
+                QCoreApplication::processEvents();  // the labels are announced once per event-loop turn
                 if (before > 0 && labels->property("count").toInt() == before) {
                     QVERIFY(original);
                     QQuickItem* after = nullptr;
@@ -733,6 +734,21 @@ private slots:
         const auto labels = layer.labelledDatasets();
         QVERIFY(labels.contains(30));
         QVERIFY(labels.size() <= 7);
+        // Announced once per event-loop turn, against what was last announced: a read before delivery (which
+        // refreshes the cache) and a second move in the same turn still end in one announcement of the new choice,
+        // and a turn with no move announces nothing.
+        QSignalSpy announced(&layer, &edi_app::ScanLayer::labelledDatasetsChanged);
+        QCoreApplication::processEvents();
+        announced.clear();
+        layer.setCurrent(5);
+        QVERIFY(layer.labelledDatasets() != labels);
+        layer.setHeight(100.001);
+        QCOMPARE(announced.size(), 0);
+        QCoreApplication::processEvents();
+        QVERIFY(layer.labelledDatasets() != labels);
+        QCOMPARE(announced.size(), 1);
+        QCoreApplication::processEvents();
+        QCOMPARE(announced.size(), 1);
         layer.setActive(false);
         QVERIFY(layer.labelledDatasets().isEmpty());
     }

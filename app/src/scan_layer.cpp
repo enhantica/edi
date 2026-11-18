@@ -107,10 +107,8 @@ void ScanLayer::labelsMoved() {
     // Stale at once, so a read is always current; chosen again and announced once per event-loop turn, and only
     // when the choice changed. A followed fit moves the current row, the placement and both axis ends for each
     // point, and announcing each of them re-bound every label several times per point.
-    if (!shown_labels_stale_) {
-        announced_labels_ = shown_labels_;
-        announced_datasets_ = labelled_datasets_;
-    }
+    // The baseline is what subscribers were last told (announceLabels), never the read cache: a getter may have
+    // refreshed the cache since, without anyone being told.
     shown_labels_stale_ = true;
     if (labels_pending_) return;
     labels_pending_ = true;

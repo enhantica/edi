@@ -325,7 +325,7 @@ class ScanLayer : public QQuickPaintedItem {
     void labelsMoved();
     void announceLabels();
     bool labels_pending_ = false;
-    QList<bool> announced_labels_;  // the choice last announced (announceLabels)
+    QList<bool> announced_labels_;  // the choice last announced (announceLabels); only announceLabels sets it
     QList<int> announced_datasets_;
     double display_min_ = 0.0, display_max_ = 1.0;
     // By dataset: its lowest and highest value on the y scale, and its stacked baseline (NaN while it has no row).
