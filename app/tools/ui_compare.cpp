@@ -122,6 +122,7 @@ void write_map(const Score& score, const QSize& size, const QString& path) {
 
 }  // namespace
 
+// NOLINTNEXTLINE(bugprone-exception-escape): only libc++'s container growth past max_size() raises length_error here
 int main(int argc, char** argv) {
     QCoreApplication app(argc, argv);  // PNG reading and writing need no display
     QCommandLineParser parser;

@@ -1270,6 +1270,7 @@ class Edit {
     // (indices into `replacement`'s experiments), the first the load's target, as members of the project after it.
     static Edit replace_project(Project& project, Project replacement, const std::vector<std::size_t>& produced) {
         auto next = std::make_shared<const Project>(std::move(replacement));
+        // NOLINTNEXTLINE(bugprone-exception-escape): only libc++'s container growth past max_size() raises length_error here
         return Edit(ResultOperation{}, [&project, next, produced] {
             replace_into(project, Project(*next));
             AppliedResult result;

@@ -217,6 +217,7 @@ struct RowHold : std::enable_shared_from_this<RowHold> {
     // fail to allocate, and that ends the program rather than leave a column that disagrees with
     // its row.
     template <typename V>
+    // NOLINTNEXTLINE(bugprone-exception-escape): only libc++'s container growth past max_size() raises length_error here
     void write(std::size_t column, std::uint64_t identity, const V& value) const noexcept {
         for (const Holding& held : tables) {
             static_cast<crysta::Column<V>*>(held.table->values[column])->write(held.row, value);
@@ -1293,6 +1294,7 @@ class OptionalParameter {
         }
         return *this;
     }
+    // NOLINTNEXTLINE(bugprone-exception-escape): only libc++'s container growth past max_size() raises length_error here
     OptionalParameter& operator=(OptionalParameter&& other) noexcept {
         if (this != &other) {
             reset();
@@ -2484,6 +2486,7 @@ class ItemVec final : public detail::KeyedBase {
         // Takes `item` as row `row`, whose values the columns already hold: its cells write to
         // this table from now on, beside every other table that holds the row, and the table
         // notes what they hold.
+        // NOLINTNEXTLINE(bugprone-exception-escape): only libc++'s container growth past max_size() raises length_error here
         void take(T& item, std::shared_ptr<detail::RowHold> record, std::size_t row) noexcept {
             record->tables.push_back(detail::Holding{&notes, row});  // room: record_of
             detail::CellHold::hold(item, record.get());

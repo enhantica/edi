@@ -761,6 +761,7 @@ void ScanSession::readWanted() {
     reading_ = true;
     // Each file is read once, for its extract rules only; the values reach this session only while it exists.
     const QPointer<ScanSession> self(this);
+    // NOLINTNEXTLINE(bugprone-exception-escape): only libc++'s container growth past max_size() raises length_error here
     run_in_background([self, stop, source, directory, generation, batch = std::move(batch)] {
         struct Read {
             int dataset{};

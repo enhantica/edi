@@ -245,6 +245,7 @@ void fit(const std::string& source, const std::string& output, bool dry,
 
 }  // namespace
 
+// NOLINTNEXTLINE(bugprone-exception-escape): only libc++'s container growth past max_size() raises length_error here
 int main(int argc, char** argv) {
     // The one message level, on every command (owner record 2026-11-09): taken out of the arguments
     // here, warning when not given.

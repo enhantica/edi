@@ -66,6 +66,7 @@ struct Worker::State {
 
     // One delivery on its way to the owner thread: traced there, and dropped once the Worker is gone.
     void deliver(Ticket ticket, const std::string& channel, Delivery delivery) {
+        // NOLINTNEXTLINE(bugprone-exception-escape): only libc++'s container growth past max_size() raises length_error here
         post([self = this, keep = open, ticket, channel, delivery = std::move(delivery)] {
             if (!keep->load(std::memory_order_acquire)) {
                 return;

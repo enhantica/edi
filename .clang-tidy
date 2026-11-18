@@ -24,7 +24,8 @@ Checks: >
   -performance-no-int-to-ptr
 WarningsAsErrors: ''
 HeaderFilterRegex: 'core/.*'
-# libc++ throws these two only when a size passes max_size(), a request no allocation can meet: libstdc++ reports the
-# same case as bad_alloc from operator new, which the check does not count, so the two libraries read alike (ADR-0093).
+# libc++'s allocator throws bad_array_new_length only for a size past max_size(), a request no allocation can meet, and
+# edi never throws it: libstdc++ reports the same case as bad_alloc from operator new, which the check does not count,
+# so the two libraries read alike (ADR-0093).
 CheckOptions:
-  bugprone-exception-escape.IgnoredExceptions: 'bad_array_new_length,length_error'
+  bugprone-exception-escape.IgnoredExceptions: 'bad_array_new_length'

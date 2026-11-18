@@ -4050,6 +4050,7 @@ void ProjectViewModel::startViewRead() {
 #endif
     view_reading_ = true;
     const QPointer<ProjectViewModel> self(this);
+    // NOLINTNEXTLINE(bugprone-exception-escape): only libc++'s container growth past max_size() raises length_error here
     run_in_background([self, request, index, directory, file, mode, d_spacing, values = std::move(values),
                        shown = std::move(shown)]() mutable {
         DatasetView view;
@@ -5308,6 +5309,7 @@ QString ProjectViewModel::write_report_settings(const edi::Edit& change, bool re
 
 namespace {
 // An edit's Undo keeps only the parameters it changed. Shrinks only; strings move, no map, traversal or allocation.
+// NOLINTNEXTLINE(bugprone-exception-escape): only libc++'s container growth past max_size() raises length_error here
 void keep_changed(auto& states, const std::vector<const edi::Parameter*>& targets) noexcept {
     std::size_t kept = 0;
     for (std::size_t i = 0; i < states.size(); ++i) {

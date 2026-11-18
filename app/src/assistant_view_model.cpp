@@ -16282,6 +16282,7 @@ struct AssistantViewModel::State {
                     code.startsWith("edi.assistant.") && static_cast<std::uint64_t>(code.toUtf8().size()) <= Limits::id_bytes)
                     emitted_code = code;
             }
+            // NOLINTNEXTLINE(bugprone-exception-escape): only libc++'s container growth past max_size() raises length_error here
             QMetaObject::invokeMethod(&owner, [this, publication, text, incoming, emitted_code, incoming_generation] {
                 if (!publication.input_current() || !controller || incoming_generation != generation) return;
                 try {
@@ -16821,6 +16822,7 @@ struct AssistantViewModel::State {
             const auto publication = file_projection();
             const auto scope = generation;
             const auto captured = object(text);
+            // NOLINTNEXTLINE(bugprone-exception-escape): only libc++'s container growth past max_size() raises length_error here
             if (!QMetaObject::invokeMethod(&owner, [this, publication, text, scope, captured] {
                 if (!publication.input_current() || !controller || scope != generation) return;
                 const auto current_turn = object(controller->state()).value("active_turn_id").toString();
