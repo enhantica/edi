@@ -42,8 +42,8 @@ public:
     };
     /// Clear the actual archive owners, including accepted writes not yet on disk and known recovery targets.
     /// The returned barriers do not take any normal history writer's owner token.
-    static std::vector<ClearBarrier> clearCaches(QObject*,Notice);
-    AssistantHistoryArchive(QObject*, QString requestedPath, Notice, bool provisional = false);
+    static std::vector<ClearBarrier> clearCaches(QObject*,const Notice&);
+    AssistantHistoryArchive(QObject*, const QString& requestedPath, Notice, bool provisional = false);
     /// Commit this candidate's receiver after its actual owner finished construction.
     /// A failed/uncommitted candidate never revokes the surviving prior writer.
     void activate();

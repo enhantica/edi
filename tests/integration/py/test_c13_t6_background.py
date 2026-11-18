@@ -162,6 +162,8 @@ def test_public_fit_recovers_all_coefficients_from_independentbasis(case):
     assert len(project.free_parameters) == len(target), (
         ' a coefficient-only fit must include every coefficient, including zero high orders'
     )
+    project._minimizer_chi_square_tolerance = project._minimizer_chi_square_tolerance or 1e-6
+    project._minimizer_max_iterations = project._minimizer_max_iterations or 50
     project.analysis.fit()
     actual = np.asarray([parameter.value for parameter in project.free_parameters])
     assert np.allclose(actual, target, rtol=0, atol=2e-5), (

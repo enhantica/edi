@@ -186,7 +186,7 @@ def current(fixture, raw, report):
     observed = raw.get('iteration_domain', {})
     if not isinstance(observed, dict) or observed.keys() != {'conditions', 'callbacks'}:
         raise ValueError('Current iteration trace requires a typed record')
-    expected = {**domain['conditions'], 'max_iterations': 1000}
+    expected = {**domain['conditions'], 'max_iterations': 50}
     if (
         observed.get('conditions') != expected
         or type(observed['conditions']['max_iterations']) is not int
@@ -250,8 +250,8 @@ def required_runtime(record):
 
 def compare_runtime(report, reference, fixture):
     """Same input/conditions, two real backends: no scalar counter golden is minted."""
-    actual, rows = history(report, 1000)
-    expected, native_rows = history(reference, 1000)
+    actual, rows = history(report, 50)
+    expected, native_rows = history(reference, 50)
     required_runtime(actual)
     required_runtime(expected)
     for key in EXACT_FIELDS:

@@ -112,7 +112,7 @@ QVariant PatternModel::data(const QModelIndex& index, int role) const {
         }
         case CalcStatusRole:
             return static_cast<std::size_t>(index.row()) < published_status_.size()
-                       ? QVariant(QString::fromStdString(published_status_[index.row()])) : QVariant();
+                       ? QVariant(QString::fromStdString(published_status_[static_cast<std::size_t>(index.row())])) : QVariant();
         default: return {};
     }
 }

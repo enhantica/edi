@@ -395,8 +395,9 @@ std::optional<ResolvedParameter> resolve_phase_label(Project& project, Experimen
     if (rest == "march_r" || rest == "march_random_fract") {
         for (const auto& texture : experiment.preferred_orientation) {
             if (datablock_key(texture->structure_id, "structure") == key) {
-                return ResolvedParameter{rest == "march_r" ? &texture->march_r : &texture->march_random_fract,
-                                         root + "preferred_orientation[" + texture->structure_id.value() + "]." + rest};
+                std::string path = root;
+                path.append("preferred_orientation[").append(texture->structure_id.value()).append("].").append(rest);
+                return ResolvedParameter{rest == "march_r" ? &texture->march_r : &texture->march_random_fract, path};
             }
         }
     }
@@ -667,8 +668,10 @@ std::vector<DescriptorEntry> model_descriptors(Project& project) {
     for (const auto& structure : project.structures) {
         const std::string root = detail::structure_root(project, *structure);
         for (const auto& [key, length] : structure->scattering_lengths_fm.get()) {
-            entries.push_back({"scattering_length.length_fm", root + "scattering_length[" + key + "].length_fm",
-                               "structure", structure->name, "scattering_length", key, "length_fm", length});
+            std::string path = root;
+            path.append("scattering_length[").append(key).append("].length_fm");
+            entries.push_back({"scattering_length.length_fm", path, "structure", structure->name, "scattering_length",
+                               key, "length_fm", length});
         }
     }
     const bool joint = project.experiments.size() > 1;
@@ -679,9 +682,17 @@ std::vector<DescriptorEntry> model_descriptors(Project& project) {
         const std::string prefix = joint ? "experiments[" + experiment->name + "]." : std::string("experiment.");
         const auto add = [&](const std::string& category, const std::string& row, const std::string& name,
                              double value) {
-            const std::string at = row.empty() ? prefix + category + "." + name
-                                               : prefix + category + "[" + row + "]." + name;
-            entries.push_back({category + "." + name, at, "experiment", experiment->name, category, row, name, value});
+            std::string at = prefix;
+            at.append(category);
+            if (row.empty()) {
+                at.append(".");
+            } else {
+                at.append("[").append(row).append("].");
+            }
+            at.append(name);
+            std::string unique = category;
+            unique.append(".").append(name);
+            entries.push_back({unique, at, "experiment", experiment->name, category, row, name, value});
         };
         add("peak", "", "cutoff_fwhm", experiment->peak.cutoff_fwhm);
         if (experiment->background_type == "line-segment") {

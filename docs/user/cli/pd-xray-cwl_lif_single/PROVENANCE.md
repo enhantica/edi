@@ -29,3 +29,18 @@ regression pins of the `fast_descent` run.
 **History.** The project first fitted the polarization pair alone against diffraction-lib's polarized LiF reference.
 Extending it to the doublet and absorption needed data that carries all three, hence the authored reference above; the
 polarization pair is now fixed at FullProf's values.
+
+**Cross-platform iteration window (17 November 2026).** CI run 44137760653 at edi
+735552da reports four fast-descent iterations on Windows while Linux and macOS
+retain five. The Windows checker reports no other deviation: reduced chi-square
+and Rwp retain their original absolute bounds of 1e-9, and both FullProf parameter
+references and their bounds above are unchanged. Repeated local native, scalar
+and capped SIMD runs retain five iterations and the same numerical results. This
+is an observed platform/build stop-count difference, not evidence of within-build
+randomness or a changed physical result.
+
+The iteration regression window admits only the observed integer counts 4–5. Its
+JSON midpoint 4.5 and absolute radius 0.5 encode that interval; 4.5 is not a captured
+iteration count. Counts 3 and 6 still fail. This case-specific window does not
+change the exact same-build cross-surface report contract, any
+other example, or any fit-quality or scientific tolerance.

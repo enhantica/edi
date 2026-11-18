@@ -268,6 +268,9 @@ jobs:
         if: github.event.pull_request.head.repo.fork == false
         run: pixi run --manifest-path tools/installer/pixi.toml python "${{ github.workspace }}/tools/installer/build.py" --crysta-source "${{ github.workspace }}/.crysta" --work "${{ github.workspace }}/build/installer" --collection "${{ github.workspace }}/.edi-data"
         env:
+          # The Windows app's C++ under MSVC's /W4 as errors on a pull request (ADR-0093); the CI app jobs cover Linux and
+          # macOS, and a release build is never stopped by a warning.
+          EDI_WERROR: ${{ github.event_name == 'pull_request' && runner.os == 'Windows' && 'ON' || 'OFF' }}
           EDI_CODESIGN_MAC_IDENTITY: ${{ runner.os == 'macOS' && vars.CODESIGN_MAC_IDENTITY || '' }}
           EDI_NOTARY_APPLE_ID: ${{ env.EDI_CODESIGN == '1' && runner.os == 'macOS' && secrets.CODESIGN_MAC_NOTARY_APPLE_ID || '' }}
           EDI_NOTARY_PASSWORD: ${{ env.EDI_CODESIGN == '1' && runner.os == 'macOS' && secrets.CODESIGN_MAC_NOTARY_PASSWORD || '' }}

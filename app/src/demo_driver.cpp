@@ -591,6 +591,7 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     steps_.push_back({"t17-50-axis-scientific",
                       QStringList{"key:Escape"} + start + open_example("pd-neut-cwl_lbco-hrpt")
                           + QStringList{experiment, basic,
+                                        // NOLINTNEXTLINE(bugprone-suspicious-missing-comma): one step over two lines.
                                         "load-experiments:pd-neut-cwl_lbco-hrpt/project/experiments/"
                                         "hrpt.edi|data_hrpt=data_large|lbco 9()=lbco 30000000()",
                                         analysis, "mainArea.tab.pattern"}});
@@ -647,7 +648,7 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     // Every Preferences tab in both themes, to check that each keeps the same two columns. Run only when asked
     // (`--demo-only prefs-`).
     if (only.startsWith(QLatin1String("prefs-"))) {
-        for (const QString theme : {QStringLiteral("light"), QStringLiteral("dark")}) {
+        for (const QString& theme : {QStringLiteral("light"), QStringLiteral("dark")}) {
             const QString name = QStringLiteral("prefs-") + theme + QStringLiteral("-");
             steps_.push_back({name + "1-appearance", {"key:Escape", "theme:" + theme, "appBar.button.preferences",
                                                       "preferences.tab.appearance"}});
@@ -687,7 +688,7 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
         steps_.push_back({"mainview-empty-5-example-structure",
                           QStringList{"appBar.button.save"} + start + open_example("pd-neut-cwl_cosio-d20_2k")
                               + QStringList{"appBar.tab.structure", basic}});
-        for (const QString theme : {QStringLiteral("light"), QStringLiteral("dark")}) {
+        for (const QString& theme : {QStringLiteral("light"), QStringLiteral("dark")}) {
             const QString name = QStringLiteral("mainview-empty-slide-") + theme + QLatin1Char('-');
             const QStringList pages{"experiment", "analysis", "structure", "experiment"};
             steps_.push_back({name + "0-structure", {"theme:" + theme, "appBar.tab.structure"}});
@@ -707,7 +708,7 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
         if (QFile manifest(QStringLiteral(":/edi/tutorials/manifest.json")); manifest.open(QIODevice::ReadOnly)) {
             const QJsonDocument document = QJsonDocument::fromJson(manifest.readAll());
             const QJsonArray list = document.isObject() ? document.object().value(QStringLiteral("tutorials")).toArray() : document.array();
-            for (const QJsonValue& tutorial : list) ids.append(tutorial.toObject().value(QStringLiteral("id")).toString());
+            for (const auto& tutorial : list) ids.append(tutorial.toObject().value(QStringLiteral("id")).toString());
         }
         steps_.push_back({"tutorials-00-start", QStringList{"resize:1280x768", "theme:light"}});
         for (qsizetype i = 0; i < ids.size(); ++i) {
@@ -739,9 +740,8 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     // The documentation's concept figures, from the Co2SiO4 magnetic case, in both themes, each saved by Save image
     // (the owner, 2026-11-10). Run only when asked (`--demo-only concepts-`).
     if (only.startsWith(QLatin1String("concepts-"))) {
-        const QString structure = QStringLiteral("appBar.tab.structure");
         // Opened and fitted once; the dark figures are the same fit in the other theme.
-        for (const QString theme : {QStringLiteral("light"), QStringLiteral("dark")}) {
+        for (const QString& theme : {QStringLiteral("light"), QStringLiteral("dark")}) {
             const QString name = QStringLiteral("concepts-") + theme + QStringLiteral("-");
             const QStringList open = theme == QLatin1String("light")
                                          ? QStringList{"resize:1314x900"} + start + open_cli_project("pd-neut-cwl_cosio-d20_2k") +
@@ -754,7 +754,7 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
         }
         // The measured pattern alone: the fitted experiment's chart with every other curve hidden, as legend clicks
         // hide them, and so its residual and tick panes. Last, so the fitted figures come first.
-        for (const QString theme : {QStringLiteral("light"), QStringLiteral("dark")}) {
+        for (const QString& theme : {QStringLiteral("light"), QStringLiteral("dark")}) {
             const QString name = QStringLiteral("concepts-") + theme + QStringLiteral("-");
             // The window shorter by the tick and residual panes, so the measured pattern's plot is the fitted one's
             // size: the two read as one chart growing.
@@ -771,9 +771,8 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     // The sidebar's pins, empty tabs and Performance row, the structure view's atom view names, in both themes (the
     // owner, 2026-11-10). Run only when asked (`--demo-only sidebar-`).
     if (only.startsWith(QLatin1String("sidebar-"))) {
-        const QString structure = QStringLiteral("appBar.tab.structure");
         const QString settings = QStringLiteral("sideBar.tab.settings");
-        for (const QString theme : {QStringLiteral("light"), QStringLiteral("dark")}) {
+        for (const QString& theme : {QStringLiteral("light"), QStringLiteral("dark")}) {
             const QString name = QStringLiteral("sidebar-") + theme + QStringLiteral("-");
             const QStringList open = theme == QLatin1String("light")
                                          ? QStringList{"resize:1280x960"} + start + open_cli_project("pd-neut-cwl_lbco-hrpt_start-2")
@@ -1083,7 +1082,7 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
         steps_.push_back({"schemes-0-list", QStringList{"resize:1280x960", "theme:light"} + start
                                                 + QStringList{"appBar.button.preferences", "preferences.tab.appearance",
                                                               "preferences.colours"}});
-        for (const QString theme : {QStringLiteral("light"), QStringLiteral("dark")}) {
+        for (const QString& theme : {QStringLiteral("light"), QStringLiteral("dark")}) {
             for (int i = 0; i < schemes.size(); ++i) {
                 QStringList actions = i == 0 && theme == QLatin1String("light")
                                           ? QStringList{"key:Escape", "key:Escape"} + start
@@ -1119,7 +1118,6 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     // Experiment page, the experiments, the Analysis parameters and the atom sites. Run only when asked
     // (`--demo-only tablecheck-`).
     if (only.startsWith(QLatin1String("tablecheck-"))) {
-        const QString experiment = QStringLiteral("appBar.tab.experiment");
         int n = 0;
         const auto name = [&n](const QString& what) {
             return QStringLiteral("tablecheck-%1-%2").arg(++n, 2, 10, QLatin1Char('0')).arg(what);
@@ -1142,8 +1140,6 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     // Every table of the app in the light theme, on an example that fills it, each image named after its table (the
     // owner, 2026-10-27). Run only when asked (`--demo-only tableshots-`).
     if (only.startsWith(QLatin1String("tableshots-"))) {
-        const QString experiment = QStringLiteral("appBar.tab.experiment");
-        const QString structure = QStringLiteral("appBar.tab.structure");
         const auto shot = [this](const QString& table, const QStringList& actions) {
             steps_.push_back({QStringLiteral("tableshots-") + table, actions});
         };
@@ -1186,7 +1182,6 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     // Each structure's curve: the Analysis chart with the toolbar's switch on, in both themes, and the Experiment page's
     // data table with a column per structure. Run only when asked (`--demo-only curves-`).
     if (only.startsWith(QLatin1String("curves-"))) {
-        const QString experiment = QStringLiteral("appBar.tab.experiment");
         steps_.push_back({"curves-1-analysis-light",
                           QStringList{"resize:1280x960", "theme:light"} + start + open_example("pd-neut-tof_ferrite-austenite-beer")
                               + QStringList{analysis, basic, "chart.toolbar.structureCurves"}});
@@ -1198,7 +1193,6 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     // The one pattern chart on the Structure, Experiment and Analysis pages: a zoom made on one page shows on the others.
     // Run only when asked (`--demo-only onechart-`).
     if (only.startsWith(QLatin1String("onechart-"))) {
-        const QString experiment = QStringLiteral("appBar.tab.experiment");
         steps_.push_back({"onechart-1-analysis-zoomed",
                           QStringList{"resize:1280x960", "theme:light"} + start + open_example("pd-neut-tof_ferrite-austenite-beer")
                               + QStringList{analysis, basic, "drag:chart.pointer:0.74,0.05,0.80,0.95", "chart.toolbar.structureCurves"}});
@@ -1210,7 +1204,6 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     // The owner's first local test: latp_scan's three structures on the Experiment page, a zoom with each structure's
     // curve off, then the curves on and off again. Run only when asked (`--demo-only latp-`).
     if (only.startsWith(QLatin1String("latp-"))) {
-        const QString experiment = QStringLiteral("appBar.tab.experiment");
         steps_.push_back({"latp-1-experiment", {"resize:1280x960", "theme:light", "open-cli-project:pd-xray-cwl_latp_scan-4f",
                                                 experiment, basic}});
         steps_.push_back({"latp-2-zoomed", {"drag:chart.pointer:0.30,0.05,0.45,0.95"}});
@@ -1271,7 +1264,6 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     // every y scale, then cosio's one structure and ncaf's banks, each opened with its full view.
     // Run only when asked (`--demo-only retest-`).
     if (only.startsWith(QLatin1String("retest-"))) {
-        const QString experiment = QStringLiteral("appBar.tab.experiment");
         const QString yscale = QStringLiteral("chart.toolbar.yscale");
         const QString curves = QStringLiteral("chart.toolbar.structureCurves");
         steps_.push_back({"retest-01-latp-on", {"resize:1280x960", "theme:light", "open-cli-project:pd-xray-cwl_latp_scan-4f",
@@ -1473,7 +1465,7 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
                                                   + open_cli_project("pd-neut-cwl_cosio-d20_scan")
                                                   + QStringList{analysis, basic, "mainArea.tab.map",
                                                                 "scanView.map.toolbar.yscale", "choose:Log"}});
-        for (const QString theme : {QStringLiteral("light"), QStringLiteral("dark")}) {
+        for (const QString& theme : {QStringLiteral("light"), QStringLiteral("dark")}) {
             // The list is taller than the window, so a far entry cannot be clicked: the first map is chosen from the
             // list, and each next one by a key on the closed box (open it to give it the keyboard, close it, step),
             // down the list in the light theme and back up it in the dark.
@@ -1629,7 +1621,7 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     // The About window and its two popups, then How to cite and Diagnostics, in both themes. Run only when asked
     // (`--demo-only about-`).
     if (only.startsWith(QLatin1String("about-"))) {
-        for (const QString theme : {QStringLiteral("light"), QStringLiteral("dark")}) {
+        for (const QString& theme : {QStringLiteral("light"), QStringLiteral("dark")}) {
             const QString first = theme == QLatin1String("light") ? QStringLiteral("resize:1280x960") : QStringLiteral("key:Escape");
             steps_.push_back({"about-" + theme + "-1-window", {first, "theme:" + theme, "appBar.tab.home", "home.about"}});
             steps_.push_back({"about-" + theme + "-2-bsd", {"about.licence.BSD-3-Clause"}});
@@ -1652,10 +1644,9 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
         // The scan views' frames on the 324-file scan, a 162-file scan's fit with every pattern drawn (the fit waiting
         // for each, or the display catching up) against the adaptive rule (edi ADR-0029), and slider steps on LBCO
         // before and after a fit (edi ADR-0041).
-        const QString analysis = QStringLiteral("appBar.tab.analysis");
         QStringList views{"resize:1280x800", "open-cli-project:pd-neut-cwl_cosio-d20_scan-324f", analysis,
                           "mainArea.tab.stacked", "wait-scan:stacked"};
-        for (const QString mode : {QStringLiteral("stacked"), QStringLiteral("map")}) {
+        for (const QString& mode : {QStringLiteral("stacked"), QStringLiteral("map")}) {
             if (mode == QLatin1String("map")) {
                 views << "mainArea.tab.map" << "wait-scan:map";
             }
@@ -2039,7 +2030,7 @@ bool DemoDriver::tutorial_fit_check(QObject* panel, int step) {
     return true;
 }
 
-void DemoDriver::tutorial_next_then(std::function<void()> next, int step, int waited_ms, int clicked_ms) {
+void DemoDriver::tutorial_next_then(const std::function<void()>& next, int step, int waited_ms, int clicked_ms) {
     // A step that waits for a fit, a download or a save keeps Next off meanwhile; one that stays off this long cannot
     // be left by Next alone.
     constexpr int kPollMs = 250;
@@ -2050,7 +2041,7 @@ void DemoDriver::tutorial_next_then(std::function<void()> next, int step, int wa
         return;
     }
     const int now = panel->property("step").toInt();
-    const int count = panel->property("steps").toList().size();
+    const auto count = static_cast<int>(panel->property("steps").toList().size());
     const QVariant chosen = panel->property("tutorial");
     QString id = chosen.value<Tutorial>().id;
     if (id.isEmpty()) id = chosen.toMap().value(QStringLiteral("id")).toString();
@@ -2141,7 +2132,7 @@ void DemoDriver::tutorial_next_then(std::function<void()> next, int step, int wa
     });
 }
 
-void DemoDriver::wait_fit_then(std::function<void()> next, int waited_ms, int files) {
+void DemoDriver::wait_fit_then(const std::function<void()>& next, int waited_ms, int files) {
     QQmlEngine* engine = qmlEngine(window_.contentItem());
     auto* session = engine ? engine->singletonInstance<Session*>("edi.app", "Session") : nullptr;
     const FitViewModel* fit = session != nullptr && session->project() != nullptr ? session->project()->fit() : nullptr;
@@ -2662,7 +2653,7 @@ void DemoDriver::park_pointer() {
     QCoreApplication::sendEvent(&window_, &move);
 }
 
-void DemoDriver::settle_then(std::function<void()> next) {
+void DemoDriver::settle_then(const std::function<void()>& next) {
     settle_attempts_ = 0;
     preparing_attempts_ = 0;
     previous_frame_ = QImage();
@@ -2788,7 +2779,7 @@ QString DemoDriver::scan_work(int files) const {
     return {};
 }
 
-void DemoDriver::idle_then(std::function<void()> next, int waited_ms) {
+void DemoDriver::idle_then(const std::function<void()>& next, int waited_ms) {
     ProjectViewModel* project = open_project(window_);
     if (project == nullptr || !project->calculating()) {
         next();
@@ -2801,10 +2792,10 @@ void DemoDriver::idle_then(std::function<void()> next, int waited_ms) {
     QTimer::singleShot(kIdlePollMs, this, [this, next, waited_ms] { idle_then(next, waited_ms + kIdlePollMs); });
 }
 
-void DemoDriver::drawn_then(std::function<void()> next, int waited_ms) {
+void DemoDriver::drawn_then(const std::function<void()>& next, int waited_ms) {
     ProjectViewModel* project = open_project(window_);
     if (project == nullptr || project->fit() == nullptr || !project->fit()->catchingUp()) {
-        idle_then(std::move(next));
+        idle_then(next);
         return;
     }
     if (waited_ms > kFitWaitMs) {
@@ -2814,7 +2805,7 @@ void DemoDriver::drawn_then(std::function<void()> next, int waited_ms) {
     QTimer::singleShot(kIdlePollMs, this, [this, next, waited_ms] { drawn_then(next, waited_ms + kIdlePollMs); });
 }
 
-void DemoDriver::timed_fit_then(std::function<void()> next, int files, int stop_after) {
+void DemoDriver::timed_fit_then(const std::function<void()>& next, int files, int stop_after) {
     ProjectViewModel* project = open_project(window_);
     FitViewModel* fit = project != nullptr ? project->fit() : nullptr;
     if (fit == nullptr || fit->running()) {
@@ -2936,7 +2927,7 @@ void DemoDriver::record_samples(const QString& label, std::vector<double> sample
     }
 }
 
-void DemoDriver::wait_scan_then(std::function<void()> next, const QString& mode, int waited_ms) {
+void DemoDriver::wait_scan_then(const std::function<void()>& next, const QString& mode, int waited_ms) {
     QQuickItem* layer = find(QStringLiteral("scanView.%1.layer").arg(mode), false);
     auto* model = layer != nullptr ? layer->property("model").value<ScanViewModel*>() : nullptr;
     if (model != nullptr && model->count() > 0 && model->loaded() == model->count()) {
@@ -2951,7 +2942,7 @@ void DemoDriver::wait_scan_then(std::function<void()> next, const QString& mode,
                        [this, next, mode, waited_ms] { wait_scan_then(next, mode, waited_ms + kSettleIntervalMs); });
 }
 
-void DemoDriver::wait_assistant_then(std::function<void()> next, int waited_ms, int idle_polls) {
+void DemoDriver::wait_assistant_then(const std::function<void()>& next, int waited_ms, int idle_polls) {
 #if !EDI_APP_ASSISTANT
     // A build without the assistant has no turn to wait for.
     (void)waited_ms;
@@ -2980,7 +2971,7 @@ void DemoDriver::wait_assistant_then(std::function<void()> next, int waited_ms, 
 #endif
 }
 
-void DemoDriver::wait_online_then(std::function<void()> next, int waited_ms) {
+void DemoDriver::wait_online_then(const std::function<void()>& next, int waited_ms) {
     QObject* dialog = window_.findChild<QObject*>(QStringLiteral("onlineLoad"));
     auto* search = dialog != nullptr ? dialog->property("search").value<QObject*>() : nullptr;
     if (search != nullptr && !search->property("busy").toBool()) {

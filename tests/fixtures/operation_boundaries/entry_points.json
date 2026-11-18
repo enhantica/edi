@@ -783,6 +783,16 @@
           "proof": null,
           "overloads": 1
         },
+        "sliderLower": {
+          "domain": "read-only query",
+          "proof": null,
+          "overloads": 1
+        },
+        "sliderUpper": {
+          "domain": "read-only query",
+          "proof": null,
+          "overloads": 1
+        },
         "displayText": {
           "domain": "read-only query",
           "proof": null,

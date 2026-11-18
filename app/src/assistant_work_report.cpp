@@ -182,9 +182,9 @@ FileResult publishFile(const QString& projectRoot,const QByteArray& bytes,const 
         while(off<static_cast<std::size_t>(bytes.size())) {
             auto n=::write(candidate.n,bytes.constData()+off,static_cast<std::size_t>(bytes.size())-off);
             if(n<0){if(errno==EINTR)continue;throw std::runtime_error("Work report write");}
-            if(!n)throw std::runtime_error("Work report short write");off+=static_cast<std::size_t>(n);
+            if(!n){throw std::runtime_error("Work report short write");}off+=static_cast<std::size_t>(n);
         }
-        if(::fsync(candidate.n) || fileHash(candidate.n,bytes.size())!=digest)throw std::runtime_error("Work report candidate verification");
+        if(::fsync(candidate.n) || fileHash(candidate.n,static_cast<quint64>(bytes.size()))!=digest)throw std::runtime_error("Work report candidate verification");
         auto current=below(lockFolder.n,QString::fromLatin1(lockName),true);
         if(!folderId->object(folder.n) || !lockFolderId->object(lockFolder.n) || !lockId->object(current.n))throw std::runtime_error("Work report lock changed");
         auto named=below(stageParent,QString::fromLatin1(candidateName));
@@ -215,7 +215,7 @@ FileResult publishFile(const QString& projectRoot,const QByteArray& bytes,const 
         changed=true; // Namespace changed before any readback/callback can fail.
         if(work_report_test_fault(WorkReportFaultPoint::AfterAtomicPublishReadback))throw std::runtime_error("Work report test readback fault");
         auto installed=below(folder.n,"work-report.json");
-        if(!candidateId->object(installed.n) || fileHash(installed.n,bytes.size())!=digest)throw std::runtime_error("Work report installed changed");
+        if(!candidateId->object(installed.n) || fileHash(installed.n,static_cast<quint64>(bytes.size()))!=digest)throw std::runtime_error("Work report installed changed");
         if(oldPresent){auto prior=below(stageParent,QString::fromLatin1(candidateName));if(!oldId->object(prior.n))throw std::runtime_error("Work report old exchange unverified");}
         if(work_report_test_fault(WorkReportFaultPoint::OldCandidateCleanup))throw std::runtime_error("Work report test cleanup fault");
         if(oldPresent && ::unlinkat(stageParent,candidateName.constData(),0))throw std::runtime_error("Work report old cleanup refused");
@@ -224,7 +224,7 @@ FileResult publishFile(const QString& projectRoot,const QByteArray& bytes,const 
         currentNamespace();
         verified=true;result.disposition="saved";
         result.artifact={{"path",projectRoot+QStringLiteral("/reports/work-report.json")},
-            {"sha256",QString::fromLatin1(digest)},{"bytes",decimal(bytes.size())},{"physical_identity",identityToken(*candidateId)}};
+            {"sha256",QString::fromLatin1(digest)},{"bytes",decimal(static_cast<quint64>(bytes.size()))},{"physical_identity",identityToken(*candidateId)}};
     } catch(...) {
         if(indeterminate){result.disposition="publication_indeterminate";result.recovery=true;}
         else if(changed){result.disposition="committed_unverified";result.recovery=true;}
@@ -242,7 +242,7 @@ FileResult publishFile(const QString& projectRoot,const QByteArray& bytes,const 
 } // namespace
 
 bool work_report_next_serial(std::uint64_t current,std::uint64_t& next) noexcept {
-    if(current==std::numeric_limits<std::uint64_t>::max())return false;next=current+1;return true;
+    if(current==std::numeric_limits<std::uint64_t>::max()){return false;}next=current+1;return true;
 }
 Object work_report_missing(const char* reason) {return {{"state","missing"},{"reason",QLatin1StringView(reason)}};}
 Object work_report_observed(const QJsonValue& value,const char* source,const QString& row) {
@@ -425,8 +425,8 @@ bool AssistantWorkReports::artifactCurrent(const Object& artifact,QStringView st
 #endif
 }
 
-QVariantMap AssistantWorkReports::capture(bool automaticTrigger,AssistantWorkReportCoverage counts,QStringView storageRoot,
-        const std::function<AssistantWorkReportSnapshot(quint64)>& build,const QString& expectedScope,quint64 expectedRevision,bool projectionBlocked) {
+QVariantMap AssistantWorkReports::capture(bool automaticTrigger,const AssistantWorkReportCoverage& counts,QStringView storageRoot,
+        [[maybe_unused]] const std::function<AssistantWorkReportSnapshot(quint64)>& build,const QString& expectedScope,quint64 expectedRevision,bool projectionBlocked) {
     // The original worker and owner-thread completion retain their own snapshots.
     struct WorkCapture {
         std::shared_ptr<WriterWorkerLease> lease;
@@ -444,7 +444,7 @@ QVariantMap AssistantWorkReports::capture(bool automaticTrigger,AssistantWorkRep
         QByteArray encoded;
         QString scope;
         QPointer<AssistantViewModel> receiver;
-        bool fallbackOnly;
+        bool fallbackOnly{};
     };
     const QPointer<AssistantViewModel> receiver(owner_);
     if(QThread::currentThread()!=receiver->thread())throw std::logic_error("Work report capture requires its native owner thread");
@@ -571,83 +571,83 @@ QVariantMap AssistantWorkReports::capture(bool automaticTrigger,AssistantWorkRep
         present(receipt,acceptedVariant);
         const auto input=std::make_shared<WorkCapture>(WorkCapture{workerLease,state,completion,std::move(document),receipt,primaryRoot,serializationRoot,scope,std::move(mirror),receiver});
         auto work=[input]() mutable {
-            const auto& state=input->state;const auto& completion=input->completion;
-            auto& document=input->document;const auto& receipt=input->receipt;const auto& primaryRoot=input->primaryRoot;
-            const auto& scope=input->scope;const auto& receiver=input->receiver;
+            const auto& workState=input->state;const auto& workCompletion=input->completion;
+            auto& workDocument=input->document;const auto& workReceipt=input->receipt;const auto& workRoot=input->primaryRoot;
+            const auto& workScope=input->scope;const auto& workReceiver=input->receiver;
             // Worker mutates only its local Qt owners and this original cell's
             // fixed atomics. Never State/Project/QObject/owner-thread Qt data.
             try {
-                auto terminal=receipt;QByteArray encoded;bool fallbackOnly=false;
+                auto terminal=workReceipt;QByteArray encoded;bool fallbackOnly=false;
                 try {
                     terminal["phase"]="terminal";
-                    encoded=QJsonDocument(document).toJson(QJsonDocument::Compact);
+                    encoded=QJsonDocument(workDocument).toJson(QJsonDocument::Compact);
                     if(encoded.isEmpty())throw std::runtime_error("Report encoding failed");
                     const auto hash=QCryptographicHash::hash(encoded,QCryptographicHash::Sha256).toHex();
-                    if(!QDir().mkpath(primaryRoot))throw std::runtime_error("The app-local report destination is unavailable");
-                    const auto result=publishFile(primaryRoot,encoded,hash);
-                    completion->publication(result); // Primary outcome is latched before optional mirror work.
+                    if(!QDir().mkpath(workRoot))throw std::runtime_error("The app-local report destination is unavailable");
+                    const auto result=publishFile(workRoot,encoded,hash);
+                    workCompletion->publication(result); // Primary outcome is latched before optional mirror work.
                     terminal["disposition"]=QLatin1StringView(result.disposition);terminal["recovery_required"]=result.recovery;
                     if(!result.artifact.isEmpty()) {
                         terminal["artifact"]=observed(result.artifact);
                         if(!terminal.value("complete_evidence").toBool())terminal["disposition"]="saved_incomplete";
                     }else {
-                        terminal["artifact"]=missing(completion->outcome.load(std::memory_order_acquire)>=3?"not_observed":"not_present");
+                        terminal["artifact"]=missing(workCompletion->outcome.load(std::memory_order_acquire)>=3?"not_observed":"not_present");
                         terminal["error_code"]=observed(QLatin1StringView(result.disposition));
                         auto covered=terminal.value("coverage").toObject();covered["reason"]="storage";terminal["coverage"]=covered;
                     }
                     try {
-                    Object mirror{{"binding",observed(completion->rootIdentity)},{"disposition","not_present"},{"artifact",missing("not_present")}};
+                    Object copyMirror{{"binding",observed(workCompletion->rootIdentity)},{"disposition","not_present"},{"artifact",missing("not_present")}};
                     if(!input->mirror.root.isEmpty()) {
-                        if(result.artifact.isEmpty())mirror["disposition"]="primary_unverified";
-                        else if(!input->mirror.lease)mirror["disposition"]="destination_unavailable";
+                        if(result.artifact.isEmpty())copyMirror["disposition"]="primary_unverified";
+                        else if(!input->mirror.lease)copyMirror["disposition"]="destination_unavailable";
                         else {
                             const auto copied=publishFile(input->mirror.root,encoded,hash,input->serializationRoot,&input->mirror);
-                            mirror["disposition"]=QLatin1StringView(copied.disposition);mirror["recovery_required"]=copied.recovery;
-                            if(!copied.artifact.isEmpty())mirror["artifact"]=observed(copied.artifact);
+                            copyMirror["disposition"]=QLatin1StringView(copied.disposition);copyMirror["recovery_required"]=copied.recovery;
+                            if(!copied.artifact.isEmpty())copyMirror["artifact"]=observed(copied.artifact);
                         }
                     }
-                    terminal["project_mirror"]=mirror;
+                    terminal["project_mirror"]=copyMirror;
                     }catch(...) {} // Optional mirror observation cannot discard the already assembled primary receipt.
                 }catch(...) {fallbackOnly=true;terminal={};} // Immutable fallback already owns every field/Variant.
-                document={};
-                const auto output=std::make_shared<FinishCapture>(FinishCapture{state,completion,std::move(terminal),std::move(encoded),scope,receiver,fallbackOnly});
+                workDocument={};
+                const auto output=std::make_shared<FinishCapture>(FinishCapture{workState,workCompletion,std::move(terminal),std::move(encoded),workScope,workReceiver,fallbackOnly});
                 auto deliver=[output]() mutable {
-                    const auto& state=output->state;const auto& completion=output->completion;
-                    auto& terminal=output->terminal;const auto& scope=output->scope;const auto& receiver=output->receiver;
-                    bool fallbackOnly=output->fallbackOnly;
-                    if(!completion->beginDelivery())return; // A late old callback cannot settle another writer.
-                    completion->consumed.store(true,std::memory_order_release);
-                    const auto finished=qScopeGuard([completion]{completion->delivery.store(WriterCompletion::Settled,std::memory_order_release);});
+                    const auto& doneState=output->state;const auto& doneCompletion=output->completion;
+                    auto& doneTerminal=output->terminal;const auto& doneScope=output->scope;const auto& doneReceiver=output->receiver;
+                    bool doneFallbackOnly=output->fallbackOnly;
+                    if(!doneCompletion->beginDelivery())return; // A late old callback cannot settle another writer.
+                    doneCompletion->consumed.store(true,std::memory_order_release);
+                    const auto finished=qScopeGuard([doneCompletion]{doneCompletion->delivery.store(WriterCompletion::Settled,std::memory_order_release);});
                     // Settled means original callback execution, never receiver
                     // delivery/consumption acknowledgement after death/throw.
-                    const auto fallbackIndex=completion->outcome.load(std::memory_order_acquire)+
-                        (state->scope!=scope || state->closing?WriterCompletion::publicationCases:0);
-                    const auto& fallback=completion->fallback[fallbackIndex];
+                    const auto fallbackIndex=doneCompletion->outcome.load(std::memory_order_acquire)+
+                        (doneState->scope!=doneScope || doneState->closing?WriterCompletion::publicationCases:0);
+                    const auto& fallback=doneCompletion->fallback[fallbackIndex];
                     QVariantMap terminalVariant;
-                    if(!fallbackOnly)try {terminal["scope_retired"]=state->scope!=scope || state->closing;
-                            if(state->rootIdentity!=completion->rootIdentity) {auto mirror=terminal.value("project_mirror").toObject();mirror["binding_retired"]=true;terminal["project_mirror"]=mirror;}terminalVariant=terminal.toVariantMap();}
-                        catch(...) {fallbackOnly=true;}
-                    if(fallbackOnly){terminal=fallback.first;terminalVariant=fallback.second;}
+                    if(!doneFallbackOnly)try {doneTerminal["scope_retired"]=doneState->scope!=doneScope || doneState->closing;
+                            if(doneState->rootIdentity!=doneCompletion->rootIdentity) {auto retiredMirror=doneTerminal.value("project_mirror").toObject();retiredMirror["binding_retired"]=true;doneTerminal["project_mirror"]=retiredMirror;}terminalVariant=doneTerminal.toVariantMap();}
+                        catch(...) {doneFallbackOnly=true;}
+                    if(doneFallbackOnly){doneTerminal=fallback.first;terminalVariant=fallback.second;}
                     // An unavailable old scope is never presented on a successor.
                     // A normal original delivery still settles its actual waiter.
-                    if(state->completion==completion) {
-                        if(!output->encoded.isEmpty())state->lastDocument=std::move(output->encoded);
-                        state->busy=false;state->activeRoot.clear();state->activeReceipt={};state->completion.reset();
+                    if(doneState->completion==doneCompletion) {
+                        if(!output->encoded.isEmpty())doneState->lastDocument=std::move(output->encoded);
+                        doneState->busy=false;doneState->activeRoot.clear();doneState->activeReceipt={};doneState->completion.reset();
                     }
-                    if(receiver) {
-                        if(state->scope==scope && !state->closing) {
+                    if(doneReceiver) {
+                        if(doneState->scope==doneScope && !doneState->closing) {
 
-                            state->last=terminal;state->lastVariant=terminalVariant;
-                            try {emit receiver->workReportReceiptChanged();}catch(...){}
+                            doneState->last=doneTerminal;doneState->lastVariant=terminalVariant;
+                            try {emit doneReceiver->workReportReceiptChanged();}catch(...){}
                         }
-                        if(receiver && !state->closing)try {emit receiver->workReportFinished(terminalVariant);}catch(...){}
+                        if(doneReceiver && !doneState->closing)try {emit doneReceiver->workReportFinished(terminalVariant);}catch(...){}
                     }
-                    terminal={};
+                    doneTerminal={};
                 };
                 auto* app=QCoreApplication::instance();
-                if(!app || !QMetaObject::invokeMethod(app,std::move(deliver),Qt::QueuedConnection))completion->unavailable();
-                else {auto expected=WriterCompletion::Pending;(void)completion->delivery.compare_exchange_strong(expected,WriterCompletion::Queued,std::memory_order_acq_rel);}
-            }catch(...) {completion->unavailable();} // No second enqueue/capture; original file outcome survives.
+                if(!app || !QMetaObject::invokeMethod(app,std::move(deliver),Qt::QueuedConnection))workCompletion->unavailable();
+                else {auto expected=WriterCompletion::Pending;(void)workCompletion->delivery.compare_exchange_strong(expected,WriterCompletion::Queued,std::memory_order_acq_rel);}
+            }catch(...) {workCompletion->unavailable();} // No second enqueue/capture; original file outcome survives.
         };
         run_in_background(std::move(work));return acceptedVariant;
     } catch(...) {

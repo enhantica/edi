@@ -78,10 +78,9 @@ inline ActivityPresentation presentActivity(const ActivityInput& in) {
         if (settled && in.rowStatus == in.payloadStatus) out.state = in.payloadStatus;
         else out.state = in.payloadStatus == "inProgress" && in.rowStatus == "in_progress"
             ? QStringLiteral("in_progress") : QStringLiteral("unconfirmed");
-    } else if (in.nativeOutcomeStatus == "unconfirmed" || in.nativeOutcomeStatus == "applied_unconfirmed")
-        out.state = QStringLiteral("unconfirmed");
-    else if (in.rowStatus == "completed" || in.rowStatus == "failed" || in.rowStatus == "refused" ||
-             in.rowStatus == "declined" || in.rowStatus == "interrupted" || in.rowStatus == "in_progress")
+    } else if (in.nativeOutcomeStatus != "unconfirmed" && in.nativeOutcomeStatus != "applied_unconfirmed" &&
+               (in.rowStatus == "completed" || in.rowStatus == "failed" || in.rowStatus == "refused" ||
+                in.rowStatus == "declined" || in.rowStatus == "interrupted" || in.rowStatus == "in_progress"))
         out.state = in.rowStatus;
     else out.state = QStringLiteral("unconfirmed");
 
@@ -147,7 +146,7 @@ struct WebActionInput {
 inline std::optional<QString> webSearchQuery(const WebActionInput& in) {
     if (in.kind == WebActionKind::Missing) return QString();
     if (in.kind != WebActionKind::Search) return std::nullopt;
-    const QString query = singleLineText(in.query);
+    QString query = singleLineText(in.query);
     if (!query.isEmpty()) return query;
     if (!in.queriesPresent) return QString();
     if (!in.queries) return std::nullopt;
@@ -238,7 +237,7 @@ inline QString humanWebCaption(const QJsonObject& payload) {
 }
 inline QString activityHumanDescription(const HumanActivityInput& in) {
     if (nativeDescriptionPlaceholder(in)) return in.nativeLabel.value_or(presentActivity({}).nativeCaption);
-    const auto supplied = suppliedDescription(in.payload);
+    auto supplied = suppliedDescription(in.payload);
     if (nonblankLiteral(supplied)) return supplied;
     if (in.payload.value("type") == "webSearch") return humanWebCaption(in.payload);
     return in.commandActivity ? in.payload.value("commandDescription").toString() : QString();

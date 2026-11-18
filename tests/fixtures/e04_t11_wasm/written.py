@@ -265,12 +265,19 @@ def validate_loaded(loaded, source, old, names, conditions):
         else 'joint',
         'su_rule': 'iucr_99',
         'free_count': len(old['labels']),
-        'max_iterations': int(analysis.find_value('_minimizer.max_iterations') or '0'),
+        'max_iterations': int(analysis.find_value('_minimizer.max_iterations') or '50'),
         'chi_square_tolerance': float(
             analysis.find_value('_minimizer.chi_square_tolerance') or '0'
         ),
         **conditions,
     }
+    if conditions == solver_vehicles.HISTORICAL:
+        expected['max_iterations'] = int(
+            analysis.find_value('_minimizer.max_iterations') or '1000'
+        )
+        expected['chi_square_tolerance'] = (
+            expected['chi_square_tolerance'] or solver_vehicles.HISTORICAL_TOLERANCE
+        )
     if json.dumps(loaded, sort_keys=True, allow_nan=False) != json.dumps(expected, sort_keys=True):
         raise ValueError('Loaded solver vehicle changed an original input or declared condition')
 
@@ -526,7 +533,7 @@ def admit(root, case, reference):
         'fitting_mode': 'single' if case == 'lbco' else 'joint',
         'su_rule': 'iucr_99',
         'free_count': len(old['labels']),
-        'max_iterations': int(analysis.find_value('_minimizer.max_iterations') or '0'),
+        'max_iterations': int(analysis.find_value('_minimizer.max_iterations') or '50'),
         'chi_square_tolerance': float(
             analysis.find_value('_minimizer.chi_square_tolerance') or '0'
         ),
@@ -534,7 +541,14 @@ def admit(root, case, reference):
     }:
         raise ValueError('written reference loaded state differs from the source declarations')
     historical_loaded = json.loads((reference / 'historical/loaded.json').read_text())
-    if historical_loaded != {**loaded, **solver_vehicles.HISTORICAL}:
+    if historical_loaded != {
+        **loaded,
+        **solver_vehicles.HISTORICAL,
+        'max_iterations': 1000,
+        'chi_square_tolerance': (
+            loaded['chi_square_tolerance'] or solver_vehicles.HISTORICAL_TOLERANCE
+        ),
+    }:
         raise ValueError('Historical loaded state changed the original non-solver declarations')
     qualify_historical(
         fixture,
@@ -625,13 +639,16 @@ def capture_loaded(project, source, case, old, output, conditions):
     ):
         raise ValueError('native reference changed the declared case mode or uncertainty rule')
     analysis = document(source / 'analysis/analysis.edi', 'analysis/analysis.edi')
-    expected_max = int(analysis.find_value('_minimizer.max_iterations') or '0')
+    expected_max = int(analysis.find_value('_minimizer.max_iterations') or '50')
     expected_tolerance = float(analysis.find_value('_minimizer.chi_square_tolerance') or '0')
+    if conditions == solver_vehicles.HISTORICAL:
+        expected_max = int(analysis.find_value('_minimizer.max_iterations') or '1000')
+        expected_tolerance = expected_tolerance or solver_vehicles.HISTORICAL_TOLERANCE
     loaded = {
         'fitting_mode': project.analysis.fitting_mode,
         'su_rule': project.su_rule,
         'free_count': len(project.free_parameters),
-        'max_iterations': project._minimizer_max_iterations,
+        'max_iterations': project._minimizer_max_iterations or 50,
         'chi_square_tolerance': project._minimizer_chi_square_tolerance,
         'descent': project.analysis.descent,
         'stop_rules': project.analysis.stop_rules,
@@ -683,6 +700,13 @@ def capture_historical(case, fixture, old, source, names, banks, output):
     """Retain the independently anchored regression before touching the default run."""
     output.mkdir()
     project = edi.Project.load(source)
+    analysis = document(source / 'analysis/analysis.edi', 'analysis/analysis.edi')
+    project._minimizer_max_iterations = int(
+        analysis.find_value('_minimizer.max_iterations') or '1000'
+    )
+    project._minimizer_chi_square_tolerance = (
+        project._minimizer_chi_square_tolerance or solver_vehicles.HISTORICAL_TOLERANCE
+    )
     project.analysis.descent = solver_vehicles.HISTORICAL['descent']
     project.analysis.stop_rules = solver_vehicles.HISTORICAL['stop_rules']
     loaded = capture_loaded(project, source, case, old, output, solver_vehicles.HISTORICAL)

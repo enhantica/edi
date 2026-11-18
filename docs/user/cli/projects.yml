@@ -239,6 +239,8 @@ projects:
   - id: sc-neut-cwl_tb2ti2o7-heidi_basic
     executing: true
     verification: true
+  - id: sc-neut-cwl_tb2ti2o7-heidi_exclusions
+    executing: true
   - id: sc-neut-cwl_tb2ti2o7-heidi_isotropic-extinction
     executing: true
     verification: true

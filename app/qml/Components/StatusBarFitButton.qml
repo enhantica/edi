@@ -22,7 +22,7 @@ StatusBarButton {
     readonly property bool running: fit !== null && (fit.running || fit.waitingForData)
 
     clickable: fit !== null && (running || fit.available)
-    keyIcon: running ? "stop-circle" : "play-circle"
+    keyIcon: running ? "stop" : "play"
     // Every state's icon smaller than the word and further from the frame's left end (the owner, 2026-11-16).
     iconPixelSize: Math.round(font.pixelSize * 0.85)
     iconLeftPadding: Math.round(font.pixelSize * 0.8)

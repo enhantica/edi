@@ -166,6 +166,7 @@ void select_absorption(ExperimentBase& experiment, const std::string& value) {
 // Each value of a selector by its dictionary name (edi ADR-0051).
 static std::vector<std::string> option_labels(std::string_view uid, const std::vector<std::string>& tokens) {
     std::vector<std::string> labels;
+    labels.reserve(tokens.size());
     for (const std::string& token : tokens) {
         labels.push_back(option_label(uid, token));
     }

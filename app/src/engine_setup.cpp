@@ -192,7 +192,7 @@ QByteArray& browser_settings_stored() {
 // ADR-0031 §3, §6: today's settings.ini carried over into the one store. Only a key the store does not hold is copied,
 // so a key is carried once and never overwritten, and the old file is left as it is. The keys that moved go to their new
 // groups.
-void carry_over_settings(const QString& old_file, const QString& store_file) {
+[[maybe_unused]] void carry_over_settings(const QString& old_file, const QString& store_file) {
     if (!QFile::exists(old_file)) {
         return;
     }
@@ -333,8 +333,9 @@ void configure_engine(QQmlEngine& engine, std::unique_ptr<Session> session) {
     object->setParent(&engine);
     object->engine_bound_ = true;
     QJSEngine::setObjectOwnership(object, QJSEngine::CppOwnership);
-    (void)session.release();
-    (void)binding.release();
+    // The engine owns both from here (the session as its child, the binding through its destroyed signal).
+    (void)session.release();  // NOLINT(bugprone-unused-return-value)
+    (void)binding.release();  // NOLINT(bugprone-unused-return-value)
     configure_engine_settings(engine);
 }
 void configure_engine(QQmlEngine& engine) { configure_engine(engine, AssistantWorkReportOptions{}); }

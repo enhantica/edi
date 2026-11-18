@@ -76,6 +76,7 @@ void RowTableModel::setTableRows(const QList<Row>& target) {
                 if (!self) return;
                 rows_.insert(i, target.at(i));
                 endInsertRows();
+                // cppcheck-suppress identicalConditionAfterEarlyExit ; the call above can delete it
                 if (!self) return;
                 continue;
             }
@@ -83,6 +84,7 @@ void RowTableModel::setTableRows(const QList<Row>& target) {
             if (!self) return;
             rows_.move(found, i);
             endMoveRows();
+            // cppcheck-suppress identicalConditionAfterEarlyExit ; the call above can delete it
             if (!self) return;
         }
         QList<int> changed;

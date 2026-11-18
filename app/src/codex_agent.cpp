@@ -32,12 +32,14 @@ bool stringSize(QStringView text, std::optional<quint64> cap, quint64& size) {
     if (!addSize(2, cap, size)) return false;
     for (qsizetype i = 0; i < text.size(); ++i) {
         const auto c = text.at(i).unicode(); quint64 n;
+        // NOLINTNEXTLINE(bugprone-branch-clone): JSON's escapes and two-byte UTF-8 share a length, not a case.
         if (c == '"' || c == '\\' || c == 8 || c == 12 || c == 10 || c == 13 || c == 9) n = 2;
         else if (c < 0x20) n = 6;
         else if (c < 0x80) n = 1;
         else if (c < 0x800) n = 2;
         else if (QChar::isHighSurrogate(c)) {
-            if (++i >= text.size() || !text.at(i).isLowSurrogate()) return false;
+            ++i;
+            if (i >= text.size() || !text.at(i).isLowSurrogate()) return false;
             n = 4;
         } else if (QChar::isLowSurrogate(c)) return false;
         else n = 3;
@@ -102,7 +104,7 @@ bool encodedSize(const QJsonValue& value, std::optional<quint64> cap, quint64& s
 bool codex_encoded_size(const QJsonValue& value, quint64 cap, quint64& size) { return encodedSize(value, cap, size); }
 bool codex_measured_size(const QJsonValue& value, quint64& size) { return encodedSize(value, std::nullopt, size); }
 quint64 codex_json_capacity(quint64 bytes) {
-    const auto header=static_cast<quint64>(sizeof(QArrayData)+alignof(std::max_align_t)+sizeof(QChar));
+    const quint64 header=sizeof(QArrayData)+alignof(std::max_align_t)+sizeof(QChar);
     if(bytes>std::numeric_limits<quint64>::max()/4)throw std::length_error("JSON backing exceeds capacity");
     // Pinned qarraydata.cpp Grow rule; header/alignment/terminator remain owned.
     return qNextPowerOfTwo(bytes+header)+header;
@@ -147,7 +149,7 @@ void CodexAgent::processOwnerReleased(quint64 birth) noexcept {
 CodexAgent::CodexAgent(QObject* parent,std::shared_ptr<const void> releaseOwner) : QObject(parent),release_owner_(std::move(releaseOwner)) {
     clock_.start(); timer_.setInterval(100);
     connect(&timer_, &QTimer::timeout, this, [this] {
-        const QPointer<CodexAgent> receiver(this); const auto scope = generation_;
+        const QPointer<CodexAgent> receiver(this); const auto scope = generation_;  // NOLINT(clang-analyzer-core.NullDereference): this is the timer's owner.
         try { checkDeadline(); }
         catch (...) { if (receiver && generation_ == scope) fail("The official agent deadline could not be checked."); }
     });
@@ -380,7 +382,7 @@ QString CodexAgent::executable() {
         (metadata.value("ediPolicySchema")!="edi.runtime-policy/1" || metadata.value("ediFlavour")!="edi-app-server/1" ||
          metadata.value("upstreamCommit")!="092d3acd6bec3e3a14bdc7e7a2810ab628ab759d" ||
          metadata.value("sourcePatchSha256")!=policyPatch())) return {};
-    const auto executable = root + "/" + QString::fromUtf8(EDI_CODEX_RUNTIME_ENTRYPOINT);
+    auto executable = root + "/" + QString::fromUtf8(EDI_CODEX_RUNTIME_ENTRYPOINT);
     if (!QFileInfo(executable).isFile() || !QFileInfo(executable).isExecutable()) return {};
     return executable;
 }
@@ -440,42 +442,42 @@ bool CodexAgent::start(const QString& executable, const QString& workspace) {
         // The runtime owns its ordinary profile and managed login. Never assign
         // HOME/home/CODEX_HOME, open config/auth files, or copy provider tokens.
         connect(process, &QProcess::started, this, [this, original = prepared, scope] {
-            const QPointer<CodexAgent> receiver(this);
-            const auto current = [&] { return receiver && original && process_ == original.data() && generation_ == scope; };
-            try { if (current() && !failed_) emit started(); }
-            catch (...) { if (current()) fail("The official agent handshake could not be prepared."); }
+            const QPointer<CodexAgent> alive(this);
+            const auto stillCurrent = [&] { return alive && original && process_ == original.data() && generation_ == scope; };
+            try { if (stillCurrent() && !failed_) emit started(); }
+            catch (...) { if (stillCurrent()) fail("The official agent handshake could not be prepared."); }
         });
         connect(process, &QProcess::bytesWritten, this, [this, original = prepared, scope](qint64 count) {
             if (!original || process_ != original.data() || generation_ != scope || failed_ || count <= 0) return;
             // Optional writes are admitted only at an empty physical queue, so
             // these bytes are its FIFO head even after required writes arrive.
             optional_queued_bytes_ -= qMin(optional_queued_bytes_, static_cast<quint64>(count));
-            const QPointer<CodexAgent> receiver(this);
+            const QPointer<CodexAgent> alive(this);
             flushRequired(); // Can synchronously retire this exact process scope.
-            if(!receiver || !original || process_!=original.data() || generation_!=scope || failed_ ||
+            if(!alive || !original || process_!=original.data() || generation_!=scope || failed_ ||
                 original->state()!=QProcess::Running || optionalUsageBackpressured())return;
             try {emit optionalUsageReady();}catch(...){} // Optional terminal hint, never a required-write failure.
         });
         connect(process, &QProcess::readyReadStandardOutput, this, [this, original = prepared, scope] { if (original) read(original.data(), scope); });
         connect(process, &QProcess::readyReadStandardError, this, [this, original = prepared, scope] {
-            const QPointer<CodexAgent> receiver(this);
-            const auto current = [&] { return receiver && original && process_ == original.data() && generation_ == scope; };
-            if (!current()) return;
+            const QPointer<CodexAgent> alive(this);
+            const auto stillCurrent = [&] { return alive && original && process_ == original.data() && generation_ == scope; };
+            if (!stillCurrent()) return;
             if(active_frames_==std::numeric_limits<quint64>::max())return;
             ++active_frames_;
-            const auto frame=qScopeGuard([receiver]{if(receiver){--receiver->active_frames_;receiver->maybeOwnersReleased();}});
+            const auto frame=qScopeGuard([alive]{if(alive){--alive->active_frames_;alive->maybeOwnersReleased();}});
             try {
                 original->setReadChannel(QProcess::StandardError);
-                while (current() && !failed_ && original->bytesAvailable() > 0) {
+                while (stillCurrent() && !failed_ && original->bytesAvailable() > 0) {
                     const auto count=static_cast<quint64>(Limits::http_chunk_bytes);
 
                     const auto discarded = original->read(count);
-                    if (!current() || failed_) return;
+                    if (!stillCurrent() || failed_) return;
                     if (discarded.isEmpty()) break;
                     wire_bytes_ += static_cast<quint64>(discarded.size());
                 }
-                if (current()) original->setReadChannel(QProcess::StandardOutput);
-            } catch (...) { if (current()) fail("The official agent diagnostic channel could not be drained."); }
+                if (stillCurrent()) original->setReadChannel(QProcess::StandardOutput);
+            } catch (...) { if (stillCurrent()) fail("The official agent diagnostic channel could not be drained."); }
             // Never put raw runtime stderr (which may contain user data) in a
             // provider failure card or credential log.
         });
@@ -516,7 +518,7 @@ bool CodexAgent::write(const QJsonObject& envelope, const std::function<bool()>&
     checkDeadline(); if (!receiver || process_ != process || generation_ != epoch || failed_) return false;
     quint64 encoded = 0;
     if (!encodedSize(envelope, std::nullopt, encoded)) {
-        if (!nonfatalPreflight) fail("The official agent request has invalid Unicode, number or nesting."); return false;
+        if (!nonfatalPreflight) { fail("The official agent request has invalid Unicode, number or nesting."); } return false;
     }
     const auto initialQueued = static_cast<quint64>(process_->bytesToWrite());
     const auto lineSize = encoded + 1;
@@ -527,7 +529,7 @@ bool CodexAgent::write(const QJsonObject& envelope, const std::function<bool()>&
     const bool deferred=!deferred_required_.isEmpty() || queued!=0;
     auto line=QJsonDocument(envelope).toJson(QJsonDocument::Compact);
     if(static_cast<quint64>(line.size())!=encoded) {
-        if(!nonfatalPreflight)fail("The official agent request could not be encoded consistently.");return false;
+        if(!nonfatalPreflight){fail("The official agent request could not be encoded consistently.");}return false;
     }
     line.append('\n');
     auto heldWire=deferred_required_;
@@ -544,7 +546,7 @@ bool CodexAgent::write(const QJsonObject& envelope, const std::function<bool()>&
     }
     if(optionalUsage)optional_queued_bytes_=lineSize;
     if(process->write(line)!=line.size()) {
-        if(receiver && process_==process && generation_==epoch)fail("The official agent request could not be delivered.");return false;
+        if(receiver && process_==process && generation_==epoch){fail("The official agent request could not be delivered.");}return false;
     }
     return receiver && process_==process && generation_==epoch && !failed_;
 }
@@ -781,13 +783,16 @@ void CodexAgent::retire() {
     if (!process) return;
     retired_process_=process;
     process->disconnect(this);
+    // cppcheck-suppress identicalConditionAfterEarlyExit ; the call above can delete it
     if (!process) return;
     // Only the detached original process is touched after these callbacks. A
     // replacement facade/process owns its own channels, maps and first deadline.
     process->setParent(nullptr);
+    // cppcheck-suppress identicalConditionAfterEarlyExit ; the call above can delete it
     if (!process) return;
     // Shutdown must outlive the facade without a blocking QProcess destructor.
     process->terminate();
+    // cppcheck-suppress identicalConditionAfterEarlyExit ; the call above can delete it
     if (!process) return;
     QTimer::singleShot(static_cast<int>(Limits::callback_ms), process.data(), [process] { if (process && process->state() != QProcess::NotRunning) process->kill(); });
     connect(process.data(), qOverload<int, QProcess::ExitStatus>(&QProcess::finished), process.data(), &QObject::deleteLater);

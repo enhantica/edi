@@ -6,6 +6,7 @@ from pathlib import Path
 import pytest
 
 from tests.fixtures.metadata_transition import retired_source_fields
+from tests.fixtures.stop_defaults import example_inputs
 from tests.fixtures.table_display import metadata_bytes
 from tests.fixtures.table_display.source_uncertainties import previous_bytes as source_bytes
 
@@ -422,9 +423,10 @@ def assert_retired_source_fields_require_complete_current_and_archived_bytes():
     for name, row in retired_source_fields.rows().items():
         raw = source_bytes(name, (ROOT / name).read_bytes())
         before = retired_source_fields.previous_bytes(name, raw)
-        assert hashlib.sha256(raw).hexdigest() == row['after_sha256'], (
-            'Every release source projection binds its complete committed current input'
-        )
+        assert (
+            hashlib.sha256(example_inputs.composed_bytes(name, raw)).hexdigest()
+            == row['after_sha256']
+        ), 'Every release source projection binds its complete committed current input'
         assert hashlib.sha256(before).hexdigest() == row['before_sha256'], (
             'Every release source projection retains its complete independent older input'
         )

@@ -210,7 +210,7 @@ class ScanLayer : public QQuickPaintedItem {
     void xMaxChanged();
     void yMinChanged();
     void yMaxChanged();
-    void scaleChanged();
+    void scaleChanged();  // NOLINT(bugprone-derived-method-shadowing-base-method): the y scale QML binds by this name.
     void colourSchemeChanged();
     void colourMapChanged();
     void backgroundChanged();
@@ -269,7 +269,7 @@ class ScanLayer : public QQuickPaintedItem {
         std::uint64_t generation = 0;  // the dataset's ScanViewModel::Pattern::generation it was made from; 0: none
         std::vector<float> x, v;
         // Stacked, with the excluded ranges shown: the trace's stretches inside them, drawn dimmed (x, v as above).
-        std::vector<float> excluded_x, excluded_v;
+        std::vector<float> excluded_x{}, excluded_v{};
     };
     bool lines_on_gpu() const { return gpu_ && mode_ == QLatin1String("stacked"); }
     // Asks for this frame's drawing: the reductions and the GPU lines at the polish, the painting after it.
@@ -328,8 +328,8 @@ class ScanLayer : public QQuickPaintedItem {
     std::vector<double> lows_, highs_, baselines_;
     struct RangeKey {
         QString scale;
-        bool included, subtract, visible;
-        double from, to;
+        bool included{}, subtract{}, visible{};
+        double from{}, to{};
         bool operator==(const RangeKey&) const = default;
     };
     struct Range {

@@ -6,6 +6,7 @@ import pytest
 
 from tests.fixtures.e04_t11_wasm import written
 from tests.fixtures.metadata_transition import task_inputs
+from tests.fixtures.stop_defaults import example_inputs
 
 ROOT = Path(__file__).resolve().parents[3]
 
@@ -17,6 +18,25 @@ def authenticated_inputs():
 
 @pytest.mark.parametrize('case', ['lbco', 'ncaf'])
 def test_each_catalogue_source_pair_is_exact_and_idempotent(case):
+    if case == 'lbco':
+        for source_name, entry in example_inputs.rows().items():
+            current = (ROOT / source_name).read_bytes()
+            before = entry['before_text'].encode()
+            assert example_inputs.previous_bytes(source_name, current) == before, (
+                'Each changed example retains its exact former input before the default transition'
+            )
+            assert example_inputs.previous_content(current) == before, (
+                'A staged copy retains the same complete source identity as its named example'
+            )
+            for changed in (
+                current + b'\n',
+                current + b'_minimizer.max_iterations 999\n',
+                current.replace(b'data_', b'data_changed_', 1),
+            ):
+                if changed == current:
+                    continue
+                with pytest.raises(AssertionError):
+                    example_inputs.previous_bytes(source_name, changed)
     name = 'docs/user/cli/' + written.CASES[case] + '/project/analysis/analysis.edi'
     row = task_inputs.rows()[name]
     original = task_inputs.archived(row['before_sha256'])

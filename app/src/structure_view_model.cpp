@@ -364,7 +364,7 @@ void AtomSiteListModel::append() {
     std::uniform_real_distribution<double> unit(0.0, 1.0);
     edi::AtomSite site = edi::new_atom_site(structure, [this, &unit] { return unit(*random_); });
     const ProjectEditor::CreationAction action{ProjectEditor::CreationAction::Kind::AtomAppend,&structure,{},QString::fromStdString(site.id.value())};
-    editor_.apply_creation_control(edi::Edit::append(structure.atom_sites, std::move(site)), true, action);
+    editor_.apply_creation_control(edi::Edit::append(structure.atom_sites, site), true, action);
 }
 
 void AtomSiteListModel::duplicate(int row) {
@@ -634,17 +634,6 @@ std::array<double, 3> in_form(const std::array<double, 6>& cell, const std::arra
     }
     return crystal;
 }
-
-std::array<double, 3> from_form(const std::array<double, 6>& cell, const std::array<double, 3>& values,
-                                const QString& form) {
-    if (form == QLatin1String("cartesian")) {
-        return crysta::moment_crystal_axis(cell, values);
-    }
-    if (form == QLatin1String("spherical")) {
-        return crysta::moment_crystal_axis(cell, crysta::moment_from_spherical(values));
-    }
-    return values;
-}
 }  // namespace
 
 QList<double> AtomSiteMomentListModel::components(int row, const QString& form) const {
@@ -715,6 +704,7 @@ QString AtomSiteMomentListModel::setComponent(int row, const QString& form, int 
                 const std::vector<edi::Parameter*> components =
                     const_cast<edi::AtomSiteMoment*>(moment)->parameters();
                 std::vector<std::pair<edi::Parameter*, double>> writes;
+                writes.reserve(edit.writes.size());
                 for (const auto& [i, written] : edit.writes) {
                     writes.emplace_back(components[i], written);
                 }
@@ -849,7 +839,7 @@ void ScatteringLengthListModel::remove(int row) {
 
 // ---- StructureViewModel -------------------------------------------------------------------------
 
-StructureViewModel::StructureViewModel(SavedFile saved, edi::Structure& structure, ProjectEditor& editor,
+StructureViewModel::StructureViewModel(const SavedFile& saved, edi::Structure& structure, ProjectEditor& editor,
                                        ParameterRegistry& registry, QObject* parent)
     : QObject(parent),
       structure_(structure),
@@ -900,7 +890,7 @@ MagneticGroupView StructureViewModel::magneticGroup() const {
         try {
             name_uni = crysta::magnetic_space_group(group.number_bns).name_uni;
         } catch (const std::invalid_argument&) {
-            // A number the table does not have shows no symbol.
+            name_uni.clear();  // A number the table does not have shows no symbol.
         }
     }
     return MagneticGroupView{QString::fromStdString(group.number_bns), QString::fromStdString(group.name_bns),

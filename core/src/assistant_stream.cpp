@@ -54,9 +54,9 @@ struct OpenAiStream::State {
     // Provider item/part identities belong only to this decoder. The normalized
     // controller text envelope remains unchanged (Responses streaming-events).
     struct Part {
-        std::string kind, text;
+        std::string kind{}, text{};
         bool text_done = false, part_done = false, deltas = false;
-        J complete, declaration;
+        J complete{}, declaration{};
         bool started = false;
     };
     struct Item {

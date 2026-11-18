@@ -143,6 +143,9 @@ WorkflowPage {
             ObservedThresholdRow {
                 experiment: page.experiment
             }
+            ReflectionAdmissionRow {
+                experiment: page.experiment
+            }
             SingleCrystalTable {
                 id: reflectionTable
 

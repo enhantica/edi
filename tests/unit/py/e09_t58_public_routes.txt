@@ -862,3 +862,10 @@ SphericalMoment	other-public
 SphericalMoment.azimuth	other-public
 SphericalMoment.modulus	other-public
 SphericalMoment.polar	other-public
+BraggPdExperiment.excluded_reflections	other-public
+BraggPdExperiment.reflns_absences	other-public
+BraggPdExperiment.reflns_merge	other-public
+PdExperimentBase.excluded_reflections	other-public
+PdExperimentBase.reflns_absences	other-public
+PdExperimentBase.reflns_merge	other-public
+Project.reflection_admission	other-public

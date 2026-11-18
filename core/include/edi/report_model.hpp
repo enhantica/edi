@@ -143,13 +143,13 @@ struct ReportParameter {
     bool fittable = true;
     /// Where it sits, as diffraction-lib's tables name it: its datablock, category, entry (an atom id or a row; empty
     /// for a single-row category) and item; its dictionary item (`category.name`, empty without one, for its docs link).
-    std::string datablock, category, entry, name, uid;
+    std::string datablock{}, category{}, entry{}, name{}, uid{};
     /// Its value and s.u. apart as the app's Analysis table writes them (file_text), its start likewise, and its
     /// admissible range (`-inf` and `inf` when unbounded).
-    std::string value_cell, su_cell, start_cell, min_cell, max_cell;
+    std::string value_cell{}, su_cell{}, start_cell{}, min_cell{}, max_cell{};
     /// The marks its s.u. carries after a fit (su_marks).
     bool su_poor = false;
-    std::string su_partner;
+    std::string su_partner{};
     double su_correlation = 0.0;
 };
 
@@ -193,7 +193,7 @@ struct ReportStructure {
         StructureScene scene;
         SceneDrawing drawing;
     };
-    std::vector<Variant> variants;
+    std::vector<Variant> variants{};
 };
 
 /// An experiment's pattern chart (ADR-0021): present_pattern's output over the full range with no decimation and a
@@ -213,6 +213,14 @@ struct ReportPattern {
 
 /// A single crystal's chart (edi ADR-0049), as the app draws it: per reflection its Miller indices, its measured F²
 /// and s.u., and its calculated F², which is empty before a calculation; F²meas against F²calc with the y = x line.
+/// Which of a single crystal's reflections its fit uses, as crysta's admission counts them (edi's reflection
+/// admission): the counts, the merge mode's token and Rint and R-sigma, none when undefined.
+struct ReportAdmission {
+    std::size_t measured = 0, unique = 0, used = 0, excluded = 0, absent = 0;
+    std::string merge;
+    std::optional<double> r_int, r_sigma;
+};
+
 struct ReportSingleCrystal {
     std::vector<int> h, k, l;
     std::vector<double> meas, su, calc;
@@ -221,7 +229,20 @@ struct ReportSingleCrystal {
     /// The points' series name and the axes' titles, and each point's hover text, by the dictionary (edi ADR-0051).
     std::string name, x_title, y_title;
     std::vector<std::string> hover;
+    /// Why each reflection is left out of the fit: empty when it is used, else `cutoff`, `indices`, `range` or
+    /// `absent`. Empty without an admission (a report written before it, or no measured reflections): every
+    /// reflection is used.
+    std::vector<std::string> reason;
+    /// The admission's counts and agreement, and the same as one line for the chart's caption.
+    std::optional<ReportAdmission> admission;
+    std::string statistics;
 };
+
+/// The admission line a single crystal's chart shows under its title: the counts, the merge mode and Rint and
+/// R-sigma with their units (edi::statistic_text: the one undefined text when undefined, never 0).
+std::string admission_statistics(const ReportAdmission& admission);
+/// The hover line naming why a reflection is left out (`reason` as in ReportSingleCrystal); empty when used.
+std::string left_out_text(const std::string& reason);
 
 /// Gives a single crystal's chart its series name and axis titles from the dictionary and each point's hover from its
 /// numbers, measured values by `su_rule` (edi ADR-0051); the numbers stay as they are. A report written before the

@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pytest
 
+from tests.fixtures.native_process import native_executable
 from tests.fixtures.single_crystal_edges.inputs import (
     COEFFICIENTS,
     HKLS,
@@ -66,6 +67,7 @@ def native():
         / ('single_crystal_edges' if BACKEND == 'edi' else 'tests/fixtures/single_crystal_edges')
         / 'single_crystal_edge_probe'
     )
+    executable = native_executable(executable)
     assert executable.is_file(), (
         'The public-model observer must be prepared by the normal native build '
         'before acceptance tests'
@@ -335,11 +337,11 @@ def test_free_metadata_does_not_stale_reflection_values(native, tmp_path):
     )
 
 
+# Axis-qualified ranges are single-crystal inputs; see the reflection-admission gates.
 FORBIDDEN = (
     '_peak.type',
     '_background.type',
     '_data.two_theta',
-    '_excluded_region.start',
     '_absorption.type',
     '_preferred_orientation.structure_id',
 )

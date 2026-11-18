@@ -44,11 +44,11 @@ class ChartLegendModel : public QAbstractListModel {
         QString mark;
         bool bragg = false;
         double markWidth = 0.0;
-        QStringList labelTexts, labelColors;
+        QStringList labelTexts{}, labelColors{};
         // The selected dataset's entry, shown bold in its own colour.
         bool selected = false;
         // What a click on the entry hides or shows (the series' id, or a listed row's label), and whether it is hidden.
-        QString key;
+        QString key{};
         bool hidden = false;
         // A magnetic structure's magnetic reflections (edi ADR-0078): the magnet, as its tick row's label.
         bool magnetic = false;

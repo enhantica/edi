@@ -11,7 +11,7 @@ StructureInstances::StructureInstances(QQuick3DObject* parent) : QQuick3DInstanc
 void StructureInstances::setEntries(const std::vector<edi::SceneInstance>& entries, std::size_t first,
                                     std::optional<QColor> color) {
     QByteArray buffer;
-    buffer.resize(static_cast<qsizetype>(entries.size() * sizeof(InstanceTableEntry)));
+    buffer.resize(static_cast<qsizetype>(entries.size()) * static_cast<qsizetype>(sizeof(InstanceTableEntry)));
     auto* out = reinterpret_cast<InstanceTableEntry*>(buffer.data());
     for (std::size_t i = 0; i != entries.size(); ++i) {
         const edi::SceneInstance& entry = entries[i];

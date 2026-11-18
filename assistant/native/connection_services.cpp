@@ -33,7 +33,7 @@ class NetworkOperation final : public HttpOperation {
     std::vector<QMetaObject::Connection> bindings_;
 public:
     explicit NetworkOperation(QNetworkReply* reply) : reply_(reply) {}
-    void bind(QMetaObject::Connection connection) { bindings_.push_back(connection); }
+    void bind(const QMetaObject::Connection& connection) { bindings_.push_back(connection); }
     void cancel() noexcept override { if (reply_ && reply_->isRunning()) reply_->abort(); }
     ~NetworkOperation() override {
         for (const auto& connection : bindings_) QObject::disconnect(connection);
@@ -141,7 +141,7 @@ struct Services : QObject {
         }
         return result;
     }
-    std::unique_ptr<HttpOperation> request(HttpRequest source, HttpCallbacks callbacks) {
+    std::unique_ptr<HttpOperation> request(const HttpRequest& source, const HttpCallbacks& callbacks) {
         QNetworkRequest request(source.url);
         request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::ManualRedirectPolicy);
         request.setTransferTimeout(static_cast<int>(source.timeout_ms));
@@ -203,7 +203,7 @@ struct Services : QObject {
 ProductionServices production_services() {
     auto services = std::make_shared<Services>();
     NativeDependencies d;
-    d.request = [services](HttpRequest request, HttpCallbacks callbacks) { return services->request(std::move(request), std::move(callbacks)); };
+    d.request = [services](const HttpRequest& request, const HttpCallbacks& callbacks) { return services->request(request, callbacks); };
     d.open_browser = [](const QUrl& url) { return QDesktopServices::openUrl(url); };
     d.read_record = [services](const RecordKey& key) { return services->read(key); };
     d.write_record = [services](const RecordKey& key, const QByteArray& bytes) { return services->write(key, bytes); };

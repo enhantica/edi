@@ -8,6 +8,7 @@
 // rules unchanged (owner, 2026-09-27); where a rule is shared the function below reproduces it and a
 // parity test holds the two equal.
 
+#include <array>
 #include <functional>
 #include <cstdint>
 #include <optional>
@@ -152,6 +153,47 @@ std::vector<std::string> reflns_threshold_basis_labels();
 void set_reflns_threshold_sigma(ExperimentBase& experiment, std::optional<double> sigma);
 void set_reflns_threshold_basis(ExperimentBase& experiment, std::optional<std::string> basis);
 void set_refine_ls_threshold_sigma(Project& project, std::optional<double> sigma);
+// A single crystal's merge mode and absences setting, checked by crysta's rules (a time-of-flight single crystal
+// merges nothing); empty clears. An excluded region's axis: a single crystal's names `d_spacing` or
+// `sin_theta_over_lambda`, a powder's is empty. Each returns or stores crysta's spelling.
+void set_reflns_merge(ExperimentBase& experiment, std::optional<std::string> mode);
+void set_reflns_absences(ExperimentBase& experiment, std::optional<std::string> absences);
+std::string check_excluded_region_axis(const ExperimentBase& experiment, const std::string& axis);
+// Which measured reflections of a single crystal a fit uses and why: per row its `_refln.include_status` code
+// (`o` used, `x` excluded, `-` absent, `<` below the fit's cutoff), the counts, Rint and R-sigma (none when
+// undefined) and the absences' mean I/su. None for a powder or a single crystal without measured reflections.
+struct ReflectionAdmission {
+    std::vector<char> status;
+    std::vector<bool> excluded_by_indices;
+    // Per row why it is used or not: `used`, `excluded_indices`, `excluded_range`, `absent` or `below_cutoff`.
+    std::vector<std::string> reason;
+    std::size_t measured = 0;
+    std::size_t unique = 0;
+    std::size_t used = 0;
+    std::size_t excluded = 0;
+    std::size_t absent = 0;
+    std::optional<double> r_int;
+    std::optional<double> r_sigma;
+    double absent_mean_i_over_sigma = 0.0;
+};
+std::optional<ReflectionAdmission> reflection_admission(const Project& project, std::size_t experiment);
+// The class an h k l of single crystal `experiment` belongs to under its merge mode, as the admission groups and
+// excludes by: the indices themselves without merging, one key for all equivalents with a merged mode. Throws when
+// the experiment is not in the project or its structure is missing.
+std::array<int, 3> reflection_class(const Project& project, std::size_t experiment, const std::array<int, 3>& hkl);
+// The factor that brings an experiment's calculation to its data's level, every phase scale multiplied by it and
+// the background held (crysta's common scale: a powder's peak height above its baseline, a single crystal's
+// least squares); none without one. apply_common_scale first gives a powder without background points one point at
+// the measured baseline (never replacing a background, never in automatic mode), then multiplies the enabled phase
+// scales by the factor; it reports whether it scaled, whether it started the background, and how well the
+// calculated and measured peaks line up (a powder's overlap, 1 when they coincide).
+struct CommonScaleOutcome {
+    bool applied = false;
+    bool background_started = false;
+    std::optional<double> overlap;
+};
+std::optional<double> common_scale_factor(const Project& project, std::size_t experiment);
+CommonScaleOutcome apply_common_scale(Project& project, std::size_t experiment);
 // A simulated single crystal's resolution limit: above 0 and finite, on a constant-wavelength
 // single crystal without measured reflections; empty clears. Its reach is checked when it is calculated.
 void set_sin_theta_over_lambda_max(ExperimentBase& experiment, std::optional<double> limit);
@@ -161,8 +203,8 @@ void set_sin_theta_over_lambda_max(ExperimentBase& experiment, std::optional<dou
 // window 0.5 to 10 angstrom through the instrument, with 1000 points; a measured pattern's range is its own. No
 // step for a single point or an uneven grid.
 struct PdCalculationRange {
-    double min;
-    double max;
+    double min = 0.0;
+    double max = 0.0;
     std::optional<double> step;
 };
 enum class PdRangeValue { Min, Max, Step };

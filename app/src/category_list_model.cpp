@@ -15,7 +15,7 @@ CategoryPresentation category_presentation(const QString& id) {
     // Titles and icons are crysta's dictionary's, through the core's bridge, which the report reads too; the app keeps
     // only where a category sits: the Basic or the Extras group, and whether it also shows in Extras.
     struct Place {
-        T tier;
+        T tier{};
         bool extras_part = false;
         bool needs_data = false;
         bool extras_needs_data = false;
@@ -176,7 +176,7 @@ void CategoryListModel::setCategories(const std::vector<edi::Category>& categori
         return -1;
     };
     for (int i = static_cast<int>(rows_.size()) - 1; i >= 0; --i) {
-        if (find(target, rows_[i].id, 0) < 0) {
+        if (find(target, rows_[static_cast<std::size_t>(i)].id, 0) < 0) {
             beginRemoveRows(QModelIndex(), i, i);
             rows_.erase(rows_.begin() + i);
             endRemoveRows();
@@ -199,7 +199,7 @@ void CategoryListModel::setCategories(const std::vector<edi::Category>& categori
             endInsertRows();
         } else {
             beginMoveRows(QModelIndex(), found, found, QModelIndex(), row);
-            const Row moved = rows_[found];
+            const Row moved = rows_[static_cast<std::size_t>(found)];
             rows_.erase(rows_.begin() + found);
             rows_.insert(rows_.begin() + row, moved);
             endMoveRows();

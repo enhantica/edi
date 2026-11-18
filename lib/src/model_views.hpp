@@ -151,9 +151,15 @@ struct TofPdDataRangeNode : PdDataRangeNode {};
 struct ScReflnView {
     edi::ExperimentBase* experiment;
     explicit ScReflnView(edi::ExperimentBase* experiment) : experiment(experiment) {}
-    const edi::ReflnDataBase& measured() const { return *experiment->reflections; }
+    const edi::ReflnDataBase& measured() const { return rows(); }
     const edi::ReflnDataBase& calculated() const {
         experiment->ensure_computed();
+        return rows();
+    }
+    const edi::ReflnDataBase& rows() const {
+        if (!experiment->reflections.has_value()) {
+            throw std::logic_error("experiment '" + experiment->name + "' holds no reflections");
+        }
         return *experiment->reflections;
     }
 };

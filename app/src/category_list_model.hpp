@@ -81,7 +81,7 @@ class CategoryListModel : public QAbstractListModel {
 // `extras_part`: a Basic category that also has a group of its own name in Extras, for its settings
 // (`peak`'s `cutoff_fwhm`).
 struct CategoryPresentation {
-    CategoryListModel::Tier tier;
+    CategoryListModel::Tier tier{};
     QString title;
     QString icon;
     bool extras_part = false;

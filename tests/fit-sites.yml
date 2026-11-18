@@ -327,6 +327,11 @@ sites:
   - file: tests/system/py/test_joint_series_derived.py
     case: constraint-covariance
 
+  - file: tests/integration/py/test_fitting_corpus_witness.py
+    case: single-crystal-cwl-tbti-basic
+    why: Fit a byte-identical copy of the pinned measured project.
+    assertion_feed: Independent FullProf structure factors and weighted normal equations from the corpus reference.
+
   - file: tests/system/py/test_cli_performance_options.py
     case: cosio-d20-scan-3f
     why: Both real CLI hosts fit disposable copies of the pinned three-file scan to exercise process performance selections.

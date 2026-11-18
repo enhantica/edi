@@ -639,7 +639,6 @@ TEST_CASE("E09-T55 experiment schema mutations fail at their declared boundary")
                                                "_background_estimate.method",
                                                "_data.two_theta",
                                                "_data_range.two_theta_min",
-                                               "_excluded_region.start",
                                                "_absorption.type",
                                                "_preferred_orientation.structure_id"};
     for (const bool tof : {false, true}) {
@@ -673,6 +672,20 @@ TEST_CASE("E09-T55 experiment schema mutations fail at their declared boundary")
                 "input for either beam mode");
             CHECK_MESSAGE(linked.experiment_type.beam_mode == single.experiment_type.beam_mode,
                           "a reflection-file link must preserve its declared beam mode");
+        }
+        for (const bool loop : {false, true}) {
+            const std::string range = loop ? "loop_\n_excluded_region.start\n_excluded_region."
+                                             "end\n_excluded_region.axis\n1.25 2.75 d_spacing\n"
+                                           : "_excluded_region.start 1.25\n_excluded_region.end "
+                                             "2.75\n_excluded_region.axis d_spacing\n";
+            const auto admitted = edi::experiment_from_edi_text(clean + range);
+            CHECK_MESSAGE(admitted.excluded_regions.size() == 1,
+                          "Scalar and loop single-crystal exclusions must not disappear");
+            if (admitted.excluded_regions.size() != 1) continue;
+            CHECK_MESSAGE((admitted.excluded_regions[0]->first == 1.25 &&
+                           admitted.excluded_regions[0]->second == 2.75 &&
+                           admitted.excluded_regions[0]->axis == "d_spacing"),
+                          "Single-crystal d exclusions retain their bounds for either beam mode");
         }
         for (const auto& tag : powder_tags) {
             for (const bool loop : {false, true}) {

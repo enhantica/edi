@@ -246,6 +246,8 @@ installer-check = "pixi run --manifest-path tools/installer/pixi.toml python -m 
 # and runs each step on that build: app-verify (and the verify chains that include it) through pixi's shared
 # dependency, each CI app job through `pixi run --skip-deps` (as the owner corrected it on 2026-09-29).
 app-build = { cmd = ["bash", "tools/ci/app-build.sh"]  }
+# moc for every app target, so clang-tidy can read each source that includes its own .moc (cpp-tidy).
+app-moc = { cmd = ["bash", "tools/ci/app-moc.sh"] }
 app-test-assistant-groups = { cmd = "cmake --build build/app --target assistant_real_owner_probe -j 4 && python -m pytest tests/fixtures/assistant_fixes/check_grouped_flags.py --noconftest -o addopts= -q", depends-on = ["app-build"] }
 app-test-assistant-lifetime = { cmd = "cmake --build build/app --target edi_assistant_lifetime_host -j 4 && python -m pytest tests/fixtures/assistant_fixes/check_process_lifetime.py --noconftest -o addopts= -q", depends-on = ["app-build"] }
 app-test-skill-targets = { cmd = "python tools/checks/assistant_skill_targets.py && python -m pytest tests/unit/py/test_assistant_skill_targets.py --noconftest -o addopts= -q" }
@@ -309,8 +311,27 @@ wasm-build = { cmd = ["bash", "tools/ci/wasm-build.sh"], depends-on = [{ task = 
 # -e app app-test`, `app-ui-test` and `app-ui-bless` still run by hand.
 app-gates = { depends-on = ["app-test-scan-lines", "app-test-scan-refresh", { task = "app-build", environment = "app" }, "app-lint", "app-format-check"] }
 
+# The C++ static checks (edi ADR-0093): clang-tidy at one version on every platform, the version crysta's code-quality
+# rules pin, and cppcheck. They read the compile commands of the app's build tree (build/app), so this environment
+# holds only the tools.
+[feature.cpp-lint.dependencies]
+clang-tools = "==22.1.8"
+# clang's builtin headers (stddef.h and the rest), which clang-tidy reads.
+clang-22 = "==22.1.8"
+cppcheck = "==2.21.0"
+python = "3.14.*"  # run-clang-tidy is a Python script
+
+# The checks run in the Linux and macOS app jobs; conda-forge has no Windows bash.
+[feature.cpp-lint.target.unix.dependencies]
+bash = ">=5.2"
+
+[feature.cpp-lint.tasks]
+cpp-tidy = { cmd = ["bash", "tools/ci/cpp-tidy.sh"] }
+cpp-cppcheck = { cmd = ["bash", "tools/ci/cpp-cppcheck.sh"] }
+
 [environments]
 app = ["app"]
+cpp-lint = { features = ["cpp-lint"], no-default-feature = true }
 
 [pypi-dependencies]
 easydiffraction = { path = ".", editable = true }

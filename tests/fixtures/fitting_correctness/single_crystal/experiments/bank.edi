@@ -1,0 +1,23 @@
+data_bank
+_edi.schema_version 3
+_experiment_type.sample_form "single crystal"
+_experiment_type.radiation_probe neutron
+_experiment_type.scattering_type bragg
+_experiment_type.beam_mode "constant wavelength"
+_scattering_source.neutron_scattering_length sears1992
+_instrument.setup_wavelength 0.8
+_extinction.type none
+loop_
+_linked_structure.structure_id
+_linked_structure.scale
+phase 2.3
+loop_
+_refln.index_h
+_refln.index_k
+_refln.index_l
+_refln.intensity_meas
+_refln.intensity_meas_su
+1 0 0 1000 1
+2 0 0 10 1
+2 1 1 14 2
+2 2 0 -2 3

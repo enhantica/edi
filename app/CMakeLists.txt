@@ -276,6 +276,7 @@ qt_add_qml_module(edi_app_module
         qml/Pages/Experiment/AbsorptionGroup.qml
         qml/Pages/Experiment/ExtinctionGroup.qml
         qml/Pages/Experiment/ObservedThresholdRow.qml
+        qml/Pages/Experiment/ReflectionAdmissionRow.qml
         qml/Pages/Experiment/BackgroundGroup.qml
         qml/Pages/Experiment/ExcludedRegionsGroup.qml
         qml/Pages/Experiment/ExperimentPage.qml

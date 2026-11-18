@@ -3,6 +3,7 @@
 #include <chrono>
 #include <charconv>
 #include <cmath>
+#include <cstddef>
 #include <filesystem>
 #include <iostream>
 #include <limits>
@@ -244,6 +245,7 @@ void fit(const std::string& source, const std::string& output, bool dry,
 
 }  // namespace
 
+// NOLINTNEXTLINE(bugprone-exception-escape): only libc++'s container growth past max_size() raises length_error here
 int main(int argc, char** argv) {
     // The one message level, on every command (owner record 2026-11-09): taken out of the arguments
     // here, warning when not given.
@@ -253,8 +255,8 @@ int main(int argc, char** argv) {
         const std::string_view argument(argv[index]);
         if (argument == "--log-level" && index + 1 < argc) {
             level = argv[++index];
-        } else if (argument.starts_with("--log-level=")) {
-            level = std::string(argument.substr(12));
+        } else if (constexpr std::string_view prefix = "--log-level="; argument.starts_with(prefix)) {
+            level.assign(argument.begin() + static_cast<std::ptrdiff_t>(prefix.size()), argument.end());
         } else {
             kept.push_back(argv[index]);
         }
@@ -306,8 +308,11 @@ int main(int argc, char** argv) {
                 dry = true;
             } else if (argument == "--output" || argument == "--verbosity" || argument == "--report" ||
                        argument == "--threads" || argument == "--parallel-fits") {
-                if (!inline_value && (++i == argc || std::string_view(argv[i]).starts_with("--"))) {
-                    throw std::invalid_argument("missing value for " + std::string(argument));
+                if (!inline_value) {
+                    ++i;
+                    if (i == argc || std::string_view(argv[i]).starts_with("--")) {
+                        throw std::invalid_argument("missing value for " + std::string(argument));
+                    }
                 }
                 const std::string_view value = inline_value ? *inline_value : argv[i];
                 if (argument == "--threads") {

@@ -65,7 +65,7 @@ inline void complete_result_maximum(QJsonObject& maximum) {
     maximum.insert("code",QLatin1StringView(code.data(),static_cast<qsizetype>(code.size())));
 }
 enum class Type { Text, FitReason, ActionError, ActionField, RecipeField, RecipeReason, RecipeGuidance, Number, Boolean, Object, Array, TextArray, NumberArray };
-struct Field { const char* name; Type type; Role child=Role::Result; };
+struct Field { const char* name = nullptr; Type type = Type::Text; Role child=Role::Result; };
 inline const Field* fields(Role role, std::size_t& count) {
 #define ROWS(...) static constexpr Field rows[]={__VA_ARGS__}; count=std::size(rows); return rows
 #define T(n) Field{n,Type::Text}
@@ -135,7 +135,8 @@ inline const Field* fields(Role role, std::size_t& count) {
     throw std::invalid_argument("Outgoing role is unavailable");
 }
 inline void add(quint64& size, quint64 growth) {
-    if(growth>std::numeric_limits<quint64>::max()-size)throw std::overflow_error("Outgoing byte count overflow");size+=growth;
+    if(growth>std::numeric_limits<quint64>::max()-size)throw std::overflow_error("Outgoing byte count overflow");
+    size+=growth;
 }
 inline quint64 scalar_size(const QJsonValue& value) {
     quint64 size=0;
@@ -193,7 +194,8 @@ inline QJsonValue field_value(const QJsonValue& value,const Field& field,quint64
         if(!value.isArray())throw std::invalid_argument("Outgoing rows have an invalid native type");
         QJsonArray result;add(size,2);bool comma=false;
         for(const auto& item:value.toArray()) {
-            if(comma)add(size,1);comma=true;
+            if(comma)add(size,1);
+            comma=true;
             const auto projected=field.type==Type::TextArray?field_value(item,Field{"",Type::Text},size,materialize):
                 field.type==Type::NumberArray?field_value(item,Field{"",Type::Number},size,materialize):walk(item,field.child,size,materialize);
             if(materialize)result.append(projected);
@@ -243,7 +245,8 @@ inline QJsonValue walk(const QJsonValue& value,Role role,quint64& size,bool mate
         if(top && QLatin1StringView(field.name)==QLatin1StringView("schema"))continue;
         const auto member=source.constFind(QLatin1StringView(field.name));
         if(member==source.constEnd())continue;
-        if(comma)add(size,1);comma=true;
+        if(comma)add(size,1);
+        comma=true;
         // All field keys are fixed ASCII identifiers with no JSON escapes.
         add(size,std::char_traits<char>::length(field.name)+3);
         const auto projected=field_value(*member,field,size,materialize);
@@ -264,7 +267,7 @@ inline QJsonValue walk(const QJsonValue& value,Role role,quint64& size,bool mate
             // Only app-owned closed first-gate codes survive. Unknown source
             // messages/codes keep the original generic status projection.
             for(std::size_t i=static_cast<std::size_t>(ResultCode::RequestStale);i<result_codes.size();++i)
-                if(source.value("code")==QLatin1StringView(result_codes[i].data())) {code=result_codes[i].data();break;}
+                if(source.value("code")==QLatin1StringView(result_codes[i].data(),static_cast<qsizetype>(result_codes[i].size()))) {code=result_codes[i].data();break;}
         }
         if(code) {if(comma)add(size,1);add(size,sizeof("\"code\":")-1+std::char_traits<char>::length(code)+2);if(materialize)result.insert("code",QLatin1StringView(code));}
     }

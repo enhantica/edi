@@ -14583,6 +14583,66 @@ var frozen = {
       }
     },
     {
+      "id": "sc-neut-cwl_tb2ti2o7-heidi_exclusions",
+      "path": "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_exclusions/project",
+      "metadata": {
+        "_edi.schema_version": {
+          "value": 3.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_metadata.name": "sc-neut-cwl_tb2ti2o7-heidi_exclusions",
+        "_metadata.title": "Tb₂Ti₂O₇ [Fd-3m] · HEiDi @ MLZ (FRM II)",
+        "_metadata.description": "Single crystal · Reflections excluded by indices and by d · Scale-only fit",
+        "_metadata.created": "22 Oct 2026 18:00:00",
+        "_metadata.last_modified": "22 Oct 2026 18:00:00",
+        "_metadata.timestamp": "?"
+      },
+      "analysis": {
+        "_edi.schema_version": {
+          "value": 3.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_fitting_mode.type": "single"
+      },
+      "structures": [
+        {
+          "name": "tb2ti2o7",
+          "atoms": 4,
+          "cellA": 10.13,
+          "displayCell": [
+            10.13,
+            10.13,
+            10.13,
+            90.0,
+            90.0,
+            90.0
+          ],
+          "spaceGroup": "F d -3 m",
+          "cell": [
+            10.13,
+            10.13,
+            10.13,
+            90.0,
+            90.0,
+            90.0
+          ]
+        }
+      ],
+      "experiments": [
+        "heidi"
+      ],
+      "datasets": [],
+      "loaderWarning": "",
+      "files": {
+        "project.edi": "7930faa350fbd4486a1743f00b576009a4c0a96dd01d60c0610790293388ea69",
+        "structures/tb2ti2o7.edi": "e2752395f4a64fd69d6bd481bdf6895a36a09248a37e7f0ba3e6c33a0785a0df",
+        "experiments/heidi.edi": "9996b5c1420af1e4488488153ceadb7108e8ac1d7bfcd943e69f64ba81df1925",
+        "analysis/analysis.edi": "bbee6c124a9efa78411d31fb1eef11495ba2eadbd7172a36b30905f1484b9876"
+      }
+    },
+    {
       "id": "sc-neut-cwl_tb2ti2o7-heidi_isotropic-extinction",
       "path": "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_isotropic-extinction/project",
       "metadata": {
@@ -274357,6 +274417,7113 @@ var frozen = {
             },
             "intensity_meas_su": {
               "value": 7.78,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          }
+        ]
+      }
+    },
+    {
+      "project": "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_exclusions/project",
+      "experiment": "heidi",
+      "sha256": "9996b5c1420af1e4488488153ceadb7108e8ac1d7bfcd943e69f64ba81df1925",
+      "singleCrystal": true,
+      "mode": "cwl",
+      "peakType": "",
+      "scalars": {
+        "_edi.schema_version": {
+          "value": 3.0,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_experiment_type.sample_form": "single crystal",
+        "_experiment_type.beam_mode": "constant wavelength",
+        "_experiment_type.radiation_probe": "neutron",
+        "_experiment_type.scattering_type": "bragg",
+        "_experiment_type.dimensionality": "1d",
+        "_experiment_type.polarisation": "unpolarised",
+        "_instrument.name": "HEiDi",
+        "_instrument.facility": "MLZ (FRM II)",
+        "_scattering_source.neutron_scattering_length": "sears1992",
+        "_calculator.type": "crysta",
+        "_instrument.setup_wavelength": {
+          "value": 0.793,
+          "free": false,
+          "uncertainty": 0.0
+        },
+        "_extinction.type": "none",
+        "_reflns.merge": "none",
+        "_reflns.absences": "exclude"
+      },
+      "loops": {
+        "excluded_region": [
+          {
+            "id": {
+              "value": 1.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "start": {
+              "value": 0.85,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "end": {
+              "value": 0.9,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "axis": "d_spacing"
+          }
+        ],
+        "linked_structure": [
+          {
+            "structure_id": "tb2ti2o7",
+            "scale": {
+              "value": 3.653,
+              "free": true,
+              "uncertainty": null
+            }
+          }
+        ],
+        "refln": [
+          {
+            "id": {
+              "value": 1.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 1.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 1.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 1.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 194.5677,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 2.3253,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 2.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 2.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 2.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 0.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 22.6319,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 1.1233,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 3.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 3.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 1.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 1.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 99.2917,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 2.562,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 4.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 2.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 2.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 2.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 219.2877,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 3.2522,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 5.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 4.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 0.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 0.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 1366.7377,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 31.0766,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 6.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 3.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 3.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 1.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 1381.2404,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 24.4182,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 7.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 4.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 2.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 2.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 272.4665,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 4.2351,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 8.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 5.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 1.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 1.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 991.5085,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 19.2015,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 9.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 3.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 3.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 3.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 504.5874,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 7.2552,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 10.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 4.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 4.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 0.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 2167.6858,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 37.9609,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 11.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 5.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 3.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 1.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 369.5253,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 6.1847,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 12.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 4.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 4.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 2.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 6.2608,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 2.8933,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 13.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 6.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 2.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 0.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 339.3607,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 5.1923,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 14.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 5.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 3.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 3.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 20.2404,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 2.4298,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 15.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 6.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 2.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 2.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 214.3519,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 4.0421,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 16.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 4.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 4.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 4.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 375.6302,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 6.4494,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 17.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 7.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 1.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 1.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 838.4976,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 10.5859,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 18.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 5.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 5.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 1.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 55.1172,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 5.8025,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 19.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 6.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 4.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 2.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 33.0758,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 1.73,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 20.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 5.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 5.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 3.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 764.9341,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 9.6838,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 21.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 7.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 3.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 1.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 73.8851,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 5.6586,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 22.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 8.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 0.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 0.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 1910.4371,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 35.8678,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 23.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 7.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 3.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 3.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 2395.7312,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 49.6513,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 24.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 6.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 4.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 4.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 9.8576,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 3.0133,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 25.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 8.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 2.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 2.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 1207.8987,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 15.3849,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 26.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 6.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 6.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 0.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 1217.1985,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 14.023,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 27.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 7.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 5.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 1.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 324.4044,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 6.9411,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 28.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 5.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 5.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 5.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 2023.2412,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 19.0822,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 29.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 6.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 6.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 2.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 172.7699,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 5.0273,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 30.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 8.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 4.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 0.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 119.736,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 4.1954,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 31.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 7.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 5.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 3.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 1082.9794,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 14.7933,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 32.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 9.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 1.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 1.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 123.3764,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 9.8873,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 33.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 6.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 6.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 4.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 656.7704,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 10.7445,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 34.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 9.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 3.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 1.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 130.3383,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 4.7733,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 35.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 8.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 4.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 4.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 570.3704,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 7.6292,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 36.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 9.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 3.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 3.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 1398.5513,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 18.2014,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 37.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 7.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 7.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 1.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 1685.6763,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 14.9738,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 38.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 7.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 5.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 5.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 107.9908,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 12.4997,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 39.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 10.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 2.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 0.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 914.1141,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 9.7104,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 40.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 8.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 6.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 2.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 258.0833,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 9.2406,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 41.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 7.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 7.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 3.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 588.8738,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 10.5555,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 42.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 9.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 5.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 1.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 1016.6021,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 15.1481,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 43.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 6.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 6.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 6.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 215.3041,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 5.8482,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 44.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 10.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 2.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 2.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 165.5683,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 6.7319,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 45.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 9.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 5.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 3.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 263.2697,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 6.1767,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 46.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 10.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 4.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 2.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 399.1649,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 7.1967,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 47.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 11.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 1.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 1.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 406.6985,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 7.741,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 48.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 7.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 7.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 5.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 9.0443,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 5.724,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 49.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 8.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 8.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 0.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 232.3389,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 6.1342,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 50.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 11.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 3.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 1.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 815.0747,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 11.7547,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 51.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 9.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 7.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 1.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 645.9863,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 10.2892,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 52.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 9.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 5.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 5.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 105.5177,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 9.3831,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 53.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 10.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 6.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 0.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 2129.5383,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 32.0582,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 54.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 9.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 7.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 3.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 24.8305,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 3.9317,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 55.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 11.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 3.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 3.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 111.9623,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 3.9825,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 56.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 10.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 6.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 2.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 178.0339,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 6.2671,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 57.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 12.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 0.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 0.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 355.9608,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 7.7594,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 58.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 8.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 8.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 4.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 451.119,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 9.247,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 59.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 7.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 7.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 7.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 2409.2754,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 31.1082,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 60.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 11.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 5.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 1.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 36.939,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 14.722,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 61.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 12.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 2.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 2.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 1267.522,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 18.7561,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 62.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 10.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 6.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 4.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 1228.7996,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 18.9536,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 63.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 9.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 7.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 5.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 329.1074,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 7.5867,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 64.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 11.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 5.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 3.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 224.7773,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 6.8633,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 65.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 12.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 4.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 0.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 883.0682,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 16.7404,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 66.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 9.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 9.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 1.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 60.6822,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 3.0033,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 67.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 8.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 8.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 6.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 12.822,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 4.685,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 68.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 12.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 4.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 2.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 5.0893,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 4.852,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 69.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 10.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 8.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 2.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 15.7286,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 4.7639,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 70.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 11.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 5.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 5.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 1284.8992,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 17.9016,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 71.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 13.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 1.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 1.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 91.8083,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 11.1508,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 72.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 9.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 9.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 3.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 114.64,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 11.1921,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 73.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 11.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 7.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 1.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 11.3935,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 12.2606,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 74.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 10.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 6.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 6.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 107.1723,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 5.1578,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 75.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 12.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 4.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 4.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 25.885,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 4.0867,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 76.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 9.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 7.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 7.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 1452.166,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 21.8338,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 77.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 13.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 3.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 1.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 1245.0792,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 14.7605,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 78.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 11.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 7.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 3.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 1511.823,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 25.7585,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 79.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 10.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 8.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 4.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 3.71,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 5.2924,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 80.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 12.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 6.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 2.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 329.076,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 7.9567,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 81.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 13.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 3.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 3.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 285.8376,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 8.01,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 82.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 9.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 9.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 5.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 992.9638,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 18.5608,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 83.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 8.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 8.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 8.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 288.2571,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 8.2375,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 84.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 13.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 5.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 1.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 194.837,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 8.1567,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 85.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 11.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 7.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 5.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 414.2435,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 16.7881,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 86.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 12.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 6.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 4.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 7.2439,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 6.2567,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 87.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 10.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 10.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 0.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 2714.7458,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 39.4196,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 88.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 10.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 8.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 6.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 343.7899,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 16.235,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 89.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 14.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 2.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 0.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 472.1022,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 16.35,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 90.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 13.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 5.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 3.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 22.6495,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 6.3833,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 91.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 11.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 9.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 1.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 467.5958,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 11.3159,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 92.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 14.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 2.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 2.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 135.5432,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 5.6885,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 93.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 10.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 10.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 2.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 111.2981,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 5.0295,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 94.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 12.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 8.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 0.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 143.5622,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 5.6917,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 95.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 11.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 9.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 3.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 624.4188,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 12.4461,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 96.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 9.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 9.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 7.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 533.15,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 11.2212,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 97.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 12.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 8.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 2.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 10.4581,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 6.7,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 98.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 10.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 10.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 4.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 2155.8782,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 37.8372,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 99.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 12.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 6.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 6.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 7.6967,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 17.7236,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 100.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 14.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 4.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 2.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 105.0912,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 17.4296,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 101.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 13.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 5.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 5.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 587.6577,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 13.573,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 102.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 11.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 7.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 7.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 152.2555,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 8.7189,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 103.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 13.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 7.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 1.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 17.2751,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 9.38,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 104.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 12.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 8.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 4.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 2.808,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 6.3706,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 105.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 13.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 7.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 3.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 2101.8381,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 32.1411,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 106.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 15.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 1.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 1.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 21.4748,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 16.6965,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 107.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 11.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 9.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 5.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 16.9701,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 17.7952,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 108.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 10.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 8.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 8.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 3.9106,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 6.964,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 109.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 14.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 4.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 4.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 6.3243,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 7.0625,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 110.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 14.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 6.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 0.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 1277.8949,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 16.08,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 111.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 15.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 3.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 1.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 173.7919,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 6.8503,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 112.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 10.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 10.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 6.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 148.4994,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 5.8123,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 113.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 14.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 6.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 2.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 96.6851,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 4.7807,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 114.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 13.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 7.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 5.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 743.1557,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 16.0757,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 115.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 11.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 11.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 1.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 253.0292,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 14.1009,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 116.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 15.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 3.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 3.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 801.3929,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 17.95,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 117.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 9.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 9.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 9.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 9.293,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 11.9304,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 118.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 12.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 8.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 6.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 5.7886,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 6.4533,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 119.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 14.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 6.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 4.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 799.8103,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 10.113,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 120.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 12.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 10.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 2.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 16.6109,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 6.3233,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 121.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 15.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 5.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 1.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 1196.2526,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 20.6643,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 122.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 13.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 9.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 1.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 77.6526,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 11.5775,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 123.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 11.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 11.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 3.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 0.1226,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 4.688,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 124.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 11.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 9.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 7.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 36.2448,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 3.7426,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 125.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 16.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 0.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 0.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 2281.319,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 47.996,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 126.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 13.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 9.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 3.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 1012.6861,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 19.7955,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 127.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 15.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 5.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 3.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 73.0685,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 14.1163,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 128.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 12.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 10.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 4.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 4.7657,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 7.03,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 129.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 10.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 10.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 8.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 708.9425,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 20.5846,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 130.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 14.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 8.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 2.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 66.2456,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 8.0414,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 131.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 16.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 2.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 2.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 355.8104,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 8.7275,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 132.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 13.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 7.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 7.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 338.0038,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 10.7433,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 133.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 11.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 11.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 5.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 460.0088,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 18.0683,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 134.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 14.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 6.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 6.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 142.0896,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 5.9235,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 135.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 16.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 4.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 0.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 484.0079,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 12.2049,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 136.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 15.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 7.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 1.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 296.3522,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 7.405,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 137.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 15.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 5.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 5.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 135.249,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 6.64,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 138.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 13.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 9.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 5.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 67.1565,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 6.2286,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 139.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 16.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 4.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 2.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 0.413,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 6.02,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 140.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 14.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 8.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 4.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 0.6195,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 5.9567,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 141.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 12.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 10.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 6.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 156.6047,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 6.0433,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 142.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 11.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 9.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 9.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 406.6829,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 10.9233,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 143.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 15.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 7.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 3.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 10.0451,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 11.6751,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 144.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 16.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 4.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 4.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 889.3516,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 28.0052,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 145.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 12.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 12.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 0.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 48.4913,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 10.0438,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 146.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 13.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 11.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 1.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 515.3911,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 12.1189,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 147.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 11.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 11.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 7.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 540.725,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 12.2186,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 148.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 17.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 1.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 1.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 547.7704,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 20.6454,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 149.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 12.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 12.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 2.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 26.2629,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 8.6633,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 150.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 14.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 10.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 0.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 2187.1519,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 30.0916,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 151.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 16.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 6.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 2.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 7.7465,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 19.6828,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 152.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 14.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 8.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 6.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 64.3002,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 9.41,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 153.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 13.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 9.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 7.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 11.6539,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 8.6633,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 154.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 17.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 3.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 1.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 50.185,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 8.083,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 155.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 15.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 7.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 5.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 374.3065,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 8.778,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 156.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 13.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 11.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 3.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 30.6726,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 8.108,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 157.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 14.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 10.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 2.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 109.6739,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 5.0606,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 158.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 10.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 10.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 10.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 100.755,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 5.66,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 159.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 12.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 12.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 4.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 504.4615,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 14.3566,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 160.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 17.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 3.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 3.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 1812.5647,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 373.5117,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 161.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 15.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 9.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 1.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 2.6081,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 18.5729,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 162.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 12.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 10.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 8.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 13.5403,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 10.2359,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 163.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 16.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 6.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 4.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 4.9083,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 8.09,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 164.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 14.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 10.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 4.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 1167.5333,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 17.3067,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 165.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 13.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 11.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 5.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 218.7551,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 14.8851,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 166.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 15.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 9.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 3.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 267.0351,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 15.4758,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 167.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 17.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 5.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 1.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 125.0758,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 5.4433,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 168.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 16.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 8.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 0.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 471.4993,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 49.8891,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 169.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 15.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 7.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 7.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 651.6143,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 15.2539,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 170.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 17.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 5.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 3.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 699.3832,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 19.8546,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 171.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 11.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 11.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 9.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 196.8183,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 9.834,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 172.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 16.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 8.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 2.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 17.5671,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 8.5743,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 173.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 14.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 8.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 8.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 9.327,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 7.8625,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 174.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 12.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 12.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 6.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 6.8138,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 9.11,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 175.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 16.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 6.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 6.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 200.7956,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 7.88,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 176.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 18.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 2.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 0.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 24.2069,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 10.3216,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 177.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 15.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 9.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 5.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 1035.1714,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 159.7362,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 178.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 13.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 9.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 9.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 118.5448,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 15.4553,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 179.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 14.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 10.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 6.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 69.1974,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 7.3238,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 180.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 18.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 2.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 2.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 70.071,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 11.7222,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 181.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 16.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 8.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 4.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 34.1798,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 8.0556,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 182.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 17.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 7.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 1.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 1108.8405,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 51.5627,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 183.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 17.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 5.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 5.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 39.7098,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 15.3006,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 184.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 13.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 11.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 7.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 1245.7976,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 17.3057,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 185.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 13.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 13.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 1.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 790.6947,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 16.8371,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 186.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 14.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 12.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 2.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 121.2231,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 8.75,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 187.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 18.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 4.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 2.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 46.5794,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 9.905,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 188.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 12.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 10.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 10.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 632.8853,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 20.8124,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 189.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 13.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 13.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 3.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 252.1584,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 9.3625,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 190.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 17.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 7.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 3.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 321.9037,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 13.8123,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 191.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 15.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 11.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 1.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 340.2429,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 11.2167,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 192.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 12.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 12.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 8.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 408.8684,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 15.0235,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 193.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 15.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 11.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 3.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 230.5712,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 8.1633,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 194.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 15.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 9.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 7.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 211.3878,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 8.11,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 195.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 16.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 8.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 6.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 0.951,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 9.3733,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 196.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 14.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 12.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 4.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 3.2415,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 8.4987,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 197.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 18.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 4.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 4.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 11.4682,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 9.05,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 198.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 14.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 10.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 8.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 478.7053,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 12.6775,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 199.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 18.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 6.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 0.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 386.9393,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 9.9513,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 200.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 16.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 10.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 2.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 96.3516,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 6.4755,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 201.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 17.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 7.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 5.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 9.6315,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 10.75,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 202.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 19.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 1.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 1.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 376.4738,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 11.215,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 203.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 13.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 13.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 5.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 10.4966,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 10.158,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 204.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 11.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 11.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 11.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 112.0977,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 6.675,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 205.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 18.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 6.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 2.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 85.2351,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 14.2239,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 206.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 19.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 3.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 1.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 305.3999,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 10.8567,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 207.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 17.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 9.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 1.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 359.4543,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 11.5071,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 208.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 13.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 11.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 9.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 427.539,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 11.28,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 209.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 15.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 11.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 5.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 4.1747,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 6.7067,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 210.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 16.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 10.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 4.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 5.4459,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 10.5467,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 211.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 18.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 6.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 4.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 59.6674,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 9.1117,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 212.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 14.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 12.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 6.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 43.3857,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 9.2075,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 213.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 19.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 3.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 3.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 23.8039,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 9.1867,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 214.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 17.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 9.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 3.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 48.7587,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 7.7333,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 215.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 16.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 8.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 8.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 29.3063,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 12.6552,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 216.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 17.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 7.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 7.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 1601.5154,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 628.8915,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 217.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 13.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 13.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 7.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 1176.0896,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 414.6018,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 218.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 19.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 5.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 1.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 0.8334,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 20.4207,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 219.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 15.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 9.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 9.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 10.9864,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 8.065,
+              "free": false,
+              "uncertainty": 0.0
+            }
+          },
+          {
+            "id": {
+              "value": 220.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_h": {
+              "value": 12.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_k": {
+              "value": 12.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "index_l": {
+              "value": 10.0,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas": {
+              "value": 14.4074,
+              "free": false,
+              "uncertainty": 0.0
+            },
+            "intensity_meas_su": {
+              "value": 11.38,
               "free": false,
               "uncertainty": 0.0
             }
