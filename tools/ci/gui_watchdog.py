@@ -7,16 +7,19 @@
 The trace is the app's `ui-probe:` events (app/src/ui_probe.hpp), one JSON object per line,
 all on one monotonic millisecond clock: `clock` (tick_ms), `begin` and `complete` around the
 scenario, a `tick` at every delivery of the GUI thread's 10 ms timer, `step` per measured step,
-`tool-begin`/`tool-end` (matched by `id`) around the demo driver's own grabs and image writes,
-and in a control run `block-begin`/`block-end` around the injected block.
+`measurement-enter`/`measurement-leave` (matched by `id` and `callback`, on the GUI thread)
+around the demo driver's own window grabs and image comparisons, and in a control run
+`block-begin`/`block-end` around the injected block. Every event names its `thread`.
 
 Each interval between two ticks that meets the scenario's interval counts as its length, less
 the time it shares with the driver's work, less the nominal tick; more than the limit (100 ms)
-fails. The ticks must bracket the scenario's whole interval. With a contract
-(tests/fixtures/ui_responsiveness/contract.json by default, when present) the steps must be the
-scenario's listed steps, in order. --control checks a control run: it must hold one block on
-the GUI thread inside the measured interval, and the block's gap then fails the check as any
-other would.
+fails. A measurement span is the driver's work only while the GUI thread did nothing else: any
+other event on the GUI thread inside it (a tick included; an event naming no thread counts as
+the GUI thread's) leaves it counted. The ticks must bracket the scenario's whole interval. With
+a contract (tests/fixtures/ui_responsiveness/contract.json by default, when present) the steps
+must be the scenario's listed steps, in order. --control checks a control run: it must hold one
+block on the GUI thread inside the measured interval, a gap over the limit must contain that
+whole block, and the check then fails on it as on any other.
 
 Exit status: 0 within the limit, 1 a gap over it, 2 a trace that is invalid or incomplete.
 --report prints and exits 0 whatever it finds, for a baseline. Every refusal names its cause.
@@ -81,42 +84,59 @@ def interval(events: list[dict], scenario: str) -> tuple[float, float]:
     return start, end
 
 
-def tool_intervals(events: list[dict]) -> list[tuple[float, float]]:
-    """The driver's own work, as matched, non-overlapping begin and end times."""
-    tools, open_tools = [], {}
+def tool_intervals(events: list[dict], gui: object) -> list[tuple[float, float]]:
+    """The driver's own work: matched measurement spans with no other GUI-thread event inside."""
+    spans, open_spans = [], {}
     for event in events:
-        if event['event'] == 'tool-begin':
-            if open_tools:
-                raise InvalidTraceError("the driver's work intervals overlap")
-            open_tools[event.get('id')] = event['t_ms']
-        elif event['event'] == 'tool-end':
-            if event.get('id') not in open_tools:
+        kind = event['event']
+        if kind == 'measurement-enter':
+            if open_spans:
+                raise InvalidTraceError("the driver's measurement spans overlap")
+            if event.get('thread') != gui:
+                raise InvalidTraceError('a measurement span is not on the GUI thread')
+            open_spans[event.get('id'), event.get('callback')] = event['t_ms']
+        elif kind == 'measurement-leave':
+            key = (event.get('id'), event.get('callback'))
+            if key not in open_spans or event.get('thread') != gui:
                 raise InvalidTraceError(
-                    f'a tool-end without its tool-begin (id {event.get("id")})'
+                    f'a measurement-leave without its enter (id {event.get("id")})'
                 )
-            tools.append((open_tools.pop(event.get('id')), event['t_ms']))
-    if open_tools:
-        raise InvalidTraceError('a tool-begin without its tool-end')
-    return tools
+            spans.append((open_spans.pop(key), event['t_ms']))
+    if open_spans:
+        raise InvalidTraceError('a measurement-enter without its leave')
+    excluded = []
+    for t0, t1 in spans:
+        busy = any(
+            t0 < e['t_ms'] < t1
+            and e['event'] not in {'measurement-enter', 'measurement-leave'}
+            and e.get('thread', gui) == gui
+            for e in events
+        )
+        if not busy:
+            excluded.append((t0, t1))
+    return excluded
 
 
-def has_block(events: list[dict], span: tuple[float, float], gui: object) -> bool:
-    """Whether a control block ran on the GUI thread inside the measured interval."""
+def blocks(
+    events: list[dict], span: tuple[float, float], gui: object
+) -> list[tuple[float, float]]:
+    """The control blocks run on the GUI thread inside the measured interval."""
     start, end = span
+    found = []
     for a, b in zip(events, events[1:], strict=False):
         if a['event'] == 'block-begin' and b['event'] == 'block-end':
             inside = start <= a['t_ms'] and b['t_ms'] <= end
             if inside and a.get('thread') == gui and b.get('thread') == gui:
-                return True
-    return False
+                found.append((a['t_ms'], b['t_ms']))
+    return found
 
 
 def gaps_over(
-    events: list[dict], span: tuple[float, float], tick: float, limit: float
-) -> list[str]:
-    """The counted gaps over the limit, as text."""
+    events: list[dict], span: tuple[float, float], tick: float, limit: float, gui: object
+) -> list[tuple[float, float, str]]:
+    """The tick intervals whose counted gap is over the limit: start, end and a description."""
     start, end = span
-    tools = tool_intervals(events)
+    tools = tool_intervals(events, gui)
     ticks = [e['t_ms'] for e in events if e['event'] == 'tick']
     if not ticks or ticks[0] > start or ticks[-1] < end:
         raise InvalidTraceError(
@@ -129,10 +149,11 @@ def gaps_over(
         shared = sum(max(0.0, min(b, t1) - max(a, t0)) for t0, t1 in tools)
         counted = (b - a) - shared - tick
         if counted > limit:
-            over.append(
-                f'a gap of {counted:.0f} ms ending at {b:.0f} ({b - a:.0f} ms between '
-                f'ticks, {shared:.0f} ms driver work)'
+            text = (
+                f'a gap of {counted:.0f} ms ending at {b:.0f} ({b - a:.0f} ms between ticks, '
+                f'{shared:.0f} ms driver work)'
             )
+            over.append((a, b, text))
     return over
 
 
@@ -152,11 +173,16 @@ def check(
             raise InvalidTraceError(
                 f"the steps are not {scenario}'s listed steps in order: {shown}"
             )
-    if control and not has_block(events, span, gui):
-        raise InvalidTraceError(
-            'the control run holds no block on the GUI thread inside the measured interval'
-        )
-    return gaps_over(events, span, tick, limit)
+    over = gaps_over(events, span, tick, limit, gui)
+    if control:
+        found = blocks(events, span, gui)
+        if not found:
+            raise InvalidTraceError(
+                'the control run holds no block on the GUI thread inside the measured interval'
+            )
+        if not any(a <= b0 and b1 <= b for b0, b1 in found for a, b, _ in over):
+            raise InvalidTraceError('no gap over the limit contains the control block')
+    return [text for _, _, text in over]
 
 
 def main(argv: list[str] | None = None) -> int:

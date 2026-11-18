@@ -232,14 +232,14 @@ void ReportViewModel::requestBuild() {
     dirty_ = false;
     const std::uint64_t generation = ++build_generation_;
     if (building_) {
-        ui_trace("supersede", {{"view", "V12/report"}, {"old", static_cast<double>(generation - 1)},
+        EDI_UI_TRACE("supersede", {{"view", "V12/report"}, {"old", static_cast<double>(generation - 1)},
                                {"replacement", static_cast<double>(generation)}});
     }
     building_ = true;
-    ui_trace("request", {{"view", "V12/report"}, {"generation", static_cast<double>(generation)}});
+    EDI_UI_TRACE("request", {{"view", "V12/report"}, {"generation", static_cast<double>(generation)}});
     const QPointer<ReportViewModel> self(this);
     run_in_background([self, generation, inputs = prepare()]() {
-        ui_trace("build", {{"view", "V12/report"}, {"thread", ui_trace_thread()}, {"scales", true}});
+        EDI_UI_TRACE("build", {{"view", "V12/report"}, {"thread", ui_trace_thread()}, {"scales", true}});
         auto built = std::make_shared<Built>(make(inputs));
         QMetaObject::invokeMethod(
             QCoreApplication::instance(),
@@ -247,7 +247,7 @@ void ReportViewModel::requestBuild() {
                 if (!self || generation != self->build_generation_) {
                     return;  // a newer request replaced it, or the page is gone
                 }
-                ui_trace("deliver", {{"view", "V12/report"}, {"generation", static_cast<double>(generation)}});
+                EDI_UI_TRACE("deliver", {{"view", "V12/report"}, {"generation", static_cast<double>(generation)}});
                 self->building_ = false;
                 if (self->adopt(std::move(*built))) {
                     self->publishModel();

@@ -8,11 +8,13 @@
 #include <QJsonArray>
 #include <QJsonObject>
 #include <QObject>
+#include <QPointer>
 #include <QString>
 #include <QStringList>
 #include <QTemporaryDir>
 #include <QTimer>
 #include <functional>
+#include <mutex>
 #include <optional>
 #include <vector>
 
@@ -148,6 +150,33 @@ class DemoDriver : public QObject {
     QString trace_scenario_;
     int tool_id_ = 0;
     int request_id_ = 0;
+    // The UI trace's witnesses (ui_probe.hpp): the native state each frame shows, and the transition a measured step's
+    // action asked for, open until the state reaches it.
+    struct Expected {
+        int request = 0;
+        QString page;     // the page the action shows
+        int before = -1;  // the selection before a next or previous press
+        QString fit;      // "start", "running", "ended" or "settled"
+        bool open = false;
+    };
+    void trace_watch();
+    QJsonObject trace_state();
+    void trace_action(const QString& action);
+    void trace_frame();
+    QString trace_input();
+    Expected expected_;
+    std::mutex trace_mutex_;          // the render thread reads what the GUI thread publishes for the next frame
+    QJsonArray published_transitions_;  // published since the last frame was synchronised
+    QJsonObject synced_displayed_;      // the last synchronised frame's native state, its transitions and number
+    QJsonArray synced_transitions_;
+    qint64 synced_frame_ = 0;
+    QString input_identity_;
+    QList<QPointer<QQuickItem>> page_tabs_, view_tabs_;
+    int fit_runs_ = 0;
+    bool fit_running_ = false;
+    bool watching_ = false;
+    qint64 nav_base_ = -1;
+    int nav_index_ = 0;
     QElapsedTimer timer_;
     std::vector<double> pre_fit_values_;
     QString loaded_cli_project_;

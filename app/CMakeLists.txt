@@ -346,6 +346,13 @@ add_dependencies(edi_app_module edi_app_build_version)
 qt_add_shaders(edi_app_module "edi_scan_shaders" PREFIX "/edi" FILES shaders/scan_line.vert shaders/scan_line.frag)
 target_include_directories(edi_app_module PUBLIC src ${CMAKE_CURRENT_BINARY_DIR})
 target_compile_definitions(edi_app_module PUBLIC QT_MESSAGELOGCONTEXT)  # file and line in the run log (ADR-0062)
+# The UI observation trace (ADR-0096, app/src/ui_probe.hpp): built into development, test, CI and demo builds, and
+# compiled out of release builds and installed apps, so users carry none of it.
+option(EDI_UI_INSTRUMENTATION "Build the UI observation trace the GUI watchdog reads" ON)
+if(EDI_RELEASE_VERSION OR EDI_DEPLOY_APP)
+    set(EDI_UI_INSTRUMENTATION OFF CACHE BOOL "Build the UI observation trace the GUI watchdog reads" FORCE)
+endif()
+target_compile_definitions(edi_app_module PUBLIC EDI_UI_INSTRUMENTATION=$<IF:$<BOOL:${EDI_UI_INSTRUMENTATION}>,1,0>)
 target_link_libraries(edi_app_module
     PUBLIC Qt6::Quick Qt6::QuickControls2 Qt6::Graphs Qt6::Quick3D Qt6::Concurrent Qt6::Network edi::core
     PRIVATE ${EDI_GUI_BASE_TARGETS} Qt6::CorePrivate Qt6::QuickPrivate Qt6::QmlModelsPrivate)
