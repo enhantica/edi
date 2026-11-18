@@ -15,6 +15,7 @@
 #include <QJsonDocument>
 #include <algorithm>
 #include <exception>
+#include <functional>
 #include <memory>
 #include <string>
 #include <utility>
@@ -175,6 +176,36 @@ ReportViewModel::Built ReportViewModel::make(const Inputs& inputs) {
         experiment.pattern = {};
     }
     built.model = QJsonDocument::fromJson(QByteArray::fromStdString(edi::report_to_json(text))).toVariant().toMap();
+    // A long table's rows leave the QML model: converting thousands of rows to QML values was most of a shown
+    // Report's cost (ADR-0096 rule 2). The table keeps its key and count, and its rows are read from rowsModel.
+    std::function<void(QVariant&, const QString&)> strip = [&](QVariant& value, const QString& path) {
+        if (value.typeId() == QMetaType::QVariantMap) {
+            QVariantMap map = value.toMap();
+            if (auto table = map.find(QStringLiteral("table")); table != map.end() && table->typeId() == QMetaType::QVariantMap) {
+                QVariantMap fields = table->toMap();
+                const QVariantList rows = fields.value(QStringLiteral("rows")).toList();
+                if (rows.size() > 100) {
+                    QStringList joined;
+                    joined.reserve(rows.size());
+                    for (const QVariant& row : rows) joined.append(row.toStringList().join(QChar(0x1f)));
+                    built.rows.insert(path, joined);
+                    fields.insert(QStringLiteral("rows"), QVariantList());
+                    fields.insert(QStringLiteral("rows_key"), path);
+                    fields.insert(QStringLiteral("row_count"), rows.size());
+                    *table = fields;
+                }
+            }
+            for (auto it = map.begin(); it != map.end(); ++it) strip(it.value(), path + QLatin1Char('/') + it.key());
+            value = map;
+        } else if (value.typeId() == QMetaType::QVariantList) {
+            QVariantList list = value.toList();
+            for (qsizetype i = 0; i < list.size(); ++i) strip(list[i], path + QLatin1Char('/') + QString::number(i));
+            value = list;
+        }
+    };
+    QVariant root = built.model;
+    strip(root, QString());
+    built.model = root.toMap();
     // The saved reports are judged against what each format's writer would write now (savedReports).
     const edi::ReportModel* judged = &built.report;
     if (edi::chooses_presentation(built.options)) {
@@ -212,6 +243,8 @@ bool ReportViewModel::adopt(Built&& built) const {
     if (built.json == json_) {
         return false;
     }
+    rows_ = std::move(built.rows);
+    for (auto it = rows_models_.begin(); it != rows_models_.end(); ++it) it.value()->setRows(rows_.value(it.key()));
     json_ = std::move(built.json);
     report_ = std::move(built.report);
     model_ = std::move(built.model);
@@ -257,6 +290,39 @@ void ReportViewModel::requestBuild() {
             },
             Qt::QueuedConnection);
     });
+}
+
+void ReportRowsModel::setRows(const QStringList& rows) {
+    if (rows == rows_) return;
+    beginResetModel();  // the table's row set is replaced by a new build
+    rows_ = rows;
+    endResetModel();
+}
+
+QVariant ReportRowsModel::data(const QModelIndex& index, int role) const {
+    if (role != Qt::UserRole + 1 || !index.isValid() || index.row() >= rows_.size()) return {};
+    return rows_.at(index.row());
+}
+
+QObject* ReportViewModel::rowsModel(const QString& key) {
+    ReportRowsModel*& model = rows_models_[key];
+    if (model == nullptr) {
+        model = new ReportRowsModel(this);
+        model->setRows(rows_.value(key));
+    }
+    return model;
+}
+
+QVariantList ReportViewModel::sampleRows(const QString& key) const {
+    const QStringList rows = rows_.value(key);
+    constexpr qsizetype kSample = 200;
+    QVariantList sample;
+    const qsizetype count = std::min(rows.size(), kSample);
+    for (qsizetype k = 0; k < count; ++k) {
+        const qsizetype index = rows.size() > kSample ? k * rows.size() / kSample : k;
+        sample.append(QVariant(rows.at(index).split(QChar(0x1f))));
+    }
+    return sample;
 }
 
 const edi::ReportPattern* ReportViewModel::pattern(const QString& experiment) const {

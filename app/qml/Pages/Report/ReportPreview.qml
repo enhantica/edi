@@ -113,13 +113,16 @@ Flickable {
             rows: preview.keyValues(block.category.rows)
         }
         Item {
-            visible: block.category.rows.length > 0 && block.category.table.rows.length > 0
+            visible: block.category.rows.length > 0 && (block.category.table.row_count ?? block.category.table.rows.length) > 0
             width: 1
             height: 6.2 * preview.pt
         }
         ReportTable {
             columns: block.category.table.columns
             rows: block.category.table.rows
+            report: preview.report
+            rowsKey: block.category.table.rows_key ?? ""
+            storedRows: block.category.table.row_count ?? 0
         }
     }
 

@@ -8693,7 +8693,7 @@ QJSValue ApplicationInfo::reportTableLayout() const {
         };
         // A long table (an experiment's data points) is measured on 200 rows spread over it, not on every row.
         constexpr int kSample = 200;
-        const auto rows = panelUsageContextRead(f, "rows");
+        const auto rows = panelUsageContextRead(f, "layoutRows");
         const int total = panelUsageRead(f, rows, "length").toInt();
         for (int k = 0; panelUsageReady(f) && k < std::min(total, kSample); ++k) {
             const int index = total > kSample ? static_cast<int>(static_cast<long long>(k) * total / kSample) : k;

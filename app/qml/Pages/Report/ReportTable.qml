@@ -19,8 +19,16 @@ Flickable {
 
     property var columns: []
     property var rows: []
+    // A long table's rows stay in the report's C++ store: its key there, its row count, and the report holding it. The
+    // model then carries none of them, so a table of thousands of points costs nothing to convert or copy.
+    property var report: null
+    property string rowsKey: ""
+    property int storedRows: 0
+    readonly property int rowCount: rowsKey ? storedRows : rows.length
+    // The rows the columns are measured on: a stored table's evenly spread sample, else the rows.
+    readonly property var layoutRows: rowsKey && report ? report.sampleRows(rowsKey) : rows
     readonly property bool keyValue: columns.length === 0
-    readonly property int columnCount: keyValue ? (rows.length > 0 ? rows[0].length : 0) : columns.length
+    readonly property int columnCount: keyValue ? (layoutRows.length > 0 ? layoutRows[0].length : 0) : columns.length
     readonly property real em: EaStyle.Sizes.fontPixelSize
     // The reference's 20.4 pt line and 6 pt column padding for its 10.04 pt body, and its key column's 28 px.
     readonly property real rowHeight: Math.round(em * 20.4 / 10.04)
@@ -29,7 +37,7 @@ Flickable {
     readonly property real border: EaStyle.Sizes.borderThickness
     // A long table (an experiment's thousands of data points) shows a window of rows that scrolls; the list builds each
     // row as it comes into view, so the preview stays responsive.
-    readonly property bool windowed: rows.length > 100
+    readonly property bool windowed: rowCount > 100
     readonly property int windowRows: 20
     // Every width is measured with the cells' own font, and again when it changes: a font that loads after the table
     // is made (macOS) would otherwise leave the columns measured with the fallback one, and clip their text.
@@ -55,7 +63,7 @@ Flickable {
     interactive: contentWidth > width
     boundsBehavior: Flickable.StopAtBounds
     clip: true
-    visible: rows.length > 0
+    visible: rowCount > 0
     ScrollBar.horizontal: EaElements.ScrollBar {
         id: horizontal
         policy: table.contentWidth > table.width ? ScrollBar.AlwaysOn : ScrollBar.AlwaysOff
@@ -135,12 +143,12 @@ Flickable {
         width: table.tableWidth
         tableRowHeight: table.rowHeight
         rowPadding: 0
-        maxRowCountShow: table.windowed ? table.windowRows : Math.max(1, rowModel.count)
+        maxRowCountShow: table.windowed ? table.windowRows : Math.max(1, table.rowCount)
         selectable: false
         multiSelection: false
         cacheBuffer: 0
         defaultInfoText: ""
-        model: rowModel
+        model: table.rowsKey && table.report ? table.report.rowsModel(table.rowsKey) : rowModel
         scrollBarPolicy: table.windowed ? ScrollBar.AlwaysOn : ScrollBar.AlwaysOff
 
         // The header: shaded, a number column's title centred over its numbers; none for a key-value table.

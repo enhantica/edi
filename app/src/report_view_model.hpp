@@ -2,6 +2,7 @@
 #ifndef EDI_APP_REPORT_VIEW_MODEL_HPP
 #define EDI_APP_REPORT_VIEW_MODEL_HPP
 
+#include <QAbstractListModel>
 #include <QHash>
 #include <QImage>
 #include <QList>
@@ -46,6 +47,24 @@ struct SavedReport {
 // QML as the model's JSON values, rebuilt once per coalesced change. Its options are the project's report settings
 // (ADR-0036 §7), which the Contents boxes, the Embed checkbox and the Analysis page's correlation level and x axis
 // edit; the page reads the model only, never the project.
+// A long report table's rows, one `cells` string per row (cells joined by U+001F, as ReportTable splits them), for the
+// preview's windowed list: the rows stay in C++, so a table of thousands of points is never converted to QML values.
+class ReportRowsModel : public QAbstractListModel {
+    Q_OBJECT
+    QML_ELEMENT
+    QML_UNCREATABLE("Made by the report")
+
+   public:
+    explicit ReportRowsModel(QObject* parent) : QAbstractListModel(parent) {}
+    void setRows(const QStringList& rows);
+    int rowCount(const QModelIndex& parent = QModelIndex()) const override { return parent.isValid() ? 0 : static_cast<int>(rows_.size()); }
+    QVariant data(const QModelIndex& index, int role) const override;
+    QHash<int, QByteArray> roleNames() const override { return {{Qt::UserRole + 1, "cells"}}; }
+
+   private:
+    QStringList rows_;
+};
+
 class ReportViewModel : public QObject {
     Q_OBJECT
     QML_ELEMENT
@@ -97,6 +116,10 @@ class ReportViewModel : public QObject {
     const edi::ReportStructure* structure(const QString& id) const;
     // An experiment's reliability text in the model (edi::reliability_text); empty with none.
     Q_INVOKABLE QString reliability(const QString& experiment) const;
+    // A long table's rows, by the key the model gives it (`rows_key`), as a list model, and an evenly spread sample of
+    // at most 200 of them split into cells, which the table measures its columns on.
+    Q_INVOKABLE QObject* rowsModel(const QString& key);
+    Q_INVOKABLE QVariantList sampleRows(const QString& key) const;
     QStringList hidden() const;
     void setHidden(const QStringList& keys);
     bool embedLibraries() const;
@@ -161,6 +184,7 @@ class ReportViewModel : public QObject {
         std::optional<edi::ReportModel> judged;
         std::optional<std::string> cif_digest;
         QHash<QString, QString> digests;  // by format
+        QHash<QString, QStringList> rows;  // long tables' rows, moved out of `model`, by key
     };
     Inputs prepare() const;
     static Built make(const Inputs& inputs);
@@ -212,6 +236,8 @@ class ReportViewModel : public QObject {
     mutable std::optional<edi::ReportModel> judged_;
     mutable std::optional<std::string> cif_digest_;
     mutable QHash<QString, QString> digests_;  // the saved reports' digests by format, from the last build
+    mutable QHash<QString, QStringList> rows_;    // long tables' rows by key, from the last build
+    QHash<QString, ReportRowsModel*> rows_models_;
     mutable std::uint64_t build_generation_ = 0;
     mutable bool building_ = false;
     QHash<QString, QImage> figures_;  // setFigure's images, which the next save takes
