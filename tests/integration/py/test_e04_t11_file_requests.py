@@ -193,7 +193,7 @@ def native_project_checks(code, owners, needs, problems):
         problems.append('identity, failed-answer and changed-project guards precede acceptance')
     for fragment in (
         'if(!answer.cancelled)',
-        'if(current())emit loadFailed(last_error_);',
+        'if(current())emit loadFailed(last_error_, report(nullptr));',
         'if(web_copy_!=root)QDir(root).removeRecursively();',
         'was not opened: the open project was changed while it was read',
     ):
