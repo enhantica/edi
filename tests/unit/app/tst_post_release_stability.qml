@@ -37,6 +37,8 @@ TestCase {
         };
         if (Qt.application.arguments.includes("PostReleaseStability::test_a_series_survive_hover_and_analysis_switch"))
             prepareHoverInput();
+        if (Qt.application.arguments.includes("PostReleaseStability::test_c_typing_with_attachment_remains_responsive"))
+            prepareTypingInput();
     }
     function prepareHoverInput() {
         const folder = SettingsProof.copyProject(Probe.referenceUrl("hover"));
@@ -118,21 +120,37 @@ TestCase {
         compare(named("feedback.kind").currentValue, "problem", "Invalid relations prefill the Problem report kind");
         verify(/alias|constraint/i.test(named("feedback.text").text), "The report text carries the actual invalid-relation diagnostic");
     }
-    function test_c_typing_with_attachment_remains_responsive() {
+    function prepareTypingInput() {
         const folder = SettingsProof.emptyDirectory();
         verify(SettingsProof.write(folder, "attachment.bin", "x".repeat(1024 * 1024)), "The typing witness is a real admitted one MiB file");
         const form = named("feedback.form");
         form.openAs("feedback", "", "", []);
         tryCompare(form, "opened", true, 2000, "Typing is measured in the opened production feedback form");
+        const field = named("feedback.text");
+        field.text = "";
+        field.forceActiveFocus();
+        tryCompare(field, "activeFocus", true, 1000, "The opened feedback editor owns real keyboard focus before the bare control");
+        const bare = Date.now();
+        for (let index = 0; index < 24; ++index) {
+            verify(SettingsProof.key(field, Qt.Key_A), "The bare editor control receives the same real keystrokes");
+            wait(0);
+            verify(Date.now() - bare < 5000, "The editor handles the same keystrokes within the interaction budget before any file is attached");
+        }
+        compare(field.text, "a".repeat(24), "The bare editor control establishes complete input delivery before attachment timing");
+        console.info("Attachment typing stage: bare control passed");
+        field.text = "";
         console.info("Attachment typing stage: attach");
         form.attach([folder + "/attachment.bin"]);
         console.info("Attachment typing stage: attached");
         compare(form.attachedFiles.length, 1, "The real attachment reader admits the file before typing");
         compare(form.attachmentError, "", "The responsiveness case stays within all named attachment limits");
-        const field = named("feedback.text");
         field.text = "";
         field.forceActiveFocus();
         tryCompare(field, "activeFocus", true, 1000, "The opened feedback editor owns real keyboard focus before timing");
+    }
+    function test_c_typing_with_attachment_remains_responsive() {
+        const form = named("feedback.form");
+        const field = named("feedback.text");
         console.info("Attachment typing stage: keyboard");
         const start = Date.now();
         for (let index = 0; index < 24; ++index) {
