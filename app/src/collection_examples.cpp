@@ -4,6 +4,7 @@
 #include <QDateTime>
 #include <QDir>
 #include <QFile>
+#include <QFileInfo>
 #include <QLoggingCategory>
 #include <QScopeGuard>
 #include <QUrl>
@@ -108,6 +109,20 @@ void CollectionExamples::refresh() {
 // The online collection's index against the bundled one: an entry it adds is served from online, and a file it
 // changed is downloaded now and used from then on; until it has arrived the bundled file serves. Offline nothing
 // changes.
+// Whether the copy on this computer that serves `id` holds its file at `path`.
+bool CollectionExamples::heldHere(const QString& id, const QString& path) const {
+    const auto it = known_.constFind(id);
+    if (it == known_.constEnd()) return false;
+    for (const QString& base : it->sources) {
+        const QUrl url(base);
+        if (url.isLocalFile() || url.scheme().isEmpty()) {
+            const QString root = url.isLocalFile() ? url.toLocalFile() : base;
+            return QFileInfo(QDir(root).filePath(path)).isFile();
+        }
+    }
+    return false;
+}
+
 void CollectionExamples::checkOnline(int generation, const QStringList& online, const edi::online::Index& bundled) {
     ++checking_;
     fetch_from(this, network_, online, QStringLiteral("index.json"),
@@ -139,6 +154,9 @@ void CollectionExamples::checkOnline(int generation, const QStringList& online, 
                 continue;
             }
             if (old->files.empty() || (old->files.front().sha256 == file.sha256 && old->files.front().bytes == file.bytes)) continue;
+            // An item the app's copy leaves out for its size waits for its first Open, changed or not (ADR-0068): only
+            // a file the copy holds is brought up to date in the background.
+            if (!heldHere(id, QString::fromStdString(old->files.front().path))) continue;
             const QString name = QString::fromStdString(edi::online::file_name(file));
             fetch_from(this, network_, online, QString::fromStdString(file.path),
                        [this, generation, id, file, name](const QByteArray& fetched, const QString& fetchError, bool) {

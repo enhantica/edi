@@ -50,6 +50,7 @@ public:
     void whenRead(const QString& id, std::function<void()> then);
     /// Download (or copy) the entry's file, checked against the index; `done` gets the bytes or an error.
     void fetchBytes(const QString& id, BytesDone done, FetchProgress progress = {});
+    bool heldHere(const QString& id, const QString& path) const;
     /// The entry's zip in a temporary folder; `done` gets the archive or an error.
     void fetchProject(const QString& id, ProjectDone done, FetchProgress progress = {});
     /// The file name the entry's path ends with; empty for an unknown entry.
