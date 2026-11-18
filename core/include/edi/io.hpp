@@ -8,6 +8,7 @@
 #include <optional>
 #include <set>
 #include <stdexcept>
+#include <exception>
 #include <string>
 #include <utility>
 #include <vector>
@@ -29,6 +30,43 @@ class IoError : public std::runtime_error {
    public:
     explicit IoError(const std::string& message) : std::runtime_error(message) {}
 };
+
+namespace detail {
+// The file whose reading failed most recently on this thread (reading_file); empty when none did.
+std::string& failed_file();
+}  // namespace detail
+
+// Runs `read`; when it throws, records `path` as the file whose reading failed unless a read nested inside it (a
+// data file an experiment names) already recorded its own. The exception passes on unchanged.
+template <class Read>
+decltype(auto) reading_file(const std::string& path, Read&& read) {
+    try {
+        return read();
+    } catch (...) {
+        if (detail::failed_file().empty()) detail::failed_file() = path;
+        throw;
+    }
+}
+
+// The same for a stretch of code: while a ReadingScope lives, an exception leaving it records `path` (unless a read
+// nested inside recorded its own). For interpreting one input file across several statements.
+class ReadingScope {
+   public:
+    explicit ReadingScope(std::string path) : path_(std::move(path)), active_(std::uncaught_exceptions()) {}
+    ReadingScope(const ReadingScope&) = delete;
+    ReadingScope& operator=(const ReadingScope&) = delete;
+    ~ReadingScope() {
+        if (std::uncaught_exceptions() > active_ && detail::failed_file().empty()) detail::failed_file() = path_;
+    }
+
+   private:
+    std::string path_;
+    int active_;
+};
+
+// The file the last failed load on this thread was reading (reading_file), cleared as it is taken; take it once
+// before a load to start clean. A refusal that is not about one file's contents (a name clash) records none.
+inline std::string take_failed_file() { return std::exchange(detail::failed_file(), std::string()); }
 
 // Load a declarative `.edi` project directory (structures/, experiments/, analysis/) into a
 // Project: the single structure, every experiment bank (sorted by filename), and the analysis

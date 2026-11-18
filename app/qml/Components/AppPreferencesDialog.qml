@@ -448,6 +448,7 @@ AppDialog {
                         ToolTip.text: qsTr("How long the pointer rests on a control before its tooltip opens")
                     }
                 }
+
                 GroupTitle {
                     first: false
                     icon: "calculator"
@@ -461,6 +462,31 @@ AppDialog {
                         currentIndex: Preferences.showFitResults ? 0 : 1
                         onActivated: index => Preferences.showFitResults = index === 0
                         ToolTip.text: qsTr("The fit status in the status bar opens the results window too")
+                    }
+                }
+                GroupTitle {
+                    first: false
+                    icon: "comments"
+                    text: qsTr("Feedback")
+                }
+                Field {
+                    label: qsTr("Enjoying EasyDiffraction? prompt")
+                    FieldBox {
+                        objectName: "preferences.askLikes"
+                        model: [qsTr("On"), qsTr("Off")]
+                        currentIndex: Preferences.askLikes ? 0 : 1
+                        onActivated: index => Preferences.askLikes = index === 0
+                        ToolTip.text: qsTr("A short question above the status bar after a successful fit, at most once every 3 months. Don't ask again turns it off.")
+                    }
+                }
+                Field {
+                    label: qsTr("Survey invitation")
+                    FieldBox {
+                        objectName: "preferences.surveyInvitation"
+                        model: [qsTr("On"), qsTr("Off")]
+                        currentIndex: Preferences.surveyInvitation ? 0 : 1
+                        onActivated: index => Preferences.surveyInvitation = index === 0
+                        ToolTip.text: qsTr("An invitation to the 10–15 min user survey after some use, at a pause in your work. Home keeps its survey link.")
                     }
                 }
             }

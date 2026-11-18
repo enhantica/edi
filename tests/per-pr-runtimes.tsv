@@ -65,6 +65,9 @@ UNMEASURED:failed-in-this-run	tests/integration/app/test_adp_symmetry_gui.py::te
 0.470	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[tetragonal-Uani-tensor]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[tetragonal-beta-labels]
 0.410	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[tetragonal-beta-tensor]
+0.030	tests/integration/app/test_application_error_boundary.py::test_production_event_boundary_reports_and_continues[standard]
+0.030	tests/integration/app/test_application_error_boundary.py::test_production_event_boundary_reports_and_continues[unknown]
+0.040	tests/integration/app/test_application_error_boundary.py::test_real_reporter_emits_the_caught_error_signal
 0.000	tests/integration/app/test_assistant_candidate_boundaries.py::test_accepted_fit_currentness_reaches_both_provider_roles
 0.005	tests/integration/app/test_assistant_candidate_boundaries.py::test_calculate_misfit_reaches_provider_without_any_fit
 0.000	tests/integration/app/test_assistant_candidate_boundaries.py::test_candidate_endpoint_restores_accepted_flags_relations_and_record[refusal]
@@ -755,6 +758,12 @@ UNMEASURED:failed-in-this-run	tests/integration/app/test_scan_view_content.py::t
 UNMEASURED:failed-in-this-run	tests/integration/app/test_sequential_pattern_drawing.py::test_current_scan_pattern_is_drawn_without_stale_curve_or_missing_fill[current]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_sequential_pattern_drawing.py::test_current_scan_pattern_is_drawn_without_stale_curve_or_missing_fill[fills]
 0.002	tests/integration/app/test_sequential_pattern_drawing.py::test_current_scan_pattern_is_drawn_without_stale_curve_or_missing_fill[observer]
+0.050	tests/integration/app/test_settings_identity_migration.py::test_any_populated_destination_wins_over_legacy
+0.140	tests/integration/app/test_settings_identity_migration.py::test_empty_destination_carries_typed_unicode_preferences[missing]
+0.030	tests/integration/app/test_settings_identity_migration.py::test_empty_destination_carries_typed_unicode_preferences[zero-byte]
+0.030	tests/integration/app/test_settings_identity_migration.py::test_fresh_test_or_demo_does_not_migrate_user_preferences
+0.060	tests/integration/app/test_settings_identity_migration.py::test_migration_does_not_repeat_on_later_calls
+0.020	tests/integration/app/test_settings_identity_migration.py::test_no_legacy_store_does_not_create_settings
 0.560	tests/integration/app/test_shared_controls.py::test_every_registered_native_case_has_a_python_witness
 UNMEASURED:failed-in-this-run	tests/integration/app/test_shared_controls.py::test_shared_control_contract[app_bar]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_shared_controls.py::test_shared_control_contract[button_clicks]
@@ -169245,7 +169254,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_name_loading.
 0.120	tests/integration/py/test_e01_scaffold.py::test_core_and_lib_are_qt_free[core]
 0.030	tests/integration/py/test_e01_scaffold.py::test_core_and_lib_are_qt_free[lib]
 0.020	tests/integration/py/test_e01_scaffold.py::test_product_checkout_has_no_embedded_process_plane
-0.020	tests/integration/py/test_e01_scaffold.py::test_surface_tree_matches_adr_0002
+UNMEASURED:not-completed-in-this-run	tests/integration/py/test_e01_scaffold.py::test_surface_tree_matches_adr_0002
 0.000	tests/integration/py/test_e01_scaffold.py::test_verify_requires_core_build
 0.080	tests/integration/py/test_e02_t2_io_parity_integration.py::test_e02_t2_edi_save_reload_preserves_semantics
 0.080	tests/integration/py/test_e02_t2_io_parity_integration.py::test_e02_t2_save_as_replaces_the_complete_destination_without_stale_files
@@ -169304,24 +169313,6 @@ UNMEASURED:not-completed-in-this-run	tests/integration/py/test_e04_t11_science_i
 0.010	tests/integration/py/test_e04_t11_wasm_pin.py::test_qt_recommendation_enforces_the_exact_packet_pin[-False]
 0.010	tests/integration/py/test_e04_t11_wasm_pin.py::test_qt_recommendation_enforces_the_exact_packet_pin[4.0.7-True]
 0.010	tests/integration/py/test_e04_t11_wasm_pin.py::test_qt_recommendation_enforces_the_exact_packet_pin[4.0.8-False]
-0.200	tests/integration/py/test_e04_t12_cut_configuration.py::test_e04_t12_check_only_cut_performs_no_mutation
-0.200	tests/integration/py/test_e04_t12_cut_configuration.py::test_e04_t12_cut_reads_every_configuration_page[labels]
-0.380	tests/integration/py/test_e04_t12_cut_configuration.py::test_e04_t12_cut_reads_every_configuration_page[pulls]
-0.220	tests/integration/py/test_e04_t12_cut_configuration.py::test_e04_t12_cut_reads_every_configuration_page[rulesets]
-0.400	tests/integration/py/test_e04_t12_cut_configuration.py::test_e04_t12_cut_refuses_unreadable_or_incomplete_listing[labels-malformed]
-0.410	tests/integration/py/test_e04_t12_cut_configuration.py::test_e04_t12_cut_refuses_unreadable_or_incomplete_listing[labels-unreadable]
-0.360	tests/integration/py/test_e04_t12_cut_configuration.py::test_e04_t12_cut_refuses_unreadable_or_incomplete_listing[pulls-malformed]
-0.360	tests/integration/py/test_e04_t12_cut_configuration.py::test_e04_t12_cut_refuses_unreadable_or_incomplete_listing[pulls-unreadable]
-0.380	tests/integration/py/test_e04_t12_cut_configuration.py::test_e04_t12_cut_refuses_unreadable_or_incomplete_listing[rulesets-malformed]
-0.420	tests/integration/py/test_e04_t12_cut_configuration.py::test_e04_t12_cut_refuses_unreadable_or_incomplete_listing[rulesets-unreadable]
-0.380	tests/integration/py/test_e04_t12_cut_configuration.py::test_e04_t12_cut_refuses_unreadable_or_incomplete_listing[runner-groups-short]
-0.380	tests/integration/py/test_e04_t12_cut_configuration.py::test_e04_t12_cut_refuses_unreadable_or_incomplete_listing[runner-groups-unreadable]
-0.390	tests/integration/py/test_e04_t12_cut_configuration.py::test_e04_t12_cut_refuses_unreadable_or_incomplete_listing[runner-groups-untotalled]
-0.250	tests/integration/py/test_e04_t12_cut_configuration.py::test_e04_t12_environment_policy_matches_workflow_events[pull_request-False-refs/pull/17/merge]
-0.270	tests/integration/py/test_e04_t12_cut_configuration.py::test_e04_t12_environment_policy_matches_workflow_events[pull_request-True-refs/pull/23/merge]
-0.250	tests/integration/py/test_e04_t12_cut_configuration.py::test_e04_t12_environment_policy_matches_workflow_events[push-False-refs/heads/main]
-0.200	tests/integration/py/test_e04_t12_cut_configuration.py::test_e04_t12_recreation_reconciles_existing_labels_and_reaches_all_grants[encoded]
-0.220	tests/integration/py/test_e04_t12_cut_configuration.py::test_e04_t12_recreation_reconciles_existing_labels_and_reaches_all_grants[ordinary]
 0.380	tests/integration/py/test_e04_t12_name_allowance.py::test_e04_t12_name_span_escapes_refuse_every_history[cleaned-tip-pr-decoded-member-comment-marker]
 0.360	tests/integration/py/test_e04_t12_name_allowance.py::test_e04_t12_name_span_escapes_refuse_every_history[cleaned-tip-pr-decoded-member-cpp-namespace]
 0.430	tests/integration/py/test_e04_t12_name_allowance.py::test_e04_t12_name_span_escapes_refuse_every_history[cleaned-tip-pr-decoded-member-indexed-expression]
@@ -170829,6 +170820,27 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_experiment_descriptions.
 0.000	tests/integration/py/test_fast_chart_timing.py::test_timing_verdict_requires_quiet_confirmation_and_stated_load[conditions7]
 0.000	tests/integration/py/test_fast_chart_timing.py::test_timing_verdict_requires_quiet_confirmation_and_stated_load[conditions8]
 0.000	tests/integration/py/test_fast_chart_timing.py::test_timing_verdict_requires_quiet_confirmation_and_stated_load[conditions9]
+0.350	tests/integration/py/test_feedback_file_contract.py::test_any_file_type_is_accepted_without_rewriting_opaque_bytes[calibration-\xb5.nxs-application/x-hdf5]
+0.360	tests/integration/py/test_feedback_file_contract.py::test_any_file_type_is_accepted_without_rewriting_opaque_bytes[collection.zip-application/zip]
+0.340	tests/integration/py/test_feedback_file_contract.py::test_any_file_type_is_accepted_without_rewriting_opaque_bytes[detector.raw-application/octet-stream]
+0.370	tests/integration/py/test_feedback_file_contract.py::test_any_file_type_is_accepted_without_rewriting_opaque_bytes[extensionless-]
+0.370	tests/integration/py/test_feedback_file_contract.py::test_any_file_type_is_accepted_without_rewriting_opaque_bytes[notes.pdf-application/pdf]
+0.390	tests/integration/py/test_feedback_file_contract.py::test_any_file_type_is_accepted_without_rewriting_opaque_bytes[recording.mp4-video/mp4]
+0.370	tests/integration/py/test_feedback_file_contract.py::test_any_file_type_is_accepted_without_rewriting_opaque_bytes[screenshot.png-image/png]
+0.210	tests/integration/py/test_feedback_file_contract.py::test_attachment_limit_is_named_and_never_silently_drops_files[binary-1-5242881-5 MB]
+0.210	tests/integration/py/test_feedback_file_contract.py::test_attachment_limit_is_named_and_never_silently_drops_files[binary-3-4194304-10 MB]
+0.200	tests/integration/py/test_feedback_file_contract.py::test_attachment_limit_is_named_and_never_silently_drops_files[binary-6-1-5 files]
+0.220	tests/integration/py/test_feedback_file_contract.py::test_attachment_limit_is_named_and_never_silently_drops_files[text-1-5242881-5 MB]
+0.200	tests/integration/py/test_feedback_file_contract.py::test_attachment_limit_is_named_and_never_silently_drops_files[text-3-4194304-10 MB]
+0.220	tests/integration/py/test_feedback_file_contract.py::test_attachment_limit_is_named_and_never_silently_drops_files[text-6-1-5 files]
+0.170	tests/integration/py/test_feedback_file_contract.py::test_attachment_preflight_accepts_the_declared_boundary[sizes0]
+0.150	tests/integration/py/test_feedback_file_contract.py::test_attachment_preflight_accepts_the_declared_boundary[sizes1]
+0.150	tests/integration/py/test_feedback_file_contract.py::test_attachment_preflight_accepts_the_declared_boundary[sizes2]
+0.200	tests/integration/py/test_feedback_file_contract.py::test_empty_attachments_keep_the_existing_payload_shape
+0.530	tests/integration/py/test_feedback_file_contract.py::test_large_text_file_stays_complete_and_out_of_message_log_and_copied_report
+0.240	tests/integration/py/test_feedback_file_contract.py::test_text_bytes_are_scrubbed_without_changing_other_content[structure.cif-application/octet-stream]
+0.200	tests/integration/py/test_feedback_file_contract.py::test_text_bytes_are_scrubbed_without_changing_other_content[unknown-extension.custom-text/plain]
+0.520	tests/integration/py/test_feedback_file_contract.py::test_unreadable_file_is_attached_with_contact_and_diagnostic_preserved
 0.020	tests/integration/py/test_fit_tables_reference.py::test_ncaf_bank_one_retains_the_external_brief_values
 0.080	tests/integration/py/test_fit_tables_reference.py::test_saved_curve_factors_equal_the_table_reference[All datasets]
 0.010	tests/integration/py/test_fit_tables_reference.py::test_saved_curve_factors_equal_the_table_reference[wish_1_10]
@@ -171354,6 +171366,29 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_independent_heidi_case.p
 0.000	tests/integration/py/test_input_format_oracle_transition.py::test_recorded_input_change_keeps_every_non_identity_byte[tests/fixtures/e04_t1/warning-project/experiments/experiment.edi]
 0.000	tests/integration/py/test_input_format_oracle_transition.py::test_recorded_input_change_keeps_every_non_identity_byte[tests/fixtures/e04_t1/xray-project/experiments/experiment.edi#pre-catalogue]
 0.000	tests/integration/py/test_input_format_oracle_transition.py::test_recorded_input_change_keeps_every_non_identity_byte[tests/fixtures/e04_t1/xray-project/experiments/experiment.edi]
+0.000	tests/integration/py/test_installer_identity.py::test_component_identity[APP_COMPONENT-org.easydiffraction.app]
+0.000	tests/integration/py/test_installer_identity.py::test_component_identity[ASSISTANT_COMPONENT-org.easydiffraction.app.assistant]
+0.000	tests/integration/py/test_installer_identity.py::test_download_is_one_native_installer[macos-.dmg]
+0.000	tests/integration/py/test_installer_identity.py::test_download_is_one_native_installer[windows-.exe]
+0.000	tests/integration/py/test_installer_identity.py::test_draft_cleanup_preserves_other_sources_channels_and_published_releases[False]
+0.000	tests/integration/py/test_installer_identity.py::test_draft_cleanup_preserves_other_sources_channels_and_published_releases[True]
+0.030	tests/integration/py/test_installer_identity.py::test_failed_release_workflow_reaches_owned_draft_cleanup[installers.yml]
+0.100	tests/integration/py/test_installer_identity.py::test_failed_release_workflow_reaches_owned_draft_cleanup[release-plan.yml]
+0.020	tests/integration/py/test_installer_identity.py::test_failed_release_workflow_reaches_owned_draft_cleanup[release-publish.yml]
+0.000	tests/integration/py/test_installer_identity.py::test_installed_windows_maintenance_tool_requires_signature
+0.000	tests/integration/py/test_installer_identity.py::test_macos_bundle_declares_the_project_owned_identifier
+0.000	tests/integration/py/test_installer_identity.py::test_metadata_preserves_existing_component_updates[linux]
+0.000	tests/integration/py/test_installer_identity.py::test_metadata_preserves_existing_component_updates[macos]
+0.000	tests/integration/py/test_installer_identity.py::test_metadata_preserves_existing_component_updates[windows]
+0.000	tests/integration/py/test_installer_identity.py::test_release_signs_assistant_executables_outside_the_app[macos]
+0.000	tests/integration/py/test_installer_identity.py::test_release_signs_assistant_executables_outside_the_app[windows]
+0.000	tests/integration/py/test_installer_identity.py::test_signing_enablement_keeps_pr_builds_unsigned[macos-1]
+0.000	tests/integration/py/test_installer_identity.py::test_signing_enablement_keeps_pr_builds_unsigned[macos-]
+0.000	tests/integration/py/test_installer_identity.py::test_signing_enablement_keeps_pr_builds_unsigned[windows-1]
+0.000	tests/integration/py/test_installer_identity.py::test_signing_enablement_keeps_pr_builds_unsigned[windows-]
+0.000	tests/integration/py/test_installer_identity.py::test_windows_installation_defaults[AdminTargetDir-@ApplicationsDirX64@/EasyDiffraction]
+0.000	tests/integration/py/test_installer_identity.py::test_windows_installation_defaults[StartMenuDir-EasyDiffraction]
+0.000	tests/integration/py/test_installer_identity.py::test_windows_installation_defaults[TargetDir-@ApplicationsDirUser@/EasyDiffraction]
 0.000	tests/integration/py/test_ionic_xray_factors.py::test_external_coefficient_snapshot_retains_its_digest
 UNMEASURED:failed-in-this-run	tests/integration/py/test_ionic_xray_factors.py::test_ionic_site_intensity_ratio_matches_published_factors[it1992-Fe3+]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_ionic_xray_factors.py::test_ionic_site_intensity_ratio_matches_published_factors[it1992-O2-]
@@ -171364,6 +171399,19 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_ionic_xray_factors.py::t
 0.000	tests/integration/py/test_legacy_project_load.py::test_old_engine_start_state_is_refused_with_its_name[line-segment]
 0.000	tests/integration/py/test_legacy_project_load.py::test_old_engine_start_state_is_refused_with_its_name[polynomial]
 0.010	tests/integration/py/test_loaded_correlation_cache.py::test_loaded_numeric_cache_tracks_current_rows_and_recorded_coefficient_writes[alias-reorder-record]
+0.140	tests/integration/py/test_likes_timing.py::test_prompt_eligibility_uses_sessions_age_and_activity[changes0-7-True]
+0.170	tests/integration/py/test_likes_timing.py::test_prompt_eligibility_uses_sessions_age_and_activity[changes1-6.999-False]
+0.180	tests/integration/py/test_likes_timing.py::test_prompt_eligibility_uses_sessions_age_and_activity[changes10-96.999-False]
+0.160	tests/integration/py/test_likes_timing.py::test_prompt_eligibility_uses_sessions_age_and_activity[changes11-97-True]
+0.140	tests/integration/py/test_likes_timing.py::test_prompt_eligibility_uses_sessions_age_and_activity[changes12-110-True]
+0.150	tests/integration/py/test_likes_timing.py::test_prompt_eligibility_uses_sessions_age_and_activity[changes2-10-False]
+0.250	tests/integration/py/test_likes_timing.py::test_prompt_eligibility_uses_sessions_age_and_activity[changes3-100-False]
+0.160	tests/integration/py/test_likes_timing.py::test_prompt_eligibility_uses_sessions_age_and_activity[changes4-10-False]
+0.160	tests/integration/py/test_likes_timing.py::test_prompt_eligibility_uses_sessions_age_and_activity[changes5-10-False]
+0.140	tests/integration/py/test_likes_timing.py::test_prompt_eligibility_uses_sessions_age_and_activity[changes6-10-False]
+0.210	tests/integration/py/test_likes_timing.py::test_prompt_eligibility_uses_sessions_age_and_activity[changes7-100-False]
+0.120	tests/integration/py/test_likes_timing.py::test_prompt_eligibility_uses_sessions_age_and_activity[changes8-8-False]
+0.140	tests/integration/py/test_likes_timing.py::test_prompt_eligibility_uses_sessions_age_and_activity[changes9-50-False]
 0.010	tests/integration/py/test_loaded_correlation_cache.py::test_loaded_numeric_cache_tracks_current_rows_and_recorded_coefficient_writes[alias-reorder-rows]
 0.010	tests/integration/py/test_loaded_correlation_cache.py::test_loaded_numeric_cache_tracks_current_rows_and_recorded_coefficient_writes[alias-replace-record]
 0.010	tests/integration/py/test_loaded_correlation_cache.py::test_loaded_numeric_cache_tracks_current_rows_and_recorded_coefficient_writes[alias-replace-rows]
@@ -173979,6 +174027,9 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_report_storage.py::test_
 0.000	tests/integration/py/test_retired_absorption_bytes.py::test_saved_absorption_restores_only_the_fixed_zero_for_the_original_hash[nonzero-0]
 0.000	tests/integration/py/test_retired_absorption_bytes.py::test_saved_absorption_restores_only_the_fixed_zero_for_the_original_hash[type-0.0]
 0.000	tests/integration/py/test_retired_absorption_bytes.py::test_saved_absorption_restores_only_the_fixed_zero_for_the_original_hash[type-0]
+0.000	tests/integration/py/test_retired_public_bootstrap.py::test_one_time_public_bootstrap_entrypoints_are_retired[cutover.py]
+0.000	tests/integration/py/test_retired_public_bootstrap.py::test_one_time_public_bootstrap_entrypoints_are_retired[snapshot.py]
+0.000	tests/integration/py/test_retired_public_bootstrap.py::test_one_time_public_bootstrap_entrypoints_are_retired[spdx.py]
 0.420	tests/integration/py/test_runtime_publication_selection.py::test_core_entrypoint_retains_the_actual_publication_workflows_after_retiering
 0.000	tests/integration/py/test_runtime_update_index.py::test_duration_without_completed_node_evidence_remains_unmeasured[call]
 0.000	tests/integration/py/test_runtime_update_index.py::test_duration_without_completed_node_evidence_remains_unmeasured[setup]
@@ -175162,6 +175213,37 @@ UNMEASURED:product-red-in-scoped-run	tests/integration/py/test_single_crystal_co
 0.000	tests/integration/py/test_structure_cif_refusal.py::test_structure_factories_preserve_main_cif_admission[from_cif_str-multiblock]
 0.000	tests/integration/py/test_structure_cif_refusal.py::test_structure_factories_preserve_main_cif_admission[from_cif_str-underscore]
 0.000	tests/integration/py/test_structure_cif_refusal.py::test_structure_factories_preserve_main_cif_admission[from_cif_str-upper]
+UNMEASURED:not-completed-in-this-run	tests/integration/py/test_survey_timing.py::test_likes_also_respects_session_exclusion_and_seven_day_spacing[likes-win-when-both-due]
+UNMEASURED:not-completed-in-this-run	tests/integration/py/test_survey_timing.py::test_likes_also_respects_session_exclusion_and_seven_day_spacing[no-other-bar]
+UNMEASURED:not-completed-in-this-run	tests/integration/py/test_survey_timing.py::test_likes_also_respects_session_exclusion_and_seven_day_spacing[survey-already-shown-this-session]
+UNMEASURED:not-completed-in-this-run	tests/integration/py/test_survey_timing.py::test_likes_also_respects_session_exclusion_and_seven_day_spacing[survey-at-week]
+UNMEASURED:not-completed-in-this-run	tests/integration/py/test_survey_timing.py::test_likes_also_respects_session_exclusion_and_seven_day_spacing[survey-in-future]
+UNMEASURED:not-completed-in-this-run	tests/integration/py/test_survey_timing.py::test_likes_also_respects_session_exclusion_and_seven_day_spacing[survey-just-before-week]
+UNMEASURED:not-completed-in-this-run	tests/integration/py/test_survey_timing.py::test_survey_offer_requires_useful_work_idle_and_persisted_history[defer-at-both-boundaries]
+UNMEASURED:not-completed-in-this-run	tests/integration/py/test_survey_timing.py::test_survey_offer_requires_useful_work_idle_and_persisted_history[defer-just-before-thirty-days]
+UNMEASURED:not-completed-in-this-run	tests/integration/py/test_survey_timing.py::test_survey_offer_requires_useful_work_idle_and_persisted_history[defer-many-days-no-new-session]
+UNMEASURED:not-completed-in-this-run	tests/integration/py/test_survey_timing.py::test_survey_offer_requires_useful_work_idle_and_persisted_history[defer-many-sessions-not-enough-days]
+UNMEASURED:not-completed-in-this-run	tests/integration/py/test_survey_timing.py::test_survey_offer_requires_useful_work_idle_and_persisted_history[defer-only-one-new-session]
+UNMEASURED:not-completed-in-this-run	tests/integration/py/test_survey_timing.py::test_survey_offer_requires_useful_work_idle_and_persisted_history[disabled-never-reappears-with-age]
+UNMEASURED:not-completed-in-this-run	tests/integration/py/test_survey_timing.py::test_survey_offer_requires_useful_work_idle_and_persisted_history[first-boundaries]
+UNMEASURED:not-completed-in-this-run	tests/integration/py/test_survey_timing.py::test_survey_offer_requires_useful_work_idle_and_persisted_history[fit-in-progress]
+UNMEASURED:not-completed-in-this-run	tests/integration/py/test_survey_timing.py::test_survey_offer_requires_useful_work_idle_and_persisted_history[fresh-user-input]
+UNMEASURED:not-completed-in-this-run	tests/integration/py/test_survey_timing.py::test_survey_offer_requires_useful_work_idle_and_persisted_history[just-before-idle-minute]
+UNMEASURED:not-completed-in-this-run	tests/integration/py/test_survey_timing.py::test_survey_offer_requires_useful_work_idle_and_persisted_history[just-before-two-weeks]
+UNMEASURED:not-completed-in-this-run	tests/integration/py/test_survey_timing.py::test_survey_offer_requires_useful_work_idle_and_persisted_history[likes-go-first]
+UNMEASURED:not-completed-in-this-run	tests/integration/py/test_survey_timing.py::test_survey_offer_requires_useful_work_idle_and_persisted_history[other-bar-at-week]
+UNMEASURED:not-completed-in-this-run	tests/integration/py/test_survey_timing.py::test_survey_offer_requires_useful_work_idle_and_persisted_history[other-bar-in-future]
+UNMEASURED:not-completed-in-this-run	tests/integration/py/test_survey_timing.py::test_survey_offer_requires_useful_work_idle_and_persisted_history[other-bar-just-before-week]
+UNMEASURED:not-completed-in-this-run	tests/integration/py/test_survey_timing.py::test_survey_offer_requires_useful_work_idle_and_persisted_history[permanently-stopped]
+UNMEASURED:not-completed-in-this-run	tests/integration/py/test_survey_timing.py::test_survey_offer_requires_useful_work_idle_and_persisted_history[preference-off]
+UNMEASURED:not-completed-in-this-run	tests/integration/py/test_survey_timing.py::test_survey_offer_requires_useful_work_idle_and_persisted_history[same-session-even-after-week]
+UNMEASURED:not-completed-in-this-run	tests/integration/py/test_survey_timing.py::test_survey_offer_requires_useful_work_idle_and_persisted_history[same-session-other-bar]
+UNMEASURED:not-completed-in-this-run	tests/integration/py/test_survey_timing.py::test_survey_offer_requires_useful_work_idle_and_persisted_history[startup-is-not-useful-work]
+UNMEASURED:not-completed-in-this-run	tests/integration/py/test_survey_timing.py::test_survey_offer_requires_useful_work_idle_and_persisted_history[stopped-never-reappears-with-age]
+UNMEASURED:not-completed-in-this-run	tests/integration/py/test_survey_timing.py::test_survey_offer_requires_useful_work_idle_and_persisted_history[too-few-sessions]
+UNMEASURED:not-completed-in-this-run	tests/integration/py/test_survey_timing.py::test_survey_offer_requires_useful_work_idle_and_persisted_history[tutorial-in-progress]
+UNMEASURED:not-completed-in-this-run	tests/integration/py/test_survey_timing.py::test_survey_rechecks_current_activity_and_likes_priority_before_showing
+UNMEASURED:not-completed-in-this-run	tests/integration/py/test_survey_timing.py::test_survey_uses_the_injected_clock_for_first_use_and_deferral
 UNMEASURED:failed-in-this-run	tests/integration/py/test_table_and_about_contract.py::test_about_has_no_tabbed_or_explanatory_licence_pages
 UNMEASURED:failed-in-this-run	tests/integration/py/test_table_and_about_contract.py::test_dependency_matrix_declares_all_distribution_surfaces
 UNMEASURED:failed-in-this-run	tests/integration/py/test_table_and_about_contract.py::test_every_table_instantiates_the_one_row_type
@@ -176188,6 +176270,39 @@ UNMEASURED:failed-in-this-run	tests/system/app/test_rendered_caption_capitalisat
 UNMEASURED:failed-in-this-run	tests/system/app/test_rendered_caption_capitalisation.py::test_actual_rendered_captions_follow_the_capitalisation_rule[structure-extras-2]
 UNMEASURED:failed-in-this-run	tests/system/app/test_rendered_caption_capitalisation.py::test_actual_rendered_captions_follow_the_capitalisation_rule[tof]
 UNMEASURED:failed-in-this-run	tests/system/app/test_rendered_caption_capitalisation.py::test_rendered_probe_reaches_each_runtime_caption_escape
+UNMEASURED:not-completed-in-this-run	tests/system/app/test_likes_feedback.py::test_likes_bar_actions[a_bar_uses_the_approved_controls]
+UNMEASURED:not-completed-in-this-run	tests/system/app/test_likes_feedback.py::test_likes_bar_actions[b_activity_blocks_an_offer:disabled]
+UNMEASURED:not-completed-in-this-run	tests/system/app/test_likes_feedback.py::test_likes_bar_actions[b_activity_blocks_an_offer:few-sessions]
+UNMEASURED:not-completed-in-this-run	tests/system/app/test_likes_feedback.py::test_likes_bar_actions[b_activity_blocks_an_offer:fitting]
+UNMEASURED:not-completed-in-this-run	tests/system/app/test_likes_feedback.py::test_likes_bar_actions[b_activity_blocks_an_offer:recent]
+UNMEASURED:not-completed-in-this-run	tests/system/app/test_likes_feedback.py::test_likes_bar_actions[b_activity_blocks_an_offer:tutorial]
+UNMEASURED:not-completed-in-this-run	tests/system/app/test_likes_feedback.py::test_likes_bar_actions[b_activity_blocks_an_offer:young]
+UNMEASURED:not-completed-in-this-run	tests/system/app/test_likes_feedback.py::test_likes_bar_actions[b_live_activity_hides_the_bar:fitting]
+UNMEASURED:not-completed-in-this-run	tests/system/app/test_likes_feedback.py::test_likes_bar_actions[b_live_activity_hides_the_bar:tutorial]
+UNMEASURED:not-completed-in-this-run	tests/system/app/test_likes_feedback.py::test_likes_bar_actions[c_negative_answers_open_the_existing_form:problem]
+UNMEASURED:not-completed-in-this-run	tests/system/app/test_likes_feedback.py::test_likes_bar_actions[c_negative_answers_open_the_existing_form:question]
+UNMEASURED:not-completed-in-this-run	tests/system/app/test_likes_feedback.py::test_likes_bar_actions[d_yes_sends_then_opens_feedback]
+UNMEASURED:not-completed-in-this-run	tests/system/app/test_likes_feedback.py::test_likes_bar_actions[e_opt_out_and_close_are_dismissible:close]
+UNMEASURED:not-completed-in-this-run	tests/system/app/test_likes_feedback.py::test_likes_bar_actions[e_opt_out_and_close_are_dismissible:opt-out]
+UNMEASURED:not-completed-in-this-run	tests/system/app/test_likes_feedback.py::test_likes_bar_actions[f_another_fit_does_not_repeat_a_recent_prompt]
+UNMEASURED:not-completed-in-this-run	tests/system/app/test_likes_feedback.py::test_likes_bar_actions[g_unsuccessful_fits_do_not_prompt:maxIterations]
+UNMEASURED:not-completed-in-this-run	tests/system/app/test_likes_feedback.py::test_likes_bar_actions[g_unsuccessful_fits_do_not_prompt:stopped]
+UNMEASURED:not-completed-in-this-run	tests/system/app/test_likes_feedback.py::test_likes_bar_actions[h_opt_out_survives_a_new_bar_instance]
+UNMEASURED:not-completed-in-this-run	tests/system/app/test_likes_feedback.py::test_likes_bar_actions[i_preferences_offer_both_feedback_switches:likes]
+UNMEASURED:not-completed-in-this-run	tests/system/app/test_likes_feedback.py::test_likes_bar_actions[i_preferences_offer_both_feedback_switches:survey]
+3.181	tests/system/app/test_stability_feedback.py::test_error_feedback_actions[a_previous_crash_has_send_and_ok]
+3.050	tests/system/app/test_stability_feedback.py::test_error_feedback_actions[b_caught_event_error_shows_diagnostic_actions]
+3.290	tests/system/app/test_stability_feedback.py::test_error_feedback_actions[b_failed_project_open_shows_diagnostic_actions]
+3.710	tests/system/app/test_stability_feedback.py::test_error_feedback_actions[c_unreadable_input_shows_location_and_attaches_file:data]
+3.400	tests/system/app/test_stability_feedback.py::test_error_feedback_actions[c_unreadable_input_shows_location_and_attaches_file:experiment]
+3.400	tests/system/app/test_stability_feedback.py::test_error_feedback_actions[c_unreadable_input_shows_location_and_attaches_file:structure]
+2.050	tests/system/app/test_stability_feedback.py::test_error_feedback_actions[d_non_ascii_datablock_survives_load_save_and_reopen]
+UNMEASURED:failed-in-this-run	tests/system/app/test_stability_feedback.py::test_error_feedback_actions[e_survey_is_permanently_available]
+UNMEASURED:not-completed-in-this-run	tests/system/app/test_stability_feedback.py::test_error_feedback_actions[e_user_can_open_likes_from_home_despite_timing]
+3.440	tests/system/app/test_stability_feedback.py::test_error_feedback_actions[f_failed_send_offers_a_plain_text_report:no-answer]
+3.460	tests/system/app/test_stability_feedback.py::test_error_feedback_actions[f_failed_send_offers_a_plain_text_report:other-success-code]
+3.890	tests/system/app/test_stability_feedback.py::test_error_feedback_actions[f_failed_send_offers_a_plain_text_report:rate-limit]
+4.010	tests/system/app/test_stability_feedback.py::test_error_feedback_actions[f_failed_send_offers_a_plain_text_report:server]
 UNMEASURED:not-completed-in-this-run	tests/system/py/e11_t5_original_controls/test_current_original.py::test_current_original_ordinary[composer_ime_clear]
 UNMEASURED:not-completed-in-this-run	tests/system/py/e11_t5_original_controls/test_current_original.py::test_current_original_ordinary[restore_ime_commit]
 UNMEASURED:not-completed-in-this-run	tests/system/py/e11_t5_original_controls/test_current_original.py::test_current_original_ordinary[restore_preedit_active]
@@ -179614,6 +179729,9 @@ UNMEASURED:current named-title observer browser build and replay pending	tests/s
 0.060	tests/system/py/test_ci_cadence.py::test_acquisition_children_preserve_proven_ownership_and_release[standalone-token-False-crysta-src.sh]
 0.030	tests/system/py/test_ci_cadence.py::test_acquisition_children_preserve_proven_ownership_and_release[standalone-token-True-build-crysta.sh]
 0.050	tests/system/py/test_ci_cadence.py::test_acquisition_children_preserve_proven_ownership_and_release[standalone-token-True-crysta-src.sh]
+3.310	tests/system/py/test_ci_cadence.py::test_bootstrap_migrations_refuse_each_missing_tool_witness[cutover.py]
+3.180	tests/system/py/test_ci_cadence.py::test_bootstrap_migrations_refuse_each_missing_tool_witness[snapshot.py]
+3.140	tests/system/py/test_ci_cadence.py::test_bootstrap_migrations_refuse_each_missing_tool_witness[spdx.py]
 0.000	tests/system/py/test_ci_cadence.py::test_cadence_eligibility_and_rendering_use_the_actions_model[pull_request]
 0.000	tests/system/py/test_ci_cadence.py::test_cadence_eligibility_and_rendering_use_the_actions_model[push]
 0.000	tests/system/py/test_ci_cadence.py::test_catalogue_task_additions_cannot_replace_or_reorder_existing_work
@@ -179665,6 +179783,7 @@ UNMEASURED:current named-title observer browser build and replay pending	tests/s
 2.480	tests/system/py/test_ci_cadence.py::test_inventory_migration_refuses_every_dropped_successor[collection-7]
 2.430	tests/system/py/test_ci_cadence.py::test_inventory_migration_refuses_every_dropped_successor[collection-8]
 2.460	tests/system/py/test_ci_cadence.py::test_inventory_migration_refuses_every_dropped_successor[collection-9]
+3.580	tests/system/py/test_ci_cadence.py::test_inventory_migration_refuses_every_dropped_successor[current-public-workflows]
 0.280	tests/system/py/test_ci_cadence.py::test_inventory_migration_refuses_every_dropped_successor[desktop-linux]
 0.280	tests/system/py/test_ci_cadence.py::test_inventory_migration_refuses_every_dropped_successor[desktop-macos]
 0.120	tests/system/py/test_ci_cadence.py::test_inventory_migration_refuses_every_dropped_successor[diagnostics]
@@ -179767,6 +179886,7 @@ UNMEASURED:current named-title observer browser build and replay pending	tests/s
 0.000	tests/system/py/test_ci_cadence.py::test_nonexecution_check_ignores_only_skip_reason_text[reason]
 0.000	tests/system/py/test_ci_cadence.py::test_nonexecution_check_ignores_only_skip_reason_text[skipif-condition]
 0.000	tests/system/py/test_ci_cadence.py::test_nonexecution_check_ignores_only_skip_reason_text[xfail-condition]
+0.820	tests/system/py/test_ci_cadence.py::test_public_bootstrap_migrations_retain_frozen_inputs_and_live_successors
 0.070	tests/system/py/test_ci_cadence.py::test_regular_macos_keeps_native_build_and_sdk_qualification
 0.000	tests/system/py/test_ci_cadence.py::test_retired_aliases_do_not_exempt_canonical_sdk_or_qualification_work[linux-map-tools/ci/build-crysta.sh]
 0.020	tests/system/py/test_ci_cadence.py::test_retired_aliases_do_not_exempt_canonical_sdk_or_qualification_work[linux-map-tools/ci/edi_native.py]
@@ -236494,8 +236614,6 @@ UNMEASURED:not-completed-in-this-run	tests/system/py/test_e04_t11_wasm_delivery.
 0.090	tests/system/py/test_e04_t12_public_release.py::test_compressed_member_reaches_independent_and_production_checks[secret-zip]
 0.100	tests/system/py/test_e04_t12_public_release.py::test_compressed_member_reaches_independent_and_production_checks[secret-zst]
 0.080	tests/system/py/test_e04_t12_public_release.py::test_compressed_member_reaches_independent_and_production_checks[secret-ztxt.png]
-0.000	tests/system/py/test_e04_t12_public_release.py::test_cutover_checklist_covers_settings_and_owner_boundary
-0.450	tests/system/py/test_e04_t12_public_release.py::test_cutover_resnapshots_newer_main_without_mutating_source
 0.000	tests/system/py/test_e04_t12_public_release.py::test_dependency_notice_covers_review_component[Eigen]
 0.000	tests/system/py/test_e04_t12_public_release.py::test_dependency_notice_covers_review_component[FreeType]
 0.000	tests/system/py/test_e04_t12_public_release.py::test_dependency_notice_covers_review_component[HarfBuzz]
@@ -242142,6 +242260,7 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_project_transactions.py::test
 0.290	tests/system/py/test_public_content_workflows.py::test_e04_t12_credentials_are_refused_and_redacted_in_metadata[title-private-key]
 0.300	tests/system/py/test_public_content_workflows.py::test_e04_t12_credentials_are_refused_and_redacted_in_metadata[title-slack]
 1.690	tests/system/py/test_public_content_workflows.py::test_e04_t12_transformed_snapshot_keeps_the_content_workflow_observer
+1.610	tests/system/py/test_public_content_workflows.py::test_current_public_workflows_keep_the_content_observer
 UNMEASURED:failed-in-this-run	tests/system/py/test_public_save_boundary.py::test_public_delegate_cannot_borrow_a_pending_save_operation[generated-include]
 UNMEASURED:failed-in-this-run	tests/system/py/test_public_save_boundary.py::test_public_delegate_cannot_borrow_a_pending_save_operation[generated-linked]
 UNMEASURED:failed-in-this-run	tests/system/py/test_public_save_boundary.py::test_public_delegate_cannot_borrow_a_pending_save_operation[whole-include]
@@ -252115,7 +252234,7 @@ UNMEASURED:not-completed-in-this-run	tests/unit/py/test_e11_t5_runtime_publicati
 0.000	tests/unit/py/test_operation_entry_census.py::test_public_entries_cannot_appear_outside_the_ownership_inventory[OnlineSourcesModel]
 0.000	tests/unit/py/test_operation_entry_census.py::test_public_entries_cannot_appear_outside_the_ownership_inventory[ParameterItem]
 0.000	tests/unit/py/test_operation_entry_census.py::test_public_entries_cannot_appear_outside_the_ownership_inventory[ProjectViewModel]
-0.000	tests/unit/py/test_operation_entry_census.py::test_public_entries_cannot_appear_outside_the_ownership_inventory[Session]
+UNMEASURED:not-completed-in-this-run	tests/unit/py/test_operation_entry_census.py::test_public_entries_cannot_appear_outside_the_ownership_inventory[Session]
 0.000	tests/unit/py/test_operation_entry_census.py::test_writable_properties_cannot_bypass_the_ownership_inventory[FitViewModel]
 0.000	tests/unit/py/test_operation_entry_census.py::test_writable_properties_cannot_bypass_the_ownership_inventory[OnlineSearch]
 0.000	tests/unit/py/test_operation_entry_census.py::test_writable_properties_cannot_bypass_the_ownership_inventory[OnlineSourcesModel]
@@ -252243,19 +252362,33 @@ UNMEASURED:not-completed-in-this-run	tests/unit/py/test_project_save_owned_alias
 0.000	tests/unit/py/test_release_presentation.py::test_whats_new_links_the_release_title_directly_to_its_change_sections[True-False]
 0.000	tests/unit/py/test_release_presentation.py::test_whats_new_links_the_release_title_directly_to_its_change_sections[True-True]
 0.000	tests/unit/py/test_release_promotion.py::test_cli_delivery_requires_the_executed_identity_and_unchanged_zip
-0.030	tests/unit/py/test_release_promotion.py::test_component_archive_keeps_the_repository_paths_and_is_verified
-0.000	tests/unit/py/test_release_promotion.py::test_component_identity_and_original_checksums_are_verified[archive]
-0.000	tests/unit/py/test_release_promotion.py::test_component_identity_and_original_checksums_are_verified[assistant_archive]
-0.000	tests/unit/py/test_release_promotion.py::test_component_identity_and_original_checksums_are_verified[declaration]
-0.000	tests/unit/py/test_release_promotion.py::test_component_identity_and_original_checksums_are_verified[missing]
-0.000	tests/unit/py/test_release_promotion.py::test_component_identity_and_original_checksums_are_verified[none]
-0.000	tests/unit/py/test_release_promotion.py::test_component_identity_and_original_checksums_are_verified[version]
-0.000	tests/unit/py/test_release_promotion.py::test_delivery_compares_zip_and_executed_app_to_prepared_identity[bytes]
-0.000	tests/unit/py/test_release_promotion.py::test_delivery_compares_zip_and_executed_app_to_prepared_identity[channel]
-0.000	tests/unit/py/test_release_promotion.py::test_delivery_compares_zip_and_executed_app_to_prepared_identity[history]
-0.000	tests/unit/py/test_release_promotion.py::test_delivery_compares_zip_and_executed_app_to_prepared_identity[none]
-0.000	tests/unit/py/test_release_promotion.py::test_delivery_compares_zip_and_executed_app_to_prepared_identity[not-executed]
-0.000	tests/unit/py/test_release_promotion.py::test_delivery_compares_zip_and_executed_app_to_prepared_identity[source]
+UNMEASURED:not-completed-in-this-run	tests/unit/py/test_release_promotion.py::test_component_archive_keeps_the_repository_paths_and_is_verified
+UNMEASURED:not-completed-in-this-run	tests/unit/py/test_release_promotion.py::test_component_identity_and_original_checksums_are_verified[archive]
+UNMEASURED:not-completed-in-this-run	tests/unit/py/test_release_promotion.py::test_component_identity_and_original_checksums_are_verified[assistant_archive]
+UNMEASURED:not-completed-in-this-run	tests/unit/py/test_release_promotion.py::test_component_identity_and_original_checksums_are_verified[declaration]
+UNMEASURED:not-completed-in-this-run	tests/unit/py/test_release_promotion.py::test_component_identity_and_original_checksums_are_verified[legacy-app]
+UNMEASURED:not-completed-in-this-run	tests/unit/py/test_release_promotion.py::test_component_identity_and_original_checksums_are_verified[legacy-assistant]
+UNMEASURED:not-completed-in-this-run	tests/unit/py/test_release_promotion.py::test_component_identity_and_original_checksums_are_verified[missing]
+UNMEASURED:not-completed-in-this-run	tests/unit/py/test_release_promotion.py::test_component_identity_and_original_checksums_are_verified[none]
+UNMEASURED:not-completed-in-this-run	tests/unit/py/test_release_promotion.py::test_component_identity_and_original_checksums_are_verified[version]
+UNMEASURED:not-completed-in-this-run	tests/unit/py/test_release_promotion.py::test_delivery_compares_download_and_executed_app_to_prepared_identity[linux-x86_64-.zip-bytes]
+UNMEASURED:not-completed-in-this-run	tests/unit/py/test_release_promotion.py::test_delivery_compares_download_and_executed_app_to_prepared_identity[linux-x86_64-.zip-channel]
+UNMEASURED:not-completed-in-this-run	tests/unit/py/test_release_promotion.py::test_delivery_compares_download_and_executed_app_to_prepared_identity[linux-x86_64-.zip-history]
+UNMEASURED:not-completed-in-this-run	tests/unit/py/test_release_promotion.py::test_delivery_compares_download_and_executed_app_to_prepared_identity[linux-x86_64-.zip-none]
+UNMEASURED:not-completed-in-this-run	tests/unit/py/test_release_promotion.py::test_delivery_compares_download_and_executed_app_to_prepared_identity[linux-x86_64-.zip-not-executed]
+UNMEASURED:not-completed-in-this-run	tests/unit/py/test_release_promotion.py::test_delivery_compares_download_and_executed_app_to_prepared_identity[linux-x86_64-.zip-source]
+UNMEASURED:not-completed-in-this-run	tests/unit/py/test_release_promotion.py::test_delivery_compares_download_and_executed_app_to_prepared_identity[macos-arm64-.dmg-bytes]
+UNMEASURED:not-completed-in-this-run	tests/unit/py/test_release_promotion.py::test_delivery_compares_download_and_executed_app_to_prepared_identity[macos-arm64-.dmg-channel]
+UNMEASURED:not-completed-in-this-run	tests/unit/py/test_release_promotion.py::test_delivery_compares_download_and_executed_app_to_prepared_identity[macos-arm64-.dmg-history]
+UNMEASURED:not-completed-in-this-run	tests/unit/py/test_release_promotion.py::test_delivery_compares_download_and_executed_app_to_prepared_identity[macos-arm64-.dmg-none]
+UNMEASURED:not-completed-in-this-run	tests/unit/py/test_release_promotion.py::test_delivery_compares_download_and_executed_app_to_prepared_identity[macos-arm64-.dmg-not-executed]
+UNMEASURED:not-completed-in-this-run	tests/unit/py/test_release_promotion.py::test_delivery_compares_download_and_executed_app_to_prepared_identity[macos-arm64-.dmg-source]
+UNMEASURED:not-completed-in-this-run	tests/unit/py/test_release_promotion.py::test_delivery_compares_download_and_executed_app_to_prepared_identity[windows-x86_64-.exe-bytes]
+UNMEASURED:not-completed-in-this-run	tests/unit/py/test_release_promotion.py::test_delivery_compares_download_and_executed_app_to_prepared_identity[windows-x86_64-.exe-channel]
+UNMEASURED:not-completed-in-this-run	tests/unit/py/test_release_promotion.py::test_delivery_compares_download_and_executed_app_to_prepared_identity[windows-x86_64-.exe-history]
+UNMEASURED:not-completed-in-this-run	tests/unit/py/test_release_promotion.py::test_delivery_compares_download_and_executed_app_to_prepared_identity[windows-x86_64-.exe-none]
+UNMEASURED:not-completed-in-this-run	tests/unit/py/test_release_promotion.py::test_delivery_compares_download_and_executed_app_to_prepared_identity[windows-x86_64-.exe-not-executed]
+UNMEASURED:not-completed-in-this-run	tests/unit/py/test_release_promotion.py::test_delivery_compares_download_and_executed_app_to_prepared_identity[windows-x86_64-.exe-source]
 0.000	tests/unit/py/test_release_promotion.py::test_draft_cli_passes_the_commit_and_deliveries_to_qualification
 0.000	tests/unit/py/test_release_promotion.py::test_installer_job_packs_the_tested_components_into_its_delivery
 0.000	tests/unit/py/test_release_promotion.py::test_only_preview_drafts_can_replace_a_known_installer
@@ -252275,7 +252408,7 @@ UNMEASURED:not-completed-in-this-run	tests/unit/py/test_project_save_owned_alias
 0.000	tests/unit/py/test_release_promotion.py::test_release_retry_never_overwrites_an_existing_identity[notes]
 0.000	tests/unit/py/test_release_promotion.py::test_release_retry_never_overwrites_an_existing_identity[published-missing]
 0.000	tests/unit/py/test_release_promotion.py::test_release_retry_never_overwrites_an_existing_identity[source]
-0.010	tests/unit/py/test_release_promotion.py::test_stable_release_attaches_every_platform_component_archive
+UNMEASURED:not-completed-in-this-run	tests/unit/py/test_release_promotion.py::test_stable_release_attaches_every_platform_component_archive
 0.000	tests/unit/py/test_rendered_caption_contract.py::test_a_caption_without_valid_rendered_evidence_cannot_satisfy_the_census[changes0]
 0.000	tests/unit/py/test_rendered_caption_contract.py::test_a_caption_without_valid_rendered_evidence_cannot_satisfy_the_census[changes10]
 0.000	tests/unit/py/test_rendered_caption_contract.py::test_a_caption_without_valid_rendered_evidence_cannot_satisfy_the_census[changes11]
@@ -252994,6 +253127,8 @@ UNMEASURED:not-completed-in-this-run	tests/unit/py/test_web_science_identity.py:
 # module-cost: 6.489	tests/integration/py/test_tutorial_strategy.py
 # module-cost: 2.933	tests/integration/py/test_weight_fraction_app.py
 # module-cost: 12.650	tests/system/app/test_rendered_caption_capitalisation.py
+# module-cost: 0.951	tests/system/app/test_likes_feedback.py
+# module-cost: 0.603	tests/system/app/test_stability_feedback.py
 # module-cost: 2.769	tests/system/py/test_adoption_listener_boundaries.py
 # module-cost: 11.310	tests/system/py/test_app_minimum.py
 # module-cost: 1.849	tests/system/py/test_app_receipt_current_inputs.py

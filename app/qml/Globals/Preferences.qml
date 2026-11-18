@@ -95,6 +95,10 @@ QtObject {
     // What Help and feedback offers to send as the user's contact, each optional, kept for the next message.
     property string feedbackName: ""
     property string feedbackEmail: ""
+    // Whether the app asks now and then whether EasyDiffraction is enjoyed (the likes bar); Don't ask again turns it
+    // off and Preferences turns it back on (owner, 2026-11-17).
+    property bool askLikes: true
+    property bool surveyInvitation: true
     property string feedbackAffiliation: ""
     // The newest changelog date the user has seen in What's new (edi ADR-0067), empty before the first start.
     property string whatsNewSeen: ""
@@ -174,6 +178,8 @@ QtObject {
         property alias name: preferences.feedbackName
         property alias email: preferences.feedbackEmail
         property alias affiliation: preferences.feedbackAffiliation
+        property alias askLikes: preferences.askLikes
+        property alias surveyInvitation: preferences.surveyInvitation
     }
 
     property Settings whatsNewSettings: Settings {

@@ -59,8 +59,8 @@ to know where Qt puts it.
    with a link that opens Preferences on its Performance tab (ADR-0017 §12): "Parallel fits: N" on the Analysis page,
    for a scan, and "Threads per calculation: …" on the Experiment page, whose Settings tab holds only this group.
 3. **One ini file on the desktop.** The store is `QSettings` in `IniFormat` on every desktop platform, one file named
-   after the organisation and the application: `~/.config/EasyScience/EasyDiffraction.ini` on Linux and macOS,
-   `%APPDATA%\EasyScience\EasyDiffraction.ini` on Windows. Not the native formats (a property list on macOS, the
+   after the organisation and the application: `~/.config/EasyDiffraction/EasyDiffraction.ini` on Linux and macOS,
+   `%APPDATA%\EasyDiffraction\EasyDiffraction.ini` on Windows (the organisation was `EasyScience` before ADR-0091). Not the native formats (a property list on macOS, the
    registry on Windows): the file is the same text on every platform, a user can read, copy or remove it, and a bug
    report can include it.
 4. **The browser.** The web app keeps the `.ini` file only where the page's files persist across reloads (WasmFS on the

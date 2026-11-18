@@ -23,24 +23,29 @@ after changing the installed components.
 
 ## Install and update
 
-EasyDiffraction comes with all required application dependencies. Download and extract the
-whole ZIP for your platform. The online installer needs an internet connection. The macOS and
-Windows installers are signed by the European Spallation Source, and Apple has checked the macOS
-installer, so both open without a security warning.
+EasyDiffraction comes with all required application dependencies. Download the installer for your
+platform. The online installer needs an internet connection. The macOS and Windows installers are signed
+by European Spallation Source ERIC, and Apple has checked the macOS installer, so it opens without a
+security warning.
 
 === "macOS"
 
-    1. Open the extracted installer app.
+    1. Open the downloaded `.dmg` and then the installer app inside it.
     2. Follow setup. The suggested folder is `/Applications/EasyDiffraction`.
 
 === "Windows"
 
-    1. Right-click the ZIP and select **Extract All**, then open the installer `.exe`.
-    2. Follow setup to choose the installation folder.
+    1. Open the downloaded installer `.exe`. Windows may show **Windows protected your PC** while our
+       signing certificate is still new: choose **More info**, check that the publisher reads
+       **European Spallation Source ERIC**, then choose **Run anyway**. The warning goes away as the
+       certificate gains reputation.
+    2. Follow setup. The suggested folder is `%LOCALAPPDATA%\Programs\EasyDiffraction`, which needs no
+       administrator rights; run the installer as administrator to install into
+       `C:\Program Files\EasyDiffraction` for every user.
 
 === "Linux"
 
-    1. Keep the extracted `.run` file beside the `installer-runtime` folder.
+    1. Extract the whole ZIP and keep the `.run` file beside the `installer-runtime` folder.
     2. In a terminal opened in that folder, make the installer executable and run it.
 
         ```bash

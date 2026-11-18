@@ -1,8 +1,8 @@
-# 0002. Monorepo layout `lib/ app/ shared/ cli/ docs/`
+# 0002. Monorepo layout `lib/ app/ cli/ docs/`
 
 - **Status:** Accepted
 - **Date:** 2026-07-04
-- **Implementation:** 🟡 Partially implemented — E01 scaffolded the surface tree (`core/ lib/ app/ shared/ cli/ docs/ tests/`) + the CMake baseline (ADR-0009); product/API code is E02+.
+- **Implementation:** 🟡 Partially implemented — E01 scaffolded the surface tree (`core/ lib/ app/ cli/ docs/ tests/`; `shared/` was removed in 2026-11, empty, the session layer being part of `app/`) + the CMake baseline (ADR-0009); product/API code is E02+.
 - **Priority:** Highest
 - **Forward constraint (binding on new features):** Keep the surface split. Product logic is
   implemented **once in `core`** ([ADR-0009](0009-cpp-product-core-thin-bindings.md)); the Python
@@ -36,7 +36,6 @@ edi/
 ├── core/      C++ product core — the user-facing model, .edi/CIF I/O, the crysta adapter (ADR-0009). Qt-free.
 ├── lib/       Python library — thin bindings (+ pythonic sugar) over the core; import edi; dist easydiffraction. Qt-free.
 ├── app/       QML application — ONE C++/CMake host; desktop + WASM build targets, on the gui-components base.
-├── shared/    shared session layer injected into the GUI base (theme/settings/page-model/undo…).
 ├── cli/       the C++ command-line surface, Python-free (ADR-0007).
 ├── docs/      product documentation (user-facing; distinct from knowledge/ the dev corpus).
 ├── tests/     cross-surface tests — tests/hidden/ (hidden spec) + tests/fixtures/ (golden projects).
@@ -70,5 +69,5 @@ edi/
 | Alternative | Verdict |
 |---|---|
 | Separate repos per surface (lib/app/cli) | The historical split; triples release/sync overhead for one product. Rejected (ADR-0001). |
-| Put shared session code inside `app` | `shared/` is injected into the GUI **base** and is reused by desktop+WASM; keeping it separate from `app` screens keeps the injection seam clean (ADR-0005). Rejected. |
+| A separate `shared/` session layer | Scaffolded first and never filled: the session layer (settings, page model, undo) grew inside `app/`, which builds the desktop and WASM targets from one tree. The empty folder was removed in 2026-11. |
 | `src/edi/` single-package layout | Doesn't express the multi-surface product; the four surfaces need distinct build/test/CI treatment. Rejected. |

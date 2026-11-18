@@ -192,7 +192,7 @@ def test_offline_installer_retains_default_update_repositories(tmp_path, channel
             PACKAGE, 'macos_installer_template', return_value=tmp_path / 'installerbase'
         ),
         mock.patch.object(PACKAGE, 'run', side_effect=copy_bundles) as builder,
-        mock.patch.object(PACKAGE, 'archive_installer', return_value=archive),
+        mock.patch.object(PACKAGE, 'deliver_installer', return_value=archive),
     ):
         PACKAGE.package_app(
             stage,
@@ -219,14 +219,14 @@ def test_offline_installer_retains_default_update_repositories(tmp_path, channel
     assert len(creators) == 1, 'Offline packaging builds one installer.'
     assert '--hybrid' in creators[0], 'Offline maintenance permits updates.'
     packages = output / 'source/packages'
-    if PACKAGE.SYSTEM == 'macos':
+    if PACKAGE.SYSTEM in {'macos', 'windows'}:
         tool = packages / PACKAGE.MAINTENANCE_COMPONENT / 'data/maintenancetool'
-        assert PACKAGE.maintenance_tool_executable(tool / PACKAGE.MAINTENANCE_TOOL).is_file(), (
-            'The macOS installer carries the separately built maintenance tool.'
-        )
+        assert PACKAGE.maintenance_tool_executable(
+            tool / PACKAGE.maintenance_tool_name()
+        ).is_file(), 'The installer carries the separately built maintenance tool.'
     else:
         assert not (packages / PACKAGE.MAINTENANCE_COMPONENT).exists(), (
-            'Only macOS ships the maintenance tool component.'
+            'Only macOS and Windows ship the maintenance tool component.'
         )
     assert not (output / 'repository').exists(), 'Offline packaging publishes no repository.'
 
@@ -240,7 +240,7 @@ def test_download_archive_keeps_bootstrap_libraries_and_permissions(tmp_path):
     runtime = tmp_path / 'installer-runtime'
     (runtime / 'lib').mkdir(parents=True)
     (runtime / 'lib/library.so').write_bytes(b'portable dependency')
-    archive = PACKAGE.archive_installer(installer, runtime)
+    archive = PACKAGE.deliver_installer(installer, runtime)
     unpacked = PACKAGE.unpack_installer(archive, tmp_path / 'download')
     assert unpacked.read_bytes() == b'installer', (
         'Download archive keeps bootstrap libraries and permissions.'
@@ -606,9 +606,9 @@ def test_signed_packaging_refuses_a_missing_maintenance_tool(tmp_path, monkeypat
 
 
 def signed_bundle(tmp_path):
-    bundle = tmp_path / PACKAGE.MAINTENANCE_TOOL
+    bundle = tmp_path / PACKAGE.maintenance_tool_name()
     executable = PACKAGE.maintenance_tool_executable(bundle)
-    executable.parent.mkdir(parents=True)
+    executable.parent.mkdir(parents=True, exist_ok=True)
     executable.write_bytes(b'signed tool')
     return bundle
 
@@ -625,6 +625,7 @@ def signed_bundle(tmp_path):
 def test_signed_maintenance_tool_needs_the_developer_id(
     tmp_path, monkeypatch, authority, accepted
 ):
+    monkeypatch.setattr(PACKAGE, 'SYSTEM', 'macos')  # the macOS check, on every runner
     monkeypatch.setenv('EDI_CODESIGN', '1')
     monkeypatch.setenv(
         'EDI_CODESIGN_MAC_IDENTITY',
@@ -645,6 +646,7 @@ def test_signed_maintenance_tool_needs_the_developer_id(
 
 
 def test_unsigned_build_checks_only_the_ad_hoc_signature(tmp_path, monkeypatch):
+    monkeypatch.setattr(PACKAGE, 'SYSTEM', 'macos')  # the macOS check, on every runner
     monkeypatch.delenv('EDI_CODESIGN', raising=False)
     with (
         mock.patch.object(PACKAGE, 'run') as verify,
@@ -653,6 +655,18 @@ def test_unsigned_build_checks_only_the_ad_hoc_signature(tmp_path, monkeypatch):
         PACKAGE.check_maintenance_tool(signed_bundle(tmp_path))
     verify.assert_called_once()
     display.assert_not_called()
+
+
+@pytest.mark.parametrize('signed', [False, True])
+def test_windows_maintenance_tool_is_verified_only_when_signed(tmp_path, monkeypatch, signed):
+    monkeypatch.setattr(PACKAGE, 'SYSTEM', 'windows')
+    if signed:
+        monkeypatch.setenv('EDI_CODESIGN', '1')
+    else:
+        monkeypatch.delenv('EDI_CODESIGN', raising=False)
+    with mock.patch.object(PACKAGE, 'verify_windows_signature') as verify:
+        PACKAGE.check_maintenance_tool(signed_bundle(tmp_path))
+    assert verify.call_count == (1 if signed else 0)
 
 
 @pytest.mark.parametrize('damage', ['written', 'left'])

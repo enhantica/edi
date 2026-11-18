@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 """Recorded qualification evidence and immutable release retry boundaries."""
 
+import hashlib
 import importlib.util
 import json
 import sys
@@ -122,16 +123,21 @@ def test_promotion_requires_every_platform_from_one_successful_main_attempt(dama
 @pytest.mark.parametrize(
     'damage', ['none', 'bytes', 'source', 'history', 'not-executed', 'channel']
 )
-def test_delivery_compares_zip_and_executed_app_to_prepared_identity(tmp_path, damage):
+@pytest.mark.parametrize(
+    ('platform', 'suffix'),
+    [('linux-x86_64', '.zip'), ('macos-arm64', '.dmg'), ('windows-x86_64', '.exe')],
+)
+def test_delivery_compares_download_and_executed_app_to_prepared_identity(
+    tmp_path, damage, platform, suffix
+):
     release = {'version': '2026.11.0', 'commit': 'a' * 40}
     policy = json.loads((ROOT / 'data/distribution.json').read_text())
-    platform = 'linux-x86_64'
     url = (
         policy['primary_base'].rstrip('/')
         + '/'
         + policy['repository_paths']['stable'].format(platform=platform)
     )
-    name = 'EasyDiffraction-2026.11.0-linux-x86_64-online.zip'
+    name = f'EasyDiffraction-2026.11.0-{platform}-online{suffix}'
     (tmp_path / name).write_bytes(b'qualified installer')
     metadata = {
         **release,
@@ -140,8 +146,8 @@ def test_delivery_compares_zip_and_executed_app_to_prepared_identity(tmp_path, d
         'platform': platform,
         'kind': 'online',
         'repository_url': url,
-        'zip': name,
-        'zip_sha256': PROMOTE.digest(tmp_path / name),
+        'download': name,
+        'download_sha256': hashlib.sha256((tmp_path / name).read_bytes()).hexdigest(),
     }
     build = {
         'edi_commit': release['commit'],
@@ -174,7 +180,7 @@ def test_delivery_compares_zip_and_executed_app_to_prepared_identity(tmp_path, d
         (tmp_path / filename).write_text(json.dumps(value))
     if damage == 'none':
         assert PROMOTE.validate_delivery(tmp_path, release, 'b' * 64, platform).name == name, (
-            'Delivery compares ZIP and executed app to prepared identity.'
+            'Each platform download retains its prepared identity and executed-app evidence.'
         )
     else:
         with pytest.raises(ValueError, match=r'identity|bytes'):
@@ -277,11 +283,21 @@ def test_release_history_progression_refuses_stale_candidates(damage):
 
 
 @pytest.mark.parametrize(
-    'damage', ['none', 'archive', 'assistant_archive', 'version', 'missing', 'declaration']
+    'damage',
+    [
+        'none',
+        'archive',
+        'assistant_archive',
+        'version',
+        'missing',
+        'declaration',
+        'legacy-app',
+        'legacy-assistant',
+    ],
 )
 def test_component_identity_and_original_checksums_are_verified(tmp_path, damage):
     content = '<Updates>'
-    for name in ['org.easyscience.edi', 'org.easyscience.edi.assistant']:
+    for name in ['org.easydiffraction.app', 'org.easydiffraction.app.assistant']:
         optional = name.endswith('.assistant')
         if optional and damage == 'missing':
             continue
@@ -293,7 +309,7 @@ def test_component_identity_and_original_checksums_are_verified(tmp_path, damage
         metadata.write_bytes(b'qualified component metadata')
         for path in [archive, metadata]:
             with path.open('rb') as stream:
-                checksum = PROMOTE.hashlib.file_digest(stream, 'sha1').hexdigest()
+                checksum = hashlib.file_digest(stream, 'sha1').hexdigest()
             path.with_suffix(path.suffix + '.sha1').write_text(checksum)
         version = '2026.11.1' if optional and damage == 'version' else '2026.11.0'
         content += (
@@ -304,6 +320,15 @@ def test_component_identity_and_original_checksums_are_verified(tmp_path, damage
         if damage == ('assistant_archive' if optional else 'archive'):
             archive.write_bytes(b'rebuilt component')
     content += '</Updates>'
+    if damage == 'legacy-app':
+        content = content.replace(
+            '<Name>org.easydiffraction.app</Name>', '<Name>org.easyscience.edi</Name>'
+        )
+    elif damage == 'legacy-assistant':
+        content = content.replace(
+            '<Name>org.easydiffraction.app.assistant</Name>',
+            '<Name>org.easyscience.edi.assistant</Name>',
+        )
     if damage == 'declaration':
         content = '<!DOCTYPE Updates>' + content
     (tmp_path / 'Updates.xml').write_text(content)
@@ -316,9 +341,9 @@ def test_component_identity_and_original_checksums_are_verified(tmp_path, damage
 
 def component_repository(folder, version='2026.11.0', *, platform='linux-x86_64'):
     content = '<Updates>'
-    names = ['org.easyscience.edi', 'org.easyscience.edi.assistant']
-    if platform == 'macos-arm64':
-        names.append('org.easyscience.edi.maintenancetool')
+    names = ['org.easydiffraction.app', 'org.easydiffraction.app.assistant']
+    if platform in {'macos-arm64', 'windows-x86_64'}:
+        names.append('org.easydiffraction.app.maintenancetool')
     for name in names:
         component = folder / name
         component.mkdir(parents=True)
@@ -328,7 +353,7 @@ def component_repository(folder, version='2026.11.0', *, platform='linux-x86_64'
         metadata.write_bytes(b'qualified component metadata ' + name.encode())
         for path in [archive, metadata]:
             with path.open('rb') as stream:
-                checksum = PROMOTE.hashlib.file_digest(stream, 'sha1').hexdigest()
+                checksum = hashlib.file_digest(stream, 'sha1').hexdigest()
             path.with_suffix(path.suffix + '.sha1').write_text(checksum)
         content += (
             f'<PackageUpdate><Name>{name}</Name><Version>{version}</Version>'
@@ -370,7 +395,7 @@ def test_component_archive_keeps_the_repository_paths_and_is_verified(tmp_path):
         is None
     ), 'A component archive belongs to one channel.'
     damaged = component_repository(tmp_path / 'damaged')
-    (damaged / 'org.easyscience.edi/2026.11.0content.7z').write_bytes(b'rebuilt')
+    (damaged / 'org.easydiffraction.app/2026.11.0content.7z').write_bytes(b'rebuilt')
     (delivery / name).unlink()
     PROMOTE.pack_components(damaged, delivery / name)
     with pytest.raises(ValueError, match='checksum differs'):

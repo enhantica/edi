@@ -1,5 +1,5 @@
 # Unit-tier coverage of both languages, by dispatch: the text reports are uploaded and summarised.
-name: Coverage (C++ and Python)
+name: Coverage
 
 on:
   workflow_dispatch:

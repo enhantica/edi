@@ -19,6 +19,13 @@ from plan import markdown_notes, validate_history, version_key
 
 PLATFORMS = {'Linux': 'linux-x86_64', 'macOS': 'macos-arm64', 'Windows': 'windows-x86_64'}
 ROOT = Path(__file__).resolve().parents[2]
+# The one installer file users download (edi ADR-0071); Linux keeps its runtime libraries in a ZIP.
+INSTALLER_SUFFIXES = {'linux-x86_64': '.zip', 'macos-arm64': '.dmg', 'windows-x86_64': '.exe'}
+
+
+def installer_name(version: str, platform: str, kind: str) -> str:
+    """The file name of a platform's online or offline installer download."""
+    return f'EasyDiffraction-{version}-{platform}-{kind}{INSTALLER_SUFFIXES[platform]}'
 
 
 def api(repo: str, suffix: str) -> dict:
@@ -165,12 +172,12 @@ def validate_delivery(folder: Path, release: dict, history_hash: str, platform: 
         raise ValueError(
             'Delivered installer and executed application do not share the prepared identity'
         )
-    name = metadata['zip']
-    if name != f'EasyDiffraction-{version}-{platform}-online.zip':
-        raise ValueError('Unexpected installer ZIP filename')
+    name = metadata['download']
+    if name != installer_name(version, platform, 'online'):
+        raise ValueError('Unexpected installer filename')
     archive = folder / name
-    if archive.is_symlink() or digest(archive) != metadata['zip_sha256']:
-        raise ValueError('Qualified installer ZIP bytes differ')
+    if archive.is_symlink() or digest(archive) != metadata['download_sha256']:
+        raise ValueError('Qualified installer bytes differ')
     return archive
 
 
@@ -194,7 +201,7 @@ def validate_cli(folder: Path, version: str, commit: str, platform: str) -> Path
 
 def validate_offline(folder: Path, version: str, commit: str, platform: str) -> Path | None:
     """Read the optional tested offline installer of a platform delivery."""
-    name = f'EasyDiffraction-{version}-{platform}-offline.zip'
+    name = installer_name(version, platform, 'offline')
     metadata, receipt = folder / 'offline-installer.json', folder / 'offline-qualification.json'
     archive = folder / name
     if not metadata.exists() and not archive.exists():
@@ -205,7 +212,7 @@ def validate_offline(folder: Path, version: str, commit: str, platform: str) -> 
         'version': version,
         'platform': platform,
         'kind': 'offline',
-        'zip': name,
+        'download': name,
         'edi_commit': commit,
     }
     if (
@@ -214,7 +221,7 @@ def validate_offline(folder: Path, version: str, commit: str, platform: str) -> 
         or qualification.get('smoke', {}).get('app_version') != version
     ):
         raise ValueError('Qualified offline installer identity differs')
-    if archive.is_symlink() or digest(archive) != identity.get('zip_sha256'):
+    if archive.is_symlink() or digest(archive) != identity.get('download_sha256'):
         raise ValueError('Qualified offline installer bytes differ')
     return archive
 
@@ -316,14 +323,16 @@ def stage_optional_assets(output: Path, assets: Path, release: dict) -> None:
             shutil.copy2(archive, assets / archive.name)
 
 
-APP_COMPONENTS = frozenset({'org.easyscience.edi', 'org.easyscience.edi.assistant'})
-# macOS installs its separately signed maintenance tool from this component (edi ADR-0091).
-MAINTENANCE_COMPONENT = 'org.easyscience.edi.maintenancetool'
+APP_COMPONENT = 'org.easydiffraction.app'
+APP_COMPONENTS = frozenset({APP_COMPONENT, 'org.easydiffraction.app.assistant'})
+# macOS and Windows install their separately signed maintenance tool from it (edi ADR-0091).
+MAINTENANCE_COMPONENT = 'org.easydiffraction.app.maintenancetool'
+MAINTENANCE_PLATFORMS = frozenset({'macos-arm64', 'windows-x86_64'})
 
 
 def component_names(platform: str) -> frozenset[str]:
     """The components a release repository holds for one platform."""
-    if platform == 'macos-arm64':
+    if platform in MAINTENANCE_PLATFORMS:
         return APP_COMPONENTS | {MAINTENANCE_COMPONENT}
     return APP_COMPONENTS
 

@@ -9,12 +9,16 @@ import tempfile
 from pathlib import Path
 
 from promote import (
+    APP_COMPONENT,
+    APP_COMPONENTS,
     MAINTENANCE_COMPONENT,
+    MAINTENANCE_PLATFORMS,
     PLATFORMS,
     ROOT,
     api,
     digest,
     extract,
+    installer_name,
     validate_repository,
 )
 
@@ -123,13 +127,13 @@ def copy_preview(
     delivery: Path, components: Path, output: Path, platform: str, version: str, commit: str
 ) -> None:
     policy = json.loads((ROOT / 'data/distribution.json').read_text())
-    name = f'EasyDiffraction-{version}-{platform}-online.zip'
+    name = installer_name(version, platform, 'online')
     url = policy['primary_base'] + policy['repository_paths']['testing'].format(platform=platform)
     metadata = json.loads((delivery / 'installer.json').read_text())
     build = json.loads((delivery / 'build-inputs.json').read_text())
     qualification = json.loads((delivery / 'qualification.json').read_text())
     expected = {
-        'zip': name,
+        'download': name,
         'version': version,
         'platform': platform,
         'kind': 'online',
@@ -141,13 +145,13 @@ def copy_preview(
         or build['edi_commit'] != commit
         or qualification.get('passed') is not True
         or qualification.get('smoke', {}).get('passed') is not True
-        or digest(delivery / name) != metadata['zip_sha256']
+        or digest(delivery / name) != metadata['download_sha256']
     ):
         raise ValueError(f'Preview delivery identity or qualification differs: {platform}')
     repository = components / 'testing' / platform
     packages = frozenset(item.name for item in repository.iterdir() if item.is_dir())
-    allowed = [{'org.easyscience.edi'}, {'org.easyscience.edi', 'org.easyscience.edi.assistant'}]
-    if platform == 'macos-arm64':
+    allowed = [{APP_COMPONENT}, set(APP_COMPONENTS)]
+    if platform in MAINTENANCE_PLATFORMS:
         allowed = [names | {MAINTENANCE_COMPONENT} for names in allowed]
     if packages not in allowed:
         raise ValueError(f'Unknown preview component set: {platform}')

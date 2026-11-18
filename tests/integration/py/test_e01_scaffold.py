@@ -1,4 +1,4 @@
-"""Acceptance gates for 's monorepo scaffold contracts."""
+"""Acceptance gates for the monorepo scaffold contracts."""
 
 from __future__ import annotations
 
@@ -36,9 +36,12 @@ def assert_ok(result: subprocess.CompletedProcess[str]) -> None:
 
 
 def test_surface_tree_matches_adr_0002() -> None:
-    expected = {'core', 'lib', 'app', 'shared', 'cli', 'docs', 'tests'}
+    expected = {'core', 'lib', 'app', 'cli', 'docs', 'tests'}
     missing = sorted(name for name in expected if not (ROOT / name).is_dir())
     assert not missing, f'missing ADR-0002 surfaces: {missing}'
+    assert not (ROOT / 'shared').exists(), (
+        'ADR-0002 keeps the session layer in app and retires the empty shared surface'
+    )
     assert (ROOT / 'tests/hidden-surface.txt').is_file()
     assert any(path.is_file() for path in (ROOT / 'tests/unit').rglob('*'))
     assert not list((ROOT / 'tests').rglob('*_hidden.py'))

@@ -206,7 +206,7 @@ def desktop(plan):
     for mode in MODES:
         config = Path(plan['scratch']) / ('machine-' + mode)
         config.mkdir()
-        settings = config / 'EasyScience/EasyDiffraction/settings.ini'
+        settings = config / 'EasyDiffraction/EasyDiffraction/settings.ini'
         settings.parent.mkdir(parents=True, exist_ok=True)
         env = dict(
             os.environ,

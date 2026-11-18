@@ -138,3 +138,50 @@ def test_api_failure_is_not_treated_as_a_first_release():
         pytest.raises(RuntimeError, match='could not be read'),
     ):
         PREPARE.published_history('enhantica/edi')
+
+
+def draft_release(identifier, tag, commit, *, draft=True, prerelease=True, body=None, assets=()):
+    return {
+        'id': identifier,
+        'tag_name': tag,
+        'target_commitish': commit,
+        'draft': draft,
+        'prerelease': prerelease,
+        'body': PLAN.release_body('', '2026-11-17') if body is None else body,
+        'assets': list(assets),
+    }
+
+
+@pytest.mark.parametrize(
+    ('mode', 'deleted'),
+    [
+        ({'prerelease': True}, [1, 2]),
+        ({'prerelease': False, 'reservations_only': True}, [5]),
+    ],
+)
+def test_a_failed_run_withdraws_only_its_own_drafts(mode, deleted):
+    commit, other = 'a' * 40, 'b' * 40
+    releases = [
+        draft_release(1, 'v2026.11.21', commit),
+        draft_release(2, 'v2026.11.22', commit, body='Notes', assets=[{'name': 'x.dmg'}]),
+        draft_release(3, 'v2026.11.20', commit, draft=False),
+        draft_release(4, 'v2026.11.23', other),
+        draft_release(5, 'v2026.11.6', commit, prerelease=False),
+        draft_release(6, 'v2026.11.7', commit, prerelease=False, assets=[{'name': 'x.exe'}]),
+        draft_release(7, 'not-a-calendar-tag', commit),
+    ]
+    calls = []
+
+    def fake_run(command, **_):
+        calls.append(command)
+        return subprocess.CompletedProcess(command, 0)
+
+    with (
+        mock.patch.object(PREPARE, 'list_releases', return_value=releases),
+        mock.patch.object(PREPARE.subprocess, 'run', side_effect=fake_run),
+    ):
+        tags = PREPARE.withdraw_drafts('enhantica/edi', commit, **mode)
+    assert [command[-1] for command in calls] == [
+        f'repos/enhantica/edi/releases/{identifier}' for identifier in deleted
+    ], 'Only this source and channel lose their drafts; published releases are never touched.'
+    assert len(tags) == len(deleted)

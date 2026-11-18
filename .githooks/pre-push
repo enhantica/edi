@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# Runs the CI lint job's checks before a push. Enable it once per clone with
+#     git config core.hooksPath .githooks
+# and skip it for one push with `git push --no-verify`.
+exec pixi run lint

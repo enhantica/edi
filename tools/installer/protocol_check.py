@@ -13,9 +13,9 @@ from package import (
     SUFFIX,
     SYSTEM,
     clean_environment,
+    installer_from_download,
     package_app,
     run,
-    unpack_installer,
     verify_installed_maintenance_tool,
 )
 
@@ -62,8 +62,11 @@ def exercise(
     kind: str, bootstrap: Path, output: Path, marker: Path, assistant_marker: Path
 ) -> None:
     env = clean_environment(output / 'isolated home' / kind)
+    metadata = json.loads((bootstrap.parent / 'installer.json').read_text())
     executable = installer_command(
-        unpack_installer(bootstrap.with_suffix('.zip'), output / kind / 'unzipped')
+        installer_from_download(
+            bootstrap.parent / metadata['download'], output / kind / 'unpacked'
+        )
     )
     target = output / (kind + ' installed app')
     maintenance = target / (
@@ -87,7 +90,6 @@ def exercise(
         )
         installed = target / marker
         try:
-            metadata = json.loads((bootstrap.parent / 'installer.json').read_text())
             verify_installed_maintenance_tool(target, metadata)
             expected = 'first marker\n' if kind == 'offline' else 'second marker\n'
             if installed.read_text() != expected:
