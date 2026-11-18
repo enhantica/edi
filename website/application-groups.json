@@ -261,6 +261,16 @@
           "AppearanceGroup"
         ],
         "app_group": "appearance"
+      },
+      {
+        "page": "application/structure/polyhedra.md",
+        "title": "Polyhedra",
+        "tab": "Extra",
+        "icon": "dice-d20",
+        "components": [
+          "PolyhedraGroup"
+        ],
+        "app_group": "polyhedra"
       }
     ],
     "experiment": [

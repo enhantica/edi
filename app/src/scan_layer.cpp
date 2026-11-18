@@ -1267,7 +1267,13 @@ void ScanLayer::paint(QPainter* painter) {
     // The ratio is the painter's whole scale: Qt paints this item into a texture of device pixels through a scaled
     // transform on a device that reports a ratio of 1, so the device's ratio alone would stroke at item resolution and
     // the texture would stretch the lines.
-    const qreal ratio = painter->deviceTransform().m11();
+    // Its size, not its sign: a mirrored transform (macOS's Metal texture) gives a negative m11, and a negative pen width
+    // warns on every frame.
+    const QTransform transform = painter->deviceTransform();
+    const qreal scale = std::hypot(transform.m11(), transform.m12());
+    const qreal ratio = std::isfinite(scale) && scale > 0.0 ? scale
+                        : window() != nullptr                ? window()->effectiveDevicePixelRatio()
+                                                             : 1.0;
     const int device_width = std::max(1, static_cast<int>(std::ceil(width() * ratio)));
     const int device_height = std::max(1, static_cast<int>(std::ceil(height() * ratio)));
     const int forced = qEnvironmentVariableIntValue("EDI_SCAN_PAINT_THREADS");

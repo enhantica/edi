@@ -60,6 +60,7 @@ DataTable {
     }
 
     objectName: "singleCrystal.reflections"
+    readOnly: true
     maxRowCountShow: spareHeight > 0 ? Math.max(5, Math.floor((spareHeight - (headerItem ? headerItem.height : 0) - AppSizes.groupContentSpacing) / tableRowHeight - 0.5)) : EaStyle.Sizes.tableMaxRowCountShow
     defaultInfoText: qsTr("No reflections yet")
     sourceModel: experiment ? experiment.singleCrystalReflections : null
@@ -131,17 +132,17 @@ DataTable {
             marksCurrentRow: true
             text: row.index + 1
         }
-        EaComponents.ListViewLabel {
+        CellLabel {
             elide: Text.ElideRight
             horizontalAlignment: Text.AlignHCenter
             text: row.model.h
         }
-        EaComponents.ListViewLabel {
+        CellLabel {
             elide: Text.ElideRight
             horizontalAlignment: Text.AlignHCenter
             text: row.model.k
         }
-        EaComponents.ListViewLabel {
+        CellLabel {
             elide: Text.ElideRight
             horizontalAlignment: Text.AlignHCenter
             text: row.model.l

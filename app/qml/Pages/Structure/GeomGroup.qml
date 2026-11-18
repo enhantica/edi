@@ -84,13 +84,16 @@ Column {
         }
     }
 
+    // Calculated, so read-only. Each site's label and its symmetry code in CIF form (1_555), as Atoms in the cell
+    // shows them, so the bonds of one pair of sites to different images are told apart.
     DataTable {
         objectName: "geom.bonds"
         width: EaStyle.Sizes.sideBarContentWidth
+        readOnly: true
         defaultInfoText: qsTr("No bonds within the cutoffs, or the structure is not calculated yet.")
         sourceModel: group.structure ? group.structure.bonds : []
 
-        columns: [numberColumnWidth, -1, -1, -1]
+        columns: [numberColumnWidth, -1, -1, -1, -1, -1]
 
         header: EaComponents.ListViewHeader {
             EaComponents.ListViewLabel {
@@ -103,7 +106,15 @@ Column {
             }
             HeaderLabel {
                 horizontalAlignment: Text.AlignLeft
+                uid: "geom_bond.site_symmetry_1"
+            }
+            HeaderLabel {
+                horizontalAlignment: Text.AlignLeft
                 uid: "geom_bond.atom_site_label_2"
+            }
+            HeaderLabel {
+                horizontalAlignment: Text.AlignLeft
+                uid: "geom_bond.site_symmetry_2"
             }
             HeaderLabel {
                 uid: "geom_bond.distance"
@@ -122,19 +133,31 @@ Column {
                 marksCurrentRow: true
                 text: row.index + 1
             }
-            EaComponents.ListViewLabel {
+            CellLabel {
                 objectName: `geom.bonds.site1.${row.index}`
                 elide: Text.ElideRight
                 horizontalAlignment: Text.AlignLeft
                 text: row.modelData.site1
             }
-            EaComponents.ListViewLabel {
+            CellLabel {
+                objectName: `geom.bonds.symmetry1.${row.index}`
+                elide: Text.ElideRight
+                horizontalAlignment: Text.AlignLeft
+                text: row.modelData.symmetry1
+            }
+            CellLabel {
                 objectName: `geom.bonds.site2.${row.index}`
                 elide: Text.ElideRight
                 horizontalAlignment: Text.AlignLeft
                 text: row.modelData.site2
             }
-            EaComponents.ListViewLabel {
+            CellLabel {
+                objectName: `geom.bonds.symmetry2.${row.index}`
+                elide: Text.ElideRight
+                horizontalAlignment: Text.AlignLeft
+                text: row.modelData.symmetry2
+            }
+            CellLabel {
                 objectName: `geom.bonds.distance.${row.index}`
                 elide: Text.ElideRight
                 horizontalAlignment: Text.AlignHCenter

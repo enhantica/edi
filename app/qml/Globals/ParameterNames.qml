@@ -26,6 +26,15 @@ QtObject {
         return ApplicationInfo.nameParameterIcon(name);
     }
 
+    // A parameter's full name, qualified by its datablock and, in a loop, its row: d20.peak.broad_gauss_v,
+    // lbco.atom_site.La.fract_x (the owner, 2026-11-14).
+    function fullName(item): string {
+        if (!item)
+            return "";
+        const row = item.rowLabel !== "" ? `.${item.rowLabel}` : "";
+        return `${item.blockName}.${item.category}${row}.${item.name}`;
+    }
+
     // A ParameterItem's name as IconLine pieces (§10).
     function segments(item) {
         return ApplicationInfo.nameSegments(item);

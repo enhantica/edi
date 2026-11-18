@@ -101,6 +101,7 @@ Item {
                         direction: entry.colourMap ? entry.modelData.direction : "auto"
                         chartBackground: entry.colourMap ? entry.modelData.chartBackground : "white"
                         dark: entry.colourMap && entry.modelData.dark
+                        fitShown: entry.colourMap && entry.modelData.fitShown
                         shownIndex: entry.colourMap ? entry.modelData.currentIndex : 0
                         onActivated: index => entry.modelData.activated(index)
                     }
@@ -114,6 +115,7 @@ Item {
                         model: entry.box ? entry.modelData.model : []
                         closedTexts: entry.box ? entry.modelData.closedTexts : []
                         closedOnly: entry.box && entry.modelData.closedOnly
+                        fitShown: entry.box && entry.modelData.fitShown
                         shownIndex: entry.box ? entry.modelData.currentIndex : 0
                         onActivated: index => entry.modelData.activated(index)
                     }
@@ -127,6 +129,7 @@ Item {
                         fontIcon: entry.modelData.fontIcon ?? ""
                         toolTip: entry.modelData.toolTip ?? ""
                         checked: entry.modelData.checked ?? false
+                        alert: entry.modelData.alert ?? false
                         onClicked: entry.modelData.clicked()
 
                         // A button drawn with a letter (view along a, b, c) has no icon: its letter, in its colour.

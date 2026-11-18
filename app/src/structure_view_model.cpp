@@ -973,6 +973,8 @@ QVariantList StructureViewModel::bonds() const {
     for (std::size_t b = 0; b < bonds.size(); ++b) {
         out.append(QVariantMap{{QStringLiteral("site1"), QString::fromStdString(bonds.atom_site_label_1[b])},
                                {QStringLiteral("site2"), QString::fromStdString(bonds.atom_site_label_2[b])},
+                               {QStringLiteral("symmetry1"), QString::fromStdString(bonds.site_symmetry_1[b])},
+                               {QStringLiteral("symmetry2"), QString::fromStdString(bonds.site_symmetry_2[b])},
                                {QStringLiteral("distance"), bonds.distance[b]}});
     }
     return out;

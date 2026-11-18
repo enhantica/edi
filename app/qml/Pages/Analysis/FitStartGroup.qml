@@ -25,6 +25,7 @@ DataTable {
     }
 
     objectName: "fitStart.list"
+    readOnly: true
     defaultInfoText: qsTr("No fit start state")
     sourceModel: analysis ? analysis.fitStart : null
 
@@ -56,8 +57,6 @@ DataTable {
         required property var model
         // A row's parameter, null for a start row no current parameter has.
         readonly property ParameterItem parameter: row.model.parameter ?? null
-
-        highlightsHover: false
 
         EaComponents.ListViewLabel {
             elide: Text.ElideRight
@@ -96,13 +95,11 @@ DataTable {
         }
         NumberLabel {
             horizontalAlignment: Text.AlignRight
-            color: EaStyle.Colors.themeForegroundMinor
             number: table.shown("fit_parameter.start_value", row.model.startValue)
             full: NumberText.plainFull(row.model.startValue)
         }
         NumberLabel {
             horizontalAlignment: Text.AlignRight
-            color: EaStyle.Colors.themeForegroundMinor
             number: table.shown("fit_parameter.start_uncertainty", row.model.startUncertainty)
             full: NumberText.plainFull(row.model.startUncertainty)
         }

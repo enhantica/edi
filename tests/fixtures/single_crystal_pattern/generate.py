@@ -150,7 +150,7 @@ _linked_structure.structure_id
 _linked_structure.scale
 cosio 1
 """
-    (HERE / 'simulation.edi').write_text(header)
+    (HERE / 'simulation.edi').write_text(header + '_data_range.sin_theta_over_lambda_max 0.35\n')
     header += 'loop_\n' + ''.join(
         '_refln.' + name + '\n'
         for name in ('index_h', 'index_k', 'index_l', 'intensity_meas', 'intensity_meas_su')

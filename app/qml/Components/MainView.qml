@@ -13,7 +13,8 @@ import edi.app
 // and Analysis pages holds one, in its main area, and it moves with the page. Its tabs are the page's set (`tabKeys`)
 // out of Structure, Pattern, Meas vs calc, Correlations, Stacked, Map and Evolution, in that order: a tab that will
 // become available is shown disabled, one that is irrelevant (Stacked and Map with one dataset, Evolution without a
-// scan) is hidden. The page's first tab opens with each project; after that the shown tab stays. The block selector
+// scan) is hidden. The page's default tab opens with each project, or the tab the user last picked on the page in this
+// session; after that the shown tab stays. The block selector
 // above the views lists the structures on the Structure tab and the experiments on the others.
 EaComponents.MainContent {
     id: view
@@ -31,7 +32,17 @@ EaComponents.MainContent {
     function tabOf(key) {
         return Math.max(0, allKeys.indexOf(key));
     }
-    readonly property int ownTab: tabOf(tabKeys[0])
+    // The tab the page opens on, whatever the tab order (the owner, 2026-11-17: Pattern on Analysis and Experiment).
+    property string defaultKey: tabKeys[0]
+    readonly property int ownTab: tabOf(defaultKey)
+    // The tab the user last picked on this page: it opens on that one with each later project, for the session. Kept by
+    // page in SideBarGroups, as a new project builds its pages again.
+    property string pageKey: defaultKey
+    readonly property string chosenKey: SideBarGroups.tabPick(pageKey)
+    function available(key) {
+        const tab = bar && key !== "" && shows(key) ? bar.itemAt(tabOf(key)) : null;
+        return tab !== null && tab.enabled && tab.visible;
+    }
     readonly property string currentKey: allKeys[tabIndex] ?? ""
 
     readonly property ProjectViewModel project: Session.project
@@ -53,6 +64,20 @@ EaComponents.MainContent {
             showMainTab(ownTab);
     }
 
+    // A tab hidden or disabled while it is current (Stacked, Map or Evolution once the scan or the joint fit ends, Meas
+    // vs calc for an experiment without both values) leaves the bar on the page's own tab rather than on a page with
+    // nothing to show; the user's pick comes back with the tab.
+    readonly property bool currentHidden: {
+        const tab = bar && currentKey !== "" ? bar.itemAt(tabIndex) : null;
+        return tab !== null && (!tab.visible || !tab.enabled);
+    }
+    onCurrentHiddenChanged: {
+        if (!currentHidden)
+            return;
+        pickPending = currentKey === chosenKey;
+        showMainTab(ownTab);
+    }
+
     // The tab bar, reached from its first tab (the base names it nowhere).
     readonly property var bar: structureTab.TabBar.tabBar
     readonly property int tabIndex: bar ? bar.currentIndex : 0
@@ -61,8 +86,9 @@ EaComponents.MainContent {
     readonly property var structureController: structureView.controller
 
     function showMainTab(index) {
-        if (bar)
-            bar.currentIndex = index;
+        if (!bar)
+            return;
+        bar.currentIndex = index;
     }
     // The page's own tab opens the first time the page is shown with a project, even with nothing to show yet; after
     // that the tab the user is on stays until they pick another, and the view never switches by itself (the owner,
@@ -72,7 +98,18 @@ EaComponents.MainContent {
         if (!bar || !shown || ownTabOpened)
             return;
         ownTabOpened = true;
-        showMainTab(ownTab);
+        pickPending = chosenKey !== "" && !available(chosenKey);
+        showMainTab(available(chosenKey) ? tabOf(chosenKey) : ownTab);
+    }
+    // The user's pick may not be available yet when the page first shows a new project (its structures still
+    // loading): the page opens on its own tab and moves to the pick once it is, unless the user picked another.
+    property bool pickPending: false
+    readonly property bool pickReady: pickPending && available(chosenKey)
+    onPickReadyChanged: {
+        if (pickReady) {
+            pickPending = false;
+            showMainTab(tabOf(chosenKey));
+        }
     }
     onProjectChanged: {
         ownTabOpened = false;
@@ -88,6 +125,14 @@ EaComponents.MainContent {
     onTabIndexChanged: {
         if (!view.shown)
             Qt.callLater(showCurrentPage);
+    }
+    // Only a click on a tab is the user's pick: the bar also moves by itself while a project closes and opens, and
+    // that move used to overwrite the pick with the first tab.
+    function keepPick() {
+        if (shown) {
+            SideBarGroups.setTabPick(view.pageKey, view.currentKey);
+            pickPending = false;
+        }
     }
     // The pages' list keeps its old position when the tab changes while the view is hidden (a scan project opened
     // straight onto Analysis showed the previous project's structure under the Pattern tab): put it on the current
@@ -112,6 +157,8 @@ EaComponents.MainContent {
             id: structureTab
 
             objectName: "mainArea.tab.structure"
+
+            onClicked: view.keepPick()
             text: qsTr("Structure")
             visible: view.shows("structure")
             width: visible ? Math.max(implicitBackgroundWidth + leftInset + rightInset, implicitContentWidth + leftPadding + rightPadding) : 0
@@ -119,6 +166,7 @@ EaComponents.MainContent {
         },
         IconTabButton {
             objectName: "mainArea.tab.pattern"
+            onClicked: view.keepPick()
             text: qsTr("Pattern")
             visible: view.shows("pattern")
             width: visible ? Math.max(implicitBackgroundWidth + leftInset + rightInset, implicitContentWidth + leftPadding + rightPadding) : 0
@@ -128,6 +176,7 @@ EaComponents.MainContent {
         // owner, 2026-11-16): enabled once the shown experiment has both.
         IconTabButton {
             objectName: "mainArea.tab.measCalc"
+            onClicked: view.keepPick()
             text: qsTr("Meas vs calc")
             visible: view.shows("meascalc")
             width: visible ? Math.max(implicitBackgroundWidth + leftInset + rightInset, implicitContentWidth + leftPadding + rightPadding) : 0
@@ -136,6 +185,7 @@ EaComponents.MainContent {
         // The last fit's parameter correlations for the shown experiment.
         IconTabButton {
             objectName: "mainArea.tab.correlations"
+            onClicked: view.keepPick()
             text: qsTr("Correlations")
             visible: view.shows("correlations")
             width: visible ? Math.max(implicitBackgroundWidth + leftInset + rightInset, implicitContentWidth + leftPadding + rightPadding) : 0
@@ -144,12 +194,14 @@ EaComponents.MainContent {
         // A scan's or a joint fit's patterns, stacked and as a map (edi ADR-0041): only with several datasets.
         IconTabButton {
             objectName: "mainArea.tab.stacked"
+            onClicked: view.keepPick()
             text: qsTr("Stacked")
             visible: view.shows("stacked") && (view.patternViews || view.singleCrystals)
             width: visible ? Math.max(implicitBackgroundWidth + leftInset + rightInset, implicitContentWidth + leftPadding + rightPadding) : 0
         },
         IconTabButton {
             objectName: "mainArea.tab.map"
+            onClicked: view.keepPick()
             text: qsTr("Map")
             visible: view.shows("map") && view.patternViews && !view.singleCrystals
             width: visible ? Math.max(implicitBackgroundWidth + leftInset + rightInset, implicitContentWidth + leftPadding + rightPadding) : 0
@@ -157,6 +209,7 @@ EaComponents.MainContent {
         // A fitted parameter across a scan's datasets (edi ADR-0017 §19), in a scan project (edi ADR-0046).
         IconTabButton {
             objectName: "mainArea.tab.evolution"
+            onClicked: view.keepPick()
             text: qsTr("Evolution")
             visible: view.shows("evolution") && view.project !== null && view.project.scan
             width: visible ? Math.max(implicitBackgroundWidth + leftInset + rightInset, implicitContentWidth + leftPadding + rightPadding) : 0
@@ -201,17 +254,18 @@ EaComponents.MainContent {
 
                 objectName: "singleCrystal.measCalc"
                 anchors.fill: parent
-                visible: measCalcTab.singleCrystal
+                // Nothing of an experiment without both values is drawn, not even the previous experiment's points.
+                visible: measCalcTab.singleCrystal && measCalcTab.available
                 comparison: true
                 experiment: measCalcTab.singleCrystal ? measCalcTab.experiment : null
                 project: view.project
-                shown: measCalcTab.shown && measCalcTab.singleCrystal
+                shown: measCalcTab.shown && measCalcTab.singleCrystal && measCalcTab.available
             }
             MeasCalcChart {
                 id: measCalcPowder
 
                 anchors.fill: parent
-                visible: !measCalcTab.singleCrystal
+                visible: !measCalcTab.singleCrystal && measCalcTab.available
                 experiment: measCalcTab.singleCrystal ? null : measCalcTab.experiment
                 shown: measCalcTab.shown && !measCalcTab.singleCrystal && measCalcTab.available
             }

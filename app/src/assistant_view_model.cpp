@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "assistant_view_model.hpp"
+#include "assistant_control_routes.hpp"
 #include "assistant_file_primitives.hpp"
 #include "assistant_history.hpp"
 #include "assistant_history_lookup.hpp"
@@ -4021,6 +4022,11 @@ struct AssistantViewModel::State {
         qsizetype relation_row = 0, relation_field = 0;
         bool relation_constraint = false, relation_visible = false;
         qsizetype relation_base = 0, completed_steps = 0;
+        // The tool and arguments as admitted, so a refused cue can still run the operation as normal mode does.
+        QString fallback_tool;
+        Object fallback_args;
+        QString cue_skipped;
+        bool cue_fallback = false;
         const void* relation_key = nullptr;
         ProjectEditor::RelationAction relation_action;
         bool step_counted = false, estimate_then_names = false;
@@ -4066,6 +4072,9 @@ struct AssistantViewModel::State {
         std::shared_ptr<LocalInputSource> structure_origin, measurement_origin;
         QUrl measurement_path, measurement_reader_path;
         bool origin_unavailable=false;
+        // Show actions could not cue the original control: the same native operation ran without the cue.
+        QString cue_skipped;
+        bool cue_fallback=false;
 
         std::unique_ptr<QTemporaryDir> input_snapshot;
         std::shared_ptr<ProjectViewModel::WidgetCreationInput> control_input;
@@ -4489,6 +4498,11 @@ struct AssistantViewModel::State {
         // sidebar/focus operation is added before this real user action.
         if (original_widget && original_widget->tool == "save_project") original_widget->save_manual_takeover = true;
         if (original_creation) original_creation->manual_takeover = true;
+        // The user's own input cancels the operation: nothing refused from here on runs it without its cue.
+        ++native_superseding;
+        const auto takeover = qScopeGuard([this, receiver] {
+            if (receiver && receiver->state_.get() == this) --native_superseding;
+        });
         if (showing_actions) try { emit owner.actionManualTakeover(); } catch (...) {}
         if (!original_request()) return false; // A never cancels/acts through new B.
         if (manual_request_current()) native_supersede_operation(widget_outcome_error);
@@ -4616,6 +4630,95 @@ struct AssistantViewModel::State {
             native_records.size() == entries && (!native_call || native_call->record == record))
             try { widget_showing(false); } catch (...) {}
     }
+    // A cue is presentation: a Show actions edit refused before anything was applied runs as normal mode runs it
+    // (the same recorded edit, the same Undo) and reports the skipped cue. True when it answered the call.
+    // What the activity row and the assistant say when a click could not be shown: never a silent fallback.
+    static QString cue_skipped_message(const QString& reason) {
+        return QObject::tr("Show actions could not show this click (%1), so it ran without the visible click.").arg(reason);
+    }
+    // Only a cue that could not be shown runs without it. A cancellation, a takeover, a stale scientific context or a
+    // blocked owner refuses as it always did: nothing of the operation runs after it.
+    template <class Call>
+    bool cue_fallback_admitted(const Call& call) const noexcept {
+        return native_superseding == 0 && !native_blocked && native_call && !native_call->retiring && call.record &&
+               !call.record->retired && call.receipt && !call.receipt->retired && !call.receipt->stale &&
+               (!native_receipt || !native_receipt->stale);
+    }
+    bool widget_cue_fallback(const std::shared_ptr<NativeWidget>& run, const QString& message) noexcept {
+        if (!cue_fallback_admitted(run->call)) return false;
+        const auto& tool = run->fallback_tool;
+        const bool edit_tool = tool == "set_parameters" || tool == "set_free" || tool == "add_relations";
+        const bool own_path = tool == "edit_relation" || tool == "undo_fit" || tool == "run_fit";
+        if (run->cue_fallback || (!edit_tool && !own_path) || run->completed_steps != 0 || !run->window ||
+            !native_call || native_call->may_have_written || run->call.record != native_call->record ||
+            run->call.record->answered || run->call.record->discarded || run->call.record->completed || !project ||
+            run->project != project)
+            return false;
+        if (tool == "edit_relation" && run->relation_input) return false;  // its edit already began
+        run->cue_fallback = true;
+        run->cue_skipped = message.isEmpty() ? QStringLiteral("The original control could not be shown") : message;
+        const auto receiver = run->receiver;
+        const auto record = native_call->record;
+        const auto receipt = native_call->receipt;
+        const auto rpc = native_call->rpc;
+        const QPointer<ProjectViewModel> target(project);
+        // A callback (the message handler, the helper's cleanup) may stop, take over or replace the operation: before
+        // anything runs, the original call must still be current and admitted. If it is not, whoever settled it owns
+        // the reply.
+        const auto original = [&] {
+            return receiver && receiver->state_.get() == this && native_call && native_call->record == record &&
+                   native_call->receipt == receipt && native_call->rpc == rpc && target && project == target &&
+                   !record->answered && !record->discarded && !record->completed && cue_fallback_admitted(run->call);
+        };
+        try { qInfo().noquote() << "assistant: Show actions cue skipped for" << tool << "reason" << run->cue_skipped; } catch (...) {}
+        if (!original() || !widget_owned(run)) return true;
+        try {
+            if (tool == "edit_relation") {
+                run->relation_visible = false;
+                widget_relation_edit_apply(run);
+                return true;
+            }
+            if (tool == "undo_fit") {
+                run->fit_undo_visible = false;
+                run->window = nullptr;
+                apply_fit_undo(run);
+                return true;
+            }
+            if (tool == "run_fit") {
+                if (native_fit) return false;  // a fit already started
+                widget_end(run);
+                if (!original() || native_fit) return true;
+                try { native_start_fit_normal(); }
+                catch (const std::exception& error) {
+                    if (receiver && receiver->state_.get() == this && native_call)
+                        native_finish(false, {{"status", "refused"}, {"message", bounded_error(QString::fromUtf8(error.what()))}});
+                }
+                return true;
+            }
+            std::vector<std::pair<std::string, bool>> before_flags;
+            auto edit = assistant_native_edit(*project->assistantProject(), tool, run->fallback_args, before_flags);
+            if (!edit) return false;
+            if (!original()) return true;
+            const auto scope = begin_own_edit();
+            native_call->may_have_written = true;
+            ProjectViewModel::EditOutcome result;
+            try { result = project->applyRecordedEdit(*edit, tool == "add_relations"); }
+            catch (...) { end_own_edit(scope); throw; }
+            end_own_edit(scope);
+            if (!receiver || receiver->state_.get() != this || !target || project != target || !native_call ||
+                native_call->record != record)
+                return true;
+            native_finish(result.applied && result.published,
+                {{"status", !result.applied ? "refused" : result.published ? "edited" : "applied_unconfirmed"},
+                 {"calculation_pending", project->calculating()}, {"cue_skipped", bounded_error(run->cue_skipped)},
+                 {"message", result.message.isEmpty() ? bounded_error(cue_skipped_message(run->cue_skipped))
+                                                      : bounded_error(result.message)}});
+            if (receiver && receiver->state_.get() == this && widget_owned(run)) widget_end(run);
+            return true;
+        } catch (...) {
+            return false;
+        }
+    }
     void widget_refuse(const std::shared_ptr<NativeWidget>& run, const QString& message,
                        std::source_location caller = std::source_location::current()) noexcept {
         if (const auto parent = run->create_parent.lock()) {
@@ -4674,6 +4777,7 @@ struct AssistantViewModel::State {
         }
         if (!widget_owned(run)) return;
         const auto receiver = run->receiver;
+        if (widget_cue_fallback(run, message)) return;
         if (run->tool == "undo_fit") {
             native_retain_fit_undo(run->call);
             try {
@@ -4768,6 +4872,10 @@ struct AssistantViewModel::State {
     }
     void native_supersede_operation(const QString& message) noexcept {
         const QPointer<AssistantViewModel> receiver(&owner);
+        ++native_superseding;
+        const auto superseded = qScopeGuard([this, receiver] {
+            if (receiver && receiver->state_.get() == this) --native_superseding;
+        });
         const auto call = native_call;
         const auto widget = native_widget;
         const auto creation = native_create_widget;
@@ -5252,6 +5360,9 @@ struct AssistantViewModel::State {
             widget_refuse(run, QObject::tr("Finish the current manual input before revealing its parameter")); return false;
         }
         const QPointer<QQuickItem> originalField(field);
+        // One rule for every control: one the user can already see and press is pressed as it is. Layout settling, group
+        // checks and row scope only serve to bring a control into view, never to veto one already in view.
+        if (widget_input->usableTarget(*field) && widget_full_row_visible(field)) return true;
         if(!widget_settle_control_layout(run,field)) {
             if(run->receiver && run->receiver->state_.get()==this && widget_entry_owned(run,entry))
                 widget_refuse(run,QObject::tr("The original control group changed while its pending layout was settled"));
@@ -7266,6 +7377,10 @@ struct AssistantViewModel::State {
             {"applied",applied},{"published",published},{"complete",complete},{"atomic",!run->relation_visible},
             {"steps_completed",complete?1:0},{"uncertain",applied && !complete},
             {"calculation_pending",run->project && run->project->calculating()}};
+        if(!run->cue_skipped.isEmpty()) {
+            result["cue_skipped"]=bounded_error(run->cue_skipped);
+            result["message"]=bounded_error(cue_skipped_message(run->cue_skipped));
+        }
         if(complete) {
             using K=ProjectEditor::RelationAction::Kind;
             const auto kind=run->relation_action.kind;
@@ -7488,6 +7603,7 @@ struct AssistantViewModel::State {
         auto run = std::make_shared<NativeWidget>();
         run->call = *native_call; run->receiver = &owner; run->project = project;
         run->tool = QStringLiteral("undo_fit"); run->fit_undo_visible = show_actions; run->window = show_actions ? action_window : nullptr;
+        run->fallback_tool = run->tool;
         const auto receiver = run->receiver;
         auto undo = std::make_shared<NativeFitUndo>();
         undo->receiver = receiver; undo->project = run->project;
@@ -7555,6 +7671,7 @@ struct AssistantViewModel::State {
         auto run=std::make_shared<NativeWidget>();run->call=*native_call;run->receiver=&owner;run->project=project;
         run->tool=QStringLiteral("edit_relation");run->tab=QStringLiteral("appBar.tab.analysis");run->relation_args=args;
         run->relation_visible=show_actions;run->window=show_actions?action_window:nullptr;
+        run->fallback_tool=run->tool;run->fallback_args=args;
         const auto op=args.value("operation").toString();const auto id=args.value("id").toString().toStdString();
         run->relation_constraint=op.startsWith(QLatin1String("constraint_"));run->relation_field=1;
         const auto& projectModel=*project->assistantProject();
@@ -7690,6 +7807,7 @@ struct AssistantViewModel::State {
         const bool batch=parameter_rows.size()>1;
         auto run = std::make_shared<NativeWidget>();
         run->call = *native_call; run->receiver = &owner; run->project = project; run->window = action_window; run->tool = tool;
+        run->fallback_tool = tool; run->fallback_args = args;
         if(tool=="estimate_background") {
             if(!native_estimate_target_current(run->call))throw std::runtime_error("The originally requested Estimate experiment is no longer selected");
             run->background_experiment=run->call.record->estimate_member;
@@ -7938,6 +8056,8 @@ struct AssistantViewModel::State {
     }
     quint64 native_serial = 0, native_accepted_serial = 0;
     bool native_blocked = false, native_discard_pending = false;
+    // Inside native_supersede_operation: a refusal then is a cancellation, never a cue to skip (cue_fallback_admitted).
+    int native_superseding = 0;
     // Fixed local first-cause facts only: no payload, identity, path or what().
     // This is diagnostic storage, never a recovery or admission authority.
     struct NativeFailure {
@@ -9268,10 +9388,50 @@ struct AssistantViewModel::State {
         if(!inspection || !inspection->data_member)return true;
         const auto view=inspection->data_view;
         const auto target=inspection->project;
-        if(!target || project!=target || !view || !target->experimentModels().contains(view) ||
-            view->experiment()!=inspection->data_member || view->patternGeneration()!=inspection->data_generation)return false;
+        if(!target || project!=target || !view || !target->experimentModels().contains(view) || view->experiment()!=inspection->data_member)
+            return false;
+        // The slice was read from the model: a chart capturing the same unchanged pattern again (a page or tab shown)
+        // moves the publication generation without changing a value, so only a changed model makes it stale.
+        if(view->patternGeneration()!=inspection->data_generation &&
+            (!inspection->stamps || !edi::unchanged_since(*target->assistantProject(),*inspection->stamps)))return false;
         for(const auto& member:target->assistantProject()->experiments)if(member.get()==inspection->data_member)return true;
         return false;
+    }
+    // A single or joint fit as normal mode starts it: the fit's own report answers the call.
+    void native_start_fit_normal() {
+        if (!project->fit()->available() || edi::fits_a_scan(*project->assistantProject())) {
+            native_finish(false, {{"status", "unavailable"}, {"message", "This native action supports an available single/joint fit only."}}); return;
+        }
+        auto* handle = project->fit();
+        QPointer<FitViewModel> captured = handle;
+        native_fit = handle;
+        if (!native_call) return;
+        const auto original_call = *native_call;
+        const auto receipt = original_call.receipt;
+        const auto original_scope = native_settlement_scope(original_call);
+        if (native_call) native_call->may_have_written = true;
+        try {
+            handle->startNative(native_fit_callback(captured, original_call), original_call.fit_attempt);
+        } catch (...) {
+            if (captured && captured->nativeRunning()) {
+                if (native_call && native_call->record == original_call.record && native_call->receipt == receipt && native_call->rpc == original_call.rpc)
+                    native_call->may_have_written = true;
+                captured->cancel();
+                if (original_scope()) native_fence();
+                return;
+            }
+            if (native_fit == captured) native_fit.clear();
+            if (native_call && native_call->record == original_call.record && native_call->receipt == receipt && native_call->rpc == original_call.rpc)
+                native_call->may_have_written = false;
+            throw; // Preparation failed before actual submission; no future report is owed.
+        }
+        if (!captured || native_fit != captured || !native_call || native_call->record != original_call.record ||
+            native_call->receipt != receipt || native_call->rpc != original_call.rpc) return;
+        if (!captured->nativeRunning()) {
+            native_fit.clear(); native_call->may_have_written = false;
+            native_finish(false, {{"status", "refused"}, {"message", "The native fit did not start."}});
+        } else native_call->may_have_written = true;
+        return;
     }
     void native_dispatch(const QJsonValue& rpc, const Object& params, const char*& save_stage, const QString& expectedThread, const QString& expectedTurn) {
         const auto publication=file_projection();
@@ -9551,45 +9711,7 @@ struct AssistantViewModel::State {
                 {"calculation_pending", project->calculating()}, {"message", result.message.isEmpty() ? QString("Native edit published with Undo; calculation is asynchronous.") : bounded_error(result.message)}});
             return;
         }
-        if (name == "run_fit") {
-            if (!project->fit()->available() || edi::fits_a_scan(*project->assistantProject())) {
-                native_finish(false, {{"status", "unavailable"}, {"message", "This native action supports an available single/joint fit only."}}); return;
-            }
-            auto* handle = project->fit();
-            QPointer<FitViewModel> captured = handle;
-            native_fit = handle;
-            if (!native_call) return;
-            const auto original_call = *native_call;
-            const auto receipt = original_call.receipt;
-            const auto original_scope = native_settlement_scope(original_call);
-            if (native_call) native_call->may_have_written = true;
-            try {
-                handle->startNative(native_fit_callback(captured, original_call), original_call.fit_attempt);
-            } catch (...) {
-                if (captured && captured->nativeRunning()) {
-                    if (native_call) {
-                        NativeCall& held_call = *native_call;
-                        if (held_call.record == original_call.record && held_call.receipt == receipt && held_call.rpc == original_call.rpc) held_call.may_have_written = true;
-                    }
-                    captured->cancel();
-                    if (original_scope()) native_fence();
-                    return;
-                }
-                if (native_fit == captured) native_fit.clear();
-                if (native_call) {
-                    NativeCall& held_call = *native_call;
-                    if (held_call.record == original_call.record && held_call.receipt == receipt && held_call.rpc == original_call.rpc) held_call.may_have_written = false;
-                }
-                throw; // Preparation failed before actual submission; no future report is owed.
-            }
-            if (!captured || native_fit != captured || !native_call || native_call->record != original_call.record ||
-                native_call->receipt != receipt || native_call->rpc != original_call.rpc) return;
-            if (!captured->nativeRunning()) {
-                native_fit.clear(); native_call->may_have_written = false;
-                native_finish(false, {{"status", "refused"}, {"message", "The native fit did not start."}});
-            } else native_call->may_have_written = true;
-            return;
-        }
+        if (name == "run_fit") { native_start_fit_normal(); return; }
         throw std::runtime_error("Unimplemented native tool");
     }
 
@@ -11387,6 +11509,10 @@ struct AssistantViewModel::State {
             result["action_field"] = run->file_input ? "file_id" : run->individual_tool == "create_experiment" ? "project" : "experiment";
         }
         if(!complete)control_append(result,run->call.record);
+        if(!run->cue_skipped.isEmpty()) {
+            result["cue_skipped"]=bounded_error(run->cue_skipped);
+            result["message"]=bounded_error(cue_skipped_message(run->cue_skipped));
+        }
         if(!individual_member_current(run))return result;
         if(run->result_structure) {
             const auto& name=run->result_structure->name.value();
@@ -11636,7 +11762,11 @@ struct AssistantViewModel::State {
             }
             else if(structure_app_action(name)) {} // Final original structure control cue was appended above.
             else if(name=="load_structure") { run->inputs.push_back({Kind::Navigate,"structures.load"}); run->inputs.push_back({Kind::Navigate,"structures.load.file"}); }
-            else if(name=="load_data") { run->inputs.push_back({Kind::Navigate,"experiments.load"}); run->inputs.push_back({Kind::Navigate,"experiments.load.dataFile"}); }
+            else if(name=="load_data") {
+                // Measured data load from the experiment's own Data file cell, not from Load ▾ (which loads experiments).
+                run->inputs.push_back({Kind::Navigate,QString("experiments.loadData.%1").arg(individual_member_index(run))});
+                run->inputs.push_back({Kind::Navigate,"experiments.load.dataFile"});
+            }
             else if(name=="create_experiment")run->inputs.push_back({Kind::Navigate,"experiments.create"});
             else {
                 const auto axis=args.value("axis").toString(),token=args.value("token").toString();
@@ -11775,6 +11905,8 @@ struct AssistantViewModel::State {
         const auto receiver = run->receiver;
         const auto wanted=run->step>=0 && run->step<run->inputs.size()?run->inputs.at(run->step).target:QString{};
         work_latch_control(run->call,{},"control_refusal",branch,{},wanted);
+        // Which guard refused the cue, in the run log: the control, the branch and the reason.
+        try { qInfo().noquote() << "assistant: Show actions cue refused at" << wanted << "branch" << branch << "reason" << message; } catch (...) {}
         if(!receiver || receiver->state_.get()!=this || !create_widget_owned(run))return;
         if(run->normal_project_only && run->owner_handoff) {
             try {if(run->owner_handoff->ordinary_failure.isEmpty())run->owner_handoff->ordinary_failure=message;}catch(...) {}
@@ -11782,6 +11914,32 @@ struct AssistantViewModel::State {
         }
         if (run->call.record->answered || run->call.record->discarded || run->call.record->completed) {
             create_widget_end(run); return; // An original final fact is never replaced by cleanup uncertainty.
+        }
+        // A cue is presentation: when Show actions cannot reveal or cue the original control before anything was
+        // applied, the operation runs as normal mode runs it (same reader, same Undo) and reports the skipped cue.
+        if (!uncertain && cue_fallback_admitted(run->call) && run->visible_delivery && run->ordinary && !run->cue_fallback && run->completed_steps == 0 &&
+            !run->individual_tool.isEmpty() && !selection_action(run) && !run->origin_unavailable &&
+            !(run->file_input && (run->file_input->consumed || run->file_input->source_changed)) &&
+            !(run->control_input && run->control_input->consumed)) {
+            run->cue_fallback = true;
+            run->cue_skipped = message.isEmpty() ? QStringLiteral("The original control could not be shown") : message;
+            try { qInfo().noquote() << "assistant: Show actions cue skipped for" << run->individual_tool << "reason" << run->cue_skipped; } catch (...) {}
+            try {
+                individual_normal(run);
+            } catch (const ActionRefusal& refusal) {
+                if (receiver && receiver->state_.get() == this && create_widget_owned(run)) {
+                    try {
+                        auto result = individual_progress(run, false);
+                        result["action_error"] = refusal.error; result["action_field"] = refusal.field;
+                        native_finish(false, result);
+                    } catch (...) {}
+                }
+            } catch (...) {
+                if (receiver && receiver->state_.get() == this && create_widget_owned(run))
+                    try { native_finish(false, individual_progress(run, false)); } catch (...) {}
+            }
+            if (receiver && receiver->state_.get() == this && create_widget_owned(run)) create_widget_end(run);
+            return;
         }
         if (lcAssistantWidgetLookup().isDebugEnabled()) {
             // Only scalar facts from this original refusal; never query a control again.
@@ -11900,7 +12058,7 @@ struct AssistantViewModel::State {
         if(!receiver || receiver->state_.get()!=this)return;
         const QPointer<ExperimentViewModel> targetExperiment=measured && row?qobject_cast<ExperimentViewModel*>(row->property("experiment").value<QObject*>()):nullptr;
         if(!receiver || receiver->state_.get()!=this)return;
-        const QPointer<QObject> menu(group->findChild<QObject*>(measured?QStringLiteral("experiments.load.menu"):QStringLiteral("structures.load.menu")));
+        const QPointer<QObject> menu(group->findChild<QObject*>(measured?QStringLiteral("experiments.load.dataMenu"):QStringLiteral("structures.load.menu")));
         const auto targetCurrent=[this,run,load,row,targetExperiment,target_name,measured,menu] {
             const auto runReceiver=run->receiver;
             if(!runReceiver || runReceiver->state_.get()!=this || !load)return false;
@@ -11910,7 +12068,8 @@ struct AssistantViewModel::State {
             const auto content=menu?menu->property("contentItem").value<QQuickItem*>():nullptr;
             if(!menu || !menu->property("visible").toBool() || !content || !content->isAncestorOf(load))return false;
             if(!measured)return true;
-            if(!row || !targetExperiment || menu->property("selected").value<QObject*>()!=targetExperiment)return false;
+            // The data menu names the experiment its row opened it for.
+            if(!row || !targetExperiment || menu->property("target").value<QObject*>()!=targetExperiment)return false;
             const auto member=row->property("experiment").value<QObject*>();
             if(!runReceiver || runReceiver->state_.get()!=this || !row || !targetExperiment || member!=targetExperiment)return false;
             const bool current=create_widget_current(run);
@@ -12020,14 +12179,18 @@ struct AssistantViewModel::State {
               (extrasOperation && run->inputs.at(run->step).kind==AssistantWidgetInput::Kind::FileLoadCue))));
         const QString sidebar = QStringLiteral("workflow.") + run->page + ".manualSidebar";
         QPointer<QQuickItem> menuContent;
-        const auto loadButton=name.startsWith("experiments.load.")?QStringLiteral("experiments.load"):
+        QList<QQuickItem*> candidates;
+        // The measured-data menu belongs to the Experiments group (each row's Data file cell opens it); Load ▾ menus
+        // belong to their buttons.
+        const bool dataMenu=name.startsWith("experiments.load.data");
+        const auto loadButton=dataMenu?QStringLiteral("group.experiments"):name.startsWith("experiments.load.")?QStringLiteral("experiments.load"):
             name.startsWith("structures.load.")?QStringLiteral("structures.load"):QString();
         if(!loadButton.isEmpty())for(auto* button:widget_items()) {
             if(button->objectName()!=loadButton || button->window()!=run->window)continue;
             bool original=false;
             for(auto* parent=button;parent;parent=parent->parentItem())if(parent->objectName()==sidebar)original=true;
             if(!original)continue;
-            const auto menu=button->findChild<QObject*>(loadButton+".menu");
+            const auto menu=button->findChild<QObject*>(dataMenu?QStringLiteral("experiments.load.dataMenu"):loadButton+".menu");
             if(menu && menu->property("visible").toBool())menuContent=menu->property("contentItem").value<QQuickItem*>();
         }
         for (auto* item : widget_items()) {
@@ -12043,6 +12206,29 @@ struct AssistantViewModel::State {
                 inside = ancestor->objectName() == sidebar || (run->form && (ancestor == run->form->property("contentItem").value<QQuickItem*>() ||
                     ancestor == run->form->property("footer").value<QQuickItem*>()));
             if (!inside) continue;
+            candidates.append(item);
+        }
+        // Found nowhere in the page's sidebar, its open menu or the Create form: the one control of that name anywhere in the
+        // window that the user can see and press (a main-area toolbar, a popup) is the control.
+        if (candidates.isEmpty() && widget_input) {
+            for (auto* item : widget_items()) {
+                if (item->objectName() != name || item->window() != run->window || !item->isVisible() || !item->isEnabled() ||
+                    !widget_input->usableTarget(*item)) continue;
+                if (found) return nullptr;
+                found = item;
+            }
+            return found;
+        }
+        if (candidates.size() == 1) return candidates.first();
+        // A table can hold a second copy of a row for a moment (measuring its columns, a delegate being replaced): the
+        // one the user can see and press is the control. Two that can both be pressed stay ambiguous.
+        for (auto* item : std::as_const(candidates)) {
+            if (!item->isVisible() || !item->isEnabled() || (widget_input && !widget_input->usableTarget(*item))) continue;
+            if (found) return nullptr;
+            found = item;
+        }
+        if (!found) for (auto* item : std::as_const(candidates)) {
+            if (!item->isVisible()) continue;
             if (found) return nullptr;
             found = item;
         }
@@ -12160,41 +12346,52 @@ struct AssistantViewModel::State {
         return false;
     }
     bool create_widget_missing_target(const std::shared_ptr<NativeCreateWidget>& run, const NativeCreateWidget::Input& step) {
-        QString groupName, tableName; qsizetype index = -1;
+        // The control's home from the one route table: its group, and its table for a row control.
+        const ControlRoute* route=control_route(step.target);
+        if(!route || !*route->group)return false;
+        const QString groupName=QString::fromLatin1(route->group), tableName=QString::fromLatin1(route->table);
         bool indexed=false;const auto requested=step.target.section('.',-1).toLongLong(&indexed);
-        if(step.target.startsWith("structures.")) {
-            groupName="group.structures";tableName="structures.list";index=indexed?requested:-1;
-            if(indexed && structure_app_action(run->individual_tool) && index!=structure_member_index(run))return false;
-        } else if(step.target.startsWith("spaceGroup."))groupName="group.space_group";
-        else if(step.target.startsWith("atomSiteAdp.")) {groupName="group.atom_site_aniso";tableName="atomSiteAdps.list";index=indexed?requested:-1;}
-        else if(step.target.startsWith("atomSite.") || step.target=="atomSites.append") {groupName="group.atom_site";tableName="atomSites.list";index=indexed?requested:-1;}
-        else if (step.target.startsWith("excludedRegion.")) {
-            groupName="group.excluded_region"; tableName="excludedRegions.list"; index=indexed?requested:-1;
-        } else if (step.target.startsWith("linkedStructure.")) {
-            groupName="group.linked_structure"; tableName="linkedStructure.list"; index=indexed?requested:-1;
-        } else if (step.target.startsWith("experiments.")) {
-            groupName="group.experiments"; tableName="experiments.list"; index=indexed?requested:-1;
-            if(indexed && !run->individual_tool.isEmpty() && index!=individual_member_index(run))return false;
-        } else if(step.target.startsWith("jointFit.weight.")) {
-            groupName="group.joint_fit";tableName="jointFit.list";index=indexed?requested:-1;
-            if(index!=individual_member_index(run))return false;
-        } else if(step.target.startsWith("extinction."))groupName="group.extinction";
-        else if(step.target.startsWith("absorption."))groupName="group.absorption";
-        else if (step.target.startsWith("peak.")) groupName="group.peak";
-        else if (step.target.startsWith("instrument.")) groupName="group.instrument";
-        else return false;
+        const qsizetype index=indexed && !tableName.isEmpty()?requested:-1;
+        // A row control of another member than the one this operation edits is never revealed.
+        if(index>=0) {
+            if(tableName=="structures.list" && structure_app_action(run->individual_tool) && index!=structure_member_index(run))return false;
+            if(tableName=="experiments.list" && !run->individual_tool.isEmpty() && index!=individual_member_index(run))return false;
+            if(tableName=="jointFit.list" && index!=individual_member_index(run))return false;
+        }
         auto* group=create_widget_named(run,groupName);
         if (!group) return false;
         if (group->property("collapsed").toBool()) {
-            auto* content=group->property("contentItem").value<QQuickItem*>();
-            if (!content) return false;
-            // Existing reveal finds this content's actual owning group/header,
-            // even when no table-row delegate exists inside collapsed content.
-            return !create_widget_reveal(run,content);
+            // Open the group as a user would: its header scrolled into view, then clicked. With one open group at a
+            // time, opening another (Instrument for a parameter) folds this one, so its row controls do not exist.
+            const QPointer<QQuickItem> title(qobject_cast<QQuickItem*>(group->property("titleArea").value<QObject*>()));
+            if (!title || title->window()!=run->window || !title->isEnabled()) return false;
+            if (!widget_input->usableTarget(*title)) return !create_widget_reveal(run,title);
+            const QPointer<QQuickItem> originalGroup(group);
+            AssistantWidgetInput::Request request;
+            request.kind=AssistantWidgetInput::Kind::Navigate;request.target=title;
+            request.current=[this,run,title] { return title && create_widget_current(run); };
+            request.prepareCommit=[] { return true; };request.finishCommit=[] {};
+            request.completed=[this,run,originalGroup](bool delivered,const QString& message,ControlCause cause) noexcept {
+                if(!create_widget_owned(run))return;
+                control_failure(run,delivered?ControlCause::None:cause);
+                try {
+                    if(!delivered || !originalGroup || originalGroup->property("collapsed").toBool()) {
+                        if(create_widget_owned(run))create_widget_refuse(run,message.isEmpty()?widget_outcome_error:message,false,"group-open");
+                        return;
+                    }
+                    QTimer::singleShot(500,&owner,[this,run] {
+                        if(!create_widget_current(run))return;
+                        try{create_widget_next(run);}catch(...){if(create_widget_owned(run))create_widget_refuse(run,widget_outcome_error,false,"group-open-next");}
+                    });
+                } catch(...) { if(create_widget_owned(run))create_widget_refuse(run,widget_outcome_error,false,"group-open-catch"); }
+            };
+            control_start(run->call,control_target(run),std::move(request));
+            return true;
         }
         auto* table=tableName.isEmpty() ? nullptr : create_widget_named(run,tableName);
         if (!table || index<0 || index>=table->property("count").toLongLong() || ++run->reveal_steps>64) return false;
-        if (!widget_input->usableTarget(*table) && !create_widget_reveal(run,table)) return true;
+        // The row itself is scrolled into view below; the whole table need not be visible first (a long Experiments
+        // group puts its table's middle outside the sidebar).
         const QPointer<QQuickItem> original(table);const auto receiver=run->receiver;
         const QPointer<QObject> source(table->property("sourceModel").value<QObject*>());
         if(tableName=="jointFit.list" && source!=run->project->experiments())return false;
@@ -12610,7 +12807,7 @@ struct AssistantViewModel::State {
             }
             add(Kind::Navigate,"appBar.tab.experiment");add(Kind::Navigate,"sideBar.tab.basic");add(Kind::Navigate,"experiments.create");
             add(Kind::Choose,"experimentType.beamMode");add(Kind::Choose,"experimentType.radiationProbe");
-            add(Kind::Navigate,"experiments.load");add(Kind::Navigate,"experiments.load.dataFile");add(Kind::Text,"experiments.name.0",QString::fromStdString(experiment.name.value()));
+            add(Kind::Navigate,"experiments.loadData.0");add(Kind::Navigate,"experiments.load.dataFile");add(Kind::Text,"experiments.name.0",QString::fromStdString(experiment.name.value()));
             for(const auto tier:{CategoryListModel::Basic,CategoryListModel::Extras})for(const auto* category:experiment_order) {
                 if(category_presentation(QString::fromStdString(category->id)).tier!=tier)continue;
                 if(category->id=="background") {

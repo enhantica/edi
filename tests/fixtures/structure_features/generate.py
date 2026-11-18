@@ -9,12 +9,12 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 SITES = [
     ('Fe1', 'Fe', (0.5, 0.5, 0.5)),
-    ('O1', 'O', (0.75, 0.5, 0.5)),
-    ('O2', 'O', (0.25, 0.5, 0.5)),
-    ('O3', 'O', (0.5, 0.75, 0.5)),
-    ('O4', 'O', (0.5, 0.25, 0.5)),
-    ('O5', 'O', (0.5, 0.5, 0.75)),
-    ('O6', 'O', (0.5, 0.5, 0.25)),
+    ('O1', 'O', (0.84001, 0.5, 0.5)),
+    ('O2', 'O', (0.15999, 0.5, 0.5)),
+    ('O3', 'O', (0.5, 0.84001, 0.5)),
+    ('O4', 'O', (0.5, 0.15999, 0.5)),
+    ('O5', 'O', (0.5, 0.5, 0.84001)),
+    ('O6', 'O', (0.5, 0.5, 0.15999)),
 ]
 
 
@@ -36,7 +36,7 @@ def main():
     args = parser.parse_args()
     reference = {
         'claim': 'Declared cubic input and closed Euclidean distances, not app output',
-        'cell_edge_angstrom': 4,
+        'cell_edge_angstrom': 6,
         'min_distance': 0.1,
         'distance_increment': 0.15,
         'radii_source': 'Published Cordero covalent radii, Fe=1.32 A and O=0.66 A',
@@ -46,7 +46,7 @@ def main():
     }
     for index, first in enumerate(SITES):
         for second in SITES[index + 1 :]:
-            distance = math.dist(first[2], second[2]) * 4
+            distance = math.dist(first[2], second[2]) * 6
             radii = {'Fe': 1.32, 'O': 0.66}
             if 0.1 <= distance <= radii[first[1]] + radii[second[1]] + 0.15:
                 reference['bonds'].append({'sites': [first[0], second[0]], 'distance': distance})
@@ -64,9 +64,9 @@ def main():
     (HERE / 'reference.json').write_text(json.dumps(reference, indent=2) + '\n')
     structure = """data_cosio
 _edi.schema_version 3
-_cell.length_a 4
-_cell.length_b 4
-_cell.length_c 4
+_cell.length_a 6
+_cell.length_b 6
+_cell.length_c 6
 _cell.angle_alpha 90
 _cell.angle_beta 90
 _cell.angle_gamma 90

@@ -46,6 +46,7 @@ Item {
             if (group.collapsed)
                 click(group);
             tryVerify(() => !group.collapsed, 1500, "The report group reaches its expanded layout before input");
+            tryVerify(() => !group.folding, 1500, "Sidebar input waits for the real group to finish folding");
             return group;
         }
         function prepare(kind = "buttons") {
@@ -140,16 +141,20 @@ Item {
             Ui.scrollIntoView(figure);
             verify(waitForPolish(figure) && waitForRendering(figure), "The report figure reaches its visible viewport");
             const prefix = data.structure ? "structure.toolbar." : "chart.toolbar.";
-            for (const role of data.structure ? ["projection", "a", "b", "c", "labels", "bonds", "cell", "axes", "reset", "save"] : ["pan", "zoom", "reset", "save", "legend"]) {
+            verify(findChild(figure, prefix + "save") === null, "Report figures leave Save image to the main view rather than duplicating a camera control");
+            if (data.structure)
+                for (const role of ["labels", "bonds", "cell", "axes"])
+                    verify(!findChild(figure, prefix + role).visible, "Report structure figures keep report-owned features outside the interactive camera controls");
+            for (const role of data.structure ? ["projection", "a", "b", "c", "reset"] : ["pan", "zoom", "reset", "legend"]) {
                 const control = findChild(figure, prefix + role);
                 verify(control !== null && control.visible && control.enabled && Ui.rendered(control), "The Report preview exposes the supported app chart buttons as actual visible controls");
-                if (role === "save" || role === "reset")
+                if (role === "reset")
                     continue;
                 const old = control.checked, projection = data.structure ? figure.projection : "";
                 click(control);
                 if (role === "projection")
                     tryVerify(() => figure.projection !== projection, 1000, "The actual Report projection button changes the rendered structure camera projection");
-                if (["legend", "pan", "zoom", "labels", "bonds", "cell", "axes"].includes(role) && typeof old === "boolean")
+                if (["legend", "pan", "zoom"].includes(role) && typeof old === "boolean")
                     tryCompare(control, "checked", !old, 1000, "The supported Report chart button changes its actual mode or visibility state");
             }
             click(findChild(figure, prefix + "reset"));

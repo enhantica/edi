@@ -5931,6 +5931,13 @@ std::vector<double> single_crystal_nuclear_share(const Project& project, std::si
         const BuiltExperiments banks = calculation_banks(project.experiments);
         crysta::Project engine(to_crysta_structures(project), experiment_list(banks));
         fill_crysta_relations(project, engine);
+        if (zero_moments) {
+            // Every parameter takes its related value first, then the relations go: a constraint fixing a moment
+            // would otherwise set it again before the calculation, and the nuclear part would equal the total.
+            crysta::apply_relations(engine, false);
+            engine.aliases.clear();
+            engine.constraints.clear();
+        }
         bool moments = false;
         for (crysta::Structure& structure : engine.structures) {
             for (crysta::AtomSiteMoment& row : structure.atom_site_moment) {

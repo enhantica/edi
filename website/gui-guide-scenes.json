@@ -42,6 +42,7 @@
   "application/structure/appearance.md": {
     "Change the appearance": "guide-structure-appearance"
   },
+  "application/structure/polyhedra.md": {},
   "application/experiment/index.md": {
     "Read the pattern": "10-experiment-loaded"
   },

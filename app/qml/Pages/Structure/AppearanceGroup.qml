@@ -11,7 +11,8 @@ import edi.app
 // model, or the ADP surfaces) and the atom scale, or the ADP probability in the ADP view — laid out and styled as the Instrument group (the owner, 2026-10-02): a muted
 // caption above each field and the fields side by side in equal columns over the group's width, with the
 // components that group and the selectors use. The elements whose radius was substituted are listed under them.
-// View state of the open project, shared by every structure's view; not saved.
+// Saved with the structure shown, as its `_structure_view` items (the polyhedra settings not yet). The switches here
+// are the toolbar's own: both set the same options, so they always agree.
 SideBarGroup {
     id: group
 
@@ -30,9 +31,66 @@ SideBarGroup {
     icon: "palette"
     last: SideBarGroups.isLast(group)
 
+    component Switch: EaElements.CheckBox {
+        width: (EaStyle.Sizes.sideBarContentWidth - AppSizes.inputSpacing) / 2
+        leftPadding: 0
+    }
+
     Column {
         spacing: AppSizes.groupContentSpacing
 
+        // What the structure view's toolbar switches, in its order, two to a row.
+        Grid {
+            id: switches
+
+            readonly property bool hasSites: group.controller !== null && group.controller.hasSites
+            readonly property bool hasBonds: hasSites && group.controller.hasBonds
+
+            columns: 2
+            columnSpacing: AppSizes.inputSpacing
+            rowSpacing: AppSizes.groupContentSpacing
+
+            Switch {
+                objectName: "structure.appearance.labels"
+                visible: switches.hasSites
+                text: qsTr("Labels")
+                checked: group.options !== null && group.options.showLabels
+                onToggled: group.options.showLabels = checked
+            }
+            Switch {
+                objectName: "structure.appearance.bonds"
+                visible: switches.hasBonds
+                text: qsTr("Bonds")
+                checked: group.options !== null && group.options.bonds
+                onToggled: group.options.bonds = checked
+            }
+            Switch {
+                objectName: "structure.appearance.polyhedra"
+                visible: switches.hasBonds
+                text: qsTr("Polyhedra")
+                checked: group.options !== null && group.options.polyhedra
+                onToggled: group.options.polyhedra = checked
+            }
+            Switch {
+                objectName: "structure.appearance.cell"
+                text: qsTr("Cell")
+                checked: group.options !== null && group.options.cell
+                onToggled: group.options.cell = checked
+            }
+            Switch {
+                objectName: "structure.appearance.moments"
+                visible: group.controller !== null && group.controller.hasMoments
+                text: Session.categoryTitle("atom_site_moment")
+                checked: group.options !== null && group.options.showMoments
+                onToggled: group.options.showMoments = checked
+            }
+            Switch {
+                objectName: "structure.appearance.axes"
+                text: qsTr("Axes")
+                checked: group.options !== null && group.options.axes
+                onToggled: group.options.axes = checked
+            }
+        }
         // Two fields in equal columns and rows spaced, as ParameterGrid lays out the instrument's.
         Grid {
             id: grid
@@ -151,55 +209,6 @@ SideBarGroup {
                 Component.onCompleted: FieldTitles.align(momentScale)
                 onAccepted: commit()
                 onEditingFinished: commit()
-            }
-            // Coordination polyhedra, switched by the view's toolbar button: their colour, opacity and extent, shown while
-            // they are on. Kept for the session.
-            SelectorField {
-                objectName: "structure.appearance.polyhedraColour"
-                width: grid.fieldWidth
-                label: qsTr("Polyhedra colour")
-                visible: group.options !== null && group.options.polyhedra
-                options: group.options ? group.options.polyhedraColourOptions : null
-                token: group.options ? group.options.polyhedraColour : ""
-                onSelected: token => group.options.polyhedraColour = token
-            }
-            EaElements.ParamTextField {
-                id: opacity
-
-                objectName: "structure.appearance.polyhedraOpacity"
-                width: grid.fieldWidth
-                visible: group.options !== null && group.options.polyhedra
-                parameter: group.options ? {
-                    "value": group.options.polyhedraOpacity,
-                    "error": 0,
-                    "enabled": true,
-                    "fittable": false,
-                    "fit": false,
-                    "name": "polyhedra_opacity",
-                    "shortPrettyName": qsTr("Polyhedra opacity"),
-                    "units": ""
-                } : ({})
-
-                // From 0 (clear) to 1 (solid); a value outside is brought to the nearest end.
-                function commit() {
-                    if (group.options !== null && text !== opacity.value) {
-                        group.options.polyhedraOpacity = Number(text);
-                        text = Qt.binding(() => opacity.value);
-                    }
-                }
-
-                Component.onCompleted: FieldTitles.align(opacity)
-                onAccepted: commit()
-                onEditingFinished: commit()
-            }
-            SelectorField {
-                objectName: "structure.appearance.polyhedraExtent"
-                width: grid.fieldWidth
-                label: qsTr("Polyhedra extent")
-                visible: group.options !== null && group.options.polyhedra
-                options: group.options ? group.options.polyhedraExtentOptions : null
-                token: group.options ? group.options.polyhedraExtent : ""
-                onSelected: token => group.options.polyhedraExtent = token
             }
         }
         EaElements.Label {

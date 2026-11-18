@@ -1,6 +1,6 @@
 {
   "claim": "Declared cubic input and closed Euclidean distances, not app output",
-  "cell_edge_angstrom": 4,
+  "cell_edge_angstrom": 6,
   "min_distance": 0.1,
   "distance_increment": 0.15,
   "radii_source": "Published Cordero covalent radii, Fe=1.32 A and O=0.66 A",
@@ -10,126 +10,42 @@
         "Fe1",
         "O1"
       ],
-      "distance": 1.0
+      "distance": 2.0400600000000004
     },
     {
       "sites": [
         "Fe1",
         "O2"
       ],
-      "distance": 1.0
+      "distance": 2.0400600000000004
     },
     {
       "sites": [
         "Fe1",
         "O3"
       ],
-      "distance": 1.0
+      "distance": 2.0400600000000004
     },
     {
       "sites": [
         "Fe1",
         "O4"
       ],
-      "distance": 1.0
+      "distance": 2.0400600000000004
     },
     {
       "sites": [
         "Fe1",
         "O5"
       ],
-      "distance": 1.0
+      "distance": 2.0400600000000004
     },
     {
       "sites": [
         "Fe1",
         "O6"
       ],
-      "distance": 1.0
-    },
-    {
-      "sites": [
-        "O1",
-        "O3"
-      ],
-      "distance": 1.4142135623730951
-    },
-    {
-      "sites": [
-        "O1",
-        "O4"
-      ],
-      "distance": 1.4142135623730951
-    },
-    {
-      "sites": [
-        "O1",
-        "O5"
-      ],
-      "distance": 1.4142135623730951
-    },
-    {
-      "sites": [
-        "O1",
-        "O6"
-      ],
-      "distance": 1.4142135623730951
-    },
-    {
-      "sites": [
-        "O2",
-        "O3"
-      ],
-      "distance": 1.4142135623730951
-    },
-    {
-      "sites": [
-        "O2",
-        "O4"
-      ],
-      "distance": 1.4142135623730951
-    },
-    {
-      "sites": [
-        "O2",
-        "O5"
-      ],
-      "distance": 1.4142135623730951
-    },
-    {
-      "sites": [
-        "O2",
-        "O6"
-      ],
-      "distance": 1.4142135623730951
-    },
-    {
-      "sites": [
-        "O3",
-        "O5"
-      ],
-      "distance": 1.4142135623730951
-    },
-    {
-      "sites": [
-        "O3",
-        "O6"
-      ],
-      "distance": 1.4142135623730951
-    },
-    {
-      "sites": [
-        "O4",
-        "O5"
-      ],
-      "distance": 1.4142135623730951
-    },
-    {
-      "sites": [
-        "O4",
-        "O6"
-      ],
-      "distance": 1.4142135623730951
+      "distance": 2.0400600000000004
     }
   ],
   "atom_types": {

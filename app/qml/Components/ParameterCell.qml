@@ -140,6 +140,7 @@ EaComponents.ListViewParameter {
         "fittable": cell.canFit,
         "fit": item.free && cell.canFit,
         "category": item.category,
+        "fullName": ParameterNames.fullName(item),
         "name": item.name,
         "url": Session.documentationUrl(item.uid).toString(),
         "units": item.displayUnits

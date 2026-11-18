@@ -39,6 +39,8 @@ Rectangle {
     // The theme colours the view draws with; a PDF's figure takes the light ones.
     property FigureColors colors: FigureColors {}
     property string reportStructure: ""
+    // Set on the Report page's preview figure: the toolbar's camera buttons; the PDF's copies draw no toolbar.
+    property bool reportToolbar: false
 
     // The moment arrows' colours follow the app's preference (edi ADR-0078).
     Binding {
@@ -103,7 +105,7 @@ Rectangle {
         viewportWidth: view.width
         viewportHeight: view.height
         // The band kept clear at the top for the toolbar: its height with its margins.
-        topBand: view.report ? 0 : toolbarRow.height + 2 * view.margin
+        topBand: view.report && !view.reportToolbar ? 0 : toolbarRow.height + 2 * view.margin
         // And at either side for the legend: its width with its margin, and a gap before the drawing. Kept while the
         // atoms are hidden, which hides the legend, so a show or hide keeps the camera (the owner, 2026-11-03).
         sideBand: view.legendWidth > 0 && controller.hasSites ? view.sideMargin + view.legendWidth + view.margin : 0
@@ -114,6 +116,44 @@ Rectangle {
         shared: structureScene.shared
         polyhedra: structureScene.polyhedra
         labels: labelLayer
+    }
+
+    // A view shown while its page is still sliding in gets no new frame once the page stops (a project opened on
+    // Analysis showed only the axis letters until a resize): it asks for frames until it stays in place.
+    Timer {
+        id: frameRequest
+
+        property point last: Qt.point(NaN, NaN)
+        property int left: 0
+
+        interval: 50
+        repeat: true
+        onTriggered: {
+            if (!view.view3d) {
+                stop();
+                return;
+            }
+            view.view3d.update();
+            const at = view.view3d.mapToItem(null, 0, 0);
+            if ((at.x === last.x && at.y === last.y) || --left <= 0)
+                stop();
+            last = at;
+        }
+    }
+    function requestFrames() {
+        frameRequest.last = Qt.point(NaN, NaN);
+        frameRequest.left = 40;
+        frameRequest.restart();
+    }
+    Connections {
+        target: controller
+        function onRevisionChanged() {
+            view.requestFrames();
+        }
+        function onActiveChanged() {
+            if (controller.active)
+                view.requestFrames();
+        }
     }
 
     // The scene, on every platform; the View3D below draws it where there is a 3D API.
@@ -218,12 +258,13 @@ Rectangle {
         y: view.margin
         width: view.width
         height: implicitHeight
-        visible: !view.report
+        visible: !view.report || view.reportToolbar
         leftEdge: view.sideMargin
         rightEdge: view.width - view.toolbarRightInset
 
         ToolbarComboBox {
             objectName: "structure.toolbar.colors"
+            visible: !view.report
             toolTip: qsTr("Colour scheme (adjusted for contrast in labels and tables)")
             // The schemes' names as their authors spell them; the options keep diffraction-lib's tokens.
             model: ["Jmol", "VESTA"]
@@ -235,6 +276,7 @@ Rectangle {
 
             controller: controller
             options: view.options
+            features: !view.report
         }
     }
 

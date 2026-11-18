@@ -3,6 +3,8 @@
 #include "label_case.hpp"
 
 #include <algorithm>
+#include <cmath>
+#include <cstdlib>
 #include <set>
 #include <string>
 #include <vector>
@@ -65,6 +67,32 @@ bool names_parameter(const std::string& uid) {
                                                 "fit_parameter_correlation.parameter_unique_name_i",
                                                 "fit_parameter_correlation.parameter_unique_name_j"};
     return items.contains(uid);
+}
+
+// A derived coordinate the calculation leaves at a rounding error from zero (2.38e-16 Å) is written as 0, so it
+// shows as 0 at the column's precision. The limit is 1e-10 of the longest cell edge for Cartesian values and 1e-10
+// for fractional ones.
+void zero_coordinate_noise(edi::TextCategory& category, const std::string& block_text) {
+    double longest = 1.0;
+    const edi::TextCategory cell = edi::text_category(block_text, "cell");
+    for (std::size_t column = 0; column < cell.names.size(); ++column) {
+        if (cell.names[column].starts_with("length_") && !cell.rows.empty() && column < cell.rows[0].size()) {
+            const double length = std::strtod(cell.rows[0][column].c_str(), nullptr);
+            if (std::isfinite(length)) longest = std::max(longest, std::abs(length));
+        }
+    }
+    for (std::size_t column = 0; column < category.names.size(); ++column) {
+        const std::string& name = category.names[column];
+        const bool cartesian = name.starts_with("cartn_");
+        if (!cartesian && !name.starts_with("fract_")) continue;
+        const double limit = cartesian ? 1e-10 * longest : 1e-10;
+        for (std::vector<std::string>& row : category.rows) {
+            if (column >= row.size() || row[column].empty()) continue;
+            char* end = nullptr;
+            const double value = std::strtod(row[column].c_str(), &end);
+            if (end != row[column].c_str() && *end == '\0' && value != 0.0 && std::abs(value) < limit) row[column] = "0";
+        }
+    }
 }
 
 QVariantList option_identities(const QList<OptionListModel*>& options) {
@@ -161,6 +189,9 @@ void GeneratedCategory::read() {
                 }
             }
         }
+    }
+    if (id == "expanded_atom_site" && source_ != nullptr) {
+        zero_coordinate_noise(category, source_->text().toStdString());
     }
     publication = ++notification_publication_;
     if (publication == 0) publication = ++notification_publication_;

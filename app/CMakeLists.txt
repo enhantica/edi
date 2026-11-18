@@ -192,6 +192,7 @@ qt_add_qml_module(edi_app_module
         qml/Components/HeaderLabel.qml
         qml/Components/ChartToolButton.qml
         qml/Components/SaveImageButton.qml
+        qml/Components/CellLabel.qml
         qml/Components/ChartToolbar.qml
         qml/Components/ColourMapBar.qml
         qml/Components/ColourMapComboBox.qml
@@ -316,6 +317,7 @@ qt_add_qml_module(edi_app_module
         qml/Pages/Structure/AtomSiteMomentGroup.qml
         qml/Pages/Structure/MagneticFormFactorsGroup.qml
         qml/Pages/Structure/MagneticSpaceGroupGroup.qml
+        qml/Pages/Structure/PolyhedraGroup.qml
         qml/Pages/Structure/PropagationVectorsGroup.qml
         qml/Pages/Structure/AtomSitesGroup.qml
         qml/Pages/Structure/CellGroup.qml
@@ -618,9 +620,9 @@ if(NOT EMSCRIPTEN)
 endif()
 install(FILES ${EDI_APP_LICENCE_FILES} DESTINATION ${CMAKE_INSTALL_DOCDIR} COMPONENT desktop)
 
-# The EasyDiffraction data collection (enhantica/edi-data, about 14 MB), installed with the desktop app as its offline
-# copy: the built-in source's last location, read when the online ones are out (edi ADR-0068). The online collection
-# stays the source of updates. Empty installs none.
+# The EasyDiffraction data collection (enhantica/edi-data, about 14 MB), installed with the desktop app: examples open
+# from it at once, and the online collection is asked in the background only for what is new or changed (edi
+# ADR-0068). Empty installs none.
 set(EDI_BUNDLED_COLLECTION "" CACHE PATH "A copy of the edi-data collection to install as the app's offline copy")
 if(EDI_BUNDLED_COLLECTION AND NOT EMSCRIPTEN)
     if(NOT EXISTS "${EDI_BUNDLED_COLLECTION}/index.json")
@@ -637,6 +639,16 @@ if(EDI_BUNDLED_COLLECTION AND NOT EMSCRIPTEN)
             PATTERN ".git" EXCLUDE PATTERN ".github" EXCLUDE)
     set_property(SOURCE src/online_sources.cpp APPEND PROPERTY COMPILE_DEFINITIONS
                  "EDI_APP_BUNDLED_COLLECTION=\"${edi_collection_from_binary}\"")
+endif()
+# A local build reads a copy of the collection where it is, so it opens examples as the installed app does
+# (tools/ci/app-build.sh sets it; the owner, 2026-11-17).
+set(EDI_LOCAL_COLLECTION "" CACHE PATH "A copy of the edi-data collection the app in the build tree reads in place")
+if(EDI_LOCAL_COLLECTION AND NOT EDI_BUNDLED_COLLECTION AND NOT EMSCRIPTEN)
+    if(NOT EXISTS "${EDI_LOCAL_COLLECTION}/index.json")
+        message(FATAL_ERROR "EDI_LOCAL_COLLECTION ${EDI_LOCAL_COLLECTION} has no index.json")
+    endif()
+    set_property(SOURCE src/online_sources.cpp APPEND PROPERTY COMPILE_DEFINITIONS
+                 "EDI_APP_BUNDLED_COLLECTION=\"${EDI_LOCAL_COLLECTION}\"")
 endif()
 
 if(TARGET edi_assistant_native AND EDI_APP_ASSISTANT)

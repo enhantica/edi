@@ -29,6 +29,7 @@ DataTable {
     }
 
     objectName: "reflections.list"
+    readOnly: true
     defaultInfoText: qsTr("No reflections yet")
     sourceModel: experiment ? experiment.reflections : null
 
@@ -82,7 +83,7 @@ DataTable {
             marksCurrentRow: true
             text: row.index + 1
         }
-        EaComponents.ListViewLabel {
+        CellLabel {
             elide: Text.ElideRight
             horizontalAlignment: Text.AlignHCenter
             text: row.model.hkl

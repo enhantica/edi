@@ -13,9 +13,11 @@ template: gui.html
 
 On **Structure → Main**, expand **Structures** and select a row to make it current.
 
-- **Load ▾ → From file…** imports a CIF or `.edi` structure file.
 - **Create structure** adds a starting model. Replace its initial symmetry, cell and atom sites with those of your sample.
+- **Load ▾ → From file…** imports a CIF or `.edi` structure file; **From web…** searches COD or EasyDiffraction's collection.
 - **Duplicate structure** copies the selected model. Link the copy to an experiment when you want it to contribute.
+
+The **Model** column says how each structure is described: **Atom-based**, by its atom sites, for every structure you create or load today. A mode-based structure, described by symmetry modes, will come from a mode-based CIF or a parent structure; it is shown, never chosen.
 
 Edit the name in the list or use the row's remove control. Removing a structure also removes its experiment links; **Undo** restores the change.
 

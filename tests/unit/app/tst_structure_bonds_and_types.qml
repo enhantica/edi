@@ -10,15 +10,6 @@ Item {
     id: surface
     width: 1200
     height: 900
-    Component {
-        id: viewFactory
-        StructureView {
-            x: 0
-            width: 600
-            height: 900
-            shown: true
-        }
-    }
     TestCase {
         id: test
         name: "StructureBondsAndTypes"
@@ -38,8 +29,6 @@ Item {
             }
         }
         function cleanup() {
-            if (view)
-                view.destroy();
             if (page)
                 page.destroy();
             view = page = null;
@@ -55,14 +44,18 @@ Item {
             const globalPoint = Ui.target(item).mapToItem(surface, at.x, at.y);
             verify(globalPoint.x >= 0 && globalPoint.y >= 0 && globalPoint.x < surface.width && globalPoint.y < surface.height, "Actual Structure pointer input lies inside the real test window");
             mouseClick(Ui.target(item), at.x, at.y);
-            verify(waitForRendering(page), "The actual Structure feature input renders");
+            verify(waitForPolish(page), "The actual Structure feature input completes its layout");
         }
         function expand(name) {
-            const group = findChild(page, "group." + name);
-            verify(group !== null && group.visible, "The Structure sidebar exposes the requested bond or atom group");
+            let group;
+            tryVerify(() => {
+                group = Ui.find(page, "group." + name, true);
+                return group !== null;
+            }, 1500, "The selected Structure sidebar exposes its current bond or atom group");
             if (group.collapsed)
                 click(group);
             tryVerify(() => !group.collapsed, 1500, "The actual Structure group reaches its expanded geometry");
+            tryVerify(() => !group.folding, 1500, "Sidebar input waits for the real group to finish folding");
             return group;
         }
         function open(probe) {
@@ -78,12 +71,9 @@ Item {
                 height: test.height
             });
             verify(page !== null && waitForPolish(page) && waitForRendering(page), "The production Structure page renders the independent input");
-            view = viewFactory.createObject(surface, {
-                structure: Session.project.currentStructure,
-                options: Session.project.structureViewOptions
-            });
-            verify(view !== null && waitForPolish(view), "The bond and type witness creates the real Structure view");
-            tryVerify(() => view.has3D && view.current && view.atomCount === 7, 10000, "The actual 3D renderer prepares every atom of the independently declared cubic structure");
+            click(findChild(page, "mainArea.tab.structure"));
+            view = findChild(page, "structure.view");
+            tryVerify(() => view && view.has3D && view.current && view.atomCount === 7, 10000, "The real Structure page renders every independently declared cubic atom");
         }
         function edit(group, name, value) {
             const field = Render.descendants(group).find(item => item.visible && (item.uid === "geom." + name || item.objectName.endsWith("." + name)));
@@ -100,10 +90,10 @@ Item {
             tryCompare(Session.project, "calculating", false, 10000, "The real bond-setting edit completes its geometry update");
         }
         function checkBonds(expected) {
-            const group = expand("geom_bond");
+            const group = expand("geom");
             let list;
             tryVerify(() => {
-                list = findChild(group, "generated.geom_bond.list");
+                list = findChild(group, "geom.bonds");
                 return list !== null && list.count === expected.length;
             }, 3000, "The displayed bond table has the independent cubic pair count after each cutoff edit");
             const seen = [];
@@ -111,9 +101,9 @@ Item {
                 list.positionViewAtIndex(index, ListView.Contain);
                 Ui.scrollIntoView(list);
                 verify(waitForPolish(list), "The actual bond output table finishes positioning its requested row");
-                const get = name => findChild(group, "generated.geom_bond." + name + "." + index);
-                tryVerify(() => get("distance") !== null && get("atom_site_label_1") !== null && get("atom_site_label_2") !== null, 1000, "The actual visible bond row contains both site names and its distance");
-                const first = String(get("atom_site_label_1").text), second = String(get("atom_site_label_2").text);
+                const get = name => findChild(group, "geom.bonds." + name + "." + index);
+                tryVerify(() => get("distance") !== null && get("site1") !== null && get("site2") !== null, 1000, "The actual visible bond row contains both site names and its distance");
+                const first = String(get("site1").text), second = String(get("site2").text);
                 const pair = [first, second].sort().join("|");
                 const row = expected.find(item => item.sites.slice().sort().join("|") === pair);
                 verify(row !== undefined && !seen.includes(pair), "Every displayed bond is one unique independently predicted cubic pair");
@@ -129,11 +119,14 @@ Item {
             edit(settings, "min_bond_distance_cutoff", reference.min_distance);
             edit(settings, "bond_distance_inc", reference.distance_increment);
             checkBonds(reference.bonds);
-            edit(expand("geom"), "min_bond_distance_cutoff", 1.1);
-            const expected = reference.bonds.filter(row => row.distance >= 1.1);
+            edit(expand("geom"), "bond_distance_inc", .01);
+            checkBonds([]);
+            edit(expand("geom"), "bond_distance_inc", reference.distance_increment);
+            checkBonds(reference.bonds);
+            edit(expand("geom"), "min_bond_distance_cutoff", 2.1);
+            const expected = reference.bonds.filter(row => row.distance >= 2.1);
             checkBonds(expected);
             verify(Session.save(), "The actual session saves the edited bond-distance settings");
-            view.destroy();
             page.destroy();
             view = page = null;
             verify(waitForRendering(surface), "The real Structure view retires before the edited project closes");
@@ -145,11 +138,9 @@ Item {
                 height: test.height
             });
             verify(page !== null && waitForPolish(page), "The actual reopened Structure page binds the saved geometry settings");
-            view = viewFactory.createObject(surface, {
-                structure: Session.project.currentStructure,
-                options: Session.project.structureViewOptions
-            });
-            tryVerify(() => view !== null && view.current, 10000, "The reopened real Structure view prepares its saved bond geometry");
+            click(findChild(page, "mainArea.tab.structure"));
+            view = findChild(page, "structure.view");
+            tryVerify(() => view && view.current, 10000, "The reopened page prepares its real saved bond geometry");
             click(findChild(page, "sideBar.tab.extras"));
             checkBonds(expected);
         }
@@ -193,22 +184,21 @@ Item {
         function test_active_probe_types_and_element_colour_regression_pin(data) {
             open(data.probe);
             click(findChild(page, "sideBar.tab.basic"));
-            expand("atom_site");
-            const box = findChild(page, "atomSite.typeSymbol.0");
+            const atoms = expand("atom_site");
+            const box = findChild(atoms, "atomSite.typeSymbol.0");
             verify(box !== null && box.visible && box.enabled, "The actual first atom site has an editable type selector");
             const actual = Array.from({
                 length: box.count
             }, (_, i) => box.textAt(i)).sort();
             compare(JSON.stringify(actual), JSON.stringify(reference.atom_types[data.probe]), "The type selector lists exactly the independently committed active probe scattering table, including supported isotopes or ions");
             choose(box, data.element);
-            const natural = findChild(page, "atomSite.icon.0").segments.find(part => part.icon !== undefined);
+            const natural = findChild(atoms, "atomSite.icon.0").segments.find(part => part.icon !== undefined);
             verify(natural !== undefined && natural.color.a > 0, "The actual natural element has a visible atom icon for the regression pin");
             const colourRegressionPin = String(natural.color);
             choose(box, data.selected);
-            const changed = findChild(page, "atomSite.icon.0").segments.find(part => part.icon !== undefined);
+            const changed = findChild(atoms, "atomSite.icon.0").segments.find(part => part.icon !== undefined);
             verify(changed !== undefined && String(changed.color) === colourRegressionPin, "The isotope or ion retains the corresponding natural element's existing icon-colour regression pin");
             verify(Session.save(), "The real project saves its selected isotope or ion");
-            view.destroy();
             page.destroy();
             view = page = null;
             verify(waitForRendering(surface), "The real Structure view retires before the edited project closes");

@@ -2,10 +2,13 @@
 // 2026-11-14): "Making diffraction data analysis easy" fades in and holds, the other words fade out,
 // "easy" and "diffraction" move to their places in the logo ("easy" turning Regular on the way), and
 // the mark rolls in from beyond the left edge and brakes hard. It plays while the app downloads and
-// starts. If the app is ready first, the page fades out once the intro ends; if the intro ends first,
-// the mark keeps turning as the splash does until the app is ready. Skip fades in once the app is ready
-// and fades the page out; Disable turns the intro off for good (the app's Preferences, Intro
-// animation, read and write the same stored value) and leaves the splash alone.
+// starts, in full on every load until it is disabled (the owner, 2026-11-17). If the app is ready first, the page
+// fades out once the intro ends; if the intro ends first, the mark keeps turning as the splash does until the app is
+// ready. Skip and Disable are always shown: Skip is disabled until the app is ready and then fades the page out;
+// Disable turns the intro off for later loads (the app's Preferences, Intro animation, read and write the same stored
+// value) and leaves the splash alone. The app starts only once the intro's animations run (`ready`): a reload takes the
+// app from the browser's cache and keeps the page busy at once, and animations not started by then stood still on
+// their first frame, an empty page.
 //
 // Every motion is a Web Animations transform or opacity, so the browser's compositor keeps drawing it
 // while the page's main thread is busy starting the app (see make_logo.py). A page driven by a test
@@ -77,17 +80,16 @@
         loading.style.display = "none";
         return;
       }
-      if (skip !== null) {
-        skip.style.visibility = "visible";
-        // To the buttons' own opacity (index.html), so Skip ends as Disable looks and keeps its hover.
-        skip.animate([{ opacity: 0 }], { duration: 1000, easing: "ease-in-out" });
-      }
+      if (skip !== null) skip.disabled = false;
       if (ended) reveal();
     },
     // The page shows a message instead of the app: no intro over it.
     abort() {
       if (layer !== null) toSplash();
     },
+    // Settles once the intro's animations are running and a frame has been drawn (at once without the intro), so
+    // the app's start, which keeps the page busy, cannot hold them on their first frame.
+    ready: Promise.resolve(),
   };
   if (!wanted) return;
 
@@ -199,7 +201,7 @@
   buttons.className = "intro-buttons";
   skip = document.createElement("button");
   skip.textContent = "Skip";
-  skip.style.visibility = "hidden";
+  skip.disabled = !loaded;
   skip.onclick = () => reveal();
   const disable = document.createElement("button");
   disable.textContent = "Disable";
@@ -210,4 +212,7 @@
   };
   buttons.append(skip, disable);
   layer.appendChild(buttons);
+
+  const frame = () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  window.ediIntro.ready = Promise.all(animations.map((animation) => animation.ready)).then(frame, frame);
 })();

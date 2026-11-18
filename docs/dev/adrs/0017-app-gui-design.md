@@ -88,6 +88,10 @@ The decisions it rests on, unchanged here:
   | any later page switch                      | the tab already shown, until the user picks another         |
   | a project is opened or created             | first visits start again                                   |
 
+  Each page sets its first-visit tab itself, whatever the order of its tabs; a page where the user picked another tab
+  opens on that one at the first visit of each later project in the session, if it can be picked (the owner,
+  2026-11-17).
+
   The view never switches tabs by itself. A shown tab with nothing to draw shows its empty state, with no view and no
   toolbar: Structure says "No structure", Pattern "No pattern". The tabs the user cannot pick are disabled
   (Structure without a structure, Pattern without an experiment, Correlations before a fit, Stacked and Map without a

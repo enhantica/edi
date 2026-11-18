@@ -24,7 +24,7 @@ Item {
     // What the main view's Save image takes when this is the shown tab: the item, its toolbar (hidden while the image
     // is taken), the file name, and whether the toolbar's band is cut off.
     readonly property Item imageItem: chart
-    readonly property Item imageToolbar: viewButtons
+    readonly property Item imageToolbar: evolutionToolbar
     readonly property string imageName: "evolution"
     readonly property bool imageCropsToolbar: true
 

@@ -15,12 +15,12 @@ namespace {
 
 // Least important first. The owner's last four (2026-11-16) end it: subtract background, the intensity scale, the x
 // axis and reset. A name not listed sits between the view options and the pointer modes.
-constexpr std::array<std::string_view, 37> kOrder{
+constexpr std::array<std::string_view, 38> kOrder{
     "hover", "highlight", "legend", "structureCurves", "includedRange", "thinBars", "errorBars", "range", "smooth",
-    "reverse", "labels", "moments", "polyhedra", "bonds", "axes", "cell", "projection", "a", "b", "c", "atoms",
-    "colors", "measuredStyle", "direction", "colourMap", "spacing", "rows", "singleCrystalQuantity", "quantity", "pan",
-    "zoom", "subtractBackground", "yscale", "scale", "xaxis", "singleCrystalXAxis", "reset"};
-constexpr int kUnlisted = 27;
+    "reverse", "labels", "moments", "polyhedra", "bonds", "axes", "cell", "projection", "a", "b", "c", "atomView",
+    "atoms", "colors", "measuredStyle", "direction", "colourMap", "spacing", "rows", "singleCrystalQuantity",
+    "quantity", "pan", "zoom", "subtractBackground", "yscale", "scale", "xaxis", "singleCrystalXAxis", "reset"};
+constexpr int kUnlisted = 28;
 
 struct Unit {
     double width = 0;
@@ -130,7 +130,7 @@ void ToolbarRow::place(QQuickItem* lines, QQuickItem* more) const {
 
 int ToolbarRow::rank(const QString& name) {
     const QByteArray last = name.section(QLatin1Char('.'), -1).toUtf8();
-    const auto it = std::find(kOrder.begin(), kOrder.end(), std::string_view(last.constData(), last.size()));
+    const auto it = std::find(kOrder.begin(), kOrder.end(), std::string_view(last.constData(), static_cast<std::size_t>(last.size())));
     if (it == kOrder.end()) return kUnlisted * 2 + 1;
     return static_cast<int>(it - kOrder.begin()) * 2;
 }
@@ -138,7 +138,7 @@ int ToolbarRow::rank(const QString& name) {
 QVariantMap ToolbarRow::layout(const QVariantList& list, double left, double right, double spacing,
                                double groupSpacing, double moreWidth) const {
     std::vector<Unit> units;
-    units.reserve(list.size());
+    units.reserve(static_cast<std::size_t>(list.size()));
     for (const QVariant& entry : list) {
         const QVariantMap map = entry.toMap();
         const bool inMore = map.value(QStringLiteral("inMore")).toBool() && map.value(QStringLiteral("movable")).toBool();
