@@ -4170,9 +4170,14 @@ void ApplicationInfo::updateParameterSliderLimits() const {
     const auto value = assistantContextField(f, "selected", "value");
     const auto a = panelUsageNumber(f, value), b = panelUsageNumber(f, span);
     if (!a || !b) return;
-    panelUsageContextWrite(f, "lower", QJSValue(*a - *b));
-    const auto actual = assistantContextField(f, "selected", "value");
-    panelUsageContextWrite(f, "upper", panelUsageAdd(f, actual, span));
+    // Within the parameter's own limits (an occupancy stays in 0-1), unless the value is already outside them.
+    double lower = *a - *b, upper = *a + *b;
+    if (const auto* item = qobject_cast<const edi_app::ParameterItem*>(selected.toQObject())) {
+        if (std::isfinite(item->minimum()) && *a >= item->minimum()) lower = std::max(lower, item->minimum());
+        if (std::isfinite(item->maximum()) && *a <= item->maximum()) upper = std::min(upper, item->maximum());
+    }
+    panelUsageContextWrite(f, "lower", QJSValue(lower));
+    panelUsageContextWrite(f, "upper", QJSValue(upper));
 }
 void ApplicationInfo::parameterSliderPressed(bool destroying) const {
     const auto f = panelUsageEngine(this);
@@ -4703,7 +4708,7 @@ void ApplicationInfo::resetPreferences() const {
     const auto f = panelUsageEngine(this);
     projectWrite(f, "preferences", "assistantWidth", assistantContextField(f, "AppSizes", "assistantDefaultWidth"));
     const std::pair<const char*, QJSValue> defaults[] = {
-        {"toolTipLevel", QJSValue(QStringLiteral("Important"))}, {"toolTipDelay", QJSValue(1000)}, {"autoCollapse", QJSValue(true)}, {"sideBarSide", QJSValue(QStringLiteral("Right"))},
+        {"toolTipLevel", QJSValue(QStringLiteral("Important"))}, {"toolTipDelay", QJSValue(1000)}, {"autoCollapse", QJSValue(true)}, {"sideBarSide", QJSValue(QStringLiteral("Right"))}, {"imageBackground", QJSValue(QStringLiteral("transparent"))},
         {"engineThreads", QJSValue(0)}, {"scanWorkers", QJSValue(1)}, {"loggingLevel", QJSValue(QStringLiteral("Warning"))}, {"scanPatternUpdates", QJSValue(2)}, {"analysisShowNotMeasured", QJSValue(true)},
         {"analysisShowBySymmetry", QJSValue(false)}, {"analysisShowByConstraint", QJSValue(false)}, {"analysisShowFixedSettings", QJSValue(false)},
         {"showFitResults", QJSValue(true)}, {"scanRenderer", QJSValue(QStringLiteral("auto"))}, {"newProjectSuRule", QJSValue(QStringLiteral("iucr_99"))},
@@ -4712,7 +4717,7 @@ void ApplicationInfo::resetPreferences() const {
         {"patternMeasuredStyle", QJSValue(QStringLiteral("band"))}, {"patternPointerMode", QJSValue(QStringLiteral("zoom"))},
         {"scanMapColours", QJSValue(QStringLiteral("blue-red"))}, {"scanMapSmooth", QJSValue(true)},
         {"scanStackedReversed", QJSValue(false)}, {"scanStackedLegendShown", QJSValue(false)}, {"chartIncludedOnly", QJSValue(false)},
-        {"chartSubtractBackground", QJSValue(false)}, {"singleCrystalQuantity", QJSValue(QStringLiteral("f_squared"))},
+        {"chartSubtractBackground", QJSValue(false)}, {"singleCrystalQuantity", QJSValue(QStringLiteral("f_squared"))}, {"singleCrystalXAxis", QJSValue(QStringLiteral("q"))}, {"singleCrystalPatternQuantity", QJSValue(QStringLiteral("f_squared"))}, {"singleCrystalThinBars", QJSValue(false)}, {"singleCrystalMeasuredStyle", QJSValue(QStringLiteral("bars"))},
         {"chartHighlightSelected", QJSValue(true)}, {"chartHiddenRange", QJSValue(QStringLiteral("keep"))}, {"textShow", QJSValue(QStringLiteral("editable"))}
     };
     for (const auto& [name, value] : defaults) projectWrite(f, "preferences", name, value);
@@ -9206,8 +9211,9 @@ void ApplicationInfo::patternChoice(const QJSValue& index, int kind) const {
             assistantMemberWrite(f, preferences, "patternYScale", textIndex(f, tokens, index));
         } else projectWrite(f, "controller", "yScale", index);
     } else if (kind == 1) {
-        if (panelUsageTruth(assistantContextField(f, "chart", "axisProject"))) assistantMemberWrite(f, assistantContextField(f, "chart", "axisProject"), "patternDSpacing", QJSValue(index.strictlyEquals(QJSValue(1))));
-        else projectWrite(f, "controller", "dSpacing", QJSValue(index.strictlyEquals(QJSValue(1))));
+        const auto token = textIndex(f, panelUsageContextRead(f, "tokens"), index);
+        if (panelUsageTruth(assistantContextField(f, "chart", "axisProject"))) assistantMemberWrite(f, assistantContextField(f, "chart", "axisProject"), "patternXAxis", token);
+        else projectWrite(f, "controller", "xAxis", token);
     } else {
         const auto preferences = panelUsageContextRead(f, "Preferences");
         assistantMemberWrite(f, preferences, "patternMeasuredStyle", textIndex(f, panelUsageContextRead(f, "tokens"), index));
@@ -9986,7 +9992,7 @@ QJSValue ApplicationInfo::scanClosedTexts(int kind) const {
 void ApplicationInfo::scanChoice(const QJSValue& index, int kind) const {
     const auto f = panelUsageEngine(this);
     if (kind == 0) {
-        if (panelUsageTruth(assistantContextField(f, "chart", "project")) && panelUsageTruth(panelUsageContextRead(f, "nativeOffered"))) assistantMemberWrite(f, assistantContextField(f, "chart", "project"), "patternDSpacing", QJSValue(index.strictlyEquals(QJSValue(1))));
+        if (panelUsageTruth(assistantContextField(f, "chart", "project"))) assistantMemberWrite(f, assistantContextField(f, "chart", "project"), "patternXAxis", textIndex(f, panelUsageContextRead(f, "tokens"), index));
     } else if (kind == 1) {
         if (panelUsageTruth(assistantContextField(f, "chart", "project")) && panelUsageTruth(panelUsageRead(f, assistantContextField(f, "chart", "project"), "evolution"))) {
             const auto evolution = panelUsageRead(f, assistantContextField(f, "chart", "project"), "evolution"); assistantMemberWrite(f, evolution, "xMode", panelUsageTruth(panelUsageContextRead(f, "hasValue")) ? index : QJSValue(1));

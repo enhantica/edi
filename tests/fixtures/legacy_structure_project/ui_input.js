@@ -1,0 +1,7 @@
+.pragma library
+
+function prepare(proof, root) {
+    const structure = "data_cosio\n_edi.schema_version 3\n_cell.length_a 4.3\n_cell.length_b 5.1\n_cell.length_c 6.7\n_cell.angle_alpha 90\n_cell.angle_beta 90\n_cell.angle_gamma 90\n_space_group.name_h_m \"P 1\"\nloop_\n_atom_site.id\n_atom_site.type_symbol\n_atom_site.fract_x\n_atom_site.fract_y\n_atom_site.fract_z\n_atom_site.wyckoff_letter\n_atom_site.occupancy\n_atom_site.adp_iso\n_atom_site.adp_type\nCo1 Co 0.1 0.2 0.3 a 1 0.5 Biso\nCo2 Co 0.4 0.5 0.6 a 1 0.5 Biso\nO1 O 0.7 0.2 0.8 a 1 0.5 Biso\n";
+    const experiment = "data_d20\n_edi.schema_version 3\n_experiment_type.sample_form powder\n_experiment_type.radiation_probe neutron\n_experiment_type.scattering_type bragg\n_experiment_type.beam_mode \"constant wavelength\"\n_peak.type cwl-tch-pseudo-voigt\n_peak.broad_gauss_u 0\n_peak.broad_gauss_v 0\n_peak.broad_gauss_w 0.15\n_peak.broad_lorentz_x 0\n_peak.broad_lorentz_y 0\n_peak.cutoff_fwhm 5\n_instrument.setup_wavelength 1.87\n_instrument.calib_twotheta_offset 0\nloop_\n_linked_structure.structure_id\n_linked_structure.scale\ncosio 1\n_background.type line-segment\nloop_\n_background.id\n_background.position\n_background.intensity\nleft 40 6\nright 64 6\nloop_\n_data.two_theta\n_data.intensity_meas\n_data.intensity_meas_su\n40 20 2\n52 33 3\n64 25 4\n";
+    return proof.write(root, "structures/cosio.edi", structure) && proof.write(root, "experiments/d20.edi", experiment);
+}

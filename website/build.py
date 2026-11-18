@@ -559,8 +559,8 @@ def _tutorial_navigation(pages: list[tuple[str, str, str]]) -> str:
     return ''.join(lines)
 
 
-def _config_text(name: str, original: str, shared_controls: Path, base_url: str | None) -> str:
-    """Return the concept's MkDocs configuration with versioned assets and the site URL."""
+def _config_text(name: str, original: str, base_url: str | None) -> str:
+    """Return the concept's MkDocs configuration with its tutorial menus and the site URL."""
     text = original.replace(
         TUTORIAL_MARKER, _tutorial_navigation(_with_assistant(TUTORIAL_PAGES, 'python'))
     )
@@ -571,19 +571,6 @@ def _config_text(name: str, original: str, shared_controls: Path, base_url: str 
         APP_TUTORIAL_MARKER,
         _tutorial_navigation(_with_assistant(_app_tutorial_pages(), 'application')),
     )
-    text = text.replace(
-        'assets/site-components.css?v=shared',
-        'assets/site-components.css?v='
-        + hashlib.sha256(shared_controls.read_bytes()).hexdigest()[:12],
-    )
-    if name == 'surfaces':
-        assets = ROOT / 'surfaces/docs/assets'
-        digest = hashlib.sha256(
-            (assets / 'gui-capture.css').read_bytes()
-            + (assets / 'gui-capture.js').read_bytes()
-            + (assets / 'interfaces.css').read_bytes()
-        ).hexdigest()[:12]
-        text = text.replace('extra:\n', f'extra:\n  gui_assets_version: {digest}\n', 1)
     if base_url:
         text, count = re.subn(
             r'^site_url:.*$',
@@ -596,11 +583,11 @@ def _config_text(name: str, original: str, shared_controls: Path, base_url: str 
     return text
 
 
-def _run_zensical(name: str, shared_controls: Path, base_url: str | None) -> None:
+def _run_zensical(name: str, base_url: str | None) -> None:
     config = ROOT / name / 'mkdocs.yml'
     temporary = None
     original = config.read_text(encoding='utf-8')
-    text = _config_text(name, original, shared_controls, base_url)
+    text = _config_text(name, original, base_url)
     if text != original:
         with tempfile.NamedTemporaryFile(
             mode='w',
@@ -1056,8 +1043,58 @@ def _write_feedback_form(built: Path) -> None:
     )
 
 
-def _build_concept(name: str, shared_controls: Path, base_url: str | None, output: Path) -> None:
-    _run_zensical(name, shared_controls, base_url)
+# A stylesheet or script with a hand-set version, in a configuration list or a template link.
+HAND_VERSION = re.compile(r'\.(?:css|js)(?:[\'"]\s*\|\s*url\s*\}\})?\?v=')
+ASSET_LINK = re.compile(r'(?P<attr>href|src)="(?P<url>[^"?#:]+\.(?:css|js))(?:\?v=[^"#]*)?"')
+
+
+def _check_hand_versions(name: str) -> None:
+    """Refuse a hand-written ?v= on a stylesheet or script link; the build sets each one."""
+    sources = [ROOT / name / 'mkdocs.yml', *sorted((ROOT / name / 'overrides').rglob('*.html'))]
+    found = [
+        f'{path.relative_to(ROOT)}:{number}'
+        for path in sources
+        if path.is_file()
+        for number, line in enumerate(path.read_text(encoding='utf-8').splitlines(), 1)
+        if HAND_VERSION.search(line)
+    ]
+    if found:
+        raise SystemExit(
+            'Stylesheet and script links get ?v= from the build; drop the hand-written ones: '
+            + ', '.join(found)
+        )
+    print('No hand-written asset versions: PASS', flush=True)
+
+
+def _version_assets(built: Path) -> None:
+    """Give every local stylesheet and script link a ?v= from a short hash of the file it names.
+
+    The host's CDN keeps an asset for a week, so a changed file needs a new URL (landing.css kept a
+    hand-set tag and stayed stale for days); a hash changes exactly when the content does.
+    """
+    digests: dict[Path, str] = {}
+
+    def versioned(page: Path, match: re.Match) -> str:
+        url = match['url']
+        target = (built / url.lstrip('/')) if url.startswith('/') else (page.parent / url)
+        target = target.resolve()
+        if not target.is_relative_to(built.resolve()) or not target.is_file():
+            return match[0]
+        if target not in digests:
+            digests[target] = hashlib.sha256(target.read_bytes()).hexdigest()[:12]
+        return f'{match["attr"]}="{url}?v={digests[target]}"'
+
+    for page in built.rglob('*.html'):
+        text = page.read_text(encoding='utf-8')
+        changed = ASSET_LINK.sub(lambda match, page=page: versioned(page, match), text)
+        if changed != text:
+            page.write_text(changed, encoding='utf-8')
+    print(f'Asset links versioned by content ({len(digests)} files): PASS', flush=True)
+
+
+def _build_concept(name: str, base_url: str | None, output: Path) -> None:
+    _check_hand_versions(name)
+    _run_zensical(name, base_url)
     built = ROOT / name / 'site'
     if not (built / 'index.html').is_file():
         raise SystemExit(f'{name}: the build did not produce its homepage')
@@ -1077,6 +1114,7 @@ def _build_concept(name: str, shared_controls: Path, base_url: str | None, outpu
         _write_feedback_form(built)
         _check_catalogue(built)
         _check_parameter_reference(built)
+    _version_assets(built)
     assembled = output if name == 'surfaces' else output / name
     if assembled.exists() and name != 'surfaces':
         shutil.rmtree(assembled)
@@ -1141,7 +1179,6 @@ def main() -> None:  # noqa: PLR0915 - the build, step by step
     args = parser.parse_args()
     if args.require_outputs and args.no_notebooks:
         parser.error('--require-outputs and --no-notebooks exclude each other')
-    shared_controls = ROOT / 'surfaces/docs/assets/site-components.css'
     _render_sources()
     if args.base_url:
         args.base_url = _normalized_base_url(parser, args.base_url)
@@ -1195,7 +1232,7 @@ def main() -> None:  # noqa: PLR0915 - the build, step by step
             changelog.write_text(render_release_notes(releases), encoding='utf-8')
             home.write_text(_with_latest_release(originals[home], releases), encoding='utf-8')
         for name in names:
-            _build_concept(name, shared_controls, args.base_url, output)
+            _build_concept(name, args.base_url, output)
     finally:
         for path, original in originals.items():
             path.write_text(original, encoding='utf-8')

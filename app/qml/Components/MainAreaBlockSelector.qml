@@ -27,6 +27,8 @@ Item {
     property real areaWidth: 0
     property real tabBarHeight: EaStyle.Sizes.tabBarHeight
     property real rightInset: margin
+    // Where the row starts, from the main area's left edge: the shown view's toolbar's left edge (the owner, 2026-11-16).
+    property real leftInset: leftMargin
 
     // The chart's own margin above its toolbar, here also above the row (PatternChart.topMargin); on the left the
     // main area's margin (owner, 2026-10-05).
@@ -35,25 +37,36 @@ Item {
     // The margin above the row and the row; the chart's own margin above its toolbar is the one below it.
     readonly property real reservedHeight: visible ? margin + height : 0
 
-    x: leftMargin
+    x: leftInset
     y: tabBarHeight + margin
-    width: areaWidth - leftMargin - rightInset
+    width: areaWidth - leftInset - rightInset
     height: selector.height
 
     // The row's band, across the main area, in the chart's background.
     Rectangle {
-        x: -placement.leftMargin
+        x: -placement.leftInset
         y: -placement.margin
         width: placement.areaWidth
         height: placement.height + 2 * placement.margin
         color: EaStyle.Colors.chartBackground
     }
 
+    // A series of joint fits chooses a point and a bank in place of an experiment (SeriesSelectors).
+    readonly property bool series: blockKind === "experiment" && Session.project !== null && Session.project.series
+
     BlockSelector {
         id: selector
         objectName: "mainArea.blocks"
+        visible: !placement.series
         width: placement.width
         backgroundColor: EaStyle.Colors.chartBackground
         onBlockActivated: index => placement.blockActivated(index)
+    }
+    SeriesSelectors {
+        objectName: "mainArea.series"
+        visible: placement.series
+        width: placement.width
+        project: placement.series ? Session.project : null
+        viewKey: AppState.mainView?.currentKey ?? ""
     }
 }

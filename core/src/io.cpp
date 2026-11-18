@@ -747,6 +747,9 @@ const std::set<std::string>& known_covered_tags() {
         "_atom_site_moment.label", "_atom_site_moment.crystalaxis_x",
         "_atom_site_moment.crystalaxis_y", "_atom_site_moment.crystalaxis_z",
         "_atom_site_moment.symmform",
+        // The derived spherical form crysta's writer adds: never read back.
+        "_atom_site_moment.spherical_modulus", "_atom_site_moment.spherical_polar",
+        "_atom_site_moment.spherical_azimuthal",
         // _background
         "_background.coef", "_background.id", "_background.intensity", "_background.order",
         "_background.origin", "_background.position", "_background.type", "_background.x_max",
@@ -3358,8 +3361,8 @@ BraggPdExperiment simulation_experiment(const std::string& name, const Experimen
                                         const std::vector<std::string>& structure_ids) {
     const bool constant_wavelength = type.beam_mode == "constant wavelength";
     if (type.sample_form == "single crystal") {
-        // A single crystal: its wavelength (constant wavelength), no extinction and no reflections until its data
-        // are loaded.
+        // A single crystal: its wavelength and resolution limit (constant wavelength), no extinction and no measured
+        // reflections until its data are loaded.
         if (type.radiation_probe != "neutron") {
             throw std::invalid_argument("a single crystal is a neutron experiment; choose neutron first");
         }
@@ -3370,6 +3373,9 @@ BraggPdExperiment simulation_experiment(const std::string& name, const Experimen
         text += "_experiment_type.scattering_type \"bragg\"\n\n";
         if (constant_wavelength) {
             text += "_instrument.setup_wavelength 1.\n\n";
+            // A resolution limit, so the reflections are calculated before any are measured (edi ADR-0049 point 6):
+            // d down to 1 Å, which wavelengths up to 2 Å still reach.
+            text += std::string(detail::single_crystal_resolution_key()) + " 0.5\n\n";
         }
         text += "_extinction.type none\n";
         if (!structure_ids.empty()) {
@@ -3570,6 +3576,23 @@ void rename_experiment(Project& project, ExperimentBase& experiment, const std::
             KeyTraits<BraggPdExperiment>::canonical(item->name) == wanted) {
             throw IoError("an experiment named '" + detail::printable_id(name) +
                           "' is already in the project");
+        }
+    }
+    // The rows that name the experiment follow it: its series pattern and its set membership.
+    const std::string before = KeyTraits<BraggPdExperiment>::canonical(experiment.name);
+    for (const auto& member : project.sequential_fit.experiments) {
+        if (KeyTraits<BraggPdExperiment>::canonical(member->experiment_id.value()) == before) {
+            member->experiment_id = name;
+        }
+    }
+    for (const auto& member : project.experiment_set_members) {
+        if (KeyTraits<BraggPdExperiment>::canonical(member->experiment_id.value()) == before) {
+            member->experiment_id = name;
+        }
+    }
+    for (const auto& set : project.experiment_sets) {
+        if (KeyTraits<BraggPdExperiment>::canonical(set->template_experiment_id.value()) == before) {
+            set->template_experiment_id = name;
         }
     }
     experiment.name = name;
@@ -4027,6 +4050,41 @@ static Project load_project_folder(const std::string& directory, const WarningSi
                                                       analysis_file.string()),
                                             "_sequential_fit_extract.required");
                 project.sequential_fit.extract.push_back(std::move(rule));
+            }
+        }
+        // A series of joint fits: one file pattern per experiment, and then no `file_pattern`.
+        if (const Loop* members = block.loop_with("_sequential_fit_experiment.experiment_id")) {
+            if (block.find("_sequential_fit.file_pattern") != nullptr) {
+                throw std::invalid_argument(
+                    "_sequential_fit.file_pattern and a _sequential_fit_experiment loop are both declared (a series "
+                    "of joint fits takes one pattern per experiment): " +
+                    analysis_file.string());
+            }
+            for (const auto& row : members->rows) {
+                SequentialFitExperiment member;
+                member.experiment_id = loop_cell(*members, row, "_sequential_fit_experiment.experiment_id",
+                                                 analysis_file.string());
+                member.file_pattern = loop_cell(*members, row, "_sequential_fit_experiment.file_pattern",
+                                                analysis_file.string());
+                project.sequential_fit.experiments.push_back(std::move(member));
+            }
+        }
+        if (const Loop* sets = block.loop_with("_experiment_set.id")) {
+            for (const auto& row : sets->rows) {
+                ExperimentSet set;
+                set.id = loop_cell(*sets, row, "_experiment_set.id", analysis_file.string());
+                set.template_experiment_id =
+                    loop_cell(*sets, row, "_experiment_set.template_experiment_id", analysis_file.string());
+                project.experiment_sets.push_back(std::move(set));
+            }
+        }
+        if (const Loop* members = block.loop_with("_experiment_set_member.experiment_id")) {
+            for (const auto& row : members->rows) {
+                ExperimentSetMember member;
+                member.experiment_id =
+                    loop_cell(*members, row, "_experiment_set_member.experiment_id", analysis_file.string());
+                member.set_id = loop_cell(*members, row, "_experiment_set_member.set_id", analysis_file.string());
+                project.experiment_set_members.push_back(std::move(member));
             }
         }
         if (const Loop* aliases = block.loop_with("_alias.id")) {

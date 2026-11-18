@@ -14,6 +14,9 @@
 **Amended by [ADR-0053](0053-what-a-fit-can-free.md):** the free-flag warning for a dependent also names the reason, and
 the other reasons a fit cannot vary a parameter come from crysta's rule.
 
+**Extended by [ADR-0087](0087-experiment-sets-and-shared-parameters.md):** the "Same for all experiments" and "Phase
+ratios shared" switches write ordinary alias and constraint rows.
+
 ## Context
 
 diffraction-lib names a parameter with `analysis.aliases.create(id=, param=)` and ties parameters with an expression,

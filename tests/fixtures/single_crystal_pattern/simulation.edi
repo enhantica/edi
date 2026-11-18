@@ -1,0 +1,15 @@
+data_d20
+_edi.schema_version 3
+_experiment_type.sample_form "single crystal"
+_experiment_type.radiation_probe neutron
+_experiment_type.scattering_type bragg
+_experiment_type.beam_mode "constant wavelength"
+_experiment_type.polarisation unpolarised
+_scattering_source.neutron_scattering_length sears1992
+_instrument.setup_wavelength 1.87
+_extinction.type none
+loop_
+_linked_structure.structure_id
+_linked_structure.scale
+cosio 1
+_data_range.sin_theta_over_lambda_max 0.35

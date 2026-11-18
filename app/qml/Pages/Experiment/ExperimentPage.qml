@@ -51,11 +51,25 @@ WorkflowPage {
     })
 
     pageName: "experiment"
+    // Its own main view: Pattern, and Stacked and Map with several datasets (the owner, 2026-11-14 item 5).
+    pageView: Component {
+        MainView {
+            shown: page.current
+            defaultKey: "pattern"
+            pageKey: "experiment"
+            tabKeys: ["pattern", "meascalc", "stacked", "map"]
+        }
+    }
+    onCurrentChanged: if (current && pageViewItem)
+        AppState.mainView = pageViewItem
+    onPageViewItemChanged: if (current && pageViewItem)
+        AppState.mainView = pageViewItem
     extrasEnabled: experiment !== null
     textEnabled: experiment !== null
     basicItem: Component {
         EaComponents.SideBarColumn {
             ExperimentsGroup {
+                id: experimentsGroup
                 project: page.project
             }
             Repeater {

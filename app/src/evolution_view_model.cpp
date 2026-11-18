@@ -41,10 +41,11 @@ double padded(double value, double pad) {
 
 EvolutionParameterListModel::EvolutionParameterListModel(QObject* parent) : RowTableModel({"name", "label"}, parent) {}
 
-void EvolutionParameterListModel::setNames(const QStringList& names) {
+void EvolutionParameterListModel::setNames(const QStringList& names, const QStringList& labels) {
     QList<Row> rows;
     for (int i = 0; i < names.size(); ++i) {
-        rows.append({reinterpret_cast<const void*>(static_cast<std::uintptr_t>(i + 1)), {names[i], names[i]}});
+        const QString label = i < labels.size() && !labels[i].isEmpty() ? labels[i] : names[i];
+        rows.append({reinterpret_cast<const void*>(static_cast<std::uintptr_t>(i + 1)), {names[i], label}});
     }
     setTableRows(rows);
 }
@@ -145,11 +146,50 @@ void EvolutionViewModel::syncFitted() {
     }
 }
 
-bool EvolutionViewModel::syncNames() {
-    // The core's list (edi::evolution_parameters), the report's too: every free parameter, listed before any dataset
-    // is fitted, then the ones results.csv records that are no longer free; the shown one kept, else the first.
+void EvolutionViewModel::syncExperiments() {
     QStringList names;
-    if (project_ != nullptr) {
+    if (project_ != nullptr && project_->sequential_fit.joint()) {
+        for (const auto& experiment : project_->experiments) names.append(QString::fromStdString(experiment->name));
+    }
+    if (names != experiments_) {
+        experiments_ = names;
+        if (experiments_.isEmpty()) per_experiment_ = false;
+        current_experiment_ = std::min(current_experiment_, static_cast<int>(experiments_.size()) - 1);
+        emit seriesChanged();
+        emit experimentsChanged();
+        emit perExperimentChanged();
+        emit currentExperimentChanged();
+        emit xTitleChanged();  // a series that records nothing is placed by its runs
+    }
+}
+
+void EvolutionViewModel::setPerExperiment(bool on) {
+    on = on && series();
+    if (on == per_experiment_) return;
+    per_experiment_ = on;
+    emit perExperimentChanged();
+    syncNames();
+    rebuild();
+}
+
+void EvolutionViewModel::setCurrentExperiment(int index) {
+    if (index == current_experiment_ || index < -1 || index >= experiments_.size()) return;
+    current_experiment_ = index;
+    emit currentExperimentChanged();
+    if (per_experiment_) rebuild();
+}
+
+bool EvolutionViewModel::syncNames() {
+    syncExperiments();
+    // The core's list (edi::evolution_parameters), the report's too: every free parameter, listed before any dataset
+    // is fitted, then the ones results.csv records that are no longer free; the shown one kept, else the first. Per
+    // experiment, the columns results_experiments.csv records (edi::evolution_experiment_parameters).
+    QStringList names;
+    if (project_ != nullptr && per_experiment_) {
+        for (const std::string& name : edi::evolution_experiment_parameters(*project_)) {
+            names.append(QString::fromStdString(name));
+        }
+    } else if (project_ != nullptr) {
         static const edi::ScanResultIndex kNoResults;
         for (const std::string& name :
              edi::evolution_parameters(*project_, session_ != nullptr ? session_->index() : kNoResults)) {
@@ -160,13 +200,17 @@ bool EvolutionViewModel::syncNames() {
     const bool changed = names != names_;
     if (changed) {
         names_ = names;
-        parameters_->setNames(names_);
+        QStringList labels;
+        for (const QString& name : names_) labels.append(labeller_ ? labeller_(name, per_experiment_) : QString());
+        labels_ = labels;
+        parameters_->setNames(names_, labels);
     }
     const int current = names_.isEmpty() ? -1 : std::max(0, static_cast<int>(names_.indexOf(shown)));
     if (current != current_ || changed) {
         current_ = current;
         emit currentParameterChanged();
         emit yTitleChanged();
+        emit yLabelChanged();
     }
     return changed;
 }
@@ -190,7 +234,8 @@ void EvolutionViewModel::addRow(int dataset, const std::vector<std::string>& cel
     // A fresh run's first row brings the header, and with it the axes and any recorded parameter not listed yet: the
     // points are read once then; every later row adds its own point.
     // The template's own point, shown before the scan had rows, gives way to the scan's points.
-    if (!fitted_ || current_ < 0 || template_point_) {
+    // Per experiment the row's points are in results_experiments.csv, which the point's row follows: read them all.
+    if (!fitted_ || current_ < 0 || template_point_ || per_experiment_) {
         syncNames();
         syncFitted();
         rebuild();
@@ -232,6 +277,7 @@ void EvolutionViewModel::setCurrentParameter(int index) {
         current_ = index;
         emit currentParameterChanged();
         emit yTitleChanged();
+        emit yLabelChanged();
         rebuild();
     }
 }
@@ -246,12 +292,18 @@ void EvolutionViewModel::setXMode(int mode) {
 }
 
 QStringList EvolutionViewModel::xModes() const {
-    return {extracted_title_.isEmpty() ? tr("value") : extracted_title_, tr("file index")};
+    // A series that records nothing is placed by its runs (the owner, 2026-11-16).
+    return {extracted_title_.isEmpty() ? (series() ? tr("Run") : tr("value")) : extracted_title_, tr("file index")};
 }
 
 QString EvolutionViewModel::xTitle() const { return xModes().value(x_mode_); }
 
 QString EvolutionViewModel::yTitle() const { return current_ >= 0 ? names_.value(current_) : QString(); }
+
+QString EvolutionViewModel::yLabel() const {
+    const QString label = current_ >= 0 ? labels_.value(current_) : QString();
+    return label.isEmpty() ? yTitle() : label;
+}
 
 void EvolutionViewModel::setLayer(MeasuredLayer* layer) {
     if (layer != layer_) {
@@ -273,7 +325,7 @@ void EvolutionViewModel::rebuild() {
 }
 
 void EvolutionViewModel::readPoints() {
-    template_point_ = templatePoint();
+    template_point_ = per_experiment_ ? std::nullopt : templatePoint();
     if (template_point_) {
         points_.push_back(*template_point_);
         return;
@@ -285,6 +337,17 @@ void EvolutionViewModel::readPoints() {
         const std::string name = names_[current_].toStdString();
         const bool by_value = x_mode_ == 0 && !extracted_title_.isEmpty();
         const auto points = [&](const std::function<void(const edi::EvolutionPoint&)>& visit) {
+            if (per_experiment_) {
+                edi::evolution_experiment_series(
+                    *project_, session_->places(), session_->index(), name, by_value,
+                    [&](std::size_t experiment, const edi::EvolutionPoint& point) {
+                        if (current_experiment_ < 0 || experiment == static_cast<std::size_t>(current_experiment_)) {
+                            bank_ = static_cast<int>(experiment);
+                            visit(point);
+                        }
+                    });
+                return;
+            }
             edi::evolution_series(*project_, session_->places(), session_->index(), name, by_value, visit);
         };
         double low = std::numeric_limits<double>::infinity(), high = -low;
@@ -296,7 +359,7 @@ void EvolutionViewModel::readPoints() {
         });
         if (count <= static_cast<std::size_t>(kThinningLimit)) {
             points([this](const edi::EvolutionPoint& point) {
-                points_.push_back({point.x, point.y, point.su, static_cast<int>(point.dataset)});
+                points_.push_back({point.x, point.y, point.su, static_cast<int>(point.dataset), allBanks() ? bank_ : -1});
             });
         } else {
             const int buckets = kThinningLimit / 2;
@@ -412,7 +475,36 @@ void EvolutionViewModel::draw() {
             high.append(point.y + point.error);
         }
     }
+    // Every bank shown: each bank's points on its own layer, the chart's own layer empty.
+    if (allBanks()) {
+        for (int bank = 0; bank < bank_layers_.size(); ++bank) {
+            if (!bank_layers_[bank]) continue;
+            QList<QPointF> own;
+            QList<double> own_low, own_high;
+            for (const Point& point : points_) {
+                if (point.bank != bank) continue;
+                own.append(QPointF(point.x, point.y));
+                if (bars) {
+                    own_low.append(point.y - point.error);
+                    own_high.append(point.y + point.error);
+                }
+            }
+            bank_layers_[bank]->setData(own, own_low, own_high);
+        }
+        layer_->setData({}, {}, {});
+        return;
+    }
+    for (const QPointer<MeasuredLayer>& layer : bank_layers_) {
+        if (layer) layer->setData({}, {}, {});
+    }
     layer_->setData(points, low, high);
+}
+
+void EvolutionViewModel::setBankLayer(int bank, MeasuredLayer* layer) {
+    if (bank < 0) return;
+    if (bank >= bank_layers_.size()) bank_layers_.resize(bank + 1);
+    bank_layers_[bank] = layer;
+    draw();
 }
 
 int EvolutionViewModel::datasetAt(double x, double y, double x_tolerance, double y_tolerance) const {

@@ -369,7 +369,7 @@ void add_scene(ReportStructure& out, const Structure& structure, ColorScheme col
 // takes the style row of `place`, the experiment's place, or a scan's template dataset's among its datasets.
 ReportPattern pattern_of(const Project& project, std::size_t index, const ReportOptions& options, std::size_t place) {
     PatternSource source =
-        capture_pattern(project, index, options.d_spacing ? PatternAxis::DSpacing : PatternAxis::Native);
+        capture_pattern(project, index, options.x_axis);
     source.experiment_place = place;
     if (!options.residual) {
         source.resid = nullptr;
@@ -1017,7 +1017,7 @@ ReportOptions effective_report_options(const Project& project, const ReportOverr
     }
     options.correlation_level =
         overrides.correlation_threshold ? overrides.correlation_threshold : project.correlation_threshold;
-    options.d_spacing = overrides.x_axis.value_or(project.pattern_x_axis.value_or("native")) == "d_spacing";
+    options.x_axis = pattern_axis_from_token(overrides.x_axis.value_or(project.pattern_x_axis.value_or("native")));
     options.embed_libraries = overrides.html_offline.value_or(project.report_html_offline.value_or(false));
     const auto scheme_named = [](const std::string& name) {
         const std::optional<ColourScheme> scheme = colour_scheme_from_name(name);

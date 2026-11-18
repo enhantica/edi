@@ -104,6 +104,7 @@ struct UncertaintyText {
 };
 
 class ParameterRegistry;
+class ParameterItem;
 
 // The project's structures: roles `name`, `label` (`name · file`, the file the structure is saved as),
 // `structure` (StructureViewModel), `colorIndex`.
@@ -138,6 +139,7 @@ class ExperimentListModel : public RowTableModel {
         QStringList extracted;
         bool is_template = false;
         QString reliability;  // its fit's χ², as the selector's line shows it; empty before it is fitted
+        QString name;         // the row's name in place of the experiment's (a series' one row)
     };
     // A scan's `count` datasets. The rows hold only their keys: a row's values are built from `row` when it is read,
     // so a scan of many files keeps no text per file (the session holds its facts).
@@ -188,8 +190,12 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // ("linked") or asks ("ask"). Kept by the app for the project's folder; until chosen, all up to 20 files and
     // 50 MB, linked above.
     Q_PROPERTY(QString includeDataOnSave READ includeDataOnSave WRITE setIncludeDataOnSave NOTIFY includeDataOnSaveChanged)
-    // The Analysis pattern chart's x axis, the project's `_pattern_chart.x_axis`: d-spacing, or the experiment's own.
-    // The report's charts follow it. An undoable edit.
+    // The Analysis pattern chart's x axis, the project's `_pattern_chart.x_axis`, by PatternChartController's token:
+    // the experiment's own, d-spacing, Q or sinθ/λ. The report's charts and the scan views follow it. The native axis
+    // and d-spacing are saved, as an undoable edit; Q and sinθ/λ are kept for the session until the project file can
+    // name them.
+    Q_PROPERTY(QString patternXAxis READ patternXAxis WRITE setPatternXAxis NOTIFY patternXAxisChanged)
+    // Whether that axis is d-spacing; setting it chooses d-spacing or the native axis.
     Q_PROPERTY(bool patternDSpacing READ patternDSpacing WRITE setPatternDSpacing NOTIFY patternDSpacingChanged)
     // The Evolution chart's view settings, the project's `_evolution_chart` (edi ADR-0017 §19): the error bars drawn
     // (absent: yes), and the y range fitted to the values with their error bars (absent: the values only).
@@ -236,6 +242,19 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // datasets, and the current experiment index the shown dataset. `scanColumns`: one heading per extract
     // rule, with its unit ("temperature (K)").
     Q_PROPERTY(bool scan READ scan NOTIFY scanChanged)
+    // A series of joint fits (ADR-0088): a scan whose points each hold one file per experiment, its banks. The
+    // Experiments group shows it as one ordinary row; the charts choose a run (the series
+    // variable, currentExperimentIndex as for a scan) and a bank (currentBank, the experiment the side bar shows).
+    Q_PROPERTY(bool series READ series NOTIFY seriesModeChanged)
+    Q_PROPERTY(int currentBank READ currentBank WRITE setCurrentBank NOTIFY currentBankChanged)
+    Q_PROPERTY(QStringList bankLabels READ bankLabels NOTIFY bankLabelsChanged)
+    // The series' name (its experiment set, else its first structure), what its points record ("Temperature (K)",
+    // or "Run" when nothing is recorded) and how many points it lists (incomplete ones last).
+    Q_PROPERTY(QString seriesName READ seriesName NOTIFY seriesNameChanged)
+    Q_PROPERTY(QString seriesVariable READ seriesVariable NOTIFY seriesVariableChanged)
+    Q_PROPERTY(int seriesPointCount READ seriesPointCount NOTIFY seriesPointCountChanged)
+    // Counted up whenever a run's facts change, so a binding reading pointName or pointProblem reads them again.
+    Q_PROPERTY(int seriesRevision READ seriesRevision NOTIFY seriesChanged)
     Q_PROPERTY(QString missingDataFolder READ missingDataFolder NOTIFY missingDataFolderChanged)
     Q_PROPERTY(QString missingDataFile READ missingDataFile NOTIFY missingDataFileChanged)
     Q_PROPERTY(QString pendingCollectionData READ pendingCollectionData NOTIFY pendingCollectionDataChanged)
@@ -313,6 +332,8 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     void recordReportFiles(std::vector<edi::ReportFile> rows);
     void setReportCorrelationThreshold(double threshold);
     bool patternDSpacing() const;
+    QString patternXAxis() const;
+    void setPatternXAxis(const QString& token);
     void setPatternDSpacing(bool on);
     bool evolutionErrorBars() const;
     void setEvolutionErrorBars(bool on);
@@ -378,6 +399,18 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     bool canLoadStructure() const { return true; }
     bool canCreateExperiment() const;
     bool scan() const { return scan_; }
+    bool series() const;
+    int currentBank() const { return current_experiment_; }
+    void setCurrentBank(int bank);
+    QStringList bankLabels() const;
+    QString seriesName() const;
+    QString seriesVariable() const;
+    int seriesPointCount() const;
+    int seriesRevision() const { return series_revision_; }
+    // A run's name for the Run selector, which adds its number: what it records, or its key.
+    Q_INVOKABLE QString pointName(int point) const;
+    // Why an incomplete point is not fitted; empty for a complete one.
+    Q_INVOKABLE QString pointProblem(int point) const;
     QStringList scanColumns() const { return scan_columns_; }
     EvolutionViewModel* evolution() const { return evolution_; }
     ScanViewModel* scanViews() const { return scan_views_; }
@@ -427,6 +460,23 @@ class ProjectViewModel : public QObject, public ProjectEditor {
         std::string refusal;
     };
     const std::vector<std::pair<std::string, std::string>>& savedFiles() const;
+    // A publication that only shows a scan dataset or a series point (edi ADR-0089 point 7): the texts a save writes
+    // and the fields' save spelling are made from a copy off the GUI thread and taken when they arrive, if nothing
+    // changed meanwhile. `view_calculation_` carries the mark from the edit's publication to its calculation's.
+    void refreshTextsLater();
+    // ScanSession::templateIdentity of `project`, kept while the project is unchanged (its work stamps): a scan's start
+    // and end ask for the same template, which a scan does not change (edi ADR-0089 point 7).
+    std::string templateIdentityOf(const edi::Project& project) const;
+    struct IdentityMemo {
+        const edi::Project* project = nullptr;
+        edi::WorkStamps stamps;
+        std::string identity;
+    };
+    mutable std::optional<IdentityMemo> identity_memo_;
+    void refreshSpellingLater();
+    bool view_calculation_ = false;
+    std::uint64_t texts_request_ = 0;
+    std::uint64_t spelling_request_ = 0;
     std::string savedFile(const std::string& relative) const;
     // The same file as a save writes it without calculating: what finds the generated groups.
     std::string discoveredFile(const std::string& relative) const;
@@ -507,6 +557,11 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     /// data folder lies inside the project); the project must be saved and hold that one experiment.
     Q_INVOKABLE bool loadDatasets(edi_app::ExperimentViewModel* experiment, const QList<QUrl>& files, bool asScan,
                                   bool copy = true, const QList<edi_app::CollectionOrigin>& origins = {});
+    /// A series of joint fits from `files` (edi ADR-0088 point 1): the names grouped into one file pattern per
+    /// experiment, `experiment` the template and a copy of it for each further group, the experiments an experiment set,
+    /// the folder linked and each experiment holding its first point's data. One undoable change; a project of more than
+    /// one experiment, files from several folders or names that do not group refuse with why.
+    Q_INVOKABLE bool loadSeriesOfJointFits(edi_app::ExperimentViewModel* experiment, const QList<QUrl>& files);
     /// The files' total size in bytes, for the Copy data into the project default (20 files, 50 MB).
     Q_INVOKABLE qint64 filesBytes(const QList<QUrl>& files) const;
     /// List a local folder off the GUI thread, then link its datasets through the normal scan loader.
@@ -524,6 +579,13 @@ class ProjectViewModel : public QObject, public ProjectEditor {
         qint64 scanBytes = 0;
     };
     LinkedInventory linkedInventory() const;
+    // Whether the project reads data from outside its folder, and the copy-or-link choice Save as presets (edi
+    // ADR-0088 point 5): Data on save's, or by size when it asks (copied up to 20 files and 50 MB).
+    Q_INVOKABLE bool hasLinkedData() const { return linkedInventory().linked; }
+    Q_INVOKABLE QString presetSaveData() const;
+    // A series of joint fits' data state (edi ADR-0088 points 1 and 4): its incomplete points, never fitted, and the
+    // points whose files changed since they were fitted; empty when there is nothing to say.
+    Q_INVOKABLE QString seriesDataNote() const;
     /// Why a save cannot include the linked data now (an experiment's data not downloaded or not found), else empty.
     QString linkedDataUnavailable() const;
     /// The inputs a save reads from disk as found now, to tell whether they changed: the linked files and, for a save
@@ -607,6 +669,18 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // data set to `token`: the experiment is made anew with that type, keeping its name, its link and,
     // within one beam mode, its range.
     Q_INVOKABLE bool setExperimentType(int index, const QString& axis, const QString& token);
+    // ADR-0087's switches for the experiment at `index` and the experiments it is tied to (its set, else the
+    // project's): "Phase ratios shared" and "Same for all experiments" for a parameter named without its datablock.
+    // Each turn is one undoable step; a refusal writes nothing and is reported.
+    Q_INVOKABLE bool phaseRatiosShared(int index) const;
+    Q_INVOKABLE bool setPhaseRatiosShared(int index, bool on);
+    Q_INVOKABLE bool sameForAllExperiments(int index, const QString& path) const;
+    Q_INVOKABLE bool setSameForAllExperiments(int index, const QString& path, bool on);
+    // The same switch for a Parameters table row: whether it applies (an experiment's parameter in a project of
+    // several experiments), whether it is on, and turning it.
+    Q_INVOKABLE bool sameForAllApplies(edi_app::ParameterItem* parameter) const;
+    Q_INVOKABLE bool sameForAll(edi_app::ParameterItem* parameter) const;
+    Q_INVOKABLE bool setSameForAll(edi_app::ParameterItem* parameter, bool on);
     // The place of the structure of this name in the project, or -1: its colour (edi ADR-0017 §8).
     Q_INVOKABLE int structureIndex(const QString& name) const;
 
@@ -706,6 +780,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     void suRuleChanged();
     void includeDataOnSaveChanged();
     void patternDSpacingChanged();
+    void patternXAxisChanged();
     void evolutionErrorBarsChanged();
     void evolutionRangeWithSuChanged();
     void lastModifiedChanged();
@@ -742,6 +817,13 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     void calculationStarted();
     void templateIndexChanged();
     void scanChanged();
+    void seriesModeChanged();
+    void seriesChanged();
+    void bankLabelsChanged();
+    void seriesNameChanged();
+    void seriesVariableChanged();
+    void seriesPointCountChanged();
+    void currentBankChanged();
     void listingDatasetFolderChanged();
     void missingDataFolderChanged();
     void missingDataFileChanged();
@@ -1059,6 +1141,10 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     StructureViewOptions* structure_view_options_;
     int current_structure_ = -1;
     int current_experiment_ = -1;
+    int series_revision_ = 0;
+    // Each run's profile factors as its record arrived this session, by its file or point key (the summary's ranges).
+    std::map<std::string, std::vector<edi::ScanFileRecord::Factors>> run_factors_;
+    void syncSeries();
     // A scan project (edi ADR-0017 §19, ADR-0026): its results (the session), the dataset shown, and the template.
     // While a dataset is shown the model holds that dataset's projection (its data, the template's parameters with
     // its results row over them) and `scan_template_` holds the template, which is what a save writes and what a
@@ -1148,6 +1234,8 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     void followScanDeclaration();
     // Re-derives whether the scan modes can run (a single template experiment and a listed scan).
     void syncScanAdmission();
+    // The project's experiments are the scan's: one for a scan, those a series of joint fits names, in order.
+    bool seriesMatches() const;
     // Shows a dataset: its projection is read off the GUI thread and applied when ready. `refresh`: again, even
     // when it is the shown one (its results row changed).
     void viewDataset(int index, bool refresh = false);
@@ -1155,6 +1243,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // runs, its calculated pattern; or the refusal.
     struct DatasetView {
         std::optional<edi::PdDataBase> data;
+        std::vector<edi::PdDataBase> series;  // a series of joint fits' point: each experiment's file, project order
         std::vector<edi::Edit::ScanValue> values;
         std::optional<edi::FitFrame> frame;
         std::optional<edi::PatternSource> d_frame;  // the frame on d, when a chart is on d
@@ -1167,6 +1256,16 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // The same over `from`, read with `index`'s columns.
     std::vector<edi::Edit::ScanValue> datasetValues(const std::vector<std::string>& row, const edi::Project& from,
                                                     const edi::ScanResultIndex& index) const;
+    // The values dataset `index` is shown with: its results row's, and a series point's per-experiment row's over them.
+    std::vector<edi::Edit::ScanValue> pointValues(int index) const;
+    // A series point's per-experiment values (`results_experiments.csv`) over `values`, read from `project`.
+    static void overlaySeriesPoint(std::vector<edi::Edit::ScanValue>& values, const edi::Project& project,
+                                   const edi::ScanDatasets& datasets, int index);
+    // Reads dataset `index` into `view`: its file, or a series point's file of each experiment (beam modes in
+    // project order). Throws as edi::read_scan_dataset does.
+    static void readDataset(DatasetView& view, const edi::ScanDatasets& datasets, int index,
+                            const std::vector<edi::BeamModeEnum>& modes);
+    std::vector<edi::BeamModeEnum> beamModes() const;
     void syncDatasets();
     // One dataset's row in the lists (its outcome, extracted values, template tag).
     void syncDataset(int index);
@@ -1257,6 +1356,8 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     QString published_name_, published_title_, published_description_, published_last_modified_;
     QString published_authors_, published_su_rule_;
     bool published_pattern_d_spacing_ = false;
+    QString published_pattern_x_axis_;
+    QString session_pattern_x_axis_;  // Q or sinθ/λ, which the file cannot name yet; empty: the project's axis
     bool published_evolution_error_bars_ = true;
     bool published_evolution_range_with_su_ = false;
     StructureViewModel* published_structure_ = nullptr;

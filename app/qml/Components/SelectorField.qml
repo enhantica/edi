@@ -1,4 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
+pragma ComponentBehavior: Bound
+
 import QtQuick
 import QtQuick.Controls
 
@@ -66,7 +68,31 @@ EaElements.ParamComboBox {
     // Its title as every field's: left, inset as a combo box's, ending in "…" (edi ADR-0017 §5).
     Component.onCompleted: FieldTitles.align(selector)
 
-    onActivated: index => ApplicationInfo.activateSelector(index, () => {
+    // The base's menu item for an option the other choices rule out (OptionListModel's `enabled`): not pickable, and
+    // drawn in the disabled colour, which the base's item does not do itself (the owner, 2026-11-16).
+    delegate: EaElements.MenuItem {
+        required property var model
+        required property int index
+        readonly property bool allowed: model.enabled !== false
+        width: parent !== null ? parent.width : 0
+        height: EaStyle.Sizes.comboBoxHeight
+        font.family: selector.font.family
+        textFormat: Text.RichText
+        elide: selector.elide
+        text: allowed ? (model.label ?? "") : `<font color="${EaStyle.Colors.themeForegroundDisabled}">${model.label ?? ""}</font>`
+        enabled: allowed
+        highlighted: selector.highlightedIndex === index
+        hoverEnabled: selector.hoverEnabled
+    }
+
+    onActivated: index => {
+        // A ruled-out option reached by key or wheel is not taken.
+        if (options && !options.isEnabled(options.tokenAt(index))) {
             currentIndex = Qt.binding(() => options && options.revision >= 0 ? options.indexOf(selector.token) : -1);
-        })
+            return;
+        }
+        ApplicationInfo.activateSelector(index, () => {
+            currentIndex = Qt.binding(() => options && options.revision >= 0 ? options.indexOf(selector.token) : -1);
+        });
+    }
 }

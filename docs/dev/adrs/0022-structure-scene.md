@@ -86,6 +86,37 @@ dimensions (the cell edge's radius and the triad scale with the fitted half heig
 surface's own identity: a sphere by its instance index, a shared-site wedge by the ordinal its texture coordinate
 carries; no distance to a centre is used. `hover_text` describes the atom as crysta gave it.
 
+### 8. Bond settings and atom types
+
+The Structure page's Extra tab has a Bond settings group (`_geom`): the minimum distance and the increment over the
+two sites' covalent radii, each crysta's default until set, and a read-only table of the bonds crysta found with
+them, the same `_geom_bond` rows the view draws. A negative or unreadable value leaves the setting as it was. The
+generic `_geom_bond` group is not shown, so the bonds appear once.
+
+A site's type is picked from the types crysta's scattering table holds for each experiment linking the structure:
+the neutron table of its scattering-length source (elements and isotopes with a length), or the X-ray form-factor
+table of its source (elements and ions). With both probes linked the list is their union, sorted; with no experiment
+linked it is the elements a new atom may take. crysta lists no X-ray table, so each element and each charge from 1 to
+9 is asked for once per source. Every entry carries its element's colour (§4). A type outside the list, as a file may
+state it, is kept and shown as it is.
+
+### 9. Coordination polyhedra
+
+The toolbar's polyhedron button switches coordination polyhedra on; the Appearance group sets their colour, opacity
+and extent while they are on (the owner, 2026-11-16). They are drawn round each drawn metal
+atom (any element but hydrogen, the noble gases and the non-metals that usually sit at the corners: B, C, N, O, F, Si,
+P, S, Cl, As, Se, Br, Te, I) with at least four bonded neighbours among those non-metals, the convex hull of their centres from
+the same `_geom_bond` rows (§2: no neighbour search, and the polyhedra follow the bond settings of §8). A flat face of
+more than three corners is one fan of triangles, so a see-through face is drawn once; corners all in one plane enclose
+no volume and make no polyhedron. Each polyhedron takes its centre atom's colour, or grey; its opacity is 0.5 by
+default. Bonds can be hidden while the polyhedra stay. Each structure saves these settings with the rest of its
+appearance as `_structure_view.polyhedra`, `polyhedra_colour`, `polyhedra_opacity`, `polyhedra_extent`,
+`polyhedra_centres`, `polyhedra_corners` and `polyhedra_max_distance`, each once crysta's dictionary declares it; until
+then that setting lasts for the session, and a file without it shows the default. The extent is "inside the cell", the
+corners being the drawn atoms, or "complete for atoms in the cell": each pair of sites bonds up to the longest bond the
+rows list between them, or the maximum distance when one is set, and a centre takes every atom that near in whichever
+cell it sits, so its polyhedron is whole; the corners outside the cell are not drawn as atoms.
+
 ## Consequences
 
 - The app's view is one renderer of this description (ADR-0017 §16): Qt Quick 3D instancing fed from C++, two draw

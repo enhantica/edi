@@ -43,12 +43,20 @@ QtObject {
     // The Stacked and Map views' zoom, one per view and shared by the pages that show them (edi ADR-0041):
     // {stacked: {x, y}, map: {x, y}}, each [min, max] or empty for the whole range.
     property var scanZoom: ({})
-    // A project opened, reset or closed starts with its full view (no range set, as a chart writes it); the toolbar's
-    // choices stay.
+    // The Meas vs calc view's axes scale (0 linear, 1 square root, 2 log) and zoom, and each single-crystal view's zoom
+    // ({comparison, stacked, axis}), one per view and shared by the pages that show it: a change on one page's copy
+    // shows on every other's.
+    property int measCalcScale: 0
+    property list<real> measCalcZoom: []
+    property var singleCrystalZoom: ({})
+    // A project opened, reset or closed starts with its full view (no range set, as a chart writes it, the comparison
+    // and single-crystal zooms included); the toolbar's choices stay.
     property Connections patternViewReset: Connections {
         target: Session
         function onProjectChanged() {
             ApplicationInfo.resetPatternProjectView();
+            AppState.measCalcZoom = [];
+            AppState.singleCrystalZoom = {};
         }
     }
 

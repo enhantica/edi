@@ -1,9 +1,11 @@
 """Observe actual saved HTML plot data and layout in an installed browser."""
 
+import contextlib
 import json
 import os
 import queue
 import shutil
+import signal
 import subprocess
 import sys
 import tempfile
@@ -43,7 +45,7 @@ window.addEventListener('error', e => errors.push(String(e.message)));
 window.addEventListener('unhandledrejection', e => errors.push(String(e.reason)));
 const observeLoaded = () => {
   const deadline = performance.now() + RENDER_TIMEOUT;
-  const report = ready => {
+  const report = async ready => {
     const plots = [...document.querySelectorAll('.js-plotly-plot')]
       .filter(plot => plot.closest('.evolution-figure'));
     const result = {selectors: document.querySelectorAll('.evolution-figure select').length,
@@ -70,6 +72,10 @@ const observeLoaded = () => {
           title: plot.layout?.title?.text,
           xTitle: plot.layout?.xaxis?.title?.text, yTitle: plot.layout?.yaxis?.title?.text};
       })};
+    if (HAS_EXTRA_OBSERVER) {
+      try { result.extra = await EXTRA_OBSERVER; }
+      catch (error) { errors.push(String(error)); }
+    }
     fetch('/proof?case=CASE', {method: 'POST', body: JSON.stringify(result)});
   };
   const inspect = () => {
@@ -92,16 +98,16 @@ else window.addEventListener('load', observeLoaded, {once: true});
 </script>"""
 
 
-def receive_pages(received, process, deadline):
+def receive_pages(received, process, deadline, viewports=('wide', 'narrow')):
     results = {}
-    while set(results) != {'wide', 'narrow'}:
+    while set(results) != set(viewports):
         try:
             name, facts = received.get(timeout=max(0.01, deadline - time.monotonic()))
         except queue.Empty as error:
-            missing = sorted({'wide', 'narrow'} - results.keys())
+            missing = sorted(set(viewports) - results.keys())
             message = f'Browser pages did not report: {missing}; exit={process.poll()}'
             raise RuntimeError(message) from error
-        if name not in {'wide', 'narrow'} or name in results:
+        if name not in viewports or name in results:
             raise RuntimeError('Browser proof must identify each viewport exactly once')
         results[name] = facts
     return results
@@ -110,41 +116,122 @@ def receive_pages(received, process, deadline):
 class _ObserverHead(HTMLParser):
     def __init__(self, html):
         super().__init__()
-        self.offset = None
+        self.head_offset = None
         self.lines = html.splitlines(keepends=True)
         self.feed(html)
 
     def handle_starttag(self, tag, _attrs):
         if tag != 'head':
             return
-        if self.offset is not None:
+        if self.head_offset is not None:
             raise ValueError('Structure observation requires one actual HTML head')
         line, column = self.getpos()
-        self.offset = (
+        self.head_offset = (
             sum(map(len, self.lines[: line - 1])) + column + len(self.get_starttag_text())
         )
 
 
-def _observed_html(html, name, timeout_ms, require_structure):
+def _observed_html(html, name, timeout_ms, require_structure, extra_observer=None):
     script = (
         OBSERVER
         .replace('CASE', name)
         .replace('RENDER_TIMEOUT', str(timeout_ms))
         .replace('REQUIRE_STRUCTURE', 'true' if require_structure else 'false')
+        .replace('HAS_EXTRA_OBSERVER', 'true' if extra_observer is not None else 'false')
+        .replace('EXTRA_OBSERVER', extra_observer if extra_observer is not None else 'null')
     )
     if not require_structure:
         return html + script
     head = _ObserverHead(html)
-    if head.offset is None:
+    if head.head_offset is None:
         raise ValueError('Native structure observation requires an actual HTML head')
-    return html[: head.offset] + script + html[head.offset :]
+    return html[: head.head_offset] + script + html[head.head_offset :]
 
 
-def observe(html, *, render_timeout_ms=5000, require_structure_rendering=False):
+def _browser_launch(browser, profile, url, require_structure_rendering):
+    if require_structure_rendering and 'firefox' in Path(browser).name:
+        (profile / 'user.js').write_text('user_pref("webgl.force-enabled", true);\n')
+    args = (
+        [browser, '--headless', '--no-remote', '--profile', str(profile), url]
+        if 'firefox' in Path(browser).name
+        else [
+            browser,
+            '--headless',
+            '--disable-gpu',
+            '--no-first-run',
+            f'--user-data-dir={profile}',
+            url,
+        ]
+    )
+    use_display = require_structure_rendering and sys.platform.startswith('linux')
+    environment = {**os.environ, 'MOZ_HEADLESS': '1'}
+    if use_display:
+        # Headless Firefox has no WebGL context on Linux. Use the native gates' real
+        # Xwayland/Mesa display and the installed browser, never a canvas substitute.
+        if '--headless' in args:
+            args.remove('--headless')
+        environment.pop('MOZ_HEADLESS', None)
+        args = [
+            'bash',
+            str(Path(__file__).resolve().parents[3] / 'tests/fixtures/scan_views/run.sh'),
+            *args,
+        ]
+    # The native runner's report-writer fault shim must stay in that runner. Firefox's
+    # sandbox also forks processes; loading the writer interposer there can crash them.
+    fault_directory = environment.get('EDI_REPORT_ACCEPTANCE_PRELOADED')
+    if fault_directory:
+        for key in ('LD_PRELOAD', 'DYLD_INSERT_LIBRARIES'):
+            libraries = [
+                item
+                for item in environment.get(key, '').split(':')
+                if item and Path(item).parent != Path(fault_directory)
+            ]
+            if libraries:
+                environment[key] = ':'.join(libraries)
+            else:
+                environment.pop(key, None)
+    return args, environment, use_display
+
+
+def _stop_browser(process, use_display):
+    def send(sig):
+        if use_display:
+            with contextlib.suppress(ProcessLookupError):
+                os.killpg(process.pid, sig)
+        else:
+            process.send_signal(sig)
+
+    send(signal.SIGTERM)
+    try:
+        process.wait(timeout=3)
+    except subprocess.TimeoutExpired:
+        send(signal.SIGKILL)
+        process.wait(timeout=3)
+
+
+def observe(
+    html,
+    *,
+    render_timeout_ms=5000,
+    require_structure_rendering=False,
+    extra_observer=None,
+    viewports=('wide', 'narrow'),
+):
     if type(render_timeout_ms) is not int or not 0 < render_timeout_ms <= 5000:
         raise ValueError('The browser drawing deadline must be an integer from 1 to 5000 ms')
     if type(require_structure_rendering) is not bool:
         raise ValueError('Structure readiness must be an explicit boolean')
+    if extra_observer is not None and (
+        not isinstance(extra_observer, str) or not extra_observer.strip()
+    ):
+        raise ValueError('Additional browser observation must be a nonempty JavaScript expression')
+    if (
+        not isinstance(viewports, tuple)
+        or not viewports
+        or len(set(viewports)) != len(viewports)
+        or not set(viewports) <= {'wide', 'narrow'}
+    ):
+        raise ValueError('Browser viewports must name a nonempty distinct tuple of wide or narrow')
     candidates = [shutil.which(name) for name in ('firefox', 'chromium', 'google-chrome')]
     candidates += [
         '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
@@ -158,14 +245,20 @@ def observe(html, *, render_timeout_ms=5000, require_structure_rendering=False):
     temporary = Path(tempfile.mkdtemp(prefix='edi-evolution-browser-'))
     documents = {
         '/' + name: (
-            _observed_html(html, name, render_timeout_ms, require_structure_rendering)
+            _observed_html(
+                html, name, render_timeout_ms, require_structure_rendering, extra_observer
+            )
         ).encode()
-        for name in ('wide', 'narrow')
+        for name in viewports
     }
     documents['/'] = (
-        b'<!doctype html><iframe width="1200" height="2400" src="/wide"></iframe>'
-        b'<iframe width="220" height="2400" src="/narrow"></iframe>'
-    )
+        '<!doctype html>'
+        + ''.join(
+            f'<iframe width="{1200 if name == "wide" else 220}" '
+            f'height="2400" src="/{name}"></iframe>'
+            for name in viewports
+        )
+    ).encode()
     received = queue.Queue()
 
     class Handler(BaseHTTPRequestHandler):
@@ -196,46 +289,19 @@ def observe(html, *, render_timeout_ms=5000, require_structure_rendering=False):
     profile = temporary / 'profile'
     profile.mkdir()
     url = f'http://127.0.0.1:{server.server_port}/'
-    args = (
-        [browser, '--headless', '--no-remote', '--profile', str(profile), url]
-        if 'firefox' in Path(browser).name
-        else [
-            browser,
-            '--headless',
-            '--disable-gpu',
-            '--no-first-run',
-            f'--user-data-dir={profile}',
-            url,
-        ]
+    args, environment, use_display = _browser_launch(
+        browser, profile, url, require_structure_rendering
     )
-    environment = {**os.environ, 'MOZ_HEADLESS': '1'}
-    # The native runner's report-writer fault shim must stay in that runner. Firefox's
-    # sandbox also forks processes; loading the writer interposer there can crash them.
-    fault_directory = environment.get('EDI_REPORT_ACCEPTANCE_PRELOADED')
-    if fault_directory:
-        for key in ('LD_PRELOAD', 'DYLD_INSERT_LIBRARIES'):
-            libraries = [
-                item
-                for item in environment.get(key, '').split(':')
-                if item and Path(item).parent != Path(fault_directory)
-            ]
-            if libraries:
-                environment[key] = ':'.join(libraries)
-            else:
-                environment.pop(key, None)
     with (temporary / 'browser.log').open('w') as log:
-        process = subprocess.Popen(args, stdout=log, stderr=log, env=environment)
+        process = subprocess.Popen(
+            args, stdout=log, stderr=log, env=environment, start_new_session=use_display
+        )
         try:
             # Allow browser startup and both frames to load on slower CI runners.
             # Each page still has its own drawing deadline.
-            results = receive_pages(received, process, time.monotonic() + 60)
+            results = receive_pages(received, process, time.monotonic() + 60, viewports)
         finally:
-            process.terminate()
-            try:
-                process.wait(timeout=3)
-            except subprocess.TimeoutExpired:
-                process.kill()
-                process.wait(timeout=3)
+            _stop_browser(process, use_display)
             server.shutdown()
             server.server_close()
             shutil.rmtree(temporary)

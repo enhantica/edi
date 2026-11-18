@@ -35,6 +35,8 @@ EaElements.TextField {
     property bool fittable: parameter.fittable ?? false
     property bool fit: parameter.fit ?? false
     property string category: parameter.category ?? ''
+    // The datablock-qualified name the menu shows, when the field's parameter has one.
+    property string fullName: parameter.fullName ?? ''
     property string name: parameter.name ?? 'default'
     property string prettyName: parameter.prettyName ?? ''
     property string shortPrettyName: parameter.shortPrettyName ?? ''
@@ -134,7 +136,7 @@ EaElements.TextField {
                     // Header
                     EaElements.Label {
                         color: EaStyle.Colors.themeForegroundMinor
-                        text: qsTr("Edi key (documentation)")
+                        text: qsTr("Full name (documentation)")
                     }
                     EaElements.Label {
                         color: EaStyle.Colors.themeForegroundMinor
@@ -160,9 +162,9 @@ EaElements.TextField {
                     // Content
                     EaElements.Button {
                         objectName: "parameter.documentation"
-                        fontIcon: "book"  // opens the parameter's documentation
+                        fontIcon: "external-link-alt"  // opens the parameter's documentation
                         readonly property url documentationUrl: control.url
-                        text: `${control.category}.${control.name}`
+                        text: control.fullName !== "" ? control.fullName : `${control.category}.${control.name}`
                         checked: true
                         enabled: control.url !== ""
                         onClicked: Qt.openUrlExternally(control.url)

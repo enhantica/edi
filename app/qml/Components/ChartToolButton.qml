@@ -27,7 +27,8 @@ Rectangle {
     width: AppSizes.toolbarControlSize
     height: width
     color: button.alert && button.active ? EaStyle.Colors.red : EaStyle.Colors.contentBackground
-    border.color: button.alert && button.active ? EaStyle.Colors.red : button.active ? EaStyle.Colors.chartAxis : EaStyle.Colors.themeBackgroundDisabled
+    // A switched-on button's frame takes the accent too, so on and off read at a glance (the owner, 2026-11-16).
+    border.color: button.alert && button.active ? EaStyle.Colors.red : button.active && button.checked ? EaStyle.Colors.themeAccent : button.active ? EaStyle.Colors.chartAxis : EaStyle.Colors.themeBackgroundDisabled
     border.width: EaStyle.Sizes.borderThickness
 
     EaElements.Label {

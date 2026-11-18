@@ -1,14 +1,12 @@
 // SPDX-License-Identifier: BSD-3-Clause
 import QtQuick
 
-import EasyApplication.Gui.Components as EaComponents
-
 import edi.app
 
 // A read-only table cell that shows a number (an s.u., a range end, a fit result). When the number's text does not
 // fit the cell it is shown in scientific notation with the same significant digits, and hovering shows it in full
 // (NumberText.fitted; the owner, 2026-10-22), so no number is cut short.
-EaComponents.ListViewLabel {
+CellLabel {
     id: label
     elide: Text.ElideRight
 

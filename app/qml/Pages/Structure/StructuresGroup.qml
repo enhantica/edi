@@ -38,7 +38,11 @@ SideBarGroup {
             currentRow: group.project ? group.project.currentStructureIndex : -1
             onRowActivated: row => ApplicationInfo.activateFormBlock(row, true)
 
-            columns: [numberColumnWidth, AppSizes.iconOnlyColumnWidth, -1, AppSizes.iconColumnWidth]
+            // The Type column, right after the name, says how the structure is described. It is fixed by where the
+            // structure comes from, so it is shown disabled (the owner, 2026-11-15). Every structure is atom-based
+            // until mode-based ones can be loaded.
+            readonly property string atomBased: qsTr("Atom-based")
+            columns: [numberColumnWidth, AppSizes.iconOnlyColumnWidth, textColumnWidth("name", qsTr("Name")), -1, AppSizes.iconColumnWidth]
 
             header: EaComponents.ListViewHeader {
                 EaComponents.ListViewLabel {
@@ -53,6 +57,11 @@ SideBarGroup {
                     elide: Text.ElideRight
                     horizontalAlignment: Text.AlignLeft
                     text: qsTr("Name")
+                }
+                EaComponents.ListViewLabel {
+                    elide: Text.ElideRight
+                    horizontalAlignment: Text.AlignLeft
+                    text: qsTr("Type")
                 }
                 EaComponents.ListViewLabel {
                     elide: Text.ElideRight
@@ -93,6 +102,13 @@ SideBarGroup {
                     onActiveFocusChanged: ApplicationInfo.finishUiEvent(10, undefined)
                     onCommitted: text => row.structure.name = text
                 }
+                TextCell {
+                    horizontalAlignment: Text.AlignLeft
+                    objectName: `structures.type.${row.index}`
+                    readOnly: true
+                    enabled: false
+                    value: table.atomBased
+                }
                 EaComponents.ListViewButton {
                     horizontalAlignment: Text.AlignHCenter
                     objectName: `structures.remove.${row.index}`
@@ -103,9 +119,10 @@ SideBarGroup {
             }
         }
 
-        // Load ▾, Create and Duplicate side by side at equal widths (the owner, 2026-11-03): Create adds
-        // easydiffractionbeta's default phase as structure1, structure2, … (edi ADR-0017 §4). The Load menu takes a
-        // structure from a file or from the web (COD or EasyDiffraction's collection).
+        // Create, Load ▾ and Duplicate side by side at equal widths (the owner, 2026-11-03; Create first, as on the
+        // Experiment page, 2026-11-14): Create adds easydiffractionbeta's default phase as structure1, structure2, …
+        // (edi ADR-0017 §4). The Load menu takes a structure from a file or from the web (COD or EasyDiffraction's
+        // collection).
         Row {
             id: buttons
 
@@ -113,6 +130,15 @@ SideBarGroup {
 
             spacing: EaStyle.Sizes.fontPixelSize
 
+            EaElements.SideBarButton {
+                objectName: "structures.create"
+                width: buttons.buttonWidth
+                enabled: group.project !== null
+                fontIcon: "plus-circle"
+                text: qsTr("Create structure")
+                ToolTip.text: qsTr("Add a structure with one atom site, to edit into the one you need")
+                onClicked: group.project.createStructure()
+            }
             EaElements.SideBarButton {
                 id: loadButton
                 objectName: "structures.load"
@@ -164,15 +190,6 @@ SideBarGroup {
                         onTriggered: onlineLoad.openFor("structure", null)
                     }
                 }
-            }
-            EaElements.SideBarButton {
-                objectName: "structures.create"
-                width: buttons.buttonWidth
-                enabled: group.project !== null
-                fontIcon: "plus-circle"
-                text: qsTr("Create structure")
-                ToolTip.text: qsTr("Add a structure with one atom site, to edit into the one you need")
-                onClicked: group.project.createStructure()
             }
             EaElements.SideBarButton {
                 objectName: "structures.duplicate"

@@ -6,7 +6,7 @@
 - **Date:** 2026-10-06
 - **Implementation:** 🟡 Partially implemented: datasets, runs, the template dataset and the bounded read-ahead are shipped; the scale gate runs to 100,000 files
 - **Priority:** High
-- **Forward constraint (binding on new features):** nothing may keep an object per scan file in memory or read every file up front; `analysis/results.csv` stays the one store of a scan's results.
+- **Forward constraint (binding on new features):** nothing may keep an object per scan file in memory or read every file up front; a scan's results are stored only in `analysis/results.csv` and, for a series of several experiments, `analysis/results_experiments.csv` ("Two results files" below).
 
 ## Context
 
@@ -21,7 +21,8 @@ a long experiment.
 1. **The file list is the only per-file state kept.** Listing the scan reads the directory, never
    the files (`edi::scan_datasets`, crysta's own listing). A file is read when it is shown or
    fitted. 1,000,000 names are tens of megabytes.
-2. **`results.csv` is the store of results.** A run appends one row per file. The app reads the
+2. **`results.csv` is the store of results** (with `results_experiments.csv` for several experiments, "Two results
+   files" below). A run appends one row per file. The app reads the
    new row from the end of the file as each file completes, and the whole file only when a project
    opens or a run ends. No fitted model is kept per file.
 3. **Bounded read-ahead.** crysta's driver reads at most four files ahead of the fit on a worker
@@ -152,3 +153,30 @@ The original full-count row-label Repeater created a dependency on the selected 
 the owner's Adaptive sample showed those scan-chart bindings and legend resets consuming the GUI thread.
 Initial project assignment used that same path. Label choice, spacing and the current dataset's label follow
 the existing native placement rules; only instantiated labels change.
+
+
+## Amendment, 2026-11: two results files
+
+A series of joint fits (ADR-0088) fits each point jointly over several experiments. Its results are two files:
+
+1. `analysis/results.csv`, one row per point: `point` (the text the patterns' `*` matched), the joint fit's reduced χ²,
+   success and iterations, the extract rules' values, each structure parameter's value and `.uncertainty`, the fit
+   conditions, then structure-level derived values.
+2. `analysis/results_experiments.csv`, one row per point and experiment: `point`, `experiment` (the datablock name),
+   `file_path`, that experiment's own reduced χ², then each experiment parameter by its name without the datablock
+   (`peak.broad_gauss_sigma_2`, `linked_structure.ncaf.scale`), followers of a constraint included, then
+   experiment-level derived values. A cell of a parameter an experiment does not have is empty.
+
+The two are joined by `point`. A point's experiment rows are written before its `results.csv` row, so a point is done
+when it has a `results.csv` row; experiment rows of a point without one are a torn tail. A scan of one experiment
+writes `results.csv` as before, with derived values after the condition columns, and no second file. Every reader
+(the results index, the live index, Reset, Undo, Continue, `edi fit`, the report) reads both by the same rule: both
+headers crysta's, every `results.csv` point having all its experiment rows, a last line without its line break left
+out while a run writes. A live point event carries both files' row offsets, so each new row is read from the end of
+its file. Reset and Undo set both files aside together.
+
+The scale gate extends to a series: a seeded series of 100 points × 5 patterns (the five WISH banks of the NCAF
+example), run on the producer path the app uses, with peak memory after point 100 within 10 % of the peak after point
+10, the median time per point over points 91 to 100 within 1.2 times the median over points 11 to 20, and no
+GUI-thread stall over 100 ms while the app shows the run. A series of 1,000 points × 100 patterns waits for real
+example data. Views draw from per-pattern summaries (ADR-0089).

@@ -172,6 +172,7 @@ Flickable {
             StructureView {
                 report: preview.report
                 reportStructure: record.modelData.id
+                reportToolbar: true
                 colors: FigureColors {
                     light: true
                 }
@@ -182,6 +183,7 @@ Flickable {
             PatternChart {
                 report: preview.report
                 reportExperiment: record.modelData.id
+                reportToolbar: true
                 colors: FigureColors {
                     light: true
                 }

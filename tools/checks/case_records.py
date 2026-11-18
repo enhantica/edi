@@ -250,10 +250,15 @@ def problems(root: Path = ROOT) -> list[str]:
         )
     # The app's Examples list is the catalogue: exactly the cases, tagged from the one registry.
     # The source, facility and instrument are never tags (owner record 2026-11-09).
+    # The registry's declared app-only examples (ADR-0048) are listed beside the cases.
     listed = list(json.loads((root / CATALOGUE).read_text(encoding='utf-8'))['examples'])
     ids = [built['id'] for built in built_records]
+    rows = yaml.safe_load((root / REGISTRY).read_text(encoding='utf-8'))['projects']
+    app_only = {row['id'] for row in rows if row.get('app-only')}
     out.extend(
-        f'{CATALOGUE}: lists {extra}, which is not a case' for extra in listed if extra not in ids
+        f'{CATALOGUE}: lists {extra}, which is not a case'
+        for extra in listed
+        if extra not in ids and extra not in app_only
     )
     out.extend(f'{CATALOGUE}: does not list the case {case}' for case in ids if case not in listed)
     facets = json.loads((root / TAGS).read_text(encoding='utf-8'))['tags']

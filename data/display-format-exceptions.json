@@ -206,6 +206,16 @@
    "reason": "the `_structure_view.moment_scale` value a save writes, not a displayed value"
   },
   {
+   "file": "app/src/structure_view_options.cpp",
+   "match": "QString::number(polyhedra_opacity_, 'g', 6)",
+   "reason": "the `_structure_view.polyhedra_opacity` value a save writes, not a displayed value"
+  },
+  {
+   "file": "app/src/structure_view_options.cpp",
+   "match": "QString::number(options_.polyhedra_max_distance, 'g', 6)",
+   "reason": "the `_structure_view.polyhedra_max_distance` value a save writes, not a displayed value"
+  },
+  {
    "file": "core/src/fit_policy.cpp",
    "match": "std::to_chars(buffer, buffer + sizeof(buffer), value, std::chars_format::general, 4);",
    "reason": "the independent run's fit message, which names each experiment with its reduced chi-square to four significant digits (ADR-0081); text inside a saved message, not an item's value"
@@ -531,6 +541,36 @@
    "file": "data/report/report.js",
    "literal": "Magnetic moments",
    "reason": "the exported structure view's toggle for its moment arrows, a view setting, not the moment category"
+  },
+  {
+   "file": "app/qml/Components/AppPreferencesDialog.qml",
+   "literal": "Atom colour",
+   "reason": "the moment arrows' colour preference, each arrow in its atom's colour, not the polyhedra colour option"
+  },
+  {
+   "file": "app/qml/Main.qml",
+   "literal": "Measured data",
+   "reason": "the save dialog's heading for the measured data files a project links, not the data category"
+  },
+  {
+   "file": "app/qml/Pages/Experiment/ExperimentsGroup.qml",
+   "literal": "Measured data",
+   "reason": "the load menu's heading for measured data files, not the data category"
+  },
+  {
+   "file": "app/qml/Pages/Structure/AppearanceGroup.qml",
+   "literal": "Bonds",
+   "reason": "a view toggle, an app-only setting (I1)"
+  },
+  {
+   "file": "app/qml/Pages/Structure/AppearanceGroup.qml",
+   "literal": "Cell",
+   "reason": "a view toggle, an app-only setting (I1)"
+  },
+  {
+   "file": "app/qml/Pages/Structure/AtomSiteMomentGroup.qml",
+   "literal": "|M|",
+   "reason": "the header of the moment magnitude the table derives from the crystal-axis components, without an s.u., not the spherical modulus input"
   }
  ]
 }

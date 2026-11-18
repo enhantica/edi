@@ -443,6 +443,15 @@ std::string canonical_encoding(const Project& project) {
         put_text(out, rule->pattern);
         put_text(out, rule->required ? "1" : "0");
     }
+    // A series of joint fits' patterns are fit-relevant as the scan's own pattern is; a project
+    // without them encodes exactly as before.
+    if (!project.sequential_fit.experiments.empty()) {
+        put_u64(out, project.sequential_fit.experiments.size());
+        for (const auto& member : project.sequential_fit.experiments) {
+            put_text(out, member->experiment_id.value());
+            put_text(out, member->file_pattern);
+        }
+    }
     return out;
 }
 

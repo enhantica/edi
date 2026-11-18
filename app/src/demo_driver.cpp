@@ -739,7 +739,6 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     // The documentation's concept figures, from the Co2SiO4 magnetic case, in both themes, each saved by Save image
     // (the owner, 2026-11-10). Run only when asked (`--demo-only concepts-`).
     if (only.startsWith(QLatin1String("concepts-"))) {
-        const QString structure = QStringLiteral("appBar.tab.structure");
         // Opened and fitted once; the dark figures are the same fit in the other theme.
         for (const QString theme : {QStringLiteral("light"), QStringLiteral("dark")}) {
             const QString name = QStringLiteral("concepts-") + theme + QStringLiteral("-");
@@ -748,9 +747,9 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
                                                QStringList{"preference:chartIncludedOnly=true", "preference:patternMeasuredStyle=line", "theme:light", analysis, basic,
                                                            "statusBar.fit.button", "wait-fit", "choose:OK"}
                                          : QStringList{"theme:dark", analysis};
-            steps_.push_back({name + "1-fit", open + QStringList{"mainArea.tab.pattern", "save-image:chart.toolbar.save|" + name + "refinement.png|2"}});
+            steps_.push_back({name + "1-fit", open + QStringList{"mainArea.tab.pattern", "save-image:mainArea.saveImage|" + name + "refinement.png|2"}});
             steps_.push_back({name + "2-model", {structure, "mainArea.tab.structure",
-                                                 "save-image:structure.toolbar.save|" + name + "model.png|2"}});
+                                                 "save-image:mainArea.saveImage|" + name + "model.png|2"}});
         }
         // The measured pattern alone: the fitted experiment's chart with every other curve hidden, as legend clicks
         // hide them, and so its residual and tick panes. Last, so the fitted figures come first.
@@ -764,14 +763,13 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
                 actions.append(QStringLiteral("preference:structureCurves=false"));
                 actions.append(QStringLiteral("measured-only"));
             }
-            actions.append("save-image:chart.toolbar.save|" + name + "pattern.png|2");
+            actions.append("save-image:mainArea.saveImage|" + name + "pattern.png|2");
             steps_.push_back({name + "3-pattern", actions});
         }
     }
     // The sidebar's pins, empty tabs and Performance row, the structure view's atom view names, in both themes (the
     // owner, 2026-11-10). Run only when asked (`--demo-only sidebar-`).
     if (only.startsWith(QLatin1String("sidebar-"))) {
-        const QString structure = QStringLiteral("appBar.tab.structure");
         const QString settings = QStringLiteral("sideBar.tab.settings");
         for (const QString theme : {QStringLiteral("light"), QStringLiteral("dark")}) {
             const QString name = QStringLiteral("sidebar-") + theme + QStringLiteral("-");
@@ -823,6 +821,82 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     }
     // A scan opened from the file EDI_DEMO_SCAN_PROJECT names, its pages, then Fit and Reset, which stop the run when
     // disabled. Run only when asked (`--demo-only scan-open-`).
+    // The scale check's GUI stall probe (EDI_STALL_PROBE): a series of joint fits, EDI_DEMO_SCAN_PROJECT, opened, its
+    // Stacked and Map views shown, fitted to the end with each view in turn, then its Evolution. Run only when asked
+    // (`--demo-only stall-`).
+    // The synthetic 100-point series opened from the examples list (its collection entry downloaded), then shown on the
+    // Experiment page with its views. Run only when asked (`--demo-only examplecheck-`).
+    // The chart-consistency review's set: every chart view of the Experiment and Analysis pages for the series
+    // EDI_DEMO_SCAN_PROJECT after its fit, then a single crystal's Pattern and Meas vs calc. Run only when asked
+    // (`--demo-only review-`).
+    if (only.startsWith(QLatin1String("review-"))) {
+        const QString experimentTab = QStringLiteral("appBar.tab.experiment");
+        // Before the fit: the Map on Q by bank (the owner's empty map, 2026-11-16), then back to d.
+        steps_.push_back({"review-00a-prefit-map-bybank-q",
+                          {"resize:1480x800", "open-project:" + qEnvironmentVariable("EDI_DEMO_SCAN_PROJECT"),
+                           experimentTab, basic, "mainArea.tab.map", "mainArea.series.rows", "choose:by bank",
+                           "scanView.map.toolbar.xaxis", "choose:x: Q"}});
+        steps_.push_back({"review-00-fitted",
+                          {"scanView.map.toolbar.xaxis", "choose:x: d-spacing", "mainArea.series.rows", "choose:by run",
+                           analysis, basic, "statusBar.fit.button", "wait-files:100", "wait-fit", "choose:OK"}});
+        steps_.push_back({"review-01-experiment-pattern", {experimentTab, basic, "mainArea.tab.pattern"}});
+        steps_.push_back({"review-02-experiment-meascalc", {"mainArea.tab.measCalc"}});
+        steps_.push_back({"review-03-experiment-stacked-byrun", {"mainArea.tab.stacked"}});
+        steps_.push_back({"review-04-experiment-stacked-bybank", {"mainArea.series.rows", "choose:by bank"}});
+        steps_.push_back({"review-05-experiment-map-bybank", {"mainArea.tab.map"}});
+        steps_.push_back({"review-06-experiment-map-byrun", {"mainArea.series.rows", "choose:by run"}});
+        steps_.push_back({"review-06b-experiment-map-byrun-q", {"scanView.map.toolbar.xaxis", "choose:x: Q"}});
+        steps_.push_back({"review-06c-experiment-map-bybank-q", {"mainArea.series.rows", "choose:by bank"}});
+        steps_.push_back({"review-06d-experiment-stacked-bybank-q", {"mainArea.tab.stacked"}});
+        steps_.push_back({"review-06e-back-to-d", {"scanView.stacked.toolbar.xaxis", "choose:x: d-spacing",
+                                                   "mainArea.series.rows", "choose:by run"}});
+        steps_.push_back({"review-07-analysis-pattern", {analysis, basic, "mainArea.tab.pattern"}});
+        steps_.push_back({"review-08-analysis-meascalc", {"mainArea.tab.measCalc"}});
+        steps_.push_back({"review-09-analysis-structure", {"mainArea.tab.structure"}});
+        steps_.push_back({"review-10-analysis-evolution-shared", {"mainArea.tab.evolution"}});
+        steps_.push_back({"review-11-analysis-evolution-perbank", {"evolution.toolbar.scope", "choose:Per bank"}});
+        steps_.push_back({"review-12-analysis-stacked", {"mainArea.tab.stacked"}});
+        steps_.push_back({"review-13-analysis-map", {"mainArea.tab.map"}});
+        steps_.push_back({"review-14-analysis-correlations", {"mainArea.tab.correlations"}});
+    }
+    // A single fit's results dialog, from a fresh start (`--demo-only fitdialog-`).
+    if (only.startsWith(QLatin1String("fitdialog-"))) {
+        steps_.push_back({"fitdialog-1-single", QStringList{"resize:1480x800", "home.start", "expand:group.examples"} +
+                                                    open_example("pd-neut-cwl_lbco-hrpt") +
+                                                    QStringList{analysis, basic, "statusBar.fit.button", "wait-fit"}});
+    }
+    // The review's single crystal, from a fresh start (`--demo-only reviewsc-`).
+    if (only.startsWith(QLatin1String("reviewsc-"))) {
+        steps_.push_back({"reviewsc-1-sc-pattern", QStringList{"resize:1480x800", "home.start", "expand:group.examples"} +
+                                                       open_example("sc-neut-cwl_tb2ti2o7-heidi") +
+                                                       QStringList{"appBar.tab.experiment", basic, "mainArea.tab.pattern"}});
+        steps_.push_back({"reviewsc-2-sc-meascalc", {"mainArea.tab.measCalc"}});
+    }
+    if (only.startsWith(QLatin1String("examplecheck-"))) {
+        steps_.push_back({"examplecheck-1-opened",
+                          QStringList{"resize:1480x800", "home.start", "expand:group.examples"} +
+                              open_example("pd-neut-tof_ncaf-wish-5bank_synthetic-100p")});
+        steps_.push_back({"examplecheck-2-experiment", {"appBar.tab.experiment", basic}});
+        steps_.push_back({"examplecheck-3-stacked", {"mainArea.tab.stacked"}});
+    }
+    // An experiment without data shows Load data… in its row: its menu, open, from a fresh start
+    // (`--demo-only datamenu-`).
+    if (only.startsWith(QLatin1String("datamenu-"))) {
+        steps_.push_back({"datamenu-1-open", QStringList{"resize:1480x800", "home.start", "expand:group.examples"} +
+                                                 open_example("pd-neut-cwl_lbco_simulation") +
+                                                 QStringList{"appBar.tab.experiment", basic, "experiments.loadData.0"}});
+    }
+    if (only.startsWith(QLatin1String("stall-"))) {
+        steps_.push_back({"stall-1-opened",
+                          {"resize:1480x800", "open-project:" + qEnvironmentVariable("EDI_DEMO_SCAN_PROJECT"),
+                           "appBar.tab.experiment", basic}});
+        steps_.push_back({"stall-2-stacked", {"mainArea.tab.stacked"}});
+        steps_.push_back({"stall-3-map", {"mainArea.tab.map"}});
+        steps_.push_back({"stall-4-fitting", {analysis, basic, "mainArea.tab.stacked", "statusBar.fit.button",
+                                              "wait-files:30", "capture-now"}});
+        steps_.push_back({"stall-5-fitting-map", {"mainArea.tab.map", "wait-files:65", "capture-now"}});
+        steps_.push_back({"stall-6-fitted", {"mainArea.tab.evolution", "wait-files:100", "wait-fit"}});
+    }
     if (only.startsWith(QLatin1String("scan-open-"))) {
         steps_.push_back({"scan-open-1-opened",
                           {"resize:1280x800", "open-project:" + qEnvironmentVariable("EDI_DEMO_SCAN_PROJECT")}});
@@ -908,7 +982,6 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     // Experiment page, the experiments, the Analysis parameters and the atom sites. Run only when asked
     // (`--demo-only tablecheck-`).
     if (only.startsWith(QLatin1String("tablecheck-"))) {
-        const QString experiment = QStringLiteral("appBar.tab.experiment");
         int n = 0;
         const auto name = [&n](const QString& what) {
             return QStringLiteral("tablecheck-%1-%2").arg(++n, 2, 10, QLatin1Char('0')).arg(what);
@@ -931,8 +1004,6 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     // Every table of the app in the light theme, on an example that fills it, each image named after its table (the
     // owner, 2026-10-27). Run only when asked (`--demo-only tableshots-`).
     if (only.startsWith(QLatin1String("tableshots-"))) {
-        const QString experiment = QStringLiteral("appBar.tab.experiment");
-        const QString structure = QStringLiteral("appBar.tab.structure");
         const auto shot = [this](const QString& table, const QStringList& actions) {
             steps_.push_back({QStringLiteral("tableshots-") + table, actions});
         };
@@ -975,7 +1046,6 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     // Each structure's curve: the Analysis chart with the toolbar's switch on, in both themes, and the Experiment page's
     // data table with a column per structure. Run only when asked (`--demo-only curves-`).
     if (only.startsWith(QLatin1String("curves-"))) {
-        const QString experiment = QStringLiteral("appBar.tab.experiment");
         steps_.push_back({"curves-1-analysis-light",
                           QStringList{"resize:1280x960", "theme:light"} + start + open_example("pd-neut-tof_ferrite-austenite-beer")
                               + QStringList{analysis, basic, "chart.toolbar.structureCurves"}});
@@ -987,7 +1057,6 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     // The one pattern chart on the Structure, Experiment and Analysis pages: a zoom made on one page shows on the others.
     // Run only when asked (`--demo-only onechart-`).
     if (only.startsWith(QLatin1String("onechart-"))) {
-        const QString experiment = QStringLiteral("appBar.tab.experiment");
         steps_.push_back({"onechart-1-analysis-zoomed",
                           QStringList{"resize:1280x960", "theme:light"} + start + open_example("pd-neut-tof_ferrite-austenite-beer")
                               + QStringList{analysis, basic, "drag:chart.pointer:0.74,0.05,0.80,0.95", "chart.toolbar.structureCurves"}});
@@ -999,7 +1068,6 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     // The owner's first local test: latp_scan's three structures on the Experiment page, a zoom with each structure's
     // curve off, then the curves on and off again. Run only when asked (`--demo-only latp-`).
     if (only.startsWith(QLatin1String("latp-"))) {
-        const QString experiment = QStringLiteral("appBar.tab.experiment");
         steps_.push_back({"latp-1-experiment", {"resize:1280x960", "theme:light", "open-cli-project:pd-xray-cwl_latp_scan-4f",
                                                 experiment, basic}});
         steps_.push_back({"latp-2-zoomed", {"drag:chart.pointer:0.30,0.05,0.45,0.95"}});
@@ -1060,7 +1128,6 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     // every y scale, then cosio's one structure and ncaf's banks, each opened with its full view.
     // Run only when asked (`--demo-only retest-`).
     if (only.startsWith(QLatin1String("retest-"))) {
-        const QString experiment = QStringLiteral("appBar.tab.experiment");
         const QString yscale = QStringLiteral("chart.toolbar.yscale");
         const QString curves = QStringLiteral("chart.toolbar.structureCurves");
         steps_.push_back({"retest-01-latp-on", {"resize:1280x960", "theme:light", "open-cli-project:pd-xray-cwl_latp_scan-4f",
@@ -1441,7 +1508,6 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
         // The scan views' frames on the 324-file scan, a 162-file scan's fit with every pattern drawn (the fit waiting
         // for each, or the display catching up) against the adaptive rule (edi ADR-0029), and slider steps on LBCO
         // before and after a fit (edi ADR-0041).
-        const QString analysis = QStringLiteral("appBar.tab.analysis");
         QStringList views{"resize:1280x800", "open-cli-project:pd-neut-cwl_cosio-d20_scan-324f", analysis,
                           "mainArea.tab.stacked", "wait-scan:stacked"};
         for (const QString mode : {QStringLiteral("stacked"), QStringLiteral("map")}) {

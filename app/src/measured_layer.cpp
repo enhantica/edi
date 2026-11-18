@@ -38,6 +38,14 @@ void MeasuredLayer::setMarkerSize(qreal size) {
     }
 }
 
+void MeasuredLayer::setFillColor(const QColor& color) {
+    if (color != fill_color_) {
+        fill_color_ = color;
+        emit fillColorChanged();
+        update();
+    }
+}
+
 void MeasuredLayer::setData(const QList<QPointF>& points, const QList<double>& low, const QList<double>& high) {
     const bool resized = points.size() != points_.size();
     points_ = points;
@@ -104,9 +112,16 @@ QSGNode* MeasuredLayer::updatePaintNode(QSGNode* old, UpdatePaintNodeData* /*dat
         {
             QPainter stamp(&marker);
             stamp.setRenderHint(QPainter::Antialiasing);
-            stamp.setPen(Qt::NoPen);
-            stamp.setBrush(color_);
-            stamp.drawEllipse(QRectF(0, 0, size, size));
+            if (fill_color_.isValid()) {
+                const double outline = std::max(1.0, ratio);
+                stamp.setPen(QPen(color_, outline));
+                stamp.setBrush(fill_color_);
+                stamp.drawEllipse(QRectF(outline / 2, outline / 2, size - outline, size - outline));
+            } else {
+                stamp.setPen(Qt::NoPen);
+                stamp.setBrush(color_);
+                stamp.drawEllipse(QRectF(0, 0, size, size));
+            }
         }
         const double half = size / 2.0;
         for (const QPointF& point : points_) {

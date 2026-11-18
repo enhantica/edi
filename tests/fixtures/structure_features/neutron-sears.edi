@@ -1,0 +1,34 @@
+data_d20
+_edi.schema_version 3
+_experiment_type.sample_form powder
+_experiment_type.radiation_probe neutron
+_experiment_type.scattering_type bragg
+_experiment_type.beam_mode "constant wavelength"
+_instrument.setup_wavelength 1.87
+_instrument.calib_twotheta_offset 0
+_peak.type cwl-tch-pseudo-voigt
+_peak.broad_gauss_u 0
+_peak.broad_gauss_v 0
+_peak.broad_gauss_w .15
+_peak.broad_lorentz_x 0
+_peak.broad_lorentz_y 0
+_peak.cutoff_fwhm 5
+loop_
+_linked_structure.structure_id
+_linked_structure.scale
+cosio 0
+_background.type line-segment
+loop_
+_background.id
+_background.position
+_background.intensity
+left 40 6
+right 64 6
+loop_
+_data.two_theta
+_data.intensity_meas
+_data.intensity_meas_su
+40 20 2
+52 33 3
+64 25 4
+_scattering_source.neutron_scattering_length sears1992

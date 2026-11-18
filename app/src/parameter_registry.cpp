@@ -271,10 +271,24 @@ void ParameterRegistry::publishValues() {
 void ParameterRegistry::refreshSpelling(const edi::Project& project) {
     // A field shows a value as the save writes it, exactly where the save does: a cell that rounded would not
     // load, or every value. That follows any edit, so it is read again with the rule at every publish.
-    const edi::SaveSpelling spelling = edi::save_spelling(project);
+    setSpelling(project, edi::save_spelling(project));
+}
+
+void ParameterRegistry::setSpelling(const edi::Project& project, const edi::SaveSpelling& spelling) {
     for (ParameterItem* item : items_) {
         item->setSpelling(project.su_rule, edi::written_exactly(spelling, project, *item->parameter()));
     }
+}
+
+void ParameterRegistry::applySpelling(edi::Project& project, const edi::SaveSpelling& spelling) {
+    const QPointer<ParameterRegistry> receiver(this);
+    const auto filePublication = beginFileText(project);
+    const auto releaseFileText = qScopeGuard([receiver] { if (receiver) --receiver->file_text_publication_depth_; });
+    setSpelling(project, spelling);
+    for (ParameterItem* item : items_) {
+        item->publish();
+    }
+    if (receiver) receiver->finishFileText(filePublication, project);
 }
 
 void ParameterRegistry::refreshDefiniteness(const edi::Project& project) {
@@ -302,12 +316,14 @@ void ParameterRegistry::publish(edi::Project& project) {
     refreshRefinable(project);
     refreshFittability(project);
     refreshEstimated(project);
-    refreshSpelling(project);
+    if (!spelling_deferred_) refreshSpelling(project);
     refreshDefiniteness(project);
     for (ParameterItem* item : items_) {
         item->publish();
     }
     if(receiver)receiver->finishFileText(filePublication,project);
+    // The deferred spelling is not here yet: the published pairs do not describe the project until it is.
+    if (receiver && spelling_deferred_) receiver->file_text_publication_.reset();
 }
 
 std::shared_ptr<ParameterRegistry::FileTextPublication> ParameterRegistry::beginFileText(const edi::Project& project) noexcept {

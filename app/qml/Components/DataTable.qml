@@ -59,9 +59,14 @@ EaComponents.ListView {
     readonly property bool scrollsSideways: rowsWidth > width + 0.5
     contentWidth: scrollsSideways ? rowsWidth : width
     flickableDirection: scrollsSideways ? Flickable.AutoFlickDirection : Flickable.VerticalFlick
+    // The same policy as the vertical bar, so it fades when idle as every other scroll bar does.
     ScrollBar.horizontal: EaElements.ScrollBar {
-        policy: table.scrollsSideways ? ScrollBar.AlwaysOn : ScrollBar.AlwaysOff
+        policy: table.scrollsSideways ? table.scrollBarPolicy : ScrollBar.AlwaysOff
+        interactive: table.scrollBarInteractive
     }
+    // A table of values the user does not edit (calculated, or read from a file): its rows take no hover tint and its
+    // value cells (CellLabel, NumberLabel) the grey of a cell shown, not edited, so editable tables stand out.
+    property bool readOnly: false
     property bool equalColumns: false
     property var spreadColumns: []
     // The column margin is separate from the cell's own measured insets (ADR-0029).
@@ -177,6 +182,15 @@ EaComponents.ListView {
     }
     // Content that changed while the table was not shown, measured once it is.
     property bool unfitted: false
+    // onScreen can miss the change that shows the table (a large table on the page a project opened onto stayed
+    // unmeasured, Name taking the whole width): a visible table still waiting looks again a few times a second.
+    Timer {
+        interval: 250
+        repeat: true
+        running: table.unfitted && table.visible
+        onTriggered: if (ApplicationInfo.tableOnScreen())
+            table.refit()
+    }
     onVisibleChanged: ApplicationInfo.tableVisibleChanged()
     onOnScreenChanged: ApplicationInfo.tableOnScreenChanged()
     // Whether the table can be seen: in no collapsed group, and on the current item of every SwipeView it is in (a page,
@@ -203,14 +217,29 @@ EaComponents.ListView {
         Qt.callLater(repairRows);
     }
     onCountChanged: {
+        snapIntoBounds();
         ApplicationInfo.tableColumnsChanged(false);
         Qt.callLater(repairRows);
+    }
+    // Fewer rows (a filter, a removal) leave the old scroll beyond the new end, which ListView then eases back, so the
+    // rows slid in under a blank band (the owner, 2026-11-17). The view moves at once instead: to the top when every row
+    // fits, else to the nearest position that shows rows.
+    onContentHeightChanged: snapIntoBounds()
+    onOriginYChanged: snapIntoBounds()
+    function snapIntoBounds() {
+        if (moving || dragging || flicking)
+            return;
+        const top = originY;
+        const bottom = count <= maxRowCountShow ? top : Math.max(top, originY + contentHeight - height);
+        if (contentY < top - 0.5 || contentY > bottom + 0.5)
+            contentY = Math.min(Math.max(contentY, top), bottom);
     }
     Component.onCompleted: {
         ApplicationInfo.tableApplyRuledWidths(true);
         refit();
     }
     onHeightChanged: {
+        snapIntoBounds();
         Qt.callLater(repairRows);
         Qt.callLater(keepHeaderOnTop);
     }

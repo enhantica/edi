@@ -179,6 +179,8 @@ A small agreement factor alone does not establish that the structural model is c
 
 ## Inspect parameter correlations
 
+Open **Meas vs calc** to plot each measured value against its calculated value: a good fit puts the points on the diagonal, and a systematic bend shows what the model misses. For a powder each point is a data point; for a single crystal each is a reflection, as F² or F. During a sequential fit it follows the dataset being fitted.
+
 Open **Correlations** in the Analysis main view after fitting. Inspect strongly related free parameters alongside their uncertainties and the residual. A correlation can reveal that the data do not determine two values independently; see [covariance and correlations](../../physics/minimization.md#eq-covariance).
 
 <!-- gui-guide:inspect-parameter-correlations -->
