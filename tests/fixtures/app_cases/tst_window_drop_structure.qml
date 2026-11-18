@@ -56,4 +56,30 @@ TestCase {
         tryCompare(project.structures, "count", before + 1, 10000);
         compare(Session.project, project);
     }
+
+    // The whole file is read with the loaders' grammar: a comment that names an experiment item, past a long
+    // preamble, does not make a structure file a project to open.
+    function test_c_a_commented_structure_edi_is_still_a_structure() {
+        const project = Session.project;
+        const before = project.structures.count;
+        ApplicationInfo.dropProject({
+            "hasUrls": true,
+            "urls": [Qt.resolvedUrl("window_drop/commented.edi")],
+            "accept": () => {}
+        });
+        tryCompare(project.structures, "count", before + 1, 10000);
+        compare(Session.project, project);
+    }
+
+    // A folder is a project to open, whatever its name ends with.
+    function test_d_a_project_folder_named_like_a_cif_opens() {
+        const before = Session.project;
+        ApplicationInfo.dropProject({
+            "hasUrls": true,
+            "urls": [Qt.resolvedUrl("window_drop/sample.cif")],
+            "accept": () => {}
+        });
+        // The open project has unsaved structures: its replacement asks first; the question proves Open was taken.
+        tryVerify(() => Session.project !== before || findChild(window, "unsavedChanges") !== null && findChild(window, "unsavedChanges").visible, 10000);
+    }
 }

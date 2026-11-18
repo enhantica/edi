@@ -23,6 +23,7 @@
 #include "pattern_chart_controller.hpp"
 #include "project_view_model.hpp"
 #include "edi/display.hpp"
+#include "edi/io.hpp"
 #include "edi/report.hpp"
 #include "edi/model.hpp"
 #include "edi/palette.hpp"
@@ -3537,19 +3538,20 @@ void ApplicationInfo::acceptProjectSavePicker(bool zip) const {
     projectInvoke(frame, "AppState", "saveAsFinished", {QJSValue(saved)});
 }
 namespace {
-// A structure file, which a window drop loads into the open project as Load structure does: a CIF or magnetic CIF, or
-// an .edi block that is a structure (a cell, no experiment type), never a project record.
+// A structure file, which a window drop loads into the open project as Load structure does: a CIF or magnetic CIF
+// file, or an .edi file whose tags are a structure's (edi::edi_text_kind, the loaders' own reading of the whole file).
+// A folder is a project to open whatever its name, and so is project.edi.
 bool dropped_structure(const QUrl& url) {
     const QFileInfo file(url.toLocalFile());
+    if (!file.isFile()) return false;
     const QString suffix = file.suffix().toLower();
     if (suffix == QLatin1String("cif") || suffix == QLatin1String("mcif")) return true;
     if (suffix != QLatin1String("edi") || file.fileName().compare(QLatin1String("project.edi"), Qt::CaseInsensitive) == 0) {
         return false;
     }
     QFile text(file.filePath());
-    if (!file.isFile() || !text.open(QIODevice::ReadOnly)) return false;
-    const QByteArray head = text.read(1 << 16);
-    return head.contains("_cell.length_a") && !head.contains("_experiment_type.");
+    if (!text.open(QIODevice::ReadOnly)) return false;
+    return edi::edi_text_kind(text.readAll().toStdString()) == edi::EdiTextKind::Structure;
 }
 }  // namespace
 

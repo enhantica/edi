@@ -5969,6 +5969,27 @@ std::vector<std::pair<std::string, std::string>> project_edi_files(const Project
 }
 }  // namespace edi
 
+edi::EdiTextKind edi::edi_text_kind(const std::string& text) {
+    std::vector<Token> tokens;
+    try {
+        tokens = tokenize(text, "<text>");
+    } catch (const std::exception&) {
+        return EdiTextKind::Other;
+    }
+    bool cell = false;
+    for (const Token& token : tokens) {
+        if (!is_tag(token)) {
+            continue;
+        }
+        const std::string category = detail::one_row_category(token.text);
+        if (category == "_experiment_type") {
+            return EdiTextKind::Experiment;
+        }
+        cell = cell || category == "_cell";
+    }
+    return cell ? EdiTextKind::Structure : EdiTextKind::Other;
+}
+
 // The file whose reading failed most recently on this thread (edi::reading_file).
 std::string& edi::detail::failed_file() {
     thread_local std::string file;
