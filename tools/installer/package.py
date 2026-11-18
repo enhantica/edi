@@ -1222,15 +1222,7 @@ def exercise_installer(
             if SYSTEM == 'macos'
             else 'bin/EasyDiffraction' + SUFFIX
         )
-        with (output / 'app.log').open('w') as log:
-            run(
-                [app, '--testmode', output / 'smoke'],
-                env=env,
-                cwd=home,
-                stdout=log,
-                stderr=subprocess.STDOUT,
-                timeout=45,
-            )
+        smoke_installed_app(app, output, env, home)
         receipt = json.loads((output / 'smoke/result.json').read_text(encoding='utf-8'))
         verify_installed_identity(metadata, receipt)
         if (
@@ -1265,6 +1257,34 @@ def exercise_installer(
     (output / 'passed.json').write_text(
         json.dumps({'passed': True, 'smoke': receipt}, indent=2) + '\n'
     )
+
+
+# A hosted runner's first start of a freshly installed app can take long (a cold disk, a font cache, a macOS
+# signature check), so the smoke run has two minutes and one more try after a timeout; a failure is not retried.
+SMOKE_TIMEOUT = 120
+SMOKE_TRIES = 2
+
+
+def smoke_installed_app(app: Path, output: Path, env: dict, home: Path) -> None:
+    for attempt in range(1, SMOKE_TRIES + 1):
+        shutil.rmtree(output / 'smoke', ignore_errors=True)
+        with (output / 'app.log').open('w' if attempt == 1 else 'a') as log:
+            log.write(f'--- smoke run {attempt} of {SMOKE_TRIES}\n')
+            log.flush()
+            try:
+                run(
+                    [app, '--testmode', output / 'smoke'],
+                    env=env,
+                    cwd=home,
+                    stdout=log,
+                    stderr=subprocess.STDOUT,
+                    timeout=SMOKE_TIMEOUT,
+                )
+                return
+            except subprocess.TimeoutExpired:
+                if attempt == SMOKE_TRIES:
+                    raise
+                print(f'smoke run timed out after {SMOKE_TIMEOUT} s; trying once more', flush=True)
 
 
 def relocate_linux(stage: Path, patchelf: Path, qt_prefix: Path) -> None:

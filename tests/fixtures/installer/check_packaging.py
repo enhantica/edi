@@ -691,3 +691,34 @@ def test_installed_maintenance_tool_check_passes_for_the_shipped_tool(tmp_path, 
     with mock.patch.object(PACKAGE, 'run') as verify:
         PACKAGE.verify_installed_maintenance_tool(tmp_path, {'maintenance_tool_sha256': expected})
     assert verify.call_args.args[0][:3] == ['codesign', '--verify', '--strict']
+
+
+# The installed app's smoke run: two minutes, one more try after a timeout, never after a failure.
+@pytest.mark.parametrize(
+    ('outcomes', 'calls', 'raised'),
+    [
+        (['timeout', 'ok'], 2, None),
+        (['timeout', 'timeout'], 2, subprocess.TimeoutExpired),
+        (['failed'], 1, subprocess.CalledProcessError),
+        (['ok'], 1, None),
+    ],
+)
+def test_smoke_run_retries_once_after_a_timeout(tmp_path, outcomes, calls, raised):
+    seen = []
+
+    def fake_run(args, **kwargs):
+        seen.append(kwargs['timeout'])
+        outcome = outcomes[len(seen) - 1]
+        if outcome == 'timeout':
+            raise subprocess.TimeoutExpired(args, kwargs['timeout'])
+        if outcome == 'failed':
+            raise subprocess.CalledProcessError(1, args)
+
+    with mock.patch.object(PACKAGE, 'run', fake_run):
+        if raised is None:
+            PACKAGE.smoke_installed_app(tmp_path / 'app', tmp_path, {}, tmp_path)
+        else:
+            with pytest.raises(raised):
+                PACKAGE.smoke_installed_app(tmp_path / 'app', tmp_path, {}, tmp_path)
+    assert seen == [120] * calls
+    assert (tmp_path / 'app.log').read_text().count('--- smoke run') == calls
