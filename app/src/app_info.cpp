@@ -38,6 +38,11 @@
 #include <QImage>
 #include <QDir>
 #include <QFile>
+#include <QFileInfo>
+#include <QMimeDatabase>
+#include <QNetworkAccessManager>
+#include <QNetworkReply>
+#include <QNetworkRequest>
 #include <QDateTime>
 #include <QEvent>
 #include <QGuiApplication>
@@ -11134,10 +11139,25 @@ QJSValue ApplicationInfo::windowUnsavedText() const {
     });
 }
 
+int ApplicationInfo::schemeFor(int theme, int browser) const {
+    // The owner, 2026-11-15: edi's Light and Dark override the platform's scheme; System follows it. The browser's
+    // page gets no scheme from Qt, so there System is the browser's prefers-color-scheme (edi-feedback #63).
+    if (theme == 0) return static_cast<int>(Qt::ColorScheme::Light);
+    if (theme == 1) return static_cast<int>(Qt::ColorScheme::Dark);
+    if (browser == 0) return static_cast<int>(Qt::ColorScheme::Light);
+    if (browser == 1) return static_cast<int>(Qt::ColorScheme::Dark);
+    return static_cast<int>(Qt::ColorScheme::Unknown);
+}
+
 void ApplicationInfo::applyColorScheme(int theme) const {
-    // The owner, 2026-11-15: edi's Light and Dark override the platform's scheme; System follows it.
-    const auto scheme = theme == 0 ? Qt::ColorScheme::Light : theme == 1 ? Qt::ColorScheme::Dark : Qt::ColorScheme::Unknown;
-    QGuiApplication::styleHints()->setColorScheme(scheme);
+    int browser = -1;
+#ifdef Q_OS_WASM
+    const auto query = emscripten::val::global("window").call<emscripten::val>("matchMedia", std::string("(prefers-color-scheme: dark)"));
+    browser = query["matches"].as<bool>() ? 1 : 0;
+#endif
+    const auto scheme = static_cast<Qt::ColorScheme>(schemeFor(theme, browser));
+    if (QGuiApplication::styleHints()->colorScheme() != scheme || scheme == Qt::ColorScheme::Unknown)
+        QGuiApplication::styleHints()->setColorScheme(scheme);
 }
 
 void ApplicationInfo::finishUiEvent(int kind, const QJSValue& value) const {
@@ -11590,6 +11610,48 @@ void ApplicationInfo::assistantMessageReset(const QJSValue& component) const {
 #endif  // EDI_APP_ASSISTANT
 
 void ApplicationInfo::copyText(const QString& text) const { QGuiApplication::clipboard()->setText(text); }
+void ApplicationInfo::postFeedback(const QString& url, const QString& body, const QJSValue& completed) const {
+    if (!feedback_network_) {
+        feedback_network_ = new QNetworkAccessManager(const_cast<ApplicationInfo*>(this));
+    }
+    QNetworkRequest request{QUrl(url)};
+    request.setHeader(QNetworkRequest::ContentTypeHeader, QStringLiteral("application/json"));
+    request.setTransferTimeout(60000);
+    QNetworkReply* reply = feedback_network_->post(request, body.toUtf8());
+    QObject::connect(reply, &QNetworkReply::finished, reply, [reply, completed] {
+        reply->deleteLater();
+        const int status = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+        const QByteArray answer = reply->readAll();
+        // The service says why it refused in {"error": ...}; without an answer, the network's own reason.
+        // A message taken with a file it could not attach says so in {"warning": ...}.
+        const QJsonObject answered = QJsonDocument::fromJson(answer).object();
+        QString detail = answered.value(status == 201 ? QStringLiteral("warning") : QStringLiteral("error")).toString();
+        if (detail.isEmpty() && reply->error() != QNetworkReply::NoError) detail = reply->errorString();
+        if (status != 201) qWarning("feedback not sent: status %d, %s", status, qPrintable(detail));
+        QJSValue callback = completed;
+        if (callback.isCallable()) callback.call({QJSValue(status), QJSValue(detail), QJSValue(QString::fromUtf8(answer))});
+    });
+}
+edi_app::FeedbackFile ApplicationInfo::fileAttachment(const QString& path, bool automatic) const {
+    constexpr qint64 limit = 5 * 1024 * 1024;  // the feedback service's limit for one file (app/feedback/Payload.js)
+    QFile file(path);
+    if (!file.open(QIODevice::ReadOnly)) return {};
+    const qint64 whole = file.size();
+    edi_app::FeedbackFile attached;
+    attached.name = QFileInfo(path).fileName();
+    attached.type = QMimeDatabase().mimeTypeForFile(path).name();
+    // A file the user picked keeps its real size and is refused past the limit, unread; only the failing input
+    // attached by an error popup is sent as its marked first part.
+    if (!automatic && whole > limit) {
+        attached.size = whole;
+        return attached;
+    }
+    const QByteArray bytes = file.read(limit);
+    attached.size = bytes.size();
+    attached.cut = whole > bytes.size();
+    attached.data = QString::fromLatin1(bytes.toBase64());
+    return attached;
+}
 namespace {
 struct SessionBrowserFrame {
     QPointer<QJSEngine> engine;

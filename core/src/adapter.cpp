@@ -1978,7 +1978,7 @@ bool holds_measured_data(const BraggPdExperiment& experiment) {
 }
 
 void read_linked_file(BraggPdExperiment& experiment, const std::string& path) {
-    PlainDataLoad read = experiment_with_plain_data(experiment, path, false);
+    PlainDataLoad read = reading_file(path, [&] { return experiment_with_plain_data(experiment, path, false); });
     if (!read.more.empty())
         throw IoError(path + " holds several datasets: copy it into the project, one experiment per dataset");
     if (experiment.reflections.has_value()) {

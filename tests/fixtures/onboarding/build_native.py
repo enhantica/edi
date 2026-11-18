@@ -88,7 +88,7 @@ def build_native(source: Path, destination: Path, target: str) -> Path:
             f'-DEDI_SOURCE_ROOT={source}',
             f'-DCMAKE_PREFIX_PATH={prefix}',
         ],
-        [str(cmake), '--build', str(destination), '--target', target, '--parallel', '2'],
+        [str(cmake), '--build', str(destination), '--target', target, '--parallel', '4'],
     ]:
         result = subprocess.run(command, capture_output=True, text=True, check=False, timeout=120)
         assert result.returncode == 0, (
@@ -117,6 +117,7 @@ def build_logger(source: Path, destination: Path) -> Path:
 
 if __name__ == '__main__':
     import argparse
+    import sys
 
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('target', choices=['log_probe', 'payload_probe', 'geometry_probe'])
@@ -125,3 +126,16 @@ if __name__ == '__main__':
     arguments = parser.parse_args()
     destination = arguments.build or arguments.source / 'build/onboarding-native'
     print(build_native(arguments.source, destination, arguments.target))
+    if arguments.target == 'log_probe':
+        subprocess.run(
+            [
+                sys.executable,
+                str(arguments.source / 'tests/fixtures/stability_feedback/build_native.py'),
+                '--source',
+                str(arguments.source),
+                '--build',
+                str(destination),
+            ],
+            check=True,
+            timeout=240,
+        )

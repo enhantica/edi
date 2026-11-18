@@ -7,8 +7,7 @@
 # the pin-currency job without its token steps.
 # Compatible native consumers share this run's validated Edi artifacts and qualified SDK.
 # Qt and browser configurations keep their own builds; compiler caches cover both.
-# The latency bank runs on the self-hosted fleet by dispatch only (bank-latency.yml).
-name: CI
+name: Tests
 
 on:
   push:
@@ -75,26 +74,12 @@ jobs:
       - uses: actions/checkout@v5
       - uses: ./.github/actions/setup-pixi
       # Every check runs and reports even when an earlier one fails (owner, 2026-11-15); the step still fails.
+      # The same checks as `pixi run lint` and the pre-push hook (tools/ci/lint.sh).
       - name: Ruff lint + format, entity-path convention
-        run: |
-          status=0
-          pixi run check || status=1
-          pixi run format-check || status=1
-          pixi run entity-path-check || status=1
-          exit $status
+        run: bash tools/ci/lint.sh style
       - name: Static policy checks (weakref, tutorial exclusions, generated regions)
         if: ${{ !cancelled() }}
-        run: |
-          status=0
-          pixi run weakref-policy || status=1
-          pixi run tutorial-exclusions || status=1
-          pixi run tutorial-code || status=1
-          pixi run notebook-outputs || status=1
-          pixi run wheel-packages || status=1
-          pixi run report-pattern-panes || status=1
-          pixi run generated-regions || status=1
-          pixi run category-census-check || status=1
-          exit $status
+        run: bash tools/ci/lint.sh policy
 
   native:
     name: native · ${{ matrix.platform }}
@@ -818,6 +803,7 @@ jobs:
           pixi run -e app --skip-deps app-test-assistant-ui || status=1
           pixi run -e app --skip-deps app-test-skill-targets || status=1
           pixi run -e app --skip-deps app-test-assistant-lifetime || status=1
+          pixi run -e app --skip-deps app-test-load-attempts || status=1
           exit $status
       # The integration tests whose wiring vectors run on the real app skip in the core job, which has no app. They
       # run here, on every run, on the test runner just built from this commit; without it they fail.

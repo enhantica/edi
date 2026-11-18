@@ -119,6 +119,11 @@
           "proof": "tests/system/py/test_operation_contracts.py",
           "overloads": 1
         },
+        "takeFailedFile": {
+          "domain": "error-state",
+          "proof": "tests/system/app/test_stability_feedback.py",
+          "overloads": 1
+        },
         "openProject": {
           "domain": "project-replacement",
           "proof": "tests/system/py/test_held_edit_loss_guards.py",
@@ -272,6 +277,11 @@
           "overloads": 1
         },
         "filesBytes": {
+          "domain": "read-only query",
+          "proof": null,
+          "overloads": 1
+        },
+        "takeRefusedFile": {
           "domain": "read-only query",
           "proof": null,
           "overloads": 1

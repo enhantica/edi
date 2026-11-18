@@ -24,7 +24,14 @@ platform-specific compiler infrastructure; users of the installed app need no Pi
 
 Deployment is opt-in (`EDI_DEPLOY_APP`); ordinary developer and WebAssembly builds keep their existing
 layout. macOS gets an application bundle; Linux and Windows get a relocatable application directory.
-Use a home-directory default on Linux and Windows, and suggest `/Applications/EasyDiffraction` on macOS. The framework handles authorization when the chosen location requires it.
+Suggest `/Applications/EasyDiffraction` on macOS and a home-directory default on Linux. On Windows a new
+installation goes to `%LOCALAPPDATA%\Programs\EasyDiffraction` (`@ApplicationsDirUser@`: no administrator rights,
+updates without elevation, where per-user programs usually live), or to `C:\Program Files\EasyDiffraction`
+(`AdminTargetDir`) when the installer runs as administrator, for shared or managed machines. The controller script
+sets both from the environment, because the Framework's directory variables have changed meaning between versions,
+and only replaces the default, never a directory given with `--root`. Installations made before this
+(`C:\Users\<name>\EasyDiffraction`) keep updating where they are, through their maintenance tool. The framework
+handles authorization when the chosen location requires it.
 After offline qualification, publish only the online installer. Initial component repositories use
 GitHub Pages under `/repository/testing/<platform>/`. Installers are development artifacts,
 without a signing identity or public release step. The Preferences update controls use the installed
@@ -101,7 +108,7 @@ building a custom helper or packaging a replacement system C library for older s
 
 The Linux IFW bootstrap itself links portable X11 and utility libraries, even when its CLI uses the
 offscreen platform. Relocate a copy of `installerbase` before the framework appends its payload. Ship
-its non-glibc library closure and licence files beside the bootstrap in the download ZIP and inside
+its non-glibc library closure and licence files beside the bootstrap in the Linux download ZIP and inside
 the component for the installed maintenance tool. Do not patch an already appended installer or
 rely on Pixi paths in the user's environment. The operating system still supplies glibc.
 
@@ -364,10 +371,27 @@ welcome page describes the application and links to its website. The folder
 field and Browse button have the same visible height, with a macOS inset to
 compensate for the native control offset.
 
-The macOS application and bootstrap use the same padded ICNS asset. The
-transparent canvas keeps the blue mark clear of the Dock's running indicator.
+The installer has its own icon, distinct from the app's so the two are not confused in a downloads
+folder or the Dock: the app logo coming out of a flat isometric cardboard box, the logo about a quarter
+hidden behind the box front (the approved sketch G1). `tools/installer/Installer.svg` is the source, drawn
+within the usual icon margins; `Installer.icns` (macOS, 16–1024 px), `Installer.ico` (Windows, 16–256 px)
+and `Installer.png` (the Linux and Windows window icon, 256 px) were rendered from it with Chromium and
+resized with Lanczos filtering. The installer uses it as its application and window icon; the app and its
+maintenance tool keep the app icon, whose transparent canvas keeps the blue mark clear of the Dock's
+running indicator.
 
 The running macOS application uses its bundle icon for the Dock.
+
+`Installer.qss` takes every colour but the default button's blue from the system palette (`palette(window)`,
+`palette(base)`, `palette(mid)`...), so the installer and its maintenance tool follow the system's light or dark
+theme where Qt gives a dark palette (Windows 11, macOS). A second, dark sheet cannot be chosen at run time: the
+control script's `gui` object is a proxy, not the wizard window, so a stylesheet set on it does nothing. In dark
+mode the header shows the white wordmark, only where the pages turn dark: macOS's dark appearance and Windows 11's
+dark app theme. Windows 10 (and Windows Server 2022) keeps a light palette in dark mode, as Linux does here, so
+those show the normal wordmark (seen in the Windows dark-mode captures). The maintenance tool built on its own carries the same controller and sheet. The installers workflow's
+`capture_pages` dispatch builds a small marker installer and saves every page of the installer and the maintenance
+tool, on Windows in light and dark with its own app theme set, on Linux in light under a virtual display, as a run
+artifact.
 
 
 ## Offline installation with maintenance updates
@@ -382,3 +406,28 @@ installer and checks updates and optional-component changes without a temporary 
 This exercises the installed default configuration while keeping public servers out of the check.
 
 - [Qt: offline installers and later updates](https://doc.qt.io/qtinstallerframework/ifw-offline-installers.html)
+
+
+## One download file per installer
+
+Each installer is one file that needs no unpacking. macOS: a disk image (`.dmg`) holding the installer app and
+the branding licence; the image is the download because a ZIP of an app needs unpacking first, and an image keeps
+the signed app and the maintenance tool it carries intact. On release builds the installer app is signed,
+notarised and stapled first, then the image itself is signed, notarised and stapled, and `spctl --assess --type
+open` accepts it. Windows: the self-contained installer `.exe` itself, signed on release builds; it needs no
+library beside it. Linux keeps a ZIP, because its `.run` installer needs the portable `installer-runtime`
+libraries next to it. `installer.json` names the file as `download` with its `download_sha256`, the release tools
+expect `EasyDiffraction-<version>-<platform>-<kind>` with `.dmg`, `.exe` or `.zip`, and each test installation
+starts from that file (mounting the image on macOS). The download page links the new names and still finds the
+ZIPs of releases made before this.
+
+
+## Failed release runs leave no draft
+
+A preview release reserves its calendar version as a draft before the installers are built, and a stable
+preparation does the same. When the installers or the draft step of a preview run fail, or the run is
+cancelled, the workflow's last job deletes that run's drafts for its source (`prepare.py --withdraw preview`),
+so no draft such as `v2026.11.21` is left holding a number that is never published. A stable preparation that
+fails after reserving deletes its reservation if it is still empty (`--withdraw stable-reservation`), and a
+publication that fails or is cancelled before publishing deletes the release commit's draft (`--withdraw
+stable`); running the publication again makes the draft again. Published releases are never touched.
