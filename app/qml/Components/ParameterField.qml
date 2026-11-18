@@ -52,6 +52,7 @@ EaElements.ParamTextField {
         "fittable": field.canFit,
         "fit": item.free && field.canFit,
         "category": item.category,
+        "fullName": ParameterNames.fullName(item),
         "name": item.name,
         "shortPrettyName": field.label,
         "url": Session.documentationUrl(item.uid).toString(),

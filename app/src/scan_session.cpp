@@ -44,15 +44,26 @@ void own_analysis_dir(const edi::Project& project) {
     crysta::output::own_folder(analysis_dir(project) / ".edi-set-aside", working_root(project));
 }
 
-const char* const kResultFiles[] = {"results.csv", "results-provenance.csv", "scan-run.json", "scan-notes.csv"};
-constexpr int kResultFileCount = 4;
+// A series of joint fits' bank rows are its results too (ADR-0132): taken, set aside and put back with the point rows,
+// so both files always come from the same run.
+const char* const kResultFiles[] = {"results.csv", "results-provenance.csv", "scan-run.json", "scan-notes.csv",
+                                    "results_experiments.csv"};
+constexpr int kResultFileCount = 5;
 
 std::optional<std::string>* slot(ScanSession::Files& files, int which) {
-    return which == 0 ? &files.results : which == 1 ? &files.provenance : which == 2 ? &files.run : &files.skipped;
+    return which == 0   ? &files.results
+           : which == 1 ? &files.provenance
+           : which == 2 ? &files.run
+           : which == 3 ? &files.skipped
+                        : &files.experiments;
 }
 
 const std::optional<std::string>* slot(const ScanSession::Files& files, int which) {
-    return which == 0 ? &files.results : which == 1 ? &files.provenance : which == 2 ? &files.run : &files.skipped;
+    return which == 0   ? &files.results
+           : which == 1 ? &files.provenance
+           : which == 2 ? &files.run
+           : which == 3 ? &files.skipped
+                        : &files.experiments;
 }
 
 // A file's bytes; nullopt when it does not exist; throws when it exists and cannot be read, or is not a regular
@@ -108,6 +119,7 @@ ScanSession::~ScanSession() { stopMetadata(); }
 
 QString ScanSession::load(const edi::Project& project) {
     stopMetadata();
+    bank_rule_ = {};
     try {
         datasets_ = edi::scan_datasets(project);
     } catch (const std::exception& refusal) {
@@ -145,6 +157,7 @@ void ScanSession::take(ScanSession& listing) {
     datasets_ = std::move(listing.datasets_);
     places_ = std::move(listing.places_);
     index_ = std::move(listing.index_);
+    bank_rule_ = std::move(listing.bank_rule_);
     run_ = std::move(listing.run_);
     source_ = std::move(listing.source_);
     metadata_.assign(datasets_.files.size(), std::nullopt);
@@ -220,6 +233,7 @@ QString ScanSession::decodeRun(const std::optional<std::string>& bytes, Run& run
 QString ScanSession::reindex(const edi::Project& project, bool writing) {
     // The old index goes first: a scan's two indexes at once would double what it holds at the end of a run.
     index_ = {};
+    bank_rule_ = {};  // made again from the project as it is now, when first asked
     index_ = edi::index_scan_results(project, datasets_, places_, writing);
     return QString::fromStdString(index_.error);
 }
@@ -260,6 +274,14 @@ int ScanSession::addRow(const edi::Project& project, const std::vector<std::stri
         if (index_.rows[dataset].offset >= 0) {
             return static_cast<int>(dataset);  // indexed already, when the run's first row caught up with the file
         }
+        // A series point's experiment rows are written before its results row: checked here as a full read checks
+        // them, so a damaged row is refused live as on reopen.
+        if (datasets_.joint()) {
+            edi::SeriesPointCheck check = pointCheck(project, static_cast<int>(dataset));
+            check.recorded = true;
+            check.succeeded = row.converged;
+            edi::check_series_point_rows(project, datasets_.files[dataset], check);
+        }
         // The notes the run appended since the last row come first (files skipped before this one, its own note):
         // crysta notes a file before appending its row. A refusal there refuses the index below.
         index_.notes_end = edi::read_scan_notes(project, places_, index_, index_.notes_end, true);
@@ -290,8 +312,22 @@ int ScanSession::addRow(const edi::Project& project, const std::vector<std::stri
     }
 }
 
+const edi::SeriesBankRule& ScanSession::bankRule(const edi::Project& project) const {
+    if (bank_rule_.empty() && datasets_.joint()) {
+        bank_rule_ = edi::SeriesBankRule(project);
+    }
+    return bank_rule_;
+}
+
+edi::SeriesPointCheck ScanSession::pointCheck(const edi::Project& project, int place) const {
+    if (place < 0 || !datasets_.joint()) {
+        return {};
+    }
+    return edi::series_point_check(bankRule(project), datasets_, index_, static_cast<std::size_t>(place));
+}
+
 std::vector<std::string> ScanSession::row(const edi::Project& project, int dataset) const {
-    if (dataset < 0 || dataset >= static_cast<int>(index_.rows.size()) || index_.rows[dataset].offset < 0) {
+    if (dataset < 0 || dataset >= static_cast<int>(index_.rows.size()) || index_.rows[static_cast<std::size_t>(dataset)].offset < 0) {
         return {};
     }
     if (!edi::scan_state_present(analysis_dir(project) / "results.csv", "analysis/results.csv")) {
@@ -305,7 +341,7 @@ std::vector<std::string> ScanSession::row(const edi::Project& project, int datas
                                         "before");
         }
     }
-    std::vector<std::string> cells = edi::read_scan_row(project, index_.rows[dataset].offset);
+    std::vector<std::string> cells = edi::read_scan_row(project, index_.rows[static_cast<std::size_t>(dataset)].offset);
     const std::string& expected = datasets_.files[static_cast<std::size_t>(dataset)];
     if (cells.size() != index_.header.size() || edi::scan_row_file(index_, cells) != expected) {
         throw std::invalid_argument("analysis/results.csv changed under the app: the row for '" + expected +
@@ -320,15 +356,15 @@ std::vector<std::string> ScanSession::row(const edi::Project& project, int datas
 }
 
 QString ScanSession::outcome(int dataset) const {
-    if (dataset >= 0 && dataset < static_cast<int>(index_.rows.size()) && index_.rows[dataset].skipped) {
+    if (dataset >= 0 && dataset < static_cast<int>(index_.rows.size()) && index_.rows[static_cast<std::size_t>(dataset)].skipped) {
         return QStringLiteral("skipped");
     }
-    if (dataset < 0 || dataset >= static_cast<int>(index_.rows.size()) || index_.rows[dataset].offset < 0) {
+    if (dataset < 0 || dataset >= static_cast<int>(index_.rows.size()) || index_.rows[static_cast<std::size_t>(dataset)].offset < 0) {
         return {};
     }
     // From the row's own facts: converged, else the reason crysta's ledger recorded when the file was fitted; a row
     // fitted before the ledger recorded reasons did not converge for a reason no one knows now.
-    const edi::ScanResultIndex::Row& row = index_.rows[dataset];
+    const edi::ScanResultIndex::Row& row = index_.rows[static_cast<std::size_t>(dataset)];
     if (row.converged) {
         return QStringLiteral("success");
     }
@@ -368,16 +404,20 @@ std::string ScanSession::templateIdentity(const edi::Project& project) {
     // `_fit_parameter_correlation` loop, its last category), nor its results (`_fit_result`, `_fit_result_bank`,
     // `_fit_parameter`). The minimizer's settings are part of it: rows fitted under
     // another bound or descent are another generation.
+    // Hashed from a copy, which is never calculated: a save of a calculated project adds its computed columns and
+    // categories (and a newer schema version), so the same inputs would hash differently before and after a
+    // calculation, e.g. the shown model at a scan's start against the template copy at its end.
+    const edi::Project inputs = project;  // NOLINT(performance-unnecessary-copy-initialization): see above.
+    return templateIdentity(edi::project_edi_files(inputs));
+}
+
+std::string ScanSession::templateIdentity(const std::vector<std::pair<std::string, std::string>>& files) {
     QCryptographicHash hash(QCryptographicHash::Sha256);
     const auto add = [&hash](std::string_view line) {
         hash.addData(QByteArrayView(line.data(), static_cast<qsizetype>(line.size())));
         hash.addData(QByteArrayView("\n", 1));
     };
-    // Hashed from a copy, which is never calculated: a save of a calculated project adds its computed columns and
-    // categories (and a newer schema version), so the same inputs would hash differently before and after a
-    // calculation, e.g. the shown model at a scan's start against the template copy at its end.
-    const edi::Project inputs = project;
-    for (const auto& [path, body] : edi::project_edi_files(inputs)) {
+    for (const auto& [path, body] : files) {
         if (path == "project.edi" || path == "reports/report.edi") {
             continue;
         }
@@ -701,10 +741,11 @@ const std::vector<std::string>* ScanSession::extracted(int dataset) const {
     if (dataset < 0 || dataset >= static_cast<int>(datasets_.files.size())) {
         return nullptr;
     }
-    if (index_.rows[dataset].offset >= 0) {
-        return &index_.rows[dataset].extracted;
+    if (index_.rows[static_cast<std::size_t>(dataset)].offset >= 0) {
+        return &index_.rows[static_cast<std::size_t>(dataset)].extracted;
     }
-    return metadata_[dataset] ? &*metadata_[dataset] : nullptr;
+    const auto& metadata = metadata_[static_cast<std::size_t>(dataset)];
+    return metadata.has_value() ? &*metadata : nullptr;
 }
 
 QString ScanSession::metadataError(int dataset) const {
@@ -760,9 +801,10 @@ void ScanSession::readWanted() {
     reading_ = true;
     // Each file is read once, for its extract rules only; the values reach this session only while it exists.
     const QPointer<ScanSession> self(this);
+    // NOLINTNEXTLINE(bugprone-exception-escape): only libc++'s container growth past max_size() raises length_error here
     run_in_background([self, stop, source, directory, generation, batch = std::move(batch)] {
         struct Read {
-            int dataset;
+            int dataset{};
             std::vector<std::string> values;
             QString error;
         };

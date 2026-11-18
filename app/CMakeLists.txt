@@ -80,7 +80,7 @@ endif()
 configure_file(src/app_build_info.hpp.in ${CMAKE_CURRENT_BINARY_DIR}/app_build_info.hpp @ONLY)
 
 # Singletons are marked before the module is declared: qt_add_qml_module reads the property then.
-set_source_files_properties(qml/Globals/AppState.qml qml/Globals/FactorText.qml qml/Globals/FieldTitles.qml qml/Globals/FitOutcomes.qml qml/Globals/NumberText.qml qml/Globals/ParameterNames.qml
+set_source_files_properties(qml/Globals/AppState.qml qml/Globals/DialogFolders.qml qml/Globals/FactorText.qml qml/Globals/FieldTitles.qml qml/Globals/FitOutcomes.qml qml/Globals/NumberText.qml qml/Globals/ParameterNames.qml
                             qml/Globals/Preferences.qml qml/Globals/RecentProjects.qml qml/Globals/SideBarGroups.qml qml/Globals/TypedInput.qml
                             qml/Style/AppColors.qml qml/Style/AppSizes.qml PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
 qt_add_library(edi_app_module STATIC)
@@ -104,8 +104,10 @@ qt_add_qml_module(edi_app_module
         src/engine_setup.hpp src/engine_setup.cpp
         src/demo_driver.hpp src/demo_driver.cpp src/demo_documentation.cpp
         src/run_log.hpp src/run_log.cpp
+        src/stall_probe.hpp src/stall_probe.cpp
         src/item_locator.hpp src/item_locator.cpp
         src/view_rows.hpp src/view_rows.cpp
+        src/toolbar_row.hpp src/toolbar_row.cpp
         src/user_action_log.hpp src/user_action_log.cpp
         src/build_version.hpp
         src/desktop_updates.hpp src/desktop_updates.cpp
@@ -125,6 +127,7 @@ qt_add_qml_module(edi_app_module
         src/structure_view_options.hpp src/structure_view_options.cpp
         src/structure_instances.hpp src/structure_instances.cpp
         src/shared_site_geometry.hpp src/shared_site_geometry.cpp
+        src/polyhedra_geometry.hpp src/polyhedra_geometry.cpp
         src/structure_label_layer.hpp src/structure_label_layer.cpp
         src/structure_view_controller.hpp src/structure_view_controller.cpp
         src/experiment_models.hpp src/experiment_models.cpp
@@ -148,6 +151,7 @@ qt_add_qml_module(edi_app_module
         src/report_pdf.hpp src/report_pdf.cpp
         src/project_view_model.hpp src/project_view_model.cpp
         src/session.hpp src/session.cpp
+        src/load_attempt.hpp src/load_attempt.cpp
         src/online_sources.hpp src/online_sources.cpp
         src/collection_origin.hpp
         src/online_search.hpp src/online_search.cpp
@@ -159,7 +163,12 @@ qt_add_qml_module(edi_app_module
     QML_FILES
         qml/Main.qml
         feedback/Payload.js
+        feedback/Likes.js
         qml/Components/AppDialog.qml
+        qml/Components/ErrorDialog.qml
+        qml/Components/LikesBar.qml
+        qml/Components/SurveyBar.qml
+        qml/Components/BarButton.qml
         qml/Components/AppPreferencesDialog.qml
         qml/Components/LoadMenuHeader.qml
         qml/Components/LoadMenuItem.qml
@@ -189,6 +198,7 @@ qt_add_qml_module(edi_app_module
         qml/Components/HeaderLabel.qml
         qml/Components/ChartToolButton.qml
         qml/Components/SaveImageButton.qml
+        qml/Components/CellLabel.qml
         qml/Components/ChartToolbar.qml
         qml/Components/ColourMapBar.qml
         qml/Components/ColourMapComboBox.qml
@@ -196,7 +206,9 @@ qt_add_qml_module(edi_app_module
         qml/Components/IconLine.qml
         qml/Components/IconTabButton.qml
         qml/Components/MainAreaBlockSelector.qml
+        qml/Components/SeriesSelectors.qml
         qml/Components/MainView.qml
+        qml/Components/MeasCalcChart.qml
         qml/Components/NumberLabel.qml
         qml/Components/ParameterCell.qml
         qml/Components/ParameterField.qml
@@ -247,6 +259,7 @@ qt_add_qml_module(edi_app_module
         qml/Globals/FactorText.qml
         qml/Globals/FieldTitles.qml
         qml/Globals/FitOutcomes.qml
+        qml/Globals/DialogFolders.qml
         qml/Globals/NumberText.qml
         qml/Globals/ParameterNames.qml
         qml/Globals/Preferences.qml
@@ -270,6 +283,7 @@ qt_add_qml_module(edi_app_module
         qml/Pages/Experiment/AbsorptionGroup.qml
         qml/Pages/Experiment/ExtinctionGroup.qml
         qml/Pages/Experiment/ObservedThresholdRow.qml
+        qml/Pages/Experiment/ReflectionAdmissionRow.qml
         qml/Pages/Experiment/BackgroundGroup.qml
         qml/Pages/Experiment/ExcludedRegionsGroup.qml
         qml/Pages/Experiment/ExperimentPage.qml
@@ -277,6 +291,7 @@ qt_add_qml_module(edi_app_module
         qml/Pages/Experiment/ExperimentsGroup.qml
         qml/Pages/Experiment/InstrumentGroup.qml
         qml/Pages/Experiment/LinkedStructureGroup.qml
+        qml/Pages/Experiment/DataStatusRows.qml
         qml/Pages/Experiment/MeasuredRangeGroup.qml
         qml/Pages/Experiment/PeakExtrasGroup.qml
         qml/Pages/Experiment/BackgroundExtrasGroup.qml
@@ -308,9 +323,11 @@ qt_add_qml_module(edi_app_module
         qml/Pages/Structure/AtomSiteMomentGroup.qml
         qml/Pages/Structure/MagneticFormFactorsGroup.qml
         qml/Pages/Structure/MagneticSpaceGroupGroup.qml
+        qml/Pages/Structure/PolyhedraGroup.qml
         qml/Pages/Structure/PropagationVectorsGroup.qml
         qml/Pages/Structure/AtomSitesGroup.qml
         qml/Pages/Structure/CellGroup.qml
+        qml/Pages/Structure/GeomGroup.qml
         qml/Pages/Structure/ScatteringLengthsGroup.qml
         qml/Pages/Structure/SpaceGroupGroup.qml
         qml/Pages/Structure/StructurePage.qml
@@ -333,6 +350,8 @@ target_link_libraries(edi_app_module
     PRIVATE ${EDI_GUI_BASE_TARGETS} Qt6::CorePrivate Qt6::QuickPrivate Qt6::QmlModelsPrivate)
 find_package(Qt6QmlPrivate REQUIRED)
 target_link_libraries(edi_app_module PRIVATE Qt6::QmlPrivate)
+# The stall probe names the modules of its stack samples (dladdr).
+target_link_libraries(edi_app_module PRIVATE ${CMAKE_DL_LIBS})
 if(EDI_APP_ASSISTANT)
     # The assistant's math rendering; nothing else draws formulas, so a build without the assistant has no math library.
     target_link_libraries(edi_app_module PRIVATE EdiMath::JKQTMathTextEdi)
@@ -373,6 +392,13 @@ endif()
 file(GLOB _cli_entries LIST_DIRECTORIES true RELATIVE ${_cli} CONFIGURE_DEPENDS ${_cli}/*)
 foreach(entry IN LISTS _cli_entries)
     if(IS_DIRECTORY ${_cli}/${entry} AND NOT entry IN_LIST _registered_ids)
+        # What a branch switch leaves of another branch's example: only files a run wrote, no project.edi. Named, not
+        # fatal, so the build goes on.
+        if(NOT EXISTS ${_cli}/${entry}/project/project.edi)
+            message(WARNING "docs/user/cli/${entry}/ holds no project (another branch's example, or files a run "
+                            "left behind): remove the folder")
+            continue()
+        endif()
         message(FATAL_ERROR "docs/user/cli/${entry}/ is not listed in docs/user/cli/projects.yml")
     endif()
 endforeach()
@@ -515,6 +541,8 @@ set_target_properties(edi_app_ui_compare PROPERTIES WIN32_EXECUTABLE FALSE MACOS
 # compiled in, over the same edi.app module and engine setup the host uses. The cases are the tests
 # lane's; a glob keeps the two lanes off one file. Never linked into edi_app.
 file(GLOB EDI_APP_TEST_SUPPORT CONFIGURE_DEPENDS ${PROJECT_SOURCE_DIR}/tests/unit/app/test_*.cpp)
+# The implementation's own support for its visible cases in tests/fixtures/app_cases (`edi_app_tests -input tests/fixtures/app_cases`).
+list(APPEND EDI_APP_TEST_SUPPORT ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_drop_events.cpp)
 # The runner prints the commit it was built from (`<sha>-dirty` when tracked files differed), so the latency
 # bank attributes the frame times it prints to a revision; regenerated on every build, as lib's.
 set(EDI_APP_BUILD_COMMIT_CPP "${CMAKE_BINARY_DIR}/edi_app_build_commit.cpp")
@@ -554,7 +582,8 @@ add_dependencies(edi_app edi_app_build_marker)
 target_link_libraries(edi_app_tests PRIVATE edi_app_module edi_app_moduleplugin ${EDI_GUI_BASE_TARGETS}
                                             Qt6::QuickTest Qt6::QmlPrivate)
 # The demo and the test observers open test projects the app does not bundle from the source tree (ADR-0048).
-set_source_files_properties(src/demo_driver.cpp src/demo_documentation.cpp PROPERTIES
+# The session opens a project in that folder as a copy, so a run never writes into a committed example.
+set_source_files_properties(src/demo_driver.cpp src/demo_documentation.cpp src/session.cpp PROPERTIES
                             COMPILE_DEFINITIONS "EDI_CLI_PROJECTS_DIR=\"${PROJECT_SOURCE_DIR}/docs/user/cli\"")
 target_compile_definitions(edi_app_tests PRIVATE
     QUICK_TEST_SOURCE_DIR="${PROJECT_SOURCE_DIR}/tests/unit/app")
@@ -568,7 +597,7 @@ if(EDI_DEPLOY_APP AND APPLE)
     set_source_files_properties("${app_icon}" PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
     set_target_properties(edi_app PROPERTIES MACOSX_BUNDLE_ICON_FILE App.icns)
     set_target_properties(edi_app PROPERTIES MACOSX_BUNDLE TRUE OUTPUT_NAME EasyDiffraction
-        MACOSX_BUNDLE_GUI_IDENTIFIER org.easyscience.easydiffraction
+        MACOSX_BUNDLE_GUI_IDENTIFIER org.easydiffraction.app
         MACOSX_BUNDLE_BUNDLE_NAME EasyDiffraction)
     set(CMAKE_INSTALL_BINDIR EasyDiffraction.app/Contents/MacOS)
     set(CMAKE_INSTALL_LIBEXECDIR EasyDiffraction.app/Contents/libexec)
@@ -599,9 +628,9 @@ if(NOT EMSCRIPTEN)
 endif()
 install(FILES ${EDI_APP_LICENCE_FILES} DESTINATION ${CMAKE_INSTALL_DOCDIR} COMPONENT desktop)
 
-# The EasyDiffraction data collection (enhantica/edi-data, about 14 MB), installed with the desktop app as its offline
-# copy: the built-in source's last location, read when the online ones are out (edi ADR-0068). The online collection
-# stays the source of updates. Empty installs none.
+# The EasyDiffraction data collection (enhantica/edi-data, about 14 MB), installed with the desktop app: examples open
+# from it at once, and the online collection is asked in the background only for what is new or changed (edi
+# ADR-0068). Empty installs none.
 set(EDI_BUNDLED_COLLECTION "" CACHE PATH "A copy of the edi-data collection to install as the app's offline copy")
 if(EDI_BUNDLED_COLLECTION AND NOT EMSCRIPTEN)
     if(NOT EXISTS "${EDI_BUNDLED_COLLECTION}/index.json")
@@ -618,6 +647,16 @@ if(EDI_BUNDLED_COLLECTION AND NOT EMSCRIPTEN)
             PATTERN ".git" EXCLUDE PATTERN ".github" EXCLUDE)
     set_property(SOURCE src/online_sources.cpp APPEND PROPERTY COMPILE_DEFINITIONS
                  "EDI_APP_BUNDLED_COLLECTION=\"${edi_collection_from_binary}\"")
+endif()
+# A local build reads a copy of the collection where it is, so it opens examples as the installed app does
+# (tools/ci/app-build.sh sets it; the owner, 2026-11-17).
+set(EDI_LOCAL_COLLECTION "" CACHE PATH "A copy of the edi-data collection the app in the build tree reads in place")
+if(EDI_LOCAL_COLLECTION AND NOT EDI_BUNDLED_COLLECTION AND NOT EMSCRIPTEN)
+    if(NOT EXISTS "${EDI_LOCAL_COLLECTION}/index.json")
+        message(FATAL_ERROR "EDI_LOCAL_COLLECTION ${EDI_LOCAL_COLLECTION} has no index.json")
+    endif()
+    set_property(SOURCE src/online_sources.cpp APPEND PROPERTY COMPILE_DEFINITIONS
+                 "EDI_APP_BUNDLED_COLLECTION=\"${EDI_LOCAL_COLLECTION}\"")
 endif()
 
 if(TARGET edi_assistant_native AND EDI_APP_ASSISTANT)
@@ -651,6 +690,17 @@ add_dependencies(edi_trial_lock_tests edi_app_build_commit)
 set_target_properties(edi_trial_lock_tests PROPERTIES AUTOMOC ON WIN32_EXECUTABLE FALSE MACOSX_BUNDLE FALSE)
 if(TARGET edi_assistant_native)
     target_link_libraries(edi_trial_lock_tests PRIVATE edi_assistant_native)
+endif()
+
+# Which file an error report attaches, over every load route (ADR-0063).
+qt_add_executable(edi_load_attempt_tests tests/load_attempt_tests.cpp)
+target_link_libraries(edi_load_attempt_tests PRIVATE edi_app_module edi_app_moduleplugin ${EDI_GUI_BASE_TARGETS} Qt6::QuickTest)
+target_compile_definitions(edi_load_attempt_tests PRIVATE EDI_SOURCE_DIR="${PROJECT_SOURCE_DIR}")
+target_sources(edi_load_attempt_tests PRIVATE "${EDI_APP_BUILD_COMMIT_CPP}")
+add_dependencies(edi_load_attempt_tests edi_app_build_commit)
+set_target_properties(edi_load_attempt_tests PROPERTIES AUTOMOC ON WIN32_EXECUTABLE FALSE MACOSX_BUNDLE FALSE)
+if(TARGET edi_assistant_native)
+    target_link_libraries(edi_load_attempt_tests PRIVATE edi_assistant_native)
 endif()
 
 qt_add_executable(edi_assistant_ui_tests tests/assistant_ui_tests.cpp)

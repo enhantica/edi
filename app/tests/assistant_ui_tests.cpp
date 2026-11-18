@@ -383,7 +383,7 @@ private slots:
                 if (auto* found = self(child, self)) return found;
             return nullptr;
         };
-        QTRY_VERIFY((titleCell = findTitle(table, findTitle)));
+        QTRY_VERIFY((titleCell = findTitle(table, findTitle)));  // NOLINT(bugprone-assignment-in-if-condition): polled until found.
         QTRY_VERIFY(table->property("onScreen").toBool());
         QTRY_VERIFY(!table->property("refitting").toBool());
         QTRY_VERIFY(titleCell->width() > 0);
@@ -413,7 +413,8 @@ private slots:
         assistant.setShowActions(true);
         engine.rootContext()->setContextProperty("testAssistant", &assistant);
         QQmlComponent component(&engine);
-        component.setData("import QtQuick\nimport QtQuick.Controls\nimport edi.app\nApplicationWindow { width: 1200; height: 200; visible: true; footer: StatusBar { assistantChatShown: true } }", QUrl());
+        // The status bar is never shown on Home (owner, 2026-11-17), so the window starts on the next page.
+        component.setData("import QtQuick\nimport QtQuick.Controls\nimport EasyApplication.Gui.Globals as EaGlobals\nimport edi.app\nApplicationWindow { width: 1200; height: 200; visible: true; footer: StatusBar { assistantChatShown: true } Component.onCompleted: EaGlobals.Vars.appBarCurrentIndex = 1 }", QUrl());
         QScopedPointer<QObject> bar(component.create());
         QVERIFY2(bar, qPrintable(component.errorString()));
         auto* window = qobject_cast<QQuickWindow*>(bar.data());

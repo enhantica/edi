@@ -25,7 +25,7 @@ def artifact(run, name, created, *, expired=False):
 def updates(version):
     """Repository metadata offering the application at one version."""
     return (
-        '<Updates><PackageUpdate><Name>org.easyscience.edi</Name>'
+        '<Updates><PackageUpdate><Name>org.easydiffraction.app</Name>'
         f'<Version>{version}</Version></PackageUpdate></Updates>'
     )
 
@@ -351,7 +351,7 @@ def test_testing_retention_keeps_two_versions_and_preserves_stable(tmp_path):
         })
     )
     for channel in ['testing', 'stable']:
-        root = site / 'repository' / channel / 'macos-arm64/org.easyscience.edi'
+        root = site / 'repository' / channel / 'macos-arm64/org.easydiffraction.app'
         root.mkdir(parents=True)
         for version in [*existing, '2026.11.2', '0.0.49.1']:
             for suffix in ['.7z', '.7z.sha1']:
@@ -361,7 +361,7 @@ def test_testing_retention_keeps_two_versions_and_preserves_stable(tmp_path):
     macos = incoming.parent / 'macos-arm64'
     macos.mkdir()
     (macos / 'Updates.xml').write_text('qualified metadata')
-    windows = site / 'repository/testing/windows-x86_64/org.easyscience.edi'
+    windows = site / 'repository/testing/windows-x86_64/org.easydiffraction.app'
     windows.mkdir(parents=True)
     (windows / '2026.11.0bin.7z').write_text('other platform')
     incoming.write_text(
@@ -372,14 +372,14 @@ def test_testing_retention_keeps_two_versions_and_preserves_stable(tmp_path):
         })
     )
     MODULE.overlay_testing_feed(site, incoming)
-    testing = site / 'repository/testing/macos-arm64/org.easyscience.edi'
+    testing = site / 'repository/testing/macos-arm64/org.easydiffraction.app'
     assert sorted(path.name for path in testing.iterdir()) == [
         '2026.11.1bin.7z',
         '2026.11.1bin.7z.sha1',
         '2026.11.2bin.7z',
         '2026.11.2bin.7z.sha1',
     ], 'Testing retention keeps two versions and preserves stable.'
-    stable = site / 'repository/stable/macos-arm64/org.easyscience.edi'
+    stable = site / 'repository/stable/macos-arm64/org.easydiffraction.app'
     assert len(list(stable.iterdir())) == 8, (
         'Testing retention keeps two versions and preserves stable.'
     )
@@ -409,7 +409,7 @@ def test_production_components_use_the_public_platform_path(tmp_path):
 
 def test_pages_budget_prunes_only_unreferenced_preview_archives(tmp_path):
     platform = tmp_path / 'repository/testing/macos-arm64'
-    package = platform / 'org.easyscience.edi'
+    package = platform / 'org.easydiffraction.app'
     package.mkdir(parents=True)
     metadata = platform / 'Updates.xml'
     metadata.write_text(

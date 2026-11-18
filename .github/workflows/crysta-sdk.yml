@@ -1,4 +1,4 @@
-name: crysta SDK
+name: Build crysta
 
 # The crysta SDK edi builds against (edi ADR-0083): pixi.toml's CRYSTA_COMMIT, built here once per commit and
 # platform and kept in the cache under that commit, with crysta's source at the same commit. Every edi job and

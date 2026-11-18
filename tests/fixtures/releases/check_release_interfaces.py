@@ -260,3 +260,23 @@ def test_preview_index_refuses_a_wheel_that_differs_from_its_digest(tmp_path):
     assert not (tmp_path / 'pypi/simple/easydiffraction' / name).exists(), (
         'A wheel that differs from its recorded digest is not published.'
     )
+
+
+@pytest.mark.parametrize(
+    ('labels', 'problem'),
+    [
+        ({'[scope] bug', '[interface] desktop'}, None),
+        ({'[scope] bug', '[interface] cli-py', '[interface] web'}, None),
+        ({'[bot] release'}, None),
+        ({'[interface] desktop'}, 'needs exactly one release scope label'),
+        (
+            {'[scope] bug', '[scope] enhancement', '[interface] py'},
+            'needs exactly one release scope label',
+        ),
+        ({'[scope] bug'}, 'needs at least one release interface label'),
+        ({'[scope] bug', '[interface] unknown'}, 'needs at least one release interface label'),
+    ],
+)
+def test_pull_request_label_check_uses_the_release_note_rule(labels, problem):
+    assert PLAN.label_problem(labels) == problem
+    assert PLAN.check_labels(sorted(labels)) == (0 if problem is None else 1)

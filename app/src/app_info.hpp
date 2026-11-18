@@ -19,6 +19,7 @@
 
 #include "assistant_message_presentation.hpp"
 #include "example_list_model.hpp"
+#include "run_log.hpp"
 
 #include "edi/palette.hpp"
 
@@ -97,10 +98,10 @@ struct TutorialStep {
     QString tab;
     QString title;
     bool coversTarget = false;
-    QStringList expectFree;
-    QStringList expectWholeBackground;
+    QStringList expectFree{};
+    QStringList expectWholeBackground{};
     // A built structure's sites when this step starts, "label type x y z" each (the replay's check).
-    QStringList expectSites;
+    QStringList expectSites{};
     double expectChi2 = -1;
     double expectChi2Tolerance = 0.01;
 };
@@ -132,9 +133,9 @@ struct Tutorial {
     QStringList completion;
     QString stop;
     QList<TutorialStep> steps;
-    QStringList tag_labels, tag_icons, tag_colors, tag_dark_colors;
+    QStringList tag_labels{}, tag_icons{}, tag_colors{}, tag_dark_colors{};
     // Its tags as the manifest gives them, "family:value".
-    QStringList tags;
+    QStringList tags{};
 };
 
 // What the app says about itself — its name, version and links. The only source of the identity the user
@@ -269,6 +270,8 @@ class ApplicationInfo : public QObject {
     // Where Save image starts: the folder last saved to while it exists; else the project's reports folder, made
     // when missing, for a project with a place of its own; else the pictures folder.
     Q_INVOKABLE QUrl imageFolder(const QString& stored, const QString& projectPath, bool ownPlace) const;
+    // A dialog's remembered folder (`stored`, a URL) while it is still a folder on this disk, else `fallback`.
+    Q_INVOKABLE QUrl rememberedFolder(const QString& stored, const QUrl& fallback) const;
 #if EDI_APP_ASSISTANT
     /// Original Panel projection/selection on the current QML thread; no cache or canonical lookup.
     /// Borrows actual Panel/engine values; original JS errors remain pending except the projection's explicit catch.
@@ -296,6 +299,14 @@ class ApplicationInfo : public QObject {
 #endif
     // Puts `text` on the clipboard (the web build's needs the click that asks for it).
     Q_INVOKABLE void copyText(const QString& text) const;
+    // A file for Help and feedback to attach (edi ADR-0063). A picked file past the 5 MB limit for one attachment
+    // comes back unread with its real size, which the form refuses; the failing input an error popup attaches
+    // (`automatic`) keeps its first 5 MB and says so in `cut`. An unreadable file gives one with no name.
+    Q_INVOKABLE edi_app::FeedbackFile fileAttachment(const QString& path, bool automatic = false) const;
+    // Posts the feedback message `body` (JSON) to `url` and calls `completed(status, detail, answer)`: the HTTP status,
+    // or 0 when no answer came, what happened (the service's error or warning, or the network's reason) and the
+    // answer's text (edi ADR-0063).
+    Q_INVOKABLE void postFeedback(const QString& url, const QString& body, const QJSValue& completed) const;
     Q_INVOKABLE QString fileSizeKilobytes(qint64 bytes) const;
     // Declaration-only members of existing global ApplicationInfo (QML singleton ApplicationInfo).
     /// Capture the original session draft intent in its existing view field.
@@ -877,6 +888,10 @@ class ApplicationInfo : public QObject {
     /// Hands edi's Theme (0 light, 1 dark, 2 system) to Qt's colour scheme, so what Qt draws itself, such as the
     /// Windows title bar's buttons, follows edi's theme; system gives the choice back to the platform.
     Q_INVOKABLE void applyColorScheme(int theme) const;
+    /// The Qt colour scheme (Qt::ColorScheme) edi's `theme` asks for, given the browser's prefers-color-scheme
+    /// (`browser`: 1 dark, 0 light, -1 not in a browser): Light and Dark override, System follows the browser in a
+    /// page and the platform otherwise.
+    Q_INVOKABLE int schemeFor(int theme, int browser) const;
     /// Preserve the generic loaded text item's original dirty-property relation without narrowing its type.
     Q_INVOKABLE void workflowTextItemChanged() const;
 #if EDI_APP_ASSISTANT
@@ -1076,6 +1091,7 @@ class ApplicationInfo : public QObject {
 
    private:
     qint64 last_input_ = 0;
+    mutable class QNetworkAccessManager* feedback_network_ = nullptr;
     mutable QPointer<QObject> pending_project_picker_;
     mutable QPointer<QObject> dataset_folder_picker_, dataset_folder_project_, dataset_folder_experiment_;
 

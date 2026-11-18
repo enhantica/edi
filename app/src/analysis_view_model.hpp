@@ -184,8 +184,8 @@ class AnalysisViewModel : public QObject {
     Q_PROPERTY(double shiftTolerance READ shiftTolerance WRITE setShiftTolerance NOTIFY shiftToleranceChanged)
     Q_PROPERTY(bool hasShiftTolerance READ hasShiftTolerance NOTIFY hasShiftToleranceChanged)
     Q_PROPERTY(double defaultShiftTolerance READ defaultShiftTolerance CONSTANT)
-    // Whether a fit tries free magnetic moments at exactly zero (`try_exact_zero`, also when none is declared, or
-    // `keep_free`), and whether the project has a magnetic structure, the only one it applies to.
+    // Whether a fit tries free magnetic moments at exactly zero (`try_exact_zero`, or
+    // `keep_free`, also when none is declared), and whether the project has a magnetic structure, the only one it applies to.
     Q_PROPERTY(QString momentsNearZero READ momentsNearZero WRITE setMomentsNearZero NOTIFY momentsNearZeroChanged)
     Q_PROPERTY(edi_app::OptionListModel* momentsNearZeroOptions READ momentsNearZeroOptions CONSTANT)
     Q_PROPERTY(bool magnetic READ magnetic NOTIFY magneticChanged)
@@ -207,7 +207,7 @@ class AnalysisViewModel : public QObject {
     Q_PROPERTY(QString lastError READ lastError NOTIFY lastErrorChanged)
 
    public:
-    AnalysisViewModel(edi::Project& project, ProjectEditor& editor, SavedFile saved, QObject* parent);
+    AnalysisViewModel(edi::Project& project, ProjectEditor& editor, const SavedFile& saved, QObject* parent);
 
     QString fittingMode() const { return fitting_mode_; }
     void setFittingMode(const QString& mode);

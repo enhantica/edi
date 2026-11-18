@@ -559,8 +559,8 @@ def _tutorial_navigation(pages: list[tuple[str, str, str]]) -> str:
     return ''.join(lines)
 
 
-def _config_text(name: str, original: str, shared_controls: Path, base_url: str | None) -> str:
-    """Return the concept's MkDocs configuration with versioned assets and the site URL."""
+def _config_text(name: str, original: str, base_url: str | None) -> str:
+    """Return the concept's MkDocs configuration with its tutorial menus and the site URL."""
     text = original.replace(
         TUTORIAL_MARKER, _tutorial_navigation(_with_assistant(TUTORIAL_PAGES, 'python'))
     )
@@ -571,19 +571,6 @@ def _config_text(name: str, original: str, shared_controls: Path, base_url: str 
         APP_TUTORIAL_MARKER,
         _tutorial_navigation(_with_assistant(_app_tutorial_pages(), 'application')),
     )
-    text = text.replace(
-        'assets/site-components.css?v=shared',
-        'assets/site-components.css?v='
-        + hashlib.sha256(shared_controls.read_bytes()).hexdigest()[:12],
-    )
-    if name == 'surfaces':
-        assets = ROOT / 'surfaces/docs/assets'
-        digest = hashlib.sha256(
-            (assets / 'gui-capture.css').read_bytes()
-            + (assets / 'gui-capture.js').read_bytes()
-            + (assets / 'interfaces.css').read_bytes()
-        ).hexdigest()[:12]
-        text = text.replace('extra:\n', f'extra:\n  gui_assets_version: {digest}\n', 1)
     if base_url:
         text, count = re.subn(
             r'^site_url:.*$',
@@ -596,11 +583,11 @@ def _config_text(name: str, original: str, shared_controls: Path, base_url: str 
     return text
 
 
-def _run_zensical(name: str, shared_controls: Path, base_url: str | None) -> None:
+def _run_zensical(name: str, base_url: str | None) -> None:
     config = ROOT / name / 'mkdocs.yml'
     temporary = None
     original = config.read_text(encoding='utf-8')
-    text = _config_text(name, original, shared_controls, base_url)
+    text = _config_text(name, original, base_url)
     if text != original:
         with tempfile.NamedTemporaryFile(
             mode='w',
@@ -1017,20 +1004,55 @@ def _feedback_dialog_texts(qml: str) -> dict:
         r'\+ " " \+ qsTr\("([^"]*)"\)',
         'the privacy line',
     )
-    # What the app's form says while sending and after the answer, and the label of its button
-    # once sent.
-    status = one(
-        r'text: dialog\.sending \? qsTr\("([^"]*)"\) : dialog\.sent \? qsTr\("([^"]*)"\) : '
-        r'dialog\.lastStatus === 429 \? '
-        r'qsTr\("([^"]*)"\) : dialog\.lastStatus === 0 \? qsTr\("([^"]*)"\) : qsTr\("([^"]*)"\)',
-        'the sending status texts',
+    # What the app's form says while sending and after the answer, in its status line's order:
+    # sending, sent (then "But …" for a file the service did not keep), too many, not sent with a
+    # reason, no connection, refused with a reason, failed.
+    line = one(
+        r'objectName: "feedback\.status"[^\n]*\n(?:[^\n]*\n){0,6}?'
+        r'\s*text: dialog\.sending \?([^\n]*)',
+        'the status line',
     )
+    status_texts = re.findall(r'qsTr\("([^"]*)"\)', line.group(1))
+    if len(status_texts) != 8:
+        raise SystemExit(f'FeedbackDialog.qml: expected 8 status texts, found {len(status_texts)}')
     close = one(r'text: dialog\.sent \? qsTr\("([^"]*)"\)', 'the Close button').group(1)
+    attach = one(
+        r'objectName: "feedback\.files\.add"[^}]*?text: qsTr\("([^"]+)"\)'
+        r'\s*ToolTip\.text: qsTr\("([^"]+)"\)',
+        'the Attach files link',
+    )
+    files = {
+        'attach': attach.group(1),
+        'tooltip': attach.group(2),
+        'remove': one(
+            r'objectName: "feedback\.files\.remove\.[^}]*?text: qsTr\("([^"]+)"\)',
+            'the Remove link',
+        ).group(1),
+        'unreadable': one(
+            r'qsTr\("(Not attached, could not be read: %1)"\)', 'the unreadable-file line'
+        ).group(1),
+        'refused': one(
+            r'objectName: "feedback\.files\.error"[^}]*?qsTr\("([^"]+)"\)', 'the limit line'
+        ).group(1),
+        'notAttached': one(r'qsTr\("(%1 was not attached)"\)', 'the not-attached text').group(1),
+        'notAttachedMany': one(r'qsTr\("(%1 were not attached)"\)', 'the not-attached text').group(
+            1
+        ),
+    }
+    copy_report = one(
+        r'objectName: "feedback\.copyReport"[^}]*?text: qsTr\("([^"]+)"\)', 'Copy report'
+    ).group(1)
     return {
         'status': dict(
-            zip(('sending', 'sent', 'tooMany', 'offline', 'failed'), status.groups(), strict=True)
+            zip(
+                ('sending', 'sent', 'but', 'tooMany', 'notSent', 'offline', 'refused', 'failed'),
+                status_texts,
+                strict=True,
+            )
         ),
         'close': close,
+        'files': files,
+        'copyReport': copy_report,
         'reasons': [{'value': value, 'text': text} for value, text in reasons],
         'contact': contact,
         'subject': by_kind('objectName: "feedback.subject"', 'the subject prompts'),
@@ -1051,13 +1073,73 @@ def _write_feedback_form(built: Path) -> None:
         (ROOT.parent / 'app/qml/Components/FeedbackDialog.qml').read_text(encoding='utf-8')
     )
     form = {'endpoint': found[0], **texts}
+    # The app's own message rules (limits, the report text, which files a 201 kept), wrapped so the
+    # page has one name for them.
+    payload = (ROOT.parent / 'app/feedback/Payload.js').read_text(encoding='utf-8')
+    payload = payload.replace('.pragma library\n', '', 1)
     (built / 'assets/feedback-form.js').write_text(
-        f'window.edFeedbackForm = {json.dumps(form, ensure_ascii=False)};\n', encoding='utf-8'
+        f'window.edFeedbackForm = {json.dumps(form, ensure_ascii=False)};\n'
+        'window.edFeedbackPayload = (function () {\n'
+        f'{payload}\n'
+        '  return { filesProblem, reportText, unconfirmedFiles, maxFiles, maxFileBytes,\n'
+        '           maxTotalBytes };\n'
+        '})();\n',
+        encoding='utf-8',
     )
 
 
-def _build_concept(name: str, shared_controls: Path, base_url: str | None, output: Path) -> None:
-    _run_zensical(name, shared_controls, base_url)
+# A stylesheet or script with a hand-set version, in a configuration list or a template link.
+HAND_VERSION = re.compile(r'\.(?:css|js)(?:[\'"]\s*\|\s*url\s*\}\})?\?v=')
+ASSET_LINK = re.compile(r'(?P<attr>href|src)="(?P<url>[^"?#:]+\.(?:css|js))(?:\?v=[^"#]*)?"')
+
+
+def _check_hand_versions(name: str) -> None:
+    """Refuse a hand-written ?v= on a stylesheet or script link; the build sets each one."""
+    sources = [ROOT / name / 'mkdocs.yml', *sorted((ROOT / name / 'overrides').rglob('*.html'))]
+    found = [
+        f'{path.relative_to(ROOT)}:{number}'
+        for path in sources
+        if path.is_file()
+        for number, line in enumerate(path.read_text(encoding='utf-8').splitlines(), 1)
+        if HAND_VERSION.search(line)
+    ]
+    if found:
+        raise SystemExit(
+            'Stylesheet and script links get ?v= from the build; drop the hand-written ones: '
+            + ', '.join(found)
+        )
+    print('No hand-written asset versions: PASS', flush=True)
+
+
+def _version_assets(built: Path) -> None:
+    """Give every local stylesheet and script link a ?v= from a short hash of the file it names.
+
+    The host's CDN keeps an asset for a week, so a changed file needs a new URL (landing.css kept a
+    hand-set tag and stayed stale for days); a hash changes exactly when the content does.
+    """
+    digests: dict[Path, str] = {}
+
+    def versioned(page: Path, match: re.Match) -> str:
+        url = match['url']
+        target = (built / url.lstrip('/')) if url.startswith('/') else (page.parent / url)
+        target = target.resolve()
+        if not target.is_relative_to(built.resolve()) or not target.is_file():
+            return match[0]
+        if target not in digests:
+            digests[target] = hashlib.sha256(target.read_bytes()).hexdigest()[:12]
+        return f'{match["attr"]}="{url}?v={digests[target]}"'
+
+    for page in built.rglob('*.html'):
+        text = page.read_text(encoding='utf-8')
+        changed = ASSET_LINK.sub(lambda match, page=page: versioned(page, match), text)
+        if changed != text:
+            page.write_text(changed, encoding='utf-8')
+    print(f'Asset links versioned by content ({len(digests)} files): PASS', flush=True)
+
+
+def _build_concept(name: str, base_url: str | None, output: Path) -> None:
+    _check_hand_versions(name)
+    _run_zensical(name, base_url)
     built = ROOT / name / 'site'
     if not (built / 'index.html').is_file():
         raise SystemExit(f'{name}: the build did not produce its homepage')
@@ -1077,6 +1159,7 @@ def _build_concept(name: str, shared_controls: Path, base_url: str | None, outpu
         _write_feedback_form(built)
         _check_catalogue(built)
         _check_parameter_reference(built)
+    _version_assets(built)
     assembled = output if name == 'surfaces' else output / name
     if assembled.exists() and name != 'surfaces':
         shutil.rmtree(assembled)
@@ -1141,7 +1224,6 @@ def main() -> None:  # noqa: PLR0915 - the build, step by step
     args = parser.parse_args()
     if args.require_outputs and args.no_notebooks:
         parser.error('--require-outputs and --no-notebooks exclude each other')
-    shared_controls = ROOT / 'surfaces/docs/assets/site-components.css'
     _render_sources()
     if args.base_url:
         args.base_url = _normalized_base_url(parser, args.base_url)
@@ -1195,7 +1277,7 @@ def main() -> None:  # noqa: PLR0915 - the build, step by step
             changelog.write_text(render_release_notes(releases), encoding='utf-8')
             home.write_text(_with_latest_release(originals[home], releases), encoding='utf-8')
         for name in names:
-            _build_concept(name, shared_controls, args.base_url, output)
+            _build_concept(name, args.base_url, output)
     finally:
         for path, original in originals.items():
             path.write_text(original, encoding='utf-8')

@@ -17,12 +17,12 @@ using HttpHeaders = std::vector<std::pair<QByteArray, QByteArray>>;
 enum class HttpMethod { get, post };
 enum class HttpFailure { none, cancelled, timeout, tls, network };
 struct HttpRequest {
-    HttpMethod method;
+    HttpMethod method{};
     QUrl url;
     HttpHeaders headers;
     QByteArray body;
-    std::uint64_t body_limit_bytes; // Zero: streaming work has no cumulative body quota.
-    std::uint64_t timeout_ms; // Zero: active work has no operation expiry.
+    std::uint64_t body_limit_bytes{}; // Zero: streaming work has no cumulative body quota.
+    std::uint64_t timeout_ms{}; // Zero: active work has no operation expiry.
 };
 struct HttpCallbacks {
     std::function<void(int status, HttpHeaders headers)> headers;
@@ -36,16 +36,16 @@ public:
 };
 enum class RecordKind { host, registration, credentials };
 struct RecordKey {
-    RecordKind kind;
+    RecordKind kind{};
     std::string id;
 };
 enum class StoreStatus { ok, absent, failed };
 struct RecordRead {
-    StoreStatus status;
+    StoreStatus status{};
     QByteArray bytes;
 };
 struct RegistrationList {
-    StoreStatus status;
+    StoreStatus status{};
     std::vector<std::string> ids;
 };
 struct NativeDependencies {
@@ -71,9 +71,9 @@ class ChatGptConnection {
     ChatGptConnection(const ChatGptConnection&) = delete;
     ChatGptConnection& operator=(const ChatGptConnection&) = delete;
     Reply sign_in();
-    Reply connect_saved(std::string registration_id);
+    Reply connect_saved(const std::string& registration_id);
     Reply send(const JsonText& request);
-    void cancel(std::string turn_id);
+    void cancel(const std::string& turn_id);
     void sign_out();
     JsonText state() const;
 

@@ -53,9 +53,11 @@ Control {
     // The item's width with its key shown, whether or not it is, and with its icon and value only: what the bar
     // measures. A framed item has no key; its word goes in the compact width unless it drops it, when it is a circle.
     readonly property real framedIconWidth: keyIcon === "" ? 0 : iconLabel.implicitWidth + contentRow.spacing
-    readonly property real framedLeftPadding: keyIcon === "" ? afterWordPadding : sidePadding
+    // The padding before a framed item's icon: the Fit button's is wider (the owner, 2026-11-16).
+    property real iconLeftPadding: sidePadding
+    readonly property real framedLeftPadding: keyIcon === "" ? afterWordPadding : iconLeftPadding
     readonly property real valueWidth: framed ? word.implicitWidth : value.implicitWidth
-    readonly property real labelledWidth: framed ? framedIconWidth + word.implicitWidth + framedLeftPadding + afterWordPadding : iconLabel.implicitWidth + keyLabel.implicitWidth + valueWidth + 2 * contentRow.spacing + leftPadding + rightPadding
+    readonly property real labelledWidth: !framed && keyText === "" ? compactWidth : framed ? framedIconWidth + word.implicitWidth + framedLeftPadding + afterWordPadding : iconLabel.implicitWidth + keyLabel.implicitWidth + valueWidth + 2 * contentRow.spacing + leftPadding + rightPadding
     readonly property real compactWidth: !framed ? iconLabel.implicitWidth + valueWidth + contentRow.spacing + leftPadding + rightPadding : dropsWord ? frameHeight : framedIconWidth + valueWidth + framedLeftPadding + afterWordPadding
     signal clicked
 

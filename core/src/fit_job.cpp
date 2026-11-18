@@ -226,6 +226,7 @@ bool FitJob::start(const Project* scan_template) {
                 preview = std::make_shared<Project>(snapshot->project);
             }
             const PreambleCallback on_start = [&self, &emit](const FitPreamble& preamble) {
+                // NOLINTNEXTLINE(bugprone-exception-escape): only libc++'s container growth past max_size() raises length_error here
                 emit([self, preamble] {
                     if (self->open && self->hooks.started) {
                         self->hooks.started(preamble);
@@ -233,6 +234,7 @@ bool FitJob::start(const Project* scan_template) {
                 });
             };
             const IterationCallback on_iteration = [&self, &emit, &preview](const IterationRecord& record) {
+                // NOLINTNEXTLINE(bugprone-exception-escape): only libc++'s container growth past max_size() raises length_error here
                 emit([self, record] {
                     if (self->open && self->hooks.iterated) {
                         self->hooks.iterated(record);
@@ -251,6 +253,7 @@ bool FitJob::start(const Project* scan_template) {
                 }
             };
             const ScanStartCallback on_scan_start = [&self, &emit](const ScanPreamble& preamble) {
+                // NOLINTNEXTLINE(bugprone-exception-escape): only libc++'s container growth past max_size() raises length_error here
                 emit([self, preamble] {
                     if (self->open && self->hooks.scan_started) {
                         self->hooks.scan_started(preamble);
@@ -300,6 +303,7 @@ bool FitJob::start(const Project* scan_template) {
                 if (const auto observe = worker_file_observer.load(std::memory_order_acquire)) {
                     observe(record.file_name);
                 }
+                // NOLINTNEXTLINE(bugprone-exception-escape): only libc++'s container growth past max_size() raises length_error here
                 emit([self, record] {
                     if (self->open && self->hooks.file_completed) {
                         self->hooks.file_completed(record);

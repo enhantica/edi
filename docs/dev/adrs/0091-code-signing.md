@@ -30,11 +30,14 @@ secrets with `CODESIGN_<OS>_` names, listed in its organisation discussion on Gi
 | macOS bundle id (`app/CMakeLists.txt`) | `org.easyscience.easydiffraction` | `org.easydiffraction.app` |
 | Installer component, app (`tools/installer/package.py`) | `org.easyscience.edi` | `org.easydiffraction.app` |
 | Installer component, AI assistant | `org.easyscience.edi.assistant` | `org.easydiffraction.app.assistant` |
+| Installer component, maintenance tool (macOS, Windows) | `org.easyscience.edi.maintenancetool` | `org.easydiffraction.app.maintenancetool` |
 | Settings organisation (`app/main.cpp`) | `EasyScience` | `EasyDiffraction` |
 
-The ids change in their own change, together with the settings migration, not with the signing steps. The
-first release with the new ids reads settings from the old location when the new one is empty, and its installer
-replaces the old components, so existing users keep their preferences and update in place.
+Existing users keep their preferences and update in place. On its first start the app copies the old settings
+file (`EasyScience/EasyDiffraction.ini`) to the new one when the new one is missing or empty, and moves the old data
+and configuration folders (assistant history, logs) to the new names when the new folders do not exist yet, so it
+happens once and the old file stays as it was. Each new component's `Replaces` names its old id, so the installed
+maintenance tool removes the old component and installs the new one in the same update.
 
 **Secrets and variables** (GitHub Actions, repository level on edi). The names follow easyscience's:
 
@@ -101,15 +104,17 @@ macOS, SmartScreen and the Mark of the Web on Windows); files an installer write
 downloads are signed: the installers on both systems, the command-line `edi.exe` on Windows (its ZIP passes
 the mark to the extracted files) and the command-line `edi` on macOS. The EasyDiffraction app is signed too, on
 both systems, so it shows its publisher and passes institutional policies and antivirus checks more easily.
-The assistant runtime's helper executables and the Windows maintenance tool are not signed yet; the Windows
-tool runs unsigned, and signing it would take the same component as the macOS tool below, with a signed
-`installerbase.exe`.
+The assistant's helper programs (the guard, and the runtime's code-mode host, ripgrep and sandbox helpers) and
+the maintenance tool are signed as well, so every program the user runs from the installation names its
+publisher. The runtime's upstream bytes are checked against their pinned checksums before the signature changes
+them, and the installed payload is checked against the signed bytes.
 
 **macOS steps**, in the installer job of `.github/workflows/installers.yml`:
 
 1. `apple-actions/import-codesign-certs` imports the `.p12` into a temporary keychain.
 2. `tools/installer/build.py` signs every executable and library inside the app bundle, then the bundle, with
-   the identity and `--timestamp`, without the hardened runtime. The app is not notarised: the installer
+   the identity and `--timestamp`, without the hardened runtime, and the same way every Mach-O file of the
+   assistant runtime, which lives beside the bundle so the maintenance tool can add or remove it. The app is not notarised: the installer
    writes it to disk, so it is never quarantined, as with EasyDiffractionBeta.
 3. `tools/installer/standalone_cli.py` signs the command-line `edi` and the libraries in its `.runtime` folder
    with `codesign --options runtime --timestamp` before archiving them, then sends the ZIP to
@@ -121,7 +126,7 @@ tool runs unsigned, and signing it would take the same component as the macOS to
    showed it). So `package.py maintenance-tool` builds the tool on its own with `binarycreator --mt`, the
    Framework's way of making a maintenance tool for separate signing, and signs, notarises and staples it like
    the installer. Both installers carry it in a hidden, always-installed component
-   (`org.easyscience.edi.maintenancetool`, carrying the app version like the other components, so the
+   (`org.easydiffraction.app.maintenancetool`, carrying the app version like the other components, so the
    release, preview and Pages repository checks hold), whose script calls `installer.setInstallerBaseBinary`
    on the bundle; for a bundle the Framework moves it to the installation root unchanged instead of writing
    its own. An update lists the component but unpacks nothing and keeps the installed tool. Packaging refuses an unsigned tool when signing is on, and each
@@ -131,18 +136,25 @@ tool runs unsigned, and signing it would take the same component as the macOS to
    the same way on Windows.
 5. Qt Installer Framework builds the installer app. `tools/installer/package.py seal` signs it with
    `codesign --options runtime --timestamp`, notarises it the same way, staples the ticket with
-   `xcrun stapler staple`, checks it with `codesign --verify` and `spctl --assess`, and archives it again. This
-   runs for the offline and the online installer.
+   `xcrun stapler staple` and checks it with `codesign --verify` and `spctl --assess`. It then puts the app into
+   the download disk image and signs, notarises and staples the image the same way (ADR-0071). This runs for the
+   offline and the online installer.
 
 **Windows steps**, in the same job:
 
 1. Decode the client `.p12` and set `SM_CLIENT_CERT_FILE`. `digicert/code-signing-software-trust-action@v1` in
    simple-signing mode, without an input, installs `smctl`. `SM_HOST`, `SM_API_KEY` and
    `SM_CLIENT_CERT_PASSWORD` are set only on the steps that sign.
-2. With `smctl sign --simple`, `tools/installer/build.py` signs the app, `standalone_cli.py` signs `edi.exe`
-   before archiving the command-line download, and `package.py seal` signs each installer before archiving it
-   again.
-3. `signtool verify /pa` checks each signed file and the installed app of each test installation.
+2. With `smctl sign --simple`, `tools/installer/build.py` signs every `.exe` of the stage (the app, the assistant
+   guard and the runtime's helpers), `standalone_cli.py` signs `edi.exe` before archiving the command-line
+   download, `package.py maintenance-tool` signs the maintenance tool, and `package.py seal` signs each installer.
+3. **The maintenance tool** takes the macOS path, except that Windows' `binarycreator` has no `--mt`: the tool is
+   the Framework's own `installerbase.exe`, which the installer runs from as is, keeping its pages and data in
+   `maintenancetool.dat` beside it. It is signed and shipped in the
+   same hidden component, whose script calls `installer.setInstallerBaseBinary` on the shipped
+   `MaintenanceTool.exe`. Each test installation checks that the installed tool is the shipped one (checksum)
+   and, on release builds, its signature with `signtool verify /pa`.
+4. `signtool verify /pa` checks each signed file and the installed app of each test installation.
 
 **When signing runs.** Only for release builds of the installer workflow on `main` in this repository: a manual
 run with a release plan or a preview-release preparation. `EDI_CODESIGN` is set for those runs and every signing
@@ -152,6 +164,12 @@ unsigned and never reaches the credentials. Signing runs also take the GitHub en
 as before and still runs every installer check. When signing is on, a missing credential, a refused signature
 or a rejected notarisation fails the job, and nothing is uploaded or published. Linux installers are not
 signed. Every installer check runs on the signed installers.
+
+**SmartScreen reputation.** A new certificate has no reputation yet, so Windows SmartScreen can still warn on a
+signed installer; the install guide says what to do. The release run's last step (`tools/release/smartscreen.py`,
+never failing the release) uploads the Windows online installer with the text to paste as the artifact
+`smartscreen-submission` and writes the steps of Microsoft's file submission to the run's summary: submit only while a
+fresh download still shows the warning, by hand, as Microsoft offers no submission API.
 
 ## Consequences
 

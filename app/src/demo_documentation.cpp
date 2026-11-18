@@ -300,8 +300,8 @@ std::optional<bool> DemoDriver::documentationAction(const QString& action) {
                 for (auto* parent = item->parentItem(); parent; parent = parent->parentItem())
                     if (parent->clip()) {
                         const auto clip = parent->mapRectToScene(parent->clipRect());
-                        const auto bounds = parent->mapRectToScene(parent->boundingRect());
-                        std::fprintf(stderr, "clip %s %s rect=(%g,%g,%g,%g) bounds=(%g,%g,%g,%g)\n", parent->metaObject()->className(), qPrintable(parent->objectName()), clip.x(), clip.y(), clip.width(), clip.height(), bounds.x(), bounds.y(), bounds.width(), bounds.height());
+                        const auto parent_bounds = parent->mapRectToScene(parent->boundingRect());
+                        std::fprintf(stderr, "clip %s %s rect=(%g,%g,%g,%g) bounds=(%g,%g,%g,%g)\n", parent->metaObject()->className(), qPrintable(parent->objectName()), clip.x(), clip.y(), clip.width(), clip.height(), parent_bounds.x(), parent_bounds.y(), parent_bounds.width(), parent_bounds.height());
                     }
             }
             fail("cannot edit documentation form field: " + body.left(separator) +
@@ -382,7 +382,7 @@ std::optional<bool> DemoDriver::documentationAction(const QString& action) {
             urls.append(QUrl::fromLocalFile(file));
         }
         const auto request = assistant ? assistant->beginFileSelection() : QString();
-        if (request.isEmpty() || !assistant->addSelectedFiles(request, urls)) {
+        if (assistant == nullptr || request.isEmpty() || !assistant->addSelectedFiles(request, urls)) {
             fail("the assistant did not take the attached files");
             return false;
         }

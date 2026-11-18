@@ -12,6 +12,8 @@
 #include <QSurfaceFormat>
 #include <QtQml/qqmlextensionplugin.h>
 #include <cstdio>
+#include <cstdlib>
+#include <exception>
 #include <memory>
 #if defined(Q_OS_UNIX)
 #include <unistd.h>
@@ -22,6 +24,7 @@
 #include "web_page_hooks.hpp"
 #include "engine_setup.hpp"
 #include "run_log.hpp"
+#include "stall_probe.hpp"
 #include "test_observer.hpp"
 #ifndef __EMSCRIPTEN__
 void start_installer_smoke(QQuickWindow&, const QString&);
@@ -32,19 +35,54 @@ double merge_mac_title_bar(QWindow* window);
 
 Q_IMPORT_QML_PLUGIN(edi_appPlugin)
 
+namespace {
+// A failure in one event's handler is logged and that event dropped; it never reaches the event loop, which would end
+// the app (a model call refusing a project it cannot take, say one without an experiment). The user sees it in the
+// error popup (edi ADR-0062).
+class GuardedApplication final : public QGuiApplication {
+   public:
+    using QGuiApplication::QGuiApplication;
+    bool notify(QObject* receiver, QEvent* event) override {
+        try {
+            return QGuiApplication::notify(receiver, event);
+        } catch (const std::exception& error) {
+            qCritical("edi: an event handler failed and was skipped: %s", error.what());
+            edi_app::RunLog::reportCaught(QString::fromUtf8(error.what()));
+        } catch (...) {
+            qCritical("edi: an event handler failed and was skipped");
+            edi_app::RunLog::reportCaught(QStringLiteral("an unknown error"));
+        }
+        return false;
+    }
+};
+}  // namespace
+
 // Thin QML host (ADR-0009): it hosts the QML tree and wires the product core through the app-layer
 // view-models. No product logic here. One host, two build targets — desktop and WASM — from this one
 // source tree (ADR-0006).
 int main(int argc, char* argv[]) {
+    // An exception nothing caught is written to the run log before the abort, so the next start can say what it was.
+    std::set_terminate([] {
+        if (const auto current = std::current_exception()) {
+            try {
+                std::rethrow_exception(current);
+            } catch (const std::exception& error) {
+                qCritical("terminated by an uncaught exception: %s", error.what());
+            } catch (...) {
+                qCritical("terminated by an uncaught exception");
+            }
+        }
+        std::abort();
+    });
     if (const auto code = edi_app::refuse_test_observer(argc, argv)) {
         return *code;  // before the platform checks, so the refusal names the observer request
     }
     edi_app::select_freetype_engine(argc, argv);  // before the QGuiApplication reads the platform
-    QGuiApplication app(argc, argv);
+    GuardedApplication app(argc, argv);
 #if !defined(__EMSCRIPTEN__) && !defined(Q_OS_MACOS)
     app.setWindowIcon(QIcon(QStringLiteral(":/qt/qml/edi/app/resources/logo/App.svg")));
 #endif
-    QGuiApplication::setOrganizationName(QStringLiteral("EasyScience"));
+    QGuiApplication::setOrganizationName(edi_app::settings_organisation());
     QGuiApplication::setApplicationName(QStringLiteral("EasyDiffraction"));
     edi_app::use_design_font();
     edi_app::require_freetype_engine();
@@ -118,15 +156,17 @@ int main(int argc, char* argv[]) {
         edi_app::use_fresh_settings();  // never the machine's saved settings
     }
     // Every message of this run to the terminal and its log file (ADR-0062), at the level Preferences keeps.
+    edi_app::migrate_legacy_settings();  // before anything reads the settings or the data folder
     edi_app::RunLog run_log({edi_app::run_log_directory()});
-    const QSettings settings(QSettings::IniFormat, QSettings::UserScope, QStringLiteral("EasyScience"),
-                             QStringLiteral("EasyDiffraction"));
+    const QSettings settings(edi_app::settings_store_path(), QSettings::IniFormat);
     run_log.setLevel(settings.value(QStringLiteral("develop/loggingLevel"), QStringLiteral("Info")).toString());
     edi_app::RunLog::install(&run_log);
     if (!run_log.start(edi_app::run_log_header()) && !edi_app::run_log_directory().isEmpty()) {
         qWarning("cannot write the run log in %s; this run logs to the terminal only",
                  qPrintable(edi_app::run_log_directory()));
     }
+    // Off unless EDI_STALL_PROBE is set; its summary is written before the log finishes.
+    edi_app::install_stall_probe(app);
     QObject::connect(&app, &QCoreApplication::aboutToQuit, &run_log, &edi_app::RunLog::finish);
     edi_app::quit_on_termination_signals();
     QQmlApplicationEngine engine;

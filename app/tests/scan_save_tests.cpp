@@ -1,12 +1,17 @@
 // SPDX-License-Identifier: BSD-3-Clause
+#include <cmath>
+#include <functional>
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
 #include <QGuiApplication>
+#include <QImage>
 #include <QQmlApplicationEngine>
 #include <QQmlComponent>
 #include <QQmlExpression>
 #include <QQuickWindow>
+#include <QRegularExpression>
+#include <QScopeGuard>
 #include <QSettings>
 #include "scan_layer.hpp"
 #include <QTemporaryDir>
@@ -64,6 +69,524 @@ private slots:
         QCOMPARE(fit->elapsed(), duration + "s");
         QCOMPARE(fit->results()->text(1, "value"), duration + " s");
         for (const double time : runningTimes) QVERIFY(time <= duration.toDouble());
+    }
+    // Opened on Analysis, at once or from another project's Analysis page, the structure view draws its atoms and the
+    // parameter table fits its columns, as when the pages are visited in order.
+    void projectOpenedOnAnalysisDrawsStructureAndTable() {
+        QQmlApplicationEngine engine;
+        edi_app::configure_engine(engine);
+        engine.loadFromModule("edi.app", "Main");
+        QVERIFY(!engine.rootObjects().isEmpty());
+        auto* window = qobject_cast<QQuickWindow*>(engine.rootObjects().constFirst());
+        QVERIFY(window);
+        window->resize(1480, 900);
+        window->show();
+        QVERIFY(QTest::qWaitForWindowExposed(window));
+        auto* session = engine.singletonInstance<edi_app::Session*>("edi.app", "Session");
+        QVERIFY(session);
+        // The named item on screen: each page holds its own copy of the main view and the tables.
+        const auto shown = [window](const QString& name) -> QQuickItem* {
+            QQuickItem* result = nullptr;
+            std::function<void(QQuickItem*)> walk = [&](QQuickItem* parent) {
+                for (QQuickItem* child : parent->childItems()) {
+                    const QPointF at = child->mapToScene(QPointF());
+                    if (child->objectName() == name && child->isVisible() && at.x() >= 0 && at.x() < window->width())
+                        result = child;
+                    walk(child);
+                }
+            };
+            walk(window->contentItem());
+            return result;
+        };
+        const auto click = [window](QQuickItem* item) {
+            QTest::mouseClick(window, Qt::LeftButton, {}, item->mapToScene(QPointF(item->width() / 2, item->height() / 2)).toPoint());
+        };
+        const auto openAnalysis = [&] {
+            QQuickItem* tab = nullptr;
+            QTRY_VERIFY_WITH_TIMEOUT((tab = shown("appBar.tab.analysis")) && tab->isEnabled(), 20000);
+            click(tab);
+        };
+        // Atoms in the middle of the view: there a blank view has no letter, legend or toolbar.
+        const auto drawn = [&]() {
+            QQuickItem* view = shown("structure.view");
+            if (view == nullptr || !view->property("has3D").toBool()) return view != nullptr && view->property("atomCount").toInt() > 0;
+            const QImage image = window->grabWindow();
+            const QPointF origin = view->mapToScene(QPointF());
+            const QRect middle(int(origin.x() + view->width() * 0.2), int(origin.y() + view->height() * 0.3), int(view->width() * 0.4), int(view->height() * 0.5));
+            const QColor background = view->property("color").value<QColor>();
+            const double scale = image.width() / double(window->width());
+            int marked = 0;
+            for (int y = middle.top(); y < middle.bottom(); y += 2)
+                for (int x = middle.left(); x < middle.right(); x += 2) {
+                    const QColor pixel = image.pixelColor(int(x * scale), int(y * scale));
+                    if (std::abs(pixel.red() - background.red()) + std::abs(pixel.green() - background.green()) + std::abs(pixel.blue() - background.blue()) > 60) ++marked;
+                }
+            return marked > middle.width() * middle.height() / 4 / 50;
+        };
+        // Every column fitted: a table measured while hidden keeps all but Name at their least width.
+        const auto fitted = [&]() {
+            QQuickItem* table = shown("parameters.list");
+            if (table == nullptr || table->property("unfitted").toBool() || table->property("refitting").toBool()) return false;
+            const QVariantList widths = table->property("columnWidths").value<QJSValue>().toVariant().toList();
+            if (widths.size() < 4) return false;
+            for (qsizetype column = 2; column < widths.size(); ++column)
+                if (widths[column].toDouble() <= 12) return false;
+            return true;
+        };
+        const QString ncaf = QStringLiteral(EDI_SOURCE_DIR "/docs/user/cli/pd-neut-tof_ncaf-wish/project");
+        QVERIFY2(session->openProject(QUrl::fromLocalFile(ncaf)), qPrintable(session->lastError()));
+        openAnalysis();
+        // Analysis opens on Pattern; the Structure tab then draws its view at once.
+        QTRY_VERIFY_WITH_TIMEOUT(shown("mainArea.tab.structure") && shown("mainArea.tab.structure")->isEnabled(), 20000);
+        click(shown("mainArea.tab.structure"));
+        QTRY_VERIFY_WITH_TIMEOUT(shown("structure.view"), 20000);
+        QTRY_VERIFY_WITH_TIMEOUT(drawn(), 20000);
+        QTRY_VERIFY_WITH_TIMEOUT(fitted(), 60000);
+        // Another project opened from Analysis: its pages are built while the Project page shows.
+        QVERIFY2(session->openProject(QUrl::fromLocalFile(QStringLiteral(EDI_SOURCE_DIR "/app/examples/pd-xray-cwl_lif/project"))), qPrintable(session->lastError()));
+        openAnalysis();
+        QVERIFY2(session->openProject(QUrl::fromLocalFile(ncaf)), qPrintable(session->lastError()));
+        // Its Analysis page built beside the Project page, before it is shown.
+        const auto builtHidden = [window]() {
+            bool found = false;
+            std::function<void(QQuickItem*)> walk = [&](QQuickItem* parent) {
+                for (QQuickItem* child : parent->childItems()) {
+                    if (child->objectName() == "parameters.list" && child->property("count").toInt() > 200 && child->mapToScene(QPointF()).x() >= window->width())
+                        found = true;
+                    walk(child);
+                }
+            };
+            walk(window->contentItem());
+            return found;
+        };
+        QTRY_VERIFY_WITH_TIMEOUT(builtHidden(), 30000);
+        openAnalysis();
+        QTRY_VERIFY_WITH_TIMEOUT(shown("structure.view"), 20000);
+        click(shown("mainArea.tab.structure"));
+        QTRY_VERIFY_WITH_TIMEOUT(drawn(), 20000);
+        QTRY_VERIFY_WITH_TIMEOUT(fitted(), 60000);
+    }
+    void computedTablesReadOnlyWithFadingBarsAndNoZeroNoise() {
+        QQmlApplicationEngine engine;
+        edi_app::configure_engine(engine);
+        engine.loadFromModule("edi.app", "Main");
+        QVERIFY(!engine.rootObjects().isEmpty());
+        auto* window = qobject_cast<QQuickWindow*>(engine.rootObjects().constFirst());
+        QVERIFY(window);
+        window->resize(1480, 900);
+        window->show();
+        QVERIFY(QTest::qWaitForWindowExposed(window));
+        auto* session = engine.singletonInstance<edi_app::Session*>("edi.app", "Session");
+        QVERIFY(session);
+        const auto all = [window](const std::function<bool(QQuickItem*)>& match) {
+            QList<QQuickItem*> found;
+            std::function<void(QQuickItem*)> walk = [&](QQuickItem* parent) {
+                for (QQuickItem* child : parent->childItems()) {
+                    const QPointF at = child->mapToScene(QPointF());
+                    if (child->isVisible() && at.x() >= 0 && at.x() < window->width() && match(child)) found.append(child);
+                    walk(child);
+                }
+            };
+            walk(window->contentItem());
+            return found;
+        };
+        const auto shown = [&](const QString& name) -> QQuickItem* {
+            const QList<QQuickItem*> found = all([&](QQuickItem* item) { return item->objectName() == name; });
+            return found.isEmpty() ? nullptr : found.constLast();
+        };
+        const auto click = [window](QQuickItem* item) {
+            QTest::mouseClick(window, Qt::LeftButton, {}, item->mapToScene(QPointF(item->width() / 2, item->height() / 2)).toPoint());
+        };
+        // The page's own first group on screen first: while the pages slide, the previous page's Extra tab is still
+        // found and a click on it changes nothing here.
+        const auto openExtras = [&](const char* page, const char* group) {
+            QQuickItem* tab = nullptr;
+            QTRY_VERIFY_WITH_TIMEOUT((tab = shown(QString::fromLatin1(page))) && tab->isEnabled(), 20000);
+            click(tab);
+            QTRY_VERIFY_WITH_TIMEOUT(shown(QString::fromLatin1(group)), 20000);
+            QTRY_VERIFY_WITH_TIMEOUT((tab = shown("sideBar.tab.extras")), 20000);
+            click(tab);
+        };
+        const auto expand = [&](const QString& group) {
+            QQuickItem* item = nullptr;
+            QTRY_VERIFY_WITH_TIMEOUT((item = shown(group)), 20000);
+            QVERIFY(item->setProperty("collapsed", false));
+        };
+        // A table's horizontal bar follows the vertical bar's policy (AsNeeded, fading when idle), never AlwaysOn.
+        const auto barFades = [](QQuickItem* table) {
+            for (QObject* child : table->children()) {
+                if (QString::fromLatin1(child->metaObject()->className()).contains("ScrollBar") && child->property("orientation").toInt() == Qt::Horizontal)
+                    return child->property("policy").toInt() != 2;
+            }
+            return true;
+        };
+        QVERIFY2(session->openProject(QUrl::fromLocalFile(QStringLiteral(EDI_SOURCE_DIR "/docs/user/cli/pd-neut-cwl_lbco-hrpt/project"))), qPrintable(session->lastError()));
+        QTRY_VERIFY_WITH_TIMEOUT(!session->project()->calculating(), 30000);
+
+        openExtras("appBar.tab.structure", "group.structures");
+        // One group at a time: with auto-collapse on, expanding the next folds the one before.
+        expand("group.expanded_atom_site");
+        QQuickItem* atoms = nullptr;
+        QTRY_VERIFY_WITH_TIMEOUT((atoms = shown("generated.expanded_atom_site.list")) && atoms->property("count").toInt() > 0, 20000);
+        QVERIFY(barFades(atoms));
+        // Cartesian and fractional coordinates at a rounding error from zero show as 0, never in scientific notation.
+        QList<QQuickItem*> coordinates;
+        QTRY_VERIFY_WITH_TIMEOUT(!(coordinates = all([](QQuickItem* item) {
+                                      const QString name = item->objectName();
+                                      return name.startsWith("generated.expanded_atom_site.cartn_") || name.startsWith("generated.expanded_atom_site.fract_");
+                                  })).isEmpty(),
+                                 20000);
+        int zeros = 0;
+        for (QQuickItem* cell : coordinates) {
+            const QString text = cell->property("text").toString();
+            QVERIFY2(!text.contains(QChar(0x00D7)) && !text.contains('e'), qPrintable(cell->objectName() + ": " + text));
+            if (text.toDouble() == 0.0 && !text.isEmpty()) ++zeros;
+        }
+        QVERIFY(zeros > 0);
+
+        expand("group.geom");
+        QQuickItem* bonds = nullptr;
+        QTRY_VERIFY_WITH_TIMEOUT((bonds = shown("geom.bonds")) && bonds->property("count").toInt() > 0, 20000);
+        QVERIFY(bonds->property("readOnly").toBool());
+        QVERIFY(barFades(bonds));
+        QQuickItem* symmetry = nullptr;
+        QTRY_VERIFY_WITH_TIMEOUT((symmetry = shown("geom.bonds.symmetry2.0")), 20000);
+        QVERIFY2(QRegularExpression("^\\d+_\\d{3,}$").match(symmetry->property("text").toString()).hasMatch(), qPrintable(symmetry->property("text").toString()));
+        QQuickItem* site = shown("geom.bonds.site1.0");
+        QVERIFY(site);
+        // A read-only table's value cells take the grey of a cell shown, not edited.
+        QVERIFY(site->property("readOnlyRow").toBool());
+
+        // The magnetic space group's BNS and UNI symbols share the row in two equal columns.
+        QVERIFY2(session->openProject(QUrl::fromLocalFile(QStringLiteral(EDI_SOURCE_DIR "/docs/user/cli/pd-neut-cwl_cosio-d20_2k/project"))), qPrintable(session->lastError()));
+        QTRY_VERIFY_WITH_TIMEOUT(!session->project()->calculating(), 30000);
+        {
+            QQuickItem* tab = nullptr;
+            QTRY_VERIFY_WITH_TIMEOUT((tab = shown("appBar.tab.structure")) && tab->isEnabled(), 20000);
+            click(tab);
+            QTRY_VERIFY_WITH_TIMEOUT((tab = shown("sideBar.tab.basic")), 20000);
+            click(tab);
+        }
+        expand("group.space_group_magn");
+        QQuickItem* bns = nullptr;
+        QQuickItem* uni = nullptr;
+        QTRY_VERIFY_WITH_TIMEOUT((bns = shown("magneticSpaceGroup.selector")) && (uni = shown("magneticSpaceGroup.nameUni")), 20000);
+        QVERIFY(bns->width() > 0);
+        QCOMPARE(bns->width(), uni->width());
+
+        QVERIFY2(session->openProject(QUrl::fromLocalFile(QStringLiteral(EDI_SOURCE_DIR "/docs/user/cli/pd-neut-cwl_lbco-hrpt/project"))), qPrintable(session->lastError()));
+        QTRY_VERIFY_WITH_TIMEOUT(!session->project()->calculating(), 30000);
+        openExtras("appBar.tab.experiment", "group.experiments");
+        expand("group.refln");
+        QQuickItem* reflections = nullptr;
+        QTRY_VERIFY_WITH_TIMEOUT((reflections = shown("reflections.list")) && reflections->property("count").toInt() > 0, 20000);
+        QVERIFY(reflections->property("readOnly").toBool());
+        QVERIFY(barFades(reflections));
+    }
+    // Controls moving between a toolbar's row and its ⋯ popup, chart tabs switching and the popup opening and closing
+    // leave no QML warning (the owner's log: attached tooltips binding on controls being moved or destroyed).
+    // A new experiment switched from powder to single crystal shows the linked structure's simulated reflections
+    // before any data, and the switch reports nothing.
+    void newSingleCrystalExperimentShowsSimulatedReflections() {
+        QQmlApplicationEngine engine;
+        edi_app::configure_engine(engine);
+        auto* session = engine.singletonInstance<edi_app::Session*>("edi.app", "Session");
+        QVERIFY(session);
+        QTemporaryDir root;
+        QVERIFY(session->createProject(QStringLiteral("sc"), {}, root.filePath(QStringLiteral("project"))));
+        edi_app::ProjectViewModel* project = session->project();
+        QVERIFY(project);
+        QVERIFY(project->createStructure());
+        QVERIFY(project->createExperiment());
+        QTRY_VERIFY_WITH_TIMEOUT(!project->calculating(), 30000);
+        const auto messages = [session] {
+            QStringList lines;
+            edi_app::WarningListModel* list = session->loadWarnings();
+            const auto roles = list->roleNames();
+            for (int row = 0; row < list->rowCount(); ++row)
+                for (const QByteArray& role : roles)
+                    lines.append(list->text(row, QString::fromUtf8(role)));
+            return lines.join(QLatin1String(" | "));
+        };
+        const int before = session->loadWarnings()->rowCount();
+        QVERIFY2(project->setExperimentType(0, QStringLiteral("sampleForm"), QStringLiteral("single crystal")),
+                 qPrintable(session->lastError()));
+        QTRY_VERIFY_WITH_TIMEOUT(!project->calculating(), 30000);
+        edi_app::ExperimentViewModel* experiment = project->currentExperiment();
+        QVERIFY(experiment);
+        QCOMPARE(experiment->sampleForm(), edi_app::ExperimentViewModel::SingleCrystal);
+        edi_app::SingleCrystalReflectionModel* reflections = experiment->singleCrystalReflections();
+        QTRY_VERIFY2_WITH_TIMEOUT(reflections->simulated() && !reflections->calculated().isEmpty(), qPrintable(messages()), 30000);
+        QVERIFY2(session->loadWarnings()->rowCount() == before, qPrintable(messages()));
+    }
+
+    // A filter that leaves a few rows shows them at once from the table's top, with no blank band easing away.
+    void filteredTableShowsItsRowsAtOnceFromTheTop() {
+        QQmlApplicationEngine engine;
+        edi_app::configure_engine(engine);
+        engine.loadFromModule("edi.app", "Main");
+        QVERIFY(!engine.rootObjects().isEmpty());
+        auto* window = qobject_cast<QQuickWindow*>(engine.rootObjects().constFirst());
+        QVERIFY(window);
+        window->resize(1480, 900);
+        window->show();
+        QVERIFY(QTest::qWaitForWindowExposed(window));
+        auto* session = engine.singletonInstance<edi_app::Session*>("edi.app", "Session");
+        QVERIFY(session);
+        QVERIFY2(session->openProject(QUrl::fromLocalFile(QStringLiteral(EDI_SOURCE_DIR "/docs/user/cli/pd-neut-cwl_lbco-hrpt/project"))), qPrintable(session->lastError()));
+        QTRY_VERIFY_WITH_TIMEOUT(!session->project()->calculating(), 30000);
+        QQuickItem* tab = nullptr;
+        QTRY_VERIFY_WITH_TIMEOUT((tab = window->findChild<QQuickItem*>(QStringLiteral("appBar.tab.analysis"))) && tab->isEnabled(), 20000);
+        QTest::mouseClick(window, Qt::LeftButton, {}, tab->mapToScene(QPointF(tab->width() / 2, tab->height() / 2)).toPoint());
+        QQuickItem* table = nullptr;
+        QTRY_VERIFY_WITH_TIMEOUT((table = window->findChild<QQuickItem*>(QStringLiteral("parameters.list"))) && table->isVisible() && table->property("count").toInt() > table->property("maxRowCountShow").toInt(), 20000);
+        // Scrolled to the end of the whole list, then filtered down to a few rows.
+        const double end = table->property("originY").toDouble() + table->property("contentHeight").toDouble() - table->height();
+        table->setProperty("contentY", end);
+        QCOMPARE(table->property("contentY").toDouble(), end);
+        auto* filter = table->property("sourceModel").value<QObject*>();
+        QVERIFY(filter);
+        QVERIFY(filter->setProperty("nameFilter", QStringLiteral("adp")));
+        QTRY_VERIFY_WITH_TIMEOUT(table->property("count").toInt() > 0 && table->property("count").toInt() <= table->property("maxRowCountShow").toInt(), 5000);
+        QCoreApplication::processEvents();
+        // At the top on the first frame after the filter, with nothing left moving.
+        QCOMPARE(table->property("contentY").toDouble(), table->property("originY").toDouble());
+        QVERIFY(!table->property("moving").toBool());
+    }
+
+    // A parameter at zero still slides by a useful step: ±0.1° for the 2θ offset, the table's floor for its kind.
+    void slidersStartWideEnoughAtZero() {
+        QQmlApplicationEngine engine;
+        edi_app::configure_engine(engine);
+        auto* session = engine.singletonInstance<edi_app::Session*>("edi.app", "Session");
+        QVERIFY(session);
+        QVERIFY2(session->openProject(QUrl::fromLocalFile(QStringLiteral(EDI_SOURCE_DIR "/docs/user/cli/pd-neut-cwl_lbco-hrpt/project"))), qPrintable(session->lastError()));
+        auto* parameters = session->project()->parameters();
+        const auto find = [parameters](const QString& path) -> edi_app::ParameterItem* {
+            for (int row = 0; row < parameters->rowCount(); ++row)
+                if (parameters->text(row, QStringLiteral("path")).endsWith(path))
+                    return qobject_cast<edi_app::ParameterItem*>(parameters->item(row, QStringLiteral("parameter")));
+            return nullptr;
+        };
+        edi_app::ParameterItem* offset = find(QStringLiteral("instrument.calib_twotheta_offset"));
+        QVERIFY(offset);
+        QCOMPARE(offset->sliderHalfWidth(), std::max(0.1, std::abs(offset->value()) * 0.5));
+        edi_app::ParameterItem* length = find(QStringLiteral("cell.length_a"));
+        QVERIFY(length);
+        QCOMPARE(length->sliderHalfWidth(), 0.05);
+    }
+
+    // A fit with live updates on draws its patterns on the shown Pattern chart while it runs, not only at the end.
+    // A sequential fit seen on Meas vs calc alone: each dataset it follows is drawn there, not only the first.
+    void measCalcFollowsASequentialFit() {
+        QQmlApplicationEngine engine;
+        edi_app::configure_engine(engine);
+        engine.loadFromModule("edi.app", "Main");
+        QVERIFY(!engine.rootObjects().isEmpty());
+        auto* window = qobject_cast<QQuickWindow*>(engine.rootObjects().constFirst());
+        QVERIFY(window);
+        window->resize(1480, 900);
+        window->show();
+        QVERIFY(QTest::qWaitForWindowExposed(window));
+        auto* session = engine.singletonInstance<edi_app::Session*>("edi.app", "Session");
+        QVERIFY(session);
+        QVERIFY2(session->openProject(QUrl::fromLocalFile(QStringLiteral(EDI_SOURCE_DIR "/docs/user/cli/pd-neut-tof_ncaf-wish-5bank_scan-6p/project"))), qPrintable(session->lastError()));
+        edi_app::ProjectViewModel* project = session->project();
+        QTRY_VERIFY_WITH_TIMEOUT(!project->calculating(), 60000);
+        // The shown one of several items of that name (every page has its main view's tabs).
+        const auto shown = [window](const QString& name) -> QQuickItem* {
+            QQuickItem* result = nullptr;
+            std::function<void(QQuickItem*)> walk = [&](QQuickItem* parent) {
+                for (QQuickItem* child : parent->childItems()) {
+                    const QPointF at = child->mapToScene(QPointF());
+                    if (child->objectName() == name && child->isVisible() && child->isEnabled() && at.x() >= 0 && at.x() < window->width()) result = child;
+                    walk(child);
+                }
+            };
+            walk(window->contentItem());
+            return result;
+        };
+        QQuickItem* item = nullptr;
+        for (const char* name : {"appBar.tab.analysis", "mainArea.tab.measCalc"}) {
+            QTRY_VERIFY_WITH_TIMEOUT((item = shown(QString::fromLatin1(name))), 20000);
+            QTest::mouseClick(window, Qt::LeftButton, {}, item->mapToScene(QPointF(item->width() / 2, item->height() / 2)).toPoint());
+        }
+        edi_app::ExperimentViewModel* experiment = project->currentExperiment();
+        QVERIFY(experiment);
+        QTRY_VERIFY_WITH_TIMEOUT(experiment->patternShown(), 20000);
+        edi_app::FitViewModel* fit = project->fit();
+        fit->setPatternUpdates(0);  // every pattern
+        int duringFit = 0;
+        QObject::connect(experiment, &edi_app::ExperimentViewModel::patternSourceChanged, window, [&] {
+            if (fit->running() && experiment->presentedGeneration() == experiment->patternGeneration()) ++duringFit;
+        });
+        fit->start();
+        QTRY_VERIFY_WITH_TIMEOUT(fit->running(), 20000);
+        QTRY_VERIFY_WITH_TIMEOUT(!fit->running(), 600000);
+        QVERIFY2(duringFit >= 2, qPrintable(QString("datasets presented on Meas vs calc while running: %1").arg(duringFit)));
+    }
+
+    void patternChartFollowsARunningFit() {
+        QQmlApplicationEngine engine;
+        edi_app::configure_engine(engine);
+        engine.loadFromModule("edi.app", "Main");
+        QVERIFY(!engine.rootObjects().isEmpty());
+        auto* window = qobject_cast<QQuickWindow*>(engine.rootObjects().constFirst());
+        QVERIFY(window);
+        window->resize(1480, 900);
+        window->show();
+        QVERIFY(QTest::qWaitForWindowExposed(window));
+        auto* session = engine.singletonInstance<edi_app::Session*>("edi.app", "Session");
+        QVERIFY(session);
+        QVERIFY2(session->openProject(QUrl::fromLocalFile(QStringLiteral(EDI_SOURCE_DIR "/docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project"))), qPrintable(session->lastError()));
+        edi_app::ProjectViewModel* project = session->project();
+        QTRY_VERIFY_WITH_TIMEOUT(!project->calculating(), 60000);
+        QQuickItem* tab = nullptr;
+        QTRY_VERIFY_WITH_TIMEOUT((tab = window->findChild<QQuickItem*>(QStringLiteral("appBar.tab.analysis"))) && tab->isEnabled(), 20000);
+        QTest::mouseClick(window, Qt::LeftButton, {}, tab->mapToScene(QPointF(tab->width() / 2, tab->height() / 2)).toPoint());
+        edi_app::ExperimentViewModel* experiment = project->currentExperiment();
+        QVERIFY(experiment);
+        QTRY_VERIFY_WITH_TIMEOUT(experiment->patternShown(), 20000);
+        edi_app::FitViewModel* fit = project->fit();
+        fit->setPatternUpdates(0);  // every pattern
+        int duringFit = 0;
+        // Counted only when the shown chart presented it: the controller draws on the same signal, before this.
+        QObject::connect(experiment, &edi_app::ExperimentViewModel::patternSourceChanged, window, [&] {
+            if (fit->running() && experiment->presentedGeneration() == experiment->patternGeneration()) ++duringFit;
+        });
+        fit->start();
+        QTRY_VERIFY_WITH_TIMEOUT(fit->running(), 20000);
+        QTRY_VERIFY_WITH_TIMEOUT(!fit->running(), 300000);
+        QVERIFY2(duringFit >= 2, qPrintable(QString("patterns presented while running: %1").arg(duringFit)));
+    }
+
+    void toolbarOverflowLeavesNoQmlWarning() {
+        static QStringList warnings;
+        warnings.clear();
+        static QtMessageHandler previous = nullptr;
+        previous = qInstallMessageHandler([](QtMsgType type, const QMessageLogContext& context, const QString& message) {
+            if (type != QtDebugMsg && type != QtInfoMsg && (message.contains(QLatin1String(".qml:")) || message.contains(QLatin1String("QML "))))
+                warnings.append(message);
+            if (previous) previous(type, context, message);
+        });
+        const auto restore = qScopeGuard([] { qInstallMessageHandler(previous); });
+        QQmlApplicationEngine engine;
+        edi_app::configure_engine(engine);
+        engine.loadFromModule("edi.app", "Main");
+        QVERIFY(!engine.rootObjects().isEmpty());
+        auto* window = qobject_cast<QQuickWindow*>(engine.rootObjects().constFirst());
+        QVERIFY(window);
+        window->resize(1480, 900);
+        window->show();
+        QVERIFY(QTest::qWaitForWindowExposed(window));
+        auto* session = engine.singletonInstance<edi_app::Session*>("edi.app", "Session");
+        QVERIFY(session);
+        const auto shown = [window](const QString& name) -> QQuickItem* {
+            QQuickItem* result = nullptr;
+            std::function<void(QQuickItem*)> walk = [&](QQuickItem* parent) {
+                for (QQuickItem* child : parent->childItems()) {
+                    const QPointF at = child->mapToScene(QPointF());
+                    if (child->objectName() == name && child->isVisible() && at.x() >= 0 && at.x() < window->width()) result = child;
+                    walk(child);
+                }
+            };
+            walk(window->contentItem());
+            return result;
+        };
+        const auto click = [window](QQuickItem* item) {
+            QTest::mouseClick(window, Qt::LeftButton, {}, item->mapToScene(QPointF(item->width() / 2, item->height() / 2)).toPoint());
+        };
+        QVERIFY2(session->openProject(QUrl::fromLocalFile(QStringLiteral(EDI_SOURCE_DIR "/docs/user/cli/pd-neut-cwl_lbco-hrpt/project"))), qPrintable(session->lastError()));
+        QTRY_VERIFY_WITH_TIMEOUT(!session->project()->calculating(), 30000);
+        QQuickItem* tab = nullptr;
+        QTRY_VERIFY_WITH_TIMEOUT((tab = shown("appBar.tab.analysis")) && tab->isEnabled(), 20000);
+        click(tab);
+        // Each chart tab at a wide and a narrow window: the narrow one puts controls in the popup, which opens and closes.
+        for (const char* key : {"pattern", "measCalc", "structure", "pattern"}) {
+            QTRY_VERIFY_WITH_TIMEOUT((tab = shown(QStringLiteral("mainArea.tab.%1").arg(QLatin1String(key)))) && tab->isEnabled(), 20000);
+            click(tab);
+            const QString toolbar = QLatin1String(key) == QLatin1String("pattern") ? "chart.toolbar" : QLatin1String(key) == QLatin1String("measCalc") ? "measCalc.toolbar" : "structure.toolbar";
+            QTRY_VERIFY_WITH_TIMEOUT(shown(toolbar), 20000);
+            for (int round = 0; round < 2; ++round) {
+                window->resize(1024, 700);
+                QQuickItem* more = nullptr;
+                // A toolbar with fewer controls (Meas vs calc) may still fit: then it has no popup to open, and the
+                // resize alone is what must stay free of warnings.
+                if (!QTest::qWaitFor([&] { return (more = shown(toolbar + ".more")) != nullptr; }, 3000)) {
+                    window->resize(1480, 900);
+                    continue;
+                }
+                click(more);
+                QTRY_VERIFY_WITH_TIMEOUT(more->property("checked").toBool(), 5000);
+                click(more);
+                QTRY_VERIFY_WITH_TIMEOUT(!more->property("checked").toBool(), 5000);
+                click(more);
+                QTRY_VERIFY_WITH_TIMEOUT(more->property("checked").toBool(), 5000);
+                // Wider with the popup open: its controls go back to the row.
+                window->resize(1480, 900);
+                QTRY_VERIFY_WITH_TIMEOUT(!shown(toolbar + ".more"), 20000);
+            }
+        }
+        QVERIFY2(warnings.isEmpty(), qPrintable(warnings.join(QLatin1Char('\n'))));
+    }
+    void eachPageOpensOnItsDefaultTabThenTheUsersPick() {
+        QQmlApplicationEngine engine;
+        edi_app::configure_engine(engine);
+        engine.loadFromModule("edi.app", "Main");
+        QVERIFY(!engine.rootObjects().isEmpty());
+        auto* window = qobject_cast<QQuickWindow*>(engine.rootObjects().constFirst());
+        QVERIFY(window);
+        window->resize(1480, 900);
+        window->show();
+        QVERIFY(QTest::qWaitForWindowExposed(window));
+        auto* session = engine.singletonInstance<edi_app::Session*>("edi.app", "Session");
+        QVERIFY(session);
+        const auto onScreen = [window](const std::function<bool(QQuickItem*)>& match) -> QQuickItem* {
+            QQuickItem* result = nullptr;
+            std::function<void(QQuickItem*)> walk = [&](QQuickItem* parent) {
+                for (QQuickItem* child : parent->childItems()) {
+                    const QPointF at = child->mapToScene(QPointF());
+                    if (child->isVisible() && at.x() >= 0 && at.x() < window->width() && match(child)) result = child;
+                    walk(child);
+                }
+            };
+            walk(window->contentItem());
+            return result;
+        };
+        const auto shown = [&](const QString& name) { return onScreen([&](QQuickItem* item) { return item->objectName() == name; }); };
+        // The shown page's main view, by its current tab's key.
+        const auto currentKey = [&]() {
+            QQuickItem* view = onScreen([](QQuickItem* item) { return item->property("defaultKey").isValid() && item->property("shown").toBool(); });
+            return view ? view->property("currentKey").toString() : QString();
+        };
+        const auto click = [window](QQuickItem* item) {
+            QTest::mouseClick(window, Qt::LeftButton, {}, item->mapToScene(QPointF(item->width() / 2, item->height() / 2)).toPoint());
+        };
+        const auto openPage = [&](const char* name) {
+            QQuickItem* tab = nullptr;
+            QTRY_VERIFY_WITH_TIMEOUT((tab = shown(QString::fromLatin1(name))) && tab->isEnabled(), 20000);
+            click(tab);
+        };
+        const QUrl lbco = QUrl::fromLocalFile(QStringLiteral(EDI_SOURCE_DIR "/docs/user/cli/pd-neut-cwl_lbco-hrpt/project"));
+        QVERIFY2(session->openProject(lbco), qPrintable(session->lastError()));
+        openPage("appBar.tab.analysis");
+        QTRY_COMPARE_WITH_TIMEOUT(currentKey(), QStringLiteral("pattern"), 20000);
+        openPage("appBar.tab.structure");
+        QTRY_COMPARE_WITH_TIMEOUT(currentKey(), QStringLiteral("structure"), 20000);
+        openPage("appBar.tab.experiment");
+        QTRY_COMPARE_WITH_TIMEOUT(currentKey(), QStringLiteral("pattern"), 20000);
+        // The user's pick on Analysis is what Analysis opens on with the next project; the other pages keep theirs.
+        openPage("appBar.tab.analysis");
+        QTRY_COMPARE_WITH_TIMEOUT(currentKey(), QStringLiteral("pattern"), 20000);
+        QQuickItem* structureTab = nullptr;
+        QTRY_VERIFY_WITH_TIMEOUT((structureTab = shown("mainArea.tab.structure")), 20000);
+        click(structureTab);
+        QTRY_COMPARE_WITH_TIMEOUT(currentKey(), QStringLiteral("structure"), 20000);
+        QVERIFY2(session->openProject(lbco), qPrintable(session->lastError()));
+        openPage("appBar.tab.analysis");
+        QTRY_COMPARE_WITH_TIMEOUT(currentKey(), QStringLiteral("structure"), 20000);
+        openPage("appBar.tab.experiment");
+        QTRY_COMPARE_WITH_TIMEOUT(currentKey(), QStringLiteral("pattern"), 20000);
     }
     void hiddenWorkflowPagesDeferSelection() {
         QQmlApplicationEngine engine;

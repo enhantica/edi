@@ -14,7 +14,9 @@ EaComponents.ListViewDelegate {
     required property int index
     // False for a read-only list (the About window's third-party licences): the row shows no hover tint and keeps the
     // arrow pointer, as nothing in it can be chosen.
-    property bool highlightsHover: true
+    property bool highlightsHover: !readOnly
+    // The row of a read-only table (DataTable.readOnly): its value cells (CellLabel) show the read-only grey.
+    readonly property bool readOnly: (ListView.view as DataTable)?.readOnly ?? false
     // As wide as its columns when they are wider than the table, which then scrolls sideways (DataTable.rowsWidth).
     implicitWidth: ListView.view ? Math.max(ListView.view.width, (ListView.view as DataTable)?.rowsWidth ?? 0) : 0
 

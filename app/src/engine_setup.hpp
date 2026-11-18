@@ -16,9 +16,17 @@ class Session;
 void configure_engine(QQmlEngine& engine);
 void configure_engine(QQmlEngine& engine, AssistantWorkReportOptions options);
 void configure_engine(QQmlEngine& engine, std::unique_ptr<Session> session);
+// The organisation the settings and data folders are named after (edi ADR-0091), and the one used before it.
+QString settings_organisation();
+QString legacy_settings_organisation();
 // ADR-0031 §3: the one app-settings store's file on the desktop, QSettings' ini file of the user scope
-// (`~/.config/EasyScience/EasyDiffraction.ini` on Linux and macOS).
+// (`~/.config/EasyDiffraction/EasyDiffraction.ini` on Linux and macOS).
 QString settings_store_path();
+// edi ADR-0091: the first start under the new organisation carries over the old one's settings store when the new
+// store is empty, and moves the old data and config folders when the new ones do not exist yet, so it happens
+// once. Never for a demo or test run's fresh settings. Call it after the application's names are set and before
+// anything reads the settings.
+void migrate_legacy_settings();
 // The settings file the engine was configured with (the store, a demo or test run's fresh file, or the browser's
 // copy); empty before configure_engine.
 QString settings_file_path();

@@ -31,12 +31,12 @@ inline Edit prepare_relation_append(Project& project, const std::vector<NativeAl
     };
     bool first = true;
     for (const auto& row : aliases) {
-        if (!first) charge(sizeof(",") - 1); first = false;
+        if (!first) { charge(sizeof(",") - 1); } first = false;
         charge(sizeof("{\"id\":,\"path\":}") - 1); text(row.id, Limits::id_bytes); text(row.path, Limits::id_bytes);
     }
     first = true;
     for (const auto& row : constraints) {
-        if (!first) charge(sizeof(",") - 1); first = false;
+        if (!first) { charge(sizeof(",") - 1); } first = false;
         charge(sizeof("{\"id\":,\"expression\":,\"enabled\":}") - 1);
         charge(row.enabled ? sizeof("true") - 1 : sizeof("false") - 1);
         text(row.id, Limits::id_bytes); text(row.expression, std::nullopt);

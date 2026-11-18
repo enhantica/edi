@@ -192,16 +192,25 @@ SideBarGroup {
 
     // The system's choosers. On the next turn the opened project replaces this page, dialogs and all
     // (AppState.afterChanges).
+    // Both open where a project was last chosen.
     FolderDialog {
         id: openFolderDialog
         title: qsTr("Open an edi project folder")
         acceptLabel: qsTr("Open")
-        onAccepted: Qt.callLater(Session.openProject, selectedFolder)
+        currentFolder: DialogFolders.folder("openProject", "")
+        onAccepted: {
+            DialogFolders.remember("openProject", selectedFolder);
+            Qt.callLater(Session.openProject, selectedFolder);
+        }
     }
     FileDialog {
         id: openZipDialog
         title: qsTr("Open an edi project archive")
         nameFilters: [qsTr("edi project archives (*.zip)")]
-        onAccepted: Qt.callLater(Session.openProject, selectedFile)
+        currentFolder: DialogFolders.folder("openProject", "")
+        onAccepted: {
+            DialogFolders.remember("openProject", selectedFile);
+            Qt.callLater(Session.openProject, selectedFile);
+        }
     }
 }

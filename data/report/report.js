@@ -604,18 +604,27 @@ function drawSingleCrystal(figure, crystal) {
   const frame = pageStyle('--chartframe');
   const range = crystal.browser.range;
   const axis = { automargin: true, showline: true, mirror: true, linecolor: frame, gridcolor: grid, zeroline: false, range };
-  const points = {
-    type: 'scatter',
-    mode: 'markers',
-    name: crystal.name,
-    x: crystal.calc,
-    y: crystal.meas,
-    error_y: { type: 'data', array: crystal.su, visible: true, thickness: 1, width: 0, color: crystal.browser.color },
-    // Each point's hover as the core writes it: its indices and values by the dictionary's labels and formats.
-    text: crystal.hover,
-    hovertemplate: '%{text}<extra></extra>',
-    marker: { color: crystal.browser.color, size: 5 },
+  // The reflections the fit uses, and those it leaves out (an exclusion, an absence or the cutoff) dimmed beside
+  // them; a report without the reasons has every reflection used. Each point's hover is the core's, its reason
+  // included.
+  const reason = crystal.reason || [];
+  const subset = (left) => {
+    const pick = (values) => values.filter((_, i) => (reason[i] || '') !== '' === left);
+    return {
+      type: 'scatter',
+      mode: 'markers',
+      name: crystal.name,
+      x: pick(crystal.calc),
+      y: pick(crystal.meas),
+      error_y: { type: 'data', array: pick(crystal.su), visible: true, thickness: 1, width: 0, color: crystal.browser.color },
+      text: pick(crystal.hover),
+      hovertemplate: '%{text}<extra></extra>',
+      marker: { color: crystal.browser.color, size: 5 },
+      opacity: left ? 0.35 : 1,
+    };
   };
+  const points = subset(false);
+  const leftOut = subset(true);
   const diagonal = {
     type: 'scatter',
     mode: 'lines',
@@ -626,18 +635,22 @@ function drawSingleCrystal(figure, crystal) {
   };
   const layout = {
     height: figure.clientHeight,
-    margin: { l: 16, r: 16, t: 36, b: 16 },
+    // The toolbar stands above the plot, as on the pattern chart, and the statistics' line above that.
+    margin: { l: 16, r: 16, t: crystal.statistics ? 66 : 48, b: 16 },
     font: { family: font, color: pageStyle('--chart-ink') || undefined },
     showlegend: false,
     hovermode: 'closest',
-    annotations: crystal.title
-      ? [{ text: crystal.title, xref: 'paper', yref: 'paper', x: 0, y: 1, xanchor: 'left', yanchor: 'bottom',
-           showarrow: false, font: { family: font, color: pageStyle('--chart-ink') || undefined } }]
+    annotations: crystal.title || crystal.statistics
+      ? [{ text: [crystal.title, crystal.statistics].filter(Boolean).join('<br>'), xref: 'paper', yref: 'paper', x: 0, y: 1,
+           xanchor: 'left', yanchor: 'bottom', showarrow: false,
+           font: { family: font, color: pageStyle('--chart-ink') || undefined } }]
       : [],
     xaxis: { ...axis, title: { text: crystal.x_title } },
     yaxis: { ...axis, title: { text: crystal.y_title } },
   };
-  window.Plotly.newPlot(figure, [diagonal, points], sizedChart(layout), { responsive: true, displaylogo: false, modeBarButtons: MODEBAR });
+  window.Plotly.newPlot(figure, [diagonal, leftOut, points], sizedChart(layout), { responsive: true, displaylogo: false, displayModeBar: false });
+  // Reset keeps one range on both axes.
+  plotToolbar(figure, 'single-crystal', { 'xaxis.range': range, 'yaxis.range': range });
 }
 
 // One of a scan's evolution charts (edi ADR-0036): a parameter at each fitted dataset with its s.u. as an error bar,
@@ -669,9 +682,7 @@ function drawEvolution(figure, series) {
   };
   const layout = {
     height: figure.clientHeight,
-    // The toolbar stands at the right, clear of the title.
-    margin: { l: 16, r: 40, t: 40, b: 16 },
-    modebar: { orientation: 'v' },
+    margin: { l: 16, r: 16, t: 48, b: 16 },
     font: { family: font, color: pageStyle('--chart-ink') || undefined },
     title: { text: series.browser.title, x: 0.02, xanchor: 'left' },
     showlegend: false,
@@ -679,7 +690,8 @@ function drawEvolution(figure, series) {
     xaxis: { ...axis, title: { text: series.x_title } },
     yaxis: { ...axis },
   };
-  window.Plotly.newPlot(figure, [trace], sizedChart(layout), { responsive: true, displaylogo: false, modeBarButtons: MODEBAR });
+  window.Plotly.newPlot(figure, [trace], sizedChart(layout), { responsive: true, displaylogo: false, displayModeBar: false });
+  plotToolbar(figure, 'evolution');
 }
 
 // --- The structure views (edi ADR-0022) ---
@@ -693,8 +705,41 @@ function saveBlob(blob, name) {
   URL.revokeObjectURL(link.href);
 }
 
-// A Plotly chart's buttons with Save image last, in its own group, as on every chart of the app.
-const MODEBAR = [['zoom2d', 'pan2d', 'autoScale2d', 'resetScale2d'], ['toImage']];
+// The app's chart buttons for a Plotly chart without switches of its own (the single crystal's, an evolution chart):
+// the hover read-out, pan, box zoom and reset, then Save image in its own group, drawn as the pattern chart's are.
+// `reset` restores the axes, by default to their automatic ranges.
+function plotToolbar(figure, filename, reset = { 'xaxis.autorange': true, 'yaxis.autorange': true }) {
+  const state = { hover: true, mode: 'zoom' };
+  const toolbar = document.createElement('div');
+  toolbar.className = 'viewer-toolbar';
+  const buttons = [];
+  const add = (icon, title, onClick, pressed) => {
+    const element = button(icon, title, () => { onClick(); refresh(); });
+    buttons.push({ element, pressed });
+    toolbar.appendChild(element);
+  };
+  const refresh = () => {
+    for (const { element, pressed } of buttons) if (pressed) element.setAttribute('aria-pressed', String(pressed()));
+  };
+  const gap = () => {
+    const element = document.createElement('span');
+    element.className = 'gap';
+    toolbar.appendChild(element);
+  };
+  add('comment-alt', 'Show coordinates tooltip on hover', () => {
+    state.hover = !state.hover;
+    window.Plotly.relayout(figure, { hovermode: state.hover ? 'closest' : false });
+  }, () => state.hover);
+  gap();
+  const mode = name => () => { state.mode = name; window.Plotly.relayout(figure, { dragmode: name }); };
+  add('arrows-alt', 'Enable pan', mode('pan'), () => state.mode === 'pan');
+  add('expand', 'Enable box zoom', mode('zoom'), () => state.mode === 'zoom');
+  add('home', 'Reset axes', () => window.Plotly.relayout(figure, reset));
+  gap();
+  add('camera', 'Save image', () => window.Plotly.downloadImage(figure, { format: 'png', filename }));
+  figure.appendChild(toolbar);
+  refresh();
+}
 
 // A toolbar button with an icon (or a letter), its tooltip, and whether it is on.
 function button(icon, title, onClick) {

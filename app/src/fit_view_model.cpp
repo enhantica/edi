@@ -142,6 +142,16 @@ void FitAgreementModel::setRecord(const edi::Project& project) {
         const std::string form = edi::token(edi::SampleFormEnum::SINGLE_CRYSTAL);
         column(QString::fromStdString(edi::label("fit_result.prof_r_factor", form)));
         column(QString::fromStdString(edi::label("fit_result.prof_wr_factor", form)));
+        // Then which reflections the fit used (crysta's admission): Rint and R-sigma with their units, the one
+        // undefined text where undefined (edi::statistic_text), the merge mode and the counts.
+        column(QStringLiteral("R<sub>int</sub>"));
+        column(QStringLiteral("R<sub>sigma</sub>"));
+        column(tr("Merge"));
+        column(tr("Measured"));
+        column(tr("Unique"));
+        column(tr("Used"));
+        column(tr("Excluded"));
+        column(tr("Absent"));
         // A crystal with its own share shows its own factors; a record with no shares, its pooled ones. One with shares
         // has none for a crystal it does not hold.
         const bool shares = std::any_of(project.experiments.begin(), project.experiments.end(),
@@ -153,12 +163,31 @@ void FitAgreementModel::setRecord(const edi::Project& project) {
             const auto shown = [own, shares](const std::optional<double>& bank, const std::optional<double>& pooled) {
                 return own ? bank : shares ? std::nullopt : pooled;
             };
+            QStringList values{percent("fit_result.prof_r_factor",
+                                       shown(experiment.fit_prof_r_factor, result.prof_r_factor), form),
+                               percent("fit_result.prof_wr_factor",
+                                       shown(experiment.fit_prof_wr_factor, result.prof_wr_factor), form)};
+            std::optional<edi::ReflectionAdmission> admitted;
+            try {
+                admitted = edi::reflection_admission(project, i);
+            } catch (const std::exception&) {
+                admitted.reset();  // a project crysta cannot take shows no admission
+            }
+            // Each with its units, as the sidebar and the report show them (edi::statistic_text).
+            const auto ratio = [](const char* uid, const std::optional<double>& value) {
+                return QString::fromStdString(edi::statistic_text(uid, value));
+            };
+            if (admitted) {
+                values << ratio("fit_result_bank.r_int", admitted->r_int) << ratio("fit_result_bank.r_sigma", admitted->r_sigma)
+                       << QString::fromStdString(edi::option_label("reflns.merge", experiment.reflns_merge.value_or("none")))
+                       << QString::number(admitted->measured) << QString::number(admitted->unique)
+                       << QString::number(admitted->used) << QString::number(admitted->excluded)
+                       << QString::number(admitted->absent);
+            } else {
+                for (int empty = 0; empty < 8; ++empty) values << QString();
+            }
             rows.append({reinterpret_cast<const void*>(static_cast<std::uintptr_t>(i + 1)),
-                         {QString::fromStdString(experiment.name.value()), static_cast<int>(i),
-                          QStringList{percent("fit_result.prof_r_factor",
-                                              shown(experiment.fit_prof_r_factor, result.prof_r_factor), form),
-                                      percent("fit_result.prof_wr_factor",
-                                              shown(experiment.fit_prof_wr_factor, result.prof_wr_factor), form)}}});
+                         {QString::fromStdString(experiment.name.value()), static_cast<int>(i), values}});
         }
         if (columns != columns_) {
             columns_ = columns;
@@ -214,7 +243,7 @@ void FitAgreementModel::setRecord(const edi::Project& project) {
     };
     std::size_t datasets = 0;
     for (std::size_t i = 0; i < project.experiments.size(); ++i) {
-        datasets += in_fit(i) ? 1 : 0;
+        datasets += in_fit(i) ? 1U : 0U;
     }
     const QStringList blank_structures(static_cast<qsizetype>(2 * ordered.size()));
     const QStringList global{percent("fit_result.prof_r_factor", result.prof_r_factor),
@@ -316,6 +345,21 @@ void FitResultListModel::setScan(const ScanSummary& summary) {
     }
     if (summary.fitted > 0) {
         row(QStringLiteral("ruler"), tr("Goodness-of-fit range (%1)").arg(chi_label()), chi_range(summary));
+    }
+    // Rp and Rwp as ranges like χ² (the owner, 2026-11-16), each in its dictionary format.
+    if (summary.factors) {
+        // With the dictionary's unit, as the pattern header shows an R value ("7.23 %").
+        const auto range = [](const char* uid, double low, double high) {
+            const QString a = QString::fromStdString(edi::shown_text(uid, low));
+            const QString b = QString::fromStdString(edi::shown_text(uid, high));
+            const QString unit = QString::fromStdString(edi::units_label(uid));
+            const QString text = a == b ? a : QStringLiteral("%1–%2").arg(a, b);
+            return unit.isEmpty() ? text : text + u' ' + unit;
+        };
+        row(QStringLiteral("ruler"), tr("%1 range").arg(QString::fromStdString(edi::label("fit_result.prof_r_factor"))),
+            range("fit_result.prof_r_factor", summary.rp_min, summary.rp_max));
+        row(QStringLiteral("ruler"), tr("%1 range").arg(QString::fromStdString(edi::label("fit_result.prof_wr_factor"))),
+            range("fit_result.prof_wr_factor", summary.rwp_min, summary.rwp_max));
     }
     setTableRows(rows);
 }
@@ -474,6 +518,11 @@ void FitViewModel::startNative(std::function<void(const edi::FitReport&, bool)> 
 
 void FitViewModel::start() {
     const QPointer<FitViewModel> self(this);
+    // With nothing free there is nothing to fit: refused before it starts, so it never reports Failed.
+    if (!native_completion_ && !running_ && project_.free_parameters().empty()) {
+        emit refused(tr("Select at least one free parameter"));
+        return;
+    }
     // Data from a data collection that is not here yet is downloaded first (edi ADR-0069); the fit starts when it has
     // arrived, unless something else started or the project changed meanwhile (the fetch's own operation).
     if (!native_completion_ && owner_.needsCollectionData()) {
@@ -554,7 +603,6 @@ void FitViewModel::startImpl(std::uint64_t attempt) {
             return;
         }
         setFollowing(true);
-        if (owner_.retired_) return;
         if (owner_.retired_) return;
         job_->follow(true);
         if (owner_.retired_) return;
@@ -651,7 +699,7 @@ bool FitViewModel::undo() {
     const QPointer<FitViewModel> self(this);
     restoring_ = true;
     const auto restoration = qScopeGuard([self] { if (self) self->restoring_ = false; });
-    const bool undone = owner_.applyUndo(std::move(edit), whole).isEmpty();
+    const bool undone = owner_.applyUndo(edit, whole).isEmpty();
     if (!self) return undone;
     restoring_ = false;
     if (undone && whole) {
@@ -786,6 +834,8 @@ void FitViewModel::sync() {
     QString reason;
     if (!measured) {
         reason = tr("A fit needs measured data: no experiment in this project has any");
+    } else if (project_.free_parameters().empty()) {
+        reason = tr("Select at least one free parameter");
     } else if (scan) {
         reason = owner_.scanRefusal();
         // Outdated results can always be fitted again (Refit; the owner, 2026-10-26).
@@ -953,12 +1003,15 @@ bool FitViewModel::waitsForView(int mode) const {
 }
 
 bool FitViewModel::viewReady() const {
-    // A pattern chart once the last view asked for is applied; with no pattern chart, a Stacked view or Map with no
-    // dataset read pending, in every update mode.
+    // A pattern chart once the last view asked for is applied; a Stacked view or Map with no dataset read pending, in
+    // every update mode. With neither (Meas vs calc, Correlations, Structure, Evolution, another page) the followed
+    // file's model still follows at the chosen cadence, so those views and the parameter table move with the fit (the
+    // owner, 2026-11-17); the fit does not wait for them (waitsForView).
     if (owner_.patternShown()) {
         return owner_.followReady();
     }
-    return owner_.scanViewShown() && owner_.viewSettled();
+    // Settled, as for Stacked and Map: no read in flight, the last view asked for applied.
+    return owner_.viewSettled();
 }
 
 std::uint64_t FitViewModel::handOver(const std::string& file) {
@@ -1309,6 +1362,7 @@ void FitViewModel::presentEnded(const edi::FitReport& report, bool automatic_res
             // A fit stopped part way is not accepted: a candidate it ends goes back to the accepted state.
             if (report.status != edi::FitStatus::CANCELLED) pending_accept_ = std::make_shared<const edi::Project>(project_);
         }
+        if (!report.result) return;
         const edi::FitResultBase& result = *report.result;
         setProgress(QString::number(result.iterations),
                     QStringLiteral("%1 → %2").arg(chi(result.pre_fit.reduced_chi_square), chi(result.reduced_chi_square)),

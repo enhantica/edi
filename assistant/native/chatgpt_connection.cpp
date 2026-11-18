@@ -161,7 +161,11 @@ struct ChatGptConnection::State : QObject {
         ++generation; sink = {}; callback.close(); timer.stop();
         for (auto& [id, op] : operations) { (void)id; op->settled = true; if (op->owned) op->owned->cancel(); }
         operations.clear();
-        if (release_records) release_records();
+        // A destructor must not throw: a failing release is dropped rather than ending the program.
+        try {
+            if (release_records) release_records();
+        } catch (...) {
+        }
     }
     std::uint64_t now() {
         if (thread() != QThread::currentThread()) throw std::invalid_argument("Wrong native owner thread");
@@ -270,7 +274,7 @@ struct ChatGptConnection::State : QObject {
         operations.emplace(op->id, op);
         const QPointer<State> owner(this);
         HttpCallbacks callbacks;
-        callbacks.headers = [owner, op](int status, HttpHeaders headers) {
+        callbacks.headers = [owner, op](int status, const HttpHeaders& headers) {
             if (!owner || !owner->admit_callback(op)) return;
             try {
                 if (owner->requesting || op->headers || status < 100 || status > 599) throw std::invalid_argument("Invalid HTTP headers phase");
@@ -310,12 +314,14 @@ struct ChatGptConnection::State : QObject {
         HttpHeaders headers;
         if (authorized) headers.emplace_back("Authorization", "Bearer " + credentials.value("access_token").toString().toUtf8());
         request({HttpMethod::get, url, std::move(headers), {}, Limits::http_json_bytes, Limits::http_json_ms},
-            [done = std::move(done)](int status, QByteArray bytes) { if (status != 200) throw std::invalid_argument("Provider refused request"); done(document(bytes)); });
+            // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks): the std::function owns the lambda; the analyzer does not follow libc++'s release of it
+            [done = std::move(done)](int status, const QByteArray& bytes) { if (status != 200) throw std::invalid_argument("Provider refused request"); done(document(bytes)); });
     }
     void token(const QUrlQuery& fields, std::function<void(Object)> done) {
         request({HttpMethod::post, QUrl("https://auth.openai.com/api/accounts/oauth/token"),
                  {{"Content-Type", "application/x-www-form-urlencoded"}}, fields.query(QUrl::FullyEncoded).toUtf8(), Limits::http_json_bytes, Limits::http_json_ms},
-            [done = std::move(done)](int status, QByteArray body) { if (status != 200) throw std::invalid_argument("Authorization refused"); done(document(body)); });
+            // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks): the std::function owns the lambda; the analyzer does not follow libc++'s release of it
+            [done = std::move(done)](int status, const QByteArray& body) { if (status != 200) throw std::invalid_argument("Authorization refused"); done(document(body)); });
     }
     std::uint64_t record_usage() const {
         auto used = loaded_record_bytes;
@@ -371,7 +377,7 @@ struct ChatGptConnection::State : QObject {
         registrations = next;
     }
     void catalog();
-    void verify(Object tokens, const QString& client, bool renewal);
+    void verify(const Object& tokens, const QString& client, bool renewal);
     void arrival();
     void poll();
     void revoke();
@@ -379,7 +385,7 @@ struct ChatGptConnection::State : QObject {
 };
 
 void ChatGptConnection::State::catalog() {
-    get(QUrl("https://api.openai.com/v1/models"), [this](Object result) {
+    get(QUrl("https://api.openai.com/v1/models"), [this](const Object& result) {
         if (!result.value("models").isArray() || result.value("models").toArray().size() > static_cast<qsizetype>(Limits::models))
             detail::refuse("resource_exhausted", "Provider catalog exceeds limit");
         QJsonArray next; QSet<QString> seen; bool eligible = false;
@@ -405,7 +411,7 @@ void ChatGptConnection::State::catalog() {
         signing_in = false; renewing = false; error.clear(); error_code.clear(); emit_connection("ready");
     }, true);
 }
-void ChatGptConnection::State::verify(Object tokens, const QString& client, bool renewal) {
+void ChatGptConnection::State::verify(const Object& tokens, const QString& client, bool renewal) {
     if (!tokens.value("access_token").isString() || tokens.value("access_token").toString().isEmpty() ||
         tokens.value("token_type").toString().compare("Bearer", Qt::CaseInsensitive) != 0 ||
         !tokens.value("expires_in").isDouble() || tokens.value("expires_in").toDouble() <= 0 ||
@@ -442,13 +448,13 @@ void ChatGptConnection::State::verify(Object tokens, const QString& client, bool
         nonce.clear(); verifier.clear(); expected_state.clear(); callback.close(); catalog();
     };
     if (renewal && tokens.value("id_token").toString().isEmpty()) { complete(subject, label); return; }
-    get(QUrl("https://auth.openai.com/.well-known/openid-configuration"), [this, tokens, client, renewal, complete](Object metadata) {
+    get(QUrl("https://auth.openai.com/.well-known/openid-configuration"), [this, tokens, client, renewal, complete](const Object& metadata) {
         const QUrl jwks(metadata.value("jwks_uri").toString());
         const QUrl revoke(metadata.value("revocation_endpoint").toString());
         if (metadata.value("issuer") != "https://auth.openai.com" || !issuer_url(jwks) ||
             (!revoke.isEmpty() && !issuer_url(revoke))) throw std::invalid_argument("Unexpected issuer metadata");
         revocation_endpoint = revoke;
-        get(jwks, [this, tokens, client, renewal, complete](Object keys) {
+        get(jwks, [this, tokens, client, renewal, complete](const Object& keys) {
             if (!keys.value("keys").isArray() || keys.value("keys").toArray().size() > static_cast<qsizetype>(Limits::jwk_keys))
                 detail::refuse("resource_exhausted", "Verification key count exceeds limit");
             const auto decoded = jwt::decode(tokens.value("id_token").toString().toStdString());
@@ -511,7 +517,7 @@ void ChatGptConnection::State::arrival() {
                     throw std::invalid_argument("Incomplete registration");
                 QUrlQuery fields; fields.addQueryItem("grant_type", "authorization_code"); fields.addQueryItem("client_id", client);
                 fields.addQueryItem("code", code); fields.addQueryItem("code_verifier", verifier); fields.addQueryItem("redirect_uri", redirect); fields.addQueryItem("resource", "https://api.openai.com/v1");
-                token(fields, [this, client](Object tokens) { verify(tokens, client, false); });
+                token(fields, [this, client](const Object& tokens) { verify(tokens, client, false); });
             } catch (...) { fail("ChatGPT sign-in or consent could not be completed."); }
         });
     }
@@ -529,10 +535,10 @@ void ChatGptConnection::State::revoke() {
     if (revoking.value("refresh_token").toString().isEmpty()) { end_sign_out(!revoke_uncertain); return; }
     if (revocation_endpoint.isEmpty()) {
         request({HttpMethod::get, QUrl("https://auth.openai.com/.well-known/openid-configuration"), {}, {}, Limits::http_json_bytes, Limits::revoke_ms},
-            [this](int status, QByteArray body) {
+            [this](int code, const QByteArray& reply) {
                 try {
-                    if (status != 200) { end_sign_out(false); return; }
-                    const auto metadata = document(body);
+                    if (code != 200) { end_sign_out(false); return; }
+                    const auto metadata = document(reply);
                     const QUrl endpoint(metadata.value("revocation_endpoint").toString());
                     if (metadata.value("issuer") != "https://auth.openai.com" || !issuer_url(endpoint)) { end_sign_out(false); return; }
                     revocation_endpoint = endpoint; revoke();
@@ -549,9 +555,9 @@ void ChatGptConnection::State::revoke() {
     };
     request({HttpMethod::post, revocation_endpoint, {{"Content-Type", "application/x-www-form-urlencoded"}},
              form.query(QUrl::FullyEncoded).toUtf8(), Limits::http_json_bytes, Limits::revoke_ms},
-        [this, retry](int status, QByteArray body) {
-            if (status == 200 && body.isEmpty()) end_sign_out(true);
-            else if (status >= 500) retry(); else end_sign_out(false);
+        [this, retry](int code, const QByteArray& reply) {
+            if (code == 200 && reply.isEmpty()) end_sign_out(true);
+            else if (code >= 500) retry(); else end_sign_out(false);
         }, {}, retry);
 }
 void ChatGptConnection::State::poll() {
@@ -626,7 +632,7 @@ Reply ChatGptConnection::sign_in() {
     } catch (const detail::Refusal& e) { s.fail("Native sign-in input exceeded the assistant limit.", "edi.assistant." + q(e.code)); return no(s.error, s.error_code); }
     catch (...) { s.fail("ChatGPT sign-in could not start. Check the private connection store and system browser."); return no(s.error); }
 }
-Reply ChatGptConnection::connect_saved(std::string id) {
+Reply ChatGptConnection::connect_saved(const std::string& id) {
     auto& s = *state_;
     if (!registration_id(id)) return no("Invalid saved registration.");
     if (s.signing_in || s.renewing || s.signing_out || s.active_inference) return no("Stop the active native operation before reconnecting.");
@@ -648,7 +654,7 @@ Reply ChatGptConnection::connect_saved(std::string id) {
         s.credentials = saved->take(); s.renewing = true;
         QUrlQuery form; form.addQueryItem("grant_type", "refresh_token"); form.addQueryItem("client_id", client);
         form.addQueryItem("refresh_token", s.credentials.value("refresh_token").toString()); form.addQueryItem("resource", "https://api.openai.com/v1");
-        s.token(form, [&s, client](Object tokens) { s.verify(tokens, client, true); });
+        s.token(form, [&s, client](const Object& tokens) { s.verify(tokens, client, true); });
         return ok();
     } catch (const detail::Refusal& e) { s.fail("Saved authorization exceeded the assistant limit.", "edi.assistant." + q(e.code)); return no(s.error, s.error_code); }
     catch (...) { s.fail("Saved ChatGPT authorization could not be renewed. Sign in again."); return no(s.error); }
@@ -754,9 +760,9 @@ Reply ChatGptConnection::send(const JsonText& input) {
         if (!effort.isEmpty()) body["reasoning"] = Object{{"effort", effort}};
         auto wire = encoded(body);
         s.request_context = source; s.pending_terminal = {}; s.pending_calls = {}; s.pending_call_bytes = 2; const auto generation = s.generation; const auto connection = s.connection;
-        s.stream = std::make_unique<OpenAiStream>(source.value("turn_id").toString().toStdString(), source.value("request_id").toString().toStdString(), [&s, source, generation, connection](const JsonText& input) {
+        s.stream = std::make_unique<OpenAiStream>(source.value("turn_id").toString().toStdString(), source.value("request_id").toString().toStdString(), [&s, source, generation, connection](const JsonText& chunk) {
             if (generation != s.generation) return;
-            auto event = QJsonDocument::fromJson(QByteArray::fromStdString(input)).object(); event["connection_id"] = connection;
+            auto event = QJsonDocument::fromJson(QByteArray::fromStdString(chunk)).object(); event["connection_id"] = connection;
             if (event.value("type") == "tool_call") {
                 const auto project = source.value("context").toObject().value("project").toObject();
                 event["project_id"] = project.value("id").toString(); event["revision"] = project.isEmpty() ? QJsonValue("0") : project.value("revision");
@@ -769,7 +775,7 @@ Reply ChatGptConnection::send(const JsonText& input) {
             } else if (event.value("type") == "turn_finished") s.pending_terminal = event;
             else if (s.sink) s.sink(json(event));
         });
-        const auto done = [&s, source](int status, QByteArray) {
+        const auto done = [&s, source](int status, const QByteArray&) {
             s.active_inference = 0;
             if (status != 200 || !s.stream) { s.inference_failed("The provider request did not complete. Retry or reconnect."); return; }
             const auto decoded = s.stream->finish();
@@ -783,13 +789,13 @@ Reply ChatGptConnection::send(const JsonText& input) {
             // but only semantically completed responses become continuation.
             // Failed calls were deferred and never dispatched, so retry can use
             // the previous clean replay without manufacturing tool outcomes.
-            const bool completed = s.pending_terminal.value("status") == "completed";
+            const bool finished = s.pending_terminal.value("status") == "completed";
             s.replay = replay;
-            if (!output.isEmpty()) s.replay_groups.push_back({source.value("history").toArray().size(), output, completed});
+            if (!output.isEmpty()) s.replay_groups.push_back({source.value("history").toArray().size(), output, finished});
             auto terminal = std::exchange(s.pending_terminal, Object{});
             auto calls = std::exchange(s.pending_calls, QJsonArray{}); s.pending_call_bytes = 2;
             s.stream.reset();
-            const auto generation = s.generation;
+            const auto doneGeneration = s.generation;
             if (terminal.value("status") != "completed") {
                 s.set_error("Provider reply failed, incomplete or refused. No tools ran. Retry uses the last completed reply.");
                 terminal["message"] = s.error;
@@ -797,17 +803,17 @@ Reply ChatGptConnection::send(const JsonText& input) {
             else {
                 s.error.clear(); s.error_code.clear();
                 for (const auto& call : calls) {
-                    if (generation != s.generation || s.request_context.isEmpty()) return;
+                    if (doneGeneration != s.generation || s.request_context.isEmpty()) return;
                     if (s.sink) s.sink(json(call.toObject()));
                 }
             }
-            if (generation != s.generation || s.request_context.isEmpty()) return;
+            if (doneGeneration != s.generation || s.request_context.isEmpty()) return;
             s.request_context = {};
             if (s.sink) s.sink(json(terminal));
         };
-        const auto data = [&s](QByteArray data) {
+        const auto data = [&s](const QByteArray& chunk) {
             if (!s.stream) return;
-            const auto result = s.stream->feed(std::string_view(data.constData(), static_cast<std::size_t>(data.size())));
+            const auto result = s.stream->feed(std::string_view(chunk.constData(), static_cast<std::size_t>(chunk.size())));
             if (!result.ok) s.inference_failed(decoder_reason(result, false), q(result.code));
         };
         s.active_inference = s.request({HttpMethod::post, QUrl("https://api.openai.com/v1/responses"),
@@ -817,7 +823,7 @@ Reply ChatGptConnection::send(const JsonText& input) {
     } catch (const detail::Refusal& e) { return no("Assistant request was refused.", "edi.assistant." + q(e.code)); }
     catch (...) { s.inference_failed("The native provider request could not start."); return no("The native provider request could not start."); }
 }
-void ChatGptConnection::cancel(std::string turn_id) {
+void ChatGptConnection::cancel(const std::string& turn_id) {
     auto& s = *state_;
     if (s.active_inference && s.request_context.value("turn_id").toString() == q(turn_id)) s.inference_failed("The provider request was cancelled.");
 }

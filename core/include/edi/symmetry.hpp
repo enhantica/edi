@@ -27,7 +27,7 @@ struct ParameterTie {
     const Parameter* parameter = nullptr;
     TieKind kind = TieKind::Independent;
     const Parameter* leader = nullptr;  // Follows: the independent parameter it tracks
-    std::optional<double> fixed_value;  // Fixed: the constant symmetry gives it
+    std::optional<double> fixed_value{};  // Fixed: the constant symmetry gives it
 };
 
 // One row per cell parameter (a, b, c, alpha, beta, gamma), then one per atom site's fract_x,
@@ -109,6 +109,11 @@ void restore_dependent_uncertainties(Project& project);
 // returns numbers in [0, 1): the caller's random source, so a test can fix it. A space group crysta cannot resolve
 // leaves the site without a letter.
 AtomSite new_atom_site(const Structure& structure, const std::function<double()>& random);
+
+// The atom types a site of `structure` may take: the types crysta's scattering table holds for the probe and source of
+// each experiment linking it (isotopes with neutrons, ions with X-rays), sorted and without repeats. With no
+// experiment linking it, the elements a new atom may take.
+std::vector<std::string> atom_types(const Project& project, const Structure& structure);
 
 // Sets a site's ADP type and converts its values, through crysta's conversion (ADR-0027):
 // to an isotropic type the site keeps its equivalent isotropic value; to an anisotropic one it

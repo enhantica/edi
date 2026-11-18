@@ -255,6 +255,11 @@ class SingleCrystalReflectionModel : public RowTableModel {
     QString sort_role_;
     bool sort_ascending_ = true;
     std::shared_ptr<const std::vector<double>> frame_;  // a running fit's F²calc, when one is shown
+    // Per measured reflection its `_refln.include_status` code from crysta's admission, taken on each edit (sync),
+    // never per fit frame: a frame changes no exclusion.
+    std::vector<char> status_;
+    // Per measured reflection why it is used or not (ReflectionAdmission::reason), with the status.
+    std::vector<std::string> reason_;
     const edi::ExperimentBase& experiment_;
     const edi::Project& project_;
     QList<double> calculated_;
@@ -289,6 +294,8 @@ class ExcludedRegionListModel : public RowTableModel {
     Q_INVOKABLE bool setId(int row, const QString& id);
     Q_INVOKABLE bool setStart(int row, double start);
     Q_INVOKABLE bool setEnd(int row, double end);
+    // A single crystal's region axis, `d_spacing` or `sin_theta_over_lambda`.
+    Q_INVOKABLE bool setAxis(int row, const QString& axis);
     Q_INVOKABLE void append();
     Q_INVOKABLE void remove(int row);
 
@@ -297,6 +304,7 @@ class ExcludedRegionListModel : public RowTableModel {
         return role == QLatin1String("id") ? setId(row, value.toString())
                : role == QLatin1String("start") ? setStart(row, value.toDouble())
                : role == QLatin1String("end") ? setEnd(row, value.toDouble())
+               : role == QLatin1String("axis") ? setAxis(row, value.toString())
                                               : false;
     }
 
@@ -330,6 +338,8 @@ class LinkedStructureListModel : public RowTableModel {
     Q_INVOKABLE bool setEnabled(int row, bool enabled);
     Q_INVOKABLE void append();
     Q_INVOKABLE void remove(int row);
+    // The common scale estimated again (the Estimate beside Add linked structure), one undo step.
+    Q_INVOKABLE void estimateScale();
 
    protected:
     bool setRole(int row, const QString& role, const QVariant& value) override {

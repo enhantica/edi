@@ -349,4 +349,290 @@ TestCase {
         verify(running.count > 0, "The unchanged measured-data application command really starts a fit");
         tryVerify(() => !Session.project.fit.running && Session.project.fit.canUndo, 10000, "The measured-data control completes an actual fit with an undoable result");
     }
+    function test_visible_disabled_controls_without_measurements() {
+        open(false);
+        scaleRow();
+        const free = control("parameters.free.0");
+        verify(Ui.exposed(free) && !free.enabled, "Without measured data the Free column stays visible and disabled");
+        const header = control("parameters.freeHeader");
+        verify(Ui.exposed(header) && !header.interactionEnabled, "Without measured data the Free header retains its visible column geometry");
+        const variability = control("parameters.variability");
+        verify(Ui.exposed(variability) && !variability.enabled, "The parameter variability selector remains visible and disabled without measured data");
+        compare(control("statusBar.fit.button").keyIcon, "play", "The idle Fit button uses the plain play icon");
+    }
+    function rejectedPowderPoint(x) {
+        return x<=15 || (x>=38.5 && x<=41.5) || x>=85;
+    }
+    function removePowderRanges() {
+        const regions=Session.project.currentExperiment.excludedRegions;
+        const count=Probe.rows(regions).length;
+        compare(count,3,"The powder scale witness contains all three authored excluded regions");
+        for(let i=0;i<count;++i) regions.remove(0);
+        ready();
+        return count;
+    }
+    function restorePowderRanges(count) {
+        for(let i=0;i<count;++i) Session.project.undo();
+        ready();
+    }
+    function powderStimulus() {
+        open(false);
+        const count=removePowderRanges(), rows=Probe.rows(Session.project.currentExperiment.pattern);
+        let data="",wn=0,wd=0,un=0,ud=0,rn=0,rd=0,peak=0,peakRatio=0;
+        for(let i=0;i<rows.length;++i) {
+            const row=rows[i],net=row.intensityCalc-row.intensityBkg;
+            if(!isFinite(net)) continue;
+            // The engine profile is an input stimulus for a normal-equation invariant.
+            // Nonproportional net observations distinguish weighting and peak ratios.
+            const sigma=[1,4,2][i%3],ratio=rejectedPowderPoint(row.x)?1e10:1.2+0.35*(i%5);
+            const observed=row.intensityBkg+ratio*net+100+17*(i%7);
+            data+=row.x+" "+observed+" "+sigma+"\n";
+            rn+=net*(observed-row.intensityBkg)/(sigma*sigma); rd+=net*net/(sigma*sigma);
+            if(rejectedPowderPoint(row.x)) continue;
+            wn+=net*(observed-row.intensityBkg)/(sigma*sigma); wd+=net*net/(sigma*sigma);
+            un+=net*(observed-row.intensityBkg); ud+=net*net;
+            if(net>peak) {peak=net;peakRatio=(observed-row.intensityBkg)/net;}
+        }
+        restorePowderRanges(count);
+        console.info("Independent scale stimuli:",JSON.stringify({weighted:wn/wd,unit:un/ud,raw:rn/rd,peak:peakRatio,admittedDenominator:wd,rawDenominator:rd}));
+        verify(wd>0 && rd>wd,"Admitted and rejected powder points both carry calculated Bragg intensity");
+        verify(Math.abs(wn/wd-un/ud)>1e-4,"The powder load witness separates inverse-variance weights from unit weights");
+        verify(Math.abs(wn/wd-peakRatio)>1e-4,"The powder load witness separates WLS from a background-subtracted peak ratio");
+        verify(Math.abs(wn/wd-rn/rd)>1e-3,"Rejected observations change the optimum if the automatic initializer bypasses admission");
+        verify(SettingsProof.write(source,"scaled.xye",data),"The powder scale witness stages nonproportional measurements and poisoned excluded points");
+        return {k:wn/wd,unit:un/ud,peak:peakRatio,raw:rn/rd,data:data};
+    }
+    function loadPowderStimulus() {
+        const stimulus=powderStimulus();
+        verify(Session.project.loadDataInto(Session.project.currentExperiment,Qt.resolvedUrl(source+"/scaled.xye")),"The real powder data loader receives the admission-sensitive witness");
+        ready();
+        return stimulus;
+    }
+    function commonFactorWitness() {
+        let wn=0,wd=0,un=0,ud=0;
+        for(const row of Probe.rows(Session.project.currentExperiment.pattern)) {
+            if(!isFinite(row.intensityCalc)||!isFinite(row.intensityMeas)||!(row.intensityMeasSu>0)) continue;
+            const background=40+(row.x-10)/2, net=row.intensityCalc-background;
+            fuzzyCompare(row.intensityBkg,background,1e-8,"Every scale trigger holds the authored background fixed");
+            const observed=row.intensityMeas-background,w=1/(row.intensityMeasSu*row.intensityMeasSu);
+            wn+=w*net*observed;wd+=w*net*net;un+=net*observed;ud+=net*net;
+        }
+        verify(wd>0,"Every phase trigger leaves admitted measured calculated signal");
+        verify(Math.abs(wn/wd-un/ud)>1e-4,"Every phase-trigger witness distinguishes inverse-variance from unit weights");
+        const count=removePowderRanges();
+        let rn=0,rd=0;
+        for(const row of Probe.rows(Session.project.currentExperiment.pattern)) {
+            const net=row.intensityCalc-row.intensityBkg,w=1/(row.intensityMeasSu*row.intensityMeasSu);
+            if(!isFinite(net)||!isFinite(row.intensityMeas)||!isFinite(w)) continue;
+            rn+=w*net*(row.intensityMeas-row.intensityBkg);rd+=w*net*net;
+        }
+        restorePowderRanges(count);
+        verify(Math.abs(rn/rd-wn/wd)>1e-3,"Every phase trigger's rejected points change the optimum if admission is bypassed");
+        return wn/wd;
+    }
+    function scaleMatches(actual,expected) { return isFinite(actual) && Math.abs(actual-expected)<=3e-5; }
+    function test_scale_gate_rejects_competing_estimators_and_missing_trigger() {
+        const stimulus=powderStimulus();
+        verify(scaleMatches(stimulus.k,stimulus.k),"The scale gate accepts the independent admitted weighted optimum");
+        for(const wrong of [stimulus.unit,stimulus.peak,stimulus.raw,1])
+            verify(!scaleMatches(wrong,stimulus.k),"The actual scale comparison rejects unit weights, peak ratio, raw admission and an omitted load trigger");
+    }
+    function test_measured_load_fits_common_scale_with_fixed_background_and_one_undo() {
+        const stimulus=powderStimulus(), project=Session.project, before=scale().value;
+        verify(project.loadDataInto(project.currentExperiment,Qt.resolvedUrl(source+"/scaled.xye")),"Loading measurements exercises the actual automatic scale trigger");
+        ready();
+        const actual=scale().value;
+        // Also exercises the same admitted objective after initialization.
+        const remaining=commonFactorWitness();
+        project.undo();ready();
+        fuzzyCompare(scale().value,before,1e-12,"One undo restores the pre-load scale with the measurement load");
+        verify(project.currentExperiment.calculationOnly,"One undo restores the calculation-only experiment");
+        verify(scaleMatches(actual,before*stimulus.k),"Loading data applies the independent weighted admitted optimum rather than a peak or unit-weight estimator");
+        verify(scaleMatches(remaining,1),"The automatically scaled powder profile satisfies the admitted normal equation");
+    }
+
+    function phaseScales() {
+        return Probe.rows(Session.project.currentExperiment.linkedStructures).map(row => ({id: row.structureId, value: row.scale.value}));
+    }
+    function test_powder_phase_change_data() {
+        return [{tag: "add", action: "add"}, {tag: "remove", action: "remove"}];
+    }
+    function test_powder_phase_change(data) {
+        loadPowderStimulus();
+        const project = Session.project;
+        const structure = SettingsProof.text(source, "structures/phase.edi");
+        verify(SettingsProof.write(source, "extra.edi", structure.replace("data_phase", "data_extra").replace(/_cell.length_([abc]) 4/g, "_cell.length_$1 5")), "A second phase has a distinct lattice and independent peaks");
+        verify(project.loadStructure(Qt.resolvedUrl(source + "/extra.edi")), "The actual structure loader supplies the second phase");
+        ready();
+        const links = project.currentExperiment.linkedStructures;
+        if (data.action === "remove") {
+            links.append();
+            ready();
+            verify(SettingsProof.write(source, "third.edi", structure.replace("data_phase", "data_third").replace(/_cell.length_([abc]) 4/g, "_cell.length_$1 6")), "The removal witness keeps two independent phase scales after removing a third");
+            verify(project.loadStructure(Qt.resolvedUrl(source + "/third.edi")), "The actual structure loader supplies the third phase");
+            links.append();
+            ready();
+        }
+        let rows = Probe.rows(links);
+        rows.forEach((row, index) => row.scale.value = [2, 3, 5][index]);
+        ready();
+        const before = phaseScales();
+        const undoText = project.currentExperiment.text.inputText;
+        if (data.action === "add")
+            links.append();
+        else
+            links.remove(2);
+        ready();
+        const scales = phaseScales();
+        compare(scales.length, 2, "A phase edit leaves two live scales whose ratio can distinguish one common factor from independent fitting");
+        const expectedRatio = data.action === "add" ? 2 : 2 / 3;
+        fuzzyCompare(scales[0].value / scales[1].value, expectedRatio, 1e-8, "Automatic scale adjustment preserves the pre-edit ratio, including the newly added phase's default scale");
+        const remainingFactor=commonFactorWitness();
+        project.undo();
+        ready();
+        compare(JSON.stringify(phaseScales()), JSON.stringify(before), "One undo restores every prior phase scale and the phase membership");
+        compare(project.currentExperiment.text.inputText, undoText, "Undo restores the complete pre-edit experiment declaration");
+        verify(scaleMatches(remainingFactor,1), "Adding or removing a phase automatically reaches the closed-form common-factor optimum");
+    }
+
+    function test_single_crystal_phase_replacement_fits_scale_and_undoes_once() {
+        Session.closeProject();
+        source = SettingsProof.copyProject(Probe.repoUrl("tests/fixtures/fitting_correctness/admission_project"));
+        const structure = SettingsProof.text(source, "structures/phase.edi");
+        verify(SettingsProof.write(source, "extra.edi", structure.replace("data_phase", "data_extra")), "The single-crystal replacement has the same independently known one-atom Ni amplitude");
+        verify(Session.openProject(source), "The authored single-crystal scale witness opens through the actual Session");
+        const project = Session.project;
+        tryVerify(() => !project.calculating, 10000, "The single-crystal calculation settles before changing its linked phase");
+        verify(project.loadStructure(Qt.resolvedUrl(source + "/extra.edi")), "A replacement single-crystal phase enters through the actual structure loader");
+        tryVerify(() => !project.calculating, 10000, "The replacement structure load settles before the phase-link edit");
+        const experiment = project.currentExperiment;
+        experiment.scale.value = 2.3;
+        const before = experiment.text.inputText;
+        const oldId = experiment.linkedStructureId;
+        experiment.linkedStructureId = "extra";
+        tryVerify(() => !project.calculating, 10000, "Replacing the single-crystal phase publishes its later calculation");
+        compare(experiment.linkedStructureId, "extra", "The phase selector really replaces the enabled single-crystal link");
+        const loadedScale = experiment.scale.value;
+        const expected=JSON.parse(SettingsProof.text(source,"reference.json")).bank.scale;
+        project.undo();
+        tryVerify(() => !project.calculating, 10000, "Undo of the single-crystal phase replacement settles");
+        compare(experiment.linkedStructureId, oldId, "One undo restores the former single-crystal phase link");
+        fuzzyCompare(experiment.scale.value, 2.3, 1e-12, "One undo restores the scale before the automatic phase-change fit");
+        compare(experiment.text.inputText, before, "Undo restores the full pre-replacement single-crystal declaration");
+        fuzzyCompare(loadedScale, expected, 1e-5, "Replacing a single-crystal phase fits only the independently merged, non-absent, non-excluded observations above the cutoff");
+    }
+    function test_running_fit_uses_plain_stop_then_plain_play() {
+        open(true);
+        scale().free = true;
+        const fit = Session.project.fit;
+        const button = control("statusBar.fit.button");
+        compare(button.keyIcon, "play", "An idle measured-data fit exposes the plain play icon");
+        fit.start();
+        verify(fit.running, "The icon transition is observed during an actual started fit");
+        compare(button.keyIcon, "stop", "An actual running fit exposes the plain stop icon");
+        fit.cancel();
+        tryVerify(() => !fit.running, 10000, "The actual fit settles after Stop");
+        compare(button.keyIcon, "play", "A settled fit restores the plain play icon");
+    }
+
+    function test_single_crystal_measured_load_and_one_undo() {
+        Session.closeProject();
+        source = SettingsProof.copyProject(Probe.repoUrl("tests/fixtures/fitting_correctness/admission_project"));
+        verify(Session.openProject(source), "The independent Ni experiment opens before replacing its measured reflections");
+        const project = Session.project, experiment = project.currentExperiment;
+        tryVerify(() => !project.calculating, 10000, "The saved single-crystal calculation settles before data replacement");
+        experiment.scale.value = 2.3;
+        const before = experiment.text.inputText;
+        const original=SettingsProof.text(source,"experiments/bank.edi").split("_refln.intensity_meas_su\n")[1].trim().split("\n");
+        // The original observations are nonproportional; scaling their intensities changes
+        // merged scatter weights while retaining the rejected weak row below cutoff.
+        const data=original.map(line=>{const row=line.trim().split(/\s+/).map(Number);row[3]=row[3]*1.7;return row.join(" ");}).join("\n")+"\n";
+        verify(SettingsProof.write(source,"replacement.hkl",data),"The single-crystal replacement includes strong excluded/absent points and unequal-weight merged equivalents");
+        verify(project.loadDataInto(experiment,Qt.resolvedUrl(source+"/replacement.hkl")),"The actual single-crystal data loader reaches the common-factor trigger");
+        tryVerify(()=>!project.calculating,10000,"The single-crystal data replacement settles");
+        const afterScale=project.currentExperiment.scale.value;
+        const expected=JSON.parse(SettingsProof.text(source,"reference.json")).replacement.scale;
+        project.undo();
+        tryVerify(() => !project.calculating, 10000, "Undo of the single-crystal data load settles");
+        fuzzyCompare(project.currentExperiment.scale.value,2.3,1e-12,"One undo restores the previous single-crystal scale with its data");
+        compare(project.currentExperiment.text.inputText,before,"One undo restores the complete previous single-crystal input declaration");
+        fuzzyCompare(afterScale,expected,1e-5,"Single-crystal data replacement composes merging, absence policy, omission, range and fit cutoff in the independent weighted optimum");
+    }
+    function test_disabled_phase_keeps_scale_while_remaining_phase_rescales() {
+        loadPowderStimulus();
+        const project=Session.project, experiment=project.currentExperiment;
+        const structure=SettingsProof.text(source,"structures/phase.edi");
+        verify(SettingsProof.write(source,"extra.edi",structure.replace("data_phase","data_extra")),"A second powder phase supplies a genuinely disabled scale witness");
+        verify(project.loadStructure(Qt.resolvedUrl(source+"/extra.edi")),"The second structure is added through the actual loader");
+        experiment.linkedStructures.append();
+        ready();
+        let rows=Probe.rows(experiment.linkedStructures);
+        rows[0].scale.value=2;
+        rows[1].scale.value=3;
+        ready();
+        verify(experiment.linkedStructures.setEnabled(1,false),"The phase-disable action exercises the declared removal trigger");
+        ready();
+        rows=Probe.rows(experiment.linkedStructures);
+        const disabledScale=rows[1].scale.value;
+        const remainingFactor=commonFactorWitness();
+        project.undo();
+        ready();
+        const restored=Probe.rows(experiment.linkedStructures);
+        verify(restored[1].enabled,"One undo restores the disabled phase membership");
+        fuzzyCompare(restored[0].scale.value,2,1e-12,"One undo restores the first pre-disable scale");
+        fuzzyCompare(restored[1].scale.value,3,1e-12,"One undo restores the second pre-disable scale");
+        fuzzyCompare(disabledScale,3,1e-12,"A disabled link keeps its own scale during common-factor initialization");
+        verify(scaleMatches(remainingFactor,1),"Disabling a phase fits only the remaining enabled phase contribution");
+    }
+
+    function test_powder_link_replacement_fits_scale_and_undoes_once() {
+        loadPowderStimulus();
+        const project=Session.project,experiment=project.currentExperiment;
+        const structure=SettingsProof.text(source,"structures/phase.edi");
+        verify(SettingsProof.write(source,"extra.edi",structure.replace("data_phase","data_extra").replace(/_cell.length_([abc]) 4/g,"_cell.length_$1 5")),"The powder replacement supplies different phase peaks");
+        verify(project.loadStructure(Qt.resolvedUrl(source+"/extra.edi")),"The replacement powder structure enters through its actual loader");
+        ready();
+        experiment.scale.value=2.3;ready();
+        const before=experiment.text.inputText,old=experiment.linkedStructureId;
+        experiment.linkedStructureId="extra";ready();
+        compare(experiment.linkedStructureId,"extra","The powder phase selector actually replaces its one linked structure");
+        const remaining=commonFactorWitness();
+        project.undo();ready();
+        compare(experiment.linkedStructureId,old,"One undo restores the former powder linked structure");
+        fuzzyCompare(experiment.scale.value,2.3,1e-12,"One undo restores the pre-replacement powder scale");
+        compare(experiment.text.inputText,before,"One undo restores the full powder phase declaration");
+        verify(scaleMatches(remaining,1),"Powder linked-structure replacement applies the admitted weighted common factor with the background fixed");
+    }
+
+    function test_common_scale_no_change_data() {
+        return [{tag:"zero-calculation",zero:true},{tag:"negative-optimum",zero:false}];
+    }
+    function test_common_scale_no_change(data) {
+        open(false);
+        const project=Session.project;
+        scale().value=data.zero?0:2.3;
+        ready();
+        const before=scale().value;
+        let observations="", numerator=0, denominator=0;
+        const rows=Probe.rows(project.currentExperiment.pattern);
+        for(let index=0;index<rows.length;++index) {
+            const row=rows[index];
+            if(!isFinite(row.intensityCalc)||!isFinite(row.intensityBkg)) continue;
+            const observed=row.intensityBkg/2, sigma=1+index%3, net=row.intensityCalc-row.intensityBkg;
+            observations+=row.x+" "+observed+" "+sigma+"\n";
+            numerator+=net*(observed-row.intensityBkg)/(sigma*sigma);
+            denominator+=net*net/(sigma*sigma);
+        }
+        if(data.zero)
+            fuzzyCompare(denominator,0,1e-20,"The zero-signal guard genuinely has a zero normal-equation denominator");
+        else
+            verify(denominator>0 && numerator<0,"The nonpositive-factor guard genuinely has calculated signal and a negative weighted optimum");
+        verify(SettingsProof.write(source,"guard.xye",observations),"The no-change witness declares either zero calculated signal or a negative optimum");
+        verify(project.loadDataInto(project.currentExperiment,Qt.resolvedUrl(source+"/guard.xye")),"The no-change guard is reached by a real measured-data load: "+project.lastError);
+        ready();
+        fuzzyCompare(scale().value,before,1e-12,"A zero denominator or nonpositive common factor leaves scales unchanged");
+        const notes=Probe.rows(Session.loadWarnings).filter(row=>/phase scales.*left|scale.*unchanged/i.test(String(row.message)));
+        compare(notes.length,1,"A skipped common factor posts one explanatory info line in Messages");
+    }
+
 }

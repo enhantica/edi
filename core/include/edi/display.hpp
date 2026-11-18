@@ -2,6 +2,7 @@
 #pragma once
 
 #include <cstddef>
+#include <limits>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -115,6 +116,12 @@ std::string display_text(std::string_view uid, double value, std::string_view va
 /// The same value as a display shows it, by the app's one rule for numbers: a decimal when 0.001 <= |x| < 1000, else
 /// three significant digits with a power of ten ("8.40×10⁻⁵"; "8.40e-5" without `display`).
 std::string shown_text(std::string_view uid, double value, std::string_view variant = {}, bool display = true);
+/// The one text every surface shows for a value the data leave undefined: an s.u. the fit cannot compute, an agreement
+/// factor over no merged group.
+inline constexpr std::string_view kUndefinedValue = "undefined";
+/// A statistic of item `uid` as a summary line shows it: the number by its dictionary format with the item's units
+/// ("1.23 %"), or kUndefinedValue when it has no finite value.
+std::string statistic_text(std::string_view uid, std::optional<double> value, std::string_view variant = {});
 /// A single crystal's reflection as its chart's hover reads it (edi ADR-0049): its Miller indices, the measured value
 /// with its s.u. by `su_rule` (alone, by its format, without one) and the calculated value by its format, each named by
 /// its dictionary label, in F² (`squared`) or F. A value that is not finite is left out.
@@ -124,6 +131,13 @@ std::vector<std::string> reflection_hover_lines(int h, int k, int l, double meas
 double display_step(const Parameter& parameter, std::string_view variant = {});
 /// The same for a value of a numeric item.
 double display_step(std::string_view uid, double value, std::string_view variant = {});
+/// The Analysis slider's limits: value ± half_width, widened outward to whole multiples of one unit of the half
+/// width's leading digit, or of `step` when that is larger, so both limit boxes read round numbers. They never leave
+/// the parameter's admissible range [`lower`, `upper`]: a side cut at a limit gives its width to the other side, and the
+/// span is at least one unit (a B iso of 0 with limits 0 and 10 slides from 0 up, never below 0).
+std::pair<double, double> slider_limits(double value, double half_width, double step,
+                                        double lower = -std::numeric_limits<double>::infinity(),
+                                        double upper = std::numeric_limits<double>::infinity());
 
 /// A parameter's value and s.u. as the project file and the Text tab spell them under `su_rule`.
 struct FileText {

@@ -77,7 +77,7 @@ const char* write_history_file(const QString& path,const QJsonArray& rows) {
     return file.commit()?nullptr:"commit";
 }
 }
-AssistantHistoryArchive::AssistantHistoryArchive(QObject* receiver,QString requested,Notice notice,bool provisional)
+AssistantHistoryArchive::AssistantHistoryArchive(QObject* receiver,const QString& requested,Notice notice,bool provisional)
     : pending_receiver_(receiver),pending_notice_(std::move(notice)) {
     // A replacement VM reuses the same file owner, including its accepted final
     // snapshot. An older worker can never land after a newer archive revision.
@@ -126,7 +126,7 @@ bool AssistantHistoryArchive::ClearBarrier::retry() noexcept {
         return true;
     }catch(...) {return false;}
 }
-std::vector<AssistantHistoryArchive::ClearBarrier> AssistantHistoryArchive::clearCaches(QObject* receiver,Notice notice) {
+std::vector<AssistantHistoryArchive::ClearBarrier> AssistantHistoryArchive::clearCaches(QObject* receiver,const Notice& notice) {
     const auto root=QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation)+"/assistant";
     QStringList paths{root+"/history.json"};
     const auto recovery=[](const QString& name) {return name.startsWith("history-recovered-") && !QUuid(name.mid(18)).isNull();};

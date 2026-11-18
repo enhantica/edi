@@ -44725,6 +44725,301 @@
       "edi_sha": "5dd558c382ddcfb406d9b5a2220375c5a6e81322",
       "crysta_build_commit": "361b2b641b5187e263b50242a8374382d22fb5de",
       "classification": "CLI wiring regression pin, not an independent physics oracle"
+    },
+    {
+      "id": "sc-neut-cwl_tb2ti2o7-heidi_exclusions",
+      "path": "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_exclusions/project",
+      "mode": "single",
+      "minimizer": "crysta (auto)",
+      "inputs_sha256": {
+        "analysis/analysis.edi": "bbee6c124a9efa78411d31fb1eef11495ba2eadbd7172a36b30905f1484b9876",
+        "experiments/heidi.edi": "9996b5c1420af1e4488488153ceadb7108e8ac1d7bfcd943e69f64ba81df1925",
+        "project.edi": "7930faa350fbd4486a1743f00b576009a4c0a96dd01d60c0610790293388ea69",
+        "structures/tb2ti2o7.edi": "e2752395f4a64fd69d6bd481bdf6895a36a09248a37e7f0ba3e6c33a0785a0df"
+      },
+      "record": {
+        "schema": "9",
+        "record": "fit",
+        "status": "done",
+        "mode": "single",
+        "converged": "true",
+        "n_points_loaded": "220",
+        "n_points_fitted": "210",
+        "n_free": "1",
+        "iterations": "1",
+        "reduced_chi_square": "81.72706664",
+        "rwp": "0.2347976656",
+        "stopping_rule": "chi_square_change",
+        "stopping_value": "3.024379681e-14",
+        "last_shift_su": "2.541325711e-06",
+        "descent": "auto",
+        "fast_descent": "true",
+        "linear_snap": "false",
+        "guarded_linear_snap": "false",
+        "linear_snap_attempts": "0",
+        "linear_snap_rejections": "0",
+        "linear_snap_guard_residual_evaluations": "0",
+        "multistart_prune": "true",
+        "multistart_probes_started": "2",
+        "multistart_probes_pruned": "1",
+        "multistart_probe_iterations": "4",
+        "multistart_survivor": "fast_descent",
+        "unevaluable_trials": "0",
+        "terminal_unevaluable_trials": "0",
+        "nonfinite_trials": "0",
+        "terminal_nonfinite_trials": "0",
+        "bound_active_columns": "none",
+        "zero_jacobian_columns": "none",
+        "elapsed_ms": "69.453",
+        "iter.1.rwp": "0.2347976656",
+        "iter.1.reduced_chi_square": "81.72706664",
+        "iter.1.unevaluable_trials": "0",
+        "iter.1.elapsed_ms": "59.150",
+        "param.scale.value": "3.239714656",
+        "param.scale.uncertainty": "0.05413041406",
+        "x-edi.correlations": "0"
+      },
+      "stderr": "",
+      "parameters": [
+        {
+          "value": 10.13,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 10.13,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 10.13,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 90.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 90.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 90.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.5,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.5,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.5,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 1.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 1.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.32804,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.125,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.125,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 1.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.375,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.375,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.375,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 1.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 152.827,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.793,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 3.239714655611742,
+          "uncertainty": 0.054130414062085824,
+          "free": true
+        }
+      ],
+      "edi_sha": "1e6f77bdf0cd4021f1e5ea94c9ea09bae433d167",
+      "crysta_build_commit": "d34aafeea655976ee131aad72aeacacf46d326db",
+      "classification": "CLI wiring regression pin, not an independent physics oracle"
     }
   ],
   "catalogue_identity_aliases": {

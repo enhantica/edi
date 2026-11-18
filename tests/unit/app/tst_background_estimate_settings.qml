@@ -21,6 +21,8 @@ TestCase {
         sidebarPane = null;
         appWindow = application.createObject(null);
         verify(appWindow !== null, "Saved estimation settings must use the production app window");
+        appWindow.requestActivate();
+        tryCompare(appWindow, "active", true, 2000, "Background controls receive input in the active app window");
         verify(waitForRendering(appWindow.contentItem), "The settings window must render");
     }
     function cleanup() {
@@ -162,6 +164,7 @@ TestCase {
         for (let step = 0; step < index; ++step)
             verify(SettingsProof.key(control, Qt.Key_Down), "The option list must receive actual navigation input");
         verify(SettingsProof.key(control, Qt.Key_Return), "Return must activate the actual saved estimate option");
+        tryCompare(control, "token", token, 1000, "The actual keyboard choice publishes its requested saved token");
     }
     function valueField(labels, identity) {
         const fields = objects(sidebarPane, "label").filter(control => Ui.inPane(control) &&
@@ -463,10 +466,14 @@ TestCase {
         verify(Math.abs(fields[0].width - fields[2].width) <= 1,
                "Both Background selectors must have the same grid width");
         const method = fields[2], peaks = fields[0];
+        // Dictionary option labels retain scientific acronym spelling.
+        const optionLabels = {auto: "Auto", snip: "SNIP", arpls: "arPLS", fabc: "FABC",
+                              subtract: "Subtract", ignore: "Ignore"};
         [method, peaks].forEach(control => {
             for (let index = 0; index < optionTokens(control).length; ++index)
-                compare(String(control.textAt(index)), String(control.textAt(index)).toLowerCase(),
-                        "Every public Background combo value must display in lower case");
+                compare(String(control.textAt(index)),
+                        optionLabels[optionTokens(control)[index]],
+                        "Every Background choice retains its dictionary label and saved token");
         });
         choose(method, "snip");
         verify(!namedField("background_estimate.smoothness").enabled,
@@ -475,8 +482,8 @@ TestCase {
         verify(namedField("background_estimate.smoothness").enabled,
                "Auto resolving to arpls must enable curve smoothness again");
         compare(String(method.token), "auto", "The resolved baseline hint must retain the saved auto token");
-        verify(/auto/.test(String(method.displayText)) && /·.*arpls/.test(String(method.displayText)),
-               "The stable baseline-method selector must display auto followed by its resolved arpls choice");
+        verify(/^Auto /.test(String(method.displayText)) && /·.*arpls/.test(String(method.displayText)),
+               "The baseline-method selector displays Auto followed by its resolved arpls choice");
         const destination = Probe.scratchProjectUrl();
         verify(Session.saveAs(destination), "All background types must save their shared and own estimate controls");
         if (kind !== "line-segment") {

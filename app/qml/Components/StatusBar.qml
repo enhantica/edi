@@ -40,7 +40,8 @@ EaElements.StatusBar {
     signal updateRequested
     readonly property real updateRoom: updateGroup.visible ? updateGroup.width + EaStyle.Sizes.fontPixelSize * 1.2 : 0
 
-    visible: DesktopUpdates.available || EaGlobals.Vars.appBarCurrentIndex !== 0 || AppState.analysisPageEnabled || assistantStatusNeeded || AppState.tutorialRunning
+    // Never on Home, in any case (owner, 2026-11-17): Home has its own Update available link.
+    visible: EaGlobals.Vars.appBarCurrentIndex !== 0
 
     // The items show their keys only when all of them fit with their keys in the bar's width; otherwise each
     // shows its icon and value (the owner, 2026-10-03). Measured from the items' own widths, so it holds for
@@ -322,9 +323,10 @@ EaElements.StatusBar {
             readonly property string outcome: bar.fit ? bar.fit.outcome : ""
             readonly property bool outdated: bar.fit !== null && bar.fit.outOfDate
             shown: fitArea.summary && outcome !== ""
-            showKey: bar.keysFit
+            // The state alone with its icon, never a "Status" key (the owner, 2026-11-16).
+            showKey: false
             keyIcon: outdated ? "history" : FitOutcomes.icon(outcome)
-            keyText: qsTr("Status")
+            keyText: ""
             valueText: outdated ? qsTr("Outdated") : FitOutcomes.word(outcome)
             iconColor: outdated ? EaStyle.Colors.orange : FitOutcomes.color(outcome, EaStyle.Colors.statusBarIconForeground)
             valueColor: outdated ? EaStyle.Colors.orange : FitOutcomes.textColor(outcome)

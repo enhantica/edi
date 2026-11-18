@@ -471,12 +471,69 @@
           "storage": [
             "crysta::Column<double>"
           ]
+        },
+        {
+          "member": "ExcludedRegion::axis",
+          "type": "detail::WrittenText",
+          "items": [
+            "axis"
+          ],
+          "storage": [
+            "crysta::Column<std::string>"
+          ]
         }
       ],
       "row": "ExcludedRegion",
       "legacy": [
         "_easydiffraction_excluded_region"
       ]
+    },
+    {
+      "name": "_excluded_reflection",
+      "form": "loop",
+      "columns": [
+        {
+          "member": "ExcludedReflection::id",
+          "type": "ItemKey",
+          "items": [
+            "id"
+          ],
+          "storage": [
+            "crysta::Column<std::string>"
+          ]
+        },
+        {
+          "member": "ExcludedReflection::index_h",
+          "type": "detail::Written<int>",
+          "items": [
+            "index_h"
+          ],
+          "storage": [
+            "crysta::Column<int>"
+          ]
+        },
+        {
+          "member": "ExcludedReflection::index_k",
+          "type": "detail::Written<int>",
+          "items": [
+            "index_k"
+          ],
+          "storage": [
+            "crysta::Column<int>"
+          ]
+        },
+        {
+          "member": "ExcludedReflection::index_l",
+          "type": "detail::Written<int>",
+          "items": [
+            "index_l"
+          ],
+          "storage": [
+            "crysta::Column<int>"
+          ]
+        }
+      ],
+      "row": "ExcludedReflection"
     },
     {
       "name": "_background",
@@ -712,6 +769,87 @@
         }
       ],
       "row": "SequentialExtractRule"
+    },
+    {
+      "name": "_sequential_fit_experiment",
+      "form": "loop",
+      "columns": [
+        {
+          "member": "SequentialFitExperiment::experiment_id",
+          "type": "ItemKey",
+          "items": [
+            "experiment_id"
+          ],
+          "storage": [
+            "crysta::Column<std::string>"
+          ]
+        },
+        {
+          "member": "SequentialFitExperiment::file_pattern",
+          "type": "detail::WrittenText",
+          "items": [
+            "file_pattern"
+          ],
+          "storage": [
+            "crysta::Column<std::string>"
+          ]
+        }
+      ],
+      "row": "SequentialFitExperiment"
+    },
+    {
+      "name": "_experiment_set",
+      "form": "loop",
+      "columns": [
+        {
+          "member": "ExperimentSet::id",
+          "type": "ItemKey",
+          "items": [
+            "id"
+          ],
+          "storage": [
+            "crysta::Column<std::string>"
+          ]
+        },
+        {
+          "member": "ExperimentSet::template_experiment_id",
+          "type": "detail::WrittenText",
+          "items": [
+            "template_experiment_id"
+          ],
+          "storage": [
+            "crysta::Column<std::string>"
+          ]
+        }
+      ],
+      "row": "ExperimentSet"
+    },
+    {
+      "name": "_experiment_set_member",
+      "form": "loop",
+      "columns": [
+        {
+          "member": "ExperimentSetMember::experiment_id",
+          "type": "ItemKey",
+          "items": [
+            "experiment_id"
+          ],
+          "storage": [
+            "crysta::Column<std::string>"
+          ]
+        },
+        {
+          "member": "ExperimentSetMember::set_id",
+          "type": "detail::WrittenText",
+          "items": [
+            "set_id"
+          ],
+          "storage": [
+            "crysta::Column<std::string>"
+          ]
+        }
+      ],
+      "row": "ExperimentSetMember"
     },
     {
       "name": "_fit_parameter_correlation",
@@ -1593,6 +1731,20 @@
           "type": "std::optional<std::string>",
           "items": [
             "threshold_basis"
+          ]
+        },
+        {
+          "member": "ExperimentBase::reflns_merge",
+          "type": "std::optional<std::string>",
+          "items": [
+            "merge"
+          ]
+        },
+        {
+          "member": "ExperimentBase::reflns_absences",
+          "type": "std::optional<std::string>",
+          "items": [
+            "absences"
           ]
         }
       ],
@@ -3969,12 +4121,47 @@
       "category": "_excluded_region"
     },
     {
+      "member": "ExcludedRegion::axis",
+      "type": "detail::WrittenText",
+      "category": "_excluded_region"
+    },
+    {
       "member": "ExcludedRegion::row",
       "type": "detail::RowLink",
       "part": "the row's link to its collection"
     },
     {
       "member": "ExcludedRegion::epoch",
+      "type": "detail::Epoch",
+      "part": "the row's identity as a calculation input"
+    },
+    {
+      "member": "ExcludedReflection::id",
+      "type": "ItemKey",
+      "category": "_excluded_reflection"
+    },
+    {
+      "member": "ExcludedReflection::index_h",
+      "type": "detail::Written<int>",
+      "category": "_excluded_reflection"
+    },
+    {
+      "member": "ExcludedReflection::index_k",
+      "type": "detail::Written<int>",
+      "category": "_excluded_reflection"
+    },
+    {
+      "member": "ExcludedReflection::index_l",
+      "type": "detail::Written<int>",
+      "category": "_excluded_reflection"
+    },
+    {
+      "member": "ExcludedReflection::row",
+      "type": "detail::RowLink",
+      "part": "the row's link to its collection"
+    },
+    {
+      "member": "ExcludedReflection::epoch",
       "type": "detail::Epoch",
       "part": "the row's identity as a calculation input"
     },
@@ -5100,6 +5287,23 @@
       "category": "_reflns"
     },
     {
+      "member": "ExperimentBase::reflns_merge",
+      "type": "std::optional<std::string>",
+      "category": "_reflns"
+    },
+    {
+      "member": "ExperimentBase::reflns_absences",
+      "type": "std::optional<std::string>",
+      "category": "_reflns"
+    },
+    {
+      "member": "ExperimentBase::excluded_reflections",
+      "type": "ItemVec<ExcludedReflection>",
+      "holds": [
+        "_excluded_reflection"
+      ]
+    },
+    {
       "member": "ExperimentBase::sin_theta_over_lambda_max",
       "type": "std::optional<double>",
       "category": "_data_range"
@@ -5339,6 +5543,26 @@
       "not_storage": "a fit report"
     },
     {
+      "member": "ScanFileRecord::factors",
+      "type": "std::vector<Factors>",
+      "not_storage": "a fit report"
+    },
+    {
+      "member": "Factors::experiment",
+      "type": "std::string",
+      "not_storage": "a fit report"
+    },
+    {
+      "member": "Factors::rp",
+      "type": "double",
+      "not_storage": "a fit report"
+    },
+    {
+      "member": "Factors::rwp",
+      "type": "double",
+      "not_storage": "a fit report"
+    },
+    {
       "member": "ScanPreamble::total_files",
       "type": "int",
       "not_storage": "a fit report"
@@ -5534,6 +5758,31 @@
       "not_storage": "a linked structure's weight fraction, derived from the model on each read"
     },
     {
+      "member": "DerivedQuantity::value",
+      "type": "double",
+      "not_storage": "a derived value with its s.u., computed from the model on each read"
+    },
+    {
+      "member": "DerivedQuantity::uncertainty",
+      "type": "std::optional<double>",
+      "not_storage": "a derived value with its s.u., computed from the model on each read"
+    },
+    {
+      "member": "SphericalMoment::modulus",
+      "type": "DerivedQuantity",
+      "not_storage": "a moment's spherical form, derived from the model on each read"
+    },
+    {
+      "member": "SphericalMoment::polar",
+      "type": "DerivedQuantity",
+      "not_storage": "a moment's spherical form, derived from the model on each read"
+    },
+    {
+      "member": "SphericalMoment::azimuthal",
+      "type": "DerivedQuantity",
+      "not_storage": "a moment's spherical form, derived from the model on each read"
+    },
+    {
       "member": "ProjectMetadata::name",
       "type": "std::string",
       "category": "_metadata"
@@ -5597,6 +5846,36 @@
       "member": "SequentialExtractRule::required",
       "type": "detail::Written<bool>",
       "category": "_sequential_fit_extract"
+    },
+    {
+      "member": "SequentialFitExperiment::experiment_id",
+      "type": "ItemKey",
+      "category": "_sequential_fit_experiment"
+    },
+    {
+      "member": "SequentialFitExperiment::file_pattern",
+      "type": "detail::WrittenText",
+      "category": "_sequential_fit_experiment"
+    },
+    {
+      "member": "ExperimentSet::id",
+      "type": "ItemKey",
+      "category": "_experiment_set"
+    },
+    {
+      "member": "ExperimentSet::template_experiment_id",
+      "type": "detail::WrittenText",
+      "category": "_experiment_set"
+    },
+    {
+      "member": "ExperimentSetMember::experiment_id",
+      "type": "ItemKey",
+      "category": "_experiment_set_member"
+    },
+    {
+      "member": "ExperimentSetMember::set_id",
+      "type": "detail::WrittenText",
+      "category": "_experiment_set_member"
     },
     {
       "member": "ParameterAlias::id",
@@ -5673,6 +5952,13 @@
       "type": "ItemVec<SequentialExtractRule>",
       "holds": [
         "_sequential_fit_extract"
+      ]
+    },
+    {
+      "member": "SequentialFitConfig::experiments",
+      "type": "ItemVec<SequentialFitExperiment>",
+      "holds": [
+        "_sequential_fit_experiment"
       ]
     },
     {
@@ -5975,7 +6261,8 @@
       "type": "SequentialFitConfig",
       "holds": [
         "_sequential_fit",
-        "_sequential_fit_extract"
+        "_sequential_fit_extract",
+        "_sequential_fit_experiment"
       ]
     },
     {
@@ -5990,6 +6277,20 @@
       "type": "ItemVec<ParameterConstraint>",
       "holds": [
         "_constraint"
+      ]
+    },
+    {
+      "member": "Project::experiment_sets",
+      "type": "ItemVec<ExperimentSet>",
+      "holds": [
+        "_experiment_set"
+      ]
+    },
+    {
+      "member": "Project::experiment_set_members",
+      "type": "ItemVec<ExperimentSetMember>",
+      "holds": [
+        "_experiment_set_member"
       ]
     },
     {
@@ -6101,8 +6402,17 @@
     "_evolution_chart": [
       "_evolution_chart"
     ],
+    "_excluded_reflection": [
+      "_excluded_reflection"
+    ],
     "_excluded_region": [
       "_excluded_region"
+    ],
+    "_experiment_set": [
+      "_experiment_set"
+    ],
+    "_experiment_set_member": [
+      "_experiment_set_member"
     ],
     "_experiment_type": [
       "_experiment_type"
@@ -6208,6 +6518,9 @@
     ],
     "_sequential_fit": [
       "_sequential_fit"
+    ],
+    "_sequential_fit_experiment": [
+      "_sequential_fit_experiment"
     ],
     "_sequential_fit_extract": [
       "_sequential_fit_extract"

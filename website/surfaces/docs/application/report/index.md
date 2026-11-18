@@ -16,7 +16,7 @@ The **Report** page presents structures, experiments, fit information and correl
 
 ## Review the document
 
-The main view shows the report with its figures and structure views. Inspect it after a fit, particularly the selected experiment, model values and charts.
+The main view shows the report with its figures and structure views. Inspect it after a fit, particularly the selected experiment, model values and charts. Each pattern chart has its hover, pan, zoom and reset buttons, and each structure view its camera buttons, as on the other pages; the exported HTML report's charts carry the same buttons.
 
 The sidebar has **Export** and **Contents** groups.
 

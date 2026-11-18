@@ -227,6 +227,34 @@ def reserve_identity(
     raise RuntimeError('No calendar version could be reserved')
 
 
+def withdraw_drafts(
+    repo: str, commit: str, *, prerelease: bool, reservations_only: bool = False
+) -> list[str]:
+    """Delete the drafts a failed release run left for this source and channel.
+
+    A failed or cancelled run would otherwise leave its draft behind, holding a version number that
+    is never published. Only drafts are touched, never a published release; with
+    `reservations_only` only a draft that is still an empty reservation. Returns the deleted tags.
+    """
+    deleted = []
+    own = [
+        item
+        for item in list_releases(repo)
+        if item['target_commitish'] == commit
+        and item['prerelease'] == prerelease
+        and CALENDAR_TAG.fullmatch(item['tag_name'])
+    ]
+    for item in own:
+        if item['draft'] and (not reservations_only or reservation_only(item)):
+            subprocess.run(
+                ['gh', 'api', '--method', 'DELETE', f'repos/{repo}/releases/{item["id"]}'],
+                check=True,
+                capture_output=True,
+            )
+            deleted.append(item['tag_name'])
+    return deleted
+
+
 def prepare(repo: str, source: str, output: Path, today: datetime.date) -> dict:
     """Choose one identity from published history and the exact included source commits."""
     if not re.fullmatch(r'[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+', repo):
@@ -279,8 +307,25 @@ def main() -> None:
         type=datetime.date.fromisoformat,
         default=datetime.datetime.now(datetime.UTC).date(),
     )
-    parser.add_argument('--output', type=Path, required=True)
+    parser.add_argument('--output', type=Path)
+    parser.add_argument(
+        '--withdraw',
+        choices=['preview', 'stable', 'stable-reservation'],
+        help='delete the drafts a failed run left for this source instead of preparing',
+    )
     args = parser.parse_args()
+    if args.withdraw:
+        commit = git('rev-parse', '--verify', '--end-of-options', args.source + '^{commit}')
+        deleted = withdraw_drafts(
+            args.repo,
+            commit,
+            prerelease=args.withdraw == 'preview',
+            reservations_only=args.withdraw == 'stable-reservation',
+        )
+        print(json.dumps({'withdrawn': deleted}))
+        return
+    if args.output is None:
+        parser.error('--output is required to prepare a release')
     result = prepare(args.repo, args.source, args.output, args.date)
     print(json.dumps({'version': result['release']['version'], 'reused': result['reused']}))
 

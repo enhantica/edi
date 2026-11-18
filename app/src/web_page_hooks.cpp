@@ -212,7 +212,7 @@ EM_JS(void, edi_install_web_page_hooks, (), {
     const call = (action) => {
         const state = JSON.parse(UTF8ToString(withStackSave(() => _edi_develop_diagnostics(stringToUTF8OnStack(action)))));
         if (state.error) {
-            throw new Error(`ediDevelopDiagnostics(${action}): ${state.error}`);
+            throw new Error("ediDevelopDiagnostics(" + action + "): " + state.error);
         }
         return state;
     };
@@ -240,14 +240,14 @@ EM_JS(void, edi_install_web_page_hooks, (), {
     globalThis.ediControlGeometry = (objectName) => {
         const state = JSON.parse(UTF8ToString(withStackSave(() => _edi_control_geometry(stringToUTF8OnStack(String(objectName))))));
         if (state.error) {
-            throw new Error(`ediControlGeometry: ${state.error}`);
+            throw new Error("ediControlGeometry: " + state.error);
         }
         return state;
     };
     globalThis.ediFitProgress = () => {
         const state = JSON.parse(UTF8ToString(_edi_fit_progress()));
         if (state.error) {
-            throw new Error(`ediFitProgress: ${state.error}`);
+            throw new Error("ediFitProgress: " + state.error);
         }
         return state;
     };

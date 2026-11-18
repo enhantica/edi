@@ -35,11 +35,11 @@ class ScanSession : public QObject {
         bool last_single = false;  // a single fit on a dataset came after the run
         bool mixed = false;        // the rows came from more than one template (a Continue after an edit)
         bool invalid = false;      // a provenance file was there but did not read as one (`error` says why)
-        QString error;
+        QString error{};
     };
-    // The three result files a fresh run replaces, as they were (absent: none).
+    // The result files a fresh run replaces, as they were (absent: none): a series' bank rows among them.
     struct Files {
-        std::optional<std::string> results, provenance, run, skipped;
+        std::optional<std::string> results, provenance, run, skipped, experiments;
         std::string kept;  // where the taken files wait on disk until they are put back
     };
 
@@ -61,6 +61,10 @@ class ScanSession : public QObject {
     const edi::ScanResultIndex& index() const { return index_; }
     int place(const std::string& file) const;
     const edi::ScanPlaces& places() const { return places_; }
+    // A series' rule for its per-experiment rows, made from `project` the first time it is asked for in a load.
+    const edi::SeriesBankRule& bankRule(const edi::Project& project) const;
+    // What a reader of dataset `place`'s per-experiment rows checks them against (edi::series_point_check).
+    edi::SeriesPointCheck pointCheck(const edi::Project& project, int place) const;
     // A row a run just appended (the event's own cells): checked against the header, indexed at the file's end.
     // The dataset's place, or -1 with the refusal in `error`; a refusal leaves the index refused (`index().error`),
     // never holding part of what was read.
@@ -81,6 +85,8 @@ class ScanSession : public QObject {
     // A digest of what the template saves as (its structures, experiments and analysis): equal digests, equal
     // templates.
     static std::string templateIdentity(const edi::Project& project);
+    // The same from the project's saved files (edi::project_edi_files of an uncalculated copy), made elsewhere.
+    static std::string templateIdentity(const std::vector<std::pair<std::string, std::string>>& files);
 
     // A fresh run's start or Reset fits: reads the three result files and sets them aside, all or none; the
     // in-memory provenance goes with them. The refusal, if any; a refusal that could not put everything back says
@@ -120,6 +126,8 @@ class ScanSession : public QObject {
     edi::ScanDatasets datasets_;
     edi::ScanPlaces places_;
     edi::ScanResultIndex index_;
+    // A series' rule for its results_experiments.csv rows (edi::SeriesBankRule), made once per load when first asked.
+    mutable edi::SeriesBankRule bank_rule_;
     Run run_;
     std::vector<std::optional<std::vector<std::string>>> metadata_;
     std::unordered_map<int, QString> metadata_errors_;

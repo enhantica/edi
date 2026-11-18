@@ -97,6 +97,9 @@ Column {
         uid: "structure_view.moment_form"
         options: group.options ? group.options.momentFormOptions : null
         token: group.form
+        // Greyed until a site has a moment: every site starts with none (the owner, 2026-11-14).
+        writable: group.structure !== null && group.structure.magnetic
+        disabledReason: qsTr("Choose a magnetic ion for a site to give it a moment")
         onSelected: token => group.options.momentForm = token
     }
 
@@ -110,7 +113,10 @@ Column {
         equalColumns: true
         // The symmetry form takes what the equal component columns leave, right-aligned like the components, so it
         // stands clear of |M| (the owner, 2026-11-03).
-        columns: [numberColumnWidth, textColumnWidth("label", Session.label("atom_site.id")), Math.max(group.ionWidth, (fittedWidths[2] ?? 0) + autoColumnPadding / 2), components, components, components, components, -1]
+        // |M| and its two angles beside the components, read only (edi ADR-0089 point 6).
+        columns: [numberColumnWidth, textColumnWidth("label", Session.label("atom_site.id")), Math.max(group.ionWidth, (fittedWidths[2] ?? 0) + autoColumnPadding / 2), components, components, components, derived, derived, derived, -1]
+        // The derived columns hold shorter numbers than the components: a narrower floor, so all six fit the sidebar.
+        readonly property real derived: Math.max(EaStyle.Sizes.fontPixelSize * 4.5, Math.ceil(widestValue) + autoColumnPadding / 2)
         readonly property real components: group.componentsWidth(table, widestValue)
         property real widestValue: 0
 
@@ -144,7 +150,17 @@ Column {
             EaComponents.ListViewLabel {
                 elide: Text.ElideRight
                 horizontalAlignment: Text.AlignRight
-                text: "|M|"
+                text: Session.label("atom_site_moment.spherical_modulus")
+            }
+            EaComponents.ListViewLabel {
+                elide: Text.ElideRight
+                horizontalAlignment: Text.AlignRight
+                text: qsTr("θ (deg)")
+            }
+            EaComponents.ListViewLabel {
+                elide: Text.ElideRight
+                horizontalAlignment: Text.AlignRight
+                text: qsTr("φ (deg)")
             }
             HeaderLabel {
                 horizontalAlignment: Text.AlignRight
@@ -155,6 +171,14 @@ Column {
 
         delegate: TableRow {
             id: row
+
+            // The moment in spherical form, for the read-only angles; read again whenever a component changes.
+            readonly property var sphericalParts: {
+                const changes = [row.mx, row.my, row.mz].map(item => item ? [item.value, item.uncertainty] : null);
+                if (!row.magnetic || !group.moments || !changes || group.moments.revision < 0)
+                    return [];
+                return group.moments.components(row.index, "spherical");
+            }
 
             required property string label
             required property string ion
@@ -251,6 +275,25 @@ Column {
                 value: group.modulusText(parts, parts)
                 ToolTip.text: parts.length > 7 ? group.suTip(parts, parts[7]) : ""
             }
+            // The polar and azimuthal angles, read only: the spherical form's own, a dash where the moment fixes none.
+            TextCell {
+                property int columnAlignment: Text.AlignRight
+                objectName: `atomSiteMoment.angle1.${row.index}`
+                horizontalAlignment: columnAlignment
+                readOnly: true
+                readonly property var parts: row.sphericalParts
+                value: parts.length > 5 ? group.formText(parts, 1, parts) : ""
+                ToolTip.text: parts.length > 5 ? (group.undetermined(parts, 1) ? group.undeterminedTip(parts) : group.suTip(parts, parts[4])) : ""
+            }
+            TextCell {
+                property int columnAlignment: Text.AlignRight
+                objectName: `atomSiteMoment.angle2.${row.index}`
+                horizontalAlignment: columnAlignment
+                readOnly: true
+                readonly property var parts: row.sphericalParts
+                value: parts.length > 5 ? group.formText(parts, 2, parts) : ""
+                ToolTip.text: parts.length > 5 ? (group.undetermined(parts, 2) ? group.undeterminedTip(parts) : group.suTip(parts, parts[5])) : ""
+            }
             // Derived from the site and the magnetic group: read only. Aligned as the components are, so the table
             // treats it as a number column (DataTable.kindOf).
             TextCell {
@@ -274,7 +317,7 @@ Column {
         sourceModel: group.moments
 
         readonly property bool spherical: group.form === "spherical"
-        readonly property var titles: spherical ? [qsTr("|M|"), qsTr("θ (deg)"), qsTr("φ (deg)")] : [qsTr("Mx (x ‖ a)"), qsTr("My"), qsTr("Mz (z ‖ c*)")]
+        readonly property var titles: spherical ? [Session.label("atom_site_moment.spherical_modulus"), qsTr("θ (deg)"), qsTr("φ (deg)")] : [qsTr("Mx (x ‖ a)"), qsTr("My"), qsTr("Mz (z ‖ c*)")]
 
         equalColumns: true
         // In spherical form the modulus is the first component, so the |M| column takes no width and is hidden.
@@ -315,7 +358,7 @@ Column {
                 elide: Text.ElideRight
                 horizontalAlignment: Text.AlignRight
                 visible: !converted.spherical
-                text: "|M|"
+                text: Session.label("atom_site_moment.spherical_modulus")
             }
             HeaderLabel {
                 horizontalAlignment: Text.AlignRight

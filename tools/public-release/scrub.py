@@ -57,7 +57,6 @@ SKIP_FILES = {
     'tools/public-release/scrub.py',
     'tools/public-release/patterns.py',
     'tools/public-release/scan.py',
-    'tools/public-release/snapshot.py',
     'tests/per-pr-runtimes.tsv',
     'tests/latency-bank.json',
     'tests/hidden-surface.txt',

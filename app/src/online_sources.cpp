@@ -18,9 +18,10 @@ namespace {
 const QString kStoreKey = QStringLiteral("Online/sources");
 const QStringList kAllKinds{QStringLiteral("structure"), QStringLiteral("experiment"), QStringLiteral("data"), QStringLiteral("project")};
 
-// The copy of the EasyDiffraction collection the desktop app installs beside itself (EDI_BUNDLED_COLLECTION), when
-// there is one: the source's last location, read only after an outage of the online ones, so the app has its examples
-// offline while the online collection stays the source of updates (the owner, 2026-11-10; edi ADR-0068).
+// The copy of the EasyDiffraction collection the desktop app installs beside itself (EDI_BUNDLED_COLLECTION), or a local
+// build reads in place (EDI_LOCAL_COLLECTION), when there is one: the source's last location here. The examples open
+// from it at once and the online locations are asked only for what is new or changed (CollectionExamples; the owner,
+// 2026-11-10 and 2026-11-17; edi ADR-0068).
 QStringList bundled_collection() {
 #if defined(EDI_APP_BUNDLED_COLLECTION)
     const QString folder = QDir::cleanPath(QDir(QCoreApplication::applicationDirPath()).filePath(QStringLiteral(EDI_APP_BUNDLED_COLLECTION)));
@@ -54,7 +55,7 @@ QString slug(const QString& name) {
 QList<QPair<QString, QString>> overrides() {
     QList<QPair<QString, QString>> pairs;
     const auto take = [&pairs](const QString& text) {
-        const int eq = text.indexOf(u'=');
+        const auto eq = text.indexOf(u'=');
         if (eq <= 0) return;
         pairs.append({text.left(eq).trimmed(), text.mid(eq + 1).trimmed()});
     };
@@ -208,7 +209,7 @@ void OnlineSourcesModel::load() {
     sources_ = builtin_sources();
     const QSettings store(settings_file_path(), QSettings::IniFormat);
     const QJsonArray rows = QJsonDocument::fromJson(store.value(kStoreKey).toString().toUtf8()).array();
-    for (const QJsonValue& value : rows) {
+    for (const auto& value : rows) {
         const QJsonObject row = value.toObject();
         const QString id = row.value(QStringLiteral("id")).toString();
         const int at = indexOf(id);
@@ -222,7 +223,7 @@ void OnlineSourcesModel::load() {
         s.id = id;
         s.name = row.value(QStringLiteral("name")).toString();
         s.url = row.value(QStringLiteral("url")).toString();
-        for (const QJsonValue& k : row.value(QStringLiteral("kinds")).toArray())
+        for (const auto& k : row.value(QStringLiteral("kinds")).toArray())
             if (kAllKinds.contains(k.toString())) s.kinds.append(k.toString());
         s.enabled = row.value(QStringLiteral("enabled")).toBool(true);
         sources_.append(s);

@@ -19,20 +19,20 @@ _diffrn.ambient_electric_field ?
 _calculator.type crysta
 
 _peak.rise_alpha_0 -0.0094
-_peak.rise_alpha_1 0.1(1)
-_peak.decay_beta_0 0.007(1)
-_peak.decay_beta_1 0.01(1)
+_peak.rise_alpha_1 0.1()
+_peak.decay_beta_0 0.007()
+_peak.decay_beta_1 0.01()
 _peak.broad_gauss_sigma_0 0.
 _peak.broad_gauss_sigma_1 0.
-_peak.broad_gauss_sigma_2 5.(1)
+_peak.broad_gauss_sigma_2 5.()
 _peak.broad_gauss_size 0.
 _peak.broad_gauss_strain 0.
 _peak.cutoff_fwhm 20
 _peak.type tof-jorgensen
 
 _instrument.setup_twotheta_bank 152.827
-_instrument.calib_d_to_tof_offset 0.(1)
-_instrument.calib_d_to_tof_linear 20773.(1)
+_instrument.calib_d_to_tof_offset 0.()
+_instrument.calib_d_to_tof_linear 20773.()
 _instrument.calib_d_to_tof_quadratic -1.08308
 _instrument.calib_d_to_tof_reciprocal 0.
 
@@ -41,7 +41,7 @@ _absorption.type none
 loop_
 _linked_structure.structure_id
 _linked_structure.scale
-ncaf 39.(1)
+ncaf 39.()
 
 loop_
 _excluded_region.id

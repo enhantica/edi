@@ -1,8 +1,6 @@
 """Real publication, credential and workflow counterfactuals retain PR core cadence."""
 
 import shutil
-import subprocess
-import sys
 
 import pytest
 import yaml
@@ -13,48 +11,16 @@ from tests.integration.py.test_e04_t12_public_content import (
     check,
     commit,
     event,
-    git,
     observe_content_workflows,
     specimen,
     synthetic_credential,
 )
 
 
-def test_e04_t12_transformed_snapshot_keeps_the_content_workflow_observer(tmp_path):
-    root, _base = specimen(tmp_path)
-    prepared = root / 'tools/public-release/github/workflows'
-    source = ROOT / 'tools/public-release/github/workflows'
-    if not source.is_dir():
-        source = ROOT / '.github/workflows'
-    shutil.copytree(source, prepared)
-    head = commit(root, 'Prepare public checks')
-    output = tmp_path / 'published'
-    result = subprocess.run(
-        [
-            sys.executable,
-            str(ROOT / 'tools/public-release/snapshot.py'),
-            '--source',
-            str(root),
-            '--ref',
-            head,
-            '--output',
-            str(output),
-            '--skip-hidden',
-        ],
-        capture_output=True,
-        text=True,
-        check=False,
-        timeout=8,
-    )
-    assert result.returncode == 0, (
-        'the workflow observer control must use the actual snapshot transformation'
-    )
-    assert git(output, 'rev-list', '--count', 'HEAD') == '1', (
-        'the published workflow control must have one fresh commit'
-    )
-    assert not (output / 'tools/public-release/github').exists(), (
-        'the observer must run after the preparation directory has been removed'
-    )
+def test_current_public_workflows_keep_the_content_observer(tmp_path):
+    output, _base = specimen(tmp_path)
+    shutil.copytree(ROOT / '.github/workflows', output / '.github/workflows')
+    commit(output, 'Install current public workflows')
     observe_content_workflows(output)
 
     folder = output / '.github/workflows'

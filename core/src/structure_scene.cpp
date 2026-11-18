@@ -94,7 +94,7 @@ std::optional<Rgb> parse_color(const std::string& token) {
     }
     std::uint8_t bytes[3] = {};
     for (int i = 0; i != 3; ++i) {
-        const char* first = token.data() + 1 + 2 * i;
+        const char* first = token.data() + 1 + (2 * static_cast<std::ptrdiff_t>(i));
         const auto [ptr, ec] = std::from_chars(first, first + 2, bytes[i], 16);
         if (ec != std::errc() || ptr != first + 2) {
             return std::nullopt;
@@ -205,7 +205,7 @@ std::size_t column_size(const SceneSource::Column<T>& column) {
     return column ? column->size() : 0;
 }
 template <class T>
-T column_value(const SceneSource::Column<T>& column, std::size_t row, T fallback) {
+T column_value(const SceneSource::Column<T>& column, std::size_t row, const T& fallback) {
     return column && row < column->size() ? (*column)[row] : fallback;
 }
 
@@ -230,9 +230,9 @@ SceneFrame home_frame(const StructureScene& scene, bool has_cell) {
     Vec3 direction = unit(Vec3{1.0, 0.8, 1.5});
     const auto& basis = scene.cell_basis;
     if (has_cell) {
-        std::array<int, 3> order{0, 1, 2};
+        std::array<std::size_t, 3> order{0, 1, 2};
         std::stable_sort(order.begin(), order.end(),
-                         [&](int p, int q) { return norm(basis[p]) > norm(basis[q]); });
+                         [&](std::size_t p, std::size_t q) { return norm(basis[p]) > norm(basis[q]); });
         const Vec3 longest = unit(basis[order[0]]);
         middle = unit(basis[order[1]]);
         const Vec3 shortest = unit(basis[order[2]]);
@@ -347,9 +347,9 @@ using Matrix3 = std::array<double, 9>;  // row-major
 
 Matrix3 product(const Matrix3& a, const Matrix3& b) {
     Matrix3 out{};
-    for (int i = 0; i != 3; ++i) {
-        for (int j = 0; j != 3; ++j) {
-            for (int k = 0; k != 3; ++k) {
+    for (std::size_t i = 0; i != 3; ++i) {
+        for (std::size_t j = 0; j != 3; ++j) {
+            for (std::size_t k = 0; k != 3; ++k) {
                 out[3 * i + j] += a[3 * i + k] * b[3 * k + j];
             }
         }
@@ -365,9 +365,9 @@ Matrix3 inverted(const Matrix3& m) {
     const double det = m[0] * (m[4] * m[8] - m[5] * m[7]) - m[1] * (m[3] * m[8] - m[5] * m[6]) +
                        m[2] * (m[3] * m[7] - m[4] * m[6]);
     Matrix3 out{};
-    for (int i = 0; i != 3; ++i) {
-        for (int j = 0; j != 3; ++j) {
-            const int r1 = (j + 1) % 3, r2 = (j + 2) % 3, c1 = (i + 1) % 3, c2 = (i + 2) % 3;
+    for (std::size_t i = 0; i != 3; ++i) {
+        for (std::size_t j = 0; j != 3; ++j) {
+            const std::size_t r1 = (j + 1) % 3, r2 = (j + 2) % 3, c1 = (i + 1) % 3, c2 = (i + 2) % 3;
             out[3 * i + j] = (m[3 * r1 + c1] * m[3 * r2 + c2] - m[3 * r1 + c2] * m[3 * r2 + c1]) / det;
         }
     }
@@ -396,7 +396,8 @@ void eigen_symmetric(Matrix3 a, std::array<double, 3>& values, Matrix3& vectors)
         if (off < 1e-30) {
             break;
         }
-        for (const auto& [p, q] : {std::pair{0, 1}, std::pair{0, 2}, std::pair{1, 2}}) {
+        for (const auto& [p, q] : {std::pair<std::size_t, std::size_t>{0, 1}, std::pair<std::size_t, std::size_t>{0, 2},
+                                   std::pair<std::size_t, std::size_t>{1, 2}}) {
             const double apq = a[3 * p + q];
             if (std::abs(apq) < 1e-300) {
                 continue;
@@ -615,11 +616,11 @@ SceneSource capture_scene(const Structure& structure) {
         const double star[3][3] = {{s[0], s[3], s[4]}, {s[3], s[1], s[5]}, {s[4], s[5], s[2]}};
         const auto& m = source.cartn_matrix;
         std::array<double, 9> u{};
-        for (int i = 0; i < 3; ++i) {
-            for (int j = 0; j < 3; ++j) {
+        for (std::size_t i = 0; i < 3; ++i) {
+            for (std::size_t j = 0; j < 3; ++j) {
                 double value = 0.0;
-                for (int a = 0; a < 3; ++a) {
-                    for (int b = 0; b < 3; ++b) {
+                for (std::size_t a = 0; a < 3; ++a) {
+                    for (std::size_t b = 0; b < 3; ++b) {
                         value += m[3 * i + a] * star[a][b] * m[3 * j + b];
                     }
                 }
@@ -642,6 +643,82 @@ SceneSource capture_scene(const Structure& structure) {
     return source;
 }
 
+std::vector<std::array<std::uint32_t, 3>> convex_hull(const std::vector<Vec3>& points) {
+    std::vector<std::array<std::uint32_t, 3>> faces;
+    const std::size_t n = points.size();
+    if (n < 4 || n > 64) {
+        return faces;
+    }
+    double size = 0.0;
+    for (const Vec3& point : points) {
+        size = std::max(size, norm(sub(point, points[0])));
+    }
+    const double eps = 1e-6 * std::max(size, 1.0);
+    // Points all on one line or one plane enclose no volume, however many triangles a flat fan of them would make.
+    bool spans_volume = false;
+    for (std::size_t j = 1; j < n && !spans_volume; ++j) {
+        for (std::size_t k = j + 1; k < n && !spans_volume; ++k) {
+            const Vec3 normal = cross(sub(points[j], points[0]), sub(points[k], points[0]));
+            const double length = norm(normal);
+            if (length < eps * eps) {
+                continue;
+            }
+            for (std::size_t m = 1; m < n && !spans_volume; ++m) {
+                spans_volume = std::abs(dot(sub(points[m], points[0]), normal)) / length > eps;
+            }
+        }
+    }
+    if (!spans_volume) {
+        return faces;
+    }
+    std::set<std::vector<std::size_t>> planes;  // each face's points, found once
+    for (std::size_t i = 0; i < n; ++i) {
+        for (std::size_t j = i + 1; j < n; ++j) {
+            for (std::size_t k = j + 1; k < n; ++k) {
+                Vec3 normal = cross(sub(points[j], points[i]), sub(points[k], points[i]));
+                const double length = norm(normal);
+                if (length < eps * eps) {
+                    continue;
+                }
+                normal = mul(normal, 1.0 / length);
+                std::vector<std::size_t> on;
+                bool above = false, below = false;
+                for (std::size_t m = 0; m < n; ++m) {
+                    const double d = dot(sub(points[m], points[i]), normal);
+                    if (std::abs(d) <= eps) {
+                        on.push_back(m);
+                    } else {
+                        (d > 0.0 ? above : below) = true;
+                    }
+                }
+                if ((above && below) || !planes.insert(on).second) {
+                    continue;
+                }
+                if (above) {
+                    normal = mul(normal, -1.0);  // outwards: away from the other points
+                }
+                // The face's points in turn about its centre, counter-clockwise seen from outside, as one fan.
+                Vec3 centre;
+                for (const std::size_t m : on) {
+                    centre = add(centre, points[m]);
+                }
+                centre = mul(centre, 1.0 / static_cast<double>(on.size()));
+                const Vec3 u = mul(sub(points[on[0]], centre), 1.0 / std::max(norm(sub(points[on[0]], centre)), eps));
+                const Vec3 v = cross(normal, u);
+                std::sort(on.begin(), on.end(), [&](std::size_t a, std::size_t b) {
+                    const Vec3 pa = sub(points[a], centre), pb = sub(points[b], centre);
+                    return std::atan2(dot(pa, v), dot(pa, u)) < std::atan2(dot(pb, v), dot(pb, u));
+                });
+                for (std::size_t m = 1; m + 1 < on.size(); ++m) {
+                    faces.push_back({static_cast<std::uint32_t>(on[0]), static_cast<std::uint32_t>(on[m]),
+                                     static_cast<std::uint32_t>(on[m + 1])});
+                }
+            }
+        }
+    }
+    return faces;
+}
+
 StructureScene present_structure(const SceneSource& source, const SceneOptions& options) {
     StructureScene scene;
     scene.current = source.current;
@@ -650,7 +727,7 @@ StructureScene present_structure(const SceneSource& source, const SceneOptions& 
         return scene;
     }
     const auto& m = source.cartn_matrix;
-    for (int k = 0; k != 3; ++k) {
+    for (std::size_t k = 0; k != 3; ++k) {
         scene.cell_basis[k] = {m[k], m[3 + k], m[6 + k]};  // I2: column k of the row-major matrix
     }
 
@@ -786,8 +863,9 @@ StructureScene present_structure(const SceneSource& source, const SceneOptions& 
     substituted.erase(std::unique(substituted.begin(), substituted.end()), substituted.end());
     scene.substituted_elements = std::move(substituted);
 
-    // I7: one bond per `_geom_bond` row; an id naming no row is skipped.
-    if (options.bonds) {
+    // I7: one bond per `_geom_bond` row; an id naming no row is skipped. The polyhedra read them when bonds are hidden.
+    std::vector<SceneBond> bond_list;
+    if (options.bonds || options.polyhedra) {
         const std::size_t bonds = std::min({column_size(source.bond_site_1), column_size(source.bond_site_2),
                                             column_size(source.bond_distance)});
         for (std::size_t b = 0; b != bonds; ++b) {
@@ -807,8 +885,137 @@ StructureScene present_structure(const SceneSource& source, const SceneOptions& 
             const SceneAtom& atom_2 = scene.atoms[bond.atom_2];
             bond.color_1 = atom_1.parts[atom_1.major].color;
             bond.color_2 = atom_2.parts[atom_2.major].color;
-            scene.bonds.push_back(bond);
+            bond_list.push_back(bond);
         }
+    }
+    if (options.polyhedra) {
+        // The centres and corners by element, as VESTA and Jmol let the user set them: by default the usual anions are the
+        // corners and every other element a centre, so a silicate's SiO4 tetrahedra show beside its metals' octahedra. A
+        // metal bonded to a metal (Co-Co in an olivine) is not a corner.
+        static const std::set<std::string> kAnions{"N", "O", "F", "S", "Cl", "Se", "Br", "Te", "I"};
+        const std::set<std::string>& corners_by_element = options.polyhedra_corners.empty() ? kAnions : options.polyhedra_corners;
+        const auto corner_element = [&](const std::string& element) { return corners_by_element.count(element) != 0; };
+        const auto centre_element = [&](const std::string& element) {
+            if (element.empty()) return false;
+            return options.polyhedra_centres.empty() ? !corner_element(element) && element != "H"
+                                                     : options.polyhedra_centres.count(element) != 0;
+        };
+        std::vector<std::vector<Vec3>> shells(scene.atoms.size());
+        const auto corner_atom = [&](std::size_t atom) {
+            return corner_element(scene.atoms[atom].parts[scene.atoms[atom].major].element);
+        };
+        const double max_distance = options.polyhedra_max_distance > 0.0 ? options.polyhedra_max_distance : 0.0;
+        if (max_distance > 0.0 && !options.polyhedra_complete) {
+            // Inside the cell, within the distance: the drawn corner atoms near each centre.
+            for (std::size_t i = 0; i != scene.atoms.size(); ++i) {
+                for (std::size_t j = 0; j != scene.atoms.size(); ++j) {
+                    if (i == j || !corner_atom(j)) continue;
+                    const double distance = norm(sub(scene.atoms[j].centre, scene.atoms[i].centre));
+                    if (distance > 1e-6 && distance <= max_distance + 1e-4) shells[i].push_back(scene.atoms[j].centre);
+                }
+            }
+        } else if (max_distance == 0.0) {
+            for (const SceneBond& bond : bond_list) {
+                if (corner_atom(bond.atom_2)) shells[bond.atom_1].push_back(bond.end);
+                if (corner_atom(bond.atom_1)) shells[bond.atom_2].push_back(bond.start);
+            }
+        }
+        // Complete: a centre takes every corner atom that near, in whichever cell it sits. Near is within the distance, or
+        // up to the longest bond the geometry lists between the two sites.
+        if (options.polyhedra_complete && (max_distance > 0.0 || !bond_list.empty())) {
+            std::map<std::pair<std::string, std::string>, double> reach;
+            const auto site = [&](std::size_t row) { return (*source.atom_site_id)[row]; };
+            for (std::size_t b = 0; b != bond_list.size() && max_distance == 0.0; ++b) {
+                const auto row_1 = static_cast<std::size_t>((*source.bond_site_1)[bond_list[b].row] - 1);
+                const auto row_2 = static_cast<std::size_t>((*source.bond_site_2)[bond_list[b].row] - 1);
+                for (const auto& key : {std::pair{site(row_1), site(row_2)}, std::pair{site(row_2), site(row_1)}}) {
+                    double& longest = reach[key];
+                    longest = std::max(longest, bond_list[b].distance);
+                }
+            }
+            std::map<std::string, bool> corner_site;
+            for (const auto& [id, type] : source.site_types) {
+                corner_site[id] = corner_element(element_of(type));
+            }
+            const auto& cartn = source.cartn_matrix;
+            const Matrix3 inverse = inverted(cartn);
+            // More corners than convex_hull takes is no polyhedron; the search stops there rather than walk every cell
+            // of a huge distance.
+            constexpr std::size_t kMaxShell = 64;
+            for (std::size_t i = 0; i != scene.atoms.size(); ++i) {
+                const SceneAtom& atom = scene.atoms[i];
+                const std::size_t centre_row = atom.parts[atom.major].row;
+                if (centre_row >= n) {
+                    continue;
+                }
+                std::vector<Vec3> found;
+                for (std::size_t row = 0; row != n && found.size() <= kMaxShell; ++row) {
+                    if (!corner_site[site(row)]) continue;
+                    double limit = max_distance;
+                    if (limit == 0.0) {
+                        const auto longest = reach.find({site(centre_row), site(row)});
+                        if (longest == reach.end()) continue;
+                        limit = longest->second;
+                    }
+                    // The cells a corner within the limit can sit in: along each axis, the fractional offset changes
+                    // by at most the limit times the length of that row of the inverse cell matrix (skewed cells too).
+                    const Vec3 offset = sub(atom.centre, row_centre(source, row));
+                    std::array<int, 3> low{}, high{};
+                    bool bounded = true;
+                    for (std::size_t k = 0; k != 3; ++k) {
+                        const Vec3 reciprocal{inverse[3 * k], inverse[3 * k + 1], inverse[3 * k + 2]};
+                        const double centre = dot(reciprocal, offset), reach_k = (limit + 1e-4) * norm(reciprocal);
+                        bounded = bounded && std::isfinite(centre) && std::isfinite(reach_k) && reach_k < 1e6;
+                        if (!bounded) break;
+                        low[k] = static_cast<int>(std::ceil(centre - reach_k));
+                        high[k] = static_cast<int>(std::floor(centre + reach_k));
+                    }
+                    if (!bounded) continue;
+                    for (int ta = low[0]; ta <= high[0] && found.size() <= kMaxShell; ++ta) {
+                        for (int tb = low[1]; tb <= high[1] && found.size() <= kMaxShell; ++tb) {
+                            for (int tc = low[2]; tc <= high[2] && found.size() <= kMaxShell; ++tc) {
+                                const Vec3 shift{cartn[0] * ta + cartn[1] * tb + cartn[2] * tc,
+                                                 cartn[3] * ta + cartn[4] * tb + cartn[5] * tc,
+                                                 cartn[6] * ta + cartn[7] * tb + cartn[8] * tc};
+                                const Vec3 point = add(row_centre(source, row), shift);
+                                const double distance = norm(sub(point, atom.centre));
+                                if (distance > 1e-6 && distance <= limit + 1e-4 &&
+                                    std::none_of(found.begin(), found.end(), [&](const Vec3& kept) {
+                                        return norm(sub(kept, point)) < 1e-6;
+                                    })) {
+                                    found.push_back(point);
+                                }
+                            }
+                        }
+                    }
+                }
+                shells[i] = std::move(found);
+            }
+        }
+        for (std::size_t i = 0; i != scene.atoms.size(); ++i) {
+            const SceneAtom& atom = scene.atoms[i];
+            const ScenePart& part = atom.parts[atom.major];
+            if ((!atom.drawn && options.atoms != AtomSubset::None) || shells[i].size() < 4 || !centre_element(part.element)) {
+                continue;
+            }
+            std::vector<Vec3> corners;
+            for (const Vec3& point : shells[i]) {
+                if (std::none_of(corners.begin(), corners.end(),
+                                 [&](const Vec3& kept) { return norm(sub(kept, point)) < 1e-6; })) {
+                    corners.push_back(point);
+                }
+            }
+            auto faces = convex_hull(corners);
+            // Corners all in one plane (a square or a hexagon of bonds) enclose nothing: no polyhedron.
+            if (faces.empty()) {
+                continue;
+            }
+            const Rgb grey{0xA0, 0xA0, 0xA0};
+            scene.polyhedra.push_back({i, options.polyhedra_grey ? grey : part.color, std::move(corners), std::move(faces)});
+        }
+    }
+    if (options.bonds) {
+        scene.bonds = std::move(bond_list);
     }
 
     // I2: the 12 edges, along a, then b, then c, each group ordered by the other two indices.
@@ -837,7 +1044,7 @@ StructureScene present_structure(const SceneSource& source, const SceneOptions& 
         }
     }
     if (options.axes) {
-        for (int k = 0; k != 3; ++k) {
+        for (std::size_t k = 0; k != 3; ++k) {
             static const char* const kKeys[3] = {"axis.a", "axis.b", "axis.c"};
             scene.axes.push_back({static_cast<char>('a' + k), scene.cell_basis[k], style_color(kKeys[k])});
         }
@@ -851,7 +1058,7 @@ StructureScene present_structure(const SceneSource& source, const SceneOptions& 
                            row);
         }
         std::array<double, 3> length{};
-        for (int k = 0; k != 3; ++k) {
+        for (std::size_t k = 0; k != 3; ++k) {
             length[k] = norm(scene.cell_basis[k]);
         }
         const std::size_t count = std::min({column_size(source.moment_site_id), column_size(source.moment_symmetry),
@@ -872,7 +1079,7 @@ StructureScene present_structure(const SceneSource& source, const SceneOptions& 
             }
             const double components[3] = {(*source.moment_x)[i], (*source.moment_y)[i], (*source.moment_z)[i]};
             Vec3 vector{0.0, 0.0, 0.0};
-            for (int k = 0; k != 3; ++k) {
+            for (std::size_t k = 0; k != 3; ++k) {
                 if (length[k] > 0.0) {
                     vector = add(vector, mul(scene.cell_basis[k], components[k] / length[k]));
                 }
@@ -916,15 +1123,16 @@ SceneView default_view(const StructureScene& scene) {
 
 SceneView view_along(const StructureScene& scene, int axis) {
     SceneView view = default_view(scene);
-    if (axis < 0 || axis > 2 || !(norm(scene.cell_basis[axis]) > 0.0)) {
+    if (axis < 0 || axis > 2 || !(norm(scene.cell_basis[static_cast<std::size_t>(axis)]) > 0.0)) {
         return view;
     }
-    const int first = (axis + 1) % 3, second = (axis + 2) % 3;
-    const int lower = std::min(first, second), upper = std::max(first, second);
+    const auto along = static_cast<std::size_t>(axis);
+    const std::size_t first = (along + 1) % 3, second = (along + 2) % 3;
+    const std::size_t lower = std::min(first, second), upper = std::max(first, second);
     // The longer of the other two lies across the screen; equals in the order a, b, c.
-    const int horizontal = norm(scene.cell_basis[upper]) > norm(scene.cell_basis[lower]) ? upper : lower;
-    const int third = horizontal == lower ? upper : lower;
-    Vec3 direction = unit(scene.cell_basis[axis]);
+    const std::size_t horizontal = norm(scene.cell_basis[upper]) > norm(scene.cell_basis[lower]) ? upper : lower;
+    const std::size_t third = horizontal == lower ? upper : lower;
+    Vec3 direction = unit(scene.cell_basis[along]);
     const Vec3 across = scene.cell_basis[horizontal];
     const Vec3 right = unit(sub(across, mul(direction, dot(across, direction))));
     Vec3 up = cross(direction, right);
@@ -1158,7 +1366,7 @@ const std::vector<SceneStyle>& structure_style_table() {
 }
 
 SharedSiteBasis shared_site_browser_basis(const StructureScene& scene) {
-    const auto normalized = [](Vec3 value) {
+    const auto normalized = [](const Vec3& value) {
         const double length = std::sqrt(value.x * value.x + value.y * value.y + value.z * value.z);
         const double scale = 1.0 / (length == 0.0 || std::isnan(length) ? 1.0 : length);
         return Vec3{value.x * scale, value.y * scale, value.z * scale};
@@ -1191,7 +1399,7 @@ SharedSiteMesh shared_site_mesh(const StructureScene& scene, std::span<const std
     for (std::size_t k = 0; k < sites.size(); ++k) {
         const SceneAtom& atom = scene.atoms[sites[k]];
         Vec3 centre = atom.centre; double radius = atom.radius;
-        if (qt) { centre = {static_cast<float>(centre.x), static_cast<float>(centre.y), static_cast<float>(centre.z)}; radius = static_cast<float>(radius); }
+        if (qt) { centre = {static_cast<double>(static_cast<float>(centre.x)), static_cast<double>(static_cast<float>(centre.y)), static_cast<double>(static_cast<float>(centre.z))}; radius = static_cast<double>(static_cast<float>(radius)); }
         else { centre = {std::isfinite(centre.x) ? centre.x : 0.0, std::isfinite(centre.y) ? centre.y : 0.0, std::isfinite(centre.z) ? centre.z : 0.0}; if (!std::isfinite(radius)) radius = 0.0; }
         const auto bound = [qt](double a, double b, bool high) { return qt ? static_cast<double>(high ? static_cast<float>(a) + static_cast<float>(b) : static_cast<float>(a) - static_cast<float>(b)) : high ? a + b : a - b; };
         out.low = {std::min(out.low.x, bound(centre.x, radius, false)), std::min(out.low.y, bound(centre.y, radius, false)), std::min(out.low.z, bound(centre.z, radius, false))};

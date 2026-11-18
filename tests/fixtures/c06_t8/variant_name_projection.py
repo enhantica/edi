@@ -5,10 +5,12 @@ import json
 from pathlib import Path
 
 from tests.fixtures.path_keys import repository_key
+from tests.fixtures.stop_defaults import retention
 
 
 def restore_variant_name(relative, raw):
     relative = repository_key(relative)
+    raw = retention.previous_bytes(relative, raw)
     rows = json.loads(Path(__file__).with_name('variant-name-projection.json').read_text())[
         'files'
     ]

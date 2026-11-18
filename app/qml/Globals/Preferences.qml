@@ -66,6 +66,9 @@ QtObject {
     // The folder every Save image starts in, the last one an image was saved to; empty until then, when the
     // project's reports folder is the start (the owner, 2026-11-10).
     property string imageFolder: ""
+    // What Save image puts behind a chart or the structure view: "transparent" (the default) or "chart", the chart's
+    // own background colour (the owner, 2026-11-01).
+    property string imageBackground: "transparent"
     // The sidebar groups kept open when another opens, by object name, separated by commas (the owner, 2026-11-10).
     property string pinnedGroups: ""
     // Where the workflow pages show their sidebar: "Right" (the default) or "Left" (WorkflowPage).
@@ -92,6 +95,10 @@ QtObject {
     // What Help and feedback offers to send as the user's contact, each optional, kept for the next message.
     property string feedbackName: ""
     property string feedbackEmail: ""
+    // Whether the app asks now and then whether EasyDiffraction is enjoyed (the likes bar); Don't ask again turns it
+    // off and Preferences turns it back on (owner, 2026-11-17).
+    property bool askLikes: true
+    property bool surveyInvitation: true
     property string feedbackAffiliation: ""
     // The newest changelog date the user has seen in What's new (edi ADR-0067), empty before the first start.
     property string whatsNewSeen: ""
@@ -161,6 +168,7 @@ QtObject {
         property alias autoCollapse: preferences.autoCollapse
         property alias sideBarSide: preferences.sideBarSide
         property alias imageFolder: preferences.imageFolder
+        property alias imageBackground: preferences.imageBackground
         property alias pinnedGroups: preferences.pinnedGroups
     }
 
@@ -170,6 +178,8 @@ QtObject {
         property alias name: preferences.feedbackName
         property alias email: preferences.feedbackEmail
         property alias affiliation: preferences.feedbackAffiliation
+        property alias askLikes: preferences.askLikes
+        property alias surveyInvitation: preferences.surveyInvitation
     }
 
     property Settings whatsNewSettings: Settings {
@@ -254,6 +264,15 @@ QtObject {
     property bool chartSubtractBackground: false
     // A single crystal's chart plots F² (calc against meas) or F ("f_squared" or "f").
     property string singleCrystalQuantity: "f_squared"
+    // A single crystal's chart: "comparison" (calc against meas), or the reflections on "q" or "sin_theta_over_lambda"
+    // as a pattern (the owner, 2026-11-16); and that pattern's y, "f_squared" or "f", kept apart from the comparison's.
+    property string singleCrystalXAxis: "q"
+    property string singleCrystalPatternQuantity: "f_squared"
+    // How its Pattern tab draws the reflections: the pattern chart's styles and "bars", the default (the owner,
+    // 2026-11-16).
+    property string singleCrystalMeasuredStyle: "bars"
+    // Its Bars style as thin lines, one pixel wide at any zoom, instead of bars with a width on the axis.
+    property bool singleCrystalThinBars: false
     // Every chart of several datasets (Stacked, single-crystal Stacked and the Map) draws the selected one on top and
     // fades the others to chartFadedOpacity; off, all are drawn alike and only the selection's label marks it (the
     // owner, 2026-10-24).
@@ -279,6 +298,10 @@ QtObject {
         property alias includedOnly: preferences.chartIncludedOnly
         property alias subtractBackground: preferences.chartSubtractBackground
         property alias singleCrystalQuantity: preferences.singleCrystalQuantity
+        property alias singleCrystalXAxis: preferences.singleCrystalXAxis
+        property alias singleCrystalPatternQuantity: preferences.singleCrystalPatternQuantity
+        property alias singleCrystalThinBars: preferences.singleCrystalThinBars
+        property alias singleCrystalMeasuredStyle: preferences.singleCrystalMeasuredStyle
         property alias highlightSelected: preferences.chartHighlightSelected
         property alias hiddenRange: preferences.chartHiddenRange
     }

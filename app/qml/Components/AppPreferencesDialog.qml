@@ -359,6 +359,18 @@ AppDialog {
                         onActivated: index => ApplicationInfo.preferenceActivated(index, 4)
                     }
                 }
+                Field {
+                    label: qsTr("Saved image background")
+                    FieldBox {
+                        readonly property list<string> choices: ["transparent", "chart"]
+
+                        objectName: "preferences.imageBackground"
+                        model: [qsTr("Transparent"), qsTr("Chart colour")]
+                        currentIndex: Math.max(0, choices.indexOf(Preferences.imageBackground))
+                        onActivated: index => Preferences.imageBackground = choices[index]
+                        ToolTip.text: qsTr("What Save image puts behind a chart or the structure view")
+                    }
+                }
             }
             TabRow {
                 // The figure palette of experiments and structures, the Pattern and Stacked views alike (ADR-0084).
@@ -436,6 +448,7 @@ AppDialog {
                         ToolTip.text: qsTr("How long the pointer rests on a control before its tooltip opens")
                     }
                 }
+
                 GroupTitle {
                     first: false
                     icon: "calculator"
@@ -449,6 +462,31 @@ AppDialog {
                         currentIndex: Preferences.showFitResults ? 0 : 1
                         onActivated: index => Preferences.showFitResults = index === 0
                         ToolTip.text: qsTr("The fit status in the status bar opens the results window too")
+                    }
+                }
+                GroupTitle {
+                    first: false
+                    icon: "comments"
+                    text: qsTr("Feedback")
+                }
+                Field {
+                    label: qsTr("Enjoying EasyDiffraction? prompt")
+                    FieldBox {
+                        objectName: "preferences.askLikes"
+                        model: [qsTr("On"), qsTr("Off")]
+                        currentIndex: Preferences.askLikes ? 0 : 1
+                        onActivated: index => Preferences.askLikes = index === 0
+                        ToolTip.text: qsTr("A short question above the status bar after a successful fit, at most once every 3 months. Don't ask again turns it off.")
+                    }
+                }
+                Field {
+                    label: qsTr("Survey invitation")
+                    FieldBox {
+                        objectName: "preferences.surveyInvitation"
+                        model: [qsTr("On"), qsTr("Off")]
+                        currentIndex: Preferences.surveyInvitation ? 0 : 1
+                        onActivated: index => Preferences.surveyInvitation = index === 0
+                        ToolTip.text: qsTr("An invitation to the 10–15 min user survey after some use, at a pause in your work. Home keeps its survey link.")
                     }
                 }
             }
@@ -1214,7 +1252,11 @@ AppDialog {
         readonly property string intent: selection ? selection.id : ""
         readonly property var original: selection ? selection.owner : null
         title: qsTr("Choose a skill folder or collection")
-        onAccepted: ApplicationInfo.preferenceCompleteSourceSelection(false, true)
+        currentFolder: DialogFolders.folder("assistantSources", "")
+        onAccepted: {
+            DialogFolders.remember("assistantSources", selectedFolder);
+            ApplicationInfo.preferenceCompleteSourceSelection(false, true);
+        }
         onRejected: ApplicationInfo.preferenceCompleteSourceSelection(false, false)
         Component.onDestruction: ApplicationInfo.preferenceCompleteSourceSelection(false, false)
         Connections {

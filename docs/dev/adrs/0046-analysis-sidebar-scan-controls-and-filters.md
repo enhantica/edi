@@ -36,7 +36,8 @@ structure or one experiment, or to undo every filter at once.
    stay editable and the calculated pattern follows them. Loading measured data enables all of these at once; removing
    the last experiment that holds it, or undoing its load, disables them again. Undo still restores free flags it
    recorded, since it returns the project to an earlier state. The filters stay shown in such a project; only the
-   free/fixed picker is disabled, its tooltip saying why. The Settings tab's Parameters shown group, which chooses rows by
+   free/fixed picker is disabled, its tooltip saying why. The table's free column and its header stay shown, disabled,
+   so the table keeps its layout when data arrive. The Settings tab's Parameters shown group, which chooses rows by
    why they cannot be fitted, is hidden there, as Pattern updates is.
 
 ## Consequences

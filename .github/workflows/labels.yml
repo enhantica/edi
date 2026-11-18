@@ -1,0 +1,26 @@
+# Every pull request carries the labels its release note needs (tools/release/plan.py): one `[scope]` label and
+# one or more `[interface]` labels, or `[bot] release`. It reads only the labels, so it needs no token.
+name: Release labels
+
+on:
+  pull_request:
+    types: [opened, reopened, labeled, unlabeled, synchronize, ready_for_review]
+
+permissions:
+  contents: read
+
+jobs:
+  labels:
+    name: release labels
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.14'
+      - name: Check the release labels
+        env:
+          LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
+        run: python tools/release/plan.py --check-labels "$LABELS"

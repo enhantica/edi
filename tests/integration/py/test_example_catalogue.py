@@ -1,5 +1,6 @@
 """The owner-selected cases retain their identity across each public form."""
 
+import copy
 import hashlib
 import json
 import operator
@@ -37,14 +38,18 @@ def selected(root=ROOT):
 
 def app_cases(root=ROOT):
     declared = [row['id'] for row in registry(root) if 'app-only' in row]
-    assert not declared, (
-        'Every user example now has its catalogue form; app-only entries are retired'
+    assert declared == ['pd-neut-tof_ncaf-wish-5bank_synthetic-100p'], (
+        'Only the declared large-series GUI example may omit tutorial forms'
     )
     actual = selected(root)
     assert actual == SELECTED, (
         'The catalogue must retain the independently declared case identities and order'
     )
-    return actual
+    return [
+        row['id']
+        for row in registry(root)
+        if row.get('user-facing') is True or row['id'] in declared
+    ]
 
 
 def page_cases(path):
@@ -66,7 +71,7 @@ def test_selected_cases_and_order_match_the_independent_owner_selection(surface)
         actual = list(json.loads((ROOT / 'app/examples/metadata.json').read_text())['examples'])
     else:
         actual = page_cases((CLI if surface == 'cli-page' else TUTORIALS) / 'index.md')
-    expected = app_cases() if surface in {'registry', 'metadata'} else SELECTED
+    expected = app_cases() if surface == 'metadata' else SELECTED
     assert actual == expected, (
         'Every catalogue and the app retain the same owner-selected cases in order'
     )
@@ -137,6 +142,8 @@ def test_old_projects_keep_their_files_pins_and_execution(record):
     assert restored == record['sha256'], (
         'Retained fixture models and numerical expectations must remain byte-identical'
     )
+    if case == 'pd-xray-cwl_lif_single':
+        lif_retention_controls(record)
     live = next(row for row in registry() if row['id'] == case)
     assert live['executing'] == record['executing'], (
         'Existing fixture tests must keep their execution status'
@@ -149,6 +156,57 @@ def test_old_projects_keep_their_files_pins_and_execution(record):
     assert (directory / 'README.md').is_file(), (
         'Fixture instructions must remain beside the project'
     )
+
+
+def lif_retention_controls(record):
+    name = 'docs/user/cli/pd-xray-cwl_lif_single/expected.json'
+    current = (ROOT / name).read_bytes()
+    row = json.loads((FIXTURE / 'retention-adaptations.json').read_text())['files'][name]
+    original = row['before'].encode()
+    assert hashlib.sha256(original).hexdigest() == record['sha256']['expected.json'], (
+        'The LiF adaptation preserves the immutable original complete retention hash'
+    )
+    assert retained_bytes(name, current) == original, (
+        'Only the complete documented LiF replacement restores the original retained bytes'
+    )
+    old, new = json.loads(original), json.loads(current)
+    projected = copy.deepcopy(old)
+    quantities = projected['variants']['fast-descent']['quantities']
+    assert quantities['iterations'] == {
+        'value': 5.0,
+        'kind': 'regression-pin',
+        'tol_abs': 0.0,
+        'tol_rel': None,
+    }, 'The retained LiF witness keeps its exact original five-iteration pin'
+    quantities['iterations'] = {
+        'value': 4.5,
+        'kind': 'regression-pin',
+        'tol_abs': 0.5,
+        'tol_rel': None,
+    }
+    assert projected == new, (
+        'The LiF retention adaptation changes only the documented iteration midpoint/radius; '
+        'every quality pin, physical reference, tolerance and other field stays exact'
+    )
+    damaged = [original, current + b' ', current.replace(b'"schema": 1', b'"schema": 2')]
+    for field, key, value in (
+        ('iterations', 'value', 4.0),
+        ('iterations', 'value', 5.5),
+        ('iterations', 'tol_abs', 1.5),
+        ('iterations', 'kind', 'reference'),
+        ('reduced_chi_square', 'value', 0.0),
+        ('reduced_chi_square', 'tol_abs', 1e-6),
+        ('rwp', 'value', 0.0),
+        ('rwp', 'tol_abs', 1e-6),
+        ('param.setup_wavelength_2_to_1_ratio.value', 'value', 0.75),
+        ('param.mu_r.value', 'tol_abs', 0.1),
+    ):
+        changed = copy.deepcopy(new)
+        changed['variants']['fast-descent']['quantities'][field][key] = value
+        damaged.append((json.dumps(changed, indent=2) + '\n').encode())
+    for changed in damaged:
+        with pytest.raises(AssertionError, match='exact committed pin or descriptive adaptation'):
+            retained_bytes(name, changed)
 
 
 @pytest.mark.parametrize('case', SELECTED)

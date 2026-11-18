@@ -1026,6 +1026,63 @@
         "docs/user/cli/pd-neut-cwl_cosio-d20_scan-213f/project/structures/cosio.edi"
       ]
     },
+    "pd-neut-tof_ncaf-wish-5bank_synthetic-100p": {
+      "samples": [
+        "Na₂Ca₃Al₂F₁₄ [I2₁3]"
+      ],
+      "origin": "WISH @ ISIS",
+      "detail": "100 points × 5 banks · Synthetic series of joint fits",
+      "values": {
+        "sampleForm": [
+          "powder"
+        ],
+        "beamMode": [
+          "time-of-flight"
+        ],
+        "probe": [
+          "neutron"
+        ],
+        "scatteringType": [
+          "bragg"
+        ],
+        "purpose": [
+          "refinement"
+        ],
+        "fittingMode": [
+          "sequential"
+        ],
+        "facilities": [
+          "ISIS"
+        ],
+        "instruments": [
+          "WISH"
+        ],
+        "dimensionality": [
+          "1d"
+        ],
+        "polarisation": [
+          "unpolarised"
+        ],
+        "structure": [
+          "crystal"
+        ]
+      },
+      "searchAliases": [
+        "pd-neut-tof_ncaf-wish-5bank_synthetic-100p",
+        "Na₂Ca₃Al₂F₁₄ [I2₁3] · WISH @ ISIS",
+        "100 points × 5 banks · Synthetic series of joint fits"
+      ],
+      "sources": [
+        "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_synthetic-100p/project/project.edi",
+        "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_synthetic-100p/project/analysis/analysis.edi",
+        "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_synthetic-100p/project/experiments/wish_1_10.edi",
+        "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_synthetic-100p/project/experiments/wish_2_9.edi",
+        "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_synthetic-100p/project/experiments/wish_3_8.edi",
+        "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_synthetic-100p/project/experiments/wish_4_7.edi",
+        "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_synthetic-100p/project/experiments/wish_5_6.edi",
+        "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_synthetic-100p/project/structures/ncaf.edi"
+      ]
+    },
     "pd-xray-cwl_latp-bm01_scan": {
       "samples": [
         "LATP [R-3c]",

@@ -1,5 +1,6 @@
 """Host-independent controls for native tool selection and exact source manifest transport."""
 
+import hashlib
 import json
 import os
 import subprocess
@@ -122,6 +123,81 @@ def test_windows_native_consumer_uses_release_executable_and_honours_exact_overr
     consumer.os.environ['EDI_MAGNETIC_INTEGRATION_TEST_EXE'] = str(tmp_path / 'missing.exe')
     with pytest.raises(AssertionError, match='missing downstream consumer is a failure'):
         consumer.native_consumers.__wrapped__()
+    reflection_observer_controls(tmp_path, monkeypatch)
+
+
+def reflection_observer_controls(tmp_path, monkeypatch):
+    from tests.integration.py import (  # noqa: PLC0415 - exercise the actual fixture callers
+        test_reflection_admission as admission,
+    )
+    from tests.integration.py import (  # noqa: PLC0415 - prior-art observer fixture
+        test_single_crystal_empty as empty,
+    )
+    from tests.system.py import test_single_crystal_edges as edges  # noqa: PLC0415
+
+    for module in (admission, empty, edges):
+        directory = tmp_path / module.__name__.split('.')[-1]
+        binding = SimpleNamespace(_edi=SimpleNamespace(__file__=directory / 'python/edi/_edi.pyd'))
+        digest = hashlib.sha256(
+            (ROOT / 'tests/fixtures/single_crystal_edges/probe.cpp').read_bytes()
+        ).hexdigest()
+        for configuration in ('single', 'multi'):
+            folder = directory / 'single_crystal_edges'
+            if configuration == 'multi':
+                folder /= 'Release'
+            binary = folder / 'single_crystal_edge_probe.exe'
+            binary.parent.mkdir(parents=True, exist_ok=True)
+            binary.write_bytes(b'authored native-path control; not an executed model')
+            calls = []
+
+            def identity(command, *, binary=binary, digest=digest, calls=calls, **_kwargs):
+                assert command == [str(binary), '--identity'], (
+                    'Each reflection fixture must authenticate '
+                    'the exact selected native executable'
+                )
+                calls.append(command)
+                return digest + '\n'
+
+            with monkeypatch.context() as patch:
+                patch.setattr(native_process, 'os', SimpleNamespace(name='nt'))
+                patch.setattr(module, 'subprocess', SimpleNamespace(check_output=identity))
+                if module is admission:
+                    patch.setattr(
+                        module,
+                        'importlib',
+                        SimpleNamespace(import_module=lambda _name, binding=binding: binding),
+                    )
+                else:
+                    patch.setattr(module, 'engine', lambda binding=binding: binding)
+                if module is not edges:
+                    patch.setattr(module, 'os', SimpleNamespace(environ={}))
+                assert module.native.__wrapped__() == binary, (
+                    'All reflection observers must resolve Windows exe and Release layouts '
+                    'through their actual fixture entry points'
+                )
+                assert len(calls) == 1, (
+                    'Native path admission must reach the complete-source identity check once'
+                )
+                patch.setattr(
+                    module, 'subprocess', SimpleNamespace(check_output=lambda *_a, **_k: 'stale')
+                )
+                with pytest.raises(AssertionError, match=r'prepared.*match'):
+                    module.native.__wrapped__()
+                patch.setattr(module, 'subprocess', SimpleNamespace(check_output=identity))
+                if module is not edges:
+                    module.os.environ['SINGLE_CRYSTAL_EMPTY_OBSERVER'] = str(binary)
+                    assert module.native.__wrapped__() == binary, (
+                        'An explicit observer path is used exactly and retains identity validation'
+                    )
+                    module.os.environ['SINGLE_CRYSTAL_EMPTY_OBSERVER'] = str(
+                        directory / 'missing-override.exe'
+                    )
+                    with pytest.raises(AssertionError, match=r'require.*prepared'):
+                        module.native.__wrapped__()
+                    module.os.environ.clear()
+                binary.unlink()
+                with pytest.raises(AssertionError, match=r'require.*prepared|must be prepared'):
+                    module.native.__wrapped__()
 
 
 def test_authored_python_spy_reaches_declared_and_refused_argv_without_an_ambient_tool(tmp_path):

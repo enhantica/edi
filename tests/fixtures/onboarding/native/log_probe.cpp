@@ -105,6 +105,15 @@ int main(int argc, char** argv) {
         QMessageLogger("/fixture/native.cpp", 55, "probe", "acceptance").critical("column-critical");
         edi_app::RunLog::install(nullptr);
     }
+    if (operation == "caught") {
+        QString caught;
+        QObject::connect(&log, &edi_app::RunLog::errorCaught, &app, [&](const QString& message) { caught = message; });
+        edi_app::RunLog::install(&log);
+        edi_app::RunLog::reportCaught(request["message"].toString());
+        QCoreApplication::processEvents();
+        result["caught"] = caught;
+        edi_app::RunLog::install(nullptr);
+    }
     if (request["operation"].toString() == "bounded") {
         for (int i = 0; i < 100; ++i)
             log.write(QtInfoMsg, QMessageLogContext("/fixture/native.cpp", 90, "probe", "acceptance"), QString(request["message_size"].toInt(200), QChar(0x03bb)));

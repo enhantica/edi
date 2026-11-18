@@ -165,6 +165,7 @@ void LivePreview::apply(const Edit& edit, bool* applied, Edit::AppliedResult* re
     State& s = *self;
     if (!s.open) return;
     s.trace(work::EventKind::Input, s.newest + 1);
+    // cppcheck-suppress identicalConditionAfterEarlyExit ; the trace hook can close the preview
     if (!s.open) return;
     const auto editor_before=s.live.edits_.record();
     const auto editor_before_epoch=editor_before->epoch.value();

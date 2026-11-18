@@ -41,8 +41,8 @@ then meets the 5 s bound. The runtimes were measured serially by
 | `unit/py` | 117 | 0.1 s | **0** | 0.0% | — | 0 |
 | `unit/cpp` | 45 | 0.1 s | **0** | 0.0% | 0.096 s | 0 |
 | `integration` | 102 | 1.0 s | **0** | 0.0% | — | 0 |
-| `system` | 77 | 5.0 s | **3** | — | 72.180 s | 0 |
-| **total** | **341** | | **3** | | | **0** |
+| `system` | 77 | 5.0 s | **4** | — | 110.450 s | 0 |
+| **total** | **341** | | **4** | | | **0** |
 
 Measured-count columns retain the dated corpus above; listed breach counts include
 the exact-archive exception below.
@@ -61,7 +61,7 @@ the exact-archive exception below.
 
 - none
 
-### `system` — bound 5.0 s, 3 breach(es)
+### `system` — bound 5.0 s, 4 breach(es)
 
 - 72.180 s — `tests/system/py/test_c34_t24_cli_variants.py::test_every_executing_project_runs_every_pinned_variant_from_project_data[pd-neut-tof_ncaf-wish-5bank_start-5-0]`
   - cause:, crysta about 4x slower inside edi (fix: edi `b5f8352`, crysta
@@ -71,6 +71,11 @@ the exact-archive exception below.
   - cause:, crysta about 4x slower inside edi (fix: edi `b5f8352`, crysta
     `ce21eba6`/`a4d5c2cd`, on `-structure-categories`). Remove when, re-measured after
     Merges into edi main, it meets the 5 s bound.
+- 110.450 s — `tests/system/py/test_c34_t24_cli_variants.py::test_every_executing_project_runs_every_pinned_variant_from_project_data[pd-neut-tof_ncaf-wish-5bank_scan-6p-0]`
+  - cause:, the six-point five-bank series example fits six joint five-bank points, and one
+    five-bank point alone takes longer than the bound (2026-11-16 decision, development hub
+    `knowledge/decision-records.md`). Remove when, re-measured after the next five-bank engine
+    speed-up merges into edi main, it meets the 5 s bound.
 
 - 42.160 s — `tests/system/py/test_project_file_text_contract.py::test_real_text_tab_actor[ProjectText::test_exact_classic_archive_opens_and_saves]`
   - Tracked issue: "Saving a 65,535-member classic ZIP is slow" (2026-11-01).

@@ -139,6 +139,33 @@ def reporting_controls(tmp_path):
     spec = importlib.util.spec_from_file_location('cli_reporting_checker', RUNNER)
     checker = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(checker)
+    lif = json.loads((ROOT / 'docs/user/cli/pd-xray-cwl_lif_single/expected.json').read_text())[
+        'variants'
+    ]['fast-descent']['quantities']
+    assert lif['iterations'] == {
+        'value': 4.5,
+        'kind': 'regression-pin',
+        'tol_abs': 0.5,
+        'tol_rel': None,
+    }, 'The LiF window covers exactly the observed integer counts four and five'
+    for count in (3, 4, 5, 6):
+        assert bool(checker._deviations('iterations', lif['iterations'], count)) == (
+            count not in {4, 5}
+        ), 'The LiF stop-count adaptation must admit four/five and refuse their neighboring counts'
+    for field, value in (('reduced_chi_square', 2.275037958e-5), ('rwp', 0.0002846980363)):
+        assert lif[field] == {
+            'value': value,
+            'kind': 'regression-pin',
+            'tol_abs': 1e-9,
+            'tol_rel': None,
+        }, 'The LiF stop-count window leaves both complete original fit-quality pins unchanged'
+        assert checker._deviations(field, lif[field], value) == [], (
+            'The LiF complete original fit-quality control remains admitted'
+        )
+        for direction in (-1, 1):
+            assert checker._deviations(field, lif[field], value + direction * 2e-9), (
+                'The LiF stop-count window never admits a breach of either original quality bound'
+            )
     # Independently authored edge: the raw value passes its original scientific bound,
     # whereas its correctly reported projection lies outside it. No bound is widened.
     raw = {

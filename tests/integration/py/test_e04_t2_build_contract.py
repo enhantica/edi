@@ -217,6 +217,7 @@ def test_ci_job_names_state_area_and_platform_and_share_matrices():
         'core · macOS',
         'app · Linux',
         'app · macOS',
+        'app · Windows',
         'app · WebAssembly',
         'cli-python · Linux',
         'cli-python · macOS',
@@ -252,6 +253,10 @@ def test_ci_job_names_state_area_and_platform_and_share_matrices():
         required.add('pages')
     assert names == required, (
         f'note 18: CI job display names identify area/platform: {names ^ required}'
+    )
+    windows = [(key, job) for key, name, job in rows if name == 'app · Windows']
+    assert len(windows) == 1 and windows[0][0] == 'app-windows', (
+        'note 18: the Windows build-only app job is separate from the Linux/macOS test matrix'
     )
     for area in ('native', 'core', 'app', 'cli-python', 'cli-native'):
         keys = {key for key, name, _ in rows if name in {area + ' · Linux', area + ' · macOS'}}

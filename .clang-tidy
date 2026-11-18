@@ -1,45 +1,31 @@
-# C++ static analysis — the clang-tidy analogue of ruff lint (AGENTS.md §Code style).
-# No per-line silencing (`// NOLINT`) — a finding means refactor or justify centrally here.
-# Vendored/generated code (build/, nanobind) is excluded via the run command. Mirrors
-# crysta's curated set (ADR-0004 shared discipline): the wildcard groups on, the well-known
-# high-noise / purely-stylistic sub-checks off, keeping the bug-catching signal.
+# C++ static analysis over edi's own code (ADR-0093), any finding an error in CI.
+# The groups that find faults: the Clang Static Analyzer, bugprone, performance and cert, each with the
+# exceptions crysta's curated set makes. crysta's style groups (readability, modernize, misc,
+# cppcoreguidelines) follow in a sweep of their own. A line the checks misread names the check it
+# silences and why: `// NOLINT(<check>): <reason>`.
+# The analyzer's opt-in Padding hint is off: it asks for members in size order, and the code orders them
+# by meaning; it reports memory layout, never a fault. performance-enum-size is off too: most of edi's
+# enums are Qt's (model roles from Qt::UserRole, Q_ENUM types QML reads), which the meta-object system
+# handles as int. bugprone-empty-catch is off: edi's teardown and optional presentation steps are noexcept and
+# drop a failure on purpose. performance-no-int-to-ptr is off: Qt table models here key rows by small integers.
 Checks: >
+  -*,
+  clang-analyzer-*,
+  -clang-analyzer-optin.performance.Padding,
   bugprone-*,
-  cppcoreguidelines-*,
-  modernize-*,
   performance-*,
-  readability-*,
-  misc-*,
   cert-*,
-  -modernize-use-trailing-return-type,
-  -modernize-use-nodiscard,
-  -modernize-use-designated-initializers,
-  -modernize-use-ranges,
-  -modernize-return-braced-init-list,
-  -modernize-use-auto,
-  -modernize-use-integer-sign-comparison,
-  -modernize-raw-string-literal,
-  -modernize-avoid-c-arrays,
-  -readability-identifier-length,
-  -readability-magic-numbers,
-  -readability-math-missing-parentheses,
-  -readability-function-cognitive-complexity,
-  -readability-use-anyofallof,
-  -readability-avoid-nested-conditional-operator,
   -bugprone-easily-swappable-parameters,
   -bugprone-throwing-static-initialization,
-  -misc-non-private-member-variables-in-classes,
-  -misc-include-cleaner,
-  -cppcoreguidelines-non-private-member-variables-in-classes,
-  -cppcoreguidelines-avoid-magic-numbers,
-  -cppcoreguidelines-avoid-c-arrays,
-  -cppcoreguidelines-avoid-non-const-global-variables,
-  -cppcoreguidelines-pro-bounds-pointer-arithmetic,
-  -cppcoreguidelines-pro-bounds-array-to-pointer-decay,
-  -cppcoreguidelines-pro-bounds-constant-array-index,
-  -cppcoreguidelines-pro-bounds-avoid-unchecked-container-access,
-  -cppcoreguidelines-pro-type-vararg,
   -cert-err58-cpp,
-  -cert-err33-c
+  -cert-err33-c,
+  -performance-enum-size,
+  -bugprone-empty-catch,
+  -performance-no-int-to-ptr
 WarningsAsErrors: ''
 HeaderFilterRegex: 'core/.*'
+# libc++'s allocator throws bad_array_new_length only for a size past max_size(), a request no allocation can meet, and
+# edi never throws it: libstdc++ reports the same case as bad_alloc from operator new, which the check does not count,
+# so the two libraries read alike (ADR-0093).
+CheckOptions:
+  bugprone-exception-escape.IgnoredExceptions: 'bad_array_new_length'

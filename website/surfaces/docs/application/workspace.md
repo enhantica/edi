@@ -76,6 +76,26 @@ Move through the pages from left to right. Within each page, work down the sideb
 | Analysis | Choose free parameters, run fitting and inspect the fitted pattern and results. |
 | Report | Review and export a report of the analysis. |
 
+## Main view tabs
+
+Each page shows the main-view tabs that make sense for it. A tab that will become available later is shown disabled; a tab that does not apply is hidden.
+
+| Page | Tabs | Opens on |
+| --- | --- | --- |
+| Structure | **Structure**, **Pattern** | Structure |
+| Experiment | **Pattern**, **Meas vs calc**, and **Stacked** and **Map** for several datasets | Pattern |
+| Analysis | **Structure**, **Pattern**, **Meas vs calc**, **Correlations**, **Stacked** and **Map** for several datasets, **Evolution** for a scan | Pattern |
+
+**Structure** needs a structure, **Pattern** an experiment, **Meas vs calc** both measured and calculated values, and **Correlations** a fit that produced them. A page opens on the tab you last chose on it, for the rest of the session, whichever project you open.
+
+## Chart toolbars
+
+Every chart, and the structure view, has one row of controls above it, centred under its selector row. When the window is too narrow, the least-used controls move into **More** (**⋯**) at the row's end.
+
+On a pattern chart, the **x** box draws the experiment's own axis (2θ or time of flight), d-spacing, Q = 4π sinθ/λ or sinθ/λ; d, Q and sinθ/λ are offered once a calculation has given the experiment its d column. The **y** box picks a linear, square-root or log scale, and a third box how the measured data are drawn. The buttons show the legend and the hover read-out, the included range only, the data less the background, pan, box zoom and a reset of the axes.
+
+**Save image**, in the main view's bottom-left corner, saves what the shown tab draws. Its background is transparent unless **Preferences** › **Saved image background** says **Chart colour**.
+
 ## Sidebar tabs
 
 **Main** contains the primary controls for the active page. **Extra** and **Settings** add controls where the page has them. Every page has a **Text** tab with the `.edi` text a save writes for what the page shows. Its **Show** box picks **Editable**, text you can change and apply with **✓**, or **Everything**, which adds the measured data and results and is read-only. A disabled tab has no available view in the current state.

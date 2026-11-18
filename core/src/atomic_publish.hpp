@@ -10,7 +10,9 @@
 namespace edi::detail {
 // Shared native publication primitive (ADR-0057): fresh means no replacement;
 // an existing owned-file exchange keeps its original caller's validation.
-inline int atomic_publish(int sourceParent,const char* source,int targetParent,const char* target,bool exchange) noexcept {
+// Elsewhere it publishes nothing (-1), so the parameters go unused there.
+inline int atomic_publish([[maybe_unused]] int sourceParent,[[maybe_unused]] const char* source,[[maybe_unused]] int targetParent,
+                          [[maybe_unused]] const char* target,[[maybe_unused]] bool exchange) noexcept {
 #if defined(__linux__) && defined(SYS_renameat2) && !defined(__EMSCRIPTEN__)
     return static_cast<int>(::syscall(SYS_renameat2,sourceParent,source,targetParent,target,exchange?RENAME_EXCHANGE:RENAME_NOREPLACE));
 #elif defined(__APPLE__)

@@ -11,7 +11,12 @@ HERE = Path(__file__).parent
 
 
 def retained_bytes(relative, data):
-    data = previous_bytes(relative, data)
+    try:
+        data = previous_bytes(relative, data)
+    except ValueError as error:
+        raise AssertionError(
+            'Retained inputs require every complete committed source byte'
+        ) from error
     entries = json.loads((HERE / 'retention-adaptations.json').read_text())['files']
     row = entries.get(repository_key(relative))
     if row is None:

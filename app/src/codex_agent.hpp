@@ -68,7 +68,16 @@ signals:
     void started();
     void response(const QString& id, const QString& method, const QJsonObject& envelope);
     void serverRequest(const QJsonValue& originalId, const QString& method, const QJsonObject& params);
+    // A signal, not an override of QObject::event: its name is the protocol's and code connects to it by name, so it
+    // stays, and Clang's hidden-virtual warning is turned off for this one declaration.
+#if defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Woverloaded-virtual"
+#endif
     void event(const QString& method, const QJsonObject& params);
+#if defined(__clang__)
+#pragma clang diagnostic pop
+#endif
     void failed(const QString& explanation);
     // Only a correlated optional account/rateLimits/read disposition; not a provider error.
     void optionalUsageUnavailable(const QString& id, UsageDisposition disposition);

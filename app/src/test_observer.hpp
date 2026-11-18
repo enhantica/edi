@@ -40,15 +40,15 @@ enum class WorkReportOwnerRole { OriginalNative, OriginalItems, OriginalProgress
     OriginalTransport, PrimaryHistory, SupplementaryRow, FrozenExport, Encoding,
     WriterScratch, WorkerCapture, QueuedCallback, Receipt, ObserverScratch };
 enum class WorkReportOwnerGroup { OriginalLive, ReportCurrent, ReportRetired, Observer };
-struct WorkReportOwnerTag { WorkReportOwnerGroup group; QStringView owner_instance_id; const void* shared_backing; };
-struct WorkReportBytesView { WorkReportOwnerRole role; WorkReportOwnerTag tag; const QByteArray* owner; };
-struct WorkReportTextView { WorkReportOwnerRole role; WorkReportOwnerTag tag; const QString* owner; };
-struct WorkReportJsonView { WorkReportOwnerRole role; WorkReportOwnerTag tag; const QJsonValue* owner; };
-struct WorkReportContainerView { WorkReportOwnerRole role; WorkReportOwnerTag tag; const void* backing;
-    quint64 size,capacity,element_size; };
+struct WorkReportOwnerTag { WorkReportOwnerGroup group{}; QStringView owner_instance_id; const void* shared_backing{}; };
+struct WorkReportBytesView { WorkReportOwnerRole role{}; WorkReportOwnerTag tag; const QByteArray* owner{}; };
+struct WorkReportTextView { WorkReportOwnerRole role{}; WorkReportOwnerTag tag; const QString* owner{}; };
+struct WorkReportJsonView { WorkReportOwnerRole role{}; WorkReportOwnerTag tag; const QJsonValue* owner{}; };
+struct WorkReportContainerView { WorkReportOwnerRole role{}; WorkReportOwnerTag tag; const void* backing{};
+    quint64 size{},capacity{},element_size{}; };
 struct WorkReportTestView {
-    WorkReportBoundary boundary; QStringView scope_id,receipt_id;
-    quint64 aggregate_limit,original_reserved,report_reserved,requested_growth;
+    WorkReportBoundary boundary{}; QStringView scope_id,receipt_id;
+    quint64 aggregate_limit{},original_reserved{},report_reserved{},requested_growth{};
     std::span<const WorkReportBytesView> bytes;
     std::span<const WorkReportTextView> texts;
     std::span<const WorkReportJsonView> json;

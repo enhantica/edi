@@ -18,6 +18,13 @@ import edi.app
 Rectangle {
     id: view
 
+    // What the main view's Save image takes when this is the shown tab: the item, its toolbar (hidden while the image
+    // is taken), the file name, and whether the toolbar's band is cut off.
+    readonly property Item imageItem: view
+    readonly property Item imageToolbar: toolbarRow
+    readonly property string imageName: "structure"
+    readonly property bool imageCropsToolbar: false
+
     property StructureViewModel structure: null
     property StructureViewOptions options: null
     // The legend's width when it was last shown: the band the drawing keeps clear for it.
@@ -32,6 +39,8 @@ Rectangle {
     // The theme colours the view draws with; a PDF's figure takes the light ones.
     property FigureColors colors: FigureColors {}
     property string reportStructure: ""
+    // Set on the Report page's preview figure: the toolbar's camera buttons; the PDF's copies draw no toolbar.
+    property bool reportToolbar: false
 
     // The moment arrows' colours follow the app's preference (edi ADR-0078).
     Binding {
@@ -68,8 +77,10 @@ Rectangle {
     objectName: "structure.view"
     // EasyApp's chart background, as easydiffractionbeta's structure view (the owner, 2026-10-02), opaque behind
     // the 3D item, which clears to it too.
-    color: view.colors.chartBackground
+    color: view.transparentImage ? "transparent" : view.colors.chartBackground
     clip: true
+    // Save image's background (SaveImageButton): none while a transparent image is taken.
+    property bool transparentImage: false
 
     StructureViewController {
         id: controller
@@ -85,15 +96,16 @@ Rectangle {
         // owner, 2026-10-02): the cell edges grey, the axes red, green and blue, the labels in the foreground
         // colour over a halo of the background. Lighting and atom colours are diffraction-lib's.
         edgeColor: view.colors.grey
-        axisColorA: view.colors.red
-        axisColorB: view.colors.green
-        axisColorC: view.colors.blue
+        // a, b and c in red, green and blue, as crystallography draws them (the owner, 2026-11-16), lighter on dark.
+        axisColorA: view.colors.isDarkPalette ? "#ef5350" : "#d32f2f"
+        axisColorB: view.colors.isDarkPalette ? "#66bb6a" : "#2e7d32"
+        axisColorC: view.colors.isDarkPalette ? "#42a5f5" : "#1565c0"
         labelColor: view.colors.themeForeground
         haloColor: view.colors.chartBackground
         viewportWidth: view.width
         viewportHeight: view.height
         // The band kept clear at the top for the toolbar: its height with its margins.
-        topBand: view.report ? 0 : toolbar.height + 2 * view.margin
+        topBand: view.report && !view.reportToolbar ? 0 : toolbarRow.height + 2 * view.margin
         // And at either side for the legend: its width with its margin, and a gap before the drawing. Kept while the
         // atoms are hidden, which hides the legend, so a show or hide keeps the camera (the owner, 2026-11-03).
         sideBand: view.legendWidth > 0 && controller.hasSites ? view.sideMargin + view.legendWidth + view.margin : 0
@@ -102,7 +114,46 @@ Rectangle {
         triadShafts: structureScene.triadShafts
         triadHeads: structureScene.triadHeads
         shared: structureScene.shared
+        polyhedra: structureScene.polyhedra
         labels: labelLayer
+    }
+
+    // A view shown while its page is still sliding in gets no new frame once the page stops (a project opened on
+    // Analysis showed only the axis letters until a resize): it asks for frames until it stays in place.
+    Timer {
+        id: frameRequest
+
+        property point last: Qt.point(NaN, NaN)
+        property int left: 0
+
+        interval: 50
+        repeat: true
+        onTriggered: {
+            if (!view.view3d) {
+                stop();
+                return;
+            }
+            view.view3d.update();
+            const at = view.view3d.mapToItem(null, 0, 0);
+            if ((at.x === last.x && at.y === last.y) || --left <= 0)
+                stop();
+            last = at;
+        }
+    }
+    function requestFrames() {
+        frameRequest.last = Qt.point(NaN, NaN);
+        frameRequest.left = 40;
+        frameRequest.restart();
+    }
+    Connections {
+        target: controller
+        function onRevisionChanged() {
+            view.requestFrames();
+        }
+        function onActiveChanged() {
+            if (controller.active)
+                view.requestFrames();
+        }
     }
 
     // The scene, on every platform; the View3D below draws it where there is a 3D API.
@@ -131,8 +182,8 @@ Rectangle {
                 importScene: structureScene
                 camera: structureScene.camera
                 environment: SceneEnvironment {
-                    backgroundMode: SceneEnvironment.Color
-                    clearColor: view.color
+                    backgroundMode: view.transparentImage ? SceneEnvironment.Transparent : SceneEnvironment.Color
+                    clearColor: view.colors.chartBackground
                     antialiasingMode: SceneEnvironment.MSAA
                     antialiasingQuality: SceneEnvironment.High
                     // Linear light out to sRGB, as three.js renders diffraction-lib's view.
@@ -159,10 +210,11 @@ Rectangle {
             colors: view.colors
             minimumHeight: AppSizes.toolbarControlSize
             rowHeight: AppSizes.structureLegendRowHeight
-            anchors.left: parent.left
+            // Bottom right: the bottom-left corner holds Save image (the owner, 2026-11-16).
+            anchors.right: parent.right
             anchors.bottom: parent.bottom
             anchors.margins: view.margin
-            anchors.leftMargin: view.sideMargin
+            anchors.rightMargin: view.sideMargin
             entries: controller.legend
             labelInColor: false
             visible: controller.legend.count > 0
@@ -197,14 +249,22 @@ Rectangle {
 
     // The colour scheme and the toolbar, a toolbar group's spacing apart, in one line centred under the block
     // selector row (owner, 2026-10-11).
-    Row {
-        x: Math.round(view.sideMargin + (view.width - view.toolbarRightInset - view.sideMargin - width) / 2)
+    // The controls row every chart has (ToolbarLines): the colour scheme, then the structure toolbar's controls.
+    ToolbarLines {
+        id: toolbarRow
+
+        objectName: "structure.toolbar"
+        x: 0
         y: view.margin
-        visible: !view.report
-        spacing: EaStyle.Sizes.fontPixelSize * 0.5 + 2 * AppSizes.toolbarSpacing
+        width: view.width
+        height: implicitHeight
+        visible: !view.report || view.reportToolbar
+        leftEdge: view.sideMargin
+        rightEdge: view.width - view.toolbarRightInset
 
         ToolbarComboBox {
             objectName: "structure.toolbar.colors"
+            visible: !view.report
             toolTip: qsTr("Colour scheme (adjusted for contrast in labels and tables)")
             // The schemes' names as their authors spell them; the options keep diffraction-lib's tokens.
             model: ["Jmol", "VESTA"]
@@ -216,7 +276,7 @@ Rectangle {
 
             controller: controller
             options: view.options
-            saveTarget: view
+            features: !view.report
         }
     }
 

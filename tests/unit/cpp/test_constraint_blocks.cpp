@@ -40,6 +40,17 @@ TEST_CASE("Core joint fitting refuses unsupported relation directions") {
         ProjectDirectory directory("bank.instrument.calib_twotheta_offset", target);
         auto project = edi::load_project(directory.path.string());
         project.experiment().instrument.calib_twotheta_offset->free = true;
+        if (target == "second.instrument.calib_twotheta_offset") {
+            // Before: bank-to-bank ties refused. ADR-0131 point 5 imports the column.
+            REQUIRE_NOTHROW_MESSAGE(project.fit_joint(),
+                                    "A cross-bank tie must be admitted by the joint fit");
+            const double leader = project.experiment().instrument.calib_twotheta_offset->value;
+            CHECK_MESSAGE(
+                project.experiments[1]->instrument.calib_twotheta_offset->value ==
+                    doctest::Approx(.1 * leader + .01),
+                "The fitted imported bank column must obey its authored nonidentity relation");
+            continue;
+        }
         bool refused = false;
         try {
             (void)project.fit_joint();
@@ -55,8 +66,7 @@ TEST_CASE("Core joint fitting refuses unsupported relation directions") {
                           "The joint refusal must identify its independent bank");
         }
         CHECK_MESSAGE(
-            refused,
-            "Unsupported cross-bank and reverse-prefix relations must refuse before solving");
+            refused, "A bank-driven shared structural parameter must still refuse before solving");
     }
 }
 
