@@ -145,6 +145,7 @@ TestCase {
         for (let index = 0; index < 24; ++index) {
             verify(SettingsProof.key(field, Qt.Key_A), "Every keystroke reaches the real feedback editor");
             wait(0);
+            verify(Date.now() - start < 5000, "Typing with an admitted attachment stays inside the five-second system interaction budget");
         }
         const elapsed = Date.now() - start;
         compare(field.text, "a".repeat(24), "Attachment processing never loses or defers typed characters");
