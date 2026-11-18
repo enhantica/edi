@@ -1880,14 +1880,15 @@ void DemoDriver::trace_watch() {
     connect(&window_, &QQuickWindow::afterAnimating, this, &DemoDriver::trace_frame);
     // At synchronisation the GUI thread waits, so the native state is read there and is the state the frame shows; the
     // frame's swap then names it, with the transitions published for it.
-    connect(&window_, &QQuickWindow::afterSynchronizing, this, [this] {
+    // Both run on the render thread: they are dropped before quitting, so none can run while the driver goes away.
+    trace_sync_ = connect(&window_, &QQuickWindow::afterSynchronizing, this, [this] {
         const QJsonObject displayed = trace_state();
         const std::lock_guard lock(trace_mutex_);
         synced_frame_ = ui_trace_frame_synced();
         synced_displayed_ = displayed;
         synced_transitions_ = std::exchange(published_transitions_, {});
     }, Qt::DirectConnection);
-    connect(&window_, &QQuickWindow::frameSwapped, this, [this] {
+    trace_swap_ = connect(&window_, &QQuickWindow::frameSwapped, this, [this] {
         QJsonObject event;
         {
             const std::lock_guard lock(trace_mutex_);
@@ -1896,6 +1897,10 @@ void DemoDriver::trace_watch() {
         }
         EDI_UI_TRACE("render", event);
     }, Qt::DirectConnection);
+    connect(QCoreApplication::instance(), &QCoreApplication::aboutToQuit, this, [this] {
+        disconnect(trace_sync_);
+        disconnect(trace_swap_);
+    });
 }
 
 QString DemoDriver::trace_input() {

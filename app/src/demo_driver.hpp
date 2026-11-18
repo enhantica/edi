@@ -170,6 +170,7 @@ class DemoDriver : public QObject {
     QJsonObject synced_displayed_;      // the last synchronised frame's native state, its transitions and number
     QJsonArray synced_transitions_;
     qint64 synced_frame_ = 0;
+    QMetaObject::Connection trace_sync_, trace_swap_;
     QString input_identity_;
     QList<QPointer<QQuickItem>> page_tabs_, view_tabs_;
     int fit_runs_ = 0;
