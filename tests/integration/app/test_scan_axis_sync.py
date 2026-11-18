@@ -52,7 +52,9 @@ def axis_receipt():
             capture_output=True,
             text=True,
             check=False,
-            timeout=40,
+            # This process holds several independently asserted input rows plus
+            # cold page/renderer preparation; each QML input keeps its own bound.
+            timeout=40 + 10 * len(routes),
         )
         output = result.stdout + result.stderr
         print(output)
