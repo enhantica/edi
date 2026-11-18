@@ -6,14 +6,25 @@ from pathlib import Path
 
 
 def enrich_frames(trace):
+    trace.append({'event': 'input', 'identity': 'scan-fixture', 't_ms': -1})
     for step in [r for r in trace if r['event'] == 'step']:
         request, t = step['request'], step['t_ms']
+        trace.append({
+            'event': 'state',
+            'request': request,
+            't_ms': t + 0.5,
+            'selection': step['dataset'],
+            'input': 'scan-fixture',
+            'data_identity': 'pattern-' + str(step['dataset']),
+        })
         trace.append({'event': 'action', 'request': request, 't_ms': t, 'name': step['name']})
         trace.append({
             'event': 'presented',
             'request': request,
             't_ms': t + 1.5,
             'dataset': step['dataset'],
+            'input': 'scan-fixture',
+            'data_identity': 'pattern-' + str(step['dataset']),
             'generation': request,
         })
         for r in trace:
@@ -21,6 +32,8 @@ def enrich_frames(trace):
                 r['request'] = request
                 r['generation'] = request
                 r['dataset'] = step['dataset']
+                r['input'] = 'scan-fixture'
+                r['data_identity'] = 'pattern-' + str(step['dataset'])
             if r['event'] == 'frame' and r['request'] == request:
                 r['visible'] = dict.fromkeys(r['geometry'], True)
                 r['generation'] = request
@@ -83,13 +96,20 @@ def enrich_views(trace):
                     **key,
                     'generation': gen,
                     't_ms': started,
-                    'thread': 'worker',
+                    'thread': 'worker-' + builder + '-' + str(gen),
                     'scales': True,
                 },
-                {'event': 'built', **key, 'generation': gen, 't_ms': done, 'thread': 'worker'},
+                {
+                    'event': 'built',
+                    **key,
+                    'generation': gen,
+                    't_ms': done,
+                    'thread': 'worker-' + builder + '-' + str(gen),
+                },
             ])
         trace.extend([
             {'event': 'supersede', **key, 'generation': 1, 'replacement': 2, 't_ms': 12},
+            {'event': 'result-arrival', **key, 'generation': 1, 't_ms': 18},
             {'event': 'discard', **key, 'generation': 1, 't_ms': 18},
             {'event': 'deliver', **key, 'generation': 2, 'shown': True, 't_ms': 15},
             {'event': 'swap', **key, 'generation': 2, 'frame': i, 'thread': 'gui', 't_ms': 16},

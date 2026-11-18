@@ -68,7 +68,11 @@ def test_control_cannot_borrow_an_unrelated_later_stall():
 
 
 def action_trace(scenario):
-    trace = [{'event': 'input', 'identity': 'fixture'}]
+    trace = [
+        {'event': 'input', 'identity': 'fixture'},
+        {'event': 'begin', 't_ms': -1},
+        {'event': 'complete', 't_ms': len(CONTRACT['scenarios'][scenario]) * 100},
+    ]
     selection = 10
     for i, name in enumerate(CONTRACT['scenarios'][scenario]):
         delta = -1 if '-previous-' in name else 1
@@ -178,7 +182,7 @@ def test_complete_causal_work_escapes(case):
     elif case == 'false-scaling':
         event('build').update(scales=False, thread='gui')
     elif case == 'inorder-only':
-        event('built')['t_ms'] = 13.5
+        event('result-arrival')['t_ms'] = 9
     elif case == 'invented-supersede':
         event('supersede')['generation'] = 9
     elif case == 'render-clock':

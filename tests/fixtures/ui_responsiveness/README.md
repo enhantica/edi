@@ -107,8 +107,10 @@ which belongs to the existing blocking helper rather than the action timer.
 Exclusion spans match `measurement-enter` and `measurement-leave` from the
 actual `QQuickWindow::grabWindow` or `compare-images` callback. Both carry the
 same `id`, `callback`, GUI `thread` and exact endpoint timestamps as the markers.
-A reentrant application operation or timer delivery inside them invalidates
-the exclusion. The control's violating timer interval must contain the actual
+A GUI-thread application event of any kind, including future event types,
+or a GUI timer delivery inside them invalidates the exclusion. Concurrent
+worker events are permitted. Events carry their native thread identity; an
+event without one is conservatively treated as GUI work. The control's violating timer interval must contain the actual
 GUI block and its recovery; an unrelated later stall does not qualify.
 
 A separate `hierarchy` walks initialized native/QML view objects and includes
@@ -127,14 +129,23 @@ values at show equal their final hidden values; timestamps order hide, changes,
 show and catch-up. The positive catch-up consumes the newest invalidation.
 
 `contract.json` names the data-sized `builders` from the approved inventory.
-Every request/build/completion/delivery/discard/supersede/swap carries `builder`,
-`view`, `generation` and its actual clock. `build` and `built` bracket execution
-and record its native thread regardless of any `scales` label. Exercise both
-old and replacement requests for every builder: the old result completes after
-the new result, is discarded, and cannot deliver or swap. A current result
-completes, delivers and swaps on its matching real render clock. Every
-incremental `model-change` records `changed_range`, sampled from the actual
-changed rows, for comparison to the emitted bounds; last-row edits are valid.
+Request/build/completion/delivery/discard/supersede/cancel/result-arrival events
+carry `builder`, target `view`, `generation` and actual clock. Each supersession
+binds real old and replacement requests at the replacement issuance time.
+A queued superseded request may `cancel` without running (ADR-0096). A running
+one may complete and discard serially before its replacement starts (ADR-0020),
+or arrive late; its raw worker callback is `result-arrival`, distinct from a
+`deliver` accepted by the view. Stale output must never reach a view snapshot.
+
+The controlled rejection seam defers at least one stale owner arrival until
+after replacement computation, then observes rejection; it does not require
+reversed completion on every production worker. Native execution may remain
+serial and owner deliveries ordered. A `swap` may combine multiple builder
+outputs in a `sources` list of `{view,builder,generation}`. Every current output
+contributes exactly once to a final snapshot, with no stale source and at most
+one swap per view per frame. Every incremental model range matches the actual
+`changed_range`; whole-model changes and one-row models are valid. A separate
+partial edit supplies the strict-subrange witness.
 
 Both first and settled geometry observations bind the request and actual
 render clock. A `presented` event records the requested `dataset` and uploaded
@@ -142,3 +153,13 @@ render clock. A `presented` event records the requested `dataset` and uploaded
 cannot predate that presentation. Each frame includes a `visible` map with
 effective visibility for all six geometry entries. Positive rectangles from
 invisible panes and copied geometry from an unrendered frame are insufficient.
+
+The measured `begin` precedes every action issuance and `complete` follows all
+requested state transitions and renders, including control recovery. Step
+completion labels alone cannot establish the measured window. For Pattern,
+`state.selection` equals the step dataset and its input equals the loaded input.
+State, publication and settled render also carry the same `data_identity`, the
+content identity sampled independently from the selected native pattern and
+from the rendered pattern buffers, plus the same project `input` identity.
+This rejects a self-consistent rendered index stream for a different selection
+or different pattern contents.

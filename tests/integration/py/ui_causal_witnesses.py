@@ -24,20 +24,7 @@ def exclusions(trace, spans):
         len(callbacks) == len(rows(trace, 'measurement-leave')) == len(spans),
         'each excluded span has one actual measurement callback',
     )
-    forbidden = {
-        'action',
-        'state',
-        'step',
-        'request',
-        'build',
-        'deliver',
-        'swap',
-        'model-change',
-        'data-change',
-        'begin',
-        'complete',
-        'tick',
-    }
+    measurement_events = {'tool-begin', 'tool-end', 'measurement-enter', 'measurement-leave'}
     for start, stop, identity in spans:
         enter = unique(trace, 'measurement-enter', id=identity)
         leave = unique(trace, 'measurement-leave', id=identity)
@@ -56,7 +43,12 @@ def exclusions(trace, spans):
             'markers exactly delimit callback entry and return',
         )
         need(
-            not any(r['event'] in forbidden and start < r['t_ms'] < stop for r in trace),
+            not any(
+                r['event'] not in measurement_events
+                and (r.get('thread') or enter['thread']) == enter['thread']
+                and start < r['t_ms'] < stop
+                for r in trace
+            ),
             'application and reentrant work cannot occur inside a measurement exclusion',
         )
 
@@ -70,11 +62,13 @@ def block_interval(trace, ticks, spans):
     ]
     need(len(covering) == 1, 'a real GUI block suppresses ticks until its recovery')
     a, b = covering[0]
+    need(b <= unique(trace, 'complete')['t_ms'], 'measurement continues through control recovery')
     excluded = sum(max(0, min(b, y) - max(a, x)) for x, y, _ in spans)
     need(b - a - excluded - 10 > 100, 'the control block itself causes the violating interval')
 
 
 def actions(trace, scenario, steps):
+    begin, complete = unique(trace, 'begin'), unique(trace, 'complete')
     issued = rows(trace, 'action')
     need(
         [r['name'] for r in issued] == steps, 'every requested action is actually issued in order'
@@ -85,8 +79,17 @@ def actions(trace, scenario, steps):
         state = unique(trace, 'state', request=action['request'])
         step = unique(trace, 'step', request=action['request'])
         need(
-            action['t_ms'] <= state['t_ms'] <= step['t_ms'],
+            begin['t_ms'] <= action['t_ms'] <= state['t_ms'] <= step['t_ms'] <= complete['t_ms'],
             'state follows input issuance before its completion label',
+        )
+        need(
+            all(
+                begin['t_ms'] <= r['t_ms'] <= complete['t_ms']
+                for r in trace
+                if r['event'] in {'presented', 'render', 'frame'}
+                and r.get('request') == action['request']
+            ),
+            'the measured interval contains requested presentation and rendered completion',
         )
         need(
             state['input'] == unique(trace, 'input')['identity'],
@@ -232,94 +235,163 @@ def lifecycle(trace, kinds):
     )
 
 
+def work_key(row):
+    return tuple(row[k] for k in ('view', 'builder', 'generation'))
+
+
 def delivery(trace):
     contract = json.loads(
         (Path(__file__).parents[2] / 'fixtures/ui_responsiveness/contract.json').read_text()
     )
-    expected = set(contract['builders'])
-    requested = rows(trace, 'request')
+    requests = {work_key(r): r for r in rows(trace, 'request')}
+    need(len(requests) == len(rows(trace, 'request')), 'requests have distinct causal identities')
     need(
-        {r['builder'] for r in requested} == expected,
-        'requests cover every known data-sized builder',
+        {r['builder'] for r in requests.values()} == set(contract['builders']),
+        'all known data-sized builders are exercised',
     )
+    for name in ('build', 'built', 'deliver', 'discard', 'cancel', 'supersede', 'result-arrival'):
+        need(
+            all(work_key(r) in requests for r in rows(trace, name)),
+            'every causal work event names a real request',
+        )
+    relations = {}
+    for relation in rows(trace, 'supersede'):
+        key = work_key(relation)
+        replacement = (*key[:2], relation['replacement'])
+        need(
+            key not in relations and replacement in requests and key[2] < replacement[2],
+            'supersession connects distinct real ordered generations',
+        )
+        need(
+            requests[key]['t_ms'] < relation['t_ms'] == requests[replacement]['t_ms'],
+            'supersession occurs when the replacement is requested',
+        )
+        relations[key] = replacement
+    need(
+        {key[1] for key in relations} == set(contract['builders']),
+        'each known builder exercises supersession',
+    )
+    for key, request in requests.items():
+        execution(trace, request, key in relations)
+    snapshots(trace, requests, relations)
+    late = []
+    for key, replacement in relations.items():
+        arrivals = [r for r in rows(trace, 'result-arrival') if work_key(r) == key]
+        newer = [r for r in rows(trace, 'built') if work_key(r) == replacement]
+        if arrivals and newer and arrivals[0]['t_ms'] > newer[0]['t_ms']:
+            late.append(key)
+    need(bool(late), 'a controlled stale arrival after replacement completion exercises rejection')
+    edits = [r for r in rows(trace, 'model-change') if r['incremental']]
+    need(bool(edits), 'real incremental changes are exercised')
+    for edit in edits:
+        need(
+            edit['operation'] in {'dataChanged', 'insert', 'remove'}
+            and 0 <= edit['first'] <= edit['last'] < edit['rows'],
+            'incremental edits retain valid bounds without model reset',
+        )
+        need(
+            [edit['first'], edit['last']] == edit['changed_range'],
+            'every range matches the actual change including full and one-row models',
+        )
+    need(
+        any(r['last'] - r['first'] + 1 < r['rows'] for r in edits),
+        'a partial edit witnesses strict subrange invalidation',
+    )
+
+
+def execution(trace, request, stale):
+    key = work_key(request)
+    records = {
+        name: [r for r in rows(trace, name) if work_key(r) == key]
+        for name in ('build', 'built', 'cancel', 'discard', 'deliver', 'result-arrival')
+    }
+    if not records['build']:
+        need(
+            stale and len(records['cancel']) == 1,
+            'a superseded queued request can cancel before execution',
+        )
+        need(
+            not any(records[n] for n in ('built', 'discard', 'deliver', 'result-arrival')),
+            'queued cancellation does not fabricate execution or output',
+        )
+        replacement = unique(trace, 'supersede', view=key[0], builder=key[1], generation=key[2])
+        need(
+            records['cancel'][0]['t_ms'] >= replacement['t_ms'],
+            'queued cancellation follows supersession',
+        )
+        return
+    need(
+        len(records['build']) == len(records['built']) == 1,
+        'executed work has exactly one start and completion',
+    )
+    start, done = records['build'][0], records['built'][0]
     gui = unique(trace, 'clock')['gui_thread']
-    keys = [(r['view'], r['builder'], r['generation']) for r in requested]
-    need(len(keys) == len(set(keys)), 'builder request identities are unique')
-    for event in ('build', 'built', 'deliver', 'discard', 'swap'):
+    need(request['t_ms'] <= start['t_ms'] < done['t_ms'], 'execution follows its actual request')
+    need(
+        bool(start['thread']) and start['thread'] == done['thread'] != gui,
+        'data-sized work executes off the GUI thread',
+    )
+    if stale:
         need(
-            all((r['view'], r['builder'], r['generation']) in keys for r in rows(trace, event)),
-            'all work belongs to a real requested generation',
+            len(records['discard']) == len(records['result-arrival']) == 1
+            and not records['deliver'],
+            'stale results are observed arriving and rejected before view delivery',
         )
-    for request in requested:
-        key = {k: request[k] for k in ('view', 'builder', 'generation')}
-        start, done = unique(trace, 'build', **key), unique(trace, 'built', **key)
+        relation = unique(trace, 'supersede', view=key[0], builder=key[1], generation=key[2])
         need(
-            request['t_ms'] <= start['t_ms'] < done['t_ms'],
-            'each request binds its actual execution and completion',
+            done['t_ms'] <= records['result-arrival'][0]['t_ms'] <= records['discard'][0]['t_ms']
+            and relation['t_ms'] <= records['discard'][0]['t_ms'],
+            'stale rejection follows real completion, arrival and supersession',
         )
+    else:
         need(
-            start['thread'] == done['thread'] and start['thread'] != gui and bool(start['thread']),
-            'every known data-sized builder executes off GUI regardless of its scaling label',
+            len(records['deliver']) == 1 and not records['discard'] and not records['cancel'],
+            'current completed work delivers exactly once',
         )
-        superseded = [
-            r for r in rows(trace, 'supersede') if all(r[k] == v for k, v in key.items())
-        ]
-        if superseded:
-            newer = unique(
-                trace,
-                'request',
-                view=request['view'],
-                builder=request['builder'],
-                generation=superseded[0]['replacement'],
-            )
-            latest = unique(
-                trace,
-                'built',
-                view=newer['view'],
-                builder=newer['builder'],
-                generation=newer['generation'],
-            )
-            discard = unique(trace, 'discard', **key)
+        need(done['t_ms'] <= records['deliver'][0]['t_ms'], 'delivery follows completed execution')
+
+
+def snapshots(trace, requests, relations):
+    consumed = set()
+    swaps = rows(trace, 'swap')
+    need(bool(swaps), 'current builder outputs reach a rendered snapshot')
+    identities = [(r['view'], r['frame']) for r in swaps]
+    need(len(identities) == len(set(identities)), 'each view swaps at most once per actual frame')
+    for swap in swaps:
+        render = unique(trace, 'render', frame=swap['frame'])
+        need(
+            swap['t_ms'] == render['t_ms']
+            and swap['thread'] == unique(trace, 'clock')['gui_thread'],
+            'view swaps bind the actual render clock and GUI owner',
+        )
+        sources = swap.get('sources', [swap])
+        need(bool(sources), 'a view snapshot names its actual contributing builder outputs')
+        for source in sources:
+            key = work_key(source)
             need(
-                newer['generation'] > request['generation']
-                and newer['t_ms'] == superseded[0]['t_ms']
-                and latest['t_ms'] < done['t_ms'] <= discard['t_ms'],
-                'a genuinely late old completion is discarded after the newer result',
+                key in requests
+                and key not in relations
+                and key not in consumed
+                and key[0] == swap['view'],
+                'only current output contributes once to its target view',
             )
             need(
                 not any(
-                    all(r[k] == v for k, v in key.items())
-                    for r in rows(trace, 'swap') + rows(trace, 'deliver')
+                    other[:2] == key[:2] and other[2] > key[2] and r['t_ms'] <= swap['t_ms']
+                    for other, r in requests.items()
                 ),
-                'stale results never deliver or swap',
+                'no superseded generation can reach a view even without a supersede label',
             )
-        else:
-            delivered = unique(trace, 'deliver', **key)
-            swapped = unique(trace, 'swap', **key)
-            rendered = unique(trace, 'render', frame=swapped['frame'])
+            output = unique(trace, 'deliver', view=key[0], builder=key[1], generation=key[2])
             need(
-                done['t_ms'] <= delivered['t_ms'] <= swapped['t_ms'] <= delivered['t_ms'] + 100,
-                'each current completion delivers and swaps within its bound',
+                output['t_ms'] <= swap['t_ms'] <= output['t_ms'] + 100,
+                'a shown completed output reaches its view within the coalescing bound',
             )
-            need(
-                swapped['t_ms'] == rendered['t_ms'] and swapped['thread'] == gui,
-                'each snapshot swap binds its actual render clock and owner',
-            )
+            consumed.add(key)
     need(
-        {r['builder'] for r in rows(trace, 'supersede')} == expected,
-        'out-of-order completion is exercised for every affected builder',
+        consumed == set(requests) - set(relations),
+        'every current builder output contributes to a final view snapshot',
     )
-    for edit in rows(trace, 'model-change'):
-        if edit['incremental']:
-            need(
-                edit['operation'] in {'dataChanged', 'insert', 'remove'}
-                and 0 <= edit['first'] <= edit['last'] < edit['rows'],
-                'every incremental model edit has valid bounds without a reset',
-            )
-            need(
-                [edit['first'], edit['last']] == edit['changed_range'],
-                'every emitted range matches actual changes, including the last row',
-            )
 
 
 def rendered_navigation(trace):
@@ -332,8 +404,23 @@ def rendered_navigation(trace):
             bool(render) and first['frame'] == render[0]['frame'],
             'first frame is measured from issuance, not a delayed completion label',
         )
+        state = unique(trace, 'state', request=step['request'])
+        need(
+            state['input'] == unique(trace, 'input')['identity']
+            and state['selection'] == step['dataset'],
+            'the rendered request uses the actual selected dataset and loaded input',
+        )
         publication = unique(trace, 'presented', request=step['request'])
         displayed = unique(trace, 'render', frame=settled['frame'])
+        need(
+            bool(state['data_identity'])
+            and bool(state['input'])
+            and all(
+                r['input'] == state['input'] and r['data_identity'] == state['data_identity']
+                for r in (publication, displayed)
+            ),
+            'rendered pattern content and project identity match native selection',
+        )
         need(
             displayed['generation'] == publication['generation']
             and displayed['dataset'] == step['dataset'],
