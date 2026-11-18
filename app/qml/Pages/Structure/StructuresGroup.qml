@@ -176,8 +176,8 @@ SideBarGroup {
                         objectName: "structures.load.file"
                         fontIcon: "file"
                         text: qsTr("From file…")
-                        hint: ".cif .edi"
-                        toolTip: qsTr("Load a structure from a CIF or .edi file")
+                        hint: ".cif .mcif .edi"
+                        toolTip: qsTr("Load a structure from a CIF, magnetic CIF or .edi file")
                         // In the browser the files come through the page (edi ADR-0023).
                         onTriggered: ApplicationInfo.loadFormFiles(false)
                     }
@@ -238,8 +238,8 @@ SideBarGroup {
 
     FileDialog {
         id: loadDialog
-        title: qsTr("Load a structure from a CIF or .edi file")
-        nameFilters: [qsTr("Structure files (*.cif *.edi)"), qsTr("CIF files (*.cif)"), qsTr("edi block files (*.edi)")]
+        title: qsTr("Load a structure from a CIF, magnetic CIF or .edi file")
+        nameFilters: [qsTr("Structure files (*.cif *.mcif *.edi)"), qsTr("CIF files (*.cif *.mcif)"), qsTr("edi block files (*.edi)")]
         currentFolder: DialogFolders.folder("loadStructure", "")
         onAccepted: {
             DialogFolders.remember("loadStructure", selectedFile);

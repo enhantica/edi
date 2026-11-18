@@ -3920,7 +3920,7 @@ struct AssistantViewModel::State {
     }
     static QString input_reader_hint(const QString& name) {
         const auto suffix=QFileInfo(name).suffix().toLower();
-        if(suffix=="cif" || suffix=="edi")return "structure";
+        if(suffix=="cif" || suffix=="mcif" || suffix=="edi")return "structure";
         if(suffix=="xy" || suffix=="xye" || suffix=="dat" || suffix=="txt" || suffix=="csv")return "measurement";
         return "unknown";
     }

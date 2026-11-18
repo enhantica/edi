@@ -4427,7 +4427,7 @@ void ApplicationInfo::loadFormFiles(bool experiments) const {
         assistantMemberWrite(f, group, "webRequestProject", project);
         if (experiments) projectWrite(f, "group", "webDataExperiment", consentNull());
         const auto requestOwner = panelUsageContextRead(f, "group");
-        const auto request = projectInvoke(f, "WebFiles", "openFiles", {QJSValue(QStringLiteral(".cif,.edi")), QJSValue(experiments)});
+        const auto request = projectInvoke(f, "WebFiles", "openFiles", {QJSValue(experiments ? QStringLiteral(".cif,.edi") : QStringLiteral(".cif,.mcif,.edi")), QJSValue(experiments)});
         assistantMemberWrite(f, requestOwner, "webRequest", request);
     } else projectInvoke(f, "loadDialog", "open");
 }
@@ -4448,7 +4448,7 @@ bool ApplicationInfo::chooseStructureFile() const {
         if (!consentFieldEquals(f, original, "project", actualProject) || !pickerSessionProject(f, original)) {
             panelUsageContextWrite(f, "webIntent", consentNull()); return false;
         }
-        const auto request = projectInvoke(f, "WebFiles", "openFiles", {QJSValue(QStringLiteral(".edi,.cif")), QJSValue(false)});
+        const auto request = projectInvoke(f, "WebFiles", "openFiles", {QJSValue(QStringLiteral(".edi,.cif,.mcif")), QJSValue(false)});
         if (!editorLife(f, life) || !assistantSameName(f, original, "webIntent")) return false;
         const auto currentProject = panelUsageContextRead(f, "project");
         if (request.strictlyEquals(QJSValue(0)) || !consentFieldEquals(f, original, "project", currentProject)
