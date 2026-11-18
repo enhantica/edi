@@ -142,8 +142,8 @@ void FitAgreementModel::setRecord(const edi::Project& project) {
         const std::string form = edi::token(edi::SampleFormEnum::SINGLE_CRYSTAL);
         column(QString::fromStdString(edi::label("fit_result.prof_r_factor", form)));
         column(QString::fromStdString(edi::label("fit_result.prof_wr_factor", form)));
-        // Then which reflections the fit used (crysta's admission): Rint and R-sigma in per cent, "n/a" where
-        // undefined, the merge mode and the counts.
+        // Then which reflections the fit used (crysta's admission): Rint and R-sigma in per cent, the one undefined text
+        // where undefined (edi::kUndefinedValue), the merge mode and the counts.
         column(QStringLiteral("R<sub>int</sub>"));
         column(QStringLiteral("R<sub>sigma</sub>"));
         column(tr("Merge"));
@@ -175,7 +175,8 @@ void FitAgreementModel::setRecord(const edi::Project& project) {
             }
             const auto ratio = [](const char* uid, const std::optional<double>& value) {
                 return value && std::isfinite(*value) ? QString::fromStdString(edi::shown_text(uid, *value))
-                                                      : QStringLiteral("n/a");
+                                                      : QString::fromUtf8(edi::kUndefinedValue.data(),
+                                                                          static_cast<qsizetype>(edi::kUndefinedValue.size()));
             };
             if (admitted) {
                 values << ratio("fit_result_bank.r_int", admitted->r_int) << ratio("fit_result_bank.r_sigma", admitted->r_sigma)

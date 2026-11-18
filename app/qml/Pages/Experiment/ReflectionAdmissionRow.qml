@@ -8,7 +8,7 @@ import edi.app
 
 // Which of a single crystal's reflections the fit uses: how equivalents are merged and whether systematic absences
 // are left out, each blank until set (none and include by default), then the counts and agreement crysta's admission
-// gives (Rint over merged groups of two or more, shown as n/a when undefined).
+// gives (Rint over merged groups of two or more, shown as undefined when there is none).
 Column {
     id: row
 
@@ -16,9 +16,9 @@ Column {
     readonly property var admission: experiment ? experiment.reflectionAdmission : null
     readonly property real fieldWidth: (EaStyle.Sizes.sideBarContentWidth - grid.columnSpacing) / 2
 
-    // An agreement factor as the dictionary shows its item, n/a when undefined.
+    // A statistic as the dictionary shows its item, with its units, or the one undefined text.
     function ratio(uid, value) {
-        return isNaN(value) ? qsTr("n/a") : Session.display(uid, value);
+        return Session.statisticText(uid, value);
     }
 
     spacing: AppSizes.groupContentSpacing
@@ -61,6 +61,6 @@ Column {
         width: EaStyle.Sizes.sideBarContentWidth
         wrapMode: Text.WordWrap
         color: EaStyle.Colors.red
-        text: row.admission === null ? "" : qsTr("Systematic absences: %1 with mean I/su %2; the space group may be wrong").arg(row.admission.absent).arg(Session.display("fit_result_bank.absent_mean_i_over_su", row.admission.absentMeanIOverSigma))
+        text: row.admission === null ? "" : qsTr("Systematic absences: %1 with mean I/su %2; the space group may be wrong").arg(row.admission.absent).arg(row.ratio("fit_result_bank.absent_mean_i_over_su", row.admission.absentMeanIOverSigma))
     }
 }

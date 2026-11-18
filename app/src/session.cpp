@@ -2534,6 +2534,11 @@ QString Session::written(const QString& uid, double value) const {
     return from_bridge([&] { return edi::file_text(uid.toStdString(), value); });
 }
 
+QString Session::statisticText(const QString& uid, double value) const {
+    const std::optional<double> defined = std::isfinite(value) ? std::optional<double>(value) : std::nullopt;
+    return from_bridge([&] { return edi::statistic_text(uid.toStdString(), defined); });
+}
+
 QString Session::display(const QString& uid, double value, const QString& variant) const {
     if (!std::isfinite(value)) {
         return {};

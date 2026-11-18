@@ -239,7 +239,7 @@ struct ReportSingleCrystal {
 };
 
 /// The admission line a single crystal's chart shows under its title: the counts, the merge mode and Rint and
-/// R-sigma ("not available" when undefined, never 0).
+/// R-sigma with their units (edi::statistic_text: the one undefined text when undefined, never 0).
 std::string admission_statistics(const ReportAdmission& admission);
 /// The hover line naming why a reflection is left out (`reason` as in ReportSingleCrystal); empty when used.
 std::string left_out_text(const std::string& reason);

@@ -468,9 +468,7 @@ ReportSingleCrystal single_crystal_of(const Project& project, std::size_t index,
 }  // namespace
 
 std::string admission_statistics(const ReportAdmission& admission) {
-    const auto ratio = [](const char* uid, const std::optional<double>& value) {
-        return value && std::isfinite(*value) ? shown_text(uid, *value) : std::string("not available");
-    };
+    const auto ratio = [](const char* uid, const std::optional<double>& value) { return statistic_text(uid, value); };
     return "Measured " + std::to_string(admission.measured) + ", unique " + std::to_string(admission.unique) +
            ", used " + std::to_string(admission.used) + ", excluded " + std::to_string(admission.excluded) +
            ", absent " + std::to_string(admission.absent) + "; merge " +

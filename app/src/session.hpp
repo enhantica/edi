@@ -292,6 +292,9 @@ class Session : public QObject {
     // A value of item `uid` as a save writes it, for an input field or an editable cell (edi ADR-0051).
     Q_INVOKABLE QString written(const QString& uid, double value) const;
     Q_INVOKABLE QString display(const QString& uid, double value, const QString& variant = QString()) const;
+    // A statistic of item `uid` with its units, or the one undefined text when `value` is not finite
+    // (edi::statistic_text).
+    Q_INVOKABLE QString statisticText(const QString& uid, double value) const;
     // A read-only value of item `uid` and its s.u. as a table shows them apart: rounded by the s.u. under the project's
     // rule (edi::fitted_text), or without one by the item's display format, the s.u. then empty.
     Q_INVOKABLE QString valueText(const QString& uid, double value, double su) const;
