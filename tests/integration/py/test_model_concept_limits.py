@@ -47,13 +47,14 @@ def nav_paths(value):
 
 
 def test_user_concept_navigation_explains_model_preconditions_and_search_limits():
-    navigation = yaml.safe_load((ROOT / 'mkdocs.yml').read_text())['nav']
+    public = ROOT / 'website/surfaces'
+    navigation = yaml.load((public / 'mkdocs.yml').read_text(), Loader=yaml.BaseLoader)['nav']
     paths = set(nav_paths(navigation))
     candidates = []
     for name in paths:
-        if not (name.startswith('user/') and name.endswith('.md')):
+        if not (name.startswith('user-guide/') and name.endswith('.md')):
             continue
-        page = ROOT / 'docs' / name
+        page = public / 'docs' / name
         title = page.read_text() if page.is_file() else ''
         if (
             'concept' in name.lower()
