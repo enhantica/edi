@@ -129,7 +129,8 @@ def violations(text, case):
             )
         needs(
             load,
-            'QJSValue(QStringLiteral(".cif,.edi")),QJSValue(experiments)',
+            'QJSValue(experiments ? QStringLiteral(".cif,.edi") : '
+            'QStringLiteral(".cif,.mcif,.edi")),QJSValue(experiments)',
             'native chooser passes its declared filter and cardinality',
         )
         needs(
@@ -411,6 +412,11 @@ def test_every_browser_file_receiver_preserves_request_ownership(case):
             ('native', '!projectFieldIs(f, "group", "webRequestProject", current)', 'false'),
         ],
         'structure-cardinality': [
+            (
+                'native',
+                'QStringLiteral(".cif,.mcif,.edi")',
+                'QStringLiteral(".cif,.edi")',
+            ),
             (
                 'structure',
                 'ApplicationInfo.loadFormFiles(false)',

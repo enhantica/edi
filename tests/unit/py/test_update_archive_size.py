@@ -54,7 +54,12 @@ def repository(folder, sizes):
 @pytest.mark.parametrize('size', [61_000_000, 71_000_000, 95_000_000])
 def test_admit_current_and_boundary_archive_sizes(tmp_path, size):
     folder = repository(tmp_path / 'repository', {(APP, 'content.7z'): size})
-    PROMOTE.validate_repository(folder, VERSION, expected=PROMOTE.component_names('macos-arm64'))
+    result = PROMOTE.validate_repository(
+        folder, VERSION, expected=PROMOTE.component_names('macos-arm64')
+    )
+    assert result is None, (
+        'ADR-0068: a checksum-valid repository at or below the publishing limit is admitted'
+    )
 
 
 @pytest.mark.parametrize('component', [APP, ASSISTANT, MAINTENANCE])

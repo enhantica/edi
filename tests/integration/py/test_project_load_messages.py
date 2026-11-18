@@ -113,19 +113,29 @@ def test_every_project_load_route_has_a_per_attempt_visible_failure_channel(rout
     observer = block(main, 'function ' + handler + '(')
     observed = javascript(
         'let shown=[];const qsTr=s=>s;const refusal={message:"",title:"",'
-        'open(){shown.push(this.message)}};'
+        'file:"",open(){shown.push([this.message,this.file,this.title])}};'
         + observer
         + ';'
         + handler
-        + '("same refusal");'
+        + '("same refusal","file:///unreadable.edi");'
         + handler
         + '("same refusal");console.log(JSON.stringify(shown));'
     )
-    assert observed == ['same refusal', 'same refusal'], (
-        'Each actual per-attempt event must open the message dialog, including identical refusals'
+    assert observed == [
+        ['same refusal', 'file:///unreadable.edi', 'The project was not opened'],
+        ['same refusal', '', 'The project was not opened'],
+    ], (
+        'Each actual per-attempt event must open the message dialog, including identical '
+        'refusals, and replace the unreadable file with the current attempt'
     )
-    dialog = item(main, 'refusal.dialog')
-    assert 'refusal.message' in dialog, (
+    assert re.search(r'\bErrorDialog\s*\{\s*id:\s*refusal\b', main), (
+        'ADR-0062: load refusals must use the shared reportable error dialog'
+    )
+    assert 'objectName: "refusal.dialog"' in item(main, 'refusal.dialog'), (
+        'The actual load refusal must retain its observable dialog identity'
+    )
+    dialog = (ROOT / 'app/qml/Components/ErrorDialog.qml').read_text()
+    assert 'text: dialog.message' in dialog, (
         'The actual failure dialog must render the message published by its native event owner'
     )
     assert property_value(dialog, 'standardButtons').strip(), (
