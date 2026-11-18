@@ -7,6 +7,7 @@ import pytest
 
 from tests.fixtures import phase_scan
 from tests.fixtures.report_units.iucr_reference import rounded_pair
+from tests.fixtures.scan_csv import DERIVED_COLUMNS
 
 
 def rows(path):
@@ -35,9 +36,11 @@ def test_recorded_columns_equal_every_declared_free_category(tmp_path, mode, bac
         'fit_result.chi_square_tolerance',
         'fit_result.termination',
     }
-    assert actual == expected | {key + '.uncertainty' for key in expected}, (
+    assert actual == expected | {key + '.uncertainty' for key in expected} | set(
+        DERIVED_COLUMNS
+    ), (
         'Every declared active free category, including both texture fields per phase, '
-        'must have exactly one qualified value and uncertainty column'
+        'and each derived phase fraction has exactly one qualified value and uncertainty column'
     )
     before = (directory / 'analysis/results.csv').read_bytes()
     first = fit(project)

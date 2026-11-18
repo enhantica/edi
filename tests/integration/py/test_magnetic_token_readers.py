@@ -95,11 +95,13 @@ def admitted(source, route, root):
 
 
 def observed_errors(source, route, root, case, kind, token):
+    ignored = case.variant == 'redundant' and case.tag.startswith('_atom_site_moment.spherical_')
+    must_admit = ignored or kind == 'valid'
     try:
         project = admitted(source, route, root)
     except (ValueError, RuntimeError, KeyError) as error:
         if (
-            kind == 'valid'
+            must_admit
             or (kind == 'literal' and case.kind == 'text')
             or (kind == 'missing' and case.missing_accepts)
         ):
@@ -110,6 +112,9 @@ def observed_errors(source, route, root, case, kind, token):
         ):
             return ['refusal must name the tag and complete supplied value: ' + str(error)]
         return []
+    if ignored:
+        # ADR-0133 leaves spherical output unread beside authoritative crystal-axis inputs.
+        return saved_errors(project, root, case, 'valid', token)
     if kind == 'invalid' or (kind == 'literal' and case.kind != 'text'):
         return ['invalid supplied token accepted or defaulted']
     return saved_errors(project, root, case, kind, token)
@@ -183,15 +188,16 @@ def test_native_storage_refuses_unsupported_converted_moment_spellings(tmp_path,
 def test_a_supplied_moment_form_is_complete_even_beside_another_form(tmp_path, form, route):
     errors = []
     for index, (kind, source, tag) in enumerate(token_inputs.partial_moment_declarations(form)):
+        ignored = form == 'spherical' and '_atom_site_moment.crystalaxis_x\n' in source
         try:
             model = admitted(token_inputs.cif(source), route, tmp_path / str(index))
         except (ValueError, RuntimeError, KeyError) as error:
-            if kind == 'valid':
+            if kind == 'valid' or ignored:
                 errors.append('valid complete moment form refused: ' + str(error))
             elif '_atom_site_moment.' not in str(error):
                 errors.append('incomplete declaration refusal lacks its moment tag: ' + str(error))
         else:
-            if kind == 'invalid':
+            if kind == 'invalid' and not ignored:
                 errors.append('incomplete supplied form ignored or defaulted: ' + tag)
             else:
                 values = [
@@ -204,6 +210,6 @@ def test_a_supplied_moment_form_is_complete_even_beside_another_form(tmp_path, f
                 ):
                     errors.append('complete form changes the independently stated moment')
     assert not errors, (
-        'ADR-0108 each supplied moment form has all three values, including a redundant form: '
-        + '\n'.join(errors)
+        'Selected moment input forms are complete; redundant spherical output cannot override '
+        'the independently specified crystal-axis moment: ' + '\n'.join(errors)
     )
