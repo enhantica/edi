@@ -365,6 +365,7 @@ def assert_scene_evolution(qml):
             r"""#include <cstdio>
 #include <optional>
 #include <vector>
+#include <cmath>
 struct Project { std::optional<bool> evolution_error_bars; };
 struct QPointF{double x,y;QPointF(double a,double b):x(a),y(b){}};
 template<class T>struct QList:std::vector<T>{void append(T x){this->push_back(x);}};
@@ -373,10 +374,14 @@ i<p.size();
 ++i)std::printf("%.17g:%.17g:%.17g:%.17g\n",p[i].x,p[i].y,low[i],high[i]);
 }};
 
+template<class T>using QPointer=T*;
+using MeasuredLayer=Layer;
 struct EvolutionViewModel{struct Point{double x,y,error;
-int dataset;
+int dataset;int bank;
 };
-std::vector<Point> points_{{3,17,.4,8},{7,23,.7,17}};
+std::vector<Point> points_{{3,17,.4,8,0},{7,23,.7,17,1}};
+QList<QPointer<MeasuredLayer>> bank_layers_;
+bool allBanks() const {return false;}
 Layer layer;
 Layer* layer_=&layer;
 Project project;
@@ -386,7 +391,7 @@ void draw();
 
 BODY
 int main(){EvolutionViewModel model;model.draw();}
-""".replace('BODY', draw),
+""".replace('BODY', block(source('src/evolution_view_model.cpp'), 'double bar_of(') + '\n' + draw),
             Path(scratch),
         )
     assert [list(map(float, row.split(':'))) for row in actual] == [

@@ -347,9 +347,11 @@ def test_save_asks_once_then_uses_the_existing_location():
     )
     accepted = body(item(source, 'saveAs.choice'), 'onAccepted:')
     script = """let calls=[];
-    const saveAsChoice={zip:false,copy:false,diskWritable:true};const WebFiles={available:false};
+    const saveAsChoice={zip:false,copy:false,diskWritable:true,linkedData:false,dataChoice:"copy"};
+    const WebFiles={available:false};
     const window={assistantSaveIntent:''};
-    const Session={downloadWebProject(){calls.push(['download'])},
+    const Session={setNextSaveData(value){if(value!=="")throw Error('Unexpected linked data')},
+      downloadWebProject(){calls.push(['download'])},
       saveWebProjectAs(...args){calls.push(['web',...args])},
       suggestedSaveTarget(zip){return zip?'/chosen/name.zip':'/chosen/name'}};
     const saveZip={openAt(path){calls.push(['zip',path])}};
