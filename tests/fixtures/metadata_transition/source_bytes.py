@@ -14,9 +14,9 @@ from tests.fixtures.metadata_transition import (
     task_inputs,
 )
 from tests.fixtures.path_keys import repository_key
+from tests.fixtures.stop_defaults import example_inputs
 from tests.fixtures.table_display import source_uncertainties
 from tests.fixtures.table_display.source_uncertainties import previous_bytes as uncertainties
-from tests.fixtures.stop_defaults import example_inputs
 
 ROOT = Path(__file__).resolve().parents[3]
 HERE = Path(__file__).parent
