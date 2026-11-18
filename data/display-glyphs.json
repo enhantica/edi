@@ -199,6 +199,7 @@
    "sites": [
     "crysta:data/dictionary/parameters.yaml",
     "app/qml/Pages/Structure/AppearanceGroup.qml",
+    "app/qml/Pages/Structure/PolyhedraGroup.qml",
     "core/src/presentation.cpp"
    ],
    "drawn_by": "PT Sans",
@@ -276,7 +277,8 @@
    "font": "PT Sans",
    "sites": [
     "crysta:data/dictionary/parameters.yaml",
-    "app/qml/Pages/Structure/CellGroup.qml"
+    "app/qml/Pages/Structure/CellGroup.qml",
+    "app/src/parameter_item.cpp"
    ],
    "drawn_by": "Noto Sans",
    "weight": 400
