@@ -6,6 +6,7 @@ import zipfile
 
 import pytest
 
+from tests.fixtures.cif_import_baseline import source_free_markers
 from tests.fixtures.table_display import source_uncertainties
 
 
@@ -27,7 +28,7 @@ def test_free_marker_projection_is_bound_to_whole_inputs_and_six_significant_dig
         archive.writestr(digest, before)
     monkeypatch.setattr(source_uncertainties, 'HERE', tmp_path)
     frozen = {'_value': ['1.23456789(52)'], '_other': ['retained']}
-    assert source_uncertainties.reader_values('probe.edi', frozen, after) == {
+    assert source_free_markers.reader_values('probe.edi', frozen, after) == {
         '_value': ['1.23457()'],
         '_other': ['retained'],
     }, 'The archived empty-s.u. transition retains the free marker and six significant digits'
@@ -36,9 +37,9 @@ def test_free_marker_projection_is_bound_to_whole_inputs_and_six_significant_dig
     )
     for damaged in (after.replace(b'1.23456789', b'1.24456789'), after + b'# extra\n'):
         with pytest.raises(AssertionError, match='entire independently archived source'):
-            source_uncertainties.reader_values('probe.edi', frozen, damaged)
+            source_free_markers.reader_values('probe.edi', frozen, damaged)
     with pytest.raises(AssertionError, match='frozen nominal'):
-        source_uncertainties.reader_values('probe.edi', {'_value': ['9.876(5)']}, after)
-    assert source_uncertainties.reader_values('another.edi', frozen, after) == frozen, (
+        source_free_markers.reader_values('probe.edi', {'_value': ['9.876(5)']}, after)
+    assert source_free_markers.reader_values('another.edi', frozen, after) == frozen, (
         'A declared source transition cannot alter another input with identical numeric spelling'
     )

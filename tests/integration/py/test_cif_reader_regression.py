@@ -12,12 +12,12 @@ import pytest
 
 from tests.fixtures import cif_import_cases as case
 from tests.fixtures.cif_import_baseline import generate_readers as reference
+from tests.fixtures.cif_import_baseline import source_free_markers
 from tests.fixtures.cif_import_baseline.canonical_positions import (
     SILICON,
     reader_values,
     restore_representative,
 )
-from tests.fixtures.table_display import source_uncertainties
 
 BASE = Path(__file__).resolve().parents[2] / 'fixtures/cif_import_baseline'
 PINS = json.loads(gzip.decompress((BASE / 'readers-before.json.gz').read_bytes()))
@@ -54,7 +54,7 @@ def test_main_reader_model_regression_pin_changes_only_published_parameter_state
             expected[name] = transition['after']
     expected = reader_values(row['path'], expected, row['values'])
     original = reference.source_path(row['path'])
-    expected = source_uncertainties.reader_values(
+    expected = source_free_markers.reader_values(
         original.relative_to(case.ROOT).as_posix(), expected, original.read_bytes()
     )
     published = Path(row['path']).suffix.lower() == '.cif'
