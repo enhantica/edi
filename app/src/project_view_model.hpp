@@ -1263,7 +1263,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
                                                     const edi::ScanResultIndex& index,
                                                     const std::vector<std::string>& start_row = {},
                                                     bool start_known = true) const;
-    // The dataset a sequential fit started dataset `dataset` from (crysta ADR-0131 point 3): -1 the template (the
+    // The dataset a sequential fit started dataset `dataset` from, as crysta seeds a series: -1 the template (the
     // first, one with no successful predecessor, an unfitted dataset, or any dataset of an independent scan);
     // kStartUnknown where the saved rows cannot prove it (a Continue filled points in out of order).
     static constexpr int kStartUnknown = -2;

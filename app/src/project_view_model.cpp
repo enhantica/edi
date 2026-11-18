@@ -4247,7 +4247,7 @@ int ProjectViewModel::startDataset(const edi::Project& from, const edi::ScanResu
     // A run fits the points in order, each from the last success before it; a Continue starts from the last
     // stored success and may fill earlier points after later ones. The saved rows prove a start only where both
     // readings agree: every row written before this one is of an earlier point, and the success written last
-    // among them is also the latest earlier point's. Elsewhere the start is not known (crysta ADR-0131 point 3).
+    // among them is also the latest earlier point's. Elsewhere the start is not known.
     const std::int64_t own = index.rows[static_cast<std::size_t>(dataset)].offset;
     int by_order = -1, by_place = -1;
     std::int64_t latest = -1;
