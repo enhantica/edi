@@ -989,6 +989,7 @@ void PatternChartController::refresh() {
     const edi::PatternSeries* residual = nullptr;
     std::vector<QList<QPointF>> ticks(static_cast<std::size_t>(bragg_series_.size()));
     std::vector<const edi::PatternSeries*> structure_curves;
+    std::vector<std::string> bragg_ids;
     QList<ChartLegendModel::Entry> legend;
     // The style table, built once for the whole drawing.
     const std::vector<edi::SeriesStyle> table = styles();
@@ -1040,6 +1041,7 @@ void PatternChartController::refresh() {
                 }
                 ++rows;
                 shown_rows += hiddenId(series.id) ? 0 : 1;
+                bragg_ids.push_back(series.id);
                 break;
             }
         }
@@ -1214,6 +1216,10 @@ void PatternChartController::refresh() {
     // barWidth wide (the bottom series) and its outline is drawn round it. One area for all the bars was not used:
     // Qt Graphs filled the gaps between them as slivers fanned from the first point.
     const bool component_bars = bars && !structure_curves.empty();
+    // A single crystal with no magnetic part: the total is its one structure's contribution, so hiding that structure's
+    // entry hides the bars' fill as it hides a part's, and the total keeps only its outline (none in thin lines).
+    const bool contribution_hidden = bars && structure_curves.empty() && bragg_ids.size() == 1 &&
+                                     !bragg_ids.front().ends_with("/magnetic") && hiddenId(bragg_ids.front());
     publish(component_bars_, component_bars, &PatternChartController::componentBarsChanged);
     const auto fill_bars = [&](const edi::PatternSeries* series, std::size_t pane, double low_edge, double high_edge) {
         if (pane >= band_series_.size() || (held && pane == 0)) return;
@@ -1233,7 +1239,7 @@ void PatternChartController::refresh() {
         }
         QList<QPointF> fill, outline;
         // With its parts drawn as bars of their own, the total is its outline alone; in thin lines, the parts alone.
-        const bool parts = pane == 2 && component_bars;
+        const bool parts = pane == 2 && (component_bars || contribution_hidden);
         if (bars && series != nullptr && half > 0.0 && !(parts && thin_bars_)) {
             for (const auto& point : series->points) {
                 if (!std::isfinite(point.x) || !std::isfinite(point.y)) continue;
