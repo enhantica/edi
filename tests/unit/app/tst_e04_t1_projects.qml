@@ -100,6 +100,11 @@ TestCase {
             verify(project.scan, "Scan examples expose their dataset catalogue");
             same(Probe.rows(project.experiments).map(r => r.file), datasets.map(d => d.file), "Every independently inventoried scan filename appears once in scan order");
             same(Probe.rows(project.experiments).map(r => r.name), datasets.map(() => expected.experiments[0]), "Every scan dataset retains its declared template experiment identity");
+        } else if (expected.series) {
+            verify(project.series, "The authored per-bank scan opens as a joint series");
+            compare(project.seriesPointCount, expected.series.points.length, "Every complete independently declared series point is listed");
+            compare(project.experiments.count, expected.series.points.length, "The series exposes every point to its current-experiment selector");
+            compare(project.bankLabels.length, expected.series.banks.length, "Every declared series bank remains selectable");
         } else {
             same(Probe.rows(project.experiments).map(r => r.name).sort(), expected.experiments.slice().sort(), "I19: every experiment is loaded");
         }
@@ -118,10 +123,15 @@ TestCase {
             click("sideBar.tab.text");
             textVisible("_cell.length_a", "I19: Structure Text is populated by the loaded block");
         }
-        const experiments = Probe.rows(project.experiments);
+        const experiments = expected.series ? expected.experiments : Probe.rows(project.experiments);
         const selected = datasets.length ? [...new Set([0, Math.floor(datasets.length / 2), datasets.length - 1])] : experiments.map((_, index) => index);
         for (const i of selected) {
-            project.currentExperimentIndex = i;
+            if (expected.series) {
+                project.currentExperimentIndex = 0;
+                project.currentBank = expected.series.banks.indexOf(expected.experiments[i]);
+            } else {
+                project.currentExperimentIndex = i;
+            }
             tryCompare(project, "calculating", false, 5000, "A selected dataset finishes its lazy read and projection");
             const experiment = project.currentExperiment;
             const frozen = Oracle.frozen.corpus.find(c => c.project === expected.path && c.experiment === experiment.name);
@@ -149,14 +159,15 @@ TestCase {
                 }
             } else {
                 compare(experiment.peakType, frozen.peakType, "I19: loaded powder profile is preserved");
-                const range = datasets.length ? datasets[i].range : frozen.range;
+                const pointInput = expected.series ? expected.series.first_point[experiment.name] : (datasets.length ? datasets[i] : null);
+                const range = pointInput ? pointInput.range : frozen.range;
                 tryCompare(experiment.measuredRange, "points", range[3], 5000, "The selected experiment publishes its independently measured point count");
                 fuzzyCompare(experiment.measuredRange.minimum, range[0], 1e-10, "The selected dataset displays the independent ASCII axis minimum");
                 fuzzyCompare(experiment.measuredRange.step, range[2], 0.00005, "The selected dataset preserves the independent mean axis step");
                 fuzzyCompare(experiment.measuredRange.maximum, range[1], 1e-10, "The selected dataset displays the independent ASCII axis maximum");
             }
-            if (datasets.length) {
-                const samples = datasets[i].samples;
+            if (datasets.length || expected.series) {
+                const samples = expected.series ? expected.series.first_point[experiment.name].samples : datasets[i].samples;
                 tryVerify(() => {
                     const rows = Probe.rows(experiment.pattern);
                     return samples.every(sample => {
@@ -204,7 +215,22 @@ TestCase {
         const cellTexts = cells.map(cell => Render.texts(cell).map(item => item.text).join(""));
         const text = Render.texts(preview).map(item => Probe.plainText(item.text)).concat(cellTexts).join("\n");
         ["Project summary", "Analysis", "Structures", "Experiments"].forEach(heading => verify(text.includes(heading), "The live preview renders every required report section: " + heading));
-        const numbers = (text.match(/[-+]?\d+(?:\.\d+)?(?:[eE][-+]?\d+)?/g) || []).map(Number);
+        const superscripts = {
+            "⁰": "0",
+            "¹": "1",
+            "²": "2",
+            "³": "3",
+            "⁴": "4",
+            "⁵": "5",
+            "⁶": "6",
+            "⁷": "7",
+            "⁸": "8",
+            "⁹": "9",
+            "⁻": "-",
+            "⁺": "+"
+        };
+        const numericText = text.replace(/([-+]?\d+(?:\.\d+)?)×10([⁰¹²³⁴⁵⁶⁷⁸⁹⁻⁺]+)/g, (_, value, exponent) => value + "e" + Array.from(exponent).map(char => superscripts[char]).join(""));
+        const numbers = (numericText.match(/[-+]?\d+(?:\.\d+)?(?:[eE][-+]?\d+)?/g) || []).map(Number);
         expected.structures.forEach(s => {
             verify(text.includes(s.name) && text.includes(s.spaceGroup), "The preview's crystal identity comes from committed structure files: " + s.name);
             (s.displayCell || s.cell).forEach(value => verify(numbers.some(n => Math.abs(n - value) < 0.00005), "Preview cell lengths and angles agree with independently rounded committed input: " + s.name + " " + value + "; rendered cells=" + JSON.stringify(cellTexts)));
@@ -223,7 +249,7 @@ TestCase {
                 [frozen.loops.refln.length, Number(reflection.intensity_meas.value.toPrecision(6)), Number(reflection.intensity_meas_su.value.toPrecision(6))].forEach(value => verify(numbers.some(n => Math.abs(n - value) < 0.00005), "Preview reflection count, measured value and uncertainty agree with committed single-crystal data: " + name + " " + value));
             } else {
                 const reportRange = datasets.length ? datasets[selected[selected.length - 1]].range : frozen.range;
-                [reportRange[0], reportRange[1], reportRange[3]].forEach(value => verify(numbers.some(n => Math.abs(n - value) < 0.00005), "Preview Data endpoints and point count agree with committed data: " + name + " " + value + "; rendered cells=" + JSON.stringify(cellTexts)));
+                [reportRange[0], reportRange[1], reportRange[3]].map((value, index) => expected.series && index < 2 ? Number(value.toPrecision(3)) : value).forEach(value => verify(numbers.some(n => Math.abs(n - value) < 0.00005), "Preview Data endpoints and point count agree with committed data: " + name + " " + value + "; rendered cells=" + JSON.stringify(cellTexts)));
             }
         });
         verify(text.includes("crysta"), "The rendered Analysis software subsection names the effective engine");
