@@ -18,7 +18,18 @@ def unique(trace, event, **keys):
     return found[0]
 
 
+def gui_thread(trace):
+    identity = unique(trace, 'clock').get('gui_thread')
+    need(
+        (type(identity) is int and identity > 0)
+        or (isinstance(identity, str) and bool(identity.strip())),
+        'a nonempty native GUI thread identity is required',
+    )
+    return identity
+
+
 def exclusions(trace, spans):
+    gui_thread(trace)
     callbacks = rows(trace, 'measurement-enter')
     need(
         len(callbacks) == len(rows(trace, 'measurement-leave')) == len(spans),
@@ -35,7 +46,7 @@ def exclusions(trace, spans):
         need(
             enter['callback'] == leave['callback']
             and enter['thread'] == leave['thread']
-            and enter['thread'] == unique(trace, 'clock')['gui_thread'],
+            and enter['thread'] == gui_thread(trace),
             'callback ownership is GUI-local',
         )
         need(
@@ -54,7 +65,12 @@ def exclusions(trace, spans):
 
 
 def block_interval(trace, ticks, spans):
+    owner = gui_thread(trace)
     start, stop = unique(trace, 'block-begin'), unique(trace, 'block-end')
+    need(
+        start.get('thread') == stop.get('thread') == owner,
+        'the control block belongs to the identified GUI owner',
+    )
     covering = [
         (a, b)
         for a, b in zip(ticks, ticks[1:], strict=False)
@@ -91,6 +107,7 @@ def actions(trace, scenario, steps):
             ),
             'the measured interval contains requested presentation and rendered completion',
         )
+        transition_completion(trace, scenario, action, state)
         need(
             state['input'] == unique(trace, 'input')['identity'],
             'each action observes the loaded scenario input',
@@ -137,6 +154,102 @@ def actions(trace, scenario, steps):
                 ),
                 'rapid navigation uses the 100 ms schedule plus at most one tick of jitter',
             )
+
+
+def transition_completion(trace, scenario, action, state):
+    token = state.get('transition')
+    need(isinstance(token, str) and bool(token.strip()), 'native transition identity is required')
+    publication = unique(trace, 'transition-publication', transition=token)
+    rendered = unique(trace, 'render', frame=publication['frame'])
+    need(
+        publication['input'] == state['input'] and token in rendered.get('transitions', []),
+        'the selected native transition is published and present in the actual rendered frame',
+    )
+    begin, end = unique(trace, 'begin'), unique(trace, 'complete')
+    need(
+        begin['t_ms']
+        <= action['t_ms']
+        <= state['t_ms']
+        <= publication['t_ms']
+        <= rendered['t_ms']
+        <= end['t_ms'],
+        'measurement remains open through required transition publication and rendering',
+    )
+    if scenario == 'e58-series':
+        need(
+            bool(state.get('run')) and publication.get('run') == state['run'],
+            'series transition belongs to the actual fit run',
+        )
+        if action['name'] == 'end-settled':
+            series_completion(trace, state, publication)
+
+
+def series_completion(trace, state, publication):
+    finished = unique(trace, 'fit-finished')
+    need(
+        finished.get('run') == state['run'] and finished['completed'] == 100,
+        'the final transition belongs to the completed hundred-point run',
+    )
+    work = finished.get('work', [])
+    need(
+        bool(work) and len({work_key(r) for r in work}) == len(work),
+        'the series end transition enumerates distinct actual final work',
+    )
+    need(
+        {work_key(r) for r in publication.get('work', [])} == {work_key(r) for r in work},
+        'the final native publication consumes the completed run work identities',
+    )
+    need(
+        {'results-index', 'pattern-presentation'} <= {r['builder'] for r in work},
+        'final index delivery and Pattern presentation are included in measured completion',
+    )
+    begin, end = unique(trace, 'begin'), unique(trace, 'complete')
+    need(
+        begin['t_ms'] <= finished['t_ms'] <= publication['t_ms'] <= end['t_ms'],
+        'measurement contains fit completion and its final publication',
+    )
+    for source in work:
+        key = {k: source[k] for k in ('view', 'builder', 'generation')}
+        request = unique(trace, 'request', **key)
+        built, delivered = unique(trace, 'built', **key), unique(trace, 'deliver', **key)
+        need(
+            request.get('run') == delivered.get('run') == state['run'],
+            'final worker output belongs to this series rather than another run',
+        )
+        need(
+            begin['t_ms']
+            <= request['t_ms']
+            <= built['t_ms']
+            <= delivered['t_ms']
+            <= publication['t_ms']
+            <= end['t_ms'],
+            'final worker completion and owner delivery remain inside measurement',
+        )
+        swaps = [
+            r
+            for r in rows(trace, 'swap')
+            if any(all(part.get(k) == v for k, v in key.items()) for part in r.get('sources', [r]))
+        ]
+        need(len(swaps) == 1, 'final run output has one actual consuming view swap')
+        swap = swaps[0]
+        rendered = unique(trace, 'render', frame=swap['frame'])
+        need(
+            swap['frame'] == publication['frame']
+            and delivered['t_ms']
+            <= publication['t_ms']
+            <= swap['t_ms']
+            == rendered['t_ms']
+            <= end['t_ms'],
+            'series work keyed swaps and their actual render complete inside measurement',
+        )
+        need(
+            swap.get('thread') == gui_thread(trace),
+            'the final view swap belongs to the native GUI owner',
+        )
+        need(
+            delivered.get('thread') == gui_thread(trace),
+            'the final run output is accepted by the identified GUI owner',
+        )
 
 
 def view_types():
@@ -240,6 +353,7 @@ def work_key(row):
 
 
 def delivery(trace):
+    gui_thread(trace)
     contract = json.loads(
         (Path(__file__).parents[2] / 'fixtures/ui_responsiveness/contract.json').read_text()
     )
@@ -300,6 +414,7 @@ def delivery(trace):
 
 
 def execution(trace, request, stale):
+    gui_thread(trace)
     key = work_key(request)
     records = {
         name: [r for r in rows(trace, name) if work_key(r) == key]
@@ -325,7 +440,7 @@ def execution(trace, request, stale):
         'executed work has exactly one start and completion',
     )
     start, done = records['build'][0], records['built'][0]
-    gui = unique(trace, 'clock')['gui_thread']
+    gui = gui_thread(trace)
     need(request['t_ms'] <= start['t_ms'] < done['t_ms'], 'execution follows its actual request')
     need(
         bool(start['thread']) and start['thread'] == done['thread'] != gui,
@@ -352,6 +467,7 @@ def execution(trace, request, stale):
 
 
 def snapshots(trace, requests, relations):
+    owner = gui_thread(trace)
     consumed = set()
     swaps = rows(trace, 'swap')
     need(bool(swaps), 'current builder outputs reach a rendered snapshot')
@@ -360,8 +476,7 @@ def snapshots(trace, requests, relations):
     for swap in swaps:
         render = unique(trace, 'render', frame=swap['frame'])
         need(
-            swap['t_ms'] == render['t_ms']
-            and swap['thread'] == unique(trace, 'clock')['gui_thread'],
+            swap['t_ms'] == render['t_ms'] and swap.get('thread') == owner,
             'view swaps bind the actual render clock and GUI owner',
         )
         sources = swap.get('sources', [swap])

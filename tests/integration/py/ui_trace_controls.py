@@ -120,3 +120,69 @@ def enrich_views(trace):
         if 'builder' in row:
             row['view'] = row['builder']
     return trace
+
+
+def completed_actions(trace, scenario):
+    trace.append({'event': 'clock', 'gui_thread': 'gui'})
+    for action in [r for r in trace if r['event'] == 'action']:
+        request = action['request']
+        state = next(r for r in trace if r['event'] == 'state' and r['request'] == request)
+        token = 'native-transition-' + str(request)
+        state['transition'] = token
+        publication = {
+            'event': 'transition-publication',
+            'transition': token,
+            'input': state['input'],
+            't_ms': action['t_ms'] + 3,
+            'frame': request,
+        }
+        if scenario == 'e58-series':
+            state['run'] = publication['run'] = 'series-run'
+            if action['name'] == 'end-settled':
+                work = [
+                    {'view': 'series', 'builder': b, 'generation': 1}
+                    for b in ('results-index', 'pattern-presentation')
+                ]
+                publication['work'] = work
+                trace.append({
+                    'event': 'fit-finished',
+                    'completed': 100,
+                    'run': 'series-run',
+                    'work': work,
+                    't_ms': action['t_ms'] + 1,
+                })
+                trace.append({
+                    'event': 'swap',
+                    'view': 'series',
+                    'frame': request,
+                    'sources': work,
+                    'thread': 'gui',
+                    't_ms': action['t_ms'] + 4,
+                })
+                for source in work:
+                    trace.extend([
+                        {
+                            'event': 'request',
+                            **source,
+                            'run': 'series-run',
+                            't_ms': action['t_ms'],
+                        },
+                        {'event': 'built', **source, 't_ms': action['t_ms'] + 1.5},
+                        {
+                            'event': 'deliver',
+                            **source,
+                            'run': 'series-run',
+                            'thread': 'gui',
+                            't_ms': action['t_ms'] + 2,
+                        },
+                    ])
+        trace.extend([
+            publication,
+            {
+                'event': 'render',
+                'frame': request,
+                'transitions': [token],
+                't_ms': action['t_ms'] + 4,
+            },
+        ])
+    return trace

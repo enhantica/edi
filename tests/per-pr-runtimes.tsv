@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-18T18:22:21Z
+# measured_utc = 2026-11-18T19:08:55Z
 #
-# Recorded from: measured test run (2404 node(s) measured once, 183858 banked, 1 stale row(s) dropped)
-# Collected tests: 255430; with a reported duration: 82882
+# Recorded from: measured test run (51 node(s) measured once, 183979 banked, 0 stale row(s) dropped)
+# Collected tests: 255481; with a reported duration: 82884
 # Module-scoped fixture costs recorded: 211
 #
 # Breaches are decided PER TIER against the table
@@ -29,12 +29,12 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 255430
+# inventory_python = 255481
 # inventory_cpp = 0
-# inventory_measured = 183979
+# inventory_measured = 184030
 # inventory_unmeasured = 71451
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
-# inventory_pr_python = 89165
+# inventory_pr_python = 89216
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -177870,6 +177870,57 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_ui_causal_controls.py::t
 UNMEASURED:failed-in-this-run	tests/integration/py/test_ui_causal_controls.py::test_production_checker_rejects_exclusion_semantic_escapes[reentrant-builder]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_ui_causal_controls.py::test_production_checker_rejects_exclusion_semantic_escapes[wrong-callback]
 0.000	tests/integration/py/test_ui_causal_controls.py::test_slow_pattern_actions_are_not_rapid_navigation
+0.000	tests/integration/py/test_ui_completion_and_owner.py::test_exclusion_owner_validation_is_not_conditional_on_a_callback
+0.000	tests/integration/py/test_ui_completion_and_owner.py::test_missing_gui_and_equally_missing_swap_identity_do_not_prove_ownership[  ]
+0.000	tests/integration/py/test_ui_completion_and_owner.py::test_missing_gui_and_equally_missing_swap_identity_do_not_prove_ownership[0]
+0.000	tests/integration/py/test_ui_completion_and_owner.py::test_missing_gui_and_equally_missing_swap_identity_do_not_prove_ownership[False]
+0.000	tests/integration/py/test_ui_completion_and_owner.py::test_missing_gui_and_equally_missing_swap_identity_do_not_prove_ownership[None]
+0.000	tests/integration/py/test_ui_completion_and_owner.py::test_missing_gui_and_equally_missing_swap_identity_do_not_prove_ownership[]
+0.000	tests/integration/py/test_ui_completion_and_owner.py::test_missing_gui_and_equally_missing_swap_identity_do_not_prove_ownership[absent]
+0.000	tests/integration/py/test_ui_completion_and_owner.py::test_native_numeric_gui_identity_is_supported
+0.000	tests/integration/py/test_ui_completion_and_owner.py::test_real_transition_publication_and_render_complete_inside_measurement[e58-banks]
+0.000	tests/integration/py/test_ui_completion_and_owner.py::test_real_transition_publication_and_render_complete_inside_measurement[e58-pages]
+0.000	tests/integration/py/test_ui_completion_and_owner.py::test_real_transition_publication_and_render_complete_inside_measurement[e58-pattern]
+0.000	tests/integration/py/test_ui_completion_and_owner.py::test_real_transition_publication_and_render_complete_inside_measurement[e58-series]
+0.000	tests/integration/py/test_ui_completion_and_owner.py::test_required_completion_witness_cannot_be_absent_unmatched_or_late[missing-e58-banks]
+0.000	tests/integration/py/test_ui_completion_and_owner.py::test_required_completion_witness_cannot_be_absent_unmatched_or_late[missing-e58-pages]
+0.000	tests/integration/py/test_ui_completion_and_owner.py::test_required_completion_witness_cannot_be_absent_unmatched_or_late[missing-e58-pattern]
+0.000	tests/integration/py/test_ui_completion_and_owner.py::test_required_completion_witness_cannot_be_absent_unmatched_or_late[missing-e58-series]
+0.000	tests/integration/py/test_ui_completion_and_owner.py::test_required_completion_witness_cannot_be_absent_unmatched_or_late[missing-render-e58-banks]
+0.000	tests/integration/py/test_ui_completion_and_owner.py::test_required_completion_witness_cannot_be_absent_unmatched_or_late[missing-render-e58-pages]
+0.000	tests/integration/py/test_ui_completion_and_owner.py::test_required_completion_witness_cannot_be_absent_unmatched_or_late[missing-render-e58-pattern]
+0.000	tests/integration/py/test_ui_completion_and_owner.py::test_required_completion_witness_cannot_be_absent_unmatched_or_late[missing-render-e58-series]
+0.000	tests/integration/py/test_ui_completion_and_owner.py::test_required_completion_witness_cannot_be_absent_unmatched_or_late[post-window-e58-banks]
+0.000	tests/integration/py/test_ui_completion_and_owner.py::test_required_completion_witness_cannot_be_absent_unmatched_or_late[post-window-e58-pages]
+0.010	tests/integration/py/test_ui_completion_and_owner.py::test_required_completion_witness_cannot_be_absent_unmatched_or_late[post-window-e58-pattern]
+0.000	tests/integration/py/test_ui_completion_and_owner.py::test_required_completion_witness_cannot_be_absent_unmatched_or_late[post-window-e58-series]
+0.000	tests/integration/py/test_ui_completion_and_owner.py::test_required_completion_witness_cannot_be_absent_unmatched_or_late[unmatched-e58-banks]
+0.000	tests/integration/py/test_ui_completion_and_owner.py::test_required_completion_witness_cannot_be_absent_unmatched_or_late[unmatched-e58-pages]
+0.010	tests/integration/py/test_ui_completion_and_owner.py::test_required_completion_witness_cannot_be_absent_unmatched_or_late[unmatched-e58-pattern]
+0.000	tests/integration/py/test_ui_completion_and_owner.py::test_required_completion_witness_cannot_be_absent_unmatched_or_late[unmatched-e58-series]
+0.000	tests/integration/py/test_ui_completion_and_owner.py::test_required_completion_witness_cannot_be_absent_unmatched_or_late[wrong-frame-e58-banks]
+0.000	tests/integration/py/test_ui_completion_and_owner.py::test_required_completion_witness_cannot_be_absent_unmatched_or_late[wrong-frame-e58-pages]
+0.000	tests/integration/py/test_ui_completion_and_owner.py::test_required_completion_witness_cannot_be_absent_unmatched_or_late[wrong-frame-e58-pattern]
+0.000	tests/integration/py/test_ui_completion_and_owner.py::test_required_completion_witness_cannot_be_absent_unmatched_or_late[wrong-frame-e58-series]
+0.000	tests/integration/py/test_ui_completion_and_owner.py::test_series_completion_binds_actual_run_work_not_navigation_tags[late-delivery]
+0.000	tests/integration/py/test_ui_completion_and_owner.py::test_series_completion_binds_actual_run_work_not_navigation_tags[late-fit]
+0.000	tests/integration/py/test_ui_completion_and_owner.py::test_series_completion_binds_actual_run_work_not_navigation_tags[late-publication]
+0.000	tests/integration/py/test_ui_completion_and_owner.py::test_series_completion_binds_actual_run_work_not_navigation_tags[missing-work]
+0.000	tests/integration/py/test_ui_completion_and_owner.py::test_series_completion_binds_actual_run_work_not_navigation_tags[unmatched-work]
+0.000	tests/integration/py/test_ui_completion_and_owner.py::test_series_completion_binds_actual_run_work_not_navigation_tags[wrong-run]
+0.000	tests/integration/py/test_ui_completion_and_owner.py::test_series_work_keyed_swap_cannot_escape_the_window[late-swap]
+0.000	tests/integration/py/test_ui_completion_and_owner.py::test_series_work_keyed_swap_cannot_escape_the_window[missing-swap]
+0.000	tests/integration/py/test_ui_completion_and_owner.py::test_series_work_keyed_swap_cannot_escape_the_window[unmatched-sources]
+0.000	tests/integration/py/test_ui_completion_and_owner.py::test_shared_snapshot_entry_requires_an_actual_gui_identity
+0.000	tests/integration/py/test_ui_completion_and_owner.py::test_swap_must_belong_to_the_validated_gui_owner[None]
+0.000	tests/integration/py/test_ui_completion_and_owner.py::test_swap_must_belong_to_the_validated_gui_owner[]
+0.000	tests/integration/py/test_ui_completion_and_owner.py::test_swap_must_belong_to_the_validated_gui_owner[absent]
+0.000	tests/integration/py/test_ui_completion_and_owner.py::test_swap_must_belong_to_the_validated_gui_owner[worker]
+0.000	tests/integration/py/test_ui_completion_and_owner.py::test_timing_requires_gui_identity_even_without_excluded_spans[  ]
+0.000	tests/integration/py/test_ui_completion_and_owner.py::test_timing_requires_gui_identity_even_without_excluded_spans[None]
+0.000	tests/integration/py/test_ui_completion_and_owner.py::test_timing_requires_gui_identity_even_without_excluded_spans[]
+0.000	tests/integration/py/test_ui_completion_and_owner.py::test_timing_requires_gui_identity_even_without_excluded_spans[absent]
+0.000	tests/integration/py/test_ui_completion_and_owner.py::test_unrelated_setup_and_background_events_may_lie_outside_the_window
 0.000	tests/integration/py/test_ui_gate_repair_models.py::test_a_stale_result_cannot_contribute_to_a_shared_snapshot
 0.000	tests/integration/py/test_ui_gate_repair_models.py::test_absent_pattern_identity_cannot_pass_by_equality[None]
 0.000	tests/integration/py/test_ui_gate_repair_models.py::test_absent_pattern_identity_cannot_pass_by_equality[]

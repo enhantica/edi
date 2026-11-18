@@ -16,6 +16,7 @@ from tests.integration.py.ui_responsiveness_oracle import (
     timing,
     work_delivery,
 )
+from tests.integration.py.ui_trace_controls import completed_actions
 
 CONTRACT = json.loads(
     (Path(__file__).parents[2] / 'fixtures/ui_responsiveness/contract.json').read_text()
@@ -98,7 +99,7 @@ def action_trace(scenario):
             },
         ]
         selection += delta
-    return trace
+    return completed_actions(trace, scenario)
 
 
 @pytest.mark.parametrize('scenario', ['e58-pages', 'e58-banks', 'e58-pattern'])

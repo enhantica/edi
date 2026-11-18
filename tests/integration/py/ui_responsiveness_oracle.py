@@ -21,6 +21,7 @@ def one(trace, name):
 
 def timing(trace, scenario, steps, *, control=False):
     clock = one(trace, 'clock')
+    owner = causal.gui_thread(trace)
     require(
         (clock['clock'], clock['unit'], clock['tick_ms']) == ('monotonic', 'ms', 10),
         'S5 uses monotonic milliseconds and a nominal ten millisecond timer',
@@ -70,7 +71,7 @@ def timing(trace, scenario, steps, *, control=False):
     if control:
         block, release = one(trace, 'block-begin'), one(trace, 'block-end')
         require(
-            block['thread'] == release['thread'] == clock['gui_thread'],
+            block['thread'] == release['thread'] == owner,
             'the deliberate block executes on the GUI thread',
         )
         require(
