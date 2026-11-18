@@ -71,8 +71,14 @@ EaComponents.MainContent {
         const tab = bar && currentKey !== "" ? bar.itemAt(tabIndex) : null;
         return tab !== null && (!tab.visible || !tab.enabled);
     }
+    // Moved after the change has settled, never inside it: switching the tab from this handler re-evaluated
+    // currentHidden while it was still notifying (a binding loop), and the bar and the pages moved under each other.
     onCurrentHiddenChanged: {
-        if (!currentHidden)
+        if (currentHidden)
+            Qt.callLater(leaveHiddenTab);
+    }
+    function leaveHiddenTab() {
+        if (!currentHidden || tabIndex === ownTab || !available(defaultKey))
             return;
         pickPending = currentKey === chosenKey;
         showMainTab(ownTab);
