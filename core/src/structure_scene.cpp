@@ -937,8 +937,8 @@ StructureScene present_structure(const SceneSource& source, const SceneOptions& 
             for (const auto& [id, type] : source.site_types) {
                 corner_site[id] = corner_element(element_of(type));
             }
-            const auto& m = source.cartn_matrix;
-            const Matrix3 inverse = inverted(m);
+            const auto& cartn = source.cartn_matrix;
+            const Matrix3 inverse = inverted(cartn);
             // More corners than convex_hull takes is no polyhedron; the search stops there rather than walk every cell
             // of a huge distance.
             constexpr std::size_t kMaxShell = 64;
@@ -974,8 +974,9 @@ StructureScene present_structure(const SceneSource& source, const SceneOptions& 
                     for (int ta = low[0]; ta <= high[0] && found.size() <= kMaxShell; ++ta) {
                         for (int tb = low[1]; tb <= high[1] && found.size() <= kMaxShell; ++tb) {
                             for (int tc = low[2]; tc <= high[2] && found.size() <= kMaxShell; ++tc) {
-                                const Vec3 shift{m[0] * ta + m[1] * tb + m[2] * tc, m[3] * ta + m[4] * tb + m[5] * tc,
-                                                 m[6] * ta + m[7] * tb + m[8] * tc};
+                                const Vec3 shift{cartn[0] * ta + cartn[1] * tb + cartn[2] * tc,
+                                                 cartn[3] * ta + cartn[4] * tb + cartn[5] * tc,
+                                                 cartn[6] * ta + cartn[7] * tb + cartn[8] * tc};
                                 const Vec3 point = add(row_centre(source, row), shift);
                                 const double distance = norm(sub(point, atom.centre));
                                 if (distance > 1e-6 && distance <= limit + 1e-4 &&
