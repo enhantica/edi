@@ -19,8 +19,7 @@ endif()
 # files (`executable`; on Windows a regular file is). One run per member made a valid publication overrun its setup on
 # Windows, where every start of Python costs a few hundred milliseconds.
 find_package(Python3 REQUIRED COMPONENTS Interpreter)
-set(_edi_kind_script "${CMAKE_CURRENT_BINARY_DIR}/edi_runtime_kinds.py")
-file(WRITE "${_edi_kind_script}" [==[
+set(_edi_kind_program [==[
 import os, stat, sys
 kind, listing = sys.argv[1], sys.argv[2]
 for path in open(listing, encoding='utf-8').read().splitlines():
@@ -34,12 +33,32 @@ for path in open(listing, encoding='utf-8').read().splitlines():
     if not good:
         print(path)
 ]==])
+string(SHA256 _edi_kind_program_sha256 "${_edi_kind_program}")
+# A sidecar this module owns, written as the others are: an existing link, FIFO or directory refuses before anything
+# is written, and a stale regular file is unlinked first, so a hard-linked file elsewhere keeps its contents.
+function(_edi_runtime_write_owned path content)
+    _edi_runtime_prepare_temporary("${path}")
+    file(WRITE "${path}" "${content}")
+    _edi_runtime_require_regular("${path}")
+endfunction()
+# The checking script, written once per configure, inside the bundling function's own binary directory.
+function(_edi_runtime_kind_script out)
+    set(script "${CMAKE_CURRENT_BINARY_DIR}/edi_runtime_kinds.py")
+    get_property(written GLOBAL PROPERTY _EDI_RUNTIME_KIND_SCRIPT)
+    if(NOT written STREQUAL script)
+        _edi_runtime_write_owned("${script}" "${_edi_kind_program}")
+        set_property(GLOBAL PROPERTY _EDI_RUNTIME_KIND_SCRIPT "${script}")
+    endif()
+    set(${out} "${script}" PARENT_SCOPE)
+endfunction()
 function(_edi_runtime_not_kind kind out)
+    _edi_runtime_kind_script(script)
     set(listing "${CMAKE_CURRENT_BINARY_DIR}/edi_runtime_${kind}_paths.txt")
     list(JOIN ARGN "\n" text)
-    file(WRITE "${listing}" "${text}\n")
-    execute_process(COMMAND "${Python3_EXECUTABLE}" "${_edi_kind_script}" ${kind} "${listing}"
+    _edi_runtime_write_owned("${listing}" "${text}\n")
+    execute_process(COMMAND "${Python3_EXECUTABLE}" "${script}" ${kind} "${listing}"
                     RESULT_VARIABLE checked OUTPUT_VARIABLE bad OUTPUT_STRIP_TRAILING_WHITESPACE)
+    _edi_runtime_prepare_temporary("${listing}")
     if(NOT checked EQUAL 0)
         message(FATAL_ERROR "Runtime file kinds could not be checked")
     endif()
@@ -340,9 +359,9 @@ function(edi_bundle_assistant_runtime)
     else()
         set(EDI_CODEX_INSTALL_RELATIVE "../${EDI_CODEX_INSTALL_DESTINATION}")
     endif()
-    # The verifier's own form is in its name: one that checks file kinds per list (_edi_runtime_not_kind) is a new
+    # The verifier's own form is in its name: one that checks file kinds per list (_edi_runtime_not_kind, its script checked) is a new
     # file beside an older build's, which stays as that build wrote it.
-    set(check "${CMAKE_CURRENT_BINARY_DIR}/verify_assistant_runtime_${publication}.listed.cmake")
+    set(check "${CMAKE_CURRENT_BINARY_DIR}/verify_assistant_runtime_${publication}.kinds.cmake")
     set(check_contents "# Generated from the digest-verified official archive and owned legal resources.\n")
     # Every member's kind in one interpreter run per kind (_edi_runtime_not_kind), into a listing of this run's own.
     set(all_paths "")
@@ -353,12 +372,16 @@ function(edi_bundle_assistant_runtime)
             string(APPEND required_paths "${EDI_CODEX_RUNTIME_BUILD_DIR}/${member}\n")
         endif()
     endforeach()
+    # The script is part of what the verifier runs, so it is checked as a member is: no link, a regular file, the bytes
+    # this configure wrote. A per-run listing is a new name; anything already there refuses before a write.
+    _edi_runtime_kind_script(kind_script)
+    string(APPEND check_contents "set(_edi_script [==[${kind_script}]==])\nif(IS_SYMLINK \"\${_edi_script}\")\n message(FATAL_ERROR [==[Runtime kind checker must not be a link]==])\nendif()\nexecute_process(COMMAND${_edi_regular_check_code} \"\${_edi_script}\" RESULT_VARIABLE _edi_regular)\nif(NOT _edi_regular EQUAL 0)\n message(FATAL_ERROR [==[Runtime kind checker is not a regular file]==])\nendif()\nfile(SHA256 \"\${_edi_script}\" _edi_script_sha256)\nif(NOT _edi_script_sha256 STREQUAL [==[${_edi_kind_program_sha256}]==])\n message(FATAL_ERROR [==[Runtime kind checker changed]==])\nendif()\n")
     foreach(kind regular executable)
         set(listed "${all_paths}")
         if(kind STREQUAL "executable")
             set(listed "${required_paths}")
         endif()
-        string(APPEND check_contents "string(RANDOM LENGTH 12 _edi_run)\nset(_edi_verifier [==[${check}]==])\nset(_edi_listing \"\${_edi_verifier}.\${_edi_run}.${kind}\")\nfile(WRITE \"\${_edi_listing}\" [==[${listed}]==])\nexecute_process(COMMAND [==[${Python3_EXECUTABLE}]==] [==[${_edi_kind_script}]==] ${kind} \"\${_edi_listing}\" RESULT_VARIABLE _edi_checked OUTPUT_VARIABLE _edi_not_${kind} OUTPUT_STRIP_TRAILING_WHITESPACE)\nfile(REMOVE \"\${_edi_listing}\")\nif(NOT _edi_checked EQUAL 0)\n message(FATAL_ERROR [==[Bundled runtime file kinds could not be checked]==])\nendif()\nstring(REPLACE \"\\n\" \";\" _edi_not_${kind} \"\${_edi_not_${kind}}\")\n")
+        string(APPEND check_contents "string(RANDOM LENGTH 12 _edi_run)\nset(_edi_verifier [==[${check}]==])\nset(_edi_listing \"\${_edi_verifier}.\${_edi_run}.${kind}\")\nif(EXISTS \"\${_edi_listing}\" OR IS_SYMLINK \"\${_edi_listing}\")\n message(FATAL_ERROR [==[Runtime kind listing name is taken]==])\nendif()\nfile(WRITE \"\${_edi_listing}\" [==[${listed}]==])\nexecute_process(COMMAND [==[${Python3_EXECUTABLE}]==] \"\${_edi_script}\" ${kind} \"\${_edi_listing}\" RESULT_VARIABLE _edi_checked OUTPUT_VARIABLE _edi_not_${kind} OUTPUT_STRIP_TRAILING_WHITESPACE)\nif(IS_SYMLINK \"\${_edi_listing}\")\n message(FATAL_ERROR [==[Runtime kind listing became a link]==])\nendif()\nfile(REMOVE \"\${_edi_listing}\")\nif(NOT _edi_checked EQUAL 0)\n message(FATAL_ERROR [==[Bundled runtime file kinds could not be checked]==])\nendif()\nstring(REPLACE \"\\n\" \";\" _edi_not_${kind} \"\${_edi_not_${kind}}\")\n")
     endforeach()
     foreach(member IN LISTS members)
         set(path "${EDI_CODEX_RUNTIME_BUILD_DIR}/${member}")
