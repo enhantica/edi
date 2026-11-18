@@ -39,11 +39,7 @@ TestCase {
             prepareHoverInput();
     }
     function prepareHoverInput() {
-        const path = "docs/user/cli/pd-neut-tof_ferrite-austenite-beer_joint/project";
-        const folder = SettingsProof.copyProject(Probe.repoUrl(path));
-        const source = Probe.readFile(path + "/structures/ferrite.edi");
-        for (let index = 3; index <= 6; ++index)
-            verify(SettingsProof.write(folder, "structures/phase" + index + ".edi", source.replace("data_ferrite", "data_phase" + index)), "The hover vehicle declares six real structure blocks before chart construction");
+        const folder = SettingsProof.copyProject(Probe.referenceUrl("hover"));
         verify(Session.openProject(folder), "The six-structure hover input loads through the production session");
         compare(Session.project.structures.count, 6, "The hover rebuild begins with every declared structure present");
         tryCompare(Session.project, "calculating", false, 10000, "The actual calculation settles before the chart hover");
@@ -55,16 +51,16 @@ TestCase {
     }
     function cleanup() {
         named("feedback.form").close();
-        Session.closeProject();
         Turn.end(gateTurnSelector, message => test.warn(message));
     }
     function cleanupTestCase() {
+        Session.closeProject();
         if (app)
             app.destroy();
         app = null;
     }
-    function open(path) {
-        verify(Session.openProject(SettingsProof.copyProject(Probe.repoUrl(path))), "The case opens a private copy of independently authored input");
+    function openInput(name) {
+        verify(Session.openProject(SettingsProof.copyProject(Probe.referenceUrl(name))), "The case opens a private independently authored stability input: " + name);
         tryCompare(Session.project, "calculating", false, 10000, "The initial input calculation settles before the regression trigger");
     }
     function structureView() {
@@ -72,7 +68,7 @@ TestCase {
         let view;
         tryVerify(() => {
             view = Render.descendants(app.contentItem).find(item => item.objectName === "structure.view" && Ui.rendered(item));
-            return view && view.current;
+            return view && view.structure === Session.project.currentStructure && view.current;
         }, 10000, "The real Structure page publishes its current atom drawing");
         return view;
     }
@@ -98,16 +94,13 @@ TestCase {
         verify(waitForRendering(app.contentItem), "Analysis completes a frame after the chart input is rebuilt");
     }
     function test_b_broken_relation_is_a_reportable_popup() {
-        const folder = SettingsProof.copyProject(Probe.repoUrl("tests/fixtures/magnetic_pnma/app-project"));
-        verify(SettingsProof.write(folder, "analysis/analysis.edi", "_edi.schema_version 3\nloop_\n_alias.id\n_alias.parameter_unique_name\na cosio.atom_site_moment.Co1_1.crystalaxis_x\nb cosio.atom_site_moment.Co2_1.crystalaxis_y\n\nloop_\n_constraint.id\n_constraint.expression\nb \"b = 2*a\"\n"), "The fixture declares a real relation between two independently authored magnetic sites");
-        verify(Session.openProject(folder), "The valid magnetic relation loads before the destructive edit: " + Session.lastError);
-        structureView();
+        openInput("relations");
         const structure = Session.project.currentStructure;
         const before = structure.atomSites.count;
         structure.atomSites.remove(0);
         compare(structure.atomSites.count, before - 1, "The structural edit really removes the site referenced by the alias");
-        const remaining = Probe.rows(structure.atomSiteMoments);
-        verify(remaining.length > 0, "The remaining magnetic moments exercise uncertainty bindings after relation invalidation");
+        const remaining = structure.atomSiteMoments.components(0, "crystal_axes");
+        verify(remaining.length > 0, "The remaining magnetic moment exercises its actual uncertainty getter after relation invalidation");
         let send;
         tryVerify(() => {
             send = Probe.objectsWithProperty(app, "text").find(item => item.text === "Send to developers" && Ui.rendered(item) && typeof item.clicked === "function");
@@ -153,13 +146,9 @@ TestCase {
         compare(form.payload.attachments.length, 1, "Responsive editing retains the attached report file");
     }
     function test_d_asymmetric_unit_keeps_cobalt_sites() {
-        const path = "docs/user/cli/pd-neut-cwl_cosio-d20_2k/project";
-        const folder = SettingsProof.copyProject(Probe.repoUrl(path));
-        const source = Probe.readFile(path + "/structures/cosio.edi");
-        const translated = source.replace("0.9836()", "-0.0164()");
-        verify(translated !== source, "The Co2 witness moves its authored z coordinate by exactly one lattice period");
-        verify(SettingsProof.write(folder, "structures/cosio.edi", translated), "The translated cobalt input is private and retains its physical periodic position");
-        verify(Session.openProject(folder), "The periodic Co2 input loads through the actual application");
+        const proof = JSON.parse(Probe.readReferenceFile("inputs.json")).cobalt;
+        fuzzyCompare(proof.translated_z + proof.period, proof.original_z, 1e-12, "The Co2 input differs from its independently published position by exactly one lattice period");
+        openInput("cobalt");
         const view = structureView();
         const atoms = findChild(view, "structure.toolbar.atoms");
         verify(atoms !== null, "The actual Structure toolbar exposes the atom-population selector");
@@ -182,8 +171,8 @@ TestCase {
         ];
     }
     function test_e_magnetic_cif_menu_and_drop(data) {
-        open("tests/fixtures/magnetic_pnma/app-project");
-        structureView();
+        openInput("empty");
+        Ui.click(test, Probe, app, "appBar.tab.structure");
         const project = Session.project;
         const before = project.structures.count;
         const file = Probe.repoUrl("tests/fixtures/magnetic_pnma/cosio/cosio1.mcif");
@@ -199,6 +188,8 @@ TestCase {
             verify(Array.from(dialog.nameFilters).some(filter => filter.includes("*.mcif")), "The real structure chooser admits magnetic CIF files by extension");
             verify(SettingsProof.chooseProjectLocation(dialog, file, false), "The native chooser accepts the magnetic CIF and dispatches its original accepted handler");
         } else {
+            verify(Session.save(), "The drop begins from a saved private project without an unrelated unsaved-work prompt");
+            compare(project.modified, false, "The native drop fixture is clean before its actual event");
             verify(SettingsProof.dropProject(app, file), "The actual application drop entrance accepts a native magnetic CIF event");
         }
         tryVerify(() => Session.project === project && project.structures.count === before + 1, 5000, "Both magnetic CIF entrances add the structure to the initiating project");

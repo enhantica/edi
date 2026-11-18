@@ -7,6 +7,7 @@ from unittest import mock
 
 import pytest
 
+from tests.fixtures.post_release_stability.inputs import generate
 from tests.integration.app.native_actor import NativeActor
 
 CASES = [
@@ -35,10 +36,12 @@ def actor(request, tmp_path_factory):
     )
     root = Path(__file__).resolve().parents[3]
     collection = (root / 'tests/fixtures/online_sources/easydiffraction').as_uri()
+    inputs = generate(tmp_path_factory.mktemp('stability-inputs'))
     with mock.patch.dict(
         os.environ,
         {
             'EDI_ONLINE_SOURCES': f'cod={collection};easydiffraction={collection}',
+            'EDI_ACCEPTANCE_REFERENCE': str(inputs),
             'OMP_NUM_THREADS': '1',
             'OPENBLAS_NUM_THREADS': '1',
         },
