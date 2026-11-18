@@ -89,6 +89,11 @@
           "proof": null,
           "overloads": 1
         },
+        "statisticText": {
+          "domain": "read-only query",
+          "proof": null,
+          "overloads": 1
+        },
         "valueText": {
           "domain": "read-only query",
           "proof": null,
