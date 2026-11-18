@@ -138,6 +138,8 @@ def completed_actions(trace, scenario):
         }
         if scenario == 'e58-series':
             state['run'] = publication['run'] = 'series-run'
+            state['fitting'] = action['name'] in {'fit-start', 'fit-running'}
+            state['completed'] = 0 if state['fitting'] else 100
             if action['name'] == 'end-settled':
                 work = [
                     {'view': 'series', 'builder': b, 'generation': 1}
@@ -182,6 +184,7 @@ def completed_actions(trace, scenario):
                 'event': 'render',
                 'frame': request,
                 'transitions': [token],
+                'displayed': dict(state),
                 't_ms': action['t_ms'] + 4,
             },
         ])

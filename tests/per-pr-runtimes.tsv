@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-18T19:08:55Z
+# measured_utc = 2026-11-18T19:46:17Z
 #
-# Recorded from: measured test run (51 node(s) measured once, 183979 banked, 0 stale row(s) dropped)
-# Collected tests: 255481; with a reported duration: 82884
+# Recorded from: measured test run (1 node(s) measured once, 184049 banked, 0 stale row(s) dropped)
+# Collected tests: 255501; with a reported duration: 82884
 # Module-scoped fixture costs recorded: 211
 #
 # Breaches are decided PER TIER against the table
@@ -29,12 +29,12 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 255481
+# inventory_python = 255501
 # inventory_cpp = 0
-# inventory_measured = 184030
+# inventory_measured = 184050
 # inventory_unmeasured = 71451
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
-# inventory_pr_python = 89216
+# inventory_pr_python = 89236
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -177921,6 +177921,26 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_ui_causal_controls.py::t
 0.000	tests/integration/py/test_ui_completion_and_owner.py::test_timing_requires_gui_identity_even_without_excluded_spans[]
 0.000	tests/integration/py/test_ui_completion_and_owner.py::test_timing_requires_gui_identity_even_without_excluded_spans[absent]
 0.000	tests/integration/py/test_ui_completion_and_owner.py::test_unrelated_setup_and_background_events_may_lie_outside_the_window
+0.000	tests/integration/py/test_ui_completion_mapping.py::test_bank_completion_requires_each_actual_displayed_state_field[input]
+0.000	tests/integration/py/test_ui_completion_mapping.py::test_bank_completion_requires_each_actual_displayed_state_field[page]
+0.000	tests/integration/py/test_ui_completion_mapping.py::test_bank_completion_requires_each_actual_displayed_state_field[selection]
+0.000	tests/integration/py/test_ui_completion_mapping.py::test_bank_completion_requires_each_actual_displayed_state_field[tab]
+0.000	tests/integration/py/test_ui_completion_mapping.py::test_compatible_bank_targets_can_share_a_frame_across_another_target[distinct]
+0.000	tests/integration/py/test_ui_completion_mapping.py::test_compatible_bank_targets_can_share_a_frame_across_another_target[reused]
+0.000	tests/integration/py/test_ui_completion_mapping.py::test_compatible_native_states_may_share_rendered_completion[distinct]
+0.000	tests/integration/py/test_ui_completion_mapping.py::test_compatible_native_states_may_share_rendered_completion[reused]
+0.000	tests/integration/py/test_ui_completion_mapping.py::test_each_independent_view_must_finish_inside_measurement[late-render-independent-0]
+0.000	tests/integration/py/test_ui_completion_mapping.py::test_each_independent_view_must_finish_inside_measurement[late-render-independent-1]
+0.000	tests/integration/py/test_ui_completion_mapping.py::test_each_independent_view_must_finish_inside_measurement[missing-render-independent-0]
+0.000	tests/integration/py/test_ui_completion_mapping.py::test_each_independent_view_must_finish_inside_measurement[missing-render-independent-1]
+0.000	tests/integration/py/test_ui_completion_mapping.py::test_each_independent_view_must_finish_inside_measurement[premature-completion-independent-0]
+0.000	tests/integration/py/test_ui_completion_mapping.py::test_each_independent_view_must_finish_inside_measurement[premature-completion-independent-1]
+0.000	tests/integration/py/test_ui_completion_mapping.py::test_incompatible_native_targets_cannot_alias_one_terminal_frame[distinct-e58-banks]
+0.000	tests/integration/py/test_ui_completion_mapping.py::test_incompatible_native_targets_cannot_alias_one_terminal_frame[distinct-e58-pages]
+0.000	tests/integration/py/test_ui_completion_mapping.py::test_incompatible_native_targets_cannot_alias_one_terminal_frame[reused-e58-banks]
+0.000	tests/integration/py/test_ui_completion_mapping.py::test_incompatible_native_targets_cannot_alias_one_terminal_frame[reused-e58-pages]
+0.000	tests/integration/py/test_ui_completion_mapping.py::test_same_page_with_incompatible_tabs_cannot_share_completion
+0.000	tests/integration/py/test_ui_completion_mapping.py::test_series_views_may_finish_in_separate_frames_before_completion
 0.000	tests/integration/py/test_ui_gate_repair_models.py::test_a_stale_result_cannot_contribute_to_a_shared_snapshot
 0.000	tests/integration/py/test_ui_gate_repair_models.py::test_absent_pattern_identity_cannot_pass_by_equality[None]
 0.000	tests/integration/py/test_ui_gate_repair_models.py::test_absent_pattern_identity_cannot_pass_by_equality[]

@@ -165,6 +165,7 @@ def transition_completion(trace, scenario, action, state):
         publication['input'] == state['input'] and token in rendered.get('transitions', []),
         'the selected native transition is published and present in the actual rendered frame',
     )
+    displayed_state(rendered, scenario, state)
     begin, end = unique(trace, 'begin'), unique(trace, 'complete')
     need(
         begin['t_ms']
@@ -182,6 +183,21 @@ def transition_completion(trace, scenario, action, state):
         )
         if action['name'] == 'end-settled':
             series_completion(trace, state, publication)
+
+
+def displayed_state(rendered, scenario, state):
+    fields = {
+        'e58-pages': ('input', 'page', 'tab'),
+        'e58-banks': ('input', 'page', 'tab', 'selection'),
+    }
+    if scenario not in fields:
+        return
+    displayed = rendered.get('displayed', {})
+    need(isinstance(displayed, dict), 'rendered native state is an object snapshot')
+    need(
+        all(field in displayed and displayed[field] == state[field] for field in fields[scenario]),
+        'completion matches native state; incompatible targets cannot share a frame',
+    )
 
 
 def series_completion(trace, state, publication):
@@ -234,11 +250,10 @@ def series_completion(trace, state, publication):
         swap = swaps[0]
         rendered = unique(trace, 'render', frame=swap['frame'])
         need(
-            swap['frame'] == publication['frame']
-            and delivered['t_ms']
-            <= publication['t_ms']
+            delivered['t_ms']
             <= swap['t_ms']
             == rendered['t_ms']
+            <= unique(trace, 'render', frame=publication['frame'])['t_ms']
             <= end['t_ms'],
             'series work keyed swaps and their actual render complete inside measurement',
         )
