@@ -24,12 +24,9 @@ StructureViewOptions::StructureViewOptions(QObject* parent)
     // Each shows its name from crysta's dictionary: Crystal axes, Cartesian, Spherical.
     moment_form_options_->setItemOptions("structure_view.moment_form", {"crystal_axes", "cartesian", "spherical"});
     moment_view_options_->setItemOptions("structure_view.moment_view", {"through_atom", "from_centre", "from_surface"});
-    // The dictionary has no polyhedra item yet: the app names them.
-    polyhedra_colour_options_->setOptions({"atom", "grey"}, "atom",
-                                          {QObject::tr("Atom colour").toStdString(), QObject::tr("Grey").toStdString()});
-    polyhedra_extent_options_->setOptions({"cell", "complete"}, "cell",
-                                          {QObject::tr("Inside the cell").toStdString(),
-                                           QObject::tr("Complete for atoms in the cell").toStdString()});
+    // Atom colour or Grey; Inside the cell or Complete for atoms in the cell.
+    polyhedra_colour_options_->setItemOptions("structure_view.polyhedra_colour", {"atom", "grey"}, "atom");
+    polyhedra_extent_options_->setItemOptions("structure_view.polyhedra_extent", {"cell", "complete"}, "cell");
 }
 
 template <class T>
@@ -274,8 +271,9 @@ std::map<std::string, std::string> StructureViewOptions::toView() const {
     keep("polyhedra_colour", polyhedraColour().toStdString());
     keep("polyhedra_opacity", QString::number(polyhedra_opacity_, 'g', 6).toStdString());
     keep("polyhedra_extent", polyhedraExtent().toStdString());
-    keep("polyhedra_centres", polyhedraCentres().toStdString());
-    keep("polyhedra_corners", polyhedraCorners().toStdString());
+    // An empty list is the default (cations at the centres, the usual anions at the corners): left out.
+    if (!options_.polyhedra_centres.empty()) keep("polyhedra_centres", polyhedraCentres().toStdString());
+    if (!options_.polyhedra_corners.empty()) keep("polyhedra_corners", polyhedraCorners().toStdString());
     keep("polyhedra_max_distance", QString::number(options_.polyhedra_max_distance, 'g', 6).toStdString());
     if (moments_declared_) {
         view["show_moments"] = flag(options_.moments);
