@@ -13,7 +13,7 @@ from pathlib import Path
 import pytest
 
 from tests.fixtures import phase_scan
-from tests.fixtures.scan_csv import CONDITION_COLUMNS, legacy_scan
+from tests.fixtures.scan_csv import CONDITION_COLUMNS, DERIVED_COLUMNS, legacy_scan
 
 ROOT = Path(__file__).resolve().parents[3]
 ENGINE = 'edi'
@@ -276,7 +276,9 @@ def test_each_csv_detaches_final_and_temporary_aliases(
         historical = list(csv.DictReader(io.StringIO(previous.decode())))
         with (path / 'analysis/results.csv').open() as stream:
             reader = csv.DictReader(stream)
-            assert reader.fieldnames[-4:] == CONDITION_COLUMNS
+            assert reader.fieldnames[-8:] == [*CONDITION_COLUMNS, *DERIVED_COLUMNS], (
+                'The declared conditions precede both two-phase derived fraction pairs'
+            )
             rows = list(reader)
         assert len(rows) == 3, 'Migration and continuation retain every measured-file result'
         for old in historical:
@@ -365,7 +367,9 @@ def test_provenance_backfill_and_ordinary_scan_controls(
         )
         with (path / 'analysis/results.csv').open() as stream:
             reader = csv.DictReader(stream)
-            assert reader.fieldnames[-4:] == CONDITION_COLUMNS
+            assert reader.fieldnames[-8:] == [*CONDITION_COLUMNS, *DERIVED_COLUMNS], (
+                'The declared conditions precede both two-phase derived fraction pairs'
+            )
             rows = list(reader)
         assert len(rows) == 3 and all(row['fit_result.descent'] for row in rows), (
             'Backfill and ordinary append retain exactly one provenance row per scan dataset'

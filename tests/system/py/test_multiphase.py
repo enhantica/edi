@@ -88,6 +88,8 @@ def test_two_free_scales_recover_unequal_independent_contributions(tmp_path):
         case.links(project.experiments[0])['alpha'].scale
         is not case.links(project.experiments[0])['beta'].scale
     ), 'Phase scales cannot alias one parameter'
+    project._minimizer_chi_square_tolerance = project._minimizer_chi_square_tolerance or 1e-6
+    project._minimizer_max_iterations = project._minimizer_max_iterations or 50
     project.fit()
     actual = [case.links(project.experiments[0])[name].scale.value for name in case.SCALES]
     np.testing.assert_allclose(

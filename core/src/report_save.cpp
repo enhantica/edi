@@ -31,19 +31,15 @@ std::string iso_utc(std::time_t time) {
     return buffer;
 }
 
-// The report the project makes with `overrides`, its time now unless the options give one.
-ReportModel report_of(const Project& project, const ReportOverrides& overrides) {
-    return build_report(project, effective_report_options(project, overrides));
-}
-
 // The libraries the HTML is written with: the vendored ones when the options embed them, else none (online).
 const ReportLibraries& html_libraries(const ReportOptions& options, const ReportLibraries& libraries) {
     static const ReportLibraries kOnline;
+    // NOLINTNEXTLINE(bugprone-return-const-ref-from-parameter): callers pass the libraries they hold for the save.
     return options.embed_libraries ? libraries : kOnline;
 }
 
 // `row` as the project's row of its name: the old one replaced, else appended.
-void record_row(Project& project, ReportFile row) {
+void record_row(Project& project, const ReportFile& row) {
     std::size_t at = 0;
     for (const auto& file : project.report_files) {
         if (file->name.value() == row.name.value()) {
@@ -52,9 +48,9 @@ void record_row(Project& project, ReportFile row) {
         ++at;
     }
     if (at < project.report_files.size()) {
-        project.report_files.replace_at(at, std::make_shared<ReportFile>(std::move(row)));
+        project.report_files.replace_at(at, std::make_shared<ReportFile>(row));
     } else {
-        project.report_files.push_back(std::move(row));
+        project.report_files.push_back(row);
     }
 }
 
@@ -131,7 +127,7 @@ ReportSaveResult save_report(Project& project, const ReportOverrides& overrides,
         row.saved = iso_utc(std::time(nullptr));
         row.project_last_modified = iso_utc_from_star(project.metadata.last_modified);
         row.digest = report_digest(judged ? *judged : model, "html", used);
-        record_row(project, std::move(row));
+        record_row(project, row);
     }
     if (project.report_cif.value_or(false)) {
         const std::string name = (model.name.empty() ? std::string("report") : model.name) + ".cif";
@@ -144,7 +140,7 @@ ReportSaveResult save_report(Project& project, const ReportOverrides& overrides,
         row.saved = iso_utc(std::time(nullptr));
         row.project_last_modified = iso_utc_from_star(project.metadata.last_modified);
         row.digest = fnv1a64(text);
-        record_row(project, std::move(row));
+        record_row(project, row);
     }
     try {
         save_report_settings(project, project.path);

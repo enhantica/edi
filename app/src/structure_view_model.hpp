@@ -372,9 +372,18 @@ class StructureViewModel : public QObject {
     Q_PROPERTY(edi_app::ParentGroupView parentGroup READ parentGroup NOTIFY parentGroupChanged)
     // Whether any site carries a moment.
     Q_PROPERTY(bool magnetic READ magnetic NOTIFY magneticChanged)
+    // The types a site may take for the probes of the experiments linking the structure (edi::atom_types).
+    Q_PROPERTY(QStringList atomTypes READ atomTypes NOTIFY atomTypesChanged)
+    // The bond cutoffs (`_geom`): a bond is drawn between two sites at least the minimum distance apart and at most
+    // their covalent radii plus the increment; each is crysta's default until set. And the bonds crysta computed with
+    // them (`_geom_bond`), each {"site1", "site2", "symmetry1", "symmetry2", "distance"}
+    // (the symmetry codes in CIF form, 1_555), empty until the geometry is current.
+    Q_PROPERTY(double minBondDistance READ minBondDistance WRITE setMinBondDistance NOTIFY minBondDistanceChanged)
+    Q_PROPERTY(double bondDistanceIncrement READ bondDistanceIncrement WRITE setBondDistanceIncrement NOTIFY bondDistanceIncrementChanged)
+    Q_PROPERTY(QVariantList bonds READ bonds NOTIFY bondsChanged)
 
    public:
-    StructureViewModel(SavedFile saved, edi::Structure& structure, ProjectEditor& editor,
+    StructureViewModel(const SavedFile& saved, edi::Structure& structure, ProjectEditor& editor,
                        ParameterRegistry& registry, QObject* parent);
     QString name() const { return name_; }
     void setName(const QString& name);
@@ -396,6 +405,12 @@ class StructureViewModel : public QObject {
     // admits them with the cell and the propagation vectors, else nothing changes and the refusal is kept.
     Q_INVOKABLE bool setMagneticGroup(int index);
     bool magnetic() const { return !structure_.atom_site_moment.empty(); }
+    QStringList atomTypes() const { return atom_types_; }
+    double minBondDistance() const;
+    void setMinBondDistance(double distance);
+    double bondDistanceIncrement() const;
+    void setBondDistanceIncrement(double increment);
+    QVariantList bonds() const;
     const edi::Structure* structure() const { return &structure_; }
     void sync();
     // ADR-0022: the structure's immutable scene source, captured on this (the owner) thread when the
@@ -408,6 +423,10 @@ class StructureViewModel : public QObject {
    signals:
     void nameChanged();
     void magneticChanged();
+    void atomTypesChanged();
+    void minBondDistanceChanged();
+    void bondDistanceIncrementChanged();
+    void bondsChanged();
     void magneticGroupChanged();
     void magneticGroupRefusalChanged();
     void parentGroupChanged();
@@ -415,8 +434,11 @@ class StructureViewModel : public QObject {
     void sceneWentStale();
 
    private:
+    void syncAtomTypes();
+
     edi::Structure& structure_;
     edi::SceneSource scene_source_;
+    QStringList atom_types_;
     ProjectEditor& editor_;
     QString name_;
     SpaceGroupViewModel* space_group_;

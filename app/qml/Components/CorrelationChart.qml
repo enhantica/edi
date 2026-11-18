@@ -23,6 +23,13 @@ import edi.app
 Item {
     id: chart
 
+    // What the main view's Save image takes when this is the shown tab: the item, its toolbar (hidden while the image
+    // is taken), the file name, and whether the toolbar's band is cut off.
+    readonly property Item imageItem: chart
+    readonly property Item imageToolbar: toolbar
+    readonly property string imageName: "correlations"
+    readonly property bool imageCropsToolbar: true
+
     objectName: "correlations"
 
     property ProjectViewModel project: null
@@ -92,14 +99,17 @@ Item {
 
     // The toolbar: the correlation level and the number of parameters, each a box with its icon, name and an editable
     // number, set apart as the pattern chart's axis boxes are and centred under the block selector row, as every
-    // chart's toolbar line is (owner, 2026-10-11).
-    Row {
+    // chart's controls row is (ToolbarLines; owner, 2026-10-11).
+    ToolbarLines {
         id: toolbar
 
-        x: Math.round(chart.sideMargin + (chart.width - chart.toolbarRightInset - chart.sideMargin - width) / 2)
+        objectName: "correlations.toolbar"
+        x: 0
         y: chart.em
-        height: AppSizes.toolbarControlSize
-        spacing: AppSizes.toolbarSpacing
+        width: chart.width
+        height: implicitHeight
+        leftEdge: chart.sideMargin
+        rightEdge: chart.width - chart.toolbarRightInset
 
         NumberBox {
             objectName: "correlations.toolbar.level"
@@ -151,11 +161,6 @@ Item {
             toolTip: !enabled ? chart.offReason : chart.fullMatrix ? qsTr("Show the lower triangle only") : qsTr("Show the full matrix")
             checked: chart.fullMatrix
             onClicked: ApplicationInfo.correlationToggle(true)
-        }
-        SaveImageButton {
-            objectName: "correlations.toolbar.save"
-            target: chart
-            fileName: "correlations"
         }
     }
 

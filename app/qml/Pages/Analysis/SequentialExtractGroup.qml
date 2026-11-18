@@ -18,6 +18,7 @@ DataTable {
     property AnalysisViewModel analysis: null
 
     objectName: "sequentialExtract.list"
+    readOnly: true
     defaultInfoText: qsTr("No extraction rules")
     // These text-only columns can share more room than numeric parameter tables.
     maximumTextColumnShare: 0.4
@@ -60,19 +61,19 @@ DataTable {
             marksCurrentRow: true
             text: row.index + 1
         }
-        EaComponents.ListViewLabel {
+        CellLabel {
             horizontalAlignment: Text.AlignLeft
             elide: Text.ElideRight
             text: row.model.id
             ToolTip.text: row.model.id
         }
-        EaComponents.ListViewLabel {
+        CellLabel {
             horizontalAlignment: Text.AlignLeft
             elide: Text.ElideRight
             text: row.model.target
             ToolTip.text: row.model.target
         }
-        EaComponents.ListViewLabel {
+        CellLabel {
             horizontalAlignment: Text.AlignLeft
             elide: Text.ElideRight
             text: row.model.pattern

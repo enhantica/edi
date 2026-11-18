@@ -54,6 +54,20 @@ void OptionListModel::setItemOptions(const std::string& uid, const std::vector<s
     setOptions(tokens, default_token, labels);
 }
 
+void OptionListModel::setDisabledTokens(const QStringList& tokens) {
+    if (tokens == disabled_) {
+        return;
+    }
+    const QPointer<OptionListModel> self(this);
+    disabled_ = tokens;
+    if (!tokens_.isEmpty()) {
+        emit dataChanged(index(0), index(static_cast<int>(tokens_.size()) - 1), {EnabledRole});
+        if (!self) return;
+    }
+    ++revision_;
+    emit revisionChanged();
+}
+
 int OptionListModel::rowCount(const QModelIndex& parent) const {
     return parent.isValid() ? 0 : static_cast<int>(tokens_.size());
 }
@@ -68,12 +82,13 @@ QVariant OptionListModel::data(const QModelIndex& index, int role) const {
         case LabelRole:
         case Qt::DisplayRole: return labels_.value(index.row(), token);
         case IsDefaultRole: return token == default_token_;
+        case EnabledRole: return !disabled_.contains(token);
         default: return {};
     }
 }
 
 QHash<int, QByteArray> OptionListModel::roleNames() const {
-    return {{TokenRole, "token"}, {LabelRole, "label"}, {IsDefaultRole, "isDefault"}};
+    return {{TokenRole, "token"}, {LabelRole, "label"}, {IsDefaultRole, "isDefault"}, {EnabledRole, "enabled"}};
 }
 
 }  // namespace edi_app

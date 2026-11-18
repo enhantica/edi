@@ -87,8 +87,8 @@ TEST_CASE("E04-T9 C4 closed factories exclude assignment conversion and copy esc
     CopyingRow source; source.id = "copy_control";
     CopyingRow::copies = 0;
     edi::ItemVec<edi::AtomSite> rows;
-    using ModelRowFactory = edi::Edit (*)(edi::ItemVec<edi::AtomSite>&, edi::AtomSite);
-    const ModelRowFactory factory = &edi::Edit::append;
+    using ModelRowFactory = edi::Edit (*)(edi::ItemVec<edi::AtomSite>&, const edi::AtomSite&);
+    const ModelRowFactory factory = static_cast<ModelRowFactory>(&edi::Edit::append);
     auto operation = factory(rows, source);
     CHECK_NOTHROW_MESSAGE(operation(),
         " C4 supported row factory slices to the model row before storing the operation");

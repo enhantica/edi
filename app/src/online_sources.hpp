@@ -31,7 +31,7 @@ public:
         bool builtin = false;
         bool enabled = true;
         QString override;  ///< the URL from the command line or environment, empty when none
-        QStringList mirrors;  ///< further locations of the same files, tried in order when `url` is unavailable
+        QStringList mirrors{};  ///< further locations of the same files, tried in order when `url` is unavailable
     };
 
     explicit OnlineSourcesModel(QObject* parent = nullptr);

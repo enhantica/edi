@@ -24,8 +24,10 @@ QtObject {
     readonly property string last: recentSettings.last
     property Connections sessionConnection: Connections {
         target: Session
+        // A downloaded example or a working copy in the temporary folder is never a recent project.
         function onProjectDirectoryUsed(path) {
-            recentProjects.remember(path);
+            if (!Session.isTemporaryPath(path))
+                recentProjects.remember(path);
         }
     }
     // The web app lists the places the browser keeps (edi ADR-0052 §9): first the unsaved changes kept for a project,
@@ -60,5 +62,11 @@ QtObject {
     function forget(index: int) {
         ApplicationInfo.recentForget(index);
     }
-    Component.onCompleted: ApplicationInfo.recentCompleted()
+    // Entries an earlier version kept for temporary copies go first (the owner, 2026-11-16).
+    Component.onCompleted: {
+        const kept = recentSettings.recent.filter(path => !Session.isTemporaryPath(path));
+        if (kept.length !== recentSettings.recent.length)
+            recentSettings.recent = kept;
+        ApplicationInfo.recentCompleted();
+    }
 }

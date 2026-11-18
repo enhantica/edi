@@ -2216,7 +2216,11 @@ Popup {
         id: filesFolder
 
         title: qsTr("Save the tutorial files to")
-        onAccepted: panel.saveFiles(selectedFolder)
+        currentFolder: DialogFolders.folder("tutorialFiles", "")
+        onAccepted: {
+            DialogFolders.remember("tutorialFiles", selectedFolder);
+            panel.saveFiles(selectedFolder);
+        }
     }
 
     // The outline drawn around the step's control, over the page.

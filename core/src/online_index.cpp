@@ -71,7 +71,7 @@ bool known_symbol(const std::string& symbol) {
 std::map<std::string, double> counted_elements(const std::string& formula) {
     std::map<std::string, double> counts;
     std::size_t i = 0;
-    const std::string text = formula;
+    const std::string& text = formula;
     const auto lower = [&](std::size_t at) { return at < text.size() && std::islower(static_cast<unsigned char>(text[at])) != 0; };
     while (i < text.size()) {
         const unsigned char c = static_cast<unsigned char>(text[i]);
@@ -114,6 +114,7 @@ std::map<std::string, double> counted_elements(const std::string& formula) {
 
 std::vector<std::string> hill_order(const std::map<std::string, double>& counts) {
     std::vector<std::string> symbols;
+    symbols.reserve(counts.size());
     for (const auto& [symbol, count] : counts) symbols.push_back(symbol);
     // std::map already sorts alphabetically; carbon and hydrogen move to the front when carbon is present.
     if (counts.count("C") != 0U) {
@@ -134,7 +135,8 @@ std::string count_text(double count) {
 
 std::string percent_encoded(const std::string& text) {
     std::string out;
-    for (unsigned char c : text) {
+    for (const char ch : text) {
+        const auto c = static_cast<unsigned char>(ch);
         if (std::isalnum(c) || c == '-' || c == '_' || c == '.' || c == '~') out += static_cast<char>(c);
         else {
             char hex[4];

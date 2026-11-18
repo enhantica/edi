@@ -9,6 +9,7 @@ import EasyApplication.Gui.Style as Style
 import "UiInteraction.js" as Ui
 import "E04Review.js" as Review
 import "RenderedTable.js" as Render
+import "AdmissionChecks.js" as Admission
 
 TestCase {
     id: test
@@ -1189,4 +1190,198 @@ TestCase {
         verify(!ink.error && ink.images >= model.structures.length + 1 && ink.counts[colour] > expected.length, "The PDF must contain a populated reflection figure in addition to its structure figures");
         verify(ink.maxVerticalRun && ink.maxVerticalRun[colour] > Math.ceil(layer.markerSize * 2) + 2, "The PDF reflection image must draw uncertainty bars longer than its doubled-size point markers");
     }
+    function openAdmission(declarations) {
+        const location = SettingsProof.copyProject(Probe.repoUrl("tests/fixtures/fitting_correctness/single_crystal"));
+        if (declarations) {
+            const path = "experiments/bank.edi";
+            verify(SettingsProof.write(location, path, SettingsProof.text(location, path) + "\n" + declarations), "The admission UI witness declares the same file categories as the native model");
+        }
+        verify(Session.openProject(location), "The admission project opens through the real loader: " + Session.lastError);
+        tryVerify(() => !Session.project.calculating && Session.project.currentExperiment.singleCrystalReflections.calculatedShown,10000,"The admission witness publishes calculated reflection rows before inspection");
+        Ui.click(test, Probe, appWindow,"appBar.tab.experiment");
+        tryVerify(()=>Math.abs(Ui.page(appWindow).mapToItem(appWindow.contentItem,0,0).x)<1,3000,"The admission Experiment page reaches the actual viewport");
+        verify(waitForPolish(appWindow.contentItem),"The small admission fixture completes its page layout");
+        let chart=null;
+        tryVerify(()=>{
+            const candidates=Review.descendants(appWindow.contentItem).filter(item=>item.objectName==="singleCrystal.chart" && Ui.rendered(item));
+            if(candidates.length===1) chart=candidates[0];
+            return candidates.length===1;
+        },3000,"The admission view exposes exactly one rendered chart in the shared MainView");
+        verify(waitForRendering(chart),"The admission chart reaches an actual rendered frame");
+        return chart;
+    }
+    function test_reflection_toggle_chart_reason_and_single_undo() {
+        const chart = openAdmission("");
+        const project = Session.project;
+        const before = project.currentExperiment.text.inputText;
+        Ui.click(test, Probe, appWindow, "sideBar.tab.extras");
+        expand("group.refln");
+        const table = Review.find(Ui.page(appWindow), "singleCrystal.reflections");
+        verify(table !== null && table.count === 4, "The actual reflection table retains all independently authored measurements");
+        table.positionViewAtIndex(0, ListView.Contain);
+        tryVerify(() => table.itemAtIndex(0) !== null, 2000, "The selected reflection row is materialized before its toggle is clicked");
+        const toggle = Review.find(table.itemAtIndex(0), "singleCrystal.reflections.fitUse.0");
+        verify(toggle !== null, "The existing fit-use cell owns the reflection exclusion toggle");
+        Ui.scrollIntoView(toggle);
+        verify(waitForPolish(appWindow.contentItem), "The reflection toggle reaches a settled pointer target");
+        const point = Ui.clickPoint(toggle);
+        verify(point !== null, "The reflection toggle has a real visible pointer target");
+        mouseClick(toggle, point.x, point.y);
+        tryVerify(() => !project.calculating, 10000, "The real reflection-toggle edit publishes its new calculation");
+        verify(/_excluded_reflection.index_h/.test(project.currentExperiment.text.inputText), "A physical reflection toggle writes the declared exclusion loop in the same project");
+        const dimmed = Review.find(chart, "singleCrystal.leftOut"), included = Review.find(chart, "singleCrystal.points");
+        tryVerify(() => SettingsProof.points(dimmed).length === 1 && SettingsProof.points(included).length === 3, 3000, "Exactly the user-omitted reflection moves to the chart's dimmed layer");
+        verify(dimmed.opacity > 0 && dimmed.opacity < included.opacity, "A user exclusion remains visible at a dimmed opacity");
+        const pointer = Review.descendants(chart).find(item => typeof item.pressX === "number");
+        verify(pointer !== undefined, "The excluded reflection's reason is checked through the actual chart pointer");
+        const excluded = SettingsProof.points(dimmed)[0];
+        mouseMove(pointer, (excluded.x-dimmed.xMin)/(dimmed.xMax-dimmed.xMin)*pointer.width,
+                  (1-(excluded.y-dimmed.yMin)/(dimmed.yMax-dimmed.yMin))*pointer.height);
+        const tooltip = Review.find(chart, "singleCrystal.hover");
+        tryVerify(() => tooltip !== null && tooltip.visible && /user|omitt|exclud/i.test(Ui.text(tooltip)), 2000, "Hovering a dimmed point explains its user exclusion rather than a fit cutoff");
+        project.undo();
+        tryVerify(() => !project.calculating, 10000, "Undo of the actual reflection toggle settles");
+        compare(project.currentExperiment.text.inputText, before, "One undo restores the pre-toggle exclusion declaration exactly");
+        tryVerify(() => SettingsProof.points(dimmed).length === 0 && SettingsProof.points(included).length === 4, 3000, "Undo restores every chart point to its former included layer");
+    }
+    function test_single_crystal_range_group_edits_and_undo() {
+        openAdmission("loop_\n_excluded_region.id\n_excluded_region.start\n_excluded_region.end\n_excluded_region.axis\n1 3 6 d_spacing\n");
+        const project = Session.project;
+        const before = project.currentExperiment.text.inputText;
+        Ui.click(test, Probe, appWindow, "sideBar.tab.basic");
+        const rangeGroups = Review.descendants(Ui.page(appWindow)).filter(item => typeof item.objectName === "string" && /^group\./.test(item.objectName) && /excluded.*region/.test(item.objectName));
+        verify(rangeGroups.length === 1, "Single-crystal exclusions share one range group with the powder prior implementation");
+        expand(rangeGroups[0].objectName);
+        const start = Review.find(rangeGroups[0], "excludedRegion.start.0");
+        verify(start !== null && !start.readOnly, "The shared range group exposes the real editable start endpoint");
+        Ui.scrollIntoView(start);
+        verify(waitForPolish(appWindow.contentItem), "The range endpoint finishes layout before keyboard editing");
+        const target = Ui.clickPoint(start);
+        verify(target !== null, "The single-crystal range endpoint is reachable by real input");
+        mouseClick(start, target.x, target.y);
+        start.forceActiveFocus();
+        verify(SettingsProof.type(start, "2.5") && SettingsProof.key(start, Qt.Key_Return), "The range editor receives actual keyboard text and Return");
+        tryVerify(() => !project.calculating, 10000, "The range endpoint edit publishes its later calculation");
+        verify(project.currentExperiment.text.inputText !== before && /2.5/.test(project.currentExperiment.text.inputText), "The endpoint editor changes the saved range state used by the fit");
+        project.undo();
+        tryVerify(() => !project.calculating, 10000, "Undo of the range edit settles");
+        compare(project.currentExperiment.text.inputText, before, "One undo restores the complete single-crystal range and its axis");
+    }
+
+    function chooseAdmissionToken(box, token) {
+        verify(box.enabled, "An admission selector is enabled for the current measured single crystal");
+        const index=box.options.indexOf(token);
+        verify(index>=0,"The dictionary-backed selector offers the declared admission choice");
+        Ui.scrollIntoView(box);
+        verify(waitForPolish(appWindow.contentItem),"The admission selector finishes layout before pointer input");
+        const target=Ui.clickPoint(box);
+        verify(target!==null,"The admission selector has a visible pointer target");
+        mouseClick(box,target.x,target.y);
+        tryCompare(box.popup,"opened",true,2000,"A real click opens the admission choices");
+        const list=box.popup.contentItem;
+        list.positionViewAtIndex(index,ListView.Contain);
+        tryVerify(()=>list.itemAtIndex(index)!==null,2000,"The requested admission choice is materialized in its real popup");
+        const choice=list.itemAtIndex(index);
+        mouseClick(choice,choice.width/2,choice.height/2);
+        tryCompare(box.popup,"visible",false,2000,"Choosing an admission token closes its real popup");
+    }
+    function test_merge_and_absence_selectors_edit_and_undo() {
+        openAdmission("_reflns.merge laue_class\n_reflns.absences exclude\n");
+        const project = Session.project;
+        Ui.click(test, Probe, appWindow, "sideBar.tab.basic");
+        const selectors = Review.descendants(Ui.page(appWindow));
+        const merge = selectors.find(item => item.uid === "reflns.merge");
+        const absences = selectors.find(item => item.uid === "reflns.absences");
+        verify(merge !== undefined && absences !== undefined, "The single-crystal Main tab exposes the dictionary-backed merge and absence selectors");
+        verify(merge.visible && absences.visible, "Merge and absence choices are visible for the current experiment");
+        verify(/laue_class/.test(project.currentExperiment.text.inputText), "The Main tab reads the actual per-experiment merge declaration");
+        const before=project.currentExperiment.text.inputText;
+        chooseAdmissionToken(merge,"point_group");
+        tryVerify(()=>/_reflns.merge\s+point_group/.test(project.currentExperiment.text.inputText),2000,"A real merge choice writes the per-experiment file declaration");
+        project.undo();
+        compare(project.currentExperiment.text.inputText,before,"One undo restores the former merge policy");
+        chooseAdmissionToken(absences,"include");
+        tryVerify(()=>/_reflns.absences\s+include/.test(project.currentExperiment.text.inputText),2000,"A real absence choice writes the current experiment's file declaration");
+        project.undo();
+        compare(project.currentExperiment.text.inputText,before,"One undo restores the former absence policy");
+
+    }
+    function openSummary(defined) {
+        Session.closeProject();
+        const folder=defined ? "admission_project" : "single_crystal";
+        const source=SettingsProof.copyProject(Probe.repoUrl("tests/fixtures/fitting_correctness/"+folder));
+        verify(Session.openProject(source),"The reporting witness opens the independently authored reflection list: "+Session.lastError);
+        tryVerify(()=>!Session.project.calculating,10000,"The reporting witness settles before its displayed statistics are read");
+        if(defined) return;
+        // Legacy P1, no merging: raw signed measurements, no omitted or absent rows.
+        return {measured:4,unique:4,used:4,excluded:0,absent:0,mode:"none",rint:null,rsigma:7/1022};
+    }
+    function summaryExpected(defined) {
+        if(!defined) return {measured:4,unique:4,used:4,excluded:0,absent:0,mode:"none",rint:null,rsigma:7/1022};
+        // Generated by the visible reference generator; no engine output is an expectation.
+        return JSON.parse(SettingsProof.text(SettingsProof.copyProject(Probe.repoUrl("tests/fixtures/fitting_correctness/admission_project")),"reference.json")).bank;
+    }
+    function summaryCases() { return [{tag:"defined",defined:true},{tag:"undefined",defined:false}]; }
+    function test_report_admission_summary_data() { return summaryCases(); }
+    function test_report_admission_summary(data) {
+        openSummary(data.defined);
+        const expected=summaryExpected(data.defined);
+        Ui.click(test, Probe, appWindow, "appBar.tab.report");
+        tryVerify(() => Math.abs(Ui.page(appWindow).mapToItem(appWindow.contentItem,0,0).x)<1, 3000, "The reporting check reaches the actual Report page");
+        let preview=null;
+        tryVerify(()=>{
+            const candidates=Review.descendants(appWindow.contentItem).filter(item=>item.objectName==="report.preview" && Ui.rendered(item));
+            if(candidates.length===1) preview=candidates[0];
+            return candidates.length===1;
+        },3000,"The reflection summary reaches the rendered Report preview");
+        verify(waitForPolish(preview),"The Report's displayed reflection fields finish layout");
+        compare(Admission.problem(Ui.text(preview),expected),"","The rendered Report shows each independent count, merge mode, Rint and R-sigma at its own field");
+    }
+    function test_single_crystal_fit_popup_has_merge_factors_data() { return summaryCases(); }
+    function test_single_crystal_fit_popup_has_merge_factors(data) {
+        openSummary(data.defined);
+        const expected=summaryExpected(data.defined), project=Session.project;
+        project.currentExperiment.scale.free=true;
+        project.fit.start();
+        const dialog=findChild(appWindow,"fit.results");
+        tryVerify(()=>dialog!==null && dialog.opened && !project.fit.running,15000,"The reflection summary popup follows an actual completed fit");
+        compare(Admission.problem(Ui.text(dialog.contentItem),expected),"","The actual fit popup shows each independent count, mode and factor, including its own undefined Rint field");
+        dialog.close();
+    }
+    function test_single_crystal_data_summary_has_admission_counts_data() { return summaryCases(); }
+    function test_single_crystal_data_summary_has_admission_counts(data) {
+        openSummary(data.defined);
+        const expected=summaryExpected(data.defined);
+        Ui.click(test,Probe,appWindow,"appBar.tab.experiment");
+        Ui.click(test,Probe,appWindow,"sideBar.tab.basic");
+        tryVerify(()=>Math.abs(Ui.page(appWindow).mapToItem(appWindow.contentItem,0,0).x)<1,3000,"The reflection statistics are read on the actual Experiment page");
+        compare(Admission.problem(Ui.text(Ui.page(appWindow)),expected),"","The Experiment summary displays each count, merge mode and agreement factor at its corresponding field");
+    }
+    function test_display_summary_gate_rejects_wrong_missing_and_unassociated_values() {
+        const expected=summaryExpected(true);
+        compare(Admission.problem(Admission.render(expected),expected),"","The displayed-field checker accepts independently generated values");
+        for(const key of ["measured","unique","used","excluded","absent","mode","rint","rsigma"]) {
+            const wrong=JSON.parse(JSON.stringify(expected));
+            wrong[key]=key==="mode"?"none":(key==="rint"?null:0);
+            verify(Admission.problem(Admission.render(wrong),expected)!=="","A wrong displayed count, mode, factor or fabricated undefined value cannot pass its corresponding field");
+            const missing=Admission.render(expected).split("\n").filter(line=>!line.startsWith(key==="mode"?"Merge":key)).join("\n");
+            verify(Admission.problem(missing,expected)!=="","A missing displayed value cannot borrow another label or number");
+        }
+        const undefinedExpected=summaryExpected(false), wrong=JSON.parse(JSON.stringify(undefinedExpected));
+        wrong.rint=0;
+        verify(Admission.problem(Admission.render(wrong)+"\nOther result: —",undefinedExpected)!=="","A dash elsewhere in a dialog cannot satisfy undefined Rint");
+    }
+
+    function test_new_single_crystal_writes_explicit_merge_defaults() {
+        openAdmission("");
+        Ui.click(test, Probe, appWindow, "sideBar.tab.basic");
+        expand("group.experiments");
+        Ui.click(test, Probe, appWindow, "experiments.create");
+        chooseTypeToken("experimentType.sampleForm", "single crystal");
+        tryCompare(Session.project.currentExperiment,"sampleFormToken","single crystal",2000,"The actual Create experiment workflow produces a single crystal");
+        const text=Session.project.currentExperiment.text.inputText;
+        verify(/_reflns.merge\s+laue_class/.test(text),"A newly created neutron single crystal writes its explicit Laue default");
+        verify(/_reflns.absences\s+exclude/.test(text),"A newly created neutron single crystal writes its explicit absence-exclusion default");
+    }
+
 }

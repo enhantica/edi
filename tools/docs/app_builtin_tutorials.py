@@ -52,6 +52,9 @@ WEB_ENTRIES = {
     'data': 'experiments.load.dataWeb',
 }
 TAGS = ROOT / 'app/examples/tags.json'
+# The first experiment's Data file cell: Load data… ▾ without data, ⋯ to replace it.
+DATA_OPENER = 'experiments.loadData.0'
+DATA_REPLACER = 'experiments.dataMore.0'
 
 
 # The longest step title, in characters, that fits the popup's line beside "Step 107 of 109"
@@ -195,11 +198,12 @@ TRANSLATED = {
     r'project-created': r'createProject\.accept',
     r'(structure|experiment)-web-\d+|data-web': (
         r'structures\.load(\.web)?|experiments\.load(\.experimentWeb|\.dataWeb)?'
+        r'|experiments\.loadData\.0'
         r'|onlineLoad\.(source|search)|choose:EasyDiffraction Database'
         r'|fill:onlineLoad\.field\.id=.+'
     ),
     r'(structure|experiment)-loaded-\d+|data-loaded': r'onlineLoad\.row\.0',
-    r'data-from-file': r'experiments\.load',
+    r'data-from-file': r'reveal:experiments\.dataMore\.0|experiments\.dataMore\.0',
     r'data-from-file-closed': r'',
     r'fitting-mode-\w+|scan-mode': r'fittingMode\.type|choose-token:fittingMode\.type=\w+',
     r'minimizer': (
@@ -605,10 +609,18 @@ def plan_step(  # noqa: PLR0911, PLR0912, PLR0914, PLR0915 - one branch per docs
         source = picked[0].removeprefix('choose:') if picked else 'EasyDiffraction'
         pending.append((kind, entry, item['description']))
         page = 'structure' if kind == 'structure' else 'experiment'
-        button = 'structures.load' if kind == 'structure' else 'experiments.load'
+        # Measured data opens from the experiment's own Data file cell (Load data… ▾).
+        button = {'structure': 'structures.load', 'data': DATA_OPENER}.get(
+            kind, 'experiments.load'
+        )
         menu_entry = WEB_ENTRIES[kind]
+        opener = (
+            'Click **Load data… ▾** in its Data file cell.'
+            if kind == 'data'
+            else 'Click **Load ▾**.'
+        )
         return [
-            step('Open the Load menu', 'Click **Load ▾**.', page, button, f'menu:{menu_entry}'),
+            step('Open the Load menu', opener, page, button, f'menu:{menu_entry}'),
             step('From web', 'Choose **From web…**.', page, menu_entry, f'web-dialog:{kind}'),
             step(
                 item['description'],
@@ -649,13 +661,13 @@ def plan_step(  # noqa: PLR0911, PLR0912, PLR0914, PLR0915 - one branch per docs
     if ident == 'minimizer':
         return minimizer_steps(case, actions)
     if ident == 'data-from-file':
-        need(f'{case}: plan step {ident!r}', actions, 'experiments.load')
+        need(f'{case}: plan step {ident!r}', actions, DATA_REPLACER)
         return [
             step(
-                'Open the Load menu',
-                'Click **Load ▾**.',
+                'Open the data menu',
+                "Click **⋯** in the experiment's Data file cell.",
                 'experiment',
-                'experiments.load',
+                DATA_REPLACER,
                 'menu:experiments.load.dataFile',
             )
         ]
@@ -999,7 +1011,11 @@ def build() -> dict:
     # The Interface tour is written by hand and stays.
     kept = [entry for entry in current['tutorials'] if entry['id'] in BUILT_INS]
     metadata = json.loads(METADATA.read_text(encoding='utf-8'))
-    cases = sorted(metadata['examples'], key=lambda case: case != GETTING_STARTED)
+    # An app-only example (ADR-0048) has no tutorial yet; the catalogue's cases do.
+    registry = yaml.safe_load((ROOT / 'docs/user/cli/projects.yml').read_text(encoding='utf-8'))
+    app_only = {row['id'] for row in registry['projects'] if row.get('app-only')}
+    examples = [case for case in metadata['examples'] if case not in app_only]
+    cases = sorted(examples, key=lambda case: case != GETTING_STARTED)
     tutorials = sorted(kept, key=lambda entry: BUILT_INS.index(entry['id']))
     for case in cases:
         entry = metadata['examples'][case]

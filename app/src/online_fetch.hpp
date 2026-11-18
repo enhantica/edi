@@ -23,7 +23,8 @@ using FetchDone = std::function<void(const QByteArray& bytes, const QString& err
 /// shape), or http(s) through `manager`, created on first use under `owner`. A missing local file counts as
 /// unreachable, the offline stand-in for a host that does not answer. Optional progress
 /// reports transfer bytes; callbacks stop when owner is destroyed.
-void fetch_url(QObject* owner, QNetworkAccessManager*& manager, const QUrl& url, FetchDone done, FetchProgress progress = {});
+void fetch_url(QObject* owner, QNetworkAccessManager*& manager, const QUrl& url, const FetchDone& done,
+               const FetchProgress& progress = {});
 
 /// `base` joined with a relative `path`: a URL stays a URL, a bare folder becomes a file URL.
 QUrl joined_url(const QString& base, const QString& path);
@@ -31,7 +32,8 @@ QUrl joined_url(const QString& base, const QString& path);
 /// `path` from the first of `bases` that serves it: the next location is tried only when the one before was
 /// unavailable (an outage, by class), never for an answer such as a 404; `done` gets the last failure, unreachable
 /// only when every location was.
-void fetch_from(QObject* owner, QNetworkAccessManager*& manager, const QStringList& bases, const QString& path, FetchDone done, FetchProgress progress = {});
+void fetch_from(QObject* owner, QNetworkAccessManager*& manager, const QStringList& bases, const QString& path, const FetchDone& done,
+                const FetchProgress& progress = {});
 
 /// Why `bytes` is not the file the index describes: a size other than `expected_bytes` (when not negative) or a
 /// SHA-256 other than `sha256` (when given). Empty when the content agrees or the index states neither.

@@ -5,6 +5,7 @@
 
 #include <QAnimationDriver>
 #include <QCoreApplication>
+#include <QImageReader>
 #include <QCryptographicHash>
 #include <QDebug>
 #include <QDir>
@@ -50,6 +51,7 @@
 #include <algorithm>
 #include <atomic>
 #include <chrono>
+#include <cmath>
 #include <condition_variable>
 #include <initializer_list>
 #include <memory>
@@ -60,6 +62,7 @@
 #include <vector>
 
 #include "edi/fit_job.hpp"
+#include "edi/structure_scene.hpp"
 #include "engine_setup.hpp"
 #include "fit_view_model.hpp"
 #include "measured_layer.hpp"
@@ -163,6 +166,83 @@ class ReportSettingsProof : public QObject {
     Q_PROPERTY(QString webExportError READ webExportError)
 public:
     explicit ReportSettingsProof(QQmlEngine* engine) : engine_(engine) {}
+    // Read-only carrier: all coordinates/options come from independent fixtures.
+    Q_INVOKABLE QVariantMap polyhedraWitness(const QVariantMap& input, bool complete) const {
+        const auto points = input.value("points").toList();
+        std::vector<edi::Vec3> vertices;
+        for (const auto& point : points) {
+            const auto xyz = point.toList();
+            vertices.push_back({xyz.at(0).toDouble(), xyz.at(1).toDouble(), xyz.at(2).toDouble()});
+        }
+        const auto encodeFaces = [](const auto& faces) {
+            QVariantList result;
+            for (const auto& face : faces)
+                result.append(QVariant(QVariantList{int(face[0]), int(face[1]), int(face[2])}));
+            return result;
+        };
+        if (input.value("hull").toBool())
+            return {{"faces", encodeFaces(edi::convex_hull(vertices))}};
+        edi::SceneSource source;
+        source.current = true;
+        source.structure_id = "independent";
+        const auto matrix = input.value("matrix").toList();
+        for (int i = 0; i < 9; ++i) source.cartn_matrix[i] = matrix.at(i).toDouble();
+        std::vector<std::string> ids{"Fe1"}, sym{"1_555"};
+        std::vector<std::int32_t> clusters{1}, site1, site2;
+        std::vector<double> fx{0}, fy{0}, fz{0}, x{0}, y{0}, z{0}, occ{1}, distances;
+        source.site_types.push_back({"Fe1", "Fe"});
+        const auto fractional = input.value("fractional").toList();
+        for (int i = 0; i < int(vertices.size()); ++i) {
+            const auto& v = vertices[i];
+            const auto frac = fractional.at(i).toList();
+            fx.push_back(frac.at(0).toDouble()); fy.push_back(frac.at(1).toDouble()); fz.push_back(frac.at(2).toDouble());
+            x.push_back(v.x); y.push_back(v.y); z.push_back(v.z); occ.push_back(1);
+            const auto id = "O" + std::to_string(i + 1);
+            ids.push_back(id); sym.push_back("1_555"); clusters.push_back(i + 2);
+            source.site_types.push_back({id, "O"});
+            site1.push_back(1); site2.push_back(i + 2);
+            distances.push_back(std::sqrt(v.x*v.x + v.y*v.y + v.z*v.z));
+        }
+        source.atom_site_id = std::make_shared<const std::vector<std::string>>(ids);
+        source.site_symmetry = std::make_shared<const std::vector<std::string>>(sym);
+        source.cluster_id = std::make_shared<const std::vector<std::int32_t>>(clusters);
+        source.fract_x = std::make_shared<const std::vector<double>>(fx);
+        source.fract_y = std::make_shared<const std::vector<double>>(fy);
+        source.fract_z = std::make_shared<const std::vector<double>>(fz);
+        source.cartn_x = std::make_shared<const std::vector<double>>(x);
+        source.cartn_y = std::make_shared<const std::vector<double>>(y);
+        source.cartn_z = std::make_shared<const std::vector<double>>(z);
+        source.occupancy = std::make_shared<const std::vector<double>>(occ);
+        source.bond_site_1 = std::make_shared<const std::vector<std::int32_t>>(site1);
+        source.bond_site_2 = std::make_shared<const std::vector<std::int32_t>>(site2);
+        source.bond_distance = std::make_shared<const std::vector<double>>(distances);
+        edi::SceneOptions options;
+        options.polyhedra = true;
+        options.polyhedra_centres = {"Fe"}; options.polyhedra_corners = {"O"};
+        options.polyhedra_complete = complete;
+        options.polyhedra_max_distance = input.value("cutoff").toDouble();
+        const auto scene = edi::present_structure(source, options);
+        QVariantList corners, faces;
+        for (const auto& poly : scene.polyhedra) if (poly.atom == 0) {
+            for (const auto& v : poly.corners) corners.append(QVariant(QVariantList{v.x, v.y, v.z}));
+            faces = encodeFaces(poly.faces);
+        }
+        return {{"current", scene.current}, {"corners", corners}, {"faces", faces}};
+    }
+    Q_INVOKABLE QVariantMap momentRelationFacts(QObject* object) const {
+        const auto* view = qobject_cast<edi_app::ProjectViewModel*>(object);
+        if (!view) return {};
+        const auto& project = view->project();
+        QVariantList moments, aliases, constraints;
+        for (const auto& structure : project.structures)
+            for (const auto& moment : structure->atom_site_moment)
+                moments.append(QVariant(QVariantList{double(moment->crystalaxis_x.value), double(moment->crystalaxis_y.value), double(moment->crystalaxis_z.value)}));
+        for (const auto& alias : project.aliases)
+            aliases.append(QVariant(QVariantList{QString::fromStdString(alias->id.value()), QString::fromStdString(alias->parameter_unique_name.value())}));
+        for (const auto& constraint : project.constraints)
+            constraints.append(QVariant(QVariantList{QString::fromStdString(constraint->id.value()), QString::fromStdString(constraint->expression.value())}));
+        return {{"moments", moments}, {"aliases", aliases}, {"constraints", constraints}};
+    }
     // Public Qt text layout, using the rendered label's own font and available width.
     // The QML gate checks its line count against the actual label before reading line text.
     Q_INVOKABLE QVariantList tooltipTextLines(QObject* label, bool word, bool anywhere) const {
@@ -703,6 +783,49 @@ public:
     }
     static bool localDirectory(const QUrl& project) {
         return absoluteLocalFileUrl(project) && QFileInfo(project.toLocalFile()).isDir();
+    }
+    // Platform chooser input, like chooseProjectLocation: the actual dialog receives the user's choice.
+    Q_INVOKABLE QVariantList colourDialogs(QObject* root) const {
+        QVariantList result;
+        if (!root) return result;
+        for (auto* object : root->findChildren<QObject*>())
+            if (object->inherits("QQuickColorDialog") && object->property("visible").toBool())
+                result.append(QVariant::fromValue(object));
+        return result;
+    }
+    Q_INVOKABLE bool chooseColour(QObject* dialog, const QString& value) const {
+        const QColor colour(value);
+        if (!dialog || !colour.isValid() || !dialog->property("visible").toBool() ||
+            !dialog->inherits("QQuickColorDialog") ||
+            !dialog->setProperty("selectedColor", colour) ||
+            dialog->property("selectedColor").value<QColor>() != colour)
+            return false;
+        const bool accepted = QMetaObject::invokeMethod(dialog, "accepted", Qt::DirectConnection);
+        QMetaObject::invokeMethod(dialog, "close", Qt::DirectConnection);
+        return accepted;
+    }
+
+    // Observe the actual stored PNG, without changing its bytes or using the exporter's image.
+    Q_INVOKABLE QVariantMap savedImageFacts(const QUrl& location) const {
+        if (!absoluteLocalFileUrl(location)) return {{"valid", false}};
+        QImageReader reader(location.toLocalFile());
+        const QByteArray format = reader.format();
+        const QImage image = reader.read();
+        if (image.isNull()) return {{"valid", false}};
+        quint64 transparent = 0, opaque = 0, partial = 0;
+        for (int y = 0; y < image.height(); ++y) {
+            for (int x = 0; x < image.width(); ++x) {
+                const int alpha = image.pixelColor(x, y).alpha();
+                if (alpha == 0) ++transparent;
+                else if (alpha == 255) ++opaque;
+                else ++partial;
+            }
+        }
+        return {{"valid", true}, {"format", QString::fromLatin1(format)},
+                {"width", image.width()}, {"height", image.height()},
+                {"transparent", QVariant::fromValue(transparent)},
+                {"opaque", QVariant::fromValue(opaque)},
+                {"partial", QVariant::fromValue(partial)}};
     }
     Q_INVOKABLE QVariantMap fileObservation(const QUrl& project, const QString& relative) const {
         if (!localDirectory(project)) return {{"error", "An absolute local directory URL is required"}};

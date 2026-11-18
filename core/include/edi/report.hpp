@@ -8,6 +8,7 @@
 #include <utility>
 #include <vector>
 
+#include "edi/display.hpp"
 #include "edi/model.hpp"
 
 // Edi's fit reporting — the product half of the shared output contract.
@@ -84,7 +85,7 @@ std::string format_change(double current, double previous);
 std::string change_percent(double current, double previous);
 
 // The s.u. cell of a parameter whose s.u. the fit could not compute, and the note that explains it.
-inline constexpr std::string_view kUndefinedSu = "undefined";
+inline constexpr std::string_view kUndefinedSu = kUndefinedValue;  // the one undefined text (display.hpp)
 inline constexpr std::string_view kUndefinedSuNote =
     "the data do not determine it at the fitted value, so its standard uncertainty cannot be computed";
 

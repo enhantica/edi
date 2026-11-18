@@ -359,6 +359,18 @@ AppDialog {
                         onActivated: index => ApplicationInfo.preferenceActivated(index, 4)
                     }
                 }
+                Field {
+                    label: qsTr("Saved image background")
+                    FieldBox {
+                        readonly property list<string> choices: ["transparent", "chart"]
+
+                        objectName: "preferences.imageBackground"
+                        model: [qsTr("Transparent"), qsTr("Chart colour")]
+                        currentIndex: Math.max(0, choices.indexOf(Preferences.imageBackground))
+                        onActivated: index => Preferences.imageBackground = choices[index]
+                        ToolTip.text: qsTr("What Save image puts behind a chart or the structure view")
+                    }
+                }
             }
             TabRow {
                 // The figure palette of experiments and structures, the Pattern and Stacked views alike (ADR-0084).
@@ -1240,7 +1252,11 @@ AppDialog {
         readonly property string intent: selection ? selection.id : ""
         readonly property var original: selection ? selection.owner : null
         title: qsTr("Choose a skill folder or collection")
-        onAccepted: ApplicationInfo.preferenceCompleteSourceSelection(false, true)
+        currentFolder: DialogFolders.folder("assistantSources", "")
+        onAccepted: {
+            DialogFolders.remember("assistantSources", selectedFolder);
+            ApplicationInfo.preferenceCompleteSourceSelection(false, true);
+        }
         onRejected: ApplicationInfo.preferenceCompleteSourceSelection(false, false)
         Component.onDestruction: ApplicationInfo.preferenceCompleteSourceSelection(false, false)
         Connections {

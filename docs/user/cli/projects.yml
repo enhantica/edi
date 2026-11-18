@@ -44,6 +44,9 @@ projects:
   - id: pd-neut-tof_ncaf-wish-5bank_start-fullprof
     # The same project started at every value of FullProf's own .pcr.
     executing: true
+  - id: pd-neut-tof_ncaf-wish-5bank_scan-6p
+    # A series of joint fits: six points, one file per bank per point.
+    executing: true
   - id: pd-neut-tof_si-sepd_start-2
     executing: true
   - id: pd-neut-tof_si-sepd_start-5
@@ -219,6 +222,10 @@ projects:
     executing: true
     offline: true
     user-facing: true
+  - id: pd-neut-tof_ncaf-wish-5bank_synthetic-100p
+    # The six-point five-bank series at 100 points, to look at a long series in the app; too slow to execute in CI.
+    executing: false
+    app-only: "a synthetic series for looking at a long series of joint fits in the app"
   - id: pd-xray-cwl_latp-bm01_scan
     title: "LATP and AlPO₄ on BM01"
     short-name: "LATP+AlPO₄"
@@ -232,6 +239,8 @@ projects:
   - id: sc-neut-cwl_tb2ti2o7-heidi_basic
     executing: true
     verification: true
+  - id: sc-neut-cwl_tb2ti2o7-heidi_exclusions
+    executing: true
   - id: sc-neut-cwl_tb2ti2o7-heidi_isotropic-extinction
     executing: true
     verification: true

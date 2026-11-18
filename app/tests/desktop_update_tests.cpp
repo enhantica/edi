@@ -32,7 +32,7 @@ QByteArray history(const QJsonArray& releases) {
 class FeedServer {
 public:
     QTcpServer server;
-    explicit FeedServer(QByteArray body) {
+    explicit FeedServer(const QByteArray& body) {
         QObject::connect(&server, &QTcpServer::newConnection, &server, [this, body] {
             auto* socket = server.nextPendingConnection();
             QObject::connect(socket, &QTcpSocket::readyRead, &server, [socket, body] {

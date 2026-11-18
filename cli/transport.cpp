@@ -121,7 +121,8 @@ const Curl* curl() {
         const char* names[] = {"libcurl.so.4", "libcurl-gnutls.so.4", "libcurl.so"};
 #endif
         for (const char* name : names) {
-            if ((c.library = dlopen(name, RTLD_NOW | RTLD_LOCAL)) != nullptr) break;
+            c.library = dlopen(name, RTLD_NOW | RTLD_LOCAL);
+            if (c.library != nullptr) break;
         }
         if (c.library == nullptr || !symbol(c.library, "curl_easy_init", c.easy_init) ||
             !symbol(c.library, "curl_easy_setopt", c.easy_setopt) ||

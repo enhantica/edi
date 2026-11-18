@@ -69,7 +69,7 @@ public:
     QByteArray lastDocument() const;
     // An exhausted ID has no fabricated correlation token. No accepted worker
     // or artifact can originate from that immediate refusal.
-    QVariantMap capture(bool automaticTrigger, AssistantWorkReportCoverage counts,QStringView storageRoot,
+    QVariantMap capture(bool automaticTrigger, const AssistantWorkReportCoverage& counts,QStringView storageRoot,
         const std::function<AssistantWorkReportSnapshot(quint64)>& build,const QString& expectedScope,quint64 expectedRevision,bool projectionBlocked);
     static bool artifactCurrent(const QJsonObject&,QStringView storageRoot) noexcept;
 private:

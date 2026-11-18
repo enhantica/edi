@@ -8,6 +8,8 @@ Parameters describe both the sample and the experiment. Changing a cell length m
 
 [Look up GUI labels, Edi keys, Python paths and CIF names](#parameter-names). The tables below lead to a description of every category and field.
 
+In the app, right-click a value to see its full name with its datablock, such as `d20.peak.broad_gauss_v`; click the name to open its description.
+
 ## A value and its context
 
 A parameter's value needs its name, units and place in the model to be meaningful. Typical groups include:

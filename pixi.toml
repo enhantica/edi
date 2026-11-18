@@ -25,7 +25,7 @@ PYTHONUTF8 = "1"
 # The crysta commit edi builds (edi ADR-0083): its CI packs that commit's SDK once per platform
 # (.github/workflows/crysta-sdk.yml) and every job and product uses it. `pixi run crysta-sdk-pin <sha>`
 # moves it.
-CRYSTA_COMMIT = "e8759e78c75e921c59820be84d2a1e058b4d2187"
+CRYSTA_COMMIT = "7121efe84a06e9d6727e0401b2f1c56a80ebeb6d"
 # ONE ruff cache, outside every source and test tree. Same class as crysta's: ruff writes
 # `.ruff_cache` into the directory it is invoked from, and a stray cache can keep a RETIRED
 # directory alive after its tracked files are gone, tripping a layout gate on a folder that
@@ -246,6 +246,8 @@ installer-check = "pixi run --manifest-path tools/installer/pixi.toml python -m 
 # and runs each step on that build: app-verify (and the verify chains that include it) through pixi's shared
 # dependency, each CI app job through `pixi run --skip-deps` (as the owner corrected it on 2026-09-29).
 app-build = { cmd = ["bash", "tools/ci/app-build.sh"]  }
+# moc for every app target, so clang-tidy can read each source that includes its own .moc (cpp-tidy).
+app-moc = { cmd = ["bash", "tools/ci/app-moc.sh"] }
 app-test-assistant-groups = { cmd = "cmake --build build/app --target assistant_real_owner_probe -j 4 && python -m pytest tests/fixtures/assistant_fixes/check_grouped_flags.py --noconftest -o addopts= -q", depends-on = ["app-build"] }
 app-test-assistant-lifetime = { cmd = "cmake --build build/app --target edi_assistant_lifetime_host -j 4 && python -m pytest tests/fixtures/assistant_fixes/check_process_lifetime.py --noconftest -o addopts= -q", depends-on = ["app-build"] }
 app-test-skill-targets = { cmd = "python tools/checks/assistant_skill_targets.py && python -m pytest tests/unit/py/test_assistant_skill_targets.py --noconftest -o addopts= -q" }
@@ -310,8 +312,27 @@ wasm-build = { cmd = ["bash", "tools/ci/wasm-build.sh"], depends-on = [{ task = 
 # -e app app-test`, `app-ui-test` and `app-ui-bless` still run by hand.
 app-gates = { depends-on = ["app-test-scan-lines", "app-test-scan-refresh", { task = "app-build", environment = "app" }, "app-lint", "app-format-check"] }
 
+# The C++ static checks (edi ADR-0093): clang-tidy at one version on every platform, the version crysta's code-quality
+# rules pin, and cppcheck. They read the compile commands of the app's build tree (build/app), so this environment
+# holds only the tools.
+[feature.cpp-lint.dependencies]
+clang-tools = "==22.1.8"
+# clang's builtin headers (stddef.h and the rest), which clang-tidy reads.
+clang-22 = "==22.1.8"
+cppcheck = "==2.21.0"
+python = "3.14.*"  # run-clang-tidy is a Python script
+
+# The checks run in the Linux and macOS app jobs; conda-forge has no Windows bash.
+[feature.cpp-lint.target.unix.dependencies]
+bash = ">=5.2"
+
+[feature.cpp-lint.tasks]
+cpp-tidy = { cmd = ["bash", "tools/ci/cpp-tidy.sh"] }
+cpp-cppcheck = { cmd = ["bash", "tools/ci/cpp-cppcheck.sh"] }
+
 [environments]
 app = ["app"]
+cpp-lint = { features = ["cpp-lint"], no-default-feature = true }
 
 [pypi-dependencies]
 easydiffraction = { path = ".", editable = true }
@@ -335,7 +356,11 @@ lint = { cmd = ["bash", "tools/ci/lint.sh"] }
 # CI checkout / clean tree has no `_edi.so` and `import edi` fails, while a stale `.so` masks it locally.
 # The core suites leave out the app group (tests/integration/app and tests/system/app): it needs the Qt app build and runs as
 # group-app after app-build (app-verify, both CI app jobs; tests/test-groups.json "app").
-test = { cmd = ["bash", "tools/ci/pytest-lenient.sh", "--ignore=tests/integration/app", "--ignore=tests/system/app", "--ignore=tests/system/py/test_survey_events.py"], depends-on = ["core-build"] }
+# Shared bounded native preparation, before any behavior node's runtime is measured.
+slow-seeded-series = { cmd = ["bash", "tools/ci/slow-seeded-series.sh", "nightly-only"], depends-on = ["core-build"] }
+joint-series-seeded-prepare = { cmd = ["python", "-m", "tests.fixtures.joint_series.prepare_seeded", "--engine", "edi"], depends-on = ["core-build"] }
+joint-series-prepare = { cmd = ["python", "-m", "tests.fixtures.joint_series.prepare_native", "--engine", "edi"], depends-on = ["joint-series-seeded-prepare", "core-build"] }
+test = { cmd = ["bash", "tools/ci/pytest-lenient.sh", "--ignore=tests/integration/app", "--ignore=tests/system/app", "--ignore=tests/system/py/test_survey_events.py"], depends-on = ["joint-series-prepare", "core-build"] }
 # The quick (review-time) selection runs the FULL tier set — the measured-`heavy` exclusion is
 # retired (tests/test-groups.json declares the named groups, equal on test selection). Renamed
 # from `per-commit-tests` — the owner cadence
@@ -348,7 +373,7 @@ quick-tests = { cmd = [
     "tests/unit", "tests/integration", "tests/system", "--ignore=tests/integration/app", "--ignore=tests/system/app",
     "--ignore=tests/system/py/test_survey_events.py",
     "-q",
-], depends-on = ["core-build"] }
+], depends-on = ["joint-series-prepare", "core-build"] }
 # The nightly-only group retains the app-builder witnesses.
 nightly-only-tests = { cmd = [
     "python", "-m", "pytest",
@@ -369,6 +394,7 @@ nightly-only-tests = { cmd = [
     "tests/system/py/test_tutorial_command_line_workflows.py",
     "tests/system/py/test_tutorial_recipe_native_states.py",
     "tests/system/py/test_tutorial_assistant_create.py",
+    "tests/system/slow/seeded_series.py",
     "-q",
 ], depends-on = ["core-build"] }
 # The weekly-only group is the CIF import matrix: about 140,000 short tests, two hours serial.
@@ -382,7 +408,7 @@ weekly-only-tests = { cmd = [
 # times (tools/ci/system-tests-part.sh). Together they are exactly quick-tests' selection, except that only the
 # nightly schedule runs the nightly-only group and the Sunday schedule the weekly-only group.
 core-tests = { cmd = ["bash", "tools/ci/core-tests.sh"], depends-on = ["core-build"] }
-system-tests-part = { cmd = ["bash", "tools/ci/system-tests-part.sh"], depends-on = ["core-build", { task = "onboarding-probes", environment = "app" }, { task = "tutorial-transactions-ready", environment = "app" }] }
+system-tests-part = { cmd = ["bash", "tools/ci/system-tests-part.sh"], depends-on = ["joint-series-prepare", "core-build", { task = "onboarding-probes", environment = "app" }, { task = "tutorial-transactions-ready", environment = "app" }] }
 # The integration tests whose wiring vectors need the real app, on the test runner the app job built
 # (EDI_APP_TEST_RUNNER); the core job, which has no app, skips them.
 native-wiring = { cmd = ["bash", "tools/ci/native-wiring-tests.sh"], depends-on = ["core-build"] }
@@ -509,7 +535,7 @@ report-pattern-panes = { cmd = ["node", "tools/checks/report_pattern_panes.mjs"]
 # The standalone easydiffraction fit and python -m edi fit print the same fit output.
 cli-stream-parity = { cmd = ["python", "tools/checks/cli_stream_parity.py"], depends-on = ["core-build"] }
 # Re-measure and rewrite the manifest (serial, so per-test numbers are attributable).
-per-pr-measure = { cmd = ["bash", "tools/ci/per-pr-measure.sh"], depends-on = ["core-build"] }
+per-pr-measure = { cmd = ["bash", "tools/ci/per-pr-measure.sh"], depends-on = ["joint-series-prepare", "core-build"] }
 # Gate every region this repo generates into a committed document: re-render each from the
 # committed oracle and compare BYTE FOR BYTE. Review-7 F1 was a one-byte drift between the
 # generator's output and the committed table that a ledger row asserted was identical; a machine

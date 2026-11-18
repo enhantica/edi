@@ -381,7 +381,8 @@ std::vector<Entry> manifest(const QByteArray& bytes, const QString& intent, bool
         {ExportScratch normalize(metadata,normalizeBytes);
             if(!names.insert(name.normalized(QString::NormalizationForm_C).toCaseFolded()).second)refuse();}
         const auto size = item.at("bytes").number("bytes");
-        if (!std::isfinite(size) || size < 0 || std::floor(size) != size || size > Bounds::file_bytes || size > Bounds::collection_bytes - total) refuse();
+        if (!std::isfinite(size) || size < 0 || std::floor(size) != size || size > static_cast<double>(Bounds::file_bytes) ||
+            size > static_cast<double>(Bounds::collection_bytes - total)) refuse();
         const auto& hash = item.at("sha256").string("sha256");
         if (hash.size() != 64 || !std::all_of(hash.begin(), hash.end(), [](char c) { return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f'); })) refuse();
         total += static_cast<quint64>(size);
@@ -964,6 +965,7 @@ quint64 AssistantWorkingFolder::preparationBytes(const QString& selected) {
 #endif
 }
 quint64 AssistantWorkingFolder::retainedBytes() const noexcept {
+    // cppcheck-suppress throwInNoexceptFunction ; sizes and a unique_ptr read, none of which throws
     return sizeof(AssistantWorkingFolder)+sizeof(State)+
         static_cast<quint64>(state_->path.capacity()+state_->selected.capacity())*sizeof(QChar);
 }
@@ -1342,7 +1344,7 @@ std::shared_ptr<ImmutableAssistantReport> capture_assistant_report(const QString
                 while (written < bytes.size()) {
                     const auto n = ::write(output.n, bytes.constData() + written, static_cast<std::size_t>(bytes.size() - written));
                     if (n < 0) { if (errno == EINTR) continue; refuse(); }
-                    if (!n) refuse(); written += n;
+                    if (!n) { refuse(); } written += n;
                 }
                 if (::fchmod(output.n, 0400)) refuse();
                 result->bytes += static_cast<quint64>(bytes.size());
@@ -1358,7 +1360,7 @@ std::shared_ptr<ImmutableAssistantReport> capture_assistant_report(const QString
         Fd output(::openat(destination.n, leaf.toUtf8().constData(), O_WRONLY | O_CREAT | O_EXCL | O_NOFOLLOW | O_CLOEXEC, 0600));
         qsizetype written = 0;
         while (written < bytes.size()) { const auto n = ::write(output.n, bytes.constData() + written, static_cast<std::size_t>(bytes.size() - written)); if (n < 0) { if (errno == EINTR) continue; refuse(); } if (!n) refuse(); written += n; }
-        if (::fchmod(output.n, 0400)) refuse(); result->bytes = static_cast<quint64>(bytes.size());
+        if (::fchmod(output.n, 0400)) { refuse(); } result->bytes = static_cast<quint64>(bytes.size());
     } else copyTree(copyTree, sourceRoot.n, destination.n, {}, 0);
     for (const auto& source : admitted) { auto check = below(sourceRoot.n, source.path, source.directory); if (!source.identity.unchanged(check.n)) refuse(); }
     auto rootAgain = directory(workspace);

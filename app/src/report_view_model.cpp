@@ -124,6 +124,8 @@ bool ReportViewModel::build() const {
     if (edi::colour_scheme_from_name(colour_scheme_.toStdString())) {
         choices.colour_scheme = colour_scheme_.toStdString();
     }
+    // The pattern chart's x axis, also one the project file cannot name yet (Q, sinθ/λ).
+    choices.x_axis = project_.patternXAxis().toStdString();
     const int shown = project_.currentExperimentIndex();
     if (!project_.scan() && shown > 0 && static_cast<std::size_t>(shown) < project.experiments.size()) {
         choices.correlation_experiment = project.experiments[static_cast<std::size_t>(shown)]->name.value();
@@ -191,7 +193,8 @@ const edi::ReportStructure* ReportViewModel::structure(const QString& id) const 
 
 QStringList ReportViewModel::hidden() const {
     QStringList keys;
-    for (const std::string& key : edi::effective_report_options(project_.project()).hidden) {
+    const edi::ReportOptions options = edi::effective_report_options(project_.project());
+    for (const std::string& key : options.hidden) {
         keys.append(QString::fromStdString(key));
     }
     return keys;
@@ -440,7 +443,7 @@ void ReportViewModel::saveReport(const QString& fontFamily) {
     if (!rows.empty()) {
         if (project_.fit() != nullptr) project_.fit()->noteTrialFile(reports.filePath(QStringLiteral("report.edi")));
         try {
-            project_.recordReportFiles(std::move(rows), true);
+            project_.recordReportFiles(rows, true);
         } catch (const std::exception& error) {
             emit saveFailed(QString::fromUtf8(error.what()));
             failed = true;

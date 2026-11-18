@@ -41,7 +41,6 @@ J parameters(Project& project) {
     std::map<const Parameter*, std::string> names;
     for (const auto& slot : named_slots(project)) names[slot.parameter] = slot.unique_name;
     A rows;
-    std::uint64_t bytes = 2;
     for (const auto& entry : parameter_entries(project)) {
         const Parameter& p = *entry.parameter;
         const auto named = names.find(&p);
@@ -52,8 +51,7 @@ J parameters(Project& project) {
                             {"refinable",entry.refinable},{"fittable",independently_fittable(entry)},
                             {"fit_reason",p.fit_reason},
                             {"unit", p.spec ? p.spec->units : "dimensionless"}};
-        const auto growth = payload_size(row) + (rows.empty() ? 0 : 1);
-        bytes += growth; rows.push_back(std::move(row));
+        rows.push_back(std::move(row));
     }
     return rows;
 }
@@ -145,6 +143,33 @@ MeasurementFacts measurement_facts(const ExperimentBase& experiment) {
     return out;
 }
 
+// Which of a single crystal's reflections the fit uses, as crysta's admission counts them; null for a powder or a
+// single crystal without measured reflections. The metadata and its size both read this one object.
+J reflection_admission_summary(const Project& project, const ExperimentBase& experiment) {
+    std::size_t index = project.experiments.size();
+    for (std::size_t i = 0; i < project.experiments.size(); ++i)
+        if (project.experiments[i].get() == &experiment) index = i;
+    std::optional<ReflectionAdmission> reduced;
+    try {
+        reduced = reflection_admission(project, index);
+    } catch (const std::exception&) {
+        return J(nullptr);  // a project crysta cannot take yet has no admission
+    }
+    if (!reduced) return J(nullptr);
+    const auto ratio = [](const std::optional<double>& value) -> J {
+        return value && std::isfinite(*value) ? J(*value) : J(nullptr);
+    };
+    A omitted;
+    for (const auto& row : experiment.excluded_reflections)
+        omitted.push_back(O{{"id", row->id.value()}, {"index_h", static_cast<double>(row->index_h.get())},
+                            {"index_k", static_cast<double>(row->index_k.get())}, {"index_l", static_cast<double>(row->index_l.get())}});
+    return O{{"merge", experiment.reflns_merge.value_or("none")}, {"absences", experiment.reflns_absences.value_or("include")},
+             {"measured", static_cast<double>(reduced->measured)}, {"unique", static_cast<double>(reduced->unique)},
+             {"used", static_cast<double>(reduced->used)}, {"excluded", static_cast<double>(reduced->excluded)},
+             {"absent", static_cast<double>(reduced->absent)}, {"r_int", ratio(reduced->r_int)}, {"r_sigma", ratio(reduced->r_sigma)},
+             {"absent_mean_i_over_sigma", ratio(reduced->absent_mean_i_over_sigma)}, {"excluded_reflections", std::move(omitted)}};
+}
+
 std::uint64_t project_metadata_size(const Project* project) {
     if (!project) return encoded_fields({{"structures", 2}, {"datasets", 2},
         {"relations", encoded_fields({{"aliases", 2}, {"constraints", 2}})}});
@@ -160,7 +185,7 @@ std::uint64_t project_metadata_size(const Project* project) {
                 {"it_number", sg.it_number ? payload_size(J(*sg.it_number)) : 4}})},
             {"sites", sites}, {"anisotropic_site_ids", anisotropic}});
     });
-    const auto datasets = encoded_rows(project->experiments, [](const auto& experiment) {
+    const auto datasets = encoded_rows(project->experiments, [project](const auto& experiment) {
         const auto facts = measurement_facts(*experiment);
         std::uint64_t profile_options=2;bool profile_comma=false;
         if (facts.powder) visit_supported_peak_profiles(experiment->effective_beam_mode(),[&](const std::string& token) {
@@ -213,7 +238,8 @@ std::uint64_t project_metadata_size(const Project* project) {
             {"dataset_weight", encoded_finite(experiment->dataset_weight)}, {"excluded_regions", exclusions}, {"phases", phases},
             {"background", facts.powder ? encoded_fields({{"type", encoded_text(experiment->background_type)}, {"origin", encoded_optional(experiment->background_origin)},
                 {"x_min", encoded_optional(experiment->background_x_min)}, {"x_max", encoded_optional(experiment->background_x_max)},
-                {"anchors", anchors},{"terms",terms},{"estimate",estimate}}) : 4}});
+                {"anchors", anchors},{"terms",terms},{"estimate",estimate}}) : 4},
+            {"reflection_admission", payload_size(reflection_admission_summary(*project, *experiment))}});
     });
     const auto aliases = encoded_rows(project->aliases, [](const auto& alias) {
         return encoded_fields({{"id", encoded_text(alias->id.value(), true)}, {"parameter_unique_name", encoded_text(alias->parameter_unique_name.value(), true)}});
@@ -288,7 +314,8 @@ J project_metadata(const Project* project) {
                 {"cutoff_fwhm",facts.powder ? finite(experiment->peak.cutoff_fwhm) : J(nullptr)},{"dataset_weight", finite(experiment->dataset_weight)}, {"excluded_regions", std::move(exclusions)}, {"phases", std::move(phases)},
                 {"background",facts.powder ? J(O{{"type", experiment->background_type}, {"origin", optional(experiment->background_origin)},
                                  {"x_min", optional(experiment->background_x_min)}, {"x_max", optional(experiment->background_x_max)},
-                                 {"anchors", std::move(anchors)},{"terms",std::move(terms)},{"estimate",std::move(estimate)}}) : J(nullptr)}});
+                                 {"anchors", std::move(anchors)},{"terms",std::move(terms)},{"estimate",std::move(estimate)}}) : J(nullptr)},
+                {"reflection_admission", reflection_admission_summary(*project, *experiment)}});
         }
         for (const auto& alias : project->aliases) append(aliases, O{{"id", alias->id.value()}, {"parameter_unique_name", alias->parameter_unique_name.value()}});
         for (const auto& constraint : project->constraints)
@@ -348,21 +375,6 @@ J selected_descriptor(const SelectedFile& file) {
     const bool readable = selected_readable(file);
     return O{{"id", file.id}, {"name", file.relative_name}, {"bytes", static_cast<double>(file.bytes.size())},
              {"text_readable", readable}, {"format", readable ? "unverified_text" : "unsupported_binary"}};
-}
-std::uint64_t selected_generation(const J& value) {
-    const auto& text = value.at("generation").string("generation");
-    std::uint64_t result = 0;
-    const auto [end, error] = std::from_chars(text.data(), text.data() + text.size(), result);
-    if (text.empty() || error != std::errc{} || end != text.data() + text.size() ||
-        !std::all_of(text.begin(), text.end(), [](char c) { return c >= '0' && c <= '9'; }))
-        refuse("invalid_argument", "generation must be an unsigned decimal string");
-    return result;
-}
-std::uint64_t selected_offset(const J& value, const char* field) {
-    const auto n = number(value, field);
-    if (n < 0 || n > 9007199254740991.0 || std::floor(n) != n)
-        refuse("invalid_argument", "Selected-file offset/length must be a nonnegative safe integer");
-    return static_cast<std::uint64_t>(n);
 }
 
 J manifest() {
@@ -561,7 +573,7 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
     }
 
     Reply update_files(std::string collection_id, std::uint64_t expected_generation,
-                       std::vector<SelectedFile> added, std::vector<std::string> removed) {
+                       std::vector<SelectedFile> added, const std::vector<std::string>& removed) {
         selected_id(collection_id);
         if (!turn.empty() || !active_job.empty() || !question_call.empty() ||
             (plan && plan->approved) || !holds.empty() || !retentions.empty() || trial)
@@ -781,6 +793,7 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
         admission.emplace(std::move(prepared));
     }
     void commit_admission(bool interrupted_question = false) noexcept {
+        if (!admission) return;
         if (interrupted_question && !admission->interrupted_call.empty()) {
             history = std::move(admission->interrupted_history); history_used = admission->interrupted_history_bytes;
             cache_used = admission->interrupted_cache_bytes; calls.insert(std::move(admission->interrupted_call));
@@ -942,6 +955,7 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
         retire_scope(); ready = false; connection.clear(); capabilities = A{};
         conversation = id("conversation");
     }
+    // NOLINTNEXTLINE(bugprone-exception-escape): only libc++'s container growth past max_size() raises length_error here
     void interrupt_output() noexcept {
         plan.reset(); response_done = true; turn.clear(); request.clear();
         // Revoke human-answer authority immediately, but retain the correlated
@@ -1013,6 +1027,7 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
         if (!plan || !plan->approved || !has(event, "plan_id") || string(event, "plan_id") != plan->id)
             refuse("approval_required", "Approve this plan in the assistant before execution");
         current();
+        if (!plan) refuse("approval_required", "Approve this plan in the assistant before execution");
         if (const auto now = hooks.monotonic_ms(); now < plan->started || now - plan->started >= plan->max_ms) {
             require_stopped(); refuse("out_of_scope", "The approved elapsed-time budget is exhausted");
         }
@@ -1104,7 +1119,7 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
                 if (next.groups.count(group_id)) refuse("invalid_argument", "Duplicate group ID");
                 std::set<std::string> group_paths;
                 for (const J& path : group.at("paths").array("paths")) {
-                    const auto key = path.string("path");
+                    const auto& key = path.string("path");
                     if (!rows.count(key) || !group_paths.insert(key).second) refuse("invalid_argument", "Unknown or duplicate parameter path: " + key);
                     next.allowed.insert(key);
                 }
@@ -1169,12 +1184,14 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
         static const std::set<std::string> mutations{"set_parameters", "set_free", "begin_trial", "fit_trial", "evaluate_trial", "discard_trial"};
         if (!mutations.count(name)) refuse("unknown_tool", "Unknown tool: " + name);
         approved(event);
+        if (!plan) refuse("approval_required", "Approve this plan in the assistant before execution");
+        Plan& active_plan = *plan;
         if (request_trial != (trial ? trial->id : "")) refuse("stale_revision", "This request belongs to another candidate generation");
         if (name == "set_parameters" || name == "set_free") {
             if (!active_job.empty()) refuse("busy", "A fit is running");
             if (trial && trial->report) refuse("invalid_argument", "Discard the fitted trial before changing its setup");
             Project& target = trial ? *trial->project : *live;
-            const auto& allowed = trial ? plan->groups.at(trial->group) : plan->allowed;
+            const auto& allowed = trial ? active_plan.groups.at(trial->group) : active_plan.allowed;
             const bool values = name == "set_parameters";
             shape(args, {values ? "values" : "flags"});
             std::vector<std::pair<std::string, double>> edits;
@@ -1195,14 +1212,14 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
         if (name == "begin_trial") {
             shape(args, {"group_id"}); const auto group = string(args, "group_id");
             if (trial || !active_job.empty()) refuse("busy", "A trial already exists");
-            if (!plan->groups.count(group)) refuse("out_of_scope", "Unknown parameter group");
-            if (plan->trials >= plan->max_trials) refuse("out_of_scope", "Trial budget exhausted");
+            if (!active_plan.groups.count(group)) refuse("out_of_scope", "Unknown parameter group");
+            if (active_plan.trials >= active_plan.max_trials) refuse("out_of_scope", "Trial budget exhausted");
             auto next = std::make_shared<Trial>();
             next->id = id("trial"); next->group = group; next->project = std::make_shared<Project>(*live);
             refresh_relations(*next->project);
             refresh_fittability(*next->project);
             const auto candidate_paths = paths(*next->project);
-            const auto group_paths = plan->groups.at(group);
+            const auto group_paths = active_plan.groups.at(group);
             std::map<std::string, ParameterEntry> metadata;
             for (const auto& row : parameter_entries(*next->project)) metadata.emplace(row.path, row);
             for (auto* parameter : next->project->parameters()) parameter->free = false;
@@ -1218,7 +1235,7 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
             next->accepted_stamps = work_stamps(*live); next->accepted_inputs = edi::detail::inputs_of(*live);
             preflight(success(O{{"trial_id", next->id}}));
             auto next_trial = next->id;
-            trial = std::move(next); request_trial = std::move(next_trial); ++plan->trials;
+            trial = std::move(next); request_trial = std::move(next_trial); ++active_plan.trials;
             return admitted();
         }
         shape(args, {"trial_id"});
@@ -1230,24 +1247,29 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
             const auto mode = effective_fitting_mode(*trial->project);
             if (mode == "sequential" || mode == "independent")
                 refuse("out_of_scope", "Assistant scan trials require the pending checked result-artifact unit");
-            const auto max_iterations = static_cast<int>(plan->max_iterations);
+            const auto max_iterations = static_cast<int>(active_plan.max_iterations);
             const auto job_id = id("job"); preflight(success(O{{"job_id", job_id}}), true);
             auto next_call = admitting_call; auto next_scope = event;
             auto next_job = job_id; auto next_candidate_job = job_id; auto next_active_call = admitting_call;
             const auto self = shared_from_this();
             FitJob::Hooks callbacks;
+            // NOLINTNEXTLINE(bugprone-exception-escape): only libc++'s container growth past max_size() raises length_error here
             callbacks.iterated = [self, job_id](const IterationRecord& iteration) {
                 if (self->open && self->active_job == job_id)
                     self->safe_emit("job_progress", [&] { return O{{"job_id", job_id}, {"objective", iteration.objective_value ? J(*iteration.objective_value) : J(nullptr)}, {"reduced_chi_square", iteration.reduced_chi_square}}; }, self->trial ? &self->trial->scope : nullptr);
             };
+            // NOLINTNEXTLINE(bugprone-exception-escape): only libc++'s container growth past max_size() raises length_error here
             callbacks.finished = [self, job_id](const FitReport& report) noexcept { self->settle_fit(job_id, report); };
             const auto now = hooks.monotonic_ms();
-            const auto elapsed = now >= plan->started ? now - plan->started : plan->max_ms;
-            const auto remaining = plan->max_ms - std::min(plan->max_ms, elapsed);
+            const auto elapsed = now >= active_plan.started ? now - active_plan.started : active_plan.max_ms;
+            const auto remaining = active_plan.max_ms - std::min(active_plan.max_ms, elapsed);
             const auto wall_start = std::chrono::steady_clock::now();
+#if EDI_WORKER_OWNER_THREAD
+            // The owner-thread build also stops at the policy clock's limit.
             const auto policy_start = hooks.monotonic_ms();
             const auto clock = hooks.monotonic_ms;
-            const auto expired = [remaining, wall_start, policy_start, clock]() noexcept {
+#endif
+            const auto expired = [=]() noexcept {
                 try {
 #if EDI_WORKER_OWNER_THREAD
                 const auto value = clock();
@@ -1268,6 +1290,7 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
             const auto candidate_id = trial->id;
             struct BaselineEvidence { std::optional<double> objective; bool error = false, cancelled = false; };
             auto evidence = std::make_shared<BaselineEvidence>();
+            // NOLINTNEXTLINE(bugprone-exception-escape): only libc++'s container growth past max_size() raises length_error here
             work::Delivery completion = [self, candidate_id, job_id, evidence]() noexcept {
                 if (!self->open || !self->trial || self->trial->id != candidate_id || self->trial->job_id != job_id) return;
                 auto& candidate = *self->trial; candidate.baseline_ticket = 0;
@@ -1290,6 +1313,7 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
                 }
             };
             const auto baseline_ticket = worker.submit("assistant-baseline",
+                // NOLINTNEXTLINE(bugprone-exception-escape): only libc++'s container growth past max_size() raises length_error here
                 [baseline, evidence, expired, mode, completion = std::move(completion)](const work::CancelToken& token, const work::Emit&) mutable -> work::Delivery {
                     try {
                         evidence->cancelled = token.cancelled() || expired();
@@ -1321,7 +1345,7 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
         const double objective = record.objective_value.value_or(std::numeric_limits<double>::quiet_NaN());
         accepted = accepted && record.held() && record.objective_name == "chi_square" && std::isfinite(objective);
         if (std::isfinite(candidate->baseline))
-            accepted = accepted && objective < candidate->baseline - std::max(plan->absolute, std::abs(candidate->baseline) * plan->relative);
+            accepted = accepted && objective < candidate->baseline - std::max(active_plan.absolute, std::abs(candidate->baseline) * active_plan.relative);
         else accepted = false;
         for (const auto& row : parameter_entries(*candidate->project)) {
             const Parameter& p = *row.parameter;
@@ -1336,6 +1360,7 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
         if (!safe_emit("trial_finished", [&] { return O{{"result", result}}; })) return admitted();
         trial.reset();
         return admitted();
+        // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks) — std::function's own storage, freed by its destructor
     }
     Reply user(const J& command) {
         output_failure = OutputFailure::none;
@@ -1367,8 +1392,13 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
             if (string(command, "project_id") != version.project_id) refuse("stale_project", "Project changed");
             if (detail::revision(command) != version.revision) refuse("stale_revision", "Project revision changed");
             if (!plan || string(command, "plan_id") != plan->id) refuse("approval_required", "Plan is no longer pending");
-            if (plan->approved) { approved(command); return success(O{{"plan_id", plan->id}}); }
+            if (plan->approved) {
+                const std::string plan_id = plan->id;
+                approved(command);
+                return success(O{{"plan_id", plan_id}});
+            }
             current(); const auto started = hooks.monotonic_ms();
+            if (!plan) refuse("approval_required", "Plan is no longer pending");
             user_scope_committed = true;
             plan->approved = true; plan->started = started;
             if (!safe_emit("plan_approved", [&] { return O{{"plan_id", plan ? plan->id : ""}}; }) ||
@@ -1385,7 +1415,7 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
             if (!pending_answer.empty()) {
                 if (pending_answer.key() != question_id || pending_answer.mapped().first != answer)
                     refuse("invalid_argument", "This question already has a pending different answer");
-                const Reply result = pending_answer.mapped().second;
+                Reply result = pending_answer.mapped().second;
                 user_scope_committed = true;
                 if (!finish_question(result)) return output_refusal();
                 if (!continue_turn()) return output_refusal();
@@ -1393,13 +1423,13 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
             }
             if (question.empty() || question_id != question) refuse("invalid_argument", "No matching live question");
             if (answer.size() > Limits::question_answer_bytes) refuse("resource_exhausted", "Question answer exceeds limit");
-            bool selected = false;
-            for (const auto& option : question_record.at("options").array("options")) if (string(option, "id") == answer) selected = true;
-            if (!selected && (!question_record.at("allow_free_text").boolean("allow_free_text") || answer.find_first_not_of(" \t\r\n") == std::string::npos))
+            bool listed = false;
+            for (const auto& option : question_record.at("options").array("options")) if (string(option, "id") == answer) listed = true;
+            if (!listed && (!question_record.at("allow_free_text").boolean("allow_free_text") || answer.find_first_not_of(" \t\r\n") == std::string::npos))
                 refuse("invalid_argument", "Choose an offered option or provide permitted free text");
             if (string(question_record, "connection_id") != connection || string(question_record, "project_id", true) != version.project_id || detail::revision(question_record) != version.revision)
                 refuse("invalid_argument", "Question scope changed");
-            const auto result = success(O{{"question_id", question}, {"answer", answer}, {"selected_option_id", selected ? J(answer) : J(nullptr)}});
+            auto result = success(O{{"question_id", question}, {"answer", answer}, {"selected_option_id", listed ? J(answer) : J(nullptr)}});
 
             AnswerMap staged; staged.emplace(question, std::make_pair(answer, result));
             user_scope_committed = true;
@@ -1416,12 +1446,12 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
         // must settle before a new conversation action can replace its identity.
         if (question.empty() && !question_call.empty()) require_stopped();
         if (!turn.empty() || !active_job.empty()) refuse("busy", "A conversation turn is running");
-        auto selected = string(command, "model");
+        auto model_id = string(command, "model");
         auto selected_effort = has(command, "effort") ? string(command, "effort") : "";
         bool supported = false;
-        const auto mapped_model = openai_efforts(selected);
+        const auto mapped_model = openai_efforts(model_id);
         if (mapped_model.array("efforts").empty()) refuse("invalid_argument", "Model has no reviewed capability mapping");
-        for (const J& item : capabilities.array("capabilities")) if (string(item, "id") == selected) {
+        for (const J& item : capabilities.array("capabilities")) if (string(item, "id") == model_id) {
             supported = selected_effort.empty();
             for (const J& option : item.at("efforts").array("efforts")) if (option.string("effort") == selected_effort) supported = true;
         }
@@ -1448,14 +1478,14 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
         const J user_row = O{{"type", "message"}, {"role", "user"}, {"text", next_text}, {"turn_id", next_turn}, {"request_id", ""}};
         check_history({&user_row});
         J next_history = history; std::get<A>(next_history.data).push_back(user_row);
-        const auto outgoing = json::write(request_payload(next_turn, next_request, next_conversation, next_text, selected, selected_effort, next_history));
+        const auto outgoing = json::write(request_payload(next_turn, next_request, next_conversation, next_text, model_id, selected_effort, next_history));
         const auto growth = payload_size(user_row) + (history.array("history").empty() ? 0 : 1);
         auto admitted_message = success(O{{"turn_id", next_turn}, {"request_id", next_request}});
         auto next_trial = trial ? trial->id : std::string();
         auto captured = version;
         // All context/history/wire/return construction succeeded before admission commits.
         user_scope_committed = true;
-        text = std::move(next_text); model = std::move(selected); effort = std::move(selected_effort); attachments = A{};
+        text = std::move(next_text); model = std::move(model_id); effort = std::move(selected_effort); attachments = A{};
         turn = std::move(next_turn); request = std::move(next_request); conversation = std::move(next_conversation);
         history_used += growth;
         history = std::move(next_history); request_trial = std::move(next_trial); request_version = std::move(captured); response_done = false; had_tools = false;
@@ -1490,7 +1520,7 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
                 const auto mapped = openai_efforts(string(item, "id"));
                 if (mapped.array("efforts").empty()) refuse("invalid_argument", "Model has no reviewed capability mapping");
                 for (const J& option : item.at("efforts").array("efforts")) {
-                    const auto tag = option.string("effort");
+                    const auto& tag = option.string("effort");
                     if (!effort_tag(tag)) refuse("invalid_argument", "Unsupported reasoning effort tag");
                     if (!mapped.array("efforts").empty() && std::none_of(mapped.array("efforts").begin(), mapped.array("efforts").end(), [&](const J& x) { return x.string("effort") == tag; }))
                         refuse("invalid_argument", "Unsupported model effort combination");
@@ -1641,8 +1671,8 @@ Reply Controller::attach(Project* project, std::string project_id) {
 
 
 Reply Controller::update_selected_files(std::string collection_id, std::uint64_t expected_generation,
-                                        std::vector<SelectedFile> added, std::vector<std::string> removed) {
-    try { return state_->update_files(std::move(collection_id), expected_generation, std::move(added), std::move(removed)); }
+                                        std::vector<SelectedFile> added, const std::vector<std::string>& removed) {
+    try { return state_->update_files(std::move(collection_id), expected_generation, std::move(added), removed); }
     catch (const Refusal& error) { return failure(error.code, error.what()); }
     catch (const std::bad_alloc&) { return failure("resource_exhausted", "Selected-file admission could not be prepared"); }
     catch (const std::length_error&) { return failure("resource_exhausted", "Selected-file admission exceeds its capacity"); }

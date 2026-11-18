@@ -5,6 +5,7 @@ from __future__ import annotations
 import ast
 import hashlib
 import json
+import zipfile
 from itertools import pairwise
 from pathlib import Path
 
@@ -36,11 +37,34 @@ def test_c06_t8_report_projection_preserves_all_captured_bytes():
     paths.add(ROOT / 'tests/fixtures/c11_t35_descent_selector/default-record-no-elapsed.txt')
     paths.update(ROOT / f'tests/fixtures/e05_t1/cli.{suffix}' for suffix in ('json', 'hpp'))
     paths.update(ROOT / f'tests/fixtures/e05_t1/{name}.json' for name in ('stops', 'refusal'))
-    assert set(receipt['records']) == {p.relative_to(ROOT).as_posix() for p in paths}, (
-        'The version projection must cover every current native and CLI capture exactly'
-    )
+    later = json.loads((ROOT / 'tests/fixtures/c06_t8/later-schema9.json').read_text())
+    for name, digest in later['native_records'].items():
+        data = (ROOT / name).read_bytes()
+        assert hashlib.sha256(data).hexdigest() == digest and data.startswith(b'schema=9\n'), (
+            'A later native capture binds its own schema-nine epoch and exact captured bytes'
+        )
+        case = json.loads((ROOT / 'tests/fixtures/e05_t1/cli.json').read_text())
+        rows = [row for row in case['cases'] if row['id'] == Path(name).stem]
+        assert (
+            len(rows) == 1
+            and dict(line.split('=', 1) for line in data.decode().splitlines())
+            == rows[0]['record']
+        ), 'The later schema-nine capture equals its independently committed CLI fixture record'
+    assert set(receipt['records']) | set(later['native_records']) == {
+        p.relative_to(ROOT).as_posix() for p in paths
+    }, 'The version projection must cover every current native and CLI capture exactly'
     for name, hashes in receipt['records'].items():
         actual = (ROOT / name).read_bytes()
+        if name in later['files']:
+            entry = later['files'][name]
+            assert hashlib.sha256(actual).hexdigest() == entry['after_sha256'], (
+                'The later capture preserves the complete committed current fixture document'
+            )
+            with zipfile.ZipFile(ROOT / 'tests/fixtures/c06_t8/later-schema9.zip') as archive:
+                actual = archive.read(entry['before_sha256'])
+            assert hashlib.sha256(actual).hexdigest() == entry['before_sha256'], (
+                'The retained format migration binds its entire original fixture document'
+            )
         assert hashlib.sha256(actual).hexdigest() == hashes['after_sha256'], (
             'The format projection must retain its exact reviewed output bytes'
         )

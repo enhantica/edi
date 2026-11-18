@@ -15,6 +15,8 @@ def test_phase_scan_equals_single_fits_and_recovers_linear_coefficients(tmp_path
     directory = phase_scan.materialize(tmp_path / 'scan', mode)
     project = engine.Project.load(directory)
     events = []
+    project._minimizer_chi_square_tolerance = project._minimizer_chi_square_tolerance or 1e-6
+    project._minimizer_max_iterations = project._minimizer_max_iterations or 50
     project.analysis.fit(on_file_complete=events.append)
     rows = csv_rows(directory / 'analysis/results.csv')
     assert len(rows) == len(events) == 3, (
@@ -36,6 +38,8 @@ def test_phase_scan_equals_single_fits_and_recovers_linear_coefficients(tmp_path
         )
         point_descent = 'fast_descent' if mode == 'sequential' else 'auto'
         control.analysis.descent = point_descent
+        control._minimizer_chi_square_tolerance = control._minimizer_chi_square_tolerance or 1e-6
+        control._minimizer_max_iterations = control._minimizer_max_iterations or 50
         outcome = control.analysis.fit()
         assert row['fit_result.descent'] == point_descent, (
             'Auto sequential points execute fast descent while independent points retain Auto'

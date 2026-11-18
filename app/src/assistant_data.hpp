@@ -125,7 +125,7 @@ inline QJsonObject misfit(const edi::PatternSource& source,const QString& datase
     const auto weighted=[&](std::size_t i){return (m[i]-c[i])/sigma[i];};
     double square=0;for(const auto i:used)square+=weighted(i)*weighted(i);
     out["x_min"]=number(x[used.front()]);out["x_max"]=number(x[used.back()]);
-    out["weighted_rms"]=number(std::sqrt(square/used.size()));
+    out["weighted_rms"]=number(std::sqrt(square/static_cast<double>(used.size())));
     QJsonArray parts;
     const auto count=std::min(regions,used.size());
     for(std::size_t r=0;r<count;++r) {
@@ -144,7 +144,7 @@ inline QJsonObject misfit(const edi::PatternSource& source,const QString& datase
             const auto w=(m[i]-b[i])/sigma[i];sum+=w;sq+=w*w;++quiet;
         }
         QJsonObject background{{"quiet_points",index_number(quiet)}};
-        if(quiet){background["weighted_mean"]=number(sum/quiet);background["weighted_rms"]=number(std::sqrt(sq/quiet));}
+        if(quiet){background["weighted_mean"]=number(sum/static_cast<double>(quiet));background["weighted_rms"]=number(std::sqrt(sq/static_cast<double>(quiet)));}
         out["background"]=background;
         // Each reflection's peak: the run of included points around it where the calculated peak stands above a
         // tenth of its height. An excluded or unusable point ends the run, and a reflection whose nearest point is not
@@ -193,7 +193,7 @@ inline QJsonObject misfit(const edi::PatternSource& source,const QString& datase
         }
         std::sort(supports.begin(),supports.end(),[](const Support& l,const Support& r){return l.lo<r.lo || (l.lo==r.lo && l.hi<r.hi);});
         struct Peak {std::size_t lo=0,hi=0;std::vector<double> positions;std::vector<std::string> phases;double chi=0;
-            std::optional<double> ratio,shift,width;};
+            std::optional<double> ratio{},shift{},width{};};
         std::vector<Peak> found;
         for(const auto& support:supports) {
             if(!found.empty() && support.lo<=found.back().hi) {
@@ -409,10 +409,10 @@ inline QJsonObject summary_value(const summary::Summary& value) {
 }
 inline summary::ColumnKind column_kind(const QString& name) {
     using K=summary::ColumnKind;
-    if(name=="x")return K::X;if(name=="h")return K::H;if(name=="k")return K::K;if(name=="l")return K::L;
-    if(name=="measured")return K::Measured;if(name=="sigma")return K::Sigma;if(name=="calculated")return K::Calculated;
-    if(name=="background")return K::Background;if(name=="residual")return K::Residual;
-    if(name=="d_spacing")return K::DSpacing;if(name=="sin_theta_over_lambda")return K::SinThetaOverLambda;
+    if(name=="x"){return K::X;}if(name=="h"){return K::H;}if(name=="k"){return K::K;}if(name=="l"){return K::L;}
+    if(name=="measured"){return K::Measured;}if(name=="sigma"){return K::Sigma;}if(name=="calculated"){return K::Calculated;}
+    if(name=="background"){return K::Background;}if(name=="residual"){return K::Residual;}
+    if(name=="d_spacing"){return K::DSpacing;}if(name=="sin_theta_over_lambda"){return K::SinThetaOverLambda;}
     if(name=="wavelength")return K::Wavelength;
     throw std::logic_error("Unsupported original summary column");
 }
@@ -441,10 +441,10 @@ inline std::optional<double> native_cell(const QVariant& value) {
     return result; // Present NaN/Inf survive until explicit coverage accounting.
 }
 inline const char* file_role(const QString& name) {
-    if(name=="h")return "h";if(name=="k")return "k";if(name=="l")return "l";
-    if(name=="measured")return "intensityMeas";if(name=="sigma")return "intensityMeasSu";
-    if(name=="calculated")return "intensityCalc";if(name=="residual")return "residual";
-    if(name=="d_spacing")return "dSpacing";if(name=="sin_theta_over_lambda")return "sinThetaOverLambda";
+    if(name=="h"){return "h";}if(name=="k"){return "k";}if(name=="l"){return "l";}
+    if(name=="measured"){return "intensityMeas";}if(name=="sigma"){return "intensityMeasSu";}
+    if(name=="calculated"){return "intensityCalc";}if(name=="residual"){return "residual";}
+    if(name=="d_spacing"){return "dSpacing";}if(name=="sin_theta_over_lambda"){return "sinThetaOverLambda";}
     if(name=="wavelength")return "wavelength";
     throw std::logic_error("Unsupported original reflection summary role");
 }
@@ -471,7 +471,7 @@ inline QJsonObject powder_summary(const edi::PatternSource& source,
         case summary::ColumnKind::Residual:values=source.resid;slot=5;break;
         default:throw std::logic_error("Unexpected original powder summary column");
         }
-        if(seen[slot])throw std::logic_error("Duplicate original powder summary column");seen[slot]=true;
+        if(seen[slot]){throw std::logic_error("Duplicate original powder summary column");}seen[slot]=true;
         columns.push_back({m,0,values?std::span<const double>(*values):std::span<const double>{}});
     }
     const bool current=maskCurrent && source.current && bool(status);
@@ -521,7 +521,7 @@ inline QJsonObject bragg_summary(const edi::PatternSource& source,std::size_t st
         for(const auto& entry:meta) {
             const auto m=compact_detail::metadata(entry.toObject());
             if(m.kind==summary::ColumnKind::X) {
-                if(axis)throw std::logic_error("Duplicate original Bragg axis");axis=columns.size();
+                if(axis){throw std::logic_error("Duplicate original Bragg axis");}axis=columns.size();
                 columns.push_back({m,0,phase.position?std::span<const double>(*phase.position):std::span<const double>{}});continue;
             }
             std::size_t component=0;
@@ -531,7 +531,7 @@ inline QJsonObject bragg_summary(const edi::PatternSource& source,std::size_t st
             case summary::ColumnKind::L:component=2;break;
             default:throw std::logic_error("Unexpected original Bragg summary column");
             }
-            if(seen[component])throw std::logic_error("Duplicate original Bragg index column");seen[component]=true;
+            if(seen[component]){throw std::logic_error("Duplicate original Bragg index column");}seen[component]=true;
             if(phase.hkl)for(auto row=selected.first;row<selected.end && row<phase.hkl->size();++row)
                 hkl[component].push_back(static_cast<double>((*phase.hkl)[row][component]));
             columns.push_back({m,selected.first,std::span<const std::optional<double>>(hkl[component])});

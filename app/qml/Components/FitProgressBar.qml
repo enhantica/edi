@@ -3,6 +3,7 @@ import QtQuick
 
 import EasyApplication.Gui.Style as EaStyle
 import EasyApplication.Gui.Animations as EaAnimations
+import EasyApplication.Gui.Elements as EaElements
 
 // The status bar's fit progress (edi ADR-0017 §17): a rounded bar with its text inside. A scan fills it by
 // file count (`fraction`); a single fit, whose length is not known, fills it with moving stripes
@@ -14,6 +15,15 @@ Item {
     property real fraction: 0
     property bool indeterminate: false
     property string text: ""
+    // The count and percentage lead and the file's distinguishing end closes the text: a narrow bar cuts the middle,
+    // the whole text in the tooltip (the owner, 2026-11-17).
+    HoverHandler {
+        id: progressHover
+    }
+    EaElements.ToolTip {
+        text: bar.text
+        requested: progressHover.hovered && bar.text !== ""
+    }
     property string fontFamily: EaStyle.Fonts.fontFamily
     property real pixelSize: EaStyle.Sizes.fontPixelSize * 0.85
 
@@ -104,7 +114,7 @@ Item {
     Text {
         x: bar.height / 2
         width: Math.max(0, bar.width - bar.height)
-        elide: Text.ElideRight
+        elide: Text.ElideMiddle
         horizontalAlignment: Text.AlignHCenter
         y: bar.textBaseline - baselineOffset
         font.family: bar.fontFamily
@@ -120,7 +130,7 @@ Item {
         Text {
             x: bar.height / 2
             width: Math.max(0, bar.width - bar.height)
-            elide: Text.ElideRight
+            elide: Text.ElideMiddle
             horizontalAlignment: Text.AlignHCenter
             y: bar.textBaseline - baselineOffset
             font.family: bar.fontFamily

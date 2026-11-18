@@ -57,6 +57,7 @@ ColourTable read_colour_map(const char* tsv, const std::string& name) {
 const std::vector<ColourTable>& colour_maps() {
     static const std::vector<ColourTable> tables = [] {
         std::vector<ColourTable> out;
+        out.reserve(detail::kColourMapCount);
         for (std::size_t i = 0; i < detail::kColourMapCount; ++i) {
             out.push_back(read_colour_map(detail::kColourMapTsvs[i], detail::kColourMapNames[i]));
         }
@@ -294,8 +295,12 @@ std::vector<float> scan_pixel_values(std::span<const double> x, std::span<const 
         }
         const double low = std::min(xa, xb), high = std::max(xa, xb);
         const double first = std::ceil((low - x_min) / width - 0.5), last = std::floor((high - x_min) / width - 0.5);
-        for (double c = std::max(0.0, first); c <= std::min(static_cast<double>(columns) - 1.0, last); c += 1.0) {
-            const double centre = x_min + (c + 0.5) * width;
+        const double top = std::min(static_cast<double>(columns) - 1.0, last);
+        if (!(std::max(0.0, first) <= top)) {
+            continue;  // no column centre in this segment; also keeps a huge first out of the integer counter
+        }
+        for (auto c = static_cast<std::ptrdiff_t>(std::max(0.0, first)); static_cast<double>(c) <= top; ++c) {
+            const double centre = x_min + (static_cast<double>(c) + 0.5) * width;
             out[static_cast<std::size_t>(c)] = static_cast<float>(ya + (yb - ya) * (centre - xa) / (xb - xa));
         }
     }
@@ -513,6 +518,64 @@ ScanMapColour scan_table_colour(std::span<const ScanMapColour> table, double t) 
     }
     const double clamped = std::clamp(t, 0.0, 1.0);
     return table[static_cast<std::size_t>(std::lround(clamped * static_cast<double>(table.size() - 1)))];
+}
+
+ScanColumns merge_scan_columns(std::span<const ScanColumns> parts) {
+    if (parts.empty()) {
+        return {};
+    }
+    ScanColumns merged = parts.front();
+    for (const ScanColumns& part : parts.subspan(1)) {
+        if (part.low.size() != merged.low.size() || part.high.size() != merged.high.size()) {
+            continue;
+        }
+        for (std::size_t i = 0; i < merged.low.size(); ++i) {
+            // std::fmin and std::fmax take the number when one side is NaN.
+            merged.low[i] = std::fmin(merged.low[i], part.low[i]);
+            merged.high[i] = std::fmax(merged.high[i], part.high[i]);
+        }
+    }
+    return merged;
+}
+
+std::size_t ScanSummaryCache::cost(const Entry& entry) {
+    return entry.first.size() + ((entry.second.low.size() + entry.second.high.size()) * sizeof(float));
+}
+
+const ScanColumns* ScanSummaryCache::find(const std::string& key) {
+    const auto found = where_.find(key);
+    if (found == where_.end()) {
+        return nullptr;
+    }
+    order_.splice(order_.begin(), order_, found->second);
+    return &found->second->second;
+}
+
+void ScanSummaryCache::insert(const std::string& key, ScanColumns columns) {
+    if (const auto found = where_.find(key); found != where_.end()) {
+        bytes_ -= cost(*found->second);
+        order_.erase(found->second);
+        where_.erase(found);
+    }
+    Entry entry{key, std::move(columns)};
+    const std::size_t size = cost(entry);
+    if (size > budget_) {
+        return;
+    }
+    while (bytes_ + size > budget_ && !order_.empty()) {
+        bytes_ -= cost(order_.back());
+        where_.erase(order_.back().first);
+        order_.pop_back();
+    }
+    order_.push_front(std::move(entry));
+    where_.emplace(order_.front().first, order_.begin());
+    bytes_ += size;
+}
+
+void ScanSummaryCache::clear() {
+    order_.clear();
+    where_.clear();
+    bytes_ = 0;
 }
 
 }  // namespace edi

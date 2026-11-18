@@ -111,6 +111,7 @@ def native_resume(tmp_path_factory):
         '-I' + str(Path(sys.prefix) / 'include/eigen3'),
         '-I' + str(prefix / 'include'),
         '-I' + str(source / 'src'),
+        '-I' + str(source / 'src/core'),
         '-I' + str(root),
         str(ROOT / 'tests/fixtures/scan_template/work_probe.cpp'),
         str(artifact / 'core/libedi_core.a'),

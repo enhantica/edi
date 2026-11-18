@@ -70,7 +70,7 @@ ReportValue value_of(const Parameter& parameter, const std::string& rule, std::s
     const std::optional<double>& su = parameter.uncertainty.get();
     if (su.has_value() && std::isfinite(*su) && *su != 0.0 && std::isfinite(out.value) &&
         parameter.dependence != Dependence::SymmetryFixed) {
-        out.su = *su;
+        out.su.emplace(*su);
     }
     out.text = parameter.spec != nullptr ? display_text(parameter, rule, variant) : shortest(out.value);
     // Very large or small numbers in scientific notation, as the parameter tables write them (owner record
@@ -259,7 +259,7 @@ struct ScanTemplate {
     std::string file;
     std::optional<ScanResultIndex::Row> row;
     std::size_t files = 0, fitted = 0, converged = 0;
-    std::optional<std::size_t> place;  ///< the template dataset's place among the scan's datasets
+    std::optional<std::size_t> place{};  ///< the template dataset's place among the scan's datasets
 };
 
 ScanTemplate scan_template_of(const Project& scan) {
@@ -292,7 +292,7 @@ ScanTemplate scan_template_of(const Project& scan) {
                 columns.emplace(parameter.name, &parameter);
             }
             for (const NamedSlot& slot : named_slots(out.project)) {
-                Edit::ScanValue value{slot.unique_name, slot.parameter->value.get(), slot.parameter->uncertainty.get()};
+                Edit::ScanValue value{slot.unique_name, slot.parameter->value.get(), slot.parameter->uncertainty.get(), std::nullopt};
                 if (const auto column = columns.find(scan_results_column(slot.unique_name)); column != columns.end()) {
                     double number = 0.0, uncertainty = 0.0;
                     const std::string& uncertainty_cell = cells.at(column->second->uncertainty);
@@ -301,6 +301,8 @@ ScanTemplate scan_template_of(const Project& scan) {
                         throw std::invalid_argument("analysis/results.csv: the row's '" + column->second->name +
                                                     "' cells are not numbers");
                     }
+                    // The dataset's fit started from the template's value, as the app's Start column shows.
+                    value.start = value.value;
                     value.value = number;
                     // An undefined s.u. leaves the value without one, never 0.
                     value.uncertainty =
@@ -369,7 +371,7 @@ void add_scene(ReportStructure& out, const Structure& structure, ColorScheme col
 // takes the style row of `place`, the experiment's place, or a scan's template dataset's among its datasets.
 ReportPattern pattern_of(const Project& project, std::size_t index, const ReportOptions& options, std::size_t place) {
     PatternSource source =
-        capture_pattern(project, index, options.d_spacing ? PatternAxis::DSpacing : PatternAxis::Native);
+        capture_pattern(project, index, options.x_axis);
     source.experiment_place = place;
     if (!options.residual) {
         source.resid = nullptr;
@@ -412,7 +414,11 @@ ReportPattern pattern_of(const Project& project, std::size_t index, const Report
 
 // A single crystal's chart: its reflections' measured F² and s.u., and their calculated F² once calculated, with
 // the axes' titles and each point's hover by the dictionary, as the app's chart shows them (edi ADR-0051).
-ReportSingleCrystal single_crystal_of(const BraggPdExperiment& experiment, const std::string& su_rule) {
+ReportSingleCrystal single_crystal_of(const Project& project, std::size_t index, const std::string& su_rule) {
+    const BraggPdExperiment& experiment = *project.experiments[index];
+    if (!experiment.reflections.has_value()) {
+        throw std::logic_error("a single crystal's chart needs its reflections");
+    }
     const ReflnDataBase& reflections = *experiment.reflections;
     ReportSingleCrystal out;
     if (!reflections.rectangular()) {
@@ -428,11 +434,57 @@ ReportSingleCrystal single_crystal_of(const BraggPdExperiment& experiment, const
     if (experiment.computed_current() && calc.size() == reflections.size()) {
         out.calc = calc;
     }
+    // Which reflections the fit uses and why, from the same admission the fit reads; a project crysta cannot take
+    // reports every reflection as used.
+    std::optional<ReflectionAdmission> admitted;
+    try {
+        admitted = reflection_admission(project, index);
+    } catch (const std::exception&) {
+        admitted.reset();
+    }
+    if (admitted && admitted->status.size() == reflections.size()) {
+        out.reason.reserve(admitted->status.size());
+        for (std::size_t row = 0; row < admitted->status.size(); ++row) {
+            const char code = admitted->status[row];
+            const bool by_indices = row < admitted->excluded_by_indices.size() && admitted->excluded_by_indices[row];
+            out.reason.emplace_back(code == 'o'   ? ""
+                                    : code == '<' ? "cutoff"
+                                    : code == '-' ? "absent"
+                                    : by_indices  ? "indices"
+                                                  : "range");
+        }
+        out.admission = ReportAdmission{admitted->measured,
+                                        admitted->unique,
+                                        admitted->used,
+                                        admitted->excluded,
+                                        admitted->absent,
+                                        experiment.reflns_merge.value_or("none"),
+                                        admitted->r_int,
+                                        admitted->r_sigma};
+        out.statistics = admission_statistics(*out.admission);
+    }
     label_single_crystal(out, su_rule);
     return out;
 }
 
 }  // namespace
+
+std::string admission_statistics(const ReportAdmission& admission) {
+    const auto ratio = [](const char* uid, const std::optional<double>& value) { return statistic_text(uid, value); };
+    return "Measured " + std::to_string(admission.measured) + ", unique " + std::to_string(admission.unique) +
+           ", used " + std::to_string(admission.used) + ", excluded " + std::to_string(admission.excluded) +
+           ", absent " + std::to_string(admission.absent) + "; merge " +
+           option_label("reflns.merge", admission.merge) + "; Rint " + ratio("fit_result_bank.r_int", admission.r_int) + ", R-sigma " +
+           ratio("fit_result_bank.r_sigma", admission.r_sigma);
+}
+
+std::string left_out_text(const std::string& reason) {
+    if (reason == "cutoff") return "Left out of the fit: at or below its cutoff";
+    if (reason == "indices") return "Left out of the fit: excluded by its indices";
+    if (reason == "range") return "Left out of the fit: in an excluded range";
+    if (reason == "absent") return "Left out of the fit: a systematic absence";
+    return {};
+}
 
 void label_single_crystal(ReportSingleCrystal& crystal, const std::string& su_rule) {
     crystal.name = category_label("refln");
@@ -447,6 +499,9 @@ void label_single_crystal(ReportSingleCrystal& crystal, const std::string& su_ru
         for (const std::string& line : reflection_hover_lines(crystal.h[row], crystal.k[row], crystal.l[row],
                                                               crystal.meas[row], crystal.su[row], calc, true, su_rule)) {
             text += (text.empty() ? "" : "<br>") + line;
+        }
+        if (row < crystal.reason.size() && !crystal.reason[row].empty()) {
+            text += "<br>" + left_out_text(crystal.reason[row]);
         }
         crystal.hover.push_back(std::move(text));
     }
@@ -570,6 +625,9 @@ ReportStructure structure_of(const Structure& structure, const std::string& rule
 // least one). An excluded point is marked, not dropped: by crysta's status when the calculation is current, else by the
 // excluded regions.
 ReportTable data_table(const BraggPdExperiment& experiment) {
+    if (!experiment.data.has_value()) {
+        throw std::logic_error("a points table needs measured data");
+    }
     const PdDataBase& data = *experiment.data;
     const std::vector<double>& axis = data.axis();
     const std::vector<double>& measured = data.intensity_meas;
@@ -1017,7 +1075,7 @@ ReportOptions effective_report_options(const Project& project, const ReportOverr
     }
     options.correlation_level =
         overrides.correlation_threshold ? overrides.correlation_threshold : project.correlation_threshold;
-    options.d_spacing = overrides.x_axis.value_or(project.pattern_x_axis.value_or("native")) == "d_spacing";
+    options.x_axis = pattern_axis_from_token(overrides.x_axis.value_or(project.pattern_x_axis.value_or("native")));
     options.embed_libraries = overrides.html_offline.value_or(project.report_html_offline.value_or(false));
     const auto scheme_named = [](const std::string& name) {
         const std::optional<ColourScheme> scheme = colour_scheme_from_name(name);
@@ -1279,7 +1337,7 @@ ReportModel build_report(const Project& input, const ReportOptions& options) {
             return (part.id == "refln" && !reflections) || (part.id == "data" && !data);
         });
         if (charts && project.experiments[index]->reflections.has_value()) {
-            built.single_crystal = single_crystal_of(*project.experiments[index], rule);
+            built.single_crystal = single_crystal_of(project, index, rule);
             built.single_crystal->title = reliability_text(project, index);
         } else if (charts) {
             built.pattern = pattern_of(project, index, options, scan && scan->place ? *scan->place : index);
@@ -1316,6 +1374,7 @@ ReportModel build_report(const Project& input, const ReportOptions& options) {
         positions.insert(positions.end(), held.begin(), held.end());
     }
     model.pattern_styles = pattern_style_table(options.colour_scheme, scan && scan->place ? scan->files : experiments,
+                                               // cppcheck-suppress invalidLifetime ; positions holds copies, not references
                                                structures, positions, scan && scan->place);
     model.structure_styles = structure_style_table();
     return model;

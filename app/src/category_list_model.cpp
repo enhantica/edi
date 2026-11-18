@@ -15,7 +15,7 @@ CategoryPresentation category_presentation(const QString& id) {
     // Titles and icons are crysta's dictionary's, through the core's bridge, which the report reads too; the app keeps
     // only where a category sits: the Basic or the Extras group, and whether it also shows in Extras.
     struct Place {
-        T tier;
+        T tier{};
         bool extras_part = false;
         bool needs_data = false;
         bool extras_needs_data = false;
@@ -119,15 +119,15 @@ void CategoryListModel::setCategories(const std::vector<edi::Category>& categori
     std::vector<Row> generated;
     // Only what a user sets or reads gets a group (the owner, 2026-10-27): not the file header, the Cartesian
     // transform, the calculator (there is one), the curves' presentation order, the block list or the correlations,
-    // which the Correlations tab shows. The bond settings get a designed group of their own later, and the type is
-    // shown elsewhere.
+    // which the Correlations tab shows. The bond settings and the bonds they give have a designed group of their own
+    // (the structure lists `geom`), and the type is shown elsewhere.
     // Nor what another group shows: a structure's saved view (Appearance). The magnetic form factors have their own
     // group, which the core lists for a magnetic structure. The parent group gets a group in Extra with both its
     // transforms, the one to the magnetic cell included; Main shows it only when it differs from the space group.
     static const char* const kNotGenerated[] = {"geom",     "experiment_type",           "edi",
                                                 "calculator", "atom_sites_cartn_transform", "pd_calc_overall",
                                                 "pd_block", "fit_parameter_correlation", "structure_view",
-                                                "magnetic_form_factor"};
+                                                "magnetic_form_factor", "geom_bond"};
     const auto generates = [](const std::string& id) {
         return std::find(std::begin(kNotGenerated), std::end(kNotGenerated), id) == std::end(kNotGenerated) &&
                !edi::category_label(id).empty();
@@ -176,7 +176,7 @@ void CategoryListModel::setCategories(const std::vector<edi::Category>& categori
         return -1;
     };
     for (int i = static_cast<int>(rows_.size()) - 1; i >= 0; --i) {
-        if (find(target, rows_[i].id, 0) < 0) {
+        if (find(target, rows_[static_cast<std::size_t>(i)].id, 0) < 0) {
             beginRemoveRows(QModelIndex(), i, i);
             rows_.erase(rows_.begin() + i);
             endRemoveRows();
@@ -199,7 +199,7 @@ void CategoryListModel::setCategories(const std::vector<edi::Category>& categori
             endInsertRows();
         } else {
             beginMoveRows(QModelIndex(), found, found, QModelIndex(), row);
-            const Row moved = rows_[found];
+            const Row moved = rows_[static_cast<std::size_t>(found)];
             rows_.erase(rows_.begin() + found);
             rows_.insert(rows_.begin() + row, moved);
             endMoveRows();

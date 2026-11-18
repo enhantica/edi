@@ -47,6 +47,7 @@
 #include "edi/model.hpp"
 #include "edi/parameter_walk.hpp"
 #include "edi/selectors.hpp"
+#include "edi/sharing.hpp"
 #include "edi/symmetry.hpp"
 #include "edi/categories.hpp"
 
@@ -57,12 +58,15 @@ struct ScanViewValue {
     std::string unique_name;
     double value = 0.0;
     std::optional<double> uncertainty;
+    // The value the fit of this dataset started from (the template's), for the Start and Change columns; none for a
+    // parameter its results do not record.
+    std::optional<double> start;
 };
 // The existing scan-view operation split at its real write boundary. Scan Undo
 // prepares it before reversing files; ordinary Edit still resolves at execution.
 struct PreparedScanView {
-    struct Target { Parameter* parameter; double value; std::optional<double> uncertainty; };
-    ExperimentBase* experiment;
+    struct Target { Parameter* parameter = nullptr; double value = 0.0; std::optional<double> uncertainty; std::optional<double> start; };
+    ExperimentBase* experiment = nullptr;
     std::optional<PdDataBase> data;
     std::vector<Target> targets;
     void commit() noexcept {
@@ -72,6 +76,7 @@ struct PreparedScanView {
         for (const auto& target : targets) {
             target.parameter->value = target.value;
             target.parameter->uncertainty = target.uncertainty;
+            target.parameter->start_value = target.start;
         }
     }
 };
@@ -83,7 +88,7 @@ inline PreparedScanView prepare_scan_view(Project& project, ExperimentBase& expe
     prepared.targets.reserve(values.size());
     for (const auto& value : values) {
         if (const auto found = by_name.find(value.unique_name); found != by_name.end())
-            prepared.targets.push_back({found->second, value.value, value.uncertainty});
+            prepared.targets.push_back({found->second, value.value, value.uncertainty, value.start});
     }
     return prepared;
 }
@@ -198,6 +203,8 @@ struct ExperimentControlsUndo {
     std::optional<PeakBase> peak;
     std::optional<std::vector<ExcludedRegion>> regions;
     std::optional<std::vector<LinkedStructure>> links;
+    // With the links: the background rows, so a point the common scale started is undone with the phase change.
+    std::optional<std::vector<LineSegment>> background;
     std::optional<AbsorptionBase> absorption;
     std::optional<ExtinctionBase> extinction;
     std::optional<double> cutoff_fwhm, dataset_weight;
@@ -225,6 +232,8 @@ inline ExperimentControlsUndo capture_experiment_controls(Project& project,Exper
 inline ExperimentControlsUndo capture_experiment_links(Project& project,ExperimentBase& experiment) {
     ExperimentControlsUndo before;before.experiment=&experiment;before.links.emplace();
     for(const auto& row:experiment.linked_structures)before.links->push_back(*row);
+    before.background.emplace();
+    for(const auto& row:experiment.background)before.background->push_back(*row);
     before.related=capture_relations(project);before.fit_result=project.fit_result;
     std::set<const Parameter*> replaced;
     for(const auto& row:experiment.linked_structures)replaced.insert(&row->scale);
@@ -504,10 +513,10 @@ class Edit {
         const LinkedStructure* linked_structure = nullptr;
         const ParameterConstraint* constraint = nullptr;
         // Every experiment a composite load produced, `experiment` (its target) first (edi ADR-0069).
-        std::vector<const ExperimentBase*> experiments;
+        std::vector<const ExperimentBase*> experiments{};
         // Filled only by the original LivePreview editor door around its closed
         // application/note_edit, before trace/hooks. Epochs are identities, not counts.
-        std::shared_ptr<const detail::EditRecord> editor_before, editor_after;
+        std::shared_ptr<const detail::EditRecord> editor_before{}, editor_after{};
         std::uint64_t editor_before_epoch=0, editor_after_epoch=0;
     };
     // Executes this same closed operation once. The result is an identity fact,
@@ -582,6 +591,10 @@ class Edit {
         return Edit([&field, value = std::move(value)] { field = value; });
     }
     static Edit assign(std::optional<int>& field, std::optional<int> value) {
+        return Edit([&field, value] { field = value; });
+    }
+    // A structure's bond cutoffs (`_geom`), which record their writes.
+    static Edit assign(detail::Written<std::optional<double>>& field, std::optional<double> value) {
         return Edit([&field, value] { field = value; });
     }
     static Edit assign(detail::WrittenText& field, std::string value) {
@@ -679,10 +692,10 @@ class Edit {
                 throw std::invalid_argument("the exact background rows were replaced");
             // The affected detached/live row must still have the exact prepared state;
             // unrelated surviving rows are shared and never copied back by Undo.
-            const auto matches = [](const auto& rows, const auto& state) {
+            const auto matches = [](const auto& held, const auto& state) {
                 if (!state) return true;
-                const auto row = std::find_if(rows.begin(), rows.end(), [&](const auto& p) { return p->id.value() == state->id.value(); });
-                return row != rows.end() && BackgroundPointChange::same_point(**row, *state);
+                const auto row = std::find_if(held.begin(), held.end(), [&](const auto& p) { return p->id.value() == state->id.value(); });
+                return row != held.end() && BackgroundPointChange::same_point(**row, *state);
             };
             if (!matches(prepared->before, prepared->original) || !matches(prepared->after, prepared->replacement))
                 throw std::invalid_argument("the affected background row changed outside its prepared edit");
@@ -886,7 +899,7 @@ class Edit {
             if (magnetic && !found) {
                 AtomSiteMoment moment;
                 moment.id = site.id.value();
-                structure.atom_site_moment.push_back(std::move(moment));
+                structure.atom_site_moment.push_back(moment);
             } else if (!magnetic && found) {
                 structure.atom_site_moment.erase_at(*found);
             }
@@ -921,7 +934,7 @@ class Edit {
         }
         MagneticFormFactor added;
         added.id = type_symbol;
-        structure.magnetic_form_factors.push_back(std::move(added));
+        structure.magnetic_form_factors.push_back(added);
         return *structure.magnetic_form_factors.back();
     }
     // Removes an atom type's form-factor row when it holds only defaults: no ion, `j0`, every coefficient 0 and
@@ -995,6 +1008,20 @@ class Edit {
             constraint.id = id;
         });
     }
+    // ADR-0087's switches, each the alias and constraint rows it writes or removes (edi/sharing.hpp): "Phase ratios
+    // shared" for `experiment`'s set, and "Same for all experiments" for the leader's parameter `path`.
+    static Edit phase_ratios_shared(Project& project, std::string experiment, bool on) {
+        return Edit([&project, experiment = std::move(experiment), on] { share_phase_ratios(project, experiment, on); });
+    }
+    static Edit same_for_all_experiments(Project& project, std::string experiment, std::string path, bool on) {
+        return Edit([&project, experiment = std::move(experiment), path = std::move(path), on] {
+            if (on) {
+                share_across_experiments(project, experiment, path);
+            } else {
+                unshare_across_experiments(project, experiment, path);
+            }
+        });
+    }
     static Edit rename_scattering_length(Structure& structure, std::string from, std::string to) {
         return Edit([&structure, from = std::move(from), to = std::move(to)] {
             edi::rename_scattering_length(structure, from, to);
@@ -1005,15 +1032,13 @@ class Edit {
     // One row added to, or removed from, one of the model's collections, by its own row type: atom
     // sites, background points, texture rows, linked structures, aliases and constraints are added;
     // those, structures and experiments are removed. `erase` refuses a row that is not there.
-    static Edit append(ItemVec<AtomSite>& rows, AtomSite row) { return appending(rows, std::move(row)); }
-    static Edit append(ItemVec<LineSegment>& rows, LineSegment row) { return appending(rows, std::move(row)); }
-    static Edit append(ItemVec<PrefOrient>& rows, PrefOrient row) { return appending(rows, std::move(row)); }
-    static Edit append(ItemVec<LinkedStructure>& rows, LinkedStructure row) {
-        return appending(rows, std::move(row));
-    }
-    static Edit append(ItemVec<ParameterAlias>& rows, ParameterAlias row) { return appending(rows, std::move(row)); }
-    static Edit append(ItemVec<ParameterConstraint>& rows, ParameterConstraint row) {
-        return appending(rows, std::move(row));
+    static Edit append(ItemVec<AtomSite>& rows, const AtomSite& row) { return appending(rows, row); }
+    static Edit append(ItemVec<LineSegment>& rows, const LineSegment& row) { return appending(rows, row); }
+    static Edit append(ItemVec<PrefOrient>& rows, const PrefOrient& row) { return appending(rows, row); }
+    static Edit append(ItemVec<LinkedStructure>& rows, const LinkedStructure& row) { return appending(rows, row); }
+    static Edit append(ItemVec<ParameterAlias>& rows, const ParameterAlias& row) { return appending(rows, row); }
+    static Edit append(ItemVec<ParameterConstraint>& rows, const ParameterConstraint& row) {
+        return appending(rows, row);
     }
     // A site of a structure goes with its tensor row (erase_atom_site); any other row alone.
     static Edit erase(ItemVec<AtomSite>& rows, std::size_t index) {
@@ -1040,9 +1065,9 @@ class Edit {
                     tensor->id = id;
                 }
             }
-            structure.atom_sites.push_back(std::move(site));
+            structure.atom_sites.push_back(site);
             if (tensor) {
-                structure.atom_site_aniso.push_back(std::move(*tensor));
+                structure.atom_site_aniso.push_back(*tensor);
             }
         });
     }
@@ -1108,6 +1133,91 @@ class Edit {
             (end ? region.second : region.first) = value;
         });
     }
+    // A single crystal's region is on its d or sin(theta)/lambda axis, named on every row.
+    static Edit append_excluded_region(ExperimentBase& experiment, double start, double end, const std::string& axis) {
+        ExcludedRegion region(start, end);
+        region.axis = check_excluded_region_axis(experiment, axis);
+        return appending(experiment.excluded_regions, region);
+    }
+    static Edit excluded_region_axis(ExperimentBase& experiment, std::size_t row, std::string axis) {
+        return Edit([&experiment, row, axis = std::move(axis)] {
+            require_region(experiment, row);
+            const std::string checked = check_excluded_region_axis(experiment, axis);
+            experiment.excluded_regions[row]->axis = checked;
+        });
+    }
+    // A single crystal's reflection left out by its indices, or put back, by the class the admission groups it in
+    // (its merge mode's equivalents; the signed indices themselves without merging): every stored exclusion of that
+    // class is erased, whatever representative it was written as, and when none is the clicked indices are added.
+    static Edit toggle_excluded_reflection(Project& project, ExperimentBase& experiment, int h, int k, int l) {
+        return Edit([&project, &experiment, h, k, l] {
+            if (!experiment.reflections) {
+                throw std::invalid_argument("only a single crystal leaves out reflections by their indices");
+            }
+            std::size_t index = project.experiments.size();
+            for (std::size_t i = 0; i < project.experiments.size(); ++i) {
+                if (project.experiments[i].get() == &experiment) index = i;
+            }
+            if (index == project.experiments.size()) {
+                throw std::invalid_argument("the experiment is not in the project");
+            }
+            // Every class is found before anything is written, so a refusal changes nothing.
+            const auto clicked = reflection_class(project, index, {h, k, l});
+            std::vector<std::size_t> matching;
+            for (std::size_t row = 0; row < experiment.excluded_reflections.size(); ++row) {
+                const auto& held = *experiment.excluded_reflections[row];
+                if (reflection_class(project, index, {held.index_h.get(), held.index_k.get(), held.index_l.get()}) ==
+                    clicked) {
+                    matching.push_back(row);
+                }
+            }
+            if (matching.empty()) {
+                experiment.excluded_reflections.push_back(std::make_shared<ExcludedReflection>(h, k, l));
+                return;
+            }
+            for (auto row = matching.rbegin(); row != matching.rend(); ++row) {
+                experiment.excluded_reflections.erase_at(*row);
+            }
+        });
+    }
+    static Edit erase_excluded_reflection(ExperimentBase& experiment, std::size_t row) {
+        return Edit([&experiment, row] {
+            if (row >= experiment.excluded_reflections.size()) {
+                throw std::out_of_range("the experiment has no excluded reflection " + std::to_string(row));
+            }
+            experiment.excluded_reflections.erase_at(row);
+        });
+    }
+    // A single crystal's merge mode and absences setting; empty clears.
+    static Edit reflns_merge(ExperimentBase& experiment, std::optional<std::string> mode) {
+        return Edit([&experiment, mode = std::move(mode)] { set_reflns_merge(experiment, mode); });
+    }
+    static Edit reflns_absences(ExperimentBase& experiment, std::optional<std::string> absences) {
+        return Edit([&experiment, absences = std::move(absences)] { set_reflns_absences(experiment, absences); });
+    }
+    // An edit followed by the experiment's common scale factor: its enabled phase scales multiplied by the factor
+    // that brings its calculation to its data's level, so the two are one step to undo. `experiment` names the
+    // target unless the edit reports the experiment it produced (Load data replaces it).
+    // `scaled`, when given, receives what the factor did (applied, a background point started, the peaks' overlap).
+    static Edit rescaled(Project& project, const ExperimentBase& experiment, Edit change,
+                         const std::shared_ptr<CommonScaleOutcome>& scaled = nullptr) {
+        // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks): the std::function owns the lambda; the analyzer does not follow libc++'s release of it
+        return Edit(ResultOperation{}, [&project, &experiment, change = std::move(change), scaled] {
+            AppliedResult applied = change.apply_result();
+            const ExperimentBase* target = applied.experiment != nullptr ? applied.experiment : &experiment;
+            CommonScaleOutcome done;
+            for (std::size_t index = 0; index < project.experiments.size(); ++index) {
+                if (project.experiments[index].get() == target) {
+                    done = apply_common_scale(project, index);
+                    break;
+                }
+            }
+            if (scaled) *scaled = done;
+            return applied;
+        });
+    }
+    // No change of its own: the common scale alone (the Estimate beside Add linked structure), wrapped by rescaled.
+    static Edit unchanged() { return Edit([] {}); }
     // A space-group setting chosen whole (assign_space_group_setting): name, code and IT number never contradict
     // one another (the owner, 2026-10-06). Assignments, which cannot fail.
     static Edit space_group_setting(SpaceGroup& group, SpaceGroupSettingName setting, bool declare_number) {
@@ -1131,8 +1241,8 @@ class Edit {
 
     // --- Loaded blocks ----------------------------------------------------------------------------
     // A loaded structure added (add_loaded_structure's rule: its name is not taken).
-    static Edit add_structure(Project& project, Structure structure) {
-        return Edit(ResultOperation{}, [&project, structure = std::make_shared<Structure>(std::move(structure))] {
+    static Edit add_structure(Project& project, const Structure& structure) {
+        return Edit(ResultOperation{}, [&project, structure = std::make_shared<Structure>(structure)] {
             add_loaded_structure(project, *structure);
             const auto* inserted=project.structures.back().get();
             return AppliedResult{inserted, nullptr,
@@ -1181,8 +1291,9 @@ class Edit {
     }
     // The same replacement, admitting a file of several datasets: its result names the experiments at `produced`
     // (indices into `replacement`'s experiments), the first the load's target, as members of the project after it.
-    static Edit replace_project(Project& project, Project replacement, std::vector<std::size_t> produced) {
+    static Edit replace_project(Project& project, Project replacement, const std::vector<std::size_t>& produced) {
         auto next = std::make_shared<const Project>(std::move(replacement));
+        // NOLINTNEXTLINE(bugprone-exception-escape): only libc++'s container growth past max_size() raises length_error here
         return Edit(ResultOperation{}, [&project, next, produced] {
             replace_into(project, Project(*next));
             AppliedResult result;
@@ -1230,7 +1341,7 @@ class Edit {
         }
         project = std::move(read);
         for (auto& [held, content] : structure_content) {
-            *held = std::move(content);
+            *held = content;
         }
         for (auto& [held, content] : experiment_content) {
             *held = std::move(content);
@@ -1260,9 +1371,11 @@ class Edit {
             links.reserve(experiments.size()); textures.reserve(experiments.size());
             for (const auto& rows : before->experiments) {
                 std::vector<ItemVec<LinkedStructure>::Ptr> linked;
+                linked.reserve(rows.links.size());
                 for (const auto& row : rows.links) linked.push_back(std::make_shared<LinkedStructure>(row));
                 links.emplace_back(std::move(linked));
                 std::vector<ItemVec<PrefOrient>::Ptr> texture;
+                texture.reserve(rows.texture.size());
                 for (const auto& row : rows.texture) texture.push_back(std::make_shared<PrefOrient>(row));
                 textures.emplace_back(std::move(texture));
             }
@@ -1332,7 +1445,7 @@ class Edit {
             std::unique_ptr<detail::PreparedPeakRestore> peak;
             std::unique_ptr<detail::PreparedAbsorptionRestore> absorption;
             std::unique_ptr<detail::PreparedExtinctionRestore> extinction;
-            ItemVec<ExcludedRegion> regions;ItemVec<LinkedStructure> links;
+            ItemVec<ExcludedRegion> regions;ItemVec<LinkedStructure> links;ItemVec<LineSegment> background;
             std::vector<std::pair<Parameter*,const RelationsUndo::ParameterState*>> targets;
             ItemVec<ParameterAlias> aliases;ItemVec<ParameterConstraint> constraints;
             std::optional<FitResultRecord> fit_result;
@@ -1344,16 +1457,21 @@ class Edit {
                     std::vector<ItemVec<LinkedStructure>::Ptr> rows;rows.reserve(before->links->size());
                     for(const auto& row:*before->links)rows.push_back(std::make_shared<LinkedStructure>(row));
                     links=ItemVec<LinkedStructure>(std::move(rows));
+                    if(before->background) {
+                        std::vector<ItemVec<LineSegment>::Ptr> points;points.reserve(before->background->size());
+                        for(const auto& row:*before->background)points.push_back(std::make_shared<LineSegment>(row));
+                        background=ItemVec<LineSegment>(std::move(points));
+                    }
                 }
                 std::map<std::string,Parameter*> named;
                 for(const auto& slot:named_slots(project))named.emplace(slot.unique_name,slot.parameter);
                 auto replaced=before->peak?experiment.peak.parameters():before->absorption?experiment.absorption.parameters():before->extinction?experiment.extinction.parameters():std::vector<Parameter*>{};
                 if(before->links)for(const auto& row:experiment.linked_structures)replaced.push_back(&row->scale);
-                for(const auto& state:before->related->parameters) {
-                    const auto at=named.find(state.unique_name);
+                for(const auto& saved:before->related->parameters) {
+                    const auto at=named.find(saved.unique_name);
                     if(at==named.end() || std::find(replaced.begin(),replaced.end(),at->second)!=replaced.end())
                         throw std::invalid_argument("undo: a related parameter is no longer in the project");
-                    targets.emplace_back(at->second,&state);
+                    targets.emplace_back(at->second,&saved);
                 }
                 std::vector<ItemVec<ParameterAlias>::Ptr> a;for(const auto& row:before->related->aliases)a.push_back(std::make_shared<ParameterAlias>(row));
                 std::vector<ItemVec<ParameterConstraint>::Ptr> c;for(const auto& row:before->related->constraints)c.push_back(std::make_shared<ParameterConstraint>(row));
@@ -1366,10 +1484,11 @@ class Edit {
             if(family) {
                 // Every allocation/target validation above precedes these original no-throw transfers.
                 static_assert(std::is_nothrow_move_assignable_v<ItemVec<LinkedStructure>>);
+                static_assert(std::is_nothrow_move_assignable_v<ItemVec<LineSegment>>);
                 static_assert(std::is_nothrow_move_assignable_v<FitResultRecord>);
-                if(peak)peak->commit();else if(absorption)absorption->commit();else if(extinction)extinction->commit();else experiment.linked_structures=std::move(links);
+                if(peak)peak->commit();else if(absorption)absorption->commit();else if(extinction)extinction->commit();else {experiment.linked_structures=std::move(links);if(before->background)experiment.background=std::move(background);}
                 project.aliases=std::move(aliases);project.constraints=std::move(constraints);project.fit_result=std::move(*fit_result);
-                for(const auto& [parameter,state]:targets){parameter->value=state->value;parameter->uncertainty=state->uncertainty;parameter->free=state->free;}
+                for(const auto& [parameter,saved]:targets){parameter->value=saved->value;parameter->uncertainty=saved->uncertainty;parameter->free=saved->free;}
             } else if(before->regions)experiment.excluded_regions=std::move(regions);
             else {
                 // Own the result image before either live scalar or result changes.
@@ -1556,6 +1675,28 @@ class Edit {
         });
     }
 
+    // A series of joint fits' point shown in the model (ADR-0088): each experiment's measured data replaced by its
+    // file of the point, `data` in project order, and each named parameter given its value. All are prepared before
+    // any is written, so a point that does not match the project's experiments writes nothing.
+    static Edit series_view(Project& project, std::vector<ScanValue> values, std::vector<PdDataBase> data) {
+        auto shown = std::make_shared<std::vector<PdDataBase>>(std::move(data));
+        return Edit([&project, values = std::move(values), shown] {
+            if (shown->size() != project.experiments.size()) {
+                throw std::invalid_argument("a series point has " + std::to_string(shown->size()) +
+                                            " datasets for " + std::to_string(project.experiments.size()) +
+                                            " experiments");
+            }
+            std::vector<detail::PreparedScanView> prepared;
+            prepared.reserve(shown->size());
+            for (std::size_t at = 0; at < shown->size(); ++at) {
+                prepared.push_back(detail::prepare_scan_view(project, *project.experiments[at], values, (*shown)[at]));
+            }
+            for (detail::PreparedScanView& point : prepared) {
+                point.commit();
+            }
+        });
+    }
+
     // An edit of the relations undone (edi ADR-0024): the alias and constraint rows as they were, and each
     // parameter the edit changed back to its state then. Every parameter is resolved first, so one whose
     // row was removed since refuses with nothing written. Both complete ItemVec replacements
@@ -1578,10 +1719,12 @@ class Edit {
                 targets.emplace_back(found->second, &state);
             }
             std::vector<std::shared_ptr<ParameterAlias>> aliases;
+            aliases.reserve(before.aliases.size());
             for (const ParameterAlias& row : before.aliases) {
                 aliases.push_back(std::make_shared<ParameterAlias>(row));
             }
             std::vector<std::shared_ptr<ParameterConstraint>> constraints;
+            constraints.reserve(before.constraints.size());
             for (const ParameterConstraint& row : before.constraints) {
                 constraints.push_back(std::make_shared<ParameterConstraint>(row));
             }
@@ -1601,8 +1744,8 @@ class Edit {
 
     // FIRST ordinary relation edits: complete the prospective declaration inside
     // serialized execution, after Input observers and BEFORE the live assignment.
-    static Edit constraint_append(Project& project, ParameterConstraint complete) {
-        return Edit(ResultOperation{}, [&project, complete = std::make_shared<ParameterConstraint>(std::move(complete))] {
+    static Edit constraint_append(Project& project, const ParameterConstraint& complete) {
+        return Edit(ResultOperation{}, [&project, complete = std::make_shared<ParameterConstraint>(complete)] {
             {
                 Project candidate = project;
                 candidate.constraints.push_back(std::make_shared<ParameterConstraint>(*complete));
@@ -1678,8 +1821,8 @@ class Edit {
     // undo_fit_to's write: the first of `first` and `second` whose experiments and parameters
     // match `restored` gives every parameter's value, s.u., free flag and saved fit start, the relations and the fit
     // record; `restored` is then written onto `project`. Answers whether a state was found.
-    static bool restore_kept_state(Project& project, Project restored, std::shared_ptr<const Project> first,
-                                   std::shared_ptr<const Project> second) {
+    static bool restore_kept_state(Project& project, Project restored, const std::shared_ptr<const Project>& first,
+                                   const std::shared_ptr<const Project>& second) {
         const auto matches = [&restored](Project& kept) {
             if (kept.experiments.size() != restored.experiments.size()) return false;
             for (std::size_t i = 0; i < kept.experiments.size(); ++i)
@@ -1741,8 +1884,8 @@ class Edit {
     // The row factories' one body each, for the model row types above only: nothing outside this
     // class names them.
     template <typename Row>
-    static Edit appending(ItemVec<Row>& rows, Row row) {
-        return Edit(ResultOperation{}, [&rows, row = std::make_shared<Row>(std::move(row))] {
+    static Edit appending(ItemVec<Row>& rows, const Row& row) {
+        return Edit(ResultOperation{}, [&rows, row = std::make_shared<Row>(row)] {
             auto inserted=std::make_shared<Row>(*row);
             rows.push_back(inserted);
             if constexpr (std::is_same_v<Row,AtomSite>) return AppliedResult{nullptr,nullptr,inserted.get()};

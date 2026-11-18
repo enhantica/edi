@@ -223,13 +223,11 @@ std::optional<std::size_t> first_invalid_utf8_offset(const std::string& text) {
         } else if (lead == 0xE0) {
             continuations = 2;
             first_low = 0xA0;
-        } else if (lead >= 0xE1 && lead <= 0xEC) {
+        } else if ((lead >= 0xE1 && lead <= 0xEC) || (lead >= 0xEE && lead <= 0xEF)) {
             continuations = 2;
         } else if (lead == 0xED) {
             continuations = 2;
             first_high = 0x9F;  // no surrogates
-        } else if (lead >= 0xEE && lead <= 0xEF) {
-            continuations = 2;
         } else if (lead == 0xF0) {
             continuations = 3;
             first_low = 0x90;
@@ -719,6 +717,33 @@ const std::string& loop_cell(const Loop& loop, const std::vector<std::string>& r
     return row[static_cast<std::size_t>(column)];
 }
 
+// An excluded region's cells as written; axis and id are null when the region does not give them.
+struct ExcludedRegionText {
+    const std::string* start = nullptr;
+    const std::string* end = nullptr;
+    const std::string* axis = nullptr;
+    const std::string* id = nullptr;
+};
+
+// The block's excluded regions: each row of the `_excluded_region` loop, or the one region its items give.
+std::vector<ExcludedRegionText> excluded_region_rows(const Block& block, const std::string& where) {
+    std::vector<ExcludedRegionText> rows;
+    if (const Loop* excluded = block.loop_with("_excluded_region.start"); excluded != nullptr) {
+        const auto optional = [&](const std::vector<std::string>& row, const char* tag) -> const std::string* {
+            return excluded->column(tag) >= 0 ? &loop_cell(*excluded, row, tag, where) : nullptr;
+        };
+        for (const auto& row : excluded->rows) {
+            rows.push_back({&loop_cell(*excluded, row, "_excluded_region.start", where),
+                            &loop_cell(*excluded, row, "_excluded_region.end", where),
+                            optional(row, "_excluded_region.axis"), optional(row, "_excluded_region.id")});
+        }
+    } else if (const std::string* start = block.find("_excluded_region.start"); start != nullptr) {
+        rows.push_back({start, &block.require("_excluded_region.end", where), block.find("_excluded_region.axis"),
+                        block.find("_excluded_region.id")});
+    }
+    return rows;
+}
+
 // ---- unknown-tag policy -------------------------------------------------------------------
 
 // The reference's unknown-tag rule is TWO-SIDED, and edi mirrors both halves:
@@ -763,6 +788,9 @@ const std::set<std::string>& known_covered_tags() {
         "_atom_site_moment.label", "_atom_site_moment.crystalaxis_x",
         "_atom_site_moment.crystalaxis_y", "_atom_site_moment.crystalaxis_z",
         "_atom_site_moment.symmform",
+        // The derived spherical form crysta's writer adds: never read back.
+        "_atom_site_moment.spherical_modulus", "_atom_site_moment.spherical_polar",
+        "_atom_site_moment.spherical_azimuthal",
         // _background
         "_background.coef", "_background.id", "_background.intensity", "_background.order",
         "_background.origin", "_background.position", "_background.type", "_background.x_max",
@@ -948,7 +976,8 @@ void read_magnetic(const Block& block, Structure& structure, const std::string& 
                 const std::string value = cell(tag.c_str());
                 if (!value.empty()) {
                     // A refusal names the atom type and the coefficient, as for a moment component.
-                    const std::string at = where + ": type '" + form_factor.id.value() + "' " + tag;
+                    std::string at = where;
+                    at.append(": type '").append(form_factor.id.value()).append("' ").append(tag);
                     read_into(*coefficients[n], parse_parameter(value, at), at);
                 }
             }
@@ -956,7 +985,7 @@ void read_magnetic(const Block& block, Structure& structure, const std::string& 
             form_factor.approximation =
                 !approximation.empty() ? approximation
                                        : (cell("_magnetic_form_factor.j2_coefficient").empty() ? "j0" : "dipole");
-            structure.magnetic_form_factors.push_back(std::move(form_factor));
+            structure.magnetic_form_factors.push_back(form_factor);
         }
     }
     if (!magnetic.empty()) {
@@ -974,7 +1003,8 @@ void read_magnetic(const Block& block, Structure& structure, const std::string& 
             for (std::size_t k = 0; k < 3; ++k) {
                 // A refusal names the site and the component, as crysta's reader does.
                 const std::string tag = specs[k]->edi_names[0];
-                const std::string at = where + ": site '" + moment.id.value() + "' " + tag;
+                std::string at = where;
+                at.append(": site '").append(moment.id.value()).append("' ").append(tag);
                 read_into(*components[k], parse_parameter(loop_cell(*loop, row, tag, where), at), at);
             }
             moment.symmform = given(*loop, row, "_atom_site_moment.symmform");
@@ -986,7 +1016,7 @@ void read_magnetic(const Block& block, Structure& structure, const std::string& 
                             "_atom_site_moment.label '" + moment.id.value() + "': _atom_site_moment row '" +
                                 moment.id.value() + "' names no atom site");
             }
-            structure.atom_site_moment.push_back(std::move(moment));
+            structure.atom_site_moment.push_back(moment);
         }
     }
 }
@@ -1177,7 +1207,7 @@ Structure structure_from_block(const Block& block, const std::string& where) {
             }
         }
         read_into(site.adp_iso, adp, where);
-        structure.atom_sites.push_back(std::move(site));
+        structure.atom_sites.push_back(site);
     }
 
     // The anisotropic sites' tensors, one row per anisotropic site.
@@ -1201,7 +1231,7 @@ Structure structure_from_block(const Block& block, const std::string& where) {
                                           where),
                           where);
             }
-            structure.atom_site_aniso.push_back(std::move(tensor));
+            structure.atom_site_aniso.push_back(tensor);
         }
     }
     for (const auto& tensor : structure.atom_site_aniso) {
@@ -1246,7 +1276,7 @@ Structure structure_from_block(const Block& block, const std::string& where) {
     if (const Loop* lengths = block.loop_with("_scattering_length.type_symbol")) {
         std::map<std::string, double> declared;
         for (const auto& row : lengths->rows) {
-            const std::string& symbol =
+            const std::string symbol =
                 loop_cell(*lengths, row, "_scattering_length.type_symbol", where);
             const double length_fm =
                 to_double(loop_cell(*lengths, row, "_scattering_length.length_fm", where), where);
@@ -1371,8 +1401,8 @@ const char* family_name(BeamModeEnum mode) {
 struct ResolvedExperimentKind {
     std::string peak_type;                // the verbatim token (for error text and family checks)
     std::optional<std::string> declared;  // the token iff the block carried `_peak.type`
-    BeamModeEnum mode;
-    bool beam_declared;  // whether the block carried `_experiment_type.beam_mode`
+    BeamModeEnum mode = BeamModeEnum::CONSTANT_WAVELENGTH;
+    bool beam_declared = false;  // whether the block carried `_experiment_type.beam_mode`
 };
 
 ResolvedExperimentKind resolve_experiment_kind(const Block& block, const std::string& where) {
@@ -2057,6 +2087,67 @@ BraggPdExperiment single_crystal_from_block(const Block& block, const std::strin
     } catch (const std::invalid_argument& error) {
         fail_domain(where, "reflns-threshold", error.what());
     }
+    // Which reflections a fit uses: the merge mode, the absences and the exclusions (crysta's admission), each
+    // absent until declared. A time-of-flight single crystal merges nothing.
+    try {
+        if (const std::string* merge = block.find("_reflns.merge")) {
+            experiment.reflns_merge = detail::read_reflns_merge(
+                *merge, experiment.effective_beam_mode() != BeamModeEnum::CONSTANT_WAVELENGTH);
+        }
+        if (const std::string* absences = block.find("_reflns.absences")) {
+            experiment.reflns_absences = detail::read_reflns_absences(*absences);
+        }
+    } catch (const std::invalid_argument& error) {
+        fail_domain(where, "reflns-admission", error.what());
+    }
+    // One region may be written as items rather than a loop; either way each names its axis.
+    if (const std::vector<ExcludedRegionText> rows = excluded_region_rows(block, where); !rows.empty()) {
+        std::vector<std::shared_ptr<ExcludedRegion>> regions;
+        for (const ExcludedRegionText& row : rows) {
+            if (row.axis == nullptr) {
+                fail_schema(where, "missing-loop-column",
+                            "a single crystal's _excluded_region names its axis (_excluded_region.axis d_spacing or "
+                            "sin_theta_over_lambda) on every row");
+            }
+            ExcludedRegion region(to_double(*row.start, where), to_double(*row.end, where));
+            try {
+                region.axis = detail::read_region_axis(*row.axis);
+            } catch (const std::invalid_argument& error) {
+                fail_domain(where, "excluded-region-axis", error.what());
+            }
+            if (row.id != nullptr) region.id = *row.id;
+            regions.push_back(std::make_shared<ExcludedRegion>(region));
+        }
+        try {
+            experiment.excluded_regions.assign(std::move(regions));
+        } catch (const std::invalid_argument& error) {
+            fail_domain(where, "duplicate-id", error.what());
+        }
+    }
+    if (const Loop* omitted = block.loop_with("_excluded_reflection.index_h"); omitted != nullptr) {
+        const auto miller = [&](const std::vector<std::string>& row, const char* tag) {
+            const std::string text = loop_cell(*omitted, row, tag, where);
+            const double value = to_double(text, where);
+            if (value != std::floor(value) || std::abs(value) > 1.0e6) {
+                fail_schema(where, "invalid-miller-index", std::string(tag) + " '" + text + "' is not a Miller index");
+            }
+            return static_cast<int>(value);
+        };
+        std::vector<std::shared_ptr<ExcludedReflection>> rows;
+        for (const auto& row : omitted->rows) {
+            auto item = std::make_shared<ExcludedReflection>(miller(row, "_excluded_reflection.index_h"),
+                                                             miller(row, "_excluded_reflection.index_k"),
+                                                             miller(row, "_excluded_reflection.index_l"));
+            if (omitted->column("_excluded_reflection.id") >= 0)
+                item->id = loop_cell(*omitted, row, "_excluded_reflection.id", where);
+            rows.push_back(std::move(item));
+        }
+        try {
+            experiment.excluded_reflections.assign(std::move(rows));
+        } catch (const std::invalid_argument& error) {
+            fail_domain(where, "duplicate-id", error.what());
+        }
+    }
     if (const std::string* distribution = block.find("_extinction.mosaic_distribution")) {
         const std::vector<std::string> distributions = mosaic_distribution_tokens();
         if (std::find(distributions.begin(), distributions.end(), *distribution) == distributions.end()) {
@@ -2138,7 +2229,7 @@ BraggPdExperiment single_crystal_from_block(const Block& block, const std::strin
         return experiment;
     }
     const auto index = [&](const std::vector<std::string>& row, const char* tag) {
-        const std::string& text = loop_cell(*refln, row, tag, where);
+        const std::string text = loop_cell(*refln, row, tag, where);
         const double value = to_double(text, where);
         if (value != std::floor(value) || std::abs(value) > 1.0e6) {
             fail_schema(where, "invalid-miller-index", std::string(tag) + " '" + text + "' is not a Miller index");
@@ -2388,7 +2479,7 @@ BraggPdExperiment parse_experiment_block(const Block& block, const std::string& 
                 found->uncertainty = std::nullopt;
                 found->spec = polarization_spec;
             }
-            *slot = std::move(found);
+            *slot = found;
         }
         // The pair's domain (K in [0, 1], 2theta_m in [0, 180] degrees) is a physical one the engine
         // enforces at calculate, fit and save, refused at load as crysta's loader refuses it, in its
@@ -2634,17 +2725,21 @@ BraggPdExperiment parse_experiment_block(const Block& block, const std::string& 
         }
     }
 
-    const Loop* excluded = block.loop_with("_excluded_region.start");
-    if (excluded != nullptr) {
+    // A powder's regions are on its pattern's axis, and it leaves out no reflection by its indices.
+    if (block_has_tag(block, "_excluded_reflection.index_h") || block_has_tag(block, "_excluded_reflection.id")) {
+        fail_schema(where, "single-crystal-category-on-powder",
+                    "_excluded_reflection on a powder: only a single crystal leaves out reflections by their indices");
+    }
+    // One region may be written as items rather than a loop, on the pattern's own axis.
+    if (const std::vector<ExcludedRegionText> rows = excluded_region_rows(block, where); !rows.empty()) {
         std::vector<std::shared_ptr<ExcludedRegion>> regions;
-        for (const auto& row : excluded->rows) {
-            const double start = to_double(loop_cell(*excluded, row, "_excluded_region.start", where),
-                                           where);
-            const double end =
-                to_double(loop_cell(*excluded, row, "_excluded_region.end", where), where);
-            ExcludedRegion region(start, end);
-            if (excluded->column("_excluded_region.id") >= 0)
-                region.id = loop_cell(*excluded, row, "_excluded_region.id", where);
+        for (const ExcludedRegionText& row : rows) {
+            if (row.axis != nullptr) {
+                fail_schema(where, "single-crystal-item-on-powder",
+                            "_excluded_region.axis on a powder, whose excluded regions are on its pattern's axis");
+            }
+            ExcludedRegion region(to_double(*row.start, where), to_double(*row.end, where));
+            if (row.id != nullptr) region.id = *row.id;
             regions.push_back(std::make_shared<ExcludedRegion>(region));
         }
         experiment.excluded_regions.assign(std::move(regions));
@@ -2657,6 +2752,7 @@ BraggPdExperiment parse_experiment_block(const Block& block, const std::string& 
     if (const Loop* refln = block.loop_with("_refln.id"); refln != nullptr) {
         CarriedLoop carried;
         std::vector<std::string> columns;
+        columns.reserve(refln->tags.size());
         for (const std::string& tag : refln->tags) {
             columns.push_back(tag.rfind("_refln.", 0) == 0 ? tag.substr(7) : tag);
         }
@@ -2714,7 +2810,7 @@ BraggPdExperiment parse_experiment_block(const Block& block, const std::string& 
                       parse_parameter(loop_cell(*terms, row, spec::background_coef.edi_names[0], where), where),
                       where);
             term.id = loop_cell(*terms, row, "_background.id", where);
-            experiment.background_terms.push_back(std::move(term));
+            experiment.background_terms.push_back(term);
         }
     }
 
@@ -2812,7 +2908,7 @@ BraggPdExperiment experiment_from_block(const Block& block, const std::string& w
 
 // ---- .edi writing ---------------------------------------------------------------------------------
 
-std::string format_double(double value) {
+[[maybe_unused]] std::string format_double(double value) {
     char buffer[64];
     const auto result = std::to_chars(buffer, buffer + sizeof(buffer), value);
     return std::string(buffer, result.ptr);
@@ -2835,7 +2931,7 @@ double parse_fixed(const std::string& text) {
 // i.e. the shortest FIXED-POINT (no exponent) rendering. `format_double` uses exponent notation for
 // extreme magnitudes (`1e-07`), which the mantissa grammar rejects inside a bracket, so a bracketed
 // value must go through this instead.
-int fixed_round_trip_ndec(double value) {
+[[maybe_unused]] int fixed_round_trip_ndec(double value) {
     for (int ndec = 0; ndec <= 340; ++ndec) {
         if (parse_fixed(format_fixed(value, ndec)) == value) {
             return ndec;
@@ -2873,13 +2969,13 @@ auto parameter_slots(ProjectT& project, const KeyRename* rename = nullptr, const
         if(selected && value.size()>maximum_name_bytes)throw std::length_error("Parameter spelling source exceeds capacity");
         if(scratch_bytes && value.size()>(scratch_limit-*scratch_bytes)/16)
             throw std::length_error("Relation spelling scratch exceeds capacity");
-        return value;
+        return value;  // NOLINT(bugprone-return-const-ref-from-parameter): called only on the project's own names
     };
     if(selected)slots.reserve(1);
     const auto add = [&slots,selected,scratch_bytes,scratch_limit](ParameterPtr parameter,const auto& names) {
         if(selected && parameter!=selected)return; // No unrelated member formatting/allocation.
         if(selected && !slots.empty())throw std::invalid_argument("Parameter spelling member is ambiguous");
-        if(scratch_bytes && scratch_limit-*scratch_bytes<8*sizeof(std::string)+8*64)throw std::length_error("Relation spelling scratch exceeds capacity");
+        if(scratch_bytes && scratch_limit-*scratch_bytes<8*sizeof(std::string)+std::size_t{8}*64)throw std::length_error("Relation spelling scratch exceeds capacity");
         auto pair=names();
         if(scratch_bytes) {
             // Original slot vector, returned named vector and lookup map overlap.
@@ -3238,10 +3334,7 @@ std::optional<std::time_t> star_timestamp_seconds(const std::string& stamp) {
 }
 }  // namespace
 
-ProjectMetadata::ProjectMetadata() {
-    created = star_timestamp_now();
-    last_modified = created;
-}
+ProjectMetadata::ProjectMetadata() : created(star_timestamp_now()), last_modified(created) {}
 
 // Strictly advancing: a save landing in the same STAR-format clock tick as the stored stamp
 // (1 s resolution) still advances `last_modified`, stepping one second past the stored value
@@ -3324,7 +3417,8 @@ static void refuse_adp_spellings(const Block& written, const std::string& where)
                 if (found != site_types.end() && !found->second.has_value()) {
                     continue;
                 }
-                const std::string type = found != site_types.end() ? *found->second : std::string("Biso");
+                const std::string type =
+                    found != site_types.end() && found->second.has_value() ? *found->second : std::string("Biso");
                 const std::string form = lower(type);
                 if (isotropic_value && (form == "uani" || form == "bani" || form == "beta")) {
                     continue;
@@ -3333,11 +3427,13 @@ static void refuse_adp_spellings(const Block& written, const std::string& where)
                                  [&](const std::string& token) { return lower(token) == lower(type); })) {
                     std::string allowed = variants.front();
                     for (std::size_t index = 1; index < variants.size(); ++index) {
-                        allowed += " or " + variants[index];
+                        allowed.append(" or ").append(variants[index]);
                     }
-                    fail_schema(where, "adp-name-disagrees-with-type",
-                                "site '" + site + "' is " + type + ", but its column " + loop.tags[column] +
-                                    " holds a value for " + allowed + ": the type and the name disagree");
+                    std::string message = "site '";
+                    message.append(site).append("' is ").append(type).append(", but its column ");
+                    message.append(loop.tags[column]).append(" holds a value for ").append(allowed);
+                    message.append(": the type and the name disagree");
+                    fail_schema(where, "adp-name-disagrees-with-type", message);
                 }
             }
         }
@@ -3409,8 +3505,8 @@ BraggPdExperiment simulation_experiment(const std::string& name, const Experimen
                                         const std::vector<std::string>& structure_ids) {
     const bool constant_wavelength = type.beam_mode == "constant wavelength";
     if (type.sample_form == "single crystal") {
-        // A single crystal: its wavelength (constant wavelength), no extinction and no reflections until its data
-        // are loaded.
+        // A single crystal: its wavelength and resolution limit (constant wavelength), no extinction and no measured
+        // reflections until its data are loaded.
         if (type.radiation_probe != "neutron") {
             throw std::invalid_argument("a single crystal is a neutron experiment; choose neutron first");
         }
@@ -3421,8 +3517,16 @@ BraggPdExperiment simulation_experiment(const std::string& name, const Experimen
         text += "_experiment_type.scattering_type \"bragg\"\n\n";
         if (constant_wavelength) {
             text += "_instrument.setup_wavelength 1.\n\n";
+            // A resolution limit, so the reflections are calculated before any are measured (edi ADR-0049 point 6):
+            // d down to 1 Å, which wavelengths up to 2 Å still reach.
+            text += std::string(detail::single_crystal_resolution_key()) + " 0.5\n\n";
         }
         text += "_extinction.type none\n";
+        // A new single crystal states its admission (the owner's defaults): equivalents merged over the Laue class
+        // and systematic absences left out. Time of flight merges nothing: its equivalents are measured at their own
+        // wavelengths. A file without these items still reads as none and include.
+        text += std::string("_reflns.merge ") + (constant_wavelength ? "laue_class" : "none") + "\n";
+        text += "_reflns.absences exclude\n";
         if (!structure_ids.empty()) {
             text += "\nloop_\n_linked_structure.structure_id\n_linked_structure.scale\n";
             for (const std::string& structure_id : structure_ids) {
@@ -3561,10 +3665,19 @@ BraggPdExperiment load_experiment_file(const std::string& path, const WarningSin
 }
 
 static BraggPdExperiment load_experiment_file_unrecorded(const std::string& path, const WarningSink& on_warning) {
-    const Block block = edi_text_block(read_file(path), path, true, on_warning);
+    const std::string text = read_file(path);
+    const Block block = edi_text_block(text, path, true, on_warning);
     require_edi_schema(block, path);
-    // The file must say what it is: all four type axes, read from the block itself, because the
-    // builder would supply an absent one (beam mode from `_peak.type`, the others by default).
+    // An edi file must say what it is: all four type axes, read from the block itself, because the
+    // builder would supply an absent one (beam mode from `_peak.type`, the others by default). A CIF
+    // from outside edi rarely names them; it takes the builder's defaults, its beam mode read from its axis.
+    std::vector<std::string> tags;
+    for (const Token& token : tokenize(text, path)) {
+        if (is_tag(token)) {
+            tags.push_back(token.text);
+        }
+    }
+    const bool cif = detail::is_cif_names(tags);
     std::string missing;
     for (const char* tag : {"_experiment_type.sample_form", "_experiment_type.beam_mode",
                             "_experiment_type.radiation_probe", "_experiment_type.scattering_type"}) {
@@ -3572,13 +3685,14 @@ static BraggPdExperiment load_experiment_file_unrecorded(const std::string& path
             missing += (missing.empty() ? "" : ", ") + std::string(tag);
         }
     }
-    if (!missing.empty()) {
+    if (!missing.empty() && !cif) {
         throw IoError(path + ": an experiment file must declare its experiment type; missing " +
                       missing);
     }
     // A declared type edi's experiment class does not implement is refused by axis (an unknown
     // token is left to the builder's own message).
-    if (*block.find("_experiment_type.scattering_type") == "total") {
+    if (const std::string* scattering = block.find("_experiment_type.scattering_type");
+        scattering != nullptr && *scattering == "total") {
         throw IoError(path + ": _experiment_type.scattering_type 'total' is not implemented - edi "
                              "experiments are powder + bragg");
     }
@@ -3641,7 +3755,7 @@ void add_loaded_structure(Project& project, Structure structure) {
         throw IoError("a structure named '" + detail::printable_id(structure.name) +
                       "' is already in the project");
     }
-    project.structures.push_back(std::move(structure));
+    project.structures.push_back(structure);
 }
 
 void require_held_links(const Project& project, const BraggPdExperiment& experiment, const std::string& where,
@@ -3682,6 +3796,23 @@ void rename_experiment(Project& project, ExperimentBase& experiment, const std::
             KeyTraits<BraggPdExperiment>::canonical(item->name) == wanted) {
             throw IoError("an experiment named '" + detail::printable_id(name) +
                           "' is already in the project");
+        }
+    }
+    // The rows that name the experiment follow it: its series pattern and its set membership.
+    const std::string before = KeyTraits<BraggPdExperiment>::canonical(experiment.name);
+    for (const auto& member : project.sequential_fit.experiments) {
+        if (KeyTraits<BraggPdExperiment>::canonical(member->experiment_id.value()) == before) {
+            member->experiment_id = name;
+        }
+    }
+    for (const auto& member : project.experiment_set_members) {
+        if (KeyTraits<BraggPdExperiment>::canonical(member->experiment_id.value()) == before) {
+            member->experiment_id = name;
+        }
+    }
+    for (const auto& set : project.experiment_sets) {
+        if (KeyTraits<BraggPdExperiment>::canonical(set->template_experiment_id.value()) == before) {
+            set->template_experiment_id = name;
         }
     }
     experiment.name = name;
@@ -3791,6 +3922,23 @@ std::vector<std::string> registered_peak_types() {
 enum class ProjectLoadPolicy { Complete, Construction, SavedValues };
 std::string text_field_paragraphs(const std::vector<std::string>& lines);  // defined below
 
+namespace {
+// While a file's text is applied (project_with_file_text with a sourced sink), each of the loader's warnings is given
+// with the project file it comes from, relative to the project (`experiments/d20.edi`); empty when no one file is it.
+thread_local const SourcedWarningSink* sourced_warnings = nullptr;
+// Sets the sourced sink for one read and puts the previous one back however the read ends.
+class SourcedWarningsScope {
+   public:
+    explicit SourcedWarningsScope(const SourcedWarningSink* sink) : previous_(sourced_warnings) { sourced_warnings = sink; }
+    SourcedWarningsScope(const SourcedWarningsScope&) = delete;
+    SourcedWarningsScope& operator=(const SourcedWarningsScope&) = delete;
+    ~SourcedWarningsScope() { sourced_warnings = previous_; }
+
+   private:
+    const SourcedWarningSink* previous_;
+};
+}  // namespace
+
 // `data_root`, when given, is where a scan's data files are, for a project read from a scratch save of one.
 static Structure load_structure_as_named(const std::string& path, const WarningSink& on_warning);
 static void link_savable_names(BraggPdExperiment& experiment);
@@ -3799,18 +3947,30 @@ static Project load_project_folder(const std::string& directory, const WarningSi
                                    ProjectLoadPolicy policy=ProjectLoadPolicy::Complete, bool assistant_result=false,
                                    const std::string& data_root = {}) {
     const bool whole=policy==ProjectLoadPolicy::Complete;
-    // One exit for the loader's warnings — the sink when given, else stderr as before.
-    const auto warn = [&on_warning](const std::string& message) {
-        if (on_warning) {
+    // The project file being read, for a sourced sink (relative to the project; empty between files).
+    std::string source;
+    // One exit for the loader's warnings — the sourced sink while a file's text is applied, else the sink when given,
+    // else stderr as before.
+    const auto warn = [&on_warning, &source](const std::string& message) {
+        if (sourced_warnings != nullptr) {
+            (*sourced_warnings)(source, message);
+        } else if (on_warning) {
             on_warning(message);
         } else {
             std::cerr << "Warning: " << message << "\n";
         }
     };
+    const WarningSink file_warning = [&warn](const std::string& message) { warn(message); };
     const fs::path root(directory);
     if (!fs::is_directory(root)) {
         throw IoError("not a project directory: " + directory);
     }
+    const auto relative_to_root = [&root](const std::string& path) {
+        return fs::path(path).lexically_relative(root).generic_string();
+    };
+    // Which file holds each datablock, for warnings raised after the files are read.
+    std::map<std::string, std::string> structure_source;
+    std::map<std::string, std::string> experiment_source;
     // crysta's rule: each `.edi` and `.cif`, the suffix in any case, a `.cif` beside a `.edi` of its
     // name reported and not read; any other file is passed over.
     std::vector<std::string> hidden;
@@ -3819,8 +3979,10 @@ static Project load_project_folder(const std::string& directory, const WarningSi
     const std::vector<std::string> experiment_files =
         detail::project_structure_files((root / "experiments").string(), &hidden);
     for (const std::string& path : hidden) {
+        source = relative_to_root(path);
         warn(kCifReport + path + " not read: " + fs::path(path).stem().string() + ".edi in the same folder is read");
     }
+    source.clear();
     if (structure_files.empty() && whole) {
         throw IoError("project has no structures/*.edi: " + directory);
     }
@@ -3833,7 +3995,9 @@ static Project load_project_folder(const std::string& directory, const WarningSi
     // Each is read as crysta reads one, so a CIF written in one is refused.
     for (const std::string& path : structure_files) {
         const fs::path file(path);
-        Structure structure = load_structure_as_named(file.string(), on_warning);
+        source = relative_to_root(path);
+        Structure structure = load_structure_as_named(file.string(), file_warning);
+        structure_source[datablock_key(structure.name, "structure")] = source;
         if (std::any_of(project.structures.begin(), project.structures.end(),
                         [&](const std::shared_ptr<Structure>& held) {
                             return datablock_key(held->name, "structure") ==
@@ -3843,7 +4007,7 @@ static Project load_project_folder(const std::string& directory, const WarningSi
                           datablock_key(structure.name, "structure") + "' (" + file.string() +
                           "): a project's structures need distinct names");
         }
-        project.structures.push_back(std::move(structure));
+        project.structures.push_back(structure);
     }
 
     // A project may hold experiments with measured data and experiments with a calculation grid side by
@@ -3855,8 +4019,9 @@ static Project load_project_folder(const std::string& directory, const WarningSi
     // crysta's rule, as for structures.
     for (const std::string& path : experiment_files) {
         const fs::path file(path);
+        source = relative_to_root(path);
         const Block experiment_block = reading_file(file.string(), [&] {
-            return edi_text_block(read_file(file.string()), file.string(), true, on_warning);
+            return edi_text_block(read_file(file.string()), file.string(), true, file_warning);
         });
         if (const std::string* calculator = experiment_block.find("_calculator.type")) {
             if (*calculator != "crysta" && warned_calculators.insert(*calculator).second) {
@@ -3917,14 +4082,17 @@ static Project load_project_folder(const std::string& directory, const WarningSi
         if (policy!=ProjectLoadPolicy::SavedValues) {
             require_held_links(project, experiment, "project " + directory + ": ", file.string());
         }
+        experiment_source[datablock_key(experiment.name, "experiment")] = source;
         project.experiments.push_back(std::move(experiment));
     }
+    source.clear();
 
     // ADR-0036 §7: reports/report.edi, the report's settings and its saved-report rows, each checked by crysta's rules:
     // a value an item does not take, an item the category does not have and a row without a known format are refused,
     // naming them.
     const fs::path report_settings = root / "reports" / "report.edi";
     if (fs::is_regular_file(report_settings)) {
+        source = "reports/report.edi";
         const std::string where = report_settings.string();
         const ReadingScope reading(where);  // its reading and every check of its values
         const Block block = parse_block(read_file(where), where, false);
@@ -3944,7 +4112,7 @@ static Project load_project_folder(const std::string& directory, const WarningSi
                     file.saved = loop_cell(*files, row, "_report_file.saved", where);
                     file.project_last_modified = loop_cell(*files, row, "_report_file.project_last_modified", where);
                     file.digest = loop_cell(*files, row, "_report_file.digest", where);
-                    project.report_files.push_back(std::move(file));
+                    project.report_files.push_back(file);
                 }
             }
         } catch (const std::invalid_argument& error) {
@@ -3953,6 +4121,7 @@ static Project load_project_folder(const std::string& directory, const WarningSi
     }
 
     const fs::path analysis_file = root / "analysis" / "analysis.edi";
+    source = "analysis/analysis.edi";
     if (fs::is_regular_file(analysis_file)) {
         const ReadingScope reading(analysis_file.string());  // its reading and every check of its values
         const Block block = parse_block(read_file(analysis_file.string()), analysis_file.string(), false);
@@ -4036,8 +4205,8 @@ static Project load_project_folder(const std::string& directory, const WarningSi
                 const std::vector<std::string> ids = descent_ids();
                 if (std::find(ids.begin(), ids.end(), id) == ids.end()) {
                     std::string registered;
-                    for (const std::string& id : ids) {
-                        registered += (registered.empty() ? "" : ", ") + id;
+                    for (const std::string& known : ids) {
+                        registered += (registered.empty() ? "" : ", ") + known;
                     }
                     throw IoError("unknown _minimizer.descent '" + *descent +
                                   "' (registered descents: " + registered +
@@ -4145,7 +4314,42 @@ static Project load_project_folder(const std::string& directory, const WarningSi
                                                       "_sequential_fit_extract.required",
                                                       analysis_file.string()),
                                             "_sequential_fit_extract.required");
-                project.sequential_fit.extract.push_back(std::move(rule));
+                project.sequential_fit.extract.push_back(rule);
+            }
+        }
+        // A series of joint fits: one file pattern per experiment, and then no `file_pattern`.
+        if (const Loop* members = block.loop_with("_sequential_fit_experiment.experiment_id")) {
+            if (block.find("_sequential_fit.file_pattern") != nullptr) {
+                throw std::invalid_argument(
+                    "_sequential_fit.file_pattern and a _sequential_fit_experiment loop are both declared (a series "
+                    "of joint fits takes one pattern per experiment): " +
+                    analysis_file.string());
+            }
+            for (const auto& row : members->rows) {
+                SequentialFitExperiment member;
+                member.experiment_id = loop_cell(*members, row, "_sequential_fit_experiment.experiment_id",
+                                                 analysis_file.string());
+                member.file_pattern = loop_cell(*members, row, "_sequential_fit_experiment.file_pattern",
+                                                analysis_file.string());
+                project.sequential_fit.experiments.push_back(std::move(member));
+            }
+        }
+        if (const Loop* sets = block.loop_with("_experiment_set.id")) {
+            for (const auto& row : sets->rows) {
+                ExperimentSet set;
+                set.id = loop_cell(*sets, row, "_experiment_set.id", analysis_file.string());
+                set.template_experiment_id =
+                    loop_cell(*sets, row, "_experiment_set.template_experiment_id", analysis_file.string());
+                project.experiment_sets.push_back(std::move(set));
+            }
+        }
+        if (const Loop* members = block.loop_with("_experiment_set_member.experiment_id")) {
+            for (const auto& row : members->rows) {
+                ExperimentSetMember member;
+                member.experiment_id =
+                    loop_cell(*members, row, "_experiment_set_member.experiment_id", analysis_file.string());
+                member.set_id = loop_cell(*members, row, "_experiment_set_member.set_id", analysis_file.string());
+                project.experiment_set_members.push_back(std::move(member));
             }
         }
         if (const Loop* aliases = block.loop_with("_alias.id")) {
@@ -4156,7 +4360,7 @@ static Project load_project_folder(const std::string& directory, const WarningSi
                 const std::string name = loop_cell(*aliases, row, "_alias.parameter_unique_name", analysis_file.string());
                 refuse_older_parameter_name(project, name);
                 alias.parameter_unique_name = name;
-                project.aliases.push_back(std::move(alias));
+                project.aliases.push_back(alias);
             }
         }
         if (const Loop* constraints = block.loop_with("_constraint.expression")) {
@@ -4190,9 +4394,10 @@ static Project load_project_folder(const std::string& directory, const WarningSi
                     }
                     for (const auto& other : project.constraints) {
                         if (other->id.value() == id) {
-                            refuse("crysta.domain.constraint_target",
-                                   "parameter '" + id + "' is set by two constraints, '" +
-                                       other->expression.value() + "' and '" + text + "'");
+                            std::string message = "parameter '";
+                            message.append(id).append("' is set by two constraints, '");
+                            message.append(other->expression.value()).append("' and '").append(text).append("'");
+                            refuse("crysta.domain.constraint_target", message);
                         }
                     }
                 }
@@ -4202,7 +4407,7 @@ static Project load_project_folder(const std::string& directory, const WarningSi
                         loop_cell(*constraints, row, "_constraint.enabled", analysis_file.string()),
                         "_constraint.enabled");
                 }
-                project.constraints.push_back(std::move(constraint));
+                project.constraints.push_back(constraint);
             }
         }
         // edi ADR-0081: independent without a scan fits each experiment alone; only sequential needs one.
@@ -4215,7 +4420,7 @@ static Project load_project_folder(const std::string& directory, const WarningSi
         const Loop* weights = block.loop_with("_joint_fit.experiment_id");
         if (weights != nullptr) {
             for (const auto& row : weights->rows) {
-                const std::string& id =
+                const std::string id =
                     loop_cell(*weights, row, "_joint_fit.experiment_id", analysis_file.string());
                 const double weight =
                     to_double(loop_cell(*weights, row, "_joint_fit.weight", analysis_file.string()),
@@ -4298,22 +4503,22 @@ static Project load_project_folder(const std::string& directory, const WarningSi
             if (const Loop* banks = block.loop_with("_fit_result_bank.experiment_id")) {
                 std::set<const ExperimentBase*> seen;
                 for (const auto& row : banks->rows) {
-                    const std::string& id = loop_cell(*banks, row, "_fit_result_bank.experiment_id", where);
+                    const std::string id = loop_cell(*banks, row, "_fit_result_bank.experiment_id", where);
                     ExperimentBase* bank = nullptr;
                     for (auto& experiment_item : project.experiments) {
                         bank = experiment_item->name == id ? experiment_item.get() : bank;
                     }
                     if (bank == nullptr) {
-                        throw IoError("_fit_result_bank row '" + id + "' names no experiment of the project: " + where);
+                        throw IoError(std::string("_fit_result_bank row '").append(id).append("' names no experiment of the project: ").append(where));
                     }
                     if (!seen.insert(bank).second) {
-                        throw IoError("_fit_result_bank has two rows for experiment '" + id + "': " + where);
+                        throw IoError(std::string("_fit_result_bank has two rows for experiment '").append(id).append("': ").append(where));
                     }
-                    const std::string& points = loop_cell(*banks, row, "_fit_result_bank.n_data_points", where);
+                    const std::string points = loop_cell(*banks, row, "_fit_result_bank.n_data_points", where);
                     if (points != ".") {
                         const double value = to_double(points, where);
                         if (!(value >= 0.0) || value > 2.0e9 || value != std::floor(value)) {
-                            throw IoError("malformed _fit_result_bank.n_data_points '" + points + "': " + where);
+                            throw IoError(std::string("malformed _fit_result_bank.n_data_points '").append(points).append("': ").append(where));
                         }
                         bank->fit_n_data_points = static_cast<int>(value);
                     }
@@ -4330,9 +4535,9 @@ static Project load_project_folder(const std::string& directory, const WarningSi
             if (const Loop* phases = block.loop_with("_fit_result_phase.experiment_id")) {
                 std::set<const LinkedStructure*> seen;
                 for (const auto& row : phases->rows) {
-                    const std::string& experiment_id =
+                    const std::string experiment_id =
                         loop_cell(*phases, row, "_fit_result_phase.experiment_id", where);
-                    const std::string& structure_id = loop_cell(*phases, row, "_fit_result_phase.structure_id", where);
+                    const std::string structure_id = loop_cell(*phases, row, "_fit_result_phase.structure_id", where);
                     loop_cell(*phases, row, "_fit_result_phase.bragg_r_factor", where);
                     const std::string wanted = KeyTraits<Structure>::canonical(structure_id);
                     LinkedStructure* phase = nullptr;
@@ -4349,12 +4554,12 @@ static Project load_project_folder(const std::string& directory, const WarningSi
                         }
                     }
                     if (phase == nullptr) {
-                        throw IoError("_fit_result_phase row ('" + experiment_id + "', '" + structure_id +
-                                      "') names no linked structure of the project: " + where);
+                        throw IoError(std::string("_fit_result_phase row ('").append(experiment_id).append("', '").append(structure_id)
+                                          .append("') names no linked structure of the project: ").append(where));
                     }
                     if (!seen.insert(phase).second) {
-                        throw IoError("_fit_result_phase has two rows for ('" + experiment_id + "', '" + structure_id +
-                                      "'): " + where);
+                        throw IoError(std::string("_fit_result_phase has two rows for ('").append(experiment_id).append("', '")
+                                          .append(structure_id).append("'): ").append(where));
                     }
                     phase->fit_bragg_r_factor = cell(*phases, row, "_fit_result_phase.bragg_r_factor");
                     phase->fit_f_r_factor = cell(*phases, row, "_fit_result_phase.f_r_factor");
@@ -4379,11 +4584,11 @@ static Project load_project_folder(const std::string& directory, const WarningSi
                     loop_cell(*correlations, row, "_fit_parameter_correlation.parameter_unique_name_j", where);
                 refuse_older_correlation_name(pair->parameter_unique_name_i.value());
                 refuse_older_correlation_name(pair->parameter_unique_name_j.value());
-                const std::string& text = loop_cell(*correlations, row, "_fit_parameter_correlation.correlation", where);
+                const std::string text = loop_cell(*correlations, row, "_fit_parameter_correlation.correlation", where);
                 const double value = to_double(text, where);
                 if (std::isnan(value) || value < -1.0 || value > 1.0) {
-                    throw IoError("_fit_parameter_correlation row '" + pair->id.value() + "' has correlation '" + text +
-                                  "' outside [-1, 1]: " + where);
+                    throw IoError(std::string("_fit_parameter_correlation row '").append(pair->id.value()).append("' has correlation '")
+                                      .append(text).append("' outside [-1, 1]: ").append(where));
                 }
                 pair->correlation = value;
                 if (per_file) {
@@ -4437,7 +4642,7 @@ static Project load_project_folder(const std::string& directory, const WarningSi
                     loop_cell(*fit_rows, row, "_fit_parameter.start_value",
                               analysis_file.string()),
                     analysis_file.string());
-                const std::string& su = loop_cell(*fit_rows, row,
+                const std::string su = loop_cell(*fit_rows, row,
                                                   "_fit_parameter.start_uncertainty",
                                                   analysis_file.string());
                 slot->second->start_uncertainty =
@@ -4475,6 +4680,7 @@ static Project load_project_folder(const std::string& directory, const WarningSi
     //     rest, silently — nothing saved is substituted, and a diagnostic here fired on all
     //     prior output forever, breaking the shipped stderr-silence contracts;
     //   - an absent record defaults with the named diagnostic below.
+    source = "project.edi";
     const fs::path record_file = root / "project.edi";
     // Presence is decided IN THE NAMESPACE (symlink_status — the only query that does not
     // follow), never by is_regular_file alone: a directory, a symlink that does not resolve, a
@@ -4587,8 +4793,7 @@ static Project load_project_folder(const std::string& directory, const WarningSi
                 }
                 if (tag_is(item, su_rule_tag)) {
                     if (declared_su_rule.has_value()) {
-                        throw IoError("project.edi declares " + su_rule_tag +
-                                      " more than once: " + record_where);
+                        throw IoError(std::string("project.edi declares ").append(su_rule_tag).append(" more than once: ").append(record_where));
                     }
                     declared_su_rule = lexical_value(item.value, 0, su_rule_tag);
                     continue;
@@ -4605,15 +4810,14 @@ static Project load_project_folder(const std::string& directory, const WarningSi
                     // A duplicated field is ambiguous about what the record holds — refuse,
                     // the `_fit_parameter` duplicate rule's shape.
                     if (restored.count(tag) != 0) {
-                        throw IoError("project.edi declares " + tag +
-                                      " more than once: " + record_where);
+                        throw IoError(std::string("project.edi declares ").append(tag).append(" more than once: ").append(record_where));
                     }
                     // A long description is a semicolon text field after its tag, as crysta writes it (crysta's
                     // ADR on display metadata, item 12): a line break inside a paragraph is a space, and an empty
                     // line a paragraph break.
                     if (item.text_field) {
                         if (!item.text_closed)
-                            throw IoError("project.edi " + tag + " has an unterminated text field: " + record_where);
+                            throw IoError(std::string("project.edi ").append(tag).append(" has an unterminated text field: ").append(record_where));
                         restored.emplace(tag, text_field_paragraphs(item.text));
                         break;
                     }
@@ -4762,12 +4966,15 @@ static Project load_project_folder(const std::string& directory, const WarningSi
         check_scan_template_file(project, project.sequential_fit.template_file);
     }
     // Each value outside its admissible range — a fit may leave one there — is loaded and named in one
-    // warning; the app marks it red.
+    // warning; the app marks it red. Its source is the file of the datablock that holds it.
     for (const ParameterEntry& entry : parameter_entries(project)) {
         const ParameterSpec* spec = entry.parameter != nullptr ? entry.parameter->spec : nullptr;
         if (spec == nullptr) {
             continue;
         }
+        const auto& sources = entry.block_kind == "structure" ? structure_source : experiment_source;
+        const auto held = sources.find(datablock_key(entry.block_name, entry.block_kind));
+        source = held != sources.end() ? held->second : std::string();
         const double value = entry.parameter->value;
         if (value < spec->range.min || value > spec->range.max) {
             std::ostringstream message;
@@ -4779,7 +4986,8 @@ static Project load_project_folder(const std::string& directory, const WarningSi
     }
     // The declared and symmetry relations, as crysta reads them: refused when they cannot hold,
     // every parameter marked, a dependent's free flag cleared with a warning (not for the bracket of a
-    // dependent saved with its s.u.).
+    // dependent saved with its s.u.). No one file is their warnings' source.
+    source.clear();
     {
         // The declared relations come from the analysis file: a refusal of one is about that file.
         const ReadingScope reading(fs::is_regular_file(analysis_file) ? analysis_file.string() : std::string());
@@ -4793,6 +5001,8 @@ static Project load_project_folder(const std::string& directory, const WarningSi
         if (takes_wyckoff_letter(*structure)) {
             continue;
         }
+        const auto held = structure_source.find(datablock_key(structure->name, "structure"));
+        source = held != structure_source.end() ? held->second : std::string();
         for (const auto& site : structure->atom_sites) {
             const std::string& letter = site->wyckoff_letter.value();
             if (!letter.empty() && letter != "." && letter != "?") {
@@ -4804,6 +5014,7 @@ static Project load_project_folder(const std::string& directory, const WarningSi
     }
     // A free mark a fit could not honour (a descriptor, a value this fit's data cannot determine, one crysta cannot
     // differentiate) loads fixed, its value and s.u. kept, and is said (ADR-0053).
+    source.clear();
     for (const std::string& note : clear_unfittable_free(project)) {
         warn("crysta.domain.unfittable_free_ignored: " + note);
     }
@@ -4821,7 +5032,7 @@ std::string text_field_paragraphs(const std::vector<std::string>& lines) {
             line.pop_back();
         }
         if (line.empty()) {
-            breaks += text.empty() ? 0 : 1;
+            breaks += text.empty() ? 0U : 1U;
             continue;
         }
         if (!text.empty()) {
@@ -4857,6 +5068,10 @@ Project load_project(const std::string& path, ProjectLoadMode mode, const Warnin
         return project;
     }
     return load_project_folder(path, on_warning,policy);
+}
+Project load_project(const std::string& path, ProjectLoadMode mode, const SourcedWarningSink& on_warning) {
+    const SourcedWarningsScope scope(&on_warning);
+    return load_project(path, mode, WarningSink{});
 }
 
 namespace detail {
@@ -5131,7 +5346,7 @@ std::vector<ItemVec<FitParameterCorrelation>::Ptr> numbered_correlations(
     return rows;
 }
 
-void hold_template_rows(FitResultRecord& record, std::vector<FitParameterCorrelation> template_rows,
+void hold_template_rows(FitResultRecord& record, const std::vector<FitParameterCorrelation>& template_rows,
                         const std::vector<FitParameterCorrelation>& rows, const std::string& template_file) {
     std::map<std::string, std::vector<std::shared_ptr<const FitParameterCorrelation>>> read;
     for (const FitParameterCorrelation& row : rows) {
@@ -5147,8 +5362,8 @@ void hold_template_rows(FitResultRecord& record, std::vector<FitParameterCorrela
     }
     std::vector<ItemVec<FitParameterCorrelation>::Ptr> loop;
     loop.reserve(template_rows.size());
-    for (FitParameterCorrelation& row : template_rows) {
-        loop.push_back(std::make_shared<FitParameterCorrelation>(std::move(row)));
+    for (const FitParameterCorrelation& row : template_rows) {
+        loop.push_back(std::make_shared<FitParameterCorrelation>(row));
     }
     record.correlations.assign(std::move(loop));
 }
@@ -5248,22 +5463,22 @@ bool adopt_values(Project& project, const Project& saved) {
     // An auto background's record of its points follows the rounded values the file holds, so the saved points are
     // still the estimate's (ADR-0040) and a changed setting estimates again rather than refusing them as edited.
     for (const auto& experiment : project.experiments) {
-        for (const auto& held : saved.experiments) {
-            if (held->name.value() == experiment->name.value() &&
-                (experiment->background_estimate_inputs != held->background_estimate_inputs ||
-                 experiment->background_estimate_points != held->background_estimate_points)) {
-                experiment->background_estimate_inputs = held->background_estimate_inputs;
-                experiment->background_estimate_points = held->background_estimate_points;
+        for (const auto& stored : saved.experiments) {
+            if (stored->name.value() == experiment->name.value() &&
+                (experiment->background_estimate_inputs != stored->background_estimate_inputs ||
+                 experiment->background_estimate_points != stored->background_estimate_points)) {
+                experiment->background_estimate_inputs = stored->background_estimate_inputs;
+                experiment->background_estimate_points = stored->background_estimate_points;
                 changed = true;
             }
         }
     }
     // A time-of-flight bank angle is a setting, not a fit parameter: the project takes the six digits its file holds.
     for (const auto& experiment : project.experiments) {
-        for (const auto& held : saved.experiments) {
+        for (const auto& stored : saved.experiments) {
             Parameter& bank = experiment->instrument.setup_twotheta_bank;
-            const double written = held->instrument.setup_twotheta_bank.value.get();
-            if (held->name.value() == experiment->name.value() && bank.value.get() != written) {
+            const double written = stored->instrument.setup_twotheta_bank.value.get();
+            if (stored->name.value() == experiment->name.value() && bank.value.get() != written) {
                 bank.value = written;
                 changed = true;
             }
@@ -5308,28 +5523,28 @@ bool adopt_values(Project& project, const Project& saved) {
     // The fit's agreement records the save recomputed from the rounded values: each bank's, its phases' and every
     // bank's together.
     for (const auto& experiment : project.experiments) {
-        for (const auto& written : saved.experiments) {
-            if (written->name.value() != experiment->name.value()) {
+        for (const auto& stored : saved.experiments) {
+            if (stored->name.value() != experiment->name.value()) {
                 continue;
             }
             const auto record = std::tie(experiment->fit_n_data_points, experiment->fit_prof_r_factor,
                                          experiment->fit_prof_wr_factor, experiment->fit_prof_wr_expected,
                                          experiment->fit_prof_cr_factor, experiment->fit_prof_cwr_factor,
                                          experiment->fit_chi_square);
-            const auto kept = std::tie(written->fit_n_data_points, written->fit_prof_r_factor,
-                                       written->fit_prof_wr_factor, written->fit_prof_wr_expected,
-                                       written->fit_prof_cr_factor, written->fit_prof_cwr_factor,
-                                       written->fit_chi_square);
+            const auto kept = std::tie(stored->fit_n_data_points, stored->fit_prof_r_factor,
+                                       stored->fit_prof_wr_factor, stored->fit_prof_wr_expected,
+                                       stored->fit_prof_cr_factor, stored->fit_prof_cwr_factor,
+                                       stored->fit_chi_square);
             if (record != kept) {
                 std::tie(experiment->fit_n_data_points, experiment->fit_prof_r_factor, experiment->fit_prof_wr_factor,
                          experiment->fit_prof_wr_expected, experiment->fit_prof_cr_factor,
                          experiment->fit_prof_cwr_factor, experiment->fit_chi_square) = kept;
                 changed = true;
             }
-            const std::size_t links = std::min(experiment->linked_structures.size(), written->linked_structures.size());
+            const std::size_t links = std::min(experiment->linked_structures.size(), stored->linked_structures.size());
             for (std::size_t index = 0; index < links; ++index) {
                 LinkedStructure& link = *experiment->linked_structures[index];
-                const LinkedStructure& held_link = *written->linked_structures[index];
+                const LinkedStructure& held_link = *stored->linked_structures[index];
                 if (link.fit_bragg_r_factor != held_link.fit_bragg_r_factor ||
                     link.fit_f_r_factor != held_link.fit_f_r_factor) {
                     link.fit_bragg_r_factor = held_link.fit_bragg_r_factor;
@@ -5385,8 +5600,8 @@ std::vector<std::function<void()>> hold_calculation(Project& project) {
             keep(link->fit_bragg_r_factor);
             keep(link->fit_f_r_factor);
         }
-        if (experiment->data.has_value()) {
-            PdDataBase& data = *experiment->data;
+        if (std::optional<PdDataBase>& held = experiment->data; held.has_value()) {
+            PdDataBase& data = *held;
             keep(data.d_spacing);
             keep(data.intensity_calc);
             keep(data.intensity_bkg);
@@ -5397,13 +5612,14 @@ std::vector<std::function<void()>> hold_calculation(Project& project) {
             keep(data.component_order);
             keep(data.residual);
         }
-        if (experiment->reflections.has_value()) {
-            keep(experiment->reflections->d_spacing);
-            keep(experiment->reflections->sin_theta_over_lambda);
-            keep(experiment->reflections->intensity_calc);
-            keep(experiment->reflections->generated_index_h);
-            keep(experiment->reflections->generated_index_k);
-            keep(experiment->reflections->generated_index_l);
+        if (std::optional<ReflnDataBase>& held = experiment->reflections; held.has_value()) {
+            ReflnDataBase& reflections = *held;
+            keep(reflections.d_spacing);
+            keep(reflections.sin_theta_over_lambda);
+            keep(reflections.intensity_calc);
+            keep(reflections.generated_index_h);
+            keep(reflections.generated_index_k);
+            keep(reflections.generated_index_l);
         }
         keep(experiment->refln);
         keep(experiment->computed_source);
@@ -5606,6 +5822,12 @@ class ScratchSave {
             }
             return message;
         };
+        // A sourced sink set by the caller gets the same text as a plain one, the scratch folder taken out.
+        const SourcedWarningSink* outer = sourced_warnings;
+        const SourcedWarningSink local_sourced = [outer, &local](const std::string& file, const std::string& message) {
+            (*outer)(file, local(message));
+        };
+        const SourcedWarningsScope scope(outer != nullptr ? &local_sourced : nullptr);
         try {
             // A project still being built reads with the construction role, which keeps reference integrity.
             return load_project_folder(
@@ -5702,6 +5924,13 @@ std::string block_edi_text(const Project& project, BlockKind kind, const std::st
         case BlockKind::ANALYSIS: break;
     }
     return save.text("analysis/analysis.edi");
+}
+
+Project project_with_file_text(const Project& project, const std::string& relative, const std::string& text,
+                               const SourcedWarningSink& on_warning) {
+    // Every warning of this read goes to the sourced sink (the scratch read takes its folder out of the text).
+    const SourcedWarningsScope scope(&on_warning);
+    return project_with_file_text(project, relative, text, WarningSink{});
 }
 
 Project project_with_file_text(const Project& project, const std::string& relative, const std::string& text,

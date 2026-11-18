@@ -1,0 +1,16 @@
+{
+  "source_commit": "2830f2cc",
+  "files": {
+    "tests/fixtures/e05_t1/cli.json": {
+      "before_sha256": "b3ee41fc6b316a682022ac95b8725944ed80b5fc0227583978571c93feb50aa7",
+      "after_sha256": "5dc460672a76c0703e67ff627fbd064c60395c32ec8486b2ebf487f4a2ea7301"
+    },
+    "tests/fixtures/e05_t1/cli.hpp": {
+      "before_sha256": "1366673db2f5b12489d537e6f10357a381d2768b592e104f63f9116439ddea3e",
+      "after_sha256": "b70a908bd88687f2006995be80c055dbd140a62502fdbac948d4020fb831c76c"
+    }
+  },
+  "native_records": {
+    "tests/fixtures/e05_t1/sc-neut-cwl_tb2ti2o7-heidi_exclusions.record": "daf70f19a9d7c8a9c518b188ddaea6fc0e103a5f753167c0454ef827c5eedb9a"
+  }
+}

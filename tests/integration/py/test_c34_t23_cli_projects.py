@@ -646,13 +646,11 @@ def test_loaded_settings_preserve_value_and_refined_state(project_copy, replacem
     before = module.loaded_settings(project_copy)
     file = project_copy / 'experiments/sepd.edi'
     text = file.read_text()
-    assert '_peak.broad_gauss_sigma_1 5.0(1)' in text, (
+    assert '_peak.broad_gauss_sigma_1 5.0()' in text, (
         ' independent Si seed must have the declared starting parameter'
     )
     file.write_text(
-        text.replace(
-            '_peak.broad_gauss_sigma_1 5.0(1)', f'_peak.broad_gauss_sigma_1 {replacement}'
-        )
+        text.replace('_peak.broad_gauss_sigma_1 5.0()', f'_peak.broad_gauss_sigma_1 {replacement}')
     )
     after = module.loaded_settings(project_copy)
     assert before['broad_gauss_sigma_1'] != after['broad_gauss_sigma_1'], (
@@ -686,7 +684,7 @@ def test_loaded_settings_keep_multiple_occurrences_distinguishable(project_copy,
     selected = first.parent / changed_file
     selected.write_text(
         selected.read_text().replace(
-            '_peak.broad_gauss_sigma_1 5.0(1)',
+            '_peak.broad_gauss_sigma_1 5.0()',
             '_peak.broad_gauss_sigma_1 7.25(1)',
         )
     )

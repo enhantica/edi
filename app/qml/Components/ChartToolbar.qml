@@ -10,8 +10,11 @@ import edi.app
 // zoom, reset (Home, as the structure view's), Home last (owner, 2026-10-05). The y scale drop-down is at the chart's left (PatternChart). The legend
 // and the hover coordinates are on at the start, as there; pan and box zoom exclude each other, and box zoom is on
 // at the start.
-Row {
+Item {
     id: toolbar
+
+    // ToolbarLines takes these buttons into its row, the spacer starting the pointer group.
+    readonly property bool toolbarUnits: true
 
     property bool legendShown: true
     property bool hoverShown: true
@@ -27,21 +30,18 @@ Row {
     property bool backgroundAvailable: false
     // A chart without a legend or excluded regions (the single-crystal chart) leaves those buttons out.
     property bool legendAvailable: true
+    // A chart without a hover read-out (Meas vs calc) leaves its button out.
+    property bool hoverAvailable: true
     property bool includedRangeAvailable: true
-    // A chart of several datasets: the selected one on top and the others faded, before the zoom and Save image
-    // groups, where the scan views have it.
+    // A chart of several datasets: the selected one on top and the others faded, before the zoom group, where the scan
+    // views have it.
     property bool highlightAvailable: false
     property bool highlightShown: false
     property string highlightName: "chart.toolbar.highlight"
-    // Save image's item and file name (SaveImageButton).
-    property Item saveTarget: null
-    property string saveName: "chart"
     signal resetClicked
     signal includedOnlyToggled
     signal subtractBackgroundToggled
     signal highlightToggled
-
-    spacing: AppSizes.toolbarSpacing
 
     ChartToolButton {
         objectName: "chart.toolbar.legend"
@@ -53,6 +53,7 @@ Row {
     }
     ChartToolButton {
         objectName: "chart.toolbar.hover"
+        visible: toolbar.hoverAvailable
         fontIcon: "comment-alt"
         toolTip: qsTr("Show coordinates tooltip on hover")
         checked: toolbar.hoverShown
@@ -114,10 +115,5 @@ Row {
         fontIcon: "home"
         toolTip: qsTr("Reset axes")
         onClicked: toolbar.resetClicked()
-    }
-    SaveImageButton {
-        objectName: "chart.toolbar.save"
-        target: toolbar.saveTarget
-        fileName: toolbar.saveName
     }
 }

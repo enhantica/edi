@@ -1,0 +1,177 @@
+{
+  "source_commit": "af1fc034",
+  "authority": "91facae70",
+  "claim": "Saved default 1000 omitted; current default 50. All other bytes retained.",
+  "files": {
+    "docs/user/cli/pd-neut-cwl_cosio-d20/project/analysis/analysis.edi": {
+      "before_text": "_edi.schema_version 3\n\n_fitting_mode.type single\n\n_minimizer.type crysta\n_minimizer.max_iterations 1000\n_minimizer.descent fast_descent\n\nloop_\n_alias.id\n_alias.parameter_unique_name\nbiso_Co1 cosio.atom_site.Co1.adp_iso\nbiso_Co2 cosio.atom_site.Co2.adp_iso\n\nloop_\n_constraint.id\n_constraint.expression\nbiso_Co2 \"biso_Co2 = biso_Co1\"\n",
+      "before_sha256": "eb25ddb4323f27b49ee37478d30a7910428f4d00a7d0003a744a36f680679ace",
+      "after_sha256": "2b2ad6be99e47e250a53b475c125dfacd5b7f73981a9350f88273511aad48782"
+    },
+    "docs/user/cli/pd-neut-cwl_cosio-d20_2k/project/analysis/analysis.edi": {
+      "before_text": "_edi.schema_version 3\n\n_fitting_mode.type single\n\n_minimizer.type crysta\n_minimizer.max_iterations 1000\n\nloop_\n_alias.id\n_alias.parameter_unique_name\nbiso_Co1 cosio.atom_site.Co1.adp_iso\nbiso_Co2 cosio.atom_site.Co2.adp_iso\nsl d20.peak.asym_fcj_1\ndl d20.peak.asym_fcj_2\n\nloop_\n_constraint.id\n_constraint.expression\nbiso_Co2 \"biso_Co2 = biso_Co1\"\ndl \"dl = sl\"\n",
+      "before_sha256": "fc3edb415512ca536353f603603646ad83eddedd88d50a81019b54e4e165a616",
+      "after_sha256": "ac6dc09c04b367bb0ccdba2ef4dfe86dfacd79da57e48011a6fdb3e3549df691"
+    },
+    "docs/user/cli/pd-neut-cwl_cosio-d20_scan-162f/project/analysis/analysis.edi": {
+      "before_text": "_edi.schema_version 3\n\n_fitting_mode.type sequential\n\n_minimizer.max_iterations 1000\n\nloop_\n_alias.id\n_alias.parameter_unique_name\nbiso_Co1 cosio.atom_site.Co1.adp_iso\nbiso_Co2 cosio.atom_site.Co2.adp_iso\n\nloop_\n_constraint.id\n_constraint.expression\nbiso_Co2 \"biso_Co2 = biso_Co1\"\n\n_sequential_fit.data_dir experiments/d20_scan\n_sequential_fit.file_pattern *.dat\n_sequential_fit.reverse false\n\nloop_\n_sequential_fit_extract.id\n_sequential_fit_extract.target\n_sequential_fit_extract.pattern\n_sequential_fit_extract.required\ntemperature diffrn.ambient_temperature ^TEMP\\s+([0-9.]+) true\n\nloop_\n_joint_fit.experiment_id\n_joint_fit.weight\nd20 1\n\nloop_\n_fit_parameter.id\n_fit_parameter.start_value\n_fit_parameter.start_uncertainty\n_fit_parameter.start_tied\nstructure.cell.length_a 10.335842071204308 0.00030044084585678437 .\nstructure.cell.length_b 6.029694577103228 0.0001744170106834152 .\nstructure.cell.length_c 4.797569862624058 0.0001379223328960389 .\nstructure.Co2.fract_x 0.2819835731463893 0.0008372117226318415 .\nstructure.Co2.fract_z 0.9817650593105958 0.001875156407893872 .\nstructure.Si.fract_x 0.09415503828013828 0.0004742095179167307 .\nstructure.Si.fract_z 0.4297375075460596 0.00096810372451183 .\nstructure.Si.adp_iso 0.6742357984836326 0.07805383919823917 .\nstructure.O1.fract_x 0.09089949522664595 0.0003697276950695686 .\nstructure.O1.fract_z 0.7694131446098301 0.0007860934343670866 .\nstructure.O1.adp_iso 1.0415519277431244 0.07152573061000614 .\nstructure.O2.fract_x 0.4486097685818394 0.0003170150147560758 .\nstructure.O2.fract_z 0.21546514636273176 0.0008322467772771932 .\nstructure.O2.adp_iso 1.0315110084556942 0.07032091938237796 .\nstructure.O3.fract_x 0.1640633280783788 0.0002719390606216129 .\nstructure.O3.fract_y 0.032360685461141306 0.000421084875722922 .\nstructure.O3.fract_z 0.28012188622455775 0.0006093277793214896 .\nstructure.O3.adp_iso 1.2933868187449404 0.06152373079234894 .\nd20.broad_gauss_u 0.23091065335098124 0.00783695876908295 .\nd20.broad_gauss_v -0.5140245672916492 0.01687653105597828 .\nd20.broad_gauss_w 0.37261626098763034 0.010527576747697052 .\nd20.broad_lorentz_y 0.012941642271138643 0.005158706509940048 .\nd20.calib_twotheta_offset 0.2900788119975914 0.0022671137191298996 .\nd20.cosio.scale 1.284514263203893 0.012867984524364669 .\nd20.background.1 631.5218704038302 17.349884785986735 .\nd20.background.2 589.4062195586627 11.555806746565816 .\nd20.background.3 581.8287993082463 11.082767028471528 .\nd20.background.4 561.8485175551413 10.548928170092056 .\nd20.background.5 539.5883919556532 7.240087353326162 .\nd20.background.6 510.5027123793606 4.137448109986615 .\nd20.background.7 472.6691678104612 3.8181051620194197 .\nd20.background.8 461.90857674660697 2.896468267584116 .\nd20.background.9 473.2134522600601 2.6711225288634615 .\nd20.background.10 459.2500595078064 2.435958263947224 .\nd20.background.11 448.65542629218913 2.6324139397994117 .\nd20.background.12 393.4527932419913 2.4312954488905882 .\nd20.background.13 317.9947666398757 2.3446681431239305 .\nd20.background.14 260.91649767806456 3.4593880059384263 .\n",
+      "before_sha256": "0d463ba37e85baf7de2e4c08ac0d596a3756a50edea40b993b3120a9ae0209c6",
+      "after_sha256": "18074f08f5dcb6571f0a881efa29ee4fe866b7fae269d79dcc229cbeea346fd6"
+    },
+    "docs/user/cli/pd-neut-cwl_cosio-d20_scan-213f/project/analysis/analysis.edi": {
+      "before_text": "_edi.schema_version 3\n\n_fitting_mode.type sequential\n\n_minimizer.type crysta\n_minimizer.max_iterations 1000\n_minimizer.descent fast_descent\n\nloop_\n_alias.id\n_alias.parameter_unique_name\nbiso_Co1 cosio.atom_site.Co1.adp_iso\nbiso_Co2 cosio.atom_site.Co2.adp_iso\n\nloop_\n_constraint.id\n_constraint.expression\nbiso_Co2 \"biso_Co2 = biso_Co1\"\n\n_sequential_fit.data_dir experiments/d20_scan\n_sequential_fit.file_pattern *.dat\n_sequential_fit.reverse true\n\nloop_\n_sequential_fit_extract.id\n_sequential_fit_extract.target\n_sequential_fit_extract.pattern\n_sequential_fit_extract.required\ntemperature diffrn.ambient_temperature ^TEMP\\s+([0-9.]+) true\n\nloop_\n_joint_fit.experiment_id\n_joint_fit.weight\nd20 1\n",
+      "before_sha256": "38509b411c3da6e12738df723bf64732d13c1c955a4a5b36ff1d464c3d99c0d8",
+      "after_sha256": "5eea6588174ffef4e4c86993ee4e8e0918496339f720e0c003d08dee4d950124"
+    },
+    "docs/user/cli/pd-neut-cwl_cosio-d20_scan-324f/project/analysis/analysis.edi": {
+      "before_text": "_edi.schema_version 3\n\n_fitting_mode.type sequential\n\n_minimizer.max_iterations 1000\n\nloop_\n_alias.id\n_alias.parameter_unique_name\nbiso_Co1 cosio.atom_site.Co1.adp_iso\nbiso_Co2 cosio.atom_site.Co2.adp_iso\n\nloop_\n_constraint.id\n_constraint.expression\nbiso_Co2 \"biso_Co2 = biso_Co1\"\n\n_sequential_fit.data_dir experiments/d20_scan\n_sequential_fit.file_pattern *.dat\n_sequential_fit.reverse false\n\nloop_\n_sequential_fit_extract.id\n_sequential_fit_extract.target\n_sequential_fit_extract.pattern\n_sequential_fit_extract.required\ntemperature diffrn.ambient_temperature ^TEMP\\s+([0-9.]+) true\n\nloop_\n_joint_fit.experiment_id\n_joint_fit.weight\nd20 1\n\nloop_\n_fit_parameter.id\n_fit_parameter.start_value\n_fit_parameter.start_uncertainty\n_fit_parameter.start_tied\nstructure.cell.length_a 10.335842071204308 0.00030044084585678437 .\nstructure.cell.length_b 6.029694577103228 0.0001744170106834152 .\nstructure.cell.length_c 4.797569862624058 0.0001379223328960389 .\nstructure.Co2.fract_x 0.2819835731463893 0.0008372117226318415 .\nstructure.Co2.fract_z 0.9817650593105958 0.001875156407893872 .\nstructure.Si.fract_x 0.09415503828013828 0.0004742095179167307 .\nstructure.Si.fract_z 0.4297375075460596 0.00096810372451183 .\nstructure.Si.adp_iso 0.6742357984836326 0.07805383919823917 .\nstructure.O1.fract_x 0.09089949522664595 0.0003697276950695686 .\nstructure.O1.fract_z 0.7694131446098301 0.0007860934343670866 .\nstructure.O1.adp_iso 1.0415519277431244 0.07152573061000614 .\nstructure.O2.fract_x 0.4486097685818394 0.0003170150147560758 .\nstructure.O2.fract_z 0.21546514636273176 0.0008322467772771932 .\nstructure.O2.adp_iso 1.0315110084556942 0.07032091938237796 .\nstructure.O3.fract_x 0.1640633280783788 0.0002719390606216129 .\nstructure.O3.fract_y 0.032360685461141306 0.000421084875722922 .\nstructure.O3.fract_z 0.28012188622455775 0.0006093277793214896 .\nstructure.O3.adp_iso 1.2933868187449404 0.06152373079234894 .\nd20.broad_gauss_u 0.23091065335098124 0.00783695876908295 .\nd20.broad_gauss_v -0.5140245672916492 0.01687653105597828 .\nd20.broad_gauss_w 0.37261626098763034 0.010527576747697052 .\nd20.broad_lorentz_y 0.012941642271138643 0.005158706509940048 .\nd20.calib_twotheta_offset 0.2900788119975914 0.0022671137191298996 .\nd20.cosio.scale 1.284514263203893 0.012867984524364669 .\nd20.background.1 631.5218704038302 17.349884785986735 .\nd20.background.2 589.4062195586627 11.555806746565816 .\nd20.background.3 581.8287993082463 11.082767028471528 .\nd20.background.4 561.8485175551413 10.548928170092056 .\nd20.background.5 539.5883919556532 7.240087353326162 .\nd20.background.6 510.5027123793606 4.137448109986615 .\nd20.background.7 472.6691678104612 3.8181051620194197 .\nd20.background.8 461.90857674660697 2.896468267584116 .\nd20.background.9 473.2134522600601 2.6711225288634615 .\nd20.background.10 459.2500595078064 2.435958263947224 .\nd20.background.11 448.65542629218913 2.6324139397994117 .\nd20.background.12 393.4527932419913 2.4312954488905882 .\nd20.background.13 317.9947666398757 2.3446681431239305 .\nd20.background.14 260.91649767806456 3.4593880059384263 .\n",
+      "before_sha256": "0d463ba37e85baf7de2e4c08ac0d596a3756a50edea40b993b3120a9ae0209c6",
+      "after_sha256": "18074f08f5dcb6571f0a881efa29ee4fe866b7fae269d79dcc229cbeea346fd6"
+    },
+    "docs/user/cli/pd-neut-cwl_cosio-d20_scan-3f/project/analysis/analysis.edi": {
+      "before_text": "_edi.schema_version 2\n\n_fitting_mode.type sequential\n\n_minimizer.type \"crysta (lm)\"\n_minimizer.max_iterations 1000\n_minimizer.descent fast_descent\n_minimizer.chi_square_tolerance 1e-4\n\nloop_\n_alias.id\n_alias.parameter_unique_name\nbiso_Co1 cosio.atom_site.Co1.adp_iso\nbiso_Co2 cosio.atom_site.Co2.adp_iso\n\nloop_\n_constraint.id\n_constraint.expression\nbiso_Co2 \"biso_Co2 = biso_Co1\"\n\n_sequential_fit.data_dir experiments/d20_scan\n_sequential_fit.file_pattern *.dat\n_sequential_fit.reverse false\n\nloop_\n_sequential_fit_extract.id\n_sequential_fit_extract.target\n_sequential_fit_extract.pattern\n_sequential_fit_extract.required\ntemperature diffrn.ambient_temperature ^TEMP\\s+([0-9.]+) true\n",
+      "before_sha256": "fde9a40134aaf6794cde3e396a01067e1018d78871c394d4646c95052416f726",
+      "after_sha256": "f1f430ddd9f2c807d7690f716efe913f331370d0d1ca4158fea7c75bde5d98fa"
+    },
+    "docs/user/cli/pd-neut-cwl_cosio-d20_scan/project/analysis/analysis.edi": {
+      "before_text": "_edi.schema_version 3\n\n_fitting_mode.type sequential\n\n_minimizer.type crysta\n_minimizer.max_iterations 1000\n\nloop_\n_alias.id\n_alias.parameter_unique_name\nbiso_Co1 cosio.atom_site.Co1.adp_iso\nbiso_Co2 cosio.atom_site.Co2.adp_iso\n\nloop_\n_constraint.id\n_constraint.expression\nbiso_Co2 \"biso_Co2 = biso_Co1\"\n\n_sequential_fit.data_dir experiments/d20_scan\n_sequential_fit.file_pattern *.dat\n_sequential_fit.reverse false\n_sequential_fit.template_file 01_001_497p3790.dat\n\nloop_\n_sequential_fit_extract.id\n_sequential_fit_extract.target\n_sequential_fit_extract.pattern\n_sequential_fit_extract.required\ntemperature diffrn.ambient_temperature ^TEMP\\s+([0-9.]+) true\n",
+      "before_sha256": "f3be9aaf7a450a964908736076414946c1dbe77087030fe2cb632d679f5e362b",
+      "after_sha256": "3f4c0ec82a4c426232929819439d43752bd5ede20cfe4224705e17787f96c9f9"
+    },
+    "docs/user/cli/pd-neut-cwl_cosio-d20_start-1/project/analysis/analysis.edi": {
+      "before_text": "_edi.schema_version 2\n\n_fitting_mode.type single\n\n_minimizer.type crysta\n_minimizer.max_iterations 1000\n",
+      "before_sha256": "06acc049b2fdfd16e06af5c03634f364d62a2819d2bb2b0ea456cd4b79ba5061",
+      "after_sha256": "af3fb388e35b2942c301f07aaa0d91d9eb2245af7bd40a7d0e98ff58cfc577e0"
+    },
+    "docs/user/cli/pd-neut-cwl_cosio-d20_start-4/project/analysis/analysis.edi": {
+      "before_text": "_edi.schema_version 2\n\n_fitting_mode.type single\n\n_minimizer.type crysta\n_minimizer.max_iterations 1000\n",
+      "before_sha256": "06acc049b2fdfd16e06af5c03634f364d62a2819d2bb2b0ea456cd4b79ba5061",
+      "after_sha256": "af3fb388e35b2942c301f07aaa0d91d9eb2245af7bd40a7d0e98ff58cfc577e0"
+    },
+    "docs/user/cli/pd-neut-cwl_hs-hrpt/project/analysis/analysis.edi": {
+      "before_text": "_edi.schema_version 3\n\n_fitting_mode.type single\n\n_minimizer.type crysta\n_minimizer.max_iterations 1000\n",
+      "before_sha256": "7d828f50cfa11d9e21c6493d25e287388293d6b0de36760c45f1eca6c8a3d84e",
+      "after_sha256": "1e59c0da22d1a5246a031013c7dc61ac906ee4aa6c1cc4c72b321be27c9480d3"
+    },
+    "docs/user/cli/pd-neut-cwl_lab6-11b-echidna_basic/project/analysis/analysis.edi": {
+      "before_text": "_edi.schema_version 3\n\n_fitting_mode.type single\n\n_minimizer.type crysta\n_minimizer.max_iterations 1000\n",
+      "before_sha256": "7d828f50cfa11d9e21c6493d25e287388293d6b0de36760c45f1eca6c8a3d84e",
+      "after_sha256": "1e59c0da22d1a5246a031013c7dc61ac906ee4aa6c1cc4c72b321be27c9480d3"
+    },
+    "docs/user/cli/pd-neut-cwl_lab6-11b-echidna_tch-fcj/project/analysis/analysis.edi": {
+      "before_text": "_edi.schema_version 3\n\n_fitting_mode.type single\n\n_minimizer.type crysta\n_minimizer.max_iterations 1000\n_minimizer.chi_square_tolerance 1e-4\n",
+      "before_sha256": "603772c6d4c286e53eb8554e6d2be4843c8f560cb942fec808bb8ca138eb993f",
+      "after_sha256": "06def35cf49a1ba99521bb1ec97302ee77027d306bdae3085f03090bb359f2cc"
+    },
+    "docs/user/cli/pd-neut-cwl_lbco-hrpt/project/analysis/analysis.edi": {
+      "before_text": "_edi.schema_version 3\n\n_fitting_mode.type single\n\n_minimizer.type crysta\n_minimizer.max_iterations 1000\n\nloop_\n_alias.id\n_alias.parameter_unique_name\nbiso_La lbco.atom_site.La.adp_iso\nbiso_Ba lbco.atom_site.Ba.adp_iso\n\nloop_\n_constraint.id\n_constraint.expression\nbiso_Ba \"biso_Ba = biso_La\"\n",
+      "before_sha256": "a4d2395b2606f9ba4730de91f87aa0cb92167c5b5d0680c0a8d8bb32f5dd8959",
+      "after_sha256": "ae205ba68be6b6b68ba2350d8b4ca0f931ed5f7a228ab4186be120f55de7899c"
+    },
+    "docs/user/cli/pd-neut-cwl_lbco-hrpt_start-2/project/analysis/analysis.edi": {
+      "before_text": "_edi.schema_version 2\n\n_fitting_mode.type single\n\n_minimizer.type crysta\n_minimizer.max_iterations 1000\n",
+      "before_sha256": "06acc049b2fdfd16e06af5c03634f364d62a2819d2bb2b0ea456cd4b79ba5061",
+      "after_sha256": "af3fb388e35b2942c301f07aaa0d91d9eb2245af7bd40a7d0e98ff58cfc577e0"
+    },
+    "docs/user/cli/pd-neut-cwl_lbco-hrpt_start-4/project/analysis/analysis.edi": {
+      "before_text": "_edi.schema_version 2\n\n_fitting_mode.type single\n\n_minimizer.type crysta\n_minimizer.max_iterations 1000\n",
+      "before_sha256": "06acc049b2fdfd16e06af5c03634f364d62a2819d2bb2b0ea456cd4b79ba5061",
+      "after_sha256": "af3fb388e35b2942c301f07aaa0d91d9eb2245af7bd40a7d0e98ff58cfc577e0"
+    },
+    "docs/user/cli/pd-neut-cwl_lmo-echidna/project/analysis/analysis.edi": {
+      "before_text": "_edi.schema_version 3\n\n_fitting_mode.type single\n\n_minimizer.type crysta\n_minimizer.max_iterations 1000\n\nloop_\n_alias.id\n_alias.parameter_unique_name\nbiso_Li1 lmo.atom_site.Li1.adp_iso\nbiso_Li2 lmo.atom_site.Li2.adp_iso\nbiso_Ni1 lmo.atom_site.Ni1.adp_iso\nbiso_Ni2 lmo.atom_site.Ni2.adp_iso\nocc_Li1 lmo.atom_site.Li1.occupancy\nocc_Li2 lmo.atom_site.Li2.occupancy\nocc_Ni1 lmo.atom_site.Ni1.occupancy\nocc_Ni2 lmo.atom_site.Ni2.occupancy\n\nloop_\n_constraint.id\n_constraint.expression\n1 \"biso_Ni1 = biso_Li1\"\n2 \"biso_Li2 = biso_Ni2\"\n3 \"occ_Ni1 = 1 - occ_Li1\"\n4 \"occ_Li2 = 1 - occ_Li1\"\n5 \"occ_Ni2 = occ_Li1\"\n",
+      "before_sha256": "15de9a58c3c93c2e535daeeefe2973c5ea43b7e6a2e389c356d82b4fa9a058a3",
+      "after_sha256": "e6fbce57e84f8a39a277c436f175cb2a7c55cfbc5ed51c37a2cba8f67f26ab14"
+    },
+    "docs/user/cli/pd-neut-cwl_y2o3-spodi/project/analysis/analysis.edi": {
+      "before_text": "_edi.schema_version 3\n\n_fitting_mode.type single\n\n_minimizer.type crysta\n_minimizer.max_iterations 1000\n",
+      "before_sha256": "7d828f50cfa11d9e21c6493d25e287388293d6b0de36760c45f1eca6c8a3d84e",
+      "after_sha256": "1e59c0da22d1a5246a031013c7dc61ac906ee4aa6c1cc4c72b321be27c9480d3"
+    },
+    "docs/user/cli/pd-neut-cwl_yalo3-al2o3-spodi/project/analysis/analysis.edi": {
+      "before_text": "_edi.schema_version 3\n\n_fitting_mode.type single\n\n_minimizer.type crysta\n_minimizer.max_iterations 1000\n_minimizer.stop_rules \"chi_square_change\"\n",
+      "before_sha256": "50e933e87bb7733868748977a43db89b906e76cb55fde4dfbbdb0acec9975b26",
+      "after_sha256": "c72a7f1ca29e180136e808c734ac7c7ab939839057075e9dabc1e348f330dd65"
+    },
+    "docs/user/cli/pd-neut-tof_cecoal-polaris/project/analysis/analysis.edi": {
+      "before_text": "_edi.schema_version 3\n\n_fitting_mode.type single\n\n_minimizer.type crysta\n_minimizer.max_iterations 1000\n_minimizer.chi_square_tolerance 1e-4\n",
+      "before_sha256": "603772c6d4c286e53eb8554e6d2be4843c8f560cb942fec808bb8ca138eb993f",
+      "after_sha256": "06def35cf49a1ba99521bb1ec97302ee77027d306bdae3085f03090bb359f2cc"
+    },
+    "docs/user/cli/pd-neut-tof_cecoal-polaris_chebyshev/project/analysis/analysis.edi": {
+      "before_text": "_edi.schema_version 3\n\n_fitting_mode.type single\n\n_minimizer.type crysta\n_minimizer.max_iterations 1000\n_minimizer.chi_square_tolerance 1e-4\n",
+      "before_sha256": "603772c6d4c286e53eb8554e6d2be4843c8f560cb942fec808bb8ca138eb993f",
+      "after_sha256": "06def35cf49a1ba99521bb1ec97302ee77027d306bdae3085f03090bb359f2cc"
+    },
+    "docs/user/cli/pd-neut-tof_ceo2-pearl/project/analysis/analysis.edi": {
+      "before_text": "_edi.schema_version 3\n\n_fitting_mode.type single\n\n_minimizer.type crysta\n_minimizer.max_iterations 1000\n_minimizer.chi_square_tolerance 1e-4\n",
+      "before_sha256": "603772c6d4c286e53eb8554e6d2be4843c8f560cb942fec808bb8ca138eb993f",
+      "after_sha256": "06def35cf49a1ba99521bb1ec97302ee77027d306bdae3085f03090bb359f2cc"
+    },
+    "docs/user/cli/pd-neut-tof_ceo2-pearl_polynomial/project/analysis/analysis.edi": {
+      "before_text": "_edi.schema_version 3\n\n_fitting_mode.type single\n\n_minimizer.type crysta\n_minimizer.max_iterations 1000\n_minimizer.chi_square_tolerance 1e-4\n",
+      "before_sha256": "603772c6d4c286e53eb8554e6d2be4843c8f560cb942fec808bb8ca138eb993f",
+      "after_sha256": "06def35cf49a1ba99521bb1ec97302ee77027d306bdae3085f03090bb359f2cc"
+    },
+    "docs/user/cli/pd-neut-tof_diamond-dream_mcstas/project/analysis/analysis.edi": {
+      "before_text": "_edi.schema_version 3\n\n_fitting_mode.type single\n\n_minimizer.type crysta\n_minimizer.max_iterations 1000\n",
+      "before_sha256": "7d828f50cfa11d9e21c6493d25e287388293d6b0de36760c45f1eca6c8a3d84e",
+      "after_sha256": "1e59c0da22d1a5246a031013c7dc61ac906ee4aa6c1cc4c72b321be27c9480d3"
+    },
+    "docs/user/cli/pd-neut-tof_ferrite-austenite-beer/project/analysis/analysis.edi": {
+      "before_text": "_edi.schema_version 3\n\n_fitting_mode.type joint\n\n_minimizer.type crysta\n_minimizer.max_iterations 1000\n\nloop_\n_joint_fit.experiment_id\n_joint_fit.weight\nexpt_s2 0.5\nexpt_n2 0.5\n\nloop_\n_alias.id\n_alias.parameter_unique_name\nbiso_ferrite ferrite.atom_site.Fe.adp_iso\nbiso_austenite austenite.atom_site.Fe.adp_iso\ns2_ferrite_scale expt_s2.linked_structure.ferrite.scale\ns2_austenite_scale expt_s2.linked_structure.austenite.scale\nn2_ferrite_scale expt_n2.linked_structure.ferrite.scale\nn2_austenite_scale expt_n2.linked_structure.austenite.scale\n\nloop_\n_constraint.id\n_constraint.expression\n1 \"biso_austenite = biso_ferrite\"\n2 \"n2_ferrite_scale = s2_ferrite_scale\"\n3 \"n2_austenite_scale = s2_austenite_scale\"\n",
+      "before_sha256": "1c24e1088d024dfe9edfd8784920133ad4476690edf8d925284411ef3c65700b",
+      "after_sha256": "a57e9cbd6f004250b5afcf93c012a03268f0371414110f76f5f2047980f39aa8"
+    },
+    "docs/user/cli/pd-neut-tof_ferrite-austenite-beer_joint/project/analysis/analysis.edi": {
+      "before_text": "_edi.schema_version 3\n\n_fitting_mode.type joint\n\n_minimizer.type \"lmfit (leastsq)\"\n_minimizer.max_iterations 1000\n_minimizer.chi_square_tolerance 1e-8\n\nloop_\n_joint_fit.experiment_id\n_joint_fit.weight\nexpt_s2 0.5\nexpt_n2 0.5\n\nloop_\n_alias.id\n_alias.parameter_unique_name\nbiso_ferrite ferrite.atom_site.Fe.adp_iso\nbiso_austenite austenite.atom_site.Fe.adp_iso\n\nloop_\n_constraint.expression\n\"biso_austenite = biso_ferrite\"\n",
+      "before_sha256": "e228e179bbb95062d1646300ac68b92cbc0692d9b34a436ed944ef97cdd3df07",
+      "after_sha256": "fe0f4ed29caf0ea9c0d4fbd171b0085a67d92466fdab194289c0b372b473633a"
+    },
+    "docs/user/cli/pd-neut-tof_lbco-si-mcstas/project/analysis/analysis.edi": {
+      "before_text": "_edi.schema_version 3\n\n_fitting_mode.type single\n\n_minimizer.type crysta\n_minimizer.max_iterations 1000\n",
+      "before_sha256": "7d828f50cfa11d9e21c6493d25e287388293d6b0de36760c45f1eca6c8a3d84e",
+      "after_sha256": "1e59c0da22d1a5246a031013c7dc61ac906ee4aa6c1cc4c72b321be27c9480d3"
+    },
+    "docs/user/cli/pd-neut-tof_ncaf-wish-2bank_start-3/project/analysis/analysis.edi": {
+      "before_text": "_edi.schema_version 2\n\n_fitting_mode.type joint\n\n_minimizer.type crysta\n_minimizer.max_iterations 1000\n_minimizer.chi_square_tolerance 1e-4\n\nloop_\n_joint_fit.experiment_id\n_joint_fit.weight\nwish_4_7 1.0\nwish_5_6 1.0\n",
+      "before_sha256": "362967ebcac29cd81a538ba27f01b70d61eb04bfcbf8d2de0ba4e13bb271e428",
+      "after_sha256": "7378daba782ef8172c177c60ff6827610f75eaff7eadf4fa16fb71649c8f0302"
+    },
+    "docs/user/cli/pd-neut-tof_ncaf-wish/project/analysis/analysis.edi": {
+      "before_text": "_edi.schema_version 3\n\n_fitting_mode.type joint\n\n_minimizer.type crysta\n_minimizer.max_iterations 1000\n_minimizer.chi_square_tolerance 1e-4\n\nloop_\n_joint_fit.experiment_id\n_joint_fit.weight\nwish_5_6 1.0\nwish_4_7 1.0\nwish_3_8 1.0\nwish_2_9 1.0\nwish_1_10 1.0\n",
+      "before_sha256": "7c81ec972ad81fe5eae0e540805e3a5d28cf10f9c88cd1d6dc8eaff82a0a40b5",
+      "after_sha256": "d537ab3711a30d287dc5962264565b616e7a2f6de98c390fabc980bd44abe964"
+    },
+    "docs/user/cli/pd-neut-tof_si-sepd/project/analysis/analysis.edi": {
+      "before_text": "_edi.schema_version 3\n\n_fitting_mode.type single\n\n_minimizer.type crysta\n_minimizer.max_iterations 1000\n",
+      "before_sha256": "7d828f50cfa11d9e21c6493d25e287388293d6b0de36760c45f1eca6c8a3d84e",
+      "after_sha256": "1e59c0da22d1a5246a031013c7dc61ac906ee4aa6c1cc4c72b321be27c9480d3"
+    },
+    "docs/user/cli/pd-neut-tof_si-sepd_start-2/project/analysis/analysis.edi": {
+      "before_text": "_edi.schema_version 2\n\n_fitting_mode.type single\n\n_minimizer.type crysta\n_minimizer.max_iterations 1000\n_minimizer.chi_square_tolerance 1e-4\n",
+      "before_sha256": "9f58295877950335b95efa1716755b1247203d5be0475d9520960a0584d2b17f",
+      "after_sha256": "f53a501482815258866a4aa640e646bf349099127bb96048a13922f2dacd622a"
+    },
+    "docs/user/cli/pd-neut-tof_si-sepd_start-5/project/analysis/analysis.edi": {
+      "before_text": "_edi.schema_version 2\n\n_fitting_mode.type single\n\n_minimizer.type crysta\n_minimizer.max_iterations 1000\n_minimizer.chi_square_tolerance 1e-4\n",
+      "before_sha256": "9f58295877950335b95efa1716755b1247203d5be0475d9520960a0584d2b17f",
+      "after_sha256": "f53a501482815258866a4aa640e646bf349099127bb96048a13922f2dacd622a"
+    },
+    "docs/user/cli/pd-neut-xray-cwl_pbso4-d1a-lab/project/analysis/analysis.edi": {
+      "before_text": "_edi.schema_version 3\n\n_fitting_mode.type joint\n\n_minimizer.type crysta\n_minimizer.max_iterations 1000\n\nloop_\n_joint_fit.experiment_id\n_joint_fit.weight\nd1a 0.5\nlab 0.5\n",
+      "before_sha256": "17f359c213950f1f635d83d1a22a465491101031b51a0e79e72297d5d7e58d4e",
+      "after_sha256": "1ed6e2030a4ddc80cba00a285e2d701b6097e51e4b1544edb823f23b9e29418b"
+    },
+    "docs/user/cli/pd-xray-cwl_lam7o3-p021/project/analysis/analysis.edi": {
+      "before_text": "_edi.schema_version 3\n\n_fitting_mode.type single\n\n_minimizer.type crysta\n_minimizer.max_iterations 1000\n_minimizer.descent fast_descent\n\nloop_\n_alias.id\n_alias.parameter_unique_name\nbiso_Ti lam7o3.atom_site.Ti.adp_iso\nbiso_Cr lam7o3.atom_site.Cr.adp_iso\nbiso_Mn lam7o3.atom_site.Mn.adp_iso\nbiso_Fe lam7o3.atom_site.Fe.adp_iso\nbiso_Co lam7o3.atom_site.Co.adp_iso\nbiso_Ni lam7o3.atom_site.Ni.adp_iso\nbiso_Cu lam7o3.atom_site.Cu.adp_iso\nbiso_O1 lam7o3.atom_site.O1.adp_iso\nbiso_O2 lam7o3.atom_site.O2.adp_iso\n\nloop_\n_constraint.id\n_constraint.expression\n1 \"biso_Cr = biso_Ti\"\n2 \"biso_Mn = biso_Ti\"\n3 \"biso_Fe = biso_Ti\"\n4 \"biso_Co = biso_Ti\"\n5 \"biso_Ni = biso_Ti\"\n6 \"biso_Cu = biso_Ti\"\n7 \"biso_O2 = biso_O1\"\n",
+      "before_sha256": "487e082c579f3bbc602f285738f6169844c7413774acc1d9b1df60030054bd36",
+      "after_sha256": "0b4d006ced295d6e44f8c24d69cd88567b2df3a940f5f66b8c0ee00a19e144fc"
+    },
+    "docs/user/cli/pd-xray-cwl_pbso4-lab/project/analysis/analysis.edi": {
+      "before_text": "_edi.schema_version 3\n\n_fitting_mode.type single\n\n_minimizer.type crysta\n_minimizer.max_iterations 1000\n",
+      "before_sha256": "7d828f50cfa11d9e21c6493d25e287388293d6b0de36760c45f1eca6c8a3d84e",
+      "after_sha256": "1e59c0da22d1a5246a031013c7dc61ac906ee4aa6c1cc4c72b321be27c9480d3"
+    }
+  }
+}

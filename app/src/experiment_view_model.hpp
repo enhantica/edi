@@ -7,7 +7,9 @@
 #include <QSet>
 #include <QtNumeric>
 #include <QString>
+#include <QStringList>
 #include <QtQml/qqmlregistration.h>
+#include <array>
 #include <cstdint>
 #include <optional>
 #include <vector>
@@ -27,6 +29,35 @@ namespace edi_app {
 
 class ParameterRegistry;
 class ProjectEditor;
+
+// Which of a single crystal's reflections the fit uses, as crysta's admission counts them: `available` is false
+// without measured reflections; Rint and R-sigma are NaN when undefined.
+struct ReflectionAdmissionSummary {
+    Q_GADGET
+    QML_VALUE_TYPE(reflectionAdmissionSummary)
+    Q_PROPERTY(bool available MEMBER available CONSTANT)
+    Q_PROPERTY(int measured MEMBER measured CONSTANT)
+    Q_PROPERTY(int unique MEMBER unique CONSTANT)
+    Q_PROPERTY(int used MEMBER used CONSTANT)
+    Q_PROPERTY(int excluded MEMBER excluded CONSTANT)
+    Q_PROPERTY(int absent MEMBER absent CONSTANT)
+    Q_PROPERTY(double rInt MEMBER rInt CONSTANT)
+    Q_PROPERTY(double rSigma MEMBER rSigma CONSTANT)
+    Q_PROPERTY(double absentMeanIOverSigma MEMBER absentMeanIOverSigma CONSTANT)
+
+   public:
+    bool available = false;
+    int measured = 0, unique = 0, used = 0, excluded = 0, absent = 0;
+    double rInt = qQNaN(), rSigma = qQNaN(), absentMeanIOverSigma = 0.0;
+    // NaN, an undefined factor, equals NaN here, so an unchanged admission is no change.
+    bool operator==(const ReflectionAdmissionSummary& other) const {
+        const auto same = [](double a, double b) { return a == b || (qIsNaN(a) && qIsNaN(b)); };
+        return available == other.available && measured == other.measured && unique == other.unique &&
+               used == other.used && excluded == other.excluded && absent == other.absent &&
+               same(rInt, other.rInt) && same(rSigma, other.rSigma) &&
+               same(absentMeanIOverSigma, other.absentMeanIOverSigma);
+    }
+};
 
 // One experiment of the project. The four type axes are read-only; the selectors offer the
 // core's supported set for the type and write through the D11 core functions; everything the
@@ -85,6 +116,17 @@ class ExperimentViewModel : public QObject {
     Q_PROPERTY(edi_app::OptionListModel* reflnsThresholdBasisOptions READ reflnsThresholdBasisOptions CONSTANT)
     Q_PROPERTY(QString reflnsThresholdExpression READ reflnsThresholdExpression NOTIFY
                    reflnsThresholdExpressionChanged)
+    // Which of a single crystal's reflections a fit uses: the merge mode and the absences setting (empty until set;
+    // none and include by default), the admission's counts and agreement (`measured`, `unique`, `used`, `excluded`,
+    // `absent`, `rInt` and `rSigma`, NaN when undefined, `absentMeanIOverSigma`), and per measured reflection its
+    // `_refln.include_status` code (o, x, -, <); empty without measured reflections.
+    Q_PROPERTY(QString reflnsMerge READ reflnsMerge WRITE setReflnsMerge NOTIFY reflnsMergeChanged)
+    Q_PROPERTY(edi_app::OptionListModel* reflnsMergeOptions READ reflnsMergeOptions CONSTANT)
+    Q_PROPERTY(QString reflnsAbsences READ reflnsAbsences WRITE setReflnsAbsences NOTIFY reflnsAbsencesChanged)
+    Q_PROPERTY(edi_app::OptionListModel* reflnsAbsencesOptions READ reflnsAbsencesOptions CONSTANT)
+    Q_PROPERTY(edi_app::OptionListModel* excludedRegionAxisOptions READ excludedRegionAxisOptions CONSTANT)
+    Q_PROPERTY(edi_app::ReflectionAdmissionSummary reflectionAdmission READ reflectionAdmission NOTIFY reflectionAdmissionChanged)
+    Q_PROPERTY(QStringList reflectionStatuses READ reflectionStatuses NOTIFY reflectionStatusesChanged)
     // The background model; another type replaces the background (edi::select_background_type).
     Q_PROPERTY(QString backgroundType READ backgroundType WRITE setBackgroundType NOTIFY backgroundTypeChanged)
     // The polynomial's origin and the Chebyshev domain's ends; NaN when the type has none.
@@ -167,7 +209,7 @@ class ExperimentViewModel : public QObject {
     enum ScatteringType { Bragg, Total };
     Q_ENUM(ScatteringType)
 
-    ExperimentViewModel(SavedFile saved, edi::Project& project, edi::ExperimentBase& experiment,
+    ExperimentViewModel(const SavedFile& saved, edi::Project& project, edi::ExperimentBase& experiment,
                         ProjectEditor& editor, ParameterRegistry& registry, QObject* parent);
 
     QString name() const { return name_; }
@@ -176,6 +218,11 @@ class ExperimentViewModel : public QObject {
     // The calculation grid of an experiment without measured data (edi::Edit::data_range): its start,
     // end and step; refused, with `lastError`, for one with data.
     Q_INVOKABLE void setRange(double start, double end, double step);
+    // A powder's measured against calculated intensity, one point per data point with both finite (the Meas vs calc
+    // chart, the owner, 2026-11-16): `calc`, `meas` and `su` lists of one length, and `low` and `high`, the range both
+    // axes share; empty lists before a calculation. `scale` as the pattern chart's y scale: 0 linear, 1 square root,
+    // 2 log; a point the scale cannot draw (a negative value, or zero on log) is left out.
+    Q_INVOKABLE QVariantMap measCalcPoints(int scale = 0) const;
     void setName(const QString& name);
     SampleForm sampleForm() const;
     BeamMode beamMode() const;
@@ -221,6 +268,17 @@ class ExperimentViewModel : public QObject {
     void setReflnsThresholdBasis(const QString& token);
     OptionListModel* reflnsThresholdBasisOptions() const { return reflns_threshold_basis_options_; }
     QString reflnsThresholdExpression() const { return reflns_threshold_expression_; }
+    QString reflnsMerge() const { return reflns_merge_; }
+    void setReflnsMerge(const QString& token);
+    OptionListModel* reflnsMergeOptions() const { return reflns_merge_options_; }
+    QString reflnsAbsences() const { return reflns_absences_; }
+    void setReflnsAbsences(const QString& token);
+    OptionListModel* reflnsAbsencesOptions() const { return reflns_absences_options_; }
+    OptionListModel* excludedRegionAxisOptions() const { return excluded_region_axis_options_; }
+    ReflectionAdmissionSummary reflectionAdmission() const { return reflection_admission_; }
+    QStringList reflectionStatuses() const { return reflection_statuses_; }
+    // A single crystal's reflection left out of the fit by its indices, or put back (one undo step).
+    Q_INVOKABLE void toggleExcludedReflection(int h, int k, int l);
     QString backgroundType() const { return background_type_; }
     void setBackgroundType(const QString& token);
     double backgroundOrigin() const { return background_origin_; }
@@ -293,8 +351,24 @@ class ExperimentViewModel : public QObject {
     // The experiment's pattern as the chart draws it (edi ADR-0021 §1): immutable buffers, captured when
     // a calculation is published and when the experiment is first shown. On the d axis it is the d-spacing capture,
     // kept while a chart is on d; until there is one, the pattern on the experiment's own axis.
+    // A single crystal's reflections as a pattern on Q or sinθ/λ, F² or F (edi::single_crystal_pattern), made again when
+    // first asked for after the pattern changes.
+    const edi::PatternSource& singleCrystalPattern(edi::PatternAxis axis, bool squared) const;
+    // The pattern on `axis`: Q and sinθ/λ are converted from the d capture when first asked for after it changes.
     const edi::PatternSource& patternSource(edi::PatternAxis axis = edi::PatternAxis::Native) const {
-        return axis == edi::PatternAxis::DSpacing && d_source_ ? *d_source_ : pattern_source_;
+        if (axis == edi::PatternAxis::Native || !d_source_) {
+            return pattern_source_;
+        }
+        if (axis == edi::PatternAxis::DSpacing) {
+            return *d_source_;
+        }
+        DerivedSource& derived = derived_[axis == edi::PatternAxis::Q ? 0 : 1];
+        if (!derived.source || derived.revision != d_revision_ || derived.place != d_source_->experiment_place) {
+            derived.source = edi::pattern_on_axis(*d_source_, axis);
+            derived.revision = d_revision_;
+            derived.place = d_source_->experiment_place;
+        }
+        return *derived.source;
     }
     void capturePattern(bool categories = true);
     // The sidebar's categories as the experiment holds them now (edi::experiment_categories).
@@ -337,11 +411,14 @@ class ExperimentViewModel : public QObject {
     // the window shows): a followed scan file counts as drawn only while one is (edi ADR-0029).
     bool patternShown() const { return !shown_charts_.isEmpty(); }
     void setChartShown(const QObject* chart, bool shown);
+    // For a QML chart without a controller (Meas vs calc): a shown chart keeps a running fit publishing patterns.
+    Q_INVOKABLE void showChart(QObject* chart, bool shown) { setChartShown(chart, shown); }
     // Each new pattern source has the next generation; a shown chart notes the one it drew, so a followed file's
     // receipt can tell that its own pattern reached the screen.
     std::uint64_t patternGeneration() const { return pattern_generation_; }
     std::uint64_t presentedGeneration() const { return presented_generation_; }
-    void notePresented() { presented_generation_ = pattern_generation_; }
+    // A chart drew the current pattern (the Meas vs calc chart calls it from QML), so a followed fit moves on.
+    Q_INVOKABLE void notePresented() { presented_generation_ = pattern_generation_; }
     BlockText* text() const { return text_; }
     QString lastError() const { return last_error_; }
 
@@ -370,6 +447,10 @@ class ExperimentViewModel : public QObject {
     void reflnsThresholdSigmaChanged();
     void reflnsThresholdBasisChanged();
     void reflnsThresholdExpressionChanged();
+    void reflnsMergeChanged();
+    void reflnsAbsencesChanged();
+    void reflectionAdmissionChanged();
+    void reflectionStatusesChanged();
     void backgroundTypeChanged();
     void backgroundEstimateModeChanged();
     void backgroundEstimateMethodChanged();
@@ -447,6 +528,13 @@ class ExperimentViewModel : public QObject {
     OptionListModel* reflns_threshold_basis_options_;
     double reflns_threshold_sigma_ = qQNaN();
     QString reflns_threshold_basis_, reflns_threshold_expression_;
+    OptionListModel* reflns_merge_options_;
+    OptionListModel* reflns_absences_options_;
+    OptionListModel* excluded_region_axis_options_;
+    QString reflns_merge_, reflns_absences_;
+    ReflectionAdmissionSummary reflection_admission_;
+    QStringList reflection_statuses_;
+    void syncAdmission();
     OptionListModel* background_type_options_;
     OptionListModel* background_estimate_methods_;
     OptionListModel* background_estimate_modes_;
@@ -481,6 +569,19 @@ class ExperimentViewModel : public QObject {
     PatternModel* pattern_;
     edi::PatternSource pattern_source_;
     std::optional<edi::PatternSource> d_source_;
+    // d_source_ on the Q and sinθ/λ axes, made from the d capture of revision `revision` (patternSource).
+    struct DerivedSource {
+        std::optional<edi::PatternSource> source;
+        quint64 revision = 0;
+        std::size_t place = 0;
+    };
+    mutable std::array<DerivedSource, 2> derived_;
+    // singleCrystalPattern's, by axis (Q, sinθ/λ) and quantity (F², F), each made at pattern generation `revision`.
+    mutable std::array<DerivedSource, 4> single_crystal_patterns_;
+    // Each reflection's nuclear share of F² (edi::single_crystal_nuclear_share), made once per pattern generation.
+    mutable std::vector<double> nuclear_share_;
+    mutable std::optional<quint64> nuclear_share_revision_;
+    quint64 d_revision_ = 0;  // counts the d captures
     BlockText* text_;
 };
 

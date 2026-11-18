@@ -21,6 +21,16 @@
    "weight": 400
   },
   {
+   "char": "°",
+   "code": "U+00B0",
+   "font": "PT Sans",
+   "sites": [
+    "crysta:data/dictionary/parameters.yaml"
+   ],
+   "drawn_by": "PT Sans",
+   "weight": 400
+  },
+  {
    "char": "±",
    "code": "U+00B1",
    "font": "PT Sans",
@@ -48,6 +58,7 @@
    "font": "PT Sans",
    "sites": [
     "crysta:data/dictionary/parameters.yaml",
+    "app/qml/Components/PatternChart.qml",
     "app/qml/Components/SingleCrystalChart.qml",
     "app/qml/Components/SingleCrystalTable.qml",
     "app/qml/Components/StatusBar.qml",
@@ -112,11 +123,13 @@
     "app/qml/Components/AssistantMessage.qml",
     "app/qml/Components/AssistantSkillsDialog.qml",
     "app/qml/Components/AssistantTrial.qml",
+    "app/qml/Components/BlockSelector.qml",
     "app/qml/Components/FeedbackDialog.qml",
     "app/qml/Components/ScanViewChart.qml",
     "app/qml/Components/SelectorField.qml",
     "app/qml/Components/TutorialPanel.qml",
     "app/qml/Globals/FitOutcomes.qml",
+    "app/qml/Globals/ParameterNames.qml",
     "app/qml/Pages/Analysis/FreeHeaderMenu.qml",
     "app/qml/Pages/Experiment/ExperimentsGroup.qml",
     "app/qml/Pages/Project/ExamplesGroup.qml",
@@ -185,7 +198,8 @@
    "font": "PT Sans",
    "sites": [
     "crysta:data/dictionary/parameters.yaml",
-    "app/qml/Pages/Structure/AppearanceGroup.qml"
+    "app/qml/Pages/Structure/AppearanceGroup.qml",
+    "core/src/presentation.cpp"
    ],
    "drawn_by": "PT Sans",
    "weight": 400
@@ -284,6 +298,8 @@
    "font": "PT Sans",
    "sites": [
     "crysta:data/dictionary/parameters.yaml",
+    "app/qml/Components/PatternChart.qml",
+    "app/qml/Components/ScanViewChart.qml",
     "app/qml/Pages/Structure/AtomSiteMomentGroup.qml",
     "app/src/demo_driver.cpp"
    ],
@@ -295,7 +311,9 @@
    "code": "U+03BB",
    "font": "PT Sans",
    "sites": [
-    "crysta:data/dictionary/parameters.yaml"
+    "crysta:data/dictionary/parameters.yaml",
+    "app/qml/Components/PatternChart.qml",
+    "app/qml/Components/ScanViewChart.qml"
    ],
    "drawn_by": "Noto Sans",
    "weight": 400
@@ -327,6 +345,7 @@
    "code": "U+03C6",
    "font": "PT Sans",
    "sites": [
+    "crysta:data/dictionary/parameters.yaml",
     "app/qml/Pages/Structure/AtomSiteMomentGroup.qml"
    ],
    "drawn_by": "Noto Sans",
@@ -386,7 +405,6 @@
    "code": "U+2014",
    "font": "PT Sans",
    "sites": [
-    "app/qml/Pages/Experiment/ExperimentsGroup.qml",
     "app/qml/Pages/Structure/AtomSiteMomentGroup.qml",
     "app/qml/Pages/Structure/MagneticFormFactorsGroup.qml",
     "app/src/app_info.cpp",
@@ -452,6 +470,7 @@
     "app/qml/Components/StatusBarFitButton.qml",
     "app/qml/Components/TutorialPanel.qml",
     "app/qml/Main.qml",
+    "app/qml/Pages/Experiment/DataStatusRows.qml",
     "app/qml/Pages/Experiment/ExperimentsGroup.qml",
     "app/qml/Pages/Project/BlockNames.qml",
     "app/qml/Pages/Project/GetStartedGroup.qml",
@@ -570,7 +589,8 @@
    "code": "U+2080",
    "font": "PT Sans",
    "sites": [
-    "crysta:data/dictionary/parameters.yaml"
+    "crysta:data/dictionary/parameters.yaml",
+    "app/qml/Components/MeasCalcChart.qml"
    ],
    "drawn_by": "Noto Sans",
    "weight": 400
@@ -580,7 +600,8 @@
    "code": "U+2081",
    "font": "PT Sans",
    "sites": [
-    "crysta:data/dictionary/parameters.yaml"
+    "crysta:data/dictionary/parameters.yaml",
+    "app/qml/Components/MeasCalcChart.qml"
    ],
    "drawn_by": "PT Sans",
    "weight": 400
@@ -768,6 +789,7 @@
    "code": "U+221A",
    "font": "PT Sans",
    "sites": [
+    "app/qml/Components/MeasCalcChart.qml",
     "app/src/project_view_model.cpp"
    ],
    "drawn_by": "PT Sans",

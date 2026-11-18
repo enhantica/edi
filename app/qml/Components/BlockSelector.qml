@@ -38,6 +38,16 @@ Row {
     // line carries the word "template" in the accent blue after its name, which the line elides when long.
     property string templateRole: ""
     property bool currentTemplate: false
+    // A word before the greyed number, greyed with it and followed by a dot ("Run 6 · p005"), the block's icon after it:
+    // a series' run and bank selectors (the owner, 2026-11-16, 2026-11-17).
+    property string numberPrefix: ""
+    // An entry's line drawn by the caller, `lineFor(index, text)`, in place of the block's (a parameter picker:
+    // ParameterNames.pickerLine); such a line is cut only at its end, and the list widens to its widest line.
+    property var lineFor: null
+    // The width that shows the chosen entry's whole line: its line, the box's padding and arrow, and the two step buttons.
+    // A row with room gives the selector this width (Evolution's parameter selector, the owner, 2026-11-17).
+    readonly property real contentWidth: Math.ceil(shownLine.fullWidth + EaStyle.Sizes.fontPixelSize * 2.5 + (selector.indicator ? selector.indicator.width : 0)) + 2 * (up.width + spacing)
+    property real lineExtraWidth: EaStyle.Sizes.fontPixelSize * 7
 
     // A step to the previous or next block, as a pick in the box; no step past either end.
     function step(offset) {
@@ -59,7 +69,21 @@ Row {
         // A block's line, in the Experiments table's column order: its number, its icon in its colour, its fit
         // outcome, its name and a scan's template mark, on one centre line (IconLine, §10).
         function segments(index, name, nameColor, outcome, isTemplate) {
-            return ApplicationInfo.blockSegments(index, name, nameColor, outcome, isTemplate);
+            if (row.lineFor)
+                return row.lineFor(index, name);
+            const line = ApplicationInfo.blockSegments(index, name, nameColor, outcome, isTemplate);
+            // The scan's starting dataset reads "Start" in the accent, as the Experiments table's file cell
+            // names it (the owner, 2026-11-16).
+            if (isTemplate && line.length > 0) {
+                line[line.length - 1].text = qsTr("Start");
+                line[line.length - 1].color = String(EaStyle.Colors.themeAccent);
+            }
+            if (row.numberPrefix === "" || line.length < 2)
+                return line;
+            // The word before the number, the icon kept after it, coloured as the run's or bank's curve (the owner,
+            // 2026-11-17).
+            line[0].text = `${row.numberPrefix} ${line[0].text} ·`;
+            return line;
         }
 
         objectName: row.objectName ? `${row.objectName}.box` : ""
@@ -69,6 +93,8 @@ Row {
         model: blocks
         textRole: blocksTextRole
         currentIndex: blockIndex
+        // A drawn line's list as wide as its widest entry and its icons, within the window.
+        popup.width: row.lineFor ? Math.min(Math.max(selector.width, selector.optionWidth + row.lineExtraWidth), selector.Window.width - popup.leftMargin - popup.rightMargin) : selector.width
         // The box follows the shared index again whenever its rows come and go: emptied for a moment (the one
         // experiment replaced by Load data, every structure put back by an Undo) it drops to no entry, and the
         // shared index, unchanged, would never set it back.
@@ -84,6 +110,7 @@ Row {
             clip: true
 
             IconLine {
+                id: shownLine
                 x: EaStyle.Sizes.fontPixelSize * 0.75
                 anchors.verticalCenter: parent.verticalCenter
                 segments: selector.segments(selector.currentIndex, selector.currentText, selector.foregroundColor, row.currentOutcome, row.currentTemplate)
@@ -91,7 +118,7 @@ Row {
                 width: Math.max(0, Math.min(parent.width - x, selector.indicator && selector.indicator.visible && !selector.mirrored ? selector.indicator.x - parent.x - x - EaStyle.Sizes.fontPixelSize * 0.5 : parent.width - x))
                 maximumWidth: Math.max(1, width)
                 clip: true
-                elide: Text.ElideMiddle
+                elide: row.lineFor ? Text.ElideRight : Text.ElideMiddle
             }
         }
 
@@ -125,7 +152,7 @@ Row {
                     anchors.verticalCenter: parent.verticalCenter
                     segments: selector.segments(entry.index, entry.text, EaStyle.Colors.themeForeground, row.outcomeRole !== "" ? entry.model[row.outcomeRole] : "", row.templateRole !== "" && entry.model[row.templateRole] === true)
                     maximumWidth: Math.max(1, parent.width)
-                    elide: Text.ElideMiddle
+                    elide: row.lineFor ? Text.ElideRight : Text.ElideMiddle
                 }
             }
         }
@@ -142,7 +169,7 @@ Row {
         spacing: 0
         enabled: row.blockIndex > 0
         fontIcon: "arrow-circle-up"
-        ToolTip.text: row.blockKind === "experiment" ? qsTr("Previous experiment") : row.blockKind === "parameter" ? qsTr("Previous parameter") : qsTr("Previous structure")
+        ToolTip.text: row.blockKind === "experiment" ? qsTr("Previous experiment") : row.blockKind === "parameter" ? qsTr("Previous parameter") : row.blockKind === "run" ? qsTr("Previous run") : row.blockKind === "bank" ? qsTr("Previous bank") : qsTr("Previous structure")
         autoRepeat: true
         autoRepeatDelay: 300
         autoRepeatInterval: 50
@@ -158,7 +185,7 @@ Row {
         spacing: 0
         enabled: row.blockIndex >= 0 && row.blockIndex < selector.count - 1
         fontIcon: "arrow-circle-down"
-        ToolTip.text: row.blockKind === "experiment" ? qsTr("Next experiment") : row.blockKind === "parameter" ? qsTr("Next parameter") : qsTr("Next structure")
+        ToolTip.text: row.blockKind === "experiment" ? qsTr("Next experiment") : row.blockKind === "parameter" ? qsTr("Next parameter") : row.blockKind === "run" ? qsTr("Next run") : row.blockKind === "bank" ? qsTr("Next bank") : qsTr("Next structure")
         autoRepeat: true
         autoRepeatDelay: 300
         autoRepeatInterval: 50

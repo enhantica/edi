@@ -39,6 +39,8 @@ SYSTEM_LIBRARIES = {
         'winhttp.dll',
         'oleaut32.dll',
         'ntdll.dll',
+        # The one Windows API set crysta's runtime imports; the operating system provides it.
+        'api-ms-win-core-synch-l1-2-0.dll',
     }),
     'macos': frozenset({
         '/usr/lib/libSystem.B.dylib',

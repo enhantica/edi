@@ -1,0 +1,95 @@
+{
+  "source": "Independently published powder palette reference",
+  "tokens": [
+    "main",
+    "colourBlindSafe"
+  ],
+  "palettes": [
+    {
+      "name": "Main",
+      "light": [
+        "#618EC8",
+        "#8B9762",
+        "#DB7A12",
+        "#2E8F8A",
+        "#C877B7",
+        "#6F5A8F",
+        "#8B5A2B",
+        "#3F7F4F",
+        "#01A2C5",
+        "#9B82E9",
+        "#958508"
+      ],
+      "dark": [
+        "#6E92CB",
+        "#94935C",
+        "#F5961A",
+        "#55B1B3",
+        "#C375C2",
+        "#AE98C2",
+        "#B8743A",
+        "#72B976",
+        "#00ABCC",
+        "#9B82E9",
+        "#B0AD19"
+      ],
+      "roles": {
+        "total_calculation": {
+          "light": "#E5533D",
+          "dark": "#F26A55"
+        },
+        "background": {
+          "light": "#8A8A8A",
+          "dark": "#969696"
+        },
+        "difference": {
+          "light": "#737373",
+          "dark": "#B0B0B0"
+        }
+      }
+    },
+    {
+      "name": "Colour-blind safe",
+      "light": [
+        "#548CF1",
+        "#7E996B",
+        "#DD7C0F",
+        "#1E7679",
+        "#C577B1",
+        "#6F5A8F",
+        "#88541D",
+        "#4C8051",
+        "#01A2C5",
+        "#8675C8",
+        "#A29147"
+      ],
+      "dark": [
+        "#6A93F8",
+        "#BAB58E",
+        "#F99A1D",
+        "#73C2C0",
+        "#C175B6",
+        "#BAA6D2",
+        "#BC732F",
+        "#5EAE5F",
+        "#0C9EBF",
+        "#A49ADF",
+        "#BBB954"
+      ],
+      "roles": {
+        "total_calculation": {
+          "light": "#D04B37",
+          "dark": "#F1634C"
+        },
+        "background": {
+          "light": "#8A8A8A",
+          "dark": "#969696"
+        },
+        "difference": {
+          "light": "#737373",
+          "dark": "#B0B0B0"
+        }
+      }
+    }
+  ]
+}

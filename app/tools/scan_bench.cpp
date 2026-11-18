@@ -28,9 +28,11 @@
 #include <algorithm>
 #include <atomic>
 #include <cmath>
+#include <limits>
 #include <cstdlib>
 #include <cstdarg>
 #include <cstdio>
+#include <exception>
 #include <functional>
 #include <string>
 #include <vector>
@@ -43,6 +45,8 @@
 Q_IMPORT_QML_PLUGIN(edi_appPlugin)
 
 namespace {
+
+constexpr double kInf = std::numeric_limits<double>::infinity();
 
 constexpr int kRepeats = 30;
 // The first population may take seconds (Qt Graphs without a GPU); every later change waits three times as long as it
@@ -90,6 +94,7 @@ Stats stats(std::vector<double> samples) {
 }
 
 // One line of the run's log on stderr, written at once.
+// NOLINTNEXTLINE(cert-dcl50-cpp): printf-style, every format a literal at its call.
 void log(const char* format, ...) {
     std::va_list args;
     va_start(args, format);
@@ -145,7 +150,7 @@ class Painted : public QQuickPaintedItem {
             QPainterPath path;
             bool drawing = false;
             for (std::size_t k = 0; k < traces[d].x.size(); ++k) {
-                const double x = traces[d].x[k], y = base - traces[d].v[k] * lift;
+                const double x = static_cast<double>(traces[d].x[k]), y = base - static_cast<double>(traces[d].v[k]) * lift;
                 if (!std::isfinite(x) || !std::isfinite(y)) {
                     drawing = false;
                 } else if (drawing) {
@@ -176,7 +181,7 @@ void idle(int ms) {
 
 }  // namespace
 
-int main(int argc, char** argv) {
+int run(int argc, char** argv) {
     QGuiApplication app(argc, argv);
     edi_app::use_design_font();
     const QString directory = argc > 1 ? QString::fromLocal8Bit(argv[1])
@@ -185,7 +190,7 @@ int main(int argc, char** argv) {
     const QString frame_path = argc > 2 ? QString::fromLocal8Bit(argv[2]) : QString();
     const QString candidate = argc > 3 ? QString::fromLocal8Bit(argv[3]) : QStringLiteral("a");
     // The line width in pixels: 2 as the pattern chart's line, 1 where the view narrows it for close rows.
-    const double line_width = argc > 5 ? std::atof(argv[5]) : 2.0;
+    const double line_width = argc > 5 ? std::strtod(argv[5], nullptr) : 2.0;
     // b and p take the same traces and styles.
     const bool candidate_b = candidate == QLatin1String("b") || candidate == QLatin1String("p");
     QElapsedTimer read_clock;
@@ -196,7 +201,7 @@ int main(int argc, char** argv) {
         log("no .dat files in %s", qPrintable(directory));
         return 1;
     }
-    double lo = INFINITY, hi = -INFINITY, low = INFINITY, high = -INFINITY;
+    double lo = kInf, hi = -kInf, low = kInf, high = -kInf;
     std::size_t points = 0;
     for (const Dataset& d : scan) {
         points += d.x.size();
@@ -269,7 +274,7 @@ int main(int argc, char** argv) {
     }
     idle(200);
     // The plot's pixel columns, or fewer when asked (a fourth argument, the share of them), to see how the cost scales.
-    const double share = argc > 4 ? std::atof(argv[4]) : 1.0;
+    const double share = argc > 4 ? std::strtod(argv[4], nullptr) : 1.0;
     const int columns = std::max(1, static_cast<int>(std::ceil(share * graphs->property("plotArea").toRectF().width() *
                                                                   view.devicePixelRatio())));
 
@@ -303,11 +308,11 @@ int main(int argc, char** argv) {
     const auto points_of = [&](std::size_t d) {
         QList<QPointF> list;
         const edi::ScanTrace& trace = traces[d];
-        list.reserve(static_cast<qsizetype>(2 * trace.x.size()));
+        list.reserve(2 * static_cast<qsizetype>(trace.x.size()));
         const double row = static_cast<double>(d);
         for (std::size_t k = 0; k < trace.x.size(); ++k) {
-            const double y_low = row + (trace.low[k] - low) / (high - low) * lift;
-            const double y_high = row + (trace.high[k] - low) / (high - low) * lift;
+            const double y_low = row + (static_cast<double>(trace.low[k]) - low) / (high - low) * lift;
+            const double y_high = row + (static_cast<double>(trace.high[k]) - low) / (high - low) * lift;
             list.append(QPointF(trace.x[k], y_low));
             if (y_high != y_low) {
                 list.append(QPointF(trace.x[k], y_high));
@@ -327,10 +332,10 @@ int main(int argc, char** argv) {
                 for (std::size_t k = 0; k < trace.x.size(); ++k) {
                     const auto x = static_cast<float>((trace.x[k] - shown_min) / (shown_max - shown_min) * width);
                     out[d].x.push_back(x);
-                    out[d].v.push_back(static_cast<float>((trace.low[k] - low) / (high - low)));
+                    out[d].v.push_back(static_cast<float>((static_cast<double>(trace.low[k]) - low) / (high - low)));
                     if (trace.high[k] != trace.low[k]) {
                         out[d].x.push_back(x);
-                        out[d].v.push_back(static_cast<float>((trace.high[k] - low) / (high - low)));
+                        out[d].v.push_back(static_cast<float>((static_cast<double>(trace.high[k]) - low) / (high - low)));
                     }
                 }
                 drawn_points += out[d].x.size();
@@ -452,4 +457,13 @@ int main(int argc, char** argv) {
                 offset.median, offset.p95, range.missing + restyle.missing + offset.missing,
                 qPrintable(QGuiApplication::platformName()), static_cast<long long>(read_ms), line_width);
     return range.missing + restyle.missing + offset.missing == 0 && first >= 0.0 && misses < kMaxMisses ? 0 : 1;
+}
+
+int main(int argc, char** argv) {
+    try {
+        return run(argc, argv);
+    } catch (const std::exception& error) {
+        std::fprintf(stderr, "edi_app_scan_bench: %s\n", error.what());
+        return 1;
+    }
 }

@@ -24,6 +24,7 @@
 #include "web_page_hooks.hpp"
 #include "engine_setup.hpp"
 #include "run_log.hpp"
+#include "stall_probe.hpp"
 #include "test_observer.hpp"
 #ifndef __EMSCRIPTEN__
 void start_installer_smoke(QQuickWindow&, const QString&);
@@ -35,16 +36,20 @@ double merge_mac_title_bar(QWindow* window);
 Q_IMPORT_QML_PLUGIN(edi_appPlugin)
 
 namespace {
-// An exception that would leave an event handler ends in the error popup instead of closing the app (edi ADR-0062).
-class Application : public QGuiApplication {
+// A failure in one event's handler is logged and that event dropped; it never reaches the event loop, which would end
+// the app (a model call refusing a project it cannot take, say one without an experiment). The user sees it in the
+// error popup (edi ADR-0062).
+class GuardedApplication final : public QGuiApplication {
    public:
     using QGuiApplication::QGuiApplication;
     bool notify(QObject* receiver, QEvent* event) override {
         try {
             return QGuiApplication::notify(receiver, event);
         } catch (const std::exception& error) {
+            qCritical("edi: an event handler failed and was skipped: %s", error.what());
             edi_app::RunLog::reportCaught(QString::fromUtf8(error.what()));
         } catch (...) {
+            qCritical("edi: an event handler failed and was skipped");
             edi_app::RunLog::reportCaught(QStringLiteral("an unknown error"));
         }
         return false;
@@ -73,7 +78,7 @@ int main(int argc, char* argv[]) {
         return *code;  // before the platform checks, so the refusal names the observer request
     }
     edi_app::select_freetype_engine(argc, argv);  // before the QGuiApplication reads the platform
-    Application app(argc, argv);
+    GuardedApplication app(argc, argv);
 #if !defined(__EMSCRIPTEN__) && !defined(Q_OS_MACOS)
     app.setWindowIcon(QIcon(QStringLiteral(":/qt/qml/edi/app/resources/logo/App.svg")));
 #endif
@@ -160,6 +165,8 @@ int main(int argc, char* argv[]) {
         qWarning("cannot write the run log in %s; this run logs to the terminal only",
                  qPrintable(edi_app::run_log_directory()));
     }
+    // Off unless EDI_STALL_PROBE is set; its summary is written before the log finishes.
+    edi_app::install_stall_probe(app);
     QObject::connect(&app, &QCoreApplication::aboutToQuit, &run_log, &edi_app::RunLog::finish);
     edi_app::quit_on_termination_signals();
     QQmlApplicationEngine engine;

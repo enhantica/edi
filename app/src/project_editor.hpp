@@ -67,9 +67,9 @@ class ProjectEditor {
         enum class Kind { Other, AliasAppend, AliasId, AliasParameter, ConstraintAppend, ConstraintId, ConstraintExpression, ConstraintEnabled, AliasRemove, ConstraintRemove };
         Kind kind = Kind::Other;
         const void* row = nullptr;
-        QString text;
+        QString text{};
         bool enabled = false;
-        QString expression;
+        QString expression{};
     };
     struct RelationOutcome { bool applied = false, published = false; QString message; const edi::ParameterConstraint* constraint = nullptr; };
     virtual RelationOutcome append_constraint(edi::Project&, edi::ParameterConstraint&&, const RelationAction&) {
@@ -82,10 +82,10 @@ class ProjectEditor {
     // Original creation-row controls expose finite semantic metadata, just as
     // the original alias/constraint controls do. No provider callable/edit exists.
     struct CreationAction {
-        enum class Kind { ExperimentAppend, ExperimentType, ExperimentName, PeakProfile, AbsorptionType, ExtinctionType, MosaicDistribution, CutoffFwhm, DatasetWeight, ExclusionAppend, ExclusionStart, ExclusionEnd, ExclusionRemove, StructureAppend, StructureName, SpaceGroupName, SpaceGroupNumber, SpaceGroupSetting, AtomAppend, AtomText, AtomRemove, AtomAdpType, PhaseAppend, PhaseRetarget, PhaseEnabled, PhaseRemove };
-        Kind kind;
+        enum class Kind { ExperimentAppend, ExperimentType, ExperimentName, PeakProfile, AbsorptionType, ExtinctionType, MosaicDistribution, CutoffFwhm, DatasetWeight, ExclusionAppend, ExclusionStart, ExclusionEnd, ExclusionRemove, StructureAppend, StructureName, SpaceGroupName, SpaceGroupNumber, SpaceGroupSetting, AtomAppend, AtomText, AtomRemove, AtomAdpType, PhaseAppend, PhaseRetarget, PhaseEnabled, PhaseRemove, PhaseScale };
+        Kind kind{};
         const void* row = nullptr;
-        QString field, text;
+        QString field{}, text{};
         double number = 0;
     };
     virtual QString apply_creation_control(const edi::Edit& change, bool structural, const CreationAction&) {

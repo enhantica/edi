@@ -7,6 +7,8 @@
 #include <QStringList>
 
 #include <algorithm>
+#include <cmath>
+#include <limits>
 #include <array>
 #include <exception>
 #include <filesystem>
@@ -127,7 +129,7 @@ void set_description_options(OptionListModel* options, std::vector<std::string> 
 }
 }  // namespace
 
-ExperimentViewModel::ExperimentViewModel(SavedFile saved, edi::Project& project, edi::ExperimentBase& experiment,
+ExperimentViewModel::ExperimentViewModel(const SavedFile& saved, edi::Project& project, edi::ExperimentBase& experiment,
                                          ProjectEditor& editor, ParameterRegistry& registry, QObject* parent)
     : QObject(parent),
       project_(project),
@@ -148,6 +150,9 @@ ExperimentViewModel::ExperimentViewModel(SavedFile saved, edi::Project& project,
       extinction_type_options_(new OptionListModel(this)),
       mosaic_distribution_options_(new OptionListModel(this)),
       reflns_threshold_basis_options_(new OptionListModel(this)),
+      reflns_merge_options_(new OptionListModel(this)),
+      reflns_absences_options_(new OptionListModel(this)),
+      excluded_region_axis_options_(new OptionListModel(this)),
       background_type_options_(new OptionListModel(this)),
       background_estimate_methods_(new OptionListModel(this)),
       background_estimate_modes_(new OptionListModel(this)),
@@ -184,11 +189,44 @@ ExperimentViewModel::ExperimentViewModel(SavedFile saved, edi::Project& project,
                                        std::pair{polarisation_options_, "experiment_type.polarisation"}}) {
         options->setItemOptions(uid, option_tokens(uid));
     }
+    // An option of one type axis is offered only where some type crysta computes combines it with the other three
+    // axes' current choices; the rest show greyed (the owner, 2026-11-16).
+    {
+        const std::vector<edi::ExperimentTypeTokens> supported = edi::supported_experiment_types();
+        const edi::ExperimentTypeTokens current{sampleFormToken().toStdString(), beamModeToken().toStdString(),
+                                                radiationProbeToken().toStdString(),
+                                                scatteringTypeToken().toStdString()};
+        using Axis = std::string edi::ExperimentTypeTokens::*;
+        const std::pair<OptionListModel*, Axis> axes[] = {
+            {sample_form_options_, &edi::ExperimentTypeTokens::sample_form},
+            {beam_mode_options_, &edi::ExperimentTypeTokens::beam_mode},
+            {radiation_probe_options_, &edi::ExperimentTypeTokens::radiation_probe},
+            {scattering_type_options_, &edi::ExperimentTypeTokens::scattering_type}};
+        for (const auto& [options, axis] : axes) {
+            QStringList disabled;
+            for (int row = 0; row < options->count(); ++row) {
+                edi::ExperimentTypeTokens wanted = current;
+                wanted.*axis = options->tokenAt(row).toStdString();
+                const bool allowed = std::any_of(supported.begin(), supported.end(), [&wanted](const auto& type) {
+                    return type.sample_form == wanted.sample_form && type.beam_mode == wanted.beam_mode &&
+                           type.radiation_probe == wanted.radiation_probe &&
+                           type.scattering_type == wanted.scattering_type;
+                });
+                if (!allowed) {
+                    disabled.append(options->tokenAt(row));
+                }
+            }
+            options->setDisabledTokens(disabled);
+        }
+    }
     peak_type_options_->setItemOptions("peak.type", edi::supported_peak_profiles(mode), edi::default_peak_profile(mode));
     absorption_type_options_->setItemOptions("absorption.type", edi::supported_absorption_families(mode));
     extinction_type_options_->setOptions(edi::extinction_type_tokens(), "none", edi::extinction_type_choice_labels());
     mosaic_distribution_options_->setOptions(edi::mosaic_distribution_tokens(), "gaussian",
                                              edi::mosaic_distribution_labels());
+    reflns_merge_options_->setItemOptions("reflns.merge", edi::reflns_merge_tokens(), "none");
+    reflns_absences_options_->setItemOptions("reflns.absences", edi::reflns_absences_tokens(), "include");
+    excluded_region_axis_options_->setItemOptions("excluded_region.axis", edi::excluded_region_axis_tokens(), "d_spacing");
     reflns_threshold_basis_options_->setOptions(edi::reflns_threshold_basis_tokens(), "intensity",
                                                 edi::reflns_threshold_basis_labels());
     background_type_options_->setItemOptions("background.type", edi::supported_background_types());
@@ -564,6 +602,74 @@ void ExperimentViewModel::setReflnsThresholdBasis(const QString& token) {
     setLastError(editor_.apply_unread(edi::Edit::reflns_threshold_basis(experiment, value)));
 }
 
+void ExperimentViewModel::setReflnsMerge(const QString& token) {
+    const std::optional<std::string> value =
+        token.isEmpty() ? std::nullopt : std::optional<std::string>(token.toStdString());
+    if (value == experiment_.reflns_merge) {
+        return;
+    }
+    edi::ExperimentBase& experiment = experiment_;
+    setLastError(editor_.apply_unread(edi::Edit::reflns_merge(experiment, value)));
+}
+
+void ExperimentViewModel::setReflnsAbsences(const QString& token) {
+    const std::optional<std::string> value =
+        token.isEmpty() ? std::nullopt : std::optional<std::string>(token.toStdString());
+    if (value == experiment_.reflns_absences) {
+        return;
+    }
+    edi::ExperimentBase& experiment = experiment_;
+    setLastError(editor_.apply_unread(edi::Edit::reflns_absences(experiment, value)));
+}
+
+void ExperimentViewModel::toggleExcludedReflection(int h, int k, int l) {
+    edi::ExperimentBase& experiment = experiment_;
+    setLastError(editor_.apply_unread(edi::Edit::toggle_excluded_reflection(project_, experiment, h, k, l)));
+}
+
+// The admission is crysta's, computed again on each change: it reads the exclusions, the merge mode, the
+// absences, the structure's space group and the fit's cutoff, any of which an edit may have changed.
+void ExperimentViewModel::syncAdmission() {
+    ReflectionAdmissionSummary admission;
+    QStringList statuses;
+    std::size_t index = project_.experiments.size();
+    for (std::size_t i = 0; i < project_.experiments.size(); ++i) {
+        if (project_.experiments[i].get() == &experiment_) {
+            index = i;
+        }
+    }
+    std::optional<edi::ReflectionAdmission> reduced;
+    try {
+        reduced = edi::reflection_admission(project_, index);
+    } catch (const std::exception&) {
+        reduced.reset();  // a project crysta cannot take yet (no structure, no cell) shows no admission
+    }
+    if (reduced) {
+        const auto count = [](std::size_t value) { return static_cast<int>(value); };
+        admission.available = true;
+        admission.measured = count(reduced->measured);
+        admission.unique = count(reduced->unique);
+        admission.used = count(reduced->used);
+        admission.excluded = count(reduced->excluded);
+        admission.absent = count(reduced->absent);
+        admission.rInt = reduced->r_int.value_or(qQNaN());
+        admission.rSigma = reduced->r_sigma.value_or(qQNaN());
+        admission.absentMeanIOverSigma = reduced->absent_mean_i_over_sigma;
+        statuses.reserve(static_cast<qsizetype>(reduced->status.size()));
+        for (const char code : reduced->status) {
+            statuses.append(QString(QChar::fromLatin1(code)));
+        }
+    }
+    if (admission != reflection_admission_) {
+        reflection_admission_ = admission;
+        emit reflectionAdmissionChanged();
+    }
+    if (statuses != reflection_statuses_) {
+        reflection_statuses_ = statuses;
+        emit reflectionStatusesChanged();
+    }
+}
+
 void ExperimentViewModel::setCutoffFwhm(double cutoff) {
     edi::ExperimentBase& experiment = experiment_;
     const QPointer<ExperimentViewModel> self(this);
@@ -668,6 +774,13 @@ void ExperimentViewModel::sync() {
            &ExperimentViewModel::reflnsThresholdBasisChanged);
     update(reflns_threshold_expression_, QString::fromStdString(edi::reflns_threshold_expression(experiment_)),
            &ExperimentViewModel::reflnsThresholdExpressionChanged);
+    update(reflns_merge_, QString::fromStdString(experiment_.reflns_merge.value_or("")),
+           &ExperimentViewModel::reflnsMergeChanged);
+    update(reflns_absences_, QString::fromStdString(experiment_.reflns_absences.value_or("")),
+           &ExperimentViewModel::reflnsAbsencesChanged);
+    if (experiment_.reflections) {
+        syncAdmission();
+    }
     update(background_type_, QString::fromStdString(experiment_.background_type),
            &ExperimentViewModel::backgroundTypeChanged);
     // NaN never equals itself: a constant the type lacks is compared as absent.
@@ -751,6 +864,7 @@ void ExperimentViewModel::capturePattern(bool categories) {
     if (!d_charts_.isEmpty()) {
         d_source_ = edi::capture_pattern(project_, place(), edi::PatternAxis::DSpacing);
         d_source_->experiment_place = colourPlace();
+        ++d_revision_;
     }
     ++pattern_generation_;
     emit patternSourceChanged();
@@ -765,6 +879,7 @@ void ExperimentViewModel::showPattern(edi::PatternSource source, std::optional<e
     if (d_source) {
         d_source_ = std::move(d_source);
         d_source_->experiment_place = colourPlace();
+        ++d_revision_;
     }
     ++pattern_generation_;
     emit patternSourceChanged();
@@ -797,9 +912,69 @@ void ExperimentViewModel::setColourPlace(std::optional<std::size_t> place, std::
     emit patternSourceChanged();
 }
 
+QVariantMap ExperimentViewModel::measCalcPoints(int scale) const {
+    QList<double> calc, meas, su;
+    double low = std::numeric_limits<double>::infinity(), high = -low;
+    // The value on the scale, NaN where it has none; the s.u. carried to first order.
+    const auto scaled = [scale](double v) {
+        if (scale == 1) return v >= 0.0 ? std::sqrt(v) : qQNaN();
+        if (scale == 2) return v > 0.0 ? std::log10(v) : qQNaN();
+        return v;
+    };
+    const auto scaledSu = [scale](double s, double v) {
+        if (scale == 1) return v > 0.0 ? s / (2.0 * std::sqrt(v)) : qQNaN();
+        if (scale == 2) return s / (v * std::log(10.0));
+        return s;
+    };
+    const edi::PatternSource& source = pattern_source_;
+    if (source.current && source.meas && source.calc && source.meas->size() == source.calc->size()) {
+        for (std::size_t i = 0; i < source.meas->size(); ++i) {
+            const double rawM = (*source.meas)[i], m = scaled(rawM), c = scaled((*source.calc)[i]);
+            if (!std::isfinite(m) || !std::isfinite(c)) continue;
+            const double s = source.su && i < source.su->size() ? scaledSu((*source.su)[i], rawM) : qQNaN();
+            calc.append(c);
+            meas.append(m);
+            su.append(s);
+            low = std::min({low, m, c});
+            high = std::max({high, m, c});
+        }
+    }
+    if (!(high > low)) {
+        low = 0.0;
+        high = 1.0;
+    }
+    const double pad = 0.03 * (high - low);
+    return {{QStringLiteral("calc"), QVariant::fromValue(calc)},
+            {QStringLiteral("meas"), QVariant::fromValue(meas)},
+            {QStringLiteral("su"), QVariant::fromValue(su)},
+            {QStringLiteral("low"), low - pad},
+            {QStringLiteral("high"), high + pad}};
+}
+
+const edi::PatternSource& ExperimentViewModel::singleCrystalPattern(edi::PatternAxis axis, bool squared) const {
+    static const edi::PatternSource kNone;
+    if (axis != edi::PatternAxis::Q && axis != edi::PatternAxis::SinThetaOverLambda) {
+        return kNone;
+    }
+    DerivedSource& kept = single_crystal_patterns_[(axis == edi::PatternAxis::Q ? 0 : 2) + (squared ? 0 : 1)];
+    const std::size_t colour = colourPlace();
+    if (!kept.source || kept.revision != pattern_generation_ || kept.place != colour) {
+        if (nuclear_share_revision_ != pattern_generation_) {
+            nuclear_share_ = edi::single_crystal_nuclear_share(project_, place());
+            nuclear_share_revision_ = pattern_generation_;
+        }
+        kept.source = edi::single_crystal_pattern(project_, place(), axis, squared, nuclear_share_);
+        kept.source->experiment_place = colour;
+        kept.revision = pattern_generation_;
+        kept.place = colour;
+    }
+    return *kept.source;
+}
+
 void ExperimentViewModel::setChartAxis(const QObject* chart, edi::PatternAxis axis) {
     const bool wanted = !d_charts_.isEmpty();
-    if (axis == edi::PatternAxis::DSpacing) {
+    // Every axis but the experiment's own is drawn from the d capture.
+    if (axis != edi::PatternAxis::Native) {
         d_charts_.insert(chart);
     } else {
         d_charts_.remove(chart);
@@ -809,6 +984,7 @@ void ExperimentViewModel::setChartAxis(const QObject* chart, edi::PatternAxis ax
     } else if (!wanted) {
         d_source_ = edi::capture_pattern(project_, place(), edi::PatternAxis::DSpacing);
         d_source_->experiment_place = colourPlace();
+        ++d_revision_;
         emit patternSourceChanged();
     }
 }

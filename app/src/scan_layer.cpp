@@ -317,8 +317,30 @@ void ScanLayer::setXMax(double value) {
         redraw();
     }
 }
-void ScanLayer::setYMin(double value) { assign(y_min_, value, &ScanLayer::yMinChanged); }
-void ScanLayer::setYMax(double value) { assign(y_max_, value, &ScanLayer::yMaxChanged); }
+// The rows Stacked draws, and the count its caption shows, follow the y range too: a zoom, a pan or a reset of it
+// shows other rows (the owner, 2026-11-17).
+void ScanLayer::setYMin(double value) {
+    assign(y_min_, value, &ScanLayer::yMinChanged);
+    syncDrawnRows();
+}
+void ScanLayer::setYMax(double value) {
+    assign(y_max_, value, &ScanLayer::yMaxChanged);
+    syncDrawnRows();
+}
+
+void ScanLayer::syncDrawnRows() {
+    if (mode_ != QLatin1String("stacked")) {
+        return;
+    }
+    const auto drawn = drawingRows();
+    if (drawn != drawn_datasets_) {
+        const bool count_changed = drawn.size() != drawn_datasets_.size();
+        drawn_datasets_ = drawn;
+        emit drawingRowsChanged();
+        if (count_changed) emit drawnDatasetCountChanged();
+        update();
+    }
+}
 void ScanLayer::setColourScheme(const QString& scheme) {
     assign(colour_scheme_, scheme, &ScanLayer::colourSchemeChanged);
     recolour();
@@ -538,9 +560,9 @@ void ScanLayer::place() {
     placed_rows_ = rows;
     placed_spacing_ = spacing_;
     std::vector<std::size_t> order;
-    for (std::size_t d = 0; d < rows.size(); ++d) {
-        if (std::isfinite(rows[d])) {
-            order.push_back(d);
+    for (std::size_t set = 0; set < rows.size(); ++set) {
+        if (std::isfinite(rows[set])) {
+            order.push_back(set);
         }
     }
     std::stable_sort(order.begin(), order.end(), [&rows](std::size_t a, std::size_t b) { return rows[a] < rows[b]; });
@@ -567,9 +589,9 @@ std::vector<std::size_t> ScanLayer::drawingRows() const {
 std::vector<edi::ScanRowSpan> ScanLayer::stackedSpans() const {
     // Each stacked pattern from its baseline to its top (place).
     std::vector<edi::ScanRowSpan> spans(baselines_.size());
-    for (std::size_t d = 0; d < baselines_.size(); ++d) {
-        spans[d].low = baselines_[d];
-        spans[d].high = baselines_[d] + pattern_height_;
+    for (std::size_t set = 0; set < baselines_.size(); ++set) {
+        spans[set].low = baselines_[set];
+        spans[set].high = baselines_[set] + pattern_height_;
     }
     return spans;
 }
@@ -596,15 +618,15 @@ int ScanLayer::datasetNear(double x, double y) const {
     const double from = column - 1.0, to = column + 1.0;
     int nearest = -1;
     double best = std::numeric_limits<double>::infinity();
-    for (const auto d : drawn_datasets_) {
-        const Reduction& reduction = reductions_[d];
+    for (const auto set : drawn_datasets_) {
+        const Reduction& reduction = reductions_[set];
         double low = std::numeric_limits<double>::infinity(), high = -low;
         const auto take = [&low, &high](double v) {
             low = std::min(low, v);
             high = std::max(high, v);
         };
         for (std::size_t k = 0; k < reduction.x.size(); ++k) {
-            const double xa = reduction.x[k], va = reduction.v[k];
+            const double xa = static_cast<double>(reduction.x[k]), va = static_cast<double>(reduction.v[k]);
             if (!std::isfinite(xa) || !std::isfinite(va)) {
                 continue;
             }
@@ -614,7 +636,7 @@ int ScanLayer::datasetNear(double x, double y) const {
             if (k + 1 == reduction.x.size()) {
                 continue;
             }
-            const double xb = reduction.x[k + 1], vb = reduction.v[k + 1];
+            const double xb = static_cast<double>(reduction.x[k + 1]), vb = static_cast<double>(reduction.v[k + 1]);
             if (!std::isfinite(xb) || !std::isfinite(vb) || xb == xa) {
                 continue;
             }
@@ -627,11 +649,11 @@ int ScanLayer::datasetNear(double x, double y) const {
         if (!std::isfinite(low)) {
             continue;
         }
-        const double y_low = stackedY(d, low), y_high = stackedY(d, high);
+        const double y_low = stackedY(set, low), y_high = stackedY(set, high);
         const double distance = y < y_low ? y_low - y : y > y_high ? y - y_high : 0.0;
         if (std::isfinite(distance) && distance < best) {
             best = distance;
-            nearest = static_cast<int>(d);
+            nearest = static_cast<int>(set);
         }
     }
     return nearest;
@@ -671,7 +693,7 @@ void ScanLayer::reduce() {
             emit drawingRowsChanged();
             if (count_changed) emit drawnDatasetCountChanged();
         }
-        for (const auto d : drawn_datasets_) needed[d] = true;
+        for (const auto set : drawn_datasets_) needed[set] = true;
     } else {
         const int pixels = std::max(1, static_cast<int>(std::ceil(height())));
         if (map_rows_ != model_->rows() || map_low_ != y_min_ || map_high_ != y_max_ ||
@@ -684,7 +706,7 @@ void ScanLayer::reduce() {
         }
         for (const auto& pixel : map_pixels_) {
             if (pixel.band == MapPixelRow::none) continue;
-            for (const auto d : {pixel.band, pixel.lower, pixel.upper}) needed[d] = true;
+            for (const auto set : {pixel.band, pixel.lower, pixel.upper}) needed[set] = true;
         }
     }
     if (!(key == reduced_for_) || reduced_mode_ != mode_) {
@@ -697,12 +719,12 @@ void ScanLayer::reduce() {
     const edi::YScale scale = scale_of(scale_);
     const auto columns = static_cast<std::size_t>(key.columns);
     const double column_width = (x_max_ - x_min_) / static_cast<double>(columns);
-    constexpr float kNaN = std::numeric_limits<float>::quiet_NaN();
+    constexpr double kNaN = std::numeric_limits<double>::quiet_NaN();
     int built = 0;
-    for (std::size_t d = 0; d < patterns.size(); ++d) {
-        const ScanViewModel::Pattern& pattern = patterns[d];
-        Reduction& reduction = reductions_[d];
-        if (!needed[d]) {
+    for (std::size_t set = 0; set < patterns.size(); ++set) {
+        const ScanViewModel::Pattern& pattern = patterns[set];
+        Reduction& reduction = reductions_[set];
+        if (!needed[set]) {
             if (reduction.generation != 0) {
                 reduction = Reduction{};
                 ++reduction_changes_;
@@ -726,8 +748,8 @@ void ScanLayer::reduce() {
             for (std::size_t c = 0; c < values.size(); ++c) {
                 const double centre = x_min_ + (static_cast<double>(c) + 0.5) * column_width;
                 reduction.v[c] = column_excluded(pattern, included_only_, centre, column_width)
-                                     ? kNaN
-                                     : static_cast<float>(edi::to_display(values[c], scale));
+                                     ? std::numeric_limits<float>::quiet_NaN()
+                                     : static_cast<float>(edi::to_display(static_cast<double>(values[c]), scale));
             }
             continue;
         }
@@ -745,7 +767,7 @@ void ScanLayer::reduce() {
         bool was_excluded = false;
         double last_x = kNaN, last_v = kNaN;
         for (std::size_t k = 0; k < trace.x.size(); ++k) {
-            const double v = edi::to_display(trace.low[k], scale);
+            const double v = edi::to_display(static_cast<double>(trace.low[k]), scale);
             const double x = (trace.x[k] - x_min_) / (x_max_ - x_min_) * width();
             if (!std::isfinite(trace.x[k]) || !std::isfinite(v)) {
                 add(reduction.x, reduction.v, kNaN, kNaN);
@@ -854,7 +876,9 @@ QColor ScanLayer::lineColour(int dataset, int top) const {
 QColor ScanLayer::blendedColour(const QColor& colour, double keep) const {
     // Blended toward the background rather than made translucent: a line crossing itself, up and down a narrow peak,
     // stays one even colour, as the pattern chart's opaque lines do.
-    const auto mix = [keep](double ink, double paper) { return keep * ink + (1.0 - keep) * paper; };
+    const auto mix = [keep](float ink, float paper) {
+        return keep * static_cast<double>(ink) + (1.0 - keep) * static_cast<double>(paper);
+    };
     return QColor::fromRgbF(static_cast<float>(mix(colour.redF(), background_.redF())),
                             static_cast<float>(mix(colour.greenF(), background_.greenF())),
                             static_cast<float>(mix(colour.blueF(), background_.blueF())), 1.0F);
@@ -987,13 +1011,13 @@ std::vector<QRect> excluded_bands(const ScanViewModel& model, const std::vector<
             bands.emplace_back(left, top, right - left, bottom - top);
         }
     };
-    for (std::size_t d = 0; d < count; ++d) {
-        if (!std::isfinite(spans[d].low) || !std::isfinite(spans[d].high)) {
+    for (std::size_t set = 0; set < count; ++set) {
+        if (!std::isfinite(spans[set].low) || !std::isfinite(spans[set].high)) {
             continue;  // a dataset with no place
         }
-        const int top = std::clamp(static_cast<int>(std::lround(py(spans[d].high))), 0, pixel_rows);
-        const int bottom = std::clamp(static_cast<int>(std::lround(py(spans[d].low))), 0, pixel_rows);
-        for (const auto& [a, b] : patterns[d].excluded_shown) {
+        const int top = std::clamp(static_cast<int>(std::lround(py(spans[set].high))), 0, pixel_rows);
+        const int bottom = std::clamp(static_cast<int>(std::lround(py(spans[set].low))), 0, pixel_rows);
+        for (const auto& [a, b] : patterns[set].excluded_shown) {
             band(a, b, top, bottom);
         }
     }
@@ -1023,12 +1047,12 @@ void ScanLayer::feedLines() {
         std::vector<ScanLines::Trace> traces;
         traces.reserve(order.size() * 2);
         lines_fed_generations_.clear();
-        for (const std::size_t d : order) {
-            traces.push_back({reductions_[d].x, reductions_[d].v});
-            lines_fed_generations_.push_back(reductions_[d].generation);
+        for (const std::size_t set : order) {
+            traces.push_back({reductions_[set].x, reductions_[set].v});
+            lines_fed_generations_.push_back(reductions_[set].generation);
         }
-        for (const std::size_t d : order) {
-            traces.push_back({reductions_[d].excluded_x, reductions_[d].excluded_v});
+        for (const std::size_t set : order) {
+            traces.push_back({reductions_[set].excluded_x, reductions_[set].excluded_v});
         }
         lines_->setTraces(std::move(traces));
         lines_order_ = order;
@@ -1045,23 +1069,23 @@ void ScanLayer::feedLines() {
     // A value v reaches H (v - low) / (high - low) above its baseline: the shader's row and lift, folded.
     // Highlighted, the shown dataset is drawn by the line over the others, which are faded.
     const int top = highlighted();
-    const auto style_of = [this, top](std::size_t d) {
-        const double span = highs_[d] - lows_[d];
+    const auto style_of = [this, top](std::size_t set) {
+        const double span = highs_[set] - lows_[set];
         const double scaled = span > 0.0 ? pattern_height_ / span : 0.0;
-        QColor colour = lineColour(static_cast<int>(d), top);
-        if (top >= 0 && static_cast<int>(d) == top) {
+        QColor colour = lineColour(static_cast<int>(set), top);
+        if (top >= 0 && static_cast<int>(set) == top) {
             colour.setAlphaF(0.0F);  // drawn by the line over the others
         }
-        return ScanLines::Style{baselines_[d] - (span > 0.0 ? lows_[d] : 0.0) * scaled, scaled, colour};
+        return ScanLines::Style{baselines_[set] - (span > 0.0 ? lows_[set] : 0.0) * scaled, scaled, colour};
     };
     std::vector<ScanLines::Style> styles;
     styles.reserve(order.size() * 2);
-    for (const std::size_t d : order) {
-        styles.push_back(style_of(d));
+    for (const std::size_t set : order) {
+        styles.push_back(style_of(set));
     }
-    for (const std::size_t d : order) {
-        ScanLines::Style style = style_of(d);
-        style.colour = blendedColour(lineColour(static_cast<int>(d), top), faded_);
+    for (const std::size_t set : order) {
+        ScanLines::Style style = style_of(set);
+        style.colour = blendedColour(lineColour(static_cast<int>(set), top), faded_);
         styles.push_back(style);
     }
     lines_->setStyles(std::move(styles));
@@ -1125,8 +1149,8 @@ void ScanLayer::paint(QPainter* painter) {
 
     if (mode_ == QLatin1String("map")) {
         const std::vector<float> none(static_cast<std::size_t>(pixel_columns), std::numeric_limits<float>::quiet_NaN());
-        const auto values = [&](std::size_t d) -> const std::vector<float>& {
-            return reductions_[d].v.size() == none.size() ? reductions_[d].v : none;
+        const auto values = [&](std::size_t set) -> const std::vector<float>& {
+            return reductions_[set].v.size() == none.size() ? reductions_[set].v : none;
         };
         std::vector<edi::ScanMapColour> table =
             edi::scan_colour_table(colour_map_.toStdString(), background_.name().toStdString(), dark_);
@@ -1145,23 +1169,24 @@ void ScanLayer::paint(QPainter* painter) {
             const auto& own = values(pixel.band);
             const auto& a = values(pixel.lower);
             const auto& b = values(pixel.upper);
-            // Highlighted, every row's band but the shown dataset's is blended toward the background.
-            const bool faded = highlighted() >= 0 && pixel.band != static_cast<std::size_t>(highlighted());
+            // Every row keeps its full colour: blended toward the background, a map's low intensities read as empty,
+            // and the highlighted run is marked by its label (the owner, 2026-11-17).
+            const bool faded = false;
             const double keep = faded ? faded_ : 1.0;
             QRgb* line = reinterpret_cast<QRgb*>(image.scanLine(j));
             for (int i = 0; i < pixel_columns; ++i) {
                 const auto at = static_cast<std::size_t>(i);
-                const double va = a[at], vb = b[at];
+                const double va = static_cast<double>(a[at]), vb = static_cast<double>(b[at]);
                 // A band is its own dataset's, out to halfway to each neighbouring row, empty where that dataset has no
                 // point. Stepped, its edges are hard; smooth, it blends into its neighbour's only in the edge zone, and
                 // never into or out of an empty column, so no band shows a neighbour's data. One rule for scan values,
                 // files and datablocks (the owner, 2026-10-22): blending from row to row had invented patterns between
                 // a sparse scan's rows.
                 const double value = !smooth_rows_ || pixel.lower == pixel.upper || !std::isfinite(va) || !std::isfinite(vb)
-                                         ? own[at]
+                                         ? static_cast<double>(own[at])
                                          : va + (vb - va) * pixel.share;
                 const edi::ScanMapColour colour = edi::scan_table_colour(table, (value - display_min_) / span);
-                const auto mix = [keep](int c, int b) { return static_cast<int>(std::lround(b + (c - b) * keep)); };
+                const auto mix = [keep](int channel, int base) { return static_cast<int>(std::lround(base + (channel - base) * keep)); };
                 line[i] = keep < 1.0 && colour.a > 0 ? qRgba(mix(colour.r, background_.red()), mix(colour.g, background_.green()),
                                                              mix(colour.b, background_.blue()), colour.a)
                                                        : qRgba(colour.r, colour.g, colour.b, colour.a);
@@ -1202,15 +1227,15 @@ void ScanLayer::paint(QPainter* painter) {
     lines.reserve(drawn.size() * 2);
     // The excluded stretches first, dimmed, under every line; then the lines.
     for (const bool stretches : {true, false}) {
-        for (const std::size_t d : drawn) {
-            const Reduction& reduction = reductions_[d];
+        for (const std::size_t set : drawn) {
+            const Reduction& reduction = reductions_[set];
             const std::vector<float>& xs = stretches ? reduction.excluded_x : reduction.x;
             const std::vector<float>& vs = stretches ? reduction.excluded_v : reduction.v;
             Line line;
             bool drawing = false;
             for (std::size_t k = 0; k < xs.size(); ++k) {
-                const double x = xs[k];
-                const double y = py(stackedY(d, vs[k]));
+                const double x = static_cast<double>(xs[k]);
+                const double y = py(stackedY(set, static_cast<double>(vs[k])));
                 if (!std::isfinite(x) || !std::isfinite(y)) {
                     drawing = false;
                 } else if (drawing) {
@@ -1226,9 +1251,9 @@ void ScanLayer::paint(QPainter* painter) {
             const QRectF bounds = line.path.boundingRect();
             line.top = bounds.top() - width_px;
             line.bottom = bounds.bottom() + width_px;
-            const QColor colour = lineColour(static_cast<int>(d), top);
+            const QColor colour = lineColour(static_cast<int>(set), top);
             line.colour = stretches ? blendedColour(colour, faded_) : colour;
-            line.width = top >= 0 && static_cast<int>(d) != top ? recededWidth(width_px) : width_px;
+            line.width = top >= 0 && static_cast<int>(set) != top ? recededWidth(width_px) : width_px;
             lines.push_back(std::move(line));
         }
     }
@@ -1242,7 +1267,13 @@ void ScanLayer::paint(QPainter* painter) {
     // The ratio is the painter's whole scale: Qt paints this item into a texture of device pixels through a scaled
     // transform on a device that reports a ratio of 1, so the device's ratio alone would stroke at item resolution and
     // the texture would stretch the lines.
-    const qreal ratio = painter->deviceTransform().m11();
+    // Its size, not its sign: a mirrored transform (macOS's Metal texture) gives a negative m11, and a negative pen width
+    // warns on every frame.
+    const QTransform transform = painter->deviceTransform();
+    const qreal scale = std::hypot(transform.m11(), transform.m12());
+    const qreal ratio = std::isfinite(scale) && scale > 0.0 ? scale
+                        : window() != nullptr                ? window()->effectiveDevicePixelRatio()
+                                                             : 1.0;
     const int device_width = std::max(1, static_cast<int>(std::ceil(width() * ratio)));
     const int device_height = std::max(1, static_cast<int>(std::ceil(height() * ratio)));
     const int forced = qEnvironmentVariableIntValue("EDI_SCAN_PAINT_THREADS");
@@ -1345,23 +1376,23 @@ QSGNode* ScanRowTicks::updatePaintNode(QSGNode* old, UpdatePaintNodeData* /*data
         return root;
     }
     std::vector<int> ticks(static_cast<std::size_t>(std::ceil(plot_height_)), -1);
-    const auto place = [&](int d) {
-        const double at = layer_->rowOf(d);
+    const auto place = [&](int set) {
+        const double at = layer_->rowOf(set);
         if (!std::isfinite(at) || at < low || at > high) return;
         const auto row = static_cast<std::size_t>(std::clamp(std::floor((high - at) / (high - low) * plot_height_), 0.0, plot_height_ - 1.0));
-        ticks[row] = d;
+        ticks[row] = set;
     };
     if (layer_->property("mode").toString() == QLatin1String("stacked")) {
-        for (const auto d : layer_->drawnDatasets()) place(static_cast<int>(d));
+        for (const auto set : layer_->drawnDatasets()) place(static_cast<int>(set));
     } else {
-        for (int d = 0; d < model->count(); ++d) place(d);
+        for (int set = 0; set < model->count(); ++set) place(set);
     }
     for (std::size_t row = 0; row < ticks.size(); ++row) {
-        const int d = ticks[row];
-        if (d < 0) continue;
+        const int set = ticks[row];
+        if (set < 0) continue;
         QSGRectangleNode* tick = window()->createRectangleNode();
         tick->setRect(QRectF(0.0, static_cast<double>(row), tick_width_, 1.0));
-        tick->setColor(layer_->colourOf(d));
+        tick->setColor(layer_->colourOf(set));
         root->appendChildNode(tick);
     }
     return root;

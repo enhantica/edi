@@ -343,7 +343,7 @@ std::uint64_t AssistantWidgetInput::start(Request request) {
     const auto original = request_;
     const auto id = ++serial_;
     choice_popup_.clear(); choice_content_.clear(); choice_row_.clear(); search_header_.clear(); search_editor_.clear(); choice_text_=std::move(optionText);
-    center_ = center; step_ = Step::Move; draft_ = false; commit_prepared_ = false; tooltip_waits_ = 0;
+    center_ = center; step_ = Step::Move; draft_ = false; commit_prepared_ = false; tooltip_waits_ = 0; choice_open_waits_ = 0;
     emit activeChanged(true);
     if (!self) return id;
     const bool ready = self->current(id);
@@ -368,6 +368,7 @@ bool AssistantWidgetInput::mouse(QEvent::Type type, Qt::MouseButton button) {
     const auto buttons = type == QEvent::MouseButtonRelease ? Qt::NoButton : button;
     QMouseEvent event(type, center_, window->mapToGlobal(center_), button, buttons, Qt::NoModifier, &mouse_owner_->device);
     if (type == QEvent::MouseButtonPress) mouse_owner_->held_button = button;
+    // cppcheck-suppress nullPointerRedundantCheck ; checked on entry; the later check is for re-entry
     event.setTimestamp(mouse_owner_->eventStamp(type));
     QCoreApplication::sendEvent(window, &event);
     if (self && mouse_owner_ && type == QEvent::MouseButtonRelease) mouse_owner_->releaseFinished(*this, original_stamp);
@@ -508,6 +509,7 @@ bool AssistantWidgetInput::revealSearchEditor() {
     if(!QMetaObject::invokeMethod(list,"forceLayout",Qt::DirectConnection) || !owned())return false;
     const QPointer<QQuickItem> header(list->property("headerItem").value<QQuickItem*>());
     if(!header || !list->isAncestorOf(header))return false;
+    // cppcheck-suppress nullPointerRedundantCheck ; checked just above; the later check is for re-entry
     header->ensurePolished();if(!owned() || !header || list->property("headerItem").value<QQuickItem*>()!=header)return false;
     QPointer<QQuickItem> editor;
     for(auto* child:header->childItems())if(child->objectName()==QStringLiteral("comboBox.search")) {
@@ -577,23 +579,28 @@ void AssistantWidgetInput::advance() noexcept {
         // is active. Never request activation or inject into an inactive window.
         if (!window_->isActive()) { timer_.start(navigation_ms); return; }
         if ((step_ == Step::Move || step_ == Step::Press) && manualDraftPresent()) {
-            if(self)self->stop(request,id,false, interrupted_, false, ControlCause::ManualInput); return;
+            if(self)self->stop(request,id,false, interrupted_, false, ControlCause::ManualInput);
+            return;
         }
         switch (step_) {
         case Step::Move:
             emit pointerMoved(center_);
+            // cppcheck-suppress identicalConditionAfterEarlyExit ; a signal or event above can delete this object
             if (!self) return;
-            { const bool valid = self->current(id); if (!self) return;
-              if (!valid) { if (self && serial_ == id && request_ == request) self->fail(request,id,ControlCause::Superseded, QT_TR_NOOP("Visible action ownership changed"), true); return; } }
+            // cppcheck-suppress identicalConditionAfterEarlyExit ; a signal or event above can delete this object
+            { const bool stillValid = self->current(id); if (!self) return;
+              if (!stillValid) { if (self && serial_ == id && request_ == request) self->fail(request,id,ControlCause::Superseded, QT_TR_NOOP("Visible action ownership changed"), true); return; } }
             step_ = Step::Press; pace(move_ms); return;
         case Step::Press:
             if (request->kind == Kind::FileLoadCue) {
                 // Presentation only: no device event, focus change or button handler.
                 emit pointerPressed();
+                // cppcheck-suppress identicalConditionAfterEarlyExit ; a signal or event above can delete this object
                 if (!self || serial_ != id || request_ != request) return;
-                const bool valid = current(id);
+                const bool stillValid = current(id);
+                // cppcheck-suppress identicalConditionAfterEarlyExit ; a signal or event above can delete this object
                 if (!self || serial_ != id || request_ != request) return;
-                if (!valid) { if(self)self->fail(request,id,ControlCause::Superseded, QT_TR_NOOP("Visible file cue ownership changed"), false); return; }
+                if (!stillValid) { if(self)self->fail(request,id,ControlCause::Superseded, QT_TR_NOOP("Visible file cue ownership changed"), false); return; }
                 step_ = Step::Release; pace(press_ms); return;
             }
             if (request->kind == Kind::DismissMenu) {
@@ -610,18 +617,23 @@ void AssistantWidgetInput::advance() noexcept {
                 return;
             }
             if (!mouse(QEvent::MouseMove, Qt::NoButton)) { if (self && serial_ == id && request_ == request) self->fail(request,id,ControlCause::Delivery, QT_TR_NOOP("The target did not receive pointer movement"), false); return; }
+            // cppcheck-suppress identicalConditionAfterEarlyExit ; a signal or event above can delete this object
             if (!self) return;
-            { const bool valid = self->current(id); if (!self) return;
-              if (!valid) { if (self && serial_ == id && request_ == request) self->fail(request,id,ControlCause::Superseded, QT_TR_NOOP("Visible action ownership changed"), true); return; } }
+            // cppcheck-suppress identicalConditionAfterEarlyExit ; a signal or event above can delete this object
+            { const bool stillValid = self->current(id); if (!self) return;
+              if (!stillValid) { if (self && serial_ == id && request_ == request) self->fail(request,id,ControlCause::Superseded, QT_TR_NOOP("Visible action ownership changed"), true); return; } }
             // A tooltip left by the previous step (shown below the control it belongs to, and still fading out) can lie
             // over the target and would take the press. A person's press comes later; this one waits for it to go.
             if (tooltip_waits_ < 20 && coveredByToolTip()) { ++tooltip_waits_; timer_.start(50); return; }
             emit pointerPressed();
+            // cppcheck-suppress identicalConditionAfterEarlyExit ; a signal or event above can delete this object
             if (!self) return;
-            { const bool valid = self->current(id); if (!self) return;
-              if (!valid) { if (self && serial_ == id && request_ == request) self->fail(request,id,ControlCause::Superseded, QT_TR_NOOP("Visible action ownership changed"), true); return; } }
+            // cppcheck-suppress identicalConditionAfterEarlyExit ; a signal or event above can delete this object
+            { const bool stillValid = self->current(id); if (!self) return;
+              if (!stillValid) { if (self && serial_ == id && request_ == request) self->fail(request,id,ControlCause::Superseded, QT_TR_NOOP("Visible action ownership changed"), true); return; } }
             pressed_ = true; // Own a balancing release even if the press reenters retirement.
             if (!mouse(QEvent::MouseButtonPress, request->kind == Kind::ContextMenu ? Qt::RightButton : Qt::LeftButton)) { if (self && serial_ == id && request_ == request) self->fail(request,id,ControlCause::Delivery, QT_TR_NOOP("The real control did not receive its press"), true); return; }
+            // cppcheck-suppress identicalConditionAfterEarlyExit ; a signal or event above can delete this object
             if (!self || serial_ != id || request_ != request) return;
             step_ = Step::Release; pace(press_ms); return;
         case Step::Release:
@@ -629,27 +641,42 @@ void AssistantWidgetInput::advance() noexcept {
             if (request->kind != Kind::ParameterFilter && request->kind != Kind::StagedText && request->kind != Kind::Choose && request->kind != Kind::SearchChoice && request->kind != Kind::FormText) {
                 commit_prepared_ = true; // Exact finish is owed even if preparation reenters/cancels.
                 if (!request->prepareCommit()) { if (self && serial_ == id && request_ == request) self->fail(request,id,ControlCause::Commit, QT_TR_NOOP("The native input could not be prepared"), false); return; }
+                // cppcheck-suppress identicalConditionAfterEarlyExit ; a signal or event above can delete this object
                 if (!self) return;
-            { const bool valid = self->current(id); if (!self) return;
-              if (!valid) { if (self && serial_ == id && request_ == request) self->fail(request,id,ControlCause::Superseded, QT_TR_NOOP("Visible action ownership changed"), true); return; } }
+            // cppcheck-suppress identicalConditionAfterEarlyExit ; a signal or event above can delete this object
+            { const bool stillValid = self->current(id); if (!self) return;
+              if (!stillValid) { if (self && serial_ == id && request_ == request) self->fail(request,id,ControlCause::Superseded, QT_TR_NOOP("Visible action ownership changed"), true); return; } }
             }
             pressed_ = false;
             if (!mouse(QEvent::MouseButtonRelease, request->kind == Kind::ContextMenu ? Qt::RightButton : Qt::LeftButton)) { if (self && serial_ == id && request_ == request) self->fail(request,id,ControlCause::Delivery, QT_TR_NOOP("The real control did not receive its release"), true); return; }
+            // cppcheck-suppress identicalConditionAfterEarlyExit ; a signal or event above can delete this object
             if (!self || serial_ != id || request_ != request) return;
             if (request_->kind == Kind::Choose || request_->kind == Kind::SearchChoice) {
-                choice_popup_ = request_->target->property("popup").value<QObject*>();
-                choice_content_ = choice_popup_ ? choice_popup_->property("contentItem").value<QQuickItem*>() : nullptr;
-                if (!choice_popup_ || !choice_popup_->property("visible").toBool() || !watchChoicePopup()) { if(self)self->fail(request,id,ControlCause::Commit, QT_TR_NOOP("The genuine ComboBox popup did not open with its original completion owner"), false); return; }
-                step_ = request_->kind == Kind::SearchChoice ? Step::SearchReveal : Step::ChoiceReveal;
-                pace(click_relaxation_ms); return;
+                step_ = Step::ChoiceOpenWait; timer_.start(0); return;
             }
             if (request_->kind != Kind::ParameterFilter && request_->kind != Kind::StagedText && request_->kind != Kind::Choose && request_->kind != Kind::SearchChoice && request_->kind != Kind::FormText) { if(self)self->stop(request,id,true, {}, false); return; }
             step_ = Step::Select; pace(click_relaxation_ms); return;
+        case Step::ChoiceOpenWait: {
+            // The popup a click opens may show a frame or two later (a list rebuilt for it, a closing tooltip): wait for
+            // it, then open it directly as the combo box's own click does, before calling the click failed.
+            choice_popup_ = request->target->property("popup").value<QObject*>();
+            const bool open = choice_popup_ && choice_popup_->property("visible").toBool();
+            if (!open && choice_popup_ && choice_open_waits_ < 20) {
+                if (++choice_open_waits_ == 20) QMetaObject::invokeMethod(choice_popup_, "open");
+                timer_.start(50); return;
+            }
+            choice_content_ = choice_popup_ ? choice_popup_->property("contentItem").value<QQuickItem*>() : nullptr;
+            if (!choice_popup_ || !choice_popup_->property("visible").toBool() || !watchChoicePopup()) { if(self)self->fail(request,id,ControlCause::Commit, QT_TR_NOOP("The genuine ComboBox popup did not open with its original completion owner"), false); return; }
+            step_ = request->kind == Kind::SearchChoice ? Step::SearchReveal : Step::ChoiceReveal;
+            pace(click_relaxation_ms); return;
+        }
         case Step::SearchReveal: {
             if(!revealSearchEditor()) {if(self && serial_==id && request_==request)self->fail(request,id,ControlCause::Unavailable,QT_TR_NOOP("The original popup search editor could not be revealed"),false);return;}
+            // cppcheck-suppress identicalConditionAfterEarlyExit ; a signal or event above can delete this object
             if(!self || serial_!=id || request_!=request)return;
             const bool composing=search_editor_->property("inputMethodComposing").toBool();
             const bool manual=manualDraftPresent();
+            // cppcheck-suppress identicalConditionAfterEarlyExit ; a signal or event above can delete this object
             if(!self || serial_!=id || request_!=request)return;
             if(composing || manual) {
                 self->fail(request,id,ControlCause::ManualInput,QT_TR_NOOP("Finish the current manual input before focusing the original popup search"),false);return;
@@ -664,12 +691,15 @@ void AssistantWidgetInput::advance() noexcept {
         case Step::SearchPress: {
             if(!searchEditorOwned()){if(self && serial_==id && request_==request)self->fail(request,id,ControlCause::Unavailable,QT_TR_NOOP("The original popup search editor changed before pointer movement"),false);return;}
             const bool manual=manualDraftPresent();
+            // cppcheck-suppress identicalConditionAfterEarlyExit ; a signal or event above can delete this object
             if(!self || serial_!=id || request_!=request)return;
             if(manual){self->fail(request,id,ControlCause::ManualInput,QT_TR_NOOP("Finish the current manual input before focusing the original popup search"),false);return;}
             if(!mouse(QEvent::MouseMove,Qt::NoButton)) {if(self && serial_==id && request_==request)self->fail(request,id,ControlCause::Delivery,QT_TR_NOOP("The original popup search editor did not receive pointer movement"),false);return;}
+            // cppcheck-suppress identicalConditionAfterEarlyExit ; a signal or event above can delete this object
             if(!self || serial_!=id || request_!=request)return;
             if(!current(id) || !searchEditorOwned()){if(self && serial_==id && request_==request)self->fail(request,id,ControlCause::Superseded,QT_TR_NOOP("The original popup search editor changed before its press"),false);return;}
             emit pointerPressed();
+            // cppcheck-suppress identicalConditionAfterEarlyExit ; a signal or event above can delete this object
             if(!self || serial_!=id || request_!=request)return;
             if(!current(id) || !searchEditorOwned()){if(self && serial_==id && request_==request)self->fail(request,id,ControlCause::Superseded,QT_TR_NOOP("The original popup search editor changed during its cue"),false);return;}
             pressed_=true;
@@ -679,20 +709,25 @@ void AssistantWidgetInput::advance() noexcept {
         case Step::SearchRelease:
             pressed_=false;
             if(!mouse(QEvent::MouseButtonRelease,Qt::LeftButton)){if(self && serial_==id && request_==request)self->fail(request,id,ControlCause::Delivery,QT_TR_NOOP("The original popup search editor did not receive its release"),false);return;}
+            // cppcheck-suppress identicalConditionAfterEarlyExit ; a signal or event above can delete this object
             if(!self || serial_!=id || request_!=request)return;
             if(!searchEditorOwned() || window_->activeFocusItem()!=search_editor_ || !choiceKeyboardOwned()) {if(self && serial_==id && request_==request)self->fail(request,id,ControlCause::Delivery,QT_TR_NOOP("The original popup search editor did not receive keyboard focus"),false);return;}
             step_=Step::Select;timer_.start(0);return;
         case Step::ChoiceReveal:
             if(!revealChoice()) {if(self && serial_==id && request_==request)self->fail(request,id,ControlCause::Unavailable,QT_TR_NOOP("The exact offered popup row could not be revealed"),false);return;}
+            // cppcheck-suppress identicalConditionAfterEarlyExit ; a signal or event above can delete this object
             if(!self || serial_!=id || request_!=request)return;
             emit pointerMoved(center_);
+            // cppcheck-suppress identicalConditionAfterEarlyExit ; a signal or event above can delete this object
             if(!self || serial_!=id || request_!=request)return;
             step_=Step::ChoicePress;pace(move_ms);return;
         case Step::ChoicePress:
             if(!choiceRowOwned() || !mouse(QEvent::MouseMove,Qt::NoButton)) {if(self && serial_==id && request_==request)self->fail(request,id,ControlCause::Delivery,QT_TR_NOOP("The offered popup row did not receive pointer movement"),false);return;}
+            // cppcheck-suppress identicalConditionAfterEarlyExit ; a signal or event above can delete this object
             if(!self || serial_!=id || request_!=request)return;
             if(!current(id) || !choiceRowOwned()){if(self && serial_==id && request_==request)self->fail(request,id,ControlCause::Superseded,QT_TR_NOOP("The original offered row changed before its press"),false);return;}
             emit pointerPressed();
+            // cppcheck-suppress identicalConditionAfterEarlyExit ; a signal or event above can delete this object
             if(!self || serial_!=id || request_!=request)return;
             if(!current(id) || !choiceRowOwned()){if(self && serial_==id && request_==request)self->fail(request,id,ControlCause::Superseded,QT_TR_NOOP("The original offered row changed during its cue"),false);return;}
             pressed_=true;
@@ -701,6 +736,7 @@ void AssistantWidgetInput::advance() noexcept {
         case Step::ChoiceRelease:
             commit_prepared_=true;
             if(!request->prepareCommit()) {if(self && serial_==id && request_==request)self->fail(request,id,ControlCause::Commit,QT_TR_NOOP("The original popup choice could not admit its ordinary commit"),false);return;}
+            // cppcheck-suppress identicalConditionAfterEarlyExit ; a signal or event above can delete this object
             if(!self || serial_!=id || request_!=request)return;
             if(!current(id) || !choiceRowOwned()) {if(self && serial_==id && request_==request)self->fail(request,id,ControlCause::Superseded,QT_TR_NOOP("The prepared original popup choice changed"),false);return;}
             pressed_=false;
@@ -716,6 +752,7 @@ void AssistantWidgetInput::advance() noexcept {
         case Step::ChooseCommit:
             commit_prepared_ = true;
             if (!request->prepareCommit()) { if (self && serial_ == id && request_ == request) self->fail(request,id,ControlCause::Commit, QT_TR_NOOP("The original ComboBox choice was retired"), false); return; }
+            // cppcheck-suppress identicalConditionAfterEarlyExit ; a signal or event above can delete this object
             if (!self || serial_ != id || request_ != request) return;
             { const bool owned=current(id);
             if (!owned || !key(request->kind == Kind::DismissMenu ? Qt::Key_Escape : Qt::Key_Return)) { if (self && serial_ == id && request_ == request) self->fail(request,id,owned ? ControlCause::Delivery : ControlCause::Superseded, QT_TR_NOOP("The actual menu key could not be delivered"), false); return; } }
@@ -724,6 +761,7 @@ void AssistantWidgetInput::advance() noexcept {
         case Step::Select: {
             if (request->kind == Kind::StagedText) {
                 if (!QMetaObject::invokeMethod(request->target, "beginAssistantEdit", Qt::DirectConnection)) { if(self)self->fail(request,id,ControlCause::Commit, QT_TR_NOOP("The original staged draft has no safe owner"), false); return; }
+                // cppcheck-suppress identicalConditionAfterEarlyExit ; a signal or event above can delete this object
                 if (!self || serial_ != id || request_ != request) return;
                 if (!request->target || !request->target->property("assistantEditing").toBool()) { if(self)self->fail(request,id,ControlCause::Commit, QT_TR_NOOP("The original staged draft was not admitted"), false); return; }
                 draft_ = true;
@@ -735,6 +773,7 @@ void AssistantWidgetInput::advance() noexcept {
             const QPointer<QQuickItem> editor(request->kind == Kind::SearchChoice ? search_editor_.data() : request->target.data());
             if (!editor || (!editor->inherits("QQuickTextInput") && !editor->inherits("QQuickTextEdit")) ||
                 !choiceKeyboardOwned() || (request->kind==Kind::SearchChoice && window_->activeFocusItem()!=editor) || editor->property("inputMethodComposing").toBool()) { if(self)self->fail(request,id,ControlCause::Delivery, QT_TR_NOOP("The original draft lost keyboard ownership"), true); return; }
+            // cppcheck-suppress identicalConditionAfterEarlyExit ; a signal or event above can delete this object
             if (!self || serial_ != id || request_ != request || !editor) return;
             const auto old = injecting_; injecting_ = true;
             {
@@ -759,12 +798,13 @@ void AssistantWidgetInput::advance() noexcept {
                 }
             }
             if (!self || serial_ != id || request_ != request) return;
-            const bool valid = current(id);
+            const bool stillValid = current(id);
             if (!self || serial_ != id || request_ != request) return;
-            if (!valid || !editor || !choiceKeyboardOwned() ||
+            if (!stillValid || !editor || !choiceKeyboardOwned() ||
                 (request->kind == Kind::SearchChoice && window_->activeFocusItem() != editor) ||
                 editor->property("text").toString() != request->value) {
-                if(self)self->fail(request,id,ControlCause::Superseded, QT_TR_NOOP("The original draft owner or text changed"), true); return;
+                if(self)self->fail(request,id,ControlCause::Superseded, QT_TR_NOOP("The original draft owner or text changed"), true);
+                return;
             }
             emit inputProgress();
             if (!self || serial_ != id || request_ != request) return;
@@ -774,8 +814,9 @@ void AssistantWidgetInput::advance() noexcept {
             commit_prepared_ = true;
             if (!request->prepareCommit()) { if (self && serial_ == id && request_ == request) self->fail(request,id,ControlCause::Commit, QT_TR_NOOP("The recorded native input could not be prepared"), true); return; }
             if (!self) return;
-            { const bool valid = self->current(id); if (!self) return;
-              if (!valid) { if (self && serial_ == id && request_ == request) self->fail(request,id,ControlCause::Superseded, QT_TR_NOOP("Visible action ownership changed"), true); return; } }
+            // cppcheck-suppress identicalConditionAfterEarlyExit ; a signal or event above can delete this object
+            { const bool stillValid = self->current(id); if (!self) return;
+              if (!stillValid) { if (self && serial_ == id && request_ == request) self->fail(request,id,ControlCause::Superseded, QT_TR_NOOP("Visible action ownership changed"), true); return; } }
             if ((request->kind == Kind::StagedText) && !QMetaObject::invokeMethod(request->target, "allowAssistantCommit", Qt::DirectConnection)) { if(self)self->fail(request,id,ControlCause::Commit, QT_TR_NOOP("The numeric control could not admit its final key"), true); return; }
             if (!self || serial_ != id || request_ != request) return;
             // Staged/form drafts have no scientific blur/Return commit. Their
@@ -807,7 +848,7 @@ void AssistantWidgetInput::fail(const std::shared_ptr<Request>& expected, std::u
                                 ControlCause cause, const char* diagnostic, bool restore) {
     // Translation is a virtual callback boundary. Capture the original before it.
     const QPointer<AssistantWidgetInput> self(this);
-    const auto original=expected;
+    const auto original=expected;  // NOLINT(performance-unnecessary-copy-initialization): owns the original across reentry
     if(!original || request_!=original || serial_!=expectedId)return;
     if(original->failure==ControlCause::None)original->failure=cause;
     const auto translated=tr(diagnostic);
@@ -819,8 +860,8 @@ void AssistantWidgetInput::stop(const std::shared_ptr<Request>& expected, std::u
     const QPointer<AssistantWidgetInput> self(this);
     if(!expected || request_!=expected || serial_!=expectedId)return;
     const auto id = expectedId;
-    const auto original = expected;
-    const auto settled_diagnostic = diagnostic; // Own the original fallback across completion reentry.
+    const auto original = expected;  // NOLINT(performance-unnecessary-copy-initialization): owns the original across reentry
+    const auto settled_diagnostic = diagnostic;  // NOLINT(performance-unnecessary-copy-initialization): owns the original fallback across completion reentry
     if(!delivered){
         if(original->failure==ControlCause::None)original->failure=cause;
         cause=original->failure;

@@ -308,6 +308,30 @@ sites:
     assertion_feed: Weighted normal equations, Fisher covariance, named dataset agreement and independent saved-value rounding.
     audit: 2026-11-09; no CLI-produced value supplies an expected physical answer.
 
+  - file: tests/system/py/test_joint_series.py
+    case: constraint-covariance
+    why: Authored joint-series extension checks known generating parameters, normal equations and damaged filesystem states.
+  - file: tests/system/py/test_joint_bank_ties.py
+    case: ncaf-wish-3bank-s5
+    why: Two banks of the five-bank FullProf extension isolate the hand-counted equality free set.
+  - file: tests/system/py/test_joint_series_seeded.py
+    case: ncaf-wish-3bank-s5
+    why: One point and two banks retain fixed FullProf atomic inputs and independently fitted bank scales.
+  - file: tests/system/slow/seeded_series.py
+    case: ncaf-wish-3bank-s5
+    why: The same five-bank external reference repeats one hundred points from identical starts for each explicit descent.
+
+  - file: tests/system/py/test_joint_series_starts.py
+    case: constraint-covariance
+
+  - file: tests/system/py/test_joint_series_derived.py
+    case: constraint-covariance
+
+  - file: tests/integration/py/test_fitting_corpus_witness.py
+    case: single-crystal-cwl-tbti-basic
+    why: Fit a byte-identical copy of the pinned measured project.
+    assertion_feed: Independent FullProf structure factors and weighted normal equations from the corpus reference.
+
   - file: tests/system/py/test_cli_performance_options.py
     case: cosio-d20-scan-3f
     why: Both real CLI hosts fit disposable copies of the pinned three-file scan to exercise process performance selections.

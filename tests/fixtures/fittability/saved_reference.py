@@ -16,6 +16,9 @@ from pathlib import Path
 from tests.fixtures.metadata_transition.retired_source_fields import saved_absorption
 from tests.fixtures.metadata_transition.task_inputs import saved_analysis, saved_experiment
 from tests.fixtures.project_categories.historical_bytes import native_edi_bytes, prior_digest
+from tests.fixtures.stop_defaults import example_inputs
+
+ROOT = Path(__file__).resolve().parents[3]
 
 
 def staged(source, target, rule, *, link_data=False):
@@ -32,6 +35,10 @@ def staged(source, target, rule, *, link_data=False):
                 symlinks=True,
                 ignore=shutil.ignore_patterns('__pycache__'),
             ) if child.is_dir() else shutil.copy2(child, target / child.name)
+    analysis = target / 'analysis/analysis.edi'
+    if analysis.is_file() and source.is_relative_to(ROOT):
+        name = (source / 'analysis/analysis.edi').relative_to(ROOT).as_posix()
+        analysis.write_bytes(example_inputs.composed_bytes(name, analysis.read_bytes()))
     record = (
         (source / 'project.edi').read_text()
         if (source / 'project.edi').is_file()

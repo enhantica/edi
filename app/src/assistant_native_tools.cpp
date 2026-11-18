@@ -170,7 +170,7 @@ QJsonArray native_tool_specs(bool include_profiles) {
     // Each operation shape is closed; only Add may omit its ID.
     auto tool=tools.last().toObject();auto schema=tool.value("inputSchema").toObject();
     const auto properties=schema.value("properties").toObject();
-    const auto branch=[&](Array operations,Array fields) {
+    const auto branch=[&](const Array& operations,const Array& fields) {
         Object selected;
         for(const auto& field:fields)selected[field.toString()]=properties.value(field.toString());
         selected["operation"]=Object{{"type","string"},{"enum",operations}};
@@ -184,22 +184,22 @@ QJsonArray native_tool_specs(bool include_profiles) {
     tool["inputSchema"]=schema;tools[tools.size()-1]=tool;
     // Common optional presentation metadata, for both original root schemas
     // and their owned oneOf alternatives; scientific fields stay required.
-    const auto optionalPurpose=[](Object schema) {
-        if(schema.value("required").isArray()) {
+    const auto optionalPurpose=[](Object input) {
+        if(input.value("required").isArray()) {
             Array fields;
-            for(const auto& field:schema.value("required").toArray())if(field!="purpose")fields.append(field);
-            schema["required"]=fields;
+            for(const auto& field:input.value("required").toArray())if(field!="purpose")fields.append(field);
+            input["required"]=fields;
         }
-        return schema;
+        return input;
     };
     for(qsizetype i=0;i<tools.size();++i) {
-        auto spec=tools[i].toObject();auto schema=optionalPurpose(spec.value("inputSchema").toObject());
-        if(schema.value("oneOf").isArray()) {
+        auto spec=tools[i].toObject();auto toolSchema=optionalPurpose(spec.value("inputSchema").toObject());
+        if(toolSchema.value("oneOf").isArray()) {
             Array branches;
-            for(const auto& branch:schema.value("oneOf").toArray())branches.append(optionalPurpose(branch.toObject()));
-            schema["oneOf"]=branches;
+            for(const auto& alternative:toolSchema.value("oneOf").toArray())branches.append(optionalPurpose(alternative.toObject()));
+            toolSchema["oneOf"]=branches;
         }
-        spec["inputSchema"]=schema;tools[i]=spec;
+        spec["inputSchema"]=toolSchema;tools[i]=spec;
     }
     return tools;
 }
@@ -218,7 +218,7 @@ quint64 assistant_native_tool_specs_preparation_bytes() {
     if(!codex_encoded_size(fixed,Limits::context_bytes,encoded))
         throw std::length_error("Native catalogue exceeds capacity");
     // Finite schema's decoded strings/keys fit its encoded UTF-8 spelling.
-    quint64 retained=encoded*sizeof(QChar)+fixed.size()*sizeof(QJsonValue);
+    quint64 retained=encoded*sizeof(QChar)+static_cast<quint64>(fixed.size())*sizeof(QJsonValue);
     const auto charge=[&](quint64 bytes) {
         if(bytes>Limits::stream_retained_bytes-retained)throw std::length_error("Native catalogue exceeds capacity");
         retained+=bytes;
@@ -470,7 +470,7 @@ void assistant_native_arguments(const QString& name, const Object& args) {
             if(!codex_measured_size(value,encoded))throw std::invalid_argument("Native relation Unicode is unavailable");
             for(qsizetype at=0;at<s.size();++at) {
                 const auto c=s[at].unicode();
-                bytes+=c<0x80?1:c<0x800?2:QChar::isHighSurrogate(c)?(++at,4):3;
+                bytes+=c<0x80?1U:c<0x800?2U:QChar::isHighSurrogate(c)?(++at,4U):3U;
                 if(cap && bytes>*cap)throw std::invalid_argument("Native relation text is unavailable");
             }
         };
@@ -482,10 +482,11 @@ void assistant_native_arguments(const QString& name, const Object& args) {
     if(name=="edit_experiment") {
         const auto id_ok=[](const QJsonValue& value) {
             return value.isString() && !value.toString().isEmpty() && !value.toString().contains(QChar(0)) &&
-                value.toString().toUtf8().size()<=edi::assistant::Limits::id_bytes;
+                static_cast<quint64>(value.toString().toUtf8().size())<=edi::assistant::Limits::id_bytes;
         };
         if(!id_ok(args.value("experiment")))throw ActionRefusal("target_unavailable","experiment");
         const auto op=args.value("operation").toString();
+        // NOLINTNEXTLINE(bugprone-branch-clone): one branch per operation, as the tool schema lists them.
         if(op=="select")shape(args,{"purpose","experiment","operation"});
         else if(op=="peak_profile" || op=="absorption_type" || op=="extinction_type" || op=="mosaic_distribution") {
             shape(args,{"purpose","experiment","operation","value"});
@@ -515,6 +516,7 @@ void assistant_native_arguments(const QString& name, const Object& args) {
         if(name=="create_structure")shape(args,{"purpose"});
         else {
             if(!args.value("structure").isString() || args.value("structure").toString().isEmpty())throw ActionRefusal("target_unavailable","structure");
+            // NOLINTNEXTLINE(bugprone-branch-clone): one branch per operation, as the tool schema lists them.
             if(name=="edit_structure" && args.value("operation")=="select")shape(args,{"purpose","structure","operation"});
             else if(name=="edit_structure")shape(args,{"purpose","structure","operation","value"});
             else if(args.value("operation")=="append")shape(args,{"purpose","structure","operation"});
@@ -529,7 +531,7 @@ void assistant_native_arguments(const QString& name, const Object& args) {
         if(!args.value("file_id").isString() || args.value("file_id").toString().isEmpty())throw ActionRefusal("input_required","file_id");
         for(const auto* field:{"offset","max_bytes"}) {
             const auto n=args.value(QLatin1StringView(field));
-            const double maximum=QLatin1StringView(field)==QLatin1StringView("offset")?edi::assistant::SelectedFileLimits::file_bytes:edi::assistant::SelectedFileLimits::read_bytes;
+            const auto maximum=static_cast<double>(QLatin1StringView(field)==QLatin1StringView("offset")?edi::assistant::SelectedFileLimits::file_bytes:edi::assistant::SelectedFileLimits::read_bytes);
             if(!n.isDouble() || !std::isfinite(n.toDouble()) || n.toDouble()<0 || std::floor(n.toDouble())!=n.toDouble() || n.toDouble()>maximum)
                 throw ActionRefusal("invalid_range",field);
         }

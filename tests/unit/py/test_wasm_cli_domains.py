@@ -79,9 +79,9 @@ def test_vehicle_changes_only_the_declared_conditions_before_any_fit(tmp_path):
     domains.vehicle(project)
     domains.verify_vehicle(project, original)
     analysis = project / domains.ANALYSIS
-    assert analysis.read_bytes() == original[domains.ANALYSIS] + domains.SUFFIX, (
-        'The backend vehicle declares ladder and chi-square stopping before solving'
-    )
+    assert analysis.read_bytes() == original[domains.ANALYSIS] + domains.solver_suffix(
+        domains.input_bytes()[domains.ANALYSIS]
+    ), 'The backend vehicle declares ladder and chi-square stopping before solving'
     analysis.write_bytes(analysis.read_bytes().replace(b'ladder', b'multistart_prune'))
     with pytest.raises(ValueError, match='declared ladder'):
         domains.verify_vehicle(project, original)

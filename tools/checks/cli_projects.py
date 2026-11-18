@@ -31,9 +31,9 @@ allowed resumes, though every value has settled. Every other fit must end ``done
 
 A quantity is a key of the machine record (``param.<label>.value`` included), or
 ``results[<x>].<column>`` — the ``analysis/results.csv`` row a scan wrote whose ``diffrn.*`` value
-is ``<x>``, or, when ``<x>`` is not a number, the row of the data file named ``<x>``.
-Scan pins are compared to raw terminal results of fresh completed prefixes; each written
-CSV cell must also equal its declared reporting projection. Every non-null
+is ``<x>``, or, when ``<x>`` is not a number, the row of the data file or series point named
+``<x>``. Scan pins are compared to raw terminal results of fresh completed prefixes; each
+written CSV cell must also equal its declared reporting projection. Every non-null
 ``tol_abs``/``tol_rel`` bound must hold; a fit's record must say ``status=done``. Every
 deviation is reported, never only the first, and any deviation is red.
 
@@ -398,10 +398,15 @@ def _results_row(project: Path, key: str) -> dict[str, str]:
         rows = list(csv.DictReader(handle))
     target = _float_or_none(key)
     if target is None:
-        # A scan whose files carry no diffrn.* value names its row by the data file.
-        matches = [row for row in rows if Path(row.get('file_path', '')).name == key]
+        # A scan whose files carry no diffrn.* value names its row by the data file; a series of
+        # joint fits by its point.
+        matches = [
+            row
+            for row in rows
+            if Path(row.get('file_path', '')).name == key or row.get('point') == key
+        ]
         if len(matches) != 1:
-            raise KeyError(f'{len(matches)} results.csv rows fit the file {key}')
+            raise KeyError(f'{len(matches)} results.csv rows fit the file or point {key}')
         return matches[0]
     matches = [
         row
@@ -427,7 +432,9 @@ def _check_prefix_rows(rows: list[dict], reproduced: list[dict]) -> None:
     if len(reproduced) != len(rows):
         raise ValueError('raw scan prefix did not complete its exact file walk')
     for original, actual in zip(rows, reproduced, strict=True):
-        if Path(original['file_path']).name != Path(actual['file_path']).name:
+        # A one-experiment scan names its file per row; a series of joint fits names its point.
+        walked = 'file_path' if 'file_path' in original else 'point'
+        if Path(original[walked]).name != Path(actual.get(walked, '')).name:
             raise ValueError('raw scan prefix changed the file order')
         # Exact reported agreement with the CLI proves the prefix retained its predecessor chain.
         for column, value in original.items():
@@ -462,6 +469,19 @@ def _raw_outcome_columns(project, outcome) -> dict[str, float]:
     return values
 
 
+def _prefix_files(project: Path, rows: list[dict]) -> list[str]:
+    """The data files the scan read for these rows; a series lists them per experiment."""
+    if all('file_path' in row for row in rows):
+        return [row['file_path'] for row in rows]
+    points = {row['point'] for row in rows}
+    path = project / 'analysis/results_experiments.csv'
+    with path.open(encoding='utf-8', newline='') as handle:
+        files = [row['file_path'] for row in csv.DictReader(handle) if row['point'] in points]
+    if not files:
+        raise ValueError(f'{path} lists no file for the points {sorted(points)}')
+    return files
+
+
 def _prefix_outcome(template: Path, project: Path, rows: list[dict]) -> dict[str, float]:
     import edi  # noqa: PLC0415
 
@@ -470,8 +490,8 @@ def _prefix_outcome(template: Path, project: Path, rows: list[dict]) -> dict[str
         shutil.copytree(template, prefix, symlinks=True)
         data = prefix / 'raw-scan-prefix'
         data.mkdir()
-        for row in rows:
-            source = Path(row['file_path'])
+        for name in _prefix_files(project, rows):
+            source = Path(name)
             source = source if source.is_absolute() else project / source
             shutil.copy2(source, data / source.name)
         analysis = prefix / 'analysis/analysis.edi'

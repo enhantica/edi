@@ -18,7 +18,7 @@ namespace {
 }
 
 struct SizeCounter {
-    std::uint64_t size = 0, limit;
+    std::uint64_t size = 0, limit = 0;
     void count(std::uint64_t n) {
         if (n > limit - size) throw std::length_error("JSON encoded size limit exceeded");
         size += n;

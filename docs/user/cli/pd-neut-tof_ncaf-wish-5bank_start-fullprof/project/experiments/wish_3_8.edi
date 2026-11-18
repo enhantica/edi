@@ -18,13 +18,13 @@ _diffrn.ambient_electric_field ?
 
 _calculator.type crysta
 
-_peak.rise_alpha_0 -0.012131(10)
-_peak.rise_alpha_1 0.122897(10)
-_peak.decay_beta_0 0.005991(10)
-_peak.decay_beta_1 0.027663(10)
+_peak.rise_alpha_0 -0.012131()
+_peak.rise_alpha_1 0.122897()
+_peak.decay_beta_0 0.005991()
+_peak.decay_beta_1 0.027663()
 _peak.broad_gauss_sigma_0 0
-_peak.broad_gauss_sigma_1 62.2430(10)
-_peak.broad_gauss_sigma_2 16.8600(10)
+_peak.broad_gauss_sigma_1 62.2430()
+_peak.broad_gauss_sigma_2 16.8600()
 _peak.broad_gauss_size 0.
 _peak.broad_gauss_strain 0.
 _peak.broad_lorentz_gamma_0 0
@@ -36,13 +36,13 @@ _peak.cutoff_fwhm 8
 _peak.type tof-jorgensen-von-dreele
 
 _instrument.setup_twotheta_bank 90
-_instrument.calib_d_to_tof_offset -12.72588(10)
-_instrument.calib_d_to_tof_linear 15105.37695(10)
+_instrument.calib_d_to_tof_offset -12.72588()
+_instrument.calib_d_to_tof_linear 15105.37695()
 _instrument.calib_d_to_tof_quadratic 1.00785
 _instrument.calib_d_to_tof_reciprocal 0.
 
 _absorption.type cylinder
-_absorption.abscor1 0.00109(10)
+_absorption.abscor1 0.00109()
 
 loop_
 _excluded_region.id
@@ -54,7 +54,7 @@ _excluded_region.end
 loop_
 _linked_structure.structure_id
 _linked_structure.scale
-ncaf 37.34559(10)
+ncaf 37.34559()
 
 _background.type line-segment
 
@@ -62,28 +62,28 @@ loop_
 _background.id
 _background.position
 _background.intensity
-1 9089.7529 440.9053(10)
-2 11580.4033 512.3024(10)
-3 13667.1650 416.8597(10)
-4 15551.9824 474.3702(10)
-5 17739.7168 407.4468(10)
-6 20364.9961 377.5257(10)
-7 22653.7031 346.0828(10)
-8 24740.4648 331.7580(10)
-9 27130.1406 335.9806(10)
-10 29957.3672 353.3779(10)
-11 32616.3047 298.4350(10)
-12 36150.3359 283.4345(10)
-13 40963.3516 253.7007(10)
-14 47265.5195 254.3172(10)
-15 53391.1758 235.3136(10)
-16 62005.2383 240.5865(10)
-17 71866.8672 239.3391(10)
-18 82913.9922 242.9301(10)
-19 90385.9375 241.0844(10)
-20 99649.2188 235.3399(10)
-21 107356.7656 239.0639(10)
-22 115337.3203 246.8555(10)
+1 9089.7529 440.9053()
+2 11580.4033 512.3024()
+3 13667.1650 416.8597()
+4 15551.9824 474.3702()
+5 17739.7168 407.4468()
+6 20364.9961 377.5257()
+7 22653.7031 346.0828()
+8 24740.4648 331.7580()
+9 27130.1406 335.9806()
+10 29957.3672 353.3779()
+11 32616.3047 298.4350()
+12 36150.3359 283.4345()
+13 40963.3516 253.7007()
+14 47265.5195 254.3172()
+15 53391.1758 235.3136()
+16 62005.2383 240.5865()
+17 71866.8672 239.3391()
+18 82913.9922 242.9301()
+19 90385.9375 241.0844()
+20 99649.2188 235.3399()
+21 107356.7656 239.0639()
+22 115337.3203 246.8555()
 
 loop_
 _data.time_of_flight

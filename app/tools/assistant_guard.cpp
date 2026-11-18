@@ -125,23 +125,25 @@ int main(int argc, char** argv) {
 #ifdef Q_OS_WIN
                 const auto size = _read(_fileno(stdin), buffer, sizeof(buffer));
 #else
+                // NOLINTNEXTLINE(clang-analyzer-unix.BlockInCriticalSection): the lock below is scoped and released.
                 const auto size = ::read(STDIN_FILENO, buffer, sizeof(buffer));
 #endif
                 if (size <= 0) {
                     QMetaObject::invokeMethod(&process, [&] { process.closeWriteChannel(); }, Qt::QueuedConnection);
                     return;
                 }
-                std::unique_lock lock(mutex);
-                writable.wait(lock, [&] { return pending < 1024 * 1024; });
-                pending += static_cast<std::size_t>(size);
-                lock.unlock();
+                {
+                    std::unique_lock lock(mutex);
+                    writable.wait(lock, [&] { return pending < std::size_t{1024} * 1024; });
+                    pending += static_cast<std::size_t>(size);
+                }
                 const QByteArray bytes(buffer, size);
                 QMetaObject::invokeMethod(&process, [&, bytes] { if (process.write(bytes) != bytes.size()) stop(); }, Qt::QueuedConnection);
             }
         }).detach();
     });
     const auto forward = [&](const QByteArray& bytes, FILE* stream) {
-        if (!bytes.isEmpty() && std::fwrite(bytes.constData(), 1, bytes.size(), stream) != static_cast<std::size_t>(bytes.size())) stop();
+        if (!bytes.isEmpty() && std::fwrite(bytes.constData(), 1, static_cast<std::size_t>(bytes.size()), stream) != static_cast<std::size_t>(bytes.size())) stop();
     };
     QObject::connect(&process, &QProcess::readyReadStandardOutput, &app, [&] { forward(process.readAllStandardOutput(), stdout); });
     QObject::connect(&process, &QProcess::readyReadStandardError, &app, [&] { forward(process.readAllStandardError(), stderr); });
@@ -155,7 +157,7 @@ int main(int argc, char** argv) {
 #endif
         }
     });
-    QObject::connect(&process, qOverload<int, QProcess::ExitStatus>(&QProcess::finished), &app, [&](int code, QProcess::ExitStatus status) {
+    QObject::connect(&process, qOverload<int, QProcess::ExitStatus>(&QProcess::finished), &app, [&]([[maybe_unused]] int code, [[maybe_unused]] QProcess::ExitStatus status) {
         forward(process.readAllStandardOutput(), stdout);
         forward(process.readAllStandardError(), stderr);
 #ifdef Q_OS_WIN

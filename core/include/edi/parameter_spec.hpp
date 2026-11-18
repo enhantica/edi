@@ -32,10 +32,10 @@ struct ParameterRange {
 // emits; EVERY listed name is accepted on read. An empty units string is not representable by
 // construction — a unitless quantity declares "dimensionless" explicitly.
 struct ParameterSpec {
-    const char* category;   // e.g. "cell", "peak" — uid is "<category>.<name>"
-    const char* name;       // leaf name, e.g. "broad_gauss_sigma_0"
-    const char* units;      // normalised code, upstream vocabulary (e.g. "microseconds_squared")
-    ParameterRange range;   // admissible values, +/-inf when unbounded
+    const char* category{};   // e.g. "cell", "peak" — uid is "<category>.<name>"
+    const char* name{};       // leaf name, e.g. "broad_gauss_sigma_0"
+    const char* units{};      // normalised code, upstream vocabulary (e.g. "microseconds_squared")
+    ParameterRange range{};   // admissible values, +/-inf when unbounded
     std::span<const char* const> edi_names;  // ordered; [0] canonical
     std::span<const char* const> cif_names;  // ordered; [0] canonical; may be empty
 };

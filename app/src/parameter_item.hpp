@@ -143,6 +143,12 @@ class ParameterItem : public QObject {
     // committed: a lattice constant's kLatticeConstantSliderHalfWidth (0.05 Å; the owner, 2026-10-04); any
     // other parameter's half its magnitude, at least 1e-3.
     Q_INVOKABLE double sliderHalfWidth() const;
+    // The slider's limits, value ± sliderHalfWidth rounded outward to a whole unit and kept inside minimum and
+    // maximum (edi::slider_limits).
+    Q_INVOKABLE double sliderLower() const;
+    Q_INVOKABLE double sliderUpper() const;
+    // The smallest half width for this kind of parameter (the table in parameter_item.cpp).
+    double sliderFloor() const;
     int blockIndex() const { return block_index_; }
     QString categoryIcon() const { return category_icon_; }
     QString elementSymbol() const { return element_symbol_; }
@@ -157,7 +163,8 @@ class ParameterItem : public QObject {
     QString suReason() const { return su_reason_; }
     double sliderStep() const;
     QString toolTip() const;
-    // A number of this item, a slider limit, in its display format; empty for a parameter the dictionary does not know.
+    // A number of this item, a slider limit, in its display format without trailing zeros; empty for a parameter the
+    // dictionary does not know.
     Q_INVOKABLE QString displayText(double value) const;
     // Set by the registry at each rebuild: a block's place and a site's element can change while the
     // parameter stays shown.

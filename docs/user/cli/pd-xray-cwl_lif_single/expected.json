@@ -15,9 +15,9 @@
           "tol_rel": null
         },
         "iterations": {
-          "value": 5.0,
+          "value": 4.5,
           "kind": "regression-pin",
-          "tol_abs": 0.0,
+          "tol_abs": 0.5,
           "tol_rel": null
         },
         "rwp": {

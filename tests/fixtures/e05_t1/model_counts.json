@@ -14106,6 +14106,82 @@
           "structures/cosio.edi": "37983b2243d249186d235bc0eb2b3d5acf78edb0872ddbd0f5314ef39c252443"
         }
       }
+    },
+    {
+      "id": "sc-neut-cwl_tb2ti2o7-heidi_exclusions",
+      "n_parameters": 30,
+      "diffraction_lib_n_parameters": 30,
+      "diffraction_lib_parameter_names": [
+        "tb2ti2o7.cell.length_a",
+        "tb2ti2o7.cell.length_b",
+        "tb2ti2o7.cell.length_c",
+        "tb2ti2o7.cell.angle_alpha",
+        "tb2ti2o7.cell.angle_beta",
+        "tb2ti2o7.cell.angle_gamma",
+        "tb2ti2o7.atom_site.Tb.fract_x",
+        "tb2ti2o7.atom_site.Tb.fract_y",
+        "tb2ti2o7.atom_site.Tb.fract_z",
+        "tb2ti2o7.atom_site.Tb.occupancy",
+        "tb2ti2o7.atom_site.Tb.adp_iso",
+        "tb2ti2o7.atom_site.Ti.fract_x",
+        "tb2ti2o7.atom_site.Ti.fract_y",
+        "tb2ti2o7.atom_site.Ti.fract_z",
+        "tb2ti2o7.atom_site.Ti.occupancy",
+        "tb2ti2o7.atom_site.Ti.adp_iso",
+        "tb2ti2o7.atom_site.O1.fract_x",
+        "tb2ti2o7.atom_site.O1.fract_y",
+        "tb2ti2o7.atom_site.O1.fract_z",
+        "tb2ti2o7.atom_site.O1.occupancy",
+        "tb2ti2o7.atom_site.O1.adp_iso",
+        "tb2ti2o7.atom_site.O2.fract_x",
+        "tb2ti2o7.atom_site.O2.fract_y",
+        "tb2ti2o7.atom_site.O2.fract_z",
+        "tb2ti2o7.atom_site.O2.occupancy",
+        "tb2ti2o7.atom_site.O2.adp_iso",
+        "heidi.extinction.mosaicity",
+        "heidi.extinction.radius",
+        "heidi.linked_structure.scale",
+        "heidi.instrument.wavelength"
+      ],
+      "parameter_names": [
+        "tb2ti2o7.cell.length_a",
+        "tb2ti2o7.cell.length_b",
+        "tb2ti2o7.cell.length_c",
+        "tb2ti2o7.cell.angle_alpha",
+        "tb2ti2o7.cell.angle_beta",
+        "tb2ti2o7.cell.angle_gamma",
+        "tb2ti2o7.atom_site.Tb.fract_x",
+        "tb2ti2o7.atom_site.Tb.fract_y",
+        "tb2ti2o7.atom_site.Tb.fract_z",
+        "tb2ti2o7.atom_site.Tb.occupancy",
+        "tb2ti2o7.atom_site.Tb.adp_iso",
+        "tb2ti2o7.atom_site.Ti.fract_x",
+        "tb2ti2o7.atom_site.Ti.fract_y",
+        "tb2ti2o7.atom_site.Ti.fract_z",
+        "tb2ti2o7.atom_site.Ti.occupancy",
+        "tb2ti2o7.atom_site.Ti.adp_iso",
+        "tb2ti2o7.atom_site.O1.fract_x",
+        "tb2ti2o7.atom_site.O1.fract_y",
+        "tb2ti2o7.atom_site.O1.fract_z",
+        "tb2ti2o7.atom_site.O1.occupancy",
+        "tb2ti2o7.atom_site.O1.adp_iso",
+        "tb2ti2o7.atom_site.O2.fract_x",
+        "tb2ti2o7.atom_site.O2.fract_y",
+        "tb2ti2o7.atom_site.O2.fract_z",
+        "tb2ti2o7.atom_site.O2.occupancy",
+        "tb2ti2o7.atom_site.O2.adp_iso",
+        "heidi.extinction.mosaicity",
+        "heidi.extinction.radius",
+        "heidi.linked_structure.scale",
+        "heidi.instrument.wavelength"
+      ],
+      "experiments": [
+        "heidi"
+      ],
+      "reference_projection": {
+        "source_case": "sc-neut-cwl_tb2ti2o7-heidi_basic",
+        "rule": "Identical selected model and free flags; admission declarations add no parameters."
+      }
     }
   ],
   "previous_provenance": {

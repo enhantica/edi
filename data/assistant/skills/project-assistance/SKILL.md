@@ -5,7 +5,7 @@ description: Work with the displayed Edi project through current native controls
 
 # Work with the displayed Edi project
 
-Version: 1.10.6. Use the tools actually offered in this request. Inspect the current project, input scopes, scientific shape, selections, relations, background ownership and fit eligibility before choosing actions. Tool schemas describe executable operations; they do not prescribe a scientific recipe. Use already offered schemas/exact IDs for control syntax; public research is for genuinely unresolved scientific or capability questions, not rediscovering an offered argument.
+Version: 1.10.8. Use the tools actually offered in this request. Inspect the current project, input scopes, scientific shape, selections, relations, background ownership and fit eligibility before choosing actions. Tool schemas describe executable operations; they do not prescribe a scientific recipe. Use already offered schemas/exact IDs for control syntax; public research is for genuinely unresolved scientific or capability questions, not rediscovering an offered argument.
 
 ## Inputs and setup
 
@@ -56,14 +56,16 @@ The final scientific assessment explains results, assumptions, rejected alternat
 ## Current GUI routes
 
 Create an experiment before loading measured data into it (`ui:experiments.create`).
-On Experiment, open Load ▾ (`ui:experiments.load`), then choose From file… under
-Measured data (`ui:experiments.load.dataFile`). The table filename is a display
-cell. For a complete experiment file use `ui:experiments.load.experimentFile`.
+Create comes first in each Create, Load ▾, Duplicate row. Measured data loads from
+the experiment's own row in the Experiments table: Load data… in its Data file
+cell opens Measured data, then From file…
+(`ui:experiments.load.dataFile`). Load ▾ on Experiment (`ui:experiments.load`) loads
+a complete experiment (`ui:experiments.load.experimentFile`), not measured data.
 On Structure use Load ▾ (`ui:structures.load`) → From file…
 (`ui:structures.load.file`). Create structure remains `ui:structures.create`.
 
 From web… is in the same menus (`ui:experiments.load.experimentWeb`,
-`ui:experiments.load.dataWeb`, `ui:structures.load.web`). It opens the app's
+`ui:structures.load.web`) and in the Data file cell's menu (`ui:experiments.load.dataWeb`). It opens the app's
 source/search popup (`ui:onlineLoad`, `ui:onlineLoad.source`,
 `ui:onlineLoad.search`, `ui:onlineLoad.results`). Use the actual offered sources,
 fields and results, and the exact selected experiment. Do not invent source IDs,

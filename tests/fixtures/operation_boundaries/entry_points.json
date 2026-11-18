@@ -89,6 +89,11 @@
           "proof": null,
           "overloads": 1
         },
+        "statisticText": {
+          "domain": "read-only query",
+          "proof": null,
+          "overloads": 1
+        },
         "valueText": {
           "domain": "read-only query",
           "proof": null,
@@ -237,6 +242,16 @@
         "categoryIcon": {
           "domain": "read-only query",
           "proof": null,
+          "overloads": 1
+        },
+        "isTemporaryPath": {
+          "domain": "read-only query",
+          "proof": null,
+          "overloads": 1
+        },
+        "setNextSaveData": {
+          "domain": "save-operation",
+          "proof": "tests/system/py/test_linked_save_inventory.py",
           "overloads": 1
         }
       },
@@ -425,6 +440,76 @@
           "domain": "read-only query",
           "proof": null,
           "overloads": 1
+        },
+        "pointName": {
+          "domain": "read-only query",
+          "proof": null,
+          "overloads": 1
+        },
+        "pointProblem": {
+          "domain": "read-only query",
+          "proof": null,
+          "overloads": 1
+        },
+        "loadSeriesOfJointFits": {
+          "domain": "dataset-load",
+          "proof": "tests/integration/py/test_scan_app_contract.py",
+          "overloads": 1
+        },
+        "previewSeriesGroups": {
+          "domain": "dataset-admission",
+          "proof": "tests/integration/py/test_scan_app_contract.py",
+          "overloads": 1
+        },
+        "hasLinkedData": {
+          "domain": "read-only query",
+          "proof": null,
+          "overloads": 1
+        },
+        "presetSaveData": {
+          "domain": "read-only query",
+          "proof": null,
+          "overloads": 1
+        },
+        "seriesDataNote": {
+          "domain": "read-only query",
+          "proof": null,
+          "overloads": 1
+        },
+        "phaseRatiosShared": {
+          "domain": "read-only query",
+          "proof": null,
+          "overloads": 1
+        },
+        "setPhaseRatiosShared": {
+          "domain": "model-publication",
+          "proof": "tests/system/py/test_joint_series_edi.py",
+          "overloads": 1
+        },
+        "sameForAllExperiments": {
+          "domain": "read-only query",
+          "proof": null,
+          "overloads": 1
+        },
+        "setSameForAllExperiments": {
+          "domain": "model-publication",
+          "proof": "tests/system/py/test_joint_series_edi.py",
+          "overloads": 1
+        },
+        "sameForAllApplies": {
+          "domain": "read-only query",
+          "proof": null,
+          "overloads": 1
+        },
+        "sameForAll": {
+          "domain": "read-only query",
+          "proof": null,
+          "overloads": 1
+        },
+        "setSameForAll": {
+          "domain": "model-publication",
+          "proof": "tests/system/py/test_joint_series_edi.py",
+          "overloads": 1
         }
       },
       "property_writers": {
@@ -502,6 +587,16 @@
           "bindings": 1,
           "domain": "synchronous model or presentation",
           "proof": "tests/unit/app/tst_scan_view_content.qml"
+        },
+        "setPatternXAxis": {
+          "domain": "synchronous model or presentation",
+          "proof": "tests/integration/py/test_scan_app_contract.py",
+          "bindings": 1
+        },
+        "setCurrentBank": {
+          "domain": "synchronous model or presentation",
+          "proof": "tests/integration/py/test_scan_app_contract.py",
+          "bindings": 1
         }
       }
     },
@@ -699,6 +794,16 @@
       "header": "app/src/parameter_item.hpp",
       "entries": {
         "sliderHalfWidth": {
+          "domain": "read-only query",
+          "proof": null,
+          "overloads": 1
+        },
+        "sliderLower": {
+          "domain": "read-only query",
+          "proof": null,
+          "overloads": 1
+        },
+        "sliderUpper": {
           "domain": "read-only query",
           "proof": null,
           "overloads": 1

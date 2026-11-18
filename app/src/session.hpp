@@ -61,13 +61,18 @@ class WarningListModel : public RowTableModel {
 
    public:
     explicit WarningListModel(QObject* parent);
-    // Replace every message with the open's warnings (a new open).
-    void setMessages(const QStringList& messages);
+    // Replace every message with the open's warnings (a new open), each with its project file when it has one.
+    void setMessages(const QStringList& messages, const QStringList& sources = {});
+    // The key of a file's warning: its origin (`load-file:` from the open, `text-apply:` from a Text-tab state), the
+    // file, then the text. With an empty text, the start every key of that file and origin shares.
+    static QString fileKey(const QString& origin, const QString& file, const QString& text);
     // List a message under `key` unless one is listed there already (a dismissed one is listed again);
     // withdraw the one under `key`; the keys listed that start with `prefix`.
     void post(const QString& key, const QString& text, const QString& severity);
     void withdraw(const QString& key);
     QStringList keys(const QString& prefix) const;
+    // Whether a message is listed under exactly `key`.
+    bool lists(const QString& key) const;
     int unviewedCount() const { return unviewed_; }
     Q_INVOKABLE void markViewed();
     // Remove one warning (by its row) or all of them.
@@ -197,6 +202,9 @@ class Session : public QObject {
     // The file the last reported load failure carried (loadFailed), empty when it carried none. Forgotten once asked for.
     Q_INVOKABLE QString takeFailedFile();
     Q_INVOKABLE bool openProject(const QUrl& location);
+    // Whether `path` lies in the system's temporary folder, where downloaded examples and working copies go: such a
+    // place is never a recent project (the owner, 2026-11-16).
+    Q_INVOKABLE bool isTemporaryPath(const QString& path) const;
     // Open a bundled example: extracted to this session's temporary directory, then opened whole.
     Q_INVOKABLE bool openExample(const QString& exampleId);
     // A new empty project; with a `location` it is saved there at once, so it is that folder's project from the start
@@ -237,6 +245,9 @@ class Session : public QObject {
     /// The answer to saveDataChoiceNeeded `request`: "copy", "linked" or "cancel". The save that asked runs again with
     /// it, unless another question was asked since or the project was replaced: then nothing is saved.
     Q_INVOKABLE void answerSaveData(int request, const QString& choice);
+    /// Save as's Measured data row (edi ADR-0088 point 5): the next save copies linked data into the project ("copy") or
+    /// keeps it linked ("linked"), answering its question in advance; anything else clears it. Used by that save only.
+    Q_INVOKABLE void setNextSaveData(const QString& choice);
     Q_INVOKABLE bool saveAs(const QUrl& directory);
     // Save as (edi ADR-0052): into the folder or the .zip `target` (a `file:` URL), as `zip` says. A project saved as a
     // .zip keeps the archive as its location and every later Save rewrites it. With `copy` the project is written
@@ -292,6 +303,9 @@ class Session : public QObject {
     // A value of item `uid` as a save writes it, for an input field or an editable cell (edi ADR-0051).
     Q_INVOKABLE QString written(const QString& uid, double value) const;
     Q_INVOKABLE QString display(const QString& uid, double value, const QString& variant = QString()) const;
+    // A statistic of item `uid` with its units, or the one undefined text when `value` is not finite
+    // (edi::statistic_text).
+    Q_INVOKABLE QString statisticText(const QString& uid, double value) const;
     // A read-only value of item `uid` and its s.u. as a table shows them apart: rounded by the s.u. under the project's
     // rule (edi::fitted_text), or without one by the item's display format, the s.u. then empty.
     Q_INVOKABLE QString valueText(const QString& uid, double value, double su) const;
@@ -353,7 +367,7 @@ class Session : public QObject {
     // Opens `source` (a read-only folder) from a writable copy at `target`: the project and its results are copied, and
     // a scan's data files linked, not duplicated.
     bool openCopy(const QString& source,const QString& target,const QString& example,const std::function<bool()>& afterOpen = {});
-    bool replaceProject(ProjectViewModel* project, const QStringList& warnings, const QString& example, bool nativePrepared=false, bool* committed=nullptr, quint64* committedReplacement=nullptr, bool ordinaryEmptyCreate=false, const QString& openedFrom={}, const std::shared_ptr<SessionResetInputs>& resetInputs={});
+    bool replaceProject(ProjectViewModel* project, const QStringList& warnings, const QString& example, bool nativePrepared=false, bool* committed=nullptr, quint64* committedReplacement=nullptr, bool ordinaryEmptyCreate=false, const QString& openedFrom={}, const std::shared_ptr<SessionResetInputs>& resetInputs={}, const QStringList& warningSources={});
     void setLastError(const QString& error);
     void setOpenedArchive(const QString& name);
     // edi ADR-0069: a save is an operation. Each public save route makes one at its start: it belongs to the project and
@@ -437,7 +451,7 @@ class Session : public QObject {
     qint64 example_download_received_ = 0;
     qint64 example_download_total_ = -1;
     quint64 example_request_ = 0;
-    void fetchTutorialFiles(std::function<void(const QList<QPair<QString, QByteArray>>&, const QString&)> done);
+    void fetchTutorialFiles(const std::function<void(const QList<QPair<QString, QByteArray>>&, const QString&)>& done);
     WarningListModel* warnings_;
     int project_messages_ = 0;  // the keys of the project's messages
     QString opened_example_;
@@ -452,6 +466,7 @@ class Session : public QObject {
         SaveContinuation again;
     };
     std::optional<SaveQuestion> save_question_;
+    QString next_save_data_;  // setNextSaveData's answer for the next save, then cleared
     int save_questions_ = 0;
     quint64 save_operations_ = 0;
     // The operation for a save starting now, or none when it stops here: asked (no message) or refused (`lastError`).

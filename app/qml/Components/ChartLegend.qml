@@ -29,6 +29,8 @@ Rectangle {
     property real rowHeight: AppSizes.legendRowHeight
     // A click on a row hides its curve or shows it again (the owner, 2026-10-25, as plotly's legend): `toggled` gives
     // the row's key, and a hidden row is drawn in the disabled colour. A legend without curves to hide leaves it off.
+    // The widest an entry may be (0: as wide as it reads); a longer one is cut in its middle, its whole text in a tooltip.
+    property real maximumLabelWidth: 0
     property bool toggles: false
 
     signal toggled(string key)
@@ -85,6 +87,8 @@ Rectangle {
 
                 objectName: "chart.legend.entry"
                 height: legend.rowHeight
+                maximumWidth: legend.maximumLabelWidth
+                elide: Text.ElideMiddle
                 textColor: hidden ? legend.colors.themeForegroundDisabled : color
                 // A hidden entry keeps its own pieces, its mark or icon included, each in the disabled colour (the
                 // owner, 2026-10-25).

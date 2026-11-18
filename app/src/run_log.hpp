@@ -90,7 +90,7 @@ class RunLog : public QObject {
     using Clock = std::function<QDateTime()>;
     struct Options {
         QString directory;           ///< The folder the logs go to; created if missing.
-        Clock clock;                 ///< Local time of each line; the system clock when empty.
+        Clock clock{};                 ///< Local time of each line; the system clock when empty.
         int keep = 3;                ///< Logs kept, this run's included.
         qint64 maxBytes = 5'000'000; ///< A log stops growing at this size, after a line saying so.
         bool terminal = true;        ///< Also write each line to stderr.

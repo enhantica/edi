@@ -9,6 +9,7 @@ import zipfile
 from pathlib import Path
 
 from tests.fixtures.path_keys import repository_key
+from tests.fixtures.stop_defaults import example_inputs
 
 HERE = Path(__file__).parent
 ROOT = HERE.resolve().parents[2]
@@ -21,6 +22,7 @@ def rows():
 
 
 def previous_bytes(name, data):
+    data = example_inputs.composed_bytes(name, data)
     row = rows().get(repository_key(name))
     if row is None:
         return data

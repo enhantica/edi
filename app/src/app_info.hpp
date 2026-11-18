@@ -98,10 +98,10 @@ struct TutorialStep {
     QString tab;
     QString title;
     bool coversTarget = false;
-    QStringList expectFree;
-    QStringList expectWholeBackground;
+    QStringList expectFree{};
+    QStringList expectWholeBackground{};
     // A built structure's sites when this step starts, "label type x y z" each (the replay's check).
-    QStringList expectSites;
+    QStringList expectSites{};
     double expectChi2 = -1;
     double expectChi2Tolerance = 0.01;
 };
@@ -133,9 +133,9 @@ struct Tutorial {
     QStringList completion;
     QString stop;
     QList<TutorialStep> steps;
-    QStringList tag_labels, tag_icons, tag_colors, tag_dark_colors;
+    QStringList tag_labels{}, tag_icons{}, tag_colors{}, tag_dark_colors{};
     // Its tags as the manifest gives them, "family:value".
-    QStringList tags;
+    QStringList tags{};
 };
 
 // What the app says about itself — its name, version and links. The only source of the identity the user
@@ -270,6 +270,8 @@ class ApplicationInfo : public QObject {
     // Where Save image starts: the folder last saved to while it exists; else the project's reports folder, made
     // when missing, for a project with a place of its own; else the pictures folder.
     Q_INVOKABLE QUrl imageFolder(const QString& stored, const QString& projectPath, bool ownPlace) const;
+    // A dialog's remembered folder (`stored`, a URL) while it is still a folder on this disk, else `fallback`.
+    Q_INVOKABLE QUrl rememberedFolder(const QString& stored, const QUrl& fallback) const;
 #if EDI_APP_ASSISTANT
     /// Original Panel projection/selection on the current QML thread; no cache or canonical lookup.
     /// Borrows actual Panel/engine values; original JS errors remain pending except the projection's explicit catch.

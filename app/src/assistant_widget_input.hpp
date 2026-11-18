@@ -24,7 +24,7 @@ class AssistantWidgetInput final : public QObject {
  public:
     enum class Kind { Value, Text, Free, Fit, Navigate, ParameterFilter, StagedText, Scroll, Choose, SearchChoice, ContextMenu, DismissMenu, FileLoadCue, FormText };
     struct Request {
-        Kind kind;
+        Kind kind{};
         QPointer<QQuickItem> target;
         int scrollDirection = 0; // One ordinary wheel detent (+1/-1), only at the sidebar gutter.
         bool visualOnlyDisabledTarget = false;
@@ -73,7 +73,7 @@ class AssistantWidgetInput final : public QObject {
     bool eventFilter(QObject* watched, QEvent* event) override;
  private:
     struct MouseOwnership;
-    enum class Step { Move, Press, Release, SearchReveal, SearchPress, SearchRelease, Select, Commit, ChoiceReveal, ChoicePress, ChoiceRelease, ChoiceSettle, ChooseCommit };
+    enum class Step { Move, Press, Release, ChoiceOpenWait, SearchReveal, SearchPress, SearchRelease, Select, Commit, ChoiceReveal, ChoicePress, ChoiceRelease, ChoiceSettle, ChooseCommit };
     void advance() noexcept;
     void settleChoice(const std::shared_ptr<Request>&,std::uint64_t);
     bool watchChoicePopup();
@@ -103,6 +103,8 @@ class AssistantWidgetInput final : public QObject {
     std::uint64_t serial_ = 0;
     Step step_ = Step::Move;
     int tooltip_waits_ = 0;
+    // Frames waited for a ComboBox popup to open after its release, before it is opened directly.
+    int choice_open_waits_ = 0;
     QString original_text_;
     QPointer<QObject> choice_popup_;
     QPointer<QQuickItem> choice_content_, choice_row_, search_header_, search_editor_;

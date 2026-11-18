@@ -94,12 +94,20 @@ QString newWebKey() { return QUuid::createUuid().toString(QUuid::WithoutBraces);
 
 WarningListModel::WarningListModel(QObject* parent) : RowTableModel({"message", "severity"}, parent) {}
 
-void WarningListModel::setMessages(const QStringList& messages) {
+void WarningListModel::setMessages(const QStringList& messages, const QStringList& sources) {
     messages_.clear();
     for (qsizetype i = 0; i < messages.size(); ++i) {
-        messages_.push_back({next_id_++, QStringLiteral("load:%1").arg(i), messages[i], QStringLiteral("warning")});
+        // A warning with its project file is that file's (fileKey); a Text-tab edit of the file settles it.
+        const QString source = sources.value(i);
+        const QString key = source.isEmpty() ? QStringLiteral("load:%1").arg(i) : fileKey(QStringLiteral("load-file:"), source, messages[i]);
+        if (lists(key)) continue;
+        messages_.push_back({next_id_++, key, messages[i], QStringLiteral("warning")});
     }
     changed();
+}
+
+QString WarningListModel::fileKey(const QString& origin, const QString& file, const QString& text) {
+    return origin + file + QLatin1Char(':') + text;
 }
 
 void WarningListModel::post(const QString& key, const QString& text, const QString& severity) {
@@ -120,6 +128,10 @@ void WarningListModel::withdraw(const QString& key) {
             return;
         }
     }
+}
+
+bool WarningListModel::lists(const QString& key) const {
+    return std::any_of(messages_.begin(), messages_.end(), [&key](const Message& message) { return message.key == key; });
 }
 
 QStringList WarningListModel::keys(const QString& prefix) const {
@@ -253,7 +265,10 @@ bool Session::assistantSaveNotified(ProjectViewModel*) const { return false; }
 #endif
 
 Session::~Session() {
-    delete assistant_;assistant_=nullptr;
+#if EDI_APP_ASSISTANT
+    delete assistant_;  // a build without the assistant never makes one, and has no complete type to delete
+#endif
+    assistant_=nullptr;
     // QObject normally deletes children after members. The workers/models must
     // stop before archive roots remove their files.
     project_=nullptr;
@@ -282,7 +297,7 @@ void Session::retainTemporaryRoots(const QStringList& candidates) {
 }
 
 void Session::releaseTemporaryRoots(const QStringList& candidates,const QString& openedFrom) noexcept {
-    const QPointer<Session> receiver(this);const QPointer<ProjectViewModel> target(project_);
+    const QPointer<Session> receiver(this);const QPointer<ProjectViewModel> target(project_);  // NOLINT(clang-analyzer-core.NullDereference): this is live here.
     const auto binding=replacement_generation_;
     const auto current=[&]{return receiver && project_==target && replacement_generation_==binding;};
     try {
@@ -401,13 +416,27 @@ bool Session::openExample(const QString& exampleId) {
     return false;
 }
 
+bool Session::isTemporaryPath(const QString& path) const {
+    if (path.isEmpty()) return false;
+    const QString clean = QDir::cleanPath(QFileInfo(path).absoluteFilePath());
+    const QString temporary = QDir::cleanPath(QFileInfo(QDir::tempPath()).canonicalFilePath());
+    const QString given = QDir::cleanPath(QDir::tempPath());
+    for (const QString& root : {temporary, given}) {
+        if (!root.isEmpty() && (clean == root || clean.startsWith(root + u'/'))) return true;
+    }
+    // macOS names its temporary folder through /private; a path may come either way.
+    const QString canonical = QFileInfo(clean).canonicalFilePath();
+    return !canonical.isEmpty() && !temporary.isEmpty() && canonical.startsWith(temporary + u'/');
+}
+
 bool Session::openProjectAt(const QUrl& location, const QString& example) {
     if (!location.isLocalFile()) {
         setLastError(QStringLiteral("cannot open %1: only local projects (file: URLs) can be opened")
                          .arg(location.toString()));
         return false;
     }
-    QString source = location.toLocalFile();
+    // Without a trailing separator (a path from Recent projects may end in one): the copy target is the folder's name.
+    QString source = QDir::cleanPath(location.toLocalFile());
     const PendingOpenSource pending(*this,source);
     // edi ADR-0052: a project record opens its folder; an archive is unpacked by the core into a temporary folder and
     // opens unsaved, so its first Save asks where to keep it.
@@ -416,7 +445,7 @@ bool Session::openProjectAt(const QUrl& location, const QString& example) {
         source = given.absolutePath();
     } else if (given.isFile() && edi::is_project_archive(source.toStdString())) {
         return open(source,example,[this,given] {
-        const QPointer<Session> receiver(this);const QPointer<ProjectViewModel> target(project_);
+        const QPointer<Session> receiver(this);const QPointer<ProjectViewModel> target(project_);  // NOLINT(clang-analyzer-core.NullDereference): this is live here.
         const auto binding=replacement_generation_;auto pathBinding=path_generation_;
         const auto current=[&]{return receiver && target && project_==target && replacement_generation_==binding && pathBinding!=UINT64_MAX && path_generation_==pathBinding;};
         temporary_folder_ = QString::fromStdString(target->project().scan_data_root);
@@ -444,7 +473,16 @@ bool Session::openProjectAt(const QUrl& location, const QString& example) {
     // A project in a folder this user may not write (a read-only tree) runs in a temporary copy, as an example does,
     // so a fit never writes into it; Save As writes the project where the user chooses.
     const QFileInfo folder(source), analysis(source + QStringLiteral("/analysis"));
-    if (folder.isDir() && (!folder.isWritable() || (analysis.exists() && !analysis.isWritable()))) {
+    // A project in this build's own example folder opens as a copy, as a read-only one does: a run's results never
+    // land in a committed example (the owner, 2026-11-16).
+    bool sourceExample = false;
+#if defined(EDI_CLI_PROJECTS_DIR)
+    {
+        const QString examples = QDir::cleanPath(QStringLiteral(EDI_CLI_PROJECTS_DIR)) + u'/';
+        sourceExample = QDir::cleanPath(folder.absoluteFilePath()).startsWith(examples);
+    }
+#endif
+    if (folder.isDir() && (sourceExample || !folder.isWritable() || (analysis.exists() && !analysis.isWritable()))) {
         QString copyRoot;
         try { copyRoot=prepareCopyRoot("read-only"); }
         catch(const std::exception& error) { setLastError(QString::fromUtf8(error.what()));return false; }
@@ -452,7 +490,7 @@ bool Session::openProjectAt(const QUrl& location, const QString& example) {
         const auto cleanup=qScopeGuard([copyOwner,copyRoot]{if(copyOwner)copyOwner->releaseTemporaryRoots({copyRoot});});
         const QString target=QDir(copyRoot).filePath(folder.fileName());
         return openCopy(source,target,{},[this,folder] {
-        const QPointer<Session> receiver(this);const QPointer<ProjectViewModel> openedOwner(project_);
+        const QPointer<Session> receiver(this);const QPointer<ProjectViewModel> openedOwner(project_);  // NOLINT(clang-analyzer-core.NullDereference): this is live here.
         const auto binding=replacement_generation_;const auto pathBinding=path_generation_;
         const auto current=[&]{return receiver && openedOwner && project_==openedOwner && replacement_generation_==binding && pathBinding!=UINT64_MAX && path_generation_==pathBinding;};
         read_only_copy_ = true;
@@ -466,7 +504,7 @@ bool Session::openProjectAt(const QUrl& location, const QString& example) {
         });
     }
     return open(source,{},[this,folder] {
-        const QPointer<Session> receiver(this);const QPointer<ProjectViewModel> target(project_);
+        const QPointer<Session> receiver(this);const QPointer<ProjectViewModel> target(project_);  // NOLINT(clang-analyzer-core.NullDereference): this is live here.
         const auto binding=replacement_generation_;const auto pathBinding=path_generation_;
         emit projectDirectoryUsed(folder.absoluteFilePath());
         return receiver && target && project_==target && replacement_generation_==binding && pathBinding!=UINT64_MAX && path_generation_==pathBinding;
@@ -694,6 +732,18 @@ std::optional<Session::SaveOperation> Session::beginSave(bool wholeTree, bool st
     const bool linked = plan.value(QStringLiteral("linked")).toBool();
     operation.treeReceipt = true;
     operation.inputs = project_->linkedInputsKey(operation.treeReceipt);
+    // Save as already answered for its linked data: no question about it.
+    const QString answered = std::exchange(next_save_data_, QString());
+    if (linked && (answered == QLatin1String("copy") || answered == QLatin1String("linked"))) {
+        operation.include = answered == QLatin1String("copy");
+        if (operation.include) {
+            if (const QString why = project_->linkedDataUnavailable(); !why.isEmpty()) {
+                setLastError(why);
+                return std::nullopt;
+            }
+        }
+        return operation;
+    }
     if (plan.value(QStringLiteral("ask")).toBool()) {
         if (assistant_save_origin_ != 0 || project_->assistant_save_origin_ != 0) {
             // A question nobody answers would leave the assistant's save neither done nor refused.
@@ -718,6 +768,10 @@ std::optional<Session::SaveOperation> Session::beginSave(bool wholeTree, bool st
         }
     }
     return operation;
+}
+
+void Session::setNextSaveData(const QString& choice) {
+    next_save_data_ = choice == QLatin1String("copy") || choice == QLatin1String("linked") ? choice : QString();
 }
 
 void Session::queueReplan(const SaveOperation& operation) {
@@ -852,6 +906,7 @@ bool Session::saveAsWith(const SaveOperation& operation, const QUrl& directory) 
     {
         const QPointer<ProjectViewModel> target(project_);
         const auto origin = std::exchange(project_->assistant_save_origin_, 0);
+        // cppcheck-suppress nullPointerRedundantCheck ; checked again below, after calls that can delete it
         target->notifyProjectEdited(origin);
         if (!target || !owns(operation)) return false;
     }
@@ -942,7 +997,7 @@ bool Session::saveProjectAsFreshWith(const SaveOperation& operation,const QUrl& 
     if(!current() || target->revision()!=revision)return false;
     const auto parent=QDir(requested.absolutePath()).canonicalPath();
     if(parent.isEmpty() || requested.fileName().isEmpty()) {
-        if(current())setLastError(tr("The original fresh save parent is unavailable."));return false;
+        if(current()){setLastError(tr("The original fresh save parent is unavailable."));}return false;
     }
     const auto where=parent+QLatin1Char('/')+requested.fileName();
     const PendingOpenSource pendingOrigin(*this,where);
@@ -1308,7 +1363,7 @@ bool Session::openExampleNamed(const QString& exampleId) {
         return receiver && receiver->example_request_ == request && receiver->replacement_generation_ == binding &&
                receiver->project_ == before;
     };
-    collection_examples_->whenRead(exampleId, [receiver, exampleId, aside, request, binding, before, finish, current] {
+    collection_examples_->whenRead(exampleId, [receiver, exampleId, aside, request, before, finish, current] {
         if (!receiver || receiver->example_request_ != request) return;
         if (!current()) {
             qCInfo(lcApp, "example %s not opened: the project changed meanwhile", qPrintable(exampleId));
@@ -1373,7 +1428,7 @@ const QList<QPair<QString, QString>> kTutorialFiles{{QStringLiteral("tutorial-lb
 }  // namespace
 
 // Downloads the tutorials' files one after the other; `done` gets every (name, bytes) pair or the first error.
-void Session::fetchTutorialFiles(std::function<void(const QList<QPair<QString, QByteArray>>&, const QString&)> done) {
+void Session::fetchTutorialFiles(const std::function<void(const QList<QPair<QString, QByteArray>>&, const QString&)>& done) {
     const QPointer<Session> receiver(this);
     auto fetched = std::make_shared<QList<QPair<QString, QByteArray>>>();
     auto step = std::make_shared<std::function<void(int)>>();
@@ -1807,12 +1862,15 @@ bool Session::open(const QString& directory,const QString& example,const std::fu
     const auto binding=replacement_generation_;const auto pathBinding=path_generation_;
     const auto preparing=[&]{return receiver && project_==before && replacement_generation_==binding && pathBinding!=UINT64_MAX && path_generation_==pathBinding;};
     QStringList warnings;
+    QStringList sources;  // each loader warning's project file, so a later Text-tab edit of that file can settle it
     QPointer<ProjectViewModel> opened;
     auto adopted=std::make_shared<bool>(false);
     try {
-        edi::Project project = edi::load_project(directory.toStdString(), edi::ProjectLoadMode::Construction, [&warnings](const std::string& message) {
+        edi::Project project = edi::load_project(directory.toStdString(), edi::ProjectLoadMode::Construction,
+                                                 edi::SourcedWarningSink([&warnings, &sources](const std::string& file, const std::string& message) {
             warnings.append(QString::fromStdString(message));
-        });
+            sources.append(QString::fromStdString(file));
+        }));
         // A project loads with any value it holds; the warnings that hold for them post once, the loader's own range
         // warnings included (the owner, 2026-10-23).
         for (const std::string& warning : edi::standing_warnings(project, false)) {
@@ -1835,11 +1893,11 @@ bool Session::open(const QString& directory,const QString& example,const std::fu
     });
     retainTemporaryRoots({QString::fromStdString(opened->project().scan_data_root)});
     connect(opened,&QObject::destroyed,this,[this]{releaseTemporaryRoots({});},Qt::QueuedConnection);
-    const auto commit=[receiver,before,binding,pathBinding,opened,warnings,example,source=directory,afterOpen,adopted] {
+    const auto commit=[receiver,before,binding,pathBinding,opened,warnings,sources,example,source=directory,afterOpen,adopted] {
         if(!receiver || !opened || receiver->project_!=before || receiver->replacement_generation_!=binding ||
             pathBinding==UINT64_MAX || receiver->path_generation_!=pathBinding)return false;
-        const PendingOpenSource pending(*receiver,source);
-        if(!receiver->replaceProject(opened,warnings,example,false,adopted.get(),nullptr,false,source))return false;
+        const PendingOpenSource opening(*receiver,source);
+        if(!receiver->replaceProject(opened,warnings,example,false,adopted.get(),nullptr,false,source,{},sources))return false;
         return !afterOpen || afterOpen();
     };
     if(!assistantPrepareRestore(opened,directory,commit))return false;
@@ -1852,12 +1910,15 @@ bool Session::openCopy(const QString& source,const QString& target,const QString
     const auto binding=replacement_generation_;const auto pathBinding=path_generation_;
     const auto preparing=[&]{return receiver && project_==before && replacement_generation_==binding && pathBinding!=UINT64_MAX && path_generation_==pathBinding;};
     QStringList warnings;
+    QStringList sources;  // each loader warning's project file, so a later Text-tab edit of that file can settle it
     QPointer<ProjectViewModel> opened;
     auto adopted=std::make_shared<bool>(false);
     try {
-        edi::Project project = edi::load_project(source.toStdString(), edi::ProjectLoadMode::Construction, [&warnings](const std::string& message) {
+        edi::Project project = edi::load_project(source.toStdString(), edi::ProjectLoadMode::Construction,
+                                                 edi::SourcedWarningSink([&warnings, &sources](const std::string& file, const std::string& message) {
             warnings.append(QString::fromStdString(message));
-        });
+            sources.append(QString::fromStdString(file));
+        }));
         QString data;  // the scan data directory, linked rather than copied
         if (project.sequential_fit.declared()) {
             try {
@@ -1903,11 +1964,11 @@ bool Session::openCopy(const QString& source,const QString& target,const QString
     });
     retainTemporaryRoots({QString::fromStdString(opened->project().scan_data_root)});
     connect(opened,&QObject::destroyed,this,[this]{releaseTemporaryRoots({});},Qt::QueuedConnection);
-    const auto commit=[receiver,before,binding,pathBinding,opened,warnings,example,source=source,afterOpen,adopted] {
+    const auto commit=[receiver,before,binding,pathBinding,opened,warnings,sources,example,source=source,afterOpen,adopted] {
         if(!receiver || !opened || receiver->project_!=before || receiver->replacement_generation_!=binding ||
             pathBinding==UINT64_MAX || receiver->path_generation_!=pathBinding)return false;
-        const PendingOpenSource pending(*receiver,source);
-        if(!receiver->replaceProject(opened,warnings,example,false,adopted.get(),nullptr,false,source))return false;
+        const PendingOpenSource opening(*receiver,source);
+        if(!receiver->replaceProject(opened,warnings,example,false,adopted.get(),nullptr,false,source,{},sources))return false;
         return !afterOpen || afterOpen();
     };
     if(!assistantPrepareRestore(opened,source,commit))return false;
@@ -1922,7 +1983,7 @@ void Session::setColourScheme(const QString& scheme) {
 }
 
 void Session::setOpenedArchive(const QString& name) {
-    const QPointer<Session> receiver(this);const QPointer<ProjectViewModel> target(project_);
+    const QPointer<Session> receiver(this);const QPointer<ProjectViewModel> target(project_);  // NOLINT(clang-analyzer-core.NullDereference): this is live here.
     const auto binding=replacement_generation_;const auto pathBinding=path_generation_;
     if (name != opened_archive_) {
         opened_archive_ = name;
@@ -1932,7 +1993,7 @@ void Session::setOpenedArchive(const QString& name) {
     }
 }
 
-bool Session::replaceProject(ProjectViewModel* project, const QStringList& warnings, const QString& example, bool nativePrepared, bool* committed, quint64* committedReplacement, bool ordinaryEmptyCreate, const QString& openedFrom, const std::shared_ptr<SessionResetInputs>& resetInputs) {
+bool Session::replaceProject(ProjectViewModel* project, const QStringList& warnings, const QString& example, bool nativePrepared, bool* committed, quint64* committedReplacement, [[maybe_unused]] bool ordinaryEmptyCreate, const QString& openedFrom, [[maybe_unused]] const std::shared_ptr<SessionResetInputs>& resetInputs, const QStringList& warningSources) {
     // A save holding the open project finishes first (edi ADR-0069): nothing replaces or closes it meanwhile.
     if (const QString refusal = replacementRefusal(); !refusal.isEmpty()) {
         setLastError(refusal);
@@ -2009,12 +2070,12 @@ bool Session::replaceProject(ProjectViewModel* project, const QStringList& warni
         emit openingExampleChanged();
         if (!current() || project_ != target) return false;
     }
-    warnings_->setMessages(warnings);
+    warnings_->setMessages(warnings, warningSources);
     if(!current() || project_!=target)return false;
     if (project_ != nullptr) {
         // Collection-linked data is fetched through the collections the app reads (edi ADR-0069).
         project_->setCollectionFetcher([examples = QPointer<CollectionExamples>(collection_examples_)](
-                                           const QString& id, std::function<void(const QByteArray&, const QString&)> done) {
+                                           const QString& id, const std::function<void(const QByteArray&, const QString&)>& done) {
             if (examples.isNull()) {
                 done({}, tr("The data collections are not available"));
                 return;
@@ -2039,6 +2100,28 @@ bool Session::replaceProject(ProjectViewModel* project, const QStringList& warni
         connect(project_, &ProjectViewModel::information, this, [this](const QString& text) {
             warnings_->post(QStringLiteral("project:%1").arg(++project_messages_), text, QStringLiteral("information"));
         });
+        // The file warnings of a Text-tab state the project took (an accepted apply, or its undo). The edited file was
+        // read again, so its earlier warnings, from the open or an apply, give way to what this read reported. Another
+        // file's warnings are listed once (not again when the open listed them) and leave when an apply no longer
+        // reports them; another file's warnings from the open stay until that file is edited.
+        connect(project_, &ProjectViewModel::fileWarnings, this,
+                [this](const QString& edited, const QStringList& files, const QStringList& texts) {
+                    const QString load = QStringLiteral("load-file:");
+                    const QString prefix = QStringLiteral("text-apply:");
+                    for (const QString& key : warnings_->keys(WarningListModel::fileKey(load, edited, {})))
+                        warnings_->withdraw(key);
+                    QStringList reported;
+                    for (qsizetype i = 0; i < files.size() && i < texts.size(); ++i) {
+                        const QString key = WarningListModel::fileKey(prefix, files[i], texts[i]);
+                        reported.append(key);
+                        if (!warnings_->lists(key) && !warnings_->lists(WarningListModel::fileKey(load, files[i], texts[i]))) {
+                            warnings_->post(key, texts[i], QStringLiteral("warning"));
+                        }
+                    }
+                    for (const QString& key : warnings_->keys(prefix)) {
+                        if (!reported.contains(key)) warnings_->withdraw(key);
+                    }
+                });
     }
     syncCalculationMessages();  // the new project calculated before it was connected
     if(!current() || project_!=target)return false;
@@ -2079,7 +2162,7 @@ bool Session::replaceProject(ProjectViewModel* project, const QStringList& warni
 // ---- The web app's places (edi ADR-0052 §9) ---------------------------------------------------------
 
 void Session::setWebPlace(const WebPlace& place) {
-    const QPointer<Session> receiver(this);const QPointer<ProjectViewModel> target(project_);
+    const QPointer<Session> receiver(this);const QPointer<ProjectViewModel> target(project_);  // NOLINT(clang-analyzer-core.NullDereference): this is live here.
     const auto binding=replacement_generation_;const auto pathBinding=path_generation_;
     web_place_ = place;
     emit locationTextChanged();
@@ -2225,6 +2308,7 @@ void Session::writeWebPlace(const WebPlace& place, const QString& folder, const 
     // The page writes one place's jobs in the order they are sent, so a later keep or discard is never overtaken.
     const QPointer<ProjectViewModel> project = project_;
     WebStorage::instance()->write(
+        // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks): the std::function owns the lambda; the analyzer does not follow libc++'s release of it
         place.key, place.kind, place.name, folder, false, [this, place, project, done](const WebStorageAnswer& answer) {
             if (!answer.ok) {
                 // The browser's own words ("UnknownError", "QuotaExceededError") say nothing to the user: the place
@@ -2293,16 +2377,16 @@ void Session::saveWebProjectAsWith(const SaveOperation& operation, const QString
     waiting.hold.reset();
     WebStorage::instance()->pickSave(kind, downloadName(), web_place_.key, [this, before, kind, copy, busy, waiting](
                                                                                const WebStorageAnswer& answer) mutable {
-        SaveOperation operation = std::move(waiting);
-        if (answer.ok && owns(operation) && !hold(operation)) {
+        SaveOperation resumed = std::move(waiting);
+        if (answer.ok && owns(resumed) && !hold(resumed)) {
             emit webSaveFailed(last_error_);
             return;
         }
-        if (!copy && answer.ok && owns(operation) && !planned(operation)) {
-            queueReplan(operation);  // the project changed while the place was picked
+        if (!copy && answer.ok && owns(resumed) && !planned(resumed)) {
+            queueReplan(resumed);  // the project changed while the place was picked
             return;
         }
-        if (before != project_ || project_ == nullptr || !answer.ok || !owns(operation)) {
+        if (before != project_ || project_ == nullptr || !answer.ok || !owns(resumed)) {
             if (before == project_ && !answer.cancelled) {
                 emit webSaveFailed(answer.message);
             }
@@ -2316,16 +2400,16 @@ void Session::saveWebProjectAsWith(const SaveOperation& operation, const QString
                              answer.name};
         // What a Save writes, staged on a copy of the project in a memory folder of its own.
         Staged staged;
-        if (!stageCopy(operation, copy ? "copy" : "web",
+        if (!stageCopy(resumed, copy ? "copy" : "web",
                        folderNameFor(kind == QStringLiteral("zip") ? project_->name() : place.name), staged) ||
-            !readyToWrite(operation, staged)) {
+            !readyToWrite(resumed, staged)) {
             emit webSaveFailed(last_error_);
             return;
         }
         const QPointer<ProjectViewModel> saving = project_;
         const quint64 revision = project_->revision();
         web_writing_ = true;
-        writeWebPlace(place, staged.folder, [this, saving, revision, staged, place, copy, held = operation.hold](bool written) {
+        writeWebPlace(place, staged.folder, [this, saving, revision, staged, place, copy, held = resumed.hold](bool written) {
             web_writing_ = false;
             if (saving.isNull() || saving != project_) {
                 QDir(staged.root).removeRecursively();
@@ -2503,6 +2587,11 @@ QString Session::written(const QString& uid, double value) const {
     return from_bridge([&] { return edi::file_text(uid.toStdString(), value); });
 }
 
+QString Session::statisticText(const QString& uid, double value) const {
+    const std::optional<double> defined = std::isfinite(value) ? std::optional<double>(value) : std::nullopt;
+    return from_bridge([&] { return edi::statistic_text(uid.toStdString(), defined); });
+}
+
 QString Session::display(const QString& uid, double value, const QString& variant) const {
     if (!std::isfinite(value)) {
         return {};
@@ -2588,12 +2677,12 @@ bool Session::commitAssistantNativeModel(std::unique_ptr<ProjectViewModel> model
     try {
         const bool published = replaceProject(adopted, {}, {}, true, &committed);
         if (!committed) return false; // Still a genuinely local, unexposed candidate.
-        model.release(); // May already have been retired/deleted by a later observer.
+        static_cast<void>(model.release()); // NOLINT(bugprone-unused-return-value): may already have been retired/deleted by a later observer.
         presentationComplete = published && adopted && project_ == adopted && replacement_generation_ == replacement;
         return true; // Real adoption, independently of later presentation/current owner.
     } catch (...) {
         if (committed) {
-            model.release();
+            static_cast<void>(model.release());  // NOLINT(bugprone-unused-return-value): the adopted owner holds it.
             if (replacement_generation_ == replacement && adopted && project_ == adopted)
                 try { setLastError(tr("The native project opened, but some presentation did not complete.")); } catch (...) {}
             return true;
@@ -2611,7 +2700,7 @@ bool Session::assistantSaveAsCurrent(const QString& token) const {
         choice->epoch==assistant_epoch_ && !assistant_epoch_exhausted_ && choice->current && choice->current();
 }
 QUrl Session::assistantSaveAsTarget(const QString& token,bool zip) const {
-    const auto ordinary=suggestedSaveTarget(zip);
+    auto ordinary=suggestedSaveTarget(zip);
     if(!assistantSaveAsCurrent(token) || assistant_save_choice_->suggestion.isEmpty())return ordinary;
     return QUrl::fromLocalFile(QFileInfo(ordinary.toLocalFile()).dir().filePath(assistant_save_choice_->suggestion+(zip?QStringLiteral(".zip"):QString())));
 }
