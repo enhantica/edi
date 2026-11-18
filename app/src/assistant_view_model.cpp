@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "assistant_view_model.hpp"
+
+#include <QMetaMethod>
 #include "assistant_control_routes.hpp"
 #include "assistant_file_primitives.hpp"
 #include "assistant_history.hpp"
@@ -16376,7 +16378,10 @@ struct AssistantViewModel::State {
             if (!property("activeJobId", &AssistantViewModel::activeJobId, &AssistantViewModel::activeJobIdChanged)) return;
             if (!property("canCancel", &AssistantViewModel::canCancel, &AssistantViewModel::canCancelChanged)) return;
             if (!property("lastError", &AssistantViewModel::lastError, &AssistantViewModel::lastErrorChanged)) return;
-            if (!property("contextPreview", &AssistantViewModel::contextPreview, &AssistantViewModel::contextPreviewChanged)) return;
+            // The context text serialises the whole project. Its readers ask for it when they need it, so it is built
+            // here only when something listens for its change: a closed panel costs nothing per change (ADR-0096 rule 1).
+            if (projection.receiver->isSignalConnected(QMetaMethod::fromSignal(&AssistantViewModel::contextPreviewChanged))
+                && !property("contextPreview", &AssistantViewModel::contextPreview, &AssistantViewModel::contextPreviewChanged)) return;
             if (!property("draftAdmissionReady", &AssistantViewModel::draftAdmissionReady, &AssistantViewModel::draftAdmissionReadyChanged)) return;
             if (!property("contextConsentIdentity", &AssistantViewModel::contextConsentIdentity, &AssistantViewModel::contextConsentIdentityChanged, true)) return;
             if (!property("contextConsentRequired", &AssistantViewModel::contextConsentRequired, &AssistantViewModel::contextConsentRequiredChanged, true)) return;

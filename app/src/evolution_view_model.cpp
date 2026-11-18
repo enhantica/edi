@@ -355,11 +355,24 @@ void EvolutionViewModel::setLayer(MeasuredLayer* layer) {
     if (layer != layer_) {
         layer_ = layer;
         emit layerChanged();
+        if (layer_ && rebuild_owed_) {
+            rebuild();
+            return;
+        }
         draw();
     }
 }
 
 void EvolutionViewModel::rebuild() {
+    // No chart shows the points (the chart sets its layer only while its tab is shown; the per-bank layers stay set):
+    // the read waits until one does, so a series' runs and a fit's end cost nothing here while it is hidden
+    // (ADR-0096 rule 1).
+    if (!layer_) {
+        rebuild_owed_ = true;
+        ++rebuild_request_;  // a read in flight is no longer wanted
+        return;
+    }
+    rebuild_owed_ = false;
     const std::uint64_t request = ++rebuild_request_;
     points_.clear();
     template_point_ = per_experiment_ ? std::nullopt : templatePoint();

@@ -7099,6 +7099,14 @@ void ApplicationInfo::tableStyleCells() const {
     panelUsageGlobalCall(f, "fitColumns", {});
 }
 namespace {
+// The text a column of a declared type is sized to hold (ADR-0097 rule 4): numbers ten characters, short texts (units)
+// five, names twelve; icon and check-box columns, and an undeclared one, take their header's width.
+QString tableTypeSample(const QString& type) {
+    if (type == QLatin1String("number")) return QStringLiteral("-0.0000000");
+    if (type == QLatin1String("short")) return QStringLiteral("00000");
+    if (type == QLatin1String("text")) return QStringLiteral("MMMMMMMMMMMM");
+    return {};
+}
 // Whether a table that is visible may be measured now: a small model at once, a large one only where it can be seen.
 bool tableMeasurable(const PanelUsageFrame& f) {
     if (!panelUsageTruth(panelUsageContextRead(f, "visible"))) return false;
@@ -7111,6 +7119,27 @@ bool tableMeasurable(const PanelUsageFrame& f) {
 void ApplicationInfo::tableFitWholeModel() const {
     const auto f = panelUsageEngine(this); const auto life = panelUsageContextRead(f, "columnFitLife"); if (!tableAlive(f, life)) return;
     if (!panelUsageTruth(panelUsageContextRead(f, "refitting"))) return;
+    // A table that declares its column types (ADR-0097 rule 4) takes its columns' widths from them: no row is made or
+    // measured, so a change of the content never moves a column and costs nothing.
+    const auto types = panelUsageContextRead(f, "columnTypes");
+    if (const int typed = panelUsageTruth(types) ? panelUsageRead(f, types, "length").toInt() : 0; typed > 0) {
+        const int count = panelUsageRead(f, panelUsageContextRead(f, "columns"), "length").toInt();
+        auto widths = f->newArray(static_cast<uint>(count));
+        const double inset = projectInvoke(f, "metrics", "advanceWidth", {QJSValue(QStringLiteral("00"))}).toNumber();
+        for (int index = 0; panelUsageReady(f) && index < count; ++index) {
+            const QString sample = tableTypeSample(index < typed ? textIndex(f, types, QJSValue(index)).toString() : QString());
+            const double width = sample.isEmpty() ? 0.0
+                : projectInvoke(f, "metrics", "advanceWidth", {QJSValue(sample)}).toNumber() + inset;
+            widths.setProperty(static_cast<quint32>(index), QJSValue(width));
+        }
+        if (!editorLife(f, life)) return;
+        panelUsageContextWrite(f, "unfitted", QJSValue(false)); if (!editorLife(f, life)) return;
+        panelUsageContextWrite(f, "refitting", QJSValue(false)); if (!editorLife(f, life)) return;
+        panelUsageContextWrite(f, "contentWidths", widths); if (!editorLife(f, life)) return;
+        panelUsageGlobalCall(f, "combineWidths", {}); if (!editorLife(f, life)) return;
+        panelUsageGlobalCall(f, "styleCells", {});
+        return;
+    }
     if (!tableMeasurable(f)) {
         panelUsageContextWrite(f, "refitting", QJSValue(false));
         if (editorLife(f, life)) panelUsageContextWrite(f, "unfitted", QJSValue(true));
@@ -7305,8 +7334,12 @@ QJSValue ApplicationInfo::tableTextColumnWidth(const QString& role, const QStrin
     if (replace) {
         if (!panelUsageReady(f)) return {};
         widths = f->newArray();
-        for (int row = 0; panelUsageReady(f) && panelUsageTruth(panelUsageContextRead(f, "model"))
-             && assistantRelation(f, QJSValue(double(row)), panelUsageContextRead(f, "count"), 0); ++row) {
+        // A long model (a scan's datasets) is read for its first measuredAtOnce rows only, as tableMeasureRows does
+        // above 1000 rows: reading every row's text cost seconds on a large scan.
+        const int count = panelUsageContextRead(f, "count").toInt();
+        const int atOnce = panelUsageContextRead(f, "measuredAtOnce").toInt();
+        const int limit = count > 1000 ? std::min(count, atOnce) : count;
+        for (int row = 0; panelUsageReady(f) && panelUsageTruth(panelUsageContextRead(f, "model")) && row < limit; ++row) {
             const auto measured = panelUsageGlobalCall(f, "textWidth", {QJSValue(double(row)), QJSValue(role)}); panelUsageMemberCall(f, widths, "push", {measured});
         }
         textIndexWrite(f, panelUsageContextRead(f, "rowWidths"), QJSValue(role), widths);
@@ -7325,6 +7358,9 @@ void ApplicationInfo::tableRemeasure() const {
 }
 void ApplicationInfo::tableDataChanged(const QJSValue& topLeft, const QJSValue& bottomRight) const {
     const auto f = panelUsageEngine(this); if (!tableAlive(f, panelUsageContextRead(f, "ownerLife"))) return;
+    // Typed columns do not follow the content (tableFitWholeModel): a changed row needs no measuring.
+    const auto types = assistantContextField(f, "table", "columnTypes");
+    if (panelUsageTruth(types) && panelUsageRead(f, types, "length").toInt() > 0) return;
     // Changed rows fit the columns again, number columns included (their widths come from the measured rows), but a
     // table that cannot be seen is only marked unfitted and measured once it is (tableOnScreenChanged): a refit of a
     // series' 100 runs at each fitted run, off screen, was most of the GUI thread's stalls during a fit.

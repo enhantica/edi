@@ -86,6 +86,32 @@ std::vector<const edi::Category*> presentation_order(const std::vector<edi::Cate
 
 CategoryListModel::CategoryListModel(QObject* parent) : QAbstractListModel(parent) {}
 
+void CategoryListMirror::setSource(CategoryListModel* source) {
+    if (source_ == source) {
+        return;
+    }
+    for (const auto& connection : {reset_, inserted_, removed_, changed_}) {
+        disconnect(connection);
+    }
+    source_ = source;
+    if (source_ != nullptr) {
+        reset_ = connect(source_, &QAbstractItemModel::modelReset, this, &CategoryListMirror::follow);
+        inserted_ = connect(source_, &QAbstractItemModel::rowsInserted, this, &CategoryListMirror::follow);
+        removed_ = connect(source_, &QAbstractItemModel::rowsRemoved, this, &CategoryListMirror::follow);
+        changed_ = connect(source_, &QAbstractItemModel::dataChanged, this, &CategoryListMirror::follow);
+    }
+    follow();
+    emit sourceChanged();
+}
+
+void CategoryListMirror::follow() {
+    if (source_ != nullptr) {
+        mirror(*source_);
+    } else {
+        setCategories({});
+    }
+}
+
 void CategoryListModel::refresh() {
     setCategories(std::vector<edi::Category>(categories_), std::function<std::string()>(text_),
                   std::function<std::vector<edi::Category>()>(calculated_));
