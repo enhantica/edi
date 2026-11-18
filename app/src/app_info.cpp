@@ -3162,6 +3162,13 @@ void projectCreationRelease(const PanelUsageFrame& frame, const QJSValue& token)
 }
 QJSValue projectCallback(const PanelUsageFrame& frame, uint operation, const std::function<QJSValue(uint)>& captured) {
     if (operation == 20) {
+        // A CIF or magnetic CIF dropped on the window is a structure for the open project, as Load structure takes
+        // one (its refusal says why); anything else is a project to open.
+        const QString path = captured(0).toString().toLower();
+        const auto project = assistantContextField(frame, "Session", "project");
+        if ((path.endsWith(QLatin1String(".cif")) || path.endsWith(QLatin1String(".mcif"))) && consentQtObject(frame, project)) {
+            return panelUsageMemberCall(frame, project, "loadStructure", {captured(0)});
+        }
         const auto session = panelUsageContextRead(frame, "Session");
         return panelUsageMemberCall(frame, session, "openProject", {captured(0)});
     }

@@ -1072,7 +1072,8 @@ EaComponents.ApplicationWindow {
         }
     }
 
-    // A folder, a project.edi or a .zip dropped on the window opens it (edi ADR-0052).
+    // A folder, a project.edi or a .zip dropped on the window opens it (edi ADR-0052); a CIF or magnetic CIF is loaded
+    // as a structure into the open project.
     // Not while Help and feedback is open: a file dropped there is an attachment (FeedbackDialog.qml).
     DropArea {
         objectName: "window.projectDrop"
