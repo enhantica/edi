@@ -1844,9 +1844,9 @@ QImage DemoDriver::grab() {
     // The window grab renders a frame on the GUI thread for the driver, not for the user: the GUI watchdog leaves it
     // out (ui_probe.hpp).
     const int id = ++tool_id_;
-    EDI_UI_TRACE("measurement-enter", {{"id", id}, {"callback", "grabWindow"}});
+    EDI_UI_TRACE("measurement-enter", {{"id", id}, {"callback", "QQuickWindow::grabWindow"}});
     QImage frame = window_.grabWindow();
-    EDI_UI_TRACE("measurement-leave", {{"id", id}, {"callback", "grabWindow"}});
+    EDI_UI_TRACE("measurement-leave", {{"id", id}, {"callback", "QQuickWindow::grabWindow"}});
     return frame;
 }
 

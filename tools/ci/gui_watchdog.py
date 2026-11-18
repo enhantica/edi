@@ -21,8 +21,10 @@ must be the scenario's listed steps, in order. --control checks a control run: i
 block on the GUI thread inside the measured interval, a gap over the limit must contain that
 whole block, and the check then fails on it as on any other.
 
-Exit status: 0 within the limit, 1 a gap over it, 2 a trace that is invalid or incomplete.
---report prints and exits 0 whatever it finds, for a baseline. Every refusal names its cause.
+Exit status: 0 within the limit, 1 a gap over it or a trace that is invalid or incomplete
+(only the driver's `QQuickWindow::grabWindow` and `compare-images` callbacks are its own work).
+A valid control prints that its block was seen. --report prints and exits 0 whatever it finds,
+for a baseline. Every refusal names its cause.
 """
 
 from __future__ import annotations
@@ -34,6 +36,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 CONTRACT = ROOT / 'tests/fixtures/ui_responsiveness/contract.json'
+CALLBACKS = {'QQuickWindow::grabWindow', 'compare-images'}
 
 
 class InvalidTraceError(Exception):
@@ -94,6 +97,10 @@ def tool_intervals(events: list[dict], gui: object) -> list[tuple[float, float]]
                 raise InvalidTraceError("the driver's measurement spans overlap")
             if event.get('thread') != gui:
                 raise InvalidTraceError('a measurement span is not on the GUI thread')
+            if event.get('callback') not in CALLBACKS:
+                raise InvalidTraceError(
+                    f'a measurement span names no driver callback ({event.get("callback")})'
+                )
             open_spans[event.get('id'), event.get('callback')] = event['t_ms']
         elif kind == 'measurement-leave':
             key = (event.get('id'), event.get('callback'))
@@ -201,7 +208,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument('--report', action='store_true', help='print only; exit 0')
     options = parser.parse_args(argv)
-    invalid = 0 if options.report else 2
+    invalid = 0 if options.report else 1
     steps, limit = None, 100.0
     if options.contract.is_file():
         contract = json.loads(options.contract.read_text(encoding='utf-8'))
