@@ -298,6 +298,12 @@ ProjectViewModel::ProjectViewModel(edi::Project project, QObject* parent, const 
     connect(structure_view_options_, &StructureViewOptions::changed, this, &ProjectViewModel::keepStructureView);
     render_wait_.setSingleShot(true);
     connect(&render_wait_, &QTimer::timeout, this, [this] { followRendered(false); });
+    for (QTimer* coalesce : {&texts_coalesce_, &spelling_coalesce_}) {
+        coalesce->setSingleShot(true);
+        coalesce->setInterval(1000);
+    }
+    connect(&texts_coalesce_, &QTimer::timeout, this, [this] { makeTextsLater(); });
+    connect(&spelling_coalesce_, &QTimer::timeout, this, [this] { makeSpellingLater(); });
     loadScan();
     correlations_ = new CorrelationViewModel(this);
     connect(this, &ProjectViewModel::currentExperimentIndexChanged, this, &ProjectViewModel::syncCorrelations);
@@ -4520,9 +4526,11 @@ void ProjectViewModel::startViewRead() {
     // While a scan runs the worker is its own: a dataset shown gets its pattern calculated beside it, on a copy of
     // the template with the same values and data as the shown model, unless the scan's fit sent the followed file's
     // pattern with it (edi ADR-0029).
-    std::optional<edi::Project> shown;
+    // The template is shared with the worker, which makes its own copy: a run's template does not change, so one
+    // snapshot serves every point (no copy of the whole project on the GUI thread per point).
+    std::shared_ptr<const edi::Project> shown_from;
     if (fit_ != nullptr && fit_->scanning() && !(follow_frame_ && follow_frame_->first == index)) {
-        shown = *scan_template_;
+        shown_from = templateSnapshot();
     }
     const edi::ScanDatasets& datasets = scan_session_->datasets();
     const std::vector<edi::BeamModeEnum> modes = beamModes();
@@ -4532,7 +4540,7 @@ void ProjectViewModel::startViewRead() {
     // A file a followed scan has just fitted, its pattern sent with it, is read here, about a millisecond: the file is
     // applied in this event, with the current dataset it moves, so one frame draws both (edi ADR-0029). The browser
     // reads its files off the page's thread (edi ADR-0030).
-    if (follow_frame_ && follow_frame_->first == index && !shown) {
+    if (follow_frame_ && follow_frame_->first == index && !shown_from) {
         DatasetView view;
         view.values = std::move(values);
         try {
@@ -4547,13 +4555,17 @@ void ProjectViewModel::startViewRead() {
 #endif
     view_reading_ = true;
     const QPointer<ProjectViewModel> self(this);
-    // What a series point's values read beside its row: the project's paths, experiments and parameters.
-    std::shared_ptr<const edi::Project> source = overlaid ? std::make_shared<const edi::Project>(*project_) : nullptr;
+    // What a series point's values read beside its row: the project's paths, experiments and parameters, which the
+    // template shares with the shown model (a view changes only values and data).
+    std::shared_ptr<const edi::Project> source =
+        overlaid ? (scan_template_ ? templateSnapshot() : std::make_shared<const edi::Project>(*project_)) : nullptr;
     run_in_background([self, request, index, start, own_check, from_check, datasets, modes, d_spacing,
                        values = std::move(values),
-                       shown = std::move(shown), source = std::move(source)]() mutable {
+                       shown_from = std::move(shown_from), source = std::move(source)]() mutable {
         DatasetView view;
         view.values = std::move(values);
+        std::optional<edi::Project> shown;
+        if (shown_from) shown = *shown_from;
         try {
             if (source) {
                 overlaySeriesPoint(view.values, *source, datasets, index, start, own_check, from_check);
@@ -7238,6 +7250,15 @@ std::string ProjectViewModel::discoveredFile(const std::string& relative) const 
     return file_of(*discovered_files_, relative);
 }
 
+std::shared_ptr<const edi::Project> ProjectViewModel::templateSnapshot() const {
+    if (!scan_template_) return nullptr;
+    if (!template_snapshot_ || !edi::unchanged_since(*scan_template_, template_snapshot_stamps_)) {
+        template_snapshot_ = std::make_shared<const edi::Project>(*scan_template_);
+        template_snapshot_stamps_ = edi::work_stamps(*scan_template_);
+    }
+    return template_snapshot_;
+}
+
 std::string ProjectViewModel::templateIdentityOf(const edi::Project& project) const {
     if (identity_memo_ && identity_memo_->project == &project && edi::unchanged_since(project, identity_memo_->stamps)) {
         return identity_memo_->identity;
@@ -7248,6 +7269,15 @@ std::string ProjectViewModel::templateIdentityOf(const edi::Project& project) co
 }
 
 void ProjectViewModel::refreshTextsLater() {
+    if (fit_ != nullptr && fit_->running()) {
+        if (!texts_coalesce_.isActive()) texts_coalesce_.start();
+        return;
+    }
+    texts_coalesce_.stop();
+    makeTextsLater();
+}
+
+void ProjectViewModel::makeTextsLater() {
     // From an uncalculated copy, as discoveredFile's: the values are the shown ones; a computed category waits for the
     // next publication that is not a view.
     const auto copy = std::make_shared<const edi::Project>(*project_);
@@ -7283,6 +7313,15 @@ void ProjectViewModel::refreshTextsLater() {
 }
 
 void ProjectViewModel::refreshSpellingLater() {
+    if (fit_ != nullptr && fit_->running()) {
+        if (!spelling_coalesce_.isActive()) spelling_coalesce_.start();
+        return;
+    }
+    spelling_coalesce_.stop();
+    makeSpellingLater();
+}
+
+void ProjectViewModel::makeSpellingLater() {
     const auto copy = std::make_shared<const edi::Project>(*project_);
     const edi::WorkStamps stamps = edi::work_stamps(*project_);
     const std::uint64_t request = ++spelling_request_;

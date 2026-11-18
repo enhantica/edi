@@ -473,7 +473,17 @@ class ProjectViewModel : public QObject, public ProjectEditor {
         std::string identity;
     };
     mutable std::optional<IdentityMemo> identity_memo_;
+    // A shared copy of the scan's template, made again only when the template changes: the workers that calculate or
+    // read a shown point take it instead of a copy made per point on the GUI thread.
+    std::shared_ptr<const edi::Project> templateSnapshot() const;
+    mutable std::shared_ptr<const edi::Project> template_snapshot_;
+    mutable edi::WorkStamps template_snapshot_stamps_;
     void refreshSpellingLater();
+    // While a fit runs every followed point publishes: the texts and the spelling, each made from a copy of the
+    // whole project, are made at most once a second then, the last after the latest point (edi ADR-0089 point 7).
+    QTimer texts_coalesce_, spelling_coalesce_;
+    void makeTextsLater();
+    void makeSpellingLater();
     bool view_calculation_ = false;
     std::uint64_t texts_request_ = 0;
     std::uint64_t spelling_request_ = 0;
