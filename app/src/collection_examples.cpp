@@ -209,17 +209,26 @@ void CollectionExamples::fetchBytes(const QString& id, BytesDone done, FetchProg
     fetchPaired(id, it->sources, 0, false, std::move(done), std::move(progress));
 }
 
+
 // The file and the index it is checked against come from the same location, the index read in this operation: the
 // first location that answers serves both, the next only after an outage, so a file from the online collection is
 // never checked against the bundled copy's index or against an index read before the collection moved on. A file that
 // still disagrees with that index (a publication between the two reads) is read once more, index first.
 void CollectionExamples::fetchPaired(const QString& id, const QStringList& bases, int at, bool retried, BytesDone done,
-                                     FetchProgress progress) {
+                                     FetchProgress progress, bool omitted) {
     if (at >= bases.size()) {
         done({}, tr("No online source that answered holds '%1'").arg(id));
         return;
     }
     const QString& base = bases.at(at);
+    const bool here = QUrl(base).isLocalFile() || QUrl(base).scheme().isEmpty();
+    // A file the app does not hold could not be downloaded: said as what it is, with what the location answered.
+    const auto failed = [id, omitted](const QString& error) {
+        return omitted ? tr("'%1' is not installed with the app: it is downloaded from the online collection the first "
+                            "time it is opened, and the download did not succeed (%2). Check the internet connection "
+                            "and open it again.").arg(id, error)
+                       : error;
+    };
     const auto url = [](const QString& root, const QString& path) {
         QUrl out(QString::fromStdString(edi::online::location_url(root.toStdString(), path.toStdString())));
         return out.scheme().isEmpty() ? QUrl::fromLocalFile(out.toString()) : out;
@@ -227,11 +236,11 @@ void CollectionExamples::fetchPaired(const QString& id, const QStringList& bases
     const QPointer<CollectionExamples> receiver(this);
     fetch_url(this, network_, url(base, QStringLiteral("index.json")),
               // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks): the std::function owns the lambda; the analyzer does not follow libc++'s release of it
-              [receiver, id, bases, at, retried, done = std::move(done), progress = std::move(progress), base, url](const QByteArray& bytes, const QString& error, bool unreachable) {
+              [receiver, id, bases, at, retried, done = std::move(done), progress = std::move(progress), base, url, omitted, here, failed](const QByteArray& bytes, const QString& error, bool unreachable) {
         if (!receiver) return;
         if (!error.isEmpty()) {
-            if (unreachable && at + 1 < bases.size()) receiver->fetchPaired(id, bases, at + 1, retried, done, progress);
-            else done({}, error);
+            if (unreachable && at + 1 < bases.size()) receiver->fetchPaired(id, bases, at + 1, retried, done, progress, omitted);
+            else done({}, failed(error));
             return;
         }
         edi::online::File file;
@@ -256,17 +265,18 @@ void CollectionExamples::fetchPaired(const QString& id, const QStringList& bases
             it->sha256 = QString::fromStdString(file.sha256);
         }
         fetch_url(receiver, receiver->network_, url(base, path),
-                  [receiver, id, bases, at, retried, done, progress, file, name](const QByteArray& data, const QString& failure, bool offline) {
+                  [receiver, id, bases, at, retried, done, progress, file, name, omitted, here, failed](const QByteArray& data, const QString& failure, bool offline) {
             if (!receiver) return;
             if (!failure.isEmpty()) {
-                if (offline && at + 1 < bases.size()) receiver->fetchPaired(id, bases, at + 1, retried, done, progress);
-                else done({}, failure);
+                // The app's own copy leaves out a large file: the next location is the online collection.
+                if (offline && at + 1 < bases.size()) receiver->fetchPaired(id, bases, at + 1, retried, done, progress, omitted || here);
+                else done({}, failed(failure));
                 return;
             }
             const QString problem = content_problem(data, file.bytes, QString::fromStdString(file.sha256), name);
             if (problem.isEmpty()) done(data, {});
-            else if (!retried) receiver->fetchPaired(id, bases, at, true, done, progress);
-            else done({}, problem);
+            else if (!retried) receiver->fetchPaired(id, bases, at, true, done, progress, omitted);
+            else done({}, failed(problem));
         }, [progress, expected = file.bytes](qint64 received, qint64 total) {
             if (progress) progress(received, total > 0 ? total : expected);
         });

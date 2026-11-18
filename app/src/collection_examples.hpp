@@ -66,7 +66,10 @@ private:
         QString sha256;
     };
     void updateNotice();
-    void fetchPaired(const QString& id, const QStringList& bases, int at, bool retried, BytesDone done, FetchProgress progress);
+    // `omitted`: a location on this computer did not hold the file (left out of the app for its size), so a failure of
+    // the online ones is said as the download it is.
+    void fetchPaired(const QString& id, const QStringList& bases, int at, bool retried, BytesDone done, FetchProgress progress,
+                     bool omitted = false);
     void settle();
     void checkOnline(int generation, const QStringList& online, const edi::online::Index& bundled);
 
