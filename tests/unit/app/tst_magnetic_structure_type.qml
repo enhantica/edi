@@ -101,7 +101,7 @@ TestCase {
         tryCompare(combo.popup, "opened", false, 2000, "The selector closes after pointer selection");
     }
     function identifies(item, suffix) {
-        return String(item.uid || "").toLowerCase().endsWith(suffix) || String(item.objectName || "").toLowerCase().startsWith("generated.") && String(item.objectName).toLowerCase().endsWith(suffix);
+        return String(item.uid || "").toLowerCase().replace(/-/g, "_").endsWith(suffix) || String(item.objectName || "").toLowerCase().startsWith("generated.") && String(item.objectName).toLowerCase().replace(/-/g, "_").endsWith(suffix);
     }
     function field(owner, suffix, title) {
         const found = Render.descendants(owner).filter(item => item.visible && (identifies(item, suffix) || item.title === title || item.label === title));
