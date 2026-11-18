@@ -323,6 +323,10 @@ class ScanLayer : public QQuickPaintedItem {
     mutable QList<int> labelled_datasets_;
     mutable bool shown_labels_stale_ = true;
     void labelsMoved();
+    void announceLabels();
+    bool labels_pending_ = false;
+    QList<bool> announced_labels_;  // the choice last announced (announceLabels)
+    QList<int> announced_datasets_;
     double display_min_ = 0.0, display_max_ = 1.0;
     // By dataset: its lowest and highest value on the y scale, and its stacked baseline (NaN while it has no row).
     std::vector<double> lows_, highs_, baselines_;

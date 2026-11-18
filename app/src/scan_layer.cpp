@@ -104,17 +104,31 @@ ScanLayer::ScanLayer(QQuickItem* parent)
 }
 
 void ScanLayer::labelsMoved() {
-    // Made again now, and announced only when the choice changed: a selection that leaves every label where it was
-    // re-binds no label.
+    // Stale at once, so a read is always current; chosen again and announced once per event-loop turn, and only
+    // when the choice changed. A followed fit moves the current row, the placement and both axis ends for each
+    // point, and announcing each of them re-bound every label several times per point.
+    if (!shown_labels_stale_) {
+        announced_labels_ = shown_labels_;
+        announced_datasets_ = labelled_datasets_;
+    }
     shown_labels_stale_ = true;
-    const QList<bool> before = shown_labels_;
-    const QList<int> labelled_before = labelled_datasets_;
+    if (labels_pending_) return;
+    labels_pending_ = true;
+    QMetaObject::invokeMethod(this, &ScanLayer::announceLabels, Qt::QueuedConnection);
+}
+
+void ScanLayer::announceLabels() {
+    labels_pending_ = false;
     const QPointer<ScanLayer> self(this);
-    if (shownLabels() != before) {
+    if (shownLabels() != announced_labels_) {
+        announced_labels_ = shown_labels_;
         emit shownLabelsChanged();
         if (!self) return;
     }
-    if (labelled_datasets_ != labelled_before) emit labelledDatasetsChanged();
+    if (labelled_datasets_ != announced_datasets_) {
+        announced_datasets_ = labelled_datasets_;
+        emit labelledDatasetsChanged();
+    }
 }
 
 void ScanLayer::setLabelled(bool labelled) {
