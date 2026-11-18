@@ -1440,6 +1440,7 @@ struct AssistantViewModel::State {
     QString observed_native_error;
     std::uint64_t generation = 0;
     QTimer timer{&owner};
+    QElapsedTimer fit_sync_clock;  // while a fit runs, when the context was last made
     QString history_path, history_archive_thread;
     std::unique_ptr<AssistantHistoryArchive> history_archive,history_legacy_archive;
     bool history_cache_was_cleared=false;
@@ -16275,6 +16276,14 @@ struct AssistantViewModel::State {
                 }
                 if (selected_rows_dirty && !flush_selected_rows(projection)) return;
                 if (!projection.current()) return;
+                // While a fit runs the project changes with every followed point: its context is made again at most
+                // once a second, and on the first tick after the run ends, so the panel ends on the final state.
+                if (project && project->fit() && project->fit()->running()) {
+                    if (fit_sync_clock.isValid() && fit_sync_clock.elapsed() < 1000) return;
+                    fit_sync_clock.start();
+                } else {
+                    fit_sync_clock.invalidate();
+                }
                 sync();
             } catch (...) { if (projection.current()) { error = storage_error; render_dirty = true; } }
         });
