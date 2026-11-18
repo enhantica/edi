@@ -1399,6 +1399,22 @@ bool ProjectViewModel::loadExperimentWithStructures(const QUrl& file, const QLis
     return true;
 }
 
+// Checked on a copy: the calculation marks the live model's dependents itself, inside its own change.
+void ProjectViewModel::announceBrokenRelations() {
+    QString problem;
+    try {
+        edi::Project probe(*project_);
+        edi::refresh_relations(probe, [](const std::string&) {});
+    } catch (const std::exception& refusal) {
+        problem = QString::fromUtf8(refusal.what());
+    }
+    if (problem == broken_relations_) return;
+    broken_relations_ = problem;
+    if (!problem.isEmpty())
+        announceRefused(tr("The aliases and constraints no longer hold, so the calculation waits until they are fixed "
+                           "or the edit is undone: %1").arg(problem));
+}
+
 // Every refusal is announced here, with the file it attaches fixed as it starts (RefusalAnnouncement).
 void ProjectViewModel::announceRefused(const QString& message) {
     const RefusalAnnouncement announcement(this);
@@ -5733,6 +5749,12 @@ ProjectViewModel::EditOutcome ProjectViewModel::applyEdit(const edi::Edit& chang
     const QPointer<ProjectViewModel> self(this);
     editing_ = true;
     const auto release = qScopeGuard([self] { if (self) self->editing_ = false; });
+    // An edit that leaves the aliases or constraints unable to hold (one names an atom a removed or replaced
+    // structure no longer has) says so in a popup once; the calculation and the s.u. that need them refuse until
+    // the relation is fixed or the edit undone.
+    const auto relations = qScopeGuard([self, &result, structural] {
+        if (self && structural && result.applied) self->announceBrokenRelations();
+    });
     pending_structural_ = structural;
     const auto relation_input = widget_input_executing_ ? widget_relation_input_ : nullptr;
     const auto background_input = widget_input_executing_ ? widget_background_input_ : nullptr;

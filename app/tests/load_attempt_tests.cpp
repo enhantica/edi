@@ -9,6 +9,7 @@
 #include <QSignalSpy>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
+#include <cmath>
 
 #include "edi/project_archive.hpp"
 #include "engine_setup.hpp"
@@ -16,6 +17,7 @@
 #include "experiment_view_model.hpp"
 #include "project_view_model.hpp"
 #include "session.hpp"
+#include "structure_view_model.hpp"
 
 // The load refuses, and its refusal attaches `file` (by name; empty for none).
 #define REFUSES(call, file)                                   \
@@ -243,6 +245,32 @@ private slots:
         QCOMPARE(files, (QStringList{"", "phase.edi"}));
         // Asked outside any announcement, nothing is attached.
         QCOMPARE(project->takeRefusedFile({}), QString());
+    }
+
+    // Removing an atom an alias names leaves relations that cannot hold: the edit says so in one popup (a refusal
+    // carrying no file), and the moment table, read from a binding, shows undefined s.u. instead of ending the app.
+    void brokenRelationsArePoppedUpNotFatal() {
+        Session session(nullptr);
+        QVERIFY(session.openProject(QUrl::fromLocalFile(QStringLiteral(EDI_SOURCE_DIR "/tests/fixtures/magnetic_stall/frame"))));
+        ProjectViewModel* project = session.project();
+        QVERIFY(project && !project->structureModels().isEmpty());
+        StructureViewModel* structure = project->structureModels().constFirst();
+        QStringList refusals, files;
+        QObject::connect(project, &ProjectViewModel::refused, project, [&](const QString& message) {
+            refusals.append(message);
+            files.append(project->takeRefusedFile(message));
+        });
+        structure->atomSites()->remove(1);  // Co2, named by alias biso_Co2
+        QCOMPARE(refusals.size(), 1);
+        QVERIFY2(refusals.constFirst().contains(QStringLiteral("no longer hold")), qPrintable(refusals.constFirst()));
+        QVERIFY2(refusals.constFirst().contains(QStringLiteral("Co2")), qPrintable(refusals.constFirst()));
+        QCOMPARE(files, QStringList{QString()});
+        const QList<double> components = structure->atomSiteMoments()->components(0, QStringLiteral("crystal"));
+        QVERIFY(components.size() >= 6);
+        QVERIFY(std::isnan(components.at(3)));
+        // Another structural edit with the same problem says nothing new.
+        structure->atomSites()->remove(structure->atomSites()->rowCount() - 1);
+        QCOMPARE(refusals.size(), 1);
     }
 
     // A load started while another load's refusal is announced keeps its own file, and the first refusal, asked

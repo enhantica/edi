@@ -1401,6 +1401,8 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     quint64 revision_ = 0;
     QString last_error_;
     void announceRefused(const QString& message);  // every `refused`, with the file it attaches
+    void announceBrokenRelations();
+    QString broken_relations_;  // the relation problem last announced (announceBrokenRelations)
     QString published_name_, published_title_, published_description_, published_last_modified_;
     QString published_authors_, published_su_rule_;
     bool published_pattern_d_spacing_ = false;

@@ -612,12 +612,20 @@ const edi::AtomSiteMoment* moment_of(const edi::Structure& structure, const edi:
 // s.u. comes from: crysta's mapping of the fit's seeds through the project's relation graph
 // (edi::moment_input_covariance; crysta's rule for an undefined s.u., edi ADR-0078). Nothing is
 // rebuilt here. A structure no project holds has no seeds, so its forms show no s.u.
+// Relations that cannot hold (an alias naming an atom the structure no longer has) leave every s.u. undefined: the
+// table is read from a binding, where a refusal would end the app; the edit that broke them says why.
 std::array<double, 81> moment_covariance(const edi::Project* project, const edi::Structure& structure,
                                          const edi::AtomSiteMoment& moment) {
     if (project != nullptr) {
         for (std::size_t index = 0; index < project->structures.size(); ++index) {
             if (project->structures[index].get() == &structure) {
-                return edi::moment_input_covariance(*project, index, moment.id.value());
+                try {
+                    return edi::moment_input_covariance(*project, index, moment.id.value());
+                } catch (const std::exception&) {
+                    std::array<double, 81> undefined{};
+                    undefined.fill(std::numeric_limits<double>::quiet_NaN());
+                    return undefined;
+                }
             }
         }
     }
