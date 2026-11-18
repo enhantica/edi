@@ -16,8 +16,9 @@ def prepare(source, destination):
         'ADR-0062: caught-error coverage compiles the uniquely bounded application class'
     )
     provider = text[text.index(first) : text.index(following)].rstrip() + '\n'
-    assert 'class GuardedApplication final : public QGuiApplication' in provider and provider.rstrip().endswith(
-        'namespace'
+    assert (
+        'class GuardedApplication final : public QGuiApplication' in provider
+        and provider.rstrip().endswith('namespace')
     ), 'ADR-0062: the complete production event boundary must be retained'
     destination.mkdir(parents=True, exist_ok=True)
     (destination / 'application_provider.inc').write_text(provider, encoding='utf-8')
