@@ -3549,7 +3549,7 @@ BraggPdExperiment simulation_experiment(const std::string& name, const Experimen
         text += "_instrument.calib_twotheta_offset 0.\n\n"
                 "_peak.type cwl-tch-pseudo-voigt\n"
                 "_peak.broad_gauss_u 0.1\n_peak.broad_gauss_v -0.1\n_peak.broad_gauss_w 0.1\n"
-                "_peak.broad_lorentz_x 0.\n_peak.broad_lorentz_y 0.1\n_peak.cutoff_fwhm 8.\n\n"
+                "_peak.broad_lorentz_x 0.\n_peak.broad_lorentz_y 0.\n_peak.cutoff_fwhm 8.\n\n"
                 "_data_range.two_theta_min 10.\n_data_range.two_theta_max 150.\n"
                 "_data_range.two_theta_step 0.05\n";
     } else {
