@@ -5352,6 +5352,7 @@ void ProjectViewModel::scanEnded(edi::FitStatus status, double seconds) {
     if (scan_session_ == nullptr) {
         return;
     }
+    settleTemplateRows();  // the template file's saved rows, held while the scan ran
     // The run's provenance: the template it fitted from, its time and outcome, kept beside the results.
     const QString final_outcome = status == edi::FitStatus::ERROR       ? QStringLiteral("failed")
                                   : status == edi::FitStatus::CANCELLED ? QStringLiteral("stopped")
@@ -6972,9 +6973,31 @@ void ProjectViewModel::adoptScanFileResult(const std::string& file,
     const std::string template_file =
         scan_session_ != nullptr ? edi::effective_scan_template_file(scanTemplateOrModel(), scan_session_->datasets())
                                  : scanTemplateOrModel().sequential_fit.template_file;
+    // While a scan runs, the template file's saved rows (a rebuild of the whole correlation loop) wait for its end:
+    // the views read the file's own table meanwhile, and nothing saves during a run (edi ADR-0089 point 7).
+    if (fit_ != nullptr && fit_->scanning() && !template_file.empty() && file == template_file) {
+        project_->fit_result.scan_results[file] = result;
+        if (scan_template_) {
+            scan_template_->fit_result.scan_results[file] = result;
+        }
+        template_rows_owed_ = template_file;
+        return;
+    }
     edi::adopt_scan_file_result(project_->fit_result, file, result, template_file);
     if (scan_template_) {
         edi::adopt_scan_file_result(scan_template_->fit_result, file, result, template_file);
+    }
+}
+
+void ProjectViewModel::settleTemplateRows() {
+    if (template_rows_owed_.empty()) return;
+    const std::string file = std::exchange(template_rows_owed_, std::string());
+    for (edi::FitResultRecord* record :
+         {&project_->fit_result, scan_template_ ? &scan_template_->fit_result : nullptr}) {
+        if (record == nullptr) continue;
+        if (const auto found = record->scan_results.find(file); found != record->scan_results.end()) {
+            edi::adopt_scan_file_result(*record, file, found->second, file);
+        }
     }
 }
 

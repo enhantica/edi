@@ -764,6 +764,10 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     bool scanProcessed() const;
     // The run ended: its status, seconds and outcome key (the worst file's, Stopped or Failed).
     void scanEnded(edi::FitStatus status, double seconds);
+    // The template file's saved correlation rows, made when its fit's result arrived during a run, are made at the run's
+    // end (settleTemplateRows): `template_rows_owed_` names the file then.
+    std::string template_rows_owed_;
+    void settleTemplateRows();
     // Every pattern, display catches up: the patterns of a scan that ended are all drawn, and the shown dataset is
     // shown as its row gives it (scanEnded waits for this).
     void scanCaughtUp();
