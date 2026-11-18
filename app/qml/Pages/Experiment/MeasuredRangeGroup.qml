@@ -86,6 +86,8 @@ Column {
         // itself, so the Repeater, declared last, takes the last width, kept narrow.
         readonly property var componentNames: group.experiment ? group.experiment.pattern.componentNames : []
         columns: ApplicationInfo.nativeListProjection(1)
+        // Widths from column types, not rows (ADR-0097 rule 4): every column is a value.
+        defaultColumnType: "number"
         // A layout of its own (the owner, 2026-10-27): the count, the status and the structures' columns fit their
         // content, and the other numeric columns share the rest equally after their own widths.
         spreadColumns: [1, 2, 3, 4, 5, 6, 7]

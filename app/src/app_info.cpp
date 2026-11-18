@@ -7122,12 +7122,18 @@ void ApplicationInfo::tableFitWholeModel() const {
     // A table that declares its column types (ADR-0097 rule 4) takes its columns' widths from them: no row is made or
     // measured, so a change of the content never moves a column and costs nothing.
     const auto types = panelUsageContextRead(f, "columnTypes");
-    if (const int typed = panelUsageTruth(types) ? panelUsageRead(f, types, "length").toInt() : 0; typed > 0) {
-        const int count = panelUsageRead(f, panelUsageContextRead(f, "columns"), "length").toInt();
+    const QString fallback = panelUsageContextRead(f, "defaultColumnType").toString();
+    const int typed = panelUsageTruth(types) ? panelUsageRead(f, types, "length").toInt() : 0;
+    if (typed > 0 || !fallback.isEmpty()) {
+        const auto columns = panelUsageContextRead(f, "columns");
+        const int count = panelUsageRead(f, columns, "length").toInt();
         auto widths = f->newArray(static_cast<uint>(count));
         const double inset = projectInvoke(f, "metrics", "advanceWidth", {QJSValue(QStringLiteral("00"))}).toNumber();
         for (int index = 0; panelUsageReady(f) && index < count; ++index) {
-            const QString sample = tableTypeSample(index < typed ? textIndex(f, types, QJSValue(index)).toString() : QString());
+            // A column's own type, else the table's default for a flex column; a fixed column keeps its width.
+            QString type = index < typed ? textIndex(f, types, QJSValue(index)).toString() : QString();
+            if (type.isEmpty() && textIndex(f, columns, QJSValue(index)).strictlyEquals(QJSValue(-1))) type = fallback;
+            const QString sample = tableTypeSample(type);
             const double width = sample.isEmpty() ? 0.0
                 : projectInvoke(f, "metrics", "advanceWidth", {QJSValue(sample)}).toNumber() + inset;
             widths.setProperty(static_cast<quint32>(index), QJSValue(width));
@@ -7360,7 +7366,8 @@ void ApplicationInfo::tableDataChanged(const QJSValue& topLeft, const QJSValue& 
     const auto f = panelUsageEngine(this); if (!tableAlive(f, panelUsageContextRead(f, "ownerLife"))) return;
     // Typed columns do not follow the content (tableFitWholeModel): a changed row needs no measuring.
     const auto types = assistantContextField(f, "table", "columnTypes");
-    if (panelUsageTruth(types) && panelUsageRead(f, types, "length").toInt() > 0) return;
+    if ((panelUsageTruth(types) && panelUsageRead(f, types, "length").toInt() > 0)
+        || !assistantContextField(f, "table", "defaultColumnType").toString().isEmpty()) return;
     // Changed rows fit the columns again, number columns included (their widths come from the measured rows), but a
     // table that cannot be seen is only marked unfitted and measured once it is (tableOnScreenChanged): a refit of a
     // series' 100 runs at each fitted run, off screen, was most of the GUI thread's stalls during a fit.

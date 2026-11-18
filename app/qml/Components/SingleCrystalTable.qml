@@ -68,6 +68,8 @@ DataTable {
     // The Miller indices are short integers, so their columns are narrow and the numbers keep their room.
     readonly property real indexColumnWidth: EaStyle.Sizes.fontPixelSize * 2.5
     columns: [numberColumnWidth, indexColumnWidth, indexColumnWidth, indexColumnWidth, -1, -1, -1, -1, -1, -1].concat(timeOfFlight ? [-1] : []).concat([AppSizes.iconOnlyColumnWidth])
+    // Widths from column types, not rows (ADR-0097 rule 4): values after the fixed h, k, l.
+    defaultColumnType: "number"
 
     header: EaComponents.ListViewHeader {
         EaComponents.ListViewLabel {

@@ -57,6 +57,8 @@ EaComponents.ListView {
     // when given, the widths come from the types and no row is measured, so changing data never moves a column
     // (ADR-0097 rule 4). A table without it fits its columns to its rows (ADR-0029).
     property var columnTypes: []
+    // The type of every flex column (-1) that columnTypes leaves untyped, e.g. "number" for a table of values.
+    property string defaultColumnType: ""
     // The width the columns need. A number column is never narrower than its widest text, so a row wider than the
     // table scrolls sideways, its header with it.
     readonly property real rowsWidth: columnWidths.reduce((sum, width) => sum + Math.max(0, width), 0) + EaStyle.Sizes.tableColumnSpacing * Math.max(0, columnWidths.length - 1) + rowPadding * 2 + EaStyle.Sizes.borderThickness * 2
