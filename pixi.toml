@@ -289,6 +289,8 @@ app-format = { cmd = ["bash", "tools/ci/app-format-check.sh", "--apply"] }
 # The UI test: the demo's page images against the one committed set, by SSIM; `app-ui-bless` replaces
 # the set with the last run (a reviewed act — commit it with the reason).
 app-ui-test = { cmd = ["bash", "tools/ci/app-ui-test.sh"], depends-on = [{ task = "app-build", environment = "app" }] }
+# The GUI watchdog (ADR-0096): the demo scenarios with the stall probe, checked by tools/ci/gui_watchdog.py.
+app-watchdog = { cmd = ["bash", "tools/ci/app-watchdog.sh"], depends-on = [{ task = "app-build", environment = "app" }] }
 app-ui-bless = { cmd = ["bash", "tools/ci/app-ui-bless.sh"] }
 # ADR-0017 §15: the measured-layer benchmark, by hand: Qt Graphs' own series against edi's scene-graph
 # item, on the stress dataset's measured series. Prints one table.

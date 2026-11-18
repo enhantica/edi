@@ -25,6 +25,7 @@
 #include "engine_setup.hpp"
 #include "run_log.hpp"
 #include "stall_probe.hpp"
+#include "ui_probe.hpp"
 #include "test_observer.hpp"
 #ifndef __EMSCRIPTEN__
 void start_installer_smoke(QQuickWindow&, const QString&);
@@ -167,6 +168,8 @@ int main(int argc, char* argv[]) {
     }
     // Off unless EDI_STALL_PROBE is set; its summary is written before the log finishes.
     edi_app::install_stall_probe(app);
+    // Off unless EDI_UI_TRACE=1 (ADR-0096): the observation trace the GUI watchdog reads.
+    edi_app::install_ui_probe(app);
     QObject::connect(&app, &QCoreApplication::aboutToQuit, &run_log, &edi_app::RunLog::finish);
     edi_app::quit_on_termination_signals();
     QQmlApplicationEngine engine;

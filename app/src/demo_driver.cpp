@@ -43,6 +43,7 @@
 #include "scan_session.hpp"
 #include "scan_view_model.hpp"
 #include "session.hpp"
+#include "ui_probe.hpp"
 #include "structure_view_model.hpp"
 
 namespace edi_app {
@@ -92,7 +93,7 @@ QString copy_cli_project(const QString& id, const QDir& into) {
 }
 
 DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QString& only, QObject* parent)
-    : QObject(parent), window_(window), output_dir_(output_dir) {
+    : QObject(parent), window_(window), output_dir_(output_dir), only_(only) {
     // A new atom is random (edi::new_atom_site): the demo draws it from one seed, so its images repeat.
     AtomSiteListModel::fixRandomSeed(17);
     const QString experiment = QStringLiteral("appBar.tab.experiment");
@@ -1022,6 +1023,71 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
                                                  open_example("pd-neut-cwl_lbco_simulation") +
                                                  QStringList{"appBar.tab.experiment", basic, "experiments.loadData.0"}});
     }
+    // The GUI watchdog's scenarios (ADR-0096), run only when asked, each traced with EDI_UI_TRACE=1 for
+    // tools/ci/gui_watchdog.py: `e58-pages` shows every page with the scan EDI_DEMO_SCAN_PROJECT open; `e58-banks` steps
+    // through a copy of the five-bank NCAF set's experiments on Experiment and on Analysis; `e58-pattern` presses the
+    // scan's next and previous dataset ten times each on both pages' Pattern, at the driver's 100 ms pace; `e58-series`
+    // fits the series EDI_DEMO_SCAN_PROJECT to its end. A step's trace name is the measured step's; the steps before
+    // the first named one only set the scenario up and are not measured.
+    const auto named = [this](const QString& trace, int navigation = 0) {
+        steps_.back().trace = trace;
+        steps_.back().navigation = navigation;
+    };
+    if (only.startsWith(QLatin1String("e58-pages"))) {
+        steps_.push_back({"e58-pages-00-opened", {"resize:1480x800", "open-project:" + qEnvironmentVariable("EDI_DEMO_SCAN_PROJECT")}});
+        const QStringList pages{"home", "project", "structure", "experiment", "analysis", "report", "experiment", "report",
+                                "analysis"};
+        for (qsizetype i = 0; i < pages.size(); ++i) {
+            steps_.push_back({QStringLiteral("e58-pages-%1-page-%2").arg(i + 1, 2, 10, QLatin1Char('0')).arg(pages[i]),
+                              {"appBar.tab." + pages[i]}});
+            named("page-" + pages[i]);
+        }
+    }
+    if (only.startsWith(QLatin1String("e58-banks"))) {
+        const QString banks = copy_cli_project(QStringLiteral("pd-neut-tof_ncaf-wish-5bank_start-5"), QDir(loaded_files_.path()));
+        steps_.push_back({"e58-banks-00-opened", {"resize:1480x800", "open-project:" + banks, "appBar.tab.experiment"}});
+        int n = 0;
+        for (const QString& page : {QStringLiteral("experiment"), QStringLiteral("analysis")}) {
+            for (const QString& direction : {QStringLiteral("next"), QStringLiteral("previous")}) {
+                for (int i = 0; i < 4; ++i) {
+                    QStringList actions;
+                    if (page == QLatin1String("analysis") && direction == QLatin1String("next") && i == 0) actions << "appBar.tab.analysis";
+                    actions << (direction == QLatin1String("next") ? "mainArea.blocks.down" : "mainArea.blocks.up");
+                    steps_.push_back({QStringLiteral("e58-banks-%1-%2-%3-%4").arg(++n, 2, 10, QLatin1Char('0')).arg(page, direction).arg(i), actions});
+                    named(QStringLiteral("%1-%2-%3").arg(page, direction).arg(i));
+                }
+            }
+        }
+    }
+    if (only.startsWith(QLatin1String("e58-pattern"))) {
+        steps_.push_back({"e58-pattern-00-opened", {"resize:1480x800", "open-project:" + qEnvironmentVariable("EDI_DEMO_SCAN_PROJECT"),
+                                                    "appBar.tab.experiment", "mainArea.tab.pattern"}});
+        int n = 0;
+        for (const QString& page : {QStringLiteral("experiment"), QStringLiteral("analysis")}) {
+            for (const QString& direction : {QStringLiteral("next"), QStringLiteral("previous")}) {
+                const bool next = direction == QLatin1String("next");
+                for (int i = 0; i < 10; ++i) {
+                    QStringList actions;
+                    if (page == QLatin1String("analysis") && next && i == 0) actions << "appBar.tab.analysis" << "mainArea.tab.pattern";
+                    actions << (next ? "mainArea.blocks.down" : "mainArea.blocks.up") << "capture-at:100";
+                    steps_.push_back({QStringLiteral("e58-pattern-%1-%2-%3-%4").arg(++n, 2, 10, QLatin1Char('0')).arg(page, direction).arg(i), actions});
+                    named(QStringLiteral("%1-%2-%3").arg(page, direction).arg(i), next ? 1 : -1);
+                }
+            }
+        }
+    }
+    if (only.startsWith(QLatin1String("e58-series"))) {
+        steps_.push_back({"e58-series-0-opened", {"resize:1480x800", "open-project:" + qEnvironmentVariable("EDI_DEMO_SCAN_PROJECT"),
+                                                  analysis, basic, "mainArea.tab.pattern"}});
+        steps_.push_back({"e58-series-1-fit-start", {"statusBar.fit.button", "capture-now"}});
+        named(QStringLiteral("fit-start"));
+        steps_.push_back({"e58-series-2-fit-running", {"wait-files:50", "capture-now"}});
+        named(QStringLiteral("fit-running"));
+        steps_.push_back({"e58-series-3-fit-ended", {"wait-fit"}});
+        named(QStringLiteral("fit-ended"));
+        steps_.push_back({"e58-series-4-end-settled", {"wait-settled"}});
+        named(QStringLiteral("end-settled"));
+    }
     if (only.startsWith(QLatin1String("stall-"))) {
         steps_.push_back({"stall-1-opened",
                           {"resize:1480x800", "open-project:" + qEnvironmentVariable("EDI_DEMO_SCAN_PROJECT"),
@@ -1711,7 +1777,14 @@ void DemoDriver::start() {
 
 void DemoDriver::run_step() {
     if (current_ == steps_.size()) {
-        QCoreApplication::exit(!documentation_ || saveDocumentationManifest("complete") ? 0 : 1);
+        const int code = !documentation_ || saveDocumentationManifest("complete") ? 0 : 1;
+        if (trace_begun_) {
+            // The trace's last tick follows its end, so the measured interval is closed by a tick.
+            ui_trace("complete", {{"scenario", trace_scenario_}});
+            QTimer::singleShot(50, this, [code] { QCoreApplication::exit(code); });
+            return;
+        }
+        QCoreApplication::exit(code);
         return;
     }
     documentation_skip_ = false;
@@ -1719,8 +1792,36 @@ void DemoDriver::run_step() {
         std::fprintf(stdout, "docs-capture: %s\n", qPrintable(steps_[current_].image));
         std::fflush(stdout);
     }
+    const Step& step = steps_[current_];
+    if (!step.trace.isEmpty()) {
+        if (!trace_begun_) {
+            trace_begun_ = true;
+            trace_scenario_ = only_.section(QLatin1Char('-'), 0, 1);
+            ui_trace("begin", {{"scenario", trace_scenario_}});
+        }
+        // A navigation step names what it selected, read after its click (next_action).
+        if (step.navigation == 0) ui_trace("step", {{"name", step.trace}});
+        // The watchdog's control: EDI_UI_BLOCK_MS blocks the GUI thread once inside the measured steps, outside the
+        // driver's own work, so a check that cannot see a blocked GUI thread is caught. Production never sets it.
+        if (const int block = qEnvironmentVariableIntValue("EDI_UI_BLOCK_MS"); block > 0 && !blocked_) {
+            blocked_ = true;
+            ui_trace("block-begin", {{"ms", block}, {"thread", ui_trace_thread()}});
+            QThread::msleep(static_cast<unsigned long>(block));
+            ui_trace("block-end", {{"thread", ui_trace_thread()}});
+        }
+    }
     action_ = 0;
     next_action();
+}
+
+QImage DemoDriver::grab() {
+    // The window grab renders a frame on the GUI thread for the driver, not for the user: the GUI watchdog leaves it
+    // out (ui_probe.hpp).
+    const int id = ++tool_id_;
+    ui_trace("tool-begin", {{"id", id}, {"what", "grab"}});
+    QImage frame = window_.grabWindow();
+    ui_trace("tool-end", {{"id", id}});
+    return frame;
 }
 
 void DemoDriver::next_action() {
@@ -1810,6 +1911,15 @@ void DemoDriver::next_action() {
         if (!perform(action)) {
             return;  // fail() has ended the run
         }
+        if (step.navigation != 0 && action.startsWith(QLatin1String("mainArea.blocks."))) {
+            QQmlEngine* engine = qmlEngine(window_.contentItem());
+            auto* session = engine != nullptr ? engine->singletonInstance<Session*>("edi.app", "Session") : nullptr;
+            const int dataset = session != nullptr && session->project() != nullptr
+                                    ? session->project()->property("currentExperimentIndex").toInt()
+                                    : -1;
+            ui_trace("step", {{"name", step.trace}, {"request", ++request_id_},
+                              {"direction", step.navigation > 0 ? "next" : "previous"}, {"dataset", dataset}});
+        }
         // A hover is what the step shows, so its pointer stays.
         if (!action.startsWith(QLatin1String("hover:"))) {
             park_pointer();
@@ -1835,7 +1945,11 @@ void DemoDriver::next_action() {
         // Every documentation screenshot is WebP at quality 85 (owner record 2026-11-10); other captures stay PNG.
         const bool webp = documentation_;
         const QString path = output_dir_.filePath(steps_[current_].image + (webp ? QStringLiteral(".webp") : QStringLiteral(".png")));
-        if (!(webp ? previous_frame_.save(path, "WEBP", 85) : previous_frame_.save(path))) {
+        const int tool = ++tool_id_;
+        ui_trace("tool-begin", {{"id", tool}, {"what", "save"}});
+        const bool saved = webp ? previous_frame_.save(path, "WEBP", 85) : previous_frame_.save(path);
+        ui_trace("tool-end", {{"id", tool}});
+        if (!saved) {
             fail(QStringLiteral("cannot write %1").arg(path));
             return;
         }
@@ -1851,7 +1965,7 @@ void DemoDriver::next_action() {
     };
     if (unsettled) {
         QTimer::singleShot(unsettled_ms, this, [this, save] {
-            previous_frame_ = window_.grabWindow();
+            previous_frame_ = grab();
             save();
         });
         return;
@@ -2085,7 +2199,7 @@ void DemoDriver::tutorial_next_then(const std::function<void()>& next, int step,
         QDir folder(shots);
         folder.mkpath(id);
         folder.cd(id);
-        window_.grabWindow().save(folder.filePath(QStringLiteral("%1.png").arg(now + 1, 3, 10, QLatin1Char('0'))));
+        grab().save(folder.filePath(QStringLiteral("%1.png").arg(now + 1, 3, 10, QLatin1Char('0'))));
         if (QFile list(folder.filePath(QStringLiteral("steps.txt"))); list.open(QIODevice::Append | QIODevice::Text))
             list.write(QStringLiteral("%1\t%2\t%3\n").arg(now + 1, 3, 10, QLatin1Char('0')).arg(shown.title, shown.text).toUtf8());
         shot_step_ = now;
@@ -2121,7 +2235,7 @@ void DemoDriver::tutorial_next_then(const std::function<void()>& next, int step,
     }
     if (waited_ms > kStuckMs) {
         // The window as it stands, beside the run's captures, to show where the tutorial stopped.
-        window_.grabWindow().save(output_dir_.filePath(steps_[current_].image + QStringLiteral("-stuck.png")));
+        grab().save(output_dir_.filePath(steps_[current_].image + QStringLiteral("-stuck.png")));
         fail(QStringLiteral("step %1: tutorial %2 stays at step %3 of %4: Next %5")
                  .arg(steps_[current_].image, id).arg(now + 1).arg(count)
                  .arg(clickable ? QStringLiteral("does not advance it") : QStringLiteral("is off")));
@@ -2674,7 +2788,7 @@ void DemoDriver::settle_then(const std::function<void()>& next) {
             const QQuickItem* item = find(tab, false);
             preparing = preparing || (item != nullptr && item->property("preparing").toBool());
         }
-        const QImage frame = window_.grabWindow();
+        const QImage frame = grab();
         if (!calculating && !opening && !preparing && !previous_frame_.isNull() && frame == previous_frame_) {
             next();
             return;
@@ -3137,7 +3251,7 @@ bool DemoDriver::timed_slider(int count) {
 
 void DemoDriver::fail(const QString& message) {
     if (documentation_) {
-        window_.grabWindow().save(output_dir_.filePath("failure.png"));
+        grab().save(output_dir_.filePath("failure.png"));
         saveDocumentationManifest("failed", message);
     }
     std::fprintf(stderr, "edi_app --demo: %s\n", qPrintable(message));

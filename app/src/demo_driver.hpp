@@ -83,6 +83,8 @@ class DemoDriver : public QObject {
         QStringList highlights{};
         bool capture = true;
         QString fit_phase{};
+        QString trace{};     // the measured step's name in the UI trace (ui_probe.hpp); empty for a set-up step
+        int navigation = 0;  // +1 or -1 for a next or previous dataset press, whose selection the trace names
     };
 
     void run_step();
@@ -92,6 +94,7 @@ class DemoDriver : public QObject {
     bool on_screen(QQuickItem* item) const;  // any part of it shown: inside the window and every clip
     bool click_item(QQuickItem* item);
     void park_pointer();
+    QImage grab();  // window_.grabWindow(), bracketed in the UI trace as the driver's own work
     bool click(const QString& object_name);
     void settle_then(const std::function<void()>& next);
     // Waits until the fit has ended or, with `files`, until a running scan has fitted that many files.
@@ -139,6 +142,12 @@ class DemoDriver : public QObject {
     int settle_attempts_ = 0;
     int preparing_attempts_ = 0;
     QTemporaryDir loaded_files_;
+    bool blocked_ = false;  // EDI_UI_BLOCK_MS has blocked once
+    bool trace_begun_ = false;
+    QString only_;
+    QString trace_scenario_;
+    int tool_id_ = 0;
+    int request_id_ = 0;
     QElapsedTimer timer_;
     std::vector<double> pre_fit_values_;
     QString loaded_cli_project_;
