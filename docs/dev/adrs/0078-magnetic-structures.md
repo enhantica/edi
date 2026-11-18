@@ -49,14 +49,36 @@ without computing any of them itself.
   table lacks, is greyed out. C₂'s tooltip gives the Landé g it stands for, C₂ = 2/g − 1. The core holds a type's
   form factor as a keyed row (`magnetic_form_factor`) only once an edit or a file declares it; a row back at the
   defaults (its own ion, ⟨j0⟩, every coefficient 0 and fixed) is removed, so the file says nothing it does not need.
-- **Making a structure magnetic** (the owner, 2026-11-14). There is no separate crystal or magnetic structure type:
-  moments live on atom sites. Every structure's Structure page lists the Magnetic moments group, one row per site,
-  each "none" at first, with the form selector greyed. Choosing an ion for a site gives it a moment, and the
-  magnetic groups (magnetic space group, parent group, propagation vectors, operators, form factors) appear; setting
-  every site back to "none" hides them again. The Structures table's Type column, right after the name and
-  shown disabled, says how each structure is described: Atom-based for every structure Create makes or a CIF of
-  atom sites loads.
-- **Symmetry from the operators** (2026-11-08). When a structure's magnetic operators form no table setting, crysta
+- **Crystal or Magnetic** (the owner, 2026-11-18, replacing the 2026-11-14 rule; the owner's 2026-11-14 request was
+  *"Create → crystal or magnetic structure, magnetic groups shown only then"*, and the "moments group always present"
+  rule recorded here before was a conductor proposal taken without objection, not an owner decision). The Structures
+  table has a column after Type: Crystal or Magnetic, for an atom-based structure. Create makes Crystal, and a Crystal
+  structure shows no magnetic group, the moments included. Switching to Magnetic sets the grey group of the current
+  space group (Pnma → Pnma1′, BNS 62.442): every moment is zero by symmetry until a magnetic subgroup is chosen (CoSiO:
+  Pnma, 62.441). Switching back to Crystal sets the magnetic group's own space group (time reversal ignored) and drops
+  the moments after a confirmation. A magnetic CIF opens as Magnetic.
+- **Magnetic space group** replaces Space group for a Magnetic structure, built like it: Number BNS and Name BNS as two
+  linked, searchable fields (`_space_group_magn.number_BNS`, `.name_BNS`), and Setting as the transform to the BNS
+  standard, `a,b,c;0,0,0` by default, in place of the IT code. It is read from either
+  `_space_group_magn.transform_BNS_Pp_abc` or the `_space_group_magn_transforms` loop and written as the loop, as
+  ISODISTORT writes it. Crystal system is shown read only and not saved (the dictionary has no item for it). On Extra,
+  a separate read-only group shows the derived symbols, saved as the dictionary's `_space_group_magn` items: the UNI
+  symbol, the OG number and name and the point group (UNI, Litvin). The parent space group is always present on Extra
+  for a Magnetic structure, under its own heading (`_parent_space_group`); a file without one gets the magnetic group's
+  own space group.
+- **Site symmetry from the magnetic group** (the owner, 2026-11-18). For types I–III the family group (the operations
+  with time reversal ignored) is the ordinary space group whose IT number is the BNS number's first part, in the
+  setting the BNS transform gives. edi derives that table setting when it reads the structure and gives it to crysta
+  as the structure's space group, so Wyckoff letters, multiplicities and coordinate ties come from the table and the
+  cell and positions stay fittable (crysta ADR-0108 I5). No `_space_group` is written for a Magnetic structure. A type
+  IV group (its anti-translation makes the family a different lattice) and a setting the table does not hold keep the
+  operators-only mode below.
+- **Files.** Each sidebar group maps to one magnetic CIF category, as the crystal groups map to theirs (COMCIFS
+  magnetic CIF dictionary 1.1.0-dev). `_parent_space_group.derived`, which the dictionary does not define, is an edi
+  extension; the magnetic form factors keep the dictionary's `_atom_type_scat.neutron_magnetic_j0`…`_j6` coefficients
+  where they apply, with the approximation and C₂ as edi's extension.
+- **Symmetry from the operators** (2026-11-08). When a structure's magnetic operators form no table setting (a type IV
+  group, a setting the table does not hold), crysta
   decides it once and edi reads that decision: no position, cell or displacement ties, the cell and positions not
   fittable, no Wyckoff letter (the site table shows none, and the multiplicity is the operators' orbit), and an
   anisotropic site refused, with the reason, at load, at the type change and at the group selector, which then keeps
