@@ -2633,7 +2633,7 @@ bool ProjectViewModel::loadSeriesOfJointFits(ExperimentViewModel* experiment, co
                         return;
                     }
                     if (refusal.isEmpty()) {
-                        self->undo_history_.emplace_back(AppliedText{base});
+                        self->undo_history_.emplace_back(AppliedText{base, {}});
                         self->syncUndo();
                         if (!self || self->retired_) return;
                         self->syncLoadState();

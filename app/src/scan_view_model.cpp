@@ -54,7 +54,7 @@ void summarise_series_row(std::vector<double>& d, std::vector<double>& intensity
         if (!std::isfinite(d[i]) || d[i] <= 0.0 || !std::isfinite(intensity[i])) {
             continue;
         }
-        const auto bucket = std::min(buckets - 1, static_cast<std::size_t>((std::log(d[i]) - log_low) / span * buckets));
+        const auto bucket = std::min(buckets - 1, static_cast<std::size_t>((std::log(d[i]) - log_low) / span * static_cast<double>(buckets)));
         if (lowest[bucket] < 0 || intensity[i] < intensity[static_cast<std::size_t>(lowest[bucket])]) {
             lowest[bucket] = static_cast<std::ptrdiff_t>(i);
         }

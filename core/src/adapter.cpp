@@ -2990,7 +2990,8 @@ std::map<std::string, std::vector<std::string>> point_experiment_rows(const Proj
                    " experiments");
         }
     }
-    refuse("could not be found again");
+    throw std::invalid_argument("analysis/results_experiments.csv: point " + point +
+                                " could not be found again");
 }
 
 // One point's results_experiments.csv rows, by experiment and column: what the point's fit wrote for each
@@ -7702,7 +7703,7 @@ FitResultBase Project::fit_scan(const IterationCallback& on_iteration,
         // Where the termination cell sits in a row: by the header, since derived columns may follow the conditions.
         auto termination_at = std::make_shared<std::optional<std::size_t>>();
         const crysta::FileResultCallback engine_file_result =
-            [this, file_history, last_file_history, completed_files, scan, &on_file_complete, &cproject,
+            [file_history, last_file_history, completed_files, scan, &on_file_complete, &cproject,
              termination_at](const std::vector<std::string>& row, const crysta::FitResultBase& file_result) {
                 ++*completed_files;
                 std::swap(*last_file_history, *file_history);

@@ -962,7 +962,7 @@ StructureScene present_structure(const SceneSource& source, const SceneOptions& 
                     const Vec3 offset = sub(atom.centre, row_centre(source, row));
                     std::array<int, 3> low{}, high{};
                     bool bounded = true;
-                    for (int k = 0; k != 3; ++k) {
+                    for (std::size_t k = 0; k != 3; ++k) {
                         const Vec3 reciprocal{inverse[3 * k], inverse[3 * k + 1], inverse[3 * k + 2]};
                         const double centre = dot(reciprocal, offset), reach_k = (limit + 1e-4) * norm(reciprocal);
                         bounded = bounded && std::isfinite(centre) && std::isfinite(reach_k) && reach_k < 1e6;

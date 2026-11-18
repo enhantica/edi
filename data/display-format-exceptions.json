@@ -553,16 +553,6 @@
    "reason": "the moment arrows' colour preference, each arrow in its atom's colour, not the polyhedra colour option"
   },
   {
-   "file": "app/qml/Main.qml",
-   "literal": "Measured data",
-   "reason": "the save dialog's heading for the measured data files a project links, not the data category"
-  },
-  {
-   "file": "app/qml/Pages/Experiment/ExperimentsGroup.qml",
-   "literal": "Measured data",
-   "reason": "the load menu's heading for measured data files, not the data category"
-  },
-  {
    "file": "app/qml/Pages/Structure/AppearanceGroup.qml",
    "literal": "Bonds",
    "reason": "a view toggle, an app-only setting (I1)"
@@ -571,11 +561,6 @@
    "file": "app/qml/Pages/Structure/AppearanceGroup.qml",
    "literal": "Cell",
    "reason": "a view toggle, an app-only setting (I1)"
-  },
-  {
-   "file": "app/qml/Pages/Structure/AtomSiteMomentGroup.qml",
-   "literal": "|M|",
-   "reason": "the header of the moment magnitude the table derives from the crystal-axis components, without an s.u., not the spherical modulus input"
   }
  ]
 }

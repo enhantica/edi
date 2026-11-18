@@ -316,7 +316,7 @@ QString RunLog::crashedLogText() const {
 
 QString RunLog::crashedDiagnostic() const {
     const QStringList lines = crashedLogText().split(u'\n');
-    for (const QString level : {QStringLiteral("FATAL"), QStringLiteral("ERROR"), QStringLiteral("WARNING")}) {
+    for (const QString& level : {QStringLiteral("FATAL"), QStringLiteral("ERROR"), QStringLiteral("WARNING")}) {
         for (auto line = lines.crbegin(); line != lines.crend(); ++line) {
             // A record: time, +seconds, level, source, message, location, separated by two spaces.
             const QStringList fields = line->split(QStringLiteral("  "), Qt::SkipEmptyParts);
