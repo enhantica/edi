@@ -3918,6 +3918,11 @@ struct AssistantViewModel::State {
             {"already_admitted",!source->attachment.isEmpty() || source->acquired}});
         return {{"sources",rows}};
     }
+    // A selector's options by canonical name: its `names` where it shows display text, else its model.
+    static QStringList canonical_options(const QQuickItem* combo) {
+        const QVariant names=combo->property("names");
+        return names.isValid() ? names.toStringList() : combo->property("model").toStringList();
+    }
     static QString input_reader_hint(const QString& name) {
         const auto suffix=QFileInfo(name).suffix().toLower();
         if(suffix=="cif" || suffix=="mcif" || suffix=="edi")return "structure";
@@ -7501,17 +7506,19 @@ struct AssistantViewModel::State {
         const bool physicalChoice=run->relation_action.kind==K::AliasParameter;
         int option=-1;
         if(physicalChoice) {
-            // The actual current popup offers this exact canonical parameter.
-            const auto options=target->property("model").toStringList();
+            // The actual current popup offers this exact canonical parameter: the selector's canonical names (its model
+            // shows them as display text), else its model.
+            const auto options=canonical_options(target);
             if(!receiver || receiver->state_.get()!=this || !target || !widget_relation_row_current(run) ||
                 run->relation_row!=row || run->relation_field!=field || run->relation_base!=base || run->relation_key!=key || run->relation_constraint!=constraint)return;
             option=static_cast<int>(options.indexOf(run->relation_action.text));
             if(option<0 || options.count(run->relation_action.text)!=1){control_failure(run,ControlCause::Unavailable); widget_refuse(run,QObject::tr("The exact original alias parameter is unavailable"));return;}
         }
         AssistantWidgetInput::Request request;request.kind=physicalChoice?(target->property("searchable").toBool()?AssistantWidgetInput::Kind::SearchChoice:AssistantWidgetInput::Kind::Choose):AssistantWidgetInput::Kind::FileLoadCue;request.target=target;
-        if(physicalChoice){request.option=option;request.value=run->relation_action.text;}
+        // What is typed and checked is the option's own text, as the user sees it.
+        if(physicalChoice){request.option=option;request.value=target->property("model").toStringList().value(option,run->relation_action.text);}
         auto current=[this,run,target,row,field,base,key,constraint,physicalChoice,option]{return run->receiver && run->receiver->state_.get()==this && target &&
-            run->relation_row==row && run->relation_field==field && run->relation_base==base && run->relation_key==key && run->relation_constraint==constraint && widget_relation_row_current(run) && (!physicalChoice || target->property("model").toStringList().indexOf(run->relation_action.text)==option);};
+            run->relation_row==row && run->relation_field==field && run->relation_base==base && run->relation_key==key && run->relation_constraint==constraint && widget_relation_row_current(run) && (!physicalChoice || canonical_options(target).indexOf(run->relation_action.text)==option);};
         auto restore=current;
         std::function<bool()> prepare=[this,run,current,physicalChoice] {if(!current())return false;if(physicalChoice)widget_commit_ready(run);return current();};
         std::function<void()> finish=[this,run,receiver,physicalChoice] {
