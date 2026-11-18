@@ -123,7 +123,7 @@ Item {
             return SettingsProof.text(url.slice(0, url.lastIndexOf("/") + 1), SettingsProof.fileName(Globals.Vars.settingsFile));
         }
         function structureToggle(root) {
-            return Render.descendants(root).find(item => item.toolTip === "Show each structure's curve" && typeof item.checked === "boolean");
+            return Render.descendants(root).find(item => item.toolTip === "Show each structure's curve" && typeof item.checked === "boolean" && Ui.rendered(item));
         }
         function test_fresh_toolbar_observer_loads_actual_control() {
             const ordinary = SettingsProof.restart('import QtQuick; QtObject { property bool marker: true }');
@@ -152,8 +152,8 @@ Item {
             verify(Session.project.createStructure(), "The real Experiment page is available before any experiment is created");
             compare(Session.project.experiments.count, 0, "The no-calculated-pattern witness has no experiment");
             showPage("experiment", false);
-            const emptyToggle = structureToggle(page);
-            verify(emptyToggle !== undefined && !emptyToggle.visible, "The app-owned structure-curve toggle stays hidden without a calculated pattern");
+            const emptyToggles = Render.descendants(page.pageViewItem).filter(item => item.toolTip === "Show each structure's curve" && typeof item.checked === "boolean");
+            verify(emptyToggles.length > 0 && emptyToggles.every(item => !Ui.rendered(item)), "Every app-owned structure-curve toggle stays hidden without a calculated pattern");
             openAnalysis();
             let toggle;
             tryVerify(() => {
@@ -161,8 +161,8 @@ Item {
                 return toggle !== undefined && toggle.visible && toggle.enabled;
             }, 2000, "A calculated Analysis pattern exposes the structure-curve toggle in its toolbar");
             compare(toggle.fontIcon, "layer-group", "The curve toggle uses the existing structure icon");
-            const legend = findChild(page, "chart.toolbar.legend");
-            const hover = findChild(page, "chart.toolbar.hover");
+            const legend = findChild(toggle.parent, "chart.toolbar.legend");
+            const hover = findChild(toggle.parent, "chart.toolbar.hover");
             verify(legend && hover && toggle.parent === legend.parent && toggle.parent === hover.parent, "The structure toggle shares the legend and coordinates-tooltip toolbar group");
             const siblings = Array.from(toggle.parent.children);
             const members = [legend, hover, toggle];
