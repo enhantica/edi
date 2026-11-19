@@ -216,13 +216,22 @@ TestCase {
     }
     function test_submitted_kind_is_logged() {
         openForm();
-        const offset = RunLog.logText().length;
-        const held = dispatch();
-        form.openAs("idea", "Later attachment B");
-        held.done(201);
-        const text = RunLog.logText().slice(offset);
-        verify(text.includes("feedback sent: problem"), "ADR-0063 F1: completion logs the submitted kind even after the form is reused");
-        verify(!text.includes("feedback sent: idea"), "ADR-0063 F1: completion cannot attribute the old request to the live form kind");
+        const previous = Preferences.loggingLevel;
+        Preferences.loggingLevel = "Info";
+        try {
+            const marker = "feedback kind ownership boundary";
+            RunLog.note(marker);
+            const held = dispatch();
+            form.openAs("idea", "Later attachment B");
+            held.done(201);
+            tryVerify(() => RunLog.logText().includes(marker), 2000, "The current bounded log retains this request's marker");
+            const retained = RunLog.logText();
+            const text = retained.slice(retained.lastIndexOf(marker));
+            verify(text.includes("feedback sent: problem"), "ADR-0063 F1: completion logs the submitted kind even after the form is reused");
+            verify(!text.includes("feedback sent: idea"), "ADR-0063 F1: completion cannot attribute the old request to the live form kind");
+        } finally {
+            Preferences.loggingLevel = previous;
+        }
     }
     function test_successor_can_send_data() {
         const rows = [];

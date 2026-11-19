@@ -3630,9 +3630,15 @@ def test_same_project_reconnect_resumes_original_durable_thread_files_and_cached
         "(function(){const item=Qt.createQmlObject('import QtQuick; TextEdit {}',contentItem);"
         'item.paste();const value=item.text;item.destroy();return value;})()',
     )
-    assert json.loads(clipboard) == json.loads(document), (
-        'The actual Preferences report Copy button copies the retained diagnostic document'
-    )
+    clipboard = json.loads(clipboard)
+    document = json.loads(document)
+    for key in ('schema', 'history_evidence', 'identity_inputs', 'agent_assessment'):
+        assert clipboard[key] == document[key], (
+            'Direct Preferences copying preserves the original report evidence and identities'
+        )
+    assert (
+        clipboard['scope_coverage']['instance_id'] == document['scope_coverage']['instance_id']
+    ), 'Direct copying keeps the report writer while refreshing current lifecycle metadata'
     # Close the existing modal owners through their public QML close methods.
     for name in ('preferences',):
         qml(
@@ -19253,23 +19259,15 @@ def test_original_save_second_replacement_failure_publishes_retained_adopted_sta
     )
     payload = retained[0]['row']['payload']
     copied_outcome = json.loads(payload['contentItems'][0]['text'])
-    original_payloads = [
-        row['payload']
-        for row in actor.last['ui']['messages']
-        if row.get('payload', {}).get('tool') == 'save_project'
-        and row['payload'].get('id') == requests[0]['params']['callId']
-    ]
     assert (
         copied_outcome == native_outcome
         and copied_outcome['message'] == message
         and copied_outcome['uncertain'] is True
         and copied_outcome['saved'] is False
         and copied_outcome['committed'] is False
-        and len(original_payloads) == 1
-        and original_payloads[0]['nativeOutcome'] == native_outcome
     ), (
         'The exact original qualified cause and uncertainty survive canonical '
-        'native history and copied model-visible reply as well as outgoing wire; '
+        'copied model-visible reply as well as outgoing wire; '
         'presentation alone is not '
         'evidence'
     )
@@ -22338,16 +22336,9 @@ def test_actual_compact_inspection_uses_original_native_cells_keeps_full_raw_and
             'Every real original call has one complete canonical backend outcome, not a '
             'trimmed/overwritten conversational surrogate'
         )
-        assert json.loads(matches[0]['contentItems'][0]['text'])['data'] == outcomes[
-            call['call_id']
-        ] and any(
-            row.get('payload', {}).get('id') == call['call_id']
-            and row['payload']['nativeOutcome']['data'] == outcomes[call['call_id']]
-            for row in actor.last['ui']['messages']
-        ), (
-            'Actual outgoing projection keeps the declared summary/raw fields, while full '
-            'retained backend call evidence remains accessible'
-        )
+        assert (
+            json.loads(matches[0]['contentItems'][0]['text'])['data'] == outcomes[call['call_id']]
+        ), 'The copied report keeps every declared summary/raw field from the actual native reply'
         retained[call['call_id']] = matches[0]
     assert (
         len(

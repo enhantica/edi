@@ -10,9 +10,9 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-19T04:56:49Z
+# measured_utc = 2026-11-19T05:09:33Z
 #
-# Recorded from: measured test run (3 node(s) measured once, 183855 banked, 1 stale row(s) dropped)
+# Recorded from: measured test run (2 node(s) measured once, 183855 banked, 2 stale row(s) dropped)
 # Collected tests: 255332; with a reported duration: 82873
 # Module-scoped fixture costs recorded: 213
 #
@@ -178037,6 +178037,8 @@ UNMEASURED:not-completed-in-this-run	tests/system/app/test_stability_feedback.py
 3.460	tests/system/app/test_stability_feedback.py::test_error_feedback_actions[f_failed_send_offers_a_plain_text_report:other-success-code]
 3.890	tests/system/app/test_stability_feedback.py::test_error_feedback_actions[f_failed_send_offers_a_plain_text_report:rate-limit]
 4.010	tests/system/app/test_stability_feedback.py::test_error_feedback_actions[f_failed_send_offers_a_plain_text_report:server]
+0.025	tests/system/app/test_work_report_export.py::test_repeated_inspection_report_is_smaller_and_keeps_reader_evidence[2026.11.22]
+3.390	tests/system/app/test_work_report_export.py::test_repeated_inspection_report_is_smaller_and_keeps_reader_evidence[main]
 UNMEASURED:not-completed-in-this-run	tests/system/py/e11_t5_original_controls/test_current_original.py::test_current_original_ordinary[composer_ime_clear]
 UNMEASURED:not-completed-in-this-run	tests/system/py/e11_t5_original_controls/test_current_original.py::test_current_original_ordinary[restore_ime_commit]
 UNMEASURED:not-completed-in-this-run	tests/system/py/e11_t5_original_controls/test_current_original.py::test_current_original_ordinary[restore_preedit_active]
@@ -251813,8 +251815,6 @@ UNMEASURED:not-completed-in-this-run	tests/system/py/test_web_parallel_build.py:
 0.000	tests/system/py/test_web_parallel_oracles.py::test_owner_five_bank_reference_is_not_a_generated_web_pin
 0.320	tests/system/py/test_web_parallel_oracles.py::test_web_fit_native_reference_covers_parameters_and_calculated_pattern[lbco]
 4.600	tests/system/py/test_web_parallel_oracles.py::test_web_fit_native_reference_covers_parameters_and_calculated_pattern[ncaf]
-0.025	tests/system/py/test_work_report_export.py::test_repeated_inspection_report_is_smaller_and_keeps_reader_evidence[2026.11.22]
-2.600	tests/system/py/test_work_report_export.py::test_repeated_inspection_report_is_smaller_and_keeps_reader_evidence[main]
 0.620	tests/system/py/test_writer_owned_neighbors.py::test_every_save_retains_exact_neighbors_of_its_generated_entity_documents[same-size-copy-experiments-assistant-copy-folder]
 0.560	tests/system/py/test_writer_owned_neighbors.py::test_every_save_retains_exact_neighbors_of_its_generated_entity_documents[same-size-copy-experiments-assistant-copy-zip]
 0.670	tests/system/py/test_writer_owned_neighbors.py::test_every_save_retains_exact_neighbors_of_its_generated_entity_documents[same-size-copy-experiments-assistant-folder]
@@ -255435,6 +255435,7 @@ UNMEASURED:not-completed-in-this-run	tests/unit/py/test_web_science_identity.py:
 # module-cost: 0.951	tests/system/app/test_likes_feedback.py
 # module-cost: 12.650	tests/system/app/test_rendered_caption_capitalisation.py
 # module-cost: 0.603	tests/system/app/test_stability_feedback.py
+# module-cost: 39.055	tests/system/app/test_work_report_export.py
 # module-cost: 2.769	tests/system/py/test_adoption_listener_boundaries.py
 # module-cost: 11.310	tests/system/py/test_app_minimum.py
 # module-cost: 1.849	tests/system/py/test_app_receipt_current_inputs.py
@@ -255581,7 +255582,6 @@ UNMEASURED:not-completed-in-this-run	tests/unit/py/test_web_science_identity.py:
 # module-cost: 3.795	tests/system/py/test_visible_web_controls.py
 # module-cost: 0.020	tests/system/py/test_web_archive_permissions.py
 # module-cost: 0.549	tests/system/py/test_web_parallel_build.py
-# module-cost: 36.095	tests/system/py/test_work_report_export.py
 # module-cost: 2.709	tests/system/py/test_writer_owned_neighbors.py
 # module-cost: 2.483	tests/unit/py/test_browser_iteration_domains.py
 # module-cost: 3.595	tests/unit/py/test_browser_solver_vehicles.py
