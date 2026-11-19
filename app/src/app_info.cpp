@@ -10525,7 +10525,7 @@ void ApplicationInfo::searchCompleted(const QJSValue& alignBinding, const QJSVal
         projectWrite(f, "control", "leftPadding", QJSValue(0));
         if (panelUsageTruth(assistantContextField(f, "control", "indicator"))) projectCall(f, indicatorBinding);
     }
-    const auto content = panelUsageRead(f, assistantContextField(f, "control", "popup"), "contentItem"); assistantMemberWrite(f, content, "header", panelUsageContextRead(f, "searchHeader")); projectCall(f, modelBinding);
+    projectCall(f, modelBinding);  // the list's header (the search field) and its model, both bound
     const auto list = panelUsageRead(f, assistantContextField(f, "control", "popup"), "contentItem"); assistantMemberWrite(f, list, "headerPositioning", assistantContextField(f, "ListView", "OverlayHeader")); projectCall(f, focusBinding);
 }
 void ApplicationInfo::searchSchedule(const QJSValue& original) const {
