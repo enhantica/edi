@@ -55,6 +55,9 @@ jobs:
   docs:
     needs: crysta-sdk
     name: build documentation
+    permissions:
+      contents: read
+      actions: read
     if: github.event.pull_request.head.repo.fork == false && github.repository == 'enhantica/edi' && github.event_name != 'release' && (github.event_name != 'workflow_dispatch' || inputs.component != 'wasm')
     environment: crysta-sdk
     runs-on: &linux ubuntu-24.04
@@ -68,11 +71,22 @@ jobs:
       - uses: ./.github/actions/crysta-sdk
         with:
           platform: ${{ runner.os == 'macOS' && 'osx-arm64' || 'linux-64' }}
-      - name: Build the native code
+      - name: Find a native build of this commit
+        id: native
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 tools/ci/find_native_artifact.py
+      - name: Download the matching native build
+        if: steps.native.outputs.run-id != ''
+        uses: ./.github/actions/edi-native
+        with:
+          platform: linux-64
+          run-id: ${{ steps.native.outputs.run-id }}
+      - name: Restore the validated native code or build when absent
         run: pixi run core-build
       # The repository keeps tutorial notebooks without outputs, so the site runs them before it renders them.
       - name: Run the tutorial notebooks
-        run: pixi run notebooks-run
+        run: pixi run --skip-deps notebooks-run
       - name: Build the public site
         env:
           GH_TOKEN: ${{ github.token }}
