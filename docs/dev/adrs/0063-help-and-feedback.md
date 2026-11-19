@@ -85,12 +85,18 @@ message: `POST /feedback` with `kind` (`feedback`, `question`, `problem` or `ide
   is refused, text files go into the body and only those held whole count as attached. Tests never call GitHub. Its
   201 answer names the files it `attached` and says `logAttached: false` when the whole log did not arrive; the form
   names what did not arrive, never a plain success.
+- **Attach AI work report** (owner, 2026-11-19), a link left of Attach files when the app has the assistant, attaches
+  the assistant's work report as `work-report.json` in one click, with nothing to choose. It replaces an earlier copy
+  of that file, follows the same limits, and says when there is no report yet. The form is 48 units wide (was 40).
 - **The website's Get in touch form** takes the same attachments in the same way (owner, 2026-11-17): Attach files
   with the app's paperclip and tooltip under the message at the left, the file list with Remove below it, a drop on
-  the form, the same limits and payload, and the same results (the service's reason, the files not attached, Copy
-  report after a failed send). `website/build.py` writes the app form's wording and `app/feedback/Payload.js` itself
-  into the page, so the limits, the report text and the attached-file check are one implementation;
-  `website/checks/contact_form.py` drives it in a browser with the service stubbed.
+  the form, the same limits and payload, and the same results (the service's reason, the files not attached).
+  `website/build.py` writes the app form's wording and `app/feedback/Payload.js` itself into the page, so the limits
+  and the attached-file check are one implementation; `website/checks/contact_form.py` drives it in a browser with the
+  service stubbed. Its answer window has only Close, with no Copy report: a browser user can copy the message from the
+  form, which keeps it after a failed send. After a message is sent, only the subject, the text and the files are
+  cleared. Name, e-mail and affiliation stay, and the window says so, so the next message can go straight away (owner,
+  2026-11-19).
 - **Copy report.** After a send that fails (any answer but 201, no answer included) the form says why, with the
   service's or the network's own reason when one came, and shows a **Copy report** link beside it: the message as
   plain text (type, subject, message, contact if filled in, the app's details and the log when that box is ticked),

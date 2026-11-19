@@ -129,7 +129,8 @@ def violations(text, case):
             )
         needs(
             load,
-            'QJSValue(QStringLiteral(".cif,.edi")),QJSValue(experiments)',
+            'QJSValue(experiments ? QStringLiteral(".cif,.edi") : '
+            'QStringLiteral(".cif,.mcif,.edi")),QJSValue(experiments)',
             'native chooser passes its declared filter and cardinality',
         )
         needs(
@@ -193,7 +194,7 @@ def native_project_checks(code, owners, needs, problems):
         problems.append('identity, failed-answer and changed-project guards precede acceptance')
     for fragment in (
         'if(!answer.cancelled)',
-        'if(current())emit loadFailed(last_error_);',
+        'if(current())emit loadFailed(last_error_, report(nullptr));',
         'if(web_copy_!=root)QDir(root).removeRecursively();',
         'was not opened: the open project was changed while it was read',
     ):
@@ -411,6 +412,11 @@ def test_every_browser_file_receiver_preserves_request_ownership(case):
             ('native', '!projectFieldIs(f, "group", "webRequestProject", current)', 'false'),
         ],
         'structure-cardinality': [
+            (
+                'native',
+                'QStringLiteral(".cif,.mcif,.edi")',
+                'QStringLiteral(".cif,.edi")',
+            ),
             (
                 'structure',
                 'ApplicationInfo.loadFormFiles(false)',

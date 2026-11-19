@@ -23,6 +23,7 @@
 #include "pattern_chart_controller.hpp"
 #include "project_view_model.hpp"
 #include "edi/display.hpp"
+#include "edi/io.hpp"
 #include "edi/report.hpp"
 #include "edi/model.hpp"
 #include "edi/palette.hpp"
@@ -3309,19 +3310,30 @@ void ApplicationInfo::openWorkflowPage(const QJSValue& page) const {
     panelUsageContextWrite(frame, "reached", maximum);
     const auto globals = assistantContextField(frame, "EaGlobals", "Vars");
     assistantMemberWrite(frame, globals, "appBarCurrentIndex", page);
+    startUntitledOnProjectPage(page);
+}
+void ApplicationInfo::startUntitledOnProjectPage(const QJSValue& page) const {
+    // Work before Create starts only when the user opens Structure; Project alone creates nothing (ADR-0017 §13).
+    const auto frame = panelUsageEngine(this);
+    if (!panelUsageReady(frame) || page.toInt() < projectPage(frame, "Structure").toInt()) return;
+    if (!assistantContextField(frame, "Session", "project").isNull()) return;
+    const auto rule = assistantContextField(frame, "Preferences", "newProjectSuRule");
+    const bool libraries = assistantContextField(frame, "Preferences", "newReportLibraries").strictlyEquals(QJSValue(QStringLiteral("embedded")));
+    projectInvoke(frame, "Session", "startUntitledProject", {rule, QJSValue(libraries)});
 }
 void ApplicationInfo::resetWorkflow() const {
     const auto frame = panelUsageEngine(this);
     projectInvoke(frame, "Session", "closeProject");
-    const auto page = projectPage(frame, "Project");
+    const auto page = projectPage(frame, "Home");
     panelUsageContextWrite(frame, "reached", page);
     const auto globals = assistantContextField(frame, "EaGlobals", "Vars");
-    const auto currentPage = projectPage(frame, "Project");
-    assistantMemberWrite(frame, globals, "appBarCurrentIndex", currentPage);
+    assistantMemberWrite(frame, globals, "appBarCurrentIndex", page);
 }
 void ApplicationInfo::saveCurrentProject() const {
     const auto frame = panelUsageEngine(this);
     if (assistantContextField(frame, "Session", "project").isNull() || !panelUsageReady(frame)) return;
+    // An untitled project's first Save is Create project: it names the project and saves it (the owner, 2026-11-19).
+    if (panelUsageTruth(assistantContextField(frame, "Session", "untitled"))) { projectInvoke(frame, "AppState", "requestUntitledSave"); return; }
     if (panelUsageTruth(assistantContextField(frame, "Session", "needsSaveAs"))) { projectInvoke(frame, "window", "saveProjectAs"); return; }
     const auto saved = projectInvoke(frame, "Session", "save");
     if (!panelUsageTruth(saved) && !projectFieldIs(frame, "Session", "lastError", QJSValue(QString{}))) projectInvoke(frame, "saveError", "open");
@@ -3536,6 +3548,24 @@ void ApplicationInfo::acceptProjectSavePicker(bool zip) const {
     if (!saved) projectInvoke(frame, "saveError", "open");
     projectInvoke(frame, "AppState", "saveAsFinished", {QJSValue(saved)});
 }
+namespace {
+// A structure file, which a window drop loads into the open project as Load structure does: a CIF or magnetic CIF
+// file, or an .edi file whose tags are a structure's (edi::edi_text_kind, the loaders' own reading of the whole file).
+// A folder is a project to open whatever its name, and so is project.edi.
+bool dropped_structure(const QUrl& url) {
+    const QFileInfo file(url.toLocalFile());
+    if (!file.isFile()) return false;
+    const QString suffix = file.suffix().toLower();
+    if (suffix == QLatin1String("cif") || suffix == QLatin1String("mcif")) return true;
+    if (suffix != QLatin1String("edi") || file.fileName().compare(QLatin1String("project.edi"), Qt::CaseInsensitive) == 0) {
+        return false;
+    }
+    QFile text(file.filePath());
+    if (!text.open(QIODevice::ReadOnly)) return false;
+    return edi::edi_text_kind(text.readAll().toStdString()) == edi::EdiTextKind::Structure;
+}
+}  // namespace
+
 void ApplicationInfo::dropProject(const QJSValue& drop) const {
     const auto frame = panelUsageEngine(this);
     const auto hasUrls = panelUsageRead(frame, drop, "hasUrls");
@@ -3545,6 +3575,13 @@ void ApplicationInfo::dropProject(const QJSValue& drop) const {
     panelUsageMemberCall(frame, drop, "accept");
     const auto actualUrls = panelUsageRead(frame, drop, "urls");
     const auto url = panelUsageIndex(frame, actualUrls, 0);
+    // A structure goes into the project the drop was made on, now: it replaces nothing, so no unsaved-changes guard
+    // and no deferred action that could find another project by then. Anything else opens as a project.
+    const auto project = assistantContextField(frame, "Session", "project");
+    if (dropped_structure(url.toVariant().toUrl()) && consentQtObject(frame, project)) {
+        panelUsageMemberCall(frame, project, "loadStructure", {url});
+        return;
+    }
     const auto action = panelUsageClosure(frame, 20, {url});
     projectInvoke(frame, "AppState", "afterChanges", {action});
 }
@@ -4427,7 +4464,7 @@ void ApplicationInfo::loadFormFiles(bool experiments) const {
         assistantMemberWrite(f, group, "webRequestProject", project);
         if (experiments) projectWrite(f, "group", "webDataExperiment", consentNull());
         const auto requestOwner = panelUsageContextRead(f, "group");
-        const auto request = projectInvoke(f, "WebFiles", "openFiles", {QJSValue(QStringLiteral(".cif,.edi")), QJSValue(experiments)});
+        const auto request = projectInvoke(f, "WebFiles", "openFiles", {QJSValue(experiments ? QStringLiteral(".cif,.edi") : QStringLiteral(".cif,.mcif,.edi")), QJSValue(experiments)});
         assistantMemberWrite(f, requestOwner, "webRequest", request);
     } else projectInvoke(f, "loadDialog", "open");
 }
@@ -4448,7 +4485,7 @@ bool ApplicationInfo::chooseStructureFile() const {
         if (!consentFieldEquals(f, original, "project", actualProject) || !pickerSessionProject(f, original)) {
             panelUsageContextWrite(f, "webIntent", consentNull()); return false;
         }
-        const auto request = projectInvoke(f, "WebFiles", "openFiles", {QJSValue(QStringLiteral(".edi,.cif")), QJSValue(false)});
+        const auto request = projectInvoke(f, "WebFiles", "openFiles", {QJSValue(QStringLiteral(".edi,.cif,.mcif")), QJSValue(false)});
         if (!editorLife(f, life) || !assistantSameName(f, original, "webIntent")) return false;
         const auto currentProject = panelUsageContextRead(f, "project");
         if (request.strictlyEquals(QJSValue(0)) || !consentFieldEquals(f, original, "project", currentProject)
@@ -11052,7 +11089,7 @@ void ApplicationInfo::retireAssistantCreate(const QJSValue& id, bool manual) con
 #endif  // EDI_APP_ASSISTANT
 QJSValue ApplicationInfo::createProjectNameError(const QJSValue& name) const {
     const auto f = panelUsageEngine(this); if (panelUsageTruth(projectInvoke(f, "createDialog", "acceptsProjectName", {name}))) return QJSValue(QStringLiteral(""));
-    return mainText(f, QT_TRANSLATE_NOOP("GetStartedGroup", "Project Name must contain 2–31 characters: start with an ASCII letter, then use letters, digits, underscore, hyphen or period. Put human-readable text in Title. The supplied Name was not changed."));
+    return mainText(f, QT_TRANSLATE_NOOP("GetStartedGroup", "Project Name must contain 2–31 characters: start with an ASCII letter, then use letters, digits, underscore or hyphen. Put human-readable text in Title. The supplied Name was not changed."));
 }
 QJSValue ApplicationInfo::createProjectDefaults(const QJSValue& name, const QJSValue& description, const QJSValue& title) const {
     const auto f = panelUsageEngine(this); if (!panelUsageContextRead(f, "createIntent").isNull() || panelUsageTruth(assistantContextField(f, "createDialog", "visible"))) return panelUsageComplete(f, panelUsageLiteral(f));
@@ -11081,6 +11118,8 @@ void ApplicationInfo::chooseCreateProject() const {
 }
 void ApplicationInfo::createProjectClicked() const {
     const auto f = panelUsageEngine(this); const auto original = createGroupField(f, "assistantCreate"), state = panelUsageContextRead(f, "AppState");
+    // Create on the untitled project names and saves it, its work kept: nothing to ask about first.
+    if (panelUsageTruth(assistantContextField(f, "Session", "untitled"))) { projectInvoke(f, "group", "chooseCreate"); return; }
     panelUsageMemberCall(f, state, "afterChanges", {panelUsageClosure(f, 384, {original}), panelUsageClosure(f, 385, {original}), QJSValue(true)});
 }
 void ApplicationInfo::createProjectDialogEvent(int kind) const {
@@ -11650,6 +11689,17 @@ edi_app::FeedbackFile ApplicationInfo::fileAttachment(const QString& path, bool 
     attached.size = bytes.size();
     attached.cut = whole > bytes.size();
     attached.data = QString::fromLatin1(bytes.toBase64());
+    return attached;
+}
+edi_app::FeedbackFile ApplicationInfo::textAttachment(const QString& name, const QString& text) const {
+    constexpr qint64 limit = 5 * 1024 * 1024;  // the feedback service's limit for one file (app/feedback/Payload.js)
+    edi_app::FeedbackFile attached;
+    if (name.isEmpty() || text.isEmpty()) return attached;
+    const QByteArray bytes = text.toUtf8();
+    attached.name = name;
+    attached.type = QMimeDatabase().mimeTypeForFile(name, QMimeDatabase::MatchExtension).name();
+    attached.size = bytes.size();
+    if (bytes.size() <= limit) attached.data = QString::fromLatin1(bytes.toBase64());
     return attached;
 }
 namespace {

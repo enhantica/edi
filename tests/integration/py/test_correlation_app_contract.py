@@ -9,7 +9,13 @@ from pathlib import Path
 import pytest
 
 from tests.fixtures.native_ui_script.runner import run_javascript
-from tests.integration.py.test_scan_app_contract import block, item, property_value, spans
+from tests.integration.py.test_scan_app_contract import (
+    block,
+    item,
+    object_id,
+    property_value,
+    spans,
+)
 
 ROOT = Path(__file__).resolve().parents[3]
 QML = ROOT / 'app/qml'
@@ -200,43 +206,46 @@ def test_experiment_data_header_and_link_are_declared():
     action = property_value(menu_action, 'onTriggered')
     script = (
         'let observed=[];for(const accepted of [false,true]){let calls=[];'
+        'const target={id:"original"};const dataMenu={target};'
         'const group={confirmScanReplacement:proceed=>{calls.push("confirm");'
-        'if(accepted)proceed()},chooseDataForSelected:()=>calls.push("choose")};'
+        'dataMenu.target={id:"replacement"};'
+        'if(accepted)proceed()},chooseData:chosen=>calls.push(chosen.id)};'
         + action
         + ';observed.push(calls)};process.stdout.write(JSON.stringify(observed));'
     )
     result = run_javascript(script, timeout=3)
     assert result.returncode == 0, 'The actual measured-data action must execute its confirmation'
-    assert json.loads(result.stdout) == [['confirm'], ['confirm', 'choose']], (
+    assert json.loads(result.stdout) == [['confirm'], ['confirm', 'original']], (
         'The selected-experiment picker opens only after scan replacement is confirmed'
     )
-    assert 'loadMenu.selected.name' in property_value(menu_action, 'toolTip'), (
-        'The file action explains which selected experiment receives the data'
+    assert 'several' in property_value(menu_action, 'toolTip').lower(), (
+        'The file action explains that several files invoke the grouping choice'
     )
 
-    expressions = ','.join(property_value(cell, key) for key in ('color', 'text', 'ToolTip.text'))
+    assert property_value(cell, 'text') == 'row.file', (
+        'The populated passive data label displays its row filename'
+    )
+    assert property_value(cell, 'ToolTip.text') == 'row.file', (
+        'The populated data label describes the full filename even when elided'
+    )
+    file_cell = object_id(source, 'fileCell')
+    load = object_id(file_cell, 'loadDataButton')
+    assert property_value(load, 'visible') == 'fileCell.empty', (
+        'An empty row exposes its Load data control in the file cell'
+    )
+    assert 'Load data' in property_value(load, 'text'), (
+        'The empty row explains the measured-data action by its visible label'
+    )
     script = (
-        'const EaStyle={Colors:{themeForegroundMinor:"muted",themeForeground:"normal"}};'
-        'const qsTr=s=>s;let cases=[];'
-        'for(const experiment of [{calculationOnly:false},{calculationOnly:true},null]) {'
-        'const row={file:"data.xy",experiment};const empty=('
-        + property_value(cell, 'empty')
-        + ');cases.push(['
-        + expressions
-        + ']);}'
-        'process.stdout.write(JSON.stringify(cases));'
+        'let rows=[];for(const experiment of [{calculationOnly:false},'
+        '{calculationOnly:true},null]){const group={scan:false};const row={experiment};'
+        'rows.push(' + property_value(file_cell, 'empty') + ');}'
+        'process.stdout.write(JSON.stringify(rows));'
     )
     result = run_javascript(script, timeout=3)
-    assert result.returncode == 0, (
-        'The actual filename, placeholder and tooltip bindings must evaluate'
+    assert result.returncode == 0 and json.loads(result.stdout) == [False, True, False], (
+        'Only a real calculation-only experiment shows the empty-data entrance'
     )
-    loaded, empty, no_experiment = json.loads(result.stdout)
-    assert loaded == no_experiment == ['normal', 'data.xy', 'data.xy'], (
-        'A populated data label shows and describes the actual filename'
-    )
-    assert empty[:2] == ['muted', '— no data yet'] and re.search(
-        r'load measured data.*\bLoad\b', empty[2], re.IGNORECASE
-    ), 'The muted empty label points users to Load for measured data'
     widths = re.search(r'(?m)^\s*columns:\s*(\[[^\n]+\])', source)
     assert widths, 'The Experiments table must declare each column through the shared width rule'
     common = text('Components/DataTable.qml')
@@ -245,13 +254,15 @@ def test_experiment_data_header_and_link_are_declared():
     script = (
         'const numberColumnWidth=20,group={scan:false,scanColumns:[],fitColumnWidth:35};'
         'const AppSizes={iconColumnWidth:25,iconOnlyColumnWidth:17,dataColumnWidth:80};'
-        'const columns=(' + widths[1] + ');const equalColumns=false,spreadColumns=[];'
+        'const qsTr=value=>value;const textColumnWidth=()=>-1;const columns=('
+        + widths[1]
+        + ');const equalColumns=false,spreadColumns=[];'
         'process.stdout.write(JSON.stringify([columns,(' + filler[1] + ')]));'
     )
     result = run_javascript(script, timeout=5)
     assert result.returncode == 0, 'The production Experiments column declarations must evaluate'
     actual, filler_index = json.loads(result.stdout)
-    assert actual == [20, 17, 35, -1, -1, 0.001, 25] and filler_index == 4, (
+    assert actual == [20, 0.001, 17, 35, -1, -1, 0.001, 25] and filler_index == 5, (
         'Datablock and Data file fit their content through the shared table rule; '
         'Data file holds the spare width before the fixed action column'
     )
@@ -336,9 +347,11 @@ def test_save_asks_once_then_uses_the_existing_location():
     )
     accepted = body(item(source, 'saveAs.choice'), 'onAccepted:')
     script = """let calls=[];
-    const saveAsChoice={zip:false,copy:false,diskWritable:true};const WebFiles={available:false};
+    const saveAsChoice={zip:false,copy:false,diskWritable:true,linkedData:false,dataChoice:"copy"};
+    const WebFiles={available:false};
     const window={assistantSaveIntent:''};
-    const Session={downloadWebProject(){calls.push(['download'])},
+    const Session={setNextSaveData(value){if(value!=="")throw Error('Unexpected linked data')},
+      downloadWebProject(){calls.push(['download'])},
       saveWebProjectAs(...args){calls.push(['web',...args])},
       suggestedSaveTarget(zip){return zip?'/chosen/name.zip':'/chosen/name'}};
     const saveZip={openAt(path){calls.push(['zip',path])}};

@@ -142,8 +142,15 @@ QtObject {
         ApplicationInfo.openWorkflowPage(page);
     }
 
-    // The app bar's reset: close the project and open the Project page, where a new project starts (the owner,
-    // 2026-10-11).
+    // The untitled project's first Save (the owner, 2026-11-19): the Project page opens and its Create project dialog
+    // names the project and saves it.
+    signal untitledSaveRequested
+    function requestUntitledSave() {
+        open(AppState.Page.Project);
+        untitledSaveRequested();
+    }
+
+    // Clear returns to Home without a project; opening Project starts untitled work (edi ADR-0017 §13).
     function reset() {
         ApplicationInfo.resetWorkflow();
     }

@@ -125,9 +125,13 @@ Use these workflows after the release source has merged to main:
    draft, deploys component repositories and their history feed, then publishes the verified assets.
 
 The installed app and its notes must match the prepared source/version/history. A failed job, expired
-artifact, mixed retry attempt, changed archive or stale release plan stops promotion. Rerun all native
-jobs for a new qualification attempt; retain earlier diagnostics. A publication retry reuses the same
-qualified files and matching draft, without replacing a published identity.
+artifact, changed archive or stale release plan stops promotion. When one platform fails, use **Re-run
+failed jobs** on the same run: the platforms that passed keep their artifacts, and promotion takes each
+platform from the attempt that last ran it successfully (the version comes from the release plan, so it is
+the same in every attempt). A calendar preview cannot be combined this way, because each attempt numbers its
+own installers; rerun all native jobs there. The installed app's smoke run has two minutes and one more try
+after a timeout. A publication retry reuses the same qualified files and matching draft, without replacing a
+published identity.
 
 The history feed and bundled notes share one source. Managed calendar installations check availability
 independently of optional update notifications. The red Update button follows the existing unsaved-work

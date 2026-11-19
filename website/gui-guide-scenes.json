@@ -192,6 +192,8 @@
     },
     "Save the scan": "scan-report-basic"
   },
+  "application/structure/magnetic-group-symbols.md": {},
+  "application/structure/parent-space-group.md": {},
   "application/structure/magnetic-space-group.md": {
     "Use this group": "group-space-group-magn"
   },

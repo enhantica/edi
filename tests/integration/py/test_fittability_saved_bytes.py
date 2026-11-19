@@ -78,7 +78,7 @@ def test_main_saved_bytes_regression_pin(tmp_path, case, rule):
     transitioned = dict(ORIGINAL['projects'][case][rule])
     for change in TRANSITIONS:
         if (change['case'], change['rule']) == (case, rule):
-            assert transitioned[change['path']] == change['before'], (
+            assert transitioned.get(change['path']) == change['before'], (
                 'Each byte transition binds the exact preceding immutable regression hash'
             )
             transitioned[change['path']] = change['after']

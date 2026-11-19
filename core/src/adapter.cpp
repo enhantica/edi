@@ -26,6 +26,7 @@
 #include <ranges>
 #include <regex>
 #include <set>
+#include <tuple>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -1163,6 +1164,8 @@ void set_magnetic_symmetry(Structure& s, std::vector<std::pair<std::string, std:
     };
     Structure trial = s;
     trial.magnetic.modify(replace);
+    // The family the new operations form, its table setting, letters and ties (edi ADR-0078), on every edit.
+    (void)adopt_magnetic_family_setting(trial, true);
     // crysta's one acceptance rule, as a load applies it, on the structure as it would become: the
     // signed group, the exact family, k, the moment ties, the anisotropic refusal and the metric.
     const crysta::Structure converted = to_crysta_structure(trial);
@@ -1172,9 +1175,68 @@ void set_magnetic_symmetry(Structure& s, std::vector<std::pair<std::string, std:
     if (group) {
         require_operations_keep_metric(s.cell, operations);
     }
-    s.magnetic.modify(replace);
+    s = std::move(trial);
     complete_atom_site_moments(s);  // the accepted state, as crysta completes it
 }
+
+// The transforms loop's BNS row set to `transform`: the replaced row keeps its id, a new one takes the first free
+// number, so no two rows share an id.
+static void set_bns_transform(MagneticDescription& magnetic, const std::string& transform) {
+    bool kept = false;
+    std::erase_if(magnetic.transforms, [&kept](const auto& row) {
+        if (row.second.source != "BNS") return false;
+        if (!kept) return !(kept = true);  // the first BNS row stays and keeps its id
+        return true;
+    });
+    for (auto& row : magnetic.transforms) {
+        if (row.second.source == "BNS") {
+            row.second.pp_abc = transform;
+            return;
+        }
+    }
+    int next = 1;
+    while (std::any_of(magnetic.transforms.begin(), magnetic.transforms.end(),
+                       [&next](const auto& row) { return row.first == std::to_string(next); })) {
+        ++next;
+    }
+    magnetic.transforms.push_back({std::to_string(next), crysta::MagneticTransform{transform, "BNS"}});
+}
+
+namespace {
+// The UNI symbol of a magnetic group's point group, by the dictionary's rule (`_space_group_magn.point_group_name_UNI`):
+// the space group's UNI symbol without its lattice, each screw axis as its rotation and each glide as a mirror. A type
+// IV group, which has no UNI symbol, has its family's point group with 1', which its anti-translation gives.
+std::string point_group_uni(const crysta::MagneticSpaceGroupEntry& entry) {
+    const bool type_iv = entry.magnetic_type == 4 || entry.name_uni.empty();
+    const std::string& symbol = type_iv ? entry.name_bns : entry.name_uni;
+    if (symbol.empty() || std::string("PABCIFR").find(symbol.front()) == std::string::npos) return {};
+    std::size_t start = 1;
+    if (start + 1 < symbol.size() && symbol[start] == '_') start += 2;  // a BNS lattice subscript: one letter, P_S or C_c
+    std::string out;
+    for (std::size_t i = start; i < symbol.size(); ++i) {
+        const char c = symbol[i];
+        if (c == '_' && i + 1 < symbol.size() && std::isdigit(static_cast<unsigned char>(symbol[i + 1]))) {
+            ++i;  // a screw's translation: 2_1 is the rotation 2
+            continue;
+        }
+        if (type_iv && c == '\'') continue;
+        out += std::string("abcnde").find(c) != std::string::npos ? 'm' : c;
+    }
+    if (type_iv) out += ".1'";
+    return out;
+}
+
+crysta::MagneticGroupName group_name(const crysta::MagneticSpaceGroupEntry& entry) {
+    crysta::MagneticGroupName name;
+    name.number_bns = entry.number_bns;
+    name.name_bns = entry.name_bns;
+    name.number_og = entry.number_og;
+    name.name_og = entry.name_og;
+    name.name_uni = entry.name_uni;
+    name.point_group_name_uni = point_group_uni(entry);
+    return name;
+}
+}  // namespace
 
 void set_magnetic_space_group(Structure& s, const std::string& number_bns) {
     const crysta::MagneticSpaceGroupEntry& entry = crysta::magnetic_space_group(number_bns);
@@ -1186,13 +1248,563 @@ void set_magnetic_space_group(Structure& s, const std::string& number_bns) {
         }
         return rows;
     };
-    crysta::MagneticGroupName name;
-    name.number_bns = entry.number_bns;
-    name.name_bns = entry.name_bns;
-    name.number_og = entry.number_og;
-    name.name_og = entry.name_og;
-    name.name_uni = entry.name_uni;
-    set_magnetic_symmetry(s, numbered(entry.operations), numbered(entry.centerings), name);
+    const crysta::MagneticGroupName name = group_name(entry);
+    // The table's operations are in the BNS standard setting: its transform is the identity.
+    Structure trial = s;
+    trial.magnetic.modify([](MagneticDescription& magnetic) { set_bns_transform(magnetic, "a,b,c;0,0,0"); });
+    set_magnetic_symmetry(trial, numbered(entry.operations), numbered(entry.centerings), name);
+    s = std::move(trial);
+}
+
+namespace {
+// The IT numbers a magnetic structure's family may have: the BNS number's family first (the group the operations
+// form), then a declared parent's.
+std::vector<int> family_numbers(const MagneticDescription& magnetic) {
+    std::vector<int> numbers;
+    const auto add = [&numbers](const std::string& text) {
+        try {
+            std::size_t used = 0;
+            const int number = std::stoi(text, &used);
+            if (used == text.size() && number >= 1 && number <= 230 &&
+                std::find(numbers.begin(), numbers.end(), number) == numbers.end()) {
+                numbers.push_back(number);
+            }
+        } catch (const std::exception&) {
+        }
+    };
+    const std::string& bns = magnetic.group.number_bns;
+    add(bns.substr(0, bns.find('.')));
+    add(magnetic.parent.it_number);
+    return numbers;
+}
+
+std::string transform_to_standard(const crysta::SpaceGroup& group);
+
+// Two setting transforms are the same setting: the same basis and the same origin within a lattice translation.
+bool same_setting(const crysta::MagneticSettingTransform& first, const crysta::MagneticSettingTransform& second) {
+    for (std::size_t i = 0; i < 9; ++i) {
+        if (std::abs(first.basis[i] - second.basis[i]) > 1e-9) return false;
+    }
+    for (std::size_t i = 0; i < 3; ++i) {
+        const double step = first.origin[i] - second.origin[i];
+        if (std::abs(step - std::round(step)) > 1e-9) return false;
+    }
+    return true;
+}
+
+// The BNS row's transform when it parses; a descriptive text row claims nothing.
+std::optional<crysta::MagneticSettingTransform> claimed_setting(const MagneticDescription& magnetic) {
+    for (const auto& row : magnetic.transforms) {
+        if (row.second.source == "BNS") return crysta::parse_setting_transform(row.second.pp_abc);
+    }
+    return std::nullopt;
+}
+
+// Find the table setting with these operations, matching the BNS transform when `as_claimed` is true.
+// A setting absent from the table, including another origin or basis, uses its supplied operators directly.
+std::optional<SpaceGroupSettingName> family_setting(const MagneticDescription& magnetic, bool as_claimed) {
+    const std::optional<crysta::MagneticSettingTransform> claimed = as_claimed ? claimed_setting(magnetic) : std::nullopt;
+    const std::vector<SpaceGroupSettingName> settings = space_group_settings();
+    for (const int number : family_numbers(magnetic)) {
+        for (const SpaceGroupSettingName& setting : settings) {
+            if (setting.it_number != number) {
+                continue;
+            }
+            crysta::SpaceGroup group;
+            try {
+                group = crysta::space_group_from_file(
+                    setting.name_h_m, setting.coord_system_code.empty() ? std::nullopt
+                                                                        : std::optional<std::string>(setting.coord_system_code));
+            } catch (const std::invalid_argument&) {
+                continue;
+            }
+            if (crysta::operator_defined_symmetry(magnetic.operations, magnetic.centerings, group)) {
+                continue;
+            }
+            if (claimed) {
+                const std::optional<crysta::MagneticSettingTransform> own =
+                    crysta::parse_setting_transform(transform_to_standard(group));
+                if (!own || !same_setting(*claimed, *own)) continue;
+            }
+            return setting;
+        }
+    }
+    return std::nullopt;
+}
+}  // namespace
+
+bool bns_transform_consistent(const MagneticDescription& magnetic) {
+    std::optional<crysta::MagneticSettingTransform> transform;
+    for (const auto& row : magnetic.transforms) {
+        if (row.second.source == "BNS") transform = crysta::parse_setting_transform(row.second.pp_abc);
+    }
+    const std::string& bns = magnetic.group.number_bns;
+    if (!transform || magnetic.operations.empty() || bns.empty()) {
+        return true;  // nothing a setting is claimed for, or descriptive text
+    }
+    int number = 0;
+    try {
+        number = std::stoi(bns.substr(0, bns.find('.')));
+    } catch (const std::exception&) {
+        return true;
+    }
+    for (const SpaceGroupSettingName& setting : space_group_settings()) {
+        if (setting.it_number != number || setting.setting != 0) continue;
+        try {
+            const crysta::SpaceGroup claimed = crysta::space_group_in_setting(
+                crysta::space_group_from_file(setting.name_h_m, setting.coord_system_code.empty()
+                                                                    ? std::nullopt
+                                                                    : std::optional<std::string>(setting.coord_system_code)),
+                *transform);
+            // Type IV and settings no table holds stay operators-only: no claim to check against.
+            return !crysta::operator_defined_symmetry(magnetic.operations, magnetic.centerings, claimed) ||
+                   !family_setting(magnetic, false).has_value();
+        } catch (const std::invalid_argument&) {
+            return false;
+        }
+    }
+    return true;
+}
+
+namespace {
+std::vector<std::pair<std::string, std::string>> magnetic_rows_in_setting(const std::vector<std::string>& rows,
+                                                                          const crysta::MagneticSettingTransform& transform);
+// A signed group as a set: every operation composed with every centring, translations in 24ths modulo the lattice.
+using SignedKey = std::tuple<std::array<int, 9>, std::array<int, 3>, int>;
+std::set<SignedKey> signed_group(const std::vector<std::string>& operations, const std::vector<std::string>& centerings) {
+    std::set<SignedKey> out;
+    const std::vector<std::string> shifts = centerings.empty() ? std::vector<std::string>{"x,y,z,+1"} : centerings;
+    for (const std::string& operation_text : operations) {
+        const crysta::MagneticOperation operation = crysta::parse_magnetic_operation(operation_text);
+        for (const std::string& shift_text : shifts) {
+            const crysta::MagneticOperation shift = crysta::parse_magnetic_operation(shift_text);
+            std::array<int, 3> t{};
+            for (std::size_t i = 0; i < 3; ++i) {
+                const long steps = std::lround((operation.translation[i] + shift.translation[i]) * 24.0);
+                t[i] = static_cast<int>(((steps % 24) + 24) % 24);
+            }
+            out.emplace(operation.rotation, t, operation.theta * shift.theta);
+        }
+    }
+    return out;
+}
+
+std::vector<std::string> texts(const std::vector<std::pair<std::string, std::string>>& rows) {
+    std::vector<std::string> out;
+    out.reserve(rows.size());
+    for (const auto& row : rows) out.push_back(row.second);
+    return out;
+}
+
+// A magnetic structure without a BNS number names its group from its operations: the table group of its family that,
+// in the held setting, has the same signed operations. Its names and the setting's transform are kept, so a save, which
+// writes no `_space_group`, still carries the family.
+void identify_magnetic_group(Structure& s, const SpaceGroupSettingName& setting) {
+    if (!s.magnetic->group.number_bns.empty()) return;
+    crysta::SpaceGroup held;
+    try {
+        held = crysta::space_group_from_file(setting.name_h_m, setting.coord_system_code.empty()
+                                                                   ? std::nullopt
+                                                                   : std::optional<std::string>(setting.coord_system_code));
+    } catch (const std::invalid_argument&) {
+        return;
+    }
+    const std::string transform = transform_to_standard(held);
+    const std::optional<crysta::MagneticSettingTransform> parsed = crysta::parse_setting_transform(transform);
+    if (!parsed) return;
+    std::set<SignedKey> own;
+    try {
+        own = signed_group(texts(s.magnetic->operations), texts(s.magnetic->centerings));
+    } catch (const std::invalid_argument&) {
+        return;
+    }
+    const std::string family = std::to_string(setting.it_number) + ".";
+    for (const crysta::MagneticSpaceGroupEntry& entry : crysta::magnetic_space_groups()) {
+        if (entry.number_bns.rfind(family, 0) != 0 || entry.magnetic_type == 4) continue;
+        try {
+            if (signed_group(texts(magnetic_rows_in_setting(entry.operations, *parsed)),
+                             texts(magnetic_rows_in_setting(entry.centerings, *parsed))) != own) {
+                continue;
+            }
+        } catch (const std::invalid_argument&) {
+            continue;
+        }
+        const crysta::MagneticGroupName name = group_name(entry);
+        s.magnetic.modify([&name, &transform](MagneticDescription& magnetic) {
+            const crysta::MagneticGroupName supplied = magnetic.group;
+            magnetic.group = name;
+            // Values a file gave for the point group stay.
+            if (!supplied.point_group_name_uni.empty()) magnetic.group.point_group_name_uni = supplied.point_group_name_uni;
+            magnetic.group.point_group_number_litvin = supplied.point_group_number_litvin;
+            set_bns_transform(magnetic, transform);
+        });
+        return;
+    }
+}
+}  // namespace
+
+void identify_declared_magnetic_family(Structure& s) {
+    // A file that declares `_space_group` for a magnetic structure without a BNS number: the declared table setting is
+    // its family, whatever its parent says, so the group is named from it before a save drops the declaration.
+    if (s.magnetic->operations.empty() || !s.magnetic->group.number_bns.empty() || !s.magnetic->space_group_declared) return;
+    crysta::SpaceGroup held;
+    try {
+        held = resolve_group(s);
+    } catch (const std::invalid_argument&) {
+        return;
+    }
+    if (crysta::operator_defined_symmetry(s.magnetic->operations, s.magnetic->centerings, held)) return;
+    SpaceGroupSettingName setting;
+    setting.it_number = held.it_number;
+    setting.name_h_m = s.space_group.name_h_m;
+    setting.coord_system_code = s.space_group.coord_system_code;
+    identify_magnetic_group(s, setting);
+}
+
+bool adopt_magnetic_family_setting(Structure& s, bool reinfer_letters) {
+    if (s.magnetic->operations.empty()) {
+        return false;
+    }
+    const std::optional<SpaceGroupSettingName> setting = family_setting(s.magnetic, true);
+    if (!setting) {
+        // Type IV, or a setting no table holds: the symmetry comes from the operators (held under P 1, no letters).
+        s.space_group.name_h_m = "P 1";
+        s.space_group.coord_system_code = "";
+        s.magnetic.modify([](MagneticDescription& magnetic) { magnetic.space_group_declared = false; });
+        for (const auto& site : s.atom_sites) {
+            site->wyckoff_letter = "";
+        }
+        return false;
+    }
+    s.space_group.name_h_m = setting->name_h_m;
+    s.space_group.coord_system_code = setting->coord_system_code;
+    identify_magnetic_group(s, *setting);
+    s.magnetic.modify([&setting](MagneticDescription& magnetic) {
+        magnetic.space_group_declared = true;
+        // A structure without a parent space group gets the magnetic group's own (edi ADR-0078); a declared one stays.
+        if (magnetic.parent.name_h_m_alt.empty() && magnetic.parent.it_number.empty()) {
+            magnetic.parent.name_h_m_alt = setting->name_h_m;
+            magnetic.parent.it_number = std::to_string(setting->it_number);
+        }
+    });
+    // The letters from the table again: every site's after an edit changed the setting, a missing one after a read.
+    for (const auto& site : s.atom_sites) {
+        if (reinfer_letters || site->wyckoff_letter.value().empty() || site->wyckoff_letter.value() == ".") {
+            try {
+                site->wyckoff_letter = detail::inferred_wyckoff_letter(s, *site);
+            } catch (const std::invalid_argument&) {
+                site->wyckoff_letter = "";  // a cell the matcher cannot read keeps the site general
+            }
+        }
+    }
+    return true;
+}
+
+void set_site_type(Structure& s, AtomSite& site, const std::string& type_symbol) {
+    site.type_symbol = type_symbol;
+    if (crysta::magnetic_ions_for_type(type_symbol).empty()) {
+        for (std::size_t row = 0; row < s.atom_site_moment.size(); ++row) {
+            if (s.atom_site_moment[row]->id.value() == site.id.value()) {
+                s.atom_site_moment.erase_at(row);
+                break;
+            }
+        }
+    }
+    for (std::size_t row = s.magnetic_form_factors.size(); row-- > 0;) {
+        const std::string element = s.magnetic_form_factors[row]->id.value();
+        if (std::none_of(s.atom_sites.begin(), s.atom_sites.end(),
+                         [&element](const auto& other) { return other->type_symbol.value() == element; })) {
+            s.magnetic_form_factors.erase_at(row);
+        }
+    }
+    // The element's default ion may carry fewer terms than the old one.
+    fix_unusable_coefficients(s, type_symbol);
+}
+
+void fix_unusable_coefficients(Structure& s, const std::string& type_symbol) {
+    for (const auto& item : s.magnetic_form_factors) {
+        MagneticFormFactor& row = *item;
+        if (row.id.value() != type_symbol) continue;
+        std::size_t used = 0;
+        try {
+            used = crysta::magnetic_coefficients_used(row.approximation.value());
+        } catch (const std::invalid_argument&) {
+            return;  // an approximation crysta refuses is reported where it is used
+        }
+        std::array<bool, 3> carried{true, true, true};
+        bool given = false;
+        for (const auto& [symbol, coefficients] : s.magnetic->radial_coefficients) {
+            if (symbol != type_symbol) continue;
+            const auto whole = [&coefficients](std::size_t term) {
+                return std::all_of(coefficients.values.begin() + static_cast<std::ptrdiff_t>(8 * term),
+                                   coefficients.values.begin() + static_cast<std::ptrdiff_t>(8 * term + 7),
+                                   [](const std::string& value) { return !value.empty(); });
+            };
+            if (whole(0)) {
+                given = true;
+                for (std::size_t n = 0; n < 3; ++n) carried[n] = whole(n + 1);
+            }
+        }
+        if (!given) {
+            const std::string ion = row.ion.value().empty() ? crysta::magnetic_type_ion(type_symbol) : row.ion.value();
+            try {
+                carried = crysta::magnetic_ion_table(ion).has;
+            } catch (const std::invalid_argument&) {
+            }
+        }
+        const std::vector<Parameter*> coefficients = row.parameters();
+        for (std::size_t n = 0; n < coefficients.size(); ++n) {
+            if ((n >= used || !carried[n]) && coefficients[n]->free.get()) coefficients[n]->free = false;
+        }
+        return;
+    }
+}
+
+bool structure_magnetic(const Structure& s) {
+    // A file holding moments without magnetic operators is shown as Magnetic too, so its moments stay visible.
+    return !s.magnetic->operations.empty() || !s.atom_site_moment.empty();
+}
+
+namespace {
+// The transform from a setting of an IT number to its standard one, when the two differ by a signed permutation of
+// the axes and no origin shift (the orthorhombic and monoclinic settings): the basis of the standard setting in the
+// setting's own, as `_space_group_magn_transforms.Pp_abc` writes it. Empty when no such transform holds.
+std::string transform_to_standard(const crysta::SpaceGroup& group) {
+    const std::vector<SpaceGroupSettingName> settings = space_group_settings();
+    const auto standard = std::find_if(settings.begin(), settings.end(), [&group](const SpaceGroupSettingName& setting) {
+        return setting.it_number == group.it_number && setting.setting == 0;
+    });
+    if (standard == settings.end()) {
+        return {};
+    }
+    crysta::SpaceGroup reference;
+    try {
+        reference = crysta::space_group_from_file(standard->name_h_m, standard->coord_system_code.empty()
+                                                                         ? std::nullopt
+                                                                         : std::optional<std::string>(standard->coord_system_code));
+    } catch (const std::invalid_argument&) {
+        return {};
+    }
+    using Key = std::pair<std::array<int, 9>, std::array<int, 3>>;
+    const auto keys = [](const std::vector<crysta::SymmetryOperation>& operations) {
+        std::set<Key> out;
+        for (const crysta::SymmetryOperation& operation : operations) {
+            std::array<int, 3> t{};
+            for (std::size_t i = 0; i < 3; ++i) t[i] = ((static_cast<int>(std::lround(operation.translation[i] * 24.0)) % 24) + 24) % 24;
+            out.insert({operation.rotation, t});
+        }
+        return out;
+    };
+    const std::set<Key> wanted = keys(crysta::symmetry_operations(reference));
+    const std::vector<crysta::SymmetryOperation> own = crysta::symmetry_operations(group);
+    std::array<int, 3> order{0, 1, 2};
+    do {
+        for (int signs = 0; signs < 8; ++signs) {
+            // x_standard = M x_setting, M a signed permutation.
+            std::array<int, 9> m{};
+            for (std::size_t row = 0; row < 3; ++row) m[3 * row + static_cast<std::size_t>(order[row])] = (signs >> row) & 1 ? -1 : 1;
+            std::set<Key> mapped;
+            for (const crysta::SymmetryOperation& operation : own) {
+                // R' = M R M^T, t' = M t (M orthogonal).
+                std::array<int, 9> r{};
+                std::array<int, 3> t{};
+                for (std::size_t i = 0; i < 3; ++i) {
+                    for (std::size_t j = 0; j < 3; ++j) {
+                        int sum = 0;
+                        for (std::size_t k = 0; k < 3; ++k)
+                            for (std::size_t l = 0; l < 3; ++l) sum += m[3 * i + k] * operation.rotation[3 * k + l] * m[3 * j + l];
+                        r[3 * i + j] = sum;
+                    }
+                    double shift = 0;
+                    for (std::size_t k = 0; k < 3; ++k) shift += m[3 * i + k] * operation.translation[k];
+                    t[i] = ((static_cast<int>(std::lround(shift * 24.0)) % 24) + 24) % 24;
+                }
+                mapped.insert({r, t});
+            }
+            if (mapped != wanted) continue;
+            // The standard basis in the setting's: a_standard_j = sum_i M[j][i] a_i.
+            std::string basis;
+            for (std::size_t j = 0; j < 3; ++j) {
+                for (std::size_t i = 0; i < 3; ++i) {
+                    if (m[3 * j + i] != 0) basis += std::string(j ? "," : "") + (m[3 * j + i] < 0 ? "-" : "") + "abc"[i];
+                }
+            }
+            return basis + ";0,0,0";
+        }
+    } while (std::next_permutation(order.begin(), order.end()));
+    // A setting that also moves the origin: the standard mapped through each signed permutation and origin in
+    // quarters (crysta's space_group_in_setting) must give the setting's own operations.
+    const auto quarter = [](int steps) { return steps == 0 ? std::string("0") : steps == 2 ? std::string("1/2") : std::to_string(steps) + "/4"; };
+    std::array<int, 3> axes{0, 1, 2};
+    do {
+        for (int signs = 0; signs < 8; ++signs) {
+            for (int shift = 1; shift < 64; ++shift) {
+                crysta::MagneticSettingTransform candidate;
+                candidate.basis = {};
+                std::string basis;
+                for (std::size_t j = 0; j < 3; ++j) {
+                    const int sign = (signs >> j) & 1 ? -1 : 1;
+                    candidate.basis[3 * static_cast<std::size_t>(axes[j]) + j] = sign;  // column j: new vector j
+                    basis += std::string(j ? "," : "") + (sign < 0 ? "-" : "") + "abc"[axes[j]];
+                }
+                const std::array<int, 3> steps{shift & 3, (shift >> 2) & 3, (shift >> 4) & 3};
+                for (std::size_t axis = 0; axis < 3; ++axis) candidate.origin[axis] = steps[axis] / 4.0;
+                try {
+                    if (keys(crysta::symmetry_operations(crysta::space_group_in_setting(reference, candidate))) == keys(own)) {
+                        return basis + ";" + quarter(steps[0]) + "," + quarter(steps[1]) + "," + quarter(steps[2]);
+                    }
+                } catch (const std::invalid_argument&) {
+                }
+            }
+        }
+    } while (std::next_permutation(axes.begin(), axes.end()));
+    return {};
+}
+}  // namespace
+
+void set_structure_magnetic(Structure& s, bool magnetic) {
+    if (structure_magnetic(s) == magnetic) {
+        return;
+    }
+    const crysta::SpaceGroup group = resolve_group(s);
+    if (magnetic) {
+        // The grey group: the space group's operations with and without time reversal (Pnma -> Pnma1', BNS 62.442).
+        const std::string family = std::to_string(group.it_number) + ".";
+        const crysta::MagneticSpaceGroupEntry* grey = nullptr;
+        for (const crysta::MagneticSpaceGroupEntry& entry : crysta::magnetic_space_groups()) {
+            if (entry.magnetic_type == 2 && entry.number_bns.rfind(family, 0) == 0) {
+                grey = &entry;
+                break;
+            }
+        }
+        if (grey == nullptr) {
+            throw std::invalid_argument("space group " + std::to_string(group.it_number) + " has no grey magnetic group");
+        }
+        const std::string transform = transform_to_standard(group);
+        const crysta::MagneticGroupName name = group_name(*grey);
+        std::vector<std::pair<std::string, std::string>> operations, centerings;
+        if (transform == "a,b,c;0,0,0") {
+            for (std::size_t i = 0; i < grey->operations.size(); ++i) operations.emplace_back(std::to_string(i + 1), grey->operations[i]);
+            for (std::size_t i = 0; i < grey->centerings.size(); ++i) centerings.emplace_back(std::to_string(i + 1), grey->centerings[i]);
+        } else {
+            // Another setting: the group's own operations, each with and without time reversal.
+            for (const std::string& op : group.operators) {
+                operations.emplace_back(std::to_string(operations.size() + 1), op + ",+1");
+                operations.emplace_back(std::to_string(operations.size() + 1), op + ",-1");
+            }
+            centerings.emplace_back("1", "x,y,z,+1");
+        }
+        Structure trial = s;
+        trial.magnetic.modify([&](MagneticDescription& description) {
+            description = MagneticDescription{};
+            description.parent.name_h_m_alt = group.name_h_m;
+            description.parent.it_number = std::to_string(group.it_number);
+            if (!transform.empty()) description.transforms = {{"1", crysta::MagneticTransform{transform, "BNS"}}};
+        });
+        set_magnetic_symmetry(trial, std::move(operations), std::move(centerings), name);
+        s = std::move(trial);
+        return;
+    }
+    // Back to Crystal: the magnetic group's own space group (time reversal ignored), declared, and no magnetic data.
+    Structure trial = s;
+    if (const std::optional<SpaceGroupSettingName> setting = family_setting(trial.magnetic, true)) {
+        trial.space_group.name_h_m = setting->name_h_m;
+        trial.space_group.coord_system_code = setting->coord_system_code;
+    } else if (!trial.magnetic->space_group_declared) {
+        // Operators-only (type IV, or a setting no table holds): its family number's first setting.
+        const std::vector<int> numbers = family_numbers(trial.magnetic);
+        const std::vector<SpaceGroupSettingName> settings = space_group_settings();
+        const auto found = std::find_if(settings.begin(), settings.end(), [&](const SpaceGroupSettingName& setting) {
+            return !numbers.empty() && setting.it_number == numbers.front() && setting.setting == 0;
+        });
+        if (found == settings.end()) {
+            throw std::invalid_argument("the magnetic group names no space group to return to");
+        }
+        trial.space_group.name_h_m = found->name_h_m;
+        trial.space_group.coord_system_code = found->coord_system_code;
+    }
+    trial.magnetic.modify([](MagneticDescription& description) { description = MagneticDescription{}; });
+    while (!trial.atom_site_moment.empty()) trial.atom_site_moment.erase_at(trial.atom_site_moment.size() - 1);
+    while (!trial.magnetic_form_factors.empty()) trial.magnetic_form_factors.erase_at(trial.magnetic_form_factors.size() - 1);
+    s = std::move(trial);
+}
+
+std::string held_magnetic_setting(const Structure& s) {
+    for (const auto& row : s.magnetic->transforms) {
+        if (row.second.source == "BNS") return row.second.pp_abc;
+    }
+    // No transform given: the held table setting's own, `a,b,c;0,0,0` for the BNS standard.
+    if (!structure_magnetic(s) || !s.magnetic->space_group_declared) return {};
+    try {
+        return transform_to_standard(resolve_group(s));
+    } catch (const std::invalid_argument&) {
+        return {};
+    }
+}
+
+std::vector<std::string> magnetic_setting_transforms(const Structure& s) {
+    // The tabulated settings of the magnetic group's own space group (time reversal ignored), each as its transform
+    // from the BNS standard; built here from crysta's setting table, which names settings but gives no transforms.
+    const std::vector<int> numbers = family_numbers(s.magnetic);
+    if (numbers.empty()) {
+        return {};
+    }
+    static std::map<int, std::vector<std::string>> cache;
+    const int number = numbers.front();
+    if (const auto found = cache.find(number); found != cache.end()) {
+        return found->second;
+    }
+    std::vector<std::string> transforms;
+    for (const SpaceGroupSettingName& setting : space_group_settings()) {
+        if (setting.it_number != number) continue;
+        try {
+            const std::string transform = transform_to_standard(crysta::space_group_from_file(
+                setting.name_h_m,
+                setting.coord_system_code.empty() ? std::nullopt : std::optional<std::string>(setting.coord_system_code)));
+            if (!transform.empty() && std::find(transforms.begin(), transforms.end(), transform) == transforms.end()) {
+                transforms.push_back(transform);
+            }
+        } catch (const std::invalid_argument&) {
+        }
+    }
+    const auto standard = std::find(transforms.begin(), transforms.end(), "a,b,c;0,0,0");
+    if (standard != transforms.end()) std::rotate(transforms.begin(), standard, standard + 1);
+    cache.emplace(number, transforms);
+    return transforms;
+}
+
+namespace {
+// Signed operations (`x,y,z,+1`) of the BNS standard mapped through a setting transform, each keeping its sign.
+std::vector<std::pair<std::string, std::string>> magnetic_rows_in_setting(const std::vector<std::string>& rows,
+                                                                          const crysta::MagneticSettingTransform& transform) {
+    // Each operation alone: crysta's mapping puts the identity first, so a list would lose the sign pairing.
+    std::vector<std::pair<std::string, std::string>> out;
+    for (const std::string& row : rows) {
+        const auto comma = row.rfind(',');
+        const crysta::SpaceGroup moved = crysta::space_group_in_setting(
+            crysta::SpaceGroup(0, "", "", {row.substr(0, comma)}, {}, "", crysta::LatticeCentering::P), transform);
+        out.emplace_back(std::to_string(out.size() + 1), moved.operators.front() + row.substr(comma));
+    }
+    return out;
+}
+}  // namespace
+
+void set_magnetic_setting(Structure& s, const std::string& transform) {
+    // Use the BNS group's operations in the selected tabulated setting and write its transform as the BNS row.
+    if (!structure_magnetic(s) || s.magnetic->group.number_bns.empty()) {
+        throw std::invalid_argument("only a Magnetic structure with a magnetic space group has a magnetic setting");
+    }
+    const std::vector<std::string> settings = magnetic_setting_transforms(s);
+    if (std::find(settings.begin(), settings.end(), transform) == settings.end()) {
+        throw std::invalid_argument("the setting " + transform + " is not one of this group's tabulated settings");
+    }
+    const std::optional<crysta::MagneticSettingTransform> parsed = crysta::parse_setting_transform(transform);
+    const crysta::MagneticSpaceGroupEntry& entry = crysta::magnetic_space_group(s.magnetic->group.number_bns);
+    Structure trial = s;
+    trial.magnetic.modify([&transform](MagneticDescription& magnetic) { set_bns_transform(magnetic, transform); });
+    set_magnetic_symmetry(trial, magnetic_rows_in_setting(entry.operations, *parsed),
+                          magnetic_rows_in_setting(entry.centerings, *parsed), trial.magnetic->group);
+    s = std::move(trial);
 }
 
 void change_adp_type(Structure& s, AtomSite& site, const std::string& adp_type) {
@@ -1665,7 +2277,7 @@ Index build_index(Project& model, crysta::Project& cproject) {
                   Slot{&cexperiment.instrument[2], &experiment.instrument.calib_d_to_tof_quadratic});
     index.emplace("experiment.instrument.calib_d_to_tof_reciprocal",
                   Slot{&cexperiment.instrument[3], &experiment.instrument.calib_d_to_tof_reciprocal});
-    // A loop row by its id, never its position (the owner, 2026-10-11), as parameter_paths names it.
+    // Address a loop row by its id, never its position, as parameter_paths names it.
     index.emplace("experiment.linked_structures[" + experiment.linked_structure().structure_id.value() + "].scale",
                   Slot{&cexperiment.scale(), &experiment.linked_structure().scale});
     for (std::size_t i = 0; i < experiment.background.size(); ++i) {
@@ -2350,6 +2962,15 @@ ScanPlaces scan_places(const ScanDatasets& datasets) {
     return places;
 }
 
+// The columns crysta derives from the fitted values rather than fits (series_layout's derived_columns): a moment's
+// spherical form and a linked structure's weight fraction. Their value may be undefined in a converged row.
+static bool scan_derived_column(const std::string& name) {
+    for (const char* suffix : {".spherical_modulus", ".spherical_polar", ".spherical_azimuthal", ".weight_fraction"}) {
+        if (name.ends_with(suffix)) return true;
+    }
+    return false;
+}
+
 std::string scan_row_file(const ScanResultIndex& index, const std::vector<std::string>& cells) {
     const std::string& path = cells.at(index.file);
     std::string_view name(path);
@@ -2431,6 +3052,11 @@ std::pair<std::size_t, ScanResultIndex::Row> scan_row_facts(const Project& /*pro
         const bool value_undefined = value_cell == "nan" || value_cell.empty();
         if (!value_undefined && (!parse_scan_number(value_cell, value) || !std::isfinite(value))) {
             refuse("has no finite value for '" + parameter.name + "'");
+        }
+        // A fitted parameter of a converged row has a value, as crysta's Continue requires of the same row: only the
+        // derived columns (a moment's spherical form, a linked structure's weight fraction) may be undefined.
+        if (value_undefined && row.converged && !scan_derived_column(parameter.name)) {
+            refuse("has no value for the fitted parameter '" + parameter.name + "'");
         }
         const std::string& su_cell = cells[parameter.uncertainty];
         if (su_cell != "nan" && !su_cell.empty() && (!number(su_cell, uncertainty) || uncertainty < 0.0)) {
@@ -3825,6 +4451,15 @@ void save_project_via_crysta(const Project& model, const std::string& directory,
     with_saved_project(
         model,
         [&directory](crysta::Project& project) {
+            // A magnetic structure writes no `_space_group`: its magnetic space group stands in its place (edi
+            // ADR-0078). Its symmetry was settled before, so only the written file changes.
+            // Only a structure whose BNS number names its family drops the declaration: without one the declared
+            // group is the only identity a reload could find again, so it stays written.
+            for (std::size_t at = 0; at < project.structures.size(); ++at) {
+                crysta::Structure& structure = project.structures[at];
+                if (!structure.magnetic_operations->empty() && !structure.magnetic_group->number_bns.empty())
+                    structure.space_group.modify([](crysta::SpaceGroup& group) { group.declared = false; });
+            }
             try {
                 crysta::save_project(project, directory);
             } catch (const std::exception& error) {
@@ -4106,12 +4741,16 @@ void to_crysta_magnetic(const Structure& s, crysta::Structure& built) {
             built.magnetic_group = magnetic.group;
         }
         if (!magnetic.parent.empty()) {
-            built.parent_space_group = magnetic.parent;
+            // `_parent_space_group.derived` is no item of the magnetic CIF dictionary, so it is not written.
+            auto parent = magnetic.parent;
+            parent.derived.clear();
+            built.parent_space_group = parent;
         }
         built.magnetic_transforms = magnetic.transforms;
         built.magnetic_operations = magnetic.operations;
         built.magnetic_centerings = magnetic.centerings;
         built.propagation_vectors = magnetic.propagation_vectors;
+        built.magnetic_radial_coefficients = magnetic.radial_coefficients;
         if (!magnetic.kept_iso.empty()) {
             built.kept_iso = magnetic.kept_iso;
         }
@@ -5583,7 +6222,7 @@ std::mutex printed_mutex;
 std::set<std::string> printed;
 
 // The starting values a fit moved off zero (crysta's zero-start notices), each as "Co2 moments from 0 to 1 μB",
-// kept for the fit's result whatever the message level (owner record 2026-11-08).
+// kept for the fit's result whatever the message level.
 std::vector<std::string> start_adjustments;
 // The free parameters whose s.u. the fit could not compute (crysta's su_undefined), by crysta's names (`Co1.crystalaxis_x`).
 std::vector<std::string> undefined_su;
@@ -7233,18 +7872,13 @@ namespace {
 
 // ---: the scan-event observation seam -------------------------------------------------
 //
-// crysta's driver exposes no per-file hook, and the owner's committed rule makes
-// analysis/results.csv the ONE carry-forward state source: the driver APPENDS each file's row
-// before the next file's fit ("numbers commit as produced"). So edi derives its per-file
-// completion event from the committed rows themselves — read when the row count grows, parsed
-// from the same plain-cell contract crysta writes — and NEVER from iteration-number restarts,
-// the heuristic the packet rules out by name. The walk below mirrors crysta's own (directory
-// regular files + `*`/`?` glob + sort + optional reverse) so the preamble's N is the N crysta
-// will fit; a mismatch cannot arise from a second convention, only from the directory changing
-// mid-call.
+// crysta's driver exposes no per-file hook. It appends each file's row to analysis/results.csv
+// before fitting the next file, so edi detects completion by reading newly appended rows.
+// Iteration numbers can restart within a fit and cannot identify a completed file.
+// Enumerate regular files with the same glob, sorting and optional reverse order as the driver
+// so the announced file count matches the files it will fit, unless the directory changes mid-call.
 
-// Minimal glob over a file NAME (`*` and `?` only) — byte-for-byte crysta's matcher
-// (src/core/sequential.cpp), which is the point: the two walks must agree.
+// Match file names with only `*` and `?`, using the same rules as crysta's sequential driver.
 bool scan_glob_match(const std::string& pattern, const std::string& name) {
     std::size_t p = 0;
     std::size_t n = 0;
@@ -7312,10 +7946,8 @@ std::optional<int> count_series_points(const Project& project, const crysta::Seq
 // The one numeric-cell device for this reader, mirroring io.cpp's `to_double` device-for-device:
 // a classic-("C")-locale-imbued istringstream, fully consumed or refused. BOTH properties are
 // load-bearing and neither may be traded for the other:
-//   * portable — deliberately NOT std::from_chars: libc++ (Apple/AppleClang) `= delete`s the
-//     floating-point overload, so that call does not compile on macOS (it broke crysta's own
-//     macOS CI, PR #21, and a fresh instance here broke the owner's Mac build on this cycle's
-//     head — the documented class, re-shipped; hence one shared device, not per-site calls);
+//   * portable — supported libc++ versions on macOS lack the floating-point std::from_chars
+//     overload, so use the shared stream parser on every platform;
 //   * locale-independent — never strtod/std::stod, which honour the ambient LC_NUMERIC, so a
 //     comma-decimal locale would silently mis-parse the committed `4.8056` cell.
 template <typename Value>

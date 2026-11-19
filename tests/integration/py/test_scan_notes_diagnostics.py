@@ -168,6 +168,9 @@ def test_results_state_readers_prove_the_supported_kind(
         shutil.copytree(complete_results_history[mode], directory)
     phase_scan.scan_state_path(directory, filename, kind)
     before = phase_scan.scan_state_fingerprint(directory)
+    if surface == 'dry-events':
+        # The public CLI creates its private destination before entering the native dry-run path.
+        (tmp_path / 'dry').mkdir()
     actions = {
         'core': 'print(project._scan_notes())',
         'report': 'print(_skipped_line(project))',
@@ -225,6 +228,8 @@ def test_results_state_readers_prove_the_supported_kind(
         edi.Project.load(modern).analysis.fit()
         modern_state = phase_scan.scan_state_path(modern, filename, kind)
         modern_before = phase_scan.scan_state_fingerprint(modern)
+        if surface == 'dry-events':
+            (tmp_path / 'combined-dry').mkdir()
         modern_result = subprocess.run(
             [sys.executable, '-c', code, str(modern), str(tmp_path / 'combined-dry')],
             env={**os.environ, 'PYTHONPATH': str(Path(edi.__file__).resolve().parents[1])},

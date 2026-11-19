@@ -1,5 +1,6 @@
 // The Get in touch form in a real browser: attach and drop files, the limits, Remove, the payload, and the answers
-// (a 201 that does not confirm the files, a refusal with Copy report), with fetch stubbed so nothing leaves the page.
+// (a 201 that does not confirm the files and keeps the contact details, a refusal), with fetch stubbed so nothing
+// leaves the page. The notice has one button, Close: no Copy report.
 const [url, chrome, playwright] = process.argv.slice(2);
 const { chromium } = await import(playwright);
 const browser = await chromium.launch({ executablePath: chrome, args: ['--no-sandbox', '--disable-gpu'] });
@@ -62,25 +63,33 @@ await page.click('.ed-contact-file-list li:first-child .ed-contact-remove');
 now = await state();
 check(now.error === '' && !now.sendDisabled, 'five files may be sent');
 
-// A 201 that does not confirm the files says which were not attached.
+// A 201 that does not confirm the files says which were not attached, and keeps the contact details.
+await page.fill('input[name="name"]', 'Ada');
+await page.fill('input[name="email"]', 'ada@example.org');
+await page.fill('input[name="subject"]', 'Files');
 await page.fill('textarea[name="message"]', 'Cannot read my files');
 await page.click('form.ed-contact-form button[type="submit"]');
 await page.waitForSelector('dialog.ed-contact-notice[open]');
-const first = await page.evaluate(() => ({ text: document.querySelector('dialog.ed-contact-notice p').textContent, copy: !document.querySelector('.ed-contact-copy-report').hidden, message: window.sent[0] }));
+const buttons = () => page.evaluate(() => Array.from(document.querySelectorAll('dialog.ed-contact-notice button'))
+  .filter(button => button.getClientRects().length).map(button => button.textContent));
+const first = await page.evaluate(() => ({ text: document.querySelector('dialog.ed-contact-notice p').textContent, message: window.sent[0] }));
 check(first.message.attachments.length === 5 && first.message.attachments[0].data === btoa('AAAA'), 'the files go as the app sends them');
-check(first.text === 'Your message was sent. Thank you! But a.txt, b.txt, c.txt, d.txt, e.txt were not attached.', `unconfirmed files: ${first.text}`);
-check(!first.copy, 'no Copy report after a success');
+check(first.text === 'Your message was sent. Thank you! But a.txt, b.txt, c.txt, d.txt, e.txt were not attached. Your name, e-mail and affiliation are kept, so you can send another message.', `unconfirmed files: ${first.text}`);
+check((await buttons()).join('|') === 'Close', `only Close after a success: ${(await buttons()).join('|')}`);
+const kept = await page.evaluate(() => ['name', 'email', 'subject', 'message'].map(key => document.querySelector(`form.ed-contact-form [name="${key}"]`).value));
+check(kept.join('|') === 'Ada|ada@example.org||', `a sent message keeps name and e-mail, clears subject and text: ${kept.join('|')}`);
+check((await state()).items.length === 0, 'a sent message clears the files');
 await page.click('dialog.ed-contact-notice button:last-child');
 
-// A refusal says why and offers Copy report; the text and files stay.
+// A refusal says why; the text and files stay.
 await page.evaluate(() => (window.reply = { status: 502, body: '{"error":"the message could not be stored (GitHub 422), try again later"}' }));
 await drop(['lbco.cif']);
 await page.fill('textarea[name="message"]', 'Second try');
 await page.click('form.ed-contact-form button[type="submit"]');
 await page.waitForSelector('dialog.ed-contact-notice[open]');
-const second = await page.evaluate(() => ({ text: document.querySelector('dialog.ed-contact-notice p').textContent, copy: !document.querySelector('.ed-contact-copy-report').hidden, copyText: document.querySelector('.ed-contact-copy-report').textContent }));
+const second = await page.evaluate(() => ({ text: document.querySelector('dialog.ed-contact-notice p').textContent }));
 check(second.text === 'The feedback service did not take the message (502): the message could not be stored (GitHub 422), try again later', `refusal: ${second.text}`);
-check(second.copy && second.copyText === 'Copy report', 'Copy report after a failed send');
+check((await buttons()).join('|') === 'Close', `only Close after a refusal: ${(await buttons()).join('|')}`);
 check((await state()).items.length === 1 && (await page.inputValue('textarea[name="message"]')) === 'Second try', 'a failed send keeps the text and files');
 
 check(errors.length === 0, `no page errors: ${errors.join('; ')}`);

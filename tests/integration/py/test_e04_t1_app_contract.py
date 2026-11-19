@@ -49,12 +49,9 @@ def without_comments(source):
     return re.sub(r'//[^\n]*|/\*.*?\*/', '', source, flags=re.DOTALL)
 
 
-def report_model_exception_spans(source, relative_path):  # noqa: PLR0911 - each failed identity check refuses independently
-    # OWNER DECISION 2026-10-14, hub 3f2ce1cf6, decision-records.md:
-    # "the report model crosses into the Report page untyped for now".
-    # The planned schema successor removes this sole temporary exception.
-    # Its exact task identity and the owner citation live in the hub acceptance receipt.
-    if relative_path != 'app/src/report_view_model.hpp':
+def owned_property_spans(source, relative_path, header, owner, declaration, *, invokable=False):  # noqa: PLR0911 - each failed identity check refuses independently
+    # Except only the one declared property of its qualified owner and header.
+    if relative_path != header:
         return set()
     classes = []
     for match in re.finditer(r'\b(?:class|struct)\s+(\w+)[^;{}]*\{', source):
@@ -65,7 +62,7 @@ def report_model_exception_spans(source, relative_path):  # noqa: PLR0911 - each
         if depth:
             return set()
         classes.append((match[1], match.end(), end))
-    if sum(name == 'ReportViewModel' for name, _, _ in classes) != 1:
+    if sum(name == owner for name, _, _ in classes) != 1:
         return set()
     namespaces = []
     for match in re.finditer(r'\bnamespace\s*(\w+(?:::\w+)*)?\s*\{', source):
@@ -76,12 +73,14 @@ def report_model_exception_spans(source, relative_path):  # noqa: PLR0911 - each
         if depth:
             return set()
         namespaces.append((match[1], match.end(), end))
-    properties = list(re.finditer(r'Q_PROPERTY\s*\((.*?)\)', source, re.DOTALL))
-    named = [
-        m
-        for m in properties
-        if re.fullmatch(r'\s*QVariantMap\s+model\s+READ\s+model\s+NOTIFY\s+modelChanged\s*', m[1])
-    ]
+    properties = list(
+        re.finditer(
+            r'Q_INVOKABLE\s+([^;{]+)' if invokable else r'Q_PROPERTY\s*\((.*?)\)',
+            source,
+            re.DOTALL,
+        )
+    )
+    named = [m for m in properties if re.fullmatch(declaration, m[1])]
     if len(named) != 1:
         return set()
     prop = named[0]
@@ -89,9 +88,56 @@ def report_model_exception_spans(source, relative_path):  # noqa: PLR0911 - each
     if enclosing != ['edi_app']:
         return set()
     owners = [entry for entry in classes if entry[1] <= prop.start() < entry[2]]
-    if not owners or min(owners, key=lambda entry: entry[2] - entry[1])[0] != 'ReportViewModel':
+    if not owners or min(owners, key=lambda entry: entry[2] - entry[1])[0] != owner:
         return set()
     return {prop.span()}
+
+
+def report_model_exception_spans(source, relative_path):
+    # The legacy report map remains until its typed schema successor.
+    return owned_property_spans(
+        source,
+        relative_path,
+        'app/src/report_view_model.hpp',
+        'ReportViewModel',
+        r'\s*QVariantMap\s+model\s+READ\s+model\s+NOTIFY\s+modelChanged\s*',
+    )
+
+
+def structure_bonds_exception_spans(source, relative_path):
+    return owned_property_spans(
+        source,
+        relative_path,
+        'app/src/structure_view_model.hpp',
+        'StructureViewModel',
+        r'\s*QVariantList\s+bonds\s+READ\s+bonds\s+NOTIFY\s+bondsChanged\s*',
+    )
+
+
+def shipped_method_exception_spans(source, relative_path):
+    # Labelled API regression pins from the shipped toolbar and comparison-plot owners.
+    rows = [
+        (
+            'app/src/toolbar_row.hpp',
+            'ToolbarRow',
+            (
+                r'\s*QVariantMap\s+layout\s*\(\s*const\s+QVariantList\s*&\s*units,\s*double\s+left,'
+                r'\s*double\s+right,\s*double\s+spacing,\s*double\s+groupSpacing,'
+                r'\s*double\s+moreWidth\s*\)\s*const\s*'
+            ),
+        ),
+        (
+            'app/src/experiment_view_model.hpp',
+            'ExperimentViewModel',
+            r'\s*QVariantMap\s+measCalcPoints\s*\(\s*int\s+scale\s*=\s*0\s*\)\s*const\s*',
+        ),
+    ]
+    return set().union(
+        *(
+            owned_property_spans(source, relative_path, header, owner, declaration, invokable=True)
+            for header, owner, declaration in rows
+        )
+    )
 
 
 def assistant_exception_spans(source, relative_path):
@@ -135,6 +181,8 @@ def api_violations(source, relative_path=None):
                 forbidden.add(name or old_name)
     allowed = report_model_exception_spans(source, relative_path)
     allowed |= assistant_exception_spans(source, relative_path)
+    allowed |= structure_bonds_exception_spans(source, relative_path)
+    allowed |= shipped_method_exception_spans(source, relative_path)
     for start, end in sorted(allowed, reverse=True):
         source = source[:start] + ' ' * (end - start) + source[end:]
     surfaces = re.finditer(r'Q_PROPERTY\s*\((.*?)\)|Q_INVOKABLE\s+([^;{]+)', source, re.DOTALL)
@@ -242,6 +290,64 @@ REPORT_EXCEPTION = (
     'Q_PROPERTY(QVariantMap model READ model NOTIFY modelChanged) }; }'
 )
 REPORT_HEADER = 'app/src/report_view_model.hpp'
+
+
+def test_structure_bonds_legacy_container_is_scoped_to_its_declared_owner():
+    source = (
+        'namespace edi_app { class StructureViewModel : public QObject { '
+        'Q_PROPERTY(QVariantList bonds READ bonds NOTIFY bondsChanged) }; }'
+    )
+    header = 'app/src/structure_view_model.hpp'
+    assert not api_violations(source, header), (
+        'The shipped structure bond list is the one named legacy container for this owner'
+    )
+    for changed, path in [
+        (source, 'app/src/other.hpp'),
+        (source.replace('namespace edi_app', 'namespace other'), header),
+        (source.replace('class StructureViewModel', 'class Other'), header),
+        (source.replace('bonds READ bonds', 'other READ other'), header),
+        (source.replace('QVariantList', 'QVariantMap'), header),
+        (source.replace('};', 'Q_PROPERTY(QVariantList extra READ extra) };'), header),
+    ]:
+        assert api_violations(changed, path), (
+            'The legacy bond-list exception cannot admit another owner, member, type or API'
+        )
+
+
+def test_shipped_container_methods_cannot_admit_another_untyped_surface():
+    rows = [
+        (
+            'app/src/toolbar_row.hpp',
+            'ToolbarRow',
+            (
+                'QVariantMap layout(const QVariantList& units, '
+                'double left, double right, double spacing, '
+                'double groupSpacing, double moreWidth) const'
+            ),
+        ),
+        (
+            'app/src/experiment_view_model.hpp',
+            'ExperimentViewModel',
+            'QVariantMap measCalcPoints(int scale = 0) const',
+        ),
+    ]
+    for path, owner, declaration in rows:
+        source = (
+            'namespace edi_app { '
+            f'class {owner} : public QObject {{ Q_INVOKABLE {declaration}; }}; }}'
+        )
+        assert not api_violations(source, path), (
+            'Only the named shipped container method of its qualified owner is retained'
+        )
+        for changed, header in [
+            (source, 'app/src/other.hpp'),
+            (source.replace(owner, 'Other'), path),
+            (source.replace('QVariantMap', 'QVariantHash'), path),
+            (source.replace('};', 'Q_PROPERTY(QVariantMap extra READ extra) };'), path),
+        ]:
+            assert api_violations(changed, header), (
+                'Shipped legacy method pins do not permit another owner, type, member or API'
+            )
 
 
 def test_report_model_owner_exception_is_exactly_one_named_property():
@@ -899,6 +1005,24 @@ def test_frozen_oracle_inputs_are_the_committed_fixture_bytes():
     )
 
 
+def assert_series_oracle_sources(project):
+    series = project['series']
+    points = {
+        'pd-neut-tof_ncaf-wish-5bank_scan-6p': 6,
+        'pd-neut-tof_ncaf-wish-5bank_synthetic-100p': 100,
+    }
+    assert len(series['banks']) == len(set(series['banks'])) and series['points'], (
+        'A joint-series oracle retains its complete bank and point identities'
+    )
+    assert len(series['points']) == points[project['id']], (
+        'Each declared public series retains its independently authored point population'
+    )
+    for relative, digest in series['files'].items():
+        assert (
+            hashlib.sha256((ROOT / project['path'] / relative).read_bytes()).hexdigest() == digest
+        ), 'Each series bank and point is bound to its independent measured input bytes'
+
+
 def test_existing_projects_oracle_covers_the_registry_without_filters():
     # The manual estimate extension changes only the LBCO experiment source hash;
     # all project-block values, other files and the complete registry stay pinned.
@@ -912,17 +1036,16 @@ def test_existing_projects_oracle_covers_the_registry_without_filters():
 
     selection = current_cases()
     expected_app_ids = [row['id'] for row in selection]
-    app_only_ids = []
+    app_only_ids = ['pd-neut-tof_ncaf-wish-5bank_synthetic-100p']
     assert oracle['app_only_ids'] == app_only_ids, (
-        'The catalogue form retires every former single-crystal app-only entry'
+        'The declared synthetic series is the sole app-only example beside the shared catalogue'
     )
     assert [row['id'] for row in registry['projects'] if row.get('app-only')] == app_only_ids, (
         'The registry must refuse every app-only entry outside the declared list'
     )
-    assert oracle['app_ids'] == [*expected_app_ids, *app_only_ids], (
-        'The complete app oracle must be exactly the catalogue followed by '
-        'the declared app-only list'
-    )
+    assert oracle['app_ids'] == [
+        row for row in ids if row in {*expected_app_ids, *app_only_ids}
+    ], 'The complete app oracle retains every shared and app-only case in registry order'
     metadata = json.loads((ROOT / 'app/examples/metadata.json').read_text())
     assert list(metadata['examples']) == oracle['app_ids'], (
         'App metadata must contain every declared catalogue and app-only identity in order'
@@ -968,6 +1091,8 @@ def test_existing_projects_oracle_covers_the_registry_without_filters():
                 'gate 3: scan projects exercise every read-only scan field'
             )
     for project in oracle['projects']:
+        if project.get('series'):
+            assert_series_oracle_sources(project)
         for dataset in project.get('datasets', []):
             directory = project['analysis']['_sequential_fit.data_dir']
             source = ROOT / project['path'] / directory / dataset['file']

@@ -13,7 +13,7 @@ Shown: magnetic structure.
 
 ## Use this group
 
-On **Structure → Main**, expand **Magnetic space group**. For a magnetic structure, it shows the magnetic space group as the file names it: its BNS number, BNS symbol and UNI symbol. These values are read-only for now. Below them, the parent group is shown when it is not the space group itself, as in a supercell or a lower family group.
+On **Structure → Main**, expand **Magnetic space group**. A magnetic structure shows it in place of Space group: the crystal system, read only; the BNS number and BNS symbol, two linked fields that choose the group from the table of 1651 magnetic space groups; and the setting, the transform to the BNS standard (`a,b,c;0,0,0` for the standard itself). Make a structure magnetic in the **Structure** column of the Structures table. The derived symbols and the parent space group are on Extra.
 
 See [Magnetic structures](../../physics/magnetic.md) for the model.
 

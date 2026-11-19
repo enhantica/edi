@@ -222,7 +222,21 @@ var frozen = {
     "docs/user/cli/sc-neut-cwl_cosio-heidi/project/analysis/analysis.edi": "620e93ea4cb063a908db88aff58acfed83234bd6975be42c117a9b433128d7d9",
     "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_exclusions/project/structures/tb2ti2o7.edi": "e2752395f4a64fd69d6bd481bdf6895a36a09248a37e7f0ba3e6c33a0785a0df",
     "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_exclusions/project/experiments/heidi.edi": "9996b5c1420af1e4488488153ceadb7108e8ac1d7bfcd943e69f64ba81df1925",
-    "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_exclusions/project/analysis/analysis.edi": "bbee6c124a9efa78411d31fb1eef11495ba2eadbd7172a36b30905f1484b9876"
+    "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_exclusions/project/analysis/analysis.edi": "bbee6c124a9efa78411d31fb1eef11495ba2eadbd7172a36b30905f1484b9876",
+    "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_scan-6p/project/structures/ncaf.edi": "9284b3f18accd3a1adbd037fbaa7171e7569bf8189298096232f04cf31f497ad",
+    "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_scan-6p/project/experiments/wish_1_10.edi": "cb38712d8492a3aa8d56b2dfba65d4cc0f5a3e0c1dbda6a694c0b9de45be63df",
+    "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_scan-6p/project/experiments/wish_2_9.edi": "8e22671a10bb13c284529298b2f754e8a177499d8323d2dd5dd67b476b2b94ca",
+    "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_scan-6p/project/experiments/wish_3_8.edi": "25ca926bd7b1a851d734e1dcdb408ff6e1ad58b1fa04cff0a63da29d11dc126d",
+    "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_scan-6p/project/experiments/wish_4_7.edi": "eb403a405d4ed37f9f49c6caaf0aa56961e04547aa260d0ee52cffb15e91b77e",
+    "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_scan-6p/project/experiments/wish_5_6.edi": "86ba7e25c01e9f7e34f443f6d3a5f7ba6a6f10a9bf65cb79be8682e5ca7aa5d5",
+    "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_scan-6p/project/analysis/analysis.edi": "21b5c98f5c19e096c7e3f034a525b9cfdb868ac76fdcfe8a58657c74b179a2e2",
+    "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_synthetic-100p/project/structures/ncaf.edi": "9284b3f18accd3a1adbd037fbaa7171e7569bf8189298096232f04cf31f497ad",
+    "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_synthetic-100p/project/experiments/wish_1_10.edi": "cb38712d8492a3aa8d56b2dfba65d4cc0f5a3e0c1dbda6a694c0b9de45be63df",
+    "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_synthetic-100p/project/experiments/wish_2_9.edi": "8e22671a10bb13c284529298b2f754e8a177499d8323d2dd5dd67b476b2b94ca",
+    "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_synthetic-100p/project/experiments/wish_3_8.edi": "25ca926bd7b1a851d734e1dcdb408ff6e1ad58b1fa04cff0a63da29d11dc126d",
+    "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_synthetic-100p/project/experiments/wish_4_7.edi": "eb403a405d4ed37f9f49c6caaf0aa56961e04547aa260d0ee52cffb15e91b77e",
+    "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_synthetic-100p/project/experiments/wish_5_6.edi": "86ba7e25c01e9f7e34f443f6d3a5f7ba6a6f10a9bf65cb79be8682e5ca7aa5d5",
+    "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_synthetic-100p/project/analysis/analysis.edi": "21b5c98f5c19e096c7e3f034a525b9cfdb868ac76fdcfe8a58657c74b179a2e2"
   },
   "cases": [
     {
@@ -8982,6 +8996,746 @@ var frozen = {
     {
       "tag": "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_exclusions/project:engines",
       "path": "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_exclusions/project",
+      "page": "analysis",
+      "tier": "extras",
+      "group": "engines",
+      "selection": null,
+      "fields": [
+        [
+          "statusBar.calculator",
+          "crysta",
+          "label"
+        ],
+        [
+          "statusBar.minimizer",
+          "crysta",
+          "label"
+        ]
+      ]
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_scan-6p/project:space_group:ncaf",
+      "path": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_scan-6p/project",
+      "page": "structure",
+      "tier": "basic",
+      "group": "space_group",
+      "selection": "ncaf",
+      "fields": [
+        [
+          "spaceGroup.crystalSystem",
+          "cubic",
+          "readonly"
+        ],
+        [
+          "spaceGroup.itNumber",
+          "199",
+          "text"
+        ],
+        [
+          "spaceGroup.nameHM",
+          "I 21 3",
+          "text"
+        ],
+        [
+          "spaceGroup.coordSystemCode",
+          "1",
+          "text"
+        ]
+      ]
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_scan-6p/project:experiment_type:wish_1_10",
+      "path": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_scan-6p/project",
+      "page": "experiment",
+      "tier": "basic",
+      "group": "experiment_type",
+      "selection": "wish_1_10",
+      "fields": [
+        [
+          "experimentType.sampleForm",
+          "powder",
+          "disabled"
+        ],
+        [
+          "experimentType.beamMode",
+          "time-of-flight",
+          "disabled"
+        ],
+        [
+          "experimentType.radiationProbe",
+          "neutron",
+          "disabled"
+        ],
+        [
+          "experimentType.scatteringType",
+          "bragg",
+          "disabled"
+        ]
+      ]
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_scan-6p/project:data:wish_1_10",
+      "path": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_scan-6p/project",
+      "page": "experiment",
+      "tier": "extras",
+      "group": "data",
+      "selection": "wish_1_10",
+      "fields": [
+        [
+          "range.minimum",
+          4862.5732,
+          "number"
+        ],
+        [
+          "range.maximum",
+          256691.6094,
+          "number"
+        ],
+        [
+          "range.step",
+          "4.58\u20131190",
+          "readonly"
+        ],
+        [
+          "range.points",
+          4182,
+          "number"
+        ]
+      ]
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_scan-6p/project:experiment_type:wish_2_9",
+      "path": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_scan-6p/project",
+      "page": "experiment",
+      "tier": "basic",
+      "group": "experiment_type",
+      "selection": "wish_2_9",
+      "fields": [
+        [
+          "experimentType.sampleForm",
+          "powder",
+          "disabled"
+        ],
+        [
+          "experimentType.beamMode",
+          "time-of-flight",
+          "disabled"
+        ],
+        [
+          "experimentType.radiationProbe",
+          "neutron",
+          "disabled"
+        ],
+        [
+          "experimentType.scatteringType",
+          "bragg",
+          "disabled"
+        ]
+      ]
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_scan-6p/project:data:wish_2_9",
+      "path": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_scan-6p/project",
+      "page": "experiment",
+      "tier": "extras",
+      "group": "data",
+      "selection": "wish_2_9",
+      "fields": [
+        [
+          "range.minimum",
+          6075.1914,
+          "number"
+        ],
+        [
+          "range.maximum",
+          135112.4062,
+          "number"
+        ],
+        [
+          "range.step",
+          "4.51\u2013200",
+          "readonly"
+        ],
+        [
+          "range.points",
+          4166,
+          "number"
+        ]
+      ]
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_scan-6p/project:experiment_type:wish_3_8",
+      "path": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_scan-6p/project",
+      "page": "experiment",
+      "tier": "basic",
+      "group": "experiment_type",
+      "selection": "wish_3_8",
+      "fields": [
+        [
+          "experimentType.sampleForm",
+          "powder",
+          "disabled"
+        ],
+        [
+          "experimentType.beamMode",
+          "time-of-flight",
+          "disabled"
+        ],
+        [
+          "experimentType.radiationProbe",
+          "neutron",
+          "disabled"
+        ],
+        [
+          "experimentType.scatteringType",
+          "bragg",
+          "disabled"
+        ]
+      ]
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_scan-6p/project:data:wish_3_8",
+      "path": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_scan-6p/project",
+      "page": "experiment",
+      "tier": "extras",
+      "group": "data",
+      "selection": "wish_3_8",
+      "fields": [
+        [
+          "range.minimum",
+          7549.5366,
+          "number"
+        ],
+        [
+          "range.maximum",
+          116924.6406,
+          "number"
+        ],
+        [
+          "range.step",
+          "5.21\u201380.7",
+          "readonly"
+        ],
+        [
+          "range.points",
+          3970,
+          "number"
+        ]
+      ]
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_scan-6p/project:experiment_type:wish_4_7",
+      "path": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_scan-6p/project",
+      "page": "experiment",
+      "tier": "basic",
+      "group": "experiment_type",
+      "selection": "wish_4_7",
+      "fields": [
+        [
+          "experimentType.sampleForm",
+          "powder",
+          "disabled"
+        ],
+        [
+          "experimentType.beamMode",
+          "time-of-flight",
+          "disabled"
+        ],
+        [
+          "experimentType.radiationProbe",
+          "neutron",
+          "disabled"
+        ],
+        [
+          "experimentType.scatteringType",
+          "bragg",
+          "disabled"
+        ]
+      ]
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_scan-6p/project:data:wish_4_7",
+      "path": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_scan-6p/project",
+      "page": "experiment",
+      "tier": "extras",
+      "group": "data",
+      "selection": "wish_4_7",
+      "fields": [
+        [
+          "range.minimum",
+          7468.4165,
+          "number"
+        ],
+        [
+          "range.maximum",
+          109083.4844,
+          "number"
+        ],
+        [
+          "range.step",
+          "4.96\u201372.3",
+          "readonly"
+        ],
+        [
+          "range.points",
+          4043,
+          "number"
+        ]
+      ]
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_scan-6p/project:experiment_type:wish_5_6",
+      "path": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_scan-6p/project",
+      "page": "experiment",
+      "tier": "basic",
+      "group": "experiment_type",
+      "selection": "wish_5_6",
+      "fields": [
+        [
+          "experimentType.sampleForm",
+          "powder",
+          "disabled"
+        ],
+        [
+          "experimentType.beamMode",
+          "time-of-flight",
+          "disabled"
+        ],
+        [
+          "experimentType.radiationProbe",
+          "neutron",
+          "disabled"
+        ],
+        [
+          "experimentType.scatteringType",
+          "bragg",
+          "disabled"
+        ]
+      ]
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_scan-6p/project:data:wish_5_6",
+      "path": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_scan-6p/project",
+      "page": "experiment",
+      "tier": "extras",
+      "group": "data",
+      "selection": "wish_5_6",
+      "fields": [
+        [
+          "range.minimum",
+          7305.1274,
+          "number"
+        ],
+        [
+          "range.maximum",
+          103417.6719,
+          "number"
+        ],
+        [
+          "range.step",
+          "4.71\u201366.6",
+          "readonly"
+        ],
+        [
+          "range.points",
+          4114,
+          "number"
+        ]
+      ]
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_scan-6p/project:sequential_fit",
+      "path": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_scan-6p/project",
+      "page": "analysis",
+      "tier": "extras",
+      "group": "sequential_fit",
+      "selection": null,
+      "fields": [
+        [
+          "sequentialFit.dataDir",
+          "data",
+          "readonly"
+        ],
+        [
+          "sequentialFit.reverse",
+          "false",
+          "readonly"
+        ]
+      ]
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_scan-6p/project:engines",
+      "path": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_scan-6p/project",
+      "page": "analysis",
+      "tier": "extras",
+      "group": "engines",
+      "selection": null,
+      "fields": [
+        [
+          "statusBar.calculator",
+          "crysta",
+          "label"
+        ],
+        [
+          "statusBar.minimizer",
+          "crysta",
+          "label"
+        ]
+      ]
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_synthetic-100p/project:space_group:ncaf",
+      "path": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_synthetic-100p/project",
+      "page": "structure",
+      "tier": "basic",
+      "group": "space_group",
+      "selection": "ncaf",
+      "fields": [
+        [
+          "spaceGroup.crystalSystem",
+          "cubic",
+          "readonly"
+        ],
+        [
+          "spaceGroup.itNumber",
+          "199",
+          "text"
+        ],
+        [
+          "spaceGroup.nameHM",
+          "I 21 3",
+          "text"
+        ],
+        [
+          "spaceGroup.coordSystemCode",
+          "1",
+          "text"
+        ]
+      ]
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_synthetic-100p/project:experiment_type:wish_1_10",
+      "path": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_synthetic-100p/project",
+      "page": "experiment",
+      "tier": "basic",
+      "group": "experiment_type",
+      "selection": "wish_1_10",
+      "fields": [
+        [
+          "experimentType.sampleForm",
+          "powder",
+          "disabled"
+        ],
+        [
+          "experimentType.beamMode",
+          "time-of-flight",
+          "disabled"
+        ],
+        [
+          "experimentType.radiationProbe",
+          "neutron",
+          "disabled"
+        ],
+        [
+          "experimentType.scatteringType",
+          "bragg",
+          "disabled"
+        ]
+      ]
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_synthetic-100p/project:data:wish_1_10",
+      "path": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_synthetic-100p/project",
+      "page": "experiment",
+      "tier": "extras",
+      "group": "data",
+      "selection": "wish_1_10",
+      "fields": [
+        [
+          "range.minimum",
+          4862.5732,
+          "number"
+        ],
+        [
+          "range.maximum",
+          256691.6094,
+          "number"
+        ],
+        [
+          "range.step",
+          "4.58\u20131190",
+          "readonly"
+        ],
+        [
+          "range.points",
+          4182,
+          "number"
+        ]
+      ]
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_synthetic-100p/project:experiment_type:wish_2_9",
+      "path": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_synthetic-100p/project",
+      "page": "experiment",
+      "tier": "basic",
+      "group": "experiment_type",
+      "selection": "wish_2_9",
+      "fields": [
+        [
+          "experimentType.sampleForm",
+          "powder",
+          "disabled"
+        ],
+        [
+          "experimentType.beamMode",
+          "time-of-flight",
+          "disabled"
+        ],
+        [
+          "experimentType.radiationProbe",
+          "neutron",
+          "disabled"
+        ],
+        [
+          "experimentType.scatteringType",
+          "bragg",
+          "disabled"
+        ]
+      ]
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_synthetic-100p/project:data:wish_2_9",
+      "path": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_synthetic-100p/project",
+      "page": "experiment",
+      "tier": "extras",
+      "group": "data",
+      "selection": "wish_2_9",
+      "fields": [
+        [
+          "range.minimum",
+          6075.1914,
+          "number"
+        ],
+        [
+          "range.maximum",
+          135112.4062,
+          "number"
+        ],
+        [
+          "range.step",
+          "4.51\u2013200",
+          "readonly"
+        ],
+        [
+          "range.points",
+          4166,
+          "number"
+        ]
+      ]
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_synthetic-100p/project:experiment_type:wish_3_8",
+      "path": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_synthetic-100p/project",
+      "page": "experiment",
+      "tier": "basic",
+      "group": "experiment_type",
+      "selection": "wish_3_8",
+      "fields": [
+        [
+          "experimentType.sampleForm",
+          "powder",
+          "disabled"
+        ],
+        [
+          "experimentType.beamMode",
+          "time-of-flight",
+          "disabled"
+        ],
+        [
+          "experimentType.radiationProbe",
+          "neutron",
+          "disabled"
+        ],
+        [
+          "experimentType.scatteringType",
+          "bragg",
+          "disabled"
+        ]
+      ]
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_synthetic-100p/project:data:wish_3_8",
+      "path": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_synthetic-100p/project",
+      "page": "experiment",
+      "tier": "extras",
+      "group": "data",
+      "selection": "wish_3_8",
+      "fields": [
+        [
+          "range.minimum",
+          7549.5366,
+          "number"
+        ],
+        [
+          "range.maximum",
+          116924.6406,
+          "number"
+        ],
+        [
+          "range.step",
+          "5.21\u201380.7",
+          "readonly"
+        ],
+        [
+          "range.points",
+          3970,
+          "number"
+        ]
+      ]
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_synthetic-100p/project:experiment_type:wish_4_7",
+      "path": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_synthetic-100p/project",
+      "page": "experiment",
+      "tier": "basic",
+      "group": "experiment_type",
+      "selection": "wish_4_7",
+      "fields": [
+        [
+          "experimentType.sampleForm",
+          "powder",
+          "disabled"
+        ],
+        [
+          "experimentType.beamMode",
+          "time-of-flight",
+          "disabled"
+        ],
+        [
+          "experimentType.radiationProbe",
+          "neutron",
+          "disabled"
+        ],
+        [
+          "experimentType.scatteringType",
+          "bragg",
+          "disabled"
+        ]
+      ]
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_synthetic-100p/project:data:wish_4_7",
+      "path": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_synthetic-100p/project",
+      "page": "experiment",
+      "tier": "extras",
+      "group": "data",
+      "selection": "wish_4_7",
+      "fields": [
+        [
+          "range.minimum",
+          7468.4165,
+          "number"
+        ],
+        [
+          "range.maximum",
+          109083.4844,
+          "number"
+        ],
+        [
+          "range.step",
+          "4.96\u201372.3",
+          "readonly"
+        ],
+        [
+          "range.points",
+          4043,
+          "number"
+        ]
+      ]
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_synthetic-100p/project:experiment_type:wish_5_6",
+      "path": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_synthetic-100p/project",
+      "page": "experiment",
+      "tier": "basic",
+      "group": "experiment_type",
+      "selection": "wish_5_6",
+      "fields": [
+        [
+          "experimentType.sampleForm",
+          "powder",
+          "disabled"
+        ],
+        [
+          "experimentType.beamMode",
+          "time-of-flight",
+          "disabled"
+        ],
+        [
+          "experimentType.radiationProbe",
+          "neutron",
+          "disabled"
+        ],
+        [
+          "experimentType.scatteringType",
+          "bragg",
+          "disabled"
+        ]
+      ]
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_synthetic-100p/project:data:wish_5_6",
+      "path": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_synthetic-100p/project",
+      "page": "experiment",
+      "tier": "extras",
+      "group": "data",
+      "selection": "wish_5_6",
+      "fields": [
+        [
+          "range.minimum",
+          7305.1274,
+          "number"
+        ],
+        [
+          "range.maximum",
+          103417.6719,
+          "number"
+        ],
+        [
+          "range.step",
+          "4.71\u201366.6",
+          "readonly"
+        ],
+        [
+          "range.points",
+          4114,
+          "number"
+        ]
+      ]
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_synthetic-100p/project:sequential_fit",
+      "path": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_synthetic-100p/project",
+      "page": "analysis",
+      "tier": "extras",
+      "group": "sequential_fit",
+      "selection": null,
+      "fields": [
+        [
+          "sequentialFit.dataDir",
+          "data",
+          "readonly"
+        ],
+        [
+          "sequentialFit.reverse",
+          "false",
+          "readonly"
+        ]
+      ]
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_synthetic-100p/project:engines",
+      "path": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_synthetic-100p/project",
       "page": "analysis",
       "tier": "extras",
       "group": "engines",

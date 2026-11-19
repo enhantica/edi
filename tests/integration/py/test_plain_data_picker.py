@@ -40,6 +40,7 @@ def require_picker(text, browser, scenario='accepted', *, sample_form='powder'):
 let calls=[];
 const ExperimentViewModel={SingleCrystal:'single crystal'};
 const initiator={id:'initiator',canLoadData:true,calculationOnly:true,sampleForm:SAMPLE_FORM};
+const dataMenu={target:initiator};
 const other={id:'other',canLoadData:true,calculationOnly:true};
 const original={currentExperimentIndex:4,currentExperiment:initiator,
     createExperiment:()=>{
@@ -58,6 +59,7 @@ const group={project:original,webRequest:0,webRequestProject:null,webDataExperim
     confirmScanReplacement:proceed=>proceed()};
 const Session={get project(){return group.project}};
 const qsTr=text=>text;
+const DialogFolders={remember:()=>{}};
 const WebFiles={available:BROWSER,
     openFiles:(filter,multiple)=>{calls.push(['web',filter,multiple]);return 41;}};
 const dataDialog={intent:null,experiment:null,project:null,visible:false,
@@ -66,7 +68,7 @@ const dataDialog={intent:null,experiment:null,project:null,visible:false,
 group.dataFilter=DATA_FILTER;
 group.chooseData=CHOOSE;
 group.chooseDataForSelected=function() { with(group) SELECTED }
-function click() { ACTION }
+function click() { const row={experiment:original.currentExperiment}; if (ENABLED) { ACTION } }
 function accept() { with(dataDialog) ACCEPTED }
 RECEIVED
 FAILED
@@ -107,7 +109,8 @@ console.log(JSON.stringify({calls,desktopFilters}));
         'DATA_FILTER': property_value(text, 'dataFilter'),
         'CHOOSE': block(text, 'function chooseData('),
         'SELECTED': selected[selected.index('{') :],
-        'BEFORE': 'original.currentExperiment=null;' if no_target else '',
+        'BEFORE': 'original.currentExperiment=null;dataMenu.target=null;' if no_target else '',
+        'ENABLED': property_value(by_id(text, 'loadDataButton'), 'enabled'),
         'ACTION': property_value(item(text, 'experiments.load.dataFile'), 'onTriggered'),
         'ACCEPTED': property_value(dialog, 'onAccepted'),
         'RECEIVED': block(existing_scope, 'function onFilesOpened('),
@@ -211,10 +214,10 @@ def test_load_data_click_and_result_reach_the_initiating_row(browser, scenario):
 def test_availability_observer_rejects_retired_or_overbroad_rules(damage):
     text = source(PATH)
     require_availability(text)
-    control = item(text, 'experiments.load.dataFile')
+    control = by_id(text, 'loadDataButton')
     property_name = 'enabled'
     replacement = (
-        'loadMenu.selected !== null && loadMenu.selected.calculationOnly'
+        'row.experiment !== null && row.experiment.calculationOnly'
         if damage == 'simulation-only'
         else 'false'
         if damage == 'always-disabled'
@@ -239,12 +242,12 @@ def picker_control():
     ('old', 'new', 'browser', 'scenario'),
     [
         (
-            'onTriggered: group.confirmScanReplacement(() => group.chooseDataForSelected())',
-            'onTriggered: {}',
+            'group.confirmScanReplacement(() => group.chooseData(target));',
+            'return;',
             True,
             'accepted',
         ),
-        ('chooseData(project.currentExperiment)', 'chooseData(other)', False, 'accepted'),
+        ('group.chooseData(target)', 'group.chooseData(other)', False, 'accepted'),
         ('ApplicationInfo.chooseExperimentData(experiment);', 'return;', False, 'accepted'),
         (
             'ApplicationInfo.acceptExperimentDataFile()',

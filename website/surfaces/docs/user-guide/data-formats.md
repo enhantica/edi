@@ -128,7 +128,7 @@ Imported values start **fixed** unless they carry a standard uncertainty: a valu
 
 Every item in the file is either used, checked against what EasyDiffraction derives itself, reported as not read, or stops the import with an error that names it. Items that are not read come back as warnings beginning with `crysta.schema.cif_items_not_read`, each with a reason, so you can see exactly what was ignored.
 
-A structure is read from the one block that gives a cell, and an experiment from the one block that gives experiment items and no cell. A file with several such blocks is refused. Magnetic and modulated structures and mmCIF files are not supported.
+A structure is read from the one block that gives a cell, and an experiment from the one block that gives experiment items and no cell. A file with several such blocks is refused. A magnetic CIF (`.mcif`) gives a magnetic structure; modulated structures and mmCIF files are not supported.
 
 ### Structure files {#structure-edi}
 

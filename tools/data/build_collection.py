@@ -36,6 +36,7 @@ EXAMPLES = ROOT / 'docs/user/cli'
 METADATA = ROOT / 'app/examples/metadata.json'
 TUTORIAL_FILES = ROOT / 'app/tutorials/files'
 TUTORIALS = ROOT / 'docs/user/tutorials'
+COLLECTION_STRUCTURES = ROOT / 'data/collection/structures'
 try:
     import edi  # the core reader, for `check`; `populate` and `index` need no build
 except ImportError:  # pragma: no cover - the environment decides
@@ -442,6 +443,18 @@ def populate(output: Path) -> int:
                 'facility': 'PSI',
             })
         write_sidecar(target, meta)
+        count += 1
+    # Structures published on their own, each with its sidecar (a citation where it has one):
+    # a magnetic CIF the Examples do not hold, offered under Load structure > From web.
+    for file in sorted(COLLECTION_STRUCTURES.glob('*')):
+        if file.name.endswith('.meta.json') or not file.is_file():
+            continue
+        target = output / FOLDERS['structure'] / file.name
+        shutil.copyfile(file, target)
+        sidecar = file.with_name(file.name + '.meta.json')
+        if not sidecar.is_file():
+            raise SystemExit(f'build_collection: {file} has no {sidecar.name}')
+        shutil.copyfile(sidecar, target.with_name(target.name + '.meta.json'))
         count += 1
     print(f'populate: {count} files under {output}')
     return 0

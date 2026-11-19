@@ -92,6 +92,28 @@ QString newWebKey() { return QUuid::createUuid().toString(QUuid::WithoutBraces);
 
 // ---- WarningListModel ---------------------------------------------------------------------------
 
+namespace {
+// A CIF import's notes as the messages list says them: crysta's code (which Python and the command line keep for
+// filtering) left out, crysta named as the app, and the propagation vector a magnetic CIF leaves out said in words.
+QString plain_message(QString text) {
+    static const QString cif_code = QStringLiteral("crysta.schema.cif_items_not_read: ");
+    if (!text.contains(cif_code)) return text;
+    text.remove(cif_code);
+    const std::pair<const char*, const char*> plain[] = {
+        {"k = 0, as the group is grey",
+         "the propagation vector is taken as k = 0: the file gives none, and a grey group allows no other"},
+        {"k = 0, as the identity transform fixes it",
+         "the propagation vector is taken as k = 0: the file gives none, and its parent-to-child transform implies it"},
+        {"no crysta item has these names", "EasyDiffraction has no items with these names"},
+        {"crysta calculates these values itself", "EasyDiffraction calculates these values itself"},
+        {"crysta cannot tell an empty, ? or . text from one left out, so it reads the item as left out",
+         "an empty, ? or . text cannot be told from a value left out, so the item is read as left out"},
+    };
+    for (const auto& [from, to] : plain) text.replace(QLatin1String(from), QLatin1String(to));
+    return text;
+}
+}  // namespace
+
 WarningListModel::WarningListModel(QObject* parent) : RowTableModel({"message", "severity"}, parent) {}
 
 void WarningListModel::setMessages(const QStringList& messages, const QStringList& sources) {
@@ -101,7 +123,7 @@ void WarningListModel::setMessages(const QStringList& messages, const QStringLis
         const QString source = sources.value(i);
         const QString key = source.isEmpty() ? QStringLiteral("load:%1").arg(i) : fileKey(QStringLiteral("load-file:"), source, messages[i]);
         if (lists(key)) continue;
-        messages_.push_back({next_id_++, key, messages[i], QStringLiteral("warning")});
+        messages_.push_back({next_id_++, key, plain_message(messages[i]), QStringLiteral("warning")});
     }
     changed();
 }
@@ -116,7 +138,7 @@ void WarningListModel::post(const QString& key, const QString& text, const QStri
             return;
         }
     }
-    messages_.push_back({next_id_++, key, text, severity});
+    messages_.push_back({next_id_++, key, plain_message(text), severity});
     changed();
 }
 
@@ -592,9 +614,46 @@ QString Session::locationText() const {
 }
 
 bool Session::needsSaveAs() const {
-    // Every project in the web app has its place, which Save writes.
-    return project_ != nullptr && !WebFiles::available()
-           && (project_->path().isEmpty() || !opened_example_.isEmpty() || read_only_copy_);
+    // Every project in the web app has its place, which Save writes, except an untitled one, which Create names first.
+    return project_ != nullptr &&
+           (untitled_ || (!WebFiles::available() &&
+                          (project_->path().isEmpty() || !opened_example_.isEmpty() || read_only_copy_)));
+}
+
+void Session::setUntitled(bool untitled) {
+    if (untitled != untitled_) {
+        untitled_ = untitled;
+        emit untitledChanged();
+        emit needsSaveAsChanged();
+    }
+}
+
+bool Session::startUntitledProject(const QString& suRule, bool reportLibraries) {
+    if (project_ != nullptr) return false;
+#if EDI_APP_ASSISTANT
+    // Navigation during the assistant's Create must keep its original owner until the popup's OK (ADR-0017 §13).
+    if (assistant_->ordinaryProjectCreationPending()) return false;
+#endif
+    const QPointer<Session> receiver(this);
+    QPointer<ProjectViewModel> draft;
+    try {
+        edi::Project work = edi::empty_project("untitled", {});
+        if (suRule == QStringLiteral("iucr_19") || suRule == QStringLiteral("iucr_99")) work.su_rule = suRule.toStdString();
+        work.report_html_offline = reportLibraries;
+        draft = new ProjectViewModel(std::move(work), this, colour_scheme_);
+    } catch (const std::exception& refusal) {
+        if (receiver) setLastError(QString::fromUtf8(refusal.what()));
+        return false;
+    }
+    if (!replaceProject(draft, {}, {}, false, nullptr, nullptr, true)) {
+        if (receiver && draft && project_ != draft) draft->deleteLater();
+        return false;
+    }
+    if (!receiver || !draft || project_ != draft) return false;
+    setUntitled(true);
+    // In the web app its recovery copy is marked untitled, so a recovered one is untitled again (setWebPlace).
+    if (WebFiles::available()) setWebPlace({web_place_.key, QStringLiteral("untitled"), tr("Untitled project")});
+    return true;
 }
 
 bool Session::save() {
@@ -1036,6 +1095,8 @@ bool Session::saveProjectAsFreshWith(const SaveOperation& operation,const QUrl& 
         archive_location_.clear();releaseTemporaryFolder();if(!current())return false;
     }
     setLastError({});if(!current())return false;
+    // Saved at a place of its own (an assistant's or a window's Save As): no longer untitled.
+    setUntitled(false);if(!current())return false;
     if(notify) {
         emit projectLocationChanged();if(!current())return false;
         emit needsSaveAsChanged();if(!current())return false;
@@ -1585,6 +1646,56 @@ bool Session::creationOutcomeCurrent(const edi_app::ProjectCreationResult& outco
     return (!outcome.has_owner || original) && project_ == original &&
         outcome.replacement == QString::number(replacement_generation_);
 }
+bool Session::adoptUntitled(const QString& name, const QString& description, const QString& location,
+                            const QString& title, const QString& authors, ProjectCreationOutcome* outcome, bool replace) {
+    const QPointer<ProjectViewModel> project(project_);
+    if (outcome) { outcome->owner = project_; outcome->has_owner = true; outcome->replacement = replacement_generation_; }
+    project_->setName(name);
+    project_->setDescription(description);
+    project_->setTitle(title);
+    project_->setAuthors(authors);
+    bool saved = false;
+    if (location.isEmpty()) {
+        // The web app (or a project shown without a place): a browser place of its own, which Save writes.
+        if (WebFiles::available()) setWebPlace({web_place_.key, QStringLiteral("browser"), folderNameFor(name)});
+        setUntitled(false);
+        saved = !WebFiles::available() || save();
+    } else {
+        const QFileInfo existing(location);
+        if ((existing.exists() || existing.isSymLink()) && !replace) {
+            setLastError(tr("%1 exists already; nothing was saved.").arg(existing.absoluteFilePath()));
+        } else if (existing.exists() && (!existing.isDir() || !QFileInfo::exists(existing.absoluteFilePath() + QStringLiteral("/project.edi")))) {
+            setLastError(tr("%1 exists and is not a project folder; nothing was replaced.").arg(existing.absoluteFilePath()));
+        } else {
+            // Over a project folder, once the user chose Replace: the old one moves aside until the save has worked.
+            QString aside;
+            if (existing.exists()) {
+                aside = existing.absoluteFilePath() + QStringLiteral(".edi-replaced");
+                for (int n = 2; QFileInfo::exists(aside); ++n) aside = existing.absoluteFilePath() + QStringLiteral(".edi-replaced-%1").arg(n);
+                if (!QDir().rename(existing.absoluteFilePath(), aside)) {
+                    setLastError(tr("The project %1 could not be replaced: it could not be moved aside").arg(existing.fileName()));
+                    aside = QStringLiteral("-");
+                }
+            }
+            if (aside != QStringLiteral("-")) {
+                saved = saveProjectAsFresh(QUrl::fromLocalFile(location), false, false, false);
+                if (!aside.isEmpty()) {
+                    if (saved) {
+                        QDir(aside).removeRecursively();
+                    } else {
+                        QDir(location).removeRecursively();
+                        QDir().rename(aside, location);
+                    }
+                }
+            }
+        }
+        if (saved && project == project_) setUntitled(false);
+    }
+    const QString error = saved ? QString{} : last_error_;
+    if (outcome) { outcome->error = error; outcome->saved = saved; outcome->path = project ? project->path() : QString{}; }
+    return saved;
+}
+
 bool Session::createProjectImpl(const QString& name, const QString& description, const QString& location,
                             const QString& suRule, const QString& title, const QString& authors,
                             bool reportLibraries, const QString& assistantIntent, ProjectCreationOutcome* outcome, bool replace) {
@@ -1595,12 +1706,14 @@ bool Session::createProjectImpl(const QString& name, const QString& description,
         if (outcome) outcome->error = refusal;
         return false;
     }
+    // Create while a project is untitled names and saves that project, the work in it kept (the owner, 2026-11-19).
+    if (untitled_ && project_ != nullptr && assistantIntent.isEmpty()) {
+        return adoptUntitled(name, description, location, title, authors, outcome, replace);
+    }
     ProjectViewModel* created = nullptr;
     try {
         edi::Project project = edi::empty_project(name.toStdString(), description.toStdString());
-        if (!title.isEmpty()) {
-            project.metadata.title = title.toStdString();
-        }
+        project.metadata.title = title.toStdString();
         project.metadata.authors = authors.toStdString();
         if (suRule == QStringLiteral("iucr_19") || suRule == QStringLiteral("iucr_99")) {
             project.su_rule = suRule.toStdString();
@@ -1821,6 +1934,38 @@ void Session::syncCalculationMessages() {
     for (const QString& refusal : refusals) {
         warnings_->post(prefix + refusal, tr("Calculation refused: %1").arg(refusal), QStringLiteral("error"));
     }
+    // A point the 2θ offset moves below 0° or above 180° takes no part in the calculation or the fit (the owner,
+    // 2026-11-19): said once per experiment and count, in plain words, and withdrawn when none is left out.
+    const QString domain = QStringLiteral("domain:");
+    QStringList left_out;
+    if (project_ != nullptr) {
+        for (ExperimentViewModel* model : project_->experimentModels()) {
+            const edi::ExperimentBase& experiment = *model->experiment();
+            if (experiment.effective_beam_mode() != edi::BeamModeEnum::CONSTANT_WAVELENGTH || !experiment.data) continue;
+            const double offset = experiment.instrument.calib_twotheta_offset
+                                      ? experiment.instrument.calib_twotheta_offset->value.get()
+                                      : 0.0;
+            int count = 0;
+            for (const double angle : experiment.data->axis()) {
+                const double corrected = angle - offset;
+                if (!(corrected > 0.0 && corrected < 180.0)) ++count;
+            }
+            if (count == 0) continue;
+            const QString key = domain + QString::fromStdString(experiment.name) + u':' + QString::number(count);
+            left_out.append(key);
+            if (!warnings_->keys(domain).contains(key)) {
+                warnings_->post(key,
+                                tr("%1: %n point(s) fall outside 0° to 180° once the 2θ offset of %2° is applied; they "
+                                   "take no part in the calculation or the fit.", nullptr, count)
+                                    .arg(QString::fromStdString(experiment.name))
+                                    .arg(offset, 0, 'g', 6),
+                                QStringLiteral("information"));
+            }
+        }
+    }
+    for (const QString& key : warnings_->keys(domain)) {
+        if (!left_out.contains(key)) warnings_->withdraw(key);
+    }
 }
 
 bool Session::projectDirectoryExists(const QString& path) const {
@@ -2029,6 +2174,7 @@ bool Session::replaceProject(ProjectViewModel* project, const QStringList& warni
     // In the web app a project starts in the browser's own storage; an open from the disk or from a stored place
     // names its place once it is open.
     web_place_ = {};
+    setUntitled(false);  // a project replacing the untitled one is its own; startUntitledProject marks a new one
     web_from_file_ = false;web_source_path_.clear();
     if (project != nullptr && WebFiles::available()) {
         web_place_ = {newWebKey(), QStringLiteral("browser"), folderNameFor(project->name())};
@@ -2165,6 +2311,7 @@ void Session::setWebPlace(const WebPlace& place) {
     const QPointer<Session> receiver(this);const QPointer<ProjectViewModel> target(project_);  // NOLINT(clang-analyzer-core.NullDereference): this is live here.
     const auto binding=replacement_generation_;const auto pathBinding=path_generation_;
     web_place_ = place;
+    setUntitled(place.kind == QStringLiteral("untitled"));
     emit locationTextChanged();
     if(!receiver || project_!=target || replacement_generation_!=binding || pathBinding==UINT64_MAX || path_generation_!=pathBinding)return;
     emit projectLocationChanged();
@@ -2516,6 +2663,15 @@ void Session::keepChanges() {
     const WebPlace place = web_place_;
     WebStorage::instance()->write(place.key, place.kind, place.name, root, true,
                                   [root](const WebStorageAnswer&) { QDir(root).removeRecursively(); });
+}
+
+void Session::reportRefusal(const QString& message) {
+    if (message.isEmpty()) {
+        return;
+    }
+    warnings_->post(QStringLiteral("refusal:%1").arg(++project_messages_), message, QStringLiteral("error"));
+    if (project_ != nullptr) project_->forgetLastError();
+    emit refused(message);
 }
 
 void Session::setLastError(const QString& error) {

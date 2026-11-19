@@ -419,6 +419,9 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     CorrelationViewModel* correlations() const { return correlations_; }
     int templateIndex() const;
     QString lastError() const { return last_error_; }
+    // The last refusal was reported in the error popup and the Messages center: a cell that committed it keeps its
+    // value in the normal colour, not marked as an error (the owner, 2026-11-19).
+    void forgetLastError() { setLastError({}); }
     bool calculating() const { return calculating_; }
     bool adjusting() const { return adjusting_; }
     void setAdjusting(bool adjusting);
@@ -511,6 +514,10 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // Whether an edit or a fit would be taken now, without the refusal a too-early press shows (a tutorial's Next
     // waits for this rather than meeting "still being published").
     Q_INVOKABLE bool readyForEdit() const { return editReadinessRefusal(false).isEmpty(); }
+    // A refusal that waiting does not clear: a replaced owner, a failed publication (Undo or reopen) or a dataset
+    // that could not be shown (choose it again).
+    bool editRefusalPersistent() const;
+    QString editRefusal() const { return editReadinessRefusal(false); }
     Q_INVOKABLE bool createStructure();
     // Duplicate structure: a copy of the current structure (edi::structure_copy) named `<name>_copy`, selected and
     // linked to no experiment. One undoable step.
@@ -1086,6 +1093,9 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     struct LoadedData {
         const edi::ExperimentBase* experiment = nullptr;
         std::shared_ptr<const edi::BraggPdExperiment> before;
+        // The fit result and every bank's share before the load. Undo restores them with their data, or restores
+        // their absence, even if the replacement data were fitted meanwhile.
+        std::shared_ptr<const edi::Project> fit_state;
     };
     // The table header's free or fixed: each parameter's flag as it was, by unique name.
     struct FreeFlags {
@@ -1127,6 +1137,10 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     void syncLoadState();
     // Applies an experiment's replacement by Load data or its undo; the refusal, if any.
     QString replaceData(int index, edi::BraggPdExperiment replacement, bool restoring = false);
+    // Keeps a replaced experiment alive until its view model is gone: the old model and its pattern hold it by
+    // reference, and they are rebuilt only when the edit publishes (the owner's crash of 2026-11-19).
+    void keepUntilModelGone(const edi::ExperimentBase* experiment, std::shared_ptr<const edi::ExperimentBase> held);
+
     bool restoreScanRun(const ScanRun& run, bool restoring = false);
     // The results read again from disk (after a run, an undo or a load), with every view of them.
     void reloadScanResults();
@@ -1401,6 +1415,8 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     quint64 revision_ = 0;
     QString last_error_;
     void announceRefused(const QString& message);  // every `refused`, with the file it attaches
+    void announceBrokenRelations();
+    QString broken_relations_;  // the relation problem last announced (announceBrokenRelations)
     QString published_name_, published_title_, published_description_, published_last_modified_;
     QString published_authors_, published_su_rule_;
     bool published_pattern_d_spacing_ = false;

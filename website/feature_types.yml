@@ -12,6 +12,7 @@ rows:
   Created by hand: {occurrences: [all, [neut], all]}
   From a saved project: {occurrences: [all, [neut], all]}
   # Magnetic structures (loading)
+  From a magnetic CIF file: [neut]
   From an `.edi` file: [neut]
   # Experiments
   A full experiment from a file: all
@@ -36,6 +37,8 @@ rows:
   Incommensurate and modulated structures: all
   'Symmetry modes: displacive, occupational and magnetic': all
   Commensurate magnetic structures: [neut]
+  Magnetic space groups of types I–III: [neut]
+  Type IV magnetic space groups (anti-translations): [neut]
   Incommensurate magnetic structures: [neut]
   Magnetic domains: [neut]
   Classical polarised neutron diffraction (flipping ratios): [sc, neut]

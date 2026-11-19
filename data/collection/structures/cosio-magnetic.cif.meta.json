@@ -1,0 +1,12 @@
+{
+ "id": "cosio-magnetic",
+ "name": "Co₂SiO₄ magnetic structure (magnetic CIF, Pnma.1)",
+ "description": "Olivine Co₂SiO₄ below 50 K with its k = 0 moments on Co1 and Co2, as ISODISTORT writes it; from A. Sazonov et al., “Magnetic behaviour of synthetic Co₂SiO₄”",
+ "source": "EasyDiffraction",
+ "authors": "A. Sazonov, M. Meven, V. Hutanu, G. Heger, T. Hansen, A. Gukasov",
+ "journal": "Acta Crystallographica Section B",
+ "volume": "65",
+ "first_page": "664",
+ "year": "2009",
+ "doi": "10.1107/S0108768109042499"
+}

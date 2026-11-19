@@ -323,6 +323,8 @@ qt_add_qml_module(edi_app_module
         qml/Pages/Structure/AtomSiteMomentGroup.qml
         qml/Pages/Structure/MagneticFormFactorsGroup.qml
         qml/Pages/Structure/MagneticSpaceGroupGroup.qml
+        qml/Pages/Structure/MagneticSymbolsGroup.qml
+        qml/Pages/Structure/ParentSpaceGroupGroup.qml
         qml/Pages/Structure/PolyhedraGroup.qml
         qml/Pages/Structure/PropagationVectorsGroup.qml
         qml/Pages/Structure/AtomSitesGroup.qml
@@ -628,9 +630,10 @@ if(NOT EMSCRIPTEN)
 endif()
 install(FILES ${EDI_APP_LICENCE_FILES} DESTINATION ${CMAKE_INSTALL_DOCDIR} COMPONENT desktop)
 
-# The EasyDiffraction data collection (enhantica/edi-data, about 14 MB), installed with the desktop app: examples open
-# from it at once, and the online collection is asked in the background only for what is new or changed (edi
-# ADR-0068). Empty installs none.
+# The EasyDiffraction data collection (enhantica/edi-data), installed with the desktop app: examples open from it at
+# once, and the online collection is asked in the background only for what is new or changed (edi ADR-0068). A file
+# over EDI_BUNDLED_ITEM_LIMIT is left out, its index entry kept: the app downloads it the first time it is opened
+# (two 30 MB WISH zips made the macOS update archive too large to publish). Empty installs none.
 set(EDI_BUNDLED_COLLECTION "" CACHE PATH "A copy of the edi-data collection to install as the app's offline copy")
 if(EDI_BUNDLED_COLLECTION AND NOT EMSCRIPTEN)
     if(NOT EXISTS "${EDI_BUNDLED_COLLECTION}/index.json")
@@ -643,8 +646,23 @@ if(EDI_BUNDLED_COLLECTION AND NOT EMSCRIPTEN)
         set(edi_collection_destination ${CMAKE_INSTALL_DATADIR}/edi/collection)
         set(edi_collection_from_binary ../${CMAKE_INSTALL_DATADIR}/edi/collection)
     endif()
-    install(DIRECTORY "${EDI_BUNDLED_COLLECTION}/" DESTINATION ${edi_collection_destination} COMPONENT desktop
-            PATTERN ".git" EXCLUDE PATTERN ".github" EXCLUDE)
+    set(EDI_BUNDLED_ITEM_LIMIT 5000000 CACHE STRING "Largest collection file, in bytes, installed with the app")
+    file(GLOB_RECURSE edi_collection_files LIST_DIRECTORIES false RELATIVE "${EDI_BUNDLED_COLLECTION}"
+         "${EDI_BUNDLED_COLLECTION}/*")
+    foreach(relative IN LISTS edi_collection_files)
+        if(relative MATCHES "^\\.git(hub)?(/|$)")
+            continue()
+        endif()
+        # Only an item (a file in one of the item folders) can be left out; the index and the other files at the
+        # collection's root are what finds them, and are always installed.
+        file(SIZE "${EDI_BUNDLED_COLLECTION}/${relative}" edi_collection_bytes)
+        if(relative MATCHES "^(structures|experiments|data|projects)/" AND edi_collection_bytes GREATER EDI_BUNDLED_ITEM_LIMIT)
+            continue()
+        endif()
+        get_filename_component(edi_collection_subdirectory "${relative}" DIRECTORY)
+        install(FILES "${EDI_BUNDLED_COLLECTION}/${relative}"
+                DESTINATION "${edi_collection_destination}/${edi_collection_subdirectory}" COMPONENT desktop)
+    endforeach()
     set_property(SOURCE src/online_sources.cpp APPEND PROPERTY COMPILE_DEFINITIONS
                  "EDI_APP_BUNDLED_COLLECTION=\"${edi_collection_from_binary}\"")
 endif()

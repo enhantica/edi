@@ -81,8 +81,18 @@ private slots:
         QVERIFY(QTest::qWaitForWindowActive(window));
         edi_app::AssistantWidgetInput input(*window);
         QString diagnostic;
+        const auto findItem = [&](const char* name) {
+            const auto walk = [&](QQuickItem* item, auto&& self) -> QQuickItem* {
+                if(item->objectName() == name) return item;
+                for(auto* child : item->childItems())
+                    if(auto* found = self(child, self)) return found;
+                return nullptr;
+            };
+            if(auto* item = walk(window->contentItem(), walk)) return item;
+            return root->findChild<QQuickItem*>(name);
+        };
         const auto click = [&](const char* name) {
-            auto* target = root->findChild<QQuickItem*>(name);
+            auto* target = findItem(name);
             if (!target) { diagnostic = QString("Missing %1").arg(name); return false; }
             bool done = false, delivered = false;
             edi_app::AssistantWidgetInput::Request request;
@@ -108,13 +118,23 @@ private slots:
         };
         auto* dataFile = root->findChild<QQuickItem*>("experiments.load.dataFile");
         QVERIFY(dataFile);
-        QVERIFY(!dataFile->isEnabled());
+        QCOMPARE(dataFile->property("text").toString(), QString("File…"));
         QVERIFY2(click("experiments.create"), qPrintable(diagnostic));
         QTRY_VERIFY(project.currentExperiment());
-        QVERIFY2(click("experiments.load"), qPrintable(diagnostic));
-        auto* menu = root->findChild<QObject*>("experiments.load.menu");
+        auto* group = root->findChild<QQuickItem*>("group.experiments");
+        QVERIFY(group);
+        group->setProperty("collapsed", true);
+        auto* title = qobject_cast<QQuickItem*>(group->property("titleArea").value<QObject*>());
+        QVERIFY(title);
+        QTest::mouseClick(window, Qt::LeftButton, Qt::NoModifier,
+                          title->mapToScene(QPointF(title->width() / 2, title->height() / 2)).toPoint());
+        QTRY_VERIFY(!group->property("collapsed").toBool());
+        QTRY_VERIFY(findItem("experiments.loadData.0"));
+        QVERIFY2(click("experiments.loadData.0"), qPrintable(diagnostic));
+        auto* menu = root->findChild<QObject*>("experiments.load.dataMenu");
         QVERIFY(menu);
         QTRY_VERIFY(menu->property("visible").toBool());
+        QCOMPARE(menu->property("target").value<QObject*>(), project.currentExperiment());
         QVERIFY(dataFile->isEnabled());
         QVERIFY2(click("experiments.load.dataWeb"), qPrintable(diagnostic));
         auto* popup = root->findChild<QObject*>("onlineLoad");
@@ -124,6 +144,16 @@ private slots:
         QVERIFY(root->findChild<QObject*>("onlineLoad.source"));
         QVERIFY(root->findChild<QObject*>("onlineLoad.search"));
         QVERIFY(QMetaObject::invokeMethod(popup, "close"));
+        QTRY_VERIFY(!popup->property("visible").toBool());
+        auto* structures = root->findChild<QQuickItem*>("group.structures");
+        QVERIFY(structures);
+        if(structures->property("collapsed").toBool()) {
+            auto* structureTitle = qobject_cast<QQuickItem*>(structures->property("titleArea").value<QObject*>());
+            QVERIFY(structureTitle);
+            QTest::mouseClick(window, Qt::LeftButton, Qt::NoModifier,
+                              structureTitle->mapToScene(QPointF(structureTitle->width() / 2, structureTitle->height() / 2)).toPoint());
+        }
+        QTRY_VERIFY(!structures->property("collapsed").toBool());
         QVERIFY2(click("structures.load"), qPrintable(diagnostic));
         auto* structureFile = root->findChild<QQuickItem*>("structures.load.file");
         QVERIFY(structureFile);
@@ -134,6 +164,61 @@ private slots:
         for (auto* original : popups)
             structurePopup |= original->property("visible").toBool() && original->property("kind") == "structure";
         QVERIFY(structurePopup);
+    }
+    void aliasSearchTypesPlainNameAndSelectsDecoratedEntry() {
+        QQmlApplicationEngine engine;
+        edi_app::configure_engine(engine);
+        QQmlComponent component(&engine);
+        component.setData(R"(
+            import QtQuick
+            import QtQuick.Controls
+            import edi.app
+            ApplicationWindow {
+                width: 800; height: 600; visible: true
+                SearchableComboBox {
+                    objectName: "alias.parameter.0"
+                    searchThreshold: 0
+                    x: 40; y: 40; width: 500
+                    readonly property var names: ["phase.cell.length_a", "phase.cell.length_b"]
+                    model: ["cube a · phase.cell.length_a", "cube b · phase.cell.length_b"]
+                    currentIndex: 0
+                }
+            }
+        )", QUrl("qrc:/alias-search.qml"));
+        QScopedPointer<QObject> root(component.create());
+        QVERIFY2(root, qPrintable(component.errorString()));
+        auto* window = qobject_cast<QQuickWindow*>(root.data());
+        QVERIFY(window);
+        QVERIFY(QTest::qWaitForWindowActive(window));
+        auto* target = root->findChild<QQuickItem*>("alias.parameter.0");
+        QVERIFY(target);
+        edi_app::AssistantWidgetInput input(*window);
+        QString typed, diagnostic;
+        bool done = false, delivered = false;
+        edi_app::AssistantWidgetInput::Request request;
+        request.kind = edi_app::AssistantWidgetInput::Kind::SearchChoice;
+        request.target = target;
+        request.option = 1;
+        request.value = "phase.cell.length_b";
+        request.current = [target, window] { return target->window() == window; };
+        request.restoreCurrent = request.current;
+        request.prepareCommit = [&] {
+            auto* popup = target->property("popup").value<QObject*>();
+            auto* content = popup ? popup->property("contentItem").value<QObject*>() : nullptr;
+            auto* header = content ? content->property("headerItem").value<QObject*>() : nullptr;
+            auto* search = header ? header->findChild<QObject*>("comboBox.search") : nullptr;
+            typed = search ? search->property("text").toString() : QString();
+            return true;
+        };
+        request.finishCommit = [] {};
+        request.completed = [&](bool ok, const QString& message, edi_app::ControlCause) {
+            delivered = ok; diagnostic = message; done = true;
+        };
+        input.start(std::move(request));
+        QVERIFY(QTest::qWaitFor([&] { return done; }, 10000));
+        QVERIFY2(delivered, qPrintable(diagnostic));
+        QCOMPARE(typed, QString("phase.cell.length_b"));
+        QCOMPARE(target->property("currentIndex").toInt(), 1);
     }
     void testModelDefaultsAndExplicitChoice() {
         QQmlApplicationEngine engine;

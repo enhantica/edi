@@ -1399,6 +1399,22 @@ bool ProjectViewModel::loadExperimentWithStructures(const QUrl& file, const QLis
     return true;
 }
 
+// Checked on a copy: the calculation marks the live model's dependents itself, inside its own change.
+void ProjectViewModel::announceBrokenRelations() {
+    QString problem;
+    try {
+        edi::Project probe(*project_);
+        edi::refresh_relations(probe, [](const std::string&) {});
+    } catch (const std::exception& refusal) {
+        problem = QString::fromUtf8(refusal.what());
+    }
+    if (problem == broken_relations_) return;
+    broken_relations_ = problem;
+    if (!problem.isEmpty())
+        announceRefused(tr("The aliases and constraints no longer hold, so the calculation waits until they are fixed "
+                           "or the edit is undone: %1").arg(problem));
+}
+
 // Every refusal is announced here, with the file it attaches fixed as it starts (RefusalAnnouncement).
 void ProjectViewModel::announceRefused(const QString& message) {
     const RefusalAnnouncement announcement(this);
@@ -3213,6 +3229,7 @@ bool ProjectViewModel::setExperimentType(int index, const QString& axis, const Q
             return false;
         }
         const edi::ExperimentBase* before = &experiment;
+        keepUntilModelGone(before, project.experiments[static_cast<std::size_t>(index)]);
         error = apply_creation_control(edi::Edit::replace_experiment(project, experiment, std::move(replacement)), true,
             {CreationAction::Kind::ExperimentType, &experiment, axis, token});
         if (!self || retired_) return input && input->outcome.applied;
@@ -3316,6 +3333,16 @@ bool ProjectViewModel::setSameForAll(ParameterItem* parameter, bool on) {
     return setSameForAllExperiments(parameter->blockIndex(), shared_path(*project_, parameter), on);
 }
 
+void ProjectViewModel::keepUntilModelGone(const edi::ExperimentBase* experiment,
+                                          std::shared_ptr<const edi::ExperimentBase> held) {
+    for (ExperimentViewModel* model : experiment_models_) {
+        if (model->experiment() == experiment) {
+            connect(model, &QObject::destroyed, this, [held] {});
+            return;
+        }
+    }
+}
+
 void ProjectViewModel::experimentReplaced(const edi::ExperimentBase* before, const edi::ExperimentBase* after) {
     for (UndoRecord& record : undo_history_) {
         if (auto* added = std::get_if<AddedExperiments>(&record)) {
@@ -3350,6 +3377,9 @@ QString ProjectViewModel::replaceData(int index, edi::BraggPdExperiment replacem
     const auto input = widget_file_input_;
     edi::Project& project = *project_;
     const edi::ExperimentBase* before = project.experiments[static_cast<std::size_t>(index)].get();
+    // The old experiment outlives the edit until its view model is rebuilt (keepUntilModelGone).
+    const std::shared_ptr<const edi::ExperimentBase> held = project.experiments[static_cast<std::size_t>(index)];
+    keepUntilModelGone(before, held);
     QString error;
     try {
         // Loaded data brings the calculation to its level (the common scale factor), in the same undo step; an undo
@@ -3371,7 +3401,16 @@ QString ProjectViewModel::replaceData(int index, edi::BraggPdExperiment replacem
         return error;
     }
     if (!self || retired_) return error;
-    experimentReplaced(before, project.experiments[static_cast<std::size_t>(index)].get());
+    const edi::ExperimentBase* after = project.experiments[static_cast<std::size_t>(index)].get();
+    experimentReplaced(before, after);
+    // New data after a fit: the fit's results describe the old data, so they go, in the project itself (saved and
+    // reloaded alike); the load's undo record keeps them and Undo puts them back with that data (the owner,
+    // 2026-11-19).
+    if (!restoring && !project.fit_result.result_kind.empty()) {
+        edi::clear_fit_result(project);
+        if (fit_ != nullptr) fit_->sync();
+        if (!self || retired_) return error;
+    }
     if (!self || retired_) return error;
     syncDatasets();
     return {};
@@ -3508,7 +3547,8 @@ bool ProjectViewModel::loadData(int index, const QUrl& file) {
         syncLoadState();
         noteScaled(notes);
     } else {
-        LoadedData record{&experiment, std::make_shared<const edi::BraggPdExperiment>(experiment)};
+        LoadedData record{&experiment, std::make_shared<const edi::BraggPdExperiment>(experiment),
+                          project.fit_result.result_kind.empty() ? nullptr : std::make_shared<const edi::Project>(project)};
         // Own the original experiment snapshot/history node before core publication.
         // experimentReplaced updates this same record with the actual new member.
         undo_history_.reserve(undo_history_.size() + 1);
@@ -4612,6 +4652,11 @@ QString ProjectViewModel::criticalEditRefusal(bool restoring, bool trial, bool o
     if (edit_publication_failed_ && !restoring)
         return tr("An edit was applied but its presentation failed: Undo or reopen the project before further changes");
     return {};
+}
+
+bool ProjectViewModel::editRefusalPersistent() const {
+    return retired_ || edit_publication_failed_ ||
+        (view_applied_ == view_request_ && scan_ && current_dataset_ >= 0 && projected_dataset_ != current_dataset_);
 }
 
 QString ProjectViewModel::editReadinessRefusal(bool restoring, bool trial) const {
@@ -5733,6 +5778,12 @@ ProjectViewModel::EditOutcome ProjectViewModel::applyEdit(const edi::Edit& chang
     const QPointer<ProjectViewModel> self(this);
     editing_ = true;
     const auto release = qScopeGuard([self] { if (self) self->editing_ = false; });
+    // An edit that leaves the aliases or constraints unable to hold (one names an atom a removed or replaced
+    // structure no longer has) says so in a popup once; the calculation and the s.u. that need them refuse until
+    // the relation is fixed or the edit undone.
+    const auto relations = qScopeGuard([self, &result, structural] {
+        if (self && structural && result.applied) self->announceBrokenRelations();
+    });
     pending_structural_ = structural;
     const auto relation_input = widget_input_executing_ ? widget_relation_input_ : nullptr;
     const auto background_input = widget_input_executing_ ? widget_background_input_ : nullptr;
@@ -6410,6 +6461,24 @@ void ProjectViewModel::undo() {
             const QString error = replaceData(static_cast<int>(found - project_->experiments.begin()),
                                               edi::BraggPdExperiment(*record.before), true);
             undone = error.isEmpty();
+            // The fit result the load cleared comes back with the data it described.
+            if (undone) {
+                edi::clear_fit_result(*project_);
+                if (record.fit_state) {
+                    project_->fit_result = record.fit_state->fit_result;
+                    for (const auto& experiment : project_->experiments) {
+                        for (const auto& before : record.fit_state->experiments) {
+                            if (experiment->name.value() == before->name.value()) {
+                                edi::copy_fit_share(*experiment, *before);
+                                break;
+                            }
+                        }
+                    }
+                }
+                if (fit_ != nullptr) fit_->sync();
+                if (!self || retired_) return;
+                syncDatasets();
+            }
         }
     } else if (const auto* controls = std::get_if<edi::ExperimentControlsUndo>(&undo_history_.back())) {
         undone=restore(edi::Edit::restore_experiment_controls(*project_,*controls),true);

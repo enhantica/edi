@@ -199,25 +199,20 @@ async function main() {
       acceptedEdit = true;
     }
     if (outcome === 'network-error') reject(new TypeError('Independent offline fetch rejection'));
-    else resolve({status: Number(outcome)});
+    else resolve({status: Number(outcome), text: async () => '{}'});
     await pending;
   }
   for (const name of Object.keys(initial)) {
     const expected = acceptedEdit && change === name ? later[name] : initial[name];
-    if (outcome === '201' && !acceptedEdit)
-      assert.equal(elements[name].value, defaults[name], 'ADR-0063: ordinary success retains the website reset behavior');
-    else if (outcome === '201' && acceptedEdit && name !== change)
-      assert.ok([initial[name], defaults[name]].includes(elements[name].value), 'ADR-0063: only an unchanged submitted field may be retained or reset');
+    if (outcome === '201' && ['message', 'subject'].includes(name) && (!acceptedEdit || name !== change))
+      assert.equal(elements[name].value, '', 'ADR-0063: success clears only the submitted message and subject for the next message');
     else
       assert.equal(elements[name].value, expected, 'ADR-0063 F1: success may not clear an unsubmitted draft; failure and no-address preserve fields: ' + name);
   }
   assert.equal(button.disabled, false, 'ADR-0063: completion or refusal releases Send');
   assert.equal(sent === undefined || sent.text === initial.message, true, 'ADR-0063: completion never rewrites the transmitted payload snapshot');
-  if (outcome === '429') assert.match(status.textContent, /Too many messages/, 'ADR-0063: rate limiting keeps its existing explanation');
-  if (outcome === '0') assert.match(status.textContent, /No connection/, 'ADR-0063: offline submission keeps its existing explanation');
-  if (outcome === '400') assert.match(status.textContent, /Sending failed \(400\)/, 'ADR-0063: ordinary failure keeps its status-specific explanation');
   if (outcome === 'no-address') assert.match(status.textContent, /not available/, 'ADR-0063: missing-address feedback remains visible');
-  assert.equal(form.resets, outcome === '201' ? 1 : 0, 'ADR-0063: only a successful response resets the submitted form');
+  assert.equal(form.resets, 0, 'ADR-0063: sending never resets the remembered contact details or selected reason');
   const notices = page.children.filter(child => child.tagName === 'DIALOG');
   assert.equal(notices.length, 1, 'ADR-0063: repeated setup inserts one real confirmation dialog after the form');
   const notice = notices[0];
@@ -232,7 +227,7 @@ async function main() {
   assert.equal(close.type, 'button', 'ADR-0063: closing the notice never submits the form');
   assert.equal(close.listeners.click.length, 1, 'ADR-0063: Close retains one actual dismissal handler');
   const words = {
-    '201': 'Your message was sent. Thank you! [configured]',
+    '201': 'Your message was sent. Thank you! [configured] Your name, e-mail and affiliation are kept, so you can send another message.',
     '429': 'Too many messages were sent from here recently. Please try again later. [configured]',
     '0': 'No connection to the feedback service. Check your connection and try again. [configured]',
     'network-error': 'No connection to the feedback service. Check your connection and try again. [configured]',
@@ -244,7 +239,7 @@ async function main() {
     assert.equal(notice.modal, dialogApi === 'native', 'ADR-0063: showModal enters modal state and the open-attribute fallback stays nonmodal');
     assert.equal(document.modal === notice, dialogApi === 'native', 'ADR-0063: native confirmation belongs to the modal document layer');
     assert.equal(paragraphs[0].textContent, expectedWords, 'ADR-0063: the visible confirmation uses the independent status-specific configured answer');
-    assert.equal(status.textContent, expectedWords, 'ADR-0063: inline and prominent confirmation agree for the sent request');
+    assert.equal(status.textContent, '', 'ADR-0063: the answer appears once in its confirmation instead of also below Send');
     assert.equal(notice.dataset.outcome, sentSuccessfully ? 'sent' : 'failed', 'ADR-0063: the confirmation selects its success or failure presentation');
     assert.equal(notice.getAttribute('data-outcome'), sentSuccessfully ? 'sent' : 'failed', 'ADR-0063: dataset updates reach the attribute consumed by notice styling');
     assert.equal(notice.getAttribute('role'), sentSuccessfully ? 'status' : 'alert', 'ADR-0063: failure confirmation is announced as an alert');
@@ -272,11 +267,11 @@ async function main() {
     const next = submit();
     assert.equal(requests, 2, 'ADR-0063: a dismissed confirmation leaves the form able to send a successor');
     assert.equal(sent.text, later.message, 'ADR-0063: the next request contains its own independent draft');
-    resolve({status: 429});
+    resolve({status: 429, text: async () => '{}'});
     await next;
     confirmation(words['429'], false);
     assert.equal(elements.message.value, later.message, 'ADR-0063: the successor failure retains its retry text after dismissal');
-    assert.equal(form.resets, 1, 'ADR-0063: only the earlier successful request reset the form');
+    assert.equal(form.resets, 0, 'ADR-0063: successive outcomes preserve the remembered contact details');
     assert.equal(notice.closes, 2, 'ADR-0063: the same confirmation opens and closes for both results');
     assert.equal(button.disabled, false, 'ADR-0063: confirmation reuse leaves Send unlocked');
   }

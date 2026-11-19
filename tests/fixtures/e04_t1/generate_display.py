@@ -222,6 +222,7 @@ def generate(added_project=None, updated_project=None, output_dir=None, *, catal
                         ('filePattern', 'file_pattern'),
                         ('reverse', 'reverse'),
                     ]
+                    if '_sequential_fit.' + tag in values
                 ],
             )
         # The engine is the accepted single-engine contract, even when a legacy
