@@ -581,8 +581,8 @@ Saving is active:
   against the replacement does not survive restoring earlier measurements, and Save/reopen carries the same result
   state. The history snapshot is taken only while a fit exists.
 - **Work before Create** (the owner, 2026-11-19). Once the Project page is open the app holds an untitled project
-  in memory (`Session.untitled`), so Structure and Experiment can be used without creating a project first.
-  Experiment is available before adding a structure, for both untitled and named projects; Analysis and Report
+  in memory (`Session.untitled`), so Structure can be used without creating a project first.
+  Experiment requires at least one structure, for both untitled and named projects; Analysis and Report
   still require their scientific inputs. Its
   first Save opens Create project, which names that project and saves it with its work. Create on the Project page
   does the same while the project is untitled. Closing or quitting with unsaved work asks as for any project. The

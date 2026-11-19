@@ -74,7 +74,7 @@ QtObject {
     readonly property bool reportPageReached: reached >= AppState.Page.Report || Session.hasProject
     readonly property bool hasStructure: Session.project !== null && Session.project.structures.count > 0
     readonly property bool hasExperiment: Session.project !== null && Session.project.experiments.count > 0
-    readonly property bool experimentPageEnabled: experimentPageReached && Session.hasProject
+    readonly property bool experimentPageEnabled: experimentPageReached && hasStructure
     readonly property bool analysisPageEnabled: analysisPageReached && hasStructure && hasExperiment
     readonly property bool reportPageEnabled: reportPageReached && hasStructure && hasExperiment
 
