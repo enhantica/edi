@@ -48,6 +48,13 @@ Grid {
         fieldValue: group.magnetic.point_group_name_uni ?? ""
     }
     ValueField {
+        objectName: "magneticSymbols.ogSetting"
+        width: group.fieldWidth
+        label: qsTr("OG setting")
+        editable: false
+        fieldValue: group.magnetic.og_setting ?? ""
+    }
+    ValueField {
         objectName: "magneticSymbols.pointGroupLitvin"
         width: group.fieldWidth
         uid: "space_group_magn.point_group_number_litvin"

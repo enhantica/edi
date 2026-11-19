@@ -10,7 +10,7 @@ import edi.app
 // system is read only and not saved (the magnetic CIF dictionary has no item for it). Number BNS and Name BNS are two
 // linked, searchable fields over crysta's table of the 1651 groups: choosing either replaces the structure's operators
 // when crysta admits them, else nothing changes and the refusal says why. Setting is the transform to the BNS
-// standard, `a,b,c;0,0,0` for the standard itself. The derived symbols and the parent group are on Extra. A refused
+// standard, chosen from the tabulated settings of the group's own space group, `a,b,c;0,0,0` first. The derived symbols and the parent group are on Extra. A refused
 // choice shows in the app's error popup and the Messages center; the fields keep their values.
 Column {
     id: group
@@ -64,15 +64,23 @@ Column {
                 currentIndex = Qt.binding(() => group.index);
             }
         }
-        ValueField {
+        // A searchable list, as the space group's Code (the owner, 2026-11-19): the tabulated settings of the group's
+        // own space group, each as its transform from the BNS standard. A file's other setting shows as written,
+        // marked operators only, with the tabulated ones still selectable.
+        SearchableComboBox {
             objectName: "magneticSpaceGroup.setting"
+            property string uid: "space_group_magn_transforms.pp_abc"
+            readonly property string current: group.magnetic.setting ?? ""
             width: group.fieldWidth
-            uid: "space_group_magn_transforms.pp_abc"
-            label: qsTr("Setting")
-            fieldValue: group.magnetic.setting ?? ""
-            onCommitted: text => {
-                if (group.structure && !group.structure.setMagneticSetting(text))
+            title: qsTr("Setting")
+            searchThreshold: 0
+            model: group.structure ? group.structure.magneticSettings : []
+            currentIndex: model.indexOf(current)
+            displayText: group.structure && !group.structure.magneticSettingTabulated && current !== "" ? qsTr("%1 (operators only)").arg(current) : current
+            onActivated: index => {
+                if (group.structure && !group.structure.chooseMagneticSetting(index))
                     Session.reportRefusal(group.structure.magneticGroupRefusal);
+                currentIndex = Qt.binding(() => model.indexOf(current));
             }
         }
     }

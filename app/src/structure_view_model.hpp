@@ -36,9 +36,12 @@ struct MagneticGroupView {
     Q_PROPERTY(QString point_group_number_litvin MEMBER point_group_number_litvin CONSTANT)
     // The transform to the BNS standard, the Setting field (`a,b,c;0,0,0` for the standard itself).
     Q_PROPERTY(QString setting MEMBER setting CONSTANT)
+    // The transform to the OG standard, derived and read only (the transforms loop's OG row).
+    Q_PROPERTY(QString og_setting MEMBER og_setting CONSTANT)
 
    public:
-    QString number_bns, name_bns, name_uni, number_og, name_og, point_group_name_uni, point_group_number_litvin, setting;
+    QString number_bns, name_bns, name_uni, number_og, name_og, point_group_name_uni, point_group_number_litvin, setting,
+        og_setting;
 };
 
 // The parent space group of a magnetic structure, and whether it differs from the structure's own group.
@@ -397,6 +400,12 @@ class StructureViewModel : public QObject {
     // The propagation vector a Magnetic structure without one has from its magnetic group: k = 0,0,0 for a group in
     // its parent's cell (types I-III, table-resolved); empty when the file gives vectors or none can be derived.
     Q_PROPERTY(QString derivedPropagationVector READ derivedPropagationVector NOTIFY magneticChanged)
+    // Why the group gives no k, when a magnetic structure has no vectors and none is derived.
+    Q_PROPERTY(QString propagationNotDerived READ propagationNotDerived NOTIFY magneticChanged)
+    Q_PROPERTY(QStringList magneticSettings READ magneticSettings NOTIFY magneticChanged)
+    // Whether the structure's setting is one of the list; a file's other setting (another origin, type IV) is shown as
+    // written, marked operators only.
+    Q_PROPERTY(bool magneticSettingTabulated READ magneticSettingTabulated NOTIFY magneticChanged)
     // The types a site may take for the probes of the experiments linking the structure (edi::atom_types).
     Q_PROPERTY(QStringList atomTypes READ atomTypes NOTIFY atomTypesChanged)
     // The bond cutoffs (`_geom`): a bond is drawn between two sites at least the minimum distance apart and at most
@@ -430,14 +439,18 @@ class StructureViewModel : public QObject {
     // Crystal or Magnetic (edi ADR-0078): Magnetic takes the grey group of the space group, Crystal the family space
     // group with the moments dropped (the page asks first). A refusal is kept in magneticGroupRefusal.
     Q_INVOKABLE bool setMagnetic(bool magnetic);
-    // The Setting field: the transform to the BNS standard.
-    Q_INVOKABLE bool setMagneticSetting(const QString& transform);
+    // The Setting list (the owner, 2026-11-19): the tabulated settings of the group's own space group as transforms
+    // from the BNS standard, a,b,c;0,0,0 first; choosing one sets the BNS table group's operations in it.
+    QStringList magneticSettings() const;
+    bool magneticSettingTabulated() const;
+    Q_INVOKABLE bool chooseMagneticSetting(int index);
     QString magneticGroupRefusal() const { return magnetic_group_refusal_; }
     // Takes table group `index` of magneticGroupNames: its operators replace the structure's when crysta's rule
     // admits them with the cell and the propagation vectors, else nothing changes and the refusal is kept.
     Q_INVOKABLE bool setMagneticGroup(int index);
     bool magnetic() const;
     QString derivedPropagationVector() const;
+    QString propagationNotDerived() const;
     QStringList atomTypes() const { return atom_types_; }
     double minBondDistance() const;
     void setMinBondDistance(double distance);

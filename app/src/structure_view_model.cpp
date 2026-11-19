@@ -968,16 +968,18 @@ MagneticGroupView StructureViewModel::magneticGroup() const {
             name_uni.clear();  // A number the table does not have shows no symbol.
         }
     }
-    std::string setting;
+    std::string setting, og_setting;
     for (const auto& row : structure_.magnetic->transforms) {
         if (row.second.source == "BNS") setting = row.second.pp_abc;
+        if (row.second.source == "OG") og_setting = row.second.pp_abc;
     }
-    // A file that gives no transform is in the BNS standard setting: the dictionary's default, never blank.
-    if (setting.empty() && !group.number_bns.empty()) setting = "a,b,c;0,0,0";
+    // A file that gives no transform: the held setting's own (`a,b,c;0,0,0` for the BNS standard), never blank.
+    if (setting.empty()) setting = edi::held_magnetic_setting(structure_);
     return MagneticGroupView{QString::fromStdString(group.number_bns), QString::fromStdString(group.name_bns),
                              QString::fromStdString(name_uni), QString::fromStdString(group.number_og),
                              QString::fromStdString(group.name_og), QString::fromStdString(group.point_group_name_uni),
-                             QString::fromStdString(group.point_group_number_litvin), QString::fromStdString(setting)};
+                             QString::fromStdString(group.point_group_number_litvin), QString::fromStdString(setting),
+                             QString::fromStdString(og_setting)};
 }
 
 QStringList StructureViewModel::magneticGroupNumbersBns() {
@@ -1002,12 +1004,48 @@ QStringList StructureViewModel::magneticGroupNamesBns() {
 
 bool StructureViewModel::magnetic() const { return edi::structure_magnetic(structure_); }
 
+namespace {
+// Why the magnetic group gives no propagation vector; empty when it gives k = 0,0,0: no operation is a translation
+// with time reversal (an anti-translation) and the magnetic cell is the parent's.
+QString underived_propagation(const edi::MagneticDescription& magnetic) {
+    const auto anti_translation = [](const std::string& text) {
+        try {
+            const crysta::MagneticOperation operation = crysta::parse_magnetic_operation(text);
+            return operation.theta < 0 && operation.rotation == std::array<int, 9>{1, 0, 0, 0, 1, 0, 0, 0, 1} &&
+                   operation.translation != std::array<double, 3>{};
+        } catch (const std::invalid_argument&) {
+            return false;
+        }
+    };
+    for (const auto* rows : {&magnetic.operations, &magnetic.centerings}) {
+        for (const auto& row : *rows) {
+            if (anti_translation(row.second)) {
+                return QObject::tr("k is not derived for a group with an anti-translation (type IV); give it here");
+            }
+        }
+    }
+    std::string child = magnetic.parent.child_transform_pp_abc;
+    std::erase(child, ' ');
+    if (!child.empty() && child != "a,b,c;0,0,0") {
+        return QObject::tr("k is not derived: the magnetic cell is not the parent's (%1); give it here")
+            .arg(QString::fromStdString(magnetic.parent.child_transform_pp_abc));
+    }
+    return {};
+}
+}  // namespace
+
 QString StructureViewModel::derivedPropagationVector() const {
     const edi::MagneticDescription& magnetic = structure_.magnetic;
-    if (!edi::structure_magnetic(structure_) || !magnetic.propagation_vectors.empty() || !magnetic.space_group_declared) {
+    if (!edi::structure_magnetic(structure_) || !magnetic.propagation_vectors.empty() || !underived_propagation(magnetic).isEmpty()) {
         return {};
     }
     return QStringLiteral("0,0,0");
+}
+
+QString StructureViewModel::propagationNotDerived() const {
+    const edi::MagneticDescription& magnetic = structure_.magnetic;
+    if (!edi::structure_magnetic(structure_) || !magnetic.propagation_vectors.empty()) return {};
+    return underived_propagation(magnetic);
 }
 
 bool StructureViewModel::setMagnetic(bool magnetic) {
@@ -1019,8 +1057,24 @@ bool StructureViewModel::setMagnetic(bool magnetic) {
     return refusal.isEmpty();
 }
 
-bool StructureViewModel::setMagneticSetting(const QString& transform) {
-    const QString refusal = plain_refusal(editor_.apply(edi::Edit::magnetic_setting(structure_, transform.toStdString()), true));
+QStringList StructureViewModel::magneticSettings() const {
+    QStringList out;
+    if (!edi::structure_magnetic(structure_)) return out;
+    for (const std::string& transform : edi::magnetic_setting_transforms(structure_)) out.append(QString::fromStdString(transform));
+    return out;
+}
+
+bool StructureViewModel::magneticSettingTabulated() const {
+    return magneticSettings().contains(magneticGroup().setting);
+}
+
+bool StructureViewModel::chooseMagneticSetting(int index) {
+    const QStringList settings = magneticSettings();
+    if (index < 0 || index >= settings.size()) {
+        return false;
+    }
+    const QString refusal = plain_refusal(
+        editor_.apply(edi::Edit::magnetic_setting(structure_, settings.at(index).toStdString()), true));
     if (refusal != magnetic_group_refusal_) {
         magnetic_group_refusal_ = refusal;
         emit magneticGroupRefusalChanged();
