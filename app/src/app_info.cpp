@@ -7151,10 +7151,11 @@ void ApplicationInfo::tableFitWholeModel() const {
         if (editorLife(f, life)) panelUsageContextWrite(f, "unfitted", QJSValue(true));
         return;
     }
-    // Sliced only when the table already has widths to keep meanwhile; a first fit is made at once.
+    // A table's first fit is made at once; every later one (a value, a row count or a group shown) is measured in
+    // slices, and the widths it already has stay until it ends: a refit of a shown table at each followed run measured
+    // all its rows in one go.
     const auto fitted = panelUsageContextRead(f, "contentWidths");
-    const bool sliced = panelUsageTruth(panelUsageContextRead(f, "liveRefit")) && panelUsageTruth(fitted)
-                        && panelUsageRead(f, fitted, "length").toInt() > 0;
+    const bool sliced = panelUsageTruth(fitted) && panelUsageRead(f, fitted, "length").toInt() > 0;
     panelUsageContextWrite(f, "liveRefit", QJSValue(false)); if (!editorLife(f, life)) return;
     panelUsageContextWrite(f, "measureSliced", QJSValue(sliced)); if (!editorLife(f, life)) return;
     panelUsageContextWrite(f, "unfitted", QJSValue(false)); if (!editorLife(f, life)) return;
