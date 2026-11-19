@@ -75,6 +75,19 @@ pixi run --locked python -m tools.gsas_ii.import_project \
 `edi.Project.load("pbso4.gpx")` opens the same model without GSAS-II installed.
 The optional comparison writes a CSV on the observed grid and a JSON summary.
 
+## Recheck the tutorial corpus
+
+Use the revision of [software-examples](https://github.com/enhantica/software-examples) recorded
+with the test run. The batch check visits the dedicated project folders and reference folders,
+attempts to open each GPX, and reports the stage and error for each failure. It saves,
+reopens and recalculates each case that opens. A matching independent reference bundle
+also enables a numeric comparison.
+
+```bash
+pixi run --locked python -m tools.gsas_ii.check_corpus /path/to/software-examples/gsas-ii \
+  --report gpx-corpus-check.json
+```
+
 ## Validate the reverse direction
 
 The developer exporter reads the saved Edi data and produces the same exchange
