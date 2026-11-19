@@ -1881,7 +1881,7 @@ void DemoDriver::trace_issue(const QString& action) {
             pending.direction = step.navigation > 0 ? QStringLiteral("next") : QStringLiteral("previous");
             FrameWatch watch;
             watch.request = pending.request;
-            watch.chart = find(QStringLiteral("chart"), false);
+            watch.chart = find_held(QStringLiteral("chart"), false);
             if (watch.chart) watch.controller = watch.chart->findChild<PatternChartController*>();
             if (watch.controller) watch.base = watch.controller->traceGeneration();
             frame_watches_.append(watch);
@@ -3075,8 +3075,18 @@ bool DemoDriver::on_screen(QQuickItem* item) const {
     return !shown.isEmpty();
 }
 
+QQuickItem* DemoDriver::find_held(const QString& object_name, bool must_be_usable) {
+    // A press of a held key repeats on one control: the one found last, while it can still take the press, rather than
+    // a walk of every item in the window at each press, which made the presses themselves the slowest part.
+    QPointer<QQuickItem>& held = held_items_[object_name];
+    if (held && held->isVisible() && (!must_be_usable || held->isEnabled()) && on_screen(held)) return held;
+    held = find(object_name, must_be_usable);
+    return held;
+}
+
 bool DemoDriver::click(const QString& object_name) {
-    QQuickItem* item = find(object_name, true);
+    QQuickItem* item = current_ < steps_.size() && steps_[current_].navigation != 0 ? find_held(object_name, true)
+                                                                                   : find(object_name, true);
     // A click at an item off screen reaches nothing, so the run stops rather than capture an unchanged page.
     if (item == nullptr || !item->isVisible() || !item->isEnabled() || !on_screen(item)) {
         fail(QStringLiteral("step %1: control '%2' is %3")

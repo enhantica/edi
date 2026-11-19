@@ -210,6 +210,10 @@ class DemoDriver : public QObject {
 #endif
     QElapsedTimer nav_clock_;  // the 100 ms schedule of next and previous presses
     QHash<QString, QPointer<QQuickItem>> app_bar_tabs_;  // the settle poll's tabs, found once
+    // find(), reusing the item found last for the name while it is still visible, usable and on screen: for the
+    // presses of a held key.
+    QQuickItem* find_held(const QString& object_name, bool must_be_usable);
+    QHash<QString, QPointer<QQuickItem>> held_items_;
     qint64 nav_base_ = -1;
     int nav_index_ = 0;
     QElapsedTimer timer_;
