@@ -431,6 +431,10 @@ class ExperimentViewModel : public QObject {
     // sync() for a shown dataset or point, which changes values only: the categories are listed again only when the
     // measured data's point count changed (ADR-0096 rule 2).
     void syncValues();
+#if EDI_UI_INSTRUMENTATION
+    // The UI trace (ui_probe.hpp): the experiment's place in the project, to read its data there.
+    std::size_t tracePlace() const { return place(); }
+#endif
     // The estimate settings and what they derive, re-read: after an edit (sync) and after a calculation, which
     // changes the calculated pattern use_model reads.
     void syncEstimate();

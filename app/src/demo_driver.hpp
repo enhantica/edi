@@ -13,6 +13,8 @@
 #include <QStringList>
 #include <QTemporaryDir>
 #include <QTimer>
+#include <cstdint>
+#include <deque>
 #include <functional>
 #include <mutex>
 #include <optional>
@@ -22,6 +24,8 @@ class QQuickItem;
 class QQuickWindow;
 
 namespace edi_app {
+
+class PatternChartController;
 
 // Copies the CLI project docs/user/cli/<id>/project of this build's source tree into <into>/<id>/project, for a
 // test project the app does not bundle. Returns the copy's path, or an empty string when it cannot be made.
@@ -144,52 +148,66 @@ class DemoDriver : public QObject {
     int settle_attempts_ = 0;
     int preparing_attempts_ = 0;
     QTemporaryDir loaded_files_;
+    // The UI trace's hooks (ui_probe.hpp): no-ops, with no state, where EDI_UI_INSTRUMENTATION is off.
+    void trace_step_begin(const Step& step);    // a measured step starts: the trace's begin, a wait's action, the control
+    void trace_issue(const QString& action);    // a measured step's action is about to be issued
+    void trace_issued(const Step& step);        // a next or previous press has been issued
+    bool trace_complete(int code);              // the trace's end, when it began; true if it ends the run itself
+    QString only_;
+#if EDI_UI_INSTRUMENTATION
+    void trace_measurement(bool enter, int id, const QString& callback);
+    int tool_id_ = 0;
     bool blocked_ = false;  // EDI_UI_BLOCK_MS has blocked once
     bool trace_begun_ = false;
-    QString only_;
     QString trace_scenario_;
-    int tool_id_ = 0;
     int request_id_ = 0;
-    // The UI trace's witnesses (ui_probe.hpp): the native state each frame shows, and the transition a measured step's
-    // action asked for, open until the state reaches it.
-    struct Expected {
+    // A measured step's action, open until the native state reaches what it asked for: then its state, the transition's
+    // publication and the step itself are written, in that order and in the steps' order.
+    struct Pending {
         int request = 0;
-        QString page;     // the page the action shows
-        int before = -1;  // the selection before a next or previous press
-        QString fit;      // "start", "running", "ended" or "settled"
-        bool open = false;
+        QString name;              // the scenario's step
+        QString page;              // a page the action shows
+        int before = -1;           // the selection before a next or previous press
+        int dataset = -1;          // the selection the press made
+        QString direction;         // "next" or "previous"
+        QString fit;               // "start", "running", "ended" or "settled"
     };
-    void trace_watch();
-    QJsonObject trace_state();
-    void trace_action(const QString& action);
-    void trace_frame();
-    void trace_measurement(bool enter, int id, const QString& callback);
-    QString trace_input();
-    Expected expected_;
-    std::mutex trace_mutex_;          // the render thread reads what the GUI thread publishes for the next frame
-    QJsonArray published_transitions_;  // published since the last frame was synchronised
-    QJsonObject synced_displayed_;      // the last synchronised frame's native state, its transitions and number
-    QJsonArray synced_transitions_;
-    qint64 synced_frame_ = 0;
-    QMetaObject::Connection trace_sync_, trace_swap_;
-    // A next or previous press's chart, watched until its first frame and its settled frame are named.
+    std::deque<Pending> pending_;
+    // A next or previous press's chart: its first swapped frame after the press, and the first frame swapped once the
+    // chart has uploaded the selected dataset's own data (its settled frame).
     struct FrameWatch {
         int request = 0;
         int dataset = -1;
-        qint64 base = 0;  // the chart's fill count before the press
+        qint64 base = 0;  // the chart's upload count before the press
         QPointer<QQuickItem> chart;
-        QPointer<QObject> controller;
-        bool presented = false, first = false, settled = false;
-        QJsonObject identity;  // what `presented` named: dataset, generation, data identity
+        QPointer<PatternChartController> controller;
+        QString native;   // the selected dataset's data identity, read from the project once that dataset is applied
+        bool first = false, presented = false, settled = false;
+        QJsonObject presentation;  // request, dataset, generation, data_identity, input
     };
-    QList<FrameWatch> frame_watches_;  // GUI thread; the render thread reads them only while the GUI thread waits
-    QJsonArray synced_frames_;        // the frame observations of the last synchronised frame
+    void trace_watch();
+    QJsonObject trace_state();
+    QString trace_native_identity();
+    void trace_frame();
+    QString trace_input();
     QJsonObject trace_geometry(QQuickItem* chart) const;
+    std::mutex trace_mutex_;            // the render thread reads what the GUI thread publishes for the next frame
+    QJsonArray published_transitions_;  // published since the last frame was synchronised
+    QJsonObject synced_displayed_;      // the last synchronised frame's native state, its transitions and number
+    QJsonArray synced_transitions_;
+    QJsonArray synced_frames_;          // the frame observations of the last synchronised frame
+    QJsonArray synced_presented_;       // the presentations the last synchronised frame shows for the first time
+    qint64 synced_frame_ = 0;
+    QMetaObject::Connection trace_sync_, trace_swap_;
+    QList<FrameWatch> frame_watches_;   // GUI thread; the render thread reads them only while the GUI thread waits
     QString input_identity_;
+    std::pair<std::uint64_t, QString> native_cache_;  // the native identity, by the project's applied view
     QList<QPointer<QQuickItem>> page_tabs_, view_tabs_;
     int fit_runs_ = 0;
     bool fit_running_ = false;
     bool watching_ = false;
+#endif
+    QElapsedTimer nav_clock_;  // the 100 ms schedule of next and previous presses
     qint64 nav_base_ = -1;
     int nav_index_ = 0;
     QElapsedTimer timer_;

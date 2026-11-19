@@ -4849,6 +4849,9 @@ void ProjectViewModel::applyDatasetView(std::uint64_t request, int index, Datase
         }
     }
     applied = true;
+#if EDI_UI_INSTRUMENTATION
+    trace_applied_dataset_ = index;
+#endif
 }
 
 void ProjectViewModel::syncOutOfDate() {

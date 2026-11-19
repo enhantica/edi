@@ -261,10 +261,13 @@ class PatternChartController : public QObject {
     double braggHeight() const { return bragg_height_; }
     bool hasResidual() const { return has_residual_; }
     bool hasData() const { return has_data_; }
-    // How many times the series were filled, and (while the UI trace is on, ui_probe.hpp) a digest of what they were
-    // filled with: what the GUI watchdog's frame observation names as presented.
+#if EDI_UI_INSTRUMENTATION
+    // The UI trace's view of an upload (ui_probe.hpp): how many times the series were filled, the content identity of
+    // the measured data they were filled from, and whether the series objects the scene draws still hold that fill.
     qint64 traceGeneration() const { return trace_generation_; }
     QString traceIdentity() const { return trace_identity_; }
+    bool traceBuffersHold() const;
+#endif
     bool current() const { return current_; }
     QString xTitle() const { return x_title_; }
     QString yTitle() const { return y_title_; }
@@ -517,8 +520,11 @@ class PatternChartController : public QObject {
     // Whether the panes shown may stay while a dataset's calculation is to come: false until the first refresh of an
     // experiment (ADR-0096 rule 5).
     bool keeps_panes_ = false;
+#if EDI_UI_INSTRUMENTATION
     qint64 trace_generation_ = 0;
     QString trace_identity_;
+    QList<std::pair<QPointer<QXYSeries>, qsizetype>> trace_fill_;  // each filled series and its point count
+#endif
     QString x_title_, y_title_, residual_title_;
     QColor measured_color_, calculated_color_, background_color_, residual_color_, excluded_color_;
     QList<QColor> bragg_colors_;

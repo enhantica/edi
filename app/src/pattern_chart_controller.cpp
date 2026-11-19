@@ -6,7 +6,6 @@
 #include <cmath>
 #include <limits>
 #include <numbers>
-#include <QCryptographicHash>
 #include <QFontMetricsF>
 #include <QStringList>
 #include <set>
@@ -1179,17 +1178,6 @@ void PatternChartController::refresh() {
             &PatternChartController::hasResidualChanged);
     publish(has_data_, measured != nullptr || calculated != nullptr, &PatternChartController::hasDataChanged);
     keeps_panes_ = true;
-    ++trace_generation_;
-    if (ui_trace_on()) {
-        QCryptographicHash digest(QCryptographicHash::Sha256);
-        for (const edi::PatternSeries& series : shown_.series) {
-            digest.addData(QByteArray::fromStdString(series.id));
-            digest.addData(QByteArrayView(reinterpret_cast<const char*>(series.points.data()),
-                                          static_cast<qsizetype>(series.points.size() * sizeof(series.points[0]))));
-        }
-        trace_identity_ = QString::fromLatin1(digest.result().toHex().left(16));
-    }
-
     // The measured style (the owner, 2026-10-22): the line, the markers with their bars, or the band, measured ± s.u.
     // with the residual drawn the same way. A report's chart draws all but the band, as the report does.
     const bool band = measured_drawing_ == QLatin1String("band") && !report_;
@@ -1434,7 +1422,30 @@ void PatternChartController::refresh() {
     publish(background_available_, subtractable, &PatternChartController::backgroundAvailableChanged);
     ++revision_;
     emit revisionChanged();
+#if EDI_UI_INSTRUMENTATION
+    if (ui_trace_on()) {
+        ++trace_generation_;
+        const edi::PatternSource* source = !report_ && experiment_ ? &shownSource() : nullptr;
+        trace_identity_ = source != nullptr ? ui_trace_identity(source->meas.get()) : QString();
+        trace_fill_.clear();
+        const auto filled = [this](const QPointer<QXYSeries>& series) {
+            if (series) trace_fill_.append({series, series->count()});
+        };
+        for (const auto* series : {&measured_series_, &calculated_series_, &background_series_, &residual_series_})
+            filled(*series);
+        for (const BandSeries& band : band_series_) {
+            for (const auto* series : {&band.upper, &band.lower, &band.top, &band.bottom}) filled(*series);
+        }
+    }
+#endif
 }
+
+#if EDI_UI_INSTRUMENTATION
+bool PatternChartController::traceBuffersHold() const {
+    return std::all_of(trace_fill_.begin(), trace_fill_.end(),
+                       [](const auto& fill) { return fill.first && fill.first->count() == fill.second; });
+}
+#endif
 
 double PatternChartController::xOf(double pixel) const {
     return plot_width_ > 0.0 ? shown_x_min_ + pixel / plot_width_ * (shown_x_max_ - shown_x_min_) : shown_x_min_;

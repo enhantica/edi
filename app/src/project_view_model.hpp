@@ -750,6 +750,11 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     bool scanViewShown() const { return !scan_views_shown_.empty(); }
     // No dataset read is in flight or waits to be applied.
     bool viewSettled() const { return !view_reading_ && view_applied_ == view_request_; }
+#if EDI_UI_INSTRUMENTATION
+    // The UI trace (ui_probe.hpp): the scan dataset whose data the project holds now, and the count of applied views.
+    int traceAppliedDataset() const { return trace_applied_dataset_; }
+    std::uint64_t traceViewApplied() const { return view_applied_; }
+#endif
     // Drops a followed file's pending receipt without counting it (Follow off, a new scan).
     void releaseFollow() { followRendered(false); }
     // A followed scan's newest finished file becomes the current dataset at once (the evolution's line, the list,
@@ -1217,6 +1222,9 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     bool applying_setting_ = false;
     // The newest dataset view asked for: a projection read off the GUI thread applies only while it is the newest.
     std::uint64_t view_request_ = 0, view_applied_ = 0;
+#if EDI_UI_INSTRUMENTATION
+    int trace_applied_dataset_ = -1;
+#endif
     int view_wanted_ = -1;       // the dataset of the newest request
     int projected_dataset_ = -1;  // the dataset the model holds now (a failed read leaves the one before)
     bool listing_dataset_folder_ = false;
