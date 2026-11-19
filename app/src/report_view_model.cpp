@@ -66,10 +66,21 @@ void ReportViewModel::setActive(bool active) {
     if (active != active_) {
         active_ = active;
         emit activeChanged();
-        if (active_ && dirty_) {
+        if (!active_) {
+            supersede();  // a hidden page takes no model; it catches up when shown
+        } else if (!current()) {
             refresh();
         }
     }
+}
+
+void ReportViewModel::supersede() const {
+    if (!building_ || adopted_generation_ == build_generation_) return;
+    const std::uint64_t old = build_generation_;
+    wanted_->store(++build_generation_);
+    dirty_ = true;
+    rebuild_owed_ = false;
+    EDI_UI_TRACE("cancel", {{"builder", "report"}, {"view", "V12/report"}, {"generation", static_cast<double>(old)}});
 }
 
 void ReportViewModel::refresh() {
@@ -93,8 +104,10 @@ void ReportViewModel::refresh() {
     publish(published_writes_cif_, writesCif(), &ReportViewModel::writesCifChanged);
     dirty_ = true;
     // A hidden page waits: its saved reports' states need the model, and building it for every change of a running
-    // scan made each fitted dataset rebuild the whole report. The page builds once when shown (setActive).
+    // scan made each fitted dataset rebuild the whole report. The page builds once when shown (setActive); a build
+    // running when the change came is superseded.
     if (!active_) {
+        supersede();
         return;
     }
     requestBuild();
@@ -104,7 +117,8 @@ void ReportViewModel::ensureBuilt() const {
     // A read asks a worker for the model and reads the last one until the new one lands (ADR-0096 rule 3): the
     // preview reads the model as its page is shown, before the page's active binding has turned. Only a save builds
     // here (saveReport).
-    if (dirty_ && !building_) {
+    // A hidden page's read takes the last model: only a shown page asks for a build (rule 1).
+    if (active_ && dirty_ && !building_) {
         const_cast<ReportViewModel*>(this)->requestBuild();  // NOLINT(cppcoreguidelines-pro-type-const-cast)
     }
 }
@@ -259,41 +273,69 @@ bool ReportViewModel::adopt(Built&& built) const {
 }
 
 bool ReportViewModel::build() const {
+    // A running build is superseded: this one is newer. Its result is dropped when it returns.
     dirty_ = false;
-    building_ = false;
-    ++build_generation_;  // a build in flight is no longer wanted
+    rebuild_owed_ = false;
+    const std::uint64_t generation = ++build_generation_;
+    wanted_->store(generation);
     judged_.reset();
     cif_digest_.reset();
     digests_.clear();
-    return adopt(make(prepare()));
+    const bool changed = adopt(make(prepare()));
+    adopted_generation_ = generation;
+    return changed;
 }
 
 void ReportViewModel::requestBuild() {
     dirty_ = false;
-    const std::uint64_t generation = ++build_generation_;
     if (building_) {
-        EDI_UI_TRACE("supersede", {{"view", "V12/report"}, {"old", static_cast<double>(generation - 1)},
-                               {"replacement", static_cast<double>(generation)}});
+        // One build at a time: the running one is superseded and one more is owed, started when it returns.
+        const std::uint64_t old = build_generation_;
+        wanted_->store(++build_generation_);
+        rebuild_owed_ = true;
+        EDI_UI_TRACE("supersede", {{"builder", "report"}, {"view", "V12/report"}, {"old", static_cast<double>(old)},
+                                   {"replacement", static_cast<double>(build_generation_)}});
+        return;
     }
+    const std::uint64_t generation = ++build_generation_;
+    wanted_->store(generation);
     building_ = true;
-    EDI_UI_TRACE("request", {{"view", "V12/report"}, {"generation", static_cast<double>(generation)}});
+    EDI_UI_TRACE("request", {{"builder", "report"}, {"view", "V12/report"}, {"generation", static_cast<double>(generation)}});
     const QPointer<ReportViewModel> self(this);
-    run_in_background([self, generation, inputs = prepare()]() {
-        EDI_UI_TRACE("build", {{"view", "V12/report"}, {"thread", ui_trace_thread()}, {"scales", true}});
-        auto built = std::make_shared<Built>(make(inputs));
+    run_in_background([self, generation, wanted = wanted_, inputs = prepare()]() {
+        // A build superseded while it waited for a worker is not made.
+        std::shared_ptr<Built> built;
+        if (wanted->load() == generation) {
+            EDI_UI_TRACE("build", {{"builder", "report"}, {"view", "V12/report"}, {"thread", ui_trace_thread()},
+                                   {"scales", true}, {"generation", static_cast<double>(generation)}});
+            built = std::make_shared<Built>(make(inputs));
+        }
         QMetaObject::invokeMethod(
             QCoreApplication::instance(),
             [self, generation, built]() {
-                if (!self || generation != self->build_generation_) {
-                    return;  // a newer request replaced it, or the page is gone
-                }
-                EDI_UI_TRACE("deliver", {{"view", "V12/report"}, {"generation", static_cast<double>(generation)}});
+                if (!self) return;  // the page is gone
                 self->building_ = false;
-                if (self->adopt(std::move(*built))) {
-                    self->publishModel();
-                    if (!self) return;
+                EDI_UI_TRACE("result-arrival", {{"builder", "report"}, {"view", "V12/report"},
+                                                {"generation", static_cast<double>(generation)}});
+                // Only the newest wanted build, on a shown page, becomes the model.
+                if (built && generation == self->build_generation_ && self->active_) {
+                    EDI_UI_TRACE("deliver", {{"builder", "report"}, {"view", "V12/report"},
+                                             {"generation", static_cast<double>(generation)}});
+                    const bool changed = self->adopt(std::move(*built));
+                    self->adopted_generation_ = generation;
+                    if (changed) {
+                        self->publishModel();
+                        if (!self) return;
+                    }
+                    emit self->savedReportsChanged();
+                    return;
                 }
-                emit self->savedReportsChanged();
+                EDI_UI_TRACE("discard", {{"builder", "report"}, {"view", "V12/report"},
+                                         {"generation", static_cast<double>(generation)}});
+                if (std::exchange(self->rebuild_owed_, false)) {
+                    if (self->active_) self->requestBuild();
+                    else self->dirty_ = true;
+                }
             },
             Qt::QueuedConnection);
     });
@@ -522,6 +564,14 @@ QList<SavedReport> ReportViewModel::savedReports() const {
     return rows;
 }
 
+void ReportViewModel::prepareSave() {
+    if (!current() && build()) {
+        publishModel();  // at once: the preview draws this model before its figures are taken
+    }
+    figures_generation_ = adopted_generation_;
+    figures_.clear();
+}
+
 void ReportViewModel::setFigure(const QString& name, const QImage& image) {
     if (!image.isNull()) {
         figures_.insert(name, image);
@@ -538,8 +588,14 @@ void ReportViewModel::saveReport(const QString& fontFamily) {
     if (project_.retired_) return;
     // The figures belong to this save only, whatever it ends in.
     const QHash<QString, QImage> images = std::exchange(figures_, {});
-    // A save writes what the project is now: it builds here when a build is owed or still on a worker.
-    if ((dirty_ || building_) && build()) {
+    // The PDF's figures were taken from the model prepareSave brought up to date; a change since would write them with
+    // another build's text and digest, so the save is refused and is made again.
+    if (!images.isEmpty() && (!current() || adopted_generation_ != figures_generation_)) {
+        emit saveFailed(tr("The report changed while its figures were taken; save it again"));
+        return;
+    }
+    // A save writes what the project is now: it builds here when the model is not the newest.
+    if (!current() && build()) {
         QMetaObject::invokeMethod(this, [this] { publishModel(); }, Qt::QueuedConnection);
     }
     const edi::Project& project = project_.project();

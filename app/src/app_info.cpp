@@ -8547,6 +8547,8 @@ void ApplicationInfo::saveReportPreview() const {
     }
     if (panelUsageTruth(panelUsageRead(f, report, "calculating"))) { projectWrite(f, "group", "savePending", QJSValue(true)); return; }
     projectWrite(f, "group", "saving", QJSValue(true)); projectWrite(f, "group", "savePending", QJSValue(false));
+    // The model is brought up to date first, so the figures taken next and the text the save writes are one build's.
+    panelUsageMemberCall(f, report, "prepareSave");
     const auto write = panelUsageClosure(f, 200, {report}, 0);
     if (panelUsageTruth(panelUsageRead(f, report, "writesPdf"))) {
         const auto preview = assistantContextField(f, "group", "preview");

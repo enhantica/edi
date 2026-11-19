@@ -11,6 +11,7 @@
 #include <QStringList>
 #include <QUrl>
 #include <QVariantMap>
+#include <atomic>
 #include <cstdint>
 #include <memory>
 #include <optional>
@@ -142,6 +143,9 @@ class ReportViewModel : public QObject {
     // rows are left as they are. A format that cannot be written leaves its old file and stops the formats after it;
     // the files written before it keep their rows. Answers with saved, or saveFailed for each failure.
     Q_INVOKABLE void saveReport(const QString& fontFamily);
+    // Brings the model up to date now, before a save takes the preview's figures: the figures, the text and the written
+    // digests then come from one build. saveReport refuses figures taken from another build.
+    Q_INVOKABLE void prepareSave();
     // One of the preview's figures for the next save's PDF, by its name in the static text (structure-0, pattern-1,
     // ...); a null image is left out.
     Q_INVOKABLE void setFigure(const QString& name, const QImage& image);
@@ -238,8 +242,21 @@ class ReportViewModel : public QObject {
     mutable QHash<QString, QString> digests_;  // the saved reports' digests by format, from the last build
     mutable QHash<QString, QStringList> rows_;    // long tables' rows by key, from the last build
     QHash<QString, ReportRowsModel*> rows_models_;
+    // One request state for the model (ADR-0096 rules 1 and 3, ADR-0020): `build_generation_` is the newest wanted
+    // build, `adopted_generation_` the one the model holds. At most one build runs on a worker (`building_`); a change
+    // meanwhile owes one more (`rebuild_owed_`), started when it returns, so the project is copied for a worker once
+    // per build, not once per change. Hiding the page or a change while it is hidden supersedes a running build: its
+    // result is dropped, and the page catches up once when shown. `wanted_` lets a worker skip a superseded build.
     mutable std::uint64_t build_generation_ = 0;
+    mutable std::uint64_t adopted_generation_ = 0;
     mutable bool building_ = false;
+    mutable bool rebuild_owed_ = false;
+    std::shared_ptr<std::atomic<std::uint64_t>> wanted_ = std::make_shared<std::atomic<std::uint64_t>>(0);
+    // The model is the newest wanted one.
+    bool current() const { return !dirty_ && !rebuild_owed_ && adopted_generation_ == build_generation_; }
+    // Drops a running build's result (hidden page, hidden change).
+    void supersede() const;
+    std::uint64_t figures_generation_ = 0;  // the build prepareSave brought the model to
     QHash<QString, QImage> figures_;  // setFigure's images, which the next save takes
 };
 
