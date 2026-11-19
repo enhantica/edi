@@ -530,6 +530,32 @@ private slots:
         }
         QVERIFY2(warnings.isEmpty(), qPrintable(warnings.join(QLatin1Char('\n'))));
     }
+    // A 2θ offset that moves the lowest points below 0° leaves them out of the calculation instead of refusing it, and
+    // says so once (the owner, 2026-11-19). The expected outcome is independent of the engine: with an offset one
+    // degree above the first angle, every point below that angle plus 0° has no d-spacing.
+    void offsetBelowZeroLeavesPointsOut() {
+        edi_app::Session session(nullptr);
+        QVERIFY2(session.openProject(QUrl::fromLocalFile(QStringLiteral(EDI_SOURCE_DIR "/docs/user/cli/pd-neut-cwl_cosio-d20_2k/project"))),
+                 qPrintable(session.lastError()));
+        edi_app::ProjectViewModel* project = session.project();
+        QTRY_VERIFY_WITH_TIMEOUT(!project->calculating(), 60000);
+        edi::BraggPdExperiment& experiment = *project->project().experiments[0];
+        QVERIFY(experiment.data && experiment.instrument.calib_twotheta_offset);
+        const std::vector<double>& axis = experiment.data->axis();
+        const double offset = axis.front() + 1.0;
+        const auto below = std::count_if(axis.begin(), axis.end(), [offset](double angle) { return angle - offset <= 0.0; });
+        QVERIFY(below > 0);
+        QVERIFY(project->assign_parameter_value(*experiment.instrument.calib_twotheta_offset, offset).isEmpty());
+        QTRY_VERIFY_WITH_TIMEOUT(!project->calculating(), 60000);
+        edi_app::ExperimentViewModel* model = project->experimentModels().value(0);
+        QVERIFY(model);
+        QVERIFY2(model->pattern()->calculationError().isEmpty(), qPrintable(model->pattern()->calculationError()));
+        QVERIFY(model->pattern()->calculatedPointCount() > 0);
+        const QStringList notes = session.loadWarnings()->keys(QStringLiteral("domain:"));
+        QCOMPARE(notes.size(), 1);
+        QVERIFY2(notes.front().endsWith(u':' + QString::number(below)), qPrintable(notes.front()));
+    }
+
     // A form-factor coefficient the chosen approximation does not use keeps its value but no longer fits (the owner,
     // 2026-11-19): switching Co to <j0> fixes a free C2, its row still names the type and the ion, and one Undo brings
     // back the dipole approximation with C2 free.
