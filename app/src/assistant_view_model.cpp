@@ -4035,6 +4035,9 @@ struct AssistantViewModel::State {
         Object fallback_args;
         QString cue_skipped;
         bool cue_fallback = false;
+        // add_relations after a step whose control could not be shown: that step and the rest run through the
+        // ordinary model methods, like normal mode.
+        bool relation_ordinary = false;
         const void* relation_key = nullptr;
         ProjectEditor::RelationAction relation_action;
         bool step_counted = false, estimate_then_names = false;
@@ -4727,6 +4730,35 @@ struct AssistantViewModel::State {
             return false;
         }
     }
+    // A later add_relations step whose control could not be shown (the first step uses widget_cue_fallback): the
+    // earlier visible steps stay, this step and the rest run through the ordinary model methods, and the result names
+    // the skipped cue. A step whose edit already began, a cancellation or a stale context still refuses.
+    bool widget_relation_fallback(const std::shared_ptr<NativeWidget>& run, const QString& message) noexcept {
+        try {
+            if (run->tool != "add_relations" || run->relation_ordinary || run->completed_steps == 0 || !run->window ||
+                !run->create_parent.expired() || !cue_fallback_admitted(run->call) || !widget_current(run))
+                return false;
+            // The input of a counted step belongs to the step before; only this step's own input can have begun.
+            if (const auto& input = run->relation_input; input && !run->step_counted && (input->consumed || input->outcome.applied))
+                return false;
+            run->relation_ordinary = true;
+            run->cue_skipped = message.isEmpty() ? QStringLiteral("The original control could not be shown") : message;
+            try { qInfo().noquote() << "assistant: Show actions cue skipped for add_relations step reason" << run->cue_skipped; } catch (...) {}
+            // Release this step's prepared input and own edit, so the ordinary step prepares its own.
+            if (const auto input = std::exchange(run->relation_input, nullptr); input && run->project)
+                run->project->finishWidgetRelations(input);
+            if (const auto scope = std::exchange(run->edit_scope, 0)) end_own_edit(scope);
+            run->step_counted = false; run->reveal_steps = 0;
+            // Continue after the refusing callback has unwound.
+            QTimer::singleShot(0, &owner, [this, run] {
+                if (!widget_owned(run)) return;
+                try { widget_relation_step(run); } catch (...) { if (widget_owned(run)) widget_refuse(run, widget_outcome_error); }
+            });
+            return true;
+        } catch (...) {
+            return false;
+        }
+    }
     // The alias add_relations appended and left on its default target, removed when the run stops before choosing
     // its parameter; only that exact row, still in the project.
     void drop_partial_alias(const std::shared_ptr<NativeWidget>& run) noexcept {
@@ -4744,6 +4776,7 @@ struct AssistantViewModel::State {
     }
     void widget_refuse(const std::shared_ptr<NativeWidget>& run, const QString& message,
                        std::source_location caller = std::source_location::current()) noexcept {
+        if (widget_owned(run) && widget_relation_fallback(run, message)) return;
         drop_partial_alias(run);
         if (const auto parent = run->create_parent.lock()) {
             if (!widget_owned(run)) return;
@@ -5045,7 +5078,7 @@ struct AssistantViewModel::State {
     void widget_commit_ready(const std::shared_ptr<NativeWidget>& run) {
         const auto* entry=widget_parameter_entry(run);
         if (!widget_entry_current(run,entry)) throw std::runtime_error("The visible native request or exact live parameter binding is no longer current");
-        if(run->tool!="run_fit" && (run->tool!="edit_relation" || run->relation_visible) && !widget_page_selected(run))
+        if(run->tool!="run_fit" && (run->tool!="edit_relation" || run->relation_visible) && !run->relation_ordinary && !widget_page_selected(run))
             throw std::runtime_error("The original workflow page is no longer current; no control edit was prepared");
         if (run->tool != "run_fit") run->edit_scope = begin_own_edit();
         if (run->tool == "edit_background") {
@@ -7105,7 +7138,9 @@ struct AssistantViewModel::State {
         widget_background_next(run);
     }
     bool widget_relation_current(const std::shared_ptr<NativeWidget>& run) const {
-        if (!widget_current(run) || !widget_page_selected(run)) return false;
+        if (!widget_current(run)) return false;
+        if (run->relation_ordinary) return true;  // the ordinary model methods need no shown page
+        if (!widget_page_selected(run)) return false;
         const auto* extra = widget_sidebar_tab(run, "extras");
         return extra && extra->property("checked").toBool();
     }
@@ -7154,6 +7189,10 @@ struct AssistantViewModel::State {
         Object result{{"status", complete ? "edited" : count ? "partial" : "refused"}, {"steps_completed", static_cast<qint64>(count)},
             {"complete", complete}, {"atomic", false}, {"calculation_pending", run->project && run->project->calculating()},
             {"message", bounded_error(message)}};
+        if(!run->cue_skipped.isEmpty()) {
+            result["cue_skipped"]=bounded_error(run->cue_skipped);
+            result["message"]=bounded_error(message+QLatin1Char(' ')+cue_skipped_message(run->cue_skipped));
+        }
         if(run->estimate_then_names) {
             result["applied"]=true;
             result["published"]=run->call.record->estimate_receipt && run->call.record->estimate_receipt->published;
@@ -7335,6 +7374,7 @@ struct AssistantViewModel::State {
             widget_relation_step(run); return;
         }
         run->relation_action = action;
+        if (run->relation_ordinary) { run->relation_input.reset(); widget_relation_edit_apply(run); return; }
         widget_relation_edit_step(run); // Same original cue/model path as standalone edits.
     }
     void widget_constraint_step(const std::shared_ptr<NativeWidget>& run) {
@@ -7346,8 +7386,9 @@ struct AssistantViewModel::State {
         // cppcheck-suppress nullPointerRedundantCheck ; taken from the live run just above; the later check is for re-entry
         const QPointer<ConstraintListModel> constraintModel(target->analysis()->constraints());
         const QPointer<QQuickItem> control(widget_relation_named(run,QStringLiteral("constraints.append")));
-        if(!constraintModel || !control){widget_refuse(run,widget_outcome_error);return;}
-        if(!widget_reveal_parameter(run,control))return;
+        const bool ordinary=run->relation_ordinary;
+        if(!constraintModel || (!control && !ordinary)){widget_refuse(run,widget_outcome_error);return;}
+        if(!ordinary && !widget_reveal_parameter(run,control))return;
         if(!receiver || receiver->state_.get()!=this || !widget_owned(run))return;
         if(widget_input->manualDraftPresent()){control_failure(run,ControlCause::ManualInput);widget_refuse(run,QObject::tr("Finish the current manual input first"));return;}
         const auto row=run->relation_row;const auto values=rows.at(row).toObject();
@@ -7356,15 +7397,11 @@ struct AssistantViewModel::State {
         run->relation_action.text=values.value("id").toString();run->relation_action.expression=values.value("expression").toString();
         run->relation_action.enabled=values.value("enabled").toBool();
         widget_commit_ready(run);
-        if(!receiver || receiver->state_.get()!=this || !widget_owned(run) || !target || !constraintModel || !control)return;
-        AssistantWidgetInput::Request request;request.kind=AssistantWidgetInput::Kind::FileLoadCue;request.target=control;
-        auto current=[this,run,receiver,target,constraintModel,control,row]{return receiver && receiver->state_.get()==this && target && constraintModel && control && widget_relation_current(run) && run->relation_row==row && constraintModel==target->analysis()->constraints();};
-        request.current=current;request.restoreCurrent=current;request.prepareCommit=current;request.finishCommit=[]{};
-        request.completed=[this,run,receiver,target,constraintModel,control,row](bool delivered,const QString& message,ControlCause cause){
-            if(!receiver || receiver->state_.get()!=this || !widget_owned(run))return;
-            control_failure(run,delivered?ControlCause::None:cause);
+        if(!receiver || receiver->state_.get()!=this || !widget_owned(run) || !target || !constraintModel || (!control && !ordinary))return;
+        // The same ordinary append, after the visible cue or, once a step could not be shown, without it.
+        auto commit=[this,run,receiver,target,constraintModel,row] {
             try {
-                if(!delivered || !target || !constraintModel || !control || !widget_relation_current(run) || run->relation_row!=row){widget_refuse(run,message);return;}
+                if(!target || !constraintModel || !widget_relation_current(run) || run->relation_row!=row){widget_refuse(run,widget_outcome_error);return;}
                 const auto input=run->relation_input;const auto scope=run->edit_scope;
                 const auto cleanup=qScopeGuard([this,run,receiver,target,input,scope]() noexcept {try {if(target)target->finishWidgetRelations(input);if(receiver && receiver->state_.get()==this && run->edit_scope==scope){run->edit_scope=0;end_own_edit(scope);}}catch(...) {}});
                 if(!input){widget_refuse(run,widget_outcome_error);return;}
@@ -7375,6 +7412,16 @@ struct AssistantViewModel::State {
                 target->finishWidgetRelations(input);if(run->edit_scope==scope){run->edit_scope=0;end_own_edit(scope);}
                 widget_relation_done(run,true,{});
             }catch(...){if(receiver && receiver->state_.get()==this && widget_owned(run))widget_refuse(run,widget_outcome_error);}
+        };
+        if(ordinary){commit();return;}
+        AssistantWidgetInput::Request request;request.kind=AssistantWidgetInput::Kind::FileLoadCue;request.target=control;
+        auto current=[this,run,receiver,target,constraintModel,control,row]{return receiver && receiver->state_.get()==this && target && constraintModel && control && widget_relation_current(run) && run->relation_row==row && constraintModel==target->analysis()->constraints();};
+        request.current=current;request.restoreCurrent=current;request.prepareCommit=current;request.finishCommit=[]{};
+        request.completed=[this,run,receiver,control,commit](bool delivered,const QString& message,ControlCause cause){
+            if(!receiver || receiver->state_.get()!=this || !widget_owned(run))return;
+            control_failure(run,delivered?ControlCause::None:cause);
+            if(!delivered || !control){widget_refuse(run,message);return;}
+            commit();
         };
         control_start(run->call,control_target(run),std::move(request));
     }
