@@ -25,9 +25,7 @@ Column {
         objectName: "propagationVectors.list"
         // Never blank for a Magnetic structure (the owner, 2026-11-19): without a vector in the file, the one its
         // magnetic group gives.
-        defaultInfoText: group.structure && group.structure.derivedPropagationVector !== ""
-            ? qsTr("k = %1, from the magnetic group (its parent's cell)").arg(group.structure.derivedPropagationVector)
-            : qsTr("No propagation vectors yet")
+        defaultInfoText: group.structure && group.structure.derivedPropagationVector !== "" ? qsTr("k = %1, from the magnetic group (its parent's cell)").arg(group.structure.derivedPropagationVector) : qsTr("No propagation vectors yet")
         sourceModel: group.vectors
 
         columns: [numberColumnWidth, -1, -1, AppSizes.iconColumnWidth]
