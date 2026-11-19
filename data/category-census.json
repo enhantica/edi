@@ -2686,6 +2686,11 @@
       "why": "held as written in the structure's magnetic description; crysta checks it"
     },
     {
+      "name": "_atom_type_scat",
+      "form": "derived",
+      "why": "held as written in the structure's magnetic description; crysta checks it"
+    },
+    {
       "name": "_space_group_magn_transforms",
       "form": "derived",
       "why": "held as written in the structure's magnetic description; crysta checks it"
@@ -3708,6 +3713,11 @@
     {
       "member": "MagneticDescription::kept_iso",
       "type": "std::vector<crysta::KeptDeclaration>",
+      "not_storage": "a structure's magnetic description held as written, one value crysta reads and writes"
+    },
+    {
+      "member": "MagneticDescription::radial_coefficients",
+      "type": "std::vector<std::pair<std::string, crysta::MagneticRadialCoefficients>>",
       "not_storage": "a structure's magnetic description held as written, one value crysta reads and writes"
     },
     {
@@ -6347,6 +6357,9 @@
     ],
     "_atom_site_moment": [
       "_atom_site_moment"
+    ],
+    "_atom_type_scat": [
+      "_atom_type_scat"
     ],
     "_background": [
       "_background"

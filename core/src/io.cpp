@@ -944,7 +944,17 @@ void read_magnetic(const Block& block, Structure& structure, const std::string& 
         }
     }
     // The <jn> coefficients a file gives per atom type, held as written; crysta checks that each is a number.
-    if (const Loop* loop = block.loop_with("_atom_type_scat.symbol")) {
+    const Loop* radial_loop = nullptr;
+    for (const Loop& candidate : block.loops) {
+        if (std::none_of(candidate.tags.begin(), candidate.tags.end(),
+                         [](const std::string& tag) { return tag.starts_with("_atom_type_scat."); })) continue;
+        if (radial_loop != nullptr)
+            fail_domain(where, "duplicate-coefficient-loop", "_atom_type_scat: coefficients must be in one loop");
+        if (candidate.column("_atom_type_scat.symbol") < 0)
+            fail_domain(where, "absent-key", "_atom_type_scat.symbol: every coefficient row needs an atom-type key");
+        radial_loop = &candidate;
+    }
+    if (const Loop* loop = radial_loop) {
         for (const auto& row : loop->rows) {
             crysta::MagneticRadialCoefficients coefficients;
             for (std::size_t index = 0; index < coefficients.values.size(); ++index) {
@@ -1307,7 +1317,7 @@ Structure structure_from_block(const Block& block, const std::string& where) {
                     "the BNS transform does not map the BNS standard setting onto the magnetic operations");
     }
     // crysta's one acceptance rule for a magnetic structure, as its own load applies it.
-    if (!structure.magnetic->operations.empty()) {
+    if (!structure.magnetic->operations.empty() || !structure.magnetic->radial_coefficients.empty()) {
         try {
             check_magnetic_acceptance(structure);
             complete_atom_site_moments(structure);  // tied components as crysta's load sets them

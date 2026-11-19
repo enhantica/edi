@@ -6248,6 +6248,10 @@ struct ParentPropagationVectorCategory {
     static constexpr const char* name = "_parent_propagation_vector";
     static constexpr const char* derived = "held as written in the structure's magnetic description; crysta checks it";
 };
+struct AtomTypeScatCategory {
+    static constexpr const char* name = "_atom_type_scat";
+    static constexpr const char* derived = "held as written in the structure's magnetic description; crysta checks it";
+};
 struct SpaceGroupMagnTransformsCategory {
     static constexpr const char* name = "_space_group_magn_transforms";
     static constexpr const char* derived = "held as written in the structure's magnetic description; crysta checks it";
