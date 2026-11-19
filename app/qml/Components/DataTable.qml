@@ -174,6 +174,12 @@ EaComponents.ListView {
     // the columns keep their widths until it ends (ADR-0096 rule 2); only the first fit is made at once.
     property bool liveRefit: false
     property bool measureSliced: false
+    // The whole model measured again a second after its values last changed (tableFitWholeModel).
+    Timer {
+        id: quietRefit
+        interval: 1000
+        onTriggered: table.refit()
+    }
     property int measureRun: 0
     property var measuredWidths: null
     function measureRows(run, from) {

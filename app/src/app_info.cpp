@@ -7157,6 +7157,22 @@ void ApplicationInfo::tableFitWholeModel() const {
     // all its rows in one go.
     const auto fitted = panelUsageContextRead(f, "contentWidths");
     const bool sliced = panelUsageTruth(fitted) && panelUsageRead(f, fitted, "length").toInt() > 0;
+    // Values that changed while the table shows (a running fit's rows): the rows on screen are measured as they are,
+    // with the widths held as the floor, and no row is made beside the view; the whole model is measured again once the
+    // values have been still for a second (DataTable's quietRefit), so a wider row off screen fits then.
+    if (sliced && panelUsageTruth(panelUsageContextRead(f, "liveRefit"))) {
+        panelUsageContextWrite(f, "liveRefit", QJSValue(false)); if (!editorLife(f, life)) return;
+        const auto widths = panelUsageGlobalCall(f, "fitColumns", {consentNull(), fitted});
+        if (!editorLife(f, life)) return;
+        panelUsageContextWrite(f, "unfitted", QJSValue(false)); if (!editorLife(f, life)) return;
+        panelUsageContextWrite(f, "refitting", QJSValue(false)); if (!editorLife(f, life)) return;
+        if (panelUsageTruth(widths)) {
+            panelUsageContextWrite(f, "contentWidths", widths); if (!editorLife(f, life)) return;
+            panelUsageGlobalCall(f, "combineWidths", {}); if (!editorLife(f, life)) return;
+        }
+        panelUsageMemberCall(f, panelUsageContextRead(f, "quietRefit"), "restart", {});
+        return;
+    }
     panelUsageContextWrite(f, "liveRefit", QJSValue(false)); if (!editorLife(f, life)) return;
     panelUsageContextWrite(f, "measureSliced", QJSValue(sliced)); if (!editorLife(f, life)) return;
     panelUsageContextWrite(f, "unfitted", QJSValue(false)); if (!editorLife(f, life)) return;
