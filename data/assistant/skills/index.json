@@ -25,11 +25,11 @@
     },
     {
       "id": "fullprof-intake",
-      "version": "1.1.0",
+      "version": "1.2.0",
       "title": "Reconstruct FullProf and Edi projects",
       "summary": "Map selected FullProf and Edi projects in both directions, preserving observations and refinement settings, and compare fixed-input calculations.",
       "path": "fullprof-intake/SKILL.md",
-      "sha256": "6255a6c74589911d9a32306300d50427b54c45b54b76e5d045ae6e0307ade609",
+      "sha256": "0c0142b2eb3d04d4daa3da5028b4d66c3f0ca8d32b9e25339d8d11b3c5239f6b",
       "requires": [
         "selected_files"
       ],
