@@ -57,6 +57,8 @@ std::vector<edi::Category> shown_categories(edi::Structure& structure) {
         // A grey group gives no moment yet, so the core lists only the moments: the groups a Magnetic structure always has.
         if (!has("space_group_magn")) categories.push_back({"space_group_magn"});
         if (!has("parent_space_group")) categories.push_back({"parent_space_group"});
+        if (!has("parent_propagation_vector"))
+            categories.push_back({"parent_propagation_vector", true, structure.magnetic->propagation_vectors.size()});
         if (!has("space_group_symop_magn_operation"))
             categories.push_back({"space_group_symop_magn_operation", true, structure.magnetic->operations.size()});
         categories.push_back({"space_group_magn_symbols"});
@@ -952,6 +954,14 @@ QStringList StructureViewModel::magneticGroupNamesBns() {
 }
 
 bool StructureViewModel::magnetic() const { return edi::structure_magnetic(structure_); }
+
+QString StructureViewModel::derivedPropagationVector() const {
+    const edi::MagneticDescription& magnetic = structure_.magnetic;
+    if (!edi::structure_magnetic(structure_) || !magnetic.propagation_vectors.empty() || !magnetic.space_group_declared) {
+        return {};
+    }
+    return QStringLiteral("0,0,0");
+}
 
 bool StructureViewModel::setMagnetic(bool magnetic) {
     const QString refusal = editor_.apply(edi::Edit::structure_magnetic(structure_, magnetic), true);

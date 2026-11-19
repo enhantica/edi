@@ -379,6 +379,9 @@ class StructureViewModel : public QObject {
     Q_PROPERTY(edi_app::ParentGroupView parentGroup READ parentGroup NOTIFY parentGroupChanged)
     // Whether any site carries a moment.
     Q_PROPERTY(bool magnetic READ magnetic NOTIFY magneticChanged)
+    // The propagation vector a Magnetic structure without one has from its magnetic group: k = 0,0,0 for a group in
+    // its parent's cell (types I-III, table-resolved); empty when the file gives vectors or none can be derived.
+    Q_PROPERTY(QString derivedPropagationVector READ derivedPropagationVector NOTIFY magneticChanged)
     // The types a site may take for the probes of the experiments linking the structure (edi::atom_types).
     Q_PROPERTY(QStringList atomTypes READ atomTypes NOTIFY atomTypesChanged)
     // The bond cutoffs (`_geom`): a bond is drawn between two sites at least the minimum distance apart and at most
@@ -419,6 +422,7 @@ class StructureViewModel : public QObject {
     // admits them with the cell and the propagation vectors, else nothing changes and the refusal is kept.
     Q_INVOKABLE bool setMagneticGroup(int index);
     bool magnetic() const;
+    QString derivedPropagationVector() const;
     QStringList atomTypes() const { return atom_types_; }
     double minBondDistance() const;
     void setMinBondDistance(double distance);

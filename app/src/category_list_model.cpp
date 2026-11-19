@@ -79,10 +79,8 @@ std::vector<const edi::Category*> presentation_order(const std::vector<edi::Cate
             ordered.push_back(&category);
         }
     }
-    // A Magnetic structure's Magnetic space group takes Space group's place (edi ADR-0078).
-    const auto order = [](const std::string& id) { return edi::category_order(id == "space_group_magn" ? "space_group" : id); };
-    std::stable_sort(ordered.begin(), ordered.end(), [&order](const edi::Category* a, const edi::Category* b) {
-        return order(a->id) < order(b->id);
+    std::stable_sort(ordered.begin(), ordered.end(), [](const edi::Category* a, const edi::Category* b) {
+        return edi::category_order(a->id) < edi::category_order(b->id);
     });
     return ordered;
 }

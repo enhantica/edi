@@ -65,7 +65,9 @@ without computing any of them itself.
   a separate read-only group shows the derived symbols, saved as the dictionary's `_space_group_magn` items: the UNI
   symbol, the OG number and name and the point group (UNI, Litvin). The parent space group is always present on Extra
   for a Magnetic structure, under its own heading (`_parent_space_group`); a file without one gets the magnetic group's
-  own space group.
+  own space group. Magnetic space group takes Space group's place, above Cell, in the sidebar and in the saved file's
+  category order, and Propagation vectors follow it on Main: the vectors the file gives, else the one the magnetic group
+  gives (k = 0 for a group in its parent's cell), never blank (the owner, 2026-11-19).
 - **Site symmetry from the magnetic group** (the owner, 2026-11-18). For types I–III the family group (the operations
   with time reversal ignored) is the ordinary space group whose IT number is the BNS number's first part, in the
   setting the BNS transform gives. edi derives that table setting when it reads the structure and gives it to crysta
