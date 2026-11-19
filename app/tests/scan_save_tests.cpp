@@ -550,6 +550,32 @@ private slots:
         QTRY_VERIFY_WITH_TIMEOUT(session->hasProject(), 20000);
         QVERIFY(session->untitled());
         QVERIFY(session->needsSaveAs());
+        const auto named = [window](const char* name) {
+            const QString wanted = QString::fromLatin1(name);
+            const auto visit = [&](auto&& visit, QQuickItem* item) -> QQuickItem* {
+                if (item->objectName() == wanted) return item;
+                for (auto* child : item->childItems()) {
+                    if (auto* found = visit(visit, child)) return found;
+                }
+                return nullptr;
+            };
+            return visit(visit, window->contentItem());
+        };
+        QQuickItem* create = nullptr;
+        QTRY_VERIFY_WITH_TIMEOUT((create = named("project.create")), 20000);
+        QTest::mouseClick(window, Qt::LeftButton, {},
+                          create->mapToScene(QPointF(create->width() / 2, create->height() / 2)).toPoint());
+        QTRY_VERIFY_WITH_TIMEOUT(named("createProject.name") && named("createProject.name")->isVisible(), 20000);
+        const auto placeholder = [&](const char* name) {
+            const auto* field = named(name);
+            return field ? field->property("placeholderText").toString() : QString();
+        };
+        QVERIFY2(placeholder("createProject.name").contains(QStringLiteral("project folder")), qPrintable(placeholder("createProject.name")));
+        QVERIFY(placeholder("createProject.title").contains(QStringLiteral("report")));
+        QVERIFY(placeholder("createProject.authors").contains(QStringLiteral("report")));
+        QVERIFY(placeholder("createProject.location").contains(QStringLiteral("folder in which")));
+        QTest::keyClick(window, Qt::Key_Escape);
+        QTRY_VERIFY_WITH_TIMEOUT(!named("createProject.name") || !named("createProject.name")->isVisible(), 20000);
         QVERIFY(session->project()->createStructure());
         QCOMPARE(session->project()->project().structures.size(), std::size_t{1});
         QTemporaryDir folder;
@@ -563,15 +589,6 @@ private slots:
         QVERIFY(!session->needsSaveAs());
         QCOMPARE(session->project()->project().structures.size(), std::size_t{1});
         QVERIFY(QFileInfo::exists(location + QStringLiteral("/project.edi")));
-        // The Create form says where each field is used.
-        const auto placeholder = [window](const char* name) {
-            const auto* field = window->findChild<QObject*>(QString::fromLatin1(name));
-            return field ? field->property("placeholderText").toString() : QString();
-        };
-        QVERIFY2(placeholder("createProject.name").contains(QStringLiteral("project folder")), qPrintable(placeholder("createProject.name")));
-        QVERIFY(placeholder("createProject.title").contains(QStringLiteral("report")));
-        QVERIFY(placeholder("createProject.authors").contains(QStringLiteral("report")));
-        QVERIFY(placeholder("createProject.location").contains(QStringLiteral("folder in which")));
     }
 
     // A 2θ offset that moves the lowest points below 0° leaves them out of the calculation instead of refusing it, and
