@@ -28,7 +28,7 @@ EaComponents.ListView {
     readonly property ListModelMirror rowsMirror: ListModelMirror {
         source: table.mirrorsRows ? table.sourceModel : null
     }
-    model: mirrorsRows ? rowsMirror : (sourceModel ?? null)
+    model: mirrorsRows && rowsMirror ? rowsMirror : (sourceModel ?? null)
     multiSelection: false
     // A click on any cell makes its row current, an editable cell's too (the owner, 2026-10-22): an editor taking
     // focus selects its row, as a click on the row's background does.
@@ -356,7 +356,7 @@ EaComponents.ListView {
     Connections {
         property var ownerLife: null
         Component.onCompleted: ApplicationInfo.tableOwnerCallback(3)
-        target: table.model
+        target: table.model ?? null
         ignoreUnknownSignals: true
         function onDataChanged(topLeft, bottomRight) {
             ApplicationInfo.tableDataChanged(topLeft, bottomRight);
