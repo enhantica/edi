@@ -154,7 +154,11 @@ std::vector<std::pair<double, double>> excluded_of(const edi::ExperimentBase& ex
 
 }  // namespace
 
-ScanViewModel::ScanViewModel(QObject* parent) : QObject(parent) {}
+ScanViewModel::ScanViewModel(QObject* parent) : QObject(parent) {
+    delivery_.setSingleShot(true);
+    delivery_.setInterval(50);
+    connect(&delivery_, &QTimer::timeout, this, &ScanViewModel::publishDelivery);
+}
 
 ScanViewModel::~ScanViewModel() { stop(); }
 
@@ -596,11 +600,23 @@ void ScanViewModel::deliver(std::size_t first, std::vector<Read>& done) {
     placeRange();
     if (series_) publishBackground();
     // File-index rows and labels stay fixed while batches arrive; extracted values reorder them once at the end.
-    if (loaded_ == count()) placeRows();
+    const bool complete = loaded_ == count();
+    if (complete) placeRows();
+    // The batches' patterns reach the views at most every 50 ms (ADR-0096 rule 4): a scan of tens of thousands of
+    // files arrives in thousands of batches, and each drew the Stacked and Map views again. The last one at once.
+    if (complete) {
+        delivery_.stop();
+        publishDelivery();
+    } else if (!delivery_.isActive()) {
+        delivery_.start();
+    }
+    readNext();
+}
+
+void ScanViewModel::publishDelivery() {
     emit loadedChanged();
     ++revision_;
     emit revisionChanged();
-    readNext();
 }
 
 void ScanViewModel::placeRows() {
