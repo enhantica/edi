@@ -6955,6 +6955,7 @@ void ProjectViewModel::publishTemplate() {
 }
 
 void ProjectViewModel::publish(bool structural) {
+    ++model_revision_;  // every publication: modelSnapshot is made again
     if (structural) {
         drag_undo_.reset();  // the parameters it names may be gone; its full record still restores them by name
         registry_->rebuild(*project_);
@@ -7486,6 +7487,25 @@ std::string ProjectViewModel::discoveredFile(const std::string& relative) const 
     return file_of(*discovered_files_, relative);
 }
 
+std::shared_ptr<const edi::Project> ProjectViewModel::modelSnapshot() const {
+    if (!model_snapshot_ || model_snapshot_revision_ != model_revision_ ||
+        !edi::unchanged_since(*project_, model_snapshot_stamps_)) {
+        model_snapshot_ = std::make_shared<const edi::Project>(*project_);
+        model_snapshot_revision_ = model_revision_;
+        model_snapshot_stamps_ = edi::work_stamps(*project_);
+    }
+    return model_snapshot_;
+}
+
+std::shared_ptr<const edi::Project> ProjectViewModel::reportSnapshot() const {
+    if (!scan_template_) return modelSnapshot();
+    if (!report_template_snapshot_ || report_template_revision_ != model_revision_) {
+        report_template_snapshot_ = std::make_shared<const edi::Project>(*scan_template_);
+        report_template_revision_ = model_revision_;
+    }
+    return report_template_snapshot_;
+}
+
 std::shared_ptr<const edi::Project> ProjectViewModel::templateSnapshot() const {
     if (!scan_template_) return nullptr;
     if (!template_snapshot_ || !edi::unchanged_since(*scan_template_, template_snapshot_stamps_)) {
@@ -7528,7 +7548,7 @@ void ProjectViewModel::refreshTextsLater() {
 void ProjectViewModel::makeTextsLater() {
     // From an uncalculated copy, as discoveredFile's: the values are the shown ones; a computed category waits for the
     // next publication that is not a view.
-    const auto copy = std::make_shared<const edi::Project>(*project_);
+    const auto copy = modelSnapshot();
     const edi::WorkStamps stamps = edi::work_stamps(*project_);
     const std::uint64_t request = ++texts_request_;
     const QPointer<ProjectViewModel> self(this);
@@ -7570,7 +7590,7 @@ void ProjectViewModel::refreshSpellingLater() {
 }
 
 void ProjectViewModel::makeSpellingLater() {
-    const auto copy = std::make_shared<const edi::Project>(*project_);
+    const auto copy = modelSnapshot();
     const edi::WorkStamps stamps = edi::work_stamps(*project_);
     const std::uint64_t request = ++spelling_request_;
     const QPointer<ProjectViewModel> self(this);

@@ -482,7 +482,20 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // A shared copy of the scan's template, made again only when the template changes: the workers that calculate or
     // read a shown point take it instead of a copy made per point on the GUI thread.
     std::shared_ptr<const edi::Project> templateSnapshot() const;
+    // A shared copy of the model, made again only after a publication that changed it: the workers that read the whole
+    // model (the report, the texts) share it instead of each copying the model on the GUI thread.
+    std::shared_ptr<const edi::Project> modelSnapshot() const;
+    // What the report is built from, shared: a scan's template, else the model.
+    // Made again at most once per publication, as modelSnapshot: a scan's results reach the template outside its edit
+    // stamps, so templateSnapshot (made again only when its inputs change) can lack the newest results.
+    std::shared_ptr<const edi::Project> reportSnapshot() const;
     mutable std::shared_ptr<const edi::Project> template_snapshot_;
+    mutable std::shared_ptr<const edi::Project> model_snapshot_;
+    mutable std::uint64_t model_snapshot_revision_ = 0;
+    mutable std::shared_ptr<const edi::Project> report_template_snapshot_;
+    mutable std::uint64_t report_template_revision_ = 0;
+    mutable edi::WorkStamps model_snapshot_stamps_;
+    std::uint64_t model_revision_ = 1;  // counts publications (publish)
     mutable edi::WorkStamps template_snapshot_stamps_;
     void refreshSpellingLater();
     // While a fit runs every followed point publishes: the texts and the spelling, each made from a copy of the

@@ -151,7 +151,8 @@ ReportViewModel::Inputs ReportViewModel::prepare() const {
     const StructureViewOptions* view = project_.structureViewOptions();
     inputs.vesta = view != nullptr && view->colorScheme() == QLatin1String("vesta");
     inputs.colour_positions = project_.colourPositions();
-    inputs.input = std::make_shared<const edi::Project>(reportInput());
+    // Shared, not copied here: a scan's template copy is made again only when the template changes (ADR-0096 rule 3).
+    inputs.input = project_.reportSnapshot();
     const QDir reports(reportsDirectory());
     for (const auto& file : project.report_files) {
         if (reports.exists(QString::fromStdString(file->name.value()))) {
