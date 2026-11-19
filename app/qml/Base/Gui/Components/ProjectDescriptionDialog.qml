@@ -103,7 +103,7 @@ EaElements.Dialog {
                 implicitWidth: dialog.inputFieldWidth
                 horizontalAlignment: TextInput.AlignLeft
                 validator: RegularExpressionValidator {
-                    regularExpression: /^[a-zA-Z][a-zA-Z0-9_\-\.]{1,30}$/
+                    regularExpression: /^[a-zA-Z][a-zA-Z0-9_\-]{1,30}$/
                 }
                 placeholderText: qsTr("e.g. lbco-hrpt: becomes the project folder name; letters, digits, - and _")
 
