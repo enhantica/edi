@@ -4030,7 +4030,7 @@ struct AssistantViewModel::State {
         // An alias add_relations appended whose parameter is not chosen yet: removed if the run stops there, so no alias
         // is left on the selector's default target.
         const void* partial_alias = nullptr;
-        bool partial_alias_removed = false;
+        bool partial_alias_removed = false, partial_alias_deferred = false;
         // The tool and arguments as admitted, so a refused cue can still run the operation as normal mode does.
         QString fallback_tool;
         Object fallback_args;
@@ -4592,9 +4592,11 @@ struct AssistantViewModel::State {
         try { if (original_cleanup() && helper) helper->cancel(); } catch (...) {}
         // Every exit of add_relations, Stop and retirement included, removes an alias it left unfinished; the retained
         // outcome then says so.
-        if (run->tool == "add_relations") {
+        // The helper's cancellation callbacks may have replaced or destroyed the original owner: only it cleans up.
+        if (run->tool == "add_relations" && original_cleanup()) {
             drop_partial_alias(run);
-            if (run->partial_alias_removed) try { widget_sequence_retain(run); } catch (...) {}
+            if ((run->partial_alias_removed || run->partial_alias_deferred) && original_cleanup())
+                try { widget_sequence_retain(run); } catch (...) {}
         }
         if (original_cleanup() && publishing && (!generic_busy || generic_revoke_pending ||
             generic_clear_pending || generic_context_pending || !generic_authenticated || generic_retiring))
@@ -4760,22 +4762,35 @@ struct AssistantViewModel::State {
             std::vector<std::pair<std::string, bool>> before_flags;
             auto edit = assistant_native_edit(*project->assistantProject(), run->tool, Object{{values ? "values" : "flags", rest}}, before_flags);
             if (!edit) return false;
+            // The original owner, captured before any callback (the log's message handler, input release, the edit's
+            // publication) can stop, replace or destroy it; each later step proves it still holds.
+            const auto receiver = run->receiver;
+            const auto record = native_call->record;
+            const auto receipt = native_call->receipt;
+            const auto rpc = native_call->rpc;
+            const QPointer<ProjectViewModel> target(project);
+            const auto original = [&] {
+                return receiver && receiver->state_.get() == this && native_call && native_call->record == record &&
+                       native_call->receipt == receipt && native_call->rpc == rpc && target && project == target &&
+                       widget_owned(run) && cue_fallback_admitted(run->call);
+            };
             run->cue_fallback = true;
             run->cue_skipped = message.isEmpty() ? QStringLiteral("The original control could not be shown") : message;
             try { qInfo().noquote() << "assistant: Show actions cue skipped for" << run->tool << "entry" << run->parameter_at << "reason" << run->cue_skipped; } catch (...) {}
+            if (!original()) return true;  // whoever settled it owns the reply
             // Release the unentered entry's prepared input and own edit before the ordinary edit.
-            if (const auto input = std::exchange(run->input, nullptr)) run->project->finishWidgetInput(input);
+            if (const auto input = std::exchange(run->input, nullptr)) target->finishWidgetInput(input);
             if (const auto scope = std::exchange(run->edit_scope, 0)) end_own_edit(scope);
-            const auto receiver = run->receiver;
-            const auto record = run->call.record;
-            const QPointer<ProjectViewModel> target(project);
+            if (!original()) return true;
             const auto scope = begin_own_edit();
             native_call->may_have_written = true;
             ProjectViewModel::EditOutcome result;
             try { result = target->applyRecordedEdit(*edit, false); }
-            catch (...) { end_own_edit(scope); throw; }
+            catch (...) { if (receiver && receiver->state_.get() == this) end_own_edit(scope); throw; }
+            if (!receiver || receiver->state_.get() != this) return true;
             end_own_edit(scope);
-            if (!receiver || receiver->state_.get() != this || !target || project != target || !native_call || native_call->record != record)
+            if (!target || project != target || !native_call || native_call->record != record || native_call->receipt != receipt ||
+                native_call->rpc != rpc || !widget_owned(run))
                 return true;  // whoever replaced the call owns its reply
             const bool complete = result.applied && result.published;
             native_finish(complete,
@@ -4803,10 +4818,14 @@ struct AssistantViewModel::State {
                 return false;
             run->relation_ordinary = true;
             run->cue_skipped = message.isEmpty() ? QStringLiteral("The original control could not be shown") : message;
+            const auto receiver = run->receiver;
             try { qInfo().noquote() << "assistant: Show actions cue skipped for add_relations step reason" << run->cue_skipped; } catch (...) {}
+            // The log's message handler may have stopped or replaced the operation: then whoever did owns its reply.
+            if (!receiver || receiver->state_.get() != this || !widget_owned(run)) return true;
             // Release this step's prepared input and own edit, so the ordinary step prepares its own.
             if (const auto input = std::exchange(run->relation_input, nullptr); input && run->project)
                 run->project->finishWidgetRelations(input);
+            if (!receiver || receiver->state_.get() != this || !widget_owned(run)) return true;
             if (const auto scope = std::exchange(run->edit_scope, 0)) end_own_edit(scope);
             run->step_counted = false; run->reveal_steps = 0;
             // Continue after the refusing callback has unwound.
@@ -4825,32 +4844,87 @@ struct AssistantViewModel::State {
     void drop_partial_alias(const std::shared_ptr<NativeWidget>& run) noexcept {
         try {
             const void* partial = std::exchange(run->partial_alias, nullptr);
-            if (run->tool != "add_relations" || !run->project || run->project != project) return;
-            const auto& aliases = run->project->assistantProject()->aliases;
-            const auto& input = run->relation_input;
+            const QPointer<ProjectViewModel> target(run->project);
+            if (run->tool != "add_relations" || !target || target != project) return;
+            const auto input = run->relation_input;
             if (!partial && input && !run->step_counted && input->consumed && input->outcome.applied &&
                 input->expected.kind == ProjectEditor::RelationAction::Kind::AliasAppend) {
+                const auto& aliases = target->assistantProject()->aliases;
                 const auto position = run->relation_base + run->relation_row;
                 if (position >= 0 && position + 1 == static_cast<qsizetype>(aliases.size()))
                     partial = aliases[static_cast<std::size_t>(position)].get();
             }
             if (!partial) return;
+            // The row as the run left it: a later rename or retarget makes it someone else's, never removed.
+            std::string id, parameter;
+            for (const auto& row : target->assistantProject()->aliases)
+                if (row.get() == partial) { id = row->id.value(); parameter = row->parameter_unique_name.value(); }
+            if (id.empty() && parameter.empty()) return;
             // Remove is its own ordinary relation action: release this run's prepared one first.
-            if (input) run->project->finishWidgetRelations(input);
-            for (std::size_t at = 0; at < aliases.size(); ++at) {
-                if (aliases[at].get() != partial) continue;
-                const auto scope = begin_own_edit();
-                const auto release = qScopeGuard([this, scope]() noexcept { end_own_edit(scope); });
-                run->project->analysis()->aliases()->remove(static_cast<int>(at));
-                run->partial_alias_removed = std::none_of(aliases.begin(), aliases.end(), [partial](const auto& row) { return row.get() == partial; });
-                return;
+            if (input) target->finishWidgetRelations(input);
+            const auto removal = remove_unfinished_alias(target, partial, id, parameter);
+            run->partial_alias_removed = removal == AliasRemoval::Removed;
+            if (removal == AliasRemoval::Publishing) {
+                // Stop came from inside an edit's publication, where a nested edit is refused: remove once it unwinds.
+                run->partial_alias_deferred = true;
+                defer_unfinished_alias(target, partial, std::move(id), std::move(parameter), 0);
             }
         } catch (...) {}  // the original outcome stands; a later reread shows the row
+    }
+    enum class AliasRemoval { Removed, Kept, Publishing };
+    // Removes the exact unfinished alias row if the project still holds it unchanged. The removal's notifications may
+    // replace the project or the assistant, so everything after it goes through the captured owners.
+    AliasRemoval remove_unfinished_alias(const QPointer<ProjectViewModel>& target, const void* row, const std::string& id,
+                                         const std::string& parameter) noexcept {
+        try {
+            const QPointer<AssistantViewModel> receiver(&owner);
+            if (!target || project != target) return AliasRemoval::Kept;
+            int at = -1, index = 0;
+            for (const auto& alias : target->assistantProject()->aliases) {
+                if (alias.get() == row && alias->id.value() == id && alias->parameter_unique_name.value() == parameter) at = index;
+                ++index;
+            }
+            if (at < 0) return AliasRemoval::Kept;
+            if (!target->readyForEdit()) return AliasRemoval::Publishing;
+            const auto scope = begin_own_edit();
+            try { target->analysis()->aliases()->remove(at); }
+            catch (...) { if (receiver && receiver->state_.get() == this) end_own_edit(scope); throw; }
+            if (!receiver || receiver->state_.get() != this) return AliasRemoval::Kept;
+            end_own_edit(scope);
+            if (!target) return AliasRemoval::Kept;
+            const auto& aliases = target->assistantProject()->aliases;
+            return std::none_of(aliases.begin(), aliases.end(), [row](const auto& alias) { return alias.get() == row; })
+                ? AliasRemoval::Removed : AliasRemoval::Kept;
+        } catch (...) {
+            return AliasRemoval::Kept;
+        }
+    }
+    // The removal after the refused publication unwinds: only while this assistant and project remain, no newer
+    // operation holds the controls, and the row is still exactly as the run left it. Bounded retries.
+    void defer_unfinished_alias(const QPointer<ProjectViewModel>& target, const void* row, std::string id, std::string parameter,
+                                int attempt) noexcept {
+        try {
+            const QPointer<AssistantViewModel> receiver(&owner);
+            QTimer::singleShot(attempt == 0 ? 0 : 20, &owner, [this, receiver, target, row, id = std::move(id),
+                                                              parameter = std::move(parameter), attempt]() mutable {
+                if (!receiver || receiver->state_.get() != this || !target || project != target || native_widget || native_create_widget)
+                    return;
+                const auto removal = remove_unfinished_alias(target, row, id, parameter);
+                if (removal == AliasRemoval::Publishing && attempt < 100 && receiver && receiver->state_.get() == this)
+                    defer_unfinished_alias(target, row, std::move(id), std::move(parameter), attempt + 1);
+                else if (receiver && receiver->state_.get() == this)
+                    try { qInfo().noquote() << "assistant: unfinished alias" << (removal == AliasRemoval::Removed ? "removed" : "kept") << "after publication"; } catch (...) {}
+            });
+        } catch (...) {}
     }
     void widget_refuse(const std::shared_ptr<NativeWidget>& run, const QString& message,
                        std::source_location caller = std::source_location::current()) noexcept {
         if (widget_owned(run) && (widget_relation_fallback(run, message) || widget_parameter_fallback(run, message))) return;
-        drop_partial_alias(run);
+        {
+            const QPointer<AssistantViewModel> alive(&owner);
+            drop_partial_alias(run);
+            if (!alive || alive->state_.get() != this) return;  // the removal's notifications destroyed this assistant
+        }
         if (const auto parent = run->create_parent.lock()) {
             if (!widget_owned(run)) return;
             const auto receiver = run->receiver;
@@ -7267,6 +7341,7 @@ struct AssistantViewModel::State {
             result["message"]=bounded_error(message+QLatin1Char(' ')+cue_skipped_message(run->cue_skipped));
         }
         if(run->partial_alias_removed)result["incomplete_alias_removed"]=true;
+        else if(run->partial_alias_deferred)result["incomplete_alias_removal"]=QStringLiteral("after_publication");
         if(run->estimate_then_names) {
             result["applied"]=true;
             result["published"]=run->call.record->estimate_receipt && run->call.record->estimate_receipt->published;
