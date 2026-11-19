@@ -3458,6 +3458,8 @@ struct AssistantViewModel::State {
             {"calculating",target && target->calculating()},
             {"fitting",target && target->fit()->nativeRunning()},{"fit_undo_available",target && target->fitUndoAvailable()},{"show_actions",show_actions},{"calculations",calculations},{"interface_groups",interface_groups}};
         if(target)native_state["project_modified"]=target->modified();
+        // The Project page's untitled project: its work is unsaved until it is named (save_project, or the user's Create).
+        if(target && result_session())native_state["untitled"]=result_session()->untitled();
         // Whether fit results, R-factors and a report exist now (an assistant Undo restores the accepted fit's, ADR-0055).
         if(target)native_state["fit_result_current"]=target->fit()->results()->rowCount()>0;
         if(!selected_structure_id.isEmpty())native_state["selected_structure_id"]=selected_structure_id;
