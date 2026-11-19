@@ -7221,6 +7221,7 @@ void ProjectViewModel::syncParameterTable(bool refresh_report) {
 
 void ProjectViewModel::invalidateTexts() {
     const PublicationScope publication(*this);
+    invalidateSnapshots();
     if (retired_) return;
     for (ExperimentViewModel* experiment : experiment_models_) {
         experiment->text()->invalidate();
@@ -7488,10 +7489,11 @@ std::string ProjectViewModel::discoveredFile(const std::string& relative) const 
 }
 
 std::shared_ptr<const edi::Project> ProjectViewModel::modelSnapshot() const {
-    if (!model_snapshot_ || model_snapshot_revision_ != model_revision_ ||
+    if (!model_snapshot_ || model_snapshot_revision_ != model_revision_ || model_snapshot_epoch_ != snapshot_epoch_ ||
         !edi::unchanged_since(*project_, model_snapshot_stamps_)) {
         model_snapshot_ = std::make_shared<const edi::Project>(*project_);
         model_snapshot_revision_ = model_revision_;
+        model_snapshot_epoch_ = snapshot_epoch_;
         model_snapshot_stamps_ = edi::work_stamps(*project_);
     }
     return model_snapshot_;
@@ -7499,9 +7501,11 @@ std::shared_ptr<const edi::Project> ProjectViewModel::modelSnapshot() const {
 
 std::shared_ptr<const edi::Project> ProjectViewModel::reportSnapshot() const {
     if (!scan_template_) return modelSnapshot();
-    if (!report_template_snapshot_ || report_template_revision_ != model_revision_) {
+    if (!report_template_snapshot_ || report_template_revision_ != model_revision_ ||
+        report_template_epoch_ != snapshot_epoch_) {
         report_template_snapshot_ = std::make_shared<const edi::Project>(*scan_template_);
         report_template_revision_ = model_revision_;
+        report_template_epoch_ = snapshot_epoch_;
     }
     return report_template_snapshot_;
 }

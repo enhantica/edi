@@ -489,6 +489,9 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // Made again at most once per publication, as modelSnapshot: a scan's results reach the template outside its edit
     // stamps, so templateSnapshot (made again only when its inputs change) can lack the newest results.
     std::shared_ptr<const edi::Project> reportSnapshot() const;
+    // Both copies are made again after any change the texts or the report are told of (invalidateTexts,
+    // ReportViewModel::refresh): a settings edit, a template fit or its undo, a save, as well as a publication.
+    void invalidateSnapshots() { ++snapshot_epoch_; }
     mutable std::shared_ptr<const edi::Project> template_snapshot_;
     mutable std::shared_ptr<const edi::Project> model_snapshot_;
     mutable std::uint64_t model_snapshot_revision_ = 0;
@@ -496,6 +499,8 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     mutable std::uint64_t report_template_revision_ = 0;
     mutable edi::WorkStamps model_snapshot_stamps_;
     std::uint64_t model_revision_ = 1;  // counts publications (publish)
+    std::uint64_t snapshot_epoch_ = 1;  // counts invalidations (invalidateSnapshots)
+    mutable std::uint64_t model_snapshot_epoch_ = 0, report_template_epoch_ = 0;
     mutable edi::WorkStamps template_snapshot_stamps_;
     void refreshSpellingLater();
     // While a fit runs every followed point publishes: the texts and the spelling, each made from a copy of the

@@ -84,6 +84,7 @@ void ReportViewModel::supersede() const {
 }
 
 void ReportViewModel::refresh() {
+    project_.invalidateSnapshots();  // whatever asked for the refresh changed what the report reads
     // The settings the project now states, announced when they changed (an edit, or its undo).
     if (const QStringList keys = hidden(); keys != published_hidden_) {
         published_hidden_ = keys;
