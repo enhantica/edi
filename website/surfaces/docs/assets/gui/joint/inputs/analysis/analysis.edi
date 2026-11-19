@@ -3,7 +3,6 @@ _edi.schema_version 3
 _fitting_mode.type joint
 
 _minimizer.type crysta
-_minimizer.max_iterations 1000
 
 loop_
 _joint_fit.experiment_id

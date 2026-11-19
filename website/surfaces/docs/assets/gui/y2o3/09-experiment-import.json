@@ -7,7 +7,7 @@
     ],
     "id": "09-experiment-import",
     "image": "09-experiment-import.webp",
-    "image_sha256": "e6b1d6619fdbb0adb00aa0778d39a41939dc16c84993596d73b78b59e0a56024",
+    "image_sha256": "7ebf22de3ea9a91ec9a89f3096e548b7db4ff526485c8ff45e79e5b75c27a866",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -328,7 +328,7 @@
         },
         "experiments.create": {
             "bounds": [
-                1016,
+                784,
                 260,
                 218,
                 39
@@ -337,7 +337,7 @@
             "icon": "plus-circle",
             "label": "Create experiment",
             "visible_bounds": [
-                1016,
+                784,
                 260,
                 218,
                 39
@@ -378,7 +378,7 @@
         },
         "experiments.load": {
             "bounds": [
-                784,
+                1016,
                 260,
                 218,
                 39
@@ -387,7 +387,7 @@
             "icon": "upload",
             "label": "Load",
             "visible_bounds": [
-                784,
+                1016,
                 260,
                 218,
                 39
@@ -429,73 +429,41 @@
         "label": {
             "ambiguous": true
         },
-        "mainArea.divider": {
-            "bounds": [
-                770,
-                77,
-                1,
-                681
-            ],
-            "enabled": true,
-            "label": "",
-            "visible_bounds": [
-                770,
-                77,
-                1,
-                681
-            ]
-        },
         "mainArea.emptyState": {
             "bounds": [
-                281,
+                247,
                 389,
-                207.21875,
+                275.25,
                 58
             ],
             "enabled": false,
-            "label": "No pattern",
+            "label": "No pattern yet",
             "visible_bounds": [
-                281,
+                247,
                 389,
-                207.21875,
+                275.25,
                 58
             ]
         },
-        "mainArea.tab.correlations": {
+        "mainArea.tab.measCalc": {
             "bounds": [
-                126.640625,
+                57.765625,
                 77,
-                86.15625,
+                88.53125,
                 42
             ],
             "enabled": false,
-            "label": "Correlations",
+            "label": "Meas vs calc",
             "visible_bounds": [
-                126.640625,
+                57.765625,
                 77,
-                86.15625,
-                42
-            ]
-        },
-        "mainArea.tab.map": {
-            "bounds": [
-                273.375,
-                77,
-                39.5625,
-                42
-            ],
-            "enabled": false,
-            "label": "Map",
-            "visible_bounds": [
-                273.375,
-                77,
-                39.5625,
+                88.53125,
                 42
             ]
         },
         "mainArea.tab.pattern": {
             "bounds": [
-                68.875,
+                0,
                 77,
                 57.765625,
                 42
@@ -503,41 +471,9 @@
             "enabled": false,
             "label": "Pattern",
             "visible_bounds": [
-                68.875,
+                0,
                 77,
                 57.765625,
-                42
-            ]
-        },
-        "mainArea.tab.stacked": {
-            "bounds": [
-                212.796875,
-                77,
-                60.578125,
-                42
-            ],
-            "enabled": false,
-            "label": "Stacked",
-            "visible_bounds": [
-                212.796875,
-                77,
-                60.578125,
-                42
-            ]
-        },
-        "mainArea.tab.structure": {
-            "bounds": [
-                0,
-                77,
-                68.875,
-                42
-            ],
-            "enabled": true,
-            "label": "Structure",
-            "visible_bounds": [
-                0,
-                77,
-                68.875,
                 42
             ]
         },
@@ -743,6 +679,22 @@
                 14
             ]
         },
+        "window.projectDrop": {
+            "bounds": [
+                0,
+                0,
+                1480,
+                800
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                0,
+                0,
+                1480,
+                800
+            ]
+        },
         "workflow.experiment.mainContent": {
             "bounds": [
                 0,
@@ -819,7 +771,7 @@
     "qt_version": "6.11.2",
     "schema": 1,
     "script_sha256": "a0cd8f7d599e386e3db4cf752e3ae7050f99ce60356dedf20f4c9a1fbb3ecee3",
-    "source_revision": "9045d5d22d8f07b00ffd58c1610ec4b02b2beba5",
+    "source_revision": "66250b0826244790ae402c00384ea8fca62ae552",
     "state": {
         "experiments": 0,
         "fit_outcome": "",

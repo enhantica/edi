@@ -33,7 +33,7 @@
             "scene": "03-project-details"
         },
         {
-            "action": "fill:createProject.location=/tmp/EasyDiffraction-OxYLYn/pd-neut-cwl_y2o3-spodi",
+            "action": "fill:createProject.location=/tmp/EasyDiffraction-OOcPva/pd-neut-cwl_y2o3-spodi",
             "scene": "03-project-details"
         },
         {
@@ -105,7 +105,7 @@
             "scene": "06-structure-import"
         },
         {
-            "action": "import-structure:inputs/structures/y2o3.cif",
+            "action": "import-structure:/captures/y2o3-light/inputs/structures/y2o3.cif",
             "scene": "07-structure-loaded"
         },
         {
@@ -213,7 +213,7 @@
             "scene": "09-experiment-data"
         },
         {
-            "action": "import-data:inputs/spodi.xye",
+            "action": "import-data:/captures/y2o3-light/inputs/spodi.xye",
             "scene": "09-experiment-data"
         },
         {
@@ -513,7 +513,7 @@
             "scene": "12-analysis-choose"
         },
         {
-            "action": "save-as:checkpoints/starting",
+            "action": "save-as:/captures/y2o3-light/checkpoints/starting",
             "scene": "12-save-start"
         },
         {
@@ -633,7 +633,7 @@
             "scene": "12-run-refinement"
         },
         {
-            "action": "save-as:checkpoints/refined",
+            "action": "save-as:/captures/y2o3-light/checkpoints/refined",
             "scene": "12-save-refined"
         },
         {
@@ -1437,11 +1437,11 @@
             "scene": "guide-analysis-pattern-updates"
         }
     ],
-    "binary_sha256": "930017e29ba7c0ffac4bfbdbf09a5bea4beb135a2c33f624ca74e8fc4fe8d6bf",
+    "binary_sha256": "6b270a81225af60207e9664a9d77ce7e7a96c47e78c931c73331f97a7c9b9ce5",
     "dependencies": [
         {
             "file": "inputs/analysis/analysis.edi",
-            "sha256": "7d828f50cfa11d9e21c6493d25e287388293d6b0de36760c45f1eca6c8a3d84e"
+            "sha256": "1e59c0da22d1a5246a031013c7dc61ac906ee4aa6c1cc4c72b321be27c9480d3"
         },
         {
             "file": "inputs/structures/y2o3.edi",
@@ -2265,7 +2265,7 @@
     ],
     "schema": 1,
     "script_sha256": "a0cd8f7d599e386e3db4cf752e3ae7050f99ce60356dedf20f4c9a1fbb3ecee3",
-    "source_revision": "9045d5d22d8f07b00ffd58c1610ec4b02b2beba5",
+    "source_revision": "66250b0826244790ae402c00384ea8fca62ae552",
     "status": "complete",
     "workflow": "creation"
 }

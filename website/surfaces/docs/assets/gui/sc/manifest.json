@@ -89,7 +89,7 @@
             "scene": "group-refine-ls"
         }
     ],
-    "binary_sha256": "930017e29ba7c0ffac4bfbdbf09a5bea4beb135a2c33f624ca74e8fc4fe8d6bf",
+    "binary_sha256": "6b270a81225af60207e9664a9d77ce7e7a96c47e78c931c73331f97a7c9b9ce5",
     "dependencies": [
         {
             "file": "inputs/analysis/analysis.edi",
@@ -216,7 +216,7 @@
     ],
     "schema": 1,
     "script_sha256": "d5122f9a30b820ddb8e950bd218add712484af4ed386761370e29f6deabec864",
-    "source_revision": "9045d5d22d8f07b00ffd58c1610ec4b02b2beba5",
+    "source_revision": "66250b0826244790ae402c00384ea8fca62ae552",
     "status": "complete",
     "workflow": "reference"
 }
