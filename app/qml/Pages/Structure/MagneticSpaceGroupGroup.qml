@@ -33,6 +33,8 @@ Column {
         }
         SearchableComboBox {
             objectName: "magneticSpaceGroup.numberBns"
+            // The dictionary item it edits, as the designed fields name theirs.
+            property string uid: "space_group_magn.number_bns"
             width: group.fieldWidth
             // The names the owner gave the two fields (decision of 2026-11-18), not the dictionary's labels.
             title: qsTr("Number BNS")
@@ -48,6 +50,7 @@ Column {
         }
         SearchableComboBox {
             objectName: "magneticSpaceGroup.nameBns"
+            property string uid: "space_group_magn.name_bns"
             width: group.fieldWidth
             title: qsTr("Name BNS")
             searchThreshold: 0
@@ -63,6 +66,7 @@ Column {
         ValueField {
             objectName: "magneticSpaceGroup.setting"
             width: group.fieldWidth
+            uid: "space_group_magn_transforms.pp_abc"
             label: qsTr("Setting")
             fieldValue: group.magnetic.setting ?? ""
             onCommitted: text => {
