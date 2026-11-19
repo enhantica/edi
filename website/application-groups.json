@@ -220,6 +220,44 @@
         "category": "geom_bond"
       },
       {
+        "page": "application/structure/magnetic-group-symbols.md",
+        "title": "Magnetic group symbols",
+        "tab": "Extra",
+        "icon": "hashtag",
+        "category": "space_group_magn_symbols",
+        "components": [
+          "MagneticSymbolsGroup"
+        ],
+        "when": "Magnetic structure",
+        "tags": {
+          "sampleForm": [
+            "powder"
+          ],
+          "probe": [
+            "neutron"
+          ]
+        }
+      },
+      {
+        "page": "application/structure/parent-space-group.md",
+        "title": "Parent space group",
+        "tab": "Extra",
+        "icon": "sitemap",
+        "category": "parent_space_group",
+        "components": [
+          "ParentSpaceGroupGroup"
+        ],
+        "when": "Magnetic structure",
+        "tags": {
+          "sampleForm": [
+            "powder"
+          ],
+          "probe": [
+            "neutron"
+          ]
+        }
+      },
+      {
         "page": "application/structure/magnetic-operators.md",
         "title": "Magnetic operators",
         "tab": "Extra",
