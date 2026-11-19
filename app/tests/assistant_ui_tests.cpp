@@ -7,6 +7,7 @@
 #include <QQuickWindow>
 #include <QScopeGuard>
 #include <QStandardItemModel>
+#include <QStandardPaths>
 #include <QDir>
 #include <QFile>
 #include <QTemporaryDir>
@@ -14,6 +15,12 @@
 #include <QJsonArray>
 #include <QJsonObject>
 #include <QCryptographicHash>
+#include <QGuiApplication>
+#include <iostream>
+#ifndef __EMSCRIPTEN__
+#include "codex_agent.hpp"
+#include "assistant_runtime_config.hpp"
+#endif
 #include "edi/io.hpp"
 #include "fit_view_model.hpp"
 #include <QtQml/qqmlextensionplugin.h>
@@ -30,6 +37,88 @@
 #include <sys/xattr.h>
 #endif
 Q_IMPORT_QML_PLUGIN(edi_appPlugin)
+
+#ifndef __EMSCRIPTEN__
+// An authored local peer delivers one load_data call through the real assistant transport.
+// It has no provider connection and never performs an application edit itself.
+static int loadDataPeer() {
+    using Object = QJsonObject;
+    const auto write = [](const Object& row) {
+        std::cout << QJsonDocument(row).toJson(QJsonDocument::Compact).toStdString() << '\n' << std::flush;
+    };
+    const auto event = [&](const QString& method, const Object& params) {
+        write({{"method", method}, {"params", params}});
+    };
+    Object policy, item;
+    for (std::string line; std::getline(std::cin, line);) {
+        const auto request = QJsonDocument::fromJson(QByteArray::fromStdString(line)).object();
+        const auto method = request.value("method").toString();
+        const auto params = request.value("params").toObject();
+        if (method.isEmpty()) {
+            if (request.value("id") != "load-call") continue;
+            item["status"] = "completed";
+            item["success"] = request.value("result").toObject().value("success");
+            item["contentItems"] = request.value("result").toObject().value("contentItems");
+            event("item/completed", {{"threadId", "load-thread"}, {"turnId", "load-turn"}, {"item", item}});
+            event("turn/completed", {{"threadId", "load-thread"}, {"turn", Object{{"id", "load-turn"}, {"status", "completed"}, {"error", QJsonValue::Null}}}});
+            continue;
+        }
+        if (!request.contains("id")) continue;
+        Object result;
+        if (method == "account/read")
+            result = {{"account", Object{{"type", "chatgpt"}, {"email", "ui@example.invalid"}, {"planType", "plus"}}}, {"requiresOpenaiAuth", false}};
+        else if (method == "model/list")
+            result = {{"data", QJsonArray{Object{{"id", "gpt-6-luna"}, {"model", "gpt-6-luna"}, {"displayName", "Local UI peer"},
+                {"hidden", false}, {"defaultReasoningEffort", "medium"},
+                {"supportedReasoningEfforts", QJsonArray{Object{{"reasoningEffort", "medium"}}}}}}}, {"nextCursor", QJsonValue::Null}};
+        else if (method == "skills/list") {
+            QJsonArray skills;
+            const auto folders = params.value("cwds").toArray();
+            if (!folders.isEmpty()) {
+                const QString folder = folders.first().toString();
+                const QDir root(folder + "/.agents/skills");
+                for (const auto& name : root.entryList(QDir::Dirs | QDir::NoDotAndDotDot))
+                    skills.append(Object{{"name", name}, {"path", root.filePath(name + "/SKILL.md")}, {"enabled", true}});
+                result = {{"data", QJsonArray{Object{{"cwd", folder}, {"skills", skills}, {"errors", QJsonArray{}}}}}};
+            }
+        } else if (method == "thread/start") {
+            const auto effort = params.value("config").toObject().value("model_reasoning_effort");
+            const auto tools = params.value("dynamicTools").toArray();
+            QJsonArray advertised;
+            for (const auto& value : tools) {
+                const auto tool = value.toObject();
+                advertised.append(Object{{"type", "function"}, {"name", tool.value("name")}, {"parameters", tool.value("inputSchema")}});
+            }
+            policy = {{"schema", "edi.runtime-policy/1"}, {"flavour", "edi-app-server/1"},
+                {"upstreamVersion", EDI_CODEX_RUNTIME_VERSION}, {"upstreamCommit", "092d3acd6bec3e3a14bdc7e7a2810ab628ab759d"},
+                {"sourcePatchSha256", edi_app::CodexAgent::policyPatch()}, {"threadId", "load-thread"}, {"turnId", QJsonValue::Null},
+                {"isolation", "isolated"}, {"toolMode", "direct"}, {"sandbox", "readOnly"}, {"approvalPolicy", "never"},
+                {"modelNetwork", false}, {"requestedTools", tools}, {"advertisedTools", advertised}, {"dispatchEqualsAdvertisement", true},
+                {"model", params.value("model")}, {"reasoningEffort", effort}};
+            result = {{"thread", Object{{"id", "load-thread"}, {"ephemeral", false}}}, {"cwd", params.value("cwd")},
+                {"modelProvider", "openai"}, {"model", params.value("model")}, {"reasoningEffort", effort},
+                {"approvalPolicy", "never"}, {"approvalsReviewer", "user"},
+                {"sandbox", Object{{"type", "readOnly"}, {"networkAccess", false}}}, {"ediPolicy", policy}};
+        } else if (method == "turn/start") {
+            policy["turnId"] = "load-turn";
+            result = {{"turn", Object{{"id", "load-turn"}, {"status", "inProgress"}}}, {"ediPolicy", policy}};
+        } else if (method == "thread/list") result = {{"data", QJsonArray{}}, {"nextCursor", QJsonValue::Null}};
+        else if (method == "account/rateLimits/read") result = {{"rateLimits", QJsonValue::Null}};
+        write({{"id", request.value("id")}, {"result", result}});
+        if (method == "turn/start") {
+            event("turn/started", {{"threadId", "load-thread"}, {"turn", Object{{"id", "load-turn"}, {"status", "inProgress"}}}});
+            const auto arguments = QJsonDocument::fromJson(qgetenv("EDI_UI_LOAD_ARGUMENTS")).object();
+            item = {{"id", "load-item"}, {"type", "dynamicToolCall"}, {"tool", "load_data"},
+                {"arguments", arguments}, {"status", "inProgress"}};
+            event("item/started", {{"threadId", "load-thread"}, {"turnId", "load-turn"}, {"item", item}});
+            write({{"id", "load-call"}, {"method", "item/tool/call"}, {"params", Object{{"threadId", "load-thread"},
+                {"turnId", "load-turn"}, {"callId", "load-item"}, {"tool", "load_data"}, {"arguments", arguments}}}});
+        }
+    }
+    return 0;
+}
+
+#endif
 
 class WorkingAssistant : public edi_app::AssistantViewModel {
     Q_OBJECT
@@ -49,6 +138,7 @@ private slots:
     void initTestCase() {
         qputenv("QT_QUICK_CONTROLS_HOVER_ENABLED", "1");
         edi_app::use_fresh_settings();
+        QVERIFY(QDir().mkpath(QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation)));
         const auto root = QString::fromUtf8(EDI_SOURCE_DIR);
         const auto cod = QUrl::fromLocalFile(root + "/tests/fixtures/online_sources/cod/").toString();
         const auto edb = QUrl::fromLocalFile(root + "/tests/fixtures/online_sources/easydiffraction/").toString();
@@ -165,6 +255,127 @@ private slots:
             structurePopup |= original->property("visible").toBool() && original->property("kind") == "structure";
         QVERIFY(structurePopup);
     }
+#ifndef __EMSCRIPTEN__
+    void loadDataReplaysShownActions_data() {
+        QTest::addColumn<bool>("show");
+        QTest::newRow("shown") << true;
+        QTest::newRow("ordinary") << false;
+    }
+    void loadDataReplaysShownActions() {
+        QFETCH(bool, show);
+        const auto previousPeer = qgetenv("EDI_CODEX_DEVELOPMENT_EXECUTABLE");
+        const auto previousArguments = qgetenv("EDI_UI_LOAD_ARGUMENTS");
+        const auto restore = qScopeGuard([&] {
+            if (previousPeer.isNull()) qunsetenv("EDI_CODEX_DEVELOPMENT_EXECUTABLE");
+            else qputenv("EDI_CODEX_DEVELOPMENT_EXECUTABLE", previousPeer);
+            if (previousArguments.isNull()) qunsetenv("EDI_UI_LOAD_ARGUMENTS");
+            else qputenv("EDI_UI_LOAD_ARGUMENTS", previousArguments);
+        });
+        qputenv("EDI_CODEX_DEVELOPMENT_EXECUTABLE", QCoreApplication::applicationFilePath().toUtf8());
+        QQmlApplicationEngine engine;
+        edi_app::configure_engine(engine);
+        edi_app::test::assistant_defaults();
+        QQmlComponent component(&engine);
+        component.setData("import edi.app\nMain { width: 1400; height: 1000; visible: true }", QUrl());
+        QScopedPointer<QObject> root(component.create());
+        QVERIFY2(root, qPrintable(component.errorString()));
+        auto* window = qobject_cast<QQuickWindow*>(root.data());
+        QVERIFY(window);
+        window->requestActivate();
+        QVERIFY(QTest::qWaitForWindowActive(window));
+        auto* session = engine.singletonInstance<edi_app::Session*>("edi.app", "Session");
+        QVERIFY(session);
+        if (!session->hasProject()) QVERIFY(session->startUntitledProject());
+        auto* project = session->project();
+        QVERIFY(project->loadStructure(QUrl::fromLocalFile(QString::fromUtf8(EDI_SOURCE_DIR) + "/tests/fixtures/assistant_save_replay/lbco.cif")));
+        project->createExperiment();
+        QTRY_VERIFY(project->currentExperiment());
+        QTRY_VERIFY_WITH_TIMEOUT(!project->calculating() && project->viewSettled(), 10000);
+        auto* assistant = session->assistant();
+        assistant->setActionWindow(window);
+        assistant->setShowActions(show);
+        const auto find = [&](const QString& name) {
+            const auto walk = [&](QQuickItem* item, auto&& self) -> QQuickItem* {
+                if (item->objectName() == name) return item;
+                for (auto* child : item->childItems()) if (auto* found = self(child, self)) return found;
+                return nullptr;
+            };
+            if (auto* item = walk(window->contentItem(), walk)) return item;
+            return root->findChild<QQuickItem*>(name);
+        };
+        auto* tab = find("appBar.tab.experiment");
+        QVERIFY(tab);
+        QTRY_VERIFY(tab->isEnabled());
+        QTest::mouseClick(window, Qt::LeftButton, Qt::NoModifier,
+            tab->mapToScene(QPointF(tab->width() / 2, tab->height() / 2)).toPoint());
+        auto* pageLoader = tab->property("page").value<QObject*>();
+        QVERIFY(pageLoader);
+        QObject* page = nullptr;
+        QTRY_VERIFY((page = pageLoader->property("item").value<QObject*>()));
+        QVERIFY(QMetaObject::invokeMethod(page, "showSidebarTab", Q_ARG(QVariant, QVariant(false))));
+        QQuickItem* table = nullptr;
+        QTRY_VERIFY((table = find("experiments.list")));
+        auto* group = table->parentItem();
+        while (group && !group->property("collapsed").isValid()) group = group->parentItem();
+        QVERIFY(group);
+        QVERIFY(group->setProperty("collapsed", true));
+        QTRY_VERIFY(group->property("collapsed").toBool());
+        QTemporaryDir selected;
+        QVERIFY(selected.isValid());
+        const auto path = selected.filePath("pattern.xye");
+        QVERIFY(QFile::copy(QString::fromUtf8(EDI_SOURCE_DIR) + "/tests/fixtures/plain_data/cwl/three_columns/pattern.xye", path));
+        const auto token = assistant->beginFileSelection();
+        QVERIFY2(!token.isEmpty(), qPrintable(assistant->lastError()));
+        QVERIFY2(assistant->addSelectedFiles(token, {QUrl::fromLocalFile(path)}), qPrintable(assistant->lastError()));
+        const auto file = assistant->selectedFiles()->text(0, "id");
+        QVERIFY(!file.isEmpty());
+        const QJsonObject arguments{{"purpose", "Load the selected measurements"},
+            {"experiment", project->experiments()->text(0, "name")}, {"file_id", file}};
+        qputenv("EDI_UI_LOAD_ARGUMENTS", QJsonDocument(arguments).toJson(QJsonDocument::Compact));
+        assistant->signIn();
+        QTRY_VERIFY2_WITH_TIMEOUT(assistant->connected(), qPrintable(assistant->lastError()), 10000);
+        QTRY_VERIFY2_WITH_TIMEOUT(assistant->draftAdmissionReady(), qPrintable(assistant->lastError()), 10000);
+        QStringList observed;
+        QPointF pointer;
+        QObject observer;
+        connect(assistant, &edi_app::AssistantViewModel::actionPointerMoved, &observer, [&](const QPointF& point) { pointer = point; });
+        connect(assistant, &edi_app::AssistantViewModel::actionPointerPressed, &observer, [&] {
+            const auto hits = [&](QQuickItem* item) {
+                return item && item->isVisible() && item->mapRectToScene(item->boundingRect()).contains(pointer);
+            };
+            auto* title = qobject_cast<QQuickItem*>(group->property("titleArea").value<QObject*>());
+            if (hits(title)) observed << "unfold";
+            else if (hits(find("experiments.loadData.0"))) observed << "load-data";
+            else if (hits(find("experiments.load.dataFile"))) observed << "from-file";
+        });
+        const auto loaded = [&] {
+            return !project->assistantProject()->experiments[0]->calculation_only;
+        };
+        connect(project, &edi_app::ProjectViewModel::edited, &observer, [&] {
+            if (loaded() && !observed.contains("loaded")) observed << "loaded";
+        });
+        assistant->send("Load the attached measurements into this experiment.");
+        QTRY_VERIFY2_WITH_TIMEOUT(loaded(), qPrintable(assistant->lastError() + " cues=" + observed.join(",")), 20000);
+        QTRY_COMPARE_WITH_TIMEOUT(assistant->state(), QString("idle"), 10000);
+        QVERIFY(observed.contains("loaded"));
+        const QStringList expected = show ? QStringList{"unfold", "load-data", "from-file", "loaded"} : QStringList{"loaded"};
+        QCOMPARE(observed, expected);
+        qInfo().noquote() << "load_data" << (show ? "shown:" : "ordinary:") << observed.join(" -> ");
+        // Compare the displayed measurement with the same file through the user's ordinary loader.
+        auto* actual = project->currentExperiment()->pattern();
+        project->createExperiment();
+        QTRY_VERIFY_WITH_TIMEOUT(!project->calculating() && project->viewSettled(), 10000);
+        QVERIFY(project->loadDataInto(project->currentExperiment(), QUrl::fromLocalFile(path)));
+        auto* manual = project->currentExperiment()->pattern();
+        QTRY_VERIFY_WITH_TIMEOUT(!project->calculating() && project->viewSettled(), 10000);
+        QTRY_COMPARE(actual->rowCount(), manual->rowCount());
+        QVERIFY(actual->rowCount() > 0);
+        for (int row = 0; row < actual->rowCount(); ++row)
+            for (const int role : {edi_app::PatternModel::XRole, edi_app::PatternModel::IntensityMeasRole, edi_app::PatternModel::IntensityMeasSuRole})
+                QCOMPARE(actual->data(actual->index(row), role), manual->data(manual->index(row), role));
+        assistant->clearHistory();
+    }
+#endif
     void aliasSearchTypesPlainNameAndSelectsDecoratedEntry() {
         QQmlApplicationEngine engine;
         edi_app::configure_engine(engine);
@@ -607,5 +818,15 @@ private slots:
     }
 #endif
 };
-QTEST_MAIN(AssistantUiTests)
+int main(int argc, char** argv) {
+#ifndef __EMSCRIPTEN__
+    if (argc > 1 && QByteArray(argv[1]) == "--listen") return loadDataPeer();
+#endif
+    QStandardPaths::setTestModeEnabled(true);
+    QGuiApplication app(argc, argv);
+    app.setAttribute(Qt::AA_Use96Dpi, true);
+    AssistantUiTests tests;
+    QTEST_SET_MAIN_SOURCE_PATH
+    return QTest::qExec(&tests, argc, argv);
+}
 #include "assistant_ui_tests.moc"
