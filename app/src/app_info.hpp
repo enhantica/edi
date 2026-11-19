@@ -375,7 +375,7 @@ class ApplicationInfo : public QObject {
     Q_INVOKABLE void afterProjectChanges(const QJSValue& action, const QJSValue& abandoned, bool creating = false) const;
     Q_INVOKABLE void openWorkflowPage(const QJSValue& page) const;
     Q_INVOKABLE void resetWorkflow() const;
-    // The Project page opened with no project: an untitled one starts (Session::startUntitledProject).
+    // The Structure page opened with no project: an untitled one starts (Session::startUntitledProject).
     void startUntitledOnProjectPage(const QJSValue& page) const;
     Q_INVOKABLE void saveCurrentProject() const;
     Q_INVOKABLE void saveCurrentProjectAs(const QJSValue& intent) const;

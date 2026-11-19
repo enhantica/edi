@@ -3313,9 +3313,9 @@ void ApplicationInfo::openWorkflowPage(const QJSValue& page) const {
     startUntitledOnProjectPage(page);
 }
 void ApplicationInfo::startUntitledOnProjectPage(const QJSValue& page) const {
-    // Entering Project starts work before Create; Clear leaves no project (ADR-0017 §13).
+    // Work before Create starts only when the user opens Structure; Project alone creates nothing (ADR-0017 §13).
     const auto frame = panelUsageEngine(this);
-    if (!panelUsageReady(frame) || page.toInt() < projectPage(frame, "Project").toInt()) return;
+    if (!panelUsageReady(frame) || page.toInt() < projectPage(frame, "Structure").toInt()) return;
     if (!assistantContextField(frame, "Session", "project").isNull()) return;
     const auto rule = assistantContextField(frame, "Preferences", "newProjectSuRule");
     const bool libraries = assistantContextField(frame, "Preferences", "newReportLibraries").strictlyEquals(QJSValue(QStringLiteral("embedded")));
