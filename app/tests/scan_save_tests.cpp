@@ -529,6 +529,100 @@ private slots:
         }
         QVERIFY2(warnings.isEmpty(), qPrintable(warnings.join(QLatin1Char('\n'))));
     }
+    // The owner's path of 2026-11-19 (a crash after two binding-loop warnings): the Experiments row's data file is
+    // replaced, the new data is calculated, and Pattern, Meas vs calc and the pages switch without a warning or a fault.
+    void replacedDataIsCalculatedAndPagesSwitch() {
+        static QStringList loops;
+        loops.clear();
+        static QtMessageHandler previous = nullptr;
+        previous = qInstallMessageHandler([](QtMsgType type, const QMessageLogContext& context, const QString& text) {
+            if (text.contains(QStringLiteral("Binding loop"))) loops.append(text);
+            if (previous) previous(type, context, text);
+        });
+        const auto restore = qScopeGuard([] { qInstallMessageHandler(previous); });
+        QTemporaryDir copy;
+        QVERIFY(copy.isValid());
+        const QString source = QStringLiteral(EDI_SOURCE_DIR "/docs/user/cli/pd-neut-cwl_cosio-d20_2k/project");
+        std::function<bool(const QString&, const QString&)> copyTree = [&](const QString& from, const QString& to) {
+            if (!QDir().mkpath(to)) return false;
+            for (const QFileInfo& entry : QDir(from).entryInfoList(QDir::Files | QDir::Dirs | QDir::NoDotAndDotDot)) {
+                const QString target = to + u'/' + entry.fileName();
+                if (entry.isDir() ? !copyTree(entry.filePath(), target) : !QFile::copy(entry.filePath(), target)) return false;
+            }
+            return true;
+        };
+        QVERIFY(copyTree(source, copy.path() + QStringLiteral("/project")));
+        const QString data = copy.path() + QStringLiteral("/d20_2K.dat");
+        QVERIFY(QFile::copy(QStringLiteral(EDI_SOURCE_DIR "/docs/user/cli/pd-neut-cwl_cosio-d20_scan-162f/project/experiments/d20_scan/01_001_497p3790.dat"), data));
+
+        QQmlApplicationEngine engine;
+        edi_app::configure_engine(engine);
+        engine.loadFromModule("edi.app", "Main");
+        QVERIFY(!engine.rootObjects().isEmpty());
+        auto* window = qobject_cast<QQuickWindow*>(engine.rootObjects().constFirst());
+        QVERIFY(window);
+        window->resize(1480, 900);
+        window->show();
+        QVERIFY(QTest::qWaitForWindowExposed(window));
+        auto* session = engine.singletonInstance<edi_app::Session*>("edi.app", "Session");
+        QVERIFY(session);
+        QVERIFY2(session->openProject(QUrl::fromLocalFile(copy.path() + QStringLiteral("/project"))), qPrintable(session->lastError()));
+        edi_app::ProjectViewModel* project = session->project();
+        QTRY_VERIFY_WITH_TIMEOUT(!project->calculating(), 60000);
+        const auto shown = [window](const QString& name) -> QQuickItem* {
+            QQuickItem* result = nullptr;
+            std::function<void(QQuickItem*)> walk = [&](QQuickItem* parent) {
+                for (QQuickItem* child : parent->childItems()) {
+                    const QPointF at = child->mapToScene(QPointF());
+                    if (child->objectName() == name && child->isVisible() && child->isEnabled() && at.x() >= 0 && at.x() < window->width()) result = child;
+                    walk(child);
+                }
+            };
+            walk(window->contentItem());
+            return result;
+        };
+        const auto click = [&](const char* name) {
+            QQuickItem* item = nullptr;
+            QTRY_VERIFY_WITH_TIMEOUT((item = shown(QString::fromLatin1(name))), 20000);
+            QTest::mouseClick(window, Qt::LeftButton, {}, item->mapToScene(QPointF(item->width() / 2, item->height() / 2)).toPoint());
+        };
+        click("appBar.tab.experiment");
+        click("mainArea.tab.measCalc");
+        QVERIFY(project->currentExperiment());
+        QTRY_VERIFY_WITH_TIMEOUT(project->currentExperiment()->pattern()->calculatedPointCount() > 0, 60000);
+
+        // Hover moves across the middle of the window, where the charts are (the owner's crash came from a mouse move
+        // over a chart after the replacement).
+        const auto hover = [window] {
+            for (int x = 420; x < window->width() - 40; x += 23) {
+                QTest::mouseMove(window, QPoint(x, window->height() / 2 + (x % 97) - 48));
+                QCoreApplication::processEvents();
+            }
+        };
+        hover();
+        QVERIFY2(!project->currentExperiment()->fitOutcome().isEmpty(), "the example project carries its fit");
+        QVERIFY(!project->fit()->outOfDate());
+        QVERIFY2(project->loadDataInto(project->currentExperiment(), QUrl::fromLocalFile(data)), qPrintable(project->lastError()));
+        hover();
+        QTRY_VERIFY_WITH_TIMEOUT(!project->calculating(), 60000);
+        hover();
+        // The new data is calculated as any other edit's is.
+        QTRY_VERIFY_WITH_TIMEOUT(project->currentExperiment()->pattern()->calculatedPointCount() > 0, 60000);
+        // The project's saved fit described the old data: the experiment's line drops its outcome and the status bar
+        // shows the fit as outdated.
+        QVERIFY(project->currentExperiment()->fitOutcome().isEmpty());
+        QVERIFY(project->fit()->outOfDate());
+        for (const char* name : {"mainArea.tab.pattern", "mainArea.tab.measCalc", "appBar.tab.structure", "appBar.tab.analysis",
+                                 "mainArea.tab.measCalc", "mainArea.tab.pattern", "appBar.tab.experiment", "mainArea.tab.measCalc"}) {
+            click(name);
+            hover();
+            QTest::qWait(200);
+            hover();
+        }
+        QTRY_VERIFY_WITH_TIMEOUT(!project->calculating(), 60000);
+        QVERIFY2(loops.isEmpty(), qPrintable(loops.join(u'\n')));
+    }
+
     void eachPageOpensOnItsDefaultTabThenTheUsersPick() {
         QQmlApplicationEngine engine;
         edi_app::configure_engine(engine);
