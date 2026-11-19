@@ -311,11 +311,11 @@ class ExperimentViewModel : public QObject {
     QString estimateMethod() const { return estimate_.derived_method; }
     double estimateWidth() const { return estimate_.derived_width; }
     double estimateSmoothness() const { return estimate_.derived_smoothness; }
-    int estimatePoints() const { return estimate_.derived_points; }
+    int estimatePoints() const { settle_estimate_counts(); return estimate_.derived_points; }
     int backgroundEstimateMaxTerms() const { return estimate_.max_terms; }
     void setBackgroundEstimateMaxTerms(int maxTerms);
-    int estimateTerms() const { return estimate_.derived_terms; }
-    QString estimateNote() const { return estimate_.note; }
+    int estimateTerms() const { settle_estimate_counts(); return estimate_.derived_terms; }
+    QString estimateNote() const { settle_estimate_counts(); return estimate_.note; }
     double cutoffFwhm() const { return cutoff_fwhm_; }
     void setCutoffFwhm(double cutoff);
     QString linkedStructureId() const { return linked_structure_id_; }
@@ -551,8 +551,12 @@ class ExperimentViewModel : public QObject {
         int points = 0, derived_points = 0, max_terms = 0, derived_terms = 0;
         QString use_model = QStringLiteral("auto"), model_choice, model_reason;
     };
-    EstimateSettings estimate_;
-    EstimateSettings read_estimate_settings() const;
+    // The counts a blank anchor points or most terms field shows run the estimate itself, on the shown data: worked out
+    // at a sync only while something listens for them, else when next read (ADR-0096 rule 1).
+    mutable EstimateSettings estimate_;
+    mutable bool estimate_counts_owed_ = false;
+    EstimateSettings read_estimate_settings(bool counts = true) const;
+    void settle_estimate_counts() const;
     CategoryListModel* categories_;
     ParameterListModel* instrument_;
     ParameterListModel* peak_;
