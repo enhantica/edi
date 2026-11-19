@@ -266,7 +266,7 @@ Item {
         text: chart.fromReport ? chart.reportSeries.name + (chart.reportSeries.units ? ` (${chart.reportSeries.units})` : "") : ""
     }
 
-    GraphsView {
+    ChartView {
         id: view
 
         objectName: "evolution.view"

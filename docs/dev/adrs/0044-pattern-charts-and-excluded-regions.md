@@ -34,6 +34,16 @@ is fitted.
    closed text needs, no wider, so the two need not match (the owner, 2026-10-22). The x-axis selector reads
    `x: d-spacing` once d-spacing is chosen.
 
+5. **Pointer lifetime (2026-11-19).** All Qt Graphs panes use `ChartView` and `ChartHoverGuard`, including
+   powder, residual, Bragg, Meas vs calc, single-crystal, scan and evolution/report panes. Correlations use edi's
+   own items and have no Graphs series. Native Graphs hover is disabled and its hover events are filtered before
+   the renderer can read its cached raw series pointers. A series' `hoverable` flag alone is insufficient: Qt
+   reads that flag through the stale pointer. Edi's existing MouseAreas and measured/scan layers keep the
+   readouts, selection, zoom and pan. Fixed series update in place; structure/Bragg slots keep their existing
+   lifetime. Chart/report destruction and dynamic series removal have the same hover boundary.
+   `edi_chart_hover_tests` repeatedly removes and deletes rendered series and sends hover events before polish,
+   and checks the same boundary while replacing entire views.
+
 ## Consequences
 
 - Any reader of a project file sees an excluded region as having no calculated pattern, which is true.
