@@ -7336,14 +7336,17 @@ QJSValue ApplicationInfo::tableTextColumnWidth(const QString& role, const QStrin
         return panelUsageMemberCall(f, math, "min", {needed, viewArithmetic(f, width, share, 1)});
     }
     const auto revision = panelUsageContextRead(f, "modelRevision"); Q_UNUSED(revision);
+    // The view's count can flush pending layout. A content-sized table must measure its model without
+    // entering that layout again from its width/column bindings, including while rows are removed.
+    const auto model = panelUsageContextRead(f, "model");
+    const int count = panelUsageTruth(model) ? panelUsageRead(f, model, "count").toInt() : 0;
     QJSValue widths = textIndex(f, panelUsageContextRead(f, "rowWidths"), QJSValue(role));
     bool replace = !panelUsageTruth(widths);
-    if (!replace) { const auto length = panelUsageRead(f, widths, "length"); replace = !assistantSameName(f, length, "count"); }
+    if (!replace) replace = panelUsageRead(f, widths, "length").toInt() != count;
     if (replace) {
         if (!panelUsageReady(f)) return {};
         widths = f->newArray();
-        for (int row = 0; panelUsageReady(f) && panelUsageTruth(panelUsageContextRead(f, "model"))
-             && assistantRelation(f, QJSValue(double(row)), panelUsageContextRead(f, "count"), 0); ++row) {
+        for (int row = 0; panelUsageReady(f) && row < count; ++row) {
             const auto measured = panelUsageGlobalCall(f, "textWidth", {QJSValue(double(row)), QJSValue(role)}); panelUsageMemberCall(f, widths, "push", {measured});
         }
         textIndexWrite(f, panelUsageContextRead(f, "rowWidths"), QJSValue(role), widths);
@@ -10784,7 +10787,7 @@ QJSValue ApplicationInfo::fitResultProjection(int kind) const {
     const auto f = panelUsageEngine(this);
     if (kind == 0) return panelUsageMemberCall(f, assistantContextField(f, "dialog", "factorColumns"), "reduce", {panelUsageClosure(f, 360, {}, 2), QJSValue(QStringLiteral(""))});
     if (kind == 1) return panelUsageMemberCall(f, assistantContextField(f, "dialog", "factorColumns"), "some", {panelUsageClosure(f, 361, {}, 1)});
-    return panelUsageDeferredMemberCall(f, assistantGeometryArray(f, {assistantContextField(f, "AppSizes", "iconOnlyColumnWidth"), QJSValue(-1)}), "concat", [&] { return QJSValueList{panelUsageMemberCall(f, assistantContextField(f, "dialog", "factorColumns"), "map", {panelUsageClosure(f, 364, {}, 0)})}; });
+    return panelUsageDeferredMemberCall(f, assistantGeometryArray(f, {assistantContextField(f, "AppSizes", "iconOnlyColumnWidth"), assistantContextField(f, "agreementArea", "datasetColumnWidth")}), "concat", [&] { return QJSValueList{panelUsageMemberCall(f, assistantContextField(f, "dialog", "factorColumns"), "map", {panelUsageClosure(f, 364, {}, 0)})}; });
 }
 void ApplicationInfo::fitResultsPassive(const QJSValue& row) const {
     const auto f = panelUsageEngine(this); panelUsageEach(f, panelUsageRead(f, row, "resources"), [&](const QJSValue& handler) {

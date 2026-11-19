@@ -516,7 +516,7 @@ Item {
         }
     }
 
-    GraphsView {
+    ChartView {
         id: mainView
 
         objectName: "chart.view.main"
@@ -729,7 +729,7 @@ Item {
         }
     }
 
-    GraphsView {
+    ChartView {
         id: braggView
 
         objectName: "chart.view.bragg"
@@ -798,7 +798,7 @@ Item {
         onObjectRemoved: (index, series) => ApplicationInfo.patternBraggSeries(index, series, false)
     }
 
-    GraphsView {
+    ChartView {
         id: residualView
 
         objectName: "chart.view.residual"

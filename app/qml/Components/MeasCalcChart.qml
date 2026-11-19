@@ -191,7 +191,7 @@ Item {
         }
     }
 
-    GraphsView {
+    ChartView {
         id: view
 
         y: chart.topMargin + toolbar.height + chart.belowToolbar

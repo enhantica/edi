@@ -250,7 +250,7 @@ Item {
         text: chart.scan ? ((chart.scan.wanted && chart.scan.loaded < chart.scan.count ? qsTr("Reading patterns: %1 of %2").arg(chart.scan.loaded).arg(chart.scan.count) : "") + (chart.mode === "stacked" && layer.drawnDatasetCount < chart.scan.count ? (chart.scan.loaded < chart.scan.count ? " · " : "") + qsTr("Showing %1 of %2 curves").arg(layer.drawnDatasetCount).arg(chart.scan.count) : "")) : ""
     }
 
-    GraphsView {
+    ChartView {
         id: view
 
         objectName: "scanView." + chart.mode + ".axes"

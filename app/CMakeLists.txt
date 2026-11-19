@@ -220,6 +220,7 @@ qt_add_qml_module(edi_app_module
         qml/Components/ScanViewChart.qml
         qml/Components/SingleCrystalChart.qml
         qml/Components/SingleCrystalTable.qml
+        qml/Components/ChartView.qml
         qml/Components/CorrelationChart.qml
         qml/Components/SearchableComboBox.qml
         qml/Components/SelectedPatternLine.qml
@@ -480,6 +481,13 @@ if(NOT EMSCRIPTEN)
     target_compile_definitions(edi_scan_refresh_tests PRIVATE EDI_SOURCE_DIR="${PROJECT_SOURCE_DIR}")
     set_target_properties(edi_scan_refresh_tests PROPERTIES AUTOMOC ON WIN32_EXECUTABLE FALSE MACOSX_BUNDLE FALSE
         QT_QML_MODULE_NO_IMPORT_SCAN TRUE)
+    qt_add_executable(edi_chart_hover_tests EXCLUDE_FROM_ALL tests/chart_hover_tests.cpp)
+    target_link_libraries(edi_chart_hover_tests PRIVATE edi_app_module edi_app_moduleplugin ${EDI_GUI_BASE_TARGETS} Qt6::Test)
+    target_include_directories(edi_chart_hover_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+    set_target_properties(edi_chart_hover_tests PROPERTIES AUTOMOC ON WIN32_EXECUTABLE FALSE MACOSX_BUNDLE FALSE)
+    if(TARGET edi_assistant_native)
+        target_link_libraries(edi_chart_hover_tests PRIVATE edi_assistant_native)
+    endif()
     qt_add_executable(edi_scan_save_tests EXCLUDE_FROM_ALL tests/scan_save_tests.cpp)
     target_link_libraries(edi_scan_save_tests PRIVATE edi_app_module edi_app_moduleplugin ${EDI_GUI_BASE_TARGETS} Qt6::Test)
     target_include_directories(edi_scan_save_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
@@ -561,6 +569,10 @@ add_dependencies(edi_app_tests edi_app_build_commit)
 # The app names it too: its test observers report the build they observe.
 target_sources(edi_app PRIVATE "${EDI_APP_BUILD_COMMIT_CPP}")
 add_dependencies(edi_app edi_app_build_commit)
+if(TARGET edi_chart_hover_tests)
+    target_sources(edi_chart_hover_tests PRIVATE "${EDI_APP_BUILD_COMMIT_CPP}")
+    add_dependencies(edi_chart_hover_tests edi_app_build_commit)
+endif()
 if(TARGET edi_scan_save_tests)
     target_sources(edi_scan_save_tests PRIVATE "${EDI_APP_BUILD_COMMIT_CPP}")
     add_dependencies(edi_scan_save_tests edi_app_build_commit)
