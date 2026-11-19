@@ -484,7 +484,7 @@ ProjectViewModel::ProjectViewModel(edi::Project project, QObject* parent, const 
         }
     }
     if (scan_) {
-        scan_template_ = *project_;
+        copyModelToTemplate();
         int shown = std::max(0, templateIndex());
         const std::vector<std::string>& files = scan_session_ ? scan_session_->datasets().files : std::vector<std::string>();
         for (std::size_t i = 0; i < files.size() && !selection.value(2).isEmpty(); ++i) {
@@ -4560,7 +4560,7 @@ void ProjectViewModel::viewDataset(int index, bool refresh) {
         return;
     }
     if (!scan_template_) {
-        scan_template_ = *project_;
+        copyModelToTemplate();
     }
     // The dataset already shown, with nothing pending: only its results row changed (a new row, Reset, Undo, a
     // run's end), so it is shown again at once from its row, with no file to read.
@@ -4908,6 +4908,9 @@ QString ProjectViewModel::prepareScan(bool fresh) {
     QString warning = tr("The scan preparation changed the project, but its presentation failed. Undo or reopen before further changes.");
     editing_ = true;
     const auto release = qScopeGuard([this] { editing_ = false; });
+    // The run's template is the copy the scan fits from, made now if no dataset was shown yet (viewDataset makes it
+    // then): its identity is memoised on that copy, so the run's end finds it unchanged without a save to hash.
+    if (scan_ && !scan_template_) copyModelToTemplate();
     run_identity_ = templateIdentityOf(scanTemplateOrModel());
     previous_run_.reset();
     if (!fresh) { previous_run_ = scan_session_->run(); return {}; }
@@ -7492,13 +7495,25 @@ std::shared_ptr<const edi::Project> ProjectViewModel::templateSnapshot() const {
     return template_snapshot_;
 }
 
+std::optional<ProjectViewModel::IdentityMemo>& ProjectViewModel::identityMemoFor(const edi::Project* project) const {
+    return identity_memos_[project == project_.get() ? 0 : 1];
+}
+
 std::string ProjectViewModel::templateIdentityOf(const edi::Project& project) const {
-    if (identity_memo_ && identity_memo_->project == &project && edi::unchanged_since(project, identity_memo_->stamps)) {
-        return identity_memo_->identity;
+    std::optional<IdentityMemo>& memo = identityMemoFor(&project);
+    if (memo && memo->project == &project && edi::unchanged_since(project, memo->stamps)) {
+        return memo->identity;
     }
-    IdentityMemo memo{&project, edi::work_stamps(project), ScanSession::templateIdentity(project)};
-    identity_memo_ = std::move(memo);
-    return identity_memo_->identity;
+    memo = IdentityMemo{&project, edi::work_stamps(project), ScanSession::templateIdentity(project)};
+    return memo->identity;
+}
+
+void ProjectViewModel::copyModelToTemplate() {
+    scan_template_ = *project_;
+    const std::optional<IdentityMemo>& model = identityMemoFor(project_.get());
+    if (model && model->project == project_.get() && edi::unchanged_since(*project_, model->stamps)) {
+        identityMemoFor(&*scan_template_) = IdentityMemo{&*scan_template_, edi::work_stamps(*scan_template_), model->identity};
+    }
 }
 
 void ProjectViewModel::refreshTextsLater() {
@@ -7537,7 +7552,7 @@ void ProjectViewModel::makeTextsLater() {
                 }
                 self->saved_files_ = std::move(files);
                 if (!identity.empty()) {
-                    self->identity_memo_ = IdentityMemo{self->project_.get(), stamps, std::move(identity)};
+                    self->identityMemoFor(self->project_.get()) = IdentityMemo{self->project_.get(), stamps, std::move(identity)};
                 }
                 self->refreshTextsAndReport();
             },

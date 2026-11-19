@@ -10,6 +10,7 @@
 #include <QList>
 #include <QStringList>
 #include <QObject>
+#include <array>
 #include <QPointer>
 #include <QTemporaryDir>
 #include <QTimer>
@@ -472,7 +473,12 @@ class ProjectViewModel : public QObject, public ProjectEditor {
         edi::WorkStamps stamps;
         std::string identity;
     };
-    mutable std::optional<IdentityMemo> identity_memo_;
+    // One per project the identity is asked of, the model's and the scan template's: the model's, made in the
+    // background (makeTextsLater), never evicts the template's, which a run's end asks for (syncOutOfDate).
+    mutable std::array<std::optional<IdentityMemo>, 2> identity_memos_;
+    std::optional<IdentityMemo>& identityMemoFor(const edi::Project* project) const;
+    // The scan template made as a copy of the model, which has the model's identity while the model's is current.
+    void copyModelToTemplate();
     // A shared copy of the scan's template, made again only when the template changes: the workers that calculate or
     // read a shown point take it instead of a copy made per point on the GUI thread.
     std::shared_ptr<const edi::Project> templateSnapshot() const;
