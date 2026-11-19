@@ -117,6 +117,14 @@ JSON suits structured data in programming, but for crystallographic data it is m
 }
 ```
 
+## Open a GSAS-II project
+
+In the desktop app, choose **Open project** and **Project file**, then select the `.gpx`. The
+first supported case is the PbSO₄ constant-wavelength neutron powder tutorial with one fixed
+nuclear phase and one complete measured pattern. EasyDiffraction opens the converted model
+as an unsaved project. Use **Save As** to write the native Edi project. The importer reports
+unsupported project contents when it cannot carry the model over.
+
 ## Importing a CIF {#cif-files}
 
 A CIF file can bring in a structure or an experiment wherever a `.edi` file can. EasyDiffraction reads both CIF 1.1 and CIF 2.0, and goes by the names inside the file rather than by its suffix.

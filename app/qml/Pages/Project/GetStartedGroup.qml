@@ -169,10 +169,8 @@ SideBarGroup {
         }
     }
 
-    // Open project (edi ADR-0052 §3, §9; owner, 2026-10-25): the same small dialog on every platform, Folder or Zip
-    // archive, then the matching chooser: a folder chooser for the project folder holding project.edi, or a file
-    // chooser for a .zip. In the browser the browser's own chooser: Chrome and Edge open it on the disk, where Save
-    // writes it back; other browsers copy it into the browser's storage.
+    // The desktop file picker admits ZIP and GSAS-II projects (ADR-0052 and ADR-0096).
+    // The browser picker reads a ZIP archive or a native project folder.
     AppDialog {
         id: openChoice
         objectName: "open.choice"
@@ -199,7 +197,7 @@ SideBarGroup {
             }
             ChoiceRadioButton {
                 objectName: "open.zip"
-                text: qsTr("Zip archive")
+                text: WebFiles.available ? qsTr("Zip archive") : qsTr("Project file")
                 checked: openChoice.zip
                 onClicked: openChoice.zip = true
             }
@@ -221,8 +219,9 @@ SideBarGroup {
     }
     FileDialog {
         id: openZipDialog
-        title: qsTr("Open an edi project archive")
-        nameFilters: [qsTr("edi project archives (*.zip)")]
+        title: qsTr("Open a project file")
+        nameFilters: [qsTr("Project files (*.zip *.gpx *.gsas.json)"),
+            qsTr("edi project archives (*.zip)"), qsTr("GSAS-II projects (*.gpx *.gsas.json)")]
         currentFolder: DialogFolders.folder("openProject", "")
         onAccepted: {
             DialogFolders.remember("openProject", selectedFile);

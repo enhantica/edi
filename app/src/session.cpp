@@ -1970,7 +1970,10 @@ void Session::syncCalculationMessages() {
 
 bool Session::projectDirectoryExists(const QString& path) const {
     // A recent project is a folder or a .zip it was saved as (edi ADR-0052).
-    return !path.isEmpty() && (QFileInfo(path).isDir() || edi::is_project_archive(path.toStdString()));
+    const QFileInfo location(path);
+    const auto source = path.toStdString();
+    return !path.isEmpty() && (location.isDir() || edi::is_project_archive(source) ||
+                               (location.isFile() && edi::is_gsas_project_path(source)));
 }
 
 QUrl Session::projectDirectoryUrl(const QString& path) const {

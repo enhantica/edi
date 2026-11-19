@@ -88,9 +88,12 @@ using WarningSink = std::function<void(const std::string&)>;
 // A warning with the project file it comes from, relative to the project (`experiments/d20.edi`), or empty when no
 // one file is its source (a relation over several).
 using SourcedWarningSink = std::function<void(const std::string& file, const std::string& message)>;
-// `path` is the project's folder, its `project.edi`, or a `.zip` of the folder (edi ADR-0052). An archive unpacks into a
-// new temporary folder first; the project then has no directory of its own (`path` empty), so its first save needs one,
-// and it reads its scan data from the unpacked folder.
+// A GPX or a versioned GSAS-II text bundle opens as a new, unsaved project.
+bool is_gsas_project_path(const std::string& path);
+
+// `path` is the project's folder, its `project.edi`, a ZIP archive (ADR-0052), or a supported
+// GSAS-II project (ADR-0096). An archive is unpacked into a temporary folder first. The
+// converted GSAS-II project holds its data in memory and has no save location.
 Project load_project(const std::string& path, const WarningSink& on_warning = {});
 // Ordinary GUI Open/Text restoration also accepts saved construction states with absent
 // structures, experiments or data. Present content and all held-structure references still
