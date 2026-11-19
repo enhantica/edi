@@ -1,7 +1,7 @@
 {
   "archive_sha256": "8a49c250a70181f32424aea38e87edf9054a12aa2916c8e0d60d85946f9cc305",
   "members": {
-    "44k_data/scan-0514_pilatus_integrated_0000.xy": "8fb0e7ca0ed87431cf6165a1d474084b80fc61c1b2eae44804a29a9d009b6938",
+    "44k_data/scan-0514_pilatus_integrated_0000.xy": "c0491ffeb232cc32fdac086e6983d492cfd2fb4d581fdf6702a08460d5631839",
     "44k_project/analysis/analysis.edi": "e75ac8f39d414a22f8abf3e9af074d9c1cdf151ac61e695cba2391162607b471",
     "44k_project/structures/CaCO3.edi": "a0c30743a6111196d9b56e4aacbc8eb1c48389c7c9d00f149f393100ce684a42",
     "44k_project/structures/ZnO.edi": "5f74519460a4adc610830114200583c9869b8d1d8aeab5a6bc21a12c946367de",

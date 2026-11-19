@@ -1,11 +1,13 @@
 # UI responsiveness inputs and observations
 
-The scan files are small, unchanged members of the owner's external `44k.zip`.
-`scan-source.json` records the archive identity and each extracted member's SHA256.
+The scan files come from the owner's external `44k.zip`. Personal paths and
+names are removed from the reduced fixture's headers; its scientific data and
+project records are preserved. `scan-source.json` records the archive identity
+and each published member's SHA256.
 The archive and generated scans stay outside git. `generate.py <empty-directory>`
 stages the same two structures, linked powder experiment, report settings and
 analysis settings with 4000 patterns on the original grid. Noise is seeded; it
-does not claim scientific correctness. The original template is unchanged.
+does not claim scientific correctness. The template retains the original data.
 
 The other independent inputs are the committed CLI NCAF five-bank start-5
 project and `tests.fixtures.joint_series.ncaf.prepare(..., points=100,
