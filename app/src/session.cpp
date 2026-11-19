@@ -614,9 +614,27 @@ QString Session::locationText() const {
 }
 
 bool Session::needsSaveAs() const {
-    // Every project in the web app has its place, which Save writes.
-    return project_ != nullptr && !WebFiles::available()
-           && (project_->path().isEmpty() || !opened_example_.isEmpty() || read_only_copy_);
+    // Every project in the web app has its place, which Save writes, except an untitled one, which Create names first.
+    return project_ != nullptr &&
+           (untitled_ || (!WebFiles::available() &&
+                          (project_->path().isEmpty() || !opened_example_.isEmpty() || read_only_copy_)));
+}
+
+void Session::setUntitled(bool untitled) {
+    if (untitled != untitled_) {
+        untitled_ = untitled;
+        emit untitledChanged();
+        emit needsSaveAsChanged();
+    }
+}
+
+bool Session::startUntitledProject(const QString& suRule, bool reportLibraries) {
+    if (project_ != nullptr) return false;
+    if (!createProjectImpl(QStringLiteral("untitled"), {}, {}, suRule, {}, {}, reportLibraries, {}, nullptr)) return false;
+    setUntitled(true);
+    // In the web app its recovery copy is marked untitled, so a recovered one is untitled again (setWebPlace).
+    if (WebFiles::available()) setWebPlace({web_place_.key, QStringLiteral("untitled"), tr("Untitled project")});
+    return true;
 }
 
 bool Session::save() {
@@ -1058,6 +1076,8 @@ bool Session::saveProjectAsFreshWith(const SaveOperation& operation,const QUrl& 
         archive_location_.clear();releaseTemporaryFolder();if(!current())return false;
     }
     setLastError({});if(!current())return false;
+    // Saved at a place of its own (an assistant's or a window's Save As): no longer untitled.
+    setUntitled(false);if(!current())return false;
     if(notify) {
         emit projectLocationChanged();if(!current())return false;
         emit needsSaveAsChanged();if(!current())return false;
@@ -1607,6 +1627,56 @@ bool Session::creationOutcomeCurrent(const edi_app::ProjectCreationResult& outco
     return (!outcome.has_owner || original) && project_ == original &&
         outcome.replacement == QString::number(replacement_generation_);
 }
+bool Session::adoptUntitled(const QString& name, const QString& description, const QString& location,
+                            const QString& title, const QString& authors, ProjectCreationOutcome* outcome, bool replace) {
+    const QPointer<ProjectViewModel> project(project_);
+    if (outcome) { outcome->owner = project_; outcome->has_owner = true; outcome->replacement = replacement_generation_; }
+    project_->setName(name);
+    project_->setDescription(description);
+    if (!title.isEmpty()) project_->setTitle(title);
+    project_->setAuthors(authors);
+    bool saved = false;
+    if (location.isEmpty()) {
+        // The web app (or a project shown without a place): a browser place of its own, which Save writes.
+        if (WebFiles::available()) setWebPlace({web_place_.key, QStringLiteral("browser"), folderNameFor(name)});
+        setUntitled(false);
+        saved = !WebFiles::available() || save();
+    } else {
+        const QFileInfo existing(location);
+        if ((existing.exists() || existing.isSymLink()) && !replace) {
+            setLastError(tr("%1 exists already; nothing was saved.").arg(existing.absoluteFilePath()));
+        } else if (existing.exists() && (!existing.isDir() || !QFileInfo::exists(existing.absoluteFilePath() + QStringLiteral("/project.edi")))) {
+            setLastError(tr("%1 exists and is not a project folder; nothing was replaced.").arg(existing.absoluteFilePath()));
+        } else {
+            // Over a project folder, once the user chose Replace: the old one moves aside until the save has worked.
+            QString aside;
+            if (existing.exists()) {
+                aside = existing.absoluteFilePath() + QStringLiteral(".edi-replaced");
+                for (int n = 2; QFileInfo::exists(aside); ++n) aside = existing.absoluteFilePath() + QStringLiteral(".edi-replaced-%1").arg(n);
+                if (!QDir().rename(existing.absoluteFilePath(), aside)) {
+                    setLastError(tr("The project %1 could not be replaced: it could not be moved aside").arg(existing.fileName()));
+                    aside = QStringLiteral("-");
+                }
+            }
+            if (aside != QStringLiteral("-")) {
+                saved = saveProjectAsFresh(QUrl::fromLocalFile(location), false, false, false);
+                if (!aside.isEmpty()) {
+                    if (saved) {
+                        QDir(aside).removeRecursively();
+                    } else {
+                        QDir(location).removeRecursively();
+                        QDir().rename(aside, location);
+                    }
+                }
+            }
+        }
+        if (saved && project == project_) setUntitled(false);
+    }
+    const QString error = saved ? QString{} : last_error_;
+    if (outcome) { outcome->error = error; outcome->saved = saved; outcome->path = project ? project->path() : QString{}; }
+    return saved;
+}
+
 bool Session::createProjectImpl(const QString& name, const QString& description, const QString& location,
                             const QString& suRule, const QString& title, const QString& authors,
                             bool reportLibraries, const QString& assistantIntent, ProjectCreationOutcome* outcome, bool replace) {
@@ -1616,6 +1686,10 @@ bool Session::createProjectImpl(const QString& name, const QString& description,
         setLastError(refusal);
         if (outcome) outcome->error = refusal;
         return false;
+    }
+    // Create while a project is untitled names and saves that project, the work in it kept (the owner, 2026-11-19).
+    if (untitled_ && project_ != nullptr && assistantIntent.isEmpty()) {
+        return adoptUntitled(name, description, location, title, authors, outcome, replace);
     }
     ProjectViewModel* created = nullptr;
     try {
@@ -2083,6 +2157,7 @@ bool Session::replaceProject(ProjectViewModel* project, const QStringList& warni
     // In the web app a project starts in the browser's own storage; an open from the disk or from a stored place
     // names its place once it is open.
     web_place_ = {};
+    setUntitled(false);  // a project replacing the untitled one is its own; startUntitledProject marks a new one
     web_from_file_ = false;web_source_path_.clear();
     if (project != nullptr && WebFiles::available()) {
         web_place_ = {newWebKey(), QStringLiteral("browser"), folderNameFor(project->name())};
@@ -2219,6 +2294,7 @@ void Session::setWebPlace(const WebPlace& place) {
     const QPointer<Session> receiver(this);const QPointer<ProjectViewModel> target(project_);  // NOLINT(clang-analyzer-core.NullDereference): this is live here.
     const auto binding=replacement_generation_;const auto pathBinding=path_generation_;
     web_place_ = place;
+    setUntitled(place.kind == QStringLiteral("untitled"));
     emit locationTextChanged();
     if(!receiver || project_!=target || replacement_generation_!=binding || pathBinding==UINT64_MAX || path_generation_!=pathBinding)return;
     emit projectLocationChanged();
