@@ -75,6 +75,14 @@ AppDialog {
     }
     onAboutToShow: updateAcceptButton()
     onOpened: ApplicationInfo.connectionPresentationChanged(0)
+    // The disclosed context is made again only while the dialog is shown (opening it makes it afresh): a hidden dialog
+    // does not listen, so a running fit's changes do not serialise the context.
+    Connections {
+        target: dialog.opened ? dialog.assistant : null
+        function onContextPreviewChanged() {
+            ApplicationInfo.connectionPresentationChanged(2);
+        }
+    }
     Connections {
         target: dialog.assistant
         function onConnectedChanged() {
@@ -85,12 +93,6 @@ AppDialog {
         }
         function onDraftAdmissionReadyChanged() {
             dialog.scheduleAcceptedOffer();
-        }
-        // The disclosed context is made again only while the dialog is shown (opening it makes it afresh): a hidden
-        // dialog does not follow every change of a running fit.
-        function onContextPreviewChanged() {
-            if (dialog.opened)
-                ApplicationInfo.connectionPresentationChanged(2);
         }
         function onLastErrorChanged() {
             dialog.showConnectionFailureIfFinished();

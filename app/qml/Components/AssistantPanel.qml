@@ -114,6 +114,11 @@ Popup {
         function onLastErrorChanged() {
             panel.captureNotice();
         }
+    }
+    // A changed context matters only to a send waiting for consent: without one nothing listens, and the context is
+    // not serialised at every change (AssistantViewModel::State::sync).
+    Connections {
+        target: panel.consentSend ? panel.assistant : null
         function onContextPreviewChanged() {
             ApplicationInfo.panelConsentContextChanged();
         }
