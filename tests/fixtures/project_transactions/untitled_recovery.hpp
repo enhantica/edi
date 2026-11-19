@@ -1,4 +1,16 @@
 // Untitled recovery uses the real Project page, edit timer and storage callbacks.
+QJsonObject untitledWorkState(const edi::Project& project) {
+    QJsonArray cells;
+    for (const auto& structure : project.structures) {
+        const auto& c = structure->cell;
+        cells.append(QJsonArray{c.length_a.value.get(), c.length_b.value.get(),
+                                c.length_c.value.get(), c.angle_alpha.value.get(),
+                                c.angle_beta.value.get(), c.angle_gamma.value.get()});
+    }
+    return {{"structures", int(project.structures.size())},
+            {"experiments", int(project.experiments.size())},
+            {"cells", cells}};
+}
 QJsonObject untitledRecovery() {
     browser = true;
     WebStorage::instance()->usable_ = true;
@@ -32,9 +44,10 @@ QJsonObject untitledRecovery() {
                        {"needsSaveAs", session->needsSaveAs()}};
     if (!session->hasProject()) return result;
     need(session->project()->createStructure(), "The real untitled project accepts a structure");
+    session->project()->currentStructure()->cell()->lengthA()->setValue(7.125);
     session->project()->setTitle("Unsaved neutron work");
     settle(*session);
-    result["before"] = scientificState(session->project()->project());
+    result["before"] = untitledWorkState(session->project()->project());
     // Deliver the edit timer's actual event without sleeping for its wall-clock delay.
     need(QMetaObject::invokeMethod(session->keep_timer_, "timeout", Qt::DirectConnection),
          "The existing recovery timer receives its timeout");
@@ -58,7 +71,7 @@ QJsonObject untitledRecovery() {
     if (read < 0) return result;
     finish(size_t(read), true, kept);
     settle(*session);
-    result["after"] = scientificState(session->project()->project());
+    result["after"] = untitledWorkState(session->project()->project());
     result["title"] = session->project()->title();
     result["modified"] = session->project()->modified();
     result["stillUntitled"] = session->needsSaveAs();

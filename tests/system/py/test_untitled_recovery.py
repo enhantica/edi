@@ -20,6 +20,9 @@ def test_untitled_edits_reach_autosave(recovery):
     assert recovery['untitled'] and recovery['needsSaveAs'], (
         'Opening Project begins with genuine untitled work before autosave'
     )
+    assert recovery['before']['structures'] == 1 and recovery['before']['cells'][0][0] == 7.125, (
+        'Autosave starts from the actual nontrivial cell edit in the untitled structure'
+    )
     assert recovery.get('writesRecovery') and recovery.get('snapshotExists'), (
         'The normal edit timer writes a complete snapshot before the first named Save'
     )
@@ -31,7 +34,7 @@ def test_untitled_recovery_restores_science_and_save_state(recovery):
         'Untitled work is loadable through the actual recovery entrance'
     )
     assert recovery['after'] == recovery['before'], (
-        'Recovery preserves the complete scientific state captured before autosave'
+        'Recovery preserves the authored cell values and structure/experiment inventory'
     )
     assert recovery['title'] == 'Unsaved neutron work', 'Recovery keeps the unsaved project title'
     assert recovery['modified'] and recovery['stillUntitled'], (
