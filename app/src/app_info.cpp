@@ -88,6 +88,7 @@
 #include <private/qqmlcontextdata_p.h>
 #include <private/qqmlcontext_p.h>
 #include <private/qqmlimport_p.h>
+#include <private/qquickrepeater_p.h>
 #include <private/qqmltypenamecache_p.h>
 #include <private/qqmllistwrapper_p.h>
 #include <private/qqmltypewrapper_p.h>
@@ -7693,6 +7694,75 @@ QJSValue ApplicationInfo::sidebarEdge(const QJSValue& group, bool last) const {
     if (!assistantRelation(f, panelUsageRead(f, shown, "length"), QJSValue(0), 1)) return QJSValue(false);
     const auto index = last ? viewArithmetic(f, panelUsageRead(f, shown, "length"), QJSValue(1), 0) : QJSValue(0);
     return QJSValue(textIndex(f, shown, index).strictlyEquals(group));
+}
+void ApplicationInfo::sidebarColumnChanged(QObject* parent) const {
+    auto it = sidebar_columns_.find(parent);
+    if (it == sidebar_columns_.end() || it->dirty) return;
+    it->dirty = true;
+    ++sidebar_revision_;
+    emit const_cast<ApplicationInfo*>(this)->sidebarRevisionChanged();
+}
+bool ApplicationInfo::sidebarEdgeCached(QObject* group, bool last) const {
+    auto* self = const_cast<ApplicationInfo*>(this);
+    auto* item = qobject_cast<QQuickItem*>(group);
+    QQuickItem* parent = item != nullptr ? item->parentItem() : nullptr;
+    if (parent == nullptr) return false;
+    auto found = sidebar_columns_.find(parent);
+    if (found == sidebar_columns_.end()) {
+        found = sidebar_columns_.insert(parent, SidebarColumn{});
+        QObject::connect(parent, &QQuickItem::childrenChanged, this, [this, parent] { sidebarColumnChanged(parent); });
+        QObject::connect(parent, &QObject::destroyed, this, [this, parent] { sidebar_columns_.remove(parent); });
+    }
+    SidebarColumn& column = *found;
+    if (column.dirty) {
+        // As orderedChildren and shownGroups: the column's children in the order it lays them out, each Repeater's
+        // delegates in its place; then the groups among them (a `collapsible` property) that their tab lists.
+        for (const auto& watch : std::as_const(column.watches)) QObject::disconnect(watch);
+        column.watches.clear();
+        column.shown.clear();
+        const QList<QQuickItem*> children = parent->childItems();
+        QList<QQuickItem*> repeated;
+        QList<QQuickItem*> repeaters;
+        for (QQuickItem* child : children) {
+            if (auto* repeater = qobject_cast<QQuickRepeater*>(child)) {
+                repeaters.append(child);
+                for (int i = 0; i < repeater->count(); ++i)
+                    if (QQuickItem* delegate = repeater->itemAt(i)) repeated.append(delegate);
+                column.watches.append(QObject::connect(repeater, &QQuickRepeater::countChanged, this,
+                                                       [this, parent] { sidebarColumnChanged(parent); }));
+            }
+        }
+        QList<QQuickItem*> ordered;
+        for (QQuickItem* child : children) {
+            if (auto* repeater = qobject_cast<QQuickRepeater*>(child)) {
+                for (int i = 0; i < repeater->count(); ++i)
+                    if (QQuickItem* delegate = repeater->itemAt(i)) ordered.append(delegate);
+            } else if (!repeated.contains(child)) {
+                ordered.append(child);
+            }
+        }
+        for (QQuickItem* candidate : std::as_const(ordered)) {
+            const QMetaObject* meta = candidate->metaObject();
+            if (meta->indexOfProperty("collapsible") < 0) continue;
+            const int listed = meta->indexOfProperty("listed");
+            if (listed >= 0) {
+                const QMetaProperty property = meta->property(listed);
+                if (property.hasNotifySignal()) {
+                    column.watches.append(QObject::connect(candidate, property.notifySignal(), self,
+                                                           metaObject()->method(metaObject()->indexOfSlot("sidebarListedChanged()"))));
+                }
+                if (!property.read(candidate).toBool()) continue;
+            }
+            column.shown.append(candidate);
+        }
+        column.dirty = false;
+    }
+    if (column.shown.isEmpty()) return false;
+    return (last ? column.shown.last() : column.shown.first()).data() == group;
+}
+void ApplicationInfo::sidebarListedChanged() {
+    // A group's `listed` changed: its column, found from the sender.
+    if (auto* item = qobject_cast<QQuickItem*>(sender())) sidebarColumnChanged(item->parentItem());
 }
 QJSValue ApplicationInfo::sidebarOrderedChildren(const QJSValue& parent) const {
     const auto f = panelUsageEngine(this); const auto children = controlEmptyArray(f);
