@@ -111,11 +111,17 @@ EaComponents.MainContent {
     // loading): the page opens on its own tab and moves to the pick once it is, unless the user picked another.
     property bool pickPending: false
     readonly property bool pickReady: pickPending && available(chosenKey)
+    // Taken after the change has settled: clearing pickPending inside this handler re-evaluated pickReady while it was
+    // still notifying (a binding loop, logged before the owner's crash of 2026-11-19).
     onPickReadyChanged: {
-        if (pickReady) {
-            pickPending = false;
-            showMainTab(tabOf(chosenKey));
-        }
+        if (pickReady)
+            Qt.callLater(takePick);
+    }
+    function takePick() {
+        if (!pickReady)
+            return;
+        pickPending = false;
+        showMainTab(tabOf(chosenKey));
     }
     onProjectChanged: {
         ownTabOpened = false;
