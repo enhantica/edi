@@ -1201,6 +1201,29 @@ void set_magnetic_symmetry(Structure& s, std::vector<std::pair<std::string, std:
     complete_atom_site_moments(s);  // the accepted state, as crysta completes it
 }
 
+// The transforms loop's BNS row set to `transform`: the replaced row keeps its id, a new one takes the first free
+// number, so no two rows share an id.
+static void set_bns_transform(MagneticDescription& magnetic, const std::string& transform) {
+    bool kept = false;
+    std::erase_if(magnetic.transforms, [&kept](const auto& row) {
+        if (row.second.source != "BNS") return false;
+        if (!kept) return !(kept = true);  // the first BNS row stays and keeps its id
+        return true;
+    });
+    for (auto& row : magnetic.transforms) {
+        if (row.second.source == "BNS") {
+            row.second.pp_abc = transform;
+            return;
+        }
+    }
+    int next = 1;
+    while (std::any_of(magnetic.transforms.begin(), magnetic.transforms.end(),
+                       [&next](const auto& row) { return row.first == std::to_string(next); })) {
+        ++next;
+    }
+    magnetic.transforms.push_back({std::to_string(next), crysta::MagneticTransform{transform, "BNS"}});
+}
+
 void set_magnetic_space_group(Structure& s, const std::string& number_bns) {
     const crysta::MagneticSpaceGroupEntry& entry = crysta::magnetic_space_group(number_bns);
     const auto numbered = [](const std::vector<std::string>& triplets) {
@@ -1219,11 +1242,7 @@ void set_magnetic_space_group(Structure& s, const std::string& number_bns) {
     name.name_uni = entry.name_uni;
     // The table's operations are in the BNS standard setting: its transform is the identity.
     Structure trial = s;
-    trial.magnetic.modify([](MagneticDescription& magnetic) {
-        std::erase_if(magnetic.transforms, [](const auto& row) { return row.second.source == "BNS"; });
-        magnetic.transforms.push_back({std::to_string(magnetic.transforms.size() + 1),
-                                       crysta::MagneticTransform{"a,b,c;0,0,0", "BNS"}});
-    });
+    trial.magnetic.modify([](MagneticDescription& magnetic) { set_bns_transform(magnetic, "a,b,c;0,0,0"); });
     set_magnetic_symmetry(trial, numbered(entry.operations), numbered(entry.centerings), name);
     s = std::move(trial);
 }
@@ -1281,6 +1300,39 @@ std::optional<SpaceGroupSettingName> family_setting(const MagneticDescription& m
     return std::nullopt;
 }
 }  // namespace
+
+bool bns_transform_consistent(const MagneticDescription& magnetic) {
+    std::optional<crysta::MagneticSettingTransform> transform;
+    for (const auto& row : magnetic.transforms) {
+        if (row.second.source == "BNS") transform = crysta::parse_setting_transform(row.second.pp_abc);
+    }
+    const std::string& bns = magnetic.group.number_bns;
+    if (!transform || magnetic.operations.empty() || bns.empty()) {
+        return true;  // nothing a setting is claimed for, or descriptive text
+    }
+    int number = 0;
+    try {
+        number = std::stoi(bns.substr(0, bns.find('.')));
+    } catch (const std::exception&) {
+        return true;
+    }
+    for (const SpaceGroupSettingName& setting : space_group_settings()) {
+        if (setting.it_number != number || setting.setting != 0) continue;
+        try {
+            const crysta::SpaceGroup claimed = crysta::space_group_in_setting(
+                crysta::space_group_from_file(setting.name_h_m, setting.coord_system_code.empty()
+                                                                    ? std::nullopt
+                                                                    : std::optional<std::string>(setting.coord_system_code)),
+                *transform);
+            // Type IV and settings no table holds stay operators-only in E04-T50: no claim to check against.
+            return !crysta::operator_defined_symmetry(magnetic.operations, magnetic.centerings, claimed) ||
+                   !family_setting(magnetic, false).has_value();
+        } catch (const std::invalid_argument&) {
+            return false;
+        }
+    }
+    return true;
+}
 
 bool adopt_magnetic_family_setting(Structure& s, bool reinfer_letters) {
     if (s.magnetic->operations.empty()) {
@@ -1392,6 +1444,32 @@ std::string transform_to_standard(const crysta::SpaceGroup& group) {
             return basis + ";0,0,0";
         }
     } while (std::next_permutation(order.begin(), order.end()));
+    // A setting that also moves the origin: the standard mapped through each signed permutation and origin in
+    // quarters (crysta's space_group_in_setting) must give the setting's own operations.
+    const auto quarter = [](int steps) { return steps == 0 ? std::string("0") : steps == 2 ? std::string("1/2") : std::to_string(steps) + "/4"; };
+    std::array<int, 3> axes{0, 1, 2};
+    do {
+        for (int signs = 0; signs < 8; ++signs) {
+            for (int shift = 1; shift < 64; ++shift) {
+                crysta::MagneticSettingTransform candidate;
+                candidate.basis = {};
+                std::string basis;
+                for (std::size_t j = 0; j < 3; ++j) {
+                    const int sign = (signs >> j) & 1 ? -1 : 1;
+                    candidate.basis[3 * static_cast<std::size_t>(axes[j]) + j] = sign;  // column j: new vector j
+                    basis += std::string(j ? "," : "") + (sign < 0 ? "-" : "") + "abc"[axes[j]];
+                }
+                const std::array<int, 3> steps{shift & 3, (shift >> 2) & 3, (shift >> 4) & 3};
+                for (std::size_t axis = 0; axis < 3; ++axis) candidate.origin[axis] = steps[axis] / 4.0;
+                try {
+                    if (keys(crysta::symmetry_operations(crysta::space_group_in_setting(reference, candidate))) == keys(own)) {
+                        return basis + ";" + quarter(steps[0]) + "," + quarter(steps[1]) + "," + quarter(steps[2]);
+                    }
+                } catch (const std::invalid_argument&) {
+                }
+            }
+        }
+    } while (std::next_permutation(axes.begin(), axes.end()));
     return {};
 }
 }  // namespace
@@ -1491,10 +1569,10 @@ void set_magnetic_setting(Structure& s, const std::string& transform) {
         throw std::invalid_argument("the setting '" + transform + "' is not a transform such as a,b,c;0,0,0");
     }
     Structure trial = s;
-    trial.magnetic.modify([&spelled](MagneticDescription& description) {
-        std::erase_if(description.transforms, [](const auto& row) { return row.second.source == "BNS"; });
-        description.transforms.push_back({std::to_string(description.transforms.size() + 1), {spelled, "BNS"}});
-    });
+    trial.magnetic.modify([&spelled](MagneticDescription& description) { set_bns_transform(description, spelled); });
+    if (!bns_transform_consistent(trial.magnetic)) {
+        throw std::invalid_argument("the setting '" + transform + "' does not map the BNS standard onto this structure's operations");
+    }
     // The setting must describe the operations the structure holds: with an origin, a table setting it moves onto
     // them; refused otherwise, leaving the structure as it was.
     const bool table_before = s.magnetic->space_group_declared && family_setting(s.magnetic, false).has_value();

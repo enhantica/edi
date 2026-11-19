@@ -938,6 +938,10 @@ void read_magnetic(const Block& block, Structure& structure, const std::string& 
                                            {cell("_space_group_magn_transforms.Pp_abc"),
                                             cell("_space_group_magn_transforms.source")}});
         }
+        if (std::count_if(magnetic.transforms.begin(), magnetic.transforms.end(),
+                          [](const auto& row) { return row.second.source == "BNS"; }) > 1) {
+            fail_domain(where, "duplicate-bns-transform", "_space_group_magn_transforms gives more than one BNS row");
+        }
     }
     // The dictionary's scalar spelling of the transform to the BNS standard: kept as the loop's BNS row, which is how
     // the structure is written, unless the loop already gives one.
@@ -1278,6 +1282,11 @@ Structure structure_from_block(const Block& block, const std::string& where) {
         } else {
             structure.magnetic.modify([](MagneticDescription& magnetic) { magnetic.space_group_declared = false; });
         }
+    }
+    // A BNS transform that parses names the setting: it must map the BNS standard onto the operations.
+    if (!bns_transform_consistent(structure.magnetic)) {
+        fail_domain(where, "inconsistent-bns-transform",
+                    "the BNS transform does not map the BNS standard setting onto the magnetic operations");
     }
     // crysta's one acceptance rule for a magnetic structure, as its own load applies it.
     if (!structure.magnetic->operations.empty()) {

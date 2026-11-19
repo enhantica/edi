@@ -138,6 +138,9 @@ void set_magnetic_space_group(Structure& structure, const std::string& number_bn
 // coordinate ties come from the table and the cell and positions stay fittable. False, and nothing changed, when no
 // setting matches (a type IV group, a setting the table does not hold): the symmetry then comes from the operators.
 bool adopt_magnetic_family_setting(Structure& structure, bool reinfer_letters = false);
+// Whether the structure's BNS transform, when it parses and the family is a table setting, maps the BNS standard onto
+// its operations (edi ADR-0078). A transform that does not parse is descriptive text and claims nothing.
+bool bns_transform_consistent(const MagneticDescription& magnetic);
 // Crystal or Magnetic (edi ADR-0078). Magnetic: a structure whose symmetry is a magnetic space group.
 bool structure_magnetic(const Structure& structure);
 // Makes a Crystal structure Magnetic with the grey group of its space group (every moment zero by symmetry until a
