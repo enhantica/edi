@@ -830,7 +830,7 @@ void ExperimentViewModel::sync() {
     update(scale_, one_link ? registry_.find(&experiment_.linked_structure().scale) : nullptr,
            &ExperimentViewModel::scaleChanged);
     measured_range_->sync();
-    if (!values_only_ || categories_->itemCount(QStringLiteral("data")) != measured_range_->points()) syncCategories();
+    if (!values_only_ || listed_points_ != measured_range_->points()) syncCategories();
     instrument_->sync();
     peak_->sync();
     peak_asymmetry_->sync();
@@ -869,6 +869,7 @@ void ExperimentViewModel::syncCategories() {
     // `data` is a loop in `.edi` — its points — though the core's category list counts no rows for it; the
     // sidebar titles it as a loop, with the number of measured points (edi ADR-0017 §3).
     std::vector<edi::Category> categories = edi::experiment_categories(experiment_);
+    listed_points_ = measured_range_->points();
     for (edi::Category& category : categories) {
         if (category.id == "data") {
             category.is_loop = true;

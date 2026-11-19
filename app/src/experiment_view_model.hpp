@@ -503,6 +503,7 @@ class ExperimentViewModel : public QObject {
     std::uint64_t pattern_generation_ = 0;
     bool adjusting_ = false;
     bool values_only_ = false;  // within syncValues()
+    int listed_points_ = -1;    // the measured points syncCategories last listed
     std::optional<std::size_t> colour_place_;
     std::size_t colour_count_ = 0;
     std::vector<std::size_t> colour_positions_;

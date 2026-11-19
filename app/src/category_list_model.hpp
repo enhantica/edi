@@ -56,12 +56,16 @@ class CategoryListModel : public QAbstractListModel {
     // The same rows as `other`, brought in by the same diff, so a view keeps the delegates of the ids both lists have.
     void mirror(const CategoryListModel& other) {
         // The other list's rows as they are, applied by the same diff: its text is not read and parsed again.
+        other.settle();
         categories_ = other.categories_;
         text_ = other.text_;
         calculated_ = other.calculated_;
         applyRows(other.rows_);
     }
-    int count() const { return static_cast<int>(rows_.size()); }
+    int count() const {
+        settle();
+        return static_cast<int>(rows_.size());
+    }
     Q_INVOKABLE bool contains(const QString& categoryId) const;
     Q_INVOKABLE int itemCount(const QString& categoryId) const;
 
@@ -73,6 +77,12 @@ class CategoryListModel : public QAbstractListModel {
     void countChanged();
 
    private:
+    // A list nothing shows or follows (no view, mirror or binding on its signals) is not brought up to date at each
+    // change: the change is owed, and settled without signals when the list is next read (ADR-0096 rule 1), since the
+    // block's text it reads is made and parsed for it.
+    bool observed() const;
+    void settle() const;
+    mutable bool owed_ = false, quiet_ = false;
     struct Row;
     // Brings the rows to `target`: rows inserted, removed and moved by id, counts updated in place.
     void applyRows(const std::vector<Row>& target);
