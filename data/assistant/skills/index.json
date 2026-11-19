@@ -25,11 +25,11 @@
     },
     {
       "id": "fullprof-intake",
-      "version": "1.0.12",
-      "title": "Inspect a FullProf project",
-      "summary": "Interpret actual selected text and scientific associations; use only offered app operations, with unsupported mappings explicit.",
+      "version": "1.1.0",
+      "title": "Reconstruct FullProf and Edi projects",
+      "summary": "Map selected FullProf and Edi projects in both directions, preserving observations and refinement settings, and compare fixed-input calculations.",
       "path": "fullprof-intake/SKILL.md",
-      "sha256": "6c72b3376efcfde17b104897da422c5085bcb62bed9bbd0a7a432bd2a0d823af",
+      "sha256": "6255a6c74589911d9a32306300d50427b54c45b54b76e5d045ae6e0307ade609",
       "requires": [
         "selected_files"
       ],
@@ -40,11 +40,11 @@
       "references": [
         {
           "title": "FullProf official documentation",
-          "url": "https://www2017.ill.eu/sites/fullprof/documentation.html"
+          "url": "https://fullprofsuite.github.io/FullProf-Web/documentation.html"
         },
         {
           "title": "FullProf July2001 manual: source conventions and mappings",
-          "url": "https://www2017.ill.eu/sites/fullprof/downloads/Docs/FullProf_Manual.pdf"
+          "url": "https://fpsuite-doc.readthedocs.io/en/latest/_downloads/fc3ae97e4ca48b5b6cc53745c988f603/FullProf_Manual.pdf"
         }
       ]
     },
