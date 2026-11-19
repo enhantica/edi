@@ -1356,7 +1356,7 @@ bool bns_transform_consistent(const MagneticDescription& magnetic) {
                                                                     ? std::nullopt
                                                                     : std::optional<std::string>(setting.coord_system_code)),
                 *transform);
-            // Type IV and settings no table holds stay operators-only in E04-T50: no claim to check against.
+            // Type IV and settings no table holds stay operators-only: no claim to check against.
             return !crysta::operator_defined_symmetry(magnetic.operations, magnetic.centerings, claimed) ||
                    !family_setting(magnetic, false).has_value();
         } catch (const std::invalid_argument&) {
