@@ -4934,11 +4934,15 @@ struct AssistantViewModel::State {
     }
     // What the user sees when an unfinished alias stays: its id, its current target and why.
     void report_alias_left(const std::string& id, const std::string& parameter, const QString& reason) noexcept {
+        const QPointer<AssistantViewModel> receiver(&owner);
         try {
-            alias_cleanup_error = QObject::tr("The assistant stopped before choosing the parameter of alias %1 and could not remove it "
-                                              "(%2). It still points at %3: correct or remove it.")
+            const auto message = QObject::tr("The assistant stopped before choosing the parameter of alias %1 and could not remove it "
+                                             "(%2). It still points at %3: correct or remove it.")
                 .arg(QString::fromStdString(id), reason, QString::fromStdString(parameter));
-            qInfo().noquote() << "assistant:" << alias_cleanup_error;
+            alias_cleanup_error = message;
+            try { qInfo().noquote() << "assistant:" << message; } catch (...) {}
+            // The log's message handler may have destroyed the assistant or replaced its State.
+            if (!receiver || receiver->state_.get() != this) return;
             emit owner.lastErrorChanged();
         } catch (...) {}
     }
