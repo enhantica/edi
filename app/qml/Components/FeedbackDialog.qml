@@ -172,7 +172,8 @@ AppDialog {
     objectName: "feedback.form"
     title: qsTr("Help and feedback")
     // Wide enough for the privacy note to take two lines at the default font size; narrower in a narrower app window.
-    contentWidth: Math.min(AppSizes.unit * 40, roomWidth - AppSizes.unit * 6)
+    // A bit wider than the first 40 units, so the contact fields and the two links fit (owner, 2026-11-19).
+    contentWidth: Math.min(AppSizes.unit * 48, roomWidth - AppSizes.unit * 6)
     contentHeight: column.implicitHeight
     // The window never grows past the app's: what is left once the title, the status, the buttons and a margin around
     // the window are taken.
@@ -367,7 +368,8 @@ AppDialog {
                                 "feedback": qsTr("What works well for you, and what could be better?")
                             })[dialog.kind] ?? ""
                     }
-                    // The log box, and Attach files at the right of the same row (owner, 2026-11-17).
+                    // The log box, and Attach files at the right of the same row (owner, 2026-11-17), with the AI
+                    // work report link left of it (owner, 2026-11-19).
                     Item {
                         width: parent.width
                         height: Math.max(includeBox.implicitHeight, attachLink.implicitHeight)
@@ -383,6 +385,31 @@ AppDialog {
                             leftPadding: 0
                             checked: true
                             text: qsTr("Include app version, system and log")
+                        }
+                        // Attaches the assistant's work report as a file in one click, nothing to choose.
+                        IconLink {
+                            id: workReportLink
+
+                            objectName: "feedback.files.workReport"
+                            visible: ApplicationInfo.assistantBuilt
+                            anchors.right: attachLink.left
+                            anchors.rightMargin: EaStyle.Sizes.fontPixelSize
+                            anchors.verticalCenter: parent.verticalCenter
+                            enabled: !dialog.sending
+                            fontIcon: "file"
+                            text: qsTr("Attach AI work report")
+                            ToolTip.text: qsTr("Attach the AI assistant's work report as a file")
+                            onClicked: {
+                                const name = "work-report.json";
+                                const report = Session.assistant ? Session.assistant.workReportDocument() : "";
+                                const file = ApplicationInfo.textAttachment(name, report);
+                                if (!file.name) {
+                                    dialog.unreadableFiles = qsTr("AI work report (none yet)");
+                                    return;
+                                }
+                                dialog.unreadableFiles = "";
+                                dialog.attachedFiles = dialog.attachedFiles.filter(attached => attached.name !== name).concat([file]);
+                            }
                         }
                         IconLink {
                             id: attachLink

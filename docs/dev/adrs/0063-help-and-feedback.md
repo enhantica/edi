@@ -85,6 +85,9 @@ message: `POST /feedback` with `kind` (`feedback`, `question`, `problem` or `ide
   is refused, text files go into the body and only those held whole count as attached. Tests never call GitHub. Its
   201 answer names the files it `attached` and says `logAttached: false` when the whole log did not arrive; the form
   names what did not arrive, never a plain success.
+- **Attach AI work report** (owner, 2026-11-19), a link left of Attach files when the app has the assistant, attaches
+  the assistant's work report as `work-report.json` in one click, with nothing to choose. It replaces an earlier copy
+  of that file, follows the same limits, and says when there is no report yet. The form is 48 units wide (was 40).
 - **The website's Get in touch form** takes the same attachments in the same way (owner, 2026-11-17): Attach files
   with the app's paperclip and tooltip under the message at the left, the file list with Remove below it, a drop on
   the form, the same limits and payload, and the same results (the service's reason, the files not attached).

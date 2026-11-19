@@ -11678,6 +11678,17 @@ edi_app::FeedbackFile ApplicationInfo::fileAttachment(const QString& path, bool 
     attached.data = QString::fromLatin1(bytes.toBase64());
     return attached;
 }
+edi_app::FeedbackFile ApplicationInfo::textAttachment(const QString& name, const QString& text) const {
+    constexpr qint64 limit = 5 * 1024 * 1024;  // the feedback service's limit for one file (app/feedback/Payload.js)
+    edi_app::FeedbackFile attached;
+    if (name.isEmpty() || text.isEmpty()) return attached;
+    const QByteArray bytes = text.toUtf8();
+    attached.name = name;
+    attached.type = QMimeDatabase().mimeTypeForFile(name, QMimeDatabase::MatchExtension).name();
+    attached.size = bytes.size();
+    if (bytes.size() <= limit) attached.data = QString::fromLatin1(bytes.toBase64());
+    return attached;
+}
 namespace {
 struct SessionBrowserFrame {
     QPointer<QJSEngine> engine;

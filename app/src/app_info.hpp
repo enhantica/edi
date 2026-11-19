@@ -303,6 +303,9 @@ class ApplicationInfo : public QObject {
     // comes back unread with its real size, which the form refuses; the failing input an error popup attaches
     // (`automatic`) keeps its first 5 MB and says so in `cut`. An unreadable file gives one with no name.
     Q_INVOKABLE edi_app::FeedbackFile fileAttachment(const QString& path, bool automatic = false) const;
+    // `text` as a file named `name` for the same form (the assistant's work report). Past the 5 MB limit it comes back
+    // unsent with its real size, which the form refuses, as a picked file does.
+    Q_INVOKABLE edi_app::FeedbackFile textAttachment(const QString& name, const QString& text) const;
     // Posts the feedback message `body` (JSON) to `url` and calls `completed(status, detail, answer)`: the HTTP status,
     // or 0 when no answer came, what happened (the service's error or warning, or the network's reason) and the
     // answer's text (edi ADR-0063).

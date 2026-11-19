@@ -62,6 +62,32 @@ Item {
             verify(linkAt.x > includeAt.x + include.width, "at the right");
             verify(linkAt.x + link.width <= form.contentItem.width + 1, "not cut off");
         }
+        // Attach AI work report sits left of Attach files on the same row, between it and the log box.
+        function test_work_report_link_left_of_attach_files() {
+            open([]);
+            const report = findChild(form, "feedback.files.workReport");
+            const link = findChild(form, "feedback.files.add");
+            const include = findChild(form, "feedback.include");
+            compare(report.visible, ApplicationInfo.assistantBuilt);
+            if (!report.visible)
+                return;
+            compare(report.text, "Attach AI work report");
+            const reportAt = report.mapToItem(form.contentItem, 0, 0);
+            const linkAt = link.mapToItem(form.contentItem, 0, 0);
+            const includeAt = include.mapToItem(form.contentItem, 0, 0);
+            verify(Math.abs((reportAt.y + report.height / 2) - (linkAt.y + link.height / 2)) <= 2, "the same row");
+            verify(reportAt.x + report.width <= linkAt.x, "left of Attach files");
+            verify(reportAt.x >= includeAt.x + include.width, "right of the log box");
+        }
+        // The text attachment the link builds: the name, the UTF-8 size and base64 data; nothing for empty text.
+        function test_text_attachment_is_a_file() {
+            const file = ApplicationInfo.textAttachment("work-report.json", "{\"a\":\"\u00e9\"}");
+            compare(file.name, "work-report.json");
+            compare(file.type, "application/json");
+            compare(file.size, 10);
+            compare(file.data, "eyJhIjoiw6kifQ==");  // base64 of the UTF-8 bytes, computed outside the app
+            compare(ApplicationInfo.textAttachment("work-report.json", "").name, "");
+        }
         function test_unconfirmed_files_are_said_not_attached() {
             root.answerText = JSON.stringify({
                 "number": 55
