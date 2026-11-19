@@ -59,15 +59,22 @@ TestCase {
     function group(id, tier = "basic") {
         const found = groups(tier).filter(item => item.categoryId === id);
         compare(found.length, 1, "The selected sidebar contains exactly one " + id + " group");
-        found[0].collapsed = false;
-        Ui.scrollIntoView(found[0]);
-        verify(waitForPolish(found[0]), "The requested category finishes opening");
+        Ui.expandGroup(test, Probe, app, "group." + id);
         return found[0];
     }
     function press(item) {
         Ui.scrollIntoView(item);
-        verify(Ui.exposed(item) && item.enabled, "A real visible enabled control receives the pointer");
-        mouseClick(item, item.width / 2, item.height / 2);
+        app.update();
+        verify(waitForRendering(app.contentItem), "The pointer target finishes its rendered layout");
+        const point = Ui.clickPoint(item);
+        verify(point && item.enabled, "A real visible enabled control receives the pointer");
+        let inputDelay = 0;
+        for (let parent = item.parent; parent; parent = parent.parent)
+            if (typeof parent.pressDelay === "number")
+                inputDelay = Math.max(inputDelay, parent.pressDelay + 1);
+        mouseClick(item, point.x, point.y, undefined, undefined, inputDelay);
+        app.update();
+        verify(waitForRendering(app.contentItem), "The real pointer action produces its rendered result");
     }
     function typeChoice() {
         const table = findChild(Ui.page(app), "structures.list");
