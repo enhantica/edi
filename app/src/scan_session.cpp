@@ -125,7 +125,7 @@ QString ScanSession::load(const edi::Project& project) {
     } catch (const std::exception& refusal) {
         datasets_ = {};
         places_.clear();
-        writableIndex() = {};
+        index_ = std::make_shared<edi::ScanResultIndex>();
         return QString::fromUtf8(refusal.what());
     }
     places_ = edi::scan_places(datasets_);
@@ -232,9 +232,9 @@ QString ScanSession::decodeRun(const std::optional<std::string>& bytes, Run& run
 
 QString ScanSession::reindex(const edi::Project& project, bool writing) {
     // The old index goes first: a scan's two indexes at once would double what it holds at the end of a run.
-    writableIndex() = {};
+    index_ = std::make_shared<edi::ScanResultIndex>();
     bank_rule_ = {};  // made again from the project as it is now, when first asked
-    writableIndex() = edi::index_scan_results(project, datasets_, places_, writing);
+    index_ = std::make_shared<edi::ScanResultIndex>(edi::index_scan_results(project, datasets_, places_, writing));
     return QString::fromStdString(index().error);
 }
 
@@ -243,7 +243,7 @@ void ScanSession::refuseIndex(const std::string& why) {
     edi::ScanResultIndex refused;
     refused.error = why;
     refused.rows.resize(datasets_.files.size());
-    writableIndex() = std::move(refused);
+    index_ = std::make_shared<edi::ScanResultIndex>(std::move(refused));
 }
 
 int ScanSession::place(const std::string& file) const {
@@ -867,7 +867,9 @@ void ScanSession::stopMetadata() {
 }
 
 edi::ScanResultIndex& ScanSession::writableIndex() {
-    // A reader still holds the current copy (indexSnapshot): the change goes into a copy of its own.
+    // A change in place while a reader holds the current copy (indexSnapshot) goes into a copy of its own, made at
+    // most once per copy handed out: the writes after it change that copy in place. A replacement of the whole index
+    // (load, reindex, a refusal) takes a new one and copies nothing.
     if (index_.use_count() > 1) index_ = std::make_shared<edi::ScanResultIndex>(*index_);
     return *index_;
 }
