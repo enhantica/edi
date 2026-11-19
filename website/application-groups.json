@@ -2,7 +2,6 @@
   "undocumented": {
     "components": [
       "SaveDataGroup",
-      "GeomGroup",
       "MeasuredDataGroup"
     ],
     "categories": [
@@ -217,7 +216,10 @@
         "title": "Bonds",
         "tab": "Extra",
         "icon": "grip-lines",
-        "category": "geom_bond"
+        "category": "geom",
+        "components": [
+          "GeomGroup"
+        ]
       },
       {
         "page": "application/structure/magnetic-group-symbols.md",
