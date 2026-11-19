@@ -2360,7 +2360,7 @@ bool DemoDriver::perform(const QString& action) {
         for (const QString& name : folder.entryList(QDir::Files, QDir::Name)) {
             files.append(QUrl::fromLocalFile(folder.filePath(name)));
         }
-        QQuickItem* group = find(QStringLiteral("experiments.group"), false);
+        QQuickItem* group = find(QStringLiteral("group.experiments"), false);
         if (group == nullptr || files.isEmpty() ||
             !QMetaObject::invokeMethod(group, "askSeries", Q_ARG(QVariant, QVariant(files)))) {
             fail(QStringLiteral("step %1: no series dialog for %2").arg(steps_[current_].image, folder.path()));
