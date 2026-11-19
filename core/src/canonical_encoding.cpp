@@ -356,6 +356,15 @@ void put_magnetic(Output& out, const MagneticDescription& magnetic) {
     put_text(out, magnetic.parent.it_number);
     put_text(out, magnetic.parent.transform_pp_abc);
     put_text(out, magnetic.parent.child_transform_pp_abc);
+    // Given form-factor coefficients are calculation inputs; a structure without them keeps its bytes.
+    if (!magnetic.radial_coefficients.empty()) {
+        put_text(out, "atom_type_scat");
+        put_u64(out, magnetic.radial_coefficients.size());
+        for (const auto& [symbol, given] : magnetic.radial_coefficients) {
+            put_text(out, symbol);
+            for (const std::string& value : given.values) put_text(out, value);
+        }
+    }
 }
 
 template<class Output>

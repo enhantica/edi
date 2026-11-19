@@ -4690,6 +4690,7 @@ void to_crysta_magnetic(const Structure& s, crysta::Structure& built) {
         built.magnetic_operations = magnetic.operations;
         built.magnetic_centerings = magnetic.centerings;
         built.propagation_vectors = magnetic.propagation_vectors;
+        built.magnetic_radial_coefficients = magnetic.radial_coefficients;
         if (!magnetic.kept_iso.empty()) {
             built.kept_iso = magnetic.kept_iso;
         }

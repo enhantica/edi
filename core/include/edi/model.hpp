@@ -2877,13 +2877,16 @@ struct MagneticDescription {
     std::vector<std::pair<std::string, std::string>> propagation_vectors;
     // An imported magCIF's `_iso_*` declarations, read-only: crysta writes them back unchanged.
     std::vector<crysta::KeptDeclaration> kept_iso;
+    // The <jn> coefficients a file gives per atom type (`_atom_type_scat`, edi ADR-0078), held as written; crysta
+    // takes a type's whole <j0> in place of its ion's table.
+    std::vector<std::pair<std::string, crysta::MagneticRadialCoefficients>> radial_coefficients;
     // False for a magnetic structure read without `_space_group`: its symmetry comes from its
     // operators (held under P 1), and a save writes no `_space_group`, as crysta decides.
     bool space_group_declared = true;
 
     bool empty() const noexcept {
         return group.empty() && transforms.empty() && operations.empty() && centerings.empty() &&
-               parent.empty() && propagation_vectors.empty() && kept_iso.empty();
+               parent.empty() && propagation_vectors.empty() && kept_iso.empty() && radial_coefficients.empty();
     }
     friend bool operator==(const MagneticDescription&, const MagneticDescription&) = default;
 };

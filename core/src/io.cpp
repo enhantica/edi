@@ -943,6 +943,21 @@ void read_magnetic(const Block& block, Structure& structure, const std::string& 
             fail_domain(where, "duplicate-bns-transform", "_space_group_magn_transforms gives more than one BNS row");
         }
     }
+    // The <jn> coefficients a file gives per atom type, held as written; crysta checks that each is a number.
+    if (const Loop* loop = block.loop_with("_atom_type_scat.symbol")) {
+        for (const auto& row : loop->rows) {
+            crysta::MagneticRadialCoefficients coefficients;
+            for (std::size_t index = 0; index < coefficients.values.size(); ++index) {
+                const std::string tag = "_atom_type_scat.neutron_magnetic_j" + std::to_string(2 * (index / 8)) + "_" +
+                                        crysta::kMagneticRadialItems[index % 8];
+                const std::string value = given(*loop, row, tag.c_str());
+                coefficients.values[index] = value.empty() ? value : representable(value, tag.c_str());
+            }
+            const std::string source = given(*loop, row, "_atom_type_scat.neutron_magnetic_source");
+            coefficients.source = source.empty() ? source : representable(source, "_atom_type_scat.neutron_magnetic_source");
+            magnetic.radial_coefficients.emplace_back(key(*loop, row, "_atom_type_scat.symbol"), std::move(coefficients));
+        }
+    }
     // The dictionary's scalar spelling of the transform to the BNS standard: kept as the loop's BNS row, which is how
     // the structure is written, unless the loop already gives one.
     if (const std::string scalar = text("_space_group_magn.transform_BNS_Pp_abc"); !scalar.empty()) {

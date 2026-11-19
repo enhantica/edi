@@ -601,6 +601,23 @@ const edi::MagneticFormFactor* form_factor_of(const edi::Structure& structure, c
     }
     return nullptr;
 }
+
+// The terms an atom type's given coefficients carry whole (<j0>, <j2>, <j4>, <j6>), or nothing when its file gives
+// none or no whole <j0>, which leaves it on its ion's table (crysta's rule, ADR-0108 §5).
+std::optional<std::array<bool, 4>> given_terms(const edi::Structure& structure, const std::string& type_symbol) {
+    for (const auto& [symbol, given] : structure.magnetic->radial_coefficients) {
+        if (symbol != type_symbol) continue;
+        std::array<bool, 4> whole{};
+        for (std::size_t term = 0; term < 4; ++term) {
+            whole[term] = std::all_of(given.values.begin() + static_cast<std::ptrdiff_t>(8 * term),
+                                      given.values.begin() + static_cast<std::ptrdiff_t>(8 * term + 7),
+                                      [](const std::string& value) { return !value.empty(); });
+        }
+        if (whole[0]) return whole;
+        break;
+    }
+    return std::nullopt;
+}
 }  // namespace
 
 void MagneticFormFactorListModel::sync() {
@@ -614,8 +631,10 @@ void MagneticFormFactorListModel::sync() {
             continue;
         }
         const edi::MagneticFormFactor* declared = form_factor_of(structure_, type);
-        const std::string ion = declared != nullptr && !declared->ion.value().empty() ? declared->ion.value()
-                                                                                      : crysta::magnetic_type_ion(type);
+        // A type whose file gives its coefficients shows them as its source, read only: they replace the ion's table.
+        const std::string ion = given_terms(structure_, type) ? QObject::tr("given").toStdString()
+                                : declared != nullptr && !declared->ion.value().empty() ? declared->ion.value()
+                                                                                        : crysta::magnetic_type_ion(type);
         QList<QVariant> values{QString::fromStdString(type), QString::fromStdString(ion),
                                QString::fromStdString(declared != nullptr ? declared->approximation.value() : "j0")};
         if (declared != nullptr) {
@@ -638,6 +657,9 @@ bool MagneticFormFactorListModel::hasTerm(int row, int n) const {
     const std::string ion = text(row, QStringLiteral("ion")).toStdString();
     if (ion.empty() || n < 0 || n > 2) {
         return false;
+    }
+    if (const std::optional<std::array<bool, 4>> given = given_terms(structure_, text(row, QStringLiteral("type")).toStdString())) {
+        return (*given)[static_cast<std::size_t>(n) + 1];
     }
     try {
         return crysta::magnetic_ion_table(ion).has[static_cast<std::size_t>(n)];
