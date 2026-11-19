@@ -10,11 +10,11 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-19T00:25:58Z
+# measured_utc = 2026-11-19T04:56:49Z
 #
-# Recorded from: measured test run (2307 node(s) measured once, 183855 banked, 4 stale row(s) dropped)
-# Collected tests: 255330; with a reported duration: 82872
-# Module-scoped fixture costs recorded: 212
+# Recorded from: measured test run (3 node(s) measured once, 183855 banked, 1 stale row(s) dropped)
+# Collected tests: 255332; with a reported duration: 82873
+# Module-scoped fixture costs recorded: 213
 #
 # Breaches are decided PER TIER against the table
 # below, which the loader validates against the code constants - a manifest must state
@@ -29,12 +29,12 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 255330
+# inventory_python = 255332
 # inventory_cpp = 0
-# inventory_measured = 183856
-# inventory_unmeasured = 71474
+# inventory_measured = 183857
+# inventory_unmeasured = 71475
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
-# inventory_pr_python = 89065
+# inventory_pr_python = 89067
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -240526,7 +240526,7 @@ UNMEASURED:not-completed-in-this-run	tests/system/py/test_features_reference.py:
 3.230	tests/system/py/test_feedback_endpoint.py::test_feedback_form_in_the_actual_application[real_host_log_header_and_aligned_sources]
 1.610	tests/system/py/test_feedback_endpoint.py::test_feedback_form_in_the_actual_application[unticked_attachment_changes_the_preview]
 UNMEASURED:failed-in-this-run	tests/system/py/test_feedback_endpoint.py::test_shipped_feedback_endpoint_is_the_public_service
-3.550	tests/system/py/test_feedback_endpoint_upgrade.py::test_clearing_the_preferences_field_stays_off_after_a_restart
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_feedback_endpoint_upgrade.py::test_clearing_the_saved_destination_stays_off_after_a_restart
 UNMEASURED:failed-in-this-run	tests/system/py/test_feedback_endpoint_upgrade.py::test_old_empty_endpoint_uses_the_deployed_default
 UNMEASURED:failed-in-this-run	tests/system/py/test_feedback_payload.py::test_each_feedback_kind_uses_the_declared_wire_payload[feedback]
 0.030	tests/system/py/test_feedback_payload.py::test_each_feedback_kind_uses_the_declared_wire_payload[idea]
@@ -251813,6 +251813,8 @@ UNMEASURED:not-completed-in-this-run	tests/system/py/test_web_parallel_build.py:
 0.000	tests/system/py/test_web_parallel_oracles.py::test_owner_five_bank_reference_is_not_a_generated_web_pin
 0.320	tests/system/py/test_web_parallel_oracles.py::test_web_fit_native_reference_covers_parameters_and_calculated_pattern[lbco]
 4.600	tests/system/py/test_web_parallel_oracles.py::test_web_fit_native_reference_covers_parameters_and_calculated_pattern[ncaf]
+0.025	tests/system/py/test_work_report_export.py::test_repeated_inspection_report_is_smaller_and_keeps_reader_evidence[2026.11.22]
+2.600	tests/system/py/test_work_report_export.py::test_repeated_inspection_report_is_smaller_and_keeps_reader_evidence[main]
 0.620	tests/system/py/test_writer_owned_neighbors.py::test_every_save_retains_exact_neighbors_of_its_generated_entity_documents[same-size-copy-experiments-assistant-copy-folder]
 0.560	tests/system/py/test_writer_owned_neighbors.py::test_every_save_retains_exact_neighbors_of_its_generated_entity_documents[same-size-copy-experiments-assistant-copy-zip]
 0.670	tests/system/py/test_writer_owned_neighbors.py::test_every_save_retains_exact_neighbors_of_its_generated_entity_documents[same-size-copy-experiments-assistant-folder]
@@ -255579,6 +255581,7 @@ UNMEASURED:not-completed-in-this-run	tests/unit/py/test_web_science_identity.py:
 # module-cost: 3.795	tests/system/py/test_visible_web_controls.py
 # module-cost: 0.020	tests/system/py/test_web_archive_permissions.py
 # module-cost: 0.549	tests/system/py/test_web_parallel_build.py
+# module-cost: 36.095	tests/system/py/test_work_report_export.py
 # module-cost: 2.709	tests/system/py/test_writer_owned_neighbors.py
 # module-cost: 2.483	tests/unit/py/test_browser_iteration_domains.py
 # module-cost: 3.595	tests/unit/py/test_browser_solver_vehicles.py

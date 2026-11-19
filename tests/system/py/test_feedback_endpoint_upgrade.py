@@ -47,6 +47,6 @@ def test_old_empty_endpoint_uses_the_deployed_default(tmp_path):
     phase(tmp_path, 'legacy')
 
 
-def test_clearing_the_preferences_field_stays_off_after_a_restart(tmp_path):
+def test_clearing_the_saved_destination_stays_off_after_a_restart(tmp_path):
     phase(tmp_path, 'clear')
     phase(tmp_path, 'read')
