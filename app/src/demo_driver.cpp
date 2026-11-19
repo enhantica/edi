@@ -2054,7 +2054,7 @@ void DemoDriver::trace_watch() {
                 if (controller->traceIdentity() != watch.native) continue;
                 const QString held = controller->traceBufferIdentity();
                 if (held.isEmpty() || held != controller->traceUploadIdentity()) continue;
-                if (!trace_matches_native(controller, watch.dataset)) continue;
+                if (!trace_matches_expected(watch)) continue;
                 chosen = &watch;
                 settling = true;
                 buffers = held;
@@ -2191,41 +2191,61 @@ QString DemoDriver::trace_native_identity() {
     if (native_cache_.first != key || native_cache_.second.isEmpty()) {
         const auto& held = *project->project().experiments[experiment->tracePlace()];
         native_cache_ = std::make_pair(key, held.data ? ui_trace_identity(&held.data->intensity_meas.get()) : QString());
-        native_points_.clear();
-        native_dataset_ = selection;
-        if (held.data) {
-            const std::vector<double>& x = held.data->axis();
-            const std::vector<double>& y = held.data->intensity_meas.get();
-            for (std::size_t i = 0; i < std::min(x.size(), y.size()); ++i)
-                if (std::isfinite(x[i]) && std::isfinite(y[i])) native_points_.emplace_back(x[i], y[i]);
-            std::sort(native_points_.begin(), native_points_.end());
-        }
     }
     return native_cache_.second;
 }
 
-bool DemoDriver::trace_matches_native(const PatternChartController* controller, int dataset) const {
-    if (controller == nullptr || dataset != native_dataset_ || native_points_.empty()) return false;
-    const auto at = [this](double x) {
-        return std::equal_range(native_points_.begin(), native_points_.end(), std::make_pair(x, -HUGE_VAL),
-                                [](const auto& a, const auto& b) { return a.first < b.first; });
+void DemoDriver::trace_expect(FrameWatch& watch) {
+    const PatternChartController* controller = watch.controller;
+    if (controller == nullptr || watch.expected_generation == controller->traceGeneration()) return;
+    ProjectViewModel* project = open_project(window_);
+    const int place = controller->traceExperimentPlace();
+    if (project == nullptr || place < 0) return;
+    watch.expected.clear();
+    watch.expected_band.clear();
+    watch.expected_generation = controller->traceGeneration();
+    const edi::PatternSource source = edi::capture_pattern(project->project(), static_cast<std::size_t>(place), controller->traceAxis());
+    const edi::PatternPresentation presentation = edi::present_pattern(source, controller->traceView());
+    for (const edi::PatternSeries& series : presentation.series) {
+        if (series.kind != edi::SeriesKind::Measured) continue;
+        for (std::size_t k = 0; k < series.points.size(); ++k) {
+            const double x = series.points[k].x, y = series.points[k].y;
+            if (!std::isfinite(x) || !std::isfinite(y)) continue;
+            watch.expected.append(QPointF(x, y));
+            const double high = k < series.bar_high.size() && std::isfinite(series.bar_high[k]) ? series.bar_high[k] : y;
+            const double low = k < series.bar_low.size() ? series.bar_low[k] : y;
+            watch.expected_band.append({x, std::isfinite(low) ? low : std::nan(""), high});
+        }
+    }
+}
+
+bool DemoDriver::trace_matches_expected(const FrameWatch& watch) const {
+    const PatternChartController* controller = watch.controller;
+    if (controller == nullptr || watch.expected_generation != controller->traceGeneration() || watch.expected.isEmpty())
+        return false;
+    const auto near = [](double a, double b) { return a == b || std::abs(a - b) <= 1e-9 * std::max(1.0, std::abs(b)); };
+    // A drawn line or set of markers is the whole expected series, point for point.
+    const auto whole = [&](const QList<QPointF>& drawn) {
+        if (drawn.size() != watch.expected.size()) return false;
+        for (qsizetype i = 0; i < drawn.size(); ++i)
+            if (!near(drawn[i].x(), watch.expected[i].x()) || !near(drawn[i].y(), watch.expected[i].y())) return false;
+        return true;
     };
-    const auto near = [](double a, double b) { return std::abs(a - b) <= 1e-9 * std::max(1.0, std::abs(b)); };
-    std::size_t checked = 0;
-    for (const QPointF& point : controller->traceMeasuredPoints()) {
-        const auto [first, last] = at(point.x());
-        if (std::none_of(first, last, [&](const auto& native) { return near(point.y(), native.second); })) return false;
-        ++checked;
+    const QList<QPointF> line = controller->traceMeasuredLine(), marks = controller->traceMeasuredMarks();
+    const QList<std::array<double, 3>> band = controller->traceMeasuredBand();
+    if (line.isEmpty() && marks.isEmpty() && band.isEmpty()) return false;
+    if (!line.isEmpty() && !whole(line)) return false;
+    if (!marks.isEmpty() && !whole(marks)) return false;
+    if (!band.isEmpty()) {
+        if (band.size() != watch.expected_band.size()) return false;
+        for (qsizetype i = 0; i < band.size(); ++i) {
+            const auto& [x, low, high] = band[i];
+            const auto& want = watch.expected_band[i];
+            // The band's lower edge stands on the pane's floor where the data give no lower end.
+            if (!near(x, want[0]) || !near(high, want[2]) || (std::isfinite(want[1]) && !near(low, want[1]))) return false;
+        }
     }
-    for (const auto& [x, low, high] : controller->traceMeasuredBand()) {
-        const auto [first, last] = at(x);
-        if (std::none_of(first, last, [&](const auto& native) {
-                return native.second >= low - 1e-9 * std::abs(low) && native.second <= high + 1e-9 * std::abs(high);
-            }))
-            return false;
-        ++checked;
-    }
-    return checked > 0;
+    return true;
 }
 
 void DemoDriver::trace_frame() {
@@ -2248,6 +2268,7 @@ void DemoDriver::trace_frame() {
                                   {"upload_identity", watch.upload}};
             EDI_UI_TRACE("presented", watch.presentation);
         }
+        if (watch.presented && !watch.settled && watch.controller) trace_expect(watch);
     }
     // The steps' actions, in order: each writes its state, its publication and then the step, once the native state
     // shows what it asked for.

@@ -186,6 +186,11 @@ class DemoDriver : public QObject {
         QString native;   // the selected dataset's data identity, read from the project once that dataset is applied
         qint64 generation = 0;  // the upload that presented it
         QString upload;         // that upload's points as the series objects held them after the fill
+        // The measured series the chart should draw for that upload: the selected data, read from the project and
+        // presented here with the chart's own view, for the upload generation it was made for.
+        qint64 expected_generation = -1;
+        QList<QPointF> expected;                      // finite measured points
+        QList<std::array<double, 3>> expected_band;   // (x, lower, upper) where the band has a lower end
         bool first = false, presented = false, settled = false;
         QJsonObject presentation;  // request, dataset, generation, data_identity, input
     };
@@ -206,12 +211,10 @@ class DemoDriver : public QObject {
     QList<FrameWatch> frame_watches_;   // GUI thread; the render thread reads them only while the GUI thread waits
     QString input_identity_;
     std::pair<std::uint64_t, QString> native_cache_;  // the native identity, by the project's applied view
-    std::vector<std::pair<double, double>> native_points_;  // its (x, measured) pairs, by x
-    int native_dataset_ = -1;                                // the selection they are of
-    // Whether every measured point the chart draws is a point of the selected data as the project holds it (a band:
-    // its edges at a data x bracket the value there), with at least one drawn: read on the render thread while the
-    // GUI thread waits.
-    bool trace_matches_native(const PatternChartController* controller, int dataset) const;
+    // The expected measured series for the chart's current upload (GUI thread), and whether what the chart draws is
+    // exactly that, every drawn path whole (render thread, while the GUI thread waits).
+    void trace_expect(FrameWatch& watch);
+    bool trace_matches_expected(const FrameWatch& watch) const;
     QList<QPointer<QQuickItem>> page_tabs_, view_tabs_, side_tabs_;
     // The main and sidebar tab buttons under `root` (a page as it is built), each found once.
     void trace_collect_tabs(QQuickItem* root);

@@ -1446,7 +1446,7 @@ void PatternChartController::refresh() {
 QString PatternChartController::traceBufferIdentity() const {
     // Every point of every filled series and of the measured markers, read from the scene objects: what the scene
     // draws for this chart. Empty while no measured point is drawn: the measured data are the required fill.
-    if (traceMeasuredPoints().isEmpty() && traceMeasuredBand().isEmpty()) return {};
+    if (traceMeasuredLine().isEmpty() && traceMeasuredMarks().isEmpty() && traceMeasuredBand().isEmpty()) return {};
     QCryptographicHash hash(QCryptographicHash::Sha256);
     bool finite = false;
     if (measured_layer_) {
@@ -1467,16 +1467,26 @@ QString PatternChartController::traceBufferIdentity() const {
     return finite ? QString::fromLatin1(hash.result().toHex().left(16)) : QString();
 }
 
-QList<QPointF> PatternChartController::traceMeasuredPoints() const {
+QList<QPointF> PatternChartController::traceMeasuredLine() const {
     QList<QPointF> points;
-    const auto finite = [](const QPointF& point) { return std::isfinite(point.x()) && std::isfinite(point.y()); };
     if (measured_series_) {
-        for (const QPointF& point : measured_series_->points()) if (finite(point)) points.append(point);
-    }
-    if (measured_layer_) {
-        for (const QPointF& point : measured_layer_->points()) if (finite(point)) points.append(point);
+        for (const QPointF& point : measured_series_->points())
+            if (std::isfinite(point.x()) && std::isfinite(point.y())) points.append(point);
     }
     return points;
+}
+
+QList<QPointF> PatternChartController::traceMeasuredMarks() const {
+    QList<QPointF> points;
+    if (measured_layer_) {
+        for (const QPointF& point : measured_layer_->points())
+            if (std::isfinite(point.x()) && std::isfinite(point.y())) points.append(point);
+    }
+    return points;
+}
+
+int PatternChartController::traceExperimentPlace() const {
+    return experiment_ != nullptr ? static_cast<int>(experiment_->tracePlace()) : -1;
 }
 
 QList<std::array<double, 3>> PatternChartController::traceMeasuredBand() const {

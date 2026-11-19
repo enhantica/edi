@@ -274,8 +274,13 @@ class PatternChartController : public QObject {
     // The measured data as the scene draws them, read from the scene objects, for a check against the selected data
     // that does not go through this controller: the line's and the markers' points, and the band's edges at each x
     // (x, lower, upper).
-    QList<QPointF> traceMeasuredPoints() const;
+    QList<QPointF> traceMeasuredLine() const;
+    QList<QPointF> traceMeasuredMarks() const;
     QList<std::array<double, 3>> traceMeasuredBand() const;
+    // What the chart presents its data with, so the trace can present the selected data itself and compare.
+    edi::PatternView traceView() const { return view(); }
+    edi::PatternAxis traceAxis() const { return axis_; }
+    int traceExperimentPlace() const;
 #endif
     bool current() const { return current_; }
     QString xTitle() const { return x_title_; }
