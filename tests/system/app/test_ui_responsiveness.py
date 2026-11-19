@@ -9,6 +9,11 @@ from pathlib import Path
 
 import pytest
 
+from tests.fixtures.ui_responsiveness.tab_inventory import (
+    SCENARIO,
+    declared_tabs,
+    scenario_steps,
+)
 from tests.integration.py.ui_causal_witnesses import actions
 from tests.integration.py.ui_responsiveness_oracle import (
     events,
@@ -18,9 +23,11 @@ from tests.integration.py.ui_responsiveness_oracle import (
     timing,
     work_delivery,
 )
+from tests.integration.py.ui_tab_witnesses import tab_actions
 
 ROOT = Path(__file__).resolve().parents[3]
 CONTRACT = json.loads((ROOT / 'tests/fixtures/ui_responsiveness/contract.json').read_text())
+SCENARIOS = scenario_steps(ROOT)
 
 
 def load_observations():
@@ -51,7 +58,10 @@ def load_observations():
             'UI trace bytes must match the actual producer receipt'
         )
         traces[key] = [json.loads(line) for line in data.splitlines()]
-    expected = set(CONTRACT['scenarios'])
+    assert manifest.get('tab_inventory') == declared_tabs(ROOT), (
+        'The producer must inventory every source-declared page and main/sidebar tab'
+    )
+    expected = set(SCENARIOS)
     assert set(traces) == expected | {name + '-control' for name in expected}, (
         'Each scenario requires its own real blocking control'
     )
@@ -63,26 +73,27 @@ def observations():
     return load_observations()
 
 
-@pytest.mark.parametrize('scenario', CONTRACT['scenarios'])
+@pytest.mark.parametrize('scenario', SCENARIOS)
 def test_actual_watchdog_and_blocking_control(observations, scenario):
     traces, manifest = observations
     for trace in (traces[scenario], traces[scenario + '-control']):
-        actions(trace, scenario, CONTRACT['scenarios'][scenario])
+        if scenario == SCENARIO:
+            tab_actions(trace, declared_tabs(ROOT))
+        else:
+            actions(trace, scenario, SCENARIOS[scenario])
         validate_input(trace, scenario, manifest)
     assert (
         one(traces[scenario], 'input')['identity']
         == one(traces[scenario + '-control'], 'input')['identity']
     ), 'Blocking controls must use the same actual scenario input as their ordinary run'
-    timing(traces[scenario], scenario, CONTRACT['scenarios'][scenario])
+    timing(traces[scenario], scenario, SCENARIOS[scenario])
     with pytest.raises(AssertionError, match='U8 permits no counted gap'):
-        timing(
-            traces[scenario + '-control'], scenario, CONTRACT['scenarios'][scenario], control=True
-        )
+        timing(traces[scenario + '-control'], scenario, SCENARIOS[scenario], control=True)
 
 
 def validate_input(trace, scenario, manifest):
     observed_input = one(trace, 'input')
-    if scenario in {'e58-pages', 'e58-pattern'}:
+    if scenario in {'e58-pages', 'e58-pattern', SCENARIO}:
         assert observed_input['patterns'] == (43802 if manifest['full_scan'] else 4000), (
             'The app must actually load the declared scan scale'
         )

@@ -189,6 +189,7 @@ def displayed_state(rendered, scenario, state):
     fields = {
         'e58-pages': ('input', 'page', 'tab'),
         'e58-banks': ('input', 'page', 'tab', 'selection'),
+        'e58-tabs': ('input', 'page', 'tab', 'sidebar_tab'),
     }
     if scenario not in fields:
         return

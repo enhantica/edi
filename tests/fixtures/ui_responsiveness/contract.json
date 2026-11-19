@@ -4,6 +4,9 @@
   "tick_ms": 10,
   "limit_ms": 100,
   "control_ms": 150,
+  "dynamic_scenarios": {
+    "e58-tabs": "tests.fixtures.ui_responsiveness.tab_inventory"
+  },
   "pages": [
     "home",
     "project",

@@ -9,6 +9,7 @@ import subprocess
 from pathlib import Path
 
 from tests.fixtures.ui_responsiveness.generate import full_scan
+from tests.fixtures.ui_responsiveness.tab_inventory import declared_tabs, scenario_steps
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[2]
@@ -20,7 +21,7 @@ def digest(path):
 
 
 def collect(app, output, scan, series, *, archive=None):
-    """Run the four real scenarios and their GUI-blocking controls separately."""
+    """Run the declared scenarios and their GUI-blocking controls separately."""
     app = app.resolve()
     source = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True).strip()
     markers = set(re.findall(rb'edi-build-commit:([0-9a-f]{40})([^\n]*)\n', app.read_bytes()))
@@ -41,8 +42,9 @@ def collect(app, output, scan, series, *, archive=None):
         if archive is not None
         else None,
         'runs': {},
+        'tab_inventory': declared_tabs(ROOT),
     }
-    for name in CONTRACT['scenarios']:
+    for name in scenario_steps(ROOT):
         for control in (False, True):
             key = name + ('-control' if control else '')
             folder = output / key
@@ -57,6 +59,7 @@ def collect(app, output, scan, series, *, archive=None):
                 'XDG_DATA_HOME': str(settings),
                 'OMP_NUM_THREADS': '1',
                 'EDI_DEMO_SCAN_PROJECT': str(series if name == 'e58-series' else scan),
+                'EDI_UI_TAB_INVENTORY': json.dumps(manifest['tab_inventory']),
             }
             env.pop('EDI_STALL_PROBE_STACKS', None)
             env.pop('EDI_UI_BLOCK_MS', None)

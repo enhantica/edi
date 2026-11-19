@@ -29,13 +29,50 @@ is status 0, any invalid/incomplete/over-budget trace is nonzero. `--control`
 requires a real injected block and still fails on its observed over-budget gap.
 The checker may initially be report-only in the separate baseline CI step.
 
-The driver runs `--demo-only <name>` for names in `contract.json`. It opens the
+The driver runs `--demo-only <name>` for the expanded scenario map. It opens the
 supplied `EDI_DEMO_SCAN_PROJECT` for pages, Pattern navigation and series cases;
 banks opens NCAF start-5. `EDI_UI_TRACE=1` enables one JSON object per
 `ui-probe: ` log line. The control additionally sets `EDI_UI_BLOCK_MS=150`:
 queue a real GUI-thread block while that scenario is being measured, outside
 driver measurement markers. This seam is absent in normal runs. The producer
 uses separate fresh app processes and settings stores for all runs.
+
+## Every page and tab
+
+The additional `e58-tabs` scenario uses the same scan as `e58-pages`, reduced
+for PR CI and the complete checksummed archive for nightly. Its ordered actions
+come from `tab_inventory.scenario_steps()`, not a frozen list in `contract.json`.
+`python -m tests.fixtures.ui_responsiveness.tab_inventory` prints the complete
+page/tab inventory and expanded scenario map for the CI checker and driver.
+The inventory reads `Main.qml`'s mounted pages, each page's `mainTabs` or
+`MainView.tabKeys`, the shared main-view tab buttons and WorkflowPage's sidebar
+tab buttons. Unrecognized or ambiguous declarations refuse preparation. A new
+declaration therefore enters coverage or fails loudly; unavailable/disabled
+tabs cannot be silently omitted. Prepare the loaded scan's needed results so
+each configured tab, including Correlations and Meas vs calc, can be selected.
+
+The producer passes this input as JSON in `EDI_UI_TAB_INVENTORY` and records it
+in `manifest.tab_inventory`. It is an action plan, never a success witness.
+After initializing the pages, emit one `tab-inventory` event with
+`witness="qml-tab-bars"`, `thread=clock.gui_thread` and `pages` sampled from
+the native tab bars in the same shape as the declaration inventory. Include
+all configured buttons, not only currently enabled ones. Home currently has
+empty main/sidebar arrays and still requires its page visit.
+
+For each page emit `page-<page>`, then `tab-main-<page>-<key>` for every main
+button and `tab-sidebar-<page>-<key>` for every sidebar button, in declaration
+order. These are `action`/`state`/`step` operations with the existing native
+transition-publication and real rendered completion witnesses. Actual selected
+state names `page`, main `tab`, `sidebar_tab` and `selected_object` (the selected
+button's declared objectName; empty for a page visit). A tabless area's selection
+is empty or null. Both `action` and `state` identify the GUI thread. Each render's
+native `displayed` snapshot includes `page`, `tab`, `sidebar_tab` and `input`; incompatible
+main/sidebar selections cannot share a completion frame. Every action and its
+render stay inside the measured interval on the same loaded scan identity.
+
+The monotonic clock, ten-millisecond timer, maximum counted gap of 100 ms,
+measurement-callback exclusions and real 150 ms GUI-block control are exactly
+the existing rules. Every run and control must cover the complete inventory.
 
 ## Trace conventions
 

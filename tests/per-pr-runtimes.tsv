@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-18T19:46:17Z
+# measured_utc = 2026-11-19T08:13:53Z
 #
-# Recorded from: measured test run (1 node(s) measured once, 184049 banked, 0 stale row(s) dropped)
-# Collected tests: 255501; with a reported duration: 82884
+# Recorded from: measured test run (1 node(s) measured once, 184117 banked, 0 stale row(s) dropped)
+# Collected tests: 255574; with a reported duration: 82903
 # Module-scoped fixture costs recorded: 211
 #
 # Breaches are decided PER TIER against the table
@@ -29,12 +29,12 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 255501
+# inventory_python = 255574
 # inventory_cpp = 0
-# inventory_measured = 184050
-# inventory_unmeasured = 71451
+# inventory_measured = 184118
+# inventory_unmeasured = 71456
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
-# inventory_pr_python = 89236
+# inventory_pr_python = 89309
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -177836,6 +177836,78 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_webp.py::test_t
 0.000	tests/integration/py/test_tutorial_webp.py::test_webp_resolution_requires_real_complete_pixels[missing]
 0.000	tests/integration/py/test_tutorial_webp.py::test_webp_resolution_requires_real_complete_pixels[png-as-webp]
 0.000	tests/integration/py/test_tutorial_webp.py::test_webp_resolution_requires_real_complete_pixels[truncated]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_ui_all_tabs.py::test_ci_watchdog_judges_every_produced_tab_run_and_control[full-nightly]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_ui_all_tabs.py::test_ci_watchdog_judges_every_produced_tab_run_and_control[reduced-pr]
+0.020	tests/integration/py/test_ui_all_tabs.py::test_declared_inventory_includes_every_owner_page_and_both_tab_areas
+0.030	tests/integration/py/test_ui_all_tabs.py::test_new_declarations_are_picked_up_and_invalidate_old_coverage[main]
+0.030	tests/integration/py/test_ui_all_tabs.py::test_new_declarations_are_picked_up_and_invalidate_old_coverage[page]
+0.030	tests/integration/py/test_ui_all_tabs.py::test_new_declarations_are_picked_up_and_invalidate_old_coverage[sidebar]
+0.000	tests/integration/py/test_ui_all_tabs.py::test_no_declared_page_main_tab_or_sidebar_tab_can_be_skipped[page-analysis]
+0.000	tests/integration/py/test_ui_all_tabs.py::test_no_declared_page_main_tab_or_sidebar_tab_can_be_skipped[page-experiment]
+0.000	tests/integration/py/test_ui_all_tabs.py::test_no_declared_page_main_tab_or_sidebar_tab_can_be_skipped[page-home]
+0.000	tests/integration/py/test_ui_all_tabs.py::test_no_declared_page_main_tab_or_sidebar_tab_can_be_skipped[page-project]
+0.000	tests/integration/py/test_ui_all_tabs.py::test_no_declared_page_main_tab_or_sidebar_tab_can_be_skipped[page-report]
+0.000	tests/integration/py/test_ui_all_tabs.py::test_no_declared_page_main_tab_or_sidebar_tab_can_be_skipped[page-structure]
+0.000	tests/integration/py/test_ui_all_tabs.py::test_no_declared_page_main_tab_or_sidebar_tab_can_be_skipped[tab-main-analysis-correlations]
+0.000	tests/integration/py/test_ui_all_tabs.py::test_no_declared_page_main_tab_or_sidebar_tab_can_be_skipped[tab-main-analysis-evolution]
+0.000	tests/integration/py/test_ui_all_tabs.py::test_no_declared_page_main_tab_or_sidebar_tab_can_be_skipped[tab-main-analysis-map]
+0.000	tests/integration/py/test_ui_all_tabs.py::test_no_declared_page_main_tab_or_sidebar_tab_can_be_skipped[tab-main-analysis-meascalc]
+0.000	tests/integration/py/test_ui_all_tabs.py::test_no_declared_page_main_tab_or_sidebar_tab_can_be_skipped[tab-main-analysis-pattern]
+0.000	tests/integration/py/test_ui_all_tabs.py::test_no_declared_page_main_tab_or_sidebar_tab_can_be_skipped[tab-main-analysis-stacked]
+0.000	tests/integration/py/test_ui_all_tabs.py::test_no_declared_page_main_tab_or_sidebar_tab_can_be_skipped[tab-main-analysis-structure]
+0.000	tests/integration/py/test_ui_all_tabs.py::test_no_declared_page_main_tab_or_sidebar_tab_can_be_skipped[tab-main-experiment-map]
+0.000	tests/integration/py/test_ui_all_tabs.py::test_no_declared_page_main_tab_or_sidebar_tab_can_be_skipped[tab-main-experiment-meascalc]
+0.000	tests/integration/py/test_ui_all_tabs.py::test_no_declared_page_main_tab_or_sidebar_tab_can_be_skipped[tab-main-experiment-pattern]
+0.000	tests/integration/py/test_ui_all_tabs.py::test_no_declared_page_main_tab_or_sidebar_tab_can_be_skipped[tab-main-experiment-stacked]
+0.000	tests/integration/py/test_ui_all_tabs.py::test_no_declared_page_main_tab_or_sidebar_tab_can_be_skipped[tab-main-project-description]
+0.000	tests/integration/py/test_ui_all_tabs.py::test_no_declared_page_main_tab_or_sidebar_tab_can_be_skipped[tab-main-report-report]
+0.000	tests/integration/py/test_ui_all_tabs.py::test_no_declared_page_main_tab_or_sidebar_tab_can_be_skipped[tab-main-structure-pattern]
+0.000	tests/integration/py/test_ui_all_tabs.py::test_no_declared_page_main_tab_or_sidebar_tab_can_be_skipped[tab-main-structure-structure]
+0.000	tests/integration/py/test_ui_all_tabs.py::test_no_declared_page_main_tab_or_sidebar_tab_can_be_skipped[tab-sidebar-analysis-basic]
+0.000	tests/integration/py/test_ui_all_tabs.py::test_no_declared_page_main_tab_or_sidebar_tab_can_be_skipped[tab-sidebar-analysis-extras]
+0.000	tests/integration/py/test_ui_all_tabs.py::test_no_declared_page_main_tab_or_sidebar_tab_can_be_skipped[tab-sidebar-analysis-settings]
+0.000	tests/integration/py/test_ui_all_tabs.py::test_no_declared_page_main_tab_or_sidebar_tab_can_be_skipped[tab-sidebar-analysis-text]
+0.000	tests/integration/py/test_ui_all_tabs.py::test_no_declared_page_main_tab_or_sidebar_tab_can_be_skipped[tab-sidebar-experiment-basic]
+0.000	tests/integration/py/test_ui_all_tabs.py::test_no_declared_page_main_tab_or_sidebar_tab_can_be_skipped[tab-sidebar-experiment-extras]
+0.000	tests/integration/py/test_ui_all_tabs.py::test_no_declared_page_main_tab_or_sidebar_tab_can_be_skipped[tab-sidebar-experiment-settings]
+0.000	tests/integration/py/test_ui_all_tabs.py::test_no_declared_page_main_tab_or_sidebar_tab_can_be_skipped[tab-sidebar-experiment-text]
+0.000	tests/integration/py/test_ui_all_tabs.py::test_no_declared_page_main_tab_or_sidebar_tab_can_be_skipped[tab-sidebar-project-basic]
+0.000	tests/integration/py/test_ui_all_tabs.py::test_no_declared_page_main_tab_or_sidebar_tab_can_be_skipped[tab-sidebar-project-extras]
+0.000	tests/integration/py/test_ui_all_tabs.py::test_no_declared_page_main_tab_or_sidebar_tab_can_be_skipped[tab-sidebar-project-settings]
+0.000	tests/integration/py/test_ui_all_tabs.py::test_no_declared_page_main_tab_or_sidebar_tab_can_be_skipped[tab-sidebar-project-text]
+0.000	tests/integration/py/test_ui_all_tabs.py::test_no_declared_page_main_tab_or_sidebar_tab_can_be_skipped[tab-sidebar-report-basic]
+0.000	tests/integration/py/test_ui_all_tabs.py::test_no_declared_page_main_tab_or_sidebar_tab_can_be_skipped[tab-sidebar-report-extras]
+0.000	tests/integration/py/test_ui_all_tabs.py::test_no_declared_page_main_tab_or_sidebar_tab_can_be_skipped[tab-sidebar-report-settings]
+0.000	tests/integration/py/test_ui_all_tabs.py::test_no_declared_page_main_tab_or_sidebar_tab_can_be_skipped[tab-sidebar-report-text]
+0.000	tests/integration/py/test_ui_all_tabs.py::test_no_declared_page_main_tab_or_sidebar_tab_can_be_skipped[tab-sidebar-structure-basic]
+0.000	tests/integration/py/test_ui_all_tabs.py::test_no_declared_page_main_tab_or_sidebar_tab_can_be_skipped[tab-sidebar-structure-extras]
+0.000	tests/integration/py/test_ui_all_tabs.py::test_no_declared_page_main_tab_or_sidebar_tab_can_be_skipped[tab-sidebar-structure-settings]
+0.000	tests/integration/py/test_ui_all_tabs.py::test_no_declared_page_main_tab_or_sidebar_tab_can_be_skipped[tab-sidebar-structure-text]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_ui_all_tabs.py::test_production_checker_judges_the_complete_declared_tab_scenario[blocking-control]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_ui_all_tabs.py::test_production_checker_judges_the_complete_declared_tab_scenario[within-bound]
+0.000	tests/integration/py/test_ui_all_tabs.py::test_runtime_inventory_cannot_replace_or_shrink_the_declaration_reference[foreign]
+0.000	tests/integration/py/test_ui_all_tabs.py::test_runtime_inventory_cannot_replace_or_shrink_the_declaration_reference[label-only]
+0.000	tests/integration/py/test_ui_all_tabs.py::test_runtime_inventory_cannot_replace_or_shrink_the_declaration_reference[missing]
+0.000	tests/integration/py/test_ui_all_tabs.py::test_runtime_inventory_cannot_replace_or_shrink_the_declaration_reference[subset]
+0.000	tests/integration/py/test_ui_all_tabs.py::test_runtime_inventory_cannot_replace_or_shrink_the_declaration_reference[worker]
+0.000	tests/integration/py/test_ui_all_tabs.py::test_tab_labels_require_actual_selected_and_rendered_native_state[early-action-main]
+0.010	tests/integration/py/test_ui_all_tabs.py::test_tab_labels_require_actual_selected_and_rendered_native_state[early-action-sidebar]
+0.000	tests/integration/py/test_ui_all_tabs.py::test_tab_labels_require_actual_selected_and_rendered_native_state[late-render-main]
+0.010	tests/integration/py/test_ui_all_tabs.py::test_tab_labels_require_actual_selected_and_rendered_native_state[late-render-sidebar]
+0.010	tests/integration/py/test_ui_all_tabs.py::test_tab_labels_require_actual_selected_and_rendered_native_state[wrong-object-main]
+0.010	tests/integration/py/test_ui_all_tabs.py::test_tab_labels_require_actual_selected_and_rendered_native_state[wrong-object-sidebar]
+0.010	tests/integration/py/test_ui_all_tabs.py::test_tab_labels_require_actual_selected_and_rendered_native_state[wrong-page-main]
+0.010	tests/integration/py/test_ui_all_tabs.py::test_tab_labels_require_actual_selected_and_rendered_native_state[wrong-page-sidebar]
+0.000	tests/integration/py/test_ui_all_tabs.py::test_tab_labels_require_actual_selected_and_rendered_native_state[wrong-render-main]
+0.010	tests/integration/py/test_ui_all_tabs.py::test_tab_labels_require_actual_selected_and_rendered_native_state[wrong-render-sidebar]
+0.010	tests/integration/py/test_ui_all_tabs.py::test_tab_labels_require_actual_selected_and_rendered_native_state[wrong-selection-main]
+0.010	tests/integration/py/test_ui_all_tabs.py::test_tab_labels_require_actual_selected_and_rendered_native_state[wrong-selection-sidebar]
+0.020	tests/integration/py/test_ui_all_tabs.py::test_tab_scenario_keeps_measurement_exclusions_and_refuses_a_real_gui_block
+0.010	tests/integration/py/test_ui_all_tabs.py::test_unreadable_or_ambiguous_tab_declarations_fail_closed[duplicate]
+0.010	tests/integration/py/test_ui_all_tabs.py::test_unreadable_or_ambiguous_tab_declarations_fail_closed[indirect]
+0.010	tests/integration/py/test_ui_all_tabs.py::test_unreadable_or_ambiguous_tab_declarations_fail_closed[local-bar]
+0.020	tests/integration/py/test_ui_all_tabs.py::test_unreadable_or_ambiguous_tab_declarations_fail_closed[unassigned]
+0.020	tests/integration/py/test_ui_all_tabs.py::test_unreadable_or_ambiguous_tab_declarations_fail_closed[unnamed]
 0.000	tests/integration/py/test_ui_causal_controls.py::test_both_frames_are_bound_to_actual_rendered_data[delayed-action-boundary]
 0.000	tests/integration/py/test_ui_causal_controls.py::test_both_frames_are_bound_to_actual_rendered_data[invisible-pane]
 0.010	tests/integration/py/test_ui_causal_controls.py::test_both_frames_are_bound_to_actual_rendered_data[late-layout]
@@ -178216,6 +178288,7 @@ UNMEASURED:failed-in-this-run	tests/system/app/test_ui_responsiveness.py::test_a
 UNMEASURED:failed-in-this-run	tests/system/app/test_ui_responsiveness.py::test_actual_watchdog_and_blocking_control[e58-pages]
 UNMEASURED:failed-in-this-run	tests/system/app/test_ui_responsiveness.py::test_actual_watchdog_and_blocking_control[e58-pattern]
 UNMEASURED:failed-in-this-run	tests/system/app/test_ui_responsiveness.py::test_actual_watchdog_and_blocking_control[e58-series]
+UNMEASURED:failed-in-this-run	tests/system/app/test_ui_responsiveness.py::test_actual_watchdog_and_blocking_control[e58-tabs]
 UNMEASURED:failed-in-this-run	tests/system/app/test_ui_responsiveness.py::test_hidden_views_catch_up_once_and_deliver_newest_snapshots
 UNMEASURED:failed-in-this-run	tests/system/app/test_ui_responsiveness.py::test_pattern_layout_is_complete_at_the_first_real_swap
 UNMEASURED:not-completed-in-this-run	tests/system/py/e11_t5_original_controls/test_current_original.py::test_current_original_ordinary[composer_ime_clear]
