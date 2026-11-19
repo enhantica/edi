@@ -530,6 +530,50 @@ private slots:
         }
         QVERIFY2(warnings.isEmpty(), qPrintable(warnings.join(QLatin1Char('\n'))));
     }
+    // Work before Create (the owner, 2026-11-19): the open Project page holds an untitled project that takes a
+    // structure at once, Create names and saves that same project with its structure, and the Create form's fields say
+    // what each is for.
+    void untitledWorkIsKeptByCreate() {
+        QQmlApplicationEngine engine;
+        edi_app::configure_engine(engine);
+        engine.loadFromModule("edi.app", "Main");
+        QVERIFY(!engine.rootObjects().isEmpty());
+        auto* window = qobject_cast<QQuickWindow*>(engine.rootObjects().constFirst());
+        QVERIFY(window);
+        window->show();
+        QVERIFY(QTest::qWaitForWindowExposed(window));
+        auto* session = engine.singletonInstance<edi_app::Session*>("edi.app", "Session");
+        QVERIFY(session && !session->hasProject());
+        QQmlExpression open(qmlContext(window), window, QStringLiteral("AppState.open(AppState.Page.Project)"));
+        open.evaluate();
+        QVERIFY(!open.hasError());
+        QTRY_VERIFY_WITH_TIMEOUT(session->hasProject(), 20000);
+        QVERIFY(session->untitled());
+        QVERIFY(session->needsSaveAs());
+        QVERIFY(session->project()->createStructure());
+        QCOMPARE(session->project()->project().structures.size(), std::size_t{1});
+        QTemporaryDir folder;
+        QVERIFY(folder.isValid());
+        const QString location = folder.path() + QStringLiteral("/lbco_hrpt-7");
+        edi_app::ProjectViewModel* before = session->project();
+        QVERIFY2(session->createProject(QStringLiteral("lbco_hrpt-7"), QStringLiteral("Before Create"), location),
+                 qPrintable(session->lastError()));
+        QCOMPARE(session->project(), before);
+        QVERIFY(!session->untitled());
+        QVERIFY(!session->needsSaveAs());
+        QCOMPARE(session->project()->project().structures.size(), std::size_t{1});
+        QVERIFY(QFileInfo::exists(location + QStringLiteral("/project.edi")));
+        // The Create form says where each field is used.
+        const auto placeholder = [window](const char* name) {
+            const auto* field = window->findChild<QObject*>(QString::fromLatin1(name));
+            return field ? field->property("placeholderText").toString() : QString();
+        };
+        QVERIFY2(placeholder("createProject.name").contains(QStringLiteral("project folder")), qPrintable(placeholder("createProject.name")));
+        QVERIFY(placeholder("createProject.title").contains(QStringLiteral("report")));
+        QVERIFY(placeholder("createProject.authors").contains(QStringLiteral("report")));
+        QVERIFY(placeholder("createProject.location").contains(QStringLiteral("folder in which")));
+    }
+
     // A 2θ offset that moves the lowest points below 0° leaves them out of the calculation instead of refusing it, and
     // says so once (the owner, 2026-11-19). The expected outcome is independent of the engine: with an offset one
     // degree above the first angle, every point below that angle plus 0° has no d-spacing.
