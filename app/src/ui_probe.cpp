@@ -34,7 +34,7 @@ void ui_trace(const char* event, QJsonObject fields) {
         return;
     }
     fields.insert(QStringLiteral("event"), QString::fromLatin1(event));
-    fields.insert(QStringLiteral("t_ms"), static_cast<double>(ui_trace_ms()));
+    if (!fields.contains(QStringLiteral("t_ms"))) fields.insert(QStringLiteral("t_ms"), static_cast<double>(ui_trace_ms()));
     fields.insert(QStringLiteral("thread"), ui_trace_thread());
     const QByteArray line = QJsonDocument(fields).toJson(QJsonDocument::Compact);
     // One write per line, flushed, so lines from other threads never interleave inside one and a crash keeps them.

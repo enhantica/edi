@@ -24,7 +24,8 @@ bool ui_trace_on();
 qint64 ui_trace_ms();
 /// The current thread, as the trace names threads (`gui_thread` in the `clock` event).
 QString ui_trace_thread();
-/// Writes one event with its fields, adding `event`, `t_ms` and `thread`.
+/// Writes one event with its fields, adding `event`, `thread` and `t_ms` (unless the fields give one, for two events that
+/// must carry the same instant).
 void ui_trace(const char* event, QJsonObject fields = {});
 /// The number the main window's next frame will carry in the trace (`render`), and the count's advance when a frame
 /// is synchronised (once per frame, the GUI thread waiting), which returns the frame's number.

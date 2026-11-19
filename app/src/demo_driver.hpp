@@ -163,6 +163,7 @@ class DemoDriver : public QObject {
     QJsonObject trace_state();
     void trace_action(const QString& action);
     void trace_frame();
+    void trace_measurement(bool enter, int id, const QString& callback);
     QString trace_input();
     Expected expected_;
     std::mutex trace_mutex_;          // the render thread reads what the GUI thread publishes for the next frame

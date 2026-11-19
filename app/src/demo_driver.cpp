@@ -1844,10 +1844,23 @@ QImage DemoDriver::grab() {
     // The window grab renders a frame on the GUI thread for the driver, not for the user: the GUI watchdog leaves it
     // out (ui_probe.hpp).
     const int id = ++tool_id_;
-    EDI_UI_TRACE("measurement-enter", {{"id", id}, {"callback", "QQuickWindow::grabWindow"}});
+    trace_measurement(true, id, QStringLiteral("QQuickWindow::grabWindow"));
     QImage frame = window_.grabWindow();
-    EDI_UI_TRACE("measurement-leave", {{"id", id}, {"callback", "QQuickWindow::grabWindow"}});
+    trace_measurement(false, id, QStringLiteral("QQuickWindow::grabWindow"));
     return frame;
+}
+
+void DemoDriver::trace_measurement(bool enter, int id, const QString& callback) {
+    // The span marker and the callback witness of the driver's own work, at one instant (tools/ci/gui_watchdog.py).
+    if (!ui_trace_on()) return;
+    const double now = static_cast<double>(ui_trace_ms());
+    if (enter) {
+        ui_trace("tool-begin", {{"id", id}, {"t_ms", now}});
+        ui_trace("measurement-enter", {{"id", id}, {"callback", callback}, {"t_ms", now}});
+    } else {
+        ui_trace("measurement-leave", {{"id", id}, {"callback", callback}, {"t_ms", now}});
+        ui_trace("tool-end", {{"id", id}, {"t_ms", now}});
+    }
 }
 
 namespace {
@@ -2961,9 +2974,9 @@ void DemoDriver::settle_then(const std::function<void()>& next) {
         }
         const QImage frame = grab();
         const int compare = ++tool_id_;
-        EDI_UI_TRACE("measurement-enter", {{"id", compare}, {"callback", "compare-images"}});
+        trace_measurement(true, compare, QStringLiteral("compare-images"));
         const bool same = !previous_frame_.isNull() && frame == previous_frame_;
-        EDI_UI_TRACE("measurement-leave", {{"id", compare}, {"callback", "compare-images"}});
+        trace_measurement(false, compare, QStringLiteral("compare-images"));
         if (!calculating && !opening && !preparing && same) {
             next();
             return;
