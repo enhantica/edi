@@ -33,7 +33,13 @@ for path in open(listing, encoding='utf-8').read().splitlines():
     if not good:
         print(path)
 ]==])
-string(SHA256 _edi_kind_program_sha256 "${_edi_kind_program}")
+# file(WRITE) uses text mode: Windows writes CRLF, while the string above contains LF.
+# Hash the expected on-disk bytes so the verifier still detects every later byte change.
+set(_edi_kind_program_bytes "${_edi_kind_program}")
+if(CMAKE_HOST_WIN32)
+    string(REPLACE "\n" "\r\n" _edi_kind_program_bytes "${_edi_kind_program_bytes}")
+endif()
+string(SHA256 _edi_kind_program_sha256 "${_edi_kind_program_bytes}")
 # A sidecar this module owns, written as the others are: an existing link, FIFO or directory refuses before anything
 # is written, and a stale regular file is unlinked first, so a hard-linked file elsewhere keeps its contents.
 function(_edi_runtime_write_owned path content)
