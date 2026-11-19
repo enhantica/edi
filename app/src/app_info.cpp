@@ -11092,7 +11092,7 @@ void ApplicationInfo::retireAssistantCreate(const QJSValue& id, bool manual) con
 #endif  // EDI_APP_ASSISTANT
 QJSValue ApplicationInfo::createProjectNameError(const QJSValue& name) const {
     const auto f = panelUsageEngine(this); if (panelUsageTruth(projectInvoke(f, "createDialog", "acceptsProjectName", {name}))) return QJSValue(QStringLiteral(""));
-    return mainText(f, QT_TRANSLATE_NOOP("GetStartedGroup", "Project Name must contain 2–31 characters: start with an ASCII letter, then use letters, digits, underscore, hyphen or period. Put human-readable text in Title. The supplied Name was not changed."));
+    return mainText(f, QT_TRANSLATE_NOOP("GetStartedGroup", "Project Name must contain 2–31 characters: start with an ASCII letter, then use letters, digits, underscore or hyphen. Put human-readable text in Title. The supplied Name was not changed."));
 }
 QJSValue ApplicationInfo::createProjectDefaults(const QJSValue& name, const QJSValue& description, const QJSValue& title) const {
     const auto f = panelUsageEngine(this); if (!panelUsageContextRead(f, "createIntent").isNull() || panelUsageTruth(assistantContextField(f, "createDialog", "visible"))) return panelUsageComplete(f, panelUsageLiteral(f));
