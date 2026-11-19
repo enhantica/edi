@@ -81,8 +81,18 @@ private slots:
         QVERIFY(QTest::qWaitForWindowActive(window));
         edi_app::AssistantWidgetInput input(*window);
         QString diagnostic;
+        const auto findItem = [&](const char* name) {
+            const auto walk = [&](QQuickItem* item, auto&& self) -> QQuickItem* {
+                if(item->objectName() == name) return item;
+                for(auto* child : item->childItems())
+                    if(auto* found = self(child, self)) return found;
+                return nullptr;
+            };
+            if(auto* item = walk(window->contentItem(), walk)) return item;
+            return root->findChild<QQuickItem*>(name);
+        };
         const auto click = [&](const char* name) {
-            auto* target = root->findChild<QQuickItem*>(name);
+            auto* target = findItem(name);
             if (!target) { diagnostic = QString("Missing %1").arg(name); return false; }
             bool done = false, delivered = false;
             edi_app::AssistantWidgetInput::Request request;
@@ -119,6 +129,7 @@ private slots:
         QTest::mouseClick(window, Qt::LeftButton, Qt::NoModifier,
                           title->mapToScene(QPointF(title->width() / 2, title->height() / 2)).toPoint());
         QTRY_VERIFY(!group->property("collapsed").toBool());
+        QTRY_VERIFY(findItem("experiments.loadData.0"));
         QVERIFY2(click("experiments.loadData.0"), qPrintable(diagnostic));
         auto* menu = root->findChild<QObject*>("experiments.load.dataMenu");
         QVERIFY(menu);
@@ -133,6 +144,16 @@ private slots:
         QVERIFY(root->findChild<QObject*>("onlineLoad.source"));
         QVERIFY(root->findChild<QObject*>("onlineLoad.search"));
         QVERIFY(QMetaObject::invokeMethod(popup, "close"));
+        QTRY_VERIFY(!popup->property("visible").toBool());
+        auto* structures = root->findChild<QQuickItem*>("group.structures");
+        QVERIFY(structures);
+        if(structures->property("collapsed").toBool()) {
+            auto* structureTitle = qobject_cast<QQuickItem*>(structures->property("titleArea").value<QObject*>());
+            QVERIFY(structureTitle);
+            QTest::mouseClick(window, Qt::LeftButton, Qt::NoModifier,
+                              structureTitle->mapToScene(QPointF(structureTitle->width() / 2, structureTitle->height() / 2)).toPoint());
+        }
+        QTRY_VERIFY(!structures->property("collapsed").toBool());
         QVERIFY2(click("structures.load"), qPrintable(diagnostic));
         auto* structureFile = root->findChild<QQuickItem*>("structures.load.file");
         QVERIFY(structureFile);
