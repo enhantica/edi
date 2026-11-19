@@ -4054,6 +4054,11 @@ struct AssistantViewModel::State {
         std::shared_ptr<ProjectViewModel::WidgetParameterInput> input;
     };
     std::shared_ptr<NativeWidget> native_widget;
+    // An unfinished alias a stopped add_relations still owes removing, because its stop came while the project could
+    // not take an edit. Every later provider request waits until it is settled, so no successor can see or use it.
+    struct OwedAliasCleanup { QPointer<ProjectViewModel> project; const void* row = nullptr; std::string id, parameter; };
+    std::vector<OwedAliasCleanup> owed_alias_cleanups;
+    bool owed_alias_timer = false;
     // Weak entries count retired callback captures until their actual owners die.
     std::vector<std::weak_ptr<NativeWidget>> parameter_widget_frames;
     struct NativeCreation;
@@ -4860,14 +4865,21 @@ struct AssistantViewModel::State {
             for (const auto& row : target->assistantProject()->aliases)
                 if (row.get() == partial) { id = row->id.value(); parameter = row->parameter_unique_name.value(); }
             if (id.empty() && parameter.empty()) return;
+            // Stopped while its requested parameter was publishing: the row is already complete, so it stays.
+            const auto rows = run->relation_args.value("aliases").toArray();
+            if (!run->relation_constraint && run->relation_row >= 0 && run->relation_row < rows.size() &&
+                rows.at(run->relation_row).toObject().value("parameter").toString().toStdString() == parameter)
+                return;
             // Remove is its own ordinary relation action: release this run's prepared one first.
             if (input) target->finishWidgetRelations(input);
             const auto removal = remove_unfinished_alias(target, partial, id, parameter);
             run->partial_alias_removed = removal == AliasRemoval::Removed;
             if (removal == AliasRemoval::Publishing) {
-                // Stop came from inside an edit's publication, where a nested edit is refused: remove once it unwinds.
+                // The project cannot take an edit now (Stop from inside a publication, a Save, a dataset read): the
+                // removal is owed, and later provider requests wait for it.
                 run->partial_alias_deferred = true;
-                defer_unfinished_alias(target, partial, std::move(id), std::move(parameter), 0);
+                owed_alias_cleanups.push_back({target, partial, std::move(id), std::move(parameter)});
+                schedule_owed_aliases();
             }
         } catch (...) {}  // the original outcome stands; a later reread shows the row
     }
@@ -4899,23 +4911,42 @@ struct AssistantViewModel::State {
             return AliasRemoval::Kept;
         }
     }
-    // The removal after the refused publication unwinds: only while this assistant and project remain, no newer
-    // operation holds the controls, and the row is still exactly as the run left it. Bounded retries.
-    void defer_unfinished_alias(const QPointer<ProjectViewModel>& target, const void* row, std::string id, std::string parameter,
-                                int attempt) noexcept {
+    // Settles every owed alias removal the project can take now. A replaced project or a renamed/retargeted row is
+    // no longer owed (the row is someone else's). True when nothing is owed any more.
+    bool settle_owed_aliases() noexcept {
+        const QPointer<AssistantViewModel> receiver(&owner);
+        try {
+            for (std::size_t at = 0; at < owed_alias_cleanups.size();) {
+                const auto owed = owed_alias_cleanups[at];
+                const auto removal = owed.project && project == owed.project
+                    ? remove_unfinished_alias(owed.project, owed.row, owed.id, owed.parameter) : AliasRemoval::Kept;
+                if (!receiver || receiver->state_.get() != this) return false;
+                if (removal == AliasRemoval::Publishing) { ++at; continue; }
+                try { qInfo().noquote() << "assistant: owed unfinished alias" << (removal == AliasRemoval::Removed ? "removed" : "no longer owed"); } catch (...) {}
+                if (!receiver || receiver->state_.get() != this) return false;
+                std::erase_if(owed_alias_cleanups, [&owed](const auto& entry) { return entry.row == owed.row && entry.project == owed.project; });
+                at = 0;
+            }
+            return owed_alias_cleanups.empty();
+        } catch (...) {
+            return false;
+        }
+    }
+    void schedule_owed_aliases() noexcept {
+        if (owed_alias_timer || owed_alias_cleanups.empty()) return;
         try {
             const QPointer<AssistantViewModel> receiver(&owner);
-            QTimer::singleShot(attempt == 0 ? 0 : 20, &owner, [this, receiver, target, row, id = std::move(id),
-                                                              parameter = std::move(parameter), attempt]() mutable {
-                if (!receiver || receiver->state_.get() != this || !target || project != target || native_widget || native_create_widget)
-                    return;
-                const auto removal = remove_unfinished_alias(target, row, id, parameter);
-                if (removal == AliasRemoval::Publishing && attempt < 100 && receiver && receiver->state_.get() == this)
-                    defer_unfinished_alias(target, row, std::move(id), std::move(parameter), attempt + 1);
-                else if (receiver && receiver->state_.get() == this)
-                    try { qInfo().noquote() << "assistant: unfinished alias" << (removal == AliasRemoval::Removed ? "removed" : "kept") << "after publication"; } catch (...) {}
+            owed_alias_timer = true;
+            QTimer::singleShot(50, &owner, [this, receiver] {
+                if (!receiver || receiver->state_.get() != this) return;
+                owed_alias_timer = false;
+                if (!settle_owed_aliases()) { if (receiver && receiver->state_.get() == this) schedule_owed_aliases(); return; }
+                // Requests that waited for the removal run now, in order (the same replay an account check uses).
+                if (!receiver || receiver->state_.get() != this || account_confirmation_pending || !agent) return;
+                const QPointer<CodexAgent> transport(agent.get());
+                if (transport) transport->resumeDeferredRequests(transport->outputGeneration());
             });
-        } catch (...) {}
+        } catch (...) { owed_alias_timer = false; }
     }
     void widget_refuse(const std::shared_ptr<NativeWidget>& run, const QString& message,
                        std::source_location caller = std::source_location::current()) noexcept {
@@ -7341,7 +7372,7 @@ struct AssistantViewModel::State {
             result["message"]=bounded_error(message+QLatin1Char(' ')+cue_skipped_message(run->cue_skipped));
         }
         if(run->partial_alias_removed)result["incomplete_alias_removed"]=true;
-        else if(run->partial_alias_deferred)result["incomplete_alias_removal"]=QStringLiteral("after_publication");
+        else if(run->partial_alias_deferred)result["incomplete_alias_removal"]=QStringLiteral("pending");
         if(run->estimate_then_names) {
             result["applied"]=true;
             result["published"]=run->call.record->estimate_receipt && run->call.record->estimate_receipt->published;
@@ -15436,6 +15467,17 @@ struct AssistantViewModel::State {
     void generic_server_request(const QJsonValue& id, const QString& method, const Object& params, ServerRequestFailure& diagnostic) {
         const auto publication = file_projection();
         if (!generic_bound(params) || generic_revoke_pending) { diagnostic.stage = "BOUND_REJECT"; agent->reject(id); return; }
+        if (!owed_alias_cleanups.empty()) {
+            const QPointer<AssistantViewModel> alive(&owner);
+            const bool settled = settle_owed_aliases();
+            if (!alive || alive->state_.get() != this || !publication.input_current()) return;
+            if (!settled) {
+                diagnostic.stage = "ALIAS_CLEANUP_WAIT";
+                (void)agent->deferServerRequest(id, agent->outputGeneration());
+                schedule_owed_aliases();
+                return;
+            }
+        }
         if(account_confirmation_pending) {
             diagnostic.stage="ACCOUNT_IDENTITY_WAIT";
             (void)agent->deferServerRequest(id,agent->outputGeneration());return;
