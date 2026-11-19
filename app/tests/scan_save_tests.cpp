@@ -21,6 +21,7 @@
 #include "session.hpp"
 #include "edi/duration_text.hpp"
 #include "project_view_model.hpp"
+#include "structure_view_model.hpp"
 Q_IMPORT_QML_PLUGIN(edi_appPlugin)
 
 class ScanSaveTests : public QObject {
@@ -529,6 +530,46 @@ private slots:
         }
         QVERIFY2(warnings.isEmpty(), qPrintable(warnings.join(QLatin1Char('\n'))));
     }
+    // A form-factor coefficient the chosen approximation does not use keeps its value but no longer fits (the owner,
+    // 2026-11-19): switching Co to <j0> fixes a free C2, its row still names the type and the ion, and one Undo brings
+    // back the dipole approximation with C2 free.
+    void unusedFormFactorCoefficientIsFixed() {
+        edi_app::Session session(nullptr);
+        QVERIFY2(session.openProject(QUrl::fromLocalFile(QStringLiteral(EDI_SOURCE_DIR "/docs/user/cli/pd-neut-cwl_cosio-d20_2k/project"))),
+                 qPrintable(session.lastError()));
+        edi_app::ProjectViewModel* project = session.project();
+        QTRY_VERIFY_WITH_TIMEOUT(!project->calculating(), 60000);
+        edi_app::StructureViewModel* structure = project->structureModels().value(0);
+        QVERIFY(structure);
+        edi_app::MagneticFormFactorListModel* rows = structure->magneticFormFactors();
+        QVERIFY(rows);
+        int co = -1;
+        for (int row = 0; row < rows->rowCount(); ++row) {
+            if (rows->text(row, QStringLiteral("type")).startsWith(QStringLiteral("Co"))) co = row;
+        }
+        QVERIFY2(co >= 0, "CoSiO lists Co's form factor");
+        const auto c2 = [&]() -> const edi::Parameter* {
+            for (const auto& item : structure->structure()->magnetic_form_factors) {
+                if (QString::fromStdString(item->id.value()).startsWith(QStringLiteral("Co"))) return &item->j2_coefficient;
+            }
+            return nullptr;
+        };
+        // The example's Co row: dipole, C2 free (written `0()`).
+        QCOMPARE(rows->text(co, QStringLiteral("approximation")), QStringLiteral("dipole"));
+        QVERIFY(c2() != nullptr && c2()->free.get());
+        const double value = c2()->value.get();
+        rows->setApproximation(co, QStringLiteral("j0"));
+        QTRY_COMPARE_WITH_TIMEOUT(rows->text(co, QStringLiteral("approximation")), QStringLiteral("j0"), 20000);
+        QVERIFY(c2() != nullptr);
+        QCOMPARE(c2()->value.get(), value);
+        QVERIFY(!c2()->free.get());
+        QVERIFY(!rows->text(co, QStringLiteral("type")).isEmpty());
+        QVERIFY(!rows->text(co, QStringLiteral("ion")).isEmpty());
+        project->undo();
+        QTRY_COMPARE_WITH_TIMEOUT(rows->text(co, QStringLiteral("approximation")), QStringLiteral("dipole"), 20000);
+        QVERIFY(c2() != nullptr && c2()->free.get());
+    }
+
     // The owner's path of 2026-11-19 (a crash after two binding-loop warnings): the Experiments row's data file is
     // replaced, the new data is calculated, and Pattern, Meas vs calc and the pages switch without a warning or a fault.
     void replacedDataIsCalculatedAndPagesSwitch() {
@@ -600,7 +641,12 @@ private slots:
             }
         };
         hover();
-        QVERIFY2(!project->currentExperiment()->fitOutcome().isEmpty(), "the example project carries its fit");
+        // A fit first, as the owner had one: its results are what the replacement makes outdated.
+        project->fit()->start();
+        QTRY_VERIFY_WITH_TIMEOUT(project->fit()->running(), 20000);
+        QTRY_VERIFY_WITH_TIMEOUT(!project->fit()->running(), 900000);
+        QTRY_VERIFY_WITH_TIMEOUT(!project->calculating(), 60000);
+        QVERIFY2(!project->currentExperiment()->fitOutcome().isEmpty(), "the fit left its outcome on the experiment");
         QVERIFY(!project->fit()->outOfDate());
         QVERIFY2(project->loadDataInto(project->currentExperiment(), QUrl::fromLocalFile(data)), qPrintable(project->lastError()));
         hover();
