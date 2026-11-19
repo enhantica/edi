@@ -70,7 +70,9 @@ without computing any of them itself.
   `_space_group_magn.transform_BNS_Pp_abc` or the `_space_group_magn_transforms` loop and written as the loop, as
   ISODISTORT writes it. Crystal system is shown read only and not saved (the dictionary has no item for it). On Extra,
   a separate read-only group shows the derived symbols, saved as the dictionary's `_space_group_magn` items: the UNI
-  symbol, the OG number and name and the point group (UNI, Litvin). The parent space group is always present on Extra
+  symbol, the OG number and name and the UNI point-group symbol. A Litvin point-group number supplied by a file is
+  kept and written back unchanged; it is not derived. Extra shows only that supplied value, blank when absent
+  (conductor decision, 2026-11-19). The parent space group is always present on Extra
   for a Magnetic structure, under its own heading (`_parent_space_group`); a file without one gets the magnetic group's
   own space group. Magnetic space group takes Space group's place, above Cell, in the sidebar and in the saved file's
   category order, and Propagation vectors follow it on Main: the vectors the file gives, else the one the magnetic group
