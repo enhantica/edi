@@ -19186,6 +19186,63 @@ QString AssistantViewModel::submitDraftImpl(const QString& text,bool* accountWai
     }
     return {};
 }
+#ifndef __EMSCRIPTEN__
+// The copied or attached work report without what a reader does not use (owner, 2026-11-19): each tool reply once
+// (the text the model read, not its native duplicate and projected copy), the skill texts and tool schema as names,
+// sizes and hashes, and compact JSON. The retained report itself is unchanged.
+static void trim_work_report(Object& document) {
+    auto history = document.value("history_evidence").toArray();
+    for (qsizetype at = 0; at < history.size(); ++at) {
+        auto entry = history.at(at).toObject();
+        auto row = entry.value("row").toObject();
+        auto payload = row.value("payload").toObject();
+        if (!payload.contains("contentItems")) continue;
+        const auto reply = payload.value("contentItems");
+        if (payload.contains("nativeOutcome"))
+            payload["nativeOutcome"] = QStringLiteral("omitted: row.payload.contentItems is the reply the model read");
+        row["payload"] = payload;
+        entry["row"] = row;
+        auto evidence = entry.value("work_evidence").toObject();
+        auto value = evidence.value("value").toObject();
+        auto projected = value.value("projected_reply").toObject();
+        auto projectedValue = projected.value("value").toObject();
+        if (projectedValue.value("contentItems") == reply) {
+            projectedValue["contentItems"] = QStringLiteral("same as row.payload.contentItems");
+            projected["value"] = projectedValue;
+            value["projected_reply"] = projected;
+            evidence["value"] = value;
+            entry["work_evidence"] = evidence;
+        }
+        history[at] = entry;
+    }
+    if (document.contains("history_evidence")) document["history_evidence"] = history;
+    auto identity = document.value("identity_inputs").toObject();
+    if (identity.isEmpty()) return;
+    auto skills = identity.value("skills").toArray();
+    for (qsizetype at = 0; at < skills.size(); ++at) {
+        auto skill = skills.at(at).toObject();
+        auto body = skill.value("body").toObject();
+        if (!body.value("value").isString()) continue;
+        body["value"] = Object{{"bytes", static_cast<qint64>(body.value("value").toString().toUtf8().size())}};
+        skill["body"] = body;
+        skills[at] = skill;
+    }
+    if (identity.contains("skills")) identity["skills"] = skills;
+    auto schema = identity.value("tool_schema").toObject();
+    auto schemaBody = schema.value("body").toObject();
+    if (schemaBody.value("value").isArray()) {
+        const auto tools = schemaBody.value("value").toArray();
+        const auto bytes = QJsonDocument(tools).toJson(QJsonDocument::Compact);
+        QJsonArray names;
+        for (const auto& tool : tools) names.append(tool.toObject().value("name"));
+        schemaBody["value"] = Object{{"tools", names}, {"bytes", static_cast<qint64>(bytes.size())},
+                                     {"sha256", QString::fromLatin1(QCryptographicHash::hash(bytes, QCryptographicHash::Sha256).toHex())}};
+        schema["body"] = schemaBody;
+        identity["tool_schema"] = schema;
+    }
+    document["identity_inputs"] = identity;
+}
+#endif
 QString AssistantViewModel::workReportDocument() {
 #ifndef __EMSCRIPTEN__
     if(QThread::currentThread()!=thread())return {};
@@ -19214,7 +19271,8 @@ QString AssistantViewModel::workReportDocument() {
             {"requested_scope_id",state_->work_reports.scope()},
             {"requested_snapshot_revision",QString::number(state_->work_reports.revision())}};
         document["scope_coverage"]=scope;
-        return QString::fromUtf8(QJsonDocument(document).toJson(QJsonDocument::Indented));
+        trim_work_report(document);
+        return QString::fromUtf8(QJsonDocument(document).toJson(QJsonDocument::Compact));
     }catch(...) {return {}; }
 #else
     return {};
