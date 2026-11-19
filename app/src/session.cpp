@@ -1843,6 +1843,38 @@ void Session::syncCalculationMessages() {
     for (const QString& refusal : refusals) {
         warnings_->post(prefix + refusal, tr("Calculation refused: %1").arg(refusal), QStringLiteral("error"));
     }
+    // A point the 2θ offset moves below 0° or above 180° takes no part in the calculation or the fit (the owner,
+    // 2026-11-19): said once per experiment and count, in plain words, and withdrawn when none is left out.
+    const QString domain = QStringLiteral("domain:");
+    QStringList left_out;
+    if (project_ != nullptr) {
+        for (ExperimentViewModel* model : project_->experimentModels()) {
+            const edi::ExperimentBase& experiment = *model->experiment();
+            if (experiment.effective_beam_mode() != edi::BeamModeEnum::CONSTANT_WAVELENGTH || !experiment.data) continue;
+            const double offset = experiment.instrument.calib_twotheta_offset
+                                      ? experiment.instrument.calib_twotheta_offset->value.get()
+                                      : 0.0;
+            int count = 0;
+            for (const double angle : experiment.data->axis()) {
+                const double corrected = angle - offset;
+                if (!(corrected > 0.0 && corrected < 180.0)) ++count;
+            }
+            if (count == 0) continue;
+            const QString key = domain + QString::fromStdString(experiment.name) + u':' + QString::number(count);
+            left_out.append(key);
+            if (!warnings_->keys(domain).contains(key)) {
+                warnings_->post(key,
+                                tr("%1: %n point(s) fall outside 0° to 180° once the 2θ offset of %2° is applied; they "
+                                   "take no part in the calculation or the fit.", nullptr, count)
+                                    .arg(QString::fromStdString(experiment.name))
+                                    .arg(offset, 0, 'g', 6),
+                                QStringLiteral("information"));
+            }
+        }
+    }
+    for (const QString& key : warnings_->keys(domain)) {
+        if (!left_out.contains(key)) warnings_->withdraw(key);
+    }
 }
 
 bool Session::projectDirectoryExists(const QString& path) const {
