@@ -453,8 +453,9 @@ void ScanViewModel::readNext() {
     const QPointer<ScanViewModel> self(this);
     const std::uint64_t generation = generation_;
     const std::shared_ptr<std::atomic<bool>> stop = stop_;
-    const auto index = session_ != nullptr ? std::make_shared<const edi::ScanResultIndex>(session_->index())
-                                           : std::make_shared<const edi::ScanResultIndex>();
+    // The session's shared copy of its index, which only a series' rows read: never a copy per batch.
+    static const auto kNoIndex = std::make_shared<const edi::ScanResultIndex>();
+    const std::shared_ptr<const edi::ScanResultIndex> index = session_ != nullptr && datasets_ ? session_->indexSnapshot() : kNoIndex;
     // By bank the units are the banks at one point; otherwise the points (or a scan's files).
     const bool by_bank = rows_by_bank_ && series_;
     const std::size_t at_point = by_bank ? std::min<std::size_t>(static_cast<std::size_t>(bank_point_), files_.empty() ? 0 : files_.size() - 1) : 0;

@@ -388,7 +388,7 @@ void EvolutionViewModel::rebuild() {
     Read read;
     read.project = std::make_shared<const edi::Project>(*project_);
     read.places = session_->places();
-    read.index = session_->index();
+    read.index = session_->indexSnapshot();  // shared, not copied: a long scan's index is large
     read.datasets = session_->datasets();
     if (per_experiment_) {
         read.rule = session_->bankRule(*project_);
@@ -398,7 +398,7 @@ void EvolutionViewModel::rebuild() {
     read.per_experiment = per_experiment_;
     read.experiment = current_experiment_;
     read.all_banks = allBanks();
-    const std::int64_t end = read.index.end;
+    const std::int64_t end = read.index->end;
     const QPointer<EvolutionViewModel> self(this);
     run_in_background([self, request, end, read = std::move(read)]() {
         std::vector<Point> points;
@@ -438,7 +438,7 @@ std::vector<EvolutionViewModel::Point> EvolutionViewModel::readPoints(const Read
     int bank = -1;
     const auto points = [&](const std::function<void(const edi::EvolutionPoint&)>& visit) {
         if (read.per_experiment) {
-            edi::evolution_experiment_series(*read.project, read.places, read.index, read.rule, read.datasets,
+            edi::evolution_experiment_series(*read.project, read.places, *read.index, read.rule, read.datasets,
                                              read.name, read.by_value,
                                              [&](std::size_t experiment, const edi::EvolutionPoint& point) {
                                                  if (read.experiment < 0 ||
@@ -449,7 +449,7 @@ std::vector<EvolutionViewModel::Point> EvolutionViewModel::readPoints(const Read
                                              });
             return;
         }
-        edi::evolution_series(*read.project, read.places, read.index, read.name, read.by_value, visit);
+        edi::evolution_series(*read.project, read.places, *read.index, read.name, read.by_value, visit);
     };
     double low = std::numeric_limits<double>::infinity(), high = -low;
     std::size_t count = 0;

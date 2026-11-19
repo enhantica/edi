@@ -190,7 +190,7 @@ class EvolutionViewModel : public QObject {
     struct Read {
         std::shared_ptr<const edi::Project> project;
         edi::ScanPlaces places;
-        edi::ScanResultIndex index;
+        std::shared_ptr<const edi::ScanResultIndex> index;
         edi::ScanDatasets datasets;
         edi::SeriesBankRule rule;
         std::string name;
