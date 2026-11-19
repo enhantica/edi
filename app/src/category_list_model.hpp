@@ -54,7 +54,13 @@ class CategoryListModel : public QAbstractListModel {
     // computed categories, or an edit no core category shows.
     void refresh();
     // The same rows as `other`, brought in by the same diff, so a view keeps the delegates of the ids both lists have.
-    void mirror(const CategoryListModel& other) { setCategories(other.categories_, other.text_, other.calculated_); }
+    void mirror(const CategoryListModel& other) {
+        // The other list's rows as they are, applied by the same diff: its text is not read and parsed again.
+        categories_ = other.categories_;
+        text_ = other.text_;
+        calculated_ = other.calculated_;
+        applyRows(other.rows_);
+    }
     int count() const { return static_cast<int>(rows_.size()); }
     Q_INVOKABLE bool contains(const QString& categoryId) const;
     Q_INVOKABLE int itemCount(const QString& categoryId) const;
@@ -67,6 +73,9 @@ class CategoryListModel : public QAbstractListModel {
     void countChanged();
 
    private:
+    struct Row;
+    // Brings the rows to `target`: rows inserted, removed and moved by id, counts updated in place.
+    void applyRows(const std::vector<Row>& target);
     struct Row {
         QString id;
         int items = 0;

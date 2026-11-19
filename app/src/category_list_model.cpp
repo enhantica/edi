@@ -192,6 +192,10 @@ void CategoryListModel::setCategories(const std::vector<edi::Category>& categori
     std::stable_sort(target.begin(), target.end(), [](const Row& a, const Row& b) {
         return edi::category_order(a.id.toStdString()) < edi::category_order(b.id.toStdString());
     });
+    applyRows(target);
+}
+
+void CategoryListModel::applyRows(const std::vector<Row>& target) {
     const std::size_t before = rows_.size();
     const auto find = [](const std::vector<Row>& rows, const QString& id, std::size_t from) {
         for (std::size_t i = from; i < rows.size(); ++i) {
