@@ -9,13 +9,14 @@ void ListModelMirror::setSource(QAbstractItemModel* source) {
     if (source == source_) return;
     for (const auto& connection : std::as_const(connections_)) disconnect(connection);
     connections_.clear();
-    const int before = rowCount();
+    const int before = rows_;
     const int after = source != nullptr ? source->rowCount() : 0;
     // The first source names the roles: a view that read none before reads them again from a reset.
     if (roles_.isEmpty() && source != nullptr) {
         beginResetModel();
         roles_ = source->roleNames();
         source_ = source;
+        rows_ = after;
         endResetModel();
         if (before != after) emit countChanged();
         follow();
@@ -26,10 +27,12 @@ void ListModelMirror::setSource(QAbstractItemModel* source) {
     if (after < before) {
         beginRemoveRows(QModelIndex(), after, before - 1);
         source_ = source;
+        rows_ = after;
         endRemoveRows();
     } else if (after > before) {
         beginInsertRows(QModelIndex(), before, after - 1);
         source_ = source;
+        rows_ = after;
         endInsertRows();
     } else {
         source_ = source;
@@ -50,13 +53,15 @@ void ListModelMirror::follow() {
     });
     forward(&QAbstractItemModel::rowsAboutToBeInserted,
           [this](const QModelIndex&, int first, int last) { beginInsertRows(QModelIndex(), first, last); });
-    forward(&QAbstractItemModel::rowsInserted, [this](const QModelIndex&, int, int) {
+    forward(&QAbstractItemModel::rowsInserted, [this](const QModelIndex&, int first, int last) {
+        rows_ += last - first + 1;
         endInsertRows();
         emit countChanged();
     });
     forward(&QAbstractItemModel::rowsAboutToBeRemoved,
           [this](const QModelIndex&, int first, int last) { beginRemoveRows(QModelIndex(), first, last); });
-    forward(&QAbstractItemModel::rowsRemoved, [this](const QModelIndex&, int, int) {
+    forward(&QAbstractItemModel::rowsRemoved, [this](const QModelIndex&, int first, int last) {
+        rows_ -= last - first + 1;
         endRemoveRows();
         emit countChanged();
     });
@@ -66,6 +71,7 @@ void ListModelMirror::follow() {
     forward(&QAbstractItemModel::rowsMoved, [this](const QModelIndex&, int, int, const QModelIndex&, int) { endMoveRows(); });
     forward(&QAbstractItemModel::modelAboutToBeReset, [this] { beginResetModel(); });
     forward(&QAbstractItemModel::modelReset, [this] {
+        rows_ = source_ ? source_->rowCount() : 0;
         endResetModel();
         emit countChanged();
     });
@@ -73,10 +79,11 @@ void ListModelMirror::follow() {
     forward(&QAbstractItemModel::layoutChanged, [this] { emit layoutChanged(); });
     // A source destroyed before it is replaced leaves the mirror empty, its rows removed as any others.
     connections_.append(connect(source, &QObject::destroyed, this, [this] {
-        const int rows = rowCount();
-        if (rows > 0) {
-            beginRemoveRows(QModelIndex(), 0, rows - 1);
-            source_.clear();
+        // The source is gone; its rows, as the views were told of them, are removed.
+        source_.clear();
+        if (rows_ > 0) {
+            beginRemoveRows(QModelIndex(), 0, rows_ - 1);
+            rows_ = 0;
             endRemoveRows();
             emit countChanged();
         }
@@ -85,11 +92,11 @@ void ListModelMirror::follow() {
 }
 
 int ListModelMirror::rowCount(const QModelIndex& parent) const {
-    return parent.isValid() || !source_ ? 0 : source_->rowCount();
+    return parent.isValid() ? 0 : rows_;
 }
 
 QVariant ListModelMirror::data(const QModelIndex& index, int role) const {
-    if (!source_ || !index.isValid()) return {};
+    if (!source_ || !index.isValid() || index.row() >= rows_) return {};
     return source_->data(source_->index(index.row(), 0), role);
 }
 

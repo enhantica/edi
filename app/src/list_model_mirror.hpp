@@ -37,6 +37,9 @@ class ListModelMirror : public QAbstractListModel {
    private:
     void follow();
     QPointer<QAbstractItemModel> source_;
+    // The rows the mirror's views were told of, kept here rather than asked of the source: a source destroyed under the
+    // mirror has no rows to ask about, and its views still hold delegates for them.
+    int rows_ = 0;
     QHash<int, QByteArray> roles_;
     QList<QMetaObject::Connection> connections_;
 };
