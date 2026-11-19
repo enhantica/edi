@@ -10,6 +10,7 @@
 #include <QQuickWindow>
 #include <QStyleHints>
 #include <QSurfaceFormat>
+#include <QThreadPool>
 #include <QtQml/qqmlextensionplugin.h>
 #include <cstdio>
 #include <cstdlib>
@@ -228,5 +229,10 @@ int main(int argc, char* argv[]) {
         }
         driver->start();
     }
-    return QGuiApplication::exec();
+    const int code = QGuiApplication::exec();
+    // Work on the shared thread pool (a scan's file reads, a report build) must not outlive the objects it reports to:
+    // queued work is dropped and running work finishes before the engine and its view models are destroyed.
+    QThreadPool::globalInstance()->clear();
+    QThreadPool::globalInstance()->waitForDone();
+    return code;
 }
