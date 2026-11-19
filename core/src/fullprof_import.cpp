@@ -205,6 +205,15 @@ struct Refinement {
     std::vector<std::pair<double, double>> transformed_independent_pairs;
     int converted_automatic_groups = 0;
 
+    double shared_code(double code) {
+        if (code == 0. || std::abs(code) >= 10.) {
+            return code;
+        }
+        // One automatically assigned source direction can drive several native fields.
+        const double group = 1.e10 + 10. * ++converted_automatic_groups;
+        return std::copysign(group + std::abs(code), code);
+    }
+
     void set(Parameter& parameter, Coded coded) {
         parameter.value = coded.value;
         if (coded.code != 0.) {
@@ -1029,6 +1038,27 @@ Coded rotated_code(const PCR& pcr, double value, const Row& codes, const Row& fa
     return {value, code, direction / shift(code)};
 }
 
+std::array<Coded, 2> profile_pair(const PCR& pcr, Refinement& refine, Coded a, Coded b,
+                                  double first, double coupled, double second) {
+    if (a.code == 0.) {
+        b.code = refine.shared_code(b.code);
+    }
+    Coded out_a{first * a.value + coupled * b.value, 0.};
+    Coded out_b{second * b.value, b.code, second * b.multiplier};
+    const auto group = [](double code) { return std::floor(std::abs(code) / 10.); };
+    if (a.code != 0. && b.code != 0. && (group(a.code) == 0. || group(a.code) != group(b.code))) {
+        // Two independent directions span the two output parameters. Their
+        // interchange is valid only when neither group also moves another field.
+        refine.transformed_independent_pairs.emplace_back(a.code, b.code);
+        out_a.code = a.code;
+        out_a.multiplier = first * a.multiplier;
+    } else {
+        out_a = rotated_code(pcr, out_a.value, {a.code, b.code},
+                             {first * a.multiplier, coupled * b.multiplier}, pcr.lines.size());
+    }
+    return {out_a, out_b};
+}
+
 CodedRow pair_after(const PCR& pcr, std::size_t header, std::size_t end, std::size_t count,
                     std::size_t minimum_codes = 0) {
     const auto first = pcr.next(header + 1, end);
@@ -1089,7 +1119,7 @@ void refinement_flags(const PCR& pcr, Project& project, const Refinement& refine
         const auto group_a = integer(std::floor(std::abs(a) / 10.), pcr.path.string());
         const auto group_b = integer(std::floor(std::abs(b) / 10.), pcr.path.string());
         if ((group_a != 0 && groups[group_a].size() != 1) || (group_b != 0 && groups[group_b].size() != 1)) {
-            pcr.fail("Shared FullProf codewords combine two asymmetry terms in one EDI parameter");
+            pcr.fail("Shared FullProf codewords combine two profile terms in one EDI parameter");
         }
     }
     std::map<Parameter*, std::string> names;
@@ -1381,12 +1411,7 @@ void cw_profile(const PCR& pcr, Pattern& pattern, Refinement& refine, const Code
             auto shared = apertures[present];
             shared.value /= 2.;
             shared.multiplier /= 2.;
-            if (shared.code != 0. && std::abs(shared.code) < 10.) {
-                // Allocate an internal shared group for one automatically assigned
-                // source direction that now drives two native fields.
-                const double group = 1.e10 + 10. * ++refine.converted_automatic_groups;
-                shared.code = std::copysign(group + std::abs(shared.code), shared.code);
-            }
+            shared.code = refine.shared_code(shared.code);
             apertures.fill(shared);
         }
         refine.set(peak.asym_fcj_1, apertures[0]);
@@ -1394,19 +1419,9 @@ void cw_profile(const PCR& pcr, Pattern& pattern, Refinement& refine, const Code
     }
     if (beba) {
         const auto transform = [&](OptionalParameter& a, OptionalParameter& b, std::size_t i) {
-            auto first = shape.at(i, -1.);
-            const auto second = shape.at(i + 1, -1.);
-            first.value += 3. * second.value;
-            if (first.code != 0. && second.code != 0.) {
-                // Two independent source directions span both native parameters. A coupling outside
-                // this pair would also need the inverse two-parameter transformation.
-                refine.transformed_independent_pairs.emplace_back(first.code, second.code);
-            } else if (second.code != 0.) {
-                first.code = second.code;
-                first.multiplier = 3. * second.multiplier;
-            }
-            refine.set(a, first);
-            refine.set(b, second);
+            const auto mapped = profile_pair(pcr, refine, shape.at(i), shape.at(i + 1), -1., -3., -1.);
+            refine.set(a, mapped[0]);
+            refine.set(b, mapped[1]);
         };
         transform(peak.asym_beba_a0, peak.asym_beba_b0, 2);
         transform(peak.asym_beba_a1, peak.asym_beba_b1, 4);
@@ -1429,31 +1444,29 @@ void tof_profile(const PCR& pcr, Pattern& pattern, Refinement& refine, const Cod
     pcr.zero(sigma.codes, 3, 4, "TOF Sigma-Q code");
     pcr.zero(sigma.values, 6, 8, "anisotropic TOF size");
     pcr.zero(sigma.codes, 6, 7, "anisotropic TOF size code");
-    pcr.zero(sigma.codes, 4, 6, "TOF Gaussian size/strain refinement");
-    pcr.zero(gamma.codes, 3, 5, "TOF Lorentzian size/strain refinement");
     const auto base = pattern.resolution.value_or(TofResolution{});
-    auto sigma2 = sigma.at(0);
-    auto sigma1 = sigma.at(1);
+    const auto width_pair = [&](Coded raw, Coded contribution, double base_value) {
+        raw.value += base_value;
+        return profile_pair(pcr, refine, raw, contribution, 1., -1., 1.);
+    };
+    const auto sigma2 = width_pair(sigma.at(0), sigma.at(5), base.sigma[0]);
+    const auto sigma1 = width_pair(sigma.at(1), sigma.at(4), base.sigma[1]);
     auto sigma0 = sigma.at(2);
-    sigma2.value += base.sigma[0] - sigma.values[5];
-    sigma1.value += base.sigma[1] - sigma.values[4];
     sigma0.value += base.sigma[2];
-    refine.set(peak.broad_gauss_sigma_2, sigma2);
-    refine.set(peak.broad_gauss_sigma_1, sigma1);
+    refine.set(peak.broad_gauss_sigma_2, sigma2[0]);
+    refine.set(peak.broad_gauss_sigma_1, sigma1[0]);
     refine.set(peak.broad_gauss_sigma_0, sigma0);
-    refine.set(peak.broad_gauss_strain, sigma.at(4));
-    refine.set(peak.broad_gauss_size, sigma.at(5));
-    auto gamma2 = gamma.at(0);
-    auto gamma1 = gamma.at(1);
+    refine.set(peak.broad_gauss_strain, sigma1[1]);
+    refine.set(peak.broad_gauss_size, sigma2[1]);
+    const auto gamma2 = width_pair(gamma.at(0), gamma.at(4), base.gamma[0]);
+    const auto gamma1 = width_pair(gamma.at(1), gamma.at(3), base.gamma[1]);
     auto gamma0 = gamma.at(2);
-    gamma2.value += base.gamma[0] - gamma.values[4];
-    gamma1.value += base.gamma[1] - gamma.values[3];
     gamma0.value += base.gamma[2];
-    refine.set(peak.broad_lorentz_gamma_2, gamma2);
-    refine.set(peak.broad_lorentz_gamma_1, gamma1);
+    refine.set(peak.broad_lorentz_gamma_2, gamma2[0]);
+    refine.set(peak.broad_lorentz_gamma_1, gamma1[0]);
     refine.set(peak.broad_lorentz_gamma_0, gamma0);
-    refine.set(peak.broad_lorentz_strain, gamma.at(3));
-    refine.set(peak.broad_lorentz_size, gamma.at(4));
+    refine.set(peak.broad_lorentz_strain, gamma1[1]);
+    refine.set(peak.broad_lorentz_size, gamma2[1]);
     if (pattern.profile != 7) {
         const auto exponential = [&](std::size_t column) {
             auto coded = shape.at(column + 2);

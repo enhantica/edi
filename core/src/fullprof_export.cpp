@@ -94,6 +94,35 @@ public:
         return parameter ? field(*parameter, factor) : Field{0.};
     }
 
+    std::array<Field, 2> profile_pair(Field a, Field b, double first, double coupled, double second) const {
+        const auto ordinal = [](double code) {
+            return static_cast<std::size_t>(std::floor(std::abs(code) / 10.));
+        };
+        const auto shift = [&](double code) {
+            return std::copysign(std::abs(code) - 10. * static_cast<double>(ordinal(code)), code);
+        };
+        const auto encode = [](std::size_t group, double step) {
+            if (step == 0.) {
+                return 0.;
+            }
+            const auto base = 10. * static_cast<double>(group);
+            if (std::abs(step) >= 10. || static_cast<float>(base + std::abs(step)) == static_cast<float>(base)) {
+                unsupported("unrepresentable transformed profile refinement multiplier");
+            }
+            return std::copysign(base + std::abs(step), step);
+        };
+        double combined = first * shift(a.code);
+        if (a.code != 0. && b.code != 0. && ordinal(a.code) != ordinal(b.code)) {
+            if (group_maximum_.contains(ordinal(a.code)) || group_maximum_.contains(ordinal(b.code))) {
+                unsupported("two linked native directions contribute to one FullProf profile field");
+            }
+        } else {
+            combined += coupled * shift(b.code);
+        }
+        return {{{first * a.value + coupled * b.value, encode(ordinal(a.code != 0. ? a.code : b.code), combined)},
+                 {second * b.value, encode(ordinal(b.code), second * shift(b.code))}}};
+    }
+
     std::size_t count() const { return count_; }
 
     void check_written() const {
@@ -438,22 +467,15 @@ void write_profile(std::ostream& out, Structure& structure, const Bank& bank, st
               {codes.field(link.scale, bank.intensity_scale),
                bank.tof() ? Field{0.} : field(peak.mixing_eta_0), {0.}, {0.}, {0.}, {0.}}, " 0");
     if (bank.tof()) {
-        auto sigma2 = field(peak.broad_gauss_sigma_2);
-        auto sigma1 = field(peak.broad_gauss_sigma_1);
-        auto gamma2 = field(peak.broad_lorentz_gamma_2);
-        auto gamma1 = field(peak.broad_lorentz_gamma_1);
-        // FullProf's reported base rows include the separately declared contributions.
-        sigma2.value += peak.broad_gauss_size.value.get();
-        sigma1.value += peak.broad_gauss_strain.value.get();
-        gamma2.value += peak.broad_lorentz_size.value.get();
-        gamma1.value += peak.broad_lorentz_strain.value.get();
-        const auto fixed = [](const Parameter& parameter) { return Field{parameter.value.get()}; };
+        // FullProf's base rows include the separately declared size and strain contributions.
+        const auto sigma2 = codes.profile_pair(field(peak.broad_gauss_sigma_2), field(peak.broad_gauss_size), 1., 1., 1.);
+        const auto sigma1 = codes.profile_pair(field(peak.broad_gauss_sigma_1), field(peak.broad_gauss_strain), 1., 1., 1.);
+        const auto gamma2 = codes.profile_pair(field(peak.broad_lorentz_gamma_2), field(peak.broad_lorentz_size), 1., 1., 1.);
+        const auto gamma1 = codes.profile_pair(field(peak.broad_lorentz_gamma_1), field(peak.broad_lorentz_strain), 1., 1., 1.);
         pair_rows(out, "Sigma-2 Sigma-1 Sigma-0 Sigma-Q Iso-GStrain Iso-GSize Ani-LSize Size-Model",
-                  {sigma2, sigma1, field(peak.broad_gauss_sigma_0), {0.}, fixed(peak.broad_gauss_strain),
-                   fixed(peak.broad_gauss_size), {0.}}, " 0");
+                  {sigma2[0], sigma1[0], field(peak.broad_gauss_sigma_0), {0.}, sigma1[1], sigma2[1], {0.}}, " 0");
         pair_rows(out, "Gamma-2 Gamma-1 Gamma-0 Iso-LorStrain Iso-LorSize",
-                  {gamma2, gamma1, field(peak.broad_lorentz_gamma_0), fixed(peak.broad_lorentz_strain),
-                   fixed(peak.broad_lorentz_size)});
+                  {gamma2[0], gamma1[0], field(peak.broad_lorentz_gamma_0), gamma1[1], gamma2[1]});
     } else {
         pair_rows(out, "U V W X Y GauSiz LorSiz Size-Model",
                   {field(peak.broad_gauss_u), field(peak.broad_gauss_v), field(peak.broad_gauss_w),
@@ -475,13 +497,11 @@ void write_profile(std::ostream& out, Structure& structure, const Bank& bank, st
         out << "!Absorption correction parameters\n" << absorption.value << ' ' << absorption.code
             << " 0 0 ABS: ABSCOR1 ABSCOR2\n";
     } else {
-        const auto a0 = value(peak.asym_beba_a0);
-        const auto b0 = value(peak.asym_beba_b0);
-        const auto a1 = value(peak.asym_beba_a1);
-        const auto b1 = value(peak.asym_beba_b1);
+        const auto low = codes.profile_pair(field(peak.asym_beba_a0), field(peak.asym_beba_b0), -1., 3., -1.);
+        const auto high = codes.profile_pair(field(peak.asym_beba_a1), field(peak.asym_beba_b1), -1., 3., -1.);
         std::vector<Field> shape{texture ? field(texture->march_r) : Field{bank.texture ? 1. : 0.},
                                  texture ? field(texture->march_random_fract) : Field{0.},
-                                 {3. * b0 - a0}, {-b0}, {3. * b1 - a1}, {-b1}};
+                                 low[0], low[1], high[0], high[1]};
         if (bank.npr == 7) {
             const auto aperture_1 = field(peak.asym_fcj_1);
             const auto aperture_2 = field(peak.asym_fcj_2);

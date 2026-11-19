@@ -194,3 +194,28 @@ def test_fullprof_single_fcj_parameter_maps_to_two_physical_apertures(tmp_path):
 
     peak = edi.Project.load(tmp_path / f'{stem}.pcr').experiments[0].peak
     assert [peak.asym_fcj_1.value, peak.asym_fcj_2.value] == pytest.approx([0.08, 0.08])
+
+
+def test_fullprof_tof_size_direction_offsets_the_base_width(tmp_path):
+    source = REFERENCES / 'pd-neut-tof_si-sepd'
+    control = (source / 'fixed.pcr').read_text().replace(
+        '0 !Number of refined parameters', '1 !Number of refined parameters'
+    )
+    lines = control.splitlines()
+    index = next(i for i, line in enumerate(lines) if 'Sigma-2' in line and 'Iso-GSize' in line)
+    values = lines[index + 1].split()
+    values[0], values[5] = '10', '1.5'
+    lines[index + 1] = ' '.join(values)
+    lines[index + 2] = '0 0 0 0 0 11 0'
+    (tmp_path / 'fixed.pcr').write_text('\n'.join(lines) + '\n')
+    copyfile(source / 'fixed.dat', tmp_path / 'fixed.dat')
+
+    project = edi.Project.load(tmp_path / 'fixed.pcr')
+    peak = project.experiments[0].peak
+    width, size = peak.broad_gauss_sigma_2, peak.broad_gauss_size
+    assert [width.value, size.value] == pytest.approx([8.5, 1.5])
+    assert width.free != size.free
+    driver = width if width.free else size
+    driver.value += 0.25
+    project.calculate()
+    assert width.value + size.value == pytest.approx(10)
