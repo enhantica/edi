@@ -69,7 +69,7 @@ QString ui_trace_identity(const std::vector<double>* column) {
     if (column == nullptr) return {};
     QCryptographicHash hash(QCryptographicHash::Sha256);
     hash.addData(QByteArrayView(reinterpret_cast<const char*>(column->data()),
-                                static_cast<qsizetype>(column->size() * sizeof(double))));
+                                static_cast<qsizetype>(column->size()) * static_cast<qsizetype>(sizeof(double))));
     return QString::fromLatin1(hash.result().toHex().left(16));
 }
 

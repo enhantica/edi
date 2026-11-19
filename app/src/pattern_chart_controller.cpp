@@ -6,6 +6,7 @@
 #include <cmath>
 #include <limits>
 #include <numbers>
+#include <QCryptographicHash>
 #include <QFontMetricsF>
 #include <QStringList>
 #include <set>
@@ -1427,23 +1428,32 @@ void PatternChartController::refresh() {
         ++trace_generation_;
         const edi::PatternSource* source = !report_ && experiment_ ? &shownSource() : nullptr;
         trace_identity_ = source != nullptr ? ui_trace_identity(source->meas.get()) : QString();
-        trace_fill_.clear();
-        const auto filled = [this](const QPointer<QXYSeries>& series) {
-            if (series) trace_fill_.append({series, series->count()});
-        };
+        trace_series_.clear();
         for (const auto* series : {&measured_series_, &calculated_series_, &background_series_, &residual_series_})
-            filled(*series);
-        for (const BandSeries& band : band_series_) {
-            for (const auto* series : {&band.upper, &band.lower, &band.top, &band.bottom}) filled(*series);
+            trace_series_.append(*series);
+        for (const BandSeries& filled : band_series_) {
+            for (const auto* series : {&filled.upper, &filled.lower, &filled.top, &filled.bottom}) trace_series_.append(*series);
         }
+        trace_upload_identity_ = traceBufferIdentity();
     }
 #endif
 }
 
 #if EDI_UI_INSTRUMENTATION
-bool PatternChartController::traceBuffersHold() const {
-    return std::all_of(trace_fill_.begin(), trace_fill_.end(),
-                       [](const auto& fill) { return fill.first && fill.first->count() == fill.second; });
+QString PatternChartController::traceBufferIdentity() const {
+    // Every point of every filled series, read from the series objects: what the scene draws for this chart.
+    QCryptographicHash hash(QCryptographicHash::Sha256);
+    bool finite = false;
+    for (qsizetype index = 0; index < trace_series_.size(); ++index) {
+        const QPointer<QXYSeries>& series = trace_series_[index];
+        hash.addData(QByteArray::number(index));
+        if (!series) continue;
+        const QList<QPointF> points = series->points();
+        for (const QPointF& point : points) finite = finite || (std::isfinite(point.x()) && std::isfinite(point.y()));
+        hash.addData(QByteArrayView(reinterpret_cast<const char*>(points.constData()),
+                                    points.size() * static_cast<qsizetype>(sizeof(QPointF))));
+    }
+    return finite ? QString::fromLatin1(hash.result().toHex().left(16)) : QString();
 }
 #endif
 

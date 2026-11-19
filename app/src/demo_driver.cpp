@@ -1936,16 +1936,23 @@ void DemoDriver::trace_watch() {
         // What was loaded, counted from the model: the patterns (a scan's datasets or the experiments), structures,
         // experiments and the current pattern's points.
         const edi::Project& core = project->project();
-        int points = 0;
+        int data_points = 0;
         if (const ExperimentViewModel* experiment = project->currentExperiment(); experiment != nullptr) {
             const auto& held = *core.experiments[experiment->tracePlace()];
-            if (held.data) points = static_cast<int>(held.data->intensity_meas.size());
+            if (held.data) data_points = static_cast<int>(held.data->intensity_meas.size());
         }
-        EDI_UI_TRACE("input", {{"input", input_identity_},
-                               {"patterns", project->experiments() != nullptr ? project->experiments()->rowCount() : 0},
-                               {"structures", static_cast<int>(core.structures.size())},
-                               {"experiments", static_cast<int>(core.experiments.size())},
-                               {"points", points}});
+        // A series' fitted points, a scan's datasets, or none; each holds one measured pattern per bank with data.
+        const int banks = static_cast<int>(core.experiments.size());
+        const int with_data = static_cast<int>(std::count_if(core.experiments.begin(), core.experiments.end(),
+                                                             [](const auto& bank) { return bank->data.has_value(); }));
+        const int series_points = project->property("seriesPointCount").toInt();
+        const bool scan = project->scanTemplate() != nullptr;
+        const int points = series_points > 0 ? series_points
+                           : scan && project->experiments() != nullptr ? project->experiments()->rowCount() : 0;
+        EDI_UI_TRACE("input", {{"identity", input_identity_}, {"input", input_identity_}, {"banks", banks},
+                               {"measured", points > 0 ? points * std::max(1, with_data) : with_data},
+                               {"points", points}, {"data_points", data_points},
+                               {"structures", static_cast<int>(core.structures.size())}});
         if (FitViewModel* fit = project->fit(); fit != nullptr) {
             fit_running_ = fit->running();
             connect(fit, &FitViewModel::runningChanged, this, [this, fit] {
@@ -1963,8 +1970,11 @@ void DemoDriver::trace_watch() {
         QJsonArray frames, presented;
         for (FrameWatch& watch : frame_watches_) {
             if (!watch.chart || watch.settled) continue;
-            // Settled: the upload of the selected dataset's own data is what the series objects hold for this frame.
-            const bool settles = watch.presented && watch.controller && watch.controller->traceBuffersHold();
+            // Settled: the series objects hold, for this frame, the points of the upload that presented the selected
+            // dataset: read back now and compared with what that upload put there. A later upload with other points,
+            // or no fill, does not settle it.
+            const QString buffers = watch.presented && watch.controller ? watch.controller->traceBufferIdentity() : QString();
+            const bool settles = !buffers.isEmpty() && buffers == watch.upload;
             if (watch.first && !settles) continue;
             QJsonObject frame = trace_geometry(watch.chart);
             frame.insert(QStringLiteral("request"), watch.request);
@@ -1977,9 +1987,12 @@ void DemoDriver::trace_watch() {
             if (settles) {
                 watch.settled = true;
                 for (auto it = watch.presentation.begin(); it != watch.presentation.end(); ++it) frame.insert(it.key(), it.value());
+                frame.insert(QStringLiteral("buffer_identity"), buffers);
                 frame.insert(QStringLiteral("phase"), QStringLiteral("settled"));
                 frames.append(frame);
-                presented.append(watch.presentation);
+                QJsonObject shown = watch.presentation;
+                shown.insert(QStringLiteral("buffer_identity"), buffers);
+                presented.append(shown);
             }
         }
         const std::lock_guard lock(trace_mutex_);
@@ -1991,18 +2004,32 @@ void DemoDriver::trace_watch() {
     }, Qt::DirectConnection);
     trace_swap_ = connect(&window_, &QQuickWindow::frameSwapped, this, [this] {
         std::vector<std::pair<const char*, QJsonObject>> events;
+        QJsonArray requests;
         {
             const std::lock_guard lock(trace_mutex_);
             for (const QJsonValue& value : std::exchange(synced_frames_, {})) {
                 QJsonObject frame = value.toObject();
+                requests.append(frame.value(QStringLiteral("request")));
                 frame.insert(QStringLiteral("frame"), synced_frame_);
                 frame.insert(QStringLiteral("witness"), QStringLiteral("afterSynchronizing/frameSwapped"));
                 events.emplace_back("frame", frame);
             }
-            events.emplace_back("render", QJsonObject{{"frame", synced_frame_},
-                                                      {"transitions", std::exchange(synced_transitions_, {})},
-                                                      {"displayed", synced_displayed_},
-                                                      {"presented", std::exchange(synced_presented_, {})}});
+            QJsonObject render{{"frame", synced_frame_},
+                               {"transitions", std::exchange(synced_transitions_, {})},
+                               {"displayed", synced_displayed_}};
+            // The request whose first or settled frame this is, and for a settled one its presentation (request,
+            // input, dataset, generation, data and buffer identities), on the render itself.
+            const QJsonArray presented = std::exchange(synced_presented_, {});
+            if (!requests.isEmpty()) {
+                render.insert(QStringLiteral("request"), requests.last());
+                render.insert(QStringLiteral("requests"), requests);
+            }
+            if (!presented.isEmpty()) {
+                const QJsonObject last = presented.last().toObject();
+                for (auto it = last.begin(); it != last.end(); ++it) render.insert(it.key(), it.value());
+                render.insert(QStringLiteral("presented"), presented);
+            }
+            events.emplace_back("render", render);
         }
         ui_trace_group(events);
     }, Qt::DirectConnection);
@@ -2092,11 +2119,14 @@ void DemoDriver::trace_frame() {
         if (watch.presented || !watch.controller || watch.dataset < 0) continue;
         if (watch.native.isEmpty() && selection == watch.dataset) watch.native = native;
         if (!watch.native.isEmpty() && watch.controller->traceGeneration() > watch.base &&
-            watch.controller->traceIdentity() == watch.native) {
+            watch.controller->traceIdentity() == watch.native && !watch.controller->traceUploadIdentity().isEmpty()) {
             watch.presented = true;
+            watch.generation = watch.controller->traceGeneration();
+            watch.upload = watch.controller->traceUploadIdentity();
             watch.presentation = {{"request", watch.request}, {"dataset", watch.dataset},
                                   {"generation", static_cast<double>(watch.controller->traceGeneration())},
-                                  {"data_identity", watch.native}, {"input", input_identity_}};
+                                  {"data_identity", watch.native}, {"input", input_identity_},
+                                  {"upload_identity", watch.upload}};
             EDI_UI_TRACE("presented", watch.presentation);
         }
     }

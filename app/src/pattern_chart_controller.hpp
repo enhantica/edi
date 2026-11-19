@@ -266,7 +266,11 @@ class PatternChartController : public QObject {
     // the measured data they were filled from, and whether the series objects the scene draws still hold that fill.
     qint64 traceGeneration() const { return trace_generation_; }
     QString traceIdentity() const { return trace_identity_; }
-    bool traceBuffersHold() const;
+    // The identity of the points this upload put into the series objects, read back from them right after the fill,
+    // and the same identity read from the series objects now: equal while the scene holds that upload. Empty when no
+    // series holds a finite point (no fill).
+    QString traceUploadIdentity() const { return trace_upload_identity_; }
+    QString traceBufferIdentity() const;
 #endif
     bool current() const { return current_; }
     QString xTitle() const { return x_title_; }
@@ -523,7 +527,8 @@ class PatternChartController : public QObject {
 #if EDI_UI_INSTRUMENTATION
     qint64 trace_generation_ = 0;
     QString trace_identity_;
-    QList<std::pair<QPointer<QXYSeries>, qsizetype>> trace_fill_;  // each filled series and its point count
+    QList<QPointer<QXYSeries>> trace_series_;  // the series this upload filled, in a fixed order
+    QString trace_upload_identity_;
 #endif
     QString x_title_, y_title_, residual_title_;
     QColor measured_color_, calculated_color_, background_color_, residual_color_, excluded_color_;

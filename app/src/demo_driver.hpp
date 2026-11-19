@@ -183,6 +183,8 @@ class DemoDriver : public QObject {
         QPointer<QQuickItem> chart;
         QPointer<PatternChartController> controller;
         QString native;   // the selected dataset's data identity, read from the project once that dataset is applied
+        qint64 generation = 0;  // the upload that presented it
+        QString upload;         // that upload's points as the series objects held them after the fill
         bool first = false, presented = false, settled = false;
         QJsonObject presentation;  // request, dataset, generation, data_identity, input
     };
