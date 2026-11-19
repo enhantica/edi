@@ -23,7 +23,9 @@ describes the equivalent manual construction through normal project actions.
 3. Preserve the calculation range, exclusion intervals, background basis, calibration, diffraction
    model and phase links. Use the native space-group and Wyckoff resolver to convert normalized
    FullProf occupancies to chemical fractions. Keep the source scale with the conversion required
-   by the radiation and geometry. Use a shared profile only when the phases' PCR profiles agree.
+   by the radiation and geometry. An independently corroborated legacy occupancy factor is
+   removed from atomic occupancies and its square is applied to intensity scales and applicable
+   Larson parameters. Use a shared profile when the phases' PCR profiles agree.
 4. A nonzero FullProf codeword identifies a signed shift within a refinement group. Retain the
    starting value and use native parameter aliases and affine constraints for shared shifts. A
    declared zero refined-parameter count imports a fixed model.
@@ -36,14 +38,17 @@ describes the equivalent manual construction through normal project actions.
 Desktop Export to FullProf and `export-fullprof` use the same core writer. The writer takes a
 snapshot, evaluates the native relation graph, and publishes a new directory through the same
 fresh-path primitive as a native project copy. It emits a PCR and one measured companion per
-experiment. The first formats are FullProf XYDATA for powder patterns and INT for a single
-constant-wavelength neutron reflection experiment. Profile, background, phase scales, masks and
-geometry are mapped into the corresponding FullProf fields.
+experiment. It writes FullProf XYDATA for measured powder patterns, a declared regular grid for
+powder simulations, and INT for compatible single-crystal datasets. The observation code selects
+a scale slot in the INT group. The reader and writer use the native single-crystal calculation for
+CW and TOF data and the verified FullProf Larson isotropic and anisotropic models. Profile,
+background, phase scales, masks and geometry are mapped into the corresponding FullProf fields.
 
 The fixed-input option emits zero active codewords for reproducible forward calculation.
-Refinement export covers independent directions that have FullProf counterparts. Active explicit
-constraints and free coefficients that need a different parameterization require fixed export or a
-manual translation. The browser requires a separate multi-file output flow.
+Refinement export covers independent directions and native affine relations with one free source.
+Use the native relation graph to identify these directions, including chains, before allocating
+shared signed FullProf codewords in the target units. A nonlinear transfer or a dependent moved
+by several independent variables needs a fixed export or a manual translation. The browser requires a separate multi-file output flow.
 
 ## References
 

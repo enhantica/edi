@@ -104,3 +104,47 @@ def test_fullprof_companion_error_names_the_file(tmp_path):
     copyfile(PBSO4 / source.name, source)
     with pytest.raises((ValueError, RuntimeError), match=r'companion pbso4\.dat'):
         edi.Project.load(source)
+
+
+def test_fullprof_tof_reflection_dataset_scales(tmp_path):
+    source = ROOT / 'tests/fixtures/single_crystal/example_fits/taurine_converged/taurine.pcr'
+    project = edi.Project.load(source)
+    assert len(project.experiments) == 6
+    scales = [experiment.linked_structures[0].scale.value for experiment in project.experiments]
+    assert scales == pytest.approx([2.783, 3.855, 3.230, 2.825, 2.744, 2.960])
+    assert all(len(experiment.refln.wavelength) > 0 for experiment in project.experiments)
+    project.calculate()
+    assert sum(len(exp.refln.intensity_calc) for exp in project.experiments) == 1540
+    destination = tmp_path / 'native'
+    project.save_as(destination)
+    experiments = list((destination / 'experiments').glob('*.edi'))
+    assert len(experiments) == 6
+    assert all('_reflns.threshold_sigma' in path.read_text() for path in experiments)
+
+
+def test_fullprof_legacy_pr_occupancy_and_extinction():
+    source = ROOT / 'tests/fixtures/single_crystal/example_fits/pr2nio4/input.pcr'
+    project = edi.Project.load(source)
+    experiment = project.experiments[0]
+    assert project.structures[0].atom_sites[0].occupancy.value == pytest.approx(1.0)
+    assert experiment.linked_structures[0].scale.value == pytest.approx(4.03072)
+    assert experiment.extinction.type == 'larson-isotropic'
+    assert experiment.extinction.coefficient.value == pytest.approx(0.0067456)
+
+
+def test_fullprof_combines_nuclear_and_magnetic_overlays():
+    fixture = ROOT / 'tests/fixtures/magnetic_pnma/cosio'
+    project = edi.Project.load(fixture / 'cosio.pcr')
+    assert len(project.structures) == 1
+    assert len(project.experiments[0].linked_structures) == 1
+    project.calculate()
+    reference_x, reference_y = np.loadtxt(
+        fixture / 'cosio.prf', skiprows=7, max_rows=1508, usecols=(0, 2), unpack=True
+    )
+    native = project.experiments[0].data
+    calculated = np.interp(reference_x, native.axis(), native.intensity_calc)
+    included = np.isfinite(calculated) & (reference_x >= 8.0953) & (reference_x <= 149.9953)
+    assert included.sum() == 1418
+    assert np.linalg.norm(calculated[included] - reference_y[included]) / np.linalg.norm(
+        reference_y[included]
+    ) < 0.01

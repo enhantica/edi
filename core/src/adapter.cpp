@@ -44,6 +44,7 @@
 #include "number_token.hpp"
 #include "canonical_encoding.hpp"
 #include "assistant_project_io.hpp"  // edi-only logic: core/src-private, never installed
+#include "fullprof_project_io.hpp"
 #include "import_symmetry.hpp"
 #include "identity_bridge.hpp"  // The loader's reach into crysta's identity rules
 #include "crysta/derived_values.hpp"
@@ -2713,6 +2714,7 @@ PlainDataLoad experiment_with_plain_data(const BraggPdExperiment& experiment, co
         std::vector<std::int32_t> codes(file.dataset.begin(), file.dataset.end());
         std::sort(codes.begin(), codes.end());
         codes.erase(std::unique(codes.begin(), codes.end()), codes.end());
+        load.dataset_codes = codes;
         const auto rows_of = [&file](std::optional<std::int32_t> code) {
             std::vector<std::int32_t> h, k, l;
             std::vector<double> f2, su, wavelength;
@@ -6150,6 +6152,104 @@ void complete_relations(Project& project) {
     }
 }
 
+std::vector<detail::FullProfRelationDirection> detail::fullprof_relation_directions(Project& model) {
+    if (std::none_of(model.constraints.begin(), model.constraints.end(),
+                     [](const auto& constraint) { return constraint->enabled.get(); })) {
+        return {};
+    }
+    RelationProject converted = relation_project(model);
+    const auto graph = crysta::compile_relations(*converted.project);
+    std::map<std::string, const Parameter*> native;
+    std::vector<const Parameter*> native_seeds;
+    std::vector<const crysta::Parameter*> seeds;
+    for (const auto& slot : named_slots(model)) {
+        native.emplace(slot.unique_name, slot.parameter);
+        if (slot.parameter->free.get()) {
+            native_seeds.push_back(slot.parameter);
+            seeds.push_back(&crysta::resolve_unique_name(*converted.project, slot.unique_name));
+        }
+    }
+    if (seeds.empty()) {
+        return {};
+    }
+    enum class DependenceOrder { Constant, Linear, Nonlinear };
+    using Order = DependenceOrder;
+    using Kind = crysta::ExpressionNodeKind;
+    std::map<const crysta::Parameter*, Order> known;
+    for (const auto* seed : seeds) {
+        known.emplace(seed, Order::Linear);
+    }
+    const auto derivatives = graph.derivatives(seeds);
+    std::vector<FullProfRelationDirection> result;
+    for (std::size_t r = 0; r < graph.relations().size(); ++r) {
+        const auto& relation = graph.relations()[r];
+        std::vector<Order> nodes;
+        for (const auto& node : relation.expression.nodes()) {
+            Order order = Order::Constant;
+            switch (node.kind) {
+                case Kind::Literal:
+                    break;
+                case Kind::Reference:
+                    if (const auto found = known.find(relation.references[node.reference]); found != known.end()) {
+                        order = found->second;
+                    }
+                    break;
+                case Kind::Negate:
+                    order = nodes[node.lhs];
+                    break;
+                case Kind::Add:
+                case Kind::Subtract:
+                    order = std::max(nodes[node.lhs], nodes[node.rhs]);
+                    break;
+                case Kind::Multiply:
+                    order = nodes[node.lhs] == Order::Constant || nodes[node.rhs] == Order::Constant
+                                ? std::max(nodes[node.lhs], nodes[node.rhs]) : Order::Nonlinear;
+                    break;
+                case Kind::Divide:
+                    order = nodes[node.rhs] == Order::Constant ? nodes[node.lhs] : Order::Nonlinear;
+                    break;
+                case Kind::PowerConstant:
+                    if (node.value == 1.) {
+                        order = nodes[node.lhs];
+                        break;
+                    }
+                    if (node.value == 0.) {
+                        break;
+                    }
+                    [[fallthrough]];
+                case Kind::Call:
+                    order = nodes[node.lhs] == Order::Constant ? Order::Constant : Order::Nonlinear;
+                    break;
+            }
+            nodes.push_back(order);
+        }
+        const auto order = nodes.at(nodes.size() - 1);
+        known.emplace(relation.target, order);
+        if (relation.source != crysta::Dependence::Constrained || order == Order::Constant) {
+            continue;
+        }
+        if (order == Order::Nonlinear) {
+            throw IoError("FullProf export: nonlinear constraint " + relation.target_name + " requires fixed export");
+        }
+        std::optional<std::size_t> active;
+        for (std::size_t k = 0; k < seeds.size(); ++k) {
+            if (derivatives[r * seeds.size() + k] == 0.) {
+                continue;
+            }
+            if (active) {
+                throw IoError("FullProf export: constraint " + relation.target_name +
+                              " combines multiple free parameters; use fixed export");
+            }
+            active = k;
+        }
+        if (active) {
+            result.push_back({native.at(relation.target_name), native_seeds[*active],
+                              derivatives[r * seeds.size() + *active], relation.target_name});
+        }
+    }
+    return result;
+}
+
 bool apply_relations(Project& project) {
     if (project.structures.empty()) {
         return false;
@@ -8835,6 +8935,138 @@ std::optional<SpaceGroupSettingName> space_group_setting_for_number(int it_numbe
 std::optional<SpaceGroupSettingName> space_group_setting_for_code(int it_number, const std::string& code) {
     return lowest_setting(
         [it_number, &code](const SpaceGroupSettingName& s) { return s.it_number == it_number && s.coord_system_code == code; });
+}
+
+std::optional<SpaceGroupSettingName> detail::unambiguous_space_group_alias(const std::string& name) {
+    const auto aliases = crysta::space_groups_named(name);
+    if (aliases.size() != 1) {
+        return std::nullopt;
+    }
+    return space_group_setting_for_code(aliases.front().it_number, aliases.front().coord_system_code);
+}
+
+namespace {
+
+int fullprof_determinant(const std::array<int, 9>& r) {
+    return r[0] * (r[4] * r[8] - r[5] * r[7]) - r[1] * (r[3] * r[8] - r[5] * r[6]) +
+           r[2] * (r[3] * r[7] - r[4] * r[6]);
+}
+
+std::string fullprof_magnetic_xyz(const crysta::MagneticOperation& operation) {
+    std::ostringstream text;
+    text.imbue(std::locale::classic());
+    for (std::size_t i = 0; i < 3; ++i) {
+        if (i != 0) {
+            text << ',';
+        }
+        bool term = false;
+        for (std::size_t j = 0; j < 3; ++j) {
+            const int value = operation.rotation[3 * i + j];
+            if (value == 0) {
+                continue;
+            }
+            if (value < 0) {
+                text << '-';
+            } else if (term) {
+                text << '+';
+            }
+            if (std::abs(value) != 1) {
+                text << std::abs(value) << '*';
+            }
+            text << "xyz"[j];
+            term = true;
+        }
+        double shift = operation.translation[i] - std::floor(operation.translation[i]);
+        if (std::abs(shift) > 1.e-10 && std::abs(1. - shift) > 1.e-10) {
+            bool fraction = false;
+            for (int denominator = 2; denominator <= 48; ++denominator) {
+                const auto numerator = std::round(shift * denominator);
+                if (std::abs(shift - numerator / denominator) < 1.e-10) {
+                    text << '+' << static_cast<int>(numerator) << '/' << denominator;
+                    fraction = true;
+                    break;
+                }
+            }
+            if (!fraction) {
+                text << '+' << std::setprecision(std::numeric_limits<double>::max_digits10) << shift;
+            }
+        }
+    }
+    text << ',' << (operation.theta == 1 ? "+1" : "-1");
+    return text.str();
+}
+
+}  // namespace
+
+std::string detail::fullprof_signed_operator(const std::string& spatial, const std::string& moment) {
+    auto operation = crysta::parse_magnetic_operation(spatial + ",+1");
+    auto axial = moment;
+    for (char& variable : axial) {
+        if (variable >= 'u' && variable <= 'w') {
+            variable = static_cast<char>('x' + variable - 'u');
+        }
+    }
+    const auto transformed = crysta::parse_magnetic_operation(axial + ",+1");
+    const int determinant = fullprof_determinant(operation.rotation);
+    for (const int sign : {1, -1}) {
+        bool matches = transformed.translation == std::array<double, 3>{};
+        for (std::size_t i = 0; i < operation.rotation.size(); ++i) {
+            matches = matches && transformed.rotation[i] == sign * determinant * operation.rotation[i];
+        }
+        if (matches) {
+            operation.theta = sign;
+            return fullprof_magnetic_xyz(operation);
+        }
+    }
+    throw IoError("FullProf magnetic moment operator is not an axial signed copy of " + spatial);
+}
+
+std::string detail::fullprof_inverted_operator(const std::string& operation) {
+    auto inverted = crysta::parse_magnetic_operation(operation);
+    for (auto& v : inverted.rotation) {
+        v = -v;
+    }
+    for (auto& v : inverted.translation) {
+        v = -v;
+    }
+    return fullprof_magnetic_xyz(inverted);
+}
+
+detail::FullProfMagneticOperators detail::fullprof_magnetic_operators(const Structure& structure) {
+    const auto operators = crysta::magnetic_operations(to_crysta_structure(structure));
+    const std::array<int, 9> inversion{-1, 0, 0, 0, -1, 0, 0, 0, -1};
+    FullProfMagneticOperators result;
+    result.centrosymmetric = std::any_of(operators.begin(), operators.end(), [&](const auto& operation) {
+        return operation.theta == 1 && operation.rotation == inversion &&
+            operation.translation == std::array<double, 3>{};
+    });
+    for (const auto& operation : operators) {
+        if (!result.centrosymmetric || fullprof_determinant(operation.rotation) > 0) {
+            result.operators.push_back(fullprof_magnetic_xyz(operation));
+        }
+    }
+    return result;
+}
+
+crysta::MagneticGroupName detail::fullprof_magnetic_group(const std::string& bns) {
+    const auto& entry = crysta::magnetic_space_group(bns);
+    crysta::MagneticGroupName name;
+    name.number_bns = entry.number_bns;
+    name.name_bns = entry.name_bns;
+    name.name_uni = entry.name_uni;
+    name.number_og = entry.number_og;
+    name.name_og = entry.name_og;
+    return name;
+}
+
+std::optional<double> detail::fullprof_default_neutron_length(const std::string& type) {
+    static const auto sears = crysta::neutron_scattering("sears1992");
+    const auto found = sears.b_c.find(crysta::ion_element(type));
+    return found == sears.b_c.end() ? std::nullopt : std::optional<double>(found->second);
+}
+
+std::optional<double> detail::import_atomic_mass(const std::string& type_symbol) {
+    return crysta::atomic_mass(type_symbol);
 }
 
 void assign_space_group_setting(SpaceGroup& group, const SpaceGroupSettingName& setting, bool declare_number) {
