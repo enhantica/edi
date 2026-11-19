@@ -2545,6 +2545,7 @@ void Session::reportRefusal(const QString& message) {
         return;
     }
     warnings_->post(QStringLiteral("refusal:%1").arg(++project_messages_), message, QStringLiteral("error"));
+    if (project_ != nullptr) project_->forgetLastError();
     emit refused(message);
 }
 

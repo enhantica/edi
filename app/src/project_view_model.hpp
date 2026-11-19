@@ -421,6 +421,9 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     CorrelationViewModel* correlations() const { return correlations_; }
     int templateIndex() const;
     QString lastError() const { return last_error_; }
+    // The last refusal was reported in the error popup and the Messages center: a cell that committed it keeps its
+    // value in the normal colour, not marked as an error (the owner, 2026-11-19).
+    void forgetLastError() { setLastError({}); }
     bool calculating() const { return calculating_; }
     bool adjusting() const { return adjusting_; }
     void setAdjusting(bool adjusting);
