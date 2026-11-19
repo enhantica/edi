@@ -1,5 +1,9 @@
 data_cosio_2k5
 
+# Keep the family explicit for readers that do not infer magnetic settings.
+_space_group.name_h_m "P n m a"
+_space_group.coord_system_code abc
+
 _space_group_magn.number_BNS 62.441
 _space_group_magn.name_BNS Pnma
 _space_group_magn.name_UNI Pnma.1

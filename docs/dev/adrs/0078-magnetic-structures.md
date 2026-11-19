@@ -80,6 +80,13 @@ without computing any of them itself.
   cell and positions stay fittable. No `_space_group` is written for a Magnetic structure. A type
   IV group (its anti-translation makes the family a different lattice) and a setting the table does not hold keep the
   operators-only mode below.
+  Legacy files that also declare `_space_group` follow the same family resolution when they give a BNS number;
+  that older declaration must not select different tensor ties. Resolve the magnetic family before completing
+  displacement tensors, including when a tensor row is missing. Without a BNS number, a matching declared family
+  identifies the magnetic group before a save drops the declaration.
+  Bundled magnetic CLI inputs retain an explicit matching family declaration for compatibility with readers that
+  do not infer the family from BNS metadata, including the independently loaded engine references. The canonical
+  writer still omits it; both input forms must load with the same ties and intensities.
 - **Files.** Each sidebar group maps to one magnetic CIF category, as the crystal groups map to theirs (COMCIFS
   magnetic CIF dictionary 1.1.0-dev). `_parent_space_group.derived`, which the dictionary does not define, is an edi
   extension; the magnetic form factors keep the dictionary's `_atom_type_scat.neutron_magnetic_j0`…`_j6` coefficients

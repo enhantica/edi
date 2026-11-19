@@ -1294,28 +1294,27 @@ Structure structure_from_block(const Block& block, const std::string& where) {
                         "isotropic type '" + site->adp_type.value() + "'");
         }
     }
-    // An anisotropic site without a tensor row gets the tensor of its isotropic value, and every tensor loads as
-    // its site symmetry ties it, with adp_iso its equivalent (ADR 0027).
-    add_missing_aniso_rows(structure);
-    complete_atom_site_aniso(structure);
     read_magnetic(block, structure, where);
     // A Magnetic structure is written without `_space_group` (edi ADR-0078): its family table setting is found again
-    // from its operators, else its symmetry comes from them alone.
-    if (!group_omitted) {
+    // from its operators, else its symmetry comes from them alone. Older files also declare `_space_group`: when a
+    // BNS number is given, resolve the family the same way, before applying any displacement or coordinate ties.
+    if (group_omitted) {
+        structure.magnetic.modify([](MagneticDescription& magnetic) { magnetic.space_group_declared = false; });
+    } else {
         identify_declared_magnetic_family(structure);
     }
-    if (group_omitted) {
-        if (adopt_magnetic_family_setting(structure)) {
-            complete_atom_site_aniso(structure);  // the tensors as the adopted setting ties them
-        } else {
-            structure.magnetic.modify([](MagneticDescription& magnetic) { magnetic.space_group_declared = false; });
-        }
+    if (group_omitted || !structure.magnetic->group.number_bns.empty()) {
+        adopt_magnetic_family_setting(structure);
     }
     // A BNS transform that parses names the setting: it must map the BNS standard onto the operations.
     if (!bns_transform_consistent(structure.magnetic)) {
         fail_domain(where, "inconsistent-bns-transform",
                     "the BNS transform does not map the BNS standard setting onto the magnetic operations");
     }
+    // An anisotropic site without a tensor row gets the tensor of its isotropic value, and every tensor loads as
+    // its resolved site symmetry ties it, with adp_iso its equivalent (ADR 0027).
+    add_missing_aniso_rows(structure);
+    complete_atom_site_aniso(structure);
     // crysta's one acceptance rule for a magnetic structure, as its own load applies it.
     if (!structure.magnetic->operations.empty() || !structure.magnetic->radial_coefficients.empty()) {
         try {
