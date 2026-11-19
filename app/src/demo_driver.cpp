@@ -3133,10 +3133,13 @@ void DemoDriver::settle_then(const std::function<void()>& next) {
         const bool opening = session != nullptr && session->openingExample();
         // A page still being made after a project opened keeps its tab disabled, which no frame shows.
         bool preparing = false;
-        for (const QString& tab : {QStringLiteral("appBar.tab.structure"), QStringLiteral("appBar.tab.experiment"),
-                                   QStringLiteral("appBar.tab.analysis"), QStringLiteral("appBar.tab.report")}) {
-            const QQuickItem* item = find(tab, false);
-            preparing = preparing || (item != nullptr && item->property("preparing").toBool());
+        // The app bar's tabs live as long as the window: found once, not by a walk of every item at each poll.
+        static const QString kTabs[] = {QStringLiteral("appBar.tab.structure"), QStringLiteral("appBar.tab.experiment"),
+                                        QStringLiteral("appBar.tab.analysis"), QStringLiteral("appBar.tab.report")};
+        for (const QString& tab : kTabs) {
+            QPointer<QQuickItem>& item = app_bar_tabs_[tab];
+            if (!item) item = find(tab, false);
+            preparing = preparing || (item && item->property("preparing").toBool());
         }
         const QImage frame = grab();
 #if EDI_UI_INSTRUMENTATION

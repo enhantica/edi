@@ -3,6 +3,7 @@
 #define EDI_APP_DEMO_DRIVER_HPP
 
 #include <QDir>
+#include <QHash>
 #include <QElapsedTimer>
 #include <QImage>
 #include <QJsonArray>
@@ -208,6 +209,7 @@ class DemoDriver : public QObject {
     bool watching_ = false;
 #endif
     QElapsedTimer nav_clock_;  // the 100 ms schedule of next and previous presses
+    QHash<QString, QPointer<QQuickItem>> app_bar_tabs_;  // the settle poll's tabs, found once
     qint64 nav_base_ = -1;
     int nav_index_ = 0;
     QElapsedTimer timer_;
