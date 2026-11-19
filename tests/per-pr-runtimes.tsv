@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-19T05:09:33Z
+# measured_utc = 2026-11-19T08:26:36Z
 #
-# Recorded from: measured test run (2 node(s) measured once, 183855 banked, 2 stale row(s) dropped)
-# Collected tests: 255332; with a reported duration: 82873
+# Recorded from: measured test run (7 node(s) measured once, 183852 banked, 0 stale row(s) dropped)
+# Collected tests: 255334; with a reported duration: 82875
 # Module-scoped fixture costs recorded: 213
 #
 # Breaches are decided PER TIER against the table
@@ -29,12 +29,12 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 255332
+# inventory_python = 255334
 # inventory_cpp = 0
-# inventory_measured = 183857
+# inventory_measured = 183859
 # inventory_unmeasured = 71475
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
-# inventory_pr_python = 89067
+# inventory_pr_python = 89069
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -173335,14 +173335,14 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_examples.py::te
 0.060	tests/integration/py/test_magnetic_native_consumers.py::test_each_decoded_member_reaches_its_native_integration_consumer[Magnetic validation history cannot admit a different edited typed layout]
 0.060	tests/integration/py/test_magnetic_native_consumers.py::test_each_decoded_member_reaches_its_native_integration_consumer[Magnetic validation history cannot admit a different independent typed layout]
 0.100	tests/integration/py/test_magnetic_operator_contract.py::test_identity_family_does_not_take_pnma_cell_or_position_ties[factory-magcif]
-0.090	tests/integration/py/test_magnetic_operator_contract.py::test_identity_family_does_not_take_pnma_cell_or_position_ties[factory-native]
-0.080	tests/integration/py/test_magnetic_operator_contract.py::test_identity_family_does_not_take_pnma_cell_or_position_ties[project-magcif]
-0.080	tests/integration/py/test_magnetic_operator_contract.py::test_identity_family_does_not_take_pnma_cell_or_position_ties[project-native]
+0.100	tests/integration/py/test_magnetic_operator_contract.py::test_identity_family_does_not_take_pnma_cell_or_position_ties[factory-native]
+0.100	tests/integration/py/test_magnetic_operator_contract.py::test_identity_family_does_not_take_pnma_cell_or_position_ties[project-magcif]
+0.100	tests/integration/py/test_magnetic_operator_contract.py::test_identity_family_does_not_take_pnma_cell_or_position_ties[project-native]
 0.000	tests/integration/py/test_magnetic_operator_contract.py::test_large_exact_family_is_preserved_or_refused_without_a_table_fallback[factory-magcif]
 0.000	tests/integration/py/test_magnetic_operator_contract.py::test_large_exact_family_is_preserved_or_refused_without_a_table_fallback[factory-native]
 0.000	tests/integration/py/test_magnetic_operator_contract.py::test_large_exact_family_is_preserved_or_refused_without_a_table_fallback[project-magcif]
 0.000	tests/integration/py/test_magnetic_operator_contract.py::test_large_exact_family_is_preserved_or_refused_without_a_table_fallback[project-native]
-0.080	tests/integration/py/test_magnetic_operator_contract.py::test_omitted_nuclear_group_stays_absent_on_second_save
+0.100	tests/integration/py/test_magnetic_operator_contract.py::test_omitted_nuclear_group_stays_absent_on_second_save
 0.000	tests/integration/py/test_magnetic_operator_contract.py::test_operator_defined_anisotropic_row_is_refused_by_each_reader[factory]
 0.000	tests/integration/py/test_magnetic_operator_contract.py::test_operator_defined_anisotropic_row_is_refused_by_each_reader[project]
 0.010	tests/integration/py/test_magnetic_operator_contract.py::test_operator_defined_load_clears_forbidden_cell_and_position_free_flags
@@ -173354,6 +173354,8 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_operator_contra
 0.240	tests/integration/py/test_magnetic_operator_contract.py::test_shifted_inversion_is_exact_in_geometry_factors_and_second_save[97]
 0.240	tests/integration/py/test_magnetic_operator_contract.py::test_shifted_inversion_is_exact_in_geometry_factors_and_second_save[997]
 0.050	tests/integration/py/test_magnetic_operator_contract.py::test_table_identity_retains_its_anisotropic_support
+0.180	tests/integration/py/test_magnetic_operator_contract.py::test_unmatched_magnetic_families_keep_absent_letters[type-iv]
+0.100	tests/integration/py/test_magnetic_operator_contract.py::test_unmatched_magnetic_families_keep_absent_letters[untabulated-origin]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_pnma.py::test_each_product_reads_the_other_products_saved_moments[crysta]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_pnma.py::test_each_product_reads_the_other_products_saved_moments[edi]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_pnma.py::test_every_expanded_moment_matches_the_published_axial_operations
