@@ -61,8 +61,8 @@ EaElements.TextInput {
 
     function openContextMenu(parentItem) {
         if (contextMenu === null)
-            contextMenu = contextMenuComponent.createObject(parentItem)
-        contextMenu.popup()
+            contextMenu = contextMenuComponent.createObject(parentItem);
+        contextMenu.popup();
     }
 
     minored: !parameter.enabled ?? false
@@ -88,15 +88,15 @@ EaElements.TextInput {
         acceptedButtons: Qt.RightButton
         onClicked: mouse => {
             if (mouse.button === Qt.RightButton) {
-                control.openContextMenu(menuArea)
+                control.openContextMenu(menuArea);
             }
-            mouse.accepted = false
+            mouse.accepted = false;
         }
         onPressAndHold: mouse => {
             if (mouse.source === Qt.MouseEventNotSynthesized) {
-                control.openContextMenu(menuArea)
+                control.openContextMenu(menuArea);
             }
-            mouse.accepted = false
+            mouse.accepted = false;
         }
         // Menu
         Component {
