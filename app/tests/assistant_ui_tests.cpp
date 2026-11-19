@@ -111,8 +111,16 @@ private slots:
         QVERIFY(!dataFile->isEnabled());
         QVERIFY2(click("experiments.create"), qPrintable(diagnostic));
         QTRY_VERIFY(project.currentExperiment());
-        QVERIFY2(click("experiments.load"), qPrintable(diagnostic));
-        auto* menu = root->findChild<QObject*>("experiments.load.menu");
+        auto* group = root->findChild<QQuickItem*>("group.experiments");
+        QVERIFY(group);
+        group->setProperty("collapsed", true);
+        auto* title = qobject_cast<QQuickItem*>(group->property("titleArea").value<QObject*>());
+        QVERIFY(title);
+        QTest::mouseClick(window, Qt::LeftButton, Qt::NoModifier,
+                          title->mapToScene(QPointF(title->width() / 2, title->height() / 2)).toPoint());
+        QTRY_VERIFY(!group->property("collapsed").toBool());
+        QVERIFY2(click("experiments.loadData.0"), qPrintable(diagnostic));
+        auto* menu = root->findChild<QObject*>("experiments.load.dataMenu");
         QVERIFY(menu);
         QTRY_VERIFY(menu->property("visible").toBool());
         QVERIFY(dataFile->isEnabled());
@@ -134,6 +142,60 @@ private slots:
         for (auto* original : popups)
             structurePopup |= original->property("visible").toBool() && original->property("kind") == "structure";
         QVERIFY(structurePopup);
+    }
+    void aliasSearchTypesPlainNameAndSelectsDecoratedEntry() {
+        QQmlApplicationEngine engine;
+        edi_app::configure_engine(engine);
+        QQmlComponent component(&engine);
+        component.setData(R"(
+            import QtQuick
+            import QtQuick.Controls
+            import edi.app
+            ApplicationWindow {
+                width: 800; height: 600; visible: true
+                SearchableComboBox {
+                    objectName: "alias.parameter.0"
+                    x: 40; y: 40; width: 500
+                    readonly property var names: ["phase.cell.length_a", "phase.cell.length_b"]
+                    model: ["cube a · phase.cell.length_a", "cube b · phase.cell.length_b"]
+                    currentIndex: 0
+                }
+            }
+        )", QUrl("qrc:/alias-search.qml"));
+        QScopedPointer<QObject> root(component.create());
+        QVERIFY2(root, qPrintable(component.errorString()));
+        auto* window = qobject_cast<QQuickWindow*>(root.data());
+        QVERIFY(window);
+        QVERIFY(QTest::qWaitForWindowActive(window));
+        auto* target = root->findChild<QQuickItem*>("alias.parameter.0");
+        QVERIFY(target);
+        edi_app::AssistantWidgetInput input(*window);
+        QString typed, diagnostic;
+        bool done = false, delivered = false;
+        edi_app::AssistantWidgetInput::Request request;
+        request.kind = edi_app::AssistantWidgetInput::Kind::SearchChoice;
+        request.target = target;
+        request.option = 1;
+        request.value = "phase.cell.length_b";
+        request.current = [target, window] { return target->window() == window; };
+        request.restoreCurrent = request.current;
+        request.prepareCommit = [&] {
+            auto* popup = target->property("popup").value<QObject*>();
+            auto* content = popup ? popup->property("contentItem").value<QObject*>() : nullptr;
+            auto* header = content ? content->property("headerItem").value<QObject*>() : nullptr;
+            auto* search = header ? header->findChild<QObject*>("comboBox.search") : nullptr;
+            typed = search ? search->property("text").toString() : QString();
+            return true;
+        };
+        request.finishCommit = [] {};
+        request.completed = [&](bool ok, const QString& message, edi_app::ControlCause) {
+            delivered = ok; diagnostic = message; done = true;
+        };
+        input.start(std::move(request));
+        QVERIFY(QTest::qWaitFor([&] { return done; }, 10000));
+        QVERIFY2(delivered, qPrintable(diagnostic));
+        QCOMPARE(typed, QString("phase.cell.length_b"));
+        QCOMPARE(target->property("currentIndex").toInt(), 1);
     }
     void testModelDefaultsAndExplicitChoice() {
         QQmlApplicationEngine engine;
