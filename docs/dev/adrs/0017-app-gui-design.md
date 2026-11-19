@@ -582,6 +582,8 @@ Saving is active:
   state. The history snapshot is taken only while a fit exists.
 - **Work before Create** (the owner, 2026-11-19). Once the Project page is open the app holds an untitled project
   in memory (`Session.untitled`), so Structure can be used without creating a project first.
+  The app bar's Clear closes the project and restores the startup Home page and page access, with no project.
+  Opening Project afterwards starts a new untitled project.
   Experiment requires at least one structure, for both untitled and named projects; Analysis and Report
   still require their scientific inputs. Its
   first Save opens Create project, which names that project and saves it with its work. Create on the Project page

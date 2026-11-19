@@ -150,8 +150,7 @@ QtObject {
         untitledSaveRequested();
     }
 
-    // The app bar's reset: close the project and open the Project page, where a new project starts (the owner,
-    // 2026-10-11).
+    // Clear returns to Home without a project; opening Project starts untitled work (edi ADR-0017 §13).
     function reset() {
         ApplicationInfo.resetWorkflow();
     }

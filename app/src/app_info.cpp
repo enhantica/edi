@@ -3313,8 +3313,7 @@ void ApplicationInfo::openWorkflowPage(const QJSValue& page) const {
     startUntitledOnProjectPage(page);
 }
 void ApplicationInfo::startUntitledOnProjectPage(const QJSValue& page) const {
-    // Once the Project page is open the app holds an untitled project, so Structure and Experiment work at once (the
-    // owner, 2026-11-19); its first Save opens Create project.
+    // Entering Project starts work before Create; Clear leaves no project (ADR-0017 §13).
     const auto frame = panelUsageEngine(this);
     if (!panelUsageReady(frame) || page.toInt() < projectPage(frame, "Project").toInt()) return;
     if (!assistantContextField(frame, "Session", "project").isNull()) return;
@@ -3325,12 +3324,10 @@ void ApplicationInfo::startUntitledOnProjectPage(const QJSValue& page) const {
 void ApplicationInfo::resetWorkflow() const {
     const auto frame = panelUsageEngine(this);
     projectInvoke(frame, "Session", "closeProject");
-    const auto page = projectPage(frame, "Project");
+    const auto page = projectPage(frame, "Home");
     panelUsageContextWrite(frame, "reached", page);
     const auto globals = assistantContextField(frame, "EaGlobals", "Vars");
-    const auto currentPage = projectPage(frame, "Project");
-    assistantMemberWrite(frame, globals, "appBarCurrentIndex", currentPage);
-    startUntitledOnProjectPage(currentPage);
+    assistantMemberWrite(frame, globals, "appBarCurrentIndex", page);
 }
 void ApplicationInfo::saveCurrentProject() const {
     const auto frame = panelUsageEngine(this);
