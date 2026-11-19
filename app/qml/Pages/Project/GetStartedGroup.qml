@@ -90,6 +90,14 @@ SideBarGroup {
         ApplicationInfo.chooseCreateProject();
     }
 
+    // Save on the untitled project opens Create project here: it names the project and saves it, its work kept.
+    Connections {
+        target: AppState
+        function onUntitledSaveRequested() {
+            group.chooseCreate();
+        }
+    }
+
     EaComponents.ProjectDescriptionDialog {
         id: createDialog
         objectName: "createProject.dialog"
@@ -104,6 +112,14 @@ SideBarGroup {
         // A tutorial's project, made by the user in a tutorial that set theirs aside, is not saved until they keep
         // it (edi ADR-0064).
         showsLocation: !AppState.tutorialRunning || !Session.hasProjectSetAside || Session.project !== null
+        // On an untitled project the form starts from what the Project page already holds for it.
+        onAboutToShow: {
+            if (Session.untitled && Session.project !== null) {
+                projectTitle = Session.project.title;
+                projectAuthors = Session.project.authors;
+                projectDescription = Session.project.description;
+            }
+        }
         onOpened: ApplicationInfo.createProjectDialogEvent(0)
         onRejected: ApplicationInfo.createProjectDialogEvent(1)
         onClosed: ApplicationInfo.createProjectDialogEvent(2)

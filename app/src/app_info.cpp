@@ -3310,6 +3310,17 @@ void ApplicationInfo::openWorkflowPage(const QJSValue& page) const {
     panelUsageContextWrite(frame, "reached", maximum);
     const auto globals = assistantContextField(frame, "EaGlobals", "Vars");
     assistantMemberWrite(frame, globals, "appBarCurrentIndex", page);
+    startUntitledOnProjectPage(page);
+}
+void ApplicationInfo::startUntitledOnProjectPage(const QJSValue& page) const {
+    // Once the Project page is open the app holds an untitled project, so Structure and Experiment work at once (the
+    // owner, 2026-11-19); its first Save opens Create project.
+    const auto frame = panelUsageEngine(this);
+    if (!panelUsageReady(frame) || page.toInt() < projectPage(frame, "Project").toInt()) return;
+    if (!assistantContextField(frame, "Session", "project").isNull()) return;
+    const auto rule = assistantContextField(frame, "Preferences", "newProjectSuRule");
+    const bool libraries = assistantContextField(frame, "Preferences", "newReportLibraries").strictlyEquals(QJSValue(QStringLiteral("embedded")));
+    projectInvoke(frame, "Session", "startUntitledProject", {rule, QJSValue(libraries)});
 }
 void ApplicationInfo::resetWorkflow() const {
     const auto frame = panelUsageEngine(this);
@@ -3319,10 +3330,13 @@ void ApplicationInfo::resetWorkflow() const {
     const auto globals = assistantContextField(frame, "EaGlobals", "Vars");
     const auto currentPage = projectPage(frame, "Project");
     assistantMemberWrite(frame, globals, "appBarCurrentIndex", currentPage);
+    startUntitledOnProjectPage(currentPage);
 }
 void ApplicationInfo::saveCurrentProject() const {
     const auto frame = panelUsageEngine(this);
     if (assistantContextField(frame, "Session", "project").isNull() || !panelUsageReady(frame)) return;
+    // An untitled project's first Save is Create project: it names the project and saves it (the owner, 2026-11-19).
+    if (panelUsageTruth(assistantContextField(frame, "Session", "untitled"))) { projectInvoke(frame, "AppState", "requestUntitledSave"); return; }
     if (panelUsageTruth(assistantContextField(frame, "Session", "needsSaveAs"))) { projectInvoke(frame, "window", "saveProjectAs"); return; }
     const auto saved = projectInvoke(frame, "Session", "save");
     if (!panelUsageTruth(saved) && !projectFieldIs(frame, "Session", "lastError", QJSValue(QString{}))) projectInvoke(frame, "saveError", "open");
@@ -11107,6 +11121,8 @@ void ApplicationInfo::chooseCreateProject() const {
 }
 void ApplicationInfo::createProjectClicked() const {
     const auto f = panelUsageEngine(this); const auto original = createGroupField(f, "assistantCreate"), state = panelUsageContextRead(f, "AppState");
+    // Create on the untitled project names and saves it, its work kept: nothing to ask about first.
+    if (panelUsageTruth(assistantContextField(f, "Session", "untitled"))) { projectInvoke(f, "group", "chooseCreate"); return; }
     panelUsageMemberCall(f, state, "afterChanges", {panelUsageClosure(f, 384, {original}), panelUsageClosure(f, 385, {original}), QJSValue(true)});
 }
 void ApplicationInfo::createProjectDialogEvent(int kind) const {
