@@ -362,11 +362,12 @@ bool AtomSiteListModel::setText(int row, const QString& role, const QString& val
     edi::Structure& structure = structure_;
     const std::string text = value.toStdString();
     const edi::Edit edit = label                                      ? edi::Edit::rename_atom_site(structure, *site, text)
-                           : role == QLatin1String("typeSymbol")      ? edi::Edit::assign(site->type_symbol, text)
+                           : role == QLatin1String("typeSymbol")      ? edi::Edit::site_type(structure, *site, text)
                            : role == QLatin1String("wyckoffLetter")   ? edi::Edit::assign(site->wyckoff_letter, text)
                                                                       : edi::Edit::adp_type(structure, *site, text);
     // A type change can add or remove a tensor row, which changes the parameter set.
-    return editor_.apply_creation_control(edit, label || role == QLatin1String("adpType"),
+    // A new element can drop a moment its ions cannot carry, which changes the parameter set too.
+    return editor_.apply_creation_control(edit, label || role == QLatin1String("adpType") || role == QLatin1String("typeSymbol"),
         {ProjectEditor::CreationAction::Kind::AtomText,site,role,value}).isEmpty();
 }
 
@@ -466,9 +467,51 @@ void AtomSiteAdpListModel::setType(int row, const QString& type) {
 
 // ---- AtomSiteMomentListModel --------------------------------------------------------------------
 
+namespace {
+// A refusal in plain words for the page (the owner, 2026-11-19): crysta's text names the item it refused
+// (`_category.item 'value' ...`), which the page does not show; the known propagation-vector reasons are said as
+// what the user can do.
+QString plain_refusal(const QString& raw) {
+    QString text = raw;
+    static const QRegularExpression tag(QStringLiteral(R"(^_[A-Za-z0-9_]+\.[A-Za-z0-9_.-]+\s+'[^']*'\s*:?\s*)"));
+    text.remove(tag);
+    static const QRegularExpression vector(QStringLiteral(R"(^propagation vector '[^']*' \(([^)]*)\):\s*(.*)$)"));
+    const QRegularExpressionMatch found = vector.match(text);
+    if (!found.hasMatch()) {
+        return text.isEmpty() ? text : text.left(1).toUpper() + text.mid(1);
+    }
+    const QString k = found.captured(1);
+    const QString reason = found.captured(2);
+    static const QRegularExpression axis(QStringLiteral(R"(cell's ([abc])' axis is not a period)"));
+    if (const QRegularExpressionMatch along = axis.match(reason); along.hasMatch()) {
+        const QString letter = along.captured(1);
+        const QStringList parts = k.split(QLatin1Char(','));
+        const int index = letter.at(0).unicode() - 'a';
+        int times = 0;
+        if (index >= 0 && index < parts.size()) {
+            const QStringList fraction = parts.at(index).trimmed().split(QLatin1Char('/'));
+            if (fraction.size() == 2) times = fraction.at(1).toInt();
+        }
+        const QString longer = times == 2 ? QObject::tr("twice as long") : times > 2 ? QObject::tr("%1 times as long").arg(times)
+                                                                                    : QObject::tr("longer");
+        return QObject::tr("k = %1 needs a cell %2 along %3, which this magnetic group's cell cannot carry. Choose a "
+                           "group with that cell, or a k this cell carries.").arg(k, longer, letter);
+    }
+    if (reason.contains(QLatin1String("grey group admits only k = 0"))) {
+        return QObject::tr("A grey group (every moment zero) carries only k = 0,0,0. Choose a magnetic subgroup first.");
+    }
+    static const QRegularExpression translation(QStringLiteral(R"(the translation \(([^)]*)\) does not keep it)"));
+    if (const QRegularExpressionMatch kept = translation.match(reason); kept.hasMatch()) {
+        return QObject::tr("k = %1 does not agree with the group's translation %2, so this group cannot carry it.")
+            .arg(k, kept.captured(1));
+    }
+    return QObject::tr("k = %1 was not taken: %2").arg(k, reason);
+}
+}  // namespace
+
 AtomSiteMomentListModel::AtomSiteMomentListModel(edi::Structure& structure, ProjectEditor& editor,
                                                  ParameterRegistry& registry, QObject* parent)
-    : RowTableModel({"label", "ion", "mx", "my", "mz", "symmform"}, parent),
+    : RowTableModel({"label", "ion", "mx", "my", "mz", "symmform", "type"}, parent),
       structure_(structure),
       editor_(editor),
       registry_(registry) {
@@ -504,6 +547,8 @@ void AtomSiteMomentListModel::sync() {
         } else {
             values << QVariant() << QVariant() << QVariant() << QString();
         }
+        // The site's element: the ion choices follow it (the owner, 2026-11-19).
+        values.append(QString::fromStdString(site->type_symbol.value()));
         rows.append({site.get(), values});
     }
     setTableRows(rows);
@@ -511,7 +556,7 @@ void AtomSiteMomentListModel::sync() {
     emit revisionChanged();
 }
 
-QStringList AtomSiteMomentListModel::ions(int row) const {
+QStringList AtomSiteMomentListModel::ions(int row, const QString& /*type*/) const {
     const auto* site = static_cast<const edi::AtomSite*>(keyAt(row));
     QStringList out{QStringLiteral("none")};
     if (site != nullptr) {
@@ -742,6 +787,7 @@ QString AtomSiteMomentListModel::setComponent(int row, const QString& form, int 
             }
         }
     }
+    refusal = plain_refusal(refusal);
     if (refusal != refusal_) {
         refusal_ = refusal;
         emit refusalChanged();
@@ -767,7 +813,7 @@ void PropagationVectorListModel::sync() {
 
 bool PropagationVectorListModel::replace(std::vector<std::pair<std::string, std::string>> rows) {
     edi::Structure& structure = structure_;
-    const QString refusal = editor_.apply(edi::Edit::propagation_vectors(structure, std::move(rows)), true);
+    const QString refusal = plain_refusal(editor_.apply(edi::Edit::propagation_vectors(structure, std::move(rows)), true));
     if (refusal != refusal_) {
         refusal_ = refusal;
         emit refusalChanged();
@@ -795,8 +841,7 @@ bool PropagationVectorListModel::setVector(int row, const QString& vector) {
 
 void PropagationVectorListModel::append() {
     auto rows = structure_.magnetic->propagation_vectors;
-    // The next free id, and a half-order vector along a to start from; crysta refuses it with its reason
-    // when the cell and the group cannot carry it.
+    // The next free id and k = 0,0,0 for the user to edit: no vector the user did not enter (the owner, 2026-11-19).
     int n = static_cast<int>(rows.size()) + 1;
     const auto taken = [&rows](const std::string& id) {
         return std::any_of(rows.begin(), rows.end(), [&id](const auto& row) { return row.first == id; });
@@ -804,7 +849,7 @@ void PropagationVectorListModel::append() {
     while (taken(std::to_string(n))) {
         ++n;
     }
-    rows.emplace_back(std::to_string(n), "1/2,0,0");
+    rows.emplace_back(std::to_string(n), "0,0,0");
     replace(std::move(rows));
 }
 
@@ -927,6 +972,8 @@ MagneticGroupView StructureViewModel::magneticGroup() const {
     for (const auto& row : structure_.magnetic->transforms) {
         if (row.second.source == "BNS") setting = row.second.pp_abc;
     }
+    // A file that gives no transform is in the BNS standard setting: the dictionary's default, never blank.
+    if (setting.empty() && !group.number_bns.empty()) setting = "a,b,c;0,0,0";
     return MagneticGroupView{QString::fromStdString(group.number_bns), QString::fromStdString(group.name_bns),
                              QString::fromStdString(name_uni), QString::fromStdString(group.number_og),
                              QString::fromStdString(group.name_og), QString::fromStdString(group.point_group_name_uni),
@@ -964,7 +1011,7 @@ QString StructureViewModel::derivedPropagationVector() const {
 }
 
 bool StructureViewModel::setMagnetic(bool magnetic) {
-    const QString refusal = editor_.apply(edi::Edit::structure_magnetic(structure_, magnetic), true);
+    const QString refusal = plain_refusal(editor_.apply(edi::Edit::structure_magnetic(structure_, magnetic), true));
     if (refusal != magnetic_group_refusal_) {
         magnetic_group_refusal_ = refusal;
         emit magneticGroupRefusalChanged();
@@ -973,7 +1020,7 @@ bool StructureViewModel::setMagnetic(bool magnetic) {
 }
 
 bool StructureViewModel::setMagneticSetting(const QString& transform) {
-    const QString refusal = editor_.apply(edi::Edit::magnetic_setting(structure_, transform.toStdString()), true);
+    const QString refusal = plain_refusal(editor_.apply(edi::Edit::magnetic_setting(structure_, transform.toStdString()), true));
     if (refusal != magnetic_group_refusal_) {
         magnetic_group_refusal_ = refusal;
         emit magneticGroupRefusalChanged();
@@ -997,8 +1044,8 @@ bool StructureViewModel::setMagneticGroup(int index) {
     if (index < 0 || index >= static_cast<int>(groups.size())) {
         return false;
     }
-    const QString refusal = editor_.apply(
-        edi::Edit::magnetic_space_group(structure_, groups[static_cast<std::size_t>(index)].number_bns), true);
+    const QString refusal = plain_refusal(editor_.apply(
+        edi::Edit::magnetic_space_group(structure_, groups[static_cast<std::size_t>(index)].number_bns), true));
     if (refusal != magnetic_group_refusal_) {
         magnetic_group_refusal_ = refusal;
         emit magneticGroupRefusalChanged();

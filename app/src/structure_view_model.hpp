@@ -232,7 +232,8 @@ class AtomSiteMomentListModel : public RowTableModel {
                             QObject* parent);
     void sync();
     // The ions a row can choose: "none", then the form-factor table's ions for the site's element.
-    Q_INVOKABLE QStringList ions(int row) const;
+    // The magnetic ions of the site's element; `type` is the element the caller shows, so a change of it re-reads.
+    Q_INVOKABLE QStringList ions(int row, const QString& type = {}) const;
     // "none" removes the site's moment; an ion marks the site magnetic and sets its type's ion.
     Q_INVOKABLE void setIon(int row, const QString& ion);
     // The row's moment in `form` ("crystal_axes", "cartesian" or "spherical"; edi ADR-0078): its three components,
@@ -244,6 +245,13 @@ class AtomSiteMomentListModel : public RowTableModel {
     // in one edit. Returns why it was refused, or an empty text, which `refusal` also holds.
     Q_INVOKABLE QString setComponent(int row, const QString& form, int k, double value);
     int revision() const { return revision_; }
+    // The page shows a refusal once, in the app's error popup, then clears it here.
+    Q_INVOKABLE void clearRefusal() {
+        if (!refusal_.isEmpty()) {
+            refusal_.clear();
+            emit refusalChanged();
+        }
+    }
     QString refusal() const { return refusal_; }
 
    signals:
@@ -303,6 +311,13 @@ class PropagationVectorListModel : public RowTableModel {
     Q_INVOKABLE bool setVector(int row, const QString& vector);
     Q_INVOKABLE void append();
     Q_INVOKABLE void remove(int row);
+    // The refused vector is gone from the table at once, so the page clears its reason after a while.
+    Q_INVOKABLE void clearRefusal() {
+        if (!refusal_.isEmpty()) {
+            refusal_.clear();
+            emit refusalChanged();
+        }
+    }
     QString refusal() const { return refusal_; }
 
    signals:

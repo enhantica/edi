@@ -258,6 +258,9 @@ class Session : public QObject {
     // folder project. An empty string, else why the archive could not be written.
     Q_INVOKABLE QString writeBackReports();
     Q_INVOKABLE void clearError();
+    // A change a page could not make (the owner, 2026-11-19): said in the app's error popup (`refused`) and kept as an
+    // error in the Messages center; the page keeps its previous value.
+    Q_INVOKABLE void reportRefusal(const QString& message);
     // Where Save project as starts, with the name filled in (owner, 2026-10-25): the project's own folder or .zip
     // name (the project's name for one with neither), `.zip` for an archive, in the folder the project is in, else in
     // the user's documents.
@@ -342,6 +345,7 @@ class Session : public QObject {
     void saveDataChoiceNeeded(int request, qint64 bytes, int files, bool large, bool linked);
     void colourSchemeChanged();
     void lastErrorChanged();
+    void refused(const QString& message);
     // A project or an example could not be opened: every refused open says why (the window shows it), never a silent
     // no-op. `file` is a copy of the project member whose reading failed, for the error popup to attach when the user
     // sends the problem; empty when no single file is to blame. takeFailedFile returns the same path.

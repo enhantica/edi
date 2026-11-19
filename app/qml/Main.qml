@@ -1209,6 +1209,20 @@ EaComponents.ApplicationWindow {
         message: Session.lastError
     }
 
+    // A change a page could not make, in plain words; the Messages center keeps it too (the owner, 2026-11-19).
+    Connections {
+        target: Session
+        function onRefused(message) {
+            refusalError.message = message;
+            refusalError.open();
+        }
+    }
+    ErrorDialog {
+        id: refusalError
+        objectName: "change.error"
+        title: qsTr("The change was not made")
+    }
+
     ErrorDialog {
         id: saveError
         objectName: "save.error"

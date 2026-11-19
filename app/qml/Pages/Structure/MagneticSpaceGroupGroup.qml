@@ -10,7 +10,8 @@ import edi.app
 // system is read only and not saved (the magnetic CIF dictionary has no item for it). Number BNS and Name BNS are two
 // linked, searchable fields over crysta's table of the 1651 groups: choosing either replaces the structure's operators
 // when crysta admits them, else nothing changes and the refusal says why. Setting is the transform to the BNS
-// standard, `a,b,c;0,0,0` for the standard itself. The derived symbols and the parent group are on Extra.
+// standard, `a,b,c;0,0,0` for the standard itself. The derived symbols and the parent group are on Extra. A refused
+// choice shows in the app's error popup and the Messages center; the fields keep their values.
 Column {
     id: group
 
@@ -43,8 +44,8 @@ Column {
             currentIndex: group.index
             displayText: group.magnetic.number_bns ?? ""
             onActivated: index => {
-                if (group.structure)
-                    group.structure.setMagneticGroup(index);
+                if (group.structure && !group.structure.setMagneticGroup(index))
+                    Session.reportRefusal(group.structure.magneticGroupRefusal);
                 currentIndex = Qt.binding(() => group.index);
             }
         }
@@ -58,8 +59,8 @@ Column {
             currentIndex: group.index
             displayText: group.magnetic.name_bns ?? ""
             onActivated: index => {
-                if (group.structure)
-                    group.structure.setMagneticGroup(index);
+                if (group.structure && !group.structure.setMagneticGroup(index))
+                    Session.reportRefusal(group.structure.magneticGroupRefusal);
                 currentIndex = Qt.binding(() => group.index);
             }
         }
@@ -70,17 +71,9 @@ Column {
             label: qsTr("Setting")
             fieldValue: group.magnetic.setting ?? ""
             onCommitted: text => {
-                if (group.structure)
-                    group.structure.setMagneticSetting(text);
+                if (group.structure && !group.structure.setMagneticSetting(text))
+                    Session.reportRefusal(group.structure.magneticGroupRefusal);
             }
         }
-    }
-    EaElements.Label {
-        objectName: "magneticSpaceGroup.refusal"
-        visible: text !== ""
-        width: EaStyle.Sizes.sideBarContentWidth
-        wrapMode: Text.WordWrap
-        color: EaStyle.Colors.red
-        text: group.structure ? group.structure.magneticGroupRefusal : ""
     }
 }

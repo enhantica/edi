@@ -132,7 +132,8 @@ SideBarGroup {
                             if (!structure || (index === 1) === structure.magnetic)
                                 return;
                             if (index === 1) {
-                                structure.setMagnetic(true);
+                                if (!structure.setMagnetic(true))
+                                    Session.reportRefusal(structure.magneticGroupRefusal);
                                 return;
                             }
                             const dialog = toCrystalComponent.createObject(Overlay.overlay, {
@@ -162,8 +163,8 @@ SideBarGroup {
                 standardButtons: Dialog.Ok | Dialog.Cancel
                 contentWidth: AppSizes.messagesDialogContentWidth
                 onClosed: destroy()
-                onAccepted: if (toCrystal.structure)
-                    toCrystal.structure.setMagnetic(false)
+                onAccepted: if (toCrystal.structure && !toCrystal.structure.setMagnetic(false))
+                    Session.reportRefusal(toCrystal.structure.magneticGroupRefusal)
 
                 EaElements.Label {
                     width: toCrystal.contentWidth

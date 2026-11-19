@@ -2540,6 +2540,14 @@ void Session::keepChanges() {
                                   [root](const WebStorageAnswer&) { QDir(root).removeRecursively(); });
 }
 
+void Session::reportRefusal(const QString& message) {
+    if (message.isEmpty()) {
+        return;
+    }
+    warnings_->post(QStringLiteral("refusal:%1").arg(++project_messages_), message, QStringLiteral("error"));
+    emit refused(message);
+}
+
 void Session::setLastError(const QString& error) {
     if (error != last_error_) {
         last_error_ = error;

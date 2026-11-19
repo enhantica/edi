@@ -84,14 +84,16 @@ Column {
         }
     }
 
-    // Why the last change was not made, until one is.
-    EaElements.Label {
-        objectName: "propagationVectors.refusal"
-        visible: group.vectors !== null && group.vectors.refusal !== ""
-        width: EaStyle.Sizes.sideBarContentWidth
-        wrapMode: Text.WordWrap
-        color: EaStyle.Colors.red
-        text: group.vectors ? group.vectors.refusal : ""
+    // A vector the structure cannot carry is not taken: the row keeps its value and the reason shows in plain words in
+    // the app's error popup and the Messages center, not as a lasting label (the owner, 2026-11-19).
+    Connections {
+        target: group.vectors
+        function onRefusalChanged() {
+            if (group.vectors && group.vectors.refusal !== "") {
+                Session.reportRefusal(group.vectors.refusal);
+                group.vectors.clearRefusal();
+            }
+        }
     }
 
     EaElements.SideBarButton {
