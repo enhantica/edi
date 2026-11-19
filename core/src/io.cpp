@@ -939,6 +939,20 @@ void read_magnetic(const Block& block, Structure& structure, const std::string& 
                                             cell("_space_group_magn_transforms.source")}});
         }
     }
+    // The dictionary's scalar spelling of the transform to the BNS standard: kept as the loop's BNS row, which is how
+    // the structure is written, unless the loop already gives one.
+    if (const std::string scalar = text("_space_group_magn.transform_BNS_Pp_abc"); !scalar.empty()) {
+        const bool listed = std::any_of(magnetic.transforms.begin(), magnetic.transforms.end(),
+                                        [](const auto& row) { return row.second.source == "BNS"; });
+        if (!listed) {
+            std::string id = "1";
+            for (int next = 2; std::any_of(magnetic.transforms.begin(), magnetic.transforms.end(),
+                                           [&id](const auto& row) { return row.first == id; });
+                 ++next)
+                id = std::to_string(next);
+            magnetic.transforms.push_back({id, {scalar, "BNS"}});
+        }
+    }
     // The `_iso_*` declarations, kept as crysta keeps them: its reading of the same text, so the order and every
     // token (a quoted '?' apart from a bare ?) survive, which this reader's decoded values cannot carry. A loop mixing
     // them with other names cannot be kept whole, so it refuses.
@@ -1256,8 +1270,14 @@ Structure structure_from_block(const Block& block, const std::string& where) {
     add_missing_aniso_rows(structure);
     complete_atom_site_aniso(structure);
     read_magnetic(block, structure, where);
+    // A Magnetic structure is written without `_space_group` (edi ADR-0078): its family table setting is found again
+    // from its operators, else its symmetry comes from them alone.
     if (group_omitted) {
-        structure.magnetic.modify([](MagneticDescription& magnetic) { magnetic.space_group_declared = false; });
+        if (adopt_magnetic_family_setting(structure)) {
+            complete_atom_site_aniso(structure);  // the tensors as the adopted setting ties them
+        } else {
+            structure.magnetic.modify([](MagneticDescription& magnetic) { magnetic.space_group_declared = false; });
+        }
     }
     // crysta's one acceptance rule for a magnetic structure, as its own load applies it.
     if (!structure.magnetic->operations.empty()) {

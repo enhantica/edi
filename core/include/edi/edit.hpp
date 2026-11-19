@@ -882,6 +882,14 @@ class Edit {
     static Edit magnetic_space_group(Structure& structure, std::string number_bns) {
         return Edit([&structure, number_bns = std::move(number_bns)] { set_magnetic_space_group(structure, number_bns); });
     }
+    // Crystal or Magnetic (set_structure_magnetic).
+    static Edit structure_magnetic(Structure& structure, bool magnetic) {
+        return Edit([&structure, magnetic] { set_structure_magnetic(structure, magnetic); });
+    }
+    // The transform to the BNS standard (set_magnetic_setting).
+    static Edit magnetic_setting(Structure& structure, std::string transform) {
+        return Edit([&structure, transform = std::move(transform)] { set_magnetic_setting(structure, transform); });
+    }
     // The propagation vectors, checked as a whole (set_propagation_vectors).
     static Edit propagation_vectors(Structure& structure, std::vector<std::pair<std::string, std::string>> rows) {
         return Edit([&structure, rows = std::move(rows)] { set_propagation_vectors(structure, rows); });

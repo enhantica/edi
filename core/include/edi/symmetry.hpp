@@ -132,6 +132,21 @@ void set_magnetic_symmetry(Structure& structure, std::vector<std::pair<std::stri
                            const std::optional<crysta::MagneticGroupName>& group = std::nullopt);
 // The same with a group from crysta's table of the 1651 magnetic space groups, by BNS number, in its BNS setting.
 void set_magnetic_space_group(Structure& structure, const std::string& number_bns);
+// A magnetic structure read without `_space_group` (edi ADR-0078, site symmetry from the magnetic group): for types
+// I-III the family group (the operations with time reversal ignored) is a table setting of the IT number its parent or
+// its BNS number names. That setting becomes the structure's space group, so Wyckoff letters, multiplicities and
+// coordinate ties come from the table and the cell and positions stay fittable. False, and nothing changed, when no
+// setting matches (a type IV group, a setting the table does not hold): the symmetry then comes from the operators.
+bool adopt_magnetic_family_setting(Structure& structure);
+// Crystal or Magnetic (edi ADR-0078). Magnetic: a structure whose symmetry is a magnetic space group.
+bool structure_magnetic(const Structure& structure);
+// Makes a Crystal structure Magnetic with the grey group of its space group (every moment zero by symmetry until a
+// magnetic subgroup is chosen), or a Magnetic one Crystal with its family space group, its moments and other
+// magnetic data dropped. A refusal throws its reason and leaves the structure as it was.
+void set_structure_magnetic(Structure& structure, bool magnetic);
+// The transform of a Magnetic structure's setting to the BNS standard (`a,b,c;0,0,0` for the standard itself), kept as
+// the transforms loop's BNS row.
+void set_magnetic_setting(Structure& structure, const std::string& transform);
 
 // One tensor row for each anisotropic site and none for any other (diffraction-lib's
 // _sync_atom_site_aniso): a missing row holds the tensor of the site's isotropic value, through
