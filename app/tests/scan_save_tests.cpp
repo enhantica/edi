@@ -758,13 +758,14 @@ private slots:
                  qPrintable(session.lastError()));
         auto* project = session.project();
         QTRY_VERIFY_WITH_TIMEOUT(!project->calculating(), 60000);
-        edi::clear_fit_result(project->project());
+        auto& model = const_cast<edi::Project&>(project->project());
+        edi::clear_fit_result(model);
         const QString data = QStringLiteral(EDI_SOURCE_DIR "/docs/user/cli/pd-neut-cwl_cosio-d20_scan-162f/project/experiments/d20_scan/01_001_497p3790.dat");
         QVERIFY2(project->loadDataInto(project->currentExperiment(), QUrl::fromLocalFile(data)), qPrintable(project->lastError()));
         QTRY_VERIFY_WITH_TIMEOUT(!project->calculating(), 60000);
-        project->project().fit_result.result_kind = "single";
-        project->project().fit_result.message = "describes only the replacement";
-        project->project().experiments.front()->fit_n_data_points = 7;
+        model.fit_result.result_kind = "single";
+        model.fit_result.message = "describes only the replacement";
+        model.experiments.front()->fit_n_data_points = 7;
         project->undo();
         QTRY_VERIFY_WITH_TIMEOUT(!project->calculating(), 60000);
         QVERIFY(project->project().fit_result.result_kind.empty());
