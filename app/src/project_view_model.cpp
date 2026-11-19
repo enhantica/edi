@@ -29,6 +29,7 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QSettings>
+#include <atomic>
 #include <mutex>
 #include <QUrl>
 #include <limits>
@@ -817,11 +818,16 @@ void ProjectViewModel::storeSelection() const {
     // The values are read here; the file is written on a worker, one write at a time, as a followed scan changes the
     // dataset every run and a write of the settings file took tens of milliseconds on the GUI thread. A write still
     // pending at quit is waited for with the rest of the pool (main.cpp).
-    run_in_background([path = settings_file_path(), key = selectionKey(),
+    // Each write carries its generation; a worker writes only the newest one asked for, so a slower, older write never
+    // lands after a newer one (the pool may run them in any order).
+    static std::atomic<std::uint64_t> newest{0};
+    const std::uint64_t generation = ++newest;
+    run_in_background([path = settings_file_path(), key = selectionKey(), generation,
                        value = QStringList{structure ? structure->name() : QString(),
                                            experiment ? experiment->name() : QString(), dataset}] {
         static std::mutex writing;
         const std::lock_guard lock(writing);
+        if (generation != newest.load()) return;  // a newer selection is on its way and is written instead
         QSettings store(path, QSettings::IniFormat);
         store.beginGroup(QStringLiteral("Selections"));
         store.setValue(key, value);
