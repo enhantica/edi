@@ -1443,6 +1443,24 @@ void identify_magnetic_group(Structure& s, const SpaceGroupSettingName& setting)
 }
 }  // namespace
 
+void identify_declared_magnetic_family(Structure& s) {
+    // A file that declares `_space_group` for a magnetic structure without a BNS number: the declared table setting is
+    // its family, whatever its parent says, so the group is named from it before a save drops the declaration.
+    if (s.magnetic->operations.empty() || !s.magnetic->group.number_bns.empty() || !s.magnetic->space_group_declared) return;
+    crysta::SpaceGroup held;
+    try {
+        held = resolve_group(s);
+    } catch (const std::invalid_argument&) {
+        return;
+    }
+    if (crysta::operator_defined_symmetry(s.magnetic->operations, s.magnetic->centerings, held)) return;
+    SpaceGroupSettingName setting;
+    setting.it_number = held.it_number;
+    setting.name_h_m = s.space_group.name_h_m;
+    setting.coord_system_code = s.space_group.coord_system_code;
+    identify_magnetic_group(s, setting);
+}
+
 bool adopt_magnetic_family_setting(Structure& s, bool reinfer_letters) {
     if (s.magnetic->operations.empty()) {
         return false;
@@ -4436,9 +4454,11 @@ void save_project_via_crysta(const Project& model, const std::string& directory,
         [&directory](crysta::Project& project) {
             // A magnetic structure writes no `_space_group`: its magnetic space group stands in its place (edi
             // ADR-0078). Its symmetry was settled before, so only the written file changes.
+            // Only a structure whose BNS number names its family drops the declaration: without one the declared
+            // group is the only identity a reload could find again, so it stays written.
             for (std::size_t at = 0; at < project.structures.size(); ++at) {
                 crysta::Structure& structure = project.structures[at];
-                if (!structure.magnetic_operations->empty())
+                if (!structure.magnetic_operations->empty() && !structure.magnetic_group->number_bns.empty())
                     structure.space_group.modify([](crysta::SpaceGroup& group) { group.declared = false; });
             }
             try {

@@ -1291,6 +1291,9 @@ Structure structure_from_block(const Block& block, const std::string& where) {
     read_magnetic(block, structure, where);
     // A Magnetic structure is written without `_space_group` (edi ADR-0078): its family table setting is found again
     // from its operators, else its symmetry comes from them alone.
+    if (!group_omitted) {
+        identify_declared_magnetic_family(structure);
+    }
     if (group_omitted) {
         if (adopt_magnetic_family_setting(structure)) {
             complete_atom_site_aniso(structure);  // the tensors as the adopted setting ties them
