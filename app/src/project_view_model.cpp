@@ -6977,7 +6977,8 @@ void ProjectViewModel::publish(bool structural) {
         structure->sync();
     }
     for (ExperimentViewModel* experiment : experiment_models_) {
-        experiment->sync();
+        if (view) experiment->syncValues();
+        else experiment->sync();
         if (retired_) return;
     }
     structure_list_->setStructures(structure_models_);

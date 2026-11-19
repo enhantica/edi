@@ -428,6 +428,9 @@ class ExperimentViewModel : public QObject {
     // experiment.
     bool madeForType() const;
     void sync();
+    // sync() for a shown dataset or point, which changes values only: the categories are listed again only when the
+    // measured data's point count changed (ADR-0096 rule 2).
+    void syncValues();
     // The estimate settings and what they derive, re-read: after an edit (sync) and after a calculation, which
     // changes the calculated pattern use_model reads.
     void syncEstimate();
@@ -499,6 +502,7 @@ class ExperimentViewModel : public QObject {
     QSet<const QObject*> d_charts_;
     std::uint64_t pattern_generation_ = 0;
     bool adjusting_ = false;
+    bool values_only_ = false;  // within syncValues()
     std::optional<std::size_t> colour_place_;
     std::size_t colour_count_ = 0;
     std::vector<std::size_t> colour_positions_;

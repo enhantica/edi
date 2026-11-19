@@ -806,7 +806,7 @@ void ExperimentViewModel::sync() {
     update(scale_, one_link ? registry_.find(&experiment_.linked_structure().scale) : nullptr,
            &ExperimentViewModel::scaleChanged);
     measured_range_->sync();
-    syncCategories();
+    if (!values_only_ || categories_->itemCount(QStringLiteral("data")) != measured_range_->points()) syncCategories();
     instrument_->sync();
     peak_->sync();
     peak_asymmetry_->sync();
@@ -823,6 +823,12 @@ void ExperimentViewModel::sync() {
     preferred_orientation_->sync();
     linked_structures_->sync();
     scattering_source_->sync();
+}
+
+void ExperimentViewModel::syncValues() {
+    values_only_ = true;
+    const auto restore = qScopeGuard([this] { values_only_ = false; });
+    sync();
 }
 
 std::size_t ExperimentViewModel::place() const {
