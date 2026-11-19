@@ -29,6 +29,7 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QSettings>
+#include <mutex>
 #include <QUrl>
 #include <limits>
 #include <string_view>
@@ -813,10 +814,18 @@ void ProjectViewModel::storeSelection() const {
         current_dataset_ < static_cast<int>(scan_session_->datasets().files.size())) {
         dataset = QString::fromStdString(scan_session_->datasets().files[static_cast<std::size_t>(current_dataset_)]);
     }
-    QSettings store(settings_file_path(), QSettings::IniFormat);
-    store.beginGroup(QStringLiteral("Selections"));
-    store.setValue(selectionKey(), QStringList{structure ? structure->name() : QString(),
-                                               experiment ? experiment->name() : QString(), dataset});
+    // The values are read here; the file is written on a worker, one write at a time, as a followed scan changes the
+    // dataset every run and a write of the settings file took tens of milliseconds on the GUI thread. A write still
+    // pending at quit is waited for with the rest of the pool (main.cpp).
+    run_in_background([path = settings_file_path(), key = selectionKey(),
+                       value = QStringList{structure ? structure->name() : QString(),
+                                           experiment ? experiment->name() : QString(), dataset}] {
+        static std::mutex writing;
+        const std::lock_guard lock(writing);
+        QSettings store(path, QSettings::IniFormat);
+        store.beginGroup(QStringLiteral("Selections"));
+        store.setValue(key, value);
+    });
 }
 
 void ProjectViewModel::setStackedSpacing(const QString& spacing) {
