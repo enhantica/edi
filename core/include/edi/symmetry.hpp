@@ -147,6 +147,9 @@ bool structure_magnetic(const Structure& structure);
 // magnetic subgroup is chosen), or a Magnetic one Crystal with its family space group, its moments and other
 // magnetic data dropped. A refusal throws its reason and leaves the structure as it was.
 void set_structure_magnetic(Structure& structure, bool magnetic);
+// A site's element (the owner, 2026-11-19): a moment the new element has no magnetic ion for goes, and a magnetic
+// form-factor row for an element no site has any more goes, so no ion of the former element stays offered or saved.
+void set_site_type(Structure& structure, AtomSite& site, const std::string& type_symbol);
 // The transform of a Magnetic structure's setting to the BNS standard (`a,b,c;0,0,0` for the standard itself), kept as
 // the transforms loop's BNS row.
 void set_magnetic_setting(Structure& structure, const std::string& transform);

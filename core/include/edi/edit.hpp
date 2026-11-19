@@ -896,6 +896,10 @@ class Edit {
     }
     // Whether a site carries a magnetic moment (edi ADR-0078): marking it adds its moment row, all three
     // components zero; unmarking removes the row.
+    // A site's element (set_site_type): its moment and the magnetic form factors follow it.
+    static Edit site_type(Structure& structure, AtomSite& site, std::string type_symbol) {
+        return Edit([&structure, &site, type_symbol = std::move(type_symbol)] { set_site_type(structure, site, type_symbol); });
+    }
     static Edit moment_site(Structure& structure, const AtomSite& site, bool magnetic) {
         return Edit([&structure, &site, magnetic] {
             std::optional<std::size_t> found;

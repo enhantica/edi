@@ -1372,6 +1372,25 @@ bool adopt_magnetic_family_setting(Structure& s, bool reinfer_letters) {
     return true;
 }
 
+void set_site_type(Structure& s, AtomSite& site, const std::string& type_symbol) {
+    site.type_symbol = type_symbol;
+    if (crysta::magnetic_ions_for_type(type_symbol).empty()) {
+        for (std::size_t row = 0; row < s.atom_site_moment.size(); ++row) {
+            if (s.atom_site_moment[row]->id.value() == site.id.value()) {
+                s.atom_site_moment.erase_at(row);
+                break;
+            }
+        }
+    }
+    for (std::size_t row = s.magnetic_form_factors.size(); row-- > 0;) {
+        const std::string element = s.magnetic_form_factors[row]->id.value();
+        if (std::none_of(s.atom_sites.begin(), s.atom_sites.end(),
+                         [&element](const auto& other) { return other->type_symbol.value() == element; })) {
+            s.magnetic_form_factors.erase_at(row);
+        }
+    }
+}
+
 bool structure_magnetic(const Structure& s) {
     // A file holding moments without magnetic operators is shown as Magnetic too, so its moments stay visible.
     return !s.magnetic->operations.empty() || !s.atom_site_moment.empty();
