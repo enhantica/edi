@@ -34,12 +34,13 @@ Column {
     // CW U V W with TCH's X Y or the pseudo-Voigt's η₀ η₁), the TOF Lorentzian (γ, size, strain), then any
     // other field.
     Repeater {
-        model: group.experiment ? [group.experiment.peakBackToBack, group.experiment.peakGaussian, group.experiment.peakLorentzian, group.experiment.peakOther] : []
+        // Four rows whatever the experiment, so the next one keeps them; each row's fields follow it (ParameterGrid).
+        model: group.experiment ? 4 : 0
         delegate: ParameterGrid {
-            required property ParameterListModel modelData
+            required property int index
 
             visible: fieldCount > 0
-            fields: modelData
+            fields: group.experiment ? [group.experiment.peakBackToBack, group.experiment.peakGaussian, group.experiment.peakLorentzian, group.experiment.peakOther][index] : null
             prefix: "peak"
         }
     }

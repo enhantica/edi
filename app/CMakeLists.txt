@@ -124,6 +124,7 @@ qt_add_qml_module(edi_app_module
         src/edi_text_highlighter.hpp src/edi_text_highlighter.cpp
         src/generated_category.hpp src/generated_category.cpp
         src/category_list_model.hpp src/category_list_model.cpp
+        src/list_model_mirror.hpp src/list_model_mirror.cpp
         src/structure_view_model.hpp src/structure_view_model.cpp
         src/structure_view_options.hpp src/structure_view_options.cpp
         src/structure_instances.hpp src/structure_instances.cpp

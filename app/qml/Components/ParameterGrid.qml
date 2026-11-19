@@ -33,7 +33,11 @@ Grid {
     rowSpacing: AppSizes.groupContentSpacing
 
     Repeater {
-        model: grid.fields
+        // The fields through a mirror: another block's fields of the same kind (the next experiment's) keep the
+        // fields made for the last one, each reading its new row (ADR-0096 rule 2).
+        model: ListModelMirror {
+            source: grid.fields
+        }
         delegate: ParameterField {
             required property var model
 
