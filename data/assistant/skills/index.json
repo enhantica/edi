@@ -50,22 +50,29 @@
     },
     {
       "id": "gsas-intake",
-      "version": "1.0.6",
-      "title": "Inspect GSAS/GSAS-II material",
-      "summary": "Inspect readable selected exports through offered actions; binary GPX is never executed and unsupported mappings remain explicit.",
+      "version": "1.1.0",
+      "title": "Rebuild a GSAS-II or EasyDiffraction project",
+      "summary": "Use selected GSAS-II text to reconstruct an Edi project, or use saved Edi data to prepare a GSAS-II project.",
       "path": "gsas-intake/SKILL.md",
-      "sha256": "eec62b9501d287479780d5e86e267bb28a096654a8f911c17cba115cb888b914",
-      "requires": [
-        "selected_files"
-      ],
+      "sha256": "f1f581199e8b6b98fbe348b23b28fcaa07c97e7e6979d14a3efee3350f706c7a",
+      "requires": [],
       "capabilities": [
         "inspect_project",
+        "list_parameters",
         "ask_question"
       ],
       "references": [
         {
           "title": "GSAS-II Full CIF tutorial",
           "url": "https://advancedphotonsource.github.io/GSAS-II-tutorials/CIFtutorial/CIFtutorial.html"
+        },
+        {
+          "title": "GSAS-II scripting interface and parameter controls",
+          "url": "https://gsas-ii.readthedocs.io/en/latest/GSASIIscriptable.html"
+        },
+        {
+          "title": "GSAS-II data tree and powder instrument record",
+          "url": "https://gsas-ii.readthedocs.io/en/latest/objvarorg.html"
         }
       ]
     },
