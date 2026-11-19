@@ -86,3 +86,57 @@ def test_native_gpx_refuses_unknown_objects_and_incomplete_records(tmp_path, pay
     source.write_bytes(payload)
     with pytest.raises(edi.IoError, match=message):
         edi.Project.load(source)
+
+
+def test_gsas_powder_bundle_preserves_zero_weight_and_fit_range(tmp_path):
+    bundle = _bundle()
+    phase = bundle['phase']
+    hist = bundle['histogram']
+    hist['sample'] = {'scale': [1, False]}
+    hist['links'] = [
+        {
+            'phase_index': 0,
+            'phase_scale': [1, False],
+            'size_um': 1,
+            'microstrain_ppm': 0,
+        }
+    ]
+    hist['background']['basis'] = 'chebyschev'
+    hist['background']['coefficients'] = [2, 0, 4]
+    hist['observations'] = [[10, 4, 0], [20, 8, 0.25], [30, 7, 1], [40, 5, 0.5]]
+    hist['fit_limits'] = [[20, 40]]
+    source = tmp_path / 'test.gsas.json'
+    source.write_text(
+        json.dumps({
+            'format': 'gsas-ii-powder-v2',
+            'source': bundle['source'],
+            'phases': [phase],
+            'histograms': [hist, hist],
+        }),
+        encoding='ascii',
+    )
+    project = edi.Project.load(source)
+    project.save_as(tmp_path / 'saved')
+    reopened = edi.Project.load(tmp_path / 'saved/project.edi')
+    assert reopened.analysis.fitting_mode == 'joint'
+    for experiment in reopened.experiments:
+        assert tuple(experiment.data.two_theta) == (10, 20, 30, 40)
+        assert experiment.background_x_min == 20
+        assert experiment.background_x_max == 40
+        assert tuple(term.coef.value for term in experiment.background_terms) == (4, 0, 2)
+        assert 'gsas-zero-weight-1' in experiment.excluded_region_ids
+
+
+def test_gsas_free_axial_aperture_is_one_parameter_after_save(tmp_path):
+    bundle = _bundle()
+    bundle['histogram']['instrument']['SH/L'] = [0.02, True]
+    source = tmp_path / 'test.gsas.json'
+    source.write_text(json.dumps(bundle), encoding='ascii')
+    project = edi.Project.load(source)
+    project.save_as(tmp_path / 'saved')
+    reopened = edi.Project.load(tmp_path / 'saved/project.edi')
+    peak = reopened.experiments['powder'].peak
+    assert peak.asym_fcj_1.value == peak.asym_fcj_2.value == 0.01
+    assert peak.asym_fcj_1.free is True
+    assert peak.asym_fcj_2.free is False
+    assert len(reopened.analysis.constraints) == 1

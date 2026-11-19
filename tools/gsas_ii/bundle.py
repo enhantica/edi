@@ -3,6 +3,7 @@
 import numpy as np
 
 FORMAT = 'gsas-ii-pnc-v1'
+POWDER_FORMAT = 'gsas-ii-powder-v2'
 INSTRUMENT = ('Lam', 'Zero', 'U', 'V', 'W', 'X', 'Y', 'SH/L')
 
 

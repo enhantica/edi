@@ -119,11 +119,12 @@ JSON suits structured data in programming, but for crystallographic data it is m
 
 ## Open a GSAS-II project
 
-In the desktop app, choose **Open project** and **Project file**, then select the `.gpx`. The
-first supported case is the PbSO₄ constant-wavelength neutron powder tutorial with one fixed
-nuclear phase and one complete measured pattern. EasyDiffraction opens the converted model
-as an unsaved project. Use **Save As** to write the native Edi project. The importer reports
-unsupported project contents when it cannot carry the model over.
+In the desktop app, choose **Open project** and **Project file**, then select the `.gpx`.
+EasyDiffraction can open supported constant-wavelength neutron and X-ray powder projects
+and supported time-of-flight neutron powder projects. It also maps compatible paired
+nuclear and magnetic phases from CW neutron projects into one EasyDiffraction structure.
+Use **Save As** to write the imported model as an Edi project. Unsupported models give an
+error identifying the first incompatible setting.
 
 ## Importing a CIF {#cif-files}
 

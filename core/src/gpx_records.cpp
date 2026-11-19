@@ -133,6 +133,18 @@ void Records::read_global() {
         add(Factory::Scalar);
     else if (module == "_codecs" && name == "encode")
         add(Factory::Encode);
+    else if (module == "numpy.ma.core" && name == "MaskedArray")
+        add(Factory::MaskedArray);
+    else if (module == "numpy.ma.core" && name == "_mareconstruct")
+        add(Factory::MaskedReconstruct);
+    else if ((module == "GSASIIobj" || module == "GSASII.GSASIIobj") && name == "G2VarObj")
+        add(Factory::Variable);
+    else if ((module == "GSASIIobj" || module == "GSASII.GSASIIobj") && name == "ExpressionObj")
+        add(Factory::Expression);
+    else if (module == "__builtin__" && name == "object")
+        add(Factory::LegacyObject);
+    else if (module == "copy_reg" && name == "_reconstructor")
+        add(Factory::LegacyReconstruct);
     else
         refuse("GPX contains an unsupported serialized object");
 }
@@ -151,14 +163,37 @@ void Records::reduce() {
             break;
         }
         case Factory::Reconstruct:
-            require(arguments.size() == 3 &&
-                        as<Factory>(arguments[0], "array token") == Factory::Array,
-                    "invalid GPX array constructor");
-            add(Array{Dtype{'b', 1}, {}, marker});
+        case Factory::MaskedReconstruct: {
+            const bool masked = factory == Factory::MaskedReconstruct;
+            const auto expected = masked ? Factory::MaskedArray : Factory::Array;
+            require(
+                arguments.size() == (masked ? 4 : 3) &&
+                    as<Factory>(arguments[0], "array token") == expected &&
+                    (!masked || as<Factory>(arguments[1], "masked array base") == Factory::Array),
+                "invalid GPX array constructor");
+            add(Array{Dtype{'b', 1}, {}, marker, false, masked, std::nullopt});
             break;
+        }
+        case Factory::LegacyReconstruct: {
+            require(arguments.size() == 3 &&
+                        as<Factory>(arguments[1], "legacy base") == Factory::LegacyObject &&
+                        none(arguments[2]),
+                    "invalid legacy GPX state object");
+            const auto type = as<Factory>(arguments[0], "state token");
+            require(type == Factory::Variable || type == Factory::Expression,
+                    "unsupported legacy GPX state object");
+            add(ObjectState{type, std::nullopt});
+            break;
+        }
         case Factory::Scalar:
             require(arguments.size() == 2, "invalid GPX scalar");
-            add(element(Array{as<Dtype>(arguments[0], "dtype"), {1}, arguments[1]}, 0));
+            add(element(Array{as<Dtype>(arguments[0], "dtype"),
+                              {1},
+                              arguments[1],
+                              false,
+                              false,
+                              std::nullopt},
+                        0));
             break;
         case Factory::Encode: {
             require(arguments.size() == 2 && text(arguments[1]) == "latin1",
@@ -169,14 +204,30 @@ void Records::reduce() {
             add(Bytes{latin1(encoded)});
             break;
         }
-        case Factory::Array:
-            refuse("unexpected GPX array operation");
+        default:
+            refuse("unexpected GPX layout operation");
     }
 }
 
+void Records::new_object() {
+    const auto arguments = pop();
+    const auto type = as<Factory>(pop(), "state token");
+    require(
+        (type == Factory::Variable || type == Factory::Expression) && sequence(arguments).empty(),
+        "unsupported GPX state object");
+    add(ObjectState{type, std::nullopt});
+}
+
 void Records::build() {
-    const auto& state = sequence(pop());
+    const auto state_id = pop();
     auto& target = nodes_.at(top());
+    if (auto* object = std::get_if<ObjectState>(&target)) {
+        require(!object->state && std::holds_alternative<Dictionary>(value(state_id)),
+                "invalid GPX state object");
+        object->state = state_id;
+        return;
+    }
+    const auto& state = sequence(state_id);
     if (auto* dtype = std::get_if<Dtype>(&target)) {
         require(state.size() == 8 && none(state[2]) && none(state[3]) && none(state[4]),
                 "unsupported GPX dtype state");
@@ -187,7 +238,8 @@ void Records::build() {
         return;
     }
     auto* output = std::get_if<Array>(&target);
-    require(output != nullptr && state.size() == 5 && !truth(state[3]),
+    require(output != nullptr && output->storage == marker &&
+                state.size() == (output->masked_layout ? 7 : 5) && number(state[0]) == 1.,
             "unsupported GPX array state");
     const auto dtype = as<Dtype>(state[2], "dtype");
     const auto& bytes = as<Bytes>(state[4], "array bytes").value;
@@ -204,13 +256,36 @@ void Records::build() {
         shape.push_back(extent);
     }
     require(size == bytes.size(), "GPX array dimensions do not match its bytes");
-    *output = Array{dtype, std::move(shape), state[4]};
+    std::optional<Id> mask;
+    if (output->masked_layout && !none(state[5])) {
+        const auto& mask_bytes = as<Bytes>(state[5], "array mask").value;
+        require(mask_bytes.size() == size / dtype.width, "invalid GPX array mask size");
+        mask = state[5];
+    }
+    *output =
+        Array{dtype, std::move(shape), state[4], truth(state[3]), output->masked_layout, mask};
+}
+
+std::size_t storage_index(const Array& array, std::size_t index) {
+    if (!array.fortran_order || array.shape.size() < 2) return index;
+    std::size_t count = 1;
+    for (const auto axis : array.shape) count *= axis;
+    require(index < count, "missing GPX array element");
+    std::size_t offset = 0;
+    std::size_t stride = count;
+    for (auto axis = array.shape.rbegin(); axis != array.shape.rend(); ++axis) {
+        stride /= *axis;
+        offset += (index % *axis) * stride;
+        index /= *axis;
+    }
+    return offset;
 }
 
 double Records::element(const Array& array, std::size_t index) const {
     const auto& dtype = array.dtype;
     const auto& bytes = as<Bytes>(array.storage, "array bytes").value;
     require(index < bytes.size() / dtype.width, "missing GPX array element");
+    index = storage_index(array, index);
     const auto raw = bits(std::string_view(bytes).substr(index * dtype.width, dtype.width),
                           dtype.endian != '>');
     if (dtype.kind == 'f') {
@@ -220,6 +295,12 @@ double Records::element(const Array& array, std::size_t index) const {
     if (dtype.kind == 'u' || dtype.kind == 'b') return static_cast<double>(raw);
     const auto shift = (8 - dtype.width) * 8;
     return static_cast<double>(std::bit_cast<std::int64_t>(raw << shift) >> shift);
+}
+
+bool Records::masked(const Array& array, std::size_t index) const {
+    if (!array.mask) return false;
+    const auto& mask = as<Bytes>(*array.mask, "array mask").value;
+    return mask.at(storage_index(array, index)) != 0;
 }
 
 double Records::number(Id id) const {
@@ -273,7 +354,7 @@ Sequence Records::read() {
     while (offset_ < input_.size()) {
         switch (byte()) {
             case '.':
-                require(stack_.size() == 1 && records.size() < 64, "invalid GPX record boundary");
+                require(stack_.size() == 1 && records.size() < 512, "invalid GPX record boundary");
                 records.push_back(pop());
                 memo_.clear();
                 break;
@@ -383,6 +464,9 @@ Sequence Records::read() {
                 break;
             case 'b':
                 build();
+                break;
+            case 0x81:
+                new_object();
                 break;
             case 0x80:
                 require(byte() == 2, "unsupported GPX pickle protocol");

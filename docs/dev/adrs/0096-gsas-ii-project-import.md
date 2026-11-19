@@ -2,7 +2,7 @@
 
 - **Status:** Proposed
 - **Date:** 2026-11-19
-- **Implementation:** 🟡 One PNC powder case and a reference workflow
+- **Implementation:** 🟡 CW neutron and X-ray, TOF neutron, and paired magnetic CW powder projects
 - **Priority:** High
 - **Forward constraint:** The core owns both GPX decoding and model translation. An additional
   GSAS-II model must declare its admission rules, source units and independent numerical reference.
@@ -27,29 +27,54 @@ It contains serialized Python records whose usual reader can invoke Python objec
   Use the exporter on trusted local inputs because it uses the upstream GPX reader. The core
   accepts this bundle with the `.gsas.json` suffix and uses the same model translation as for
   GPX. The development environment builds GSAS-II to generate independent reference profiles.
-- The first case is one active PNC powder histogram, one fixed nuclear P n m a phase with
-  natural isotope abundances and isotropic displacement, and a full, unmasked measured grid.
-  It admits a `chebyschev-1` background, neutral absorption, displacement, texture and
-  extinction, fixed isotropic Lorentzian size and strain, and fixed wavelength and axial
-  aperture. It refuses unsupported phase and histogram types, linked backgrounds, exclusions,
-  active constraints and restraints, and sequential analysis.
-- Each observed row carries two-theta in degrees, intensity, and inverse variance.
-  The Edi measurement uses sigma = 1/sqrt(weight). The histogram weight multiplier is one.
-  The mapped Chebyshev domain is the first and last measured two-theta.
+- The reader accepts Python 2 and 3 GPX layouts used in the tutorial corpus, including
+  NumPy's C- and Fortran-ordered arrays and masked arrays. Recognized GSAS-II variable
+  references and expression records are inert data. Their content is consumed only by a
+  corresponding model mapping.
+- The multi-bank powder bundle uses `gsas-ii-powder-v2`. An active model may contain one or
+  more nuclear phases, joint powder datasets, and isotropic or anisotropic displacement.
+  A GPX space-group symbol selects candidates and its expanded operators select the matching
+  table setting. A phase without a matching setting is refused. A paired nuclear and
+  magnetic CW neutron model uses one Edi structure when the two phase links, cells, sites,
+  and applicable ties agree. The signed symmetry operators and moment components are
+  retained.
+- Each measured row carries two-theta in degrees or TOF in microseconds, intensity, and
+  inverse variance. The Edi measurement uses sigma = 1/sqrt(weight). A zero-weight row
+  remains on the grid and receives a reversible excluded region with positive placeholder
+  sigma. Masked rows retain their weights and use a distinct exclusion identifier.
+  The background domain is the observed range inside the active GPX fit limits. The
+  legacy GSAS-II `chebyschev` power series is expanded in the Edi Chebyshev basis.
+- CW Debye–Scherrer sample shifts map to the Edi cosine and sine terms through
+  `-0.18 / (πR)` for sample displacements in micrometres and radius in millimetres.
+  X-ray wavelengths and doublet ratios are transferred. GSAS-II X-ray polarization and
+  azimuth are combined into the effective coefficient of cos² 2θ.
+- The TOF mapping applies `difC`, `difA` and zero directly, and uses the absolute bank angle.
+  The GSAS-II back-to-back exponential rates and Gaussian variances use the same bases
+  as the Edi Jorgensen–Von Dreele model for the admitted terms. Fixed isotropic Lorentzian
+  broadening maps to the TOF size term `1e-4 difC / size` and strain term
+  `1e-6 difC microstrain`. Active reciprocal calibration, linear-in-d variance, and
+  inverse-d² decay terms are refused.
 - GSAS-II stores Gaussian variance in centidegrees squared. Edi stores squared Gaussian FWHM
   in degrees, so multiply U, V and W by 8 ln(2) / 10000. For each Lorentzian coefficient, add
   the matching fixed sample contribution before dividing by 100. GSAS-II's X is the secant
   term and Y the tangent term. Edi uses the opposite names. The secant contribution is
   1.8 wavelength / (π size in µm) in centidegrees. The tangent contribution is
   0.018 microstrain in ppm / π in centidegrees.
-- The two fixed Edi FCJ apertures are each half of GSAS-II's effective SH/L. Edi uses its own
+- The two Edi FCJ apertures are each half of GSAS-II's effective SH/L. A free SH/L uses a
+  declared equality between the two Edi apertures. Edi uses its own
   FCJ quadrature and a finite profile window. The two engines also differ in how they apply
   zero shift to the angle at which intensity and widths are evaluated.
 - Edi's linked scale is the histogram and phase scale product divided by 100 times the
-  fixed cell volume. GSAS-II multiplies by reciprocal cell volume and integrates its CW
+  starting cell volume for CW and by cell volume for TOF. GSAS-II multiplies by reciprocal
+  cell volume and evaluates its CW
   kernel in centidegrees. The single free scale, instrument/profile and background flags
   are preserved. Edi uses its Sears neutron table. Folding the fixed size and strain terms
   into the width discards their independent identity in the saved Edi model.
+- The reverse developer workflow constructs a new GSAS-II project from the saved Edi file.
+  It rebuilds datasets, phase links, single or joint structural models, atomic ADP
+  equalities and supported paired magnetic models. It reparametrizes inseparable GSAS-II
+  terms using the Edi model's effective values. The archived feature inventory records
+  source workflows that cannot be preserved in the current Edi model.
 
 These mappings use the upstream `GetSampleSigGam`, `GetReflPos`, `getPowderProfile`,
 `getFCJVoigt3`, `PYPSVFCJO` and `getBackground` implementations at the pinned
@@ -85,7 +110,9 @@ also enables a numeric comparison.
 
 ```bash
 pixi run --locked python -m tools.gsas_ii.check_corpus /path/to/software-examples/gsas-ii \
-  --report gpx-corpus-check.json
+  --roundtrip-dir gpx-audit --report gpx-corpus-check.json
+pixi run --locked -m tools/deps/gsas-ii/pixi.toml python -m tools.gsas_ii.compare_corpus \
+  /path/to/software-examples/gsas-ii gpx-audit --report gpx-roundtrip-check.json
 ```
 
 ## Validate the reverse direction

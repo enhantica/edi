@@ -3855,6 +3855,13 @@ NB_MODULE(_edi, m) {
                 }
                 self.excluded_regions.assign(std::move(rows));
             })
+        .def_prop_ro("excluded_region_ids", [](const edi::ExperimentBase& self) {
+            nb::list ids;
+            for (const auto& region : self.excluded_regions) {
+                ids.append(nb::str(region->id.value().c_str()));
+            }
+            return nb::tuple(ids);
+        })
         // A single crystal's reflections left out of the fit by their indices, as (h, k, l) rows; under a
         // merge mode the indices name their equivalents too. Assigning a list of rows replaces them all.
         .def_prop_rw(

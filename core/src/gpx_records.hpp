@@ -31,10 +31,29 @@ struct Array {
     Dtype dtype;
     std::vector<std::size_t> shape;
     Id storage;
+    bool fortran_order = false;
+    bool masked_layout = false;
+    std::optional<Id> mask;
 };
-enum class Factory { Array, Reconstruct, Dtype, Scalar, Encode };
+enum class Factory {
+    Array,
+    Reconstruct,
+    MaskedArray,
+    MaskedReconstruct,
+    Dtype,
+    Scalar,
+    Encode,
+    Variable,
+    Expression,
+    LegacyObject,
+    LegacyReconstruct
+};
+struct ObjectState {
+    Factory type;
+    std::optional<Id> state;
+};
 using Value = std::variant<std::monostate, bool, std::int64_t, double, std::string, Sequence,
-                           Dictionary, Bytes, Dtype, Array, Factory>;
+                           Dictionary, Bytes, Dtype, Array, Factory, ObjectState>;
 
 [[noreturn]] inline void refuse(const std::string& message) { throw std::runtime_error(message); }
 
@@ -58,12 +77,13 @@ class Records {
     double number(Id id) const;
     const Array& array(Id id) const { return as<Array>(id, "NumPy array"); }
     double element(const Array& array, std::size_t index) const;
+    bool masked(const Array& array, std::size_t index) const;
     Id field(Id id, std::string_view key) const;
     std::optional<Id> find(Id id, std::string_view key) const;
 
    private:
     static constexpr Id marker = std::numeric_limits<Id>::max();
-    static constexpr std::size_t max_items = 100'000;
+    static constexpr std::size_t max_items = 300'000;
     std::string_view input_;
     std::size_t offset_{};
     std::size_t decoded_bytes_{};
@@ -93,5 +113,6 @@ class Records {
     void read_global();
     void reduce();
     void build();
+    void new_object();
 };
 }  // namespace edi::gpx
