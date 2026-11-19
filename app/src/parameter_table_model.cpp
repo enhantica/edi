@@ -118,7 +118,12 @@ void ParameterFilterModel::setSourceModel(QAbstractItemModel* source) {
         source_connections_.append(connect(source, &QAbstractItemModel::modelReset, this, &ParameterFilterModel::refresh));
         source_connections_.append(connect(source, &QAbstractItemModel::rowsInserted, this, &ParameterFilterModel::refresh));
         source_connections_.append(connect(source, &QAbstractItemModel::rowsRemoved, this, &ParameterFilterModel::refresh));
-        source_connections_.append(connect(source, &QAbstractItemModel::dataChanged, this, &ParameterFilterModel::refresh));
+        // A change of values only (a fit's step, an edit) leaves every picker and count as it is: only the roles the
+        // filters read rebuild them, so a fit no longer scans every row at each change (ADR-0096 rule 2).
+        source_connections_.append(connect(source, &QAbstractItemModel::dataChanged, this,
+                                           [this](const QModelIndex&, const QModelIndex&, const QList<int>& roles) {
+                                               if (affectsFilters(roles)) refresh();
+                                           }));
     }
     refresh();
 }
@@ -133,6 +138,14 @@ bool matches_datablock(const QString& key, const QString& kind, const QString& n
 }
 
 }  // namespace
+
+bool ParameterFilterModel::affectsFilters(const QList<int>& roles) const {
+    if (roles.isEmpty() || sourceModel() == nullptr) return true;  // unnamed roles: any may have changed
+    static const QList<QByteArray> kRead{"free",      "fittable",  "fitGroup", "path",    "displayName",
+                                         "blockKind", "blockName", "category", "name"};
+    const auto names = sourceModel()->roleNames();
+    return std::any_of(roles.cbegin(), roles.cend(), [&](int role) { return kRead.contains(names.value(role)); });
+}
 
 void ParameterFilterModel::refresh() {
     // Only the rows the show-filters leave, so every picker counts what the table can show. A count is of the rows the
