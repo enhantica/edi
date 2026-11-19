@@ -203,6 +203,7 @@ struct Coded {
 struct Refinement {
     std::map<Parameter*, Coded> codes;
     std::vector<std::pair<double, double>> transformed_independent_pairs;
+    int converted_automatic_groups = 0;
 
     void set(Parameter& parameter, Coded coded) {
         parameter.value = coded.value;
@@ -297,59 +298,67 @@ struct Pattern {
     bool simulation() const { return !single_crystal() && std::abs(job) > 1; }
 };
 
-fs::path companion(const PCR& pcr, const Pattern& pattern) {
-    const fs::path directory = pcr.path.parent_path();
-    const auto conventional = pcr.path.stem().string() + (pattern.single_crystal() ? ".int" : ".dat");
-    const auto sibling = [&](const fs::path& name) -> fs::path {
-        if (fs::is_regular_file(directory / name)) {
-            return directory / name;
-        }
-        const auto key = lower(name.string());
-        fs::path match;
-        for (const auto& entry : fs::directory_iterator(directory.empty() ? fs::path(".") : directory)) {
-            if (entry.is_regular_file() && lower(entry.path().filename().string()) == key) {
-                if (!match.empty()) {
-                    pcr.fail("Multiple FullProf companions match " + name.string());
-                }
-                match = entry.path();
+fs::path sibling_input(const PCR& pcr, const fs::path& name) {
+    const auto directory = pcr.path.parent_path();
+    if (fs::is_regular_file(directory / name)) {
+        return directory / name;
+    }
+    const auto key = lower(name.string());
+    fs::path match;
+    for (const auto& entry : fs::directory_iterator(directory.empty() ? fs::path(".") : directory)) {
+        if (entry.is_regular_file() && lower(entry.path().filename().string()) == key) {
+            if (!match.empty()) {
+                pcr.fail("Multiple FullProf companions match " + name.string());
             }
+            match = entry.path();
         }
-        return match;
-    };
+    }
+    return match;
+}
+
+std::string companion_basename(std::string reference) {
+    // Old FullProf files retain workstation paths. Resolve their basename
+    // beside the control, as a portable project, without inspecting that path.
+    const auto separator = reference.find_last_of("/\\");
+    return separator == std::string::npos ? reference : reference.substr(separator + 1);
+}
+
+fs::path companion(const PCR& pcr, const Pattern& pattern) {
+    const auto conventional = pcr.path.stem().string() + (pattern.single_crystal() ? ".int" : ".dat");
     if (pattern.default_companion) {
-        if (const auto path = sibling(conventional); !path.empty()) {
+        if (const auto path = sibling_input(pcr, conventional); !path.empty()) {
             return path;
         }
     }
-    const fs::path named(pattern.file);
     if (!pattern.file.empty()) {
-        if (named.is_absolute() || named.has_parent_path() || named == "." || named == ".." ||
-            pattern.file.find_first_of("\\:") != std::string::npos) {
+        const auto portable = companion_basename(pattern.file);
+        const fs::path named(portable);
+        if (portable.empty() || named == "." || named == ".." || portable.find(':') != std::string::npos) {
             pcr.fail("Companion data must be beside the PCR file: " + pattern.file);
         }
         if (named.has_extension()) {
-            if (const auto path = sibling(named); !path.empty()) {
+            if (const auto path = sibling_input(pcr, named); !path.empty()) {
                 return path;
             }
         } else if (pattern.single_crystal()) {
-            if (const auto path = sibling(pattern.file + ".int"); !path.empty()) {
+            if (const auto path = sibling_input(pcr, portable + ".int"); !path.empty()) {
                 return path;
             }
         } else {
             for (const auto* suffix : {".dat", ".uxd", ".acq"}) {
-                if (const auto path = sibling(pattern.file + suffix); !path.empty()) {
+                if (const auto path = sibling_input(pcr, portable + suffix); !path.empty()) {
                     return path;
                 }
             }
         }
         pcr.fail("Missing FullProf companion " + named.string());
     }
-    if (const auto path = sibling(conventional); !path.empty()) {
+    if (const auto path = sibling_input(pcr, conventional); !path.empty()) {
         return path;
     }
     if (!pattern.single_crystal()) {
         for (const auto* suffix : {".uxd", ".acq"}) {
-            if (const auto path = sibling(pcr.path.stem().string() + suffix); !path.empty()) {
+            if (const auto path = sibling_input(pcr, pcr.path.stem().string() + suffix); !path.empty()) {
                 return path;
             }
         }
@@ -362,12 +371,15 @@ fs::path resolution_path(const PCR& pcr, std::size_t declaration) {
     if (name.size() >= 2 && (name.front() == '\'' || name.front() == '"') && name.back() == name.front()) {
         name = name.substr(1, name.size() - 2);
     }
-    const fs::path relative(name);
-    if (relative.empty() || relative.is_absolute() || relative.has_parent_path() ||
-        name.find_first_of("\\:") != std::string::npos) {
+    const auto portable = companion_basename(name);
+    const fs::path relative(portable);
+    if (relative.empty() || relative == "." || relative == ".." || portable.find(':') != std::string::npos) {
         pcr.fail("FullProf resolution file must be beside the PCR file: " + name, declaration);
     }
-    return pcr.path.parent_path() / relative;
+    if (const auto found = sibling_input(pcr, relative); !found.empty()) {
+        return found;
+    }
+    pcr.fail("Missing FullProf resolution companion " + portable, declaration);
 }
 
 TofResolution tof_resolution(const PCR& pcr, std::size_t declaration) {
@@ -438,13 +450,17 @@ CwResolution cw_resolution(const PCR& pcr, const Pattern& pattern, std::size_t d
         if (fields.empty()) {
             continue;
         }
+        if (lower(line).starts_with("resolution function") && widths.empty()) {
+            continue;  // Legacy IRFs put the instrument description before JOBT.
+        }
         const auto label = lower(fields[0]);
         if (label == "end") {
             break;
         }
         if (label == "jobt" || label == "geom") {
-            if (fields.size() < 2 ||
-                lower(fields[1]) != (label == "geom" ? "deby" : pattern.xray() ? "xray" : "neut")) {
+            const auto value = fields.size() > 1 ? lower(fields[1]) : "";
+            if ((label == "geom" && value != "deby" && !(value == "bragg" && !pattern.xray())) ||
+                (label == "jobt" && value != (pattern.xray() ? "xray" : "neut"))) {
                 pcr.fail("Unsupported FullProf resolution geometry or probe", declaration);
             }
             continue;
@@ -1349,12 +1365,32 @@ void cw_profile(const PCR& pcr, Pattern& pattern, Refinement& refine, const Code
         }
     }
     if (fcj) {
-        for (std::size_t column = 0; column < 2; ++column) {
-            auto coefficient = shape.values.size() > 6 + column && shape.codes.size() > 6 + column
+        std::array<Coded, 2> apertures{};
+        for (std::size_t column = 0; column < apertures.size(); ++column) {
+            apertures[column] = shape.values.size() > 6 + column && shape.codes.size() > 6 + column
                 ? shape.at(6 + column) : Coded{0., 0.};
-            coefficient.value += base.asymmetry[column];
-            refine.set(column == 0 ? peak.asym_fcj_1 : peak.asym_fcj_2, coefficient);
+            apertures[column].value += base.asymmetry[column];
         }
+        if ((apertures[0].value == 0.) != (apertures[1].value == 0.)) {
+            const auto present = apertures[0].value != 0. ? 0U : 1U;
+            if (apertures[1U - present].code != 0.) {
+                pcr.fail("An active zero FullProf FCJ aperture changes the parameterization");
+            }
+            // FullProf uses the retained aperture as the sum of equal physical
+            // apertures in its one-parameter mode.
+            auto shared = apertures[present];
+            shared.value /= 2.;
+            shared.multiplier /= 2.;
+            if (shared.code != 0. && std::abs(shared.code) < 10.) {
+                // Allocate an internal shared group for one automatically assigned
+                // source direction that now drives two native fields.
+                const double group = 1.e10 + 10. * ++refine.converted_automatic_groups;
+                shared.code = std::copysign(group + std::abs(shared.code), shared.code);
+            }
+            apertures.fill(shared);
+        }
+        refine.set(peak.asym_fcj_1, apertures[0]);
+        refine.set(peak.asym_fcj_2, apertures[1]);
     }
     if (beba) {
         const auto transform = [&](OptionalParameter& a, OptionalParameter& b, std::size_t i) {
@@ -1474,29 +1510,46 @@ std::vector<Row> profile_signature(const CodedRow& width, const CodedRow& shape,
     return {width.values, width.codes, shape.values, shape.codes, gamma.values, gamma.codes};
 }
 
-std::pair<std::string, std::string> magnetic_type(const PCR& pcr, std::string label, std::size_t source) {
-    if (label.empty() || std::toupper(static_cast<unsigned char>(label.front())) != 'M') {
+struct MagneticType {
+    std::string element;
+    std::string ion;
+    std::optional<crysta::MagneticRadialCoefficients> radial;
+};
+
+MagneticType magnetic_type(const PCR& pcr, std::string label, std::size_t source) {
+    const char family = label.empty() ? '\0' : static_cast<char>(std::toupper(static_cast<unsigned char>(label.front())));
+    const auto radial = family == 'J' ? fullprof_magnetic_radial(label) : std::nullopt;
+    if (family != 'M' && !radial) {
         pcr.fail("Unsupported FullProf magnetic form factor " + label, source);
     }
     label = element(label.substr(1));
-    const auto tail = label.find_first_of("1234567890");
+    const auto tail = label.find_first_of("0123456789");
     if (tail == std::string::npos || tail + 1 != label.size()) {
         pcr.fail("Expected a FullProf magnetic ion charge in " + label, source);
     }
-    const auto symbol = label.substr(0, tail);
-    return {symbol, label + (label.back() == '0' ? "" : "+")};
+    return {label.substr(0, tail), label + (label.back() == '0' ? "" : "+"), radial};
 }
 
-void magnetic_moment(const PCR& pcr, Structure& phase, const AtomSite& site, const std::string& ion,
+void magnetic_moment(const PCR& pcr, Structure& phase, const AtomSite& site, const MagneticType& type,
                      Refinement& refine, const Row& values, const Row& codes, bool spherical, std::size_t source) {
     const auto existing = std::find_if(phase.magnetic_form_factors.begin(), phase.magnetic_form_factors.end(),
                                        [&](const auto& row) { return row->id.value() == site.type_symbol.value(); });
+    const auto& magnetic = phase.magnetic.get();
+    const auto prior = std::find_if(magnetic.radial_coefficients.begin(), magnetic.radial_coefficients.end(),
+                                    [&](const auto& row) { return row.first == site.type_symbol.value(); });
     if (existing == phase.magnetic_form_factors.end()) {
         auto factor = std::make_shared<MagneticFormFactor>();
         factor->id = site.type_symbol.value();
-        factor->ion = ion;
+        factor->ion = type.ion;
         phase.magnetic_form_factors.push_back(factor);
-    } else if ((*existing)->ion.value() != ion) {
+        if (type.radial) {
+            phase.magnetic.modify([&](MagneticDescription& update) {
+                update.radial_coefficients.emplace_back(site.type_symbol.value(), *type.radial);
+            });
+        }
+    } else if ((*existing)->ion.value() != type.ion ||
+               (type.radial && (prior == magnetic.radial_coefficients.end() || prior->second != *type.radial)) ||
+               (!type.radial && prior != magnetic.radial_coefficients.end())) {
         pcr.fail("Magnetic ions sharing a native type must use the same form factor", source);
     }
     auto moment = std::make_shared<AtomSiteMoment>();
@@ -1561,18 +1614,23 @@ void combined_magnetic_symmetry(const PCR& pcr, Structure& structure, std::size_
             }
         }
     }
-    const auto separator = bns.find('.');
-    if (separator == std::string::npos) {
-        pcr.fail("Missing FullProf magnetic BNS number", start);
-    }
-    const auto family = integer(number(bns.substr(0, separator), pcr.path.string()), pcr.path.string());
-    const auto setting = space_group_setting_for_number(family);
-    if (!setting) {
-        pcr.fail("Unknown FullProf magnetic family " + bns, start);
-    }
-    assign_space_group_setting(structure.space_group, *setting, true);
     MagneticDescription magnetic;
-    magnetic.group = fullprof_magnetic_group(bns);
+    if (bns.empty() || bns == "0.0") {
+        structure.space_group.name_h_m = "P 1";
+        magnetic.space_group_declared = false;
+    } else {
+        const auto separator = bns.find('.');
+        if (separator == std::string::npos) {
+            pcr.fail("Invalid FullProf magnetic BNS number", start);
+        }
+        const auto family = integer(number(bns.substr(0, separator), pcr.path.string()), pcr.path.string());
+        const auto setting = space_group_setting_for_number(family);
+        if (!setting) {
+            pcr.fail("Unknown FullProf magnetic family " + bns, start);
+        }
+        assign_space_group_setting(structure.space_group, *setting, true);
+        magnetic.group = fullprof_magnetic_group(bns);
+    }
     magnetic.transforms.push_back({"1", {bns_transform, "BNS"}});
     magnetic.parent = std::move(parent);
     magnetic.centerings.emplace_back("1", "x,y,z,+1");
@@ -1637,6 +1695,8 @@ void structure_block(const PCR& pcr, Project& project, std::vector<Pattern>& pat
     const auto isy = multi ? 4U : 8U;
     const auto nvk = multi ? 8U : 12U;
     const bool magnetic = std::abs(options[jbt]) == 10. && options[isy] == 2.;
+    const bool magnetic_only = std::any_of(labels.begin(), labels.end(),
+                                           [](const auto& label) { return lower(label) == "mag_only"; });
     const bool spherical = options[jbt] < 0.;
     if (count < 1 || (!magnetic && (options[jbt] != 0. || options[isy] != 0.)) ||
         options[isy + 1] != 0. || options[nvk] != 0.) {
@@ -1737,11 +1797,10 @@ void structure_block(const PCR& pcr, Project& project, std::vector<Pattern>& pat
         if (magnetic && values[1] != 0.) {
             pcr.fail("Magnetic propagation vector needs a non-collinear conversion", atom_line);
         }
-        std::string ion;
+        MagneticType moment_type;
         if (moment_present) {
-            const auto symbols = magnetic_type(pcr, fields[1], atom_line);
-            site->type_symbol = symbols.first;
-            ion = symbols.second;
+            moment_type = magnetic_type(pcr, fields[1], atom_line);
+            site->type_symbol = moment_type.element;
         } else {
             site->type_symbol = element(fields[1]);
         }
@@ -1810,7 +1869,7 @@ void structure_block(const PCR& pcr, Project& project, std::vector<Pattern>& pat
             pcr.zero(observation.values, 3, 7, "imaginary magnetic moments or phase");
             pcr.zero(observation.codes, 3, 7, "imaginary magnetic moment code or phase");
             atom_line = pcr.next(pcr.next(atom_line + 1, first_cell) + 1, first_cell);
-            magnetic_moment(pcr, *structure, *site, ion, refine, observation.values, observation.codes, spherical, atom_line);
+            magnetic_moment(pcr, *structure, *site, moment_type, refine, observation.values, observation.codes, spherical, atom_line);
         }
     }
     double occupancy_factor = 1.;
@@ -1836,6 +1895,16 @@ void structure_block(const PCR& pcr, Project& project, std::vector<Pattern>& pat
     for (const auto& [site, occupancy] : occupancies) {
         refine.set(site->occupancy,
                    {occupancy.value / occupancy_factor, occupancy.code, occupancy.multiplier / occupancy_factor});
+    }
+    if (magnetic_only) {
+        if (!magnetic) {
+            pcr.fail("FullProf MAG_ONLY requires a combined magnetic phase", phase);
+        }
+        std::map<std::string, double> nuclear_lengths;
+        for (const auto& site : structure->atom_sites) {
+            nuclear_lengths.emplace(site->type_symbol.value(), 0.);
+        }
+        structure->scattering_lengths_fm = std::move(nuclear_lengths);
     }
     if (magnetic) {
         check_magnetic_acceptance(*structure);
@@ -2074,8 +2143,13 @@ void classic_magnetic_overlay(const PCR& pcr, Project& project, Pattern& pattern
         add_magnetic_operation(magnetic,
             fullprof_signed_operator(lower(spatial[1]), lower(moment[1].substr(0, last_comma))), counts[1] == 2.);
     }
-    structure.magnetic = std::move(magnetic);
-    identify_declared_magnetic_family(structure);
+    struct SiteMoment {
+        Row values;
+        Row codes;
+        MagneticType type;
+        std::size_t line;
+    };
+    std::vector<SiteMoment> sites;
     row = atom_header;
     const int atoms = integer(options[0], pcr.path.string());
     for (int i = 0; i < atoms; ++i) {
@@ -2084,36 +2158,11 @@ void classic_magnetic_overlay(const PCR& pcr, Project& project, Pattern& pattern
         if (fields.size() != 12) {
             pcr.fail("Incomplete FullProf magnetic overlay site", row);
         }
-        const auto values = numbers(Words(fields.begin() + 2, fields.end()), pcr.path.string());
+        auto values = numbers(Words(fields.begin() + 2, fields.end()), pcr.path.string());
         if (values[0] != 1. || values[1] != 0.) {
             pcr.fail("Unsupported FullProf magnetic operator or propagation vector", row);
         }
-        const auto [type, ion] = magnetic_type(pcr, fields[1], row);
-        const auto match = [&](const auto& site) {
-            return site->type_symbol.value() == type &&
-                std::abs(std::remainder(site->fract_x.value.get() - values[2], 1.)) < 1.e-5 &&
-                std::abs(std::remainder(site->fract_y.value.get() - values[3], 1.)) < 1.e-5 &&
-                std::abs(std::remainder(site->fract_z.value.get() - values[4], 1.)) < 1.e-5;
-        };
-        const auto site = std::find_if(structure.atom_sites.begin(), structure.atom_sites.end(), match);
-        if (site == structure.atom_sites.end() || std::count_if(structure.atom_sites.begin(), structure.atom_sites.end(), match) != 1 ||
-            (*site)->adp_type.value() != "Biso" || (*site)->adp_iso.value.get() != values[5] + bov.value) {
-            pcr.fail("FullProf magnetic overlay site does not match one nuclear site", row);
-        }
-        const auto positions = wyckoff_positions(structure);
-        if (positions.empty()) {
-            pcr.fail("FullProf magnetic overlay does not resolve nuclear Wyckoff positions", row);
-        }
-        const int general = std::max_element(positions.begin(), positions.end(), [](const auto& a, const auto& b) {
-            return a.multiplicity < b.multiplicity;
-        })->multiplicity;
-        const auto wyckoff = std::find_if(positions.begin(), positions.end(), [&](const auto& position) {
-            return position.letter == (*site)->wyckoff_letter.value();
-        });
-        if (wyckoff == positions.end() ||
-            std::abs(values[6] * general / wyckoff->multiplicity - (*site)->occupancy.value.get()) > 1.e-5) {
-            pcr.fail("FullProf magnetic overlay uses a different occupancy", row);
-        }
+        auto type = magnetic_type(pcr, fields[1], row);
         row = pcr.next(row + 1, profile);
         auto codes = pcr.row(row, 8);
         if (!pcr.refinement_enabled) {
@@ -2125,20 +2174,83 @@ void classic_magnetic_overlay(const PCR& pcr, Project& project, Pattern& pattern
             }
             codes[3] = bov.code;
         }
-        const auto& held = **site;
+        const auto imaginary = pair_after(pcr, row, profile, 7);
+        pcr.zero(imaginary.values, 0, 7, "imaginary magnetic moment or phase");
+        pcr.zero(imaginary.codes, 0, 7, "imaginary magnetic moment code or phase");
+        sites.push_back({std::move(values), std::move(codes), std::move(type), row});
+        row = pcr.next(pcr.next(row + 1, profile) + 1, profile);
+    }
+    const auto positions = wyckoff_positions(structure);
+    const bool enumerated = options[6] > 0. && magnetic.operations.size() == 1 &&
+                            magnetic.operations.front().second == "x,y,z,+1" && positions.size() > 1;
+    if (enumerated) {
+        std::vector<FullProfEnumeratedMoment> moments;
+        for (const auto& item : sites) {
+            pcr.zero(item.codes, 0, 3, "moving coordinates in an enumerated magnetic overlay");
+            pcr.zero(item.codes, 4, 5, "varying occupancy in an enumerated magnetic overlay");
+            const auto& v = item.values;
+            const auto& c = item.codes;
+            const auto ion = (item.type.radial ? "J" : "M") + item.type.ion;
+            moments.push_back({ion, {v[2], v[3], v[4]}, {v[7], v[8], v[9]}, {c[5], c[6], c[7]}, v[6], v[5], c[3]});
+        }
+        const auto inferred = fullprof_magnetic_overlay_group(structure, moments);
+        if (!inferred) {
+            pcr.fail("Enumerated FullProf moments do not preserve the nuclear site's symmetry and directions", phase);
+        }
+        magnetic = *inferred;
+    }
+    if (positions.empty()) {
+        pcr.fail("FullProf magnetic overlay does not resolve nuclear Wyckoff positions", phase);
+    }
+    const int general = std::max_element(positions.begin(), positions.end(), [](const auto& a, const auto& b) {
+        return a.multiplicity < b.multiplicity;
+    })->multiplicity;
+    structure.magnetic = std::move(magnetic);
+    identify_declared_magnetic_family(structure);
+    if (wyckoff_positions(structure).empty()) {
+        pcr.fail("FullProf magnetic overlay does not preserve the nuclear symmetry", phase);
+    }
+    std::size_t represented = 0;
+    for (const auto& item : sites) {
+        const auto& values = item.values;
+        const auto& codes = item.codes;
+        const auto match = [&](const auto& site) {
+            return site->type_symbol.value() == item.type.element &&
+                std::abs(std::remainder(site->fract_x.value.get() - values[2], 1.)) < 1.e-5 &&
+                std::abs(std::remainder(site->fract_y.value.get() - values[3], 1.)) < 1.e-5 &&
+                std::abs(std::remainder(site->fract_z.value.get() - values[4], 1.)) < 1.e-5;
+        };
+        const auto site = std::find_if(structure.atom_sites.begin(), structure.atom_sites.end(), match);
+        if (enumerated && site == structure.atom_sites.end()) {
+            continue;  // Symmetry expansion of a representative supplies this observed moment.
+        }
+        if (site == structure.atom_sites.end() || std::count_if(structure.atom_sites.begin(), structure.atom_sites.end(), match) != 1 ||
+            (*site)->adp_type.value() != "Biso" || (*site)->adp_iso.value.get() != values[5] + bov.value) {
+            pcr.fail("FullProf magnetic overlay site does not match one nuclear site", item.line);
+        }
+        const auto wyckoff = std::find_if(positions.begin(), positions.end(), [&](const auto& position) {
+            return position.letter == (*site)->wyckoff_letter.value();
+        });
+        if (wyckoff == positions.end()) {
+            pcr.fail("FullProf magnetic overlay has an unknown nuclear Wyckoff position", item.line);
+        }
+        const auto chemical_occupancy = enumerated ? values[6] : values[6] * general / wyckoff->multiplicity;
+        if (std::abs(chemical_occupancy - (*site)->occupancy.value.get()) > 1.e-5) {
+            pcr.fail("FullProf magnetic overlay uses a different occupancy", item.line);
+        }
         const std::array<Parameter*, 5> structural{&(*site)->fract_x, &(*site)->fract_y, &(*site)->fract_z,
                                                     &(*site)->adp_iso, &(*site)->occupancy};
         for (std::size_t field = 0; field < structural.size(); ++field) {
             if (codes[field] != code_of(*structural[field])) {
-                pcr.fail("FullProf magnetic overlay refines a separate structural parameter", row);
+                pcr.fail("FullProf magnetic overlay refines a separate structural parameter", item.line);
             }
         }
-        magnetic_moment(pcr, structure, held, ion, refine, Row(values.begin() + 7, values.end()),
-                        Row(codes.begin() + 5, codes.end()), options[6] < 0., row);
-        const auto imaginary = pair_after(pcr, row, profile, 7);
-        pcr.zero(imaginary.values, 0, 7, "imaginary magnetic moment or phase");
-        pcr.zero(imaginary.codes, 0, 7, "imaginary magnetic moment code or phase");
-        row = pcr.next(pcr.next(row + 1, profile) + 1, profile);
+        magnetic_moment(pcr, structure, **site, item.type, refine, Row(values.begin() + 7, values.end()),
+                        Row(codes.begin() + 5, codes.end()), options[6] < 0., item.line);
+        represented += enumerated ? static_cast<std::size_t>(wyckoff->multiplicity) : 1U;
+    }
+    if (represented != sites.size()) {
+        pcr.fail("Enumerated FullProf magnetic orbits do not match the native sites", phase);
     }
     check_magnetic_acceptance(structure);
     complete_atom_site_moments(structure);
@@ -2155,6 +2267,18 @@ std::vector<std::size_t> phase_starts(const PCR& pcr) {
             phases.push_back(i);
         }
         previous = i;
+    }
+    if (phases.empty()) {
+        for (const auto declaration : headers(pcr, "nat ", 1, pcr.lines.size())) {
+            auto title = declaration;
+            while (title > 1 && pcr.lines[--title].text.empty()) {
+            }
+            const auto& text = pcr.lines[title].text;
+            if (title > 1 && !text.empty() && std::isalpha(static_cast<unsigned char>(text.front())) &&
+                pcr.lines[title - 1].text.empty()) {
+                phases.push_back(title - 1);
+            }
+        }
     }
     if (phases.empty()) {
         pcr.fail("No labelled FullProf phase blocks");
@@ -2361,13 +2485,18 @@ std::vector<Pattern> patterns_from_header(const PCR& pcr, std::size_t end, bool 
 }
 
 void neutron_scattering_tables(const PCR& pcr, Project& project, const std::vector<Pattern>& patterns) {
-    if (std::none_of(patterns.begin(), patterns.end(),
-                     [](const auto& pattern) { return pattern.enabled && !pattern.neutron_lengths.empty(); })) {
+    const bool phase_overrides = std::any_of(project.structures.begin(), project.structures.end(),
+                                             [](const auto& phase) { return !phase->scattering_lengths_fm.empty(); });
+    if (!phase_overrides && std::none_of(patterns.begin(), patterns.end(),
+                                       [](const auto& pattern) { return pattern.enabled && !pattern.neutron_lengths.empty(); })) {
         return;
     }
     std::map<Structure*, std::map<std::string, double>> tables;
-    bool overrides = false;
+    bool overrides = phase_overrides;
     for (const auto& phase : project.structures) {
+        if (!phase->scattering_lengths_fm.empty()) {
+            continue;  // A MAG_ONLY phase already has a zero nuclear scattering table.
+        }
         for (const auto& pattern : patterns) {
             if (!pattern.enabled || pattern.xray() ||
                 std::none_of(pattern.model->linked_structures.begin(), pattern.model->linked_structures.end(),
@@ -2464,6 +2593,29 @@ std::string fullprof_scattering_type(const std::string& type) {
         }
     }
     return type;
+}
+
+std::optional<crysta::MagneticRadialCoefficients> fullprof_magnetic_radial(const std::string& label) {
+    // Individual fitted dipole curves printed by FullProf.2k 8.40 in
+    // the magnetic form-factor section of its calculation output.
+    static const std::map<std::string, std::array<std::string_view, 7>> table{
+        {"jce3", {"0.0512", "6.1154", "0.2777", "7.9525", "0.6541", "2.2870", "0.0164"}},
+        {"jdy2", {"0.1756", "5.9381", "0.2289", "11.4640", "0.5833", "2.1676", "0.0112"}},
+        {"jdy3", {"0.1235", "13.2240", "0.4881", "4.6409", "0.3943", "1.7345", "-0.0060"}},
+        {"jho2", {"0.0232", "0.7032", "0.2707", "9.9935", "0.6776", "2.5214", "0.0271"}},
+        {"jho3", {"0.0432", "0.9101", "0.2794", "8.6834", "0.6685", "2.4175", "0.0082"}},
+        {"jnd3", {"0.0733", "4.4124", "0.3715", "4.0196", "0.5395", "1.5580", "0.0173"}},
+        {"jtb2", {"0.0498", "18.7342", "0.2774", "10.0841", "0.6612", "2.7456", "0.0108"}},
+        {"jtb3", {"0.0498", "15.1122", "0.2706", "9.1583", "0.6794", "2.8803", "-0.0001"}},
+    };
+    const auto found = table.find(lower(label));
+    if (found == table.end()) {
+        return std::nullopt;
+    }
+    crysta::MagneticRadialCoefficients result;
+    std::copy(found->second.begin(), found->second.end(), result.values.begin());
+    result.source = "FullProf.2k 8.40 internal " + found->first + " magnetic form factor";
+    return result;
 }
 
 Project import_fullprof_project(const std::string& path) {

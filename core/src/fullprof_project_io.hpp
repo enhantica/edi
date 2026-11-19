@@ -17,6 +17,7 @@ struct FullProfRelationDirection {
 std::vector<FullProfRelationDirection> fullprof_relation_directions(Project& model);
 std::optional<double> fullprof_default_neutron_length(const std::string& type);
 std::string fullprof_scattering_type(const std::string& type);
+std::optional<crysta::MagneticRadialCoefficients> fullprof_magnetic_radial(const std::string& label);
 std::string fullprof_signed_operator(const std::string& spatial, const std::string& moment);
 std::string fullprof_inverted_operator(const std::string& operation);
 struct FullProfSiteGeometry {
@@ -28,6 +29,17 @@ struct FullProfSiteGeometry {
 };
 FullProfSiteGeometry fullprof_site_geometry(const Structure& structure, const AtomSite& site);
 std::array<double, 6> fullprof_rotated_beta(const std::array<double, 6>& beta, const std::array<int, 9>& rotation);
+struct FullProfEnumeratedMoment {
+    std::string ion;
+    std::array<double, 3> position;
+    std::array<double, 3> moment;
+    std::array<double, 3> codes;
+    double occupancy;
+    double b_iso;
+    double b_iso_code;
+};
+std::optional<MagneticDescription> fullprof_magnetic_overlay_group(
+    const Structure& structure, const std::vector<FullProfEnumeratedMoment>& moments);
 struct FullProfMagneticOperators {
     std::vector<std::string> operators;
     std::vector<std::array<double, 3>> centerings;

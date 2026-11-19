@@ -286,15 +286,27 @@ const LinkedStructure* link_for(const Bank& bank, const Structure& structure) {
     return nullptr;
 }
 
-bool needs_neutron_lengths(const Structure& structure) {
-    return !structure.scattering_lengths_fm.empty() ||
-        std::any_of(structure.atom_sites.begin(), structure.atom_sites.end(), [](const auto& site) {
-            const auto& type = site->type_symbol.value();
-            return !type.empty() && std::isdigit(static_cast<unsigned char>(type.front()));
+bool magnetic_only(const Structure& structure) {
+    const auto& lengths = structure.scattering_lengths_fm.get();
+    return structure_magnetic(structure) && !lengths.empty() &&
+        std::all_of(structure.atom_sites.begin(), structure.atom_sites.end(), [&](const auto& site) {
+            const auto held = lengths.find(site->type_symbol.value());
+            return held != lengths.end() && held->second == 0.;
         });
 }
 
+bool needs_neutron_lengths(const Structure& structure) {
+    return !magnetic_only(structure) && (!structure.scattering_lengths_fm.empty() ||
+        std::any_of(structure.atom_sites.begin(), structure.atom_sites.end(), [](const auto& site) {
+            const auto& type = site->type_symbol.value();
+            return !type.empty() && std::isdigit(static_cast<unsigned char>(type.front()));
+        }));
+}
+
 void add_neutron_lengths(std::map<std::string, double>& lengths, const Structure& structure) {
+    if (magnetic_only(structure)) {
+        return;
+    }
     for (const auto& site : structure.atom_sites) {
         const auto& type = site->type_symbol.value();
         const auto symbol = detail::fullprof_scattering_type(type);
@@ -471,8 +483,13 @@ void write_profile(std::ostream& out, Structure& structure, const Bank& bank, st
                                  texture ? field(texture->march_random_fract) : Field{0.},
                                  {3. * b0 - a0}, {-b0}, {3. * b1 - a1}, {-b1}};
         if (bank.npr == 7) {
-            shape.push_back(field(peak.asym_fcj_1));
-            shape.push_back(field(peak.asym_fcj_2));
+            const auto aperture_1 = field(peak.asym_fcj_1);
+            const auto aperture_2 = field(peak.asym_fcj_2);
+            if ((aperture_1.value == 0.) != (aperture_2.value == 0.)) {
+                unsupported("FullProf interprets a single nonzero FCJ aperture as an equal-aperture model");
+            }
+            shape.push_back(aperture_1);
+            shape.push_back(aperture_2);
         }
         pair_rows(out, "Pref1 Pref2 Asy1 Asy2 Asy3 Asy4 S_L D_L", shape);
     }
@@ -505,25 +522,39 @@ std::string magnetic_label(const Structure& structure, const AtomSite& site) {
     for (char& c : ion) {
         c = static_cast<char>(std::toupper(static_cast<unsigned char>(c)));
     }
-    return "M" + ion;
+    const auto& radial = structure.magnetic->radial_coefficients;
+    const auto held = std::find_if(radial.begin(), radial.end(),
+                                   [&](const auto& row) { return row.first == site.type_symbol.value(); });
+    if (held == radial.end()) {
+        return "M" + ion;
+    }
+    const auto expected = detail::fullprof_magnetic_radial("J" + ion);
+    if (!expected || expected->values != held->second.values) {
+        unsupported("custom magnetic form factor for " + site.type_symbol.value());
+    }
+    return "J" + ion;
 }
 
 void write_magnetic_group(std::ostream& out, const Structure& structure) {
     const auto& magnetic = structure.magnetic.get();
     const auto setting = held_magnetic_setting(structure);
-    if (magnetic.group.number_bns.empty() || setting.empty() || !bns_transform_consistent(magnetic) ||
-        !magnetic.radial_coefficients.empty()) {
-        unsupported(structure.name.value() + ": FullProf magnetic export requires a named BNS setting and table form factors");
+    if (!bns_transform_consistent(magnetic)) {
+        unsupported(structure.name.value() + ": FullProf magnetic export requires consistent BNS setting information");
     }
     const auto symmetry = detail::fullprof_magnetic_operators(structure);
     if (symmetry.operators.empty()) {
         unsupported(structure.name.value() + ": no FullProf magnetic symmetry operators");
     }
     const auto& group = magnetic.group.name_uni.empty() ? magnetic.group.name_bns : magnetic.group.name_uni;
-    out << group << " number: " << magnetic.group.number_bns << " <--Magnetic Space Group Symbol\n"
-        << "Transform to standard: " << setting << '\n'
+    if (magnetic.group.number_bns.empty()) {
+        out << "P1 <--Magnetic Space Group Symbol\n";
+    } else {
+        out << group << " number: " << magnetic.group.number_bns << " <--Magnetic Space Group Symbol\n";
+    }
+    out << "Transform to standard: " << setting << '\n'
         << "Parent Space Group: "
-        << (magnetic.parent.name_h_m_alt.empty() ? structure.space_group.name_h_m.value() : magnetic.parent.name_h_m_alt)
+        << (magnetic.parent.name_h_m_alt.empty() && magnetic.parent.it_number.empty()
+                ? structure.space_group.name_h_m.value() : magnetic.parent.name_h_m_alt)
         << " IT_number: " << (magnetic.parent.it_number.empty() ? std::to_string(space_group_it_number(structure.space_group))
                                                                : magnetic.parent.it_number)
         << "\nTransform from Parent: " << (magnetic.parent.child_transform_pp_abc.empty() ? "a,b,c;0,0,0"
@@ -671,7 +702,7 @@ void write_phase(std::ostream& out, Structure& structure, const std::vector<Bank
     out << "!-------------------------------------------------------------------------------\n"
         << "! Data for PHASE number: " << number << '\n'
         << "!-------------------------------------------------------------------------------\n"
-        << structure.name.value() << '\n'
+        << structure.name.value() << (magnetic_only(structure) ? " mag_only\n" : "\n")
         << "!Nat Dis Ang Jbt Isy Str Furth ATZ Nvk More\n"
         << structure.atom_sites.size() << (magnetic ? " 0 0 10 2 0 0 0 0 0\n" : " 0 0 0 0 0 0 0 0 0\n")
         << "!Contributions (0/1) of this phase to the patterns\n";
@@ -718,11 +749,19 @@ void write_data(const Bank& bank, const fs::path& folder) {
     auto out = output_file(folder / bank.file);
     const auto& data = bank.data();
     const auto& x = data.axis();
+    const double boundary = x.back() + (x.back() - x[x.size() - 2]);
+    if (!std::isfinite(boundary) || boundary <= x.back()) {
+        unsupported("cannot represent the FullProf powder grid's trailing boundary");
+    }
     out << "XYDATA " << title_text(bank.model->name.value())
-        << "\n! Exported by EasyDiffraction\n! X Y sigma\n! Original observation grid\nINTER 1 1 0 0\nTEMP 0\n";
+        << "\n! Exported by EasyDiffraction\n! X Y sigma"
+        << "\n! Final record is an unmeasured grid boundary outside the calculation range\nINTER 1 1 0 0\nTEMP 0\n";
     for (std::size_t i = 0; i < x.size(); ++i) {
         out << x[i] << ' ' << data.intensity_meas.get()[i] << ' ' << data.intensity_meas_su.get()[i] << '\n';
     }
+    // FullProf's XYDATA reader needs a following grid coordinate to evaluate
+    // the last measured channel fully. The PCR ends at the last observation.
+    out << boundary << " 0 1\n";
     out.close();
 }
 
@@ -812,7 +851,8 @@ void write_single_crystal(Project& project, const fs::path& folder, Codes& codes
         << "!-------------------------------------------------------------------------------\n"
         << "! Data for PHASE number: 1\n"
         << "!-------------------------------------------------------------------------------\n"
-        << structure.name.value() << "\n!Nat Dis Ang Pr1 Pr2 Pr3 Jbt Irf Isy Str Furth ATZ Nvk Npr More\n"
+        << structure.name.value() << (magnetic_only(structure) ? " mag_only\n" : "\n")
+        << "!Nat Dis Ang Pr1 Pr2 Pr3 Jbt Irf Isy Str Furth ATZ Nvk Npr More\n"
         << structure.atom_sites.size()
         << (magnetic ? " 0 0 0 0 1 10 4 2 0 0 0 0 0 1\n" : " 0 0 0 0 1 0 4 0 0 0 0 0 0 1\n")
         << "!Jvi Jdi Hel Sol Mom Ter Brind RMua RMub RMuc Jtyp Nsp_Ref Ph_Shift N_Domains\n"

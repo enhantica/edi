@@ -177,3 +177,20 @@ def test_fullprof_moves_an_equivalent_site_to_its_wyckoff_representative():
     assert [min(x, 1 - x), boron.fract_y.value, boron.fract_z.value] == pytest.approx(
         [0.19978, 0.5, 0.5]
     )
+
+
+
+def test_fullprof_single_fcj_parameter_maps_to_two_physical_apertures(tmp_path):
+    source = REFERENCES / 'pd-neut-cwl_lab6-echidna_fcj-asymmetry'
+    stem = 'ECH0030684_LaB6_1p622A_fcj'
+    control = (source / f'{stem}.pcr').read_text()
+    lines = control.splitlines()
+    index = next(i for i, line in enumerate(lines) if 'S_L' in line and 'D_L' in line)
+    fields = lines[index + 1].split()
+    fields[6:] = ['0.16', '0']
+    lines[index + 1] = ' '.join(fields)
+    (tmp_path / f'{stem}.pcr').write_text('\n'.join(lines) + '\n')
+    copyfile(source / f'{stem}.dat', tmp_path / f'{stem}.dat')
+
+    peak = edi.Project.load(tmp_path / f'{stem}.pcr').experiments[0].peak
+    assert [peak.asym_fcj_1.value, peak.asym_fcj_2.value] == pytest.approx([0.08, 0.08])

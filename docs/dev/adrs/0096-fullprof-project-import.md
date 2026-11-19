@@ -34,7 +34,10 @@ describes the equivalent manual construction through normal project actions.
    ALT observations use forward bin widths and keep the file's uncertainty scaled with intensity.
 6. Convert compatible commensurate magnetic descriptions through native signed symmetry
    operators and magnetic moments. The combined FullProf magnetic phase form can carry magnetic
-   centering vectors and BNS setting information.
+   centering vectors and BNS setting information. For the archived rare-earth ion labels, keep the
+   FullProf radial coefficients in the native magnetic table and recognize them on export. Preserve
+   difference-pattern phases with zero nuclear scattering and export them with the FullProf
+   `mag_only` phase qualifier.
 7. Report unsupported source terms and missing data before adopting the project. Verification uses
    FullProf's fixed-input calculated intensities on matched observations, with excluded rows
    removed from the metric. The bundled assistant skill also describes manual export to FullProf.
@@ -45,7 +48,9 @@ Desktop Export to FullProf and `export-fullprof` use the same core writer. The w
 snapshot, evaluates the native relation graph, and publishes a new directory through the same
 fresh-path primitive as a native project copy. It emits a PCR and one measured companion per
 experiment. It writes FullProf XYDATA for measured powder patterns, a declared regular grid for
-powder simulations, and INT for compatible single-crystal datasets. The observation code selects
+powder simulations, and INT for compatible single-crystal datasets. In XYDATA the final
+unmeasured boundary record is outside the calculation range. FullProf uses it to evaluate the
+last measured channel without truncating the peak profile. The observation code selects
 a scale slot in the INT group. The reader and writer use the native single-crystal calculation for
 CW and TOF data and the verified FullProf Larson isotropic and anisotropic models. Profile,
 background, phase scales, masks and geometry are mapped into the corresponding FullProf fields.

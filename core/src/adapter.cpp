@@ -832,7 +832,7 @@ detail::FullProfSiteGeometry detail::fullprof_site_geometry(const Structure& str
         }
         const auto same = [&image](const auto& other) {
             for (std::size_t i = 0; i < 3; ++i) {
-                if (std::abs(std::remainder(image[i] - other[i], 1.)) > 1.e-5) {
+                if (std::abs(std::remainder(image[i] - other[i], 1.)) > 1.e-4) {
                     return false;
                 }
             }
@@ -9083,6 +9083,59 @@ std::string detail::fullprof_inverted_operator(const std::string& operation) {
         v = -v;
     }
     return fullprof_magnetic_xyz(inverted);
+}
+
+std::optional<MagneticDescription> detail::fullprof_magnetic_overlay_group(
+    const Structure& structure, const std::vector<FullProfEnumeratedMoment>& moments) {
+    // An enumerated P1 magnetic overlay can preserve the nuclear parameterization
+    // if every nuclear symmetry operation maps its sites, moments and directions.
+    MagneticDescription result;
+    result.centerings.emplace_back("1", "x,y,z,+1");
+    for (const auto& spatial : crysta::symmetry_operations(resolve_group(structure))) {
+        for (std::size_t i = 0; i < spatial.rotation.size(); ++i) {
+            if (i % 4 != 0 && spatial.rotation[i] != 0) {
+                return std::nullopt;
+            }
+        }
+        const auto determinant = fullprof_determinant(spatial.rotation);
+        const auto maps = [&](int theta) {
+            for (const auto& from : moments) {
+                const auto matches = [&](const auto& to) {
+                    if (from.ion != to.ion || from.occupancy != to.occupancy || from.b_iso != to.b_iso ||
+                        from.b_iso_code != to.b_iso_code) {
+                        return false;
+                    }
+                    for (std::size_t i = 0; i < 3; ++i) {
+                        const double sign = spatial.rotation[4 * i];
+                        const double mapped = sign * from.position[i] + spatial.translation[i];
+                        const double gain = theta * determinant * sign;
+                        if (std::abs(std::remainder(mapped - to.position[i], 1.)) >= 1.e-5 ||
+                            std::abs(gain * from.moment[i] - to.moment[i]) >= 1.e-5 ||
+                            std::abs(gain * from.codes[i] - to.codes[i]) >= 1.e-5) {
+                            return false;
+                        }
+                    }
+                    return true;
+                };
+                if (std::count_if(moments.begin(), moments.end(), matches) != 1) {
+                    return false;
+                }
+            }
+            return true;
+        };
+        const bool positive = maps(1);
+        const bool negative = maps(-1);
+        if (!positive && !negative) {
+            return std::nullopt;
+        }
+        for (const auto sign : {1, -1}) {
+            if ((sign == 1 && positive) || (sign == -1 && negative)) {
+                result.operations.emplace_back(std::to_string(result.operations.size() + 1),
+                    fullprof_magnetic_xyz({spatial.rotation, spatial.translation, sign}));
+            }
+        }
+    }
+    return result;
 }
 
 detail::FullProfMagneticOperators detail::fullprof_magnetic_operators(const Structure& structure) {
