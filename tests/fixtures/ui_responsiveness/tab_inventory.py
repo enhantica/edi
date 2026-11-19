@@ -128,6 +128,8 @@ def declared_tabs(root=ROOT):
     result, used = {}, set()
     for component in types:
         page, areas, selected = page_tabs(qml, component, main, sidebar)
+        if page in result or not re.fullmatch(r'[a-z][a-z0-9_]*', page):
+            raise ValueError('Mounted types must have distinct canonical page identities')
         used.update(selected)
         result[page] = areas
     if used != set(keys):
@@ -150,6 +152,8 @@ def tab_targets(inventory):
                 }
                 for tab in tabs
             )
+    if len({target['name'] for target in result}) != len(result):
+        raise ValueError('Canonical tab actions must have distinct identities')
     return result
 
 

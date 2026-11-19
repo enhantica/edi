@@ -8,6 +8,7 @@ import re
 import subprocess
 from pathlib import Path
 
+from tests.fixtures.ui_responsiveness.content_contract import content_expectations
 from tests.fixtures.ui_responsiveness.generate import full_scan
 from tests.fixtures.ui_responsiveness.tab_inventory import declared_tabs, scenario_steps
 
@@ -44,6 +45,7 @@ def collect(app, output, scan, series, *, archive=None):
         'runs': {},
         'tab_inventory': declared_tabs(ROOT),
     }
+    manifest['tab_content_expectations'] = content_expectations(manifest['tab_inventory'], ROOT)
     for name in scenario_steps(ROOT):
         for control in (False, True):
             key = name + ('-control' if control else '')
@@ -60,6 +62,9 @@ def collect(app, output, scan, series, *, archive=None):
                 'OMP_NUM_THREADS': '1',
                 'EDI_DEMO_SCAN_PROJECT': str(series if name == 'e58-series' else scan),
                 'EDI_UI_TAB_INVENTORY': json.dumps(manifest['tab_inventory']),
+                'EDI_UI_TAB_CONTENT_EXPECTATIONS': json.dumps(
+                    manifest['tab_content_expectations']
+                ),
             }
             env.pop('EDI_STALL_PROBE_STACKS', None)
             env.pop('EDI_UI_BLOCK_MS', None)

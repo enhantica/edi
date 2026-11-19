@@ -21,6 +21,7 @@ from tests.fixtures.ui_responsiveness.tab_inventory import (
     tab_targets,
 )
 from tests.integration.py.ui_responsiveness_oracle import timing
+from tests.integration.py.ui_tab_content_controls import with_content
 from tests.integration.py.ui_tab_witnesses import tab_actions
 
 INVENTORY = declared_tabs()
@@ -28,7 +29,7 @@ TARGETS = tab_targets(INVENTORY)
 STEPS = [target['name'] for target in TARGETS]
 
 
-def tab_trace(inventory=INVENTORY, *, blocked=False, excluded=False):
+def tab_trace(inventory=INVENTORY, *, blocked=False, excluded=False, content=True):
     targets = tab_targets(inventory)
     end = len(targets) * 10 + 210
     trace = [
@@ -126,6 +127,8 @@ def tab_trace(inventory=INVENTORY, *, blocked=False, excluded=False):
                 })
     else:
         trace += [{'event': 'tick', 't_ms': t, 'thread': 'gui'} for t in range(0, end + 1, 10)]
+    if content:
+        trace = with_content(trace, inventory)
     return sorted(trace, key=operator.itemgetter('t_ms'))
 
 
@@ -279,7 +282,8 @@ def test_new_declarations_are_picked_up_and_invalidate_old_coverage(tmp_path, ad
     )
     with pytest.raises(AssertionError, match='every source declaration'):
         tab_actions(tab_trace(), inventory)
-    tab_actions(tab_trace(inventory), inventory)
+    with pytest.raises(ValueError, match='independent content expectation'):
+        tab_actions(tab_trace(inventory, content=False), inventory)
 
 
 @pytest.mark.parametrize('escape', ['indirect', 'duplicate', 'unnamed', 'unassigned', 'local-bar'])

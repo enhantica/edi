@@ -2,6 +2,7 @@
 
 from tests.fixtures.ui_responsiveness.tab_inventory import SCENARIO, tab_targets
 from tests.integration.py.ui_causal_witnesses import actions, gui_thread, need, unique
+from tests.integration.py.ui_content_witnesses import tab_contents
 
 
 def tab_actions(trace, inventory):
@@ -45,3 +46,4 @@ def tab_actions(trace, inventory):
                     state.get('selected_object') == target['object'],
                     'the selected tab is the declared native button rather than a label',
                 )
+    tab_contents(trace, inventory)

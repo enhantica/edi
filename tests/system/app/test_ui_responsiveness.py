@@ -9,6 +9,7 @@ from pathlib import Path
 
 import pytest
 
+from tests.fixtures.ui_responsiveness.content_contract import content_expectations
 from tests.fixtures.ui_responsiveness.tab_inventory import (
     SCENARIO,
     declared_tabs,
@@ -62,6 +63,9 @@ def load_observations():
         'The producer must inventory every source-declared page and main/sidebar tab'
     )
     expected = set(SCENARIOS)
+    assert manifest.get('tab_content_expectations') == content_expectations(
+        declared_tabs(ROOT), ROOT
+    ), 'The producer must use independent content and empty-area expectations for the scan fixture'
     assert set(traces) == expected | {name + '-control' for name in expected}, (
         'Each scenario requires its own real blocking control'
     )

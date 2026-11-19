@@ -74,6 +74,80 @@ The monotonic clock, ten-millisecond timer, maximum counted gap of 100 ms,
 measurement-callback exclusions and real 150 ms GUI-block control are exactly
 the existing rules. Every run and control must cover the complete inventory.
 
+### Content completion
+
+Canonical mounted-page identities must be unique after suffix removal and case
+normalization, before building the page dictionary. Normalized tab identities
+and the flattened action identities must also be unique. Distinct mounts must
+never overwrite one another.
+
+`content_contract.content_expectations()` classifies the scan scenario's selected
+content independently of driver output. Main charts and the project/report views
+must contain data; Correlations and Evolution require fitted results, Pattern
+and Meas vs calc require calculated data. Before measuring, with native observers
+already installed, prepare actual calculated/fitted results for the selected
+experiment and scan results, preserving the loaded scan's scale.
+These are real app calculations, not injected readiness booleans or fabricated
+result records. A full scan fit is not required as preparation. Sidebar Text
+requires the selected block's text; other declared sidebar components require
+their populated controls. An absent sidebar component instead requires its
+actual invitation note. A new content type requires an explicit independent
+classification and otherwise refuses preparation. Home has static content.
+
+The producer passes this contract in `EDI_UI_TAB_CONTENT_EXPECTATIONS` and stores
+it in `manifest.tab_content_expectations`. It supplies input expectations only.
+Native observations must establish the following additional joins:
+
+* Each selected `state.content_sources[area]` records the actual native model's
+  `input`, data/snapshot identity `data`, wanted `generation`, and native operation
+  `stage` (`model`, `calculated` or `fitted`). These are sampled from the selected
+  model, never copied from the expectation contract. Areas are `main`, `sidebar`,
+  or `page` for tabless Home.
+  Separately, `state.model_bindings` samples authoritative session/project
+  selection, not a view's cached model: project, selected structure, selected
+  block/page model, current dataset's calculated/fitted result, full scan and
+  fitted scan-result identities/revisions. The contract's `binding` names the
+  required role. Its `data` and source-model `generation` must equal that role's
+  selected native identity/revision. Builder/job generations need not equal
+  source-model revisions; no worker execution model is prescribed.
+* `content-selected` carries `request`, `area`, `key`, native content-item `root`,
+  its shown-chain `visit`, canonical native `kind`, selected `tab_object`, the
+  actual model `source`, `tab_enabled`, `tab_visible`, `thread` and
+  `witness="native-selected-content"`. Lazy content is resolved to the actual
+  selected loader item, not its tab button or an uninstantiated component.
+  Empty notes also identify their native `object`.
+* Native shown-chain callbacks emit `content-shown` / `content-hidden` with
+  `root`, `visit`, `thread` and their actual timestamps. A retained item can be
+  revisited with a new visit identity. Compatible selections can share a visit;
+  leaving an area closes it. The selected content must render before departure.
+* `content-publication` records one GUI-accepted immutable content model with
+  `id`, `root`, `source`, `kind`, `mode`, `unit`, `count`, `digest`, `reason`, and
+  `thread`. `digest` hashes that actual accepted payload, not request metadata.
+  For Stacked/Map it also records the accepted snapshot's `loaded`, `covered`
+  dataset count and `failed` count. Cached accepted publications may predate the
+  measured action. Work may finish asynchronously; there is no new worker-model
+  or global-frame restriction.
+* Every real `render.contents` lists its actual selected content consumers. Each
+  carries `root`, `visit`, `publication`, `source`, `kind`, `mode`, `unit`, actual
+  consumed `count` and payload `digest`, `reason`, `visible`, positive `geometry`,
+  `visual_count`, and `witness="native-render-consumer"`. These fields come from
+  the rendered item/applied buffer or text/model binding at synchronization;
+  copying the latest publication into a frame without observing its consumer is
+  invalid. Aggregate `loading` and `pending` cover all work/descendant lazy
+  loaders of that selected subtree and must be zero. Stacked/Map also report
+  actual applied `loaded`/`covered`/`failed`: the complete supplied dataset set
+  must be covered, including when the representation is downsampled.
+
+The request's `transition-publication.content_publications` includes all accepted
+models needed by that visit. Its completion frame consumes those exact native
+models with the selected source identity/generation. A page visit covers both
+shown areas; an individual tab visit covers its area. Data content is nonempty;
+an independently empty sidebar instead has count zero, `mode="empty"`,
+`reason="no-groups"`, and its rendered `sideBar.note.invite` item. Empty content
+still needs a real visible render. Cached and synchronous models are valid, as
+are asynchronously accepted models, provided their consuming render occurs
+inside measurement and before any incompatible selection or native departure.
+
 ## Trace conventions
 
 All timestamps are `t_ms` on one monotonic millisecond clock, recorded at the
