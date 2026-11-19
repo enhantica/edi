@@ -10,7 +10,7 @@
     ],
     "id": "08-structure-settings",
     "image": "08-structure-settings.webp",
-    "image_sha256": "ed5f3724823963a2ef9d11401783f0f8cc3be8a9e4ee44ab0d2a74df464c815c",
+    "image_sha256": "4dabf938cb58cf980950f3a198801e500e980ede7fb80f2ad80d7d456691fc83",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -326,7 +326,7 @@
             "bounds": [
                 28,
                 133,
-                714,
+                728,
                 35
             ],
             "enabled": true,
@@ -334,7 +334,7 @@
             "visible_bounds": [
                 28,
                 133,
-                714,
+                728,
                 35
             ]
         },
@@ -342,7 +342,7 @@
             "bounds": [
                 28,
                 133,
-                637,
+                651,
                 35
             ],
             "enabled": true,
@@ -350,13 +350,13 @@
             "visible_bounds": [
                 28,
                 133,
-                637,
+                651,
                 35
             ]
         },
         "mainArea.blocks.down": {
             "bounds": [
-                707,
+                721,
                 133,
                 35,
                 35
@@ -365,7 +365,7 @@
             "icon": "arrow-circle-down",
             "label": "",
             "visible_bounds": [
-                707,
+                721,
                 133,
                 35,
                 35
@@ -373,7 +373,7 @@
         },
         "mainArea.blocks.up": {
             "bounds": [
-                668.5,
+                682.5,
                 133,
                 35,
                 35
@@ -382,58 +382,43 @@
             "icon": "arrow-circle-up",
             "label": "",
             "visible_bounds": [
-                668.5,
+                682.5,
                 133,
                 35,
                 35
             ]
         },
-        "mainArea.divider": {
+        "mainArea.saveImage": {
             "bounds": [
-                770,
-                77,
-                1,
-                681
+                3.5,
+                719.5,
+                35,
+                35
             ],
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                770,
-                77,
-                1,
-                681
+                3.5,
+                719.5,
+                35,
+                35
             ]
         },
-        "mainArea.tab.correlations": {
+        "mainArea.saveImage.button": {
             "bounds": [
-                126.28125,
-                77,
-                86.15625,
-                42
+                3.5,
+                719.5,
+                35,
+                35
             ],
-            "enabled": false,
-            "label": "Correlations",
+            "enabled": true,
+            "icon": "camera",
+            "label": "",
             "visible_bounds": [
-                126.28125,
-                77,
-                86.15625,
-                42
-            ]
-        },
-        "mainArea.tab.map": {
-            "bounds": [
-                273.015625,
-                77,
-                39.5625,
-                42
-            ],
-            "enabled": false,
-            "label": "Map",
-            "visible_bounds": [
-                273.015625,
-                77,
-                39.5625,
-                42
+                3.5,
+                719.5,
+                35,
+                35
             ]
         },
         "mainArea.tab.pattern": {
@@ -449,22 +434,6 @@
                 69.1875,
                 77,
                 57.09375,
-                42
-            ]
-        },
-        "mainArea.tab.stacked": {
-            "bounds": [
-                212.4375,
-                77,
-                60.578125,
-                42
-            ],
-            "enabled": false,
-            "label": "Stacked",
-            "visible_bounds": [
-                212.4375,
-                77,
-                60.578125,
                 42
             ]
         },
@@ -702,9 +671,25 @@
                 14
             ]
         },
+        "structure.toolbar": {
+            "bounds": [
+                0,
+                182,
+                770,
+                35
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                0,
+                182,
+                770,
+                35
+            ]
+        },
         "structure.toolbar.a": {
             "bounds": [
-                479,
+                577.875,
                 182,
                 35,
                 35
@@ -712,15 +697,31 @@
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                479,
+                577.875,
                 182,
                 35,
                 35
             ]
         },
+        "structure.toolbar.atomView": {
+            "bounds": [
+                236.125,
+                182,
+                86.25,
+                35
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                236.125,
+                182,
+                86.25,
+                35
+            ]
+        },
         "structure.toolbar.atoms": {
             "bounds": [
-                177.25,
+                126.875,
                 182,
                 95.25,
                 35
@@ -728,7 +729,7 @@
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                177.25,
+                126.875,
                 182,
                 95.25,
                 35
@@ -736,7 +737,7 @@
         },
         "structure.toolbar.axes": {
             "bounds": [
-                391.5,
+                490.375,
                 182,
                 35,
                 35
@@ -745,7 +746,7 @@
             "icon": "location-arrow",
             "label": "",
             "visible_bounds": [
-                391.5,
+                490.375,
                 182,
                 35,
                 35
@@ -753,7 +754,7 @@
         },
         "structure.toolbar.b": {
             "bounds": [
-                517.5,
+                616.375,
                 182,
                 35,
                 35
@@ -761,7 +762,7 @@
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                517.5,
+                616.375,
                 182,
                 35,
                 35
@@ -769,7 +770,7 @@
         },
         "structure.toolbar.bonds": {
             "bounds": [
-                314.5,
+                374.875,
                 182,
                 35,
                 35
@@ -778,7 +779,7 @@
             "icon": "link",
             "label": "",
             "visible_bounds": [
-                314.5,
+                374.875,
                 182,
                 35,
                 35
@@ -786,7 +787,7 @@
         },
         "structure.toolbar.c": {
             "bounds": [
-                556,
+                654.875,
                 182,
                 35,
                 35
@@ -794,7 +795,7 @@
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                556,
+                654.875,
                 182,
                 35,
                 35
@@ -802,7 +803,7 @@
         },
         "structure.toolbar.cell": {
             "bounds": [
-                353,
+                451.875,
                 182,
                 35,
                 35
@@ -811,7 +812,7 @@
             "icon": "vector-square",
             "label": "",
             "visible_bounds": [
-                353,
+                451.875,
                 182,
                 35,
                 35
@@ -819,7 +820,7 @@
         },
         "structure.toolbar.colors": {
             "bounds": [
-                92,
+                41.625,
                 182,
                 71.25,
                 35
@@ -827,7 +828,7 @@
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                92,
+                41.625,
                 182,
                 71.25,
                 35
@@ -835,7 +836,7 @@
         },
         "structure.toolbar.labels": {
             "bounds": [
-                276,
+                336.375,
                 182,
                 35,
                 35
@@ -844,7 +845,24 @@
             "icon": "tag",
             "label": "",
             "visible_bounds": [
-                276,
+                336.375,
+                182,
+                35,
+                35
+            ]
+        },
+        "structure.toolbar.polyhedra": {
+            "bounds": [
+                413.375,
+                182,
+                35,
+                35
+            ],
+            "enabled": true,
+            "icon": "dice-d20",
+            "label": "",
+            "visible_bounds": [
+                413.375,
                 182,
                 35,
                 35
@@ -852,7 +870,7 @@
         },
         "structure.toolbar.projection": {
             "bounds": [
-                440.5,
+                539.375,
                 182,
                 35,
                 35
@@ -861,7 +879,7 @@
             "icon": "cube",
             "label": "",
             "visible_bounds": [
-                440.5,
+                539.375,
                 182,
                 35,
                 35
@@ -869,7 +887,7 @@
         },
         "structure.toolbar.reset": {
             "bounds": [
-                594.5,
+                693.375,
                 182,
                 35,
                 35
@@ -878,40 +896,7 @@
             "icon": "home",
             "label": "",
             "visible_bounds": [
-                594.5,
-                182,
-                35,
-                35
-            ]
-        },
-        "structure.toolbar.save": {
-            "bounds": [
-                633,
-                182,
-                45.5,
-                35
-            ],
-            "enabled": true,
-            "label": "",
-            "visible_bounds": [
-                633,
-                182,
-                45.5,
-                35
-            ]
-        },
-        "structure.toolbar.save.button": {
-            "bounds": [
-                643.5,
-                182,
-                35,
-                35
-            ],
-            "enabled": true,
-            "icon": "camera",
-            "label": "",
-            "visible_bounds": [
-                643.5,
+                693.375,
                 182,
                 35,
                 35
@@ -951,7 +936,7 @@
         },
         "structure.view.legend": {
             "bounds": [
-                28,
+                684.1875,
                 676,
                 57.8125,
                 68
@@ -959,10 +944,26 @@
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                28,
+                684.1875,
                 676,
                 57.8125,
                 68
+            ]
+        },
+        "window.projectDrop": {
+            "bounds": [
+                0,
+                0,
+                1480,
+                800
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                0,
+                0,
+                1480,
+                800
             ]
         },
         "workflow.home.sidebarHost": {
@@ -1041,7 +1042,7 @@
     "qt_version": "6.11.2",
     "schema": 1,
     "script_sha256": "a0cd8f7d599e386e3db4cf752e3ae7050f99ce60356dedf20f4c9a1fbb3ecee3",
-    "source_revision": "9045d5d22d8f07b00ffd58c1610ec4b02b2beba5",
+    "source_revision": "66250b0826244790ae402c00384ea8fca62ae552",
     "state": {
         "experiments": 0,
         "fit_outcome": "",

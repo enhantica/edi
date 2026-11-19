@@ -1108,12 +1108,13 @@ QString ProjectViewModel::apply_creation_control(const edi::Edit& change, bool s
             edi::capture_experiment_controls(*project_,*experiment,actual.kind==Kind::PeakProfile);
         undo_history_.reserve(undo_history_.size()+1);undo_history_.emplace_back(std::move(before));
         EditOutcome result;
-        // A phase added, removed, switched on or off or replaced brings the calculation to the data's level again
-        // (the common scale factor); the links' undo above restores every scale with the membership.
+        // Membership edits request one preview. Rescaling is the explicit Estimate action (ADR-0094):
+        // its forward calculation must not run inside every link edit on the GUI thread.
+        const bool rescale = actual.kind == Kind::PhaseScale;
         const auto scaled=std::make_shared<edi::CommonScaleOutcome>();
-        try {result=applyEdit(phase_control?edi::Edit::rescaled(*project_,*experiment,change,scaled):change,structural);}
+        try {result=applyEdit(rescale?edi::Edit::rescaled(*project_,*experiment,change,scaled):change,structural);}
         catch(...){if(self)undo_history_.pop_back();throw;}
-        if(self && phase_control && result.applied)noteUnscaled(*experiment,*scaled);
+        if(self && rescale && result.applied)noteUnscaled(*experiment,*scaled);
         if(input)input->outcome=result;
         if(!self)return result.applied?QString{}:result.message;
         if(!result.applied)undo_history_.pop_back();
@@ -7627,7 +7628,7 @@ void ProjectViewModel::makeSpellingLater() {
     run_in_background([self, copy, stamps, request] {
         std::optional<edi::SaveSpelling> spelling;
         try {
-            spelling = edi::save_spelling(*copy);
+            spelling = edi::input_spelling(*copy);
         } catch (const std::exception&) {
             spelling.reset();  // the next publication that is not a view spells the fields
         }

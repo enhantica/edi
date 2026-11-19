@@ -158,6 +158,26 @@ Filter the **Atomic displacement** parameters using the category filter, click t
 ## Starting and fitted patterns
 
 <!-- learning-comparison -->
+<div class="gui-viewer" markdown="1">
+
+=== "Starting model"
+
+    <p class="gui-view-description">Compare the starting calculation with the measured pattern. The residual shows their difference.</p>
+
+    <figure class="ed-interface-preview" data-interface-hero>
+    <a class="gui-image-link" href="../../../assets/learning/gui/initial.svg?v=dc5090e77c15" data-gui-dark="c2caeb25e7d7" data-gui-open aria-haspopup="dialog" aria-label="Enlarge screenshot: Starting model"><svg class="gui-capture" viewBox="0 0 1000 540" width="1000" height="540" role="img" aria-label="Starting model"><title>Starting model</title><defs><clipPath id="interface-initial"><rect y="0" width="1000" height="540" rx="12" /></clipPath></defs><image href="../../../assets/learning/gui/initial.svg?v=dc5090e77c15" data-gui-dark="c2caeb25e7d7" width="1000" height="540" clip-path="url(#interface-initial)" /><rect class="gui-image-frame" y="0" width="1000" height="540" rx="12" /></svg></a>
+    </figure>
+
+=== "Fitted model"
+
+    <p class="gui-view-description">After the fit, compare the same peaks and residual on exactly the same axes and scale.</p>
+
+    <figure class="ed-interface-preview" data-interface-hero>
+    <a class="gui-image-link" href="../../../assets/learning/gui/refined.svg?v=6eee2525fcc2" data-gui-dark="4910709b0c9f" data-gui-open aria-haspopup="dialog" aria-label="Enlarge screenshot: Fitted model"><svg class="gui-capture" viewBox="0 0 1000 540" width="1000" height="540" role="img" aria-label="Fitted model"><title>Fitted model</title><defs><clipPath id="interface-refined"><rect y="0" width="1000" height="540" rx="12" /></clipPath></defs><image href="../../../assets/learning/gui/refined.svg?v=6eee2525fcc2" data-gui-dark="4910709b0c9f" width="1000" height="540" clip-path="url(#interface-refined)" /><rect class="gui-image-frame" y="0" width="1000" height="540" rx="12" /></svg></a>
+    </figure>
+
+</div>
+
 <!-- /learning-comparison -->
 
 ## Correlations

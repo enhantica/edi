@@ -9,7 +9,7 @@
     ],
     "id": "01-home",
     "image": "01-home.webp",
-    "image_sha256": "d3a8a3eef8261c7d770060e0b062360180575488b382ab8936fbbce55dc10be1",
+    "image_sha256": "e6e2391ed0f70d7ada77de6416028cb6c6a6d5c1150051be330a0fc3fa0f47b9",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -314,8 +314,8 @@
         },
         "home.about": {
             "bounds": [
-                742.921875,
-                544,
+                730.921875,
+                560,
                 150.515625,
                 19
             ],
@@ -323,16 +323,16 @@
             "icon": "info-circle",
             "label": "About EasyDiffraction",
             "visible_bounds": [
-                742.921875,
-                544,
+                730.921875,
+                560,
                 150.515625,
                 19
             ]
         },
         "home.changes": {
             "bounds": [
-                587,
-                511,
+                575,
+                527,
                 91.34375,
                 19
             ],
@@ -340,16 +340,16 @@
             "icon": "bullhorn",
             "label": "What's new",
             "visible_bounds": [
-                587,
-                511,
+                575,
+                527,
                 91.34375,
                 19
             ]
         },
         "home.cite": {
             "bounds": [
-                742.921875,
-                511,
+                575,
+                560,
                 89.984375,
                 19
             ],
@@ -357,32 +357,32 @@
             "icon": "quote-right",
             "label": "How to cite",
             "visible_bounds": [
-                742.921875,
-                511,
+                575,
+                560,
                 89.984375,
                 19
             ]
         },
         "home.contact": {
             "bounds": [
-                742.921875,
-                478,
-                150.515625,
-                85
+                730.921875,
+                461,
+                173.765625,
+                118
             ],
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                742.921875,
-                478,
-                150.515625,
-                85
+                730.921875,
+                461,
+                173.765625,
+                118
             ]
         },
         "home.documentation": {
             "bounds": [
-                587,
-                544,
+                575,
+                494,
                 113.921875,
                 19
             ],
@@ -390,16 +390,16 @@
             "icon": "external-link-alt",
             "label": "Documentation",
             "visible_bounds": [
-                587,
-                544,
+                575,
+                494,
                 113.921875,
                 19
             ]
         },
         "home.feedback": {
             "bounds": [
-                742.921875,
-                478,
+                730.921875,
+                461,
                 133.890625,
                 19
             ],
@@ -407,32 +407,49 @@
             "icon": "comments",
             "label": "Help and feedback",
             "visible_bounds": [
-                742.921875,
-                478,
+                730.921875,
+                461,
                 133.890625,
                 19
             ]
         },
         "home.learn": {
             "bounds": [
-                587,
-                478,
+                575,
+                461,
                 113.921875,
-                85
+                118
             ],
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                587,
-                478,
+                575,
+                461,
                 113.921875,
-                85
+                118
+            ]
+        },
+        "home.likes": {
+            "bounds": [
+                730.921875,
+                494,
+                173.765625,
+                19
+            ],
+            "enabled": true,
+            "icon": "heart",
+            "label": "Enjoying EasyDiffraction?",
+            "visible_bounds": [
+                730.921875,
+                494,
+                173.765625,
+                19
             ]
         },
         "home.start": {
             "bounds": [
                 573,
-                404,
+                387,
                 334,
                 39
             ],
@@ -441,15 +458,32 @@
             "label": "Start",
             "visible_bounds": [
                 573,
-                404,
+                387,
                 334,
                 39
             ]
         },
+        "home.survey": {
+            "bounds": [
+                730.921875,
+                527,
+                142.921875,
+                19
+            ],
+            "enabled": true,
+            "icon": "external-link-alt",
+            "label": "Take the user survey",
+            "visible_bounds": [
+                730.921875,
+                527,
+                142.921875,
+                19
+            ]
+        },
         "home.tutorials": {
             "bounds": [
-                587,
-                478,
+                575,
+                461,
                 75.8125,
                 19
             ],
@@ -457,8 +491,8 @@
             "icon": "graduation-cap",
             "label": "Tutorials",
             "visible_bounds": [
-                587,
-                478,
+                575,
+                461,
                 75.8125,
                 19
             ]
@@ -466,7 +500,7 @@
         "home.version": {
             "bounds": [
                 660,
-                350,
+                333,
                 160.234375,
                 19
             ],
@@ -474,13 +508,29 @@
             "label": "Version demo (demo build)",
             "visible_bounds": [
                 660,
-                350,
+                333,
                 160.234375,
                 19
             ]
         },
         "label": {
             "ambiguous": true
+        },
+        "window.projectDrop": {
+            "bounds": [
+                0,
+                0,
+                1480,
+                800
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                0,
+                0,
+                1480,
+                800
+            ]
         },
         "workflow.home.mainContent": {
             "bounds": [
@@ -526,7 +576,7 @@
     "qt_version": "6.11.2",
     "schema": 1,
     "script_sha256": "a0cd8f7d599e386e3db4cf752e3ae7050f99ce60356dedf20f4c9a1fbb3ecee3",
-    "source_revision": "9045d5d22d8f07b00ffd58c1610ec4b02b2beba5",
+    "source_revision": "66250b0826244790ae402c00384ea8fca62ae552",
     "state": {
         "experiments": 0,
         "fit_outcome": "",

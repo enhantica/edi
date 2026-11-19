@@ -4488,6 +4488,13 @@ SaveSpelling save_spelling(const Project& model) {
     return out;
 }
 
+SaveSpelling input_spelling(const Project& model) {
+    // A copy has no current computed-source claim. The engine validates input spelling without
+    // recalculating patterns just to paint fields (ADR-0094, feedback 93).
+    const Project inputs(model);
+    return save_spelling(inputs);
+}
+
 std::string cif_report_text(const Project& model) {
 #if __has_include("crysta/cif_report.hpp")  // drop the guard when the pin moves
     std::string text;

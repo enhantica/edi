@@ -10,7 +10,7 @@
                                   unpack into build/ci, give the unpacked files this restore's
                                   time, prove the import, compile nothing
 
-The artifact binds this run, commit/tree, workspace, platform, locked Python ABI, and exact
+The artifact binds its producer run, commit/tree, workspace, platform, locked Python ABI, and exact
 qualified SDK manifest/library. Every consumer validates those facts locally before restoring.
 Retry attempts may reuse a successful producer from the same run and source. Source drift,
 foreign SDKs, changed file modes/bytes and escaping archive paths all refuse; restore compiles
@@ -100,7 +100,8 @@ def sdk_platform() -> str:
 def observed() -> dict:
     """Read the current run, source, ABI and qualified SDK identities independently."""
     name = sdk_platform()
-    run_id, workspace = os.environ.get('GITHUB_RUN_ID'), os.environ.get('GITHUB_WORKSPACE')
+    run_id = os.environ.get('EDI_NATIVE_PRODUCER_RUN_ID') or os.environ.get('GITHUB_RUN_ID')
+    workspace = os.environ.get('GITHUB_WORKSPACE')
     if not run_id or not workspace or Path(workspace).resolve() != ROOT.resolve():
         refuse('native artifacts require this run and its exact checked-out workspace')
     abi = sysconfig.get_config_var('SOABI')

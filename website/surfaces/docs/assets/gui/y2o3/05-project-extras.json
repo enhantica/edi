@@ -10,7 +10,7 @@
     ],
     "id": "05-project-extras",
     "image": "05-project-extras.webp",
-    "image_sha256": "6ef279ca9b0a0b3af38d48edb22adea6eaddeb22489fcb6707060d660ae480e3",
+    "image_sha256": "db57fee733c9e647f6d8bd9777efcb78840f5998bcbfb0e632da661cf462392a",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -454,7 +454,7 @@
                 19
             ],
             "enabled": true,
-            "label": "/tmp/EasyDiffraction-OxYLYn/pd-neut-cwl_y2o3-spodi",
+            "label": "/tmp/EasyDiffraction-OOcPva/pd-neut-cwl_y2o3-spodi",
             "visible_bounds": [
                 183.4,
                 329.40000000000003,
@@ -712,6 +712,22 @@
                 14
             ]
         },
+        "window.projectDrop": {
+            "bounds": [
+                0,
+                0,
+                1480,
+                800
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                0,
+                0,
+                1480,
+                800
+            ]
+        },
         "workflow.home.sidebarHost": {
             "bounds": [
                 770,
@@ -788,7 +804,7 @@
     "qt_version": "6.11.2",
     "schema": 1,
     "script_sha256": "a0cd8f7d599e386e3db4cf752e3ae7050f99ce60356dedf20f4c9a1fbb3ecee3",
-    "source_revision": "9045d5d22d8f07b00ffd58c1610ec4b02b2beba5",
+    "source_revision": "66250b0826244790ae402c00384ea8fca62ae552",
     "state": {
         "experiments": 0,
         "fit_outcome": "",
