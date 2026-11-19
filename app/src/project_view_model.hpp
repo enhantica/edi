@@ -1093,9 +1093,9 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     struct LoadedData {
         const edi::ExperimentBase* experiment = nullptr;
         std::shared_ptr<const edi::BraggPdExperiment> before;
-        // The project's fit result before the load, which the load clears (it described the old data); Undo puts it
-        // back with the old data (the owner, 2026-11-19).
-        std::optional<edi::FitResultRecord> fit_result;
+        // The fit result and every bank's share before the load. Undo restores them with their data, or restores
+        // their absence, even if the replacement data were fitted meanwhile.
+        std::shared_ptr<const edi::Project> fit_state;
     };
     // The table header's free or fixed: each parameter's flag as it was, by unique name.
     struct FreeFlags {

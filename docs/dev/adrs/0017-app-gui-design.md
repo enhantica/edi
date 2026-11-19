@@ -575,6 +575,11 @@ Saving is active:
   2026-09-29): its left group stays Save, Undo, Redo, Reset, as easydiffractionbeta's. A project with no
   directory of its own — a bundled example, which lives in a temporary working copy — is saved as on its first
   Save (`Session.needsSaveAs`); once saved, it is no longer the example's copy.
+- **Fit ownership after replacing data.** Replacing measurements clears the project's saved fit result and all bank
+  shares. The data-replacement Undo record holds the prior fit state, including its absence, and restores it with
+  the prior measurements. A partial Undo of successive replacements cannot make an older fit current, a fit made
+  against the replacement does not survive restoring earlier measurements, and Save/reopen carries the same result
+  state. The history snapshot is taken only while a fit exists.
 - **Work before Create** (the owner, 2026-11-19). Once the Project page is open the app holds an untitled project
   in memory (`Session.untitled`), so Structure and Experiment can be used without creating a project first. Its
   first Save opens Create project, which names that project and saves it with its work. Create on the Project page

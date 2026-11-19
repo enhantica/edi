@@ -752,6 +752,25 @@ private slots:
         QTRY_VERIFY_WITH_TIMEOUT(!project->currentExperiment()->fitOutcome().isEmpty(), 20000);
     }
 
+    void undoReplacementRestoresTheAbsenceOfFit() {
+        edi_app::Session session(nullptr);
+        QVERIFY2(session.openProject(QUrl::fromLocalFile(QStringLiteral(EDI_SOURCE_DIR "/docs/user/cli/pd-neut-cwl_cosio-d20_2k/project"))),
+                 qPrintable(session.lastError()));
+        auto* project = session.project();
+        QTRY_VERIFY_WITH_TIMEOUT(!project->calculating(), 60000);
+        edi::clear_fit_result(project->project());
+        const QString data = QStringLiteral(EDI_SOURCE_DIR "/docs/user/cli/pd-neut-cwl_cosio-d20_scan-162f/project/experiments/d20_scan/01_001_497p3790.dat");
+        QVERIFY2(project->loadDataInto(project->currentExperiment(), QUrl::fromLocalFile(data)), qPrintable(project->lastError()));
+        QTRY_VERIFY_WITH_TIMEOUT(!project->calculating(), 60000);
+        project->project().fit_result.result_kind = "single";
+        project->project().fit_result.message = "describes only the replacement";
+        project->project().experiments.front()->fit_n_data_points = 7;
+        project->undo();
+        QTRY_VERIFY_WITH_TIMEOUT(!project->calculating(), 60000);
+        QVERIFY(project->project().fit_result.result_kind.empty());
+        QVERIFY(!project->project().experiments.front()->fit_share_held());
+    }
+
     void eachPageOpensOnItsDefaultTabThenTheUsersPick() {
         QQmlApplicationEngine engine;
         edi_app::configure_engine(engine);

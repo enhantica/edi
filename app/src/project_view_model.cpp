@@ -3407,8 +3407,7 @@ QString ProjectViewModel::replaceData(int index, edi::BraggPdExperiment replacem
     // reloaded alike); the load's undo record keeps them and Undo puts them back with that data (the owner,
     // 2026-11-19).
     if (!restoring && !project.fit_result.result_kind.empty()) {
-        project.fit_result = {};
-        edi::clear_fit_share(*project.experiments[static_cast<std::size_t>(index)]);
+        edi::clear_fit_result(project);
         if (fit_ != nullptr) fit_->sync();
         if (!self || retired_) return error;
     }
@@ -3549,7 +3548,7 @@ bool ProjectViewModel::loadData(int index, const QUrl& file) {
         noteScaled(notes);
     } else {
         LoadedData record{&experiment, std::make_shared<const edi::BraggPdExperiment>(experiment),
-                          project.fit_result.result_kind.empty() ? std::nullopt : std::optional(project.fit_result)};
+                          project.fit_result.result_kind.empty() ? nullptr : std::make_shared<const edi::Project>(project)};
         // Own the original experiment snapshot/history node before core publication.
         // experimentReplaced updates this same record with the actual new member.
         undo_history_.reserve(undo_history_.size() + 1);
@@ -6463,9 +6462,21 @@ void ProjectViewModel::undo() {
                                               edi::BraggPdExperiment(*record.before), true);
             undone = error.isEmpty();
             // The fit result the load cleared comes back with the data it described.
-            if (undone && record.fit_result) {
-                project_->fit_result = *record.fit_result;
+            if (undone) {
+                edi::clear_fit_result(*project_);
+                if (record.fit_state) {
+                    project_->fit_result = record.fit_state->fit_result;
+                    for (const auto& experiment : project_->experiments) {
+                        for (const auto& before : record.fit_state->experiments) {
+                            if (experiment->name.value() == before->name.value()) {
+                                edi::copy_fit_share(*experiment, *before);
+                                break;
+                            }
+                        }
+                    }
+                }
                 if (fit_ != nullptr) fit_->sync();
+                if (!self || retired_) return;
                 syncDatasets();
             }
         }
