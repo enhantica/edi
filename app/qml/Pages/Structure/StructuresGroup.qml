@@ -42,7 +42,9 @@ SideBarGroup {
             // structure comes from, so it is shown disabled (the owner, 2026-11-15). Every structure is atom-based
             // until mode-based ones can be loaded.
             readonly property string atomBased: qsTr("Atom-based")
-            columns: [numberColumnWidth, AppSizes.iconOnlyColumnWidth, textColumnWidth("name", qsTr("Name")), -1, AppSizes.iconColumnWidth]
+            // After Type, Crystal or Magnetic for an atom-based structure (edi ADR-0078; the owner, 2026-11-18).
+            readonly property var kinds: [qsTr("Crystal"), qsTr("Magnetic")]
+            columns: [numberColumnWidth, AppSizes.iconOnlyColumnWidth, textColumnWidth("name", qsTr("Name")), -1, -1, AppSizes.iconColumnWidth]
 
             header: EaComponents.ListViewHeader {
                 EaComponents.ListViewLabel {
@@ -62,6 +64,11 @@ SideBarGroup {
                     elide: Text.ElideRight
                     horizontalAlignment: Text.AlignLeft
                     text: qsTr("Type")
+                }
+                EaComponents.ListViewLabel {
+                    elide: Text.ElideRight
+                    horizontalAlignment: Text.AlignLeft
+                    text: qsTr("Structure")
                 }
                 EaComponents.ListViewLabel {
                     elide: Text.ElideRight
@@ -109,12 +116,59 @@ SideBarGroup {
                     enabled: false
                     value: table.atomBased
                 }
+                // Magnetic sets the grey group of the space group; Crystal sets the family space group and drops the
+                // moments, after asking.
+                ComboCell {
+                    SearchableComboBox {
+                        objectName: `structures.kind.${row.index}`
+                        horizontalAlignment: Text.AlignLeft
+                        inTable: true
+                        anchors.verticalCenter: parent.verticalCenter
+                        model: table.kinds
+                        currentIndex: row.structure && row.structure.magnetic ? 1 : 0
+                        onActivated: index => {
+                            const structure = row.structure;
+                            currentIndex = Qt.binding(() => row.structure && row.structure.magnetic ? 1 : 0);
+                            if (!structure || (index === 1) === structure.magnetic)
+                                return;
+                            if (index === 1) {
+                                structure.setMagnetic(true);
+                                return;
+                            }
+                            const dialog = toCrystalComponent.createObject(Overlay.overlay, {
+                                structure: structure
+                            }) as AppDialog;
+                            dialog.open();
+                        }
+                    }
+                }
                 EaComponents.ListViewButton {
                     horizontalAlignment: Text.AlignHCenter
                     objectName: `structures.remove.${row.index}`
                     fontIcon: "minus-circle"
                     ToolTip.text: qsTr("Remove this structure")
                     onClicked: group.project.removeStructure(row.index)
+                }
+            }
+        }
+
+        Component {
+            id: toCrystalComponent
+            AppDialog {
+                id: toCrystal
+                objectName: "structures.toCrystal"
+                property StructureViewModel structure: null
+                title: qsTr("Make the structure a crystal")
+                standardButtons: Dialog.Ok | Dialog.Cancel
+                contentWidth: AppSizes.messagesDialogContentWidth
+                onClosed: destroy()
+                onAccepted: if (toCrystal.structure)
+                    toCrystal.structure.setMagnetic(false)
+
+                EaElements.Label {
+                    width: toCrystal.contentWidth
+                    wrapMode: Text.Wrap
+                    text: qsTr("The structure takes its magnetic group's space group, and its magnetic moments and form factors are removed. Undo brings them back.")
                 }
             }
         }

@@ -41,6 +41,26 @@ const std::vector<edi::SpaceGroupSettingName>& space_group_settings() {
 // any ADP type, so its count is the sites', not the anisotropic tensors' the core loop holds (the owner, 2026-11-04).
 std::vector<edi::Category> shown_categories(edi::Structure& structure) {
     std::vector<edi::Category> categories = edi::structure_categories(structure);
+    // Crystal or Magnetic (edi ADR-0078): a Crystal structure shows no magnetic group, the moments included; a Magnetic
+    // one shows its Magnetic space group in place of Space group, its derived symbols and parent group on Extra.
+    static const std::set<std::string> magnetic_ids{"space_group_magn", "parent_space_group", "parent_propagation_vector",
+                                                    "space_group_symop_magn_operation", "space_group_symop_magn_centering",
+                                                    "atom_site_moment", "magnetic_form_factor"};
+    const bool magnetic = edi::structure_magnetic(structure);
+    std::erase_if(categories, [magnetic](const edi::Category& category) {
+        return magnetic ? category.id == "space_group" : magnetic_ids.contains(category.id);
+    });
+    if (magnetic) {
+        const auto has = [&categories](const char* id) {
+            return std::any_of(categories.begin(), categories.end(), [id](const edi::Category& category) { return category.id == id; });
+        };
+        // A grey group gives no moment yet, so the core lists only the moments: the groups a Magnetic structure always has.
+        if (!has("space_group_magn")) categories.push_back({"space_group_magn"});
+        if (!has("parent_space_group")) categories.push_back({"parent_space_group"});
+        if (!has("space_group_symop_magn_operation"))
+            categories.push_back({"space_group_symop_magn_operation", true, structure.magnetic->operations.size()});
+        categories.push_back({"space_group_magn_symbols"});
+    }
     // The bond cutoffs and the bonds they give: a designed group in Extra (GeomGroup.qml).
     edi::Category geom;
     geom.id = "geom";
@@ -901,9 +921,54 @@ MagneticGroupView StructureViewModel::magneticGroup() const {
             name_uni.clear();  // A number the table does not have shows no symbol.
         }
     }
+    std::string setting;
+    for (const auto& row : structure_.magnetic->transforms) {
+        if (row.second.source == "BNS") setting = row.second.pp_abc;
+    }
     return MagneticGroupView{QString::fromStdString(group.number_bns), QString::fromStdString(group.name_bns),
                              QString::fromStdString(name_uni), QString::fromStdString(group.number_og),
-                             QString::fromStdString(group.name_og)};
+                             QString::fromStdString(group.name_og), QString::fromStdString(group.point_group_name_uni),
+                             QString::fromStdString(group.point_group_number_litvin), QString::fromStdString(setting)};
+}
+
+QStringList StructureViewModel::magneticGroupNumbersBns() {
+    static const QStringList numbers = [] {
+        QStringList out;
+        for (const crysta::MagneticSpaceGroupEntry& group : crysta::magnetic_space_groups())
+            out.append(QString::fromStdString(group.number_bns));
+        return out;
+    }();
+    return numbers;
+}
+
+QStringList StructureViewModel::magneticGroupNamesBns() {
+    static const QStringList names = [] {
+        QStringList out;
+        for (const crysta::MagneticSpaceGroupEntry& group : crysta::magnetic_space_groups())
+            out.append(QString::fromStdString(group.name_bns));
+        return out;
+    }();
+    return names;
+}
+
+bool StructureViewModel::magnetic() const { return edi::structure_magnetic(structure_); }
+
+bool StructureViewModel::setMagnetic(bool magnetic) {
+    const QString refusal = editor_.apply(edi::Edit::structure_magnetic(structure_, magnetic), true);
+    if (refusal != magnetic_group_refusal_) {
+        magnetic_group_refusal_ = refusal;
+        emit magneticGroupRefusalChanged();
+    }
+    return refusal.isEmpty();
+}
+
+bool StructureViewModel::setMagneticSetting(const QString& transform) {
+    const QString refusal = editor_.apply(edi::Edit::magnetic_setting(structure_, transform.toStdString()), true);
+    if (refusal != magnetic_group_refusal_) {
+        magnetic_group_refusal_ = refusal;
+        emit magneticGroupRefusalChanged();
+    }
+    return refusal.isEmpty();
 }
 
 QStringList StructureViewModel::magneticGroupNames() {

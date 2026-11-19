@@ -32,9 +32,13 @@ struct MagneticGroupView {
     Q_PROPERTY(QString name_uni MEMBER name_uni CONSTANT)
     Q_PROPERTY(QString number_og MEMBER number_og CONSTANT)
     Q_PROPERTY(QString name_og MEMBER name_og CONSTANT)
+    Q_PROPERTY(QString point_group_name_uni MEMBER point_group_name_uni CONSTANT)
+    Q_PROPERTY(QString point_group_number_litvin MEMBER point_group_number_litvin CONSTANT)
+    // The transform to the BNS standard, the Setting field (`a,b,c;0,0,0` for the standard itself).
+    Q_PROPERTY(QString setting MEMBER setting CONSTANT)
 
    public:
-    QString number_bns, name_bns, name_uni, number_og, name_og;
+    QString number_bns, name_bns, name_uni, number_og, name_og, point_group_name_uni, point_group_number_litvin, setting;
 };
 
 // The parent space group of a magnetic structure, and whether it differs from the structure's own group.
@@ -368,6 +372,9 @@ class StructureViewModel : public QObject {
     // The 1651 magnetic space groups of crysta's table, as "BNS number  BNS symbol", for the group's selector; and
     // why the last choice was refused, empty when it was taken.
     Q_PROPERTY(QStringList magneticGroupNames READ magneticGroupNames CONSTANT)
+    // The table's BNS numbers and BNS names, index for index with magneticGroupNames: the two linked fields.
+    Q_PROPERTY(QStringList magneticGroupNumbersBns READ magneticGroupNumbersBns CONSTANT)
+    Q_PROPERTY(QStringList magneticGroupNamesBns READ magneticGroupNamesBns CONSTANT)
     Q_PROPERTY(QString magneticGroupRefusal READ magneticGroupRefusal NOTIFY magneticGroupRefusalChanged)
     Q_PROPERTY(edi_app::ParentGroupView parentGroup READ parentGroup NOTIFY parentGroupChanged)
     // Whether any site carries a moment.
@@ -400,11 +407,18 @@ class StructureViewModel : public QObject {
     MagneticGroupView magneticGroup() const;
     ParentGroupView parentGroup() const;
     static QStringList magneticGroupNames();
+    static QStringList magneticGroupNumbersBns();
+    static QStringList magneticGroupNamesBns();
+    // Crystal or Magnetic (edi ADR-0078): Magnetic takes the grey group of the space group, Crystal the family space
+    // group with the moments dropped (the page asks first). A refusal is kept in magneticGroupRefusal.
+    Q_INVOKABLE bool setMagnetic(bool magnetic);
+    // The Setting field: the transform to the BNS standard.
+    Q_INVOKABLE bool setMagneticSetting(const QString& transform);
     QString magneticGroupRefusal() const { return magnetic_group_refusal_; }
     // Takes table group `index` of magneticGroupNames: its operators replace the structure's when crysta's rule
     // admits them with the cell and the propagation vectors, else nothing changes and the refusal is kept.
     Q_INVOKABLE bool setMagneticGroup(int index);
-    bool magnetic() const { return !structure_.atom_site_moment.empty(); }
+    bool magnetic() const;
     QStringList atomTypes() const { return atom_types_; }
     double minBondDistance() const;
     void setMinBondDistance(double distance);

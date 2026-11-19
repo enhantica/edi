@@ -6,53 +6,69 @@ import EasyApplication.Gui.Elements as EaElements
 
 import edi.app
 
-// `space_group_magn` (edi ADR-0078; the owner, 2026-11-03): the magnetic space group, chosen from crysta's table of
-// the 1651 groups by BNS number and symbol, beside its UNI symbol. A choice replaces the structure's operators when
-// crysta admits them with the cell and the propagation vectors; a refused one leaves the structure as it was and says
-// why. Under it the parent group, read only, when it is not the space group itself (a supercell or a lower family
-// group).
+// `space_group_magn` (edi ADR-0078): a Magnetic structure's group in place of Space group, built like it. Crystal
+// system is read only and not saved (the magnetic CIF dictionary has no item for it). Number BNS and Name BNS are two
+// linked, searchable fields over crysta's table of the 1651 groups: choosing either replaces the structure's operators
+// when crysta admits them, else nothing changes and the refusal says why. Setting is the transform to the BNS
+// standard, `a,b,c;0,0,0` for the standard itself. The derived symbols and the parent group are on Extra.
 Column {
     id: group
 
     property StructureViewModel structure: null
     readonly property var magnetic: structure ? structure.magneticGroup : ({})
-    readonly property var parent_: structure ? structure.parentGroup : ({})
+    readonly property int index: structure && magnetic.number_bns ? structure.magneticGroupNumbersBns.indexOf(magnetic.number_bns) : -1
+    readonly property real fieldWidth: (EaStyle.Sizes.sideBarContentWidth - 3 * AppSizes.inputSpacing) / 4
 
     spacing: AppSizes.inputSpacing
-    // The BNS and UNI symbols in two equal columns, as Bond settings and Appearance pair their fields (the owner,
-    // 2026-11-17); the parent group's three fields in equal thirds.
-    readonly property real halfWidth: (EaStyle.Sizes.sideBarContentWidth - AppSizes.inputSpacing) / 2
-    readonly property real thirdWidth: (EaStyle.Sizes.sideBarContentWidth - 2 * AppSizes.inputSpacing) / 3
 
-    Grid {
-        columns: 2
-        columnSpacing: AppSizes.inputSpacing
+    EaElements.GroupRow {
+        spacing: AppSizes.inputSpacing
 
-        // Searchable like the space group's name (the owner, 2026-11-03).
+        ValueField {
+            objectName: "magneticSpaceGroup.crystalSystem"
+            width: group.fieldWidth
+            label: qsTr("Crystal system")
+            editable: false
+            fieldValue: group.structure && group.structure.spaceGroup ? group.structure.spaceGroup.crystalSystem : ""
+        }
         SearchableComboBox {
-            id: selector
-            objectName: "magneticSpaceGroup.selector"
-            width: group.halfWidth
-            title: Session.label("space_group_magn.name_bns")
+            objectName: "magneticSpaceGroup.numberBns"
+            width: group.fieldWidth
+            // The names the owner gave the two fields (decision of 2026-11-18), not the dictionary's labels.
+            title: qsTr("Number BNS")
             searchThreshold: 0
-            model: group.structure ? group.structure.magneticGroupNames : []
-            readonly property string current: (group.magnetic.number_bns ?? "") + "  " + (group.magnetic.name_bns ?? "")
-            currentIndex: model.indexOf(current)
-            displayText: group.magnetic.number_bns ? current : ""
-            // The choice goes to the model; the box then follows the model's group again.
+            model: group.structure ? group.structure.magneticGroupNumbersBns : []
+            currentIndex: group.index
+            displayText: group.magnetic.number_bns ?? ""
             onActivated: index => {
-                if (group.structure) {
+                if (group.structure)
                     group.structure.setMagneticGroup(index);
-                }
-                currentIndex = Qt.binding(() => model.indexOf(current));
+                currentIndex = Qt.binding(() => group.index);
+            }
+        }
+        SearchableComboBox {
+            objectName: "magneticSpaceGroup.nameBns"
+            width: group.fieldWidth
+            title: qsTr("Name BNS")
+            searchThreshold: 0
+            model: group.structure ? group.structure.magneticGroupNamesBns : []
+            currentIndex: group.index
+            displayText: group.magnetic.name_bns ?? ""
+            onActivated: index => {
+                if (group.structure)
+                    group.structure.setMagneticGroup(index);
+                currentIndex = Qt.binding(() => group.index);
             }
         }
         ValueField {
-            objectName: "magneticSpaceGroup.nameUni"
-            width: group.halfWidth
-            uid: "space_group_magn.name_uni"
-            editable: false
-            fieldValue: group.magnetic.name_uni ?? ""
+            objectName: "magneticSpaceGroup.setting"
+            width: group.fieldWidth
+            label: qsTr("Setting")
+            fieldValue: group.magnetic.setting ?? ""
+            onCommitted: text => {
+                if (group.structure)
+                    group.structure.setMagneticSetting(text);
+            }
         }
     }
     EaElements.Label {
@@ -62,31 +78,5 @@ Column {
         wrapMode: Text.WordWrap
         color: EaStyle.Colors.red
         text: group.structure ? group.structure.magneticGroupRefusal : ""
-    }
-    EaElements.GroupRow {
-        visible: group.parent_.differs === true
-        spacing: AppSizes.inputSpacing
-
-        ValueField {
-            objectName: "magneticSpaceGroup.parentName"
-            width: group.thirdWidth
-            uid: "parent_space_group.name_h_m_alt"
-            editable: false
-            fieldValue: group.parent_.name_h_m_alt ?? ""
-        }
-        ValueField {
-            objectName: "magneticSpaceGroup.parentNumber"
-            width: group.thirdWidth
-            uid: "parent_space_group.it_number"
-            editable: false
-            fieldValue: group.parent_.it_number ?? ""
-        }
-        ValueField {
-            objectName: "magneticSpaceGroup.parentTransform"
-            width: group.thirdWidth
-            uid: "parent_space_group.transform_pp_abc"
-            editable: false
-            fieldValue: group.parent_.transform_pp_abc ?? ""
-        }
     }
 }
