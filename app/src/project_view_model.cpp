@@ -4630,6 +4630,11 @@ QString ProjectViewModel::criticalEditRefusal(bool restoring, bool trial, bool o
     return {};
 }
 
+bool ProjectViewModel::editRefusalPersistent() const {
+    return retired_ || edit_publication_failed_ ||
+        (view_applied_ == view_request_ && scan_ && current_dataset_ >= 0 && projected_dataset_ != current_dataset_);
+}
+
 QString ProjectViewModel::editReadinessRefusal(bool restoring, bool trial) const {
     if (const QString critical = criticalEditRefusal(restoring, trial); !critical.isEmpty()) return critical;
     // The model must hold the chosen dataset: not while its read is in flight, nor after a read that failed (the

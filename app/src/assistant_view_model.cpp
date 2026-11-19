@@ -1451,6 +1451,7 @@ struct AssistantViewModel::State {
     QJsonArray history_initial_snapshot;
     std::uint64_t history_retry_revision=0;
     QString history_error; // Local durability, never account/native authority.
+    QString alias_cleanup_error; // An unfinished alias the assistant could not remove; cleared by the next sent message.
     Object history_seen_metadata;
     Object published_app_messages() const {
         const QPointer<Session> session(qobject_cast<Session*>(owner.parent()));
@@ -4031,6 +4032,7 @@ struct AssistantViewModel::State {
         // is left on the selector's default target.
         const void* partial_alias = nullptr;
         bool partial_alias_removed = false, partial_alias_deferred = false;
+        Object partial_alias_left;  // the unfinished alias it could not remove: id, parameter, reason
         // The tool and arguments as admitted, so a refused cue can still run the operation as normal mode does.
         QString fallback_tool;
         Object fallback_args;
@@ -4056,7 +4058,7 @@ struct AssistantViewModel::State {
     std::shared_ptr<NativeWidget> native_widget;
     // An unfinished alias a stopped add_relations still owes removing, because its stop came while the project could
     // not take an edit. Every later provider request waits until it is settled, so no successor can see or use it.
-    struct OwedAliasCleanup { QPointer<ProjectViewModel> project; const void* row = nullptr; std::string id, parameter; };
+    struct OwedAliasCleanup { QPointer<ProjectViewModel> project; const void* row = nullptr; std::string id, parameter; int waits = 0; };
     std::vector<OwedAliasCleanup> owed_alias_cleanups;
     bool owed_alias_timer = false;
     // Weak entries count retired callback captures until their actual owners die.
@@ -4600,7 +4602,7 @@ struct AssistantViewModel::State {
         // The helper's cancellation callbacks may have replaced or destroyed the original owner: only it cleans up.
         if (run->tool == "add_relations" && original_cleanup()) {
             drop_partial_alias(run);
-            if ((run->partial_alias_removed || run->partial_alias_deferred) && original_cleanup())
+            if ((run->partial_alias_removed || run->partial_alias_deferred || !run->partial_alias_left.isEmpty()) && original_cleanup())
                 try { widget_sequence_retain(run); } catch (...) {}
         }
         if (original_cleanup() && publishing && (!generic_busy || generic_revoke_pending ||
@@ -4872,59 +4874,96 @@ struct AssistantViewModel::State {
                 return;
             // Remove is its own ordinary relation action: release this run's prepared one first.
             if (input) target->finishWidgetRelations(input);
+            const QPointer<AssistantViewModel> receiver(&owner);
             const auto removal = remove_unfinished_alias(target, partial, id, parameter);
+            if (!receiver || receiver->state_.get() != this) return;
             run->partial_alias_removed = removal == AliasRemoval::Removed;
-            if (removal == AliasRemoval::Publishing) {
-                // The project cannot take an edit now (Stop from inside a publication, a Save, a dataset read): the
-                // removal is owed, and later provider requests wait for it.
+            if (removal == AliasRemoval::Waiting) {
+                // The project cannot take an edit yet (Stop from inside a publication, a Save, a dataset read): the
+                // removal is owed, and later provider requests wait for it, for a bounded time.
                 run->partial_alias_deferred = true;
-                owed_alias_cleanups.push_back({target, partial, std::move(id), std::move(parameter)});
+                owed_alias_cleanups.push_back({target, partial, std::move(id), std::move(parameter), 0});
                 schedule_owed_aliases();
+            } else if (removal == AliasRemoval::Refused || removal == AliasRemoval::Failed) {
+                const auto reason = alias_removal_reason(removal, target);
+                run->partial_alias_left = {{"id", QString::fromStdString(id)}, {"parameter", QString::fromStdString(parameter)}, {"reason", reason}};
+                report_alias_left(id, parameter, reason);
             }
         } catch (...) {}  // the original outcome stands; a later reread shows the row
     }
-    enum class AliasRemoval { Removed, Kept, Publishing };
+    // Removed: the row is gone. Gone: nothing is owed any more (the row is missing, renamed or retargeted, or the
+    // project was replaced). Waiting: the project will take the edit after a publication, Save or read. Refused: it
+    // will not without the user (failed publication, dataset not shown). Failed: Remove ran and the row is still there.
+    enum class AliasRemoval { Removed, Gone, Waiting, Refused, Failed };
     // Removes the exact unfinished alias row if the project still holds it unchanged. The removal's notifications may
     // replace the project or the assistant, so everything after it goes through the captured owners.
     AliasRemoval remove_unfinished_alias(const QPointer<ProjectViewModel>& target, const void* row, const std::string& id,
                                          const std::string& parameter) noexcept {
+        const QPointer<AssistantViewModel> receiver(&owner);
+        bool attempted = false;
         try {
-            const QPointer<AssistantViewModel> receiver(&owner);
-            if (!target || project != target) return AliasRemoval::Kept;
+            if (!target || project != target) return AliasRemoval::Gone;
             int at = -1, index = 0;
             for (const auto& alias : target->assistantProject()->aliases) {
                 if (alias.get() == row && alias->id.value() == id && alias->parameter_unique_name.value() == parameter) at = index;
                 ++index;
             }
-            if (at < 0) return AliasRemoval::Kept;
-            if (!target->readyForEdit()) return AliasRemoval::Publishing;
+            if (at < 0) return AliasRemoval::Gone;
+            if (!target->readyForEdit()) return target->editRefusalPersistent() ? AliasRemoval::Refused : AliasRemoval::Waiting;
             const auto scope = begin_own_edit();
+            attempted = true;
             try { target->analysis()->aliases()->remove(at); }
             catch (...) { if (receiver && receiver->state_.get() == this) end_own_edit(scope); throw; }
-            if (!receiver || receiver->state_.get() != this) return AliasRemoval::Kept;
+            if (!receiver || receiver->state_.get() != this) return AliasRemoval::Failed;
             end_own_edit(scope);
-            if (!target) return AliasRemoval::Kept;
+            if (!target) return AliasRemoval::Gone;
             const auto& aliases = target->assistantProject()->aliases;
             return std::none_of(aliases.begin(), aliases.end(), [row](const auto& alias) { return alias.get() == row; })
-                ? AliasRemoval::Removed : AliasRemoval::Kept;
+                ? AliasRemoval::Removed : AliasRemoval::Failed;
         } catch (...) {
-            return AliasRemoval::Kept;
+            return attempted ? AliasRemoval::Failed : AliasRemoval::Refused;
         }
     }
-    // Settles every owed alias removal the project can take now. A replaced project or a renamed/retargeted row is
-    // no longer owed (the row is someone else's). True when nothing is owed any more.
+    QString alias_removal_reason(AliasRemoval removal, const QPointer<ProjectViewModel>& target) const {
+        if (removal == AliasRemoval::Failed) return QObject::tr("its removal did not take effect");
+        if (removal == AliasRemoval::Waiting) return QObject::tr("the project stayed busy");
+        try {
+            if (target) if (const auto refusal = target->editRefusal(); !refusal.isEmpty()) return refusal;
+        } catch (...) {}
+        return QObject::tr("the project could not take the edit");
+    }
+    // What the user sees when an unfinished alias stays: its id, its current target and why.
+    void report_alias_left(const std::string& id, const std::string& parameter, const QString& reason) noexcept {
+        try {
+            alias_cleanup_error = QObject::tr("The assistant stopped before choosing the parameter of alias %1 and could not remove it "
+                                              "(%2). It still points at %3: correct or remove it.")
+                .arg(QString::fromStdString(id), reason, QString::fromStdString(parameter));
+            qInfo().noquote() << "assistant:" << alias_cleanup_error;
+            emit owner.lastErrorChanged();
+        } catch (...) {}
+    }
+    // Settles every owed alias removal it can. A removal still waiting stays owed for at most about 30 s; a refusal
+    // that waiting cannot clear, a failed removal or that bound ends the obligation and tells the user which alias
+    // stayed, so later requests are never held for good. True when nothing is owed any more.
     bool settle_owed_aliases() noexcept {
         const QPointer<AssistantViewModel> receiver(&owner);
         try {
             for (std::size_t at = 0; at < owed_alias_cleanups.size();) {
                 const auto owed = owed_alias_cleanups[at];
-                const auto removal = owed.project && project == owed.project
-                    ? remove_unfinished_alias(owed.project, owed.row, owed.id, owed.parameter) : AliasRemoval::Kept;
+                auto removal = remove_unfinished_alias(owed.project, owed.row, owed.id, owed.parameter);
                 if (!receiver || receiver->state_.get() != this) return false;
-                if (removal == AliasRemoval::Publishing) { ++at; continue; }
-                try { qInfo().noquote() << "assistant: owed unfinished alias" << (removal == AliasRemoval::Removed ? "removed" : "no longer owed"); } catch (...) {}
+                const auto same = [&owed](const auto& entry) { return entry.row == owed.row && entry.project == owed.project; };
+                if (removal == AliasRemoval::Waiting) {
+                    const auto found = std::find_if(owed_alias_cleanups.begin(), owed_alias_cleanups.end(), same);
+                    if (found != owed_alias_cleanups.end() && ++found->waits < 600) { ++at; continue; }
+                }
+                std::erase_if(owed_alias_cleanups, same);
+                if (removal == AliasRemoval::Removed || removal == AliasRemoval::Gone) {
+                    try { qInfo().noquote() << "assistant: owed unfinished alias" << (removal == AliasRemoval::Removed ? "removed" : "no longer owed"); } catch (...) {}
+                } else {
+                    report_alias_left(owed.id, owed.parameter, alias_removal_reason(removal, owed.project));
+                }
                 if (!receiver || receiver->state_.get() != this) return false;
-                std::erase_if(owed_alias_cleanups, [&owed](const auto& entry) { return entry.row == owed.row && entry.project == owed.project; });
                 at = 0;
             }
             return owed_alias_cleanups.empty();
@@ -7372,6 +7411,7 @@ struct AssistantViewModel::State {
             result["message"]=bounded_error(message+QLatin1Char(' ')+cue_skipped_message(run->cue_skipped));
         }
         if(run->partial_alias_removed)result["incomplete_alias_removed"]=true;
+        else if(!run->partial_alias_left.isEmpty())result["incomplete_alias_left"]=run->partial_alias_left;
         else if(run->partial_alias_deferred)result["incomplete_alias_removal"]=QStringLiteral("pending");
         if(run->estimate_then_names) {
             result["applied"]=true;
@@ -15918,7 +15958,7 @@ struct AssistantViewModel::State {
             throw std::runtime_error("Agent input could not be admitted");
         }
         generic_writing_input = false;
-        error.clear();
+        error.clear(); alias_cleanup_error.clear();
         try { notify(); } catch (...) {} // Presentation cannot revoke a real admitted row.
         return publicId;
     }
@@ -18454,7 +18494,7 @@ bool AssistantViewModel::canCancel() const {
     if (state_->generic_mode) return state_->native_worker_admitted() || state_->generic_retiring || state_->generic_connecting || state_->generic_busy || state_->generic_clear_pending || state_->generic_context_pending || state_->file_selection.has_value() || state_->file_staging;
 #endif
     return state_->auth_pending || state_->file_selection.has_value() || state_->file_staging || state_->core.value("can_cancel").toBool(); }
-QString AssistantViewModel::lastError() const { return !state_->error.isEmpty() ? state_->error : !state_->workflow_error.isEmpty() ? state_->workflow_error : !state_->preference_save_error.isEmpty() ? state_->preference_save_error : !state_->preference_error.isEmpty() ? state_->preference_error : state_->history_error; }
+QString AssistantViewModel::lastError() const { return !state_->error.isEmpty() ? state_->error : !state_->alias_cleanup_error.isEmpty() ? state_->alias_cleanup_error : !state_->workflow_error.isEmpty() ? state_->workflow_error : !state_->preference_save_error.isEmpty() ? state_->preference_save_error : !state_->preference_error.isEmpty() ? state_->preference_error : state_->history_error; }
 QVariantMap AssistantViewModel::usage() const {
     QVariantMap result{{"available",false},{"stale",false},{"buckets",QVariantList{}},
         {"state",QStringLiteral("unavailable")},{"loading",false},{"caption",tr("Usage")},
