@@ -58,18 +58,9 @@
     close.type = 'button';
     close.textContent = app.close;
     close.addEventListener('click', () => notice.close());
-    // After a failed send, the message as plain text to send another way, as the app offers it.
-    const copy = document.createElement('button');
-    copy.type = 'button';
-    copy.className = 'ed-contact-copy-report';
-    copy.textContent = app.copyReport || 'Copy report';
-    let report = '';
-    copy.addEventListener('click', () => navigator.clipboard && navigator.clipboard.writeText(report));
-    notice.append(text, copy, close);
+    notice.append(text, close);
     form.after(notice);
-    return (status, words, sent) => {
-      report = sent && rules ? rules.reportText(sent) : '';
-      copy.hidden = status === 201 || !report;
+    return (status, words) => {
       text.textContent = words;
       notice.dataset.outcome = status === 201 ? 'sent' : 'failed';
       notice.setAttribute('role', status === 201 ? 'status' : 'alert');
@@ -78,6 +69,9 @@
       close.focus();
     };
   }
+
+  // After a message was sent: the contact details stay, so the next one only needs its text.
+  const another = 'Your name, e-mail and affiliation are kept, so you can send another message.';
 
   // The same notice and words for the website's other form, the survey (assets/survey/survey.js).
   window.edNotice = { answer, noticeFor };
@@ -219,14 +213,16 @@
         if (missing.length) detail = (missing.length === 1 ? app.files.notAttached : app.files.notAttachedMany).replace('%1', missing.join(', '));
         // The answer is the one to this request: the fields stayed as sent while it was pending.
         // The answer shows only in the notice, so the line under Send is cleared rather than repeating it.
-        const words = answer(code, detail);
+        let words = answer(code, detail);
         status.textContent = '';
         if (code === 201) {
-          form.reset();
+          // Only the message is cleared: the contact details and the reason stay for the next one.
+          for (const key of ['subject', 'message']) if (form.elements[key]) form.elements[key].value = '';
           files.splice(0, files.length);
           if (files.render) files.render([]);
+          if (['name', 'email', 'affiliation'].some(key => form.elements[key] && form.elements[key].value.trim())) words = `${words} ${another}`;
         }
-        show(code, words, message);
+        show(code, words);
         controls.forEach(element => (element.disabled = false));
         pending = false;
       });

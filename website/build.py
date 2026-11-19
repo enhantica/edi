@@ -1039,9 +1039,6 @@ def _feedback_dialog_texts(qml: str) -> dict:
             1
         ),
     }
-    copy_report = one(
-        r'objectName: "feedback\.copyReport"[^}]*?text: qsTr\("([^"]+)"\)', 'Copy report'
-    ).group(1)
     return {
         'status': dict(
             zip(
@@ -1052,7 +1049,6 @@ def _feedback_dialog_texts(qml: str) -> dict:
         ),
         'close': close,
         'files': files,
-        'copyReport': copy_report,
         'reasons': [{'value': value, 'text': text} for value, text in reasons],
         'contact': contact,
         'subject': by_kind('objectName: "feedback.subject"', 'the subject prompts'),
