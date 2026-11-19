@@ -121,8 +121,7 @@ void StructureListModel::setStructures(const QList<StructureViewModel*>& structu
 ExperimentListModel::ExperimentListModel(QObject* parent)
     : RowTableModel({"name", "label", "experiment", "fitOutcome", "file", "extracted", "isTemplate"}, parent) {}
 
-void ExperimentListModel::setExperiments(const QList<ExperimentViewModel*>& experiments, const edi::Project& project,
-                                         const std::set<const edi::ExperimentBase*>& replaced) {
+void ExperimentListModel::setExperiments(const QList<ExperimentViewModel*>& experiments, const edi::Project& project) {
     // A fit records each fitted experiment's share (`_fit_result_bank`); a single fit recorded before that has none
     // and fitted the first.
     const QString outcome = recorded_outcome(project.fit_result);
@@ -133,9 +132,7 @@ void ExperimentListModel::setExperiments(const QList<ExperimentViewModel*>& expe
     QList<Row> rows;
     for (int i = 0; i < experiments.size(); ++i) {
         ExperimentViewModel* experiment = experiments[i];
-        // Data replaced after the fit is not what the fit describes: no outcome and no agreement on its line.
-        const bool fitted = !replaced.contains(experiment->experiment()) &&
-                            (shares ? experiment->experiment()->fit_share_held() : i == 0);
+        const bool fitted = shares ? experiment->experiment()->fit_share_held() : i == 0;
         experiment->setFitOutcome(fitted ? outcome : QString());
         // Its last fit's reliability follows its name and file on the selector's line (Rwp and χ²).
         const std::string reliability = fitted ? edi::reliability_text(project, static_cast<std::size_t>(i)) : std::string();
@@ -3336,19 +3333,6 @@ bool ProjectViewModel::setSameForAll(ParameterItem* parameter, bool on) {
     return setSameForAllExperiments(parameter->blockIndex(), shared_path(*project_, parameter), on);
 }
 
-QString ProjectViewModel::fitStamp() const {
-    const edi::FitResultRecord& result = project_->fit_result;
-    return QString::fromStdString(result.result_kind + '|' + result.message + '|' + result.exit_reason) + u'|' +
-           QString::number(result.fitting_time, 'g', 17) + u'|' +
-           QString::number(result.prof_wr_factor.value_or(-1.0), 'g', 17);
-}
-
-void ProjectViewModel::syncReplacedSinceFit() {
-    if (!replaced_since_fit_.empty() && fitStamp() != replaced_fit_stamp_) replaced_since_fit_.clear();
-    // A scan's own staleness is syncOutOfDate's.
-    if (!scan_ && fit_ != nullptr) fit_->setOutOfDate(!replaced_since_fit_.empty());
-}
-
 void ProjectViewModel::keepUntilModelGone(const edi::ExperimentBase* experiment,
                                           std::shared_ptr<const edi::ExperimentBase> held) {
     for (ExperimentViewModel* model : experiment_models_) {
@@ -3360,7 +3344,6 @@ void ProjectViewModel::keepUntilModelGone(const edi::ExperimentBase* experiment,
 }
 
 void ProjectViewModel::experimentReplaced(const edi::ExperimentBase* before, const edi::ExperimentBase* after) {
-    if (replaced_since_fit_.erase(before) != 0) replaced_since_fit_.insert(after);
     for (UndoRecord& record : undo_history_) {
         if (auto* added = std::get_if<AddedExperiments>(&record)) {
             std::replace(added->experiments.begin(), added->experiments.end(), before, after);
@@ -3420,13 +3403,14 @@ QString ProjectViewModel::replaceData(int index, edi::BraggPdExperiment replacem
     if (!self || retired_) return error;
     const edi::ExperimentBase* after = project.experiments[static_cast<std::size_t>(index)].get();
     experimentReplaced(before, after);
-    // New data after a fit: that fit's results describe the old data (the owner, 2026-11-19). Undo brings back the
-    // data the fit described.
-    if (restoring) {
-        replaced_since_fit_.erase(after);
-    } else if (!project.fit_result.result_kind.empty()) {
-        if (replaced_since_fit_.empty()) replaced_fit_stamp_ = fitStamp();
-        replaced_since_fit_.insert(after);
+    // New data after a fit: the fit's results describe the old data, so they go, in the project itself (saved and
+    // reloaded alike); the load's undo record keeps them and Undo puts them back with that data (the owner,
+    // 2026-11-19).
+    if (!restoring && !project.fit_result.result_kind.empty()) {
+        project.fit_result = {};
+        edi::clear_fit_share(*project.experiments[static_cast<std::size_t>(index)]);
+        if (fit_ != nullptr) fit_->sync();
+        if (!self || retired_) return error;
     }
     if (!self || retired_) return error;
     syncDatasets();
@@ -3564,7 +3548,8 @@ bool ProjectViewModel::loadData(int index, const QUrl& file) {
         syncLoadState();
         noteScaled(notes);
     } else {
-        LoadedData record{&experiment, std::make_shared<const edi::BraggPdExperiment>(experiment)};
+        LoadedData record{&experiment, std::make_shared<const edi::BraggPdExperiment>(experiment),
+                          project.fit_result.result_kind.empty() ? std::nullopt : std::optional(project.fit_result)};
         // Own the original experiment snapshot/history node before core publication.
         // experimentReplaced updates this same record with the actual new member.
         undo_history_.reserve(undo_history_.size() + 1);
@@ -4274,8 +4259,7 @@ void ProjectViewModel::syncDatasets() {
     syncScanAdmission();
     if (!scan_) {
         experiment_list_->setColumns({});
-        syncReplacedSinceFit();
-        experiment_list_->setExperiments(experiment_models_, *project_, replaced_since_fit_);
+        experiment_list_->setExperiments(experiment_models_, *project_);
         syncPatternColours();
         return;
     }
@@ -6478,6 +6462,12 @@ void ProjectViewModel::undo() {
             const QString error = replaceData(static_cast<int>(found - project_->experiments.begin()),
                                               edi::BraggPdExperiment(*record.before), true);
             undone = error.isEmpty();
+            // The fit result the load cleared comes back with the data it described.
+            if (undone && record.fit_result) {
+                project_->fit_result = *record.fit_result;
+                if (fit_ != nullptr) fit_->sync();
+                syncDatasets();
+            }
         }
     } else if (const auto* controls = std::get_if<edi::ExperimentControlsUndo>(&undo_history_.back())) {
         undone=restore(edi::Edit::restore_experiment_controls(*project_,*controls),true);

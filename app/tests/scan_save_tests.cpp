@@ -724,10 +724,10 @@ private slots:
         hover();
         // The new data is calculated as any other edit's is.
         QTRY_VERIFY_WITH_TIMEOUT(project->currentExperiment()->pattern()->calculatedPointCount() > 0, 60000);
-        // The project's saved fit described the old data: the experiment's line drops its outcome and the status bar
-        // shows the fit as outdated.
+        // The fit described the old data: the project no longer holds it, so the experiment's line drops its outcome
+        // (and a save writes none).
         QVERIFY(project->currentExperiment()->fitOutcome().isEmpty());
-        QVERIFY(project->fit()->outOfDate());
+        QVERIFY(project->project().fit_result.result_kind.empty());
         for (const char* name : {"mainArea.tab.pattern", "mainArea.tab.measCalc", "appBar.tab.structure", "appBar.tab.analysis",
                                  "mainArea.tab.measCalc", "mainArea.tab.pattern", "appBar.tab.experiment", "mainArea.tab.measCalc"}) {
             click(name);
@@ -737,6 +737,19 @@ private slots:
         }
         QTRY_VERIFY_WITH_TIMEOUT(!project->calculating(), 60000);
         QVERIFY2(loops.isEmpty(), qPrintable(loops.join(u'\n')));
+        // A second replacement, then one Undo: the data is the first replacement's, which no fit described.
+        const QString second = copy.path() + QStringLiteral("/d20_second.dat");
+        QVERIFY(QFile::copy(QStringLiteral(EDI_SOURCE_DIR "/docs/user/cli/pd-neut-cwl_cosio-d20_scan-162f/project/experiments/d20_scan/01_002_497p3410.dat"), second));
+        QVERIFY2(project->loadDataInto(project->currentExperiment(), QUrl::fromLocalFile(second)), qPrintable(project->lastError()));
+        QTRY_VERIFY_WITH_TIMEOUT(!project->calculating(), 60000);
+        project->undo();
+        QTRY_VERIFY_WITH_TIMEOUT(!project->calculating(), 60000);
+        QVERIFY(project->project().fit_result.result_kind.empty());
+        QVERIFY(project->currentExperiment()->fitOutcome().isEmpty());
+        // A second Undo brings back the fitted data and the fit that described it.
+        project->undo();
+        QTRY_VERIFY_WITH_TIMEOUT(!project->project().fit_result.result_kind.empty(), 20000);
+        QTRY_VERIFY_WITH_TIMEOUT(!project->currentExperiment()->fitOutcome().isEmpty(), 20000);
     }
 
     void eachPageOpensOnItsDefaultTabThenTheUsersPick() {

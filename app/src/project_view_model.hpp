@@ -132,9 +132,7 @@ class ExperimentListModel : public RowTableModel {
 
    public:
     explicit ExperimentListModel(QObject* parent);
-    // `replaced`: experiments whose data was replaced after the project's last fit, which that fit no longer describes.
-    void setExperiments(const QList<ExperimentViewModel*>& experiments, const edi::Project& project,
-                        const std::set<const edi::ExperimentBase*>& replaced = {});
+    void setExperiments(const QList<ExperimentViewModel*>& experiments, const edi::Project& project);
     struct Dataset {
         QString file;
         QString outcome;
@@ -1095,6 +1093,9 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     struct LoadedData {
         const edi::ExperimentBase* experiment = nullptr;
         std::shared_ptr<const edi::BraggPdExperiment> before;
+        // The project's fit result before the load, which the load clears (it described the old data); Undo puts it
+        // back with the old data (the owner, 2026-11-19).
+        std::optional<edi::FitResultRecord> fit_result;
     };
     // The table header's free or fixed: each parameter's flag as it was, by unique name.
     struct FreeFlags {
@@ -1139,12 +1140,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // Keeps a replaced experiment alive until its view model is gone: the old model and its pattern hold it by
     // reference, and they are rebuilt only when the edit publishes (the owner's crash of 2026-11-19).
     void keepUntilModelGone(const edi::ExperimentBase* experiment, std::shared_ptr<const edi::ExperimentBase> held);
-    // The experiments whose data was replaced after the last fit, and the fit they were replaced after (fitStamp).
-    std::set<const edi::ExperimentBase*> replaced_since_fit_;
-    QString replaced_fit_stamp_;
-    QString fitStamp() const;
-    // Forgets the replaced experiments once another fit is recorded, and says whether the fit shown is out of date.
-    void syncReplacedSinceFit();
+
     bool restoreScanRun(const ScanRun& run, bool restoring = false);
     // The results read again from disk (after a run, an undo or a load), with every view of them.
     void reloadScanResults();
