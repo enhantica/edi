@@ -138,6 +138,17 @@ crysta::ParameterState state(const Parameter& p) {
 // The choice between the two paths is crysta's own rule too (crysta::space_group_from_file,
 // which its loader also calls). edi's model spells an undeclared code as the empty string, so
 // that is the absent code here.
+// The origin of a magnetic structure's setting: the BNS transform's shift when its basis is the identity and the
+// shift is not zero.
+static std::optional<std::array<double, 3>> magnetic_origin(const MagneticDescription& magnetic) {
+    for (const auto& row : magnetic.transforms) {
+        if (row.second.source != "BNS") continue;
+        std::optional<std::array<double, 3>> origin = crysta::origin_shift_of_transform(row.second.pp_abc);
+        if (origin && *origin != std::array<double, 3>{}) return origin;
+    }
+    return std::nullopt;
+}
+
 crysta::SpaceGroup resolve_group(const Structure& s) {
     const std::string& code = s.space_group.coord_system_code;
     crysta::SpaceGroup group = crysta::space_group_from_file(
@@ -145,6 +156,18 @@ crysta::SpaceGroup resolve_group(const Structure& s) {
     // A magnetic structure read without `_space_group` (crysta's decision: symmetry from its
     // operators, nothing written back).
     group.declared = s.magnetic->space_group_declared;
+    // A magnetic structure's setting may be the table one with its origin moved, as the transform to the BNS
+    // standard gives it (edi ADR-0078): held moved when the moved setting, not the table one, holds its operations.
+    if (!s.magnetic->operations.empty() && group.declared) {
+        if (const std::optional<std::array<double, 3>> origin = magnetic_origin(*s.magnetic)) {
+            if (crysta::operator_defined_symmetry(s.magnetic->operations, s.magnetic->centerings, group)) {
+                crysta::SpaceGroup moved = crysta::space_group_with_origin(group, *origin);
+                if (!crysta::operator_defined_symmetry(s.magnetic->operations, s.magnetic->centerings, moved)) {
+                    return moved;
+                }
+            }
+        }
+    }
     return group;
 }
 
@@ -1220,7 +1243,11 @@ bool adopt_magnetic_family_setting(Structure& s) {
         } catch (const std::invalid_argument&) {
             continue;
         }
-        if (!crysta::operator_defined_symmetry(magnetic.operations, magnetic.centerings, group)) {
+        const std::optional<std::array<double, 3>> origin = magnetic_origin(magnetic);
+        const bool holds = !crysta::operator_defined_symmetry(magnetic.operations, magnetic.centerings, group) ||
+                           (origin && !crysta::operator_defined_symmetry(magnetic.operations, magnetic.centerings,
+                                                                          crysta::space_group_with_origin(group, *origin)));
+        if (holds) {
             s.space_group.name_h_m = setting.name_h_m;
             s.space_group.coord_system_code = setting.coord_system_code;
             // The file gave no letters (crysta writes none without `_space_group`): each site's from the table again.
