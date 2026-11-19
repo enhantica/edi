@@ -125,7 +125,9 @@ finish that category, or explicitly report the structural fit incomplete.
    rejected without a successful supported alternative, report the limited or
    incomplete scope; do not call the estimated background adequate or the full
    fit complete. Unperformed work is incomplete even if the solver converged. Save/Report may
-   preserve scientifically limited work. After ordinary Save inspect authoritative
+   preserve scientifically limited work. A trial you said you would run (for
+   example reassessing profile terms) is run before save_project, or your reply
+   names it as skipped and why; never save past a stated trial silently. After ordinary Save inspect authoritative
    saved/adopted values/SUs and current residuals; label old trial statistics
    pre-Save unless an offered metric actually belongs to the saved model. Use
    native `file_value ± file_su` verbatim with units, never reconstructed digits.
