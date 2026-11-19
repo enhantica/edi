@@ -575,6 +575,14 @@ Saving is active:
   2026-09-29): its left group stays Save, Undo, Redo, Reset, as easydiffractionbeta's. A project with no
   directory of its own — a bundled example, which lives in a temporary working copy — is saved as on its first
   Save (`Session.needsSaveAs`); once saved, it is no longer the example's copy.
+- **Work before Create** (the owner, 2026-11-19). Once the Project page is open the app holds an untitled project
+  in memory (`Session.untitled`), so Structure and Experiment can be used without creating a project first. Its
+  first Save opens Create project, which names that project and saves it with its work. Create on the Project page
+  does the same while the project is untitled. Closing or quitting with unsaved work asks as for any project. The
+  web app keeps an untitled project's recovery copy marked untitled, so a recovered one is untitled again. Create
+  project's fields say what each is for: **Short name · Folder** (the project's folder name; letters, digits, - and
+  _), **Title**, **Authors** (separated by ;) and **Description**, which are shown in the report (the CIF export
+  does not read them), and **Location**, the folder in which the project folder is created.
 - **The core writes**: `Session.save` / `saveAs` stage the project with `edi::save_project_as` beside its folder and
   publish the checked stage (ADR-0069); the core's `edi::save_project_as` (`core/include/edi/io.hpp`): the last-modified time advances before the write and is
   restored if it fails, and the directory is remembered only after it succeeds — the Python binding's
