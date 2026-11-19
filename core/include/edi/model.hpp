@@ -4914,7 +4914,7 @@ void validate_descent(const std::string& descent, const std::string& where);
 struct ProjectMetadata {
     ProjectMetadata();
     std::string name = "untitled_project";
-    std::string title = "Untitled Project";
+    std::string title;
     std::string description;
     std::string authors;        // the project's authors, separated by "; "
     std::string path;           // kept in step with Project.path by load / save_as

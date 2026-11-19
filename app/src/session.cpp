@@ -630,7 +630,26 @@ void Session::setUntitled(bool untitled) {
 
 bool Session::startUntitledProject(const QString& suRule, bool reportLibraries) {
     if (project_ != nullptr) return false;
-    if (!createProjectImpl(QStringLiteral("untitled"), {}, {}, suRule, {}, {}, reportLibraries, {}, nullptr)) return false;
+#if EDI_APP_ASSISTANT
+    // Navigation during the assistant's Create must keep its original owner until the popup's OK (ADR-0017 §13).
+    if (assistant_->ordinaryProjectCreationPending()) return false;
+#endif
+    const QPointer<Session> receiver(this);
+    QPointer<ProjectViewModel> draft;
+    try {
+        edi::Project work = edi::empty_project("untitled", {});
+        if (suRule == QStringLiteral("iucr_19") || suRule == QStringLiteral("iucr_99")) work.su_rule = suRule.toStdString();
+        work.report_html_offline = reportLibraries;
+        draft = new ProjectViewModel(std::move(work), this, colour_scheme_);
+    } catch (const std::exception& refusal) {
+        if (receiver) setLastError(QString::fromUtf8(refusal.what()));
+        return false;
+    }
+    if (!replaceProject(draft, {}, {}, false, nullptr, nullptr, true)) {
+        if (receiver && draft && project_ != draft) draft->deleteLater();
+        return false;
+    }
+    if (!receiver || !draft || project_ != draft) return false;
     setUntitled(true);
     // In the web app its recovery copy is marked untitled, so a recovered one is untitled again (setWebPlace).
     if (WebFiles::available()) setWebPlace({web_place_.key, QStringLiteral("untitled"), tr("Untitled project")});
@@ -1633,7 +1652,7 @@ bool Session::adoptUntitled(const QString& name, const QString& description, con
     if (outcome) { outcome->owner = project_; outcome->has_owner = true; outcome->replacement = replacement_generation_; }
     project_->setName(name);
     project_->setDescription(description);
-    if (!title.isEmpty()) project_->setTitle(title);
+    project_->setTitle(title);
     project_->setAuthors(authors);
     bool saved = false;
     if (location.isEmpty()) {
@@ -1694,9 +1713,7 @@ bool Session::createProjectImpl(const QString& name, const QString& description,
     ProjectViewModel* created = nullptr;
     try {
         edi::Project project = edi::empty_project(name.toStdString(), description.toStdString());
-        if (!title.isEmpty()) {
-            project.metadata.title = title.toStdString();
-        }
+        project.metadata.title = title.toStdString();
         project.metadata.authors = authors.toStdString();
         if (suRule == QStringLiteral("iucr_19") || suRule == QStringLiteral("iucr_99")) {
             project.su_rule = suRule.toStdString();

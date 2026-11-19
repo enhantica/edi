@@ -17835,13 +17835,8 @@ bool AssistantViewModel::prepareOrdinaryProjectCreation(ProjectViewModel* target
             normal->ordinary_failure=QStringLiteral("The original normal Create dialog confirmation no longer owns this request.");return false;
         }
         if(!s->normal_project_create_current(normal))return false;
-        // FIRST Session::createProjectImpl retains native metadata defaults
-        // for an empty Title, whether omitted or explicitly left empty in its
-        // original form. Input spelling and actual created value differ here.
-        const QString expectedTitle=normal->ordinary_title.isEmpty()
-            ?QString::fromStdString(edi::ProjectMetadata{}.title):normal->ordinary_title;
         if(!target || !edi::empty_for_population(*target->assistantProject()) ||
-            !target->path().isEmpty() || target->name()!=normal->ordinary_name || target->title()!=expectedTitle || target->description()!=normal->ordinary_description ||
+            !target->path().isEmpty() || target->name()!=normal->ordinary_name || target->title()!=normal->ordinary_title || target->description()!=normal->ordinary_description ||
             location!=normal->ordinary_location) {
             normal->ordinary_failure=QStringLiteral("The original normal Create target or form defaults changed before adoption.");return false;
         }
@@ -19349,6 +19344,13 @@ void AssistantViewModel::approvePlan(const QString& id) {
     const auto revision = state_->controller->revision();
     state_->command({{"type", "approve_plan"}, {"plan_id", id}, {"project_id", QString::fromStdString(revision.project_id)},
                      {"revision", QString::number(revision.revision)}});
+}
+bool AssistantViewModel::ordinaryProjectCreationPending() const {
+#ifndef __EMSCRIPTEN__
+    return state_->native_creation && state_->native_creation->ordinary_project;
+#else
+    return false;
+#endif
 }
 bool AssistantViewModel::nativeProjectCreateCurrent(const QString& intent) const {
 #ifndef __EMSCRIPTEN__
