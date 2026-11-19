@@ -2129,7 +2129,9 @@ void DemoDriver::next_action() {
         // While traced, the image is written on a worker, so writing it is not the GUI thread's work.
         bool saved = true;
         if (ui_trace_on() && !webp) {
-            run_in_background([image = previous_frame_, path] { image.save(path); });
+            // A copy of its own: the worker never shares image data with the GUI thread, which frees and replaces
+            // previous_frame_ while the image is written.
+            run_in_background([image = previous_frame_.copy(), path] { image.save(path); });
         } else {
             saved = webp ? previous_frame_.save(path, "WEBP", 85) : previous_frame_.save(path);
         }
