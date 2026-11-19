@@ -22,8 +22,15 @@ without computing any of them itself.
   checks, calculates and writes all of it: the ties a site's symmetry imposes on its moment, the moments in the cell
   and the magnetic intensity come from crysta through the adapter, never from edi code.
 - **Structure page.** Main holds the magnetic space group, the propagation vectors and the moments; Extra holds the
-  operators, the parent group, the form factors and the moments in the cell. A moment component the site symmetry
-  fixes or ties is shown and not fittable, as a symmetry-fixed coordinate is.
+  operators, the parent group, the form factors and the moments in the cell. They appear as soon as the structure is
+  Magnetic, before any site has an ion (the owner, 2026-11-19; this replaces the 2026-11-14 rule that choosing an ion
+  makes them appear). A moment component the site symmetry fixes or ties is shown and not fittable, as a
+  symmetry-fixed coordinate is. The moments table's ion choices follow the site's element: a new element drops a moment
+  it has no magnetic ion for, and a form factor row for an element no site has goes. Add vector appends k = 0,0,0 for
+  the user to edit. A change the structure cannot take (a k its cell cannot carry, a magnetic group or Setting crysta
+  refuses) is not made: the field keeps its value and the reason shows in plain words in the app's error popup and the
+  Messages center, never as a lasting label. Setting shows the dictionary default `a,b,c;0,0,0` when a file gives no
+  transform (the owner, 2026-11-19).
 - **Viewer.** The structure view draws each magnetic atom's moment as an arrow, from the moments in the cell crysta
   computed. The toolbar shows or hides them (`_structure_view.show_moments`, saved with the structure only when
   stated). Appearance sets the arrow length per Bohr magneton and where the arrow sits (`_structure_view.moment_view`:
