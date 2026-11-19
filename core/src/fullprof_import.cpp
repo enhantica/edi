@@ -13,6 +13,7 @@
 #include <map>
 #include <numbers>
 #include <optional>
+#include <set>
 #include <sstream>
 #include <string_view>
 
@@ -372,6 +373,24 @@ fs::path companion(const PCR& pcr, const Pattern& pattern) {
             }
         }
     }
+    if (pattern.default_companion) {
+        // Legacy controls can be written before a companion filename is set.
+        // A single file of the conventional type gives an unambiguous pairing.
+        const auto folder = pcr.path.parent_path();
+        const auto extension = pattern.single_crystal() ? ".int" : ".dat";
+        fs::path candidate;
+        for (const auto& row : fs::directory_iterator(folder.empty() ? fs::path(".") : folder)) {
+            if (row.is_regular_file() && lower(row.path().extension().string()) == extension) {
+                if (!candidate.empty()) {
+                    pcr.fail("FullProf companion is ambiguous; expected " + conventional);
+                }
+                candidate = row.path();
+            }
+        }
+        if (!candidate.empty()) {
+            return candidate;
+        }
+    }
     pcr.fail("Missing FullProf companion " + conventional);
 }
 
@@ -459,8 +478,8 @@ CwResolution cw_resolution(const PCR& pcr, const Pattern& pattern, std::size_t d
         if (fields.empty()) {
             continue;
         }
-        if (lower(line).starts_with("resolution function") && widths.empty()) {
-            continue;  // Legacy IRFs put the instrument description before JOBT.
+        if (lower(trim(line)).starts_with("resolution function") && widths.empty()) {
+            continue;  // Legacy CW IRFs put an indented instrument description first.
         }
         const auto label = lower(fields[0]);
         if (label == "end") {
@@ -727,20 +746,31 @@ Data dmc_data(const fs::path& path) {
     return result;
 }
 
-Data gsas_data(const fs::path& path) {
+Data gsas_data(const fs::path& path, bool isis) {
     auto file = input(path);
     std::string line;
     std::getline(file, line);
-    std::getline(file, line);
+    if (isis) {
+        while (std::getline(file, line)) {
+            const auto row = trim(line);
+            if (!row.empty() && !row.starts_with('#')) {
+                break;
+            }
+        }
+    } else {
+        std::getline(file, line);
+    }
     const auto header = words(line);
     if (header.size() < 9 || header[0] != "BANK" ||
-        (header[4] != "CONST" && header[4] != "RALF") || header.back() != "ALT") {
-        throw IoError(path.string() + ": expected a single GSAS CONST/ALT or RALF/ALT bank");
+        (isis ? (header[4] != "RALF" || header.back() != "FXYE")
+              : ((header[4] != "CONST" && header[4] != "RALF") || header.back() != "ALT"))) {
+        throw IoError(path.string() + (isis ? ": expected a single ISIS GSAS RALF/FXYE bank"
+                                            : ": expected a single GSAS CONST/ALT or RALF/ALT bank"));
     }
     const auto count = integer(number(header[2], path.string()), path.string());
     const bool ralf = header[4] == "RALF";
     Data raw;
-    if (ralf) {
+    if (ralf && !isis) {
         while (std::getline(file, line)) {
             for (std::size_t start = 0; start < line.size(); start += 20) {
                 const auto field = std::string_view(line).substr(start, 20);
@@ -754,6 +784,17 @@ Data gsas_data(const fs::path& path) {
                          number(trim(field.substr(15)), path.string()));
             }
         }
+    } else if (isis) {
+        while (std::getline(file, line)) {
+            const auto row = numbers(words(line), path.string());
+            if (row.empty()) {
+                continue;
+            }
+            if (row.size() != 3) {
+                throw IoError(path.string() + ": expected ISIS GSAS X Y sigma rows");
+            }
+            raw.push(row[0], row[1], row[2]);
+        }
     } else {
         for (double x, y, sigma; file >> x >> y >> sigma;) {
             raw.push(x, y, sigma);
@@ -765,14 +806,22 @@ Data gsas_data(const fs::path& path) {
     Data result;
     const auto points = raw.x.size() - (ralf ? 1U : 0U);
     for (std::size_t i = 0; i < points; ++i) {
-        // RALF records are leading bin edges in 1/32 microsecond units.
-        // FullProf normalizes the integrated counts by the forward width
-        // and omits the last edge, which has no following bin boundary.
-        const double factor = ralf ? 32. / (10. * (raw.x[i + 1] - raw.x[i])) : 1.;
+        // Both RALF forms use the forward bin width and omit the final edge.
+        // FullProf normalizes ISIS FXYE counts per millisecond, while ALT
+        // stores edges in 1/32 microsecond units and counts per 0.1 microsecond.
+        double factor = 1.;
+        if (ralf) {
+            if (isis) {
+                const double width = static_cast<float>(raw.x[i + 1]) - static_cast<float>(raw.x[i]);
+                factor = 1000. / width;
+            } else {
+                factor = 3.2 / (raw.x[i + 1] - raw.x[i]);
+            }
+        }
         if (!std::isfinite(factor) || factor <= 0.) {
             throw IoError(path.string() + ": invalid GSAS RALF bin width");
         }
-        result.push(raw.x[i] / 32., raw.y[i] * factor, raw.sigma[i] * factor);
+        result.push(isis ? raw.x[i] : raw.x[i] / 32., raw.y[i] * factor, raw.sigma[i] * factor);
     }
     return result;
 }
@@ -821,26 +870,50 @@ Data xy_data(const fs::path& path) {
     return result;
 }
 
-PlainDataLoad fullprof_reflections(const BraggPdExperiment& experiment, const fs::path& path) {
+PlainDataLoad fullprof_reflections(const BraggPdExperiment& experiment, const fs::path& path,
+                                    bool classical, bool independent_twin_layout) {
     auto source = input(path);
     std::string text;
-    bool annotated = false;
+    bool changed = false;
     std::size_t row = 0;
     for (std::string line; std::getline(source, line);) {
         if (++row > 3) {
             const auto annotation = line.find("<- Dubious reflection");
             if (annotation != std::string::npos) {
                 line.resize(annotation);
-                annotated = true;
+                changed = true;
+            }
+            const auto fields = words(line);
+            if (classical && fields.size() >= 5 && !fields[0].starts_with('#')) {
+                if (independent_twin_layout &&
+                    (number(fields[3], path.string()) < 0. ||
+                     (fields.size() > 5 && number(fields[5], path.string()) != 1.))) {
+                    throw IoError(path.string() +
+                                  ": FullProf overlapped or multi-domain twin reflections require a twin observation model");
+                }
+                if (number(fields[4], path.string()) <= 0.) {
+                    // Classical FullProf substitutes sigma=2 before using the measurement.
+                    line.clear();
+                    for (std::size_t i = 0; i < fields.size(); ++i) {
+                        if (i != 0) {
+                            line += ' ';
+                        }
+                        line += i == 4 ? "2" : fields[i];
+                    }
+                    changed = true;
+                }
             }
         }
         text += line + '\n';
     }
-    if (!annotated) {
+    if (source.bad()) {
+        throw IoError(path.string() + ": incomplete FullProf reflection data read");
+    }
+    if (!changed) {
         return experiment_with_plain_data(experiment, path.string(), false);
     }
-    // FullProf may append a diagnostic outside the formatted fields of a valid INT row.
-    // Normalize that annotation in a private copy and let the normal reflection reader validate the fields.
+    // Normalize source-reader rules in a private copy. The ordinary INT reader
+    // still validates the observations and owns the native data representation.
     struct Capture {
         std::string directory = fresh_archive_directory("fullprof-int");
         ~Capture() { remove_archive_directory(directory); }
@@ -853,7 +926,7 @@ PlainDataLoad fullprof_reflections(const BraggPdExperiment& experiment, const fs
         normalized.close();
         return experiment_with_plain_data(experiment, copy.string(), path.string(), false);
     } catch (const std::ios_base::failure&) {
-        throw IoError(path.string() + ": unable to normalize FullProf reflection annotations");
+        throw IoError(path.string() + ": unable to normalize FullProf reflection measurements");
     } catch (const IoError& issue) {
         std::string diagnostic = issue.what();
         if (const auto marker = diagnostic.find(copy.string()); marker != std::string::npos) {
@@ -871,15 +944,19 @@ void reflection_data(const PCR& pcr, Pattern& pattern, Refinement& refine, Proje
         pcr.fail("Incomplete FullProf reflection data header in " + path.filename().string());
     }
     const auto controls = words(header);
+    const auto geometry = controls.size() >= 3 ? number(controls[2], path.string()) : 0.;
+    if (geometry == 2.) {
+        pcr.fail("FullProf clustered powder reflections need a powder integrated-intensity model");
+    }
     if (controls.empty() || (!pattern.tof() && controls.size() < 3) ||
-        (controls.size() >= 3 && number(controls[2], path.string()) != 0.)) {
+        (geometry != 0. && (geometry != 1. || pattern.tof()))) {
         pcr.fail("Unsupported FullProf reflection geometry (Ipow) in " + path.filename().string());
     }
     const auto intensity_type = controls.size() > 1 ? number(controls[1], path.string()) : 0.;
     if (intensity_type != 0. && (intensity_type != 1. || pattern.tof())) {
         pcr.fail("Unsupported FullProf reflection intensity selector in " + path.filename().string());
     }
-    auto loaded = fullprof_reflections(*pattern.model, path);
+    auto loaded = fullprof_reflections(*pattern.model, path, !pattern.tof(), geometry == 1.);
     if (loaded.experiment.calculation_only || loaded.dataset_codes.size() != loaded.more.size() + 1) {
         pcr.fail("FullProf reflection datasets require observed data and one scale per dataset");
     }
@@ -955,13 +1032,16 @@ void powder_data(const PCR& pcr, Pattern& pattern) {
         case 6: source = ial_data(path); break;
         case 8: source = dmc_data(path); break;
         case 10: source = xy_data(path); break;
-        case 12: source = gsas_data(path); break;
+        case 12: source = gsas_data(path, false); break;
+        case 14: source = gsas_data(path, true); break;
         default: pcr.fail("Unsupported FullProf data format Ins=" + std::to_string(pattern.format));
     }
+    const auto lo = pattern.lo - fullprof_range_tolerance(pattern.lo);
+    const auto hi = pattern.hi + fullprof_range_tolerance(pattern.hi);
     Data data;
     for (std::size_t i = 0; i < source.x.size(); ++i) {
         const auto x = source.x[i];
-        if (x < pattern.lo - 1.e-6 || x > pattern.hi + 1.e-6) {
+        if (x < lo || x > hi) {
             continue;
         }
         if (source.sigma[i] == 0. && std::any_of(pattern.model->excluded_regions.begin(),
@@ -1169,23 +1249,63 @@ void read_background(const PCR& pcr, Pattern& pattern, Refinement& refine,
         if (points == end) {
             pcr.fail("Missing interpolated background points");
         }
-        std::vector<Row> rows;
+        struct Knot {
+            double position;
+            Coded intensity;
+            bool used = false;
+        };
+        std::vector<Knot> knots;
+        std::set<double> positions;
         auto pos = points;
         for (int i = 0; i < pattern.background; ++i) {
             pos = pcr.next(pos + 1, end);
-            rows.push_back(pcr.row(pos, 3));
-        }
-        std::sort(rows.begin(), rows.end());
-        double previous = -std::numeric_limits<double>::infinity();
-        for (const auto& values : rows) {
-            if (values[0] == previous) {
+            const auto values = pcr.row(pos, 3);
+            if (!positions.insert(values[0]).second) {
                 pcr.fail("FullProf background positions must be distinct", points);
             }
-            previous = values[0];
+            knots.push_back({values[0], {values[1], pcr.refinement_enabled ? values[2] : 0.}});
+        }
+        if (knots.back().position != *positions.rbegin()) {
+            pcr.fail("A decreasing terminal FullProf background needs manual conversion", points);
+        }
+        const auto add = [&](double x, Coded intensity) {
             auto point = std::make_shared<LineSegment>();
-            point->position = values[0];
+            point->position = x;
             exp.background.push_back(point);
-            refine.set(point->intensity, {values[1], pcr.refinement_enabled ? values[2] : 0.});
+            refine.set(point->intensity, intensity);
+        };
+        double covered = knots.front().position;
+        knots.front().used = true;
+        add(covered, knots.front().intensity);
+        for (std::size_t i = 1; i < knots.size(); ++i) {
+            auto& end_knot = knots[i];
+            if (end_knot.position <= covered) {
+                continue;
+            }
+            auto& previous = knots[i - 1];
+            if (previous.position < covered) {
+                // FullProf walks the source order. A backward segment adds no
+                // coverage, and the next rising segment can jump at the boundary.
+                const auto restart = std::nextafter(static_cast<float>(covered),
+                                                    std::numeric_limits<float>::infinity());
+                if (restart >= end_knot.position) {
+                    pcr.fail("FullProf background break is closer than the coordinate precision", points);
+                }
+                const auto fraction = (restart - previous.position) / (end_knot.position - previous.position);
+                const auto mapped = profile_pair(pcr, refine, previous.intensity, end_knot.intensity,
+                                                 1. - fraction, fraction, 1.);
+                add(restart, mapped[0]);
+                end_knot.intensity = mapped[1];
+                previous.used = true;
+            }
+            covered = end_knot.position;
+            end_knot.used = true;
+            add(covered, end_knot.intensity);
+        }
+        if (std::any_of(knots.begin(), knots.end(), [](const auto& knot) {
+                return !knot.used && knot.intensity.code != 0.;
+            })) {
+            pcr.fail("An active FullProf background point is hidden by an earlier segment", points);
         }
         return;
     }
@@ -1748,7 +1868,7 @@ void structure_block(const PCR& pcr, Project& project, std::vector<Pattern>& pat
         }
     } else {
         axes[0] = {options[3], options[4], options[5]};
-        if (options[13] != 0. && options[13] != patterns[0].profile) {
+        if (!patterns.front().single_crystal() && options[13] != 0. && options[13] != patterns.front().profile) {
             pcr.fail("Unsupported FullProf phase-specific profile family", phase);
         }
     }
@@ -2029,19 +2149,29 @@ void structure_block(const PCR& pcr, Project& project, std::vector<Pattern>& pat
         if (pattern.tof()) {
             const auto sigma = pair_after(pcr, pcr.require("sigma-2 ", begin, limit), limit, 7);
             const auto gamma = pair_after(pcr, pcr.require("gamma-2 ", begin, limit), limit, 5);
-            const auto signature = profile_signature(sigma, shape, gamma);
-            if (pattern.profile_rows.empty()) {
-                const auto abs_line = pcr.next(pcr.next(pcr.require("pref1 ", begin, limit) + 1, limit) + 1, limit) + 1;
-                CodedRow absorption;
-                if (abs_line < limit && pcr.lines[abs_line].text.find("ABS:") != std::string::npos) {
-                    const auto tokens = words(pcr.lines[abs_line].text);
-                    if (tokens.size() < 5) {
-                        pcr.fail("Incomplete FullProf TOF absorption row", abs_line);
-                    }
-                    absorption.values = numbers(Words(tokens.begin(), tokens.begin() + 4), pcr.path.string());
+            auto signature = profile_signature(sigma, shape, gamma);
+            const auto shape_start = pcr.require("pref1 ", begin, limit);
+            const auto shape_codes = pcr.next(pcr.next(shape_start + 1, limit) + 1, limit);
+            const auto last = pcr.lines.begin() + static_cast<std::ptrdiff_t>(limit);
+            const auto absorption_line = std::find_if(
+                pcr.lines.begin() + static_cast<std::ptrdiff_t>(shape_codes + 1), last,
+                [](const auto& line) { return !line.text.empty(); });
+            CodedRow absorption;
+            if (absorption_line != last && lower(absorption_line->text).find("abs:") != std::string::npos) {
+                const auto tokens = words(absorption_line->text);
+                if (tokens.size() < 5) {
+                    pcr.fail("Incomplete FullProf TOF absorption row");
                 }
+                absorption.values = numbers(Words(tokens.begin(), tokens.begin() + 4), pcr.path.string());
+                if (!pcr.refinement_enabled) {
+                    absorption.values[1] = 0.;
+                    absorption.values[3] = 0.;
+                }
+            }
+            signature.push_back(absorption.values.empty() ? Row(4, 0.) : absorption.values);
+            if (pattern.profile_rows.empty()) {
                 tof_profile(pcr, pattern, refine, sigma, gamma, shape, absorption);
-                pattern.profile_rows = signature;
+                pattern.profile_rows = std::move(signature);
             } else if (pattern.profile_rows != signature) {
                 pcr.fail("EDI requires a common profile for the phases in a powder pattern", begin);
             }
@@ -2299,8 +2429,35 @@ std::vector<std::size_t> phase_starts(const PCR& pcr) {
     return phases;
 }
 
-std::vector<Pattern> patterns_from_header(const PCR& pcr, std::size_t end, bool multi, bool integrated,
+void resolve_pattern_profiles(const PCR& pcr, const std::vector<std::size_t>& phases,
+                              std::vector<Pattern>& patterns) {
+    std::vector<std::optional<int>> profiles(patterns.size());
+    for (std::size_t phase = 0; phase < phases.size(); ++phase) {
+        const auto end = phase + 1 < phases.size() ? phases[phase + 1] : pcr.lines.size();
+        auto line = pcr.require("contributions", phases[phase], end);
+        const auto contributions = pcr.after(line, end, patterns.size());
+        for (std::size_t bank = 0; bank < patterns.size(); ++bank) {
+            if (contributions[bank] != 1.) {
+                continue;
+            }
+            line = pcr.require("irf ", line + 1, end);
+            const auto flags = pcr.after(line, end, 5);
+            const int profile = flags[1] == 0. ? patterns[bank].profile : integer(flags[1], pcr.path.string());
+            if (profiles[bank] && *profiles[bank] != profile) {
+                pcr.fail("EDI requires a common profile family for the phases in a powder pattern", line);
+            }
+            profiles[bank] = profile;
+        }
+    }
+    for (std::size_t bank = 0; bank < patterns.size(); ++bank) {
+        patterns[bank].profile = profiles[bank].value_or(patterns[bank].profile);
+    }
+}
+
+std::vector<Pattern> patterns_from_header(const PCR& pcr, const std::vector<std::size_t>& phases,
+                                         bool multi, bool integrated,
                                          Project& project, Refinement& refine) {
+    const auto end = phases.front();
     const auto job_header = pcr.require("job ", 0, end);
     const auto output_header = pcr.require("ipr ", job_header, end);
     const auto ncy = pcr.require("ncy ", output_header, end);
@@ -2388,6 +2545,7 @@ std::vector<Pattern> patterns_from_header(const PCR& pcr, std::size_t end, bool 
         }
     }
     if (multi) {
+        resolve_pattern_profiles(pcr, phases, patterns);
         auto file = pcr.require("file names of data", job_line, output_header);
         for (auto& pattern : patterns) {
             file = pcr.next(file + 1, output_header);
@@ -2408,9 +2566,10 @@ std::vector<Pattern> patterns_from_header(const PCR& pcr, std::size_t end, bool 
                 const auto offset = marker + 9;
                 // The single-pattern comment is saved by FullProf as a record of the last run.
                 // Its basename is useful for the installed suite examples, which share data files.
-                const auto code = trim(std::string_view(pcr.lines[i].original_comment)
-                                           .substr(offset, comment.find(',', offset) - offset));
-                patterns.front().file = code;
+                auto code = std::string_view(pcr.lines[i].original_comment)
+                                .substr(offset, comment.find(',', offset) - offset);
+                code = code.substr(0, code.find('\0'));
+                patterns.front().file = trim(code);
             }
         }
         const auto phase = pcr.require("nat ", end, pcr.lines.size());
@@ -2487,6 +2646,9 @@ std::vector<Pattern> patterns_from_header(const PCR& pcr, std::size_t end, bool 
             for (int i = 0; i < pattern.exclusions; ++i) {
                 row = pcr.next(row + 1, end);
                 const auto interval = pcr.row(row, 2);
+                if (interval[0] == 0. && interval[1] == 0.) {
+                    continue;  // Legacy editors can retain an unused zero-filled exclusion row.
+                }
                 if (interval[0] >= interval[1]) {
                     pcr.fail("FullProf exclusion start must precede its end", row);
                 }
@@ -2631,6 +2793,12 @@ std::optional<crysta::MagneticRadialCoefficients> fullprof_magnetic_radial(const
     return result;
 }
 
+double fullprof_range_tolerance(double value) {
+    const float stored = static_cast<float>(value);
+    const float representable = std::nextafter(stored, std::numeric_limits<float>::infinity());
+    return std::isfinite(representable) ? std::max(1.e-6, static_cast<double>(representable - stored)) : 1.e-6;
+}
+
 Project import_fullprof_project(const std::string& path) {
     PCR pcr(path);
     try {
@@ -2664,7 +2832,7 @@ Project import_fullprof_project(const std::string& path) {
         const auto& title = pcr.lines.front().text;
         project.metadata.title = title.starts_with("COMM ") ? trim(std::string_view(title).substr(5)) : title;
         Refinement refine;
-        auto patterns = patterns_from_header(pcr, phase_end, multi, cry == 1., project, refine);
+        auto patterns = patterns_from_header(pcr, phases, multi, cry == 1., project, refine);
         if (patterns.front().single_crystal() != (cry == 1.)) {
             pcr.fail("FullProf integrated-intensity settings Cry and Irf disagree", phase_declaration);
         }

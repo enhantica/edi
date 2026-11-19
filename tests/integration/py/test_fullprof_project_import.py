@@ -66,6 +66,27 @@ def test_fullprof_reflection_companion(tmp_path):
     assert reopened.experiments[0].refln.intensity_meas == pytest.approx(rows.intensity_meas)
 
 
+def test_fullprof_twin_layout_with_independent_reflections(tmp_path):
+    source = tmp_path / 'prnio.pcr'
+    copyfile(SINGLE_CRYSTAL / source.name, source)
+    companion = source.with_suffix('.int')
+    rows = (SINGLE_CRYSTAL / companion.name).read_text().splitlines()
+    rows[2] = '0.8302 0 1'
+    companion.write_text('\n'.join(rows) + '\n')
+    project = edi.Project.load(source)
+    assert len(project.experiments[0].refln.intensity_meas) == 198
+
+    rows[3] = '   2   0   0    175.6782      0.0000   1'
+    companion.write_text('\n'.join(rows) + '\n')
+    project = edi.Project.load(source)
+    assert project.experiments[0].refln.intensity_meas_su[0] == 2
+
+    rows[3] = '   2   0   0     -1.0000      0.0000   1'
+    companion.write_text('\n'.join(rows) + '\n')
+    with pytest.raises((ValueError, RuntimeError), match='require a twin observation model'):
+        edi.Project.load(source)
+
+
 def test_fullprof_refinement_codeword_keeps_the_signed_shift(tmp_path):
     source = tmp_path / 'pbso4.PCR'
     original = (PBSO4 / 'pbso4.pcr').read_text()
@@ -219,3 +240,21 @@ def test_fullprof_tof_size_direction_offsets_the_base_width(tmp_path):
     driver.value += 0.25
     project.calculate()
     assert width.value + size.value == pytest.approx(10)
+
+def test_fullprof_imports_tof_absorption_and_float32_range():
+    source = REFERENCES / 'pd-neut-tof_cecoal-polaris' / 'fixed.pcr'
+    pattern = edi.Project.load(source).experiments[0]
+    assert pattern.absorption.abscor1.value == pytest.approx(0.01729)
+    assert pattern.data.axis()[0] == pytest.approx(3001.589)
+
+
+def test_fullprof_imports_phase_profile_and_isis_ralf_observations():
+    source = REFERENCES / 'pd-neut-tof_ncaf-wish_jorgensen-von-dreele'
+    project = edi.Project.load(source / 'tmpl_one_bank.pcr')
+    project.calculate()
+    data = project.experiments[0].data
+    x = np.asarray(data.axis())
+    sample = np.searchsorted(x, 9106.08)
+    assert x[sample] == pytest.approx(9106.08801)
+    assert data.intensity_meas[sample] == pytest.approx(370.31, abs=0.011)
+    assert data.intensity_calc[sample] == pytest.approx(543.11, rel=0.004)

@@ -7,6 +7,7 @@
 namespace edi::detail {
 std::optional<SpaceGroupSettingName> fullprof_default_space_group(const std::string& symbol);
 Project import_fullprof_project(const std::string& path);
+double fullprof_range_tolerance(double value);
 
 struct FullProfRelationDirection {
     const Parameter* target;

@@ -20,18 +20,26 @@ describes the equivalent manual construction through normal project actions.
 2. A legacy single-pattern project uses a same-stem companion or FullProf's recorded data filename.
    The multi-pattern format uses its declared filenames in pattern order. Companions reside beside
    the selected PCR. EDI uses its ordinary FullProf reflection reader for single-crystal INT data.
+   The twin-capable layout uses the same native observations when every row is independent and
+   uses the same scale. Grouped or multi-domain observations require a twin model.
 3. Preserve the calculation range, exclusion intervals, background basis, calibration, diffraction
    model and phase links. Use the native space-group and Wyckoff resolver to convert normalized
    FullProf occupancies to chemical fractions. Keep the source scale with the conversion required
    by the radiation and geometry. An independently corroborated legacy occupancy factor is
    removed from atomic occupancies and its square is applied to intensity scales and applicable
-   Larson parameters. Use a shared profile when the phases' PCR profiles agree.
+   Larson parameters. For an out-of-order interpolation block, retain the source order's
+   segment coverage and represent a jump with adjacent single-precision positions. Rebase
+   the active coefficients when native knots move. Emit each pattern's interpolation points
+   and exclusions consecutively, which is the positional order read by FullProf. Resolve each
+   contributing phase's profile selector against its pattern's default. Use a shared profile
+   when the effective profiles agree.
 4. A nonzero FullProf codeword identifies a signed shift within a refinement group. Retain the
-   starting value and use native parameter aliases and affine constraints for shared shifts. A
-   declared zero refined-parameter count imports a fixed model.
+   starting value and use native parameter aliases and affine constraints for shared shifts.
+   Transform the refinement directions when equivalent profile coefficients change basis.
+   A declared zero refined-parameter count imports a fixed model.
 5. Compatible polynomial CW and TOF instrument resolution files supply values for the native
    instrument calibration and peak shape. Their effective values are exported inline. GSAS RALF
-   ALT observations use forward bin widths and keep the file's uncertainty scaled with intensity.
+   ALT and ISIS FXYE observations use forward bin widths and keep uncertainty scaled with intensity.
 6. Convert compatible commensurate magnetic descriptions through native signed symmetry
    operators and magnetic moments. The combined FullProf magnetic phase form can carry magnetic
    centering vectors and BNS setting information. For the archived rare-earth ion labels, keep the

@@ -274,8 +274,8 @@ Bank bank_for(const BraggPdExperiment& experiment, std::size_t index) {
         }
     } else if (experiment.background_type == "chebyshev" &&
                experiment.background_x_min && experiment.background_x_max &&
-               *experiment.background_x_min <= x.front() + 1.e-6 &&
-               *experiment.background_x_max >= x.back() - 1.e-6) {
+               *experiment.background_x_min <= x.front() + detail::fullprof_range_tolerance(x.front()) &&
+               *experiment.background_x_max >= x.back() - detail::fullprof_range_tolerance(x.back())) {
         bank.nba = -5;
         bank.range_min = *experiment.background_x_min;
         bank.range_max = *experiment.background_x_max;
@@ -986,11 +986,11 @@ void write_pcr(Project& project, const fs::path& folder, bool fixed) {
             << bank.range_min << ' ' << bank.step << ' ' << bank.range_max << (bank.tof() ? "\n" : " 0 0\n");
     }
     for (std::size_t i = 0; i < banks.size(); ++i) {
+        // FullProf reads this section in pattern order, with each bank's
+        // background points immediately followed by its exclusion intervals.
         if (banks[i].nba >= 2) {
             write_background(out, banks[i], codes, i + 1);
         }
-    }
-    for (std::size_t i = 0; i < banks.size(); ++i) {
         const auto& exclusions = banks[i].model->excluded_regions;
         if (!exclusions.empty()) {
             out << "! Excluded regions (LowT HighT) for Pattern# " << i + 1 << '\n';
