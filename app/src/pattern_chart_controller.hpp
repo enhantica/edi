@@ -261,6 +261,10 @@ class PatternChartController : public QObject {
     double braggHeight() const { return bragg_height_; }
     bool hasResidual() const { return has_residual_; }
     bool hasData() const { return has_data_; }
+    // How many times the series were filled, and (while the UI trace is on, ui_probe.hpp) a digest of what they were
+    // filled with: what the GUI watchdog's frame observation names as presented.
+    qint64 traceGeneration() const { return trace_generation_; }
+    QString traceIdentity() const { return trace_identity_; }
     bool current() const { return current_; }
     QString xTitle() const { return x_title_; }
     QString yTitle() const { return y_title_; }
@@ -513,6 +517,8 @@ class PatternChartController : public QObject {
     // Whether the panes shown may stay while a dataset's calculation is to come: false until the first refresh of an
     // experiment (ADR-0096 rule 5).
     bool keeps_panes_ = false;
+    qint64 trace_generation_ = 0;
+    QString trace_identity_;
     QString x_title_, y_title_, residual_title_;
     QColor measured_color_, calculated_color_, background_color_, residual_color_, excluded_color_;
     QList<QColor> bragg_colors_;

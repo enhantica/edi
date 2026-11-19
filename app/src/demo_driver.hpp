@@ -172,6 +172,19 @@ class DemoDriver : public QObject {
     QJsonArray synced_transitions_;
     qint64 synced_frame_ = 0;
     QMetaObject::Connection trace_sync_, trace_swap_;
+    // A next or previous press's chart, watched until its first frame and its settled frame are named.
+    struct FrameWatch {
+        int request = 0;
+        int dataset = -1;
+        qint64 base = 0;  // the chart's fill count before the press
+        QPointer<QQuickItem> chart;
+        QPointer<QObject> controller;
+        bool presented = false, first = false, settled = false;
+        QJsonObject identity;  // what `presented` named: dataset, generation, data identity
+    };
+    QList<FrameWatch> frame_watches_;  // GUI thread; the render thread reads them only while the GUI thread waits
+    QJsonArray synced_frames_;        // the frame observations of the last synchronised frame
+    QJsonObject trace_geometry(QQuickItem* chart) const;
     QString input_identity_;
     QList<QPointer<QQuickItem>> page_tabs_, view_tabs_;
     int fit_runs_ = 0;

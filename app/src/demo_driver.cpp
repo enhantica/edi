@@ -42,6 +42,7 @@
 #include "fit_view_model.hpp"
 #include "parameter_item.hpp"
 #include "parameter_table_model.hpp"
+#include "pattern_chart_controller.hpp"
 #include "project_view_model.hpp"
 #include "scan_session.hpp"
 #include "scan_view_model.hpp"
@@ -1896,17 +1897,47 @@ void DemoDriver::trace_watch() {
     // Both run on the render thread: they are dropped before quitting, so none can run while the driver goes away.
     trace_sync_ = connect(&window_, &QQuickWindow::afterSynchronizing, this, [this] {
         const QJsonObject displayed = trace_state();
+        QJsonArray frames;
+        for (FrameWatch& watch : frame_watches_) {
+            if (!watch.chart || (watch.first && (watch.settled || !watch.presented))) continue;
+            const QJsonObject geometry = trace_geometry(watch.chart);
+            const auto observe = [&](const char* phase) {
+                QJsonObject frame = geometry;
+                frame.insert(QStringLiteral("request"), watch.request);
+                frame.insert(QStringLiteral("phase"), QString::fromLatin1(phase));
+                for (auto it = watch.identity.begin(); it != watch.identity.end(); ++it)
+                    if (it.key() != QLatin1String("request")) frame.insert(it.key(), it.value());
+                frames.append(frame);
+            };
+            if (!watch.first) {
+                watch.first = true;
+                observe("first");
+            }
+            if (watch.presented && !watch.settled) {
+                watch.settled = true;
+                observe("settled");
+            }
+        }
         const std::lock_guard lock(trace_mutex_);
         synced_frame_ = ui_trace_frame_synced();
         synced_displayed_ = displayed;
         synced_transitions_ = std::exchange(published_transitions_, {});
+        synced_frames_ = frames;
     }, Qt::DirectConnection);
     trace_swap_ = connect(&window_, &QQuickWindow::frameSwapped, this, [this] {
         QJsonObject event;
+        QJsonArray frames;
         {
             const std::lock_guard lock(trace_mutex_);
             event = {{"frame", synced_frame_}, {"transitions", synced_transitions_}, {"displayed", synced_displayed_}};
             synced_transitions_ = {};
+            frames = std::exchange(synced_frames_, {});
+        }
+        for (const QJsonValue& value : frames) {
+            QJsonObject frame = value.toObject();
+            frame.insert(QStringLiteral("frame"), event.value(QStringLiteral("frame")));
+            frame.insert(QStringLiteral("witness"), QStringLiteral("afterSynchronizing/frameSwapped"));
+            EDI_UI_TRACE("frame", frame);
         }
         EDI_UI_TRACE("render", event);
     }, Qt::DirectConnection);
@@ -1914,6 +1945,30 @@ void DemoDriver::trace_watch() {
         disconnect(trace_sync_);
         disconnect(trace_swap_);
     });
+}
+
+QJsonObject DemoDriver::trace_geometry(QQuickItem* chart) const {
+    // The pattern chart's three panes and its three axes (their titles), each as a scene rectangle and whether it shows.
+    static const std::pair<const char*, const char*> kPanes[] = {
+        {"pattern", "chart.view.main"}, {"bragg", "chart.view.bragg"}, {"residual", "chart.view.residual"}};
+    static const std::pair<const char*, const char*> kAxes[] = {
+        {"x", "chart.title.x"}, {"intensity", "chart.title.y"}, {"residual", "chart.title.residual"}};
+    const auto measure = [chart](const auto& items, QJsonObject& rects, QJsonObject& shown, QJsonArray& names) {
+        for (const auto& [name, object] : items) {
+            names.append(QString::fromLatin1(name));
+            auto* item = chart->findChild<QQuickItem*>(QString::fromLatin1(object));
+            const QRectF r = item != nullptr ? item->mapRectToScene(QRectF(0, 0, item->width(), item->height())) : QRectF();
+            rects.insert(QString::fromLatin1(name), QJsonArray{r.x(), r.y(), r.width(), r.height()});
+            shown.insert(QString::fromLatin1(name), item != nullptr && item->isVisible() && r.width() > 0 && r.height() > 0);
+        }
+    };
+    QJsonObject pane_rects, pane_shown, axis_rects, axis_shown;
+    QJsonArray panes, axes;
+    measure(kPanes, pane_rects, pane_shown, panes);
+    measure(kAxes, axis_rects, axis_shown, axes);
+    return {{"event", "frame"}, {"panes", panes}, {"axes", axes},
+            {"geometry", QJsonObject{{"panes", pane_rects}, {"axes", axis_rects}}},
+            {"visible", QJsonObject{{"panes", pane_shown}, {"axes", axis_shown}}}};
 }
 
 QString DemoDriver::trace_input() {
@@ -1958,7 +2013,17 @@ void DemoDriver::trace_action(const QString& action) {
     expected_.request = request_id_;
     expected_.open = true;
     if (action.startsWith(QLatin1String("appBar.tab."))) expected_.page = action.mid(11);
-    else if (action.startsWith(QLatin1String("mainArea.blocks."))) expected_.before = now.value(QStringLiteral("selection")).toInt();
+    else if (action.startsWith(QLatin1String("mainArea.blocks."))) {
+        expected_.before = now.value(QStringLiteral("selection")).toInt();
+        if (steps_[current_].navigation != 0) {
+            FrameWatch watch;
+            watch.request = request_id_;
+            watch.chart = find(QStringLiteral("chart"), false);
+            if (watch.chart) watch.controller = watch.chart->findChild<PatternChartController*>();
+            if (auto* controller = qobject_cast<PatternChartController*>(watch.controller.data())) watch.base = controller->traceGeneration();
+            frame_watches_.append(watch);
+        }
+    }
     else if (action == QLatin1String("statusBar.fit.button")) expected_.fit = QStringLiteral("start");
     else if (action.startsWith(QLatin1String("wait-files"))) expected_.fit = QStringLiteral("running");
     else if (action == QLatin1String("wait-fit")) expected_.fit = QStringLiteral("ended");
@@ -1967,6 +2032,19 @@ void DemoDriver::trace_action(const QString& action) {
 }
 
 void DemoDriver::trace_frame() {
+    // A watched press's dataset is presented once its chart has filled its series again with that dataset selected.
+    const int selection = trace_state().value(QStringLiteral("selection")).toInt();
+    for (FrameWatch& watch : frame_watches_) {
+        auto* controller = qobject_cast<PatternChartController*>(watch.controller.data());
+        if (watch.presented || controller == nullptr || watch.dataset < 0) continue;
+        if (controller->traceGeneration() > watch.base && selection == watch.dataset) {
+            watch.presented = true;
+            watch.identity = {{"request", watch.request}, {"dataset", watch.dataset},
+                              {"generation", static_cast<double>(controller->traceGeneration())},
+                              {"data_identity", controller->traceIdentity()}};
+            EDI_UI_TRACE("presented", watch.identity);
+        }
+    }
     if (!expected_.open) return;
     QJsonObject state = trace_state();
     bool reached = false;
@@ -2093,9 +2171,10 @@ void DemoDriver::next_action() {
             return;  // fail() has ended the run
         }
         if (issues && step.navigation != 0) {
+            const int dataset = trace_state().value(QStringLiteral("selection")).toInt();
+            if (!frame_watches_.isEmpty() && frame_watches_.last().request == request_id_) frame_watches_.last().dataset = dataset;
             EDI_UI_TRACE("step", {{"name", step.trace}, {"request", request_id_},
-                                  {"direction", step.navigation > 0 ? "next" : "previous"},
-                                  {"dataset", trace_state().value(QStringLiteral("selection"))}});
+                                  {"direction", step.navigation > 0 ? "next" : "previous"}, {"dataset", dataset}});
             // The press is the step: the next one follows on its schedule, with no capture or wait in between.
             ++current_;
             run_step();

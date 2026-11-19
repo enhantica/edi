@@ -6,10 +6,13 @@
 #include <cmath>
 #include <limits>
 #include <numbers>
+#include <QCryptographicHash>
 #include <QFontMetricsF>
 #include <QStringList>
 #include <set>
 #include <utility>
+
+#include "ui_probe.hpp"
 
 namespace edi_app {
 
@@ -1176,6 +1179,16 @@ void PatternChartController::refresh() {
             &PatternChartController::hasResidualChanged);
     publish(has_data_, measured != nullptr || calculated != nullptr, &PatternChartController::hasDataChanged);
     keeps_panes_ = true;
+    ++trace_generation_;
+    if (ui_trace_on()) {
+        QCryptographicHash digest(QCryptographicHash::Sha256);
+        for (const edi::PatternSeries& series : shown_.series) {
+            digest.addData(QByteArray::fromStdString(series.id));
+            digest.addData(QByteArrayView(reinterpret_cast<const char*>(series.points.data()),
+                                          static_cast<qsizetype>(series.points.size() * sizeof(series.points[0]))));
+        }
+        trace_identity_ = QString::fromLatin1(digest.result().toHex().left(16));
+    }
 
     // The measured style (the owner, 2026-10-22): the line, the markers with their bars, or the band, measured ± s.u.
     // with the residual drawn the same way. A report's chart draws all but the band, as the report does.
