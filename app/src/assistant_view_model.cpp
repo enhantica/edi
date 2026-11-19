@@ -3926,6 +3926,11 @@ struct AssistantViewModel::State {
         const QVariant names=combo->property("names");
         return names.isValid() ? names.toStringList() : combo->property("model").toStringList();
     }
+    // Storage names can differ from the keyed full paths shown in a decorated picker.
+    static QStringList search_options(const QQuickItem* combo) {
+        const QVariant names=combo->property("searchNames");
+        return names.isValid() ? names.toStringList() : canonical_options(combo);
+    }
     static QString input_reader_hint(const QString& name) {
         const auto suffix=QFileInfo(name).suffix().toLower();
         if(suffix=="cif" || suffix=="mcif" || suffix=="edi")return "structure";
@@ -7815,10 +7820,11 @@ struct AssistantViewModel::State {
             if(option<0 || options.count(run->relation_action.text)!=1){control_failure(run,ControlCause::Unavailable); widget_refuse(run,QObject::tr("The exact original alias parameter is unavailable"));return;}
         }
         AssistantWidgetInput::Request request;request.kind=physicalChoice?(target->property("searchable").toBool()?AssistantWidgetInput::Kind::SearchChoice:AssistantWidgetInput::Kind::Choose):AssistantWidgetInput::Kind::FileLoadCue;request.target=target;
-        // Search with the plain canonical name; the offered row keeps its decorated display text.
-        if(physicalChoice){request.option=option;request.value=run->relation_action.text;}
-        auto current=[this,run,target,row,field,base,key,constraint,physicalChoice,option]{return run->receiver && run->receiver->state_.get()==this && target &&
-            run->relation_row==row && run->relation_field==field && run->relation_base==base && run->relation_key==key && run->relation_constraint==constraint && widget_relation_row_current(run) && (!physicalChoice || canonical_options(target).indexOf(run->relation_action.text)==option);};
+        // Search the offered full path, retaining every [key]; the choice still commits its storage name.
+        if(physicalChoice){request.option=option;request.value=search_options(target).value(option);}
+        const auto searchText=request.value;
+        auto current=[this,run,target,row,field,base,key,constraint,physicalChoice,option,searchText]{return run->receiver && run->receiver->state_.get()==this && target &&
+            run->relation_row==row && run->relation_field==field && run->relation_base==base && run->relation_key==key && run->relation_constraint==constraint && widget_relation_row_current(run) && (!physicalChoice || (canonical_options(target).indexOf(run->relation_action.text)==option && search_options(target).value(option)==searchText));};
         auto restore=current;
         std::function<bool()> prepare=[this,run,current,physicalChoice] {if(!current())return false;if(physicalChoice)widget_commit_ready(run);return current();};
         std::function<void()> finish=[this,run,receiver,physicalChoice] {

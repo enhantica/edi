@@ -39,9 +39,9 @@
 Q_IMPORT_QML_PLUGIN(edi_appPlugin)
 
 #ifndef __EMSCRIPTEN__
-// An authored local peer delivers one load_data call through the real assistant transport.
+// An authored local peer delivers one requested tool call through the real assistant transport.
 // It has no provider connection and never performs an application edit itself.
-static int loadDataPeer() {
+static int assistantToolPeer() {
     using Object = QJsonObject;
     const auto write = [](const Object& row) {
         std::cout << QJsonDocument(row).toJson(QJsonDocument::Compact).toStdString() << '\n' << std::flush;
@@ -108,11 +108,12 @@ static int loadDataPeer() {
         if (method == "turn/start") {
             event("turn/started", {{"threadId", "load-thread"}, {"turn", Object{{"id", "load-turn"}, {"status", "inProgress"}}}});
             const auto arguments = QJsonDocument::fromJson(qgetenv("EDI_UI_LOAD_ARGUMENTS")).object();
-            item = {{"id", "load-item"}, {"type", "dynamicToolCall"}, {"tool", "load_data"},
+            const auto tool = qEnvironmentVariable("EDI_UI_TOOL", "load_data");
+            item = {{"id", "load-item"}, {"type", "dynamicToolCall"}, {"tool", tool},
                 {"arguments", arguments}, {"status", "inProgress"}};
             event("item/started", {{"threadId", "load-thread"}, {"turnId", "load-turn"}, {"item", item}});
             write({{"id", "load-call"}, {"method", "item/tool/call"}, {"params", Object{{"threadId", "load-thread"},
-                {"turnId", "load-turn"}, {"callId", "load-item"}, {"tool", "load_data"}, {"arguments", arguments}}}});
+                {"turnId", "load-turn"}, {"callId", "load-item"}, {"tool", tool}, {"arguments", arguments}}}});
         }
     }
     return 0;
@@ -256,6 +257,138 @@ private slots:
         QVERIFY(structurePopup);
     }
 #ifndef __EMSCRIPTEN__
+    void keyedAliasAndBackgroundNamingShown_data() {
+        QTest::addColumn<bool>("alias");
+        QTest::newRow("background-position-button") << false;
+        QTest::newRow("keyed-atom-alias") << true;
+    }
+    void keyedAliasAndBackgroundNamingShown() {
+        QFETCH(bool, alias);
+        const auto previousPeer = qgetenv("EDI_CODEX_DEVELOPMENT_EXECUTABLE");
+        const auto previousArguments = qgetenv("EDI_UI_LOAD_ARGUMENTS");
+        const auto previousTool = qgetenv("EDI_UI_TOOL");
+        const auto restore = qScopeGuard([&] {
+            for (const auto& entry : {qMakePair("EDI_CODEX_DEVELOPMENT_EXECUTABLE", previousPeer),
+                     qMakePair("EDI_UI_LOAD_ARGUMENTS", previousArguments), qMakePair("EDI_UI_TOOL", previousTool)}) {
+                if (entry.second.isNull()) qunsetenv(entry.first);
+                else qputenv(entry.first, entry.second);
+            }
+        });
+        qputenv("EDI_CODEX_DEVELOPMENT_EXECUTABLE", QCoreApplication::applicationFilePath().toUtf8());
+        qputenv("EDI_UI_TOOL", alias ? "add_relations" : "edit_background");
+        QQmlApplicationEngine engine;
+        edi_app::configure_engine(engine);
+        edi_app::test::assistant_defaults();
+        QQmlComponent component(&engine);
+        component.setData("import edi.app\nMain { width: 1400; height: 1000; visible: true }", QUrl());
+        QScopedPointer<QObject> root(component.create());
+        QVERIFY2(root, qPrintable(component.errorString()));
+        auto* window = qobject_cast<QQuickWindow*>(root.data());
+        QVERIFY(window);
+        window->requestActivate();
+        QVERIFY(QTest::qWaitForWindowActive(window));
+        auto* session = engine.singletonInstance<edi_app::Session*>("edi.app", "Session");
+        QVERIFY(session);
+        if (!session->hasProject()) QVERIFY(session->startUntitledProject());
+        auto* project = session->project();
+        QVERIFY(project->loadStructure(QUrl::fromLocalFile(QString::fromUtf8(EDI_SOURCE_DIR) + "/tests/fixtures/assistant_save_replay/lbco.cif")));
+        project->createExperiment();
+        QTRY_VERIFY(project->currentExperiment());
+        QVERIFY(project->loadDataInto(project->currentExperiment(), QUrl::fromLocalFile(QString::fromUtf8(EDI_SOURCE_DIR) + "/tests/fixtures/plain_data/cwl/three_columns/pattern.xye")));
+        auto* background = project->currentExperiment()->background();
+        background->append();
+        QVERIFY(background->count() > 0);
+        QVERIFY(background->setId(0, "manual-anchor"));
+        QTRY_VERIFY_WITH_TIMEOUT(!project->calculating() && project->viewSettled(), 10000);
+        auto* assistant = session->assistant();
+        assistant->setActionWindow(window);
+        assistant->setShowActions(true);
+        const auto find = [&](const QString& name) {
+            const auto walk = [&](QQuickItem* item, auto&& self) -> QQuickItem* {
+                if (item->objectName() == name) return item;
+                for (auto* child : item->childItems()) if (auto* found = self(child, self)) return found;
+                return nullptr;
+            };
+            return walk(window->contentItem(), walk);
+        };
+        QString path, uniqueName;
+        for (const auto& entry : edi::parameter_entries(*project->assistantProject())) {
+            if (!QString::fromStdString(entry.path).contains("atom_sites[La].adp_iso")) continue;
+            path = QString::fromStdString(entry.path);
+            for (const auto& slot : edi::named_slots(*project->assistantProject()))
+                if (slot.parameter == entry.parameter) uniqueName = QString::fromStdString(slot.unique_name);
+        }
+        QCOMPARE(path, QString("structure.atom_sites[La].adp_iso"));
+        QVERIFY(!uniqueName.isEmpty());
+        const QJsonObject arguments = alias
+            ? QJsonObject{{"purpose", "Alias the La isotropic displacement"},
+                {"aliases", QJsonArray{QJsonObject{{"id", "la_adp"}, {"path", path}}}}, {"constraints", QJsonArray{}}}
+            : QJsonObject{{"purpose", "Name background points by position"},
+                {"experiment", project->experiments()->text(0, "name")}, {"operation", "name_from_positions"}};
+        qputenv("EDI_UI_LOAD_ARGUMENTS", QJsonDocument(arguments).toJson(QJsonDocument::Compact));
+        assistant->signIn();
+        QTRY_VERIFY2_WITH_TIMEOUT(assistant->connected(), qPrintable(assistant->lastError()), 10000);
+        QTRY_VERIFY2_WITH_TIMEOUT(assistant->draftAdmissionReady(), qPrintable(assistant->lastError()), 10000);
+        QPointF pointer;
+        bool buttonPressed = false, selectedEntryPressed = false;
+        QString typed;
+        QObject observer;
+        connect(assistant, &edi_app::AssistantViewModel::actionPointerMoved, &observer,
+            [&](const QPointF& point) { pointer = point; });
+        QTimer searchObserver;
+        const auto sampleSearch = [&] {
+            auto* combo = find("alias.parameter.0");
+            auto* popup = combo ? combo->property("popup").value<QObject*>() : nullptr;
+            auto* content = popup ? popup->property("contentItem").value<QObject*>() : nullptr;
+            auto* header = content ? content->property("headerItem").value<QObject*>() : nullptr;
+            auto* search = header ? header->findChild<QObject*>("comboBox.search") : nullptr;
+            if (search && !search->property("text").toString().isEmpty())
+                typed = search->property("text").toString();
+        };
+        connect(&searchObserver, &QTimer::timeout, &observer, sampleSearch);
+        searchObserver.start(10);
+        connect(assistant, &edi_app::AssistantViewModel::actionPointerPressed, &observer, [&] {
+            sampleSearch();
+            auto* button = find("background.namePoints");
+            if (button && button->isVisible() &&
+                QLineF(pointer, button->mapToScene(QPointF(button->width() / 2, button->height() / 2))).length() < 1)
+                buttonPressed = true;
+            auto* combo = find("alias.parameter.0");
+            auto* popup = combo ? combo->property("popup").value<QObject*>() : nullptr;
+            auto* content = popup ? popup->property("contentItem").value<QObject*>() : nullptr;
+            QQuickItem* entry = nullptr;
+            const int option = combo ? static_cast<int>(combo->property("names").toStringList().indexOf(uniqueName)) : -1;
+            if (content && option >= 0 && typed == path &&
+                QMetaObject::invokeMethod(content, "itemAtIndex", Q_RETURN_ARG(QQuickItem*, entry), Q_ARG(int, option)) &&
+                entry && entry->isVisible() && entry->mapRectToScene(entry->boundingRect()).contains(pointer))
+                selectedEntryPressed = true;
+        });
+        assistant->send(alias ? "Alias the La atom isotropic displacement as la_adp." : "Name the background points from their positions.");
+        QTRY_COMPARE_WITH_TIMEOUT(assistant->state(), QString("idle"), 30000);
+        searchObserver.stop();
+        if (alias) {
+            QCOMPARE(typed, path);
+            QVERIFY(selectedEntryPressed);
+            auto* combo = find("alias.parameter.0");
+            QVERIFY(combo);
+            const auto option = combo->property("names").toStringList().indexOf(uniqueName);
+            QVERIFY(option >= 0);
+            QCOMPARE(combo->property("currentIndex").toInt(), option);
+            QCOMPARE(combo->property("model").toStringList()[option].section(" · ", 1), path);
+            const auto& aliases = project->assistantProject()->aliases;
+            QCOMPARE(aliases.size(), std::size_t(1));
+            QCOMPARE(QString::fromStdString(aliases[0]->id.value()), QString("la_adp"));
+            QCOMPARE(QString::fromStdString(aliases[0]->parameter_unique_name.value()), uniqueName);
+            qInfo().noquote() << "Shown alias search:" << typed << "selected:" << uniqueName;
+        } else {
+            QVERIFY2(buttonPressed, qPrintable(assistant->lastError()));
+            const auto expected = edi::position_point_ids(*project->currentExperiment()->experiment());
+            for (std::size_t i = 0; i < expected.size(); ++i)
+                QCOMPARE(background->text(static_cast<int>(i), "id"), QString::fromStdString(expected[i]));
+            qInfo() << "Shown background naming: cue pressed background.namePoints; position IDs applied";
+        }
+        assistant->clearHistory();
+    }
     void loadDataReplaysShownActions_data() {
         QTest::addColumn<bool>("show");
         QTest::newRow("shown") << true;
@@ -820,7 +953,7 @@ private slots:
 };
 int main(int argc, char** argv) {
 #ifndef __EMSCRIPTEN__
-    if (argc > 1 && QByteArray(argv[1]) == "--listen") return loadDataPeer();
+    if (argc > 1 && QByteArray(argv[1]) == "--listen") return assistantToolPeer();
 #endif
     QStandardPaths::setTestModeEnabled(true);
     QGuiApplication app(argc, argv);
