@@ -90,7 +90,7 @@ EaElements.StatusBar {
         room: bar.items.indexOf(projectItem) < bar.roomFor
         keyIcon: "archive"
         keyText: Session.categoryTitle("metadata")
-        valueText: bar.project ? bar.project.name : qsTr("Undefined")
+        valueText: bar.project && !Session.untitled ? bar.project.name : qsTr("Undefined")
         ToolTip.text: qsTr("Current project")
     }
     StatusBarItem {
