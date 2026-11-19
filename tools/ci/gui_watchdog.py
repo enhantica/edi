@@ -7,9 +7,11 @@
 The trace is the app's `ui-probe:` events (app/src/ui_probe.hpp), one JSON object per line,
 all on one monotonic millisecond clock: `clock` (tick_ms), `begin` and `complete` around the
 scenario, a `tick` at every delivery of the GUI thread's 10 ms timer, `step` per measured step,
-`measurement-enter`/`measurement-leave` (matched by `id` and `callback`, on the GUI thread)
-around the demo driver's own window grabs and image comparisons, and in a control run
-`block-begin`/`block-end` around the injected block. Every event names its `thread`.
+the callback witnesses `measurement-enter`/`measurement-leave` (one `id`, on the GUI thread)
+around the demo driver's own work with its span markers `tool-begin`/`tool-end`, and in a
+control run `block-begin`/`block-end` around the injected block. Every event names its
+`thread`. Markers and witnesses pair up one id on one thread, never nested; an unmatched,
+mismatched or nested one makes the trace invalid.
 
 Each interval between two ticks that meets the scenario's interval counts as its length, less
 the time it shares with the driver's work, less the nominal tick; more than the limit (100 ms)
@@ -87,41 +89,63 @@ def interval(events: list[dict], scenario: str) -> tuple[float, float]:
     return start, end
 
 
-def tool_intervals(events: list[dict], gui: object) -> list[tuple[float, float]]:
-    """The driver's own work: matched measurement spans with no other GUI-thread event inside."""
-    spans, open_spans = [], {}
+MARKERS = {'tool-begin', 'tool-end', 'measurement-enter', 'measurement-leave'}
+
+
+def paired(events: list[dict], begin: str, end: str) -> list[tuple[dict, dict]]:
+    """Begin and end events of one kind: never nested, each pair on one thread with one id."""
+    stack, pairs = [], []
     for event in events:
-        kind = event['event']
-        if kind == 'measurement-enter':
-            if open_spans:
-                raise InvalidTraceError("the driver's measurement spans overlap")
-            if event.get('thread') != gui:
-                raise InvalidTraceError('a measurement span is not on the GUI thread')
-            if event.get('callback') not in CALLBACKS:
+        if event['event'] == begin:
+            if stack:
+                raise InvalidTraceError(f'a {begin} (id {event.get("id")}) opens inside another')
+            stack.append(event)
+        elif event['event'] == end:
+            if not stack:
+                raise InvalidTraceError(f'a {end} without its {begin} (id {event.get("id")})')
+            opened = stack.pop()
+            if opened.get('id') != event.get('id') or opened.get('thread') != event.get('thread'):
                 raise InvalidTraceError(
-                    f'a measurement span names no driver callback ({event.get("callback")})'
+                    f'a {end} (id {event.get("id")}) does not close the innermost open {begin} '
+                    f'(id {opened.get("id")})'
                 )
-            open_spans[event.get('id'), event.get('callback')] = event['t_ms']
-        elif kind == 'measurement-leave':
-            key = (event.get('id'), event.get('callback'))
-            if key not in open_spans or event.get('thread') != gui:
-                raise InvalidTraceError(
-                    f'a measurement-leave without its enter (id {event.get("id")})'
-                )
-            spans.append((open_spans.pop(key), event['t_ms']))
-    if open_spans:
-        raise InvalidTraceError('a measurement-enter without its leave')
+            pairs.append((opened, event))
+    if stack:
+        raise InvalidTraceError(f'a {begin} without its {end} (id {stack[-1].get("id")})')
+    return pairs
+
+
+def tool_intervals(events: list[dict], gui: object) -> list[tuple[float, float]]:
+    """The driver's own work, as merged intervals.
+
+    The work is what the driver's callback witnesses bracket, on the GUI thread, with no other
+    GUI-thread event inside. The span markers, when present, must be well formed too.
+    """
+    paired(events, 'tool-begin', 'tool-end')
     excluded = []
-    for t0, t1 in spans:
+    for enter, leave in paired(events, 'measurement-enter', 'measurement-leave'):
+        if enter.get('callback') not in CALLBACKS or leave.get('callback') != enter.get(
+            'callback'
+        ):
+            raise InvalidTraceError(
+                f'a measurement span names no driver callback ({enter.get("callback")})'
+            )
+        if enter.get('thread') != gui:
+            raise InvalidTraceError('a measurement span is not on the GUI thread')
+        t0, t1 = enter['t_ms'], leave['t_ms']
         busy = any(
-            t0 < e['t_ms'] < t1
-            and e['event'] not in {'measurement-enter', 'measurement-leave'}
-            and e.get('thread', gui) == gui
+            t0 < e['t_ms'] < t1 and e['event'] not in MARKERS and e.get('thread', gui) == gui
             for e in events
         )
         if not busy:
             excluded.append((t0, t1))
-    return excluded
+    merged = []
+    for t0, t1 in sorted(excluded):
+        if merged and t0 <= merged[-1][1]:
+            merged[-1] = (merged[-1][0], max(merged[-1][1], t1))
+        else:
+            merged.append((t0, t1))
+    return merged
 
 
 def blocks(
