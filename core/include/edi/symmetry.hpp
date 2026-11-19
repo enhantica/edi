@@ -150,6 +150,9 @@ void set_structure_magnetic(Structure& structure, bool magnetic);
 // A site's element (the owner, 2026-11-19): a moment the new element has no magnetic ion for goes, and a magnetic
 // form-factor row for an element no site has any more goes, so no ion of the former element stays offered or saved.
 void set_site_type(Structure& structure, AtomSite& site, const std::string& type_symbol);
+// A form-factor coefficient the type's approximation does not use, or whose term its ion's table (or its given
+// coefficients) does not carry, keeps its value and is fixed: a fit cannot vary it (the owner, 2026-11-19).
+void fix_unusable_coefficients(Structure& structure, const std::string& type_symbol);
 // The tabulated settings of a Magnetic structure's own space group (time reversal ignored), each as its transform from
 // the BNS standard, `a,b,c;0,0,0` first (the owner, 2026-11-19).
 std::vector<std::string> magnetic_setting_transforms(const Structure& structure);

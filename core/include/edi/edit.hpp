@@ -923,6 +923,7 @@ class Edit {
         return Edit([&structure, type_symbol = std::move(type_symbol), ion = std::move(ion)] {
             MagneticFormFactor& row = form_factor_row(structure, type_symbol);
             row.ion = ion;
+            fix_unusable_coefficients(structure, type_symbol);
             drop_default_form_factor(structure, type_symbol);
         });
     }
@@ -934,6 +935,8 @@ class Edit {
                                             "' is none of j0, dipole and beyond_dipole");
             }
             form_factor_row(structure, type_symbol).approximation = approximation;
+            // An unused coefficient keeps its value but no longer fits, in the same undo step.
+            fix_unusable_coefficients(structure, type_symbol);
             drop_default_form_factor(structure, type_symbol);
         });
     }

@@ -1499,6 +1499,47 @@ void set_site_type(Structure& s, AtomSite& site, const std::string& type_symbol)
             s.magnetic_form_factors.erase_at(row);
         }
     }
+    // The element's default ion may carry fewer terms than the old one.
+    fix_unusable_coefficients(s, type_symbol);
+}
+
+void fix_unusable_coefficients(Structure& s, const std::string& type_symbol) {
+    for (const auto& item : s.magnetic_form_factors) {
+        MagneticFormFactor& row = *item;
+        if (row.id.value() != type_symbol) continue;
+        std::size_t used = 0;
+        try {
+            used = crysta::magnetic_coefficients_used(row.approximation.value());
+        } catch (const std::invalid_argument&) {
+            return;  // an approximation crysta refuses is reported where it is used
+        }
+        std::array<bool, 3> carried{true, true, true};
+        bool given = false;
+        for (const auto& [symbol, coefficients] : s.magnetic->radial_coefficients) {
+            if (symbol != type_symbol) continue;
+            const auto whole = [&coefficients](std::size_t term) {
+                return std::all_of(coefficients.values.begin() + static_cast<std::ptrdiff_t>(8 * term),
+                                   coefficients.values.begin() + static_cast<std::ptrdiff_t>(8 * term + 7),
+                                   [](const std::string& value) { return !value.empty(); });
+            };
+            if (whole(0)) {
+                given = true;
+                for (std::size_t n = 0; n < 3; ++n) carried[n] = whole(n + 1);
+            }
+        }
+        if (!given) {
+            const std::string ion = row.ion.value().empty() ? crysta::magnetic_type_ion(type_symbol) : row.ion.value();
+            try {
+                carried = crysta::magnetic_ion_table(ion).has;
+            } catch (const std::invalid_argument&) {
+            }
+        }
+        const std::vector<Parameter*> coefficients = row.parameters();
+        for (std::size_t n = 0; n < coefficients.size(); ++n) {
+            if ((n >= used || !carried[n]) && coefficients[n]->free.get()) coefficients[n]->free = false;
+        }
+        return;
+    }
 }
 
 bool structure_magnetic(const Structure& s) {
