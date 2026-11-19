@@ -26,6 +26,7 @@
 #include <ranges>
 #include <regex>
 #include <set>
+#include <tuple>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -138,17 +139,6 @@ crysta::ParameterState state(const Parameter& p) {
 // The choice between the two paths is crysta's own rule too (crysta::space_group_from_file,
 // which its loader also calls). edi's model spells an undeclared code as the empty string, so
 // that is the absent code here.
-// The origin of a magnetic structure's setting: the BNS transform's shift when its basis is the identity and the
-// shift is not zero.
-static std::optional<std::array<double, 3>> magnetic_origin(const MagneticDescription& magnetic) {
-    for (const auto& row : magnetic.transforms) {
-        if (row.second.source != "BNS") continue;
-        std::optional<std::array<double, 3>> origin = crysta::origin_shift_of_transform(row.second.pp_abc);
-        if (origin && *origin != std::array<double, 3>{}) return origin;
-    }
-    return std::nullopt;
-}
-
 crysta::SpaceGroup resolve_group(const Structure& s) {
     const std::string& code = s.space_group.coord_system_code;
     crysta::SpaceGroup group = crysta::space_group_from_file(
@@ -156,18 +146,6 @@ crysta::SpaceGroup resolve_group(const Structure& s) {
     // A magnetic structure read without `_space_group` (crysta's decision: symmetry from its
     // operators, nothing written back).
     group.declared = s.magnetic->space_group_declared;
-    // A magnetic structure's setting may be the table one with its origin moved, as the transform to the BNS
-    // standard gives it (edi ADR-0078): held moved when the moved setting, not the table one, holds its operations.
-    // The origin moves the Wyckoff positions even where the moved operations equal the table's (an inversion centre
-    // moved by half a cell), so the moved setting is preferred whenever it holds the operations.
-    if (!s.magnetic->operations.empty()) {
-        if (const std::optional<std::array<double, 3>> origin = magnetic_origin(*s.magnetic)) {
-            crysta::SpaceGroup moved = crysta::space_group_with_origin(group, *origin);
-            if (!crysta::operator_defined_symmetry(s.magnetic->operations, s.magnetic->centerings, moved)) {
-                return moved;
-            }
-        }
-    }
     return group;
 }
 
@@ -1224,6 +1202,42 @@ static void set_bns_transform(MagneticDescription& magnetic, const std::string& 
     magnetic.transforms.push_back({std::to_string(next), crysta::MagneticTransform{transform, "BNS"}});
 }
 
+namespace {
+// The UNI symbol of a magnetic group's point group, by the dictionary's rule (`_space_group_magn.point_group_name_UNI`):
+// the space group's UNI symbol without its lattice, each screw axis as its rotation and each glide as a mirror. A type
+// IV group, which has no UNI symbol, has its family's point group with 1', which its anti-translation gives.
+std::string point_group_uni(const crysta::MagneticSpaceGroupEntry& entry) {
+    const bool type_iv = entry.magnetic_type == 4 || entry.name_uni.empty();
+    const std::string& symbol = type_iv ? entry.name_bns : entry.name_uni;
+    if (symbol.empty() || std::string("PABCIFR").find(symbol.front()) == std::string::npos) return {};
+    std::size_t start = 1;
+    if (start + 1 < symbol.size() && symbol[start] == '_') start += 2;  // a BNS lattice subscript: one letter, P_S or C_c
+    std::string out;
+    for (std::size_t i = start; i < symbol.size(); ++i) {
+        const char c = symbol[i];
+        if (c == '_' && i + 1 < symbol.size() && std::isdigit(static_cast<unsigned char>(symbol[i + 1]))) {
+            ++i;  // a screw's translation: 2_1 is the rotation 2
+            continue;
+        }
+        if (type_iv && c == '\'') continue;
+        out += std::string("abcnde").find(c) != std::string::npos ? 'm' : c;
+    }
+    if (type_iv) out += ".1'";
+    return out;
+}
+
+crysta::MagneticGroupName group_name(const crysta::MagneticSpaceGroupEntry& entry) {
+    crysta::MagneticGroupName name;
+    name.number_bns = entry.number_bns;
+    name.name_bns = entry.name_bns;
+    name.number_og = entry.number_og;
+    name.name_og = entry.name_og;
+    name.name_uni = entry.name_uni;
+    name.point_group_name_uni = point_group_uni(entry);
+    return name;
+}
+}  // namespace
+
 void set_magnetic_space_group(Structure& s, const std::string& number_bns) {
     const crysta::MagneticSpaceGroupEntry& entry = crysta::magnetic_space_group(number_bns);
     const auto numbered = [](const std::vector<std::string>& triplets) {
@@ -1234,12 +1248,7 @@ void set_magnetic_space_group(Structure& s, const std::string& number_bns) {
         }
         return rows;
     };
-    crysta::MagneticGroupName name;
-    name.number_bns = entry.number_bns;
-    name.name_bns = entry.name_bns;
-    name.number_og = entry.number_og;
-    name.name_og = entry.name_og;
-    name.name_uni = entry.name_uni;
+    const crysta::MagneticGroupName name = group_name(entry);
     // The table's operations are in the BNS standard setting: its transform is the identity.
     Structure trial = s;
     trial.magnetic.modify([](MagneticDescription& magnetic) { set_bns_transform(magnetic, "a,b,c;0,0,0"); });
@@ -1269,32 +1278,55 @@ std::vector<int> family_numbers(const MagneticDescription& magnetic) {
     return numbers;
 }
 
-// The table setting (moved by the BNS transform's origin when one is given) that holds the operations.
-std::optional<SpaceGroupSettingName> family_setting(const MagneticDescription& magnetic, bool moved_only) {
-    const std::optional<std::array<double, 3>> origin = magnetic_origin(magnetic);
+std::string transform_to_standard(const crysta::SpaceGroup& group);
+
+// Two setting transforms are the same setting: the same basis and the same origin within a lattice translation.
+bool same_setting(const crysta::MagneticSettingTransform& first, const crysta::MagneticSettingTransform& second) {
+    for (std::size_t i = 0; i < 9; ++i) {
+        if (std::abs(first.basis[i] - second.basis[i]) > 1e-9) return false;
+    }
+    for (std::size_t i = 0; i < 3; ++i) {
+        const double step = first.origin[i] - second.origin[i];
+        if (std::abs(step - std::round(step)) > 1e-9) return false;
+    }
+    return true;
+}
+
+// The BNS row's transform when it parses; a descriptive text row claims nothing.
+std::optional<crysta::MagneticSettingTransform> claimed_setting(const MagneticDescription& magnetic) {
+    for (const auto& row : magnetic.transforms) {
+        if (row.second.source == "BNS") return crysta::parse_setting_transform(row.second.pp_abc);
+    }
+    return std::nullopt;
+}
+
+// The table setting that holds the operations and, when `as_claimed`, is the setting the BNS transform names (the
+// owner, 2026-11-19: a setting the table does not hold, another origin or another basis, is operators only).
+std::optional<SpaceGroupSettingName> family_setting(const MagneticDescription& magnetic, bool as_claimed) {
+    const std::optional<crysta::MagneticSettingTransform> claimed = as_claimed ? claimed_setting(magnetic) : std::nullopt;
     const std::vector<SpaceGroupSettingName> settings = space_group_settings();
-    for (const bool moved : {true, false}) {
-        if (moved ? !origin : moved_only) {
-            continue;
-        }
-        for (const int number : family_numbers(magnetic)) {
-            for (const SpaceGroupSettingName& setting : settings) {
-                if (setting.it_number != number) {
-                    continue;
-                }
-                crysta::SpaceGroup group;
-                try {
-                    group = crysta::space_group_from_file(
-                        setting.name_h_m, setting.coord_system_code.empty() ? std::nullopt
-                                                                            : std::optional<std::string>(setting.coord_system_code));
-                } catch (const std::invalid_argument&) {
-                    continue;
-                }
-                const crysta::SpaceGroup held = moved ? crysta::space_group_with_origin(group, *origin) : group;
-                if (!crysta::operator_defined_symmetry(magnetic.operations, magnetic.centerings, held)) {
-                    return setting;
-                }
+    for (const int number : family_numbers(magnetic)) {
+        for (const SpaceGroupSettingName& setting : settings) {
+            if (setting.it_number != number) {
+                continue;
             }
+            crysta::SpaceGroup group;
+            try {
+                group = crysta::space_group_from_file(
+                    setting.name_h_m, setting.coord_system_code.empty() ? std::nullopt
+                                                                        : std::optional<std::string>(setting.coord_system_code));
+            } catch (const std::invalid_argument&) {
+                continue;
+            }
+            if (crysta::operator_defined_symmetry(magnetic.operations, magnetic.centerings, group)) {
+                continue;
+            }
+            if (claimed) {
+                const std::optional<crysta::MagneticSettingTransform> own =
+                    crysta::parse_setting_transform(transform_to_standard(group));
+                if (!own || !same_setting(*claimed, *own)) continue;
+            }
+            return setting;
         }
     }
     return std::nullopt;
@@ -1334,11 +1366,88 @@ bool bns_transform_consistent(const MagneticDescription& magnetic) {
     return true;
 }
 
+namespace {
+std::vector<std::pair<std::string, std::string>> magnetic_rows_in_setting(const std::vector<std::string>& rows,
+                                                                          const crysta::MagneticSettingTransform& transform);
+// A signed group as a set: every operation composed with every centring, translations in 24ths modulo the lattice.
+using SignedKey = std::tuple<std::array<int, 9>, std::array<int, 3>, int>;
+std::set<SignedKey> signed_group(const std::vector<std::string>& operations, const std::vector<std::string>& centerings) {
+    std::set<SignedKey> out;
+    const std::vector<std::string> shifts = centerings.empty() ? std::vector<std::string>{"x,y,z,+1"} : centerings;
+    for (const std::string& operation_text : operations) {
+        const crysta::MagneticOperation operation = crysta::parse_magnetic_operation(operation_text);
+        for (const std::string& shift_text : shifts) {
+            const crysta::MagneticOperation shift = crysta::parse_magnetic_operation(shift_text);
+            std::array<int, 3> t{};
+            for (std::size_t i = 0; i < 3; ++i) {
+                const long steps = std::lround((operation.translation[i] + shift.translation[i]) * 24.0);
+                t[i] = static_cast<int>(((steps % 24) + 24) % 24);
+            }
+            out.emplace(operation.rotation, t, operation.theta * shift.theta);
+        }
+    }
+    return out;
+}
+
+std::vector<std::string> texts(const std::vector<std::pair<std::string, std::string>>& rows) {
+    std::vector<std::string> out;
+    out.reserve(rows.size());
+    for (const auto& row : rows) out.push_back(row.second);
+    return out;
+}
+
+// A magnetic structure without a BNS number names its group from its operations: the table group of its family that,
+// in the held setting, has the same signed operations. Its names and the setting's transform are kept, so a save, which
+// writes no `_space_group`, still carries the family.
+void identify_magnetic_group(Structure& s, const SpaceGroupSettingName& setting) {
+    if (!s.magnetic->group.number_bns.empty()) return;
+    crysta::SpaceGroup held;
+    try {
+        held = crysta::space_group_from_file(setting.name_h_m, setting.coord_system_code.empty()
+                                                                   ? std::nullopt
+                                                                   : std::optional<std::string>(setting.coord_system_code));
+    } catch (const std::invalid_argument&) {
+        return;
+    }
+    const std::string transform = transform_to_standard(held);
+    const std::optional<crysta::MagneticSettingTransform> parsed = crysta::parse_setting_transform(transform);
+    if (!parsed) return;
+    std::set<SignedKey> own;
+    try {
+        own = signed_group(texts(s.magnetic->operations), texts(s.magnetic->centerings));
+    } catch (const std::invalid_argument&) {
+        return;
+    }
+    const std::string family = std::to_string(setting.it_number) + ".";
+    for (const crysta::MagneticSpaceGroupEntry& entry : crysta::magnetic_space_groups()) {
+        if (entry.number_bns.rfind(family, 0) != 0 || entry.magnetic_type == 4) continue;
+        try {
+            if (signed_group(texts(magnetic_rows_in_setting(entry.operations, *parsed)),
+                             texts(magnetic_rows_in_setting(entry.centerings, *parsed))) != own) {
+                continue;
+            }
+        } catch (const std::invalid_argument&) {
+            continue;
+        }
+        const crysta::MagneticGroupName name = group_name(entry);
+        s.magnetic.modify([&name, &transform](MagneticDescription& magnetic) {
+            const crysta::MagneticGroupName supplied = magnetic.group;
+            magnetic.group = name;
+            // Values a file gave for the point group stay.
+            if (!supplied.point_group_name_uni.empty()) magnetic.group.point_group_name_uni = supplied.point_group_name_uni;
+            magnetic.group.point_group_number_litvin = supplied.point_group_number_litvin;
+            set_bns_transform(magnetic, transform);
+        });
+        return;
+    }
+}
+}  // namespace
+
 bool adopt_magnetic_family_setting(Structure& s, bool reinfer_letters) {
     if (s.magnetic->operations.empty()) {
         return false;
     }
-    const std::optional<SpaceGroupSettingName> setting = family_setting(s.magnetic, false);
+    const std::optional<SpaceGroupSettingName> setting = family_setting(s.magnetic, true);
     if (!setting) {
         // Type IV, or a setting no table holds: the symmetry comes from the operators (held under P 1, no letters).
         s.space_group.name_h_m = "P 1";
@@ -1351,6 +1460,7 @@ bool adopt_magnetic_family_setting(Structure& s, bool reinfer_letters) {
     }
     s.space_group.name_h_m = setting->name_h_m;
     s.space_group.coord_system_code = setting->coord_system_code;
+    identify_magnetic_group(s, *setting);
     s.magnetic.modify([&setting](MagneticDescription& magnetic) {
         magnetic.space_group_declared = true;
         // A structure without a parent space group gets the magnetic group's own (edi ADR-0078); a declared one stays.
@@ -1512,12 +1622,7 @@ void set_structure_magnetic(Structure& s, bool magnetic) {
             throw std::invalid_argument("space group " + std::to_string(group.it_number) + " has no grey magnetic group");
         }
         const std::string transform = transform_to_standard(group);
-        crysta::MagneticGroupName name;
-        name.number_bns = grey->number_bns;
-        name.name_bns = grey->name_bns;
-        name.number_og = grey->number_og;
-        name.name_og = grey->name_og;
-        name.name_uni = grey->name_uni;
+        const crysta::MagneticGroupName name = group_name(*grey);
         std::vector<std::pair<std::string, std::string>> operations, centerings;
         if (transform == "a,b,c;0,0,0") {
             for (std::size_t i = 0; i < grey->operations.size(); ++i) operations.emplace_back(std::to_string(i + 1), grey->operations[i]);
@@ -1543,13 +1648,9 @@ void set_structure_magnetic(Structure& s, bool magnetic) {
     }
     // Back to Crystal: the magnetic group's own space group (time reversal ignored), declared, and no magnetic data.
     Structure trial = s;
-    std::optional<std::array<double, 3>> origin;
-    if (const std::optional<SpaceGroupSettingName> setting = family_setting(trial.magnetic, false)) {
+    if (const std::optional<SpaceGroupSettingName> setting = family_setting(trial.magnetic, true)) {
         trial.space_group.name_h_m = setting->name_h_m;
         trial.space_group.coord_system_code = setting->coord_system_code;
-        // A setting the BNS transform moves from the table one: the coordinates move into the table setting, so the
-        // geometry is unchanged when the transform goes.
-        if (family_setting(trial.magnetic, true)) origin = magnetic_origin(trial.magnetic);
     } else if (!trial.magnetic->space_group_declared) {
         // Operators-only (type IV, or a setting no table holds): its family number's first setting.
         const std::vector<int> numbers = family_numbers(trial.magnetic);
@@ -1563,43 +1664,88 @@ void set_structure_magnetic(Structure& s, bool magnetic) {
         trial.space_group.name_h_m = found->name_h_m;
         trial.space_group.coord_system_code = found->coord_system_code;
     }
-    if (origin) {
-        for (const auto& site : trial.atom_sites) {
-            AtomSite& atom = *site;
-            for (std::size_t axis = 0; axis < 3; ++axis) {
-                Parameter& coordinate = axis == 0 ? atom.fract_x : axis == 1 ? atom.fract_y : atom.fract_z;
-                coordinate.value = coordinate.value.get() - (*origin)[axis];
-            }
-        }
-    }
     trial.magnetic.modify([](MagneticDescription& description) { description = MagneticDescription{}; });
     while (!trial.atom_site_moment.empty()) trial.atom_site_moment.erase_at(trial.atom_site_moment.size() - 1);
     while (!trial.magnetic_form_factors.empty()) trial.magnetic_form_factors.erase_at(trial.magnetic_form_factors.size() - 1);
     s = std::move(trial);
 }
 
+std::string held_magnetic_setting(const Structure& s) {
+    for (const auto& row : s.magnetic->transforms) {
+        if (row.second.source == "BNS") return row.second.pp_abc;
+    }
+    // No transform given: the held table setting's own, `a,b,c;0,0,0` for the BNS standard.
+    if (!structure_magnetic(s) || !s.magnetic->space_group_declared) return {};
+    try {
+        return transform_to_standard(resolve_group(s));
+    } catch (const std::invalid_argument&) {
+        return {};
+    }
+}
+
+std::vector<std::string> magnetic_setting_transforms(const Structure& s) {
+    // The tabulated settings of the magnetic group's own space group (time reversal ignored), each as its transform
+    // from the BNS standard; built here from crysta's setting table, which names settings but gives no transforms.
+    const std::vector<int> numbers = family_numbers(s.magnetic);
+    if (numbers.empty()) {
+        return {};
+    }
+    static std::map<int, std::vector<std::string>> cache;
+    const int number = numbers.front();
+    if (const auto found = cache.find(number); found != cache.end()) {
+        return found->second;
+    }
+    std::vector<std::string> transforms;
+    for (const SpaceGroupSettingName& setting : space_group_settings()) {
+        if (setting.it_number != number) continue;
+        try {
+            const std::string transform = transform_to_standard(crysta::space_group_from_file(
+                setting.name_h_m,
+                setting.coord_system_code.empty() ? std::nullopt : std::optional<std::string>(setting.coord_system_code)));
+            if (!transform.empty() && std::find(transforms.begin(), transforms.end(), transform) == transforms.end()) {
+                transforms.push_back(transform);
+            }
+        } catch (const std::invalid_argument&) {
+        }
+    }
+    const auto standard = std::find(transforms.begin(), transforms.end(), "a,b,c;0,0,0");
+    if (standard != transforms.end()) std::rotate(transforms.begin(), standard, standard + 1);
+    cache.emplace(number, transforms);
+    return transforms;
+}
+
+namespace {
+// Signed operations (`x,y,z,+1`) of the BNS standard mapped through a setting transform, each keeping its sign.
+std::vector<std::pair<std::string, std::string>> magnetic_rows_in_setting(const std::vector<std::string>& rows,
+                                                                          const crysta::MagneticSettingTransform& transform) {
+    // Each operation alone: crysta's mapping puts the identity first, so a list would lose the sign pairing.
+    std::vector<std::pair<std::string, std::string>> out;
+    for (const std::string& row : rows) {
+        const auto comma = row.rfind(',');
+        const crysta::SpaceGroup moved = crysta::space_group_in_setting(
+            crysta::SpaceGroup(0, "", "", {row.substr(0, comma)}, {}, "", crysta::LatticeCentering::P), transform);
+        out.emplace_back(std::to_string(out.size() + 1), moved.operators.front() + row.substr(comma));
+    }
+    return out;
+}
+}  // namespace
+
 void set_magnetic_setting(Structure& s, const std::string& transform) {
-    if (!structure_magnetic(s)) {
-        throw std::invalid_argument("only a Magnetic structure has a magnetic setting");
+    // One of the tabulated settings (the owner, 2026-11-19: Setting is a list, as the space group's Code): the BNS
+    // table group's operations in that setting, with the transform written as the BNS row.
+    if (!structure_magnetic(s) || s.magnetic->group.number_bns.empty()) {
+        throw std::invalid_argument("only a Magnetic structure with a magnetic space group has a magnetic setting");
     }
-    std::string spelled = transform;
-    std::erase(spelled, ' ');
-    if (!crysta::origin_shift_of_transform(spelled)) {
-        throw std::invalid_argument("the setting '" + transform + "' is not a transform such as a,b,c;0,0,0");
+    const std::vector<std::string> settings = magnetic_setting_transforms(s);
+    if (std::find(settings.begin(), settings.end(), transform) == settings.end()) {
+        throw std::invalid_argument("the setting " + transform + " is not one of this group's tabulated settings");
     }
+    const std::optional<crysta::MagneticSettingTransform> parsed = crysta::parse_setting_transform(transform);
+    const crysta::MagneticSpaceGroupEntry& entry = crysta::magnetic_space_group(s.magnetic->group.number_bns);
     Structure trial = s;
-    trial.magnetic.modify([&spelled](MagneticDescription& description) { set_bns_transform(description, spelled); });
-    if (!bns_transform_consistent(trial.magnetic)) {
-        throw std::invalid_argument("the setting '" + transform + "' does not map the BNS standard onto this structure's operations");
-    }
-    // The setting must describe the operations the structure holds: with an origin, a table setting it moves onto
-    // them; refused otherwise, leaving the structure as it was.
-    const bool table_before = s.magnetic->space_group_declared && family_setting(s.magnetic, false).has_value();
-    const std::optional<std::array<double, 3>> origin = magnetic_origin(trial.magnetic);
-    if (table_before && (origin ? !family_setting(trial.magnetic, true) : !family_setting(trial.magnetic, false))) {
-        throw std::invalid_argument("the setting '" + transform + "' does not describe this structure's operations");
-    }
-    (void)adopt_magnetic_family_setting(trial, true);
+    trial.magnetic.modify([&transform](MagneticDescription& magnetic) { set_bns_transform(magnetic, transform); });
+    set_magnetic_symmetry(trial, magnetic_rows_in_setting(entry.operations, *parsed),
+                          magnetic_rows_in_setting(entry.centerings, *parsed), trial.magnetic->group);
     s = std::move(trial);
 }
 

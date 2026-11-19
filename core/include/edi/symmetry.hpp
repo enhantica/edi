@@ -150,8 +150,14 @@ void set_structure_magnetic(Structure& structure, bool magnetic);
 // A site's element (the owner, 2026-11-19): a moment the new element has no magnetic ion for goes, and a magnetic
 // form-factor row for an element no site has any more goes, so no ion of the former element stays offered or saved.
 void set_site_type(Structure& structure, AtomSite& site, const std::string& type_symbol);
-// The transform of a Magnetic structure's setting to the BNS standard (`a,b,c;0,0,0` for the standard itself), kept as
-// the transforms loop's BNS row.
+// The tabulated settings of a Magnetic structure's own space group (time reversal ignored), each as its transform from
+// the BNS standard, `a,b,c;0,0,0` first (the owner, 2026-11-19).
+std::vector<std::string> magnetic_setting_transforms(const Structure& structure);
+// The setting the Setting field shows: the BNS transform a file or an edit gave, else the held table setting's own
+// transform; empty for an operators-only structure without one.
+std::string held_magnetic_setting(const Structure& structure);
+// One of those settings: the BNS table group's operations in it, the transform kept as the transforms loop's BNS row. A
+// setting not in the list is refused.
 void set_magnetic_setting(Structure& structure, const std::string& transform);
 
 // One tensor row for each anisotropic site and none for any other (diffraction-lib's
