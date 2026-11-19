@@ -86,6 +86,8 @@ Column {
                         return group.project ? group.project.parameterNamed(name) : null;
                     }
                     readonly property var names: group.aliases ? group.aliases.parameterNames : []
+                    // Search the full name shown after the separator, including every loop key.
+                    readonly property var searchNames: parameterBox.names.map(name => parameterBox.itemOf(name)?.path ?? name)
 
                     inTable: true
                     horizontalAlignment: Text.AlignLeft
