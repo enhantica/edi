@@ -941,11 +941,9 @@ void structure_block(const PCR& pcr, Project& project, std::vector<Pattern>& pat
             symbol = current_name;
         }
     }
-    auto setting = space_group_setting_for_name(symbol);
+    auto setting = fullprof_default_space_group(symbol);
     if (setting && !origin.empty()) {
         setting = space_group_setting_for_code(setting->it_number, origin);
-    } else if (same_space_group_name(symbol, "F d -3 m")) {
-        setting = space_group_setting_for_code(227, "2");
     }
     if (!setting) {
         pcr.fail("Unsupported FullProf space group " + symbol, group);
@@ -1284,6 +1282,13 @@ bool refinements_active(const PCR& pcr, std::size_t end) {
 }
 
 }  // namespace
+
+std::optional<SpaceGroupSettingName> fullprof_default_space_group(const std::string& symbol) {
+    if (same_space_group_name(symbol, "F d -3 m")) {
+        return space_group_setting_for_code(227, "2");
+    }
+    return space_group_setting_for_name(symbol);
+}
 
 Project import_fullprof_project(const std::string& path) {
     PCR pcr(path);

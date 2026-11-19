@@ -4,6 +4,7 @@
 #include "edi/parameter_walk.hpp"
 #include "edi/project_archive.hpp"
 #include "edi/symmetry.hpp"
+#include "fullprof_import.hpp"
 #include "import_symmetry.hpp"
 
 #include <algorithm>
@@ -396,10 +397,16 @@ void write_atoms(std::ostream& out, Structure& structure, Codes& codes) {
     if (group.empty() || group.find_first_of("!#\r\n") != std::string::npos) {
         unsupported(structure.name.value() + ": missing or invalid Hermann–Mauguin symbol");
     }
-    if (setting == "1") {
-        group += ":1";
-    } else if (setting == "2" && !same_space_group_name(group, "F d -3 m")) {
-        unsupported(structure.name.value() + ": FullProf origin choice 2 is unsupported for " + group);
+    if (setting == "1" || setting == "2") {
+        const auto default_setting = detail::fullprof_default_space_group(group);
+        if (!default_setting || default_setting->coord_system_code != setting) {
+            if (setting == "1" && same_space_group_name(group, "F d -3 m")) {
+                group += ":1";
+            } else {
+                unsupported(structure.name.value() + ": FullProf origin choice " + setting +
+                            " is unsupported for " + group);
+            }
+        }
     }
     out << group << " <--Space group symbol\n!Atom Typ X Y Z Biso Occ In Fin N_t Spc /Codes\n";
 
