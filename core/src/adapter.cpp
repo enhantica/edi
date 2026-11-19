@@ -1300,8 +1300,8 @@ std::optional<crysta::MagneticSettingTransform> claimed_setting(const MagneticDe
     return std::nullopt;
 }
 
-// The table setting that holds the operations and, when `as_claimed`, is the setting the BNS transform names (the
-// owner, 2026-11-19: a setting the table does not hold, another origin or another basis, is operators only).
+// Find the table setting with these operations, matching the BNS transform when `as_claimed` is true.
+// A setting absent from the table, including another origin or basis, uses its supplied operators directly.
 std::optional<SpaceGroupSettingName> family_setting(const MagneticDescription& magnetic, bool as_claimed) {
     const std::optional<crysta::MagneticSettingTransform> claimed = as_claimed ? claimed_setting(magnetic) : std::nullopt;
     const std::vector<SpaceGroupSettingName> settings = space_group_settings();
@@ -1790,8 +1790,7 @@ std::vector<std::pair<std::string, std::string>> magnetic_rows_in_setting(const 
 }  // namespace
 
 void set_magnetic_setting(Structure& s, const std::string& transform) {
-    // One of the tabulated settings (the owner, 2026-11-19: Setting is a list, as the space group's Code): the BNS
-    // table group's operations in that setting, with the transform written as the BNS row.
+    // Use the BNS group's operations in the selected tabulated setting and write its transform as the BNS row.
     if (!structure_magnetic(s) || s.magnetic->group.number_bns.empty()) {
         throw std::invalid_argument("only a Magnetic structure with a magnetic space group has a magnetic setting");
     }
@@ -2278,7 +2277,7 @@ Index build_index(Project& model, crysta::Project& cproject) {
                   Slot{&cexperiment.instrument[2], &experiment.instrument.calib_d_to_tof_quadratic});
     index.emplace("experiment.instrument.calib_d_to_tof_reciprocal",
                   Slot{&cexperiment.instrument[3], &experiment.instrument.calib_d_to_tof_reciprocal});
-    // A loop row by its id, never its position (the owner, 2026-10-11), as parameter_paths names it.
+    // Address a loop row by its id, never its position, as parameter_paths names it.
     index.emplace("experiment.linked_structures[" + experiment.linked_structure().structure_id.value() + "].scale",
                   Slot{&cexperiment.scale(), &experiment.linked_structure().scale});
     for (std::size_t i = 0; i < experiment.background.size(); ++i) {
@@ -6223,7 +6222,7 @@ std::mutex printed_mutex;
 std::set<std::string> printed;
 
 // The starting values a fit moved off zero (crysta's zero-start notices), each as "Co2 moments from 0 to 1 μB",
-// kept for the fit's result whatever the message level (owner record 2026-11-08).
+// kept for the fit's result whatever the message level.
 std::vector<std::string> start_adjustments;
 // The free parameters whose s.u. the fit could not compute (crysta's su_undefined), by crysta's names (`Co1.crystalaxis_x`).
 std::vector<std::string> undefined_su;
@@ -7873,18 +7872,13 @@ namespace {
 
 // ---: the scan-event observation seam -------------------------------------------------
 //
-// crysta's driver exposes no per-file hook, and the owner's committed rule makes
-// analysis/results.csv the ONE carry-forward state source: the driver APPENDS each file's row
-// before the next file's fit ("numbers commit as produced"). So edi derives its per-file
-// completion event from the committed rows themselves — read when the row count grows, parsed
-// from the same plain-cell contract crysta writes — and NEVER from iteration-number restarts,
-// the heuristic the packet rules out by name. The walk below mirrors crysta's own (directory
-// regular files + `*`/`?` glob + sort + optional reverse) so the preamble's N is the N crysta
-// will fit; a mismatch cannot arise from a second convention, only from the directory changing
-// mid-call.
+// crysta's driver exposes no per-file hook. It appends each file's row to analysis/results.csv
+// before fitting the next file, so edi detects completion by reading newly appended rows.
+// Iteration numbers can restart within a fit and cannot identify a completed file.
+// Enumerate regular files with the same glob, sorting and optional reverse order as the driver
+// so the announced file count matches the files it will fit, unless the directory changes mid-call.
 
-// Minimal glob over a file NAME (`*` and `?` only) — byte-for-byte crysta's matcher
-// (src/core/sequential.cpp), which is the point: the two walks must agree.
+// Match file names with only `*` and `?`, using the same rules as crysta's sequential driver.
 bool scan_glob_match(const std::string& pattern, const std::string& name) {
     std::size_t p = 0;
     std::size_t n = 0;
@@ -7952,10 +7946,8 @@ std::optional<int> count_series_points(const Project& project, const crysta::Seq
 // The one numeric-cell device for this reader, mirroring io.cpp's `to_double` device-for-device:
 // a classic-("C")-locale-imbued istringstream, fully consumed or refused. BOTH properties are
 // load-bearing and neither may be traded for the other:
-//   * portable — deliberately NOT std::from_chars: libc++ (Apple/AppleClang) `= delete`s the
-//     floating-point overload, so that call does not compile on macOS (it broke crysta's own
-//     macOS CI, PR #21, and a fresh instance here broke the owner's Mac build on this cycle's
-//     head — the documented class, re-shipped; hence one shared device, not per-site calls);
+//   * portable — supported libc++ versions on macOS lack the floating-point std::from_chars
+//     overload, so use the shared stream parser on every platform;
 //   * locale-independent — never strtod/std::stod, which honour the ambient LC_NUMERIC, so a
 //     comma-decimal locale would silently mis-parse the committed `4.8056` cell.
 template <typename Value>

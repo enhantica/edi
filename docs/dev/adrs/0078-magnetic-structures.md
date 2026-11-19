@@ -23,43 +23,39 @@ without computing any of them itself.
   and the magnetic intensity come from crysta through the adapter, never from edi code.
 - **Structure page.** Main holds the magnetic space group, the propagation vectors and the moments; Extra holds the
   operators, the parent group, the form factors and the moments in the cell. They appear as soon as the structure is
-  Magnetic, before any site has an ion (the owner, 2026-11-19; this replaces the 2026-11-14 rule that choosing an ion
-  makes them appear). A moment component the site symmetry fixes or ties is shown and not fittable, as a
+  Magnetic, before any site has an ion. A moment component the site symmetry fixes or ties is shown and not fittable, as a
   symmetry-fixed coordinate is. The moments table's ion choices follow the site's element: a new element drops a moment
   it has no magnetic ion for, and a form factor row for an element no site has goes. Add vector appends k = 0,0,0 for
   the user to edit. A change the structure cannot take (a k its cell cannot carry, a magnetic group or Setting crysta
   refuses) is not made: the field keeps its value and the reason shows in plain words in the app's error popup and the
   Messages center, never as a lasting label. Setting shows the dictionary default `a,b,c;0,0,0` when a file gives no
-  transform (the owner, 2026-11-19).
+  transform.
 - **Viewer.** The structure view draws each magnetic atom's moment as an arrow, from the moments in the cell crysta
   computed. The toolbar shows or hides them (`_structure_view.show_moments`, saved with the structure only when
   stated). Appearance sets the arrow length per Bohr magneton and where the arrow sits (`_structure_view.moment_view`:
   through the atom, from its centre or from its surface). The shaft has one thickness at every length; the head is
   the standard one (0.6 Å long, 0.3 Å wide) shortened to at most 35 % of the arrow and narrowed with it, never below
-  1.6 times the shaft, so a 1 μB arrow at the default scale keeps a visible shaft and a long arrow the standard head
-  (the owner, 2026-11-03; the fraction read from captures of 1, 3 and 10 μB arrows). The toolbar's Atoms choice draws
-  every atom, the crystal's asymmetric unit (for a magnetic structure, its parent group's, as crysta decides), the
+  1.6 times the shaft, so a 1 μB arrow at the default scale keeps a visible shaft and a long arrow the standard head.
+  The toolbar's Atoms choice draws every atom, the crystal's asymmetric unit (for a magnetic structure, its parent
+  group's, as crysta decides), the
   magnetic one, the magnetic atoms or none; moments follow the drawn atoms, and with none stay at every magnetic site.
 - **Moment forms.** The moments table shows a moment in crystal-axis, Cartesian or spherical form, with |M|, each
   derived value with its s.u. After a fit the s.u. come from the fit's covariance (correlations, and the cell where it
   was fitted, included); before one they are propagated as if the components were uncorrelated, and the tooltip says
   which. An angle the moment does not fix shows a dash, with the reason in its tooltip. Every form takes its s.u.
-  from crysta's one function, under crysta's rule for an undefined s.u. (its ADR on moments near zero, point 4,
-  amended 2026-11-08): a free component whose fitted s.u. is undefined is never shown or used as 0, so any value
+  from crysta's one function: a free component whose fitted s.u. is undefined is never shown or used as 0, so any value
   that depends on it shows an undefined s.u., and a missing correlation withholds the s.u. it would need rather than
   falling back to uncorrelated propagation. A component no fitted parameter moves contributes nothing; a component
   tied by symmetry or set by a constraint takes its s.u. from the parameters it follows, whatever its free flag says.
-- **Form factors** (the owner, 2026-11-03). The moments table chooses each site's ion, shared by its atom type. The
-  Magnetic form factors group on Extra has one row per magnetic atom type: the type and its ion, read only; the
+- **Form factors.** The moments table chooses each site's ion, shared by its atom type. The Magnetic form factors group
+  on Extra has one row per magnetic atom type: the type and its ion, read only; the
   approximation, ⟨j0⟩ alone, the dipole ⟨j0⟩ + C₂⟨j2⟩ or beyond the dipole up to ⟨j6⟩; and the coefficients it uses,
   edited and fitted like any other parameter. A coefficient the approximation does not use, or whose term the ion's
   table lacks, is greyed out. C₂'s tooltip gives the Landé g it stands for, C₂ = 2/g − 1. The core holds a type's
   form factor as a keyed row (`magnetic_form_factor`) only once an edit or a file declares it; a row back at the
   defaults (its own ion, ⟨j0⟩, every coefficient 0 and fixed) is removed, so the file says nothing it does not need.
-- **Crystal or Magnetic** (the owner, 2026-11-18). This replaces the 2026-11-14 rule that every structure lists the
-  moments group, which was not the owner's decision: the owner's 2026-11-14 request was *"Create → crystal or magnetic
-  structure, magnetic groups shown only then"*. The Structures
-  table has a column after Type: Crystal or Magnetic, for an atom-based structure. Create makes Crystal, and a Crystal
+- **Crystal or Magnetic.** The Structures table has a column after Type: Crystal or Magnetic, for an atom-based
+  structure. Create makes Crystal, and a Crystal
   structure shows no magnetic group, the moments included. Switching to Magnetic sets the grey group of the current
   space group (Pnma → Pnma1′, BNS 62.442): every moment is zero by symmetry until a magnetic subgroup is chosen (CoSiO:
   Pnma, 62.441). Switching back to Crystal sets the magnetic group's own space group (time reversal ignored) and drops
@@ -71,13 +67,13 @@ without computing any of them itself.
   ISODISTORT writes it. Crystal system is shown read only and not saved (the dictionary has no item for it). On Extra,
   a separate read-only group shows the derived symbols, saved as the dictionary's `_space_group_magn` items: the UNI
   symbol, the OG number and name and the UNI point-group symbol. A Litvin point-group number supplied by a file is
-  kept and written back unchanged; it is not derived. Extra shows only that supplied value, blank when absent
-  (conductor decision, 2026-11-19). The parent space group is always present on Extra
-  for a Magnetic structure, under its own heading (`_parent_space_group`); a file without one gets the magnetic group's
+  kept and written back unchanged; it is not derived. Extra shows only that supplied value, blank when absent.
+  The parent space group is always present on Extra for a Magnetic structure, under its own heading
+  (`_parent_space_group`); a file without one gets the magnetic group's
   own space group. Magnetic space group takes Space group's place, above Cell, in the sidebar and in the saved file's
   category order, and Propagation vectors follow it on Main: the vectors the file gives, else the one the magnetic group
-  gives (k = 0 for a group in its parent's cell), never blank (the owner, 2026-11-19).
-- **Site symmetry from the magnetic group** (the owner, 2026-11-18). For types I–III the family group (the operations
+  gives (k = 0 for a group in its parent's cell), never blank.
+- **Site symmetry from the magnetic group.** For types I–III the family group (the operations
   with time reversal ignored) is the ordinary space group whose IT number is the BNS number's first part, in the
   setting the BNS transform gives. edi derives that table setting when it reads the structure and gives it to crysta
   as the structure's space group, so Wyckoff letters, multiplicities and coordinate ties come from the table and the
