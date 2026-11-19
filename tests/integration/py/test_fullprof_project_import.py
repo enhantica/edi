@@ -1,0 +1,106 @@
+"""The ordinary project loader imports measured FullProf projects into the native model."""
+
+from pathlib import Path
+from shutil import copyfile
+
+import edi
+import numpy as np
+import pytest
+
+ROOT = Path(__file__).resolve().parents[3]
+REFERENCES = ROOT / 'knowledge/verification/fullprof'
+PBSO4 = REFERENCES / 'pd-neut-cwl_pbso4_basic'
+SINGLE_CRYSTAL = ROOT / 'tests/fixtures/single_crystal/fullprof/sc-neut-cwl_pr2nio4_basic'
+
+
+@pytest.mark.parametrize(
+    ('case', 'control', 'expected_rows', 'expected_included'),
+    [
+        ('pd-neut-cwl_pbso4_basic', 'pbso4', 2910, 2908),
+        ('pd-neut-tof_si-sepd', 'fixed', 5600, 5600),
+        ('pd-xray-cwl_lif_single', 'lif_single_unpolarized', 6001, 5999),
+    ],
+)
+def test_fullprof_powder_calculates_from_imported_values(
+    case, control, expected_rows, expected_included
+):
+    source = REFERENCES / case
+    reference_x, reference_y = np.loadtxt(
+        source / f'{control}.prf', skiprows=3, max_rows=expected_rows, usecols=(0, 2), unpack=True
+    )
+    project = edi.Project.load(source / f'{control}.pcr')
+    project.calculate()
+    experiment = project.experiments[0]
+    assert len(project.structures) == 1
+    assert len(experiment.linked_structures) == 1
+    pattern = experiment.data
+    candidate = np.asarray(pattern.intensity_calc)
+    included = np.isfinite(candidate)
+    assert len(candidate) == expected_rows
+    np.testing.assert_allclose(pattern.axis(), reference_x, atol=0.0005, rtol=0)
+    assert int(included.sum()) == expected_included
+    # The committed FullProf files report rounded Icalc. The curve uses the imported scale as read.
+    relative_error = np.linalg.norm(candidate[included] - reference_y[included]) / np.linalg.norm(
+        reference_y[included]
+    )
+    assert relative_error < 0.001
+
+
+def test_fullprof_reflection_companion(tmp_path):
+    project = edi.Project.load(SINGLE_CRYSTAL / 'prnio.pcr')
+    project.calculate()
+    rows = project.experiments[0].refln
+    reference = {}
+    for line in (SINGLE_CRYSTAL / 'prnio.prf').read_text().splitlines()[2:]:
+        fields = line.split()
+        if len(fields) >= 8:
+            reference[tuple(map(int, fields[5:8]))] = float(fields[2])
+    indices = zip(rows.index_h, rows.index_k, rows.index_l, strict=True)
+    expected = [reference[key] for key in indices]
+    assert len(expected) == len(reference) == 198
+    assert np.linalg.norm(rows.intensity_calc - expected) / np.linalg.norm(expected) < 0.001
+
+    saved = tmp_path / 'native'
+    project.save_as(saved)
+    reopened = edi.Project.load(saved)
+    assert reopened.experiments[0].refln.intensity_meas == pytest.approx(rows.intensity_meas)
+
+
+def test_fullprof_refinement_codeword_keeps_the_signed_shift(tmp_path):
+    source = tmp_path / 'pbso4.PCR'
+    original = (PBSO4 / 'pbso4.pcr').read_text()
+    with_codes = (
+        original
+        .replace('0    !Number of refined', '1    !Number of refined')
+        .replace('210.0598          0.00', '210.0598         -12.0')
+        .replace('-0.14357    0.0', '-0.14357   11.0')
+    )
+    assert with_codes != original
+    source.write_text(with_codes)
+    data = tmp_path / 'pbso4.dat'
+    copyfile(PBSO4 / data.name, data)
+    project = edi.Project.load(source)
+    experiment = project.experiments[0]
+    zero = experiment.instrument.calib_twotheta_offset
+    point = experiment.background[0].intensity
+    assert zero.free != point.free
+    zero_start, point_start = zero.value, point.value
+    if zero.free:
+        zero.value += 0.01
+    else:
+        point.value += 0.02
+    project.calculate()
+    assert point.value - point_start == pytest.approx(-2 * (zero.value - zero_start))
+
+    destination = tmp_path / 'saved'
+    project.save_as(destination)
+    assert source.read_text() == with_codes
+    assert data.read_bytes() == (PBSO4 / data.name).read_bytes()
+    assert len(edi.Project.load(destination).experiments) == 1
+
+
+def test_fullprof_companion_error_names_the_file(tmp_path):
+    source = tmp_path / 'pbso4.pcr'
+    copyfile(PBSO4 / source.name, source)
+    with pytest.raises((ValueError, RuntimeError), match=r'companion pbso4\.dat'):
+        edi.Project.load(source)

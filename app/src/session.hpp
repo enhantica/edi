@@ -255,6 +255,8 @@ class Session : public QObject {
     /// Save as's Measured data row (edi ADR-0088 point 5): the next save copies linked data into the project ("copy") or
     /// keeps it linked ("linked"), answering its question in advance; anything else clears it. Used by that save only.
     Q_INVOKABLE void setNextSaveData(const QString& choice);
+    /// Export a FullProf copy under the selected parent directory and keep the EDI project open.
+    Q_INVOKABLE bool exportFullProf(const QUrl& parentDirectory, bool fixed);
     Q_INVOKABLE bool saveAs(const QUrl& directory);
     // Save as (edi ADR-0052): into the folder or the .zip `target` (a `file:` URL), as `zip` says. A project saved as a
     // .zip keeps the archive as its location and every later Save rewrites it. With `copy` the project is written

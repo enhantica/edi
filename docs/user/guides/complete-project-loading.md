@@ -6,6 +6,17 @@ binding decision it implements is
 [crysta],
 whose project-directory contract edi mirrors.
 
+## Open a FullProf project
+
+In the desktop app, choose **Open project… → FullProf PCR file**. Keep the input powder data
+or single-crystal `.int` beside the `.pcr`, with the filename expected by FullProf. EDI creates a
+project with the imported phases, experiments, observations and refinement settings. Use **Save
+project as…** to write the native project. The original FullProf project stays available.
+
+The importer supports labelled FullProf control files for compatible nuclear diffraction models.
+If a profile, instrument correction or occupancy convention lacks a compatible EDI
+representation, the app identifies the input that needs manual conversion.
+
 ## The one loader
 
 `edi.Project.load(dir)` is the **single** loader (*one loader, project contents
@@ -146,3 +157,22 @@ demonstration of the same `import edi` API, not a CLI.
 
 Nothing here recomputes a fit metric: every number printed is one the engine produced and handed
 back on the `FitResultBase`.
+
+## Export a FullProf project
+
+Choose **Export to FullProf…** on the desktop Project page. Select a parent folder. EDI
+creates a new `<project-name>-fullprof` folder with `project.pcr` and its powder `.dat`
+or single-crystal `.int`. An existing folder with that name requires a different destination.
+
+**Fix all parameters for a forward calculation** evaluates the EDI model's constraints and exports
+the settled values. Clear the checkbox to retain representable independent refinement flags.
+The command-line equivalent for a fixed export is:
+
+```sh
+easydiffraction export-fullprof path/to/project path/to/fullprof-copy --fixed
+cd path/to/fullprof-copy
+printf 'project\n\n\n' | fp2k
+```
+
+Compare the new FullProf `.prf` with the original on the same observed coordinates or Miller
+indices.

@@ -8,6 +8,8 @@
 // than a parity to prove.
 
 #include "edi/io.hpp"
+
+#include "fullprof_import.hpp"
 #include "utc_time.hpp"
 #include <type_traits>
 #include "edi/project_archive.hpp"
@@ -5109,6 +5111,12 @@ Project load_project(const std::string& path, ProjectLoadMode mode, const Warnin
     // edi ADR-0052: a project opens from its folder, its project.edi or a .zip of the folder.
     std::error_code error;
     const fs::path given(path);
+    auto extension = given.extension().string();
+    std::transform(extension.begin(), extension.end(), extension.begin(),
+                   [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+    if (extension == ".pcr" && !fs::is_directory(given, error)) {
+        return detail::import_fullprof_project(path);
+    }
     if (given.filename() == "project.edi" && fs::is_regular_file(given, error)) {
         const fs::path folder = given.has_parent_path() ? given.parent_path() : fs::path(".");
         return load_project_folder(folder.string(), on_warning,policy);

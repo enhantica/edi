@@ -1,0 +1,704 @@
+// SPDX-License-Identifier: BSD-3-Clause
+#include "edi/fullprof.hpp"
+#include "edi/io.hpp"
+#include "edi/parameter_walk.hpp"
+#include "edi/project_archive.hpp"
+#include "edi/symmetry.hpp"
+#include "import_symmetry.hpp"
+
+#include <algorithm>
+#include <array>
+#include <cmath>
+#include <filesystem>
+#include <fstream>
+#include <iomanip>
+#include <limits>
+#include <locale>
+#include <map>
+#include <numbers>
+#include <ostream>
+#include <set>
+#include <string_view>
+
+namespace edi {
+namespace {
+
+namespace fs = std::filesystem;
+
+[[noreturn]] void unsupported(const std::string& message) {
+    throw IoError("FullProf export: " + message);
+}
+
+double value(const OptionalParameter& field) {
+    return field ? field->value.get() : 0.;
+}
+
+struct Field {
+    double value;
+    double code = 0.;
+};
+
+class Codes {
+public:
+    Codes(Project& project, bool fixed) {
+        if (fixed) {
+            return;
+        }
+        if (std::any_of(project.constraints.begin(), project.constraints.end(),
+                        [](const auto& row) { return row->enabled.get(); })) {
+            unsupported("active EDI constraints require a fixed-input export");
+        }
+        for (const auto& entry : parameter_entries(project)) {
+            if (entry.refinable && entry.parameter->free.get()) {
+                const auto ordinal = directions_.size() + 1;
+                directions_.emplace(entry.parameter, std::pair{ordinal, entry.path});
+            }
+        }
+    }
+
+    Field field(const Parameter& parameter, double factor = 1.) {
+        const auto direction = directions_.find(&parameter);
+        if (direction == directions_.end()) {
+            return {parameter.value.get() * factor};
+        }
+        written_.insert(&parameter);
+        return {parameter.value.get() * factor, 10. * static_cast<double>(direction->second.first) + 1.};
+    }
+
+    Field field(const OptionalParameter& parameter, double factor = 1.) {
+        return parameter ? field(*parameter, factor) : Field{0.};
+    }
+
+    std::size_t count() const { return directions_.size(); }
+
+    void check_written() const {
+        for (const auto& [parameter, direction] : directions_) {
+            if (!written_.contains(parameter)) {
+                unsupported("cannot write the free parameter " + direction.second);
+            }
+        }
+    }
+
+private:
+    std::map<const Parameter*, std::pair<std::size_t, std::string>> directions_;
+    std::set<const Parameter*> written_;
+};
+
+void values(std::ostream& out, const std::vector<Field>& fields) {
+    for (const auto& field : fields) {
+        if (!std::isfinite(field.value)) {
+            unsupported("a parameter is not finite");
+        }
+        out << ' ' << field.value;
+    }
+}
+
+void pair_rows(std::ostream& out, std::string_view header, const std::vector<Field>& fields,
+               std::string_view trailing = {}) {
+    out << "! " << header << '\n';
+    values(out, fields);
+    out << trailing << '\n';
+    for (const auto& field : fields) {
+        out << ' ' << field.code;
+    }
+    out << '\n';
+}
+
+std::string title_text(std::string text) {
+    for (char& c : text) {
+        if (c == '!' || c == '#' || c == '\n' || c == '\r') {
+            c = ' ';
+        }
+    }
+    if (text.size() > 120) {
+        text.resize(120);
+    }
+    return text;
+}
+
+bool token_field(std::string_view text) {
+    return !text.empty() && text.find_first_of(" \t\n\r!#") == std::string_view::npos;
+}
+
+struct Bank {
+    const BraggPdExperiment* model;
+    std::string file;
+    int job;
+    int npr;
+    int nba;
+    bool texture;
+    double step = 0.;
+    double origin = 0.;
+    double cthm = 0.;
+    double intensity_scale = 1.;
+
+    bool tof() const { return job == -1; }
+    const PdDataBase& data() const { return *model->data; }
+};
+
+Bank bank_for(const BraggPdExperiment& experiment, std::size_t index) {
+    const auto prefix = experiment.name.value() + ": ";
+    if (experiment.experiment_type.effective_sample_form() != SampleFormEnum::POWDER || experiment.calculation_only ||
+        !experiment.data || experiment.experiment_type.effective_scattering_type() != ScatteringTypeEnum::BRAGG) {
+        unsupported(prefix + "requires a measured nuclear powder pattern");
+    }
+    const bool tof = experiment.effective_beam_mode() == BeamModeEnum::TIME_OF_FLIGHT;
+    const bool xray = experiment.experiment_type.effective_radiation_probe() == RadiationProbeEnum::XRAY;
+    if (xray && (tof || experiment.xray_form_factor.value_or("") != "it1992" ||
+                experiment.xray_dispersion.value_or("") != "sasaki1989")) {
+        unsupported(prefix + "X-ray scattering tables differ from this FullProf export");
+    }
+    if (!xray && experiment.neutron_scattering_length.value_or("sears1992") != "sears1992") {
+        unsupported(prefix + "neutron scattering table differs from FullProf's Sears table");
+    }
+    const auto& data = *experiment.data;
+    const auto& x = data.axis();
+    if (x.size() < 2 || data.intensity_meas.size() != x.size() || data.intensity_meas_su.size() != x.size() ||
+        !std::isfinite(experiment.dataset_weight) || experiment.dataset_weight <= 0.) {
+        unsupported(prefix + "invalid observation grid or bank weight");
+    }
+    for (std::size_t i = 0; i < x.size(); ++i) {
+        const double y = data.intensity_meas.get()[i];
+        const double sigma = data.intensity_meas_su.get()[i];
+        if (!std::isfinite(x[i]) || (i > 0 && x[i] <= x[i - 1]) || !std::isfinite(y) ||
+            !std::isfinite(sigma) || sigma <= 0.) {
+            unsupported(prefix + "requires increasing coordinates and finite measurements with positive sigma");
+        }
+    }
+
+    const auto peak = experiment.peak.type.value_or(tof ? "tof-jorgensen" : "cwl-tch-pseudo-voigt");
+    int npr = 0;
+    if (tof) {
+        if (peak == "tof-pseudo-voigt") {
+            npr = 7;
+        } else if (peak == "tof-jorgensen" || peak == "tof-jorgensen-von-dreele") {
+            npr = 9;
+        } else {
+            unsupported(prefix + "peak profile " + peak);
+        }
+    } else if (peak == "cwl-lorentzian") {
+        npr = 1;
+    } else if (peak == "cwl-pseudo-voigt" || peak == "cwl-pseudo-voigt-berar-baldinozzi") {
+        npr = 5;
+    } else if (peak == "cwl-tch-pseudo-voigt" || peak == "cwl-tch-pseudo-voigt-fcj") {
+        npr = 7;
+    } else if (peak != "cwl-gaussian") {
+        unsupported(prefix + "peak profile " + peak);
+    }
+
+    Bank bank{&experiment, "pattern_" + std::to_string(index) + ".dat", tof ? -1 : xray ? 0 : 1, npr, 0,
+              !experiment.preferred_orientation.empty()};
+    bank.step = (x.back() - x.front()) / static_cast<double>(x.size() - 1);
+    if (experiment.background_type == "line-segment") {
+        if (experiment.background.size() >= 2) {
+            bank.nba = static_cast<int>(experiment.background.size());
+        }
+    } else if (experiment.background_type == "polynomial" && experiment.background_origin) {
+        bank.origin = *experiment.background_origin;
+    } else if (experiment.background_type == "chebyshev" &&
+               experiment.background_x_min == x.front() && experiment.background_x_max == x.back()) {
+        bank.nba = -5;
+    } else {
+        unsupported(prefix + "background basis or Chebyshev interval");
+    }
+
+    const auto& instrument = experiment.instrument;
+    if (xray && value(instrument.setup_polarization_coefficient) != 0.) {
+        if (value(instrument.setup_polarization_coefficient) != 0.5) {
+            unsupported(prefix + "only characteristic X-ray polarization is representable");
+        }
+        const double angle = value(instrument.setup_monochromator_twotheta) * std::numbers::pi / 180.;
+        bank.cthm = std::pow(std::cos(angle), 2);
+        if (bank.cthm < 1.e-12) {
+            unsupported(prefix + "ambiguous zero Cthm polarization");
+        }
+        bank.intensity_scale = 0.5;
+    }
+    const auto absorption = experiment.absorption.type.value_or("none");
+    if (absorption != "none" && absorption != (tof ? "cylinder" : "cylinder-hewat")) {
+        unsupported(prefix + "absorption model " + absorption);
+    }
+    if (!tof && value(instrument.setup_wavelength) <= 0.) {
+        unsupported(prefix + "a positive wavelength is required");
+    }
+    return bank;
+}
+
+const LinkedStructure* link_for(const Bank& bank, const Structure& structure) {
+    const auto name = datablock_key(structure.name.value(), "structure");
+    for (const auto& link : bank.model->linked_structures) {
+        if (link->enabled.get() && datablock_key(link->structure_id.value(), "structure") == name) {
+            return link.get();
+        }
+    }
+    return nullptr;
+}
+
+const PrefOrient* texture_for(const Bank& bank, const Structure& structure) {
+    for (const auto& row : bank.model->preferred_orientation) {
+        if (row->structure_id.value() == structure.name.value()) {
+            return row.get();
+        }
+    }
+    return nullptr;
+}
+
+void write_setup(std::ostream& out, const Bank& bank, std::size_t index) {
+    const auto& experiment = *bank.model;
+    const auto& instrument = experiment.instrument;
+    if (bank.tof()) {
+        out << "! Bkpos Wdt Iabscor for Pattern# " << index << '\n'
+            << bank.origin << ' ' << experiment.peak.cutoff_fwhm << ' '
+            << (experiment.absorption.abscor1 ? 2 : 0) << '\n';
+    } else {
+        out << "! Lambda1 Lambda2 Ratio Bkpos Wdt Cthm muR AsyLim Rpolarz 2nd-muR -> Patt# " << index << '\n'
+            << value(instrument.setup_wavelength) << ' '
+            << (value(instrument.setup_wavelength_2_to_1_ratio) > 0. ? value(instrument.setup_wavelength_2)
+                                                                    : value(instrument.setup_wavelength))
+            << ' ' << value(instrument.setup_wavelength_2_to_1_ratio) << ' ' << bank.origin << ' '
+            << experiment.peak.cutoff_fwhm << ' ' << bank.cthm << ' ' << value(experiment.absorption.mu_r) << ' '
+            << (experiment.peak.asym_beba_limit ? value(experiment.peak.asym_beba_limit) : 180.) << " 0 0\n";
+    }
+}
+
+void write_background(std::ostream& out, const Bank& bank, Codes& codes, std::size_t index) {
+    const auto& experiment = *bank.model;
+    if (bank.nba >= 2) {
+        out << "!2Theta/TOF/E(Kev) Background for Pattern# " << index << '\n';
+        double previous = -std::numeric_limits<double>::infinity();
+        for (const auto& point : experiment.background) {
+            if (!std::isfinite(point->position.get()) || point->position.get() <= previous) {
+                unsupported(experiment.name.value() + ": background points must be distinct and in increasing order");
+            }
+            previous = point->position.get();
+            const auto intensity = codes.field(point->intensity);
+            out << previous << ' ' << intensity.value << ' ' << intensity.code << '\n';
+        }
+        return;
+    }
+    const bool chebyshev = bank.nba == -5;
+    std::vector<Field> fields(chebyshev ? 24U : 6U, Field{0.});
+    if (!experiment.background.empty()) {
+        fields.front() = codes.field(experiment.background[0]->intensity);
+    }
+    for (const auto& term : experiment.background_terms) {
+        if (term->order.get() < 0 || static_cast<std::size_t>(term->order.get()) >= fields.size()) {
+            unsupported(experiment.name.value() + ": polynomial order exceeds FullProf's supported range");
+        }
+        fields[static_cast<std::size_t>(term->order.get())] = codes.field(term->coef);
+    }
+    out << "! Background coefficients/codes for Pattern# " << index << '\n';
+    for (std::size_t from = 0; from < fields.size(); from += 6) {
+        const auto start = fields.begin() + static_cast<std::ptrdiff_t>(from);
+        const std::vector<Field> row(start, start + 6);
+        values(out, row);
+        out << '\n';
+        for (const auto& field : row) {
+            out << ' ' << field.code;
+        }
+        out << '\n';
+    }
+}
+
+void write_calibration(std::ostream& out, const Bank& bank, Codes& codes, std::size_t index) {
+    const auto& instrument = bank.model->instrument;
+    const auto field = [&](const Field& phase) { out << ' ' << phase.value << ' ' << phase.code; };
+    if (bank.tof()) {
+        out << "! Zero Code Dtt1 Code Dtt2 Code Dtt_1overd Code 2ThetaBank -> Patt# " << index << '\n';
+        field(codes.field(instrument.calib_d_to_tof_offset));
+        field(codes.field(instrument.calib_d_to_tof_linear));
+        field(codes.field(instrument.calib_d_to_tof_quadratic));
+        field(codes.field(instrument.calib_d_to_tof_reciprocal));
+        out << ' ' << instrument.setup_twotheta_bank.value.get() << '\n';
+    } else {
+        out << "! Zero Code SyCos Code SySin Code Lambda Code MORE -> Patt# " << index << '\n';
+        field(codes.field(instrument.calib_twotheta_offset));
+        field(codes.field(instrument.calib_sample_displacement));
+        field(codes.field(instrument.calib_sample_transparency));
+        field(codes.field(instrument.setup_wavelength));
+        out << " 0\n";
+    }
+}
+
+void write_profile(std::ostream& out, Structure& structure, const Bank& bank, std::size_t index,
+                   std::size_t phase, const LinkedStructure& link, Codes& codes) {
+    const auto& peak = bank.model->peak;
+    const auto* texture = texture_for(bank, structure);
+    const auto field = [&codes](const auto& parameter) { return codes.field(parameter); };
+    out << "!-------> Profile Parameters for Pattern # " << index << " ----> Phase # " << phase << '\n';
+    pair_rows(out, bank.tof() ? "Scale Extinc Bov Str1 Str2 Str3 Strain-Model"
+                             : "Scale Shape1 Bov Str1 Str2 Str3 Strain-Model",
+              {codes.field(link.scale, bank.intensity_scale),
+               bank.tof() ? Field{0.} : field(peak.mixing_eta_0), {0.}, {0.}, {0.}, {0.}}, " 0");
+    if (bank.tof()) {
+        auto sigma2 = field(peak.broad_gauss_sigma_2);
+        auto sigma1 = field(peak.broad_gauss_sigma_1);
+        auto gamma2 = field(peak.broad_lorentz_gamma_2);
+        auto gamma1 = field(peak.broad_lorentz_gamma_1);
+        // FullProf's reported base rows include the separately declared contributions.
+        sigma2.value += peak.broad_gauss_size.value.get();
+        sigma1.value += peak.broad_gauss_strain.value.get();
+        gamma2.value += peak.broad_lorentz_size.value.get();
+        gamma1.value += peak.broad_lorentz_strain.value.get();
+        const auto fixed = [](const Parameter& parameter) { return Field{parameter.value.get()}; };
+        pair_rows(out, "Sigma-2 Sigma-1 Sigma-0 Sigma-Q Iso-GStrain Iso-GSize Ani-LSize Size-Model",
+                  {sigma2, sigma1, field(peak.broad_gauss_sigma_0), {0.}, fixed(peak.broad_gauss_strain),
+                   fixed(peak.broad_gauss_size), {0.}}, " 0");
+        pair_rows(out, "Gamma-2 Gamma-1 Gamma-0 Iso-LorStrain Iso-LorSize",
+                  {gamma2, gamma1, field(peak.broad_lorentz_gamma_0), fixed(peak.broad_lorentz_strain),
+                   fixed(peak.broad_lorentz_size)});
+    } else {
+        pair_rows(out, "U V W X Y GauSiz LorSiz Size-Model",
+                  {field(peak.broad_gauss_u), field(peak.broad_gauss_v), field(peak.broad_gauss_w),
+                   peak.mixing_eta_1 ? field(peak.mixing_eta_1) : field(peak.broad_lorentz_x),
+                   field(peak.broad_lorentz_y), {0.}, {0.}}, " 0");
+    }
+    std::vector<Field> cell;
+    for (const auto* parameter : structure.cell.parameters()) {
+        cell.push_back(field(*parameter));
+    }
+    pair_rows(out, "a b c alpha beta gamma", cell);
+    if (bank.tof()) {
+        pair_rows(out, "Pref1 Pref2 alph0 beta0 alph1 beta1 alphQ betaQ",
+                  {{0.}, {0.}, bank.npr == 9 ? field(peak.rise_alpha_0) : Field{0.},
+                   bank.npr == 9 ? field(peak.decay_beta_0) : Field{0.},
+                   bank.npr == 9 ? field(peak.rise_alpha_1) : Field{0.},
+                   bank.npr == 9 ? field(peak.decay_beta_1) : Field{0.}, {0.}, {0.}});
+        const auto absorption = field(bank.model->absorption.abscor1);
+        out << "!Absorption correction parameters\n" << absorption.value << ' ' << absorption.code
+            << " 0 0 ABS: ABSCOR1 ABSCOR2\n";
+    } else {
+        const auto a0 = value(peak.asym_beba_a0);
+        const auto b0 = value(peak.asym_beba_b0);
+        const auto a1 = value(peak.asym_beba_a1);
+        const auto b1 = value(peak.asym_beba_b1);
+        std::vector<Field> shape{texture ? field(texture->march_r) : Field{bank.texture ? 1. : 0.},
+                                 texture ? field(texture->march_random_fract) : Field{0.},
+                                 {3. * b0 - a0}, {-b0}, {3. * b1 - a1}, {-b1}};
+        if (bank.npr == 7) {
+            shape.push_back(field(peak.asym_fcj_1));
+            shape.push_back(field(peak.asym_fcj_2));
+        }
+        pair_rows(out, "Pref1 Pref2 Asy1 Asy2 Asy3 Asy4 S_L D_L", shape);
+    }
+}
+
+void require_nuclear(const Structure& structure) {
+    if (!token_field(structure.name.value()) || structure.atom_sites.empty() || structure_magnetic(structure) ||
+        !structure.scattering_lengths_fm.empty()) {
+        unsupported(structure.name.value() + ": requires a named nuclear structure with standard scattering lengths");
+    }
+}
+
+void write_atoms(std::ostream& out, Structure& structure, Codes& codes) {
+    std::string group = structure.space_group.name_h_m.value();
+    const auto& setting = structure.space_group.coord_system_code.value();
+    if (group.empty() || group.find_first_of("!#\r\n") != std::string::npos) {
+        unsupported(structure.name.value() + ": missing or invalid Hermann–Mauguin symbol");
+    }
+    if (setting == "1") {
+        group += ":1";
+    } else if (setting == "2" && !same_space_group_name(group, "F d -3 m")) {
+        unsupported(structure.name.value() + ": FullProf origin choice 2 is unsupported for " + group);
+    }
+    out << group << " <--Space group symbol\n!Atom Typ X Y Z Biso Occ In Fin N_t Spc /Codes\n";
+
+    const auto positions = wyckoff_positions(structure);
+    int general = 0;
+    for (const auto& position : positions) {
+        general = std::max(general, position.multiplicity);
+    }
+    for (const auto& site : structure.atom_sites) {
+        const auto label = site->id.value();
+        const auto type = site->type_symbol.value();
+        const auto adp = site->adp_type.value();
+        if (!token_field(label) || label.size() > 6 || !token_field(type) ||
+            (adp != "Biso" && adp != "Uiso" && adp != "beta")) {
+            unsupported(structure.name.value() + ": unsupported atom label, scattering type or ADP for " + label);
+        }
+        const auto letter = site->wyckoff_letter.empty() ? detail::inferred_wyckoff_letter(structure, *site)
+                                                        : site->wyckoff_letter.value();
+        const auto site_position = std::find_if(positions.begin(), positions.end(), [&](const auto& position) {
+            return position.letter == letter;
+        });
+        if (site_position == positions.end() || general <= 0) {
+            unsupported(structure.name.value() + ": cannot establish site multiplicity for " + label);
+        }
+        const bool tensor = adp == "beta";
+        const std::vector<Field> row{codes.field(site->fract_x), codes.field(site->fract_y), codes.field(site->fract_z),
+                                     tensor ? Field{0.} : codes.field(site->adp_iso, adp == "Uiso" ? 8. * std::numbers::pi * std::numbers::pi : 1.),
+                                     codes.field(site->occupancy, static_cast<double>(site_position->multiplicity) / general)};
+        out << label << ' ' << type;
+        values(out, row);
+        out << " 0 0 " << (tensor ? 2 : 0) << " 0\n";
+        for (const auto& field : row) {
+            out << ' ' << field.code;
+        }
+        out << '\n';
+        if (tensor) {
+            const auto found = std::find_if(structure.atom_site_aniso.begin(), structure.atom_site_aniso.end(),
+                                            [&](const auto& candidate) { return candidate->id.value() == label; });
+            if (found == structure.atom_site_aniso.end()) {
+                unsupported("missing beta tensor for " + label);
+            }
+            std::vector<Field> beta;
+            for (const auto* parameter : (*found)->parameters()) {
+                beta.push_back(codes.field(*parameter));
+            }
+            pair_rows(out, "beta11 beta22 beta33 beta12 beta13 beta23", beta);
+        }
+    }
+}
+
+void write_phase(std::ostream& out, Structure& structure, const std::vector<Bank>& banks, std::size_t number,
+                 Codes& codes) {
+    require_nuclear(structure);
+    std::vector<const LinkedStructure*> links;
+    for (const auto& bank : banks) {
+        links.push_back(link_for(bank, structure));
+    }
+    if (std::none_of(links.begin(), links.end(), [](const auto* link) { return link != nullptr; })) {
+        unsupported(structure.name.value() + ": phase is unused");
+    }
+    out << "!-------------------------------------------------------------------------------\n"
+        << "! Data for PHASE number: " << number << '\n'
+        << "!-------------------------------------------------------------------------------\n"
+        << structure.name.value() << '\n'
+        << "!Nat Dis Ang Jbt Isy Str Furth ATZ Nvk More\n"
+        << structure.atom_sites.size() << " 0 0 0 0 0 0 0 0 0\n"
+        << "!Contributions (0/1) of this phase to the patterns\n";
+    for (const auto* link : links) {
+        out << (link ? " 1" : " 0");
+    }
+    out << '\n';
+    for (std::size_t i = 0; i < banks.size(); ++i) {
+        if (!links[i]) {
+            continue;
+        }
+        const auto& bank = banks[i];
+        const auto* texture = texture_for(bank, structure);
+        out << "!Irf Npr Jtyp Nsp_Ref Ph_Shift for Pattern# " << i + 1 << "\n0 " << bank.npr
+            << ' ' << (bank.tof() ? -1 : bank.job) << " 0 0\n"
+            << "! Pr1 Pr2 Pr3 Brind Rmua Rmub Rmuc for Pattern# " << i + 1 << '\n';
+        if (texture) {
+            out << texture->index_h.get() << ' ' << texture->index_k.get() << ' ' << texture->index_l.get();
+        } else {
+            out << "0 0 1";
+        }
+        out << " 1 0 0 0\n";
+    }
+    write_atoms(out, structure, codes);
+    for (std::size_t i = 0; i < banks.size(); ++i) {
+        if (links[i]) {
+            write_profile(out, structure, banks[i], i + 1, number, *links[i], codes);
+        }
+    }
+}
+
+std::ofstream output_file(const fs::path& path) {
+    std::ofstream out(path);
+    if (!out) {
+        unsupported("cannot write " + path.string());
+    }
+    out.imbue(std::locale::classic());
+    out << std::setprecision(std::numeric_limits<double>::max_digits10);
+    out.exceptions(std::ios::badbit | std::ios::failbit);
+    return out;
+}
+
+void write_data(const Bank& bank, const fs::path& folder) {
+    auto out = output_file(folder / bank.file);
+    const auto& data = bank.data();
+    const auto& x = data.axis();
+    out << "XYDATA " << title_text(bank.model->name.value())
+        << "\n! Exported by EasyDiffraction\n! X Y sigma\n! Original observation grid\nINTER 1 1 0 0\nTEMP 0\n";
+    for (std::size_t i = 0; i < x.size(); ++i) {
+        out << x[i] << ' ' << data.intensity_meas.get()[i] << ' ' << data.intensity_meas_su.get()[i] << '\n';
+    }
+    out.close();
+}
+
+void write_single_crystal(Project& project, const fs::path& folder, Codes& codes) {
+    if (project.experiments.size() != 1 || project.structures.size() != 1) {
+        unsupported("single-crystal export requires one structure and one experiment");
+    }
+    auto& structure = *project.structures[0];
+    const auto& exp = *project.experiments[0];
+    require_nuclear(structure);
+    const auto wavelength = value(exp.instrument.setup_wavelength);
+    if (exp.experiment_type.effective_sample_form() != SampleFormEnum::SINGLE_CRYSTAL ||
+        exp.effective_beam_mode() != BeamModeEnum::CONSTANT_WAVELENGTH ||
+        exp.experiment_type.effective_radiation_probe() != RadiationProbeEnum::NEUTRON ||
+        exp.extinction.type.value_or("none") != "none" || !exp.reflections || !exp.reflections->rectangular() ||
+        exp.reflections->size() == 0 || !exp.reflections->wavelength.empty() || wavelength <= 0. ||
+        !exp.excluded_regions.empty() || !exp.excluded_reflections.empty() ||
+        exp.reflns_threshold_sigma.value_or(0.) != 0. || exp.reflns_merge.value_or("none") != "none" ||
+        exp.reflns_absences.value_or("include") != "include") {
+        unsupported("single-crystal export requires measured CW neutron F-squared without extinction, merging or filters");
+    }
+    if (exp.neutron_scattering_length.value_or("sears1992") != "sears1992" ||
+        exp.linked_structures.size() != 1 || !exp.linked_structure().enabled.get() ||
+        datablock_key(exp.linked_structure().structure_id.value(), "structure") !=
+            datablock_key(structure.name.value(), "structure")) {
+        unsupported("single-crystal export requires one enabled phase with standard neutron scattering lengths");
+    }
+    auto out = output_file(folder / "project.pcr");
+    out << "COMM " << title_text(project.metadata.title.empty() ? project.metadata.name : project.metadata.title)
+        << "\n! Files => DAT-file: project.int, PCR-file: project\n"
+        << "!Job Npr Nph Nba Nex Nsc Nor Dum Iwg Ilo Ias Res Ste Nre Cry Uni Cor Opt Aut\n"
+        << "1 0 1 0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 1\n"
+        << "!Ipr Ppl Ioc Mat Pcr Ls1 Ls2 Ls3 NLI Prf Ins Rpa Sym Hkl Fou Sho Ana\n"
+        << "0 0 1 0 2 0 4 0 0 1 0 0 0 0 0 0 0\n"
+        << "!NCY Eps R_at R_an R_pr R_gl Thmin Step Thmax PSD Sent0\n"
+        << (codes.count() == 0 ? 1 : std::max(1, project.minimizer_max_iterations))
+        << " 0.05 0.2 0.2 0.2 0.2 0 0.1 89.9 0 0\n"
+        << codes.count() << " !Number of refined parameters\n"
+        << "!-------------------------------------------------------------------------------\n"
+        << "! Data for PHASE number: 1\n"
+        << "!-------------------------------------------------------------------------------\n"
+        << structure.name.value() << "\n!Nat Dis Ang Pr1 Pr2 Pr3 Jbt Irf Isy Str Furth ATZ Nvk Npr More\n"
+        << structure.atom_sites.size() << " 0 0 0 0 1 0 4 0 0 0 0 0 0 0\n";
+    write_atoms(out, structure, codes);
+    out << "!-------> Scale, Extinction and Cell Parameters for Pattern # 1\n";
+    pair_rows(out, "Sc1 Sc2 Sc3 Sc4 Sc5 Sc6",
+              {codes.field(exp.linked_structure().scale), {0.}, {0.}, {0.}, {0.}, {0.}});
+    pair_rows(out, "Ext1 Ext2 Ext3 Ext4 Ext5 Ext6 Ext7 Ext-Model",
+              {{0.}, {0.}, {0.}, {0.}, {0.}, {0.}, {0.}}, " 1");
+    std::vector<Field> cell;
+    for (const auto* parameter : structure.cell.parameters()) {
+        cell.push_back({parameter->value.get()});
+    }
+    pair_rows(out, "a b c alpha beta gamma", cell);
+    pair_rows(out, "x-Lambda/2 optional terms", {{0.}, {0.}, {0.}, {0.}, {0.}});
+    out << "! 2Th1/TOF1 2Th2/TOF2 Pattern to plot\n0 89.9 1\n";
+    codes.check_written();
+    out.close();
+
+    auto data = output_file(folder / "project.int");
+    data << title_text(exp.name.value()) << "\n(3i4,2f20.8,i4,3f8.0)\n" << wavelength << " 0 0\n";
+    data << std::fixed << std::setprecision(8);
+    const auto& rows = *exp.reflections;
+    for (std::size_t i = 0; i < rows.size(); ++i) {
+        const auto h = rows.index_h.get()[i];
+        const auto k = rows.index_k.get()[i];
+        const auto l = rows.index_l.get()[i];
+        const double y = rows.intensity_meas.get()[i];
+        const double sigma = rows.intensity_meas_su.get()[i];
+        if (h < -999 || h > 9999 || k < -999 || k > 9999 || l < -999 || l > 9999 ||
+            !std::isfinite(y) || std::abs(y) >= 1.e9 || !std::isfinite(sigma) || sigma < 1.e-8 || sigma >= 1.e9) {
+            unsupported("single-crystal observation exceeds the FullProf INT record precision or width");
+        }
+        data << std::setw(4) << h << std::setw(4) << k << std::setw(4) << l
+             << std::setw(20) << y << std::setw(20) << sigma << std::setw(4) << 1 << '\n';
+    }
+    data.close();
+}
+
+void write_pcr(Project& project, const fs::path& folder, bool fixed) {
+    if (project.experiments.empty() || project.structures.empty() || project.sequential_fit.declared()) {
+        unsupported("expected a complete project with measured experiments");
+    }
+    complete_relations(project);
+    Codes codes(project, fixed);
+    if (project.experiments[0]->experiment_type.effective_sample_form() == SampleFormEnum::SINGLE_CRYSTAL) {
+        write_single_crystal(project, folder, codes);
+        return;
+    }
+    std::vector<Bank> banks;
+    for (const auto& experiment : project.experiments) {
+        banks.push_back(bank_for(*experiment, banks.size() + 1));
+    }
+    auto out = output_file(folder / "project.pcr");
+    out << "COMM " << title_text(project.metadata.title.empty() ? project.metadata.name : project.metadata.title)
+        << "\nNPATT " << banks.size();
+    for (const auto& bank : banks) {
+        if (std::none_of(project.structures.begin(), project.structures.end(),
+                         [&](const auto& structure) { return link_for(bank, *structure); })) {
+            unsupported(bank.model->name.value() + ": no enabled phase");
+        }
+        out << " 1";
+    }
+    out << "\nW_PAT";
+    for (const auto& bank : banks) {
+        out << ' ' << bank.model->dataset_weight;
+    }
+    out << "\n!Nph Dum Ias Nre Cry Opt Aut\n" << project.structures.size()
+        << " 0 0 0 0 1 1\n!Job Npr Nba Nex Nsc Nor Iwg Ilo Res Ste Uni Cor Anm Int\n";
+    for (const auto& bank : banks) {
+        out << bank.job << ' ' << bank.npr << ' ' << bank.nba << ' ' << bank.model->excluded_regions.size()
+            << " 0 " << static_cast<int>(bank.texture) << " 0 0 0 0 " << static_cast<int>(bank.tof()) << " 0 0 0\n";
+    }
+    out << "!File names of data(patterns) files\n";
+    for (const auto& bank : banks) {
+        out << bank.file << '\n';
+    }
+    out << "!Mat Pcr NLI Rpa Sym Sho\n0 2 0 1 0 0\n!Ipr Ppl Ioc Ls1 Ls2 Ls3 Prf Ins Hkl Fou Ana\n";
+    for (std::size_t i = 0; i < banks.size(); ++i) {
+        out << "0 2 1 0 4 0 2 10 0 0 0\n";
+    }
+    for (std::size_t i = 0; i < banks.size(); ++i) {
+        write_setup(out, banks[i], i + 1);
+    }
+    out << "!NCY Eps R_at R_an R_pr R_gl\n" << (codes.count() == 0 ? 1 : std::max(1, project.minimizer_max_iterations))
+        << " 0.05 0.2 0.2 0.2 0.2\n";
+    for (const auto& bank : banks) {
+        const auto& x = bank.data().axis();
+        out << (bank.tof() ? "! TOF-min <Step> TOF-max\n" : "! Thmin Step Thmax PSD Sent0\n")
+            << x.front() << ' ' << bank.step << ' ' << x.back() << (bank.tof() ? "\n" : " 0 0\n");
+    }
+    for (std::size_t i = 0; i < banks.size(); ++i) {
+        if (banks[i].nba >= 2) {
+            write_background(out, banks[i], codes, i + 1);
+        }
+    }
+    for (std::size_t i = 0; i < banks.size(); ++i) {
+        const auto& exclusions = banks[i].model->excluded_regions;
+        if (!exclusions.empty()) {
+            out << "! Excluded regions (LowT HighT) for Pattern# " << i + 1 << '\n';
+            for (const auto& row : exclusions) {
+                out << row->first.get() << ' ' << row->second.get() << '\n';
+            }
+        }
+    }
+    out << codes.count() << " !Number of refined parameters\n";
+    for (std::size_t i = 0; i < banks.size(); ++i) {
+        write_calibration(out, banks[i], codes, i + 1);
+        if (banks[i].nba < 2) {
+            write_background(out, banks[i], codes, i + 1);
+        }
+    }
+    for (std::size_t i = 0; i < project.structures.size(); ++i) {
+        write_phase(out, *project.structures[i], banks, i + 1, codes);
+    }
+    out << "! 2Th1/TOF1 2Th2/TOF2 Pattern to plot\n" << banks.front().data().axis().front() << ' '
+        << banks.front().data().axis().back() << " 1\n";
+    codes.check_written();
+    out.close();
+    for (const auto& bank : banks) {
+        write_data(bank, folder);
+    }
+}
+
+}  // namespace
+
+std::string export_fullprof_project(const Project& source, const std::string& directory, bool fixed) {
+    const auto destination = fs::absolute(directory).lexically_normal();
+    if (destination.filename().empty() || fs::exists(destination)) {
+        unsupported("choose a new output directory");
+    }
+    const auto stage = detail::fresh_archive_directory_at("fullprof", destination.parent_path().string());
+    try {
+        const auto output = fs::path(stage) / "export";
+        fs::create_directory(output);
+        auto project = source;
+        write_pcr(project, output, fixed);
+        detail::publish_fresh_project_path(output.string(), destination.string());
+        remove_archive_directory(stage);
+    } catch (...) {
+        remove_archive_directory(stage);
+        throw;
+    }
+    return (destination / "project.pcr").string();
+}
+
+}  // namespace edi

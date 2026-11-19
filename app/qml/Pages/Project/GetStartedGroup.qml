@@ -39,8 +39,6 @@ SideBarGroup {
             objectName: "project.open"
             fontIcon: "upload"
             text: qsTr("Open project…")
-            // A folder or a .zip, first, on every platform: a chooser picks files or a folder, never both (edi
-            // ADR-0052 §3).
             onClicked: ApplicationInfo.askOpenProjectChoice()
         }
 
@@ -58,6 +56,15 @@ SideBarGroup {
             enabled: false
             fontIcon: "link"
             text: qsTr("Open project from URL…")
+        }
+
+        EaElements.SideBarButton {
+            objectName: "project.exportFullProf"
+            visible: !WebFiles.available
+            enabled: Session.project !== null
+            fontIcon: "file-export"
+            text: qsTr("Export to FullProf…")
+            onClicked: fullProfExportChoice.open()
         }
     }
 
@@ -177,13 +184,13 @@ SideBarGroup {
         id: openChoice
         objectName: "open.choice"
         enterAccepts: true
-        property bool zip: false
+        property string format: "folder"
         parent: Overlay.overlay
         title: qsTr("Open project")
         standardButtons: Dialog.Ok | Dialog.Cancel
         contentWidth: Math.max(openChoiceColumn.implicitWidth, Math.round(AppSizes.messagesDialogContentWidth / 2))
         contentHeight: openChoiceColumn.implicitHeight
-        onAboutToShow: zip = false
+        onAboutToShow: format = "folder"
         onAccepted: ApplicationInfo.openProjectChoice()
         onClosed: ApplicationInfo.openProjectPicker()
 
@@ -194,14 +201,21 @@ SideBarGroup {
             ChoiceRadioButton {
                 objectName: "open.folder"
                 text: qsTr("Folder")
-                checked: !openChoice.zip
-                onClicked: openChoice.zip = false
+                checked: openChoice.format === "folder"
+                onClicked: openChoice.format = "folder"
             }
             ChoiceRadioButton {
                 objectName: "open.zip"
                 text: qsTr("Zip archive")
-                checked: openChoice.zip
-                onClicked: openChoice.zip = true
+                checked: openChoice.format === "zip"
+                onClicked: openChoice.format = "zip"
+            }
+            ChoiceRadioButton {
+                objectName: "open.fullProf"
+                text: qsTr("FullProf PCR file")
+                visible: !WebFiles.available
+                checked: openChoice.format === "pcr"
+                onClicked: openChoice.format = "pcr"
             }
         }
     }
@@ -223,6 +237,49 @@ SideBarGroup {
         id: openZipDialog
         title: qsTr("Open an edi project archive")
         nameFilters: [qsTr("edi project archives (*.zip)")]
+        currentFolder: DialogFolders.folder("openProject", "")
+        onAccepted: {
+            DialogFolders.remember("openProject", selectedFile);
+            Qt.callLater(Session.openProject, selectedFile);
+        }
+    }
+    AppDialog {
+        id: fullProfExportChoice
+        objectName: "export.fullProf.choice"
+        parent: Overlay.overlay
+        title: qsTr("Export to FullProf")
+        standardButtons: Dialog.Ok | Dialog.Cancel
+        contentWidth: fullProfFixed.implicitWidth
+        contentHeight: fullProfFixed.implicitHeight
+        onAccepted: {
+            fullProfExportFolder.sourceProject = Session.project;
+            fullProfExportFolder.fixed = fullProfFixed.checked;
+            Qt.callLater(fullProfExportFolder.open);
+        }
+
+        EaElements.CheckBox {
+            id: fullProfFixed
+            checked: true
+            text: qsTr("Fix all parameters for a forward calculation")
+        }
+    }
+    FolderDialog {
+        id: fullProfExportFolder
+        property var sourceProject
+        property bool fixed: true
+        title: qsTr("Choose where to create the FullProf project folder")
+        currentFolder: DialogFolders.folder("exportFullProf", "")
+        onAccepted: {
+            if (sourceProject === Session.project) {
+                DialogFolders.remember("exportFullProf", selectedFolder);
+                Session.exportFullProf(selectedFolder, fixed);
+            }
+        }
+    }
+    FileDialog {
+        id: openFullProfDialog
+        title: qsTr("Open a FullProf PCR file")
+        nameFilters: [qsTr("FullProf control files (*.pcr *.PCR)")]
         currentFolder: DialogFolders.folder("openProject", "")
         onAccepted: {
             DialogFolders.remember("openProject", selectedFile);

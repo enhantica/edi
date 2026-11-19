@@ -35,6 +35,7 @@
 #include "web_storage.hpp"
 #include "edi/display.hpp"
 #include "edi/report.hpp"
+#include "edi/fullprof.hpp"
 #include "edi/io.hpp"
 #include "edi/project_archive.hpp"
 #include "edi/parameter_walk.hpp"
@@ -935,6 +936,22 @@ QString Session::writeBackReports() {
         return failed.arg(archive_location_, QString::fromUtf8(refusal.what()));
     }
     return {};
+}
+
+bool Session::exportFullProf(const QUrl& parentDirectory, bool fixed) {
+    if (!project_ || !parentDirectory.isLocalFile()) {
+        return false;
+    }
+    const auto directory = QDir(parentDirectory.toLocalFile()).filePath(folderNameFor(project_->name()) +
+                                                                        QStringLiteral("-fullprof"));
+    try {
+        const auto written = edi::export_fullprof_project(project_->project(), directory.toStdString(), fixed);
+        qCInfo(lcApp, "FullProf project exported: %s", written.c_str());
+    } catch (const std::exception& error) {
+        emit refused(QString::fromUtf8(error.what()));
+        return false;
+    }
+    return true;
 }
 
 bool Session::saveAs(const QUrl& directory) {

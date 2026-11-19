@@ -11150,9 +11150,13 @@ void ApplicationInfo::createProjectDialogEvent(int kind) const {
 }
 void ApplicationInfo::openProjectChoice() const {
     const auto f = panelUsageEngine(this);
-    if (panelUsageTruth(assistantContextField(f, "WebFiles", "available"))) projectInvoke(f, "Session", "openWebProject", {panelUsageTruth(panelUsageContextRead(f, "zip")) ? QJSValue(QStringLiteral("file")) : QJSValue(QStringLiteral("folder"))});
-    else {
-        const char* name = panelUsageTruth(panelUsageContextRead(f, "zip")) ? "openZipDialog" : "openFolderDialog";
+    const auto format = panelUsageContextRead(f, "format").toString();
+    if (panelUsageTruth(assistantContextField(f, "WebFiles", "available"))) {
+        projectInvoke(f, "Session", "openWebProject",
+                      {QJSValue(format == QLatin1String("zip") ? QStringLiteral("file") : QStringLiteral("folder"))});
+    } else {
+        const char* name = format == QLatin1String("pcr") ? "openFullProfDialog" :
+                           format == QLatin1String("zip") ? "openZipDialog" : "openFolderDialog";
         const auto picker = panelUsageContextRead(f, name);
         pending_project_picker_ = consentQtObject(f, picker) ? picker.toQObject() : nullptr;
     }
