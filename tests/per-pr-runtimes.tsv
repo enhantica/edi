@@ -10,11 +10,11 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-19T08:26:36Z
+# measured_utc = 2026-11-19T10:11:30Z
 #
-# Recorded from: measured test run (7 node(s) measured once, 183852 banked, 0 stale row(s) dropped)
-# Collected tests: 255334; with a reported duration: 82875
-# Module-scoped fixture costs recorded: 213
+# Recorded from: measured test run (19 node(s) measured once, 183859 banked, 0 stale row(s) dropped)
+# Collected tests: 255353; with a reported duration: 82876
+# Module-scoped fixture costs recorded: 215
 #
 # Breaches are decided PER TIER against the table
 # below, which the loader validates against the code constants - a manifest must state
@@ -29,12 +29,12 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 255334
+# inventory_python = 255353
 # inventory_cpp = 0
-# inventory_measured = 183859
-# inventory_unmeasured = 71475
+# inventory_measured = 183862
+# inventory_unmeasured = 71491
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
-# inventory_pr_python = 89069
+# inventory_pr_python = 89088
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -178026,6 +178026,10 @@ UNMEASURED:failed-in-this-run	tests/system/app/test_rendered_caption_capitalisat
 UNMEASURED:failed-in-this-run	tests/system/app/test_rendered_caption_capitalisation.py::test_actual_rendered_captions_follow_the_capitalisation_rule[structure-extras-2]
 UNMEASURED:failed-in-this-run	tests/system/app/test_rendered_caption_capitalisation.py::test_actual_rendered_captions_follow_the_capitalisation_rule[tof]
 UNMEASURED:failed-in-this-run	tests/system/app/test_rendered_caption_capitalisation.py::test_rendered_probe_reaches_each_runtime_caption_escape
+0.003	tests/system/app/test_replaced_data_drawn.py::test_replaced_data[a_hover_all_chart_panes:powder]
+0.000	tests/system/app/test_replaced_data_drawn.py::test_replaced_data[a_hover_all_chart_panes:single]
+0.000	tests/system/app/test_replaced_data_drawn.py::test_replaced_data[b_replacement_recalculates_on_the_new_grid]
+UNMEASURED:failed-in-this-run	tests/system/app/test_replaced_data_drawn.py::test_replaced_data[c_replacement_retires_old_quality_and_status]
 3.181	tests/system/app/test_stability_feedback.py::test_error_feedback_actions[a_previous_crash_has_send_and_ok]
 3.050	tests/system/app/test_stability_feedback.py::test_error_feedback_actions[b_caught_event_error_shows_diagnostic_actions]
 3.290	tests/system/app/test_stability_feedback.py::test_error_feedback_actions[b_failed_project_open_shows_diagnostic_actions]
@@ -178039,6 +178043,19 @@ UNMEASURED:not-completed-in-this-run	tests/system/app/test_stability_feedback.py
 3.460	tests/system/app/test_stability_feedback.py::test_error_feedback_actions[f_failed_send_offers_a_plain_text_report:other-success-code]
 3.890	tests/system/app/test_stability_feedback.py::test_error_feedback_actions[f_failed_send_offers_a_plain_text_report:rate-limit]
 4.010	tests/system/app/test_stability_feedback.py::test_error_feedback_actions[f_failed_send_offers_a_plain_text_report:server]
+UNMEASURED:failed-in-this-run	tests/system/app/test_untitled_assistant.py::test_assistant_create_from_untitled[ordinary]
+UNMEASURED:failed-in-this-run	tests/system/app/test_untitled_assistant.py::test_assistant_create_from_untitled[shown]
+UNMEASURED:failed-in-this-run	tests/system/app/test_untitled_work.py::test_untitled_work[a_structure_and_experiment_before_create]
+UNMEASURED:failed-in-this-run	tests/system/app/test_untitled_work.py::test_untitled_work[b_first_save_names_and_preserves_work]
+UNMEASURED:failed-in-this-run	tests/system/app/test_untitled_work.py::test_untitled_work[c_cancel_first_save_keeps_work]
+UNMEASURED:failed-in-this-run	tests/system/app/test_untitled_work.py::test_untitled_work[d2_quit_save_names_and_closes]
+UNMEASURED:failed-in-this-run	tests/system/app/test_untitled_work.py::test_untitled_work[d_quit_cancel_and_discard]
+UNMEASURED:failed-in-this-run	tests/system/app/test_untitled_work.py::test_untitled_work[e_dialog_labels]
+UNMEASURED:failed-in-this-run	tests/system/app/test_untitled_work.py::test_untitled_work[f_dialog_hints:authors]
+UNMEASURED:failed-in-this-run	tests/system/app/test_untitled_work.py::test_untitled_work[f_dialog_hints:description]
+UNMEASURED:failed-in-this-run	tests/system/app/test_untitled_work.py::test_untitled_work[f_dialog_hints:location]
+UNMEASURED:failed-in-this-run	tests/system/app/test_untitled_work.py::test_untitled_work[f_dialog_hints:name]
+UNMEASURED:failed-in-this-run	tests/system/app/test_untitled_work.py::test_untitled_work[f_dialog_hints:title]
 0.025	tests/system/app/test_work_report_export.py::test_repeated_inspection_report_is_smaller_and_keeps_reader_evidence[2026.11.22]
 3.390	tests/system/app/test_work_report_export.py::test_repeated_inspection_report_is_smaller_and_keeps_reader_evidence[main]
 UNMEASURED:not-completed-in-this-run	tests/system/py/e11_t5_original_controls/test_current_original.py::test_current_original_ordinary[composer_ime_clear]
@@ -251706,6 +251723,8 @@ UNMEASURED:awaiting working feature and runner qualification	tests/system/py/tes
 UNMEASURED:awaiting working feature and runner qualification	tests/system/py/test_two_figure_palettes.py::test_pattern_threshold_reservations_and_oklab[dark-main]
 UNMEASURED:awaiting working feature and runner qualification	tests/system/py/test_two_figure_palettes.py::test_pattern_threshold_reservations_and_oklab[light-colourBlindSafe]
 UNMEASURED:awaiting working feature and runner qualification	tests/system/py/test_two_figure_palettes.py::test_pattern_threshold_reservations_and_oklab[light-main]
+UNMEASURED:failed-in-this-run	tests/system/py/test_untitled_recovery.py::test_untitled_edits_reach_autosave
+UNMEASURED:failed-in-this-run	tests/system/py/test_untitled_recovery.py::test_untitled_recovery_restores_science_and_save_state
 0.000	tests/system/py/test_user_action_logging.py::test_real_user_action_receipts[shared_control_has_one_private_info_receipt:affiliation]
 0.000	tests/system/py/test_user_action_logging.py::test_real_user_action_receipts[shared_control_has_one_private_info_receipt:button]
 0.000	tests/system/py/test_user_action_logging.py::test_real_user_action_receipts[shared_control_has_one_private_info_receipt:checkbox]
@@ -255436,7 +255455,9 @@ UNMEASURED:not-completed-in-this-run	tests/unit/py/test_web_science_identity.py:
 # module-cost: 2.933	tests/integration/py/test_weight_fraction_app.py
 # module-cost: 0.951	tests/system/app/test_likes_feedback.py
 # module-cost: 12.650	tests/system/app/test_rendered_caption_capitalisation.py
+# module-cost: 84.777	tests/system/app/test_replaced_data_drawn.py
 # module-cost: 0.603	tests/system/app/test_stability_feedback.py
+# module-cost: 0.781	tests/system/app/test_untitled_work.py
 # module-cost: 39.055	tests/system/app/test_work_report_export.py
 # module-cost: 2.769	tests/system/py/test_adoption_listener_boundaries.py
 # module-cost: 11.310	tests/system/py/test_app_minimum.py
