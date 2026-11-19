@@ -1047,6 +1047,28 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
             named("page-" + pages[i]);
         }
     }
+    // `e58-tabs`: every page, then each of its main and sidebar tabs, as EDI_UI_TAB_INVENTORY declares them (the pages in
+    // the app bar's order, each page's tabs in declaration order), with the scan EDI_DEMO_SCAN_PROJECT open.
+    if (only.startsWith(QLatin1String("e58-tabs"))) {
+        steps_.push_back({"e58-tabs-000-opened", {"resize:1480x800", "open-project:" + qEnvironmentVariable("EDI_DEMO_SCAN_PROJECT")}});
+        const QJsonObject pages = QJsonDocument::fromJson(qgetenv("EDI_UI_TAB_INVENTORY")).object();
+        int n = 0;
+        const auto add = [&](const QString& name, const QString& object) {
+            steps_.push_back({QStringLiteral("e58-tabs-%1-%2").arg(++n, 3, 10, QLatin1Char('0')).arg(name), {object}});
+            named(name);
+        };
+        for (const QString& page : {QStringLiteral("home"), QStringLiteral("project"), QStringLiteral("structure"),
+                                    QStringLiteral("experiment"), QStringLiteral("analysis"), QStringLiteral("report")}) {
+            if (!pages.contains(page)) continue;
+            add("page-" + page, "appBar.tab." + page);
+            for (const char* area : {"main", "sidebar"}) {
+                for (const QJsonValue& tab : pages.value(page).toObject().value(QString::fromLatin1(area)).toArray()) {
+                    add(QStringLiteral("tab-%1-%2-%3").arg(QString::fromLatin1(area), page, tab.toObject().value("key").toString()),
+                        tab.toObject().value("object").toString());
+                }
+            }
+        }
+    }
     if (only.startsWith(QLatin1String("e58-banks"))) {
         const QString banks = copy_cli_project(QStringLiteral("pd-neut-tof_ncaf-wish-5bank_start-5"), QDir(loaded_files_.path()));
         steps_.push_back({"e58-banks-00-opened", {"resize:1480x800", "open-project:" + banks, "appBar.tab.experiment"}});
@@ -1832,6 +1854,46 @@ ProjectViewModel* open_project(QQuickWindow& window);  // below
 }  // namespace
 
 #if EDI_UI_INSTRUMENTATION
+void DemoDriver::trace_collect_tabs(QQuickItem* root) {
+    std::function<void(QQuickItem*)> walk = [&](QQuickItem* item) {
+        for (QQuickItem* child : item->childItems()) {
+            const QString name = child->objectName();
+            if (name.startsWith(QLatin1String("mainArea.")) && name.contains(QLatin1String(".tab.")) &&
+                !view_tabs_.contains(child))
+                view_tabs_.append(child);
+            if (name.startsWith(QLatin1String("sideBar.tab.")) && !side_tabs_.contains(child)) side_tabs_.append(child);
+            walk(child);
+        }
+    };
+    walk(root);
+}
+
+void DemoDriver::trace_tab_inventory() {
+    if (tab_inventory_sent_) return;
+    QJsonObject pages;
+    for (const QPointer<QQuickItem>& tab : page_tabs_) {
+        if (!tab) continue;
+        const QString page = tab->objectName().mid(11);
+        QJsonArray main, sidebar;
+        if (auto* loader = qvariant_cast<QQuickItem*>(tab->property("page")); loader != nullptr) {
+            if (loader->property("status").toInt() != 1) return;  // a page still being built: not yet
+            std::function<void(QQuickItem*)> walk = [&](QQuickItem* item) {
+                for (QQuickItem* child : item->childItems()) {
+                    const QString name = child->objectName();
+                    const QJsonObject entry{{"key", name.section(QLatin1Char('.'), -1)}, {"object", name}};
+                    if (name.startsWith(QLatin1String("mainArea.")) && name.contains(QLatin1String(".tab."))) main.append(entry);
+                    if (name.startsWith(QLatin1String("sideBar.tab."))) sidebar.append(entry);
+                    walk(child);
+                }
+            };
+            walk(loader);
+        }
+        pages.insert(page, QJsonObject{{"main", main}, {"sidebar", sidebar}});
+    }
+    tab_inventory_sent_ = true;
+    EDI_UI_TRACE("tab-inventory", {{"witness", "qml-tab-bars"}, {"pages", pages}});
+}
+
 void DemoDriver::trace_measurement(bool enter, int id, const QString& callback) {
     // The span marker and the callback witness of the driver's own work, at one instant (tools/ci/gui_watchdog.py).
     if (!ui_trace_on()) return;
@@ -1875,6 +1937,9 @@ void DemoDriver::trace_issue(const QString& action) {
     pending.name = step.trace;
     if (action.startsWith(QLatin1String("appBar.tab."))) {
         pending.page = action.mid(11);
+    } else if (action.startsWith(QLatin1String("mainArea.")) && action.contains(QLatin1String(".tab.")) ||
+               action.startsWith(QLatin1String("sideBar.tab."))) {
+        pending.object = action;
     } else if (action.startsWith(QLatin1String("mainArea.blocks."))) {
         pending.before = now.value(QStringLiteral("selection")).toInt();
         if (step.navigation != 0) {
@@ -1926,11 +1991,11 @@ void DemoDriver::trace_watch() {
     std::function<void(QQuickItem*)> walk = [&](QQuickItem* item) {
         for (QQuickItem* child : item->childItems()) {
             if (child->objectName().startsWith(QLatin1String("appBar.tab."))) page_tabs_.append(child);
-            if (child->objectName().startsWith(QLatin1String("mainArea.tab."))) view_tabs_.append(child);
             walk(child);
         }
     };
     walk(window_.contentItem());
+    trace_collect_tabs(window_.contentItem());
     input_identity_ = trace_input();
     if (ProjectViewModel* project = open_project(window_); project != nullptr) {
         // What was loaded, counted from the model: the patterns (a scan's datasets or the experiments), structures,
@@ -2099,12 +2164,16 @@ QJsonObject DemoDriver::trace_state() {
     for (const QPointer<QQuickItem>& tab : page_tabs_) {
         if (tab && tab->property("checked").toBool()) page = tab->objectName().mid(11);
     }
-    QJsonValue view_tab = QJsonValue::Null;
-    for (const QPointer<QQuickItem>& tab : view_tabs_) {
-        if (tab && tab->property("checked").toBool() && tab->isVisible() && on_screen(tab)) view_tab = tab->objectName().mid(13);
-    }
+    // The shown page's selected main and sidebar tabs: checked, visible and on screen (another page's are off screen).
+    const auto selected = [this](const QList<QPointer<QQuickItem>>& tabs) -> QJsonValue {
+        for (const QPointer<QQuickItem>& tab : tabs) {
+            if (tab && tab->property("checked").toBool() && tab->isVisible() && on_screen(tab))
+                return tab->objectName().section(QLatin1Char('.'), -1);
+        }
+        return QJsonValue::Null;
+    };
     const ProjectViewModel* project = open_project(window_);
-    return {{"input", input_identity_}, {"page", page}, {"tab", view_tab},
+    return {{"input", input_identity_}, {"page", page}, {"tab", selected(view_tabs_)}, {"sidebar_tab", selected(side_tabs_)},
             {"selection", project != nullptr ? project->property("currentExperimentIndex").toInt() : -1}};
 }
 
@@ -2190,6 +2259,9 @@ void DemoDriver::trace_frame() {
         bool superseded = false;
         if (!pending.page.isEmpty()) {
             reached = state.value(QStringLiteral("page")).toString() == pending.page;
+        } else if (!pending.object.isEmpty()) {
+            const QQuickItem* button = find_held(pending.object, false);
+            reached = button != nullptr && button->property("checked").toBool();
         } else if (pending.dataset >= 0) {
             superseded = selection != pending.dataset;
             reached = superseded || !native.isEmpty();
@@ -2204,6 +2276,16 @@ void DemoDriver::trace_frame() {
         const QString transition = QStringLiteral("t%1").arg(pending.request);
         QJsonObject reached_state = state;
         reached_state.insert(QStringLiteral("request"), pending.request);
+        reached_state.insert(QStringLiteral("selected_object"), pending.object);
+        if (!pending.page.isEmpty()) {
+            // A page visit: its tab buttons are collected once it is built, and the inventory once every page is.
+            for (const QPointer<QQuickItem>& tab : page_tabs_) {
+                if (tab && tab->objectName() == QLatin1String("appBar.tab.") + pending.page) {
+                    if (auto* loader = qvariant_cast<QQuickItem*>(tab->property("page")); loader != nullptr) trace_collect_tabs(loader);
+                }
+            }
+            trace_tab_inventory();
+        }
         reached_state.insert(QStringLiteral("transition"), transition);
         QJsonObject publication{{"transition", transition}, {"input", input_identity_}};
         if (superseded) {

@@ -171,6 +171,7 @@ class DemoDriver : public QObject {
         int before = -1;           // the selection before a next or previous press
         int dataset = -1;          // the selection the press made
         QString direction;         // "next" or "previous"
+        QString object;            // a main or sidebar tab button the action selects
         QString fit;               // "start", "running", "ended" or "settled"
     };
     std::deque<Pending> pending_;
@@ -211,7 +212,12 @@ class DemoDriver : public QObject {
     // its edges at a data x bracket the value there), with at least one drawn: read on the render thread while the
     // GUI thread waits.
     bool trace_matches_native(const PatternChartController* controller, int dataset) const;
-    QList<QPointer<QQuickItem>> page_tabs_, view_tabs_;
+    QList<QPointer<QQuickItem>> page_tabs_, view_tabs_, side_tabs_;
+    // The main and sidebar tab buttons under `root` (a page as it is built), each found once.
+    void trace_collect_tabs(QQuickItem* root);
+    bool tab_inventory_sent_ = false;
+    // The pages' tab bars as built, once every page is: the `tab-inventory` event.
+    void trace_tab_inventory();
     int fit_runs_ = 0;
     bool fit_running_ = false;
     bool watching_ = false;
