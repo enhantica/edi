@@ -44,33 +44,33 @@ void ListModelMirror::setSource(QAbstractItemModel* source) {
 void ListModelMirror::follow() {
     if (!source_) return;
     QAbstractItemModel* source = source_;
-    const auto relay = [this](auto signal, auto slot) { connections_.append(connect(source_, signal, this, slot)); };
-    relay(&QAbstractItemModel::dataChanged, [this](const QModelIndex& first, const QModelIndex& last, const QList<int>& roles) {
+    const auto forward = [this](auto signal, auto slot) { connections_.append(connect(source_, signal, this, slot)); };
+    forward(&QAbstractItemModel::dataChanged, [this](const QModelIndex& first, const QModelIndex& last, const QList<int>& roles) {
         emit dataChanged(index(first.row()), index(last.row()), roles);
     });
-    relay(&QAbstractItemModel::rowsAboutToBeInserted,
+    forward(&QAbstractItemModel::rowsAboutToBeInserted,
           [this](const QModelIndex&, int first, int last) { beginInsertRows(QModelIndex(), first, last); });
-    relay(&QAbstractItemModel::rowsInserted, [this](const QModelIndex&, int, int) {
+    forward(&QAbstractItemModel::rowsInserted, [this](const QModelIndex&, int, int) {
         endInsertRows();
         emit countChanged();
     });
-    relay(&QAbstractItemModel::rowsAboutToBeRemoved,
+    forward(&QAbstractItemModel::rowsAboutToBeRemoved,
           [this](const QModelIndex&, int first, int last) { beginRemoveRows(QModelIndex(), first, last); });
-    relay(&QAbstractItemModel::rowsRemoved, [this](const QModelIndex&, int, int) {
+    forward(&QAbstractItemModel::rowsRemoved, [this](const QModelIndex&, int, int) {
         endRemoveRows();
         emit countChanged();
     });
-    relay(&QAbstractItemModel::rowsAboutToBeMoved, [this](const QModelIndex&, int first, int last, const QModelIndex&, int to) {
+    forward(&QAbstractItemModel::rowsAboutToBeMoved, [this](const QModelIndex&, int first, int last, const QModelIndex&, int to) {
         beginMoveRows(QModelIndex(), first, last, QModelIndex(), to);
     });
-    relay(&QAbstractItemModel::rowsMoved, [this](const QModelIndex&, int, int, const QModelIndex&, int) { endMoveRows(); });
-    relay(&QAbstractItemModel::modelAboutToBeReset, [this] { beginResetModel(); });
-    relay(&QAbstractItemModel::modelReset, [this] {
+    forward(&QAbstractItemModel::rowsMoved, [this](const QModelIndex&, int, int, const QModelIndex&, int) { endMoveRows(); });
+    forward(&QAbstractItemModel::modelAboutToBeReset, [this] { beginResetModel(); });
+    forward(&QAbstractItemModel::modelReset, [this] {
         endResetModel();
         emit countChanged();
     });
-    relay(&QAbstractItemModel::layoutAboutToBeChanged, [this] { emit layoutAboutToBeChanged(); });
-    relay(&QAbstractItemModel::layoutChanged, [this] { emit layoutChanged(); });
+    forward(&QAbstractItemModel::layoutAboutToBeChanged, [this] { emit layoutAboutToBeChanged(); });
+    forward(&QAbstractItemModel::layoutChanged, [this] { emit layoutChanged(); });
     // A source destroyed before it is replaced leaves the mirror empty, its rows removed as any others.
     connections_.append(connect(source, &QObject::destroyed, this, [this] {
         const int rows = rowCount();
