@@ -778,23 +778,76 @@ std::vector<std::string> atom_types(const Project& project, const Structure& str
     return {types.begin(), types.end()};
 }
 
-std::string detail::inferred_wyckoff_letter(const Structure& structure,const AtomSite& site) {
-    if (!takes_wyckoff_letter(structure)) {
-        return {};
+namespace {
+crysta::WyckoffMatch native_wyckoff_match(const Structure& structure, const AtomSite& site,
+                                         const crysta::SpaceGroup& group) {
+    const auto cell = completed_cell(structure);
+    // Crysta's CIF site policy is 0.01 Angstrom (ADR-0103).
+    constexpr double tolerance_angstrom = 0.01;
+    std::array<double, 3> tolerance{};
+    for (std::size_t axis = 0; axis < tolerance.size(); ++axis) {
+        const double length = cell.parameters[axis].value();
+        if (!std::isfinite(length) || length <= 0.) {
+            throw std::invalid_argument("Automatic Wyckoff assignment needs a valid native cell");
+        }
+        tolerance[axis] = tolerance_angstrom / length;
     }
-    const auto group=resolve_group(structure);
-    const auto cell=completed_cell(structure);
-    // Crysta's CIF site policy is 0.01 Angstrom (ADR-0103); use its
-    // matcher rather than adding a positional classifier here (edi ADR-0057).
-    constexpr double native_site_tolerance_angstrom=0.01;
-    std::array<double,3> tolerance{};
-    for(std::size_t axis=0;axis<tolerance.size();++axis) {
-        const double length=cell.parameters[axis].value();
-        if(!std::isfinite(length) || length<=0)throw std::invalid_argument("Automatic Wyckoff assignment needs a valid native cell");
-        tolerance[axis]=native_site_tolerance_angstrom/length;
+    const std::array<double, 3> fract{site.fract_x.value.get(), site.fract_y.value.get(), site.fract_z.value.get()};
+    return crysta::wyckoff_position_of(group, fract, tolerance);
+}
+}  // namespace
+
+std::string detail::inferred_wyckoff_letter(const Structure& structure, const AtomSite& site) {
+    return takes_wyckoff_letter(structure) ? native_wyckoff_match(structure, site, resolve_group(structure)).letter
+                                         : std::string{};
+}
+
+detail::FullProfSiteGeometry detail::fullprof_site_geometry(const Structure& structure, const AtomSite& site) {
+    if (takes_wyckoff_letter(structure)) {
+        const auto group = resolve_group(structure);
+        const auto match = native_wyckoff_match(structure, site, group);
+        int general = 0;
+        for (const auto& [letter, position] : group.wyckoff) {
+            general = std::max(general, position.multiplicity);
+        }
+        return {match.letter, match.fract, match.rotation, general, group.wyckoff.at(match.letter).multiplicity};
     }
-    const std::array<double,3> fract{site.fract_x.value.get(),site.fract_y.value.get(),site.fract_z.value.get()};
-    return crysta::wyckoff_position_of(group,fract,tolerance).letter;
+
+    const std::array<double, 3> fract{site.fract_x.value.get(), site.fract_y.value.get(), site.fract_z.value.get()};
+    const auto operators = crysta::magnetic_operations(to_crysta_structure(structure));
+    std::vector<std::array<double, 3>> images;
+    std::set<std::pair<std::array<int, 9>, std::array<int, 3>>> spatial;
+    for (const auto& op : operators) {
+        std::array<int, 3> shift{};
+        std::array<double, 3> image = op.translation;
+        for (std::size_t i = 0; i < 3; ++i) {
+            const int fractional = static_cast<int>(std::lround(op.translation[i] * 24.)) % 24;
+            shift[i] = (fractional + 24) % 24;
+            for (std::size_t j = 0; j < 3; ++j) {
+                image[i] += static_cast<double>(op.rotation[i * 3 + j]) * fract[j];
+            }
+        }
+        if (!spatial.emplace(op.rotation, shift).second) {
+            continue;
+        }
+        const auto same = [&image](const auto& other) {
+            for (std::size_t i = 0; i < 3; ++i) {
+                if (std::abs(std::remainder(image[i] - other[i], 1.)) > 1.e-5) {
+                    return false;
+                }
+            }
+            return true;
+        };
+        if (std::none_of(images.begin(), images.end(), same)) {
+            images.push_back(image);
+        }
+    }
+    return {"", fract, {1, 0, 0, 0, 1, 0, 0, 0, 1}, static_cast<int>(spatial.size()), static_cast<int>(images.size())};
+}
+
+std::array<double, 6> detail::fullprof_rotated_beta(const std::array<double, 6>& beta,
+                                                   const std::array<int, 9>& rotation) {
+    return crysta::rotated(beta, rotation);
 }
 
 AtomSite new_atom_site(const Structure& structure, const std::function<double()>& random) {
@@ -9033,9 +9086,22 @@ std::string detail::fullprof_inverted_operator(const std::string& operation) {
 }
 
 detail::FullProfMagneticOperators detail::fullprof_magnetic_operators(const Structure& structure) {
-    const auto operators = crysta::magnetic_operations(to_crysta_structure(structure));
+    check_magnetic_acceptance(structure);
+    const auto& magnetic = structure.magnetic.get();
+    std::vector<crysta::MagneticOperation> operators;
+    for (const auto& row : magnetic.operations) {
+        operators.push_back(crysta::parse_magnetic_operation(row.second));
+    }
     const std::array<int, 9> inversion{-1, 0, 0, 0, -1, 0, 0, 0, -1};
     FullProfMagneticOperators result;
+    for (const auto& row : magnetic.centerings) {
+        const auto operation = crysta::parse_magnetic_operation(row.second);
+        if (operation.theta < 0) {
+            result.anti_centerings.push_back(operation.translation);
+        } else if (operation.translation != std::array<double, 3>{}) {
+            result.centerings.push_back(operation.translation);
+        }
+    }
     result.centrosymmetric = std::any_of(operators.begin(), operators.end(), [&](const auto& operation) {
         return operation.theta == 1 && operation.rotation == inversion &&
             operation.translation == std::array<double, 3>{};

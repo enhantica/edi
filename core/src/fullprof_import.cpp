@@ -19,6 +19,7 @@
 #include "edi/categories.hpp"
 #include "edi/edit.hpp"
 #include "edi/parameter_walk.hpp"
+#include "edi/project_archive.hpp"
 #include "edi/selectors.hpp"
 #include "edi/symmetry.hpp"
 #include "import_symmetry.hpp"
@@ -56,6 +57,12 @@ std::string heading(const std::string& comment) {
     auto fields = words(lower(comment));
     if (!fields.empty() && fields.front() == "------->") {
         fields.erase(fields.begin());
+    }
+    if (!fields.empty() && fields.front() == "sig-2") {
+        fields.front() = "sigma-2";
+    }
+    if (!fields.empty() && fields.front() == "gam-2") {
+        fields.front() = "gamma-2";
     }
     std::string result;
     for (const auto& field : fields) {
@@ -124,7 +131,7 @@ struct PCR {
             ++i;
             const auto bang = line.find('!');
             std::string comment = bang == line.npos ? "" : trim(std::string_view(line).substr(bang + 1));
-            const auto end = std::min({bang, line.find('#'), line.find("<--")});
+            const auto end = std::min({bang, line.find('#'), line.find("<-")});
             auto text = trim(std::string_view(line).substr(0, end));
             if (!text.empty() || !comment.empty()) {
                 lines.push_back({std::move(text), heading(comment), std::move(comment), i});
@@ -279,6 +286,7 @@ struct Pattern {
     double step = 0.;
     double scale_factor = 1.;
     std::vector<Row> profile_rows;
+    std::map<std::string, Coded> overall_displacements;
     std::vector<Coded> reflection_scales;
     std::vector<Coded> reflection_extinction;
     int reflection_extinction_model = 0;
@@ -511,8 +519,8 @@ Data ial_data(const fs::path& path) {
         if (!text.empty() && text.back() == '\r') {
             text.pop_back();
         }
-        if (text.size() != 80) {
-            throw IoError(path.string() + ": expected ten fixed-width D1A/D2B weight and intensity pairs");
+        if (text.empty() || text.size() > 80 || text.size() % 8 != 0) {
+            throw IoError(path.string() + ": invalid fixed-width D1A/D2B weight and intensity pairs");
         }
         for (std::size_t i = 0; i < text.size(); i += 8) {
             const auto pair = std::string_view(text).substr(i, 8);
@@ -642,11 +650,40 @@ Data weighted_counts(const fs::path& path, bool d20) {
         }
         for (std::size_t i = 0; i < columns; ++i) {
             const auto pair = std::string_view(line).substr(i * stride, stride);
-            const auto weight = std::max(1., number(trim(pair.substr(0, 2)), path.string()));
-            const auto intensity = number(trim(pair.substr(2)), path.string());
+            const auto fields = words(pair);
+            const auto weight = std::max(1., number(fields.size() == 2 ? fields[0] : trim(pair.substr(0, 2)),
+                                                   path.string()));
+            const auto intensity = number(fields.size() == 2 ? fields[1] : trim(pair.substr(2)), path.string());
             const auto y = intensity > 0.00001 ? intensity : 1.;
             result.push(grid.first + static_cast<double>(result.x.size()) * grid.step, y, std::sqrt(y / weight));
         }
+    }
+    return result;
+}
+
+Data two_axis_data(const fs::path& path) {
+    auto file = input(path);
+    for (int i = 0; i < 3; ++i) {
+        data_line(file, path);
+    }
+    const auto header = numbers(words(data_line(file, path)), path.string());
+    if (header.size() < 6) {
+        throw IoError(path.string() + ": incomplete two-axis FullProf monitor header");
+    }
+    const auto grid = grid_from_line(data_line(file, path), path);
+    if (static_cast<double>(grid.count) != header[0]) {
+        throw IoError(path.string() + ": two-axis FullProf data count disagrees with the grid");
+    }
+    const auto y = packed_columns(file, path, grid.count, 8);
+    const bool supplied = header[3] != 0.;
+    const auto uncertainties = supplied ? packed_columns(file, path, grid.count, 8) : Row{};
+    const double monitor_ratio = header[4] > 1. && header[5] > 1. ? header[4] / header[5] : 1.;
+    Data result;
+    for (std::size_t i = 0; i < grid.count; ++i) {
+        const auto intensity = supplied ? std::max(y[i], 0.0001) : y[i];
+        const auto sigma = supplied ? (std::abs(uncertainties[i]) < 0.001 ? 1. : std::abs(uncertainties[i]))
+                                    : std::sqrt(intensity * monitor_ratio);
+        result.push(grid.first + static_cast<double>(i) * grid.step, intensity, sigma);
     }
     return result;
 }
@@ -671,16 +708,46 @@ Data gsas_data(const fs::path& path) {
     std::getline(file, line);
     std::getline(file, line);
     const auto header = words(line);
-    if (header.size() < 9 || header[0] != "BANK" || header[4] != "CONST" || header.back() != "ALT") {
-        throw IoError(path.string() + ": expected a single GSAS CONST/ALT bank");
+    if (header.size() < 9 || header[0] != "BANK" ||
+        (header[4] != "CONST" && header[4] != "RALF") || header.back() != "ALT") {
+        throw IoError(path.string() + ": expected a single GSAS CONST/ALT or RALF/ALT bank");
     }
     const auto count = integer(number(header[2], path.string()), path.string());
-    Data result;
-    for (double x, y, sigma; file >> x >> y >> sigma;) {
-        result.push(x / 32., y, sigma);
+    const bool ralf = header[4] == "RALF";
+    Data raw;
+    if (ralf) {
+        while (std::getline(file, line)) {
+            for (std::size_t start = 0; start < line.size(); start += 20) {
+                const auto field = std::string_view(line).substr(start, 20);
+                if (trim(field).empty()) {
+                    continue;
+                }
+                if (field.size() != 20) {
+                    throw IoError(path.string() + ": incomplete GSAS RALF/ALT record");
+                }
+                raw.push(number(trim(field.substr(0, 8)), path.string()), number(trim(field.substr(8, 7)), path.string()),
+                         number(trim(field.substr(15)), path.string()));
+            }
+        }
+    } else {
+        for (double x, y, sigma; file >> x >> y >> sigma;) {
+            raw.push(x, y, sigma);
+        }
     }
-    if (count <= 0 || result.x.size() != static_cast<std::size_t>(count)) {
+    if (count < (ralf ? 2 : 1) || raw.x.size() != static_cast<std::size_t>(count)) {
         throw IoError(path.string() + ": truncated or additional GSAS bank data");
+    }
+    Data result;
+    const auto points = raw.x.size() - (ralf ? 1U : 0U);
+    for (std::size_t i = 0; i < points; ++i) {
+        // RALF records are leading bin edges in 1/32 microsecond units.
+        // FullProf normalizes the integrated counts by the forward width
+        // and omits the last edge, which has no following bin boundary.
+        const double factor = ralf ? 32. / (10. * (raw.x[i + 1] - raw.x[i])) : 1.;
+        if (!std::isfinite(factor) || factor <= 0.) {
+            throw IoError(path.string() + ": invalid GSAS RALF bin width");
+        }
+        result.push(raw.x[i] / 32., raw.y[i] * factor, raw.sigma[i] * factor);
     }
     return result;
 }
@@ -729,6 +796,48 @@ Data xy_data(const fs::path& path) {
     return result;
 }
 
+PlainDataLoad fullprof_reflections(const BraggPdExperiment& experiment, const fs::path& path) {
+    auto source = input(path);
+    std::string text;
+    bool annotated = false;
+    std::size_t row = 0;
+    for (std::string line; std::getline(source, line);) {
+        if (++row > 3) {
+            const auto annotation = line.find("<- Dubious reflection");
+            if (annotation != std::string::npos) {
+                line.resize(annotation);
+                annotated = true;
+            }
+        }
+        text += line + '\n';
+    }
+    if (!annotated) {
+        return experiment_with_plain_data(experiment, path.string(), false);
+    }
+    // FullProf may append a diagnostic outside the formatted fields of a valid INT row.
+    // Normalize that annotation in a private copy and let the normal reflection reader validate the fields.
+    struct Capture {
+        std::string directory = fresh_archive_directory("fullprof-int");
+        ~Capture() { remove_archive_directory(directory); }
+    } capture;
+    const auto copy = fs::path(capture.directory) / path.filename();
+    try {
+        std::ofstream normalized(copy);
+        normalized.exceptions(std::ios::badbit | std::ios::failbit);
+        normalized << text;
+        normalized.close();
+        return experiment_with_plain_data(experiment, copy.string(), path.string(), false);
+    } catch (const std::ios_base::failure&) {
+        throw IoError(path.string() + ": unable to normalize FullProf reflection annotations");
+    } catch (const IoError& issue) {
+        std::string diagnostic = issue.what();
+        if (const auto marker = diagnostic.find(copy.string()); marker != std::string::npos) {
+            diagnostic.replace(marker, copy.string().size(), path.string());
+        }
+        throw IoError(diagnostic);
+    }
+}
+
 void reflection_data(const PCR& pcr, Pattern& pattern, Refinement& refine, Project& project) {
     const auto path = companion(pcr, pattern);
     auto file = input(path);
@@ -745,7 +854,7 @@ void reflection_data(const PCR& pcr, Pattern& pattern, Refinement& refine, Proje
     if (intensity_type != 0. && (intensity_type != 1. || pattern.tof())) {
         pcr.fail("Unsupported FullProf reflection intensity selector in " + path.filename().string());
     }
-    auto loaded = experiment_with_plain_data(*pattern.model, path.string(), false);
+    auto loaded = fullprof_reflections(*pattern.model, path);
     if (loaded.experiment.calculation_only || loaded.dataset_codes.size() != loaded.more.size() + 1) {
         pcr.fail("FullProf reflection datasets require observed data and one scale per dataset");
     }
@@ -817,6 +926,7 @@ void powder_data(const PCR& pcr, Pattern& pattern) {
         case 0: source = stepped_data(path); break;
         case 1: source = weighted_counts(path, false); break;
         case 3: source = weighted_counts(path, true); break;
+        case 5: source = two_axis_data(path); break;
         case 6: source = ial_data(path); break;
         case 8: source = dmc_data(path); break;
         case 10: source = xy_data(path); break;
@@ -874,6 +984,34 @@ struct CodedRow {
     Row values, codes;
     Coded at(std::size_t i, double factor = 1.) const { return {values.at(i) * factor, codes.at(i), factor}; }
 };
+
+Coded rotated_code(const PCR& pcr, double value, const Row& codes, const Row& factors,
+                   std::size_t line) {
+    double direction = 0.;
+    double code = 0.;
+    const auto group = [](double encoded) { return std::floor(std::abs(encoded) / 10.); };
+    const auto shift = [&](double encoded) {
+        return std::copysign(std::abs(encoded) - 10. * group(encoded), encoded);
+    };
+    for (std::size_t i = 0; i < factors.size(); ++i) {
+        if (factors[i] == 0. || codes[i] == 0.) {
+            continue;
+        }
+        if (code != 0. && (group(code) == 0. || group(code) != group(codes[i]))) {
+            pcr.fail("A FullProf symmetry image mixes independent refinement directions", line);
+        }
+        code = codes[i];
+        const auto step = shift(code);
+        if (step == 0.) {
+            pcr.fail("A FullProf refinement codeword has a zero shift", line);
+        }
+        direction += factors[i] * step;
+    }
+    if (direction == 0.) {
+        return {value, 0.};
+    }
+    return {value, code, direction / shift(code)};
+}
 
 CodedRow pair_after(const PCR& pcr, std::size_t header, std::size_t end, std::size_t count,
                     std::size_t minimum_codes = 0) {
@@ -1098,7 +1236,8 @@ void configure_pattern(const PCR& pcr, Pattern& pattern, Refinement& refine,
         pattern.background_origin = values[3];
         exp.peak.cutoff_fwhm = values[4];
         pattern.asymmetry_limit = values[7];
-        if (values[0] <= 0. || zero[8] != 0. || (values.size() >= 10 && values[9] != 0.)) {
+        if (values[0] <= 0. || zero[8] != 0. ||
+            (values.size() >= 10 && values[9] != 0. && values[9] != values[6])) {
             pcr.fail("Unsupported FullProf wavelength, secondary absorption or additional CW instrument terms", setup);
         }
         refine.set(instrument.setup_wavelength, spec::instrument_wavelength, {zero[6] > 0. && !(pattern.cw_resolution && pattern.cw_resolution->wavelengths)
@@ -1314,6 +1453,11 @@ std::string element(std::string type) {
             *first = static_cast<char>(std::tolower(static_cast<unsigned char>(*first)));
         }
     }
+    const auto charge = type.find_first_of("+-");
+    if (charge != std::string::npos && charge > 0 && charge + 1 < type.size() &&
+        type.find_first_not_of("0123456789", charge + 1) == std::string::npos) {
+        return type.substr(0, charge) + type.substr(charge + 1) + type[charge];
+    }
     const auto isotope_at = type.find_first_of("0123456789");
     if (isotope_at != std::string::npos && isotope_at > 0 &&
         type.find_first_not_of("0123456789", isotope_at) == std::string::npos) {
@@ -1386,10 +1530,15 @@ void combined_magnetic_symmetry(const PCR& pcr, Structure& structure, std::size_
     const auto counts_line = pcr.require("nsym cen n_clat n_ant", start, end);
     const auto counts = pcr.after(counts_line, end, 4);
     const auto count = integer(counts[0], pcr.path.string());
-    if (count < 1 || count > 192 || (counts[1] != 1. && counts[1] != 2.) || counts[2] != 0. || counts[3] != 0.) {
+    const int centering = integer(counts[2], pcr.path.string());
+    const int anti_centering = integer(counts[3], pcr.path.string());
+    if (count < 1 || count > 192 || (counts[1] != 0. && counts[1] != 1. && counts[1] != 2.) ||
+        centering < 0 || centering > 4 || anti_centering < 0 || anti_centering > 4) {
         pcr.fail("Unsupported FullProf magnetic centring or inversion layout", counts_line);
     }
     std::string bns;
+    std::string bns_transform = "a,b,c;0,0,0";
+    crysta::ParentSpaceGroup parent;
     for (std::size_t i = start; i < counts_line; ++i) {
         const auto& line = pcr.lines[i].text;
         const auto marker = lower(line).find("number:");
@@ -1399,9 +1548,17 @@ void combined_magnetic_symmetry(const PCR& pcr, Structure& structure, std::size_
                 bns = fields[0];
             }
         }
-        if (lower(line).starts_with("transform") &&
-            trim(std::string_view(line).substr(line.find(':') + 1)) != "a,b,c;0,0,0") {
-            pcr.fail("Nonstandard FullProf magnetic setting needs a basis transformation", i);
+        const auto transform = line.find(':');
+        if (lower(line).starts_with("transform to standard:") && transform != std::string::npos) {
+            bns_transform = trim(std::string_view(line).substr(transform + 1));
+        } else if (lower(line).starts_with("transform from parent:") && transform != std::string::npos) {
+            parent.child_transform_pp_abc = trim(std::string_view(line).substr(transform + 1));
+        } else if (lower(line).starts_with("parent space group:")) {
+            const auto number_at = lower(line).find("it_number:");
+            if (number_at != std::string::npos) {
+                parent.name_h_m_alt = trim(std::string_view(line).substr(transform + 1, number_at - transform - 1));
+                parent.it_number = trim(std::string_view(line).substr(number_at + 10));
+            }
         }
     }
     const auto separator = bns.find('.');
@@ -1416,9 +1573,27 @@ void combined_magnetic_symmetry(const PCR& pcr, Structure& structure, std::size_
     assign_space_group_setting(structure.space_group, *setting, true);
     MagneticDescription magnetic;
     magnetic.group = fullprof_magnetic_group(bns);
-    magnetic.transforms.push_back({"1", {"a,b,c;0,0,0", "BNS"}});
+    magnetic.transforms.push_back({"1", {bns_transform, "BNS"}});
+    magnetic.parent = std::move(parent);
     magnetic.centerings.emplace_back("1", "x,y,z,+1");
     auto row = pcr.next(counts_line + 1, end);
+    for (int i = 0; i < centering + anti_centering; ++i) {
+        row = pcr.next(row + 1, end);
+        const auto coordinates = pcr.row(row, 3);
+        std::string operation;
+        for (std::size_t coordinate = 0; coordinate < 3; ++coordinate) {
+            if (!operation.empty()) {
+                operation += ',';
+            }
+            operation += "xyz"[coordinate];
+            const double translation = coordinates[coordinate] - std::floor(coordinates[coordinate]);
+            if (translation != 0.) {
+                operation += '+' + number_text(translation);
+            }
+        }
+        magnetic.centerings.emplace_back(std::to_string(magnetic.centerings.size() + 1),
+                                         operation + (i < centering ? ",+1" : ",-1"));
+    }
     for (int i = 0; i < count; ++i) {
         row = pcr.next(row + 1, end);
         const auto fields = words(pcr.lines[row].text);
@@ -1427,20 +1602,26 @@ void combined_magnetic_symmetry(const PCR& pcr, Structure& structure, std::size_
         }
         add_magnetic_operation(magnetic, fields[1], counts[1] == 2.);
     }
+    if (!bns_transform_consistent(magnetic)) {
+        pcr.fail("FullProf magnetic group operators disagree with its BNS setting", counts_line);
+    }
     structure.magnetic = std::move(magnetic);
 }
 
 void structure_block(const PCR& pcr, Project& project, std::vector<Pattern>& patterns, Refinement& refine,
                      std::size_t start, std::size_t end, bool multi) {
     auto structure = std::make_shared<Structure>();
-    const auto name = pcr.next(start + 1, end);
-    auto title = pcr.lines[name].text;
+    const auto phase = pcr.require("nat ", start + 1, end);
+    const auto name = std::find_if(pcr.lines.begin() + static_cast<std::ptrdiff_t>(start + 1),
+                                   pcr.lines.begin() + static_cast<std::ptrdiff_t>(phase),
+                                   [](const auto& line) { return !line.text.empty(); });
+    auto title = name->text.empty() ? std::string("phase") : name->text;
     if (lower(title).starts_with("name:")) {
         title = trim(std::string_view(title).substr(5));
     }
     const auto labels = words(title);
     if (labels.empty()) {
-        pcr.fail("Missing FullProf phase name", name);
+        pcr.fail("Missing FullProf phase name", start);
     }
     const auto base = safe_name(labels.front(), "phase");
     structure->name = base;
@@ -1450,7 +1631,6 @@ void structure_block(const PCR& pcr, Project& project, std::vector<Pattern>& pat
         const auto suffix = "_" + std::to_string(i);
         structure->name = base.substr(0, 31 - suffix.size()) + suffix;
     }
-    auto phase = pcr.require("nat ", name, end);
     const auto options = pcr.after(phase, end, multi ? 10 : 15);
     const int count = integer(options[0], pcr.path.string());
     const auto jbt = multi ? 3U : 6U;
@@ -1525,10 +1705,8 @@ void structure_block(const PCR& pcr, Project& project, std::vector<Pattern>& pat
     auto first_cell = pcr.require("a ", atom_header, end);
     const auto cell = pair_after(pcr, first_cell, end, 6);
     refine.set(structure->cell.parameters(), cell.values, cell.codes);
-    const auto positions = wyckoff_positions(*structure);
-    int general = 0;
-    for (const auto& position : positions) {
-        general = std::max(general, position.multiplicity);
+    if (magnetic) {
+        (void)adopt_magnetic_family_setting(*structure);
     }
     auto atom_line = atom_header;
     std::vector<std::pair<std::shared_ptr<AtomSite>, Coded>> occupancies;
@@ -1543,9 +1721,16 @@ void structure_block(const PCR& pcr, Project& project, std::vector<Pattern>& pat
         }
         const auto values = numbers(Words(fields.begin() + 2, fields.end()), pcr.path.string());
         atom_line = pcr.next(atom_line + 1, first_cell);
-        const auto codes = pcr.row(atom_line, 5);
+        auto codes = pcr.row(atom_line, 5);
+        if (!pcr.refinement_enabled) {
+            std::fill(codes.begin(), codes.end(), 0.);
+        }
         auto site = std::make_shared<AtomSite>();
         site->id = fields[0];
+        for (unsigned suffix = 2; std::any_of(structure->atom_sites.begin(), structure->atom_sites.end(),
+                        [&](const auto& held) { return lower(held->id.value()) == lower(site->id.value()); }); ++suffix) {
+            site->id = fields[0] + "_" + std::to_string(suffix);
+        }
         const std::size_t coordinate = magnetic ? 2 : 0;
         const auto atom_model = values[7];
         const bool moment_present = magnetic && atom_model == 1.;
@@ -1561,17 +1746,25 @@ void structure_block(const PCR& pcr, Project& project, std::vector<Pattern>& pat
             site->type_symbol = element(fields[1]);
         }
         structure->atom_sites.push_back(site);
-        refine.set(site->fract_x, {values[coordinate], codes[0]});
-        refine.set(site->fract_y, {values[coordinate + 1], codes[1]});
-        refine.set(site->fract_z, {values[coordinate + 2], codes[2]});
-        site->wyckoff_letter = inferred_wyckoff_letter(*structure, *site);
-        const auto position = std::find_if(positions.begin(), positions.end(), [&](const WyckoffOption& candidate) {
-            return candidate.letter == site->wyckoff_letter.value();
-        });
-        if (position == positions.end() || position->multiplicity <= 0) {
+        const auto coordinates = site->parameters();
+        for (std::size_t axis = 0; axis < 3; ++axis) {
+            coordinates[axis]->value = values[coordinate + axis];
+        }
+        const auto geometry = fullprof_site_geometry(*structure, *site);
+        if (geometry.site_multiplicity <= 0 || geometry.general_multiplicity <= 0) {
             pcr.fail("Cannot establish FullProf site multiplicity for " + fields[0], atom_line);
         }
-        const auto factor = static_cast<double>(general) / position->multiplicity;
+        constexpr std::array<int, 9> identity{1, 0, 0, 0, 1, 0, 0, 0, 1};
+        if (magnetic && geometry.rotation != identity) {
+            pcr.fail("FullProf magnetic site image changes the moment's axes", atom_line);
+        }
+        for (std::size_t axis = 0; axis < 3; ++axis) {
+            const auto first = geometry.rotation.begin() + static_cast<std::ptrdiff_t>(axis * 3);
+            refine.set(*coordinates[axis], rotated_code(pcr, geometry.representative[axis], codes,
+                                                       Row(first, first + 3), atom_line));
+        }
+        site->wyckoff_letter = geometry.letter;
+        const auto factor = static_cast<double>(geometry.general_multiplicity) / geometry.site_multiplicity;
         const auto occupancy = values[coordinate + 4] * factor;
         if (occupancy < 0.) {
             pcr.fail("Negative FullProf site occupancy for " + site->id.value(), atom_line);
@@ -1580,7 +1773,7 @@ void structure_block(const PCR& pcr, Project& project, std::vector<Pattern>& pat
         largest = std::max(largest, occupancy);
         const auto mass = import_atomic_mass(site->type_symbol.value());
         if (mass) {
-            nominal_mass += values[coordinate + 4] * general * *mass;
+            nominal_mass += values[coordinate + 4] * geometry.general_multiplicity * *mass;
         } else {
             mass_known = false;
         }
@@ -1593,7 +1786,22 @@ void structure_block(const PCR& pcr, Project& project, std::vector<Pattern>& pat
             structure->atom_site_aniso.push_back(tensor);
             const auto row = pair_after(pcr, atom_line, first_cell, 6);
             atom_line = pcr.next(pcr.next(atom_line + 1, first_cell) + 1, first_cell);
-            refine.set(tensor->parameters(), row.values, row.codes);
+            std::array<double, 6> beta{};
+            std::copy_n(row.values.begin(), beta.size(), beta.begin());
+            const auto rotated = fullprof_rotated_beta(beta, geometry.rotation);
+            std::array<Row, 6> factors;
+            for (std::size_t source = 0; source < beta.size(); ++source) {
+                std::array<double, 6> unit{};
+                unit[source] = 1.;
+                const auto image = fullprof_rotated_beta(unit, geometry.rotation);
+                for (std::size_t destination = 0; destination < image.size(); ++destination) {
+                    factors[destination].push_back(image[destination]);
+                }
+            }
+            const auto parameters = tensor->parameters();
+            for (std::size_t column = 0; column < parameters.size(); ++column) {
+                refine.set(*parameters[column], rotated_code(pcr, rotated[column], row.codes, factors[column], atom_line));
+            }
         } else {
             pcr.fail("Unsupported FullProf atom model N_t=" + number_text(atom_model), atom_line);
         }
@@ -1710,6 +1918,7 @@ void structure_block(const PCR& pcr, Project& project, std::vector<Pattern>& pat
         }
         if (pattern.enabled) {
             overall_b = bov;
+            pattern.overall_displacements.emplace(structure->name.value(), bov);
         }
         if (pattern.tof() && (scale.values[1] != 0. || scale.codes[1] != 0.)) {
             pcr.fail("Unsupported FullProf TOF extinction", begin);
@@ -1801,8 +2010,9 @@ void classic_magnetic_overlay(const PCR& pcr, Project& project, Pattern& pattern
     if (signature != pattern.profile_rows) {
         pcr.fail("FullProf magnetic and nuclear overlays use different powder profiles", profile);
     }
-    pcr.zero(scale.values, 2, scale.values.size(), "magnetic overlay strain or overall B");
-    pcr.zero(scale.codes, 2, scale.codes.size(), "magnetic overlay strain or overall B code");
+    pcr.zero(scale.values, 3, scale.values.size(), "magnetic overlay strain");
+    pcr.zero(scale.codes, 3, scale.codes.size(), "magnetic overlay strain code");
+    const auto bov = scale.at(2);
     const auto code_of = [&](Parameter& parameter) {
         const auto found = refine.codes.find(&parameter);
         return found == refine.codes.end() ? 0. : found->second.code;
@@ -1818,6 +2028,11 @@ void classic_magnetic_overlay(const PCR& pcr, Project& project, Pattern& pattern
             code_of((*link)->scale) != scale.codes[0]) {
             continue;
         }
+        const auto displacement = pattern.overall_displacements.find(structure->name.value());
+        if (displacement == pattern.overall_displacements.end() ||
+            displacement->second.value != bov.value || displacement->second.code != bov.code) {
+            continue;
+        }
         const auto parameters = structure->cell.parameters();
         bool equal = true;
         for (std::size_t i = 0; i < parameters.size(); ++i) {
@@ -1831,7 +2046,7 @@ void classic_magnetic_overlay(const PCR& pcr, Project& project, Pattern& pattern
         }
     }
     if (!matched) {
-        pcr.fail("FullProf magnetic overlay has no equally scaled nuclear phase", phase);
+        pcr.fail("FullProf magnetic overlay has no nuclear phase with matching scale, cell and overall B", phase);
     }
     auto& structure = *matched;
     const auto count_line = pcr.require("nsym cen laue magmat", phase + 1, atom_header);
@@ -1882,7 +2097,7 @@ void classic_magnetic_overlay(const PCR& pcr, Project& project, Pattern& pattern
         };
         const auto site = std::find_if(structure.atom_sites.begin(), structure.atom_sites.end(), match);
         if (site == structure.atom_sites.end() || std::count_if(structure.atom_sites.begin(), structure.atom_sites.end(), match) != 1 ||
-            (*site)->adp_type.value() != "Biso" || (*site)->adp_iso.value.get() != values[5]) {
+            (*site)->adp_type.value() != "Biso" || (*site)->adp_iso.value.get() != values[5] + bov.value) {
             pcr.fail("FullProf magnetic overlay site does not match one nuclear site", row);
         }
         const auto positions = wyckoff_positions(structure);
@@ -1903,6 +2118,12 @@ void classic_magnetic_overlay(const PCR& pcr, Project& project, Pattern& pattern
         auto codes = pcr.row(row, 8);
         if (!pcr.refinement_enabled) {
             std::fill(codes.begin(), codes.end(), 0.);
+        }
+        if (bov.code != 0.) {
+            if (codes[3] != 0.) {
+                pcr.fail("FullProf magnetic overlay varies both Biso and overall B", row);
+            }
+            codes[3] = bov.code;
         }
         const auto& held = **site;
         const std::array<Parameter*, 5> structural{&(*site)->fract_x, &(*site)->fract_y, &(*site)->fract_z,
@@ -2110,7 +2331,11 @@ std::vector<Pattern> patterns_from_header(const PCR& pcr, std::size_t end, bool 
         setup = pcr.require(pattern.tof() ? "bkpos " : "lambda1 ", setup + 1, ncy);
         calibration = pcr.require("zero ", calibration + 1, end);
         if (multi) {
-            source_range = pcr.require(pattern.tof() ? "tof-min " : "thmin ", source_range + 1, end);
+            const auto labelled = pcr.header(pattern.tof() ? "tof-min " : "thmin ", source_range + 1, end);
+            source_range = std::min(labelled, pcr.header("range minimum step maximum", source_range + 1, end));
+            if (source_range == end) {
+                pcr.fail("Missing FullProf calculation range", ncy);
+            }
         }
         configure_pattern(pcr, pattern, refine, setup, source_range, calibration, end, !multi);
         if (pattern.background >= 2) {
@@ -2228,8 +2453,17 @@ std::optional<SpaceGroupSettingName> fullprof_default_space_group(const std::str
 
 std::string fullprof_scattering_type(const std::string& type) {
     const auto nuclide_end = type.find_first_not_of("0123456789");
-    return nuclide_end != 0 && nuclide_end != std::string::npos
-        ? type.substr(nuclide_end) + type.substr(0, nuclide_end) : type;
+    if (nuclide_end != 0 && nuclide_end != std::string::npos) {
+        return type.substr(nuclide_end) + type.substr(0, nuclide_end);
+    }
+    if (type.size() >= 3 && (type.back() == '+' || type.back() == '-')) {
+        const auto last_element = type.find_last_not_of("0123456789", type.size() - 2);
+        if (last_element != std::string::npos && last_element + 2 < type.size()) {
+            return type.substr(0, last_element + 1) + type.back() +
+                   type.substr(last_element + 1, type.size() - last_element - 2);
+        }
+    }
+    return type;
 }
 
 Project import_fullprof_project(const std::string& path) {

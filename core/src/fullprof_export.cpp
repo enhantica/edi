@@ -18,6 +18,7 @@
 #include <locale>
 #include <map>
 #include <numbers>
+#include <numeric>
 #include <ostream>
 #include <set>
 #include <string_view>
@@ -289,7 +290,7 @@ bool needs_neutron_lengths(const Structure& structure) {
     return !structure.scattering_lengths_fm.empty() ||
         std::any_of(structure.atom_sites.begin(), structure.atom_sites.end(), [](const auto& site) {
             const auto& type = site->type_symbol.value();
-            return detail::fullprof_scattering_type(type) != type;
+            return !type.empty() && std::isdigit(static_cast<unsigned char>(type.front()));
         });
 }
 
@@ -350,7 +351,8 @@ void write_setup(std::ostream& out, const Bank& bank, std::size_t index) {
                                                                     : value(instrument.setup_wavelength))
             << ' ' << value(instrument.setup_wavelength_2_to_1_ratio) << ' ' << bank.origin << ' '
             << experiment.peak.cutoff_fwhm << ' ' << bank.cthm << ' ' << value(experiment.absorption.mu_r) << ' '
-            << (experiment.peak.asym_beba_limit ? value(experiment.peak.asym_beba_limit) : 180.) << " 0 0\n";
+            << (experiment.peak.asym_beba_limit ? value(experiment.peak.asym_beba_limit) : 180.) << " 0 "
+            << (value(instrument.setup_wavelength_2_to_1_ratio) > 0. ? value(experiment.absorption.mu_r) : 0.) << '\n';
     }
 }
 
@@ -508,10 +510,10 @@ std::string magnetic_label(const Structure& structure, const AtomSite& site) {
 
 void write_magnetic_group(std::ostream& out, const Structure& structure) {
     const auto& magnetic = structure.magnetic.get();
-    if (magnetic.group.number_bns.empty() || held_magnetic_setting(structure) != "a,b,c;0,0,0" ||
-        !magnetic.radial_coefficients.empty() ||
-        (!magnetic.parent.child_transform_pp_abc.empty() && magnetic.parent.child_transform_pp_abc != "a,b,c;0,0,0")) {
-        unsupported(structure.name.value() + ": FullProf magnetic export requires the standard BNS setting and table form factors");
+    const auto setting = held_magnetic_setting(structure);
+    if (magnetic.group.number_bns.empty() || setting.empty() || !bns_transform_consistent(magnetic) ||
+        !magnetic.radial_coefficients.empty()) {
+        unsupported(structure.name.value() + ": FullProf magnetic export requires a named BNS setting and table form factors");
     }
     const auto symmetry = detail::fullprof_magnetic_operators(structure);
     if (symmetry.operators.empty()) {
@@ -519,11 +521,27 @@ void write_magnetic_group(std::ostream& out, const Structure& structure) {
     }
     const auto& group = magnetic.group.name_uni.empty() ? magnetic.group.name_bns : magnetic.group.name_uni;
     out << group << " number: " << magnetic.group.number_bns << " <--Magnetic Space Group Symbol\n"
-        << "Transform to standard: a,b,c;0,0,0\n"
-        << "Parent Space Group: " << structure.space_group.name_h_m.value() << " IT_number: "
-        << space_group_it_number(structure.space_group) << "\nTransform from Parent: a,b,c;0,0,0\n"
-        << "! Nsym Cen N_Clat N_Ant\n" << symmetry.operators.size() << ' '
-        << (symmetry.centrosymmetric ? 2 : 1) << " 0 0\n! Symmetry operators\n";
+        << "Transform to standard: " << setting << '\n'
+        << "Parent Space Group: "
+        << (magnetic.parent.name_h_m_alt.empty() ? structure.space_group.name_h_m.value() : magnetic.parent.name_h_m_alt)
+        << " IT_number: " << (magnetic.parent.it_number.empty() ? std::to_string(space_group_it_number(structure.space_group))
+                                                               : magnetic.parent.it_number)
+        << "\nTransform from Parent: " << (magnetic.parent.child_transform_pp_abc.empty() ? "a,b,c;0,0,0"
+                                                                                         : magnetic.parent.child_transform_pp_abc)
+        << "\n! Nsym Cen N_Clat N_Ant\n" << symmetry.operators.size() << ' '
+        << (symmetry.centrosymmetric ? 2 : 1) << ' ' << symmetry.centerings.size() << ' '
+        << symmetry.anti_centerings.size() << '\n';
+    const auto write_centerings = [&](const auto& centerings, std::string_view heading) {
+        if (!centerings.empty()) {
+            out << heading << '\n';
+        }
+        for (const auto& shift : centerings) {
+            out << shift[0] << ' ' << shift[1] << ' ' << shift[2] << '\n';
+        }
+    };
+    write_centerings(symmetry.centerings, "! Centring vectors");
+    write_centerings(symmetry.anti_centerings, "! Anti-Centring vectors");
+    out << "! Symmetry operators\n";
     for (std::size_t i = 0; i < symmetry.operators.size(); ++i) {
         out << i + 1 << ' ' << symmetry.operators[i] << '\n';
     }
@@ -572,18 +590,29 @@ void write_atoms(std::ostream& out, Structure& structure, Codes& codes, bool mag
             (adp != "Biso" && adp != "Uiso" && adp != "beta")) {
             unsupported(structure.name.value() + ": unsupported atom label, scattering type or ADP for " + label);
         }
-        const auto letter = site->wyckoff_letter.empty() ? detail::inferred_wyckoff_letter(structure, *site)
-                                                        : site->wyckoff_letter.value();
-        const auto site_position = std::find_if(positions.begin(), positions.end(), [&](const auto& position) {
-            return position.letter == letter;
-        });
-        if (site_position == positions.end() || general <= 0) {
+        int multiplicity = 0;
+        int general_multiplicity = general;
+        if (magnetic && positions.empty()) {
+            const auto geometry = detail::fullprof_site_geometry(structure, *site);
+            multiplicity = geometry.site_multiplicity;
+            general_multiplicity = geometry.general_multiplicity;
+        } else {
+            const auto letter = site->wyckoff_letter.empty() ? detail::inferred_wyckoff_letter(structure, *site)
+                                                            : site->wyckoff_letter.value();
+            const auto site_position = std::find_if(positions.begin(), positions.end(), [&](const auto& position) {
+                return position.letter == letter;
+            });
+            if (site_position != positions.end()) {
+                multiplicity = site_position->multiplicity;
+            }
+        }
+        if (multiplicity <= 0 || general_multiplicity <= 0) {
             unsupported(structure.name.value() + ": cannot establish site multiplicity for " + label);
         }
         const bool tensor = adp == "beta";
         const std::vector<Field> row{codes.field(site->fract_x), codes.field(site->fract_y), codes.field(site->fract_z),
                                      tensor ? Field{0.} : codes.field(site->adp_iso, adp == "Uiso" ? 8. * std::numbers::pi * std::numbers::pi : 1.),
-                                     codes.field(site->occupancy, static_cast<double>(site_position->multiplicity) / general)};
+                                     codes.field(site->occupancy, static_cast<double>(multiplicity) / general_multiplicity)};
         out << label << ' ' << type;
         if (magnetic) {
             out << (moment_present ? " 1 0" : " 0 0");
@@ -708,9 +737,7 @@ void write_single_crystal(Project& project, const fs::path& folder, Codes& codes
     auto& structure = *project.structures[0];
     const auto& first = *project.experiments[0];
     require_structure(structure);
-    if (structure_magnetic(structure)) {
-        unsupported("FullProf magnetic single-crystal export requires a reflection-specific conversion");
-    }
+    const bool magnetic = structure_magnetic(structure);
     const bool tof = first.effective_beam_mode() == BeamModeEnum::TIME_OF_FLIGHT;
     const bool xray = first.experiment_type.effective_radiation_probe() == RadiationProbeEnum::XRAY;
     const auto wavelength = value(first.instrument.setup_wavelength);
@@ -718,7 +745,7 @@ void write_single_crystal(Project& project, const fs::path& folder, Codes& codes
     const auto extinction_type = first.extinction.type.value_or("none");
     const bool anisotropic = extinction_type == "larson-anisotropic";
     const bool isotropic = extinction_type == "larson-isotropic";
-    if ((tof && xray) || (!tof && wavelength <= 0.) ||
+    if ((tof && xray) || (magnetic && xray) || (!tof && wavelength <= 0.) ||
         (!anisotropic && !isotropic && extinction_type != "none")) {
         unsupported("single-crystal wavelength, probe or extinction law");
     }
@@ -786,10 +813,11 @@ void write_single_crystal(Project& project, const fs::path& folder, Codes& codes
         << "! Data for PHASE number: 1\n"
         << "!-------------------------------------------------------------------------------\n"
         << structure.name.value() << "\n!Nat Dis Ang Pr1 Pr2 Pr3 Jbt Irf Isy Str Furth ATZ Nvk Npr More\n"
-        << structure.atom_sites.size() << " 0 0 0 0 1 0 4 0 0 0 0 0 0 1\n"
+        << structure.atom_sites.size()
+        << (magnetic ? " 0 0 0 0 1 10 4 2 0 0 0 0 0 1\n" : " 0 0 0 0 1 0 4 0 0 0 0 0 0 1\n")
         << "!Jvi Jdi Hel Sol Mom Ter Brind RMua RMub RMuc Jtyp Nsp_Ref Ph_Shift N_Domains\n"
         << "0 0 0 0 0 0 1 " << first.dataset_weight << ' ' << threshold << " 0 " << job << " 0 0 0\n";
-    write_atoms(out, structure, codes);
+    write_atoms(out, structure, codes, magnetic);
     out << "!-------> Scale, Extinction and Cell Parameters for Pattern # 1\n";
     pair_rows(out, "Sc1 Sc2 Sc3 Sc4 Sc5 Sc6", scales);
     pair_rows(out, "Ext1 Ext2 Ext3 Ext4 Ext5 Ext6 Ext7 Ext-Model", extinction, anisotropic ? " 4" : " 1");
@@ -906,8 +934,18 @@ void write_pcr(Project& project, const fs::path& folder, bool fixed) {
         const auto& exclusions = banks[i].model->excluded_regions;
         if (!exclusions.empty()) {
             out << "! Excluded regions (LowT HighT) for Pattern# " << i + 1 << '\n';
+            const auto& axis = banks[i].data().axis();
             for (const auto& row : exclusions) {
-                out << row->first.get() << ' ' << row->second.get() << '\n';
+                const auto first = row->first.get();
+                const auto last = row->second.get();
+                const auto channel = std::lower_bound(axis.begin(), axis.end(), first);
+                // FullProf converts lower exclusion endpoints to a preceding bin.
+                // An exact channel value can round down on its float32 axis.
+                double start = first;
+                if (channel != axis.end() && *channel == first && std::next(channel) != axis.end()) {
+                    start = std::midpoint(first, std::min(last, *std::next(channel)));
+                }
+                out << start << ' ' << last << '\n';
             }
         }
     }

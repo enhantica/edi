@@ -13,9 +13,12 @@ or single-crystal `.int` beside the `.pcr`, with the filename expected by FullPr
 project with the imported phases, experiments, observations and refinement settings. Use **Save
 project as…** to write the native project. The original FullProf project stays available.
 
-The importer supports labelled FullProf control files for compatible nuclear diffraction models.
-If a profile, instrument correction or occupancy convention lacks a compatible EDI
-representation, the app identifies the input that needs manual conversion.
+The importer reads labelled single- and multi-pattern controls for supported X-ray and neutron
+powder models and neutron single-crystal experiments. It reads FullProf measured-data formats,
+including XYDATA, stepped and ILL powder data, and GSAS ALT data. An INT file can contain
+several reflection datasets with their own wavelength or scale. Compatible commensurate
+magnetic phases use the native magnetic structure model. The app reports missing files,
+unsupported model terms and ambiguous conversions.
 
 ## The one loader
 
@@ -162,11 +165,13 @@ back on the `FitResultBase`.
 
 Choose **Export to FullProf…** on the desktop Project page. Select a parent folder. EDI
 creates a new `<project-name>-fullprof` folder with `project.pcr` and its powder `.dat`
-or single-crystal `.int`. An existing folder with that name requires a different destination.
+or single-crystal `.int` companions. An existing folder with that name requires a different
+destination. Powder simulations export their regular calculation grid, and representable
+external calibration values are written into the PCR.
 
 **Fix all parameters for a forward calculation** evaluates the EDI model's constraints and exports
-the settled values. Clear the checkbox to retain representable independent refinement flags.
-The command-line equivalent for a fixed export is:
+the settled values. Clear the checkbox to export independent refinement flags and affine links
+with one free source. Run the same fixed export from the command line with
 
 ```sh
 easydiffraction export-fullprof path/to/project path/to/fullprof-copy --fixed

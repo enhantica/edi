@@ -29,7 +29,13 @@ describes the equivalent manual construction through normal project actions.
 4. A nonzero FullProf codeword identifies a signed shift within a refinement group. Retain the
    starting value and use native parameter aliases and affine constraints for shared shifts. A
    declared zero refined-parameter count imports a fixed model.
-5. Report unsupported source terms and missing data before adopting the project. Verification uses
+5. Compatible polynomial CW and TOF instrument resolution files supply values for the native
+   instrument calibration and peak shape. Their effective values are exported inline. GSAS RALF
+   ALT observations use forward bin widths and keep the file's uncertainty scaled with intensity.
+6. Convert compatible commensurate magnetic descriptions through native signed symmetry
+   operators and magnetic moments. The combined FullProf magnetic phase form can carry magnetic
+   centering vectors and BNS setting information.
+7. Report unsupported source terms and missing data before adopting the project. Verification uses
    FullProf's fixed-input calculated intensities on matched observations, with excluded rows
    removed from the metric. The bundled assistant skill also describes manual export to FullProf.
 

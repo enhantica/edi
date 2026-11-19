@@ -148,3 +148,32 @@ def test_fullprof_combines_nuclear_and_magnetic_overlays():
     assert np.linalg.norm(calculated[included] - reference_y[included]) / np.linalg.norm(
         reference_y[included]
     ) < 0.01
+
+
+
+def test_fullprof_reads_forward_bin_widths_in_gsas_ralf(tmp_path):
+    source = ROOT / 'knowledge/fitting/fullprof/pd-neut-tof_ceo2-pearl_polynomial'
+    control = (source / 'Ceo2_PEARL.pcr').read_text()
+    control = control.replace(' -3  10 ', ' -3  12 ', 1).replace(
+        'DAT-file: full-fit.dat', 'DAT-file: raw.dat', 1
+    )
+    (tmp_path / 'pearl.pcr').write_text(control)
+    copyfile(source / 'Ceo2_PEARL.ralf', tmp_path / 'raw.dat')
+
+    pattern = edi.Project.load(tmp_path / 'pearl.pcr').experiments[0].data
+    assert len(pattern.axis()) == 2523
+    assert pattern.axis()[:2] == pytest.approx([1500.25, 1502.25])
+    assert pattern.intensity_meas[:2] == pytest.approx([3471.65, 3373.25])
+    assert pattern.intensity_meas_su[:2] == pytest.approx([85.2, 84.1])
+
+
+
+def test_fullprof_moves_an_equivalent_site_to_its_wyckoff_representative():
+    source = REFERENCES / 'pd-neut-cwl_lab6-11b-echidna_tch-fcj' / 'ECH0030684_LaB6_1p622A.pcr'
+    project = edi.Project.load(source)
+    boron = project.structures[0].atom_sites[1]
+    assert boron.type_symbol == '11B'
+    x = boron.fract_x.value
+    assert [min(x, 1 - x), boron.fract_y.value, boron.fract_z.value] == pytest.approx(
+        [0.19978, 0.5, 0.5]
+    )

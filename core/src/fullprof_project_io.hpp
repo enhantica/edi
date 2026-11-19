@@ -19,8 +19,19 @@ std::optional<double> fullprof_default_neutron_length(const std::string& type);
 std::string fullprof_scattering_type(const std::string& type);
 std::string fullprof_signed_operator(const std::string& spatial, const std::string& moment);
 std::string fullprof_inverted_operator(const std::string& operation);
+struct FullProfSiteGeometry {
+    std::string letter;
+    std::array<double, 3> representative;
+    std::array<int, 9> rotation;
+    int general_multiplicity;
+    int site_multiplicity;
+};
+FullProfSiteGeometry fullprof_site_geometry(const Structure& structure, const AtomSite& site);
+std::array<double, 6> fullprof_rotated_beta(const std::array<double, 6>& beta, const std::array<int, 9>& rotation);
 struct FullProfMagneticOperators {
     std::vector<std::string> operators;
+    std::vector<std::array<double, 3>> centerings;
+    std::vector<std::array<double, 3>> anti_centerings;
     bool centrosymmetric = false;
 };
 FullProfMagneticOperators fullprof_magnetic_operators(const Structure& structure);
