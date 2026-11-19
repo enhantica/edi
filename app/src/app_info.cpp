@@ -7322,13 +7322,13 @@ void ApplicationInfo::tableDestroyed() const {
 }
 QJSValue ApplicationInfo::tableTextWidth(int row, const QString& role) const {
     const auto f = panelUsageEngine(this); QJSValue text(QString{});
-    auto model = panelUsageContextRead(f, "model"); const auto method = panelUsageRead(f, model, "text");
+    auto model = panelUsageContextRead(f, "sourceModel"); const auto method = panelUsageRead(f, model, "text");
     if (tableTypeof(f, method).strictlyEquals(QJSValue(QStringLiteral("function")))) {
-        model = panelUsageContextRead(f, "model"); text = panelUsageMemberCall(f, model, "text", {QJSValue(row), QJSValue(role)});
+        model = panelUsageContextRead(f, "sourceModel"); text = panelUsageMemberCall(f, model, "text", {QJSValue(row), QJSValue(role)});
     } else {
-        model = panelUsageContextRead(f, "model");
+        model = panelUsageContextRead(f, "sourceModel");
         if (tableTypeof(f, panelUsageRead(f, model, "get")).strictlyEquals(QJSValue(QStringLiteral("function")))) {
-            model = panelUsageContextRead(f, "model"); const auto object = panelUsageMemberCall(f, model, "get", {QJSValue(row)});
+            model = panelUsageContextRead(f, "sourceModel"); const auto object = panelUsageMemberCall(f, model, "get", {QJSValue(row)});
             const auto value = tableNullish(textIndex(f, object, QJSValue(role)), QJSValue(QString{})); text = panelUsageGlobalCall(f, "String", {value});
         }
     }

@@ -187,7 +187,7 @@ Column {
             }
             // The point's calculation status as an icon, the word in its tooltip, as the experiments' fit column.
             IconCell {
-                readonly property string status: !table.model ? "" : table.model.stale ? "pending" : table.model.calculationError ? "failed" : row.model.calcStatus ?? ""
+                readonly property string status: !table.sourceModel ? "" : table.sourceModel.stale ? "pending" : table.sourceModel.calculationError ? "failed" : row.model.calcStatus ?? ""
 
                 horizontalAlignment: Text.AlignHCenter
                 objectName: `data.status.${row.index}`

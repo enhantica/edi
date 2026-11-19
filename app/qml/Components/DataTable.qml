@@ -21,7 +21,14 @@ EaComponents.ListView {
 
     // The selection model needs an explicit empty model while a page is being attached.
     property var sourceModel: null
-    model: sourceModel ?? null
+    // An item model is shown through a mirror: another block's model of the same kind (the next experiment's rows)
+    // keeps the rows made for the last one, each reading its new data (ADR-0096 rule 2). A plain list is shown as it
+    // is. Code that calls the model's own functions uses sourceModel.
+    readonly property bool mirrorsRows: sourceModel !== null && typeof sourceModel === "object" && typeof sourceModel.rowCount === "function"
+    readonly property ListModelMirror rowsMirror: ListModelMirror {
+        source: table.mirrorsRows ? table.sourceModel : null
+    }
+    model: mirrorsRows ? rowsMirror : (sourceModel ?? null)
     multiSelection: false
     // A click on any cell makes its row current, an editable cell's too (the owner, 2026-10-22): an editor taking
     // focus selects its row, as a click on the row's background does.
