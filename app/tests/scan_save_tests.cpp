@@ -544,12 +544,6 @@ private slots:
         QVERIFY(QTest::qWaitForWindowExposed(window));
         auto* session = engine.singletonInstance<edi_app::Session*>("edi.app", "Session");
         QVERIFY(session && !session->hasProject());
-        QQmlExpression open(qmlContext(window), window, QStringLiteral("AppState.open(AppState.Page.Project)"));
-        open.evaluate();
-        QVERIFY(!open.hasError());
-        QTRY_VERIFY_WITH_TIMEOUT(session->hasProject(), 20000);
-        QVERIFY(session->untitled());
-        QVERIFY(session->needsSaveAs());
         const auto named = [window](const char* name) {
             const QString wanted = QString::fromLatin1(name);
             const auto visit = [&](auto&& visit, QQuickItem* item) -> QQuickItem* {
@@ -561,10 +555,25 @@ private slots:
             };
             return visit(visit, window->contentItem());
         };
-        QQuickItem* create = nullptr;
-        QTRY_VERIFY_WITH_TIMEOUT((create = named("project.create")), 20000);
-        QTest::mouseClick(window, Qt::LeftButton, {},
-                          create->mapToScene(QPointF(create->width() / 2, create->height() / 2)).toPoint());
+        const auto click = [&](const char* name) {
+            QQuickItem* item = nullptr;
+            QTRY_VERIFY_WITH_TIMEOUT((item = named(name)) && item->isVisible() && item->isEnabled()
+                && window->contentItem()->boundingRect().contains(item->mapRectToScene(item->boundingRect())), 20000);
+            QTest::mouseClick(window, Qt::LeftButton, {},
+                              item->mapToScene(QPointF(item->width() / 2, item->height() / 2)).toPoint());
+        };
+        QQmlExpression state(qmlContext(window), window, QStringLiteral(
+            "JSON.stringify([EaGlobals.Vars.appBarCurrentIndex, AppState.reached, Session.hasProject, Session.untitled, "
+            "AppState.projectPageEnabled, AppState.structurePageEnabled, AppState.experimentPageEnabled, "
+            "AppState.analysisPageEnabled, AppState.reportPageEnabled])"));
+        const QString startup = state.evaluate().toString();
+        QVERIFY(!state.hasError());
+        QCOMPARE(startup, QStringLiteral("[0,0,false,false,false,false,false,false,false]"));
+        click("home.start");
+        QTRY_VERIFY_WITH_TIMEOUT(session->hasProject(), 20000);
+        QVERIFY(session->untitled());
+        QVERIFY(session->needsSaveAs());
+        click("project.create");
         QTRY_VERIFY_WITH_TIMEOUT(named("createProject.name") && named("createProject.name")->isVisible(), 20000);
         const auto placeholder = [&](const char* name) {
             const auto* field = named(name);
@@ -589,6 +598,19 @@ private slots:
         QVERIFY(!session->needsSaveAs());
         QCOMPARE(session->project()->project().structures.size(), std::size_t{1});
         QVERIFY(QFileInfo::exists(location + QStringLiteral("/project.edi")));
+        click("appBar.button.reset");
+        QTRY_VERIFY(!session->hasProject());
+        QTRY_COMPARE(state.evaluate().toString(), startup);
+        QVERIFY(!state.hasError());
+        click("home.start");
+        QTRY_VERIFY(session->hasProject());
+        QVERIFY(session->untitled());
+        QVERIFY(session->needsSaveAs());
+        QVERIFY(session->project()->project().structures.empty());
+        QVERIFY(session->project()->project().experiments.empty());
+        click("appBar.button.reset");
+        QTRY_VERIFY(!session->hasProject());
+        QTRY_COMPARE(state.evaluate().toString(), startup);
     }
 
     // A 2θ offset that moves the lowest points below 0° leaves them out of the calculation instead of refusing it, and
