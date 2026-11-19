@@ -108,7 +108,7 @@ private slots:
         };
         auto* dataFile = root->findChild<QQuickItem*>("experiments.load.dataFile");
         QVERIFY(dataFile);
-        QVERIFY(!dataFile->isEnabled());
+        QCOMPARE(dataFile->property("text").toString(), QString("File…"));
         QVERIFY2(click("experiments.create"), qPrintable(diagnostic));
         QTRY_VERIFY(project.currentExperiment());
         auto* group = root->findChild<QQuickItem*>("group.experiments");
@@ -123,6 +123,7 @@ private slots:
         auto* menu = root->findChild<QObject*>("experiments.load.dataMenu");
         QVERIFY(menu);
         QTRY_VERIFY(menu->property("visible").toBool());
+        QCOMPARE(menu->property("target").value<QObject*>(), project.currentExperiment());
         QVERIFY(dataFile->isEnabled());
         QVERIFY2(click("experiments.load.dataWeb"), qPrintable(diagnostic));
         auto* popup = root->findChild<QObject*>("onlineLoad");
@@ -155,6 +156,7 @@ private slots:
                 width: 800; height: 600; visible: true
                 SearchableComboBox {
                     objectName: "alias.parameter.0"
+                    searchThreshold: 0
                     x: 40; y: 40; width: 500
                     readonly property var names: ["phase.cell.length_a", "phase.cell.length_b"]
                     model: ["cube a · phase.cell.length_a", "cube b · phase.cell.length_b"]
