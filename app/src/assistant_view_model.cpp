@@ -4030,6 +4030,7 @@ struct AssistantViewModel::State {
         // An alias add_relations appended whose parameter is not chosen yet: removed if the run stops there, so no alias
         // is left on the selector's default target.
         const void* partial_alias = nullptr;
+        bool partial_alias_removed = false;
         // The tool and arguments as admitted, so a refused cue can still run the operation as normal mode does.
         QString fallback_tool;
         Object fallback_args;
@@ -4589,6 +4590,12 @@ struct AssistantViewModel::State {
         // externally reentrant QML stage cleanup, and fence any continuation
         // after its ordinary completion/pointer notifications against B.
         try { if (original_cleanup() && helper) helper->cancel(); } catch (...) {}
+        // Every exit of add_relations, Stop and retirement included, removes an alias it left unfinished; the retained
+        // outcome then says so.
+        if (run->tool == "add_relations") {
+            drop_partial_alias(run);
+            if (run->partial_alias_removed) try { widget_sequence_retain(run); } catch (...) {}
+        }
         if (original_cleanup() && publishing && (!generic_busy || generic_revoke_pending ||
             generic_clear_pending || generic_context_pending || !generic_authenticated || generic_retiring))
             try { widget_showing(false); } catch (...) {}
@@ -4730,6 +4737,59 @@ struct AssistantViewModel::State {
             return false;
         }
     }
+    // A later set_parameters/set_free entry whose control could not be shown (the first uses widget_cue_fallback):
+    // the entries already done stay, the unentered rest runs once through the ordinary edit normal mode uses (one
+    // Undo), and the result names the skipped cue. An entry whose input began, a manual draft, a cancellation or a
+    // stale context still refuses.
+    bool widget_parameter_fallback(const std::shared_ptr<NativeWidget>& run, const QString& message) noexcept {
+        try {
+            if ((run->tool != "set_parameters" && run->tool != "set_free") || run->parameter_entries.empty() || run->cue_fallback ||
+                run->completed_steps == 0 || run->parameter_at >= run->parameter_entries.size() || !run->window ||
+                !run->create_parent.expired() || !cue_fallback_admitted(run->call) || !widget_current(run) || !project ||
+                run->project != project)
+                return false;
+            if (run->parameter_uncertain || (run->input && (run->input->consumed || run->input->outcome.applied))) return false;
+            if (widget_input && widget_input->manualDraftPresent()) return false;
+            const bool values = run->tool == "set_parameters";
+            QJsonArray rest;
+            for (auto at = run->parameter_at; at < run->parameter_entries.size(); ++at) {
+                const auto& entry = run->parameter_entries[at];
+                rest.append(values ? Object{{"path", entry.path}, {"value", entry.value}} : Object{{"path", entry.path}, {"free", entry.free}});
+            }
+            const auto remaining = static_cast<qsizetype>(run->parameter_entries.size() - run->parameter_at);
+            std::vector<std::pair<std::string, bool>> before_flags;
+            auto edit = assistant_native_edit(*project->assistantProject(), run->tool, Object{{values ? "values" : "flags", rest}}, before_flags);
+            if (!edit) return false;
+            run->cue_fallback = true;
+            run->cue_skipped = message.isEmpty() ? QStringLiteral("The original control could not be shown") : message;
+            try { qInfo().noquote() << "assistant: Show actions cue skipped for" << run->tool << "entry" << run->parameter_at << "reason" << run->cue_skipped; } catch (...) {}
+            // Release the unentered entry's prepared input and own edit before the ordinary edit.
+            if (const auto input = std::exchange(run->input, nullptr)) run->project->finishWidgetInput(input);
+            if (const auto scope = std::exchange(run->edit_scope, 0)) end_own_edit(scope);
+            const auto receiver = run->receiver;
+            const auto record = run->call.record;
+            const QPointer<ProjectViewModel> target(project);
+            const auto scope = begin_own_edit();
+            native_call->may_have_written = true;
+            ProjectViewModel::EditOutcome result;
+            try { result = target->applyRecordedEdit(*edit, false); }
+            catch (...) { end_own_edit(scope); throw; }
+            end_own_edit(scope);
+            if (!receiver || receiver->state_.get() != this || !target || project != target || !native_call || native_call->record != record)
+                return true;  // whoever replaced the call owns its reply
+            const bool complete = result.applied && result.published;
+            native_finish(complete,
+                {{"status", !result.applied ? "partial" : result.published ? "edited" : "applied_unconfirmed"},
+                 {"steps_completed", static_cast<qint64>(run->completed_steps + (result.applied ? remaining : 0))},
+                 {"complete", complete}, {"atomic", false}, {"calculation_pending", target->calculating()},
+                 {"cue_skipped", bounded_error(run->cue_skipped)},
+                 {"message", bounded_error(result.message.isEmpty() ? cue_skipped_message(run->cue_skipped) : result.message)}});
+            if (receiver && receiver->state_.get() == this && widget_owned(run)) widget_end(run);
+            return true;
+        } catch (...) {
+            return false;
+        }
+    }
     // A later add_relations step whose control could not be shown (the first step uses widget_cue_fallback): the
     // earlier visible steps stay, this step and the rest run through the ordinary model methods, and the result names
     // the skipped cue. A step whose edit already began, a cancellation or a stale context still refuses.
@@ -4759,24 +4819,37 @@ struct AssistantViewModel::State {
             return false;
         }
     }
-    // The alias add_relations appended and left on its default target, removed when the run stops before choosing
-    // its parameter; only that exact row, still in the project.
+    // The alias add_relations appended and left on its default target, removed when the run ends (refused, stopped,
+    // signed out, disconnected) before its parameter was chosen; only that exact row, still in the current project.
+    // An Append that applied before its step was recorded (Stop during its publication) owns the last row.
     void drop_partial_alias(const std::shared_ptr<NativeWidget>& run) noexcept {
-        const void* partial = std::exchange(run->partial_alias, nullptr);
-        if (!partial || run->tool != "add_relations" || !run->project) return;
         try {
+            const void* partial = std::exchange(run->partial_alias, nullptr);
+            if (run->tool != "add_relations" || !run->project || run->project != project) return;
             const auto& aliases = run->project->assistantProject()->aliases;
-            for (std::size_t at = 0; at < aliases.size(); ++at) {
-                if (aliases[at].get() == partial) {
-                    run->project->analysis()->aliases()->remove(static_cast<int>(at));
-                    return;
-                }
+            const auto& input = run->relation_input;
+            if (!partial && input && !run->step_counted && input->consumed && input->outcome.applied &&
+                input->expected.kind == ProjectEditor::RelationAction::Kind::AliasAppend) {
+                const auto position = run->relation_base + run->relation_row;
+                if (position >= 0 && position + 1 == static_cast<qsizetype>(aliases.size()))
+                    partial = aliases[static_cast<std::size_t>(position)].get();
             }
-        } catch (...) {}  // the original refusal stands; a later reread shows the row
+            if (!partial) return;
+            // Remove is its own ordinary relation action: release this run's prepared one first.
+            if (input) run->project->finishWidgetRelations(input);
+            for (std::size_t at = 0; at < aliases.size(); ++at) {
+                if (aliases[at].get() != partial) continue;
+                const auto scope = begin_own_edit();
+                const auto release = qScopeGuard([this, scope]() noexcept { end_own_edit(scope); });
+                run->project->analysis()->aliases()->remove(static_cast<int>(at));
+                run->partial_alias_removed = std::none_of(aliases.begin(), aliases.end(), [partial](const auto& row) { return row.get() == partial; });
+                return;
+            }
+        } catch (...) {}  // the original outcome stands; a later reread shows the row
     }
     void widget_refuse(const std::shared_ptr<NativeWidget>& run, const QString& message,
                        std::source_location caller = std::source_location::current()) noexcept {
-        if (widget_owned(run) && widget_relation_fallback(run, message)) return;
+        if (widget_owned(run) && (widget_relation_fallback(run, message) || widget_parameter_fallback(run, message))) return;
         drop_partial_alias(run);
         if (const auto parent = run->create_parent.lock()) {
             if (!widget_owned(run)) return;
@@ -7193,6 +7266,7 @@ struct AssistantViewModel::State {
             result["cue_skipped"]=bounded_error(run->cue_skipped);
             result["message"]=bounded_error(message+QLatin1Char(' ')+cue_skipped_message(run->cue_skipped));
         }
+        if(run->partial_alias_removed)result["incomplete_alias_removed"]=true;
         if(run->estimate_then_names) {
             result["applied"]=true;
             result["published"]=run->call.record->estimate_receipt && run->call.record->estimate_receipt->published;
@@ -7369,6 +7443,8 @@ struct AssistantViewModel::State {
             : run->relation_field == 2 ? (run->relation_constraint ? projectModel.constraints[static_cast<std::size_t>(at)]->expression.value() : projectModel.aliases[static_cast<std::size_t>(at)]->parameter_unique_name.value()) == value.toStdString()
             : run->relation_field == 3 && projectModel.constraints[static_cast<std::size_t>(at)]->enabled.get() == action.enabled;
         if (unchanged) {
+            // The alias already has its requested parameter: it is complete, no longer disposable.
+            if (run->relation_field == 2 && !run->relation_constraint) run->partial_alias = nullptr;
             ++run->relation_field;
             if (run->relation_field == (run->relation_constraint ? 4 : 3)) { ++run->relation_row; run->relation_field = 0; run->relation_key = nullptr; }
             widget_relation_step(run); return;
