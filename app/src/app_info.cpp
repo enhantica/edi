@@ -7151,6 +7151,12 @@ void ApplicationInfo::tableFitWholeModel() const {
         if (editorLife(f, life)) panelUsageContextWrite(f, "unfitted", QJSValue(true));
         return;
     }
+    // Sliced only when the table already has widths to keep meanwhile; a first fit is made at once.
+    const auto fitted = panelUsageContextRead(f, "contentWidths");
+    const bool sliced = panelUsageTruth(panelUsageContextRead(f, "liveRefit")) && panelUsageTruth(fitted)
+                        && panelUsageRead(f, fitted, "length").toInt() > 0;
+    panelUsageContextWrite(f, "liveRefit", QJSValue(false)); if (!editorLife(f, life)) return;
+    panelUsageContextWrite(f, "measureSliced", QJSValue(sliced)); if (!editorLife(f, life)) return;
     panelUsageContextWrite(f, "unfitted", QJSValue(false)); if (!editorLife(f, life)) return;
     panelUsageContextWrite(f, "measuredWidths", consentNull()); if (!editorLife(f, life)) return;
     const int run = panelUsageContextRead(f, "measureRun").toInt() + 1;
@@ -7182,7 +7188,8 @@ void ApplicationInfo::tableMeasureRows(int run, int from) const {
     // columns to their headers alone, so the pass stops there and goes on from that row 100 ms later, for at most ten
     // seconds; a row still not made then is left out.
     bool waiting = false;
-    while (panelUsageReady(f) && next < total && (total <= atOnce || started.elapsed() < 20)) {
+    const bool atOnceAllowed = total <= atOnce && !panelUsageTruth(panelUsageContextRead(f, "measureSliced"));
+    while (panelUsageReady(f) && next < total && (atOnceAllowed || started.elapsed() < 20)) {
         const auto row = panelUsageMemberCall(f, panelUsageRead(f, measuring, "items"), "create", {QJSValue(next)});
         if (!editorLife(f, life)) return;
         if (!panelUsageTruth(row)) {
@@ -7373,6 +7380,7 @@ void ApplicationInfo::tableDataChanged(const QJSValue& topLeft, const QJSValue& 
     // series' 100 runs at each fitted run, off screen, was most of the GUI thread's stalls during a fit.
     const auto table = panelUsageContextRead(f, "table");
     if (panelUsageTruth(panelUsageRead(f, table, "onScreen"))) {
+        assistantMemberWrite(f, table, "liveRefit", QJSValue(true)); if (!editorLife(f, panelUsageContextRead(f, "ownerLife"))) return;
         projectInvoke(f, "table", "refit"); if (!editorLife(f, panelUsageContextRead(f, "ownerLife"))) return;
     } else {
         assistantMemberWrite(f, table, "unfitted", QJSValue(true)); if (!editorLife(f, panelUsageContextRead(f, "ownerLife"))) return;

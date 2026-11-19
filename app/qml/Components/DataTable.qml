@@ -163,6 +163,10 @@ EaComponents.ListView {
     // background did not, measured a frame at a time). A larger one (a pattern's points) is measured a frame's worth
     // of rows at a time, so the window keeps responding; a new change of the content starts it again.
     readonly property int measuredAtOnce: 200
+    // A refit for values that changed while the table shows (a running fit's rows) is measured in slices like a long
+    // model, whatever its length, and the columns keep their widths until it ends (ADR-0096 rule 2).
+    property bool liveRefit: false
+    property bool measureSliced: false
     property int measureRun: 0
     property var measuredWidths: null
     function measureRows(run, from) {
