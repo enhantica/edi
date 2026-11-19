@@ -1434,6 +1434,9 @@ void PatternChartController::refresh() {
         for (const BandSeries& filled : band_series_) {
             for (const auto* series : {&filled.upper, &filled.lower, &filled.top, &filled.bottom}) trace_series_.append(*series);
         }
+        for (const StructureSeries& curve : structure_series_) {
+            for (const auto* series : {&curve.upper, &curve.lower, &curve.outline}) trace_series_.append(*series);
+        }
         trace_upload_identity_ = traceBufferIdentity();
     }
 #endif
@@ -1441,9 +1444,17 @@ void PatternChartController::refresh() {
 
 #if EDI_UI_INSTRUMENTATION
 QString PatternChartController::traceBufferIdentity() const {
-    // Every point of every filled series, read from the series objects: what the scene draws for this chart.
+    // Every point of every filled series and of the measured markers, read from the scene objects: what the scene
+    // draws for this chart. Empty while no measured point is drawn: the measured data are the required fill.
+    if (traceMeasuredPoints().isEmpty() && traceMeasuredBand().isEmpty()) return {};
     QCryptographicHash hash(QCryptographicHash::Sha256);
     bool finite = false;
+    if (measured_layer_) {
+        const QList<QPointF>& marks = measured_layer_->points();
+        hash.addData(QByteArrayView("marks", 5));
+        hash.addData(QByteArrayView(reinterpret_cast<const char*>(marks.constData()),
+                                    marks.size() * static_cast<qsizetype>(sizeof(QPointF))));
+    }
     for (qsizetype index = 0; index < trace_series_.size(); ++index) {
         const QPointer<QXYSeries>& series = trace_series_[index];
         hash.addData(QByteArray::number(index));
@@ -1454,6 +1465,31 @@ QString PatternChartController::traceBufferIdentity() const {
                                     points.size() * static_cast<qsizetype>(sizeof(QPointF))));
     }
     return finite ? QString::fromLatin1(hash.result().toHex().left(16)) : QString();
+}
+
+QList<QPointF> PatternChartController::traceMeasuredPoints() const {
+    QList<QPointF> points;
+    const auto finite = [](const QPointF& point) { return std::isfinite(point.x()) && std::isfinite(point.y()); };
+    if (measured_series_) {
+        for (const QPointF& point : measured_series_->points()) if (finite(point)) points.append(point);
+    }
+    if (measured_layer_) {
+        for (const QPointF& point : measured_layer_->points()) if (finite(point)) points.append(point);
+    }
+    return points;
+}
+
+QList<std::array<double, 3>> PatternChartController::traceMeasuredBand() const {
+    QList<std::array<double, 3>> edges;
+    const BandSeries& band = band_series_[0];
+    if (!band.top || !band.bottom) return edges;
+    const QList<QPointF> top = band.top->points(), bottom = band.bottom->points();
+    for (qsizetype i = 0; i < std::min(top.size(), bottom.size()); ++i) {
+        if (std::isfinite(top[i].x()) && std::isfinite(top[i].y()) && std::isfinite(bottom[i].y()) &&
+            top[i].x() == bottom[i].x())
+            edges.append({top[i].x(), bottom[i].y(), top[i].y()});
+    }
+    return edges;
 }
 #endif
 

@@ -205,6 +205,12 @@ class DemoDriver : public QObject {
     QList<FrameWatch> frame_watches_;   // GUI thread; the render thread reads them only while the GUI thread waits
     QString input_identity_;
     std::pair<std::uint64_t, QString> native_cache_;  // the native identity, by the project's applied view
+    std::vector<std::pair<double, double>> native_points_;  // its (x, measured) pairs, by x
+    int native_dataset_ = -1;                                // the selection they are of
+    // Whether every measured point the chart draws is a point of the selected data as the project holds it (a band:
+    // its edges at a data x bracket the value there), with at least one drawn: read on the render thread while the
+    // GUI thread waits.
+    bool trace_matches_native(const PatternChartController* controller, int dataset) const;
     QList<QPointer<QQuickItem>> page_tabs_, view_tabs_;
     int fit_runs_ = 0;
     bool fit_running_ = false;

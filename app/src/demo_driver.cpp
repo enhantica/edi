@@ -1950,7 +1950,7 @@ void DemoDriver::trace_watch() {
         const int points = series_points > 0 ? series_points
                            : scan && project->experiments() != nullptr ? project->experiments()->rowCount() : 0;
         EDI_UI_TRACE("input", {{"identity", input_identity_}, {"input", input_identity_}, {"banks", banks},
-                               {"measured", points > 0 ? points * std::max(1, with_data) : with_data},
+                               {"measured", with_data > 0}, {"measured_banks", with_data},
                                {"points", points}, {"data_points", data_points},
                                {"structures", static_cast<int>(core.structures.size())}});
         if (FitViewModel* fit = project->fit(); fit != nullptr) {
@@ -1968,31 +1968,51 @@ void DemoDriver::trace_watch() {
     trace_sync_ = connect(&window_, &QQuickWindow::afterSynchronizing, this, [this] {
         const QJsonObject displayed = trace_state();
         QJsonArray frames, presented;
+        // One observation a swap, so the swap's render names one request: a press's first frame comes first (it must
+        // be the first swap after the press); a settled frame waits for the next swap, which checks it again.
+        FrameWatch* chosen = nullptr;
+        bool settling = false;
         for (FrameWatch& watch : frame_watches_) {
-            if (!watch.chart || watch.settled) continue;
-            // Settled: the series objects hold, for this frame, the points of the upload that presented the selected
-            // dataset: read back now and compared with what that upload put there. A later upload with other points,
-            // or no fill, does not settle it.
-            const QString buffers = watch.presented && watch.controller ? watch.controller->traceBufferIdentity() : QString();
-            const bool settles = !buffers.isEmpty() && buffers == watch.upload;
-            if (watch.first && !settles) continue;
+            if (watch.chart && !watch.first) {
+                chosen = &watch;
+                break;
+            }
+        }
+        QString buffers;
+        if (chosen == nullptr) {
+            for (FrameWatch& watch : frame_watches_) {
+                if (!watch.chart || !watch.presented || watch.settled || !watch.controller) continue;
+                // Settled: the chart's current upload was made from the selected dataset's data, the series objects
+                // hold that upload now (read back from them), and every measured point they draw is a point of the
+                // selected data as the project holds it. The generation named is the one drawn.
+                const PatternChartController* controller = watch.controller;
+                if (controller->traceIdentity() != watch.native) continue;
+                const QString held = controller->traceBufferIdentity();
+                if (held.isEmpty() || held != controller->traceUploadIdentity()) continue;
+                if (!trace_matches_native(controller, watch.dataset)) continue;
+                chosen = &watch;
+                settling = true;
+                buffers = held;
+                break;
+            }
+        }
+        if (chosen != nullptr) {
+            FrameWatch& watch = *chosen;
             QJsonObject frame = trace_geometry(watch.chart);
             frame.insert(QStringLiteral("request"), watch.request);
-            if (!watch.first) {
+            if (!settling) {
                 watch.first = true;
-                QJsonObject first = frame;
-                first.insert(QStringLiteral("phase"), QStringLiteral("first"));
-                frames.append(first);
-            }
-            if (settles) {
+                frame.insert(QStringLiteral("phase"), QStringLiteral("first"));
+                frames.append(frame);
+            } else {
                 watch.settled = true;
+                watch.presentation.insert(QStringLiteral("generation"), static_cast<double>(watch.controller->traceGeneration()));
+                watch.presentation.insert(QStringLiteral("upload_identity"), watch.controller->traceUploadIdentity());
+                watch.presentation.insert(QStringLiteral("buffer_identity"), buffers);
                 for (auto it = watch.presentation.begin(); it != watch.presentation.end(); ++it) frame.insert(it.key(), it.value());
-                frame.insert(QStringLiteral("buffer_identity"), buffers);
                 frame.insert(QStringLiteral("phase"), QStringLiteral("settled"));
                 frames.append(frame);
-                QJsonObject shown = watch.presentation;
-                shown.insert(QStringLiteral("buffer_identity"), buffers);
-                presented.append(shown);
+                presented.append(watch.presentation);
             }
         }
         const std::lock_guard lock(trace_mutex_);
@@ -2020,14 +2040,11 @@ void DemoDriver::trace_watch() {
             // The request whose first or settled frame this is, and for a settled one its presentation (request,
             // input, dataset, generation, data and buffer identities), on the render itself.
             const QJsonArray presented = std::exchange(synced_presented_, {});
-            if (!requests.isEmpty()) {
-                render.insert(QStringLiteral("request"), requests.last());
-                render.insert(QStringLiteral("requests"), requests);
-            }
+            // At most one observation a swap (above): its request, and a settled one's presentation.
+            if (!requests.isEmpty()) render.insert(QStringLiteral("request"), requests.first());
             if (!presented.isEmpty()) {
-                const QJsonObject last = presented.last().toObject();
-                for (auto it = last.begin(); it != last.end(); ++it) render.insert(it.key(), it.value());
-                render.insert(QStringLiteral("presented"), presented);
+                const QJsonObject shown = presented.first().toObject();
+                for (auto it = shown.begin(); it != shown.end(); ++it) render.insert(it.key(), it.value());
             }
             events.emplace_back("render", render);
         }
@@ -2105,8 +2122,41 @@ QString DemoDriver::trace_native_identity() {
     if (native_cache_.first != key || native_cache_.second.isEmpty()) {
         const auto& held = *project->project().experiments[experiment->tracePlace()];
         native_cache_ = std::make_pair(key, held.data ? ui_trace_identity(&held.data->intensity_meas.get()) : QString());
+        native_points_.clear();
+        native_dataset_ = selection;
+        if (held.data) {
+            const std::vector<double>& x = held.data->axis();
+            const std::vector<double>& y = held.data->intensity_meas.get();
+            for (std::size_t i = 0; i < std::min(x.size(), y.size()); ++i)
+                if (std::isfinite(x[i]) && std::isfinite(y[i])) native_points_.emplace_back(x[i], y[i]);
+            std::sort(native_points_.begin(), native_points_.end());
+        }
     }
     return native_cache_.second;
+}
+
+bool DemoDriver::trace_matches_native(const PatternChartController* controller, int dataset) const {
+    if (controller == nullptr || dataset != native_dataset_ || native_points_.empty()) return false;
+    const auto at = [this](double x) {
+        return std::equal_range(native_points_.begin(), native_points_.end(), std::make_pair(x, -HUGE_VAL),
+                                [](const auto& a, const auto& b) { return a.first < b.first; });
+    };
+    const auto near = [](double a, double b) { return std::abs(a - b) <= 1e-9 * std::max(1.0, std::abs(b)); };
+    std::size_t checked = 0;
+    for (const QPointF& point : controller->traceMeasuredPoints()) {
+        const auto [first, last] = at(point.x());
+        if (std::none_of(first, last, [&](const auto& native) { return near(point.y(), native.second); })) return false;
+        ++checked;
+    }
+    for (const auto& [x, low, high] : controller->traceMeasuredBand()) {
+        const auto [first, last] = at(x);
+        if (std::none_of(first, last, [&](const auto& native) {
+                return native.second >= low - 1e-9 * std::abs(low) && native.second <= high + 1e-9 * std::abs(high);
+            }))
+            return false;
+        ++checked;
+    }
+    return checked > 0;
 }
 
 void DemoDriver::trace_frame() {

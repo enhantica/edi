@@ -271,6 +271,11 @@ class PatternChartController : public QObject {
     // series holds a finite point (no fill).
     QString traceUploadIdentity() const { return trace_upload_identity_; }
     QString traceBufferIdentity() const;
+    // The measured data as the scene draws them, read from the scene objects, for a check against the selected data
+    // that does not go through this controller: the line's and the markers' points, and the band's edges at each x
+    // (x, lower, upper).
+    QList<QPointF> traceMeasuredPoints() const;
+    QList<std::array<double, 3>> traceMeasuredBand() const;
 #endif
     bool current() const { return current_; }
     QString xTitle() const { return x_title_; }
