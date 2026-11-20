@@ -8,6 +8,9 @@ Build the candidate, then record and compare:
     python tools/probes/cod_cif_audit.py compare BASELINE.json CANDIDATE.json RESULTS.csv
 
 Keep the JSON snapshots for the full import diagnostics and the affected sites.
+The first audit began with IDs 1000000 through 1000010 and known controls. Four further
+ZIP search batches used ID prefixes 10001%, 10100%, 70000%, and 90000%.
+A second set used 10101%, 90001%, 70001%, and 20001%.
 """
 
 import argparse
@@ -149,7 +152,11 @@ def _snapshot(cache: Path, output: Path) -> None:
                     'status': 'process failed',
                     'detail': f'{run.returncode}: {run.stderr.strip()}',
                 }
-        result['sha256'] = hashlib.sha256(path.read_bytes()).hexdigest()
+        data = path.read_bytes()
+        revision = re.search(rb'(?m)^#\$Revision:\s+([0-9]+)\s+\$', data)
+        if revision:
+            result['cod_revision'] = revision[1].decode('ascii')
+        result['sha256'] = hashlib.sha256(data).hexdigest()
         entries[path.stem] = result
         if len(entries) % 50 == 0:
             print(f'Checked {len(entries)} CIFs', file=sys.stderr, flush=True)
@@ -182,10 +189,19 @@ def _snapshot(cache: Path, output: Path) -> None:
 
 
 def _detail(entry: dict) -> str:
-    fields = [
-        f'{name} ({len(value)} sites)' if isinstance(value, dict) else f'{name}={value}'
-        for name, value in sorted(entry.get('defaults', {}).items())
-    ]
+    fields = []
+    for name, value in sorted(entry.get('defaults', {}).items()):
+        if not isinstance(value, dict):
+            fields.append(f'{name}={value}')
+            continue
+        if name == 'occupancy':
+            values = {f'{number:g}' for number in value.values()}
+        elif name == 'isotropic displacement':
+            values = {f'{site["value"]:g} {site["form"]}' for site in value.values()}
+        else:
+            values = set()
+        used = f'={", ".join(sorted(values))}' if values else ''
+        fields.append(f'{name}{used} ({len(value)} sites)')
     return entry.get('detail', ', '.join(fields))
 
 
@@ -219,14 +235,17 @@ def _compare(baseline: Path, candidate: Path, output: Path) -> None:
             before = initial.get(entry_id)
             after = current.get(entry_id)
             missing = {'status': 'not run'}
+            entry = after or before
+            revision = entry.get('cod_revision')
+            suffix = f'@{revision}' if revision else ''
             writer.writerow((
                 entry_id,
                 _status(before or missing),
                 _status(after or missing),
                 _detail(before or missing),
                 _detail(after or missing),
-                f'https://www.crystallography.net/cod/{entry_id}.cif',
-                (before or after)['sha256'],
+                f'https://www.crystallography.net/cod/{entry_id}.cif{suffix}',
+                entry['sha256'],
             ))
 
 

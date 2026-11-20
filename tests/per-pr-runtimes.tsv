@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-19T10:11:30Z
+# measured_utc = 2026-11-20T14:49:26Z
 #
-# Recorded from: measured test run (19 node(s) measured once, 183859 banked, 0 stale row(s) dropped)
-# Collected tests: 255353; with a reported duration: 82876
+# Recorded from: focused COD CIF compatibility test run (19 added tests measured)
+# Collected tests: 255372; with a reported duration: 82877
 # Module-scoped fixture costs recorded: 215
 #
 # Breaches are decided PER TIER against the table
@@ -29,12 +29,12 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 255353
+# inventory_python = 255372
 # inventory_cpp = 0
-# inventory_measured = 183862
+# inventory_measured = 183881
 # inventory_unmeasured = 71491
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
-# inventory_pr_python = 89088
+# inventory_pr_python = 89107
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -168538,6 +168538,25 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_import_contract.py::
 0.000	tests/integration/py/test_cif_reader_regression.py::test_main_reader_model_regression_pin_changes_only_published_parameter_state[structure:tests/fixtures/single_crystal/projects/sc-neut-tof_taurine_basic/structures/structure.edi]
 0.000	tests/integration/py/test_cif_reader_regression.py::test_main_reader_model_regression_pin_changes_only_published_parameter_state[structure:tests/fixtures/table_display/structures/structure.edi]
 0.000	tests/integration/py/test_cif_reader_regression.py::test_reader_regression_pin_population_is_not_empty
+0.010	tests/integration/py/test_cod_cif_compatibility.py::test_cif11_reads_a_bare_value_starting_with_a_curly_brace[{[Co4OH].2MeCN}n]
+0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif11_reads_a_bare_value_starting_with_a_curly_brace[}text]
+0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif11_refuses_an_unquoted_leading_square_bracket[[text]]
+0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif11_refuses_an_unquoted_leading_square_bracket[]text]
+0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif_accepts_matching_space_group_alias_with_one_setting_suffix[False]
+0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif_accepts_matching_space_group_alias_with_one_setting_suffix[True]
+0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif_import_reports_defaults_for_missing_site_values
+0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif_reads_an_ambiguous_hermann_mauguin_name_with_a_hall_symbol[R 3 2"]
+0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif_reads_an_ambiguous_hermann_mauguin_name_with_a_hall_symbol[R_3_2"]
+0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif_reads_an_origin_only_suffix_with_an_orthorhombic_symbol[\n_space_group_IT_coordinate_system_code 2abc]
+0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif_reads_an_origin_only_suffix_with_an_orthorhombic_symbol[]
+0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif_refuses_a_hall_symbol_inconsistent_with_the_hermann_mauguin_name
+0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif_refuses_a_setting_conflicting_with_the_explicit_coordinate_code
+0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif_refuses_conflicting_space_group_aliases[R -3 c :R]
+0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif_refuses_conflicting_space_group_aliases[R 3 c :H]
+0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif_refuses_incompatible_operations_with_an_origin_only_suffix
+0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif_reports_the_row_and_column_of_an_absent_site_label
+0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif_reports_the_site_and_column_of_an_absent_fractional_coordinate[.]
+0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif_reports_the_site_and_column_of_an_absent_fractional_coordinate[?]
 UNMEASURED:not-completed-in-this-run	tests/integration/py/test_collection_bundle_size.py::test_bundle_keeps_small_payload_byte_for_byte[data/small.xye]
 UNMEASURED:not-completed-in-this-run	tests/integration/py/test_collection_bundle_size.py::test_bundle_keeps_small_payload_byte_for_byte[projects/small.zip]
 UNMEASURED:not-completed-in-this-run	tests/integration/py/test_collection_bundle_size.py::test_bundle_omits_large_payload[data/large.xye]
