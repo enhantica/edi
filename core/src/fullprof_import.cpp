@@ -815,8 +815,8 @@ Data gsas_data(const fs::path& path, bool isis) {
         double factor = 1.;
         if (ralf) {
             if (isis) {
-                const double width = static_cast<float>(raw.x[i + 1]) - static_cast<float>(raw.x[i]);
-                factor = 1000. / width;
+                const float width = static_cast<float>(raw.x[i + 1]) - static_cast<float>(raw.x[i]);
+                factor = 1000. / static_cast<double>(width);
             } else {
                 factor = 3.2 / (raw.x[i + 1] - raw.x[i]);
             }
