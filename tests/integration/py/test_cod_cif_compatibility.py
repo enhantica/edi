@@ -136,3 +136,33 @@ def test_cif_reports_the_row_and_column_of_an_absent_site_label() -> None:
         ValueError, match=r'atom-site row 1 requires a site label.*_atom_site_label'
     ):
         edi.StructureFactory.from_cif_str(text)
+
+
+def _with_placeholder(flag: str, *, include_sites: bool = True) -> str:
+    header, sites = STRUCTURE.split('Na1', 1)
+    if include_sites:
+        rows = ['Na1' + sites.splitlines()[0] + ' d', sites.splitlines()[1] + ' d']
+    else:
+        rows = []
+    return header + '_atom_site_calc_flag\n' + '\n'.join([*rows, f'. . . . . . . {flag}']) + '\n'
+
+
+def test_cif_reports_and_omits_an_explicitly_marked_dummy_placeholder() -> None:
+    with pytest.warns(UserWarning, match=r'crysta\.schema\.cif_items_not_read') as warnings:
+        structure = edi.StructureFactory.from_cif_str(_with_placeholder('dum'))
+    assert tuple(site.id for site in structure.atom_sites) == ('Na1', 'Cl1')
+    assert any(
+        '_atom_site_calc_flag of atom-site row 3' in str(warning.message)
+        and 'marks a dummy site' in str(warning.message)
+        for warning in warnings
+    )
+
+
+def test_cif_keeps_refusing_unlabelled_physical_sites() -> None:
+    with pytest.raises(ValueError, match='atom-site row 3 requires a site label'):
+        edi.StructureFactory.from_cif_str(_with_placeholder('d'))
+
+
+def test_cif_refuses_a_structure_with_only_dummy_placeholders() -> None:
+    with pytest.raises(ValueError, match='contains only dummy sites'):
+        edi.StructureFactory.from_cif_str(_with_placeholder('dum', include_sites=False))

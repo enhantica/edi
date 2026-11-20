@@ -75,9 +75,20 @@ def _defaulted_fields(path: Path, structure: edi.Structure) -> dict:
                     return cif.as_string(value)
         return None
 
+    calc_flags = [tag for tag in tags if tag.replace('.', '_') == '_atom_site_calc_flag']
     sites = {site.id: site for site in structure.atom_sites}
     for row in range(atom_loop.length()):
         label = read(row, '_atom_site_label', '_atom_site.label', '_atom_site.id')
+        if (
+            label is None
+            and calc_flags
+            and all((read(row, tag) or '').lower() == 'dum' for tag in calc_flags)
+            and all(
+                read(row, f'_atom_site_fract_{axis}', f'_atom_site.fract_{axis}') is None
+                for axis in 'xyz'
+            )
+        ):
+            continue
         site = sites.get(label)
         if site is None:
             raise ValueError(f'cannot match source site {label!r} to the imported model')
@@ -249,7 +260,20 @@ def _compare(baseline: Path, candidate: Path, output: Path) -> None:
             ))
 
 
+def _serve() -> None:
+    for line in sys.stdin:
+        try:
+            result = _probe(Path(json.loads(line)))
+            status, detail = _status(result), _detail(result)
+        except (OSError, RuntimeError, ValueError, TypeError) as error:
+            status, detail = 'probe failed', f'{type(error).__name__}: {error}'
+        print(json.dumps((status, detail[:2000]), ensure_ascii=False), flush=True)
+
+
 def main() -> None:
+    if sys.argv[1:] == ['_serve']:
+        _serve()
+        return
     if len(sys.argv) == 3 and sys.argv[1] == '_probe':
         print(json.dumps(_probe(Path(sys.argv[2]))))
         return
