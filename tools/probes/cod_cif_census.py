@@ -399,8 +399,8 @@ class _Audit:
         self.flush()
 
 
-def _fill_live(audit: _Audit, directory: Path) -> None:
-    pending = sorted(audit.expected.keys() - audit.finished - audit.withheld)
+def _fill_live(audit: _Audit, directory: Path, entries: set[str]) -> None:
+    pending = sorted(entries - audit.finished - audit.withheld)
     next_request = time.monotonic()
 
     def fetch(url: str, target: Path) -> None:
@@ -412,8 +412,7 @@ def _fill_live(audit: _Audit, directory: Path) -> None:
         finally:
             next_request = time.monotonic() + 10
 
-    for start in range(0, len(pending), 100):
-        group = pending[start : start + 100]
+    def fetch_group(group: list[str]) -> None:
         params = urllib.parse.urlencode({
             'id': ','.join(group),
             'format': 'zip',
@@ -422,14 +421,21 @@ def _fill_live(audit: _Audit, directory: Path) -> None:
             'include_theoretical': 1,
         })
         bulk = directory / 'live-batch.zip'
+        downloaded = False
         try:
             fetch(f'{COD}/result?{params}', bulk)
             with zipfile.ZipFile(bulk) as archive:
                 audit.scan_zip(archive)
-        except (OSError, zipfile.BadZipFile) as error:
+            downloaded = True
+        except (OSError, http.client.HTTPException, zipfile.BadZipFile) as error:
             print(f'Live ZIP {group[0]} through {group[-1]}: {error}', flush=True)
         finally:
             bulk.unlink(missing_ok=True)
+        if not downloaded and len(group) > 5:
+            middle = len(group) // 2
+            fetch_group(group[:middle])
+            fetch_group(group[middle:])
+            return
 
         for entry in group:
             if entry in audit.finished:
@@ -440,11 +446,14 @@ def _fill_live(audit: _Audit, directory: Path) -> None:
                 with path.open('rb') as source:
                     if not audit.submit(entry, source):
                         print(f'Unverified CIF revision for COD {entry}', flush=True)
-            except (OSError, zipfile.BadZipFile) as error:
+            except (OSError, http.client.HTTPException, zipfile.BadZipFile) as error:
                 print(f'Could not retrieve COD {entry}: {error}', flush=True)
             finally:
                 path.unlink(missing_ok=True)
         audit.flush()
+
+    for start in range(0, len(pending), 100):
+        fetch_group(pending[start : start + 100])
 
 
 def _run(args: argparse.Namespace) -> int:
@@ -490,8 +499,18 @@ def _run(args: argparse.Namespace) -> int:
                 )
                 if args.archive_only:
                     return 0
+                entries = set(audit.expected)
+                if args.live_ids:
+                    entries = set(args.live_ids.read_text(encoding='ascii').splitlines())
+                    unknown = entries - audit.expected.keys()
+                    if not entries or unknown:
+                        raise ValueError('The live ID selection must contain frozen COD IDs only')
                 if not args.local_zip:
-                    _fill_live(audit, Path(scratch))
+                    _fill_live(audit, Path(scratch), entries)
+                if args.live_ids:
+                    pending = len(entries - audit.finished - audit.withheld)
+                    print(f'Selected live pass: {len(entries)} catalogue IDs, {pending} pending')
+                    return 0 if pending == 0 else 1
                 pending = count - len(audit.finished) - len(audit.withheld)
                 print(
                     f'Census finished: {len(audit.finished)}/{count} audited, '
@@ -679,6 +698,7 @@ def main(argv: Iterable[str] | None = None) -> int:
     source.add_argument('--local-zip', type=Path)
     source.add_argument('--live-only', action='store_true')
     source.add_argument('--archive-only', action='store_true')
+    run.add_argument('--live-ids', type=Path, help='limit --live-only to these frozen COD IDs')
     export = commands.add_parser('export')
     export.add_argument('database', type=Path)
     export.add_argument('output', type=Path)
@@ -694,6 +714,8 @@ def main(argv: Iterable[str] | None = None) -> int:
     if args.command == 'run':
         if min(args.jobs, args.seconds, args.window_mib) < 1:
             parser.error('jobs, seconds and window-mib must be positive')
+        if args.live_ids and not args.live_only:
+            parser.error('--live-ids requires --live-only')
         return _run(args)
     if args.command == 'recheck':
         if args.seconds < 1:
