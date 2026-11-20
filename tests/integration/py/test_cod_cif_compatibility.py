@@ -166,3 +166,41 @@ def test_cif_keeps_refusing_unlabelled_physical_sites() -> None:
 def test_cif_refuses_a_structure_with_only_dummy_placeholders() -> None:
     with pytest.raises(ValueError, match='contains only dummy sites'):
         edi.StructureFactory.from_cif_str(_with_placeholder('dum', include_sites=False))
+
+
+def _with_legacy_adp(code: str, tensor_form: str | None) -> str:
+    text = STRUCTURE.replace(
+        '_atom_site_B_iso_or_equiv\n', '_atom_site_B_iso_or_equiv\n_atom_site_adp_type\n'
+    )
+    text = text.replace('Na1 ? .1 .2 .3 ? .\n', f'Na1 ? .1 .2 .3 ? . {code}\n').replace(
+        'Cl1 Cl .4 .5 .6 .75 0\n', 'Cl1 Cl .4 .5 .6 .75 0 Biso\n'
+    )
+    if tensor_form:
+        text += f'loop_\n_atom_site_aniso_label\n_atom_site_aniso_{tensor_form}_11\n'
+        text += f'_atom_site_aniso_{tensor_form}_22\n_atom_site_aniso_{tensor_form}_33\n'
+        text += 'Na1 0.015 0.025 0.040\n'
+    return text
+
+
+@pytest.mark.parametrize(
+    ('legacy', 'tensor_form'), [('Beq', 'U'), ('Ueq', 'B'), ('Uij', 'U'), ('Bij', 'B')]
+)
+def test_cif_reads_legacy_adp_codes_using_the_supplied_tensor(
+    legacy: str, tensor_form: str
+) -> None:
+    with pytest.warns(UserWarning, match=r'crysta\.schema\.cif_items_not_read') as warnings:
+        structure = edi.StructureFactory.from_cif_str(_with_legacy_adp(legacy, tensor_form))
+    assert structure.atom_sites['Na1'].adp_type == f'{tensor_form}ani'
+    assert structure.atom_site_aniso['Na1'].adp_11.value == pytest.approx(0.015)
+    assert structure.atom_site_aniso['Na1'].adp_33.value == pytest.approx(0.040)
+    assert any(
+        f"'{legacy}'" in str(w.message) and 'legacy ADP type' in str(w.message) for w in warnings
+    )
+
+
+@pytest.mark.parametrize(('legacy', 'tensor_form'), [('Beq', None), ('Uij', 'B'), ('Bij', 'U')])
+def test_cif_refuses_a_legacy_adp_code_without_a_matching_tensor(
+    legacy: str, tensor_form: str | None
+) -> None:
+    with pytest.raises(ValueError, match='gives no matching anisotropic tensor'):
+        edi.StructureFactory.from_cif_str(_with_legacy_adp(legacy, tensor_form))

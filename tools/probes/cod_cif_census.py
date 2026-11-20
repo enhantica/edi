@@ -480,10 +480,15 @@ def _run(args: argparse.Namespace) -> int:
 
 def _export(database: Path, output: Path) -> None:
     query = """
-        SELECT expected.entry_id, expected.revision, results.sha256,
+        SELECT expected.entry_id, expected.revision, coalesce(results.sha256, rechecks.sha256),
                results.initial_status, results.initial_detail,
-               results.status_after_fix, results.detail_after_fix
-        FROM expected LEFT JOIN results USING (entry_id) ORDER BY expected.entry_id
+               coalesce(rechecks.status, results.status_after_fix),
+               coalesce(rechecks.detail, results.detail_after_fix), rechecks.edi_commit
+        FROM expected LEFT JOIN results USING (entry_id)
+        LEFT JOIN rechecks ON rechecks.entry_id = expected.entry_id
+            AND rechecks.revision = expected.revision
+            AND (results.sha256 IS NULL OR rechecks.sha256 = results.sha256)
+        ORDER BY expected.entry_id
     """
     with tempfile.TemporaryDirectory(prefix='export-', dir=output.parent) as directory:
         staged = Path(directory) / output.name
@@ -491,6 +496,7 @@ def _export(database: Path, output: Path) -> None:
             closing(sqlite3.connect(database, timeout=30)) as db,
             staged.open('w', newline='', encoding='utf-8') as target,
         ):
+            _create_rechecks(db)
             writer = csv.writer(target, lineterminator='\n')
             writer.writerow((
                 'cod_entry_id',
@@ -500,10 +506,10 @@ def _export(database: Path, output: Path) -> None:
                 'detail_after_fix',
                 'source_url',
                 'cif_sha256',
+                'rechecked_edi_commit',
             ))
-            for entry, revision, digest, before, before_detail, after, after_detail in db.execute(
-                query
-            ):
+            for row in db.execute(query):
+                entry, revision, digest, before, before_detail, after, after_detail, commit = row
                 writer.writerow((
                     entry,
                     before or 'pending',
@@ -512,8 +518,54 @@ def _export(database: Path, output: Path) -> None:
                     after_detail,
                     f'{COD}/{entry}.cif@{revision}',
                     digest,
+                    commit,
                 ))
         staged.replace(output)
+
+
+def _create_rechecks(connection: sqlite3.Connection) -> None:
+    connection.execute("""
+        CREATE TABLE IF NOT EXISTS rechecks (
+            entry_id TEXT PRIMARY KEY, revision TEXT NOT NULL, sha256 TEXT NOT NULL,
+            status TEXT NOT NULL, detail TEXT NOT NULL, edi_commit TEXT NOT NULL
+        )
+    """)
+
+
+def _recheck(args: argparse.Namespace) -> int:
+    build = _Build(args.after_lib.resolve(), args.after_extension.resolve())
+    commit = build.validate()
+    worker = _ProbeWorker(build, args.seconds)
+    try:
+        with closing(sqlite3.connect(args.database, timeout=30)) as db:
+            _create_rechecks(db)
+            for path in args.cifs:
+                entry = path.stem
+                expected = db.execute(
+                    'SELECT revision FROM expected WHERE entry_id = ?', (entry,)
+                ).fetchone()
+                revision = _file_revision(path)
+                if not expected or revision != expected[0]:
+                    raise ValueError(f'{path} does not match the frozen COD revision')
+                with path.open('rb') as source:
+                    digest = hashlib.file_digest(source, 'sha256').hexdigest()
+                original = db.execute(
+                    'SELECT sha256 FROM results WHERE entry_id = ?', (entry,)
+                ).fetchone()
+                if original is not None and original[0] != digest:
+                    raise ValueError(f'{path} differs from the CIF bytes used in the census')
+                status, detail = worker.check(path.resolve())
+                if status in {'process failed', 'timed out', 'probe failed'}:
+                    raise RuntimeError(f'Could not recheck {entry}: {status}, {detail}')
+                with db:
+                    db.execute(
+                        'INSERT OR REPLACE INTO rechecks VALUES (?, ?, ?, ?, ?, ?)',
+                        (entry, revision, digest, status, detail, commit),
+                    )
+                print(f'COD {entry}: {status} at {commit}', flush=True)
+    finally:
+        worker.close()
+    return 0
 
 
 def main(argv: Iterable[str] | None = None) -> int:
@@ -540,11 +592,20 @@ def main(argv: Iterable[str] | None = None) -> int:
     export = commands.add_parser('export')
     export.add_argument('database', type=Path)
     export.add_argument('output', type=Path)
+    recheck = commands.add_parser('recheck')
+    for flag in ('database', 'after-lib', 'after-extension'):
+        recheck.add_argument(f'--{flag}', required=True, type=Path)
+    recheck.add_argument('--seconds', type=int, default=60)
+    recheck.add_argument('cifs', nargs='+', type=Path)
     args = parser.parse_args(argv)
     if args.command == 'run':
         if min(args.jobs, args.seconds, args.window_mib) < 1:
             parser.error('jobs, seconds and window-mib must be positive')
         return _run(args)
+    if args.command == 'recheck':
+        if args.seconds < 1:
+            parser.error('seconds must be positive')
+        return _recheck(args)
     _export(args.database, args.output)
     return 0
 
