@@ -183,7 +183,16 @@ def _with_legacy_adp(code: str, tensor_form: str | None) -> str:
 
 
 @pytest.mark.parametrize(
-    ('legacy', 'tensor_form'), [('Beq', 'U'), ('Ueq', 'B'), ('Uij', 'U'), ('Bij', 'B')]
+    ('legacy', 'tensor_form'),
+    [
+        ('Beq', 'U'),
+        ('Ueq', 'B'),
+        ('Uequi', 'U'),
+        ('Uij', 'U'),
+        ('Bij', 'B'),
+        ('aniso', 'B'),
+        ('Uaniso', 'U'),
+    ],
 )
 def test_cif_reads_legacy_adp_codes_using_the_supplied_tensor(
     legacy: str, tensor_form: str
@@ -198,7 +207,10 @@ def test_cif_reads_legacy_adp_codes_using_the_supplied_tensor(
     )
 
 
-@pytest.mark.parametrize(('legacy', 'tensor_form'), [('Beq', None), ('Uij', 'B'), ('Bij', 'U')])
+@pytest.mark.parametrize(
+    ('legacy', 'tensor_form'),
+    [('Beq', None), ('Uij', 'B'), ('Bij', 'U'), ('aniso', None), ('Uaniso', 'B')],
+)
 def test_cif_refuses_a_legacy_adp_code_without_a_matching_tensor(
     legacy: str, tensor_form: str | None
 ) -> None:
@@ -206,15 +218,42 @@ def test_cif_refuses_a_legacy_adp_code_without_a_matching_tensor(
         edi.StructureFactory.from_cif_str(_with_legacy_adp(legacy, tensor_form))
 
 
-def test_cif_preserves_a_legacy_sites_published_isotropic_value_without_a_tensor() -> None:
-    text = _with_legacy_adp('Uij', None).replace(
-        '_atom_site_B_iso_or_equiv', '_atom_site_U_iso_or_equiv'
+@pytest.mark.parametrize(
+    ('code', 'units'),
+    [('Uij', 'U'), ('Uequiv', 'U'), ('iso', 'U'), ('iso', 'B'), ('Uovl', 'U'), ('Bovl', 'B')],
+)
+def test_cif_preserves_a_legacy_sites_published_isotropic_value_without_a_tensor(
+    code: str, units: str
+) -> None:
+    text = _with_legacy_adp(code, None).replace(
+        '_atom_site_B_iso_or_equiv', f'_atom_site_{units}_iso_or_equiv'
     )
-    text = text.replace('? . Uij\n', '? 0.12(1) Uij\n')
+    text = text.replace(f'? . {code}\n', f'? 0.12(1) {code}\n')
     with pytest.warns(UserWarning, match=r'crysta\.schema\.cif_items_not_read') as warnings:
         structure = edi.StructureFactory.from_cif_str(text)
     site = structure.atom_sites['Na1']
-    assert site.adp_type == 'Uiso'
+    assert site.adp_type == f'{units}iso'
     assert site.adp_iso.value == pytest.approx(0.12)
     assert len(structure.atom_site_aniso) == 0
-    assert any('published isotropic value is used as Uiso' in str(w.message) for w in warnings)
+    assert any(
+        f'published isotropic value is used as {units}iso' in str(w.message) for w in warnings
+    )
+
+
+@pytest.mark.parametrize(('code', 'tensor_form'), [('iso', 'U'), ('iso', None), ('Uovl', None)])
+def test_cif_refuses_a_legacy_isotropic_site_without_matching_scalar(
+    code: str, tensor_form: str | None
+) -> None:
+    text = _with_legacy_adp(code, tensor_form).replace(f'? . {code}\n', f'? 0.12 {code}\n')
+    if code == 'iso' and tensor_form is None:
+        text = (
+            text
+            .replace(
+                '_atom_site_B_iso_or_equiv\n',
+                '_atom_site_B_iso_or_equiv\n_atom_site_U_iso_or_equiv\n',
+            )
+            .replace('0.12 iso', '0.12 0.03 iso')
+            .replace('0 Biso\n', '0 0 Biso\n')
+        )
+    with pytest.raises(ValueError, match='gives no unambiguous isotropic value'):
+        edi.StructureFactory.from_cif_str(text)
