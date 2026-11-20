@@ -68,9 +68,10 @@ def test_fullprof_reflection_companion(tmp_path):
 
 def test_fullprof_twin_layout_with_independent_reflections(tmp_path):
     source = tmp_path / 'prnio.pcr'
-    copyfile(SINGLE_CRYSTAL / source.name, source)
-    companion = source.with_suffix('.int')
-    rows = (SINGLE_CRYSTAL / companion.name).read_text().splitlines()
+    control = (SINGLE_CRYSTAL / source.name).read_text().replace('DAT-file: prnio,', 'DAT-file: observed.dat,')
+    source.write_text(control)
+    companion = tmp_path / 'observed.int'
+    rows = (SINGLE_CRYSTAL / 'prnio.int').read_text().splitlines()
     rows[2] = '0.8302 0 1'
     companion.write_text('\n'.join(rows) + '\n')
     project = edi.Project.load(source)
@@ -124,6 +125,22 @@ def test_fullprof_companion_error_names_the_file(tmp_path):
     source = tmp_path / 'pbso4.pcr'
     copyfile(PBSO4 / source.name, source)
     with pytest.raises((ValueError, RuntimeError), match=r'companion pbso4\.dat'):
+        edi.Project.load(source)
+
+
+def test_fullprof_rejects_an_active_alternative_weighting_objective(tmp_path):
+    source = tmp_path / 'pbso4.pcr'
+    lines = (PBSO4 / source.name).read_text().splitlines()
+    job = next(i for i, line in enumerate(lines) if line.startswith('!Job '))
+    fields = lines[job + 1].split()
+    fields[8] = '1'
+    lines[job + 1] = ' '.join(fields)
+    for i, line in enumerate(lines):
+        if '!Number of refined parameters' in line:
+            lines[i] = '1 !Number of refined parameters'
+            break
+    source.write_text('\n'.join(lines) + '\n')
+    with pytest.raises((ValueError, RuntimeError), match=r'refinement weighting \(Iwg\)'):
         edi.Project.load(source)
 
 

@@ -52,6 +52,9 @@ def test_fullprof_export_writes_background_and_exclusions_in_bank_order(tmp_path
     reference = REFERENCES / 'pd-neut-tof_ncaf-wish'
     lines = (reference / 'fixed.pcr').read_text().splitlines()
     job = next(i for i, line in enumerate(lines) if line.startswith('!Job '))
+    for i, line in enumerate(lines):
+        if line.startswith('!Irf Npr Jtyp'):
+            lines[i + 1] = ' '.join(lines[i + 1].split()[:3])
     positions = [i for i, line in enumerate(lines) if line.startswith('!2Theta/TOF/E(Kev)')]
     for bank, position in reversed(list(enumerate(positions, start=1))):
         row = lines[job + bank].split('!')[0].split()

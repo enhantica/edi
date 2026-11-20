@@ -608,7 +608,9 @@ void write_atoms(std::ostream& out, Structure& structure, Codes& codes, bool mag
         if (group.empty() || group.find_first_of("!#\r\n") != std::string::npos) {
             unsupported(structure.name.value() + ": missing or invalid Hermann–Mauguin symbol");
         }
-        if (setting == "1" || setting == "2") {
+        if (setting == "r") {
+            group += ":R";
+        } else if (setting == "1" || setting == "2") {
             const auto default_setting = detail::fullprof_default_space_group(group);
             if (!default_setting || default_setting->coord_system_code != setting) {
                 if (setting == "1" && same_space_group_name(group, "F d -3 m")) {

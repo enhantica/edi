@@ -8,14 +8,15 @@ whose project-directory contract edi mirrors.
 
 ## Open a FullProf project
 
-In the desktop app, choose **Open project… → FullProf PCR file**. Keep the input powder data
-or single-crystal `.int` beside the `.pcr`, with the filename expected by FullProf. EDI creates a
+In the desktop app, choose **Open project… → FullProf PCR file**. Keep the input powder data,
+single-crystal `.int` and any required instrument resolution file beside the `.pcr`, with the
+filenames expected by FullProf. EDI creates a
 project with the imported phases, experiments, observations and refinement settings. Use **Save
 project as…** to write the native project. The original FullProf project stays available.
 
 The importer reads labelled single- and multi-pattern controls for supported X-ray and neutron
 powder models and neutron single-crystal experiments. It reads FullProf measured-data formats,
-including XYDATA, stepped and ILL powder data, and GSAS ALT data. An INT file can contain
+including XYDATA, stepped and ILL powder data, GSAS ALT and ISIS RALF/FXYE. An INT file can contain
 several reflection datasets with their own wavelength or scale. Compatible commensurate
 magnetic phases use the native magnetic structure model. The app reports missing files,
 unsupported model terms and ambiguous conversions.

@@ -346,12 +346,14 @@ fs::path companion(const PCR& pcr, const Pattern& pattern) {
         if (portable.empty() || named == "." || named == ".." || portable.find(':') != std::string::npos) {
             pcr.fail("Companion data must be beside the PCR file: " + pattern.file);
         }
-        if (named.has_extension()) {
-            if (const auto path = sibling_input(pcr, named); !path.empty()) {
+        if (pattern.single_crystal()) {
+            const auto stem = named.has_extension() ? named.stem().string() : portable;
+            const auto name = lower(named.extension().string()) == ".int" ? portable : stem + ".int";
+            if (const auto path = sibling_input(pcr, name); !path.empty()) {
                 return path;
             }
-        } else if (pattern.single_crystal()) {
-            if (const auto path = sibling_input(pcr, portable + ".int"); !path.empty()) {
+        } else if (named.has_extension()) {
+            if (const auto path = sibling_input(pcr, named); !path.empty()) {
                 return path;
             }
         } else {
@@ -1286,8 +1288,8 @@ void read_background(const PCR& pcr, Pattern& pattern, Refinement& refine,
             if (previous.position < covered) {
                 // FullProf walks the source order. A backward segment adds no
                 // coverage, and the next rising segment can jump at the boundary.
-                const auto restart = std::nextafter(static_cast<float>(covered),
-                                                    std::numeric_limits<float>::infinity());
+                const auto restart = static_cast<double>(std::nextafter(static_cast<float>(covered),
+                                                        std::numeric_limits<float>::infinity()));
                 if (restart >= end_knot.position) {
                     pcr.fail("FullProf background break is closer than the coordinate precision", points);
                 }
@@ -1854,9 +1856,10 @@ void structure_block(const PCR& pcr, Project& project, std::vector<Pattern>& pat
         for (std::size_t i = 0; i < patterns.size(); ++i) {
             if (contributions[i] == 1.) {
                 const auto ref = pcr.require("irf ", options_line + 1, end);
-                const auto pattern_flags = pcr.after(ref, end, 5);
+                const auto pattern_flags = pcr.after(ref, end, 3);
                 if (pattern_flags[0] != 0. || (pattern_flags[1] != 0. && pattern_flags[1] != patterns[i].profile) ||
-                    pattern_flags[3] != 0. || pattern_flags[4] != 0.) {
+                    (pattern_flags.size() > 3 && pattern_flags[3] != 0.) ||
+                    (pattern_flags.size() > 4 && pattern_flags[4] != 0.)) {
                     pcr.fail("Unsupported FullProf phase-specific reflections or profile family", ref);
                 }
                 options_line = pcr.require("pr1 ", ref, end);
@@ -1882,7 +1885,7 @@ void structure_block(const PCR& pcr, Project& project, std::vector<Pattern>& pat
         auto symbol = pcr.lines[group].text;
         std::string origin;
         if (const auto suffix = symbol.find(':'); suffix != std::string::npos) {
-            origin = trim(std::string_view(symbol).substr(suffix + 1));
+            origin = lower(trim(std::string_view(symbol).substr(suffix + 1)));
             symbol = trim(std::string_view(symbol).substr(0, suffix));
         }
         auto setting = fullprof_default_space_group(symbol);
@@ -1905,7 +1908,8 @@ void structure_block(const PCR& pcr, Project& project, std::vector<Pattern>& pat
     std::vector<std::pair<std::shared_ptr<AtomSite>, Coded>> occupancies;
     double nominal_mass = 0.;
     bool mass_known = true;
-    double largest = 0.;
+    double largest_site = 0.;
+    std::map<std::array<long, 3>, double> orbit_occupancies;
     for (int i = 0; i < count; ++i) {
         atom_line = pcr.next(atom_line + 1, first_cell);
         const auto fields = words(pcr.lines[atom_line].text);
@@ -1962,7 +1966,11 @@ void structure_block(const PCR& pcr, Project& project, std::vector<Pattern>& pat
             pcr.fail("Negative FullProf site occupancy for " + site->id.value(), atom_line);
         }
         occupancies.emplace_back(site, Coded{occupancy, codes[4], factor});
-        largest = std::max(largest, occupancy);
+        largest_site = std::max(largest_site, occupancy);
+        std::array<long, 3> orbit{};
+        std::transform(geometry.representative.begin(), geometry.representative.end(), orbit.begin(),
+                       [](double x) { return std::lround(x * 1.e6); });
+        orbit_occupancies[orbit] += occupancy;
         const auto mass = import_atomic_mass(site->type_symbol.value());
         if (mass) {
             nominal_mass += values[coordinate + 4] * geometry.general_multiplicity * *mass;
@@ -2006,20 +2014,27 @@ void structure_block(const PCR& pcr, Project& project, std::vector<Pattern>& pat
         }
     }
     double occupancy_factor = 1.;
-    if (largest > 1.00015) {
-        const double atz = options[multi ? 7 : 11];
-        if (!mass_known || nominal_mass <= 0. || atz <= 0. || brindley <= 0.) {
-            pcr.fail("FullProf occupancy normalization requires credible ATZ and Brindley values", phase);
-        }
+    const auto largest = std::max_element(orbit_occupancies.begin(), orbit_occupancies.end(),
+                              [](const auto& a, const auto& b) { return a.second < b.second; })->second;
+    if (largest_site > 1.00015) {
         const auto matches = [](double candidate, double observed) {
             return std::abs(candidate - observed) <= 0.005 * std::max(candidate, observed);
         };
-        const double atz_mass_ratio = atz * brindley / nominal_mass;
         const double integral_plateau = std::round(largest);
+        const bool filled_orbits = orbit_occupancies.size() > 1 &&
+            std::all_of(orbit_occupancies.begin(), orbit_occupancies.end(),
+                        [integral_plateau, &matches](const auto& orbit) {
+                            return matches(integral_plateau, orbit.second);
+                        });
+        const double atz = options[multi ? 7 : 11];
+        const bool has_mass = mass_known && nominal_mass > 0. && atz > 0. && brindley > 0.;
+        const double atz_mass_ratio = has_mass ? atz * brindley / nominal_mass : 0.;
+        const bool mass_matches = has_mass &&
+            (matches(integral_plateau, atz_mass_ratio) || matches(integral_plateau, nominal_mass / atz));
         if (integral_plateau >= 2. && matches(integral_plateau, largest) &&
-            (matches(integral_plateau, atz_mass_ratio) || matches(integral_plateau, nominal_mass / atz))) {
-            // Some legacy files store the fully normalized cell mass in ATZ. Others include
-            // FullProf's squared scale convention. Both can corroborate the occupancy plateau.
+            (mass_matches || filled_orbits)) {
+            // A common filled-site plateau is independent of stale ATZ metadata.
+            // Otherwise ATZ can corroborate either historical mass convention.
             occupancy_factor = integral_plateau;
         } else if (!(matches(1., atz_mass_ratio) && largest <= 1.05)) {
             pcr.fail("FullProf occupancy normalization conflicts with the phase mass", phase);
@@ -2081,7 +2096,8 @@ void structure_block(const PCR& pcr, Project& project, std::vector<Pattern>& pat
                 }
                 pattern.reflection_extinction_model = static_cast<int>(ext.values[7]);
                 const std::size_t size = pattern.reflection_extinction_model == 1 ? 1 : 6;
-                pcr.zero(ext.values, size, 7, "extra single-crystal extinction coefficients");
+                // The isotropic Larson selector uses only Ext1. Older projects
+                // can retain fixed coefficients from a prior anisotropic model.
                 pcr.zero(ext.codes, size, 7, "extra single-crystal extinction codes");
                 for (std::size_t coefficient = 0; coefficient < size; ++coefficient) {
                     pattern.reflection_extinction.push_back(ext.at(coefficient, occupancy_factor * occupancy_factor));
@@ -2441,7 +2457,7 @@ void resolve_pattern_profiles(const PCR& pcr, const std::vector<std::size_t>& ph
                 continue;
             }
             line = pcr.require("irf ", line + 1, end);
-            const auto flags = pcr.after(line, end, 5);
+            const auto flags = pcr.after(line, end, 3);
             const int profile = flags[1] == 0. ? patterns[bank].profile : integer(flags[1], pcr.path.string());
             if (profiles[bank] && *profiles[bank] != profile) {
                 pcr.fail("EDI requires a common profile family for the phases in a powder pattern", line);
@@ -2518,6 +2534,9 @@ std::vector<Pattern> patterns_from_header(const PCR& pcr, const std::vector<std:
         const auto job = pcr.row(job_line, multi ? 12 : 19);
         const std::size_t uni = multi ? 10 : 15;
         pattern.job = integer(job[0], pcr.path.string());
+        if (pcr.refinement_enabled && job[multi ? 6 : 8] != 0.) {
+            pcr.fail("FullProf refinement weighting (Iwg) needs an equivalent residual", job_line);
+        }
         pattern.polarization_model = integer(job[multi ? 7 : 9], pcr.path.string());
         pattern.profile = integer(job[1], pcr.path.string());
         pattern.resolution_format = integer(job[multi ? 8 : 11], pcr.path.string());
@@ -2646,8 +2665,9 @@ std::vector<Pattern> patterns_from_header(const PCR& pcr, const std::vector<std:
             for (int i = 0; i < pattern.exclusions; ++i) {
                 row = pcr.next(row + 1, end);
                 const auto interval = pcr.row(row, 2);
-                if (interval[0] == 0. && interval[1] == 0.) {
-                    continue;  // Legacy editors can retain an unused zero-filled exclusion row.
+                if (interval[0] == interval[1] &&
+                    (interval[0] == 0. || interval[0] < pattern.lo || interval[0] > pattern.hi)) {
+                    continue;  // A legacy unused exclusion row outside the fitted range.
                 }
                 if (interval[0] >= interval[1]) {
                     pcr.fail("FullProf exclusion start must precede its end", row);

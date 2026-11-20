@@ -32,7 +32,9 @@ describes the equivalent manual construction through normal project actions.
    the active coefficients when native knots move. Emit each pattern's interpolation points
    and exclusions consecutively, which is the positional order read by FullProf. Resolve each
    contributing phase's profile selector against its pattern's default. Use a shared profile
-   when the effective profiles agree.
+   when the effective profiles agree. Keep the explicit FullProf `:R` axes as the native
+   rhombohedral setting. For substitutional occupancies, check the normalization plateau across
+   the co-occupants of each crystallographic orbit.
 4. A nonzero FullProf codeword identifies a signed shift within a refinement group. Retain the
    starting value and use native parameter aliases and affine constraints for shared shifts.
    Transform the refinement directions when equivalent profile coefficients change basis.
@@ -48,7 +50,8 @@ describes the equivalent manual construction through normal project actions.
    `mag_only` phase qualifier.
 7. Report unsupported source terms and missing data before adopting the project. Verification uses
    FullProf's fixed-input calculated intensities on matched observations, with excluded rows
-   removed from the metric. The bundled assistant skill also describes manual export to FullProf.
+   removed from the metric. An active maximum-likelihood or unit-weight objective requires a
+   corresponding residual. The bundled assistant skill also describes manual export to FullProf.
 
 ## Export
 
