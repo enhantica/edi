@@ -265,6 +265,7 @@ def _initialise(
         );
     """)
     _create_review_tables(connection)
+    _protect_audited_inputs(connection)
     with connection:
         current = connection.execute('SELECT identity FROM census').fetchone()
         if current is None:
@@ -569,6 +570,24 @@ def _create_review_tables(connection: sqlite3.Connection) -> None:
             entry_id TEXT PRIMARY KEY, revision TEXT NOT NULL, sha256 TEXT NOT NULL,
             status TEXT NOT NULL, detail TEXT NOT NULL, edi_commit TEXT NOT NULL
         )
+    """)
+
+
+def _protect_audited_inputs(connection: sqlite3.Connection) -> None:
+    # Two compatible sources can deliver the same revision with different SVN comments.
+    # Keep the first completed comparison and its digest so a byte-for-byte replay stays valid.
+    connection.execute("""
+        CREATE TRIGGER IF NOT EXISTS keep_completed_comparisons
+        BEFORE INSERT ON results
+        WHEN EXISTS (
+            SELECT 1 FROM results
+            WHERE entry_id = NEW.entry_id AND revision = NEW.revision
+                AND initial_status NOT IN ('process failed', 'timed out', 'probe failed')
+                AND status_after_fix NOT IN ('process failed', 'timed out', 'probe failed')
+        )
+        BEGIN
+            SELECT RAISE(IGNORE);
+        END
     """)
     connection.execute("""
         CREATE TABLE IF NOT EXISTS withheld (
