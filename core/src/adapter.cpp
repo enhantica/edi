@@ -817,6 +817,9 @@ detail::FullProfSiteGeometry detail::fullprof_site_geometry(const Structure& str
     const auto operators = crysta::magnetic_operations(to_crysta_structure(structure));
     std::vector<std::array<double, 3>> images;
     std::set<std::pair<std::array<int, 9>, std::array<int, 3>>> spatial;
+    std::array<double, 3> stabilizer_displacement{};
+    std::size_t stabilizer_size = 0;
+    constexpr double site_tolerance = 1.e-4;
     for (const auto& op : operators) {
         std::array<int, 3> shift{};
         std::array<double, 3> image = op.translation;
@@ -832,17 +835,31 @@ detail::FullProfSiteGeometry detail::fullprof_site_geometry(const Structure& str
         }
         const auto same = [&image](const auto& other) {
             for (std::size_t i = 0; i < 3; ++i) {
-                if (std::abs(std::remainder(image[i] - other[i], 1.)) > 1.e-4) {
+                if (std::abs(std::remainder(image[i] - other[i], 1.)) > site_tolerance) {
                     return false;
                 }
             }
             return true;
         };
+        if (same(fract)) {
+            ++stabilizer_size;
+            for (std::size_t i = 0; i < fract.size(); ++i) {
+                stabilizer_displacement[i] += std::remainder(image[i] - fract[i], 1.);
+            }
+        }
         if (std::none_of(images.begin(), images.end(), same)) {
             images.push_back(image);
         }
     }
-    return {"", fract, {1, 0, 0, 0, 1, 0, 0, 0, 1}, static_cast<int>(spatial.size()), static_cast<int>(images.size())};
+    // FullProf computes multiplicity with a fractional tolerance. Project
+    // rounded special sites onto that same stabilizer before EDI expands the orbit.
+    auto projected = fract;
+    if (stabilizer_size > 1) {
+        for (std::size_t i = 0; i < projected.size(); ++i) {
+            projected[i] += stabilizer_displacement[i] / static_cast<double>(stabilizer_size);
+        }
+    }
+    return {"", projected, {1, 0, 0, 0, 1, 0, 0, 0, 1}, static_cast<int>(spatial.size()), static_cast<int>(images.size())};
 }
 
 std::array<double, 6> detail::fullprof_rotated_beta(const std::array<double, 6>& beta,
@@ -5186,6 +5203,9 @@ crysta::BraggPdExperiment to_crysta_cwl_experiment(const ExperimentBase& e, bool
     crysta::BraggPdExperiment built(std::move(peak), std::move(instrument),
                              param(seed_scale(e), crysta::SCALE, "scale"), background);
     built.cutoff_fwhm = e.peak.cutoff_fwhm;
+    built.fullprof_fcj_limit = e.peak.fullprof_fcj_limit;
+    built.fullprof_beba_point = e.peak.fullprof_beba_point;
+    built.fullprof_cw_irf = e.peak.fullprof_cw_irf;
     built.kind = crysta::BeamModeEnum::ConstantWavelength;  // before the post-build fill: the
     // TOF-only abscor guard reads it
     apply_post_build_fields(e, built);

@@ -193,6 +193,7 @@ struct Bank {
 
     bool tof() const { return job < 0; }
     bool simulation() const { return std::abs(job) > 1; }
+    bool has_cw_irf() const { return !tof() && npr == 7 && model->peak.fullprof_cw_irf.has_value(); }
     const PdDataBase& data() const { return *model->data; }
 };
 
@@ -392,7 +393,8 @@ void write_setup(std::ostream& out, const Bank& bank, std::size_t index) {
                                                                     : value(instrument.setup_wavelength))
             << ' ' << value(instrument.setup_wavelength_2_to_1_ratio) << ' ' << bank.origin << ' '
             << experiment.peak.cutoff_fwhm << ' ' << bank.cthm << ' ' << value(experiment.absorption.mu_r) << ' '
-            << (experiment.peak.asym_beba_limit ? value(experiment.peak.asym_beba_limit) : 180.) << " 0 "
+            << (experiment.peak.asym_beba_limit ? value(experiment.peak.asym_beba_limit)
+                                               : experiment.peak.fullprof_fcj_limit.value_or(180.)) << " 0 "
             << (value(instrument.setup_wavelength_2_to_1_ratio) > 0. ? value(experiment.absorption.mu_r) : 0.) << '\n';
     }
 }
@@ -477,10 +479,17 @@ void write_profile(std::ostream& out, Structure& structure, const Bank& bank, st
         pair_rows(out, "Gamma-2 Gamma-1 Gamma-0 Iso-LorStrain Iso-LorSize",
                   {gamma2[0], gamma1[0], field(peak.broad_lorentz_gamma_0), gamma1[1], gamma2[1]});
     } else {
-        pair_rows(out, "U V W X Y GauSiz LorSiz Size-Model",
-                  {field(peak.broad_gauss_u), field(peak.broad_gauss_v), field(peak.broad_gauss_w),
-                   peak.mixing_eta_1 ? field(peak.mixing_eta_1) : field(peak.broad_lorentz_x),
-                   field(peak.broad_lorentz_y), {0.}, {0.}}, " 0");
+        std::vector<Field> widths{field(peak.broad_gauss_u), field(peak.broad_gauss_v),
+                                  field(peak.broad_gauss_w),
+                                  peak.mixing_eta_1 ? field(peak.mixing_eta_1) : field(peak.broad_lorentz_x),
+                                  field(peak.broad_lorentz_y), {0.}, {0.}};
+        if (bank.has_cw_irf()) {
+            const auto& instrument = *peak.fullprof_cw_irf;
+            for (std::size_t i = 0; i < instrument.size(); ++i) {
+                widths[i].value -= instrument[i];
+            }
+        }
+        pair_rows(out, "U V W X Y GauSiz LorSiz Size-Model", widths, " 0");
     }
     std::vector<Field> cell;
     for (const auto* parameter : structure.cell.parameters()) {
@@ -610,10 +619,12 @@ void write_atoms(std::ostream& out, Structure& structure, Codes& codes, bool mag
         }
         if (setting == "r") {
             group += ":R";
-        } else if (setting == "1" || setting == "2") {
+        } else if (setting.starts_with('1') || setting.starts_with('2')) {
             const auto default_setting = detail::fullprof_default_space_group(group);
             if (!default_setting || default_setting->coord_system_code != setting) {
-                if (setting == "1" && same_space_group_name(group, "F d -3 m")) {
+                auto alternate = setting;
+                alternate.front() = '2';
+                if (setting.starts_with('1') && default_setting && default_setting->coord_system_code == alternate) {
                     group += ":1";
                 } else {
                     unsupported(structure.name.value() + ": FullProf origin choice " + setting +
@@ -965,11 +976,27 @@ void write_pcr(Project& project, const fs::path& folder, bool fixed) {
         << " 0 0 0 0 1 1\n!Job Npr Nba Nex Nsc Nor Iwg Ilo Res Ste Uni Cor Anm Int\n";
     for (const auto& bank : banks) {
         out << bank.job << ' ' << bank.npr << ' ' << bank.nba << ' ' << bank.model->excluded_regions.size()
-            << ' ' << bank.neutron_lengths.size() << ' ' << static_cast<int>(bank.texture) << " 0 0 0 0 " << static_cast<int>(bank.tof()) << " 0 0 0\n";
+            << ' ' << bank.neutron_lengths.size() << ' ' << static_cast<int>(bank.texture)
+            << " 0 0 " << static_cast<int>(bank.has_cw_irf()) << " 0 " << static_cast<int>(bank.tof()) << " 0 0 0\n";
     }
     out << "!File names of data(patterns) files\n";
     for (const auto& bank : banks) {
         out << bank.file << '\n';
+    }
+    for (std::size_t i = 0; i < banks.size(); ++i) {
+        const auto& bank = banks[i];
+        if (!bank.has_cw_irf()) {
+            continue;
+        }
+        const auto name = fs::path(bank.file).replace_extension(".irf");
+        out << "! Resolution file for Pattern# " << i + 1 << '\n' << name.string() << '\n';
+        auto irf = output_file(folder / name);
+        irf << "Resolution function for EasyDiffraction output ireso 1\nPROF 7 0 0 0\n";
+        for (double width : *bank.model->peak.fullprof_cw_irf) {
+            irf << width << ' ';
+        }
+        irf << "0\n";
+        irf.close();
     }
     out << "!Mat Pcr NLI Rpa Sym Sho\n0 2 0 1 0 0\n!Ipr Ppl Ioc Ls1 Ls2 Ls3 Prf Ins Hkl Fou Ana\n";
     for (std::size_t i = 0; i < banks.size(); ++i) {
@@ -1001,10 +1028,30 @@ void write_pcr(Project& project, const fs::path& folder, bool fixed) {
                 // FullProf converts lower exclusion endpoints to a preceding bin.
                 // An exact channel value can round down on its float32 axis.
                 double start = first;
-                if (channel != axis.end() && *channel == first && std::next(channel) != axis.end()) {
+                double end = last;
+                if (!banks[i].tof() && !banks[i].model->calculation_only) {
+                    const auto locate_edge = [&](auto next) {
+                        const auto included = *std::prev(next);
+                        const auto following = next == axis.end() ? included + banks[i].step : *next;
+                        return std::midpoint(included, following);
+                    };
+                    const auto after = std::upper_bound(axis.begin(), axis.end(), last);
+                    if (channel < after) {
+                        start = locate_edge(std::next(channel));
+                        end = locate_edge(after);
+                        // FullProf requires a nonempty coordinate interval even
+                        // when both edges select a single measured channel.
+                        if (start == end) {
+                            start = std::midpoint(*channel, end);
+                        }
+                    } else {
+                        start = end = axis.back() + 2. * banks[i].step;
+                        end += banks[i].step;
+                    }
+                } else if (channel != axis.end() && *channel == first && std::next(channel) != axis.end()) {
                     start = std::midpoint(first, std::min(last, *std::next(channel)));
                 }
-                out << start << ' ' << last << '\n';
+                out << start << ' ' << end << '\n';
             }
         }
     }

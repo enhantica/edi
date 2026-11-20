@@ -79,6 +79,32 @@ Use the native relation graph to identify these directions, including chains, be
 shared signed FullProf codewords in the target units. A nonlinear transfer or a dependent moved
 by several independent variables needs a fixed export or a manual translation. The browser requires a separate multi-file output flow.
 
+## FullProf CW profile conventions
+
+Import selects the FullProf-compatible FCJ quadrature and copies `AsyLim` into
+`_peak.fullprof_fcj_limit`. The imported Bérar–Baldinozzi profile selects pattern-point
+evaluation. Leave the native profiles on their existing defaults when the corresponding
+interchange items are absent. The compatible profiles and their derivatives use the same
+settings. For a supported `Res=1` CW project, store the five instrumental width terms in
+`_peak.fullprof_cw_irf` alongside the combined peak parameters. Export recreates an IRF
+and subtracts its width terms from the corresponding PCR coefficients, leaving the refinement
+directions attached to the PCR shifts. The YVO₃ case demonstrates why this decomposition
+matters to FullProf's profile window.
+
+Translate the observation mask using the actual grid and data dialect. Legacy D20
+(`Ins=3`) rounds bounds to the nearest channel. Measured CW XYDATA uses the channel
+before each lower-bound lookup. Write XYDATA limits between consecutive grid coordinates
+to address the same channels. An excluded channel can still appear in FullProf's
+profile output with background-only intensity.
+
+Use FullProf's inversion-centred setting for bare origin-choice space-group symbols.
+Preserve its explicit `:1` where supported. Project a rounded magnetic special-site
+coordinate onto the same stabilizer used for FullProf's occupancy multiplicity. This
+keeps the converted site's occupancy normalization and expanded orbit consistent.
+Map source names to valid native datablock keys before building links or parameter
+identities. Native saves fill the inactive second-wavelength slots of a single-wavelength
+X-ray project with the same defaults used by the ordinary EDI reader.
+
 ## References
 
 - [FullProf PCR documentation](https://fpsuite-doc.readthedocs.io/en/latest/pages/pcr/pcr_main.html)

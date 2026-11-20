@@ -12,6 +12,7 @@
 #include <locale>
 #include <map>
 #include <numbers>
+#include <numeric>
 #include <optional>
 #include <set>
 #include <sstream>
@@ -242,11 +243,11 @@ struct Refinement {
 
 std::string safe_name(std::string name, std::string_view fallback) {
     for (char& c : name) {
-        if (!std::isalnum(static_cast<unsigned char>(c)) && c != '_' && c != '-' && c != '.') {
+        if (!std::isalnum(static_cast<unsigned char>(c)) && c != '_' && c != '-') {
             c = '_';
         }
     }
-    if (name.empty() || !std::isalpha(static_cast<unsigned char>(name.front()))) {
+    if (!persistable_name(name) || !std::isalpha(static_cast<unsigned char>(name.front()))) {
         name = std::string(fallback) + name;
     }
     if (name.size() < 2) {
@@ -1071,6 +1072,23 @@ void powder_data(const PCR& pcr, Pattern& pattern) {
     for (const auto& region : exp.excluded_regions) {
         const auto first = region->first.get();
         const auto second = region->second.get();
+        if (!pattern.tof() && (pattern.format == 3 || pattern.format == 10)) {
+            const auto bound = [&](double edge) {
+                // D20 uses a rounded channel index from the regular grid.
+                // CW XYDATA locates the first coordinate at or after the edge
+                // and uses the preceding channel on each side of the mask.
+                const auto after = std::lower_bound(data.x.begin(), data.x.end(), static_cast<float>(edge),
+                    [](double x, float limit) { return static_cast<float>(x) < limit; });
+                if (after == data.x.begin() || after == data.x.end()) {
+                    return edge;
+                }
+                const auto before = *std::prev(after);
+                return pattern.format == 3 && edge >= std::midpoint(before, *after) ? *after : before;
+            };
+            region->first = bound(first);
+            region->second = bound(second);
+            continue;
+        }
         const auto after = std::lower_bound(data.x.begin(), data.x.end(), first);
         if (after == data.x.begin() || after == data.x.end() || *after <= second) {
             continue;
@@ -1427,9 +1445,15 @@ void configure_pattern(const PCR& pcr, Pattern& pattern, Refinement& refine,
             if (values[2] < 0. || cthm < 0. || cthm > 1. || polarization < 0. || polarization > 1.) {
                 pcr.fail("Unsupported FullProf X-ray doublet or polarization coefficients", setup);
             }
-            if (values[2] > 0. && values[1] != values[0]) {
-                refine.set(instrument.setup_wavelength_2, spec::instrument_wavelength_2, {values[1], 0.});
-                refine.set(instrument.setup_wavelength_2_to_1_ratio, spec::instrument_wavelength_2_to_1_ratio, {values[2], 0.});
+            const bool doublet = values[2] > 0. && values[1] != values[0];
+            refine.set(instrument.setup_wavelength_2, spec::instrument_wavelength_2, {doublet ? values[1] : 0., 0.});
+            refine.set(instrument.setup_wavelength_2_to_1_ratio, spec::instrument_wavelength_2_to_1_ratio,
+                       {doublet ? values[2] : 0., 0.});
+            if (!doublet) {
+                // Match the optional slots of a native single-wavelength
+                // X-ray experiment, including its omitted uncertainties.
+                instrument.setup_wavelength_2->uncertainty = std::nullopt;
+                instrument.setup_wavelength_2_to_1_ratio->uncertainty = std::nullopt;
             }
             if (cthm != 0. || polarization != 0.) {
                 if (pattern.polarization_model != 0) {
@@ -1465,6 +1489,9 @@ void cw_profile(const PCR& pcr, Pattern& pattern, Refinement& refine, const Code
     const auto nonzero = [&](std::size_t i) { return shape.values[i] != 0. || shape.codes[i] != 0.; };
     const bool beba = nonzero(2) || nonzero(3) || nonzero(4) || nonzero(5);
     const auto base = pattern.cw_resolution.value_or(CwResolution{});
+    if (pattern.cw_resolution) {
+        peak.fullprof_cw_irf = base.widths;
+    }
     const bool fcj_from_pcr = shape.values.size() >= 8 && shape.codes.size() >= 8 && (nonzero(6) || nonzero(7));
     pcr.zero(width.values, 7, width.values.size(), "CWL anisotropic size model");
     pcr.zero(width.codes, 6, width.codes.size(), "CWL size refinement");
@@ -1488,6 +1515,9 @@ void cw_profile(const PCR& pcr, Pattern& pattern, Refinement& refine, const Code
         pcr.fail("Unsupported FullProf FCJ profile");
     }
     select_peak_profile(exp, profile);
+    if (fcj) {
+        peak.fullprof_fcj_limit = pattern.asymmetry_limit;
+    }
     const auto width_at = [&](std::size_t column) {
         auto coded = width.at(column);
         coded.value += base.widths[column];
@@ -1544,6 +1574,7 @@ void cw_profile(const PCR& pcr, Pattern& pattern, Refinement& refine, const Code
         refine.set(peak.asym_fcj_2, apertures[1]);
     }
     if (beba) {
+        peak.fullprof_beba_point = true;
         const auto transform = [&](OptionalParameter& a, OptionalParameter& b, std::size_t i) {
             const auto mapped = profile_pair(pcr, refine, shape.at(i), shape.at(i + 1), -1., -3., -1.);
             refine.set(a, mapped[0]);
@@ -1951,7 +1982,13 @@ void structure_block(const PCR& pcr, Project& project, std::vector<Pattern>& pat
         }
         auto setting = fullprof_default_space_group(symbol);
         if (setting && !origin.empty()) {
-            setting = space_group_setting_for_code(setting->it_number, origin);
+            auto code = setting->coord_system_code;
+            if ((origin == "1" || origin == "2") && (code.starts_with('1') || code.starts_with('2'))) {
+                code.front() = origin.front();
+            } else {
+                code = origin;
+            }
+            setting = space_group_setting_for_code(setting->it_number, code);
         }
         if (!setting) {
             pcr.fail("Unsupported FullProf space group " + symbol, group);
@@ -2809,10 +2846,17 @@ std::optional<SpaceGroupSettingName> fullprof_default_space_group(const std::str
             normalized = current_name;
         }
     }
-    if (same_space_group_name(normalized, "F d -3 m")) {
-        return space_group_setting_for_code(227, "2");
-    }
     if (auto setting = space_group_setting_for_name(normalized)) {
+        // FullProf's unsuffixed origin-choice symbols refer to the
+        // inversion-centred setting. The bare Pmmn case in fp2k gives 2abc.
+        if (setting->coord_system_code.starts_with('1')) {
+            auto code = setting->coord_system_code;
+            code.front() = '2';
+            if (const auto inversion_center = space_group_setting_for_code(setting->it_number, code);
+                inversion_center && same_space_group_name(inversion_center->name_h_m, setting->name_h_m)) {
+                return inversion_center;
+            }
+        }
         return setting;
     }
     const auto fields = words(normalized);

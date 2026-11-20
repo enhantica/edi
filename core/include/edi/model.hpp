@@ -3684,6 +3684,9 @@ struct PeakBase {
     // PeakProfileTypeEnum spellings on the Python surface (the view's getter maps them); the
     // two reserved CW rungs stay refused by name in the loader.
     std::optional<std::string> type;
+    std::optional<double> fullprof_fcj_limit;
+    bool fullprof_beba_point = false;
+    std::optional<std::array<double, 5>> fullprof_cw_irf;
     double cutoff_fwhm = 20.0;
     // TOF Gaussian / back-to-back exponential block.
     Parameter rise_alpha_0, rise_alpha_1, decay_beta_0, decay_beta_1;
@@ -3745,6 +3748,9 @@ struct PreparedPeakRestore {
     void commit() noexcept {
         static_assert(std::is_nothrow_move_assignable_v<Parameter>);
         target->type.swap(image.type);target->cutoff_fwhm=image.cutoff_fwhm;
+        target->fullprof_fcj_limit = image.fullprof_fcj_limit;
+        target->fullprof_beba_point = image.fullprof_beba_point;
+        target->fullprof_cw_irf = image.fullprof_cw_irf;
         for(auto member:PeakBase::fixed_parameter_members)target->*member=std::move(image.*member);
         for(auto member:PeakBase::optional_parameter_members) {
             auto& current=target->*member;auto& incoming=image.*member;
