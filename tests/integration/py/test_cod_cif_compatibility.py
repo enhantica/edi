@@ -188,6 +188,7 @@ def _with_legacy_adp(code: str, tensor_form: str | None) -> str:
         ('Beq', 'U'),
         ('Ueq', 'B'),
         ('Uequi', 'U'),
+        ('equiv', 'U'),
         ('Uij', 'U'),
         ('Bij', 'B'),
         ('aniso', 'B'),
@@ -209,7 +210,7 @@ def test_cif_reads_legacy_adp_codes_using_the_supplied_tensor(
 
 @pytest.mark.parametrize(
     ('legacy', 'tensor_form'),
-    [('Beq', None), ('Uij', 'B'), ('Bij', 'U'), ('aniso', None), ('Uaniso', 'B')],
+    [('Beq', None), ('equiv', None), ('Uij', 'B'), ('Bij', 'U'), ('aniso', None), ('Uaniso', 'B')],
 )
 def test_cif_refuses_a_legacy_adp_code_without_a_matching_tensor(
     legacy: str, tensor_form: str | None
@@ -220,7 +221,15 @@ def test_cif_refuses_a_legacy_adp_code_without_a_matching_tensor(
 
 @pytest.mark.parametrize(
     ('code', 'units'),
-    [('Uij', 'U'), ('Uequiv', 'U'), ('iso', 'U'), ('iso', 'B'), ('Uovl', 'U'), ('Bovl', 'B')],
+    [
+        ('Uij', 'U'),
+        ('Uequiv', 'U'),
+        ('equiv', 'U'),
+        ('iso', 'U'),
+        ('iso', 'B'),
+        ('Uovl', 'U'),
+        ('Bovl', 'B'),
+    ],
 )
 def test_cif_preserves_a_legacy_sites_published_isotropic_value_without_a_tensor(
     code: str, units: str
