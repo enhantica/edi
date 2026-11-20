@@ -264,6 +264,7 @@ def _initialise(
             detail_after_fix TEXT NOT NULL
         );
     """)
+    _create_review_tables(connection)
     with connection:
         current = connection.execute('SELECT identity FROM census').fetchone()
         if current is None:
@@ -297,6 +298,7 @@ class _Audit:
         self.jobs = jobs
         self.seconds = seconds
         self.expected = dict(connection.execute('SELECT entry_id, revision FROM expected'))
+        self.withheld = {row[0] for row in connection.execute('SELECT entry_id FROM withheld')}
         self.finished = {
             row[0]
             for row in connection.execute(
@@ -306,6 +308,7 @@ class _Audit:
                 "AND status_after_fix != 'probe failed'"
             )
         }
+        self.finished.difference_update(self.withheld)
         self.local = threading.local()
         self.workers: list[_ProbeWorker] = []
         self.executor = ThreadPoolExecutor(max_workers=jobs)
@@ -333,7 +336,12 @@ class _Audit:
             path.unlink(missing_ok=True)
 
     def submit(self, entry: str, stream: BinaryIO) -> bool:
-        if entry not in self.expected or entry in self.finished or entry in self.enqueued:
+        if (
+            entry not in self.expected
+            or entry in self.withheld
+            or entry in self.finished
+            or entry in self.enqueued
+        ):
             return False
         path = self.spool / f'{entry}.cif'
         with path.open('wb') as target:
@@ -369,22 +377,29 @@ class _Audit:
                 f'Audited {len(self.finished)}/{len(self.expected)} catalogue entries', flush=True
             )
 
-    def scan_zip(self, archive: zipfile.ZipFile) -> None:
+    def scan_zip(self, archive: zipfile.ZipFile, max_revision: int | None = None) -> None:
         for member in sorted(archive.infolist(), key=lambda info: info.header_offset):
             name = Path(member.filename)
+            revision = self.expected.get(name.stem)
             if (
                 name.suffix.lower() != '.cif'
-                or name.stem not in self.expected
+                or revision is None
                 or name.stem in self.finished
+                or name.stem in self.withheld
             ):
                 continue
-            with archive.open(member) as stream:
-                self.submit(name.stem, stream)
+            if max_revision is not None and int(revision) > max_revision:
+                continue
+            try:
+                with archive.open(member) as stream:
+                    self.submit(name.stem, stream)
+            except zipfile.BadZipFile as error:
+                print(f'Invalid archive member for COD {name.stem}: {error}', flush=True)
         self.flush()
 
 
 def _fill_live(audit: _Audit, directory: Path) -> None:
-    pending = sorted(audit.expected.keys() - audit.finished)
+    pending = sorted(audit.expected.keys() - audit.finished - audit.withheld)
     next_request = time.monotonic()
 
     def fetch(url: str, target: Path) -> None:
@@ -461,7 +476,9 @@ def _run(args: argparse.Namespace) -> int:
                             f'Opened COD archive {stream.etag}: {len(archive.infolist())} members',
                             flush=True,
                         )
-                        audit.scan_zip(archive)
+                        named_revision = re.search(r'/cod-rev([0-9]+)-', args.archive)
+                        max_revision = int(named_revision[1]) if named_revision else None
+                        audit.scan_zip(archive, max_revision)
                     with db:
                         db.execute('INSERT INTO archive_scan VALUES (?)', (stream.etag,))
                     db.execute('PRAGMA wal_checkpoint(TRUNCATE)')
@@ -470,10 +487,17 @@ def _run(args: argparse.Namespace) -> int:
                     f'{audit.archive_mismatches} mismatched revisions',
                     flush=True,
                 )
+                if args.archive_only:
+                    return 0
                 if not args.local_zip:
                     _fill_live(audit, Path(scratch))
-                print(f'Census finished: {len(audit.finished)}/{count} audited', flush=True)
-                return 0 if len(audit.finished) == count else 1
+                pending = count - len(audit.finished) - len(audit.withheld)
+                print(
+                    f'Census finished: {len(audit.finished)}/{count} audited, '
+                    f'{len(audit.withheld)} withheld by COD, {pending} pending',
+                    flush=True,
+                )
+                return 0 if pending == 0 else 1
             finally:
                 audit.close()
 
@@ -483,8 +507,10 @@ def _export(database: Path, output: Path) -> None:
         SELECT expected.entry_id, expected.revision, coalesce(results.sha256, rechecks.sha256),
                results.initial_status, results.initial_detail,
                coalesce(rechecks.status, results.status_after_fix),
-               coalesce(rechecks.detail, results.detail_after_fix), rechecks.edi_commit
+               coalesce(rechecks.detail, results.detail_after_fix), rechecks.edi_commit,
+               withheld.release_date
         FROM expected LEFT JOIN results USING (entry_id)
+        LEFT JOIN withheld ON withheld.entry_id = expected.entry_id
         LEFT JOIN rechecks ON rechecks.entry_id = expected.entry_id
             AND rechecks.revision = expected.revision
             AND (results.sha256 IS NULL OR rechecks.sha256 = results.sha256)
@@ -496,7 +522,7 @@ def _export(database: Path, output: Path) -> None:
             closing(sqlite3.connect(database, timeout=30)) as db,
             staged.open('w', newline='', encoding='utf-8') as target,
         ):
-            _create_rechecks(db)
+            _create_review_tables(db)
             writer = csv.writer(target, lineterminator='\n')
             writer.writerow((
                 'cod_entry_id',
@@ -509,7 +535,21 @@ def _export(database: Path, output: Path) -> None:
                 'rechecked_edi_commit',
             ))
             for row in db.execute(query):
-                entry, revision, digest, before, before_detail, after, after_detail, commit = row
+                (
+                    entry,
+                    revision,
+                    digest,
+                    before,
+                    before_detail,
+                    after,
+                    after_detail,
+                    commit,
+                    hold,
+                ) = row
+                if hold:
+                    before = after = 'withheld by COD'
+                    before_detail = after_detail = f'Frozen COD catalogue release date {hold}'
+                    digest = commit = None
                 writer.writerow((
                     entry,
                     before or 'pending',
@@ -523,13 +563,41 @@ def _export(database: Path, output: Path) -> None:
         staged.replace(output)
 
 
-def _create_rechecks(connection: sqlite3.Connection) -> None:
+def _create_review_tables(connection: sqlite3.Connection) -> None:
     connection.execute("""
         CREATE TABLE IF NOT EXISTS rechecks (
             entry_id TEXT PRIMARY KEY, revision TEXT NOT NULL, sha256 TEXT NOT NULL,
             status TEXT NOT NULL, detail TEXT NOT NULL, edi_commit TEXT NOT NULL
         )
     """)
+    connection.execute("""
+        CREATE TABLE IF NOT EXISTS withheld (
+            entry_id TEXT PRIMARY KEY, release_date TEXT NOT NULL
+        )
+    """)
+
+
+def _record_withheld(database: Path, records: Path) -> None:
+    rows = [
+        (entry, revision, release_date)
+        for entry, revision, release_date in csv.reader(
+            records.read_text(encoding='utf-8').splitlines(), delimiter='\t'
+        )
+    ]
+    with closing(sqlite3.connect(database, timeout=30)) as db, db:
+        _create_review_tables(db)
+        for entry, revision, release_date in rows:
+            expected = db.execute(
+                'SELECT revision FROM expected WHERE entry_id = ?', (entry,)
+            ).fetchone()
+            if expected != (revision,) or not re.fullmatch(
+                r'[0-9]{4}-[0-9]{2}-[0-9]{2}', release_date
+            ):
+                raise ValueError(
+                    f'Withholding record does not match the frozen COD catalogue: {entry}'
+                )
+            db.execute('INSERT OR REPLACE INTO withheld VALUES (?, ?)', (entry, release_date))
+    print(f'Recorded {len(rows)} currently withheld COD IDs')
 
 
 def _recheck(args: argparse.Namespace) -> int:
@@ -538,11 +606,13 @@ def _recheck(args: argparse.Namespace) -> int:
     worker = _ProbeWorker(build, args.seconds)
     try:
         with closing(sqlite3.connect(args.database, timeout=30)) as db:
-            _create_rechecks(db)
+            _create_review_tables(db)
             for path in args.cifs:
                 entry = path.stem
                 expected = db.execute(
-                    'SELECT revision FROM expected WHERE entry_id = ?', (entry,)
+                    'SELECT revision FROM expected LEFT JOIN withheld USING (entry_id) '
+                    'WHERE expected.entry_id = ? AND withheld.entry_id IS NULL',
+                    (entry,),
                 ).fetchone()
                 revision = _file_revision(path)
                 if not expected or revision != expected[0]:
@@ -589,6 +659,7 @@ def main(argv: Iterable[str] | None = None) -> int:
     source = run.add_mutually_exclusive_group()
     source.add_argument('--local-zip', type=Path)
     source.add_argument('--live-only', action='store_true')
+    source.add_argument('--archive-only', action='store_true')
     export = commands.add_parser('export')
     export.add_argument('database', type=Path)
     export.add_argument('output', type=Path)
@@ -597,6 +668,9 @@ def main(argv: Iterable[str] | None = None) -> int:
         recheck.add_argument(f'--{flag}', required=True, type=Path)
     recheck.add_argument('--seconds', type=int, default=60)
     recheck.add_argument('cifs', nargs='+', type=Path)
+    withheld = commands.add_parser('record-withheld')
+    withheld.add_argument('database', type=Path)
+    withheld.add_argument('records', type=Path)
     args = parser.parse_args(argv)
     if args.command == 'run':
         if min(args.jobs, args.seconds, args.window_mib) < 1:
@@ -606,6 +680,9 @@ def main(argv: Iterable[str] | None = None) -> int:
         if args.seconds < 1:
             parser.error('seconds must be positive')
         return _recheck(args)
+    if args.command == 'record-withheld':
+        _record_withheld(args.database, args.records)
+        return 0
     _export(args.database, args.output)
     return 0
 

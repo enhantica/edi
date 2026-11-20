@@ -204,3 +204,17 @@ def test_cif_refuses_a_legacy_adp_code_without_a_matching_tensor(
 ) -> None:
     with pytest.raises(ValueError, match='gives no matching anisotropic tensor'):
         edi.StructureFactory.from_cif_str(_with_legacy_adp(legacy, tensor_form))
+
+
+def test_cif_preserves_a_legacy_sites_published_isotropic_value_without_a_tensor() -> None:
+    text = _with_legacy_adp('Uij', None).replace(
+        '_atom_site_B_iso_or_equiv', '_atom_site_U_iso_or_equiv'
+    )
+    text = text.replace('? . Uij\n', '? 0.12(1) Uij\n')
+    with pytest.warns(UserWarning, match=r'crysta\.schema\.cif_items_not_read') as warnings:
+        structure = edi.StructureFactory.from_cif_str(text)
+    site = structure.atom_sites['Na1']
+    assert site.adp_type == 'Uiso'
+    assert site.adp_iso.value == pytest.approx(0.12)
+    assert len(structure.atom_site_aniso) == 0
+    assert any('published isotropic value is used as Uiso' in str(w.message) for w in warnings)
