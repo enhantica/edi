@@ -191,6 +191,7 @@ def _with_legacy_adp(code: str, tensor_form: str | None) -> str:
         ('equiv', 'U'),
         ('Uij', 'U'),
         ('Bij', 'B'),
+        ('ani', 'U'),
         ('aniso', 'B'),
         ('Uaniso', 'U'),
     ],
@@ -229,6 +230,9 @@ def test_cif_refuses_a_legacy_adp_code_without_a_matching_tensor(
         ('iso', 'B'),
         ('Uovl', 'U'),
         ('Bovl', 'B'),
+        ('Uiso*', 'U'),
+        ('Biso*', 'B'),
+        ('U', 'U'),
     ],
 )
 def test_cif_preserves_a_legacy_sites_published_isotropic_value_without_a_tensor(
@@ -265,4 +269,19 @@ def test_cif_refuses_a_legacy_isotropic_site_without_matching_scalar(
             .replace('0 Biso\n', '0 0 Biso\n')
         )
     with pytest.raises(ValueError, match='gives no unambiguous isotropic value'):
+        edi.StructureFactory.from_cif_str(text)
+
+
+def test_cif_reads_the_number_in_an_annotated_displacement_value() -> None:
+    text = _with_legacy_adp('Beq', None).replace('? . Beq\n', '? 4.4* Beq\n')
+    with pytest.warns(UserWarning, match='trailing asterisk is a source annotation'):
+        structure = edi.StructureFactory.from_cif_str(text)
+    assert structure.atom_sites['Na1'].adp_type == 'Biso'
+    assert structure.atom_sites['Na1'].adp_iso.value == pytest.approx(4.4)
+
+
+@pytest.mark.parametrize('value', ['*', '4.4**', '4.4*3'])
+def test_cif_refuses_malformed_annotated_displacement_values(value: str) -> None:
+    text = _with_legacy_adp('Beq', None).replace('? . Beq\n', f'? {value} Beq\n')
+    with pytest.raises(ValueError, match='invalid numeric token'):
         edi.StructureFactory.from_cif_str(text)
