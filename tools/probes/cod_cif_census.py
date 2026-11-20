@@ -399,7 +399,7 @@ class _Audit:
         self.flush()
 
 
-def _fill_live(audit: _Audit, directory: Path, entries: set[str]) -> None:
+def _fill_live(audit: _Audit, directory: Path, entries: set[str], base_url: str) -> None:
     pending = sorted(entries - audit.finished - audit.withheld)
     next_request = time.monotonic()
 
@@ -423,7 +423,7 @@ def _fill_live(audit: _Audit, directory: Path, entries: set[str]) -> None:
         bulk = directory / 'live-batch.zip'
         downloaded = False
         try:
-            fetch(f'{COD}/result?{params}', bulk)
+            fetch(f'{base_url}/result?{params}', bulk)
             with zipfile.ZipFile(bulk) as archive:
                 audit.scan_zip(archive)
             downloaded = True
@@ -442,7 +442,7 @@ def _fill_live(audit: _Audit, directory: Path, entries: set[str]) -> None:
                 continue
             path = directory / f'{entry}.download'
             try:
-                fetch(f'{COD}/{entry}.cif@{audit.expected[entry]}', path)
+                fetch(f'{base_url}/{entry}.cif@{audit.expected[entry]}', path)
                 with path.open('rb') as source:
                     if not audit.submit(entry, source):
                         print(f'Unverified CIF revision for COD {entry}', flush=True)
@@ -506,7 +506,7 @@ def _run(args: argparse.Namespace) -> int:
                     if not entries or unknown:
                         raise ValueError('The live ID selection must contain frozen COD IDs only')
                 if not args.local_zip:
-                    _fill_live(audit, Path(scratch), entries)
+                    _fill_live(audit, Path(scratch), entries, args.live_base.rstrip('/'))
                 if args.live_ids:
                     pending = len(entries - audit.finished - audit.withheld)
                     print(f'Selected live pass: {len(entries)} catalogue IDs, {pending} pending')
@@ -699,6 +699,7 @@ def main(argv: Iterable[str] | None = None) -> int:
     source.add_argument('--live-only', action='store_true')
     source.add_argument('--archive-only', action='store_true')
     run.add_argument('--live-ids', type=Path, help='limit --live-only to these frozen COD IDs')
+    run.add_argument('--live-base', default=COD, help='HTTPS base URL of the COD API or a mirror')
     export = commands.add_parser('export')
     export.add_argument('database', type=Path)
     export.add_argument('output', type=Path)
