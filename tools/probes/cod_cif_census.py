@@ -300,22 +300,25 @@ class _Audit:
         self.seconds = seconds
         self.expected = dict(connection.execute('SELECT entry_id, revision FROM expected'))
         self.withheld = {row[0] for row in connection.execute('SELECT entry_id FROM withheld')}
-        self.finished = {
-            row[0]
-            for row in connection.execute(
-                "SELECT entry_id FROM results WHERE initial_status != 'process failed' "
-                "AND status_after_fix != 'process failed' AND initial_status != 'timed out' "
-                "AND status_after_fix != 'timed out' AND initial_status != 'probe failed' "
-                "AND status_after_fix != 'probe failed'"
-            )
-        }
-        self.finished.difference_update(self.withheld)
+        self.finished: set[str] = set()
+        self.refresh_finished()
         self.local = threading.local()
         self.workers: list[_ProbeWorker] = []
         self.executor = ThreadPoolExecutor(max_workers=jobs)
         self.pending: list[Future[tuple[str, ...]]] = []
         self.enqueued: set[str] = set()
         self.archive_mismatches = 0
+
+    def refresh_finished(self) -> None:
+        self.finished.update(
+            row[0]
+            for row in self.connection.execute("""
+                SELECT entry_id FROM results
+                WHERE initial_status NOT IN ('process failed', 'timed out', 'probe failed')
+                    AND status_after_fix NOT IN ('process failed', 'timed out', 'probe failed')
+            """)
+        )
+        self.finished.difference_update(self.withheld)
 
     def close(self) -> None:
         self.executor.shutdown(wait=True)
@@ -379,7 +382,10 @@ class _Audit:
             )
 
     def scan_zip(self, archive: zipfile.ZipFile, max_revision: int | None = None) -> None:
-        for member in sorted(archive.infolist(), key=lambda info: info.header_offset):
+        members = sorted(archive.infolist(), key=lambda info: info.header_offset)
+        for index, member in enumerate(members):
+            if max_revision is not None and index % 4096 == 0:
+                self.refresh_finished()
             name = Path(member.filename)
             revision = self.expected.get(name.stem)
             if (
