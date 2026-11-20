@@ -284,6 +284,23 @@ def _file_revision(path: Path) -> str:
     return matched[1].decode('ascii') if matched else ''
 
 
+def _copied_svn_header(path: Path, entry: str, revision: str, embedded_revision: str) -> bool:
+    # Some public COD files retain the SVN keywords of the entry they were copied from.
+    # Only callers that explicitly retrieved a revision can rely on the pinned URL here.
+    if not embedded_revision or int(embedded_revision) >= int(revision):
+        return False
+    with path.open('rb') as handle:
+        prefix = handle.read(65536)
+    url = re.search(rb'(?m)^#\$URL: [^\r\n]*/([0-9]{7})\.cif \$', prefix)
+    entry_bytes = entry.encode('ascii')
+    return bool(
+        url
+        and url[1] != entry_bytes
+        and re.search(rb'(?mi)^data_' + entry_bytes + rb'[ \t\r]*$', prefix)
+        and re.search(rb'(?mi)^_cod_database_code[ \t]+' + entry_bytes + rb'[ \t\r]*$', prefix)
+    )
+
+
 class _Audit:
     def __init__(
         self,
@@ -339,7 +356,7 @@ class _Audit:
         finally:
             path.unlink(missing_ok=True)
 
-    def submit(self, entry: str, stream: BinaryIO) -> bool:
+    def submit(self, entry: str, stream: BinaryIO, *, pinned_download: bool = False) -> bool:
         if (
             entry not in self.expected
             or entry in self.withheld
@@ -351,10 +368,18 @@ class _Audit:
         with path.open('wb') as target:
             shutil.copyfileobj(stream, target)
         revision = self.expected[entry]
-        if _file_revision(path) != revision:
-            path.unlink()
-            self.archive_mismatches += 1
-            return False
+        embedded_revision = _file_revision(path)
+        if embedded_revision != revision:
+            if not pinned_download or not _copied_svn_header(
+                path, entry, revision, embedded_revision
+            ):
+                path.unlink()
+                self.archive_mismatches += 1
+                return False
+            print(
+                f'COD {entry}: verified pinned revision {revision} with a copied SVN header',
+                flush=True,
+            )
         self.enqueued.add(entry)
         self.pending.append(self.executor.submit(self._import, entry, revision, path))
         if len(self.pending) >= self.jobs * 3:
@@ -450,7 +475,7 @@ def _fill_live(audit: _Audit, directory: Path, entries: set[str], base_url: str)
             try:
                 fetch(f'{base_url}/{entry}.cif@{audit.expected[entry]}', path)
                 with path.open('rb') as source:
-                    if not audit.submit(entry, source):
+                    if not audit.submit(entry, source, pinned_download=True):
                         print(f'Unverified CIF revision for COD {entry}', flush=True)
             except (OSError, http.client.HTTPException, zipfile.BadZipFile) as error:
                 print(f'Could not retrieve COD {entry}: {error}', flush=True)
@@ -574,7 +599,9 @@ def _export(database: Path, output: Path) -> None:
                 ) = row
                 if hold:
                     before = after = 'withheld by COD'
-                    before_detail = after_detail = f'Frozen COD catalogue release date {hold}'
+                    before_detail = after_detail = (
+                        f'COD withheld coordinates. Catalogue hold date {hold}'
+                    )
                     digest = commit = None
                 writer.writerow((
                     entry,
