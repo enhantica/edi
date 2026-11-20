@@ -85,3 +85,54 @@ def test_cif_refuses_a_setting_conflicting_with_the_explicit_coordinate_code() -
     symbols = "_space_group_name_H-M_alt 'R -3 c :H'\n_space_group_IT_coordinate_system_code r"
     with pytest.raises(ValueError, match=r'gives setting h but .* gives r'):
         edi.StructureFactory.from_cif_str(_rhombohedral_structure(symbols))
+
+
+@pytest.mark.parametrize('hall', ['R 3 2"', 'R_3_2"'])
+def test_cif_reads_an_ambiguous_hermann_mauguin_name_with_a_hall_symbol(hall: str) -> None:
+    declarations = f"_space_group_name_H-M_alt 'R 3 2'\n_symmetry_space_group_name_Hall '{hall}'"
+    with pytest.warns(UserWarning, match=r'crysta\.schema\.cif_items_not_read') as warnings:
+        structure = edi.StructureFactory.from_cif_str(_rhombohedral_structure(declarations))
+    assert structure.space_group.it_number == 155
+    assert structure.space_group.coord_system_code.lower() == 'h'
+    assert all(
+        '_symmetry_space_group_name_Hall' not in str(warning.message) for warning in warnings
+    )
+
+
+def test_cif_refuses_a_hall_symbol_inconsistent_with_the_hermann_mauguin_name() -> None:
+    declarations = "_space_group_name_H-M_alt 'R 3 2'\n_space_group.name_Hall 'P 1'"
+    with pytest.raises(ValueError, match=r'_space_group\.name_Hall.*does not select a setting'):
+        edi.StructureFactory.from_cif_str(_rhombohedral_structure(declarations))
+
+
+@pytest.mark.parametrize('code', ['', '\n_space_group_IT_coordinate_system_code 2abc'])
+def test_cif_reads_an_origin_only_suffix_with_an_orthorhombic_symbol(code: str) -> None:
+    text = STRUCTURE.replace("'P 1'", f"'P b a n :2'{code}")
+    with pytest.warns(UserWarning, match=r'crysta\.schema\.cif_items_not_read'):
+        structure = edi.StructureFactory.from_cif_str(text)
+    assert structure.space_group.it_number == 50
+    assert structure.space_group.coord_system_code == '2abc'
+
+
+def test_cif_refuses_incompatible_operations_with_an_origin_only_suffix() -> None:
+    text = STRUCTURE.replace("'P 1'", "'P b a n :2'")
+    text += "loop_\n_space_group_symop_operation_xyz\n'x,y,z'\n"
+    with pytest.raises(ValueError, match='coordinate-system code'):
+        edi.StructureFactory.from_cif_str(text)
+
+
+@pytest.mark.parametrize('marker', ['?', '.'])
+def test_cif_reports_the_site_and_column_of_an_absent_fractional_coordinate(marker: str) -> None:
+    text = STRUCTURE.replace('Na1 ? .1', f'Na1 ? {marker}')
+    with pytest.raises(
+        ValueError, match=r"site 'Na1' requires a fractional coordinate.*_atom_site_fract_x"
+    ):
+        edi.StructureFactory.from_cif_str(text)
+
+
+def test_cif_reports_the_row_and_column_of_an_absent_site_label() -> None:
+    text = STRUCTURE.replace('Na1 ?', '? ?')
+    with pytest.raises(
+        ValueError, match=r'atom-site row 1 requires a site label.*_atom_site_label'
+    ):
+        edi.StructureFactory.from_cif_str(text)
