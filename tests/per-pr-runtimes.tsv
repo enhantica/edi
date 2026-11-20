@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-20T15:26:49Z
+# measured_utc = 2026-11-20T15:37:48Z
 #
-# Recorded from: focused COD CIF compatibility test run (1 added tests measured)
-# Collected tests: 255383; with a reported duration: 82879
+# Recorded from: focused COD CIF compatibility test run (17 added tests measured)
+# Collected tests: 255399; with a reported duration: 82878
 # Module-scoped fixture costs recorded: 215
 #
 # Breaches are decided PER TIER against the table
@@ -29,12 +29,12 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 255383
+# inventory_python = 255399
 # inventory_cpp = 0
-# inventory_measured = 183892
+# inventory_measured = 183908
 # inventory_unmeasured = 71491
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
-# inventory_pr_python = 89118
+# inventory_pr_python = 89134
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -168546,19 +168546,35 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_import_contract.py::
 0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif_accepts_matching_space_group_alias_with_one_setting_suffix[True]
 0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif_import_reports_defaults_for_missing_site_values
 0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif_keeps_refusing_unlabelled_physical_sites
-0.020	tests/integration/py/test_cod_cif_compatibility.py::test_cif_preserves_a_legacy_sites_published_isotropic_value_without_a_tensor
+0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif_preserves_a_legacy_sites_published_isotropic_value_without_a_tensor[Bovl-B]
+0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif_preserves_a_legacy_sites_published_isotropic_value_without_a_tensor[Uequiv-U]
+0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif_preserves_a_legacy_sites_published_isotropic_value_without_a_tensor[Uij-U]
+0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif_preserves_a_legacy_sites_published_isotropic_value_without_a_tensor[Uovl-U]
+0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif_preserves_a_legacy_sites_published_isotropic_value_without_a_tensor[equiv-U]
+0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif_preserves_a_legacy_sites_published_isotropic_value_without_a_tensor[iso-B]
+0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif_preserves_a_legacy_sites_published_isotropic_value_without_a_tensor[iso-U]
 0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif_reads_an_ambiguous_hermann_mauguin_name_with_a_hall_symbol[R 3 2"]
 0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif_reads_an_ambiguous_hermann_mauguin_name_with_a_hall_symbol[R_3_2"]
 0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif_reads_an_origin_only_suffix_with_an_orthorhombic_symbol[\n_space_group_IT_coordinate_system_code 2abc]
 0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif_reads_an_origin_only_suffix_with_an_orthorhombic_symbol[]
 0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif_reads_legacy_adp_codes_using_the_supplied_tensor[Beq-U]
 0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif_reads_legacy_adp_codes_using_the_supplied_tensor[Bij-B]
+0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif_reads_legacy_adp_codes_using_the_supplied_tensor[Uaniso-U]
 0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif_reads_legacy_adp_codes_using_the_supplied_tensor[Ueq-B]
+0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif_reads_legacy_adp_codes_using_the_supplied_tensor[Uequi-U]
 0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif_reads_legacy_adp_codes_using_the_supplied_tensor[Uij-U]
+0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif_reads_legacy_adp_codes_using_the_supplied_tensor[aniso-B]
+0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif_reads_legacy_adp_codes_using_the_supplied_tensor[equiv-U]
 0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif_refuses_a_hall_symbol_inconsistent_with_the_hermann_mauguin_name
 0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif_refuses_a_legacy_adp_code_without_a_matching_tensor[Beq-None]
 0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif_refuses_a_legacy_adp_code_without_a_matching_tensor[Bij-U]
+0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif_refuses_a_legacy_adp_code_without_a_matching_tensor[Uaniso-B]
 0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif_refuses_a_legacy_adp_code_without_a_matching_tensor[Uij-B]
+0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif_refuses_a_legacy_adp_code_without_a_matching_tensor[aniso-None]
+0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif_refuses_a_legacy_adp_code_without_a_matching_tensor[equiv-None]
+0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif_refuses_a_legacy_isotropic_site_without_matching_scalar[Uovl-None]
+0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif_refuses_a_legacy_isotropic_site_without_matching_scalar[iso-None]
+0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif_refuses_a_legacy_isotropic_site_without_matching_scalar[iso-U]
 0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif_refuses_a_setting_conflicting_with_the_explicit_coordinate_code
 0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif_refuses_a_structure_with_only_dummy_placeholders
 0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif_refuses_conflicting_space_group_aliases[R -3 c :R]
