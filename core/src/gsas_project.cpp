@@ -74,6 +74,11 @@ Parameter parameter(const Value& item, const char* name) {
     return {finite(pair[0], name), std::nullopt, pair[1].boolean(name)};
 }
 
+Parameter with_spec(Parameter value, const ParameterSpec& spec) {
+    value.spec = &spec;
+    return value;
+}
+
 void assign_parameter(Parameter& target, const Parameter& value) {
     target.value = value.value.get();
     target.free = value.free.get();
@@ -305,8 +310,9 @@ void cw_profile(BraggPdExperiment& experiment, const Value& instrument, const Va
     require(lam.value.get() > 0 && !lam.free.get(), "expected positive fixed wavelength");
     require(!axial.free.get() || axial.value.get() >= 0.002,
             "unsupported free SH/L below the floor");
-    experiment.instrument.setup_wavelength = lam;
-    experiment.instrument.calib_twotheta_offset = parameter(instrument.at("Zero"), "Zero");
+    experiment.instrument.setup_wavelength = with_spec(lam, spec::instrument_wavelength);
+    experiment.instrument.calib_twotheta_offset =
+        with_spec(parameter(instrument.at("Zero"), "Zero"), spec::instrument_twotheta_offset);
     const auto& radius = sample.get("radius_mm");
     if (!radius.is_null()) {
         const double mm = finite(radius, "goniometer radius");
@@ -316,14 +322,17 @@ void cw_profile(BraggPdExperiment& experiment, const Value& instrument, const Va
             value.value = value.value.get() * -0.18 / (std::numbers::pi * mm);
             return value;
         };
-        experiment.instrument.calib_sample_displacement = shift("displace_x");
-        experiment.instrument.calib_sample_transparency = shift("displace_y");
+        experiment.instrument.calib_sample_displacement =
+            with_spec(shift("displace_x"), spec::instrument_sample_displacement);
+        experiment.instrument.calib_sample_transparency =
+            with_spec(shift("displace_y"), spec::instrument_sample_transparency);
     }
     const auto& lam2 = instrument.get("Lam2");
     if (!lam2.is_null()) {
-        experiment.instrument.setup_wavelength_2 = parameter(lam2, "Lam2");
-        experiment.instrument.setup_wavelength_2_to_1_ratio =
-            parameter(instrument.at("ratio"), "ratio");
+        experiment.instrument.setup_wavelength_2 =
+            with_spec(parameter(lam2, "Lam2"), spec::instrument_wavelength_2);
+        experiment.instrument.setup_wavelength_2_to_1_ratio = with_spec(
+            parameter(instrument.at("ratio"), "ratio"), spec::instrument_wavelength_2_to_1_ratio);
     }
     if (!instrument.get("polarization").is_null()) {
         const auto azimuth = parameter(instrument.at("azimuth"), "azimuth");
@@ -333,8 +342,10 @@ void cw_profile(BraggPdExperiment& experiment, const Value& instrument, const Va
         const auto polarization = parameter(instrument.at("polarization"), "polarization");
         const double effective = cosine + (1 - 2 * cosine) * polarization.value.get();
         experiment.instrument.setup_polarization_coefficient =
-            Parameter(effective, std::nullopt, polarization.free.get());
-        experiment.instrument.setup_monochromator_twotheta = Parameter(0.);
+            with_spec(Parameter(effective, std::nullopt, polarization.free.get()),
+                      spec::instrument_polarization_coefficient);
+        experiment.instrument.setup_monochromator_twotheta =
+            with_spec(Parameter(0.), spec::instrument_monochromator_twotheta);
         experiment.xray_form_factor = "it1992";
     }
     auto& peak = experiment.peak;
@@ -361,6 +372,7 @@ void cw_profile(BraggPdExperiment& experiment, const Value& instrument, const Va
     peak.broad_gauss_w = gaussian("W");
     peak.broad_lorentz_x = lorentzian("Y", 0.018 * strain / std::numbers::pi);
     peak.broad_lorentz_y = lorentzian("X", 1.8 * lam.value.get() / (std::numbers::pi * size));
+    canonicalize_peak_specs(peak);
 }
 
 void tof_profile(BraggPdExperiment& experiment, const Value& instrument, double size,

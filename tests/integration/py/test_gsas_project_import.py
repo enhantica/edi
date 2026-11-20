@@ -64,6 +64,69 @@ def test_gsas_text_import_round_trips_settings_and_observations(tmp_path):
     assert tuple(experiment.data.intensity_meas_su) == (2, 4, 2)
 
 
+def test_gsas_cw_import_uses_native_parameter_metadata_before_save(tmp_path):
+    bundle = _bundle()
+    histogram = bundle['histogram']
+    histogram['type'] = 'PXC'
+    histogram['instrument'].update({
+        'Lam2': [1.913, False],
+        'ratio': [0.5, False],
+        'polarization': [0.8, False],
+        'azimuth': [0, False],
+    })
+    histogram['sample'] = {
+        'scale': [10000, True],
+        'radius_mm': 200,
+        'displace_x': [0, False],
+        'displace_y': [0, False],
+    }
+    histogram['links'] = [
+        {
+            'phase_index': 0,
+            'phase_scale': [1, False],
+            'size_um': 1,
+            'microstrain_ppm': 1000,
+        }
+    ]
+    source = tmp_path / 'test.gsas.json'
+    source.write_text(
+        json.dumps({
+            'format': 'gsas-ii-powder-v2',
+            'source': bundle['source'],
+            'phases': [bundle['phase']],
+            'histograms': [histogram],
+        }),
+        encoding='ascii',
+    )
+    project = edi.Project.load(source)
+    experiment = project.experiments['powder']
+
+    for field, units in {
+        'setup_wavelength': 'angstroms',
+        'calib_twotheta_offset': 'degrees',
+        'calib_sample_displacement': 'degrees',
+        'calib_sample_transparency': 'degrees',
+        'setup_wavelength_2': 'angstroms',
+        'setup_wavelength_2_to_1_ratio': 'dimensionless',
+        'setup_polarization_coefficient': 'dimensionless',
+        'setup_monochromator_twotheta': 'degrees',
+    }.items():
+        parameter = getattr(experiment.instrument, field)
+        assert parameter.name == field
+        assert parameter.units == units
+
+    for field in (
+        'broad_gauss_u',
+        'broad_gauss_v',
+        'broad_gauss_w',
+        'broad_lorentz_x',
+        'broad_lorentz_y',
+        'asym_fcj_1',
+        'asym_fcj_2',
+    ):
+        assert getattr(experiment.peak, field).name == field
+
+
 def test_gsas_text_refuses_zero_weight(tmp_path):
     bundle = _bundle()
     bundle['histogram']['observations'][1][2] = 0
