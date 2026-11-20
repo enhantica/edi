@@ -2084,20 +2084,22 @@ void structure_block(const PCR& pcr, Project& project, std::vector<Pattern>& pat
             return std::abs(candidate - observed) <= 0.005 * std::max(candidate, observed);
         };
         const double integral_plateau = std::round(largest);
-        const bool filled_orbits = orbit_occupancies.size() > 1 &&
-            std::all_of(orbit_occupancies.begin(), orbit_occupancies.end(),
-                        [integral_plateau, &matches](const auto& orbit) {
-                            return matches(integral_plateau, orbit.second);
-                        });
+        const auto filled_orbits = std::count_if(orbit_occupancies.begin(), orbit_occupancies.end(),
+                                                [integral_plateau, &matches](const auto& orbit) {
+                                                    return matches(integral_plateau, orbit.second);
+                                                });
         const double atz = options[multi ? 7 : 11];
         const bool has_mass = mass_known && nominal_mass > 0. && atz > 0. && brindley > 0.;
         const double atz_mass_ratio = has_mass ? atz * brindley / nominal_mass : 0.;
         const bool mass_matches = has_mass &&
             (matches(integral_plateau, atz_mass_ratio) || matches(integral_plateau, nominal_mass / atz));
+        const bool plateau_matches = filled_orbits >= 2 &&
+            (static_cast<std::size_t>(filled_orbits) == orbit_occupancies.size() || matches(1., atz_mass_ratio));
         if (integral_plateau >= 2. && matches(integral_plateau, largest) &&
-            (mass_matches || filled_orbits)) {
-            // A common filled-site plateau is independent of stale ATZ metadata.
-            // Otherwise ATZ can corroborate either historical mass convention.
+            (mass_matches || plateau_matches)) {
+            // An integer plateau across all orbits is independent of stale ATZ.
+            // Some files store the mass of their raw atom table in ATZ. In
+            // that convention two filled orbits establish the same plateau.
             occupancy_factor = integral_plateau;
         } else if (!(matches(1., atz_mass_ratio) && largest <= 1.05)) {
             pcr.fail("FullProf occupancy normalization conflicts with the phase mass", phase);

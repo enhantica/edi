@@ -34,8 +34,9 @@ describes the equivalent manual construction through normal project actions.
    contributing phase's profile selector against its pattern's default. Use a shared profile
    when the effective profiles agree. Keep the explicit FullProf `:R` axes as the native
    rhombohedral setting with a factor of nine on the nuclear powder scale. For substitutional
-   occupancies, check the normalization plateau across
-   the co-occupants of each crystallographic orbit.
+   occupancies, check the normalization plateau across the co-occupants of each
+   crystallographic orbit. Two equal filled orbits and an ATZ matching the unnormalized atom
+   table establish a common factor while retaining partially occupied sites.
 4. A nonzero FullProf codeword identifies a signed shift within a refinement group. Retain the
    starting value and use native parameter aliases and affine constraints for shared shifts.
    Transform the refinement directions when equivalent profile coefficients change basis.
