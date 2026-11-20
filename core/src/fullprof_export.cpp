@@ -464,7 +464,7 @@ void write_profile(std::ostream& out, Structure& structure, const Bank& bank, st
     out << "!-------> Profile Parameters for Pattern # " << index << " ----> Phase # " << phase << '\n';
     pair_rows(out, bank.tof() ? "Scale Extinc Bov Str1 Str2 Str3 Strain-Model"
                              : "Scale Shape1 Bov Str1 Str2 Str3 Strain-Model",
-              {codes.field(link.scale, bank.intensity_scale),
+              {codes.field(link.scale, bank.intensity_scale / detail::fullprof_powder_scale_in_native_units(structure)),
                bank.tof() ? Field{0.} : field(peak.mixing_eta_0), {0.}, {0.}, {0.}, {0.}}, " 0");
     if (bank.tof()) {
         // FullProf's base rows include the separately declared size and strain contributions.
@@ -672,10 +672,7 @@ void write_atoms(std::ostream& out, Structure& structure, Codes& codes, bool mag
         }
         values(out, row);
         if (magnetic) {
-            if (tensor) {
-                unsupported("FullProf magnetic export requires isotropic displacement");
-            }
-            out << (moment_present ? " 1 0\n" : " 0 0\n");
+            out << ' ' << static_cast<int>(moment_present) + 2 * static_cast<int>(tensor) << " 0\n";
         } else {
             out << " 0 0 " << (tensor ? 2 : 0) << " 0\n";
         }

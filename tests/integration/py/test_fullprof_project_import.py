@@ -73,7 +73,7 @@ def test_fullprof_twin_layout_with_independent_reflections(tmp_path):
     companion = tmp_path / 'observed.int'
     rows = (SINGLE_CRYSTAL / 'prnio.int').read_text().splitlines()
     rows[2] = '0.8302 0 1'
-    companion.write_text('\n'.join(rows) + '\n')
+    companion.write_text('\n'.join([*rows[:3], '! Reflection block', *rows[3:]]) + '\n')
     project = edi.Project.load(source)
     assert len(project.experiments[0].refln.intensity_meas) == 198
 

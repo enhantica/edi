@@ -33,7 +33,8 @@ describes the equivalent manual construction through normal project actions.
    and exclusions consecutively, which is the positional order read by FullProf. Resolve each
    contributing phase's profile selector against its pattern's default. Use a shared profile
    when the effective profiles agree. Keep the explicit FullProf `:R` axes as the native
-   rhombohedral setting. For substitutional occupancies, check the normalization plateau across
+   rhombohedral setting with a factor of nine on the nuclear powder scale. For substitutional
+   occupancies, check the normalization plateau across
    the co-occupants of each crystallographic orbit.
 4. A nonzero FullProf codeword identifies a signed shift within a refinement group. Retain the
    starting value and use native parameter aliases and affine constraints for shared shifts.
@@ -44,14 +45,19 @@ describes the equivalent manual construction through normal project actions.
    ALT and ISIS FXYE observations use forward bin widths and keep uncertainty scaled with intensity.
 6. Convert compatible commensurate magnetic descriptions through native signed symmetry
    operators and magnetic moments. The combined FullProf magnetic phase form can carry magnetic
-   centering vectors and BNS setting information. For the archived rare-earth ion labels, keep the
+   centering vectors and BNS setting information. Classical `SYMM`/`MSYM` pairs convert when
+   the moment operation is a signed axial copy of the spatial operation. The legacy body-centered
+   form supplies an additional spatial centering. Sites in a recognized magnetic table setting
+   can carry beta tensors and moments in the same phase. For the archived rare-earth ion labels, keep the
    FullProf radial coefficients in the native magnetic table and recognize them on export. Preserve
    difference-pattern phases with zero nuclear scattering and export them with the FullProf
    `mag_only` phase qualifier.
 7. Report unsupported source terms and missing data before adopting the project. Verification uses
    FullProf's fixed-input calculated intensities on matched observations, with excluded rows
    removed from the metric. An active maximum-likelihood or unit-weight objective requires a
-   corresponding residual. The bundled assistant skill also describes manual export to FullProf.
+   corresponding residual. A nonzero or actively refined single-crystal `x-Lambda/2` term
+   requires a harmonic-contamination correction. The bundled assistant skill also describes
+   manual export to FullProf.
 
 ## Export
 

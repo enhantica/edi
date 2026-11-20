@@ -880,6 +880,10 @@ PlainDataLoad fullprof_reflections(const BraggPdExperiment& experiment, const fs
     std::size_t row = 0;
     for (std::string line; std::getline(source, line);) {
         if (++row > 3) {
+            if (trim(line).starts_with('!')) {
+                changed = true;
+                continue;  // FullProf permits comment-only lines between reflections.
+            }
             const auto annotation = line.find("<- Dubious reflection");
             if (annotation != std::string::npos) {
                 line.resize(annotation);
@@ -1691,15 +1695,20 @@ void magnetic_moment(const PCR& pcr, Structure& phase, const AtomSite& site, con
     moment->id = site.id.value();
     if (spherical) {
         pcr.zero(codes, 0, 3, "refinement in spherical magnetic coordinates");
-        if (phase.cell.angle_alpha.value.get() != 90. || phase.cell.angle_beta.value.get() != 90. ||
-            phase.cell.angle_gamma.value.get() != 90.) {
+        const bool along_b = values[2] == 90. && (values[1] == 90. || values[1] == 270.);
+        const bool b_is_orthogonal = phase.cell.angle_alpha.value.get() == 90. &&
+                                     phase.cell.angle_gamma.value.get() == 90.;
+        if (along_b && b_is_orthogonal) {
+            moment->crystalaxis_y.value = values[1] == 90. ? values[0] : -values[0];
+        } else if (!b_is_orthogonal || phase.cell.angle_beta.value.get() != 90.) {
             pcr.fail("Spherical FullProf moments require an orthogonal cell for this conversion", source);
+        } else {
+            const auto azimuth = values[1] * std::numbers::pi / 180.;
+            const auto polar = values[2] * std::numbers::pi / 180.;
+            moment->crystalaxis_x.value = values[0] * std::sin(polar) * std::cos(azimuth);
+            moment->crystalaxis_y.value = values[0] * std::sin(polar) * std::sin(azimuth);
+            moment->crystalaxis_z.value = values[0] * std::cos(polar);
         }
-        const auto azimuth = values[1] * std::numbers::pi / 180.;
-        const auto polar = values[2] * std::numbers::pi / 180.;
-        moment->crystalaxis_x.value = values[0] * std::sin(polar) * std::cos(azimuth);
-        moment->crystalaxis_y.value = values[0] * std::sin(polar) * std::sin(azimuth);
-        moment->crystalaxis_z.value = values[0] * std::cos(polar);
     } else {
         refine.set(moment->parameters(), values, codes);
     }
@@ -1712,6 +1721,55 @@ void add_magnetic_operation(MagneticDescription& magnetic, const std::string& op
         magnetic.operations.emplace_back(std::to_string(magnetic.operations.size() + 1),
                                          fullprof_inverted_operator(operation));
     }
+}
+
+MagneticDescription classic_magnetic_operators(const PCR& pcr, std::size_t count_line, std::size_t end) {
+    const auto counts = pcr.after(count_line, end, 4);
+    const int operations = integer(counts[0], pcr.path.string());
+    if (operations < 1 || operations > 192 || (counts[1] != 1. && counts[1] != 2.) || counts[3] != 1.) {
+        pcr.fail("Unsupported FullProf magnetic operator counts", count_line);
+    }
+    MagneticDescription magnetic;
+    magnetic.centerings.emplace_back("1", "x,y,z,+1");
+    auto row = pcr.next(count_line + 1, end);
+    for (int operation = 0; operation < operations; ++operation) {
+        row = pcr.next(row + 1, end);
+        const auto spatial = words(pcr.lines[row].text);
+        row = pcr.next(row + 1, end);
+        const auto moment = words(pcr.lines[row].text);
+        if (spatial.size() != 2 || lower(spatial[0]) != "symm" ||
+            moment.size() != 2 || lower(moment[0]) != "msym") {
+            pcr.fail("Expected a FullProf SYMM/MSYM operator pair", row);
+        }
+        const auto last_comma = moment[1].rfind(',');
+        if (last_comma == std::string::npos || number(moment[1].substr(last_comma + 1), pcr.path.string()) != 0.) {
+            pcr.fail("Unsupported FullProf magnetic operator phase", row);
+        }
+        add_magnetic_operation(magnetic,
+            fullprof_signed_operator(lower(spatial[1]), lower(moment[1].substr(0, last_comma))), counts[1] == 2.);
+    }
+    return magnetic;
+}
+
+void classic_combined_magnetic_symmetry(const PCR& pcr, Structure& structure, std::size_t start,
+                                        std::size_t end) {
+    const auto counts = pcr.require("nsym cen laue magmat", start + 1, end);
+    auto declaration = counts;
+    while (declaration > start && pcr.lines[--declaration].text.empty()) {
+    }
+    const auto& group = pcr.lines[declaration].text;
+    const auto setting = fullprof_default_space_group(group);
+    if (!setting || (group.front() != 'P' && group.front() != 'I')) {
+        pcr.fail("Unsupported FullProf classical magnetic lattice " + group, declaration);
+    }
+    auto magnetic = classic_magnetic_operators(pcr, counts, end);
+    if (group.front() == 'I') {
+        magnetic.centerings.emplace_back("2", "x+1/2,y+1/2,z+1/2,+1");
+    }
+    magnetic.parent.name_h_m_alt = setting->name_h_m;
+    magnetic.parent.it_number = std::to_string(setting->it_number);
+    assign_space_group_setting(structure.space_group, *setting, true);
+    structure.magnetic = std::move(magnetic);
 }
 
 void combined_magnetic_symmetry(const PCR& pcr, Structure& structure, std::size_t start, std::size_t end) {
@@ -1829,7 +1887,8 @@ void structure_block(const PCR& pcr, Project& project, std::vector<Pattern>& pat
     const auto jbt = multi ? 3U : 6U;
     const auto isy = multi ? 4U : 8U;
     const auto nvk = multi ? 8U : 12U;
-    const bool magnetic = std::abs(options[jbt]) == 10. && options[isy] == 2.;
+    const bool legacy_magnetic = !multi && std::abs(options[jbt]) == 10. && std::abs(options[isy]) == 1.;
+    const bool magnetic = legacy_magnetic || (std::abs(options[jbt]) == 10. && options[isy] == 2.);
     const bool magnetic_only = std::any_of(labels.begin(), labels.end(),
                                            [](const auto& label) { return lower(label) == "mag_only"; });
     const bool spherical = options[jbt] < 0.;
@@ -1876,7 +1935,9 @@ void structure_block(const PCR& pcr, Project& project, std::vector<Pattern>& pat
         }
     }
     const auto atom_header = pcr.require("atom ", phase, end);
-    if (magnetic) {
+    if (legacy_magnetic) {
+        classic_combined_magnetic_symmetry(pcr, *structure, phase, atom_header);
+    } else if (magnetic) {
         combined_magnetic_symmetry(pcr, *structure, phase, atom_header);
     } else {
         auto group = atom_header;
@@ -1930,7 +1991,8 @@ void structure_block(const PCR& pcr, Project& project, std::vector<Pattern>& pat
         }
         const std::size_t coordinate = magnetic ? 2 : 0;
         const auto atom_model = values[7];
-        const bool moment_present = magnetic && atom_model == 1.;
+        const bool moment_present = magnetic && (std::abs(atom_model) == 1. || std::abs(atom_model) == 3.);
+        const bool tensor_present = atom_model == 2. || (magnetic && std::abs(atom_model) == 3.);
         if (magnetic && values[1] != 0.) {
             pcr.fail("Magnetic propagation vector needs a non-collinear conversion", atom_line);
         }
@@ -1951,7 +2013,7 @@ void structure_block(const PCR& pcr, Project& project, std::vector<Pattern>& pat
             pcr.fail("Cannot establish FullProf site multiplicity for " + fields[0], atom_line);
         }
         constexpr std::array<int, 9> identity{1, 0, 0, 0, 1, 0, 0, 0, 1};
-        if (magnetic && geometry.rotation != identity) {
+        if (moment_present && geometry.rotation != identity) {
             pcr.fail("FullProf magnetic site image changes the moment's axes", atom_line);
         }
         for (std::size_t axis = 0; axis < 3; ++axis) {
@@ -1977,9 +2039,15 @@ void structure_block(const PCR& pcr, Project& project, std::vector<Pattern>& pat
         } else {
             mass_known = false;
         }
-        if (atom_model == 0. || moment_present) {
-            refine.set(site->adp_iso, {values[coordinate + 3], codes[3]});
-        } else if (atom_model == 2.) {
+        if (moment_present) {
+            const auto observation = pair_after(pcr, atom_line, first_cell, 7);
+            pcr.zero(observation.values, 3, 7, "imaginary magnetic moments or phase");
+            pcr.zero(observation.codes, 3, 7, "imaginary magnetic moment code or phase");
+            atom_line = pcr.next(pcr.next(atom_line + 1, first_cell) + 1, first_cell);
+            magnetic_moment(pcr, *structure, *site, moment_type, refine, observation.values, observation.codes,
+                            spherical || atom_model < 0., atom_line);
+        }
+        if (tensor_present) {
             auto tensor = std::make_shared<AtomSiteAniso>();
             tensor->id = site->id.value();
             site->adp_type = "beta";
@@ -2002,15 +2070,10 @@ void structure_block(const PCR& pcr, Project& project, std::vector<Pattern>& pat
             for (std::size_t column = 0; column < parameters.size(); ++column) {
                 refine.set(*parameters[column], rotated_code(pcr, rotated[column], row.codes, factors[column], atom_line));
             }
+        } else if (atom_model == 0. || moment_present) {
+            refine.set(site->adp_iso, {values[coordinate + 3], codes[3]});
         } else {
             pcr.fail("Unsupported FullProf atom model N_t=" + number_text(atom_model), atom_line);
-        }
-        if (moment_present) {
-            const auto observation = pair_after(pcr, atom_line, first_cell, 7);
-            pcr.zero(observation.values, 3, 7, "imaginary magnetic moments or phase");
-            pcr.zero(observation.codes, 3, 7, "imaginary magnetic moment code or phase");
-            atom_line = pcr.next(pcr.next(atom_line + 1, first_cell) + 1, first_cell);
-            magnetic_moment(pcr, *structure, *site, moment_type, refine, observation.values, observation.codes, spherical, atom_line);
         }
     }
     double occupancy_factor = 1.;
@@ -2083,6 +2146,13 @@ void structure_block(const PCR& pcr, Project& project, std::vector<Pattern>& pat
         link->structure_id = structure->name.value();
         pattern.model->linked_structures.push_back(link);
         if (pattern.single_crystal()) {
+            const auto harmonic = pcr.header("x-lambda/2", begin, limit);
+            if (harmonic != limit) {
+                const auto correction = pair_after(pcr, harmonic, limit, 1).at(0);
+                if (correction.value != 0. || correction.code != 0.) {
+                    pcr.fail("FullProf single-crystal lambda/2 contamination needs a harmonic correction", harmonic);
+                }
+            }
             const auto scale = pair_after(pcr, pcr.require("sc1 ", begin, limit), limit, 6);
             const auto ext = pair_after(pcr, pcr.require("ext1 ", begin, limit), limit, 7);
             pcr.zero(ext.values, 6, 7, "seventh single-crystal extinction coefficient");
@@ -2141,7 +2211,8 @@ void structure_block(const PCR& pcr, Project& project, std::vector<Pattern>& pat
         if (pattern.tof() && (scale.values[1] != 0. || scale.codes[1] != 0.)) {
             pcr.fail("Unsupported FullProf TOF extinction", begin);
         }
-        refine.set(link->scale, scale.at(0, pattern.scale_factor * occupancy_factor * occupancy_factor));
+        refine.set(link->scale, scale.at(0, pattern.scale_factor * occupancy_factor * occupancy_factor *
+                                                  fullprof_powder_scale_in_native_units(*structure)));
         const auto shape = pair_after(pcr, pcr.require("pref1 ", begin, limit), limit, 6);
         const bool has_texture = (shape.values[0] != 0. && shape.values[0] != 1.) ||
                                  shape.values[1] != 0. || shape.codes[0] != 0. || shape.codes[1] != 0.;
@@ -2278,30 +2349,7 @@ void classic_magnetic_overlay(const PCR& pcr, Project& project, Pattern& pattern
     }
     auto& structure = *matched;
     const auto count_line = pcr.require("nsym cen laue magmat", phase + 1, atom_header);
-    const auto counts = pcr.after(count_line, atom_header, 4);
-    const int operations = integer(counts[0], pcr.path.string());
-    if (operations < 1 || operations > 192 || (counts[1] != 1. && counts[1] != 2.) || counts[3] != 1.) {
-        pcr.fail("Unsupported FullProf magnetic overlay operator counts", count_line);
-    }
-    MagneticDescription magnetic;
-    magnetic.centerings.emplace_back("1", "x,y,z,+1");
-    auto row = pcr.next(count_line + 1, atom_header);
-    for (int operation = 0; operation < operations; ++operation) {
-        row = pcr.next(row + 1, atom_header);
-        const auto spatial = words(pcr.lines[row].text);
-        row = pcr.next(row + 1, atom_header);
-        const auto moment = words(pcr.lines[row].text);
-        if (spatial.size() != 2 || lower(spatial[0]) != "symm" ||
-            moment.size() != 2 || lower(moment[0]) != "msym") {
-            pcr.fail("Expected a FullProf SYMM/MSYM operator pair", row);
-        }
-        const auto last_comma = moment[1].rfind(',');
-        if (last_comma == std::string::npos || number(moment[1].substr(last_comma + 1), pcr.path.string()) != 0.) {
-            pcr.fail("Unsupported FullProf magnetic operator phase", row);
-        }
-        add_magnetic_operation(magnetic,
-            fullprof_signed_operator(lower(spatial[1]), lower(moment[1].substr(0, last_comma))), counts[1] == 2.);
-    }
+    auto magnetic = classic_magnetic_operators(pcr, count_line, atom_header);
     struct SiteMoment {
         Row values;
         Row codes;
@@ -2309,7 +2357,7 @@ void classic_magnetic_overlay(const PCR& pcr, Project& project, Pattern& pattern
         std::size_t line;
     };
     std::vector<SiteMoment> sites;
-    row = atom_header;
+    auto row = atom_header;
     const int atoms = integer(options[0], pcr.path.string());
     for (int i = 0; i < atoms; ++i) {
         row = pcr.next(row + 1, profile);
@@ -2817,6 +2865,13 @@ double fullprof_range_tolerance(double value) {
     const float stored = static_cast<float>(value);
     const float representable = std::nextafter(stored, std::numeric_limits<float>::infinity());
     return std::isfinite(representable) ? std::max(1.e-6, static_cast<double>(representable - stored)) : 1.e-6;
+}
+
+double fullprof_powder_scale_in_native_units(const Structure& structure) {
+    // For nuclear diffraction in explicit rhombohedral axes, FullProf retains
+    // the factor of three in its reflection amplitude. Native amplitudes on
+    // the primitive cell omit it, so the powder intensity scales differ by nine.
+    return !structure_magnetic(structure) && structure.space_group.coord_system_code.value() == "r" ? 9. : 1.;
 }
 
 Project import_fullprof_project(const std::string& path) {
