@@ -232,7 +232,10 @@ SideBarGroup {
                 EaElements.CheckBox {
                     id: saveCopyBox
                     objectName: "project.saveAs.copy"
-                    leftPadding: EaStyle.Sizes.fontPixelSize * 0.5
+                    // The box in the entries' icon column, and the entries' own row spacing above and below it.
+                    leftPadding: saveasZipItem.leftPadding + (EaStyle.Sizes.fontPixelSize * 1.25 - indicator.width) / 2
+                    topPadding: saveasZipItem.topPadding
+                    bottomPadding: saveasZipItem.bottomPadding
                     enabled: saveMenu.diskWritable
                     text: qsTr("Save a copy")
                     checked: saveMenu.copy
