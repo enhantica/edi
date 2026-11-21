@@ -1048,11 +1048,13 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
         }
     }
     // `e58-fit`: numbers fitted to their typed columns, with the project EDI_DEMO_FIT_PROJECT open (long written tokens):
-    // the Analysis and Structure tables at the smallest window, then a value cell edited across a resize and left.
+    // the Analysis table after a fit and the Structure tables at the smallest window, then a value cell edited across a
+    // resize and left.
     if (only.startsWith(QLatin1String("e58-fit"))) {
         const QString open = "open-project:" + qEnvironmentVariable("EDI_DEMO_FIT_PROJECT");
-        steps_.push_back({"e58-fit-1-analysis", {"resize:1024x640", open, "appBar.tab.analysis"}});
-        steps_.push_back({"e58-fit-2-structure", {"appBar.tab.structure"}});
+        steps_.push_back({"e58-fit-1-analysis", {"resize:1024x640", open, "appBar.tab.analysis", "mainArea.tab.pattern",
+                                                 "statusBar.fit.button", "wait-fit", "choose:OK"}});
+        steps_.push_back({"e58-fit-2-structure", {"appBar.tab.structure", "expand:group.atom_site", "expand:group.atom_site_aniso"}});
         steps_.push_back({"e58-fit-3-edit-resized", {"appBar.tab.analysis", "parameters.value.0", "resize:1600x900", "resize:1024x640"}});
         steps_.push_back({"e58-fit-4-left", {"key:Tab"}});
     }
