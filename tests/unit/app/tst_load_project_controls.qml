@@ -2,6 +2,7 @@ import QtQuick
 import QtTest
 import edi.app
 import EdiAcceptance 1.0
+import ReportAcceptance 1.0
 import "UiInteraction.js" as Ui
 import "RenderedTable.js" as Render
 
@@ -81,6 +82,50 @@ TestCase {
         const ordered = choices().sort((left, right) => left.mapToItem(null, 0, 0).y - right.mapToItem(null, 0, 0).y);
         compare(JSON.stringify(ordered.map(item => normalized(item.text))), JSON.stringify(expected),
                 "The rendered popup lists EasyDiffraction, cryspy, FullProf and GSAS-II in order");
+        keyClick(Qt.Key_Escape);
+    }
+
+    function test_save_copy_belongs_to_native_choices() {
+        verify(Session.openProject(SettingsProof.copyProject(Probe.repoUrl("tests/fixtures/loop_parameter_ids/line-segment"))),
+               "The copy-checkbox check starts from an ordinary open native project");
+        Ui.click(test, Probe, app, "appBar.tab.project");
+        Ui.click(test, Probe, app, "project.saveAs");
+        const expected = ["As EasyDiffraction folder", "As Zip", "Save a copy", "As cryspy", "As FullProf", "As GSAS-II"];
+        function controls() {
+            return Render.descendants(Ui.windowRoot(app)).filter(item =>
+                typeof item.text === "string" && typeof item.clicked === "function" &&
+                expected.includes(normalized(item.text)) && Ui.rendered(item));
+        }
+        tryVerify(() => controls().length === 6, 2000,
+                  "Save project as has one copy checkbox beside its five real choices");
+        const ordered = controls().sort((left, right) => left.mapToItem(null, 0, 0).y - right.mapToItem(null, 0, 0).y);
+        compare(JSON.stringify(ordered.map(item => normalized(item.text))), JSON.stringify(expected),
+                "Save a copy belongs under the two EasyDiffraction choices and above the export section");
+        const copy = ordered[2];
+        verify(typeof copy.toggled === "function", "The native copy option is an actual checkbox");
+        const before = copy.checked;
+        const point = Ui.clickPoint(copy);
+        mouseClick(copy, point.x, point.y);
+        tryCompare(copy, "checked", !before, 1000, "The actual native copy checkbox responds to pointer input");
+        keyClick(Qt.Key_Escape);
+    }
+
+    function test_save_project_as_opens_the_ordered_choices() {
+        verify(Session.openProject(SettingsProof.copyProject(Probe.repoUrl("tests/fixtures/loop_parameter_ids/line-segment"))),
+               "Save project as starts with an ordinary open native project");
+        Ui.click(test, Probe, app, "appBar.tab.project");
+        Ui.click(test, Probe, app, "project.saveAs");
+        const expected = ["As EasyDiffraction folder", "As Zip", "As cryspy", "As FullProf", "As GSAS-II"];
+        function choices() {
+            return Render.descendants(Ui.windowRoot(app)).filter(item =>
+                typeof item.text === "string" && typeof item.clicked === "function" &&
+                expected.includes(normalized(item.text)) && Ui.rendered(item));
+        }
+        tryVerify(() => choices().length === 5, 2000,
+                  "Clicking Save project as exposes all five real destination choices");
+        const ordered = choices().sort((left, right) => left.mapToItem(null, 0, 0).y - right.mapToItem(null, 0, 0).y);
+        compare(JSON.stringify(ordered.map(item => normalized(item.text))), JSON.stringify(expected),
+                "The Save popup lists EasyDiffraction folder, Zip, cryspy, FullProf and GSAS-II in order");
         keyClick(Qt.Key_Escape);
     }
 }
