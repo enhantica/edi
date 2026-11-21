@@ -19394,6 +19394,9 @@ void AssistantViewModel::nativeProjectCreateSaveChoice(const QString& intent,QOb
         !guard || guard->objectName()!=QStringLiteral("unsavedChanges") || !target || !window || target->window()!=window ||
         !s->normal_project_create_current(creation))return;
     creation->ordinary_guard=guard;creation->ordinary_save=target;
+    // Untitled work cannot be saved without a name, which only the user gives: its prompt is left to the user, and the
+    // window's continuation settles this Create (Discard, Cancel, or Save then the naming form) through nativeProjectCreateReady.
+    if(s->result_session() && s->result_session()->untitled())return;
     const auto current=[s,receiver,creation,guard,target,window,intent] {
         if(!receiver || receiver->state_.get()!=s || !window || s->action_window!=window || !s->normal_project_create_current(creation))return false;
         if(creation->ordinary_guard_accepted)return true; // Actual Save may close its original dialog.
@@ -19416,7 +19419,13 @@ void AssistantViewModel::nativeProjectCreateSaveChoice(const QString& intent,QOb
         request.current=current;request.restoreCurrent=current;request.prepareCommit=current;request.finishCommit=[]{};
         request.completed=[s,receiver,creation](bool delivered,const QString&,ControlCause) {
             if(!receiver || receiver->state_.get()!=s || s->native_creation!=creation || creation->ordinary_guard_accepted)return;
-            if(!delivered || !creation->ordinary_guard_accepted){creation->ordinary_failure=QObject::tr("The original unsaved-work Save choice did not complete; no new project was created.");s->native_finish_normal_project(creation,false);}
+            // The prompt closed by its own choice: Discard, Cancel, or a Save that first names untitled work. The window's
+            // continuation then settles this Create through nativeProjectCreateReady, true or false, so nothing fails here.
+            const bool closed=!creation->ordinary_guard || !creation->ordinary_guard->property("opened").toBool();
+            if(closed && creation->ordinary_waiting)return;
+            Q_UNUSED(delivered);
+            creation->ordinary_failure=QObject::tr("The original unsaved-work Save choice did not complete; no new project was created.");
+            s->native_finish_normal_project(creation,false);
         };
         if(!s->native_call)throw std::runtime_error("The original native request is no longer current");
         s->control_start(*s->native_call,ControlField::Project,std::move(request));

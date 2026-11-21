@@ -3422,6 +3422,16 @@ void ApplicationInfo::acceptUnsavedProject() const {
     }
     const auto original = panelUsageContextRead(frame, "nativeCreation");
     const auto waiting = panelUsageContextRead(frame, "action");
+    // Untitled work's Save is Create project (the owner, 2026-11-19): the waiting action goes on once Create has named and
+    // saved it, and is abandoned if Create closes with the work still untitled (Main.qml, afterNaming).
+    if (panelUsageTruth(assistantContextField(frame, "Session", "untitled"))) {
+        panelUsageContextWrite(frame, "afterNaming", waiting);
+        panelUsageContextWrite(frame, "afterNamingAbandoned", panelUsageContextRead(frame, "abandoned"));
+        panelUsageContextWrite(frame, "action", consentNull());
+        panelUsageContextWrite(frame, "abandoned", consentNull());
+        projectInvoke(frame, "AppState", "requestUntitledSave");
+        return;
+    }
     if (panelUsageTruth(assistantContextField(frame, "Session", "needsSaveAs"))) {
         panelUsageGlobalCall(frame, "abandonAction", {});
         const auto window = panelUsageContextRead(frame, "window");
@@ -3484,6 +3494,9 @@ void ApplicationInfo::projectWebSaveFinished(const QJSValue& saved) const {
 }
 void ApplicationInfo::discardUnsavedProject() const {
     const auto frame = panelUsageEngine(this);
+    // Discard answering an assistant Create's prompt lets that Create replace the discarded work (createProjectFromIntent).
+    const auto creation = panelUsageContextRead(frame, "nativeCreation");
+    if (!creation.isNull()) projectWrite(frame, "window", "assistantDiscardedIntent", panelUsageRead(frame, creation, "intent"));
     const auto waiting = panelUsageContextRead(frame, "action");
     panelUsageContextWrite(frame, "action", consentNull());
     panelUsageContextWrite(frame, "abandoned", consentNull());
@@ -3653,7 +3666,10 @@ QJSValue ApplicationInfo::createProjectFromIntent(const QJSValue& values, const 
         const auto project = assistantContextField(frame, "Session", "project");
         if (!project.isNull()) {
             const auto actual = assistantContextField(frame, "Session", "project");
-            blocked = panelUsageTruth(panelUsageRead(frame, actual, "modified"));
+            // Changes the user discarded for this Create no longer hold it back, once.
+            const bool discarded = assistantContextField(frame, "window", "assistantDiscardedIntent").strictlyEquals(intent);
+            projectWrite(frame, "window", "assistantDiscardedIntent", QJSValue(QString{}));
+            blocked = !discarded && panelUsageTruth(panelUsageRead(frame, actual, "modified"));
         }
     }
     if (!panelUsageReady(frame)) return {};
@@ -11121,8 +11137,13 @@ void ApplicationInfo::chooseCreateProject() const {
 }
 void ApplicationInfo::createProjectClicked() const {
     const auto f = panelUsageEngine(this); const auto original = createGroupField(f, "assistantCreate"), state = panelUsageContextRead(f, "AppState");
-    // Create on the untitled project names and saves it, its work kept: nothing to ask about first.
-    if (panelUsageTruth(assistantContextField(f, "Session", "untitled"))) { projectInvoke(f, "group", "chooseCreate"); return; }
+    // Create on the untitled project names and saves it, its work kept: nothing to ask about first. The assistant's Create
+    // always makes a new project, and its own prompt was answered already: it goes on as that answer did.
+    if (panelUsageTruth(assistantContextField(f, "Session", "untitled"))) {
+        if (original.isNull()) projectInvoke(f, "group", "chooseCreate");
+        else projectCall(f, panelUsageClosure(f, 384, {original}));
+        return;
+    }
     panelUsageMemberCall(f, state, "afterChanges", {panelUsageClosure(f, 384, {original}), panelUsageClosure(f, 385, {original}), QJSValue(true)});
 }
 void ApplicationInfo::createProjectDialogEvent(int kind) const {

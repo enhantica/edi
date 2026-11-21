@@ -77,6 +77,8 @@ EaComponents.ApplicationWindow {
     // Same Create API/preferences as the ordinary current-window form. Native
     // callers pass an original Session-bound intent, never another app/window.
     property var assistantCreateGuard: null
+    // The assistant Create whose unsaved-work prompt the user answered with Discard: that Create may replace the work.
+    property string assistantDiscardedIntent: ""
     function prepareNativeProjectCreate(intent) {
         return ApplicationInfo.prepareProjectCreation(intent);
     }
@@ -721,6 +723,18 @@ EaComponents.ApplicationWindow {
         target: EaGlobals.Vars
         function onAppBarCurrentIndexChanged() {
             RunLog.note(`page: ${["home", "project", "structure", "experiment", "analysis", "report"][EaGlobals.Vars.appBarCurrentIndex] ?? EaGlobals.Vars.appBarCurrentIndex}`);
+            // Opening Structure from its tab is the same as Project's Continue: it starts the unnamed work, on the next
+            // turn, never inside the tab bar's own change.
+            if (EaGlobals.Vars.appBarCurrentIndex === AppState.Page.Structure && !Session.hasProject)
+                Qt.callLater(() => {
+                    if (EaGlobals.Vars.appBarCurrentIndex !== AppState.Page.Structure || Session.hasProject)
+                        return;
+                    // Starting the work sends the tab bar back to Project (workflowProjectChanging); the second call
+                    // selects Structure again, now with its work.
+                    AppState.open(AppState.Page.Structure);
+                    if (Session.hasProject)
+                        AppState.open(AppState.Page.Structure);
+                });
         }
     }
     Connections {
@@ -848,6 +862,31 @@ EaComponents.ApplicationWindow {
         property var action: null
         property var abandoned: null
         property var nativeCreation: null
+        // Save on untitled work opens Create project: what waited goes on once Create has named and saved the work, and
+        // is abandoned if Create closes with it still untitled.
+        property var afterNaming: null
+        property var afterNamingAbandoned: null
+        function settleNaming(named) {
+            const next = named ? afterNaming : afterNamingAbandoned;
+            afterNaming = null;
+            afterNamingAbandoned = null;
+            if (next)
+                next();
+        }
+        Connections {
+            target: Session
+            function onUntitledChanged() {
+                if (unsavedChanges.afterNaming !== null && Session.hasProject && !Session.untitled)
+                    unsavedChanges.settleNaming(true);
+            }
+        }
+        Connections {
+            target: AppState
+            function onUntitledSaveClosed() {
+                if ((unsavedChanges.afterNaming !== null || unsavedChanges.afterNamingAbandoned !== null) && Session.untitled)
+                    unsavedChanges.settleNaming(false);
+            }
+        }
         onOpened: ApplicationInfo.unsavedProjectOpened()
         function abandonAction() {
             ApplicationInfo.abandonUnsavedProjectAction();
