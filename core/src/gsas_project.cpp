@@ -714,7 +714,7 @@ Project convert(const Value& bundle) {
     const auto& source = bundle.at("source");
     shape(source, {"filename"}, {"sha256", "last_saved_using"});
     const auto& filename = source.at("filename").string("source filename");
-    Project project = empty_project("gsas_ii_import", "Imported from GSAS-II: " + filename);
+    Project project = empty_project("gsas_ii_import", "Imported from GSAS-II: " + filename);  // the import base names it
     project.metadata.title = phases.front().at("name").string("phase name") + " / " +
                              histograms.front().at("name").string("histogram name");
     project.fitting_mode = histograms.size() == 1 ? "single" : "joint";
@@ -736,11 +736,6 @@ Project convert(const Value& bundle) {
 }
 
 }  // namespace
-
-bool is_gsas_project_path(const std::string& path) {
-    const auto filename = lowercase_filename(path);
-    return filename.ends_with(".gpx") || filename.ends_with(".gsas.json");
-}
 
 Project load_gsas_project(const std::string& path) {
     return reading_file(path, [&] {

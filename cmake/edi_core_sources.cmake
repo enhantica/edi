@@ -16,6 +16,7 @@ function(edi_core_sources root out)
         ${root}/core/src/gpx_records.cpp
         ${root}/core/src/gpx_project.cpp
         ${root}/core/src/gsas_project.cpp
+        ${root}/core/src/project_import.cpp
         ${root}/core/src/sharing.cpp
         ${root}/core/src/series_files.cpp
         ${root}/core/src/validation.cpp

@@ -21,6 +21,7 @@
 #include "edi/categories.hpp"
 #include "edi/edit.hpp"
 #include "edi/parameter_walk.hpp"
+#include "edi/project_import.hpp"
 #include "edi/project_archive.hpp"
 #include "edi/selectors.hpp"
 #include "edi/symmetry.hpp"
@@ -240,22 +241,6 @@ struct Refinement {
         }
     }
 };
-
-std::string safe_name(std::string name, std::string_view fallback) {
-    for (char& c : name) {
-        if (!std::isalnum(static_cast<unsigned char>(c)) && c != '_' && c != '-') {
-            c = '_';
-        }
-    }
-    if (!persistable_name(name) || !std::isalpha(static_cast<unsigned char>(name.front()))) {
-        name = std::string(fallback) + name;
-    }
-    if (name.size() < 2) {
-        name += '_';
-    }
-    name.resize(std::min<std::size_t>(name.size(), 31));
-    return name;
-}
 
 struct TofResolution {
     std::array<double, 4> calibration{};
@@ -1898,7 +1883,7 @@ void structure_block(const PCR& pcr, Project& project, std::vector<Pattern>& pat
     if (labels.empty()) {
         pcr.fail("Missing FullProf phase name", start);
     }
-    const auto base = safe_name(labels.front(), "phase");
+    const auto base = detail::imported_name(labels.front(), "phase");
     structure->name = base;
     for (unsigned i = 2; std::any_of(project.structures.begin(), project.structures.end(), [&](const auto& held) {
              return datablock_key(held->name.value(), "structure") == datablock_key(structure->name.value(), "structure");
@@ -2942,7 +2927,7 @@ Project import_fullprof_project(const std::string& path) {
         if (pcr.refinement_enabled && flags[multi ? 3 : 13] != 0.) {
             pcr.fail("FullProf parameter limits (Nre) need manual conversion", phase_declaration);
         }
-        auto project = empty_project(safe_name(pcr.path.stem().string(), "fullprof"), "");
+        auto project = empty_project("fullprof_import", "");  // the import base names it
         const auto& title = pcr.lines.front().text;
         project.metadata.title = title.starts_with("COMM ") ? trim(std::string_view(title).substr(5)) : title;
         Refinement refine;

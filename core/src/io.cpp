@@ -9,8 +9,7 @@
 
 #include "edi/io.hpp"
 
-#include "fullprof_project_io.hpp"
-#include "gsas_project.hpp"
+#include "edi/project_import.hpp"
 #include "utc_time.hpp"
 #include <type_traits>
 #include "edi/project_archive.hpp"
@@ -5112,14 +5111,9 @@ Project load_project(const std::string& path, ProjectLoadMode mode, const Warnin
     // edi ADR-0052: a project opens from its folder, its project.edi or a .zip of the folder.
     std::error_code error;
     const fs::path given(path);
-    if (is_gsas_project_path(path) && !fs::is_directory(given, error)) {
-        return load_gsas_project(path);
-    }
-    auto extension = given.extension().string();
-    std::transform(extension.begin(), extension.end(), extension.begin(),
-                   [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
-    if (extension == ".pcr" && !fs::is_directory(given, error)) {
-        return detail::import_fullprof_project(path);
+    // Another program's project file goes through its importer (ADR-0098).
+    if (is_imported_project_path(path)) {
+        return import_project(path, on_warning);
     }
     if (given.filename() == "project.edi" && fs::is_regular_file(given, error)) {
         const fs::path folder = given.has_parent_path() ? given.parent_path() : fs::path(".");

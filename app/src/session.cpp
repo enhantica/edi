@@ -37,6 +37,7 @@
 #include "edi/report.hpp"
 #include "edi/fullprof.hpp"
 #include "edi/io.hpp"
+#include "edi/project_import.hpp"
 #include "edi/project_archive.hpp"
 #include "edi/parameter_walk.hpp"
 #include "edi/scan.hpp"
@@ -1990,7 +1991,7 @@ bool Session::projectDirectoryExists(const QString& path) const {
     const QFileInfo location(path);
     const auto source = path.toStdString();
     return !path.isEmpty() && (location.isDir() || edi::is_project_archive(source) ||
-                               (location.isFile() && edi::is_gsas_project_path(source)));
+                               (location.isFile() && edi::is_imported_project_path(source)));
 }
 
 QUrl Session::projectDirectoryUrl(const QString& path) const {
