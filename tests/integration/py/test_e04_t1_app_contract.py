@@ -20,6 +20,7 @@ import pytest
 import yaml
 
 from tests.fixtures.e04_t1.project_actor import is_verification
+from tests.fixtures.e09_t75_workflow import active
 from tests.fixtures.metadata_transition.source_bytes import read_previous
 from tests.fixtures.stop_defaults import example_inputs
 from tests.integration.py.ci_runner_contract import self_hosted_runners
@@ -538,9 +539,16 @@ def assert_local_app_checks(manifest):
 
 
 NIGHTLY_APP_CONDITION = (
-    "${{ !cancelled() && (github.event_name == 'schedule' || "
-    "github.event_name == 'workflow_dispatch') && steps.apphost.outcome == 'success' }}"
+    "${{ runner.os != 'Windows' && (!cancelled() && (github.event_name == 'schedule' || "
+    "github.event_name == 'workflow_dispatch') && steps.apphost.outcome == 'success') }}"
 )
+APP_EVENTS = ('pull_request', 'push', 'schedule', 'workflow_dispatch')
+APP_OUTPUTS = {
+    ('inputs', 'run'): 'true',
+    ('apphost', 'outcome'): 'success',
+    ('onboarding', 'outcome'): 'success',
+}
+APP_JOB_PLATFORMS = {'app': 'Linux', 'app-macos': 'macOS', 'app-windows': 'Windows'}
 APP_GROUP_TITLE = "The app group's Python tests (tests/integration/app)"
 APP_TIER_STEPS = (
     ("The app's Qt Quick Test tier", 'app-test'),
@@ -570,18 +578,19 @@ def assert_windows_app_build(job):
         'gate 7: Windows executes the declared build-only MSVC app command'
     )
     forbidden = {APP_GROUP_TITLE, APP_IMAGE_UPLOAD_TITLE, *(title for title, _ in APP_TIER_STEPS)}
-    assert not forbidden.intersection(step.get('name') for step in steps), (
-        'gate 7: Windows remains build-only while Linux and macOS retain all app test tiers'
-    )
-    from tests.fixtures.e09_t75_workflow import active  # noqa: PLC0415
-
-    for event in ('pull_request', 'push', 'schedule', 'workflow_dispatch'):
-        assert active(job, event, states={'changes': 'success', 'crysta-sdk': 'success'}), (
-            'gate 7: the Windows app builder participates in every governed full event'
-        )
-        assert active(builds[0], event), (
+    for event in APP_EVENTS:
+        assert active(builds[0], event, bindings={'runner.os': 'Windows'}), (
             'gate 7: the Windows MSVC app build step executes in every governed full event'
         )
+        assert all(
+            not active(builds[0], event, bindings={'runner.os': platform})
+            for platform in ('Linux', 'macOS')
+        ), 'gate 7: the MSVC build stays inactive on Linux and macOS'
+        assert not any(
+            active(step, event, outputs=APP_OUTPUTS, bindings={'runner.os': 'Windows'})
+            for step in steps
+            if step.get('name') in forbidden
+        ), 'gate 7: Windows remains build-only on every event'
 
 
 def assert_nightly_app_steps(job):
@@ -618,16 +627,14 @@ def assert_nightly_app_steps(job):
         'owner decision: keep the group-app command present once before Qt Quick Test; '
         f'actual group steps={groups}'
     )
-    from tests.fixtures.e09_t75_workflow import active  # noqa: PLC0415
-
-    for event in ('pull_request', 'push', 'schedule', 'workflow_dispatch'):
-        assert active(
-            groups[0],
-            event,
-            outputs={('inputs', 'run'): 'true', ('onboarding', 'outcome'): 'success'},
-        ) == (event != 'pull_request'), (
-            'owner decision: app group skips PRs and runs on push, nightly and full dispatch'
-        )
+    for event in APP_EVENTS:
+        for platform in APP_JOB_PLATFORMS.values():
+            assert active(
+                groups[0], event, outputs=APP_OUTPUTS, bindings={'runner.os': platform}
+            ) == (platform != 'Windows' and event != 'pull_request'), (
+                'owner decision: the Linux and macOS app group runs on push, nightly and full '
+                'dispatch and skips PRs; Windows stays build-only'
+            )
     titles = [step.get('name') for step in job['steps']]
     assert titles.index(APP_GROUP_TITLE) < titles.index(APP_TIER_STEPS[0][0]), (
         'owner decision: group-app runs before Qt Quick Test so a Qt Quick failure cannot skip '
@@ -642,8 +649,9 @@ def assert_nightly_app_step_escape_controls():
             {
                 'name': APP_GROUP_TITLE,
                 'if': (
-                    "${{ !cancelled() && github.event_name != 'pull_request' "
-                    "&& steps.onboarding.outcome == 'success' }}"
+                    "${{ runner.os != 'Windows' && (!cancelled() && "
+                    "github.event_name != 'pull_request' "
+                    "&& steps.onboarding.outcome == 'success') }}"
                 ),
                 'run': 'pixi run --skip-deps group-app',
             },
@@ -675,6 +683,8 @@ def assert_nightly_app_step_escape_controls():
             '${{ !cancelled() }}',
             "${{ github.event_name == 'push' }}",
             "${{ github.event_name == 'pull_request' }}",
+            NIGHTLY_APP_CONDITION.replace("runner.os != 'Windows' && ", ''),
+            NIGHTLY_APP_CONDITION.replace("runner.os != 'Windows'", "runner.os == 'Windows'"),
         ):
             broken = copy.deepcopy(job)
             step = next(step for step in broken['steps'] if step['name'] == title)
@@ -700,6 +710,7 @@ def assert_nightly_app_step_escape_controls():
         "github.event_name != 'push'",
         "github.event_name != 'schedule'",
         "github.event_name != 'workflow_dispatch'",
+        job['steps'][0]['if'].replace("runner.os != 'Windows' && ", ''),
     ):
         broken = copy.deepcopy(job)
         if condition is None:
@@ -748,40 +759,41 @@ def test_local_and_ci_gates_reach_app_tests():
     manifest = tomllib.loads((ROOT / 'pixi.toml').read_text())
     assert_local_app_checks(manifest)
     workflow = yaml.safe_load((ROOT / '.github/workflows/ci.yml').read_text())
-    # Linux/macOS keep the shared test matrix; Windows has a separate build-only job.
-    app_jobs = []
-    windows_jobs = []
-    for name, job in workflow['jobs'].items():
-        if name == 'app-windows' or job.get('name') == WINDOWS_APP_TITLE:
-            assert name == 'app-windows', 'gate 7: Windows has one separately identified app job'
-            assert_windows_app_build(job)
-            windows_jobs.append(name)
-            continue
-        if name not in {'app', 'app-macos'} and not job.get('name', '').startswith('app · '):
-            continue
-        if 'WebAssembly' in job.get('name', ''):
-            continue
-        app_jobs.extend(runner[1] for runner in self_hosted_runners(job))
-        assert job.get('if') is not False, (
-            ' owner decisions: both app jobs remain active and required'
-        )
-        assert_nightly_app_steps(job)
-        commands = '\n'.join(
-            step.get('run', '') for step in job['steps'] if step.get('if') is not False
-        )
-        for script in (
-            'app-build',
-            'app-lint',
-            'app-format-check',
-            'group-app',
-        ):
-            assert script in commands, f'gate 6/7: {name} invokes the shared {script} task'
-
-    assert windows_jobs == ['app-windows'], (
-        'gate 7: the dedicated Windows build-only job is present exactly once'
+    jobs = {
+        name: job
+        for name, job in workflow['jobs'].items()
+        if name in APP_JOB_PLATFORMS
+        or (job.get('name', '').startswith('app · ') and name != 'app-wasm')
+    }
+    assert jobs.keys() == APP_JOB_PLATFORMS.keys(), (
+        'gate 7: the desktop app has exactly one static job per platform'
     )
-    assert sorted(app_jobs) == ['Linux', 'macOS'], (
-        'gate 7: both desktop platforms execute app checks'
+    assert_windows_app_build(jobs['app-windows'])
+    for name, platform in APP_JOB_PLATFORMS.items():
+        job = jobs[name]
+        assert job.get('name') == f'app · {platform}' and 'strategy' not in job, (
+            f'gate 7: {platform} has its stable display name without matrix expansion'
+        )
+        assert [runner[1] for runner in self_hosted_runners(job)] == [platform], (
+            f'gate 7: {platform} executes once on its declared OS and architecture'
+        )
+        for event in APP_EVENTS:
+            assert active(
+                job,
+                event,
+                states={'changes': 'success', 'core': 'success', 'crysta-sdk': 'success'},
+            ), f'gate 7: {platform} participates in each full event'
+        if platform == 'Windows':
+            continue
+        assert_nightly_app_steps(job)
+        for script in ('app-build', 'app-lint', 'app-format-check', 'group-app'):
+            assert any(
+                step.get('run', '').endswith(f' {script}')
+                and active(step, 'schedule', outputs=APP_OUTPUTS, bindings={'runner.os': platform})
+                for step in job['steps']
+            ), f'gate 6/7: {name} invokes the shared {script} task'
+    assert jobs['app']['steps'] == jobs['app-macos']['steps'] == jobs['app-windows']['steps'], (
+        'gate 7: all three desktop jobs share the same step list'
     )
 
 
