@@ -1054,7 +1054,9 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
         const QJsonObject pages = QJsonDocument::fromJson(qgetenv("EDI_UI_TAB_INVENTORY")).object();
         int n = 0;
         const auto add = [&](const QString& name, const QString& object) {
-            steps_.push_back({QStringLiteral("e58-tabs-%1-%2").arg(++n, 3, 10, QLatin1Char('0')).arg(name), {object}});
+            // Captured a set time after the click: a view that keeps drawing while it loads (Map on a long scan) never
+            // settles, and the trace, not the image, is what this scenario measures.
+            steps_.push_back({QStringLiteral("e58-tabs-%1-%2").arg(++n, 3, 10, QLatin1Char('0')).arg(name), {object, "capture-now"}});
             named(name);
         };
         for (const QString& page : {QStringLiteral("home"), QStringLiteral("project"), QStringLiteral("structure"),
@@ -1937,7 +1939,7 @@ void DemoDriver::trace_issue(const QString& action) {
     pending.name = step.trace;
     if (action.startsWith(QLatin1String("appBar.tab."))) {
         pending.page = action.mid(11);
-    } else if (action.startsWith(QLatin1String("mainArea.")) && action.contains(QLatin1String(".tab.")) ||
+    } else if ((action.startsWith(QLatin1String("mainArea.")) && action.contains(QLatin1String(".tab."))) ||
                action.startsWith(QLatin1String("sideBar.tab."))) {
         pending.object = action;
     } else if (action.startsWith(QLatin1String("mainArea.blocks."))) {
@@ -2491,9 +2493,11 @@ void DemoDriver::next_action() {
             }
             return;
         }
+        const bool tab_button = (action.startsWith(QLatin1String("mainArea.")) && action.contains(QLatin1String(".tab."))) ||
+                                action.startsWith(QLatin1String("sideBar.tab."));
         const bool issues = !step.trace.isEmpty() && (action.startsWith(QLatin1String("appBar.tab.")) ||
                                                       action.startsWith(QLatin1String("mainArea.blocks.")) ||
-                                                      action == QLatin1String("statusBar.fit.button"));
+                                                      action == QLatin1String("statusBar.fit.button") || tab_button);
         if (issues) trace_issue(action);
         if (!perform(action)) {
             return;  // fail() has ended the run

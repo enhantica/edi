@@ -356,7 +356,8 @@ EaComponents.ListView {
     Connections {
         property var ownerLife: null
         Component.onCompleted: ApplicationInfo.tableOwnerCallback(3)
-        target: table.model ?? null
+        // Only an item model signals changed rows; a plain list has nothing to connect.
+        target: table.mirrorsRows ? table.rowsMirror : null
         ignoreUnknownSignals: true
         function onDataChanged(topLeft, bottomRight) {
             ApplicationInfo.tableDataChanged(topLeft, bottomRight);
