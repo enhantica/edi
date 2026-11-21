@@ -103,7 +103,7 @@ SideBarGroup {
                     labelWidth: loadMenu.labelWidth
                     enabled: false
                     fontIcon: "link"
-                    text: qsTr("Open from URL…")
+                    text: qsTr("Open EasyDiffraction from URL…")
                     toolTip: qsTr("Open an EasyDiffraction project from a web address")
                 }
                 LoadMenuHeader {
