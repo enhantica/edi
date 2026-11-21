@@ -724,6 +724,9 @@ def public_native_transfer(steps, index, name):
 
 
 def native_action_boundary(action):
+    assert action['inputs']['run-id'].get('default') == '', (  # noqa: PLC1901 - absence and non-string defaults refuse
+        'Native downloads default to the current run when no producer is supplied'
+    )
     steps = action['runs']['steps']
     downloads = [step for step in steps if step.get('uses') == 'actions/download-artifact@v4']
     assert len(downloads) == 1, 'Native restoration selects exactly one addressed artifact'
@@ -735,8 +738,11 @@ def native_action_boundary(action):
     assert options.get('path') == 'build/edi-native-artifact', (
         'The native checker reads the selected download directory'
     )
-    assert options.get('run-id', '${{ github.run_id }}') == '${{ github.run_id }}', (
-        'Native downloads address this exact run'
+    assert options.get('run-id') == '${{ inputs.run-id }}', (
+        'Native downloads address only the caller-selected producer or the current run'
+    )
+    assert options.get('github-token') == "${{ inputs.run-id != '' && github.token || '' }}", (
+        'An explicit producer uses this repository token; default restoration stays same-run'
     )
     assert options.get('repository', '${{ github.repository }}') == '${{ github.repository }}', (
         'Native downloads address this repository'
@@ -753,6 +759,9 @@ def native_action_boundary(action):
         )
     selectors = [step for step in steps if 'EDI_NATIVE_ARTIFACT=1' in step.get('run', '')]
     assert len(selectors) == 1, 'The consumer explicitly enables refuse-without-compile mode'
+    assert selectors[0].get('env', {}).get('PRODUCER_RUN_ID') == '${{ inputs.run-id }}', (
+        'The restore checker receives the same producer identity selected for download'
+    )
     assert steps.index(download) < steps.index(selectors[0]), (
         'Artifact download precedes selection for restoration'
     )
@@ -780,17 +789,36 @@ def test_native_action_refuses_foreign_optional_and_fallback_routes(tmp_path, da
     import os  # noqa: PLC0415
     import subprocess  # noqa: PLC0415 - execute only the authored transport selector
 
-    environment = tmp_path / 'job-environment'
-    subprocess.run(
-        [environment_bash(), '-e', '-c', selector],
-        env={**os.environ, 'GITHUB_ENV': str(environment)},
-        check=True,
-        capture_output=True,
-        timeout=5,
-    )
-    assert environment.read_text() == 'EDI_NATIVE_ARTIFACT=1\n', (
-        'The actual action selects artifact mode before any native use'
-    )
+    for run_id in ('', '431'):
+        environment = tmp_path / ('job-environment-' + (run_id or 'current'))
+        subprocess.run(
+            [environment_bash(), '-e', '-c', selector],
+            env={**os.environ, 'GITHUB_ENV': str(environment), 'PRODUCER_RUN_ID': run_id},
+            check=True,
+            capture_output=True,
+            timeout=5,
+        )
+        expected = 'EDI_NATIVE_ARTIFACT=1\n'
+        if run_id:
+            expected += 'EDI_NATIVE_PRODUCER_RUN_ID=431\n'
+        assert environment.read_text() == expected, (
+            'The action selects artifact mode and forwards only the explicitly addressed producer'
+        )
+    for section, key, replacement in (
+        ('download', 'github-token', '${{ secrets.OTHER_TOKEN }}'),
+        ('selector', 'PRODUCER_RUN_ID', '${{ github.run_id }}'),
+        ('input', 'default', '431'),
+    ):
+        changed = copy.deepcopy(action)
+        download, select = changed['runs']['steps']
+        spelling = {
+            'download': download['with'],
+            'selector': select['env'],
+            'input': changed['inputs']['run-id'],
+        }
+        spelling[section][key] = replacement
+        with pytest.raises(AssertionError):
+            native_action_boundary(changed)
     mutant = copy.deepcopy(action)
     download = mutant['runs']['steps'][0]
     if damage == 'cache':
