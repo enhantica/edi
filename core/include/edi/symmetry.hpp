@@ -132,6 +132,39 @@ void set_magnetic_symmetry(Structure& structure, std::vector<std::pair<std::stri
                            const std::optional<crysta::MagneticGroupName>& group = std::nullopt);
 // The same with a group from crysta's table of the 1651 magnetic space groups, by BNS number, in its BNS setting.
 void set_magnetic_space_group(Structure& structure, const std::string& number_bns);
+// A magnetic structure read without `_space_group` (edi ADR-0078, site symmetry from the magnetic group): for types
+// I-III the family group (the operations with time reversal ignored) is a table setting of the IT number its parent or
+// its BNS number names. That setting becomes the structure's space group, so Wyckoff letters, multiplicities and
+// coordinate ties come from the table and the cell and positions stay fittable. False, and nothing changed, when no
+// setting matches (a type IV group, a setting the table does not hold): the symmetry then comes from the operators.
+bool adopt_magnetic_family_setting(Structure& structure, bool reinfer_letters = false);
+// Whether the structure's BNS transform, when it parses and the family is a table setting, maps the BNS standard onto
+// its operations (edi ADR-0078). A transform that does not parse is descriptive text and claims nothing.
+bool bns_transform_consistent(const MagneticDescription& magnetic);
+// Crystal or Magnetic (edi ADR-0078). Magnetic: a structure whose symmetry is a magnetic space group.
+bool structure_magnetic(const Structure& structure);
+// Makes a Crystal structure Magnetic with the grey group of its space group (every moment zero by symmetry until a
+// magnetic subgroup is chosen), or a Magnetic one Crystal with its family space group, its moments and other
+// magnetic data dropped. A refusal throws its reason and leaves the structure as it was.
+void set_structure_magnetic(Structure& structure, bool magnetic);
+// A site's element (the owner, 2026-11-19): a moment the new element has no magnetic ion for goes, and a magnetic
+// form-factor row for an element no site has any more goes, so no ion of the former element stays offered or saved.
+void set_site_type(Structure& structure, AtomSite& site, const std::string& type_symbol);
+// A form-factor coefficient the type's approximation does not use, or whose term its ion's table (or its given
+// coefficients) does not carry, keeps its value and is fixed: a fit cannot vary it (the owner, 2026-11-19).
+void fix_unusable_coefficients(Structure& structure, const std::string& type_symbol);
+// A magnetic structure read with a declared `_space_group` and no BNS number: its group is named from that declared
+// family setting (not from a parent), so a save, which writes no `_space_group`, keeps the family.
+void identify_declared_magnetic_family(Structure& structure);
+// The tabulated settings of a Magnetic structure's own space group (time reversal ignored), each as its transform from
+// the BNS standard, `a,b,c;0,0,0` first (the owner, 2026-11-19).
+std::vector<std::string> magnetic_setting_transforms(const Structure& structure);
+// The setting the Setting field shows: the BNS transform a file or an edit gave, else the held table setting's own
+// transform; empty for an operators-only structure without one.
+std::string held_magnetic_setting(const Structure& structure);
+// One of those settings: the BNS table group's operations in it, the transform kept as the transforms loop's BNS row. A
+// setting not in the list is refused.
+void set_magnetic_setting(Structure& structure, const std::string& transform);
 
 // One tensor row for each anisotropic site and none for any other (diffraction-lib's
 // _sync_atom_site_aniso): a missing row holds the tensor of the site's isotropic value, through

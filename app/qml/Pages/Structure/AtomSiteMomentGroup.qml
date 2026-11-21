@@ -186,6 +186,8 @@ Column {
             required property var my
             required property var mz
             required property string symmform
+            // The site's element: the ion choices follow it.
+            required property string type
             readonly property bool magnetic: ion !== "none"
 
             EaComponents.ListViewLabel {
@@ -207,14 +209,14 @@ Column {
                     objectName: `atomSiteMoment.ion.${row.index}`
                     inTable: true
                     anchors.verticalCenter: parent.verticalCenter
-                    model: group.moments ? group.moments.ions(row.index) : []
-                    currentIndex: group.moments ? group.moments.ions(row.index).indexOf(row.ion) : -1
+                    model: group.moments ? group.moments.ions(row.index, row.type) : []
+                    currentIndex: group.moments ? group.moments.ions(row.index, row.type).indexOf(row.ion) : -1
                     // A moment row comes or goes, which rebuilds this table: it runs after the popup has closed.
                     onActivated: index => {
                         const site = row.index;
                         const ion = textAt(index);
                         const moments = group.moments;
-                        currentIndex = Qt.binding(() => group.moments ? group.moments.ions(row.index).indexOf(row.ion) : -1);
+                        currentIndex = Qt.binding(() => group.moments ? group.moments.ions(row.index, row.type).indexOf(row.ion) : -1);
                         Qt.callLater(() => moments.setIon(site, ion));
                     }
                     ToolTip.text: qsTr("The magnetic ion whose form factor the moment takes, shared by every site of the atom type; none: the site has no moment")
@@ -376,6 +378,8 @@ Column {
             required property var my
             required property var mz
             required property string symmform
+            // The site's element: the ion choices follow it.
+            required property string type
             readonly property bool magnetic: ion !== "none"
             // The crystal-axis components, whose decimals a derived value without an s.u. shows.
             readonly property var crystal: parts.length > 0 && group.moments ? group.moments.components(index, "crystal_axes") : []
@@ -465,13 +469,15 @@ Column {
         }
     }
 
-    // Why the last converted edit was not made, until one is: a direction the site symmetry does not allow, say.
-    EaElements.Label {
-        objectName: "atomSiteMoment.refusal"
-        visible: group.moments !== null && group.moments.refusal !== ""
-        width: EaStyle.Sizes.sideBarContentWidth
-        wrapMode: Text.WordWrap
-        color: EaStyle.Colors.red
-        text: group.moments ? group.moments.refusal : ""
+    // An edit the site symmetry does not allow is not made: the reason shows in the app's error popup and the Messages
+    // center (the owner, 2026-11-19).
+    Connections {
+        target: group.moments
+        function onRefusalChanged() {
+            if (group.moments && group.moments.refusal !== "") {
+                Session.reportRefusal(group.moments.refusal);
+                group.moments.clearRefusal();
+            }
+        }
     }
 }

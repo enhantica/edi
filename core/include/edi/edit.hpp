@@ -882,12 +882,24 @@ class Edit {
     static Edit magnetic_space_group(Structure& structure, std::string number_bns) {
         return Edit([&structure, number_bns = std::move(number_bns)] { set_magnetic_space_group(structure, number_bns); });
     }
+    // Crystal or Magnetic (set_structure_magnetic).
+    static Edit structure_magnetic(Structure& structure, bool magnetic) {
+        return Edit([&structure, magnetic] { set_structure_magnetic(structure, magnetic); });
+    }
+    // The transform to the BNS standard (set_magnetic_setting).
+    static Edit magnetic_setting(Structure& structure, std::string transform) {
+        return Edit([&structure, transform = std::move(transform)] { set_magnetic_setting(structure, transform); });
+    }
     // The propagation vectors, checked as a whole (set_propagation_vectors).
     static Edit propagation_vectors(Structure& structure, std::vector<std::pair<std::string, std::string>> rows) {
         return Edit([&structure, rows = std::move(rows)] { set_propagation_vectors(structure, rows); });
     }
     // Whether a site carries a magnetic moment (edi ADR-0078): marking it adds its moment row, all three
     // components zero; unmarking removes the row.
+    // A site's element (set_site_type): its moment and the magnetic form factors follow it.
+    static Edit site_type(Structure& structure, AtomSite& site, std::string type_symbol) {
+        return Edit([&structure, &site, type_symbol = std::move(type_symbol)] { set_site_type(structure, site, type_symbol); });
+    }
     static Edit moment_site(Structure& structure, const AtomSite& site, bool magnetic) {
         return Edit([&structure, &site, magnetic] {
             std::optional<std::size_t> found;
@@ -911,6 +923,7 @@ class Edit {
         return Edit([&structure, type_symbol = std::move(type_symbol), ion = std::move(ion)] {
             MagneticFormFactor& row = form_factor_row(structure, type_symbol);
             row.ion = ion;
+            fix_unusable_coefficients(structure, type_symbol);
             drop_default_form_factor(structure, type_symbol);
         });
     }
@@ -922,6 +935,8 @@ class Edit {
                                             "' is none of j0, dipole and beyond_dipole");
             }
             form_factor_row(structure, type_symbol).approximation = approximation;
+            // An unused coefficient keeps its value but no longer fits, in the same undo step.
+            fix_unusable_coefficients(structure, type_symbol);
             drop_default_form_factor(structure, type_symbol);
         });
     }

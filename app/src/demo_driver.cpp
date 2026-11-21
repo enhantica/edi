@@ -613,7 +613,7 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     steps_.push_back({"t17-75-free-header", start + open_example("pd-neut-cwl_lbco-hrpt")
                                                 + QStringList{analysis, basic, "parameters.freeHeader"}});
     steps_.push_back({"t17-76-free-header-fixed", {"parameters.freeHeader.fixed"}});
-    // Reset to the initial state lands on the Project page (owner, 2026-10-11).
+    // Clear returns to Home with no project (ADR-0017 §13).
     steps_.push_back({"t17-77-reset", {"appBar.button.reset"}});
     // 8: a created experiment's Load data… button, left-aligned under Data file.
     steps_.push_back({"t17-24-load-data", start + open_example("pd-neut-cwl_cosio-d20")
@@ -3007,7 +3007,7 @@ bool DemoDriver::perform(const QString& action) {
         for (const QString& name : folder.entryList(QDir::Files, QDir::Name)) {
             files.append(QUrl::fromLocalFile(folder.filePath(name)));
         }
-        QQuickItem* group = find(QStringLiteral("experiments.group"), false);
+        QQuickItem* group = find(QStringLiteral("group.experiments"), false);
         if (group == nullptr || files.isEmpty() ||
             !QMetaObject::invokeMethod(group, "askSeries", Q_ARG(QVariant, QVariant(files)))) {
             fail(QStringLiteral("step %1: no series dialog for %2").arg(steps_[current_].image, folder.path()));

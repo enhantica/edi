@@ -32,9 +32,16 @@ struct MagneticGroupView {
     Q_PROPERTY(QString name_uni MEMBER name_uni CONSTANT)
     Q_PROPERTY(QString number_og MEMBER number_og CONSTANT)
     Q_PROPERTY(QString name_og MEMBER name_og CONSTANT)
+    Q_PROPERTY(QString point_group_name_uni MEMBER point_group_name_uni CONSTANT)
+    Q_PROPERTY(QString point_group_number_litvin MEMBER point_group_number_litvin CONSTANT)
+    // The transform to the BNS standard, the Setting field (`a,b,c;0,0,0` for the standard itself).
+    Q_PROPERTY(QString setting MEMBER setting CONSTANT)
+    // The transform to the OG standard, derived and read only (the transforms loop's OG row).
+    Q_PROPERTY(QString og_setting MEMBER og_setting CONSTANT)
 
    public:
-    QString number_bns, name_bns, name_uni, number_og, name_og;
+    QString number_bns, name_bns, name_uni, number_og, name_og, point_group_name_uni, point_group_number_litvin, setting,
+        og_setting;
 };
 
 // The parent space group of a magnetic structure, and whether it differs from the structure's own group.
@@ -228,7 +235,8 @@ class AtomSiteMomentListModel : public RowTableModel {
                             QObject* parent);
     void sync();
     // The ions a row can choose: "none", then the form-factor table's ions for the site's element.
-    Q_INVOKABLE QStringList ions(int row) const;
+    // The magnetic ions of the site's element; `type` is the element the caller shows, so a change of it re-reads.
+    Q_INVOKABLE QStringList ions(int row, const QString& type = {}) const;
     // "none" removes the site's moment; an ion marks the site magnetic and sets its type's ion.
     Q_INVOKABLE void setIon(int row, const QString& ion);
     // The row's moment in `form` ("crystal_axes", "cartesian" or "spherical"; edi ADR-0078): its three components,
@@ -240,6 +248,13 @@ class AtomSiteMomentListModel : public RowTableModel {
     // in one edit. Returns why it was refused, or an empty text, which `refusal` also holds.
     Q_INVOKABLE QString setComponent(int row, const QString& form, int k, double value);
     int revision() const { return revision_; }
+    // The page shows a refusal once, in the app's error popup, then clears it here.
+    Q_INVOKABLE void clearRefusal() {
+        if (!refusal_.isEmpty()) {
+            refusal_.clear();
+            emit refusalChanged();
+        }
+    }
     QString refusal() const { return refusal_; }
 
    signals:
@@ -299,6 +314,13 @@ class PropagationVectorListModel : public RowTableModel {
     Q_INVOKABLE bool setVector(int row, const QString& vector);
     Q_INVOKABLE void append();
     Q_INVOKABLE void remove(int row);
+    // The refused vector is gone from the table at once, so the page clears its reason after a while.
+    Q_INVOKABLE void clearRefusal() {
+        if (!refusal_.isEmpty()) {
+            refusal_.clear();
+            emit refusalChanged();
+        }
+    }
     QString refusal() const { return refusal_; }
 
    signals:
@@ -368,10 +390,22 @@ class StructureViewModel : public QObject {
     // The 1651 magnetic space groups of crysta's table, as "BNS number  BNS symbol", for the group's selector; and
     // why the last choice was refused, empty when it was taken.
     Q_PROPERTY(QStringList magneticGroupNames READ magneticGroupNames CONSTANT)
+    // The table's BNS numbers and BNS names, index for index with magneticGroupNames: the two linked fields.
+    Q_PROPERTY(QStringList magneticGroupNumbersBns READ magneticGroupNumbersBns CONSTANT)
+    Q_PROPERTY(QStringList magneticGroupNamesBns READ magneticGroupNamesBns CONSTANT)
     Q_PROPERTY(QString magneticGroupRefusal READ magneticGroupRefusal NOTIFY magneticGroupRefusalChanged)
     Q_PROPERTY(edi_app::ParentGroupView parentGroup READ parentGroup NOTIFY parentGroupChanged)
     // Whether any site carries a moment.
     Q_PROPERTY(bool magnetic READ magnetic NOTIFY magneticChanged)
+    // The propagation vector a Magnetic structure without one has from its magnetic group: k = 0,0,0 for a group in
+    // its parent's cell (types I-III, table-resolved); empty when the file gives vectors or none can be derived.
+    Q_PROPERTY(QString derivedPropagationVector READ derivedPropagationVector NOTIFY magneticChanged)
+    // Why the group gives no k, when a magnetic structure has no vectors and none is derived.
+    Q_PROPERTY(QString propagationNotDerived READ propagationNotDerived NOTIFY magneticChanged)
+    Q_PROPERTY(QStringList magneticSettings READ magneticSettings NOTIFY magneticChanged)
+    // Whether the structure's setting is one of the list; a file's other setting (another origin, type IV) is shown as
+    // written, marked operators only.
+    Q_PROPERTY(bool magneticSettingTabulated READ magneticSettingTabulated NOTIFY magneticChanged)
     // The types a site may take for the probes of the experiments linking the structure (edi::atom_types).
     Q_PROPERTY(QStringList atomTypes READ atomTypes NOTIFY atomTypesChanged)
     // The bond cutoffs (`_geom`): a bond is drawn between two sites at least the minimum distance apart and at most
@@ -400,11 +434,23 @@ class StructureViewModel : public QObject {
     MagneticGroupView magneticGroup() const;
     ParentGroupView parentGroup() const;
     static QStringList magneticGroupNames();
+    static QStringList magneticGroupNumbersBns();
+    static QStringList magneticGroupNamesBns();
+    // Crystal or Magnetic (edi ADR-0078): Magnetic takes the grey group of the space group, Crystal the family space
+    // group with the moments dropped (the page asks first). A refusal is kept in magneticGroupRefusal.
+    Q_INVOKABLE bool setMagnetic(bool magnetic);
+    // The Setting list (the owner, 2026-11-19): the tabulated settings of the group's own space group as transforms
+    // from the BNS standard, a,b,c;0,0,0 first; choosing one sets the BNS table group's operations in it.
+    QStringList magneticSettings() const;
+    bool magneticSettingTabulated() const;
+    Q_INVOKABLE bool chooseMagneticSetting(int index);
     QString magneticGroupRefusal() const { return magnetic_group_refusal_; }
     // Takes table group `index` of magneticGroupNames: its operators replace the structure's when crysta's rule
     // admits them with the cell and the propagation vectors, else nothing changes and the refusal is kept.
     Q_INVOKABLE bool setMagneticGroup(int index);
-    bool magnetic() const { return !structure_.atom_site_moment.empty(); }
+    bool magnetic() const;
+    QString derivedPropagationVector() const;
+    QString propagationNotDerived() const;
     QStringList atomTypes() const { return atom_types_; }
     double minBondDistance() const;
     void setMinBondDistance(double distance);

@@ -3,7 +3,7 @@ category_glyph: "\uf7a4"
 template: gui.html
 ---
 
-# <span class="ed-reference-icon" data-reference-category="geom-bond" aria-hidden="true">&#63396;</span> Bonds
+# <span class="ed-reference-icon" data-reference-category="geom" aria-hidden="true">&#63396;</span> Bonds
 
 <!-- group-tags -->
 <p class="ed-group-tags"><a class="ed-tag ed-tag--technique" data-ed-tag="sampleForm" data-ed-token="powder" href="../../user-guide/glossary/#powder-diffraction" title="Powder diffraction">pd</a> <a class="ed-tag ed-tag--neutral" data-ed-tag="sampleForm" data-ed-token="single crystal" href="../../user-guide/glossary/#single-crystal-diffraction" title="Single-crystal diffraction">sc</a> <a class="ed-tag ed-tag--neutral" data-ed-tag="beamMode" data-ed-token="constant wavelength" href="../../user-guide/glossary/#constant-wavelength" title="Constant wavelength">cwl</a> <a class="ed-tag ed-tag--technique" data-ed-tag="beamMode" data-ed-token="time-of-flight" href="../../user-guide/glossary/#time-of-flight" title="Time of flight">tof</a> <a class="ed-tag ed-tag--technique" data-ed-tag="probe" data-ed-token="neutron" href="../../user-guide/glossary/#neutron-diffraction" title="Neutron diffraction">neut</a> <a class="ed-tag ed-tag--neutral" data-ed-tag="probe" data-ed-token="x-ray" href="../../user-guide/glossary/#x-ray-diffraction" title="X-ray diffraction">xray</a></p>
@@ -11,14 +11,14 @@ template: gui.html
 
 ## Use this group
 
-On **Structure → Extra**, expand **Bonds**. It lists the bonds between the atoms of the cell. This group is read-only. See [Bonds](../../physics/parameters.md#geom-bond) in the parameter reference.
+On **Structure → Extra**, expand **Bond settings**. Set the minimum bond distance and the increment over the sites’ covalent radii, then inspect the computed bonds in the read-only table. See [Bond settings](../../physics/parameters.md#geom) and [Bonds](../../physics/parameters.md#geom-bond) in the parameter reference.
 
 <!-- gui-guide:use-this-group -->
 <div class="gui-viewer" markdown="1">
 
 <figure class="gui-figure" data-gui-figure>
-<p class="gui-view-description">Read the bonds.</p>
-<a class="gui-image-link" href="../../assets/gui/magnetic/group-bonds.webp?v=57665b855fa5" data-gui-dark="cc22504ceca0" data-gui-open aria-haspopup="dialog" aria-label="Enlarge screenshot: Bonds (34)"><svg class="gui-capture" data-gui-view="overview" viewBox="0 0 1480 800" width="1480" height="800" role="img" aria-label="Bonds (34)"><title>Bonds (34)</title><defs><clipPath id="gui-clip-group-bonds-overview-bonds-use-this-group-0-group-geom_bond"><rect width="1480" height="800" rx="17.76" /></clipPath></defs><image href="../../assets/gui/magnetic/group-bonds.webp?v=57665b855fa5" data-gui-dark="cc22504ceca0" width="1480" height="800" clip-path="url(#gui-clip-group-bonds-overview-bonds-use-this-group-0-group-geom_bond)" /><rect class="gui-image-frame" width="1480" height="800" rx="17.76" /><path class="is-active" data-gui-region="group-bonds-overview-bonds-use-this-group-0-group-geom_bond-1" data-gui-area="sidebar" data-gui-parts="[[770,329,710,316.5]]" d="M771.000 334.000 Q771.000 330.000 775.000 330.000 L1475.000 330.000 Q1479.000 330.000 1479.000 334.000 L1479.000 640.500 Q1479.000 644.500 1475.000 644.500 L775.000 644.500 Q771.000 644.500 771.000 640.500 Z" /><path data-gui-navigation data-gui-area="navigation" data-gui-parts="[[655.203125,0,72.25,77]]" d="M656.203 5.000 Q656.203 1.000 660.203 1.000 L722.453 1.000 Q726.453 1.000 726.453 5.000 L726.453 72.000 Q726.453 76.000 722.453 76.000 L660.203 76.000 Q656.203 76.000 656.203 72.000 Z" /></svg></a>
+<p class="gui-view-description">Inspect bond settings and the computed bonds.</p>
+<a class="gui-image-link" href="../../assets/gui/magnetic/group-bonds.webp?v=efaa4e64b8cb" data-gui-dark="44690c22f8f5" data-gui-open aria-haspopup="dialog" aria-label="Enlarge screenshot: Bond settings"><svg class="gui-capture" data-gui-view="overview" viewBox="0 0 1480 800" width="1480" height="800" role="img" aria-label="Bond settings"><title>Bond settings</title><defs><clipPath id="gui-clip-group-bonds-overview-bonds-use-this-group-0-group-geom"><rect width="1480" height="800" rx="17.76" /></clipPath></defs><image href="../../assets/gui/magnetic/group-bonds.webp?v=efaa4e64b8cb" data-gui-dark="44690c22f8f5" width="1480" height="800" clip-path="url(#gui-clip-group-bonds-overview-bonds-use-this-group-0-group-geom)" /><rect class="gui-image-frame" width="1480" height="800" rx="17.76" /><path class="is-active" data-gui-region="group-bonds-overview-bonds-use-this-group-0-group-geom-1" data-gui-area="sidebar" data-gui-parts="[[770,203,710,386.5]]" d="M771.000 208.000 Q771.000 204.000 775.000 204.000 L1475.000 204.000 Q1479.000 204.000 1479.000 208.000 L1479.000 584.500 Q1479.000 588.500 1475.000 588.500 L775.000 588.500 Q771.000 588.500 771.000 584.500 Z" /><path data-gui-navigation data-gui-area="navigation" data-gui-parts="[[655.203125,0,72.25,77]]" d="M656.203 5.000 Q656.203 1.000 660.203 1.000 L722.453 1.000 Q726.453 1.000 726.453 5.000 L726.453 72.000 Q726.453 76.000 722.453 76.000 L660.203 76.000 Q656.203 76.000 656.203 72.000 Z" /></svg></a>
 
 </figure>
 

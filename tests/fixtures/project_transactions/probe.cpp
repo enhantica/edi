@@ -1976,6 +1976,7 @@ bool boundary_download(const QByteArray& bytes, const QString&) {
 #include "query_owner_contract.hpp"
 #include "cod_owner_contract.hpp"
 #include "public_save_contract.hpp"
+#include "untitled_recovery.hpp"
 // clang-format on
 
 int main(int argc, char** argv) {
@@ -1991,7 +1992,9 @@ int main(int argc, char** argv) {
         need(argc == 3, "Requires the independent project folder and the named observation group");
         QString source = argv[1], group = argv[2];
         QJsonArray rows;
-        if (group.startsWith("tutorial/"))
+        if (group == "untitled-recovery")
+            rows.append(untitledRecovery());
+        else if (group.startsWith("tutorial/"))
             rows.append(tutorialOwnership(source, group.split('/')));
         else if (group.startsWith("operation-files/"))
             rows.append(operationFiles(source, group.split('/')));

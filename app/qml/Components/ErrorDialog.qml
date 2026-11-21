@@ -9,7 +9,7 @@ import edi.app
 
 // An error, said in a popup with what went wrong, never a silent close (edi ADR-0062): Send to developers opens Help
 // and feedback as a problem with the message, this run's log and, for a file edi could not read, the file attached;
-// OK closes it.
+// OK closes it. Both are in the button row.
 AppDialog {
     id: dialog
 
@@ -32,6 +32,20 @@ AppDialog {
     enterAccepts: true
     standardButtons: Dialog.Ok
 
+    // Send to developers sits in the button row, left of OK, as Messages' Dismiss all does (the owner, 2026-11-19).
+    footer: EaElements.DialogButtonBox {
+        EaElements.Button {
+            objectName: dialog.objectName + ".send"
+            fontIcon: "paper-plane"
+            text: qsTr("Send to developers")
+            DialogButtonBox.buttonRole: DialogButtonBox.ActionRole
+            onClicked: {
+                AppState.problemReported(dialog.message, dialog.file);
+                dialog.close();
+            }
+        }
+    }
+
     Column {
         id: column
 
@@ -43,19 +57,6 @@ AppDialog {
             width: parent.width
             wrapMode: Text.Wrap
             text: dialog.message
-        }
-        Row {
-            spacing: EaStyle.Sizes.fontPixelSize
-
-            EaElements.Button {
-                objectName: dialog.objectName + ".send"
-                fontIcon: "paper-plane"
-                text: qsTr("Send to developers")
-                onClicked: {
-                    AppState.problemReported(dialog.message, dialog.file);
-                    dialog.close();
-                }
-            }
         }
     }
 }

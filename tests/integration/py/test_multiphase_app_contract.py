@@ -141,12 +141,14 @@ def test_shared_block_selector_has_bounded_square_icon_steps_and_file_labels():
     ), 'The main-area placement composes one selector and preserves its original index'
     for page_name in ('Experiment', 'Structure', 'Analysis'):
         page = code(f'app/qml/Pages/{page_name}/{page_name}Page.qml')
-        assert 'WorkflowPage {' in page and 'blockSelectorShown: true' not in page, (
-            'Every browsing sidebar leaves selection to the shared persistent main view'
-        )
+        assert (
+            'WorkflowPage {' in page
+            and 'blockSelectorShown: true' not in page
+            and page.count('MainView {') == 1
+        ), 'Every browsing sidebar composes the common main view beside its own content'
     window = code('app/qml/Main.qml')
-    assert window.count('MainView {') == 1, (
-        'The application mounts the shared view exactly once across sidebar page switches'
+    assert window.count('MainView {') == 0, (
+        'The application leaves each page in charge of its common main-view instance'
     )
 
 

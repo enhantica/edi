@@ -174,6 +174,9 @@ struct SaveSpelling {
     std::vector<std::string> exact_cells;  ///< structure names
 };
 SaveSpelling save_spelling(const Project& project);
+/// Widget spelling validates the inputs' round trip only. Never reconstructs a calculated pattern;
+/// Save/Text/export keep save_spelling's full output-preservation validation.
+SaveSpelling input_spelling(const Project& project);
 /// Whether `spelling` writes `parameter` of `project` exactly.
 bool written_exactly(const SaveSpelling& spelling, const Project& project, const Parameter& parameter);
 

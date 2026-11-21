@@ -516,7 +516,7 @@ Item {
         }
     }
 
-    GraphsView {
+    ChartView {
         id: mainView
 
         objectName: "chart.view.main"
@@ -729,7 +729,7 @@ Item {
         }
     }
 
-    GraphsView {
+    ChartView {
         id: braggView
 
         objectName: "chart.view.bragg"
@@ -773,9 +773,20 @@ Item {
     }
 
     // One tick series per structure (edi::pattern_style_table's `bragg.<place>` rows, 1 px; ADR-0017 §15), each in
-    // its structure's colour, made as structures are added and handed to the controller to fill.
+    // its structure's colour, made as structures are added and handed to the controller to fill. The chart keeps every
+    // series it has made, as it keeps its structure curves: Qt Graphs forgets a removed series only at its next polish,
+    // and a hover before that reached the deleted series (a crash on the owner's Mac, 2026-11-18). One past the
+    // structures now shown holds no ticks and no colour.
+    property int braggSlots: 0
+    Connections {
+        target: controller
+        function onBraggColorsChanged() {
+            chart.braggSlots = Math.max(chart.braggSlots, controller.braggColors.length);
+        }
+        Component.onCompleted: onBraggColorsChanged()
+    }
     Instantiator {
-        model: controller.braggColors.length
+        model: chart.braggSlots
         delegate: LineSeries {
             required property int index
             objectName: "chart.series.bragg." + index
@@ -787,7 +798,7 @@ Item {
         onObjectRemoved: (index, series) => ApplicationInfo.patternBraggSeries(index, series, false)
     }
 
-    GraphsView {
+    ChartView {
         id: residualView
 
         objectName: "chart.view.residual"

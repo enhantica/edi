@@ -80,11 +80,9 @@ def acceptance_reference():
 
 
 @pytest.fixture(scope='module')
-def existing_projects_run(acceptance_reference, owner_amendment_run, request):
-    # The amendments have their own actor; the project receipt is shared with the project cases.
-    assert 'E04T1OwnerAmendments' in owner_amendment_run.stdout, (
-        'The shared page setup first executes its actual owner-amendment actor'
-    )
+def existing_projects_run(acceptance_reference, request):
+    # Project receipts execute their own actors. The independent editing amendments
+    # remain required by their dedicated cases instead of every project-row consumer.
     return run_projects(request.session, str(runner()), acceptance_reference)
 
 

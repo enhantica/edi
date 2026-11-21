@@ -46,13 +46,19 @@ Item {
             appWindow.requestActivate();
             tryCompare(appWindow, "active", true, 2000, "Actual toolbar input reaches the active application window");
         }
-        function showPage(name) {
+        function showPage(name, hasPattern = true) {
             Ui.click(test, Probe, appWindow, "appBar.tab." + name);
             page = Render.descendants(appWindow.contentItem).find(item => item.pageName === name && item.current);
             verify(page !== undefined && page.Window.window === appWindow, "The actual current page belongs to the application window");
-            const charts = Render.descendants(page).filter(item => item.objectName === "chart" && item.report === null && item.visible && item.shown);
-            compare(charts.length, 1, "The current page holds its one app-owned pattern chart");
-            verify(charts[0].Window.window === appWindow, "The reparented chart has the actual application window before input");
+            const view = page.pageViewItem;
+            verify(view !== null && Render.descendants(page.mainArea).includes(view), "The toolbar belongs to the selected page's own main view");
+            if (hasPattern)
+                Ui.click(test, Probe, appWindow, "mainArea.tab.pattern");
+            tryCompare(view, "currentKey", "pattern", 1000, "The toolbar observer selects this page's Pattern tab");
+            const charts = () => Render.descendants(view).filter(item => item.objectName === "chart" && item.report === null && item.visible && item.shown);
+            tryVerify(() => charts().length === (hasPattern ? 1 : 0), 2000, "A populated Pattern tab shows one chart and an empty experiment shows none");
+            if (hasPattern)
+                verify(charts()[0].Window.window === appWindow, "The page-owned chart has the actual application window before input");
         }
         function clickToggle(toggle) {
             tryVerify(() => !Ui.moving(appWindow.contentItem), 2000, "The chart finishes moving before its toolbar receives input");
@@ -117,7 +123,7 @@ Item {
             return SettingsProof.text(url.slice(0, url.lastIndexOf("/") + 1), SettingsProof.fileName(Globals.Vars.settingsFile));
         }
         function structureToggle(root) {
-            return Render.descendants(root).find(item => item.toolTip === "Show each structure's curve" && typeof item.checked === "boolean");
+            return Render.descendants(root).find(item => item.toolTip === "Show each structure's curve" && typeof item.checked === "boolean" && Ui.rendered(item));
         }
         function test_fresh_toolbar_observer_loads_actual_control() {
             const ordinary = SettingsProof.restart('import QtQuick; QtObject { property bool marker: true }');
@@ -145,9 +151,9 @@ Item {
             verify(Session.createProject("Empty pattern", "Toolbar visibility witness"), "The empty-chart witness creates a real unsaved project");
             verify(Session.project.createStructure(), "The real Experiment page is available before any experiment is created");
             compare(Session.project.experiments.count, 0, "The no-calculated-pattern witness has no experiment");
-            showPage("experiment");
-            const emptyToggle = structureToggle(page);
-            verify(emptyToggle !== undefined && !emptyToggle.visible, "The app-owned structure-curve toggle stays hidden without a calculated pattern");
+            showPage("experiment", false);
+            const emptyToggles = Render.descendants(page.pageViewItem).filter(item => item.toolTip === "Show each structure's curve" && typeof item.checked === "boolean");
+            verify(emptyToggles.length > 0 && emptyToggles.every(item => !Ui.rendered(item)), "Every app-owned structure-curve toggle stays hidden without a calculated pattern");
             openAnalysis();
             let toggle;
             tryVerify(() => {
@@ -155,8 +161,8 @@ Item {
                 return toggle !== undefined && toggle.visible && toggle.enabled;
             }, 2000, "A calculated Analysis pattern exposes the structure-curve toggle in its toolbar");
             compare(toggle.fontIcon, "layer-group", "The curve toggle uses the existing structure icon");
-            const legend = findChild(page, "chart.toolbar.legend");
-            const hover = findChild(page, "chart.toolbar.hover");
+            const legend = findChild(toggle.parent, "chart.toolbar.legend");
+            const hover = findChild(toggle.parent, "chart.toolbar.hover");
             verify(legend && hover && toggle.parent === legend.parent && toggle.parent === hover.parent, "The structure toggle shares the legend and coordinates-tooltip toolbar group");
             const siblings = Array.from(toggle.parent.children);
             const members = [legend, hover, toggle];

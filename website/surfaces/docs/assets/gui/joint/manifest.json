@@ -445,11 +445,11 @@
             "scene": "joint-correlations"
         }
     ],
-    "binary_sha256": "930017e29ba7c0ffac4bfbdbf09a5bea4beb135a2c33f624ca74e8fc4fe8d6bf",
+    "binary_sha256": "6b270a81225af60207e9664a9d77ce7e7a96c47e78c931c73331f97a7c9b9ce5",
     "dependencies": [
         {
             "file": "inputs/analysis/analysis.edi",
-            "sha256": "17f359c213950f1f635d83d1a22a465491101031b51a0e79e72297d5d7e58d4e"
+            "sha256": "1ed6e2030a4ddc80cba00a285e2d701b6097e51e4b1544edb823f23b9e29418b"
         },
         {
             "file": "inputs/experiments/lab.edi",
@@ -815,7 +815,7 @@
     ],
     "schema": 1,
     "script_sha256": "4507e1db0b5ab3c28a5c62a4da2f63b27e5fb9e6a583b0ba99d40520a3c70c4e",
-    "source_revision": "9045d5d22d8f07b00ffd58c1610ec4b02b2beba5",
+    "source_revision": "66250b0826244790ae402c00384ea8fca62ae552",
     "status": "complete",
     "workflow": "reference"
 }

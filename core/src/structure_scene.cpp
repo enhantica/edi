@@ -762,6 +762,25 @@ StructureScene present_structure(const SceneSource& source, const SceneOptions& 
         scene.atoms[found->second].parts.push_back(std::move(part));
     }
 
+    // Each site's own image, the one the asymmetric unit shows: its `1_555` row, or, for a site the file places
+    // outside the cell, the identity operation's first row inside it (`1_556` for a z just below 0).
+    std::unordered_map<std::string, std::size_t> own_row;
+    if (source.atom_site_id && source.site_symmetry) {
+        const std::size_t count = std::min(source.atom_site_id->size(), source.site_symmetry->size());
+        for (std::size_t row = 0; row != count; ++row) {
+            const std::string& code = (*source.site_symmetry)[row];
+            if (!code.starts_with("1_")) {
+                continue;
+            }
+            const std::string& site = (*source.atom_site_id)[row];
+            const auto held = own_row.find(site);
+            if (held == own_row.end()) {
+                own_row.emplace(site, row);
+            } else if (code == "1_555" && (*source.site_symmetry)[held->second] != "1_555") {
+                held->second = row;
+            }
+        }
+    }
     std::unordered_map<std::string, const SceneSource::SiteAdp*> adp_of_site;
     for (const SceneSource::SiteAdp& adp : source.site_adps) {
         adp_of_site.emplace(adp.site_id, &adp);
@@ -789,7 +808,7 @@ StructureScene present_structure(const SceneSource& source, const SceneOptions& 
                 atom.label += '/';
             }
             atom.label += part.site_id;
-            if (column_value(source.site_symmetry, part.row, std::string()) == "1_555") {
+            if (const auto own = own_row.find(part.site_id); own != own_row.end() && own->second == part.row) {
                 atom.asymmetric = true;
                 crystal = crystal || source.crystal_sites.empty() || source.crystal_sites.contains(part.site_id);
             }

@@ -1,0 +1,17 @@
+{
+  "kind": "Structural workload census; no private report text",
+  "scenarios": [
+    {
+      "id": "2026.11.22",
+      "source_sha256": "707bd984dbeaf29580513dc1dd5f63ba7a9e1ef9e9471714d4eb1a96ed248042",
+      "source_bytes": 7428634,
+      "inspection_calls": 14
+    },
+    {
+      "id": "main",
+      "source_sha256": "4fb85c72708b051cfc4aeb380ab788941ed2b9f379b458a9a7e4bc95cf99adc8",
+      "source_bytes": 4464656,
+      "inspection_calls": 9
+    }
+  ]
+}

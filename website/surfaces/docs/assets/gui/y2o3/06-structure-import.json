@@ -8,7 +8,7 @@
     ],
     "id": "06-structure-import",
     "image": "06-structure-import.webp",
-    "image_sha256": "bd6b0f15ca6d5d0b7eb9b8901a4726676cc7666df35d26b780cff5752fafcfc4",
+    "image_sha256": "21a52dbc8320315dc72a7f8fe78a1dd9074ee7cd5e7417513c41100ba9c6e67a",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -363,68 +363,20 @@
         "label": {
             "ambiguous": true
         },
-        "mainArea.divider": {
-            "bounds": [
-                770,
-                77,
-                1,
-                681
-            ],
-            "enabled": true,
-            "label": "",
-            "visible_bounds": [
-                770,
-                77,
-                1,
-                681
-            ]
-        },
         "mainArea.emptyState": {
             "bounds": [
-                177,
+                231,
                 389,
-                415,
+                308,
                 58
             ],
             "enabled": false,
-            "label": "No structures defined",
+            "label": "No structure yet",
             "visible_bounds": [
-                177,
+                231,
                 389,
-                415,
+                308,
                 58
-            ]
-        },
-        "mainArea.tab.correlations": {
-            "bounds": [
-                126.28125,
-                77,
-                86.15625,
-                42
-            ],
-            "enabled": false,
-            "label": "Correlations",
-            "visible_bounds": [
-                126.28125,
-                77,
-                86.15625,
-                42
-            ]
-        },
-        "mainArea.tab.map": {
-            "bounds": [
-                273.015625,
-                77,
-                39.5625,
-                42
-            ],
-            "enabled": false,
-            "label": "Map",
-            "visible_bounds": [
-                273.015625,
-                77,
-                39.5625,
-                42
             ]
         },
         "mainArea.tab.pattern": {
@@ -440,22 +392,6 @@
                 69.1875,
                 77,
                 57.09375,
-                42
-            ]
-        },
-        "mainArea.tab.stacked": {
-            "bounds": [
-                212.4375,
-                77,
-                60.578125,
-                42
-            ],
-            "enabled": false,
-            "label": "Stacked",
-            "visible_bounds": [
-                212.4375,
-                77,
-                60.578125,
                 42
             ]
         },
@@ -679,7 +615,7 @@
         },
         "structures.create": {
             "bounds": [
-                1016,
+                784,
                 260,
                 218,
                 39
@@ -688,7 +624,7 @@
             "icon": "plus-circle",
             "label": "Create structure",
             "visible_bounds": [
-                1016,
+                784,
                 260,
                 218,
                 39
@@ -729,7 +665,7 @@
         },
         "structures.load": {
             "bounds": [
-                784,
+                1016,
                 260,
                 218,
                 39
@@ -738,10 +674,26 @@
             "icon": "upload",
             "label": "Load",
             "visible_bounds": [
-                784,
+                1016,
                 260,
                 218,
                 39
+            ]
+        },
+        "window.projectDrop": {
+            "bounds": [
+                0,
+                0,
+                1480,
+                800
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                0,
+                0,
+                1480,
+                800
             ]
         },
         "workflow.home.sidebarHost": {
@@ -820,7 +772,7 @@
     "qt_version": "6.11.2",
     "schema": 1,
     "script_sha256": "a0cd8f7d599e386e3db4cf752e3ae7050f99ce60356dedf20f4c9a1fbb3ecee3",
-    "source_revision": "9045d5d22d8f07b00ffd58c1610ec4b02b2beba5",
+    "source_revision": "66250b0826244790ae402c00384ea8fca62ae552",
     "state": {
         "experiments": 0,
         "fit_outcome": "",

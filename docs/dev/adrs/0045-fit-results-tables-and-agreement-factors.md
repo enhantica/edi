@@ -50,3 +50,16 @@ fitting_time when finished. GUI queueing, frame presentation and result publicat
 that solver clock. Previously the running display used a wall timer and then changed to the engine's
 shorter duration, so the displayed time could go backwards at completion. Scan runs retain the wall
 clock for the entire run, matching their existing run summary. No recorded solver durations change.
+
+## Result table sizing
+
+The agreement table's natural width comes from model text measured with its font, factor headers,
+column spacing and padding. It never reads fitted cell widths: fitting lays out cells using the
+assigned table width, so feeding that result back into the dialog's width creates a binding cycle.
+The dataset column receives its measured width plus spare room computed from the independent area
+width; it never reads the table's assigned width back. The viewport cap reads the window's width
+directly, independently of the popup overlay's layout, and
+continues to follow window resizes. Other content-sized tables follow the same direction: measure
+inputs first, assign geometry afterwards (the existing third-party components table does this too).
+The shared natural-text measurement helper reads the model's count, never the view's count: reading
+the view can flush a pending layout and re-enter the width or column binding during row removal.

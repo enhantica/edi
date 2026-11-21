@@ -71,8 +71,14 @@ EaComponents.MainContent {
         const tab = bar && currentKey !== "" ? bar.itemAt(tabIndex) : null;
         return tab !== null && (!tab.visible || !tab.enabled);
     }
+    // Moved after the change has settled, never inside it: switching the tab from this handler re-evaluated
+    // currentHidden while it was still notifying (a binding loop), and the bar and the pages moved under each other.
     onCurrentHiddenChanged: {
-        if (!currentHidden)
+        if (currentHidden)
+            Qt.callLater(leaveHiddenTab);
+    }
+    function leaveHiddenTab() {
+        if (!currentHidden || tabIndex === ownTab || !available(defaultKey))
             return;
         pickPending = currentKey === chosenKey;
         showMainTab(ownTab);
@@ -105,11 +111,17 @@ EaComponents.MainContent {
     // loading): the page opens on its own tab and moves to the pick once it is, unless the user picked another.
     property bool pickPending: false
     readonly property bool pickReady: pickPending && available(chosenKey)
+    // Taken after the change has settled: clearing pickPending inside this handler re-evaluated pickReady while it was
+    // still notifying (a binding loop, logged before the owner's crash of 2026-11-19).
     onPickReadyChanged: {
-        if (pickReady) {
-            pickPending = false;
-            showMainTab(tabOf(chosenKey));
-        }
+        if (pickReady)
+            Qt.callLater(takePick);
+    }
+    function takePick() {
+        if (!pickReady)
+            return;
+        pickPending = false;
+        showMainTab(tabOf(chosenKey));
     }
     onProjectChanged: {
         ownTabOpened = false;

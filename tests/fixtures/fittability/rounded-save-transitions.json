@@ -2416,7 +2416,510 @@
       "path": "metadata_bytes.py",
       "before": "20d5a08975b411aaac82134a76034c5f4e4496a3d66db413231e63c06b87dc09",
       "after": "55962c7dd586c18f633f3801f1e9dfa1978ba20d391e1e12d4dec541be3b00d0"
+    },
+    {
+      "case": "docs/user/cli/pd-neut-tof_ferrite-austenite-beer/project",
+      "rule": "iucr_19",
+      "path": "experiments/expt_n2.edi",
+      "before": "035dff6078d55c640feb67d56b17f01be16cec4de6c4cf05165a86773781bef8",
+      "after": "c2cabe44146d7a67c44b66e0caea18c75c8fe3bd0049d5d38471d3423f91df1d",
+      "reason": "Retained release byte regression; parameter/free and measured-input equivalence sealed independently"
+    },
+    {
+      "case": "docs/user/cli/pd-neut-tof_ferrite-austenite-beer/project",
+      "rule": "iucr_99",
+      "path": "experiments/expt_n2.edi",
+      "before": "035dff6078d55c640feb67d56b17f01be16cec4de6c4cf05165a86773781bef8",
+      "after": "c2cabe44146d7a67c44b66e0caea18c75c8fe3bd0049d5d38471d3423f91df1d",
+      "reason": "Retained release byte regression; parameter/free and measured-input equivalence sealed independently"
+    },
+    {
+      "case": "docs/user/cli/pd-neut-tof_ncaf-wish-2bank_start-3/project",
+      "rule": "iucr_19",
+      "path": "experiments/wish_4_7.edi",
+      "before": "853bdf0e7a487759d5affbd2bb888a596072b0ad194662c985b9bbd994f5fba1",
+      "after": "dc212a4c7b0afb9ebc4f1ff7149464953c3d4e633ee2861205e25feaa2732754",
+      "reason": "Retained release byte regression; parameter/free and measured-input equivalence sealed independently"
+    },
+    {
+      "case": "docs/user/cli/pd-neut-tof_ncaf-wish-2bank_start-3/project",
+      "rule": "iucr_19",
+      "path": "experiments/wish_5_6.edi",
+      "before": "e181f3d4d53ebf13f234439d02d7f3c8dd6e048b91f5025fa6a03cb611ac75d4",
+      "after": "cf76dcb83ed3c9863293b46f5577adf1d593857ce74d8c9b71e0011aa2809d08",
+      "reason": "Retained release byte regression; parameter/free and measured-input equivalence sealed independently"
+    },
+    {
+      "case": "docs/user/cli/pd-neut-tof_ncaf-wish-2bank_start-3/project",
+      "rule": "iucr_19",
+      "path": "structures/ncaf.edi",
+      "before": "6428315de5973d31a3ad3da45931b373ec592a5859fa52978412f8357bc05f22",
+      "after": "a205e018a6343e82ba25296c8dfed38def7a6342805344c5ec6f4d4cc8c7c893",
+      "reason": "Retained release byte regression; parameter/free and measured-input equivalence sealed independently"
+    },
+    {
+      "case": "docs/user/cli/pd-neut-tof_ncaf-wish-2bank_start-3/project",
+      "rule": "iucr_99",
+      "path": "experiments/wish_4_7.edi",
+      "before": "853bdf0e7a487759d5affbd2bb888a596072b0ad194662c985b9bbd994f5fba1",
+      "after": "dc212a4c7b0afb9ebc4f1ff7149464953c3d4e633ee2861205e25feaa2732754",
+      "reason": "Retained release byte regression; parameter/free and measured-input equivalence sealed independently"
+    },
+    {
+      "case": "docs/user/cli/pd-neut-tof_ncaf-wish-2bank_start-3/project",
+      "rule": "iucr_99",
+      "path": "experiments/wish_5_6.edi",
+      "before": "e181f3d4d53ebf13f234439d02d7f3c8dd6e048b91f5025fa6a03cb611ac75d4",
+      "after": "cf76dcb83ed3c9863293b46f5577adf1d593857ce74d8c9b71e0011aa2809d08",
+      "reason": "Retained release byte regression; parameter/free and measured-input equivalence sealed independently"
+    },
+    {
+      "case": "docs/user/cli/pd-neut-tof_ncaf-wish-2bank_start-3/project",
+      "rule": "iucr_99",
+      "path": "structures/ncaf.edi",
+      "before": "6428315de5973d31a3ad3da45931b373ec592a5859fa52978412f8357bc05f22",
+      "after": "a205e018a6343e82ba25296c8dfed38def7a6342805344c5ec6f4d4cc8c7c893",
+      "reason": "Retained release byte regression; parameter/free and measured-input equivalence sealed independently"
+    },
+    {
+      "case": "docs/user/cli/pd-neut-tof_ncaf-wish-3bank_start-5/project",
+      "rule": "iucr_19",
+      "path": "experiments/wish_2_9.edi",
+      "before": "00fc809b1567d8f2a7fdbc0e08c7c0d64f9b6321b313651bff55d1bb389c6ea0",
+      "after": "154be33b264da3db4d810a144461c7cf07996ff33f33f933ebcd7181b3059fbb",
+      "reason": "Retained release byte regression; parameter/free and measured-input equivalence sealed independently"
+    },
+    {
+      "case": "docs/user/cli/pd-neut-tof_ncaf-wish-3bank_start-5/project",
+      "rule": "iucr_19",
+      "path": "experiments/wish_4_7.edi",
+      "before": "91fc63d468858451896d4f6993edbfc1d224a3ee87a7b3592ccfc575251b5016",
+      "after": "c663ddf54b25a9c0e38f2cf7ab101c4559e3363a0f5e24c374523d006aa77b68",
+      "reason": "Retained release byte regression; parameter/free and measured-input equivalence sealed independently"
+    },
+    {
+      "case": "docs/user/cli/pd-neut-tof_ncaf-wish-3bank_start-5/project",
+      "rule": "iucr_19",
+      "path": "experiments/wish_5_6.edi",
+      "before": "97c5ebc6fbcaaf0bc95c11c9c5b4e9aefbfa538cb45043f73b7dbf1c509bfbf7",
+      "after": "05f5ab46bb2ef3366e405c52972ce7407b39abbc67399f7b63431b9c8514a1e2",
+      "reason": "Retained release byte regression; parameter/free and measured-input equivalence sealed independently"
+    },
+    {
+      "case": "docs/user/cli/pd-neut-tof_ncaf-wish-3bank_start-5/project",
+      "rule": "iucr_19",
+      "path": "structures/ncaf.edi",
+      "before": "90ea112f37908c99c9675b85b198c0c47ff45fef4bba266085ecadc856b04fd8",
+      "after": "f8f5f255441b7c2f106fe48f9e3f5e39f886ca3d3d5c6c2cff8b62a11cf38a49",
+      "reason": "Retained release byte regression; parameter/free and measured-input equivalence sealed independently"
+    },
+    {
+      "case": "docs/user/cli/pd-neut-tof_ncaf-wish-3bank_start-5/project",
+      "rule": "iucr_99",
+      "path": "experiments/wish_2_9.edi",
+      "before": "00fc809b1567d8f2a7fdbc0e08c7c0d64f9b6321b313651bff55d1bb389c6ea0",
+      "after": "154be33b264da3db4d810a144461c7cf07996ff33f33f933ebcd7181b3059fbb",
+      "reason": "Retained release byte regression; parameter/free and measured-input equivalence sealed independently"
+    },
+    {
+      "case": "docs/user/cli/pd-neut-tof_ncaf-wish-3bank_start-5/project",
+      "rule": "iucr_99",
+      "path": "experiments/wish_4_7.edi",
+      "before": "91fc63d468858451896d4f6993edbfc1d224a3ee87a7b3592ccfc575251b5016",
+      "after": "c663ddf54b25a9c0e38f2cf7ab101c4559e3363a0f5e24c374523d006aa77b68",
+      "reason": "Retained release byte regression; parameter/free and measured-input equivalence sealed independently"
+    },
+    {
+      "case": "docs/user/cli/pd-neut-tof_ncaf-wish-3bank_start-5/project",
+      "rule": "iucr_99",
+      "path": "experiments/wish_5_6.edi",
+      "before": "97c5ebc6fbcaaf0bc95c11c9c5b4e9aefbfa538cb45043f73b7dbf1c509bfbf7",
+      "after": "05f5ab46bb2ef3366e405c52972ce7407b39abbc67399f7b63431b9c8514a1e2",
+      "reason": "Retained release byte regression; parameter/free and measured-input equivalence sealed independently"
+    },
+    {
+      "case": "docs/user/cli/pd-neut-tof_ncaf-wish-3bank_start-5/project",
+      "rule": "iucr_99",
+      "path": "structures/ncaf.edi",
+      "before": "90ea112f37908c99c9675b85b198c0c47ff45fef4bba266085ecadc856b04fd8",
+      "after": "f8f5f255441b7c2f106fe48f9e3f5e39f886ca3d3d5c6c2cff8b62a11cf38a49",
+      "reason": "Retained release byte regression; parameter/free and measured-input equivalence sealed independently"
+    },
+    {
+      "case": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project",
+      "rule": "iucr_19",
+      "path": "experiments/wish_1_10.edi",
+      "before": "d9dc3f31c7e95e53b7de3b193daacafc6146e14b49f5302e313682b5447942a4",
+      "after": "24a9fd6f97793c01d32109152d0be280c3acc79505ff57ce8dd7a6f84947c2c1",
+      "reason": "Retained release byte regression; parameter/free and measured-input equivalence sealed independently"
+    },
+    {
+      "case": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project",
+      "rule": "iucr_19",
+      "path": "experiments/wish_2_9.edi",
+      "before": "287fa75db816b2e930c03f7e2161f45bddec20cca4b7cec0685e692cc6fff9da",
+      "after": "826ab498a2acfaf6ef02ba03c894557530d7b83e095eb7422323e0dfd367e971",
+      "reason": "Retained release byte regression; parameter/free and measured-input equivalence sealed independently"
+    },
+    {
+      "case": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project",
+      "rule": "iucr_19",
+      "path": "experiments/wish_3_8.edi",
+      "before": "7d5721eb5ba8e95fd9afea725c4314fb84d23127e40afcf9b275d23f60c2dbb6",
+      "after": "b6b780779fac7a8bdf1bfbb273e1de6a6c822d71660704e530cdae1d3be838b5",
+      "reason": "Retained release byte regression; parameter/free and measured-input equivalence sealed independently"
+    },
+    {
+      "case": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project",
+      "rule": "iucr_19",
+      "path": "experiments/wish_4_7.edi",
+      "before": "dbc6333bdd265f3feff76297563e130548f89cd3a5cb05e2f9444d016833cc1c",
+      "after": "abd917bd09b999236d8f2eeaf5c596a6f4acc24c160df71bc23d48f12d2de692",
+      "reason": "Retained release byte regression; parameter/free and measured-input equivalence sealed independently"
+    },
+    {
+      "case": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project",
+      "rule": "iucr_19",
+      "path": "experiments/wish_5_6.edi",
+      "before": "e965f49380df9d20ffe0331133a1c902fb95ed6cbb4f5a58baf02f0340e15b50",
+      "after": "3f710723158731e13ce9cceed9903aabf7c31c45f258ebd02d3e1c6f8c64a1fe",
+      "reason": "Retained release byte regression; parameter/free and measured-input equivalence sealed independently"
+    },
+    {
+      "case": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project",
+      "rule": "iucr_19",
+      "path": "structures/ncaf.edi",
+      "before": "90ea112f37908c99c9675b85b198c0c47ff45fef4bba266085ecadc856b04fd8",
+      "after": "f8f5f255441b7c2f106fe48f9e3f5e39f886ca3d3d5c6c2cff8b62a11cf38a49",
+      "reason": "Retained release byte regression; parameter/free and measured-input equivalence sealed independently"
+    },
+    {
+      "case": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project",
+      "rule": "iucr_99",
+      "path": "experiments/wish_1_10.edi",
+      "before": "d9dc3f31c7e95e53b7de3b193daacafc6146e14b49f5302e313682b5447942a4",
+      "after": "24a9fd6f97793c01d32109152d0be280c3acc79505ff57ce8dd7a6f84947c2c1",
+      "reason": "Retained release byte regression; parameter/free and measured-input equivalence sealed independently"
+    },
+    {
+      "case": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project",
+      "rule": "iucr_99",
+      "path": "experiments/wish_2_9.edi",
+      "before": "287fa75db816b2e930c03f7e2161f45bddec20cca4b7cec0685e692cc6fff9da",
+      "after": "826ab498a2acfaf6ef02ba03c894557530d7b83e095eb7422323e0dfd367e971",
+      "reason": "Retained release byte regression; parameter/free and measured-input equivalence sealed independently"
+    },
+    {
+      "case": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project",
+      "rule": "iucr_99",
+      "path": "experiments/wish_3_8.edi",
+      "before": "7d5721eb5ba8e95fd9afea725c4314fb84d23127e40afcf9b275d23f60c2dbb6",
+      "after": "b6b780779fac7a8bdf1bfbb273e1de6a6c822d71660704e530cdae1d3be838b5",
+      "reason": "Retained release byte regression; parameter/free and measured-input equivalence sealed independently"
+    },
+    {
+      "case": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project",
+      "rule": "iucr_99",
+      "path": "experiments/wish_4_7.edi",
+      "before": "dbc6333bdd265f3feff76297563e130548f89cd3a5cb05e2f9444d016833cc1c",
+      "after": "abd917bd09b999236d8f2eeaf5c596a6f4acc24c160df71bc23d48f12d2de692",
+      "reason": "Retained release byte regression; parameter/free and measured-input equivalence sealed independently"
+    },
+    {
+      "case": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project",
+      "rule": "iucr_99",
+      "path": "experiments/wish_5_6.edi",
+      "before": "e965f49380df9d20ffe0331133a1c902fb95ed6cbb4f5a58baf02f0340e15b50",
+      "after": "3f710723158731e13ce9cceed9903aabf7c31c45f258ebd02d3e1c6f8c64a1fe",
+      "reason": "Retained release byte regression; parameter/free and measured-input equivalence sealed independently"
+    },
+    {
+      "case": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project",
+      "rule": "iucr_99",
+      "path": "structures/ncaf.edi",
+      "before": "90ea112f37908c99c9675b85b198c0c47ff45fef4bba266085ecadc856b04fd8",
+      "after": "f8f5f255441b7c2f106fe48f9e3f5e39f886ca3d3d5c6c2cff8b62a11cf38a49",
+      "reason": "Retained release byte regression; parameter/free and measured-input equivalence sealed independently"
+    },
+    {
+      "case": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project",
+      "rule": "iucr_19",
+      "path": "experiments/wish_1_10.edi",
+      "before": "f7b3b14e06e4d30d1cd4c77d77fdb4d676641745ef869b06431d2e8bcd11a4a0",
+      "after": "603a754ccda4a610a5d3ec186a2aad274c15a8a7e3ffbb5c39400894b57fc11a",
+      "reason": "Retained release byte regression; parameter/free and measured-input equivalence sealed independently"
+    },
+    {
+      "case": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project",
+      "rule": "iucr_19",
+      "path": "experiments/wish_2_9.edi",
+      "before": "0900f64bb2c1d74922bd5a46997dc76195ad36e43d76089cb62c50bac3b91fce",
+      "after": "06f217b9c6ad928ca24d9af42e1747f99c7cafc468c5a1b7a8748f9e59ae4bdb",
+      "reason": "Retained release byte regression; parameter/free and measured-input equivalence sealed independently"
+    },
+    {
+      "case": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project",
+      "rule": "iucr_19",
+      "path": "experiments/wish_3_8.edi",
+      "before": "a1c696d4248ed4e62564016ab460abfa5cca42c83a5db8c538b5023a01ef9602",
+      "after": "4011502e4c60dd87e0aee99ad19f5a52a89bdf10922c9c5083bc14617332bbc5",
+      "reason": "Retained release byte regression; parameter/free and measured-input equivalence sealed independently"
+    },
+    {
+      "case": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project",
+      "rule": "iucr_19",
+      "path": "experiments/wish_4_7.edi",
+      "before": "18a321047c96c9150c95af26a34964e0516a454d9742d6b28a5b37e12b75dab7",
+      "after": "431987d55224bd016da014ba33576b9f046e0de17085f0721ba4af139cdde029",
+      "reason": "Retained release byte regression; parameter/free and measured-input equivalence sealed independently"
+    },
+    {
+      "case": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project",
+      "rule": "iucr_19",
+      "path": "experiments/wish_5_6.edi",
+      "before": "5d3ac5408afc2f3c67f67a1da3ad37110c80d977a1b9150c9fb90c35b93d4147",
+      "after": "8820cbbed59d60d7b60527d85289dea4030c8fd02e7cd38dc373e4fdbb53058c",
+      "reason": "Retained release byte regression; parameter/free and measured-input equivalence sealed independently"
+    },
+    {
+      "case": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project",
+      "rule": "iucr_19",
+      "path": "structures/ncaf.edi",
+      "before": "6e50b1ef22e834e513af8eb8cb067c663256559126eb9fe4f9e5c87e6f6f1275",
+      "after": "8a93a9d0d2240bf02f88fa06f2d5518853ff3f9e2edb811375312be513dc4095",
+      "reason": "Retained release byte regression; parameter/free and measured-input equivalence sealed independently"
+    },
+    {
+      "case": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project",
+      "rule": "iucr_99",
+      "path": "experiments/wish_1_10.edi",
+      "before": "f7b3b14e06e4d30d1cd4c77d77fdb4d676641745ef869b06431d2e8bcd11a4a0",
+      "after": "603a754ccda4a610a5d3ec186a2aad274c15a8a7e3ffbb5c39400894b57fc11a",
+      "reason": "Retained release byte regression; parameter/free and measured-input equivalence sealed independently"
+    },
+    {
+      "case": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project",
+      "rule": "iucr_99",
+      "path": "experiments/wish_2_9.edi",
+      "before": "0900f64bb2c1d74922bd5a46997dc76195ad36e43d76089cb62c50bac3b91fce",
+      "after": "06f217b9c6ad928ca24d9af42e1747f99c7cafc468c5a1b7a8748f9e59ae4bdb",
+      "reason": "Retained release byte regression; parameter/free and measured-input equivalence sealed independently"
+    },
+    {
+      "case": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project",
+      "rule": "iucr_99",
+      "path": "experiments/wish_3_8.edi",
+      "before": "a1c696d4248ed4e62564016ab460abfa5cca42c83a5db8c538b5023a01ef9602",
+      "after": "4011502e4c60dd87e0aee99ad19f5a52a89bdf10922c9c5083bc14617332bbc5",
+      "reason": "Retained release byte regression; parameter/free and measured-input equivalence sealed independently"
+    },
+    {
+      "case": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project",
+      "rule": "iucr_99",
+      "path": "experiments/wish_4_7.edi",
+      "before": "18a321047c96c9150c95af26a34964e0516a454d9742d6b28a5b37e12b75dab7",
+      "after": "431987d55224bd016da014ba33576b9f046e0de17085f0721ba4af139cdde029",
+      "reason": "Retained release byte regression; parameter/free and measured-input equivalence sealed independently"
+    },
+    {
+      "case": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project",
+      "rule": "iucr_99",
+      "path": "experiments/wish_5_6.edi",
+      "before": "5d3ac5408afc2f3c67f67a1da3ad37110c80d977a1b9150c9fb90c35b93d4147",
+      "after": "8820cbbed59d60d7b60527d85289dea4030c8fd02e7cd38dc373e4fdbb53058c",
+      "reason": "Retained release byte regression; parameter/free and measured-input equivalence sealed independently"
+    },
+    {
+      "case": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project",
+      "rule": "iucr_99",
+      "path": "structures/ncaf.edi",
+      "before": "6e50b1ef22e834e513af8eb8cb067c663256559126eb9fe4f9e5c87e6f6f1275",
+      "after": "8a93a9d0d2240bf02f88fa06f2d5518853ff3f9e2edb811375312be513dc4095",
+      "reason": "Retained release byte regression; parameter/free and measured-input equivalence sealed independently"
+    },
+    {
+      "case": "docs/user/cli/pd-neut-tof_si-sepd_start-2/project",
+      "rule": "iucr_19",
+      "path": "experiments/sepd.edi",
+      "before": "35b9e8bc428b4a58c96b868cb970f2481fbb8efcb4dc6a0e27c82742e618162a",
+      "after": "c42e3de263f0a3628fbaeb54552e1034ad5c44072da2afe933c501a4ea472e90",
+      "reason": "Retained release byte regression; parameter/free and measured-input equivalence sealed independently"
+    },
+    {
+      "case": "docs/user/cli/pd-neut-tof_si-sepd_start-2/project",
+      "rule": "iucr_19",
+      "path": "structures/si.edi",
+      "before": "0b10b54b6c55c3c397122e3a8692a0b6e74cfe8e98e50819368c0998bd422793",
+      "after": "d7de0d1762a575427160e96acb59b2e5c35f7e37ebd1bb279a8f1c98df52bf65",
+      "reason": "Retained release byte regression; parameter/free and measured-input equivalence sealed independently"
+    },
+    {
+      "case": "docs/user/cli/pd-neut-tof_si-sepd_start-2/project",
+      "rule": "iucr_99",
+      "path": "experiments/sepd.edi",
+      "before": "35b9e8bc428b4a58c96b868cb970f2481fbb8efcb4dc6a0e27c82742e618162a",
+      "after": "c42e3de263f0a3628fbaeb54552e1034ad5c44072da2afe933c501a4ea472e90",
+      "reason": "Retained release byte regression; parameter/free and measured-input equivalence sealed independently"
+    },
+    {
+      "case": "docs/user/cli/pd-neut-tof_si-sepd_start-2/project",
+      "rule": "iucr_99",
+      "path": "structures/si.edi",
+      "before": "0b10b54b6c55c3c397122e3a8692a0b6e74cfe8e98e50819368c0998bd422793",
+      "after": "d7de0d1762a575427160e96acb59b2e5c35f7e37ebd1bb279a8f1c98df52bf65",
+      "reason": "Retained release byte regression; parameter/free and measured-input equivalence sealed independently"
+    },
+    {
+      "case": "docs/user/cli/pd-neut-tof_si-sepd_start-5/project",
+      "rule": "iucr_19",
+      "path": "experiments/sepd.edi",
+      "before": "5cf1683606a843129c51d3af1b53a3fa811c0823765230139f56a1aeff50307f",
+      "after": "cb2063215329da56128853c14c0eb3d907abf19329c06da21ec4772c5de03a1b",
+      "reason": "Retained release byte regression; parameter/free and measured-input equivalence sealed independently"
+    },
+    {
+      "case": "docs/user/cli/pd-neut-tof_si-sepd_start-5/project",
+      "rule": "iucr_19",
+      "path": "structures/si.edi",
+      "before": "0b10b54b6c55c3c397122e3a8692a0b6e74cfe8e98e50819368c0998bd422793",
+      "after": "d7de0d1762a575427160e96acb59b2e5c35f7e37ebd1bb279a8f1c98df52bf65",
+      "reason": "Retained release byte regression; parameter/free and measured-input equivalence sealed independently"
+    },
+    {
+      "case": "docs/user/cli/pd-neut-tof_si-sepd_start-5/project",
+      "rule": "iucr_99",
+      "path": "experiments/sepd.edi",
+      "before": "5cf1683606a843129c51d3af1b53a3fa811c0823765230139f56a1aeff50307f",
+      "after": "cb2063215329da56128853c14c0eb3d907abf19329c06da21ec4772c5de03a1b",
+      "reason": "Retained release byte regression; parameter/free and measured-input equivalence sealed independently"
+    },
+    {
+      "case": "docs/user/cli/pd-neut-tof_si-sepd_start-5/project",
+      "rule": "iucr_99",
+      "path": "structures/si.edi",
+      "before": "0b10b54b6c55c3c397122e3a8692a0b6e74cfe8e98e50819368c0998bd422793",
+      "after": "d7de0d1762a575427160e96acb59b2e5c35f7e37ebd1bb279a8f1c98df52bf65",
+      "reason": "Retained release byte regression; parameter/free and measured-input equivalence sealed independently"
+    },
+    {
+      "case": "docs/user/cli/pd-xray-cwl_latp-bm01_scan/project",
+      "rule": "iucr_19",
+      "path": "experiments/bm01.edi",
+      "before": "928aa3fd36f13c1c1cd40c668020a389aa65561e8b57f4288efbf3ea1d1b67d3",
+      "after": "b0d4f29a76b93759c34b3716b72e2746890210a5b124bf7772d95ba1402dad4a",
+      "reason": "Retained release byte regression; parameter/free and measured-input equivalence sealed independently"
+    },
+    {
+      "case": "docs/user/cli/pd-xray-cwl_latp-bm01_scan/project",
+      "rule": "iucr_99",
+      "path": "experiments/bm01.edi",
+      "before": "efa1a7dc8337fbcf2fbd4c271556198de5c37856df8cf0325c5b66bbee614caa",
+      "after": "ce5f98cb964a4b8437dc8a8c7b75eb8a37cf30bc8863c052a369f331f3092d05",
+      "reason": "Retained release byte regression; parameter/free and measured-input equivalence sealed independently"
+    },
+    {
+      "case": "docs/user/cli/pd-xray-cwl_latp_scan-4f/project",
+      "rule": "iucr_19",
+      "path": "experiments/bm01.edi",
+      "before": "928aa3fd36f13c1c1cd40c668020a389aa65561e8b57f4288efbf3ea1d1b67d3",
+      "after": "b0d4f29a76b93759c34b3716b72e2746890210a5b124bf7772d95ba1402dad4a",
+      "reason": "Retained release byte regression; parameter/free and measured-input equivalence sealed independently"
+    },
+    {
+      "case": "docs/user/cli/pd-xray-cwl_latp_scan-4f/project",
+      "rule": "iucr_99",
+      "path": "experiments/bm01.edi",
+      "before": "efa1a7dc8337fbcf2fbd4c271556198de5c37856df8cf0325c5b66bbee614caa",
+      "after": "ce5f98cb964a4b8437dc8a8c7b75eb8a37cf30bc8863c052a369f331f3092d05",
+      "reason": "Retained release byte regression; parameter/free and measured-input equivalence sealed independently"
+    },
+    {
+      "case": "tests/fixtures/table_display",
+      "rule": "iucr_19",
+      "path": "capture_source_uncertainties.py",
+      "before": null,
+      "after": "8aca8350404d8a0f8a5a771b66f513ac5e74699ce419226c3a4cce04a317bb17",
+      "reason": "Retained release byte regression; parameter/free and measured-input equivalence sealed independently"
+    },
+    {
+      "case": "tests/fixtures/table_display",
+      "rule": "iucr_19",
+      "path": "metadata_bytes.py",
+      "before": "55962c7dd586c18f633f3801f1e9dfa1978ba20d391e1e12d4dec541be3b00d0",
+      "after": "9afdb46a130cf835eaed3d3b143b81536ee8d58e36b70e2bb93893570d6622cb",
+      "reason": "Retained release byte regression; parameter/free and measured-input equivalence sealed independently"
+    },
+    {
+      "case": "tests/fixtures/table_display",
+      "rule": "iucr_19",
+      "path": "source-uncertainties.json",
+      "before": null,
+      "after": "4faa26f5951d17398a83d042585a7cae7e1d0a8524f210db4c95fdda80600fc6",
+      "reason": "Retained release byte regression; parameter/free and measured-input equivalence sealed independently"
+    },
+    {
+      "case": "tests/fixtures/table_display",
+      "rule": "iucr_19",
+      "path": "source-uncertainties.zip",
+      "before": null,
+      "after": "83f7aa57979b514efd82a6a94b232087392644748fa31684b41e46652fe60724",
+      "reason": "Retained release byte regression; parameter/free and measured-input equivalence sealed independently"
+    },
+    {
+      "case": "tests/fixtures/table_display",
+      "rule": "iucr_19",
+      "path": "source_uncertainties.py",
+      "before": null,
+      "after": "21d13ce46983f6550e184da7707a883000e1dacc1e7fffe4bf8076aa36930ca2",
+      "reason": "Retained release byte regression; parameter/free and measured-input equivalence sealed independently"
+    },
+    {
+      "case": "tests/fixtures/table_display",
+      "rule": "iucr_99",
+      "path": "capture_source_uncertainties.py",
+      "before": null,
+      "after": "8aca8350404d8a0f8a5a771b66f513ac5e74699ce419226c3a4cce04a317bb17",
+      "reason": "Retained release byte regression; parameter/free and measured-input equivalence sealed independently"
+    },
+    {
+      "case": "tests/fixtures/table_display",
+      "rule": "iucr_99",
+      "path": "metadata_bytes.py",
+      "before": "55962c7dd586c18f633f3801f1e9dfa1978ba20d391e1e12d4dec541be3b00d0",
+      "after": "9afdb46a130cf835eaed3d3b143b81536ee8d58e36b70e2bb93893570d6622cb",
+      "reason": "Retained release byte regression; parameter/free and measured-input equivalence sealed independently"
+    },
+    {
+      "case": "tests/fixtures/table_display",
+      "rule": "iucr_99",
+      "path": "source-uncertainties.json",
+      "before": null,
+      "after": "4faa26f5951d17398a83d042585a7cae7e1d0a8524f210db4c95fdda80600fc6",
+      "reason": "Retained release byte regression; parameter/free and measured-input equivalence sealed independently"
+    },
+    {
+      "case": "tests/fixtures/table_display",
+      "rule": "iucr_99",
+      "path": "source-uncertainties.zip",
+      "before": null,
+      "after": "83f7aa57979b514efd82a6a94b232087392644748fa31684b41e46652fe60724",
+      "reason": "Retained release byte regression; parameter/free and measured-input equivalence sealed independently"
+    },
+    {
+      "case": "tests/fixtures/table_display",
+      "rule": "iucr_99",
+      "path": "source_uncertainties.py",
+      "before": null,
+      "after": "21d13ce46983f6550e184da7707a883000e1dacc1e7fffe4bf8076aa36930ca2",
+      "reason": "Retained release byte regression; parameter/free and measured-input equivalence sealed independently"
     }
   ],
-  "retained_path_mismatches": []
+  "retained_path_mismatches": [],
+  "release_source": {
+    "edi": "23fb3a6d05597694a509caa89de39babe7bb6c69",
+    "crysta": "7121efe84a06e9d6727e0401b2f1c56a80ebeb6d",
+    "capture_sha256": "577282fcf322f5d148497b583b10e4f08ab59dc8b2fbbdd52af18d87fde18ebc",
+    "parameters_sha256": "9b59182d05909a140489acfd21bea0091fa1f0462c2a09cb64fdf09522c5b2d7",
+    "measurements_sha256": "6815fe72bfaf140618dd869661a584a7f88b9e9433ea716db8fb33c8a24b036e"
+  }
 }

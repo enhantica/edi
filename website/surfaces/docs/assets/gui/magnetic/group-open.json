@@ -6,7 +6,7 @@
     ],
     "id": "group-open",
     "image": "group-open.webp",
-    "image_sha256": "c56ef7f6c0c61b6587c0ee611c3af6307303bc8143f1c32ea3feb6955ff79293",
+    "image_sha256": "3c03695dde3e3623ec6809712a4d947a44d2f31690bb17065ccf87e54bc0f9bb",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -451,7 +451,7 @@
                 19
             ],
             "enabled": true,
-            "label": ".",
+            "label": "",
             "visible_bounds": [
                 183.4,
                 253.70000000000002,
@@ -516,7 +516,7 @@
                 19
             ],
             "enabled": true,
-            "label": "/tmp/EasyDiffraction-uVxqNv/pd-neut-cwl_cosio-d20_2k/project",
+            "label": "/tmp/EasyDiffraction-beSvmM/pd-neut-cwl_cosio-d20_2k/project",
             "visible_bounds": [
                 183.4,
                 329.40000000000003,
@@ -739,50 +739,50 @@
         },
         "statusBar.fit": {
             "bounds": [
-                1396,
+                1395,
                 769,
-                70,
+                71,
                 19
             ],
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                1396,
+                1395,
                 769,
-                70,
+                71,
                 19
             ]
         },
         "statusBar.fit.button": {
             "bounds": [
-                1414,
+                1413,
                 769,
-                52,
+                53,
                 19
             ],
             "enabled": true,
-            "icon": "play-circle",
+            "icon": "play",
             "label": "",
             "visible_bounds": [
-                1414,
+                1413,
                 769,
-                52,
+                53,
                 19
             ]
         },
         "statusBar.fit.buttons": {
             "bounds": [
-                1414,
+                1413,
                 769,
-                52,
+                53,
                 19
             ],
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                1414,
+                1413,
                 769,
-                52,
+                53,
                 19
             ]
         },
@@ -807,7 +807,7 @@
             "bounds": [
                 887.065625,
                 772,
-                218.609375,
+                210.234375,
                 14
             ],
             "enabled": true,
@@ -816,7 +816,7 @@
             "visible_bounds": [
                 887.065625,
                 772,
-                218.609375,
+                210.234375,
                 14
             ]
         },
@@ -872,6 +872,22 @@
                 772,
                 95.78125,
                 14
+            ]
+        },
+        "window.projectDrop": {
+            "bounds": [
+                0,
+                0,
+                1480,
+                800
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                0,
+                0,
+                1480,
+                800
             ]
         },
         "workflow.home.sidebarHost": {
@@ -949,8 +965,8 @@
     ],
     "qt_version": "6.11.2",
     "schema": 1,
-    "script_sha256": "3e0f9063e5fd3773de550ce84fd05a6b3c5986ae0d13ddaef80e9fc4fbb132f1",
-    "source_revision": "9045d5d22d8f07b00ffd58c1610ec4b02b2beba5",
+    "script_sha256": "bacb0119e34809368b4a4ed147d4ce1cfb8628ba03cebbf3ebd126a48519fb0f",
+    "source_revision": "66250b0826244790ae402c00384ea8fca62ae552",
     "state": {
         "experiments": 1,
         "fit_outcome": "",

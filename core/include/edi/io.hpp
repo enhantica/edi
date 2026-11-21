@@ -311,6 +311,12 @@ void check_report_setting(const std::string& tag, const std::string& value);
 // of the relations, without `from_file`.
 void refresh_relations(Project& project, const WarningSink& warn = {}, bool from_file = false);
 
+// What an .edi text holds by its tags, read with the loaders' own tokenizer (a comment or a quoted text is no tag) and
+// every admitted spelling: an experiment (an experiment type), a structure (a cell and no experiment type), or neither
+// (a project record, an analysis, text that does not read).
+enum class EdiTextKind : std::uint8_t { Other, Structure, Experiment };
+EdiTextKind edi_text_kind(const std::string& text);
+
 // Every dependent (a cell sibling, a special-position follower, a constrained parameter) set from
 // its relation at the model's current independent values by crysta's one applier, values only.
 // Implemented in the adapter (the one crysta-touching TU, ADR-0003). Returns false and changes

@@ -185,7 +185,6 @@ def test_built_navigation_groups_short_titles_under_the_five_iconed_sections(
     config = builder._config_text(
         'surfaces',
         (ROOT / 'website/surfaces/mkdocs.yml').read_text(),
-        ROOT / 'website/surfaces/docs/assets/site-components.css',
         None,
     )
     document = yaml.load(config, Loader=yaml.BaseLoader)

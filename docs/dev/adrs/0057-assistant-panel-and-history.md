@@ -5126,3 +5126,13 @@ as padding after the fitted text, which caused premature title elision in this
 browser. Row numbers, modification dates and archive buttons retain their columns.
 Titles elide only when their available space is exhausted. The browser layout
 regression covers a readable ordinary title, resizing and an overlong title.
+
+## Copied and attached work report
+
+The work report that Copy work report copies, and that Help and feedback attaches with its Attach AI work report link
+(edi ADR-0063), is compact JSON without what a reader does not use (owner, 2026-11-19). Each tool reply appears once,
+as the text the model read (`row.payload.contentItems`). Its native duplicate (`nativeOutcome`) and the projected copy
+in the work evidence are replaced by a short note naming that field. The skill texts become their byte count beside
+their existing id, version and SHA-256, and the tool schema becomes the tool names, its size and SHA-256. The report
+retained in the project and its history are unchanged. Applied to the owner's 2026.11.22 report, the same rules take it
+from 7.4 MB to 1.9 MB.

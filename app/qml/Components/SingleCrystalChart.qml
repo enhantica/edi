@@ -310,7 +310,7 @@ Item {
         }
     }
 
-    GraphsView {
+    ChartView {
         id: view
 
         y: chart.reportMode ? chart.topMargin + Math.round(chart.em * 1.5) : chart.topMargin + toolbar.height + chart.belowToolbar

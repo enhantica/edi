@@ -264,9 +264,24 @@ function filesProblem(files) {
 
 // The files as the feedback service receives them: each `name` (as given), `type`, decoded `size` and base64 `data`,
 // a text file's content with the home folder and user name replaced as in the log. A file past a limit refuses all.
+// The last list encoded, and what it gave: the form rebuilds the payload on every letter typed, and decoding and
+// encoding a screenshot each time made typing lag.
+var encodedFiles = null;
+var encodedFor = null;
+
 function attachmentsFor(files, home, user) {
     if (!Array.isArray(files))
         throw new Error("attached files must be a list");
+    if (encodedFor !== null && encodedFor.files === files && encodedFor.home === home && encodedFor.user === user &&
+            encodedFor.items.length === files.length && encodedFor.items.every(function (file, index) { return file === files[index]; }))
+        return encodedFiles;
+    var result = encodeAttachments(files, home, user);
+    encodedFor = {"files": files, "items": files.slice(), "home": home, "user": user};
+    encodedFiles = result;
+    return result;
+}
+
+function encodeAttachments(files, home, user) {
     var decoded = files.map(function (file) {
         if (file === null || typeof file !== "object" || typeof file.name !== "string" || file.name === "")
             throw new Error("an attached file has no name");
@@ -412,6 +427,15 @@ function wireText(payload, readable) {
     if (typeof payload.fullLog === "string") {
         shown = Object.assign({}, payload);
         shown.fullLog = "(the whole log, " + payload.fullLog.length + " characters, attached as log.txt)";
+    }
+    // A file's bytes are named, not shown: pages of base64 say nothing and slowed the form down.
+    if (Array.isArray(payload.attachments) && payload.attachments.length > 0) {
+        shown = Object.assign({}, shown);
+        shown.attachments = payload.attachments.map(function (file) {
+            var described = Object.assign({}, file);
+            described.data = "(" + file.size + " bytes, sent as the file)";
+            return described;
+        });
     }
     return JSON.stringify(shown, null, 2);
 }

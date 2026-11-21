@@ -445,11 +445,11 @@
             "scene": "scan-correlations"
         }
     ],
-    "binary_sha256": "930017e29ba7c0ffac4bfbdbf09a5bea4beb135a2c33f624ca74e8fc4fe8d6bf",
+    "binary_sha256": "6b270a81225af60207e9664a9d77ce7e7a96c47e78c931c73331f97a7c9b9ce5",
     "dependencies": [
         {
             "file": "inputs/analysis/analysis.edi",
-            "sha256": "38509b411c3da6e12738df723bf64732d13c1c955a4a5b36ff1d464c3d99c0d8"
+            "sha256": "5eea6588174ffef4e4c86993ee4e8e0918496339f720e0c003d08dee4d950124"
         },
         {
             "file": "inputs/experiments/d20_scan/01_001_497p3790.dat",
@@ -1369,7 +1369,7 @@
         },
         "structure": {
             "file": "inputs/structures/cosio.edi",
-            "sha256": "70324d6326ee447d4c4d83d26918e6a7ce2f0fd929e261e999ee30af8d8b329a"
+            "sha256": "cbc2ba0b5d6242ea14082ddc0d96cd3a81c6b6ef5fec7b1fe04b3542b0a21269"
         }
     },
     "logical_size": [
@@ -1668,7 +1668,7 @@
     ],
     "schema": 1,
     "script_sha256": "db1af167615f4344703ac808b4364deaf281536e8d9bb793c3e81bda9f74db6e",
-    "source_revision": "9045d5d22d8f07b00ffd58c1610ec4b02b2beba5",
+    "source_revision": "66250b0826244790ae402c00384ea8fca62ae552",
     "status": "complete",
     "workflow": "reference"
 }

@@ -228,15 +228,19 @@ AppDialog {
     Item {
         id: agreementArea
 
-        readonly property bool shown: agreementTable.count > 0
+        readonly property bool shown: agreementTable.sourceModel !== null && agreementTable.sourceModel.count > 0
         // A long dataset list scrolls inside the table, so the dialog stays on the screen.
         readonly property real tableHeight: Math.min(agreementTable.contentHeight, agreementTable.headerItem ? agreementTable.headerItem.height + EaStyle.Sizes.tableRowHeight * 8 : agreementTable.contentHeight)
 
         // The table at its full width: the dataset column fits its longest name, each factor its own width.
-        readonly property real datasetWidth: Math.max(EaStyle.Sizes.fontPixelSize * 6, (agreementTable.fittedWidths[1] ?? 0) + agreementTable.autoColumnPadding)
+        // Measure the model's text, never fitted cells: fitting follows the table's assigned width.
+        readonly property real datasetWidth: Math.max(EaStyle.Sizes.fontPixelSize * 6, agreementTable.naturalTextColumnWidth("label", qsTr("Dataset")) + agreementTable.autoColumnPadding)
+        // Any room beyond the natural table width belongs to the dataset column, after measurement.
+        readonly property real datasetColumnWidth: datasetWidth + Math.max(0, width - naturalWidth)
         readonly property real naturalWidth: AppSizes.iconOnlyColumnWidth + datasetWidth + dialog.factorColumns.length * dialog.factorWidth + (dialog.factorColumns.length + 1) * EaStyle.Sizes.tableColumnSpacing + 2 * agreementTable.rowPadding + 2 * EaStyle.Sizes.borderThickness
         // Never wider than the window: a wider table scrolls sideways, so every column can be reached.
-        readonly property real widthCap: dialog.parent ? dialog.parent.width - dialog.leftPadding - dialog.rightPadding - EaStyle.Sizes.fontPixelSize * 4 : naturalWidth
+        // Read the window itself, not the overlay whose layout includes this dialog.
+        readonly property real widthCap: Window.window ? Math.max(0, Window.window.width - dialog.leftPadding - dialog.rightPadding - EaStyle.Sizes.fontPixelSize * 4) : naturalWidth
         readonly property bool scrolls: naturalWidth > widthCap
 
         y: listArea.y + listArea.height + (shown ? EaStyle.Sizes.fontPixelSize : 0)

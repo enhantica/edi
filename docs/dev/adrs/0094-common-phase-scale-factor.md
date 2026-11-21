@@ -18,7 +18,8 @@ overlap. edi decides when to apply it.
 
 ## Decision
 
-1. **When.** Measured data loaded into an experiment, and a phase added, removed, switched on or off or replaced. A
+1. **When.** Measured data loaded into an experiment, or the explicit Estimate action. Phase membership/target/enabled
+   edits request one preview and keep the entered scales (amended 2026-11-19, feedback 93). A
    saved project is never rescaled on opening, so it fits as it did when saved.
 2. **What.** Every enabled phase scale of the experiment is multiplied by k, so their ratios stay; a disabled link
    keeps its scale. No change without measured data, when the calculation is zero or when k is not finite and
@@ -38,7 +39,23 @@ overlap. edi decides when to apply it.
 
 - A calculation lands on the data's level in one step, and phase ratios set by hand survive.
 - The tallest point sets a powder's k, so noise on it moves k by its own size; the next fit corrects it.
-- One calculation per triggering edit, never inside a fit.
+- One forward calculation per phase edit, never a synchronous scale-estimate calculation before the preview.
+- Widget formatting uses input-only spelling validation. Save, Text and export keep full computed-output validation;
+  displaying fields cannot trigger TOF pattern calculations. Both ordinary and deferred widget publication use it.
+- Superseded previews keep the existing latest-wins protocol: one job in flight, its token cancelled and result
+  rejected, then only the newest owed state admitted. The engine's single forward call has no cancellation callback,
+  so an already running call completes before rejection; it is never overlapped with another preview.
+- Regression: `edi_linked_structure_calculation_tests` adds a phase to a Linux TOF powder project and compares actual
+  engine work with one forward calculation. The gdb fixture counts engine calls, including internal spelling calls.
+  Before the fix: four engine calls (168 structure-factor evaluations against a 56-evaluation forward control).
+  The fourth call reused structure factors, so the gdb count is the authoritative calculation count.
+  Source: `app/tests/linked_structure_calculation_tests.cpp` and `tests/fixtures/linked_structure_work/`;
+  local debugger receipt: `~/runs/e04-t50/hotfix-link-gdb15.log`.
+  After the fix the same gdb fixture records one engine call; parses stay at 23 for input validation/conversion,
+  while loop renders fall from 43 to 30. Receipts: `~/runs/e04-t50/hotfix-link-count-red.log` and
+  `~/runs/e04-t50/hotfix-link-count-green.log`. The native replay checks identical calculated points (including
+  excluded-point NaNs) against the independent forward result. Repeated successful `gdb -p` snapshots of the
+  pre-fix link action enter `compute_pattern_beba_variant` (`~/runs/e04-t50/hotfix-link-attach.log`).
 
 ## Alternatives considered
 

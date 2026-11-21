@@ -51,7 +51,9 @@ Item {
     // How the atoms are drawn, the same setting as Extra's Appearance group: radius model or ADP ellipsoids.
     ToolbarComboBox {
         readonly property OptionListModel choices: toolbar.options ? toolbar.options.atomViewOptions : null
-        readonly property var tokens: choices && choices.revision >= 0 ? Array.from({ length: choices.count }, (_, i) => choices.tokenAt(i)) : []
+        readonly property var tokens: choices && choices.revision >= 0 ? Array.from({
+            length: choices.count
+        }, (_, i) => choices.tokenAt(i)) : []
         readonly property var shortNames: ({
                 "covalent": qsTr("Covalent"),
                 "vdw": qsTr("vdW"),

@@ -46,14 +46,14 @@ def test_identity_family_does_not_take_pnma_cell_or_position_ties(tmp_path, synt
         model.save_as(target)
         text = (target / 'structures/cosio.edi').read_text()
         block = gemmi.cif.read_string(text).sole_block()
-        assert list(block.find_values('_atom_site.wyckoff_letter')) == ['.'], (
-            'ADR-0108 an operator-defined save writes the absent-letter token'
-        )
+        assert list(block.find_values('_atom_site.wyckoff_letter')) == (
+            ['.'] if index == 0 else ['a']
+        ), 'ADR-0108 the unmatched declaration has no letter; its identity-only reload uses P1 a'
         assert list(block.find_values('_atom_site.multiplicity')) == ['1'], (
             'ADR-0108 identity has one image, independently of the declared Pnma table'
         )
-        assert reference.columns(text)['_space_group.name_h_m'] == ['P n m a'], (
-            'ADR-0108 the declared table group is retained without becoming the geometry source'
+        assert not any(key.startswith('_space_group.') for key in reference.columns(text)), (
+            'ADR-0078 magnetic saving omits the ordinary space-group category'
         )
         assert not any('operator_defined' in key for key in reference.columns(text)), (
             'ADR-0108 computed symmetry status is not persisted as a second authority'
@@ -208,7 +208,34 @@ def test_omitted_nuclear_group_stays_absent_on_second_save(tmp_path):
         )
         assert list(
             gemmi.cif.read_string(text).sole_block().find_values('_atom_site.wyckoff_letter')
-        ) == ['.'], 'ADR-0108 omitted-group operator geometry does not acquire a table letter'
+        ) == ['a'], 'ADR-0108 a matching undeclared P1 family uses its table letter a'
+        model = api.Project.load(target)
+
+
+@pytest.mark.parametrize('kind', ['type-iv', 'untabulated-origin'])
+def test_unmatched_magnetic_families_keep_absent_letters(tmp_path, kind):
+    source = (
+        commensurate.structure(**commensurate.VALID['anti-translation-in-operations'])
+        if kind == 'type-iv'
+        else inputs.shifted_inversion(97)
+    )
+    model = api.Project.load(reference.project(tmp_path / 'input', source))
+    for index in range(2):
+        target = tmp_path / f'saved-{index}'
+        model.save_as(target)
+        saved = (target / 'structures/cosio.edi').read_text()
+        values = reference.columns(saved)
+        block = gemmi.cif.read_string(saved).sole_block()
+        assert list(block.find_values('_atom_site.wyckoff_letter')) == ['.'], (
+            'ADR-0108 anti-translations and untabulated origins keep absent Wyckoff letters'
+        )
+        assert values['_atom_site.multiplicity'] == ['2'], (
+            'ADR-0108 either authored nontrivial family keeps its two spatial images'
+        )
+        assert (
+            values['_space_group_symop_magn_operation.xyz']
+            == reference.columns(source)['_space_group_symop_magn_operation.xyz']
+        ), 'ADR-0108 saving an untabulated family preserves its exact supplied operations'
         model = api.Project.load(target)
 
 

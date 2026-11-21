@@ -148,6 +148,9 @@ class Session : public QObject {
     // Whether Save must ask where (edi ADR-0017 §13): a project with no directory yet, or a bundled example's
     // temporary working copy, is saved as.
     Q_PROPERTY(bool needsSaveAs READ needsSaveAs NOTIFY needsSaveAsChanged)
+    // An untitled project (the owner, 2026-11-19): the one the Project page holds in memory before the user names it.
+    // Structure and Experiment work on it at once; its first Save opens Create project, which names and saves it.
+    Q_PROPERTY(bool untitled READ untitled NOTIFY untitledChanged)
     // The selected figure palette (Preferences): a project created or opened takes its first colour positions in it
     // (ADR-0038), so it opens as it would if the palette had been chosen with it open.
     Q_PROPERTY(QString colourScheme READ colourScheme WRITE setColourScheme NOTIFY colourSchemeChanged)
@@ -194,6 +197,10 @@ class Session : public QObject {
     Q_INVOKABLE bool locationExists(const QString& path) const;
     QString projectLocation() const;
     bool needsSaveAs() const;
+    bool untitled() const { return untitled_; }
+    // Opens an untitled project when none is open (the Project page does, as it opens): false when one is open
+    // already or it cannot be made. `suRule` and `reportLibraries` are the new-project preferences.
+    Q_INVOKABLE bool startUntitledProject(const QString& suRule = QStringLiteral("iucr_99"), bool reportLibraries = false);
     QString colourScheme() const { return colour_scheme_; }
     void setColourScheme(const QString& scheme);
 
@@ -258,6 +265,9 @@ class Session : public QObject {
     // folder project. An empty string, else why the archive could not be written.
     Q_INVOKABLE QString writeBackReports();
     Q_INVOKABLE void clearError();
+    // A change a page could not make (the owner, 2026-11-19): said in the app's error popup (`refused`) and kept as an
+    // error in the Messages center; the page keeps its previous value.
+    Q_INVOKABLE void reportRefusal(const QString& message);
     // Where Save project as starts, with the name filled in (owner, 2026-10-25): the project's own folder or .zip
     // name (the project's name for one with neither), `.zip` for an archive, in the folder the project is in, else in
     // the user's documents.
@@ -337,11 +347,13 @@ class Session : public QObject {
     void locationTextChanged();
     void projectLocationChanged();
     void needsSaveAsChanged();
+    void untitledChanged();
     // A save asks first (edi ADR-0069): it writes `bytes` in `files`, `large` says it passes 100 MB and `linked` that a
     // scan reads files outside the project. answerSaveData(`request`, ...) continues it.
     void saveDataChoiceNeeded(int request, qint64 bytes, int files, bool large, bool linked);
     void colourSchemeChanged();
     void lastErrorChanged();
+    void refused(const QString& message);
     // A project or an example could not be opened: every refused open says why (the window shows it), never a silent
     // no-op. `file` is a copy of the project member whose reading failed, for the error popup to attach when the user
     // sends the problem; empty when no single file is to blame. takeFailedFile returns the same path.
@@ -403,6 +415,10 @@ class Session : public QObject {
     void initializeSession();
     struct ProjectCreationOutcome;
     bool createProjectImpl(const QString&,const QString&,const QString&,const QString&,const QString&,const QString&,bool,const QString&,ProjectCreationOutcome*,bool replace = false);
+    // Create on an untitled project: its name, description, title and authors set, then saved at `location` (a web
+    // project into the browser's storage), and no longer untitled. A refused save keeps it untitled and says why.
+    bool adoptUntitled(const QString& name, const QString& description, const QString& location, const QString& title,
+                       const QString& authors, ProjectCreationOutcome* outcome, bool replace);
     friend class AssistantViewModel;
     quint64 assistantEpoch() const noexcept { return assistant_epoch_; }
     bool assistantOwner(quint64 epoch,ProjectViewModel* expected) const noexcept;
@@ -582,6 +598,8 @@ class Session : public QObject {
     // Keeps the open project's unsaved state in the browser, a few seconds after its last edit.
     void keepChanges();
     QTimer* keep_timer_ = nullptr;
+    bool untitled_ = false;
+    void setUntitled(bool untitled);
     // The memory folder the browser copied the open project into, released with it.
     QString web_copy_;
     QString web_source_path_; // Current Open/staged input dependency, never a displayed origin.

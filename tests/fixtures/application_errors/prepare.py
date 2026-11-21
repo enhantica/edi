@@ -10,14 +10,15 @@ from pathlib import Path
 
 def prepare(source, destination):
     text = (source / 'app/main.cpp').read_text(encoding='utf-8')
-    first = 'namespace {\n// An exception that would leave an event handler'
+    first = "namespace {\n// A failure in one event's handler"
     following = '// Thin QML host'
     assert text.count(first) == 1 and text.count(following) == 1, (
         'ADR-0062: caught-error coverage compiles the uniquely bounded application class'
     )
     provider = text[text.index(first) : text.index(following)].rstrip() + '\n'
-    assert 'class Application : public QGuiApplication' in provider and provider.rstrip().endswith(
-        'namespace'
+    assert (
+        'class GuardedApplication final : public QGuiApplication' in provider
+        and provider.rstrip().endswith('namespace')
     ), 'ADR-0062: the complete production event boundary must be retained'
     destination.mkdir(parents=True, exist_ok=True)
     (destination / 'application_provider.inc').write_text(provider, encoding='utf-8')

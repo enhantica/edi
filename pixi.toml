@@ -25,7 +25,7 @@ PYTHONUTF8 = "1"
 # The crysta commit edi builds (edi ADR-0083): its CI packs that commit's SDK once per platform
 # (.github/workflows/crysta-sdk.yml) and every job and product uses it. `pixi run crysta-sdk-pin <sha>`
 # moves it.
-CRYSTA_COMMIT = "b880354b14c7b347d30e47668f654ffd170e492b"
+CRYSTA_COMMIT = "57c175cb3d83833567aef9e93da1f8e437a6a9fd"
 # ONE ruff cache, outside every source and test tree. Same class as crysta's: ruff writes
 # `.ruff_cache` into the directory it is invoked from, and a stray cache can keep a RETIRED
 # directory alive after its tracked files are gone, tripping a layout gate on a folder that
@@ -289,8 +289,6 @@ app-format = { cmd = ["bash", "tools/ci/app-format-check.sh", "--apply"] }
 # The UI test: the demo's page images against the one committed set, by SSIM; `app-ui-bless` replaces
 # the set with the last run (a reviewed act — commit it with the reason).
 app-ui-test = { cmd = ["bash", "tools/ci/app-ui-test.sh"], depends-on = [{ task = "app-build", environment = "app" }] }
-# The GUI watchdog (ADR-0096): the demo scenarios with the stall probe, checked by tools/ci/gui_watchdog.py.
-app-watchdog = { cmd = ["bash", "tools/ci/app-watchdog.sh"], depends-on = [{ task = "app-build", environment = "app" }] }
 app-ui-bless = { cmd = ["bash", "tools/ci/app-ui-bless.sh"] }
 # ADR-0017 §15: the measured-layer benchmark, by hand: Qt Graphs' own series against edi's scene-graph
 # item, on the stress dataset's measured series. Prints one table.
@@ -473,7 +471,7 @@ notebook-lint-check = "ruff check docs/dev/verification/"
 # chains AND in CI's pull-request `cli-projects` job (a gate never lives in only one of the two).
 # The whole set, never a subset — subsetting on runtime is the owner's call. First, every catalogue case
 # must have all its forms (ADR-0048) and the app's example index must match the registry's records (ADR-0031).
-cli-projects = { cmd = "python tools/checks/example_catalogue.py --check && python tools/docs/feature_applicability.py --check && python tools/dev/example_metadata.py --check && python tools/comparison/fit_quality.py --check && python tools/checks/cli_projects.py && python tools/checks/save_round_trip.py", depends-on = ["core-build"] }
+cli-projects = { cmd = "python tools/checks/example_catalogue.py --check && python tools/docs/feature_applicability.py --check && python tools/dev/example_metadata.py --check && python tools/comparison/fit_quality.py --check && python tools/checks/cli_projects.py && python tools/checks/save_round_trip.py && python -m pytest tests/fixtures/magnetic_family_loading/check_loader.py --noconftest -o addopts= -q", depends-on = ["core-build"] }
 # --- the fast per-PR physics signal ----------------------------------------- The
 # independent-reference signal a crysta pull request runs against edi, rehomed: the retired
 # `tests/simulation` page-executing tier is replaced by cross-engine parity at system level, which

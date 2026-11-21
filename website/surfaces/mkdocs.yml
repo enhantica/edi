@@ -136,6 +136,8 @@ nav:
       - Symmetry operators: application/structure/symmetry-operators.md
       - Atoms in the cell: application/structure/atoms-in-the-cell.md
       - Bonds: application/structure/bonds.md
+      - Magnetic group symbols: application/structure/magnetic-group-symbols.md
+      - Parent space group: application/structure/parent-space-group.md
       - Magnetic operators: application/structure/magnetic-operators.md
       - Moments in the cell: application/structure/moments-in-the-cell.md
       - Appearance: application/structure/appearance.md

@@ -938,6 +938,49 @@ void read_magnetic(const Block& block, Structure& structure, const std::string& 
                                            {cell("_space_group_magn_transforms.Pp_abc"),
                                             cell("_space_group_magn_transforms.source")}});
         }
+        if (std::count_if(magnetic.transforms.begin(), magnetic.transforms.end(),
+                          [](const auto& row) { return row.second.source == "BNS"; }) > 1) {
+            fail_domain(where, "duplicate-bns-transform", "_space_group_magn_transforms gives more than one BNS row");
+        }
+    }
+    // The <jn> coefficients a file gives per atom type, held as written; crysta checks that each is a number.
+    const Loop* radial_loop = nullptr;
+    for (const Loop& candidate : block.loops) {
+        if (std::none_of(candidate.tags.begin(), candidate.tags.end(),
+                         [](const std::string& tag) { return tag.starts_with("_atom_type_scat."); })) continue;
+        if (radial_loop != nullptr)
+            fail_domain(where, "duplicate-coefficient-loop", "_atom_type_scat: coefficients must be in one loop");
+        if (candidate.column("_atom_type_scat.symbol") < 0)
+            fail_domain(where, "absent-key", "_atom_type_scat.symbol: every coefficient row needs an atom-type key");
+        radial_loop = &candidate;
+    }
+    if (const Loop* loop = radial_loop) {
+        for (const auto& row : loop->rows) {
+            crysta::MagneticRadialCoefficients coefficients;
+            for (std::size_t index = 0; index < coefficients.values.size(); ++index) {
+                const std::string tag = "_atom_type_scat.neutron_magnetic_j" + std::to_string(2 * (index / 8)) + "_" +
+                                        crysta::kMagneticRadialItems[index % 8];
+                const std::string value = given(*loop, row, tag.c_str());
+                coefficients.values[index] = value.empty() ? value : representable(value, tag.c_str());
+            }
+            const std::string source = given(*loop, row, "_atom_type_scat.neutron_magnetic_source");
+            coefficients.source = source.empty() ? source : representable(source, "_atom_type_scat.neutron_magnetic_source");
+            magnetic.radial_coefficients.emplace_back(key(*loop, row, "_atom_type_scat.symbol"), std::move(coefficients));
+        }
+    }
+    // The dictionary's scalar spelling of the transform to the BNS standard: kept as the loop's BNS row, which is how
+    // the structure is written, unless the loop already gives one.
+    if (const std::string scalar = text("_space_group_magn.transform_BNS_Pp_abc"); !scalar.empty()) {
+        const bool listed = std::any_of(magnetic.transforms.begin(), magnetic.transforms.end(),
+                                        [](const auto& row) { return row.second.source == "BNS"; });
+        if (!listed) {
+            std::string id = "1";
+            for (int next = 2; std::any_of(magnetic.transforms.begin(), magnetic.transforms.end(),
+                                           [&id](const auto& row) { return row.first == id; });
+                 ++next)
+                id = std::to_string(next);
+            magnetic.transforms.push_back({id, {scalar, "BNS"}});
+        }
     }
     // The `_iso_*` declarations, kept as crysta keeps them: its reading of the same text, so the order and every
     // token (a quoted '?' apart from a bare ?) survive, which this reader's decoded values cannot carry. A loop mixing
@@ -1251,16 +1294,29 @@ Structure structure_from_block(const Block& block, const std::string& where) {
                         "isotropic type '" + site->adp_type.value() + "'");
         }
     }
-    // An anisotropic site without a tensor row gets the tensor of its isotropic value, and every tensor loads as
-    // its site symmetry ties it, with adp_iso its equivalent (ADR 0027).
-    add_missing_aniso_rows(structure);
-    complete_atom_site_aniso(structure);
     read_magnetic(block, structure, where);
+    // A Magnetic structure is written without `_space_group` (edi ADR-0078): its family table setting is found again
+    // from its operators, else its symmetry comes from them alone. Older files also declare `_space_group`: when a
+    // BNS number is given, resolve the family the same way, before applying any displacement or coordinate ties.
     if (group_omitted) {
         structure.magnetic.modify([](MagneticDescription& magnetic) { magnetic.space_group_declared = false; });
+    } else {
+        identify_declared_magnetic_family(structure);
     }
+    if (group_omitted || !structure.magnetic->group.number_bns.empty()) {
+        adopt_magnetic_family_setting(structure);
+    }
+    // A BNS transform that parses names the setting: it must map the BNS standard onto the operations.
+    if (!bns_transform_consistent(structure.magnetic)) {
+        fail_domain(where, "inconsistent-bns-transform",
+                    "the BNS transform does not map the BNS standard setting onto the magnetic operations");
+    }
+    // An anisotropic site without a tensor row gets the tensor of its isotropic value, and every tensor loads as
+    // its resolved site symmetry ties it, with adp_iso its equivalent (ADR 0027).
+    add_missing_aniso_rows(structure);
+    complete_atom_site_aniso(structure);
     // crysta's one acceptance rule for a magnetic structure, as its own load applies it.
-    if (!structure.magnetic->operations.empty()) {
+    if (!structure.magnetic->operations.empty() || !structure.magnetic->radial_coefficients.empty()) {
         try {
             check_magnetic_acceptance(structure);
             complete_atom_site_moments(structure);  // tied components as crysta's load sets them
@@ -3549,7 +3605,7 @@ BraggPdExperiment simulation_experiment(const std::string& name, const Experimen
         text += "_instrument.calib_twotheta_offset 0.\n\n"
                 "_peak.type cwl-tch-pseudo-voigt\n"
                 "_peak.broad_gauss_u 0.1\n_peak.broad_gauss_v -0.1\n_peak.broad_gauss_w 0.1\n"
-                "_peak.broad_lorentz_x 0.\n_peak.broad_lorentz_y 0.1\n_peak.cutoff_fwhm 8.\n\n"
+                "_peak.broad_lorentz_x 0.\n_peak.broad_lorentz_y 0.\n_peak.cutoff_fwhm 8.\n\n"
                 "_data_range.two_theta_min 10.\n_data_range.two_theta_max 150.\n"
                 "_data_range.two_theta_step 0.05\n";
     } else {
@@ -5968,6 +6024,27 @@ std::vector<std::pair<std::string, std::string>> project_edi_files(const Project
     return files;
 }
 }  // namespace edi
+
+edi::EdiTextKind edi::edi_text_kind(const std::string& text) {
+    std::vector<Token> tokens;
+    try {
+        tokens = tokenize(text, "<text>");
+    } catch (const std::exception&) {
+        return EdiTextKind::Other;
+    }
+    bool cell = false;
+    for (const Token& token : tokens) {
+        if (!is_tag(token)) {
+            continue;
+        }
+        const std::string category = detail::one_row_category(token.text);
+        if (category == "_experiment_type") {
+            return EdiTextKind::Experiment;
+        }
+        cell = cell || category == "_cell";
+    }
+    return cell ? EdiTextKind::Structure : EdiTextKind::Other;
+}
 
 // The file whose reading failed most recently on this thread (edi::reading_file).
 std::string& edi::detail::failed_file() {

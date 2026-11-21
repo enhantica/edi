@@ -337,10 +337,29 @@ def component_names(platform: str) -> frozenset[str]:
     return APP_COMPONENTS
 
 
+# The download site's host refuses a file over 100 MB, which stopped v2026.11.24 at the site
+# push after its release was published; a repository archive over 95 MB (decimal, as the host
+# counts) stops the release here instead.
+ARCHIVE_LIMIT = 95_000_000
+
+
+def require_archive_size(path: Path) -> None:
+    size = path.stat().st_size
+    if size > ARCHIVE_LIMIT:
+        raise ValueError(
+            f'{path.name} is {size:,} bytes, over the {ARCHIVE_LIMIT:,}-byte limit'
+            ' the download site can hold'
+        )
+
+
 def validate_repository(
     folder: Path, version: str, *, expected: frozenset[str] = APP_COMPONENTS
 ) -> None:
     """Require matching component identity and the framework's original archive checksums."""
+    # Publication copies the whole tree, so every file in it meets the size limit, listed or not.
+    for path in sorted(folder.rglob('*')):
+        if path.is_file():
+            require_archive_size(path)
     content = (folder / 'Updates.xml').read_bytes()
     if len(content) > 1024 * 1024 or b'<!' in content:
         raise ValueError('Component metadata must be bounded without declarations')
@@ -364,10 +383,12 @@ def validate_repository(
             raise ValueError('Component archive names are invalid')
         for name in archives:
             path = component / (version + name)
+            require_archive_size(path)
             with path.open('rb') as stream:
                 actual = hashlib.file_digest(stream, 'sha1').hexdigest()
             if actual != path.with_suffix(path.suffix + '.sha1').read_text().strip():
                 raise ValueError('Component archive checksum differs')
+        require_archive_size(component / (version + 'meta.7z'))
         with (component / (version + 'meta.7z')).open('rb') as stream:
             if hashlib.file_digest(stream, 'sha1').hexdigest() != package.findtext('SHA1'):
                 raise ValueError('Component metadata archive checksum differs')

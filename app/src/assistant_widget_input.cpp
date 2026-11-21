@@ -331,7 +331,10 @@ std::uint64_t AssistantWidgetInput::start(Request request) {
         !QMetaObject::invokeMethod(request.target,"textAt",Qt::DirectConnection,Q_RETURN_ARG(QString,optionText),Q_ARG(int,request.option)))
         throw ControlInputRefusal(ControlCause::Unavailable,"The original offered choice text is unavailable");
     if(!self || serial_!=originalSerial || request_)return 0;
-    if(request.kind==Kind::SearchChoice && optionText!=request.value)
+    const auto searchNames=request.target->property("searchNames");
+    const auto names=searchNames.isValid()?searchNames:request.target->property("names");
+    const auto searchText=names.isValid()?names.toStringList().value(request.option):optionText;
+    if(request.kind==Kind::SearchChoice && searchText!=request.value)
         throw ControlInputRefusal(ControlCause::Unavailable,"The exact search text does not match the original offered option");
     if(!request.current())throw ControlInputRefusal(ControlCause::Superseded,"The original offered choice changed");
     if(!self || serial_!=originalSerial || request_)return 0;

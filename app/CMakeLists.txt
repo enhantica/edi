@@ -222,6 +222,7 @@ qt_add_qml_module(edi_app_module
         qml/Components/ScanViewChart.qml
         qml/Components/SingleCrystalChart.qml
         qml/Components/SingleCrystalTable.qml
+        qml/Components/ChartView.qml
         qml/Components/CorrelationChart.qml
         qml/Components/SearchableComboBox.qml
         qml/Components/SelectedPatternLine.qml
@@ -325,6 +326,8 @@ qt_add_qml_module(edi_app_module
         qml/Pages/Structure/AtomSiteMomentGroup.qml
         qml/Pages/Structure/MagneticFormFactorsGroup.qml
         qml/Pages/Structure/MagneticSpaceGroupGroup.qml
+        qml/Pages/Structure/MagneticSymbolsGroup.qml
+        qml/Pages/Structure/ParentSpaceGroupGroup.qml
         qml/Pages/Structure/PolyhedraGroup.qml
         qml/Pages/Structure/PropagationVectorsGroup.qml
         qml/Pages/Structure/AtomSitesGroup.qml
@@ -487,6 +490,21 @@ if(NOT EMSCRIPTEN)
     target_compile_definitions(edi_scan_refresh_tests PRIVATE EDI_SOURCE_DIR="${PROJECT_SOURCE_DIR}")
     set_target_properties(edi_scan_refresh_tests PROPERTIES AUTOMOC ON WIN32_EXECUTABLE FALSE MACOSX_BUNDLE FALSE
         QT_QML_MODULE_NO_IMPORT_SCAN TRUE)
+    qt_add_executable(edi_chart_hover_tests EXCLUDE_FROM_ALL tests/chart_hover_tests.cpp)
+    target_link_libraries(edi_chart_hover_tests PRIVATE edi_app_module edi_app_moduleplugin ${EDI_GUI_BASE_TARGETS} Qt6::Test)
+    target_include_directories(edi_chart_hover_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+    set_target_properties(edi_chart_hover_tests PROPERTIES AUTOMOC ON WIN32_EXECUTABLE FALSE MACOSX_BUNDLE FALSE)
+    if(TARGET edi_assistant_native)
+        target_link_libraries(edi_chart_hover_tests PRIVATE edi_assistant_native)
+    endif()
+    qt_add_executable(edi_linked_structure_calculation_tests EXCLUDE_FROM_ALL tests/linked_structure_calculation_tests.cpp)
+    target_link_libraries(edi_linked_structure_calculation_tests PRIVATE edi_app_module edi_app_moduleplugin ${EDI_GUI_BASE_TARGETS} Qt6::Test)
+    target_include_directories(edi_linked_structure_calculation_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+    target_compile_definitions(edi_linked_structure_calculation_tests PRIVATE EDI_SOURCE_DIR="${PROJECT_SOURCE_DIR}")
+    set_target_properties(edi_linked_structure_calculation_tests PROPERTIES AUTOMOC ON WIN32_EXECUTABLE FALSE MACOSX_BUNDLE FALSE)
+    if(TARGET edi_assistant_native)
+        target_link_libraries(edi_linked_structure_calculation_tests PRIVATE edi_assistant_native)
+    endif()
     qt_add_executable(edi_scan_save_tests EXCLUDE_FROM_ALL tests/scan_save_tests.cpp)
     target_link_libraries(edi_scan_save_tests PRIVATE edi_app_module edi_app_moduleplugin ${EDI_GUI_BASE_TARGETS} Qt6::Test)
     target_include_directories(edi_scan_save_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
@@ -568,6 +586,14 @@ add_dependencies(edi_app_tests edi_app_build_commit)
 # The app names it too: its test observers report the build they observe.
 target_sources(edi_app PRIVATE "${EDI_APP_BUILD_COMMIT_CPP}")
 add_dependencies(edi_app edi_app_build_commit)
+if(TARGET edi_linked_structure_calculation_tests)
+    target_sources(edi_linked_structure_calculation_tests PRIVATE "${EDI_APP_BUILD_COMMIT_CPP}")
+    add_dependencies(edi_linked_structure_calculation_tests edi_app_build_commit)
+endif()
+if(TARGET edi_chart_hover_tests)
+    target_sources(edi_chart_hover_tests PRIVATE "${EDI_APP_BUILD_COMMIT_CPP}")
+    add_dependencies(edi_chart_hover_tests edi_app_build_commit)
+endif()
 if(TARGET edi_scan_save_tests)
     target_sources(edi_scan_save_tests PRIVATE "${EDI_APP_BUILD_COMMIT_CPP}")
     add_dependencies(edi_scan_save_tests edi_app_build_commit)
@@ -637,9 +663,10 @@ if(NOT EMSCRIPTEN)
 endif()
 install(FILES ${EDI_APP_LICENCE_FILES} DESTINATION ${CMAKE_INSTALL_DOCDIR} COMPONENT desktop)
 
-# The EasyDiffraction data collection (enhantica/edi-data, about 14 MB), installed with the desktop app: examples open
-# from it at once, and the online collection is asked in the background only for what is new or changed (edi
-# ADR-0068). Empty installs none.
+# The EasyDiffraction data collection (enhantica/edi-data), installed with the desktop app: examples open from it at
+# once, and the online collection is asked in the background only for what is new or changed (edi ADR-0068). A file
+# over EDI_BUNDLED_ITEM_LIMIT is left out, its index entry kept: the app downloads it the first time it is opened
+# (two 30 MB WISH zips made the macOS update archive too large to publish). Empty installs none.
 set(EDI_BUNDLED_COLLECTION "" CACHE PATH "A copy of the edi-data collection to install as the app's offline copy")
 if(EDI_BUNDLED_COLLECTION AND NOT EMSCRIPTEN)
     if(NOT EXISTS "${EDI_BUNDLED_COLLECTION}/index.json")
@@ -652,8 +679,23 @@ if(EDI_BUNDLED_COLLECTION AND NOT EMSCRIPTEN)
         set(edi_collection_destination ${CMAKE_INSTALL_DATADIR}/edi/collection)
         set(edi_collection_from_binary ../${CMAKE_INSTALL_DATADIR}/edi/collection)
     endif()
-    install(DIRECTORY "${EDI_BUNDLED_COLLECTION}/" DESTINATION ${edi_collection_destination} COMPONENT desktop
-            PATTERN ".git" EXCLUDE PATTERN ".github" EXCLUDE)
+    set(EDI_BUNDLED_ITEM_LIMIT 5000000 CACHE STRING "Largest collection file, in bytes, installed with the app")
+    file(GLOB_RECURSE edi_collection_files LIST_DIRECTORIES false RELATIVE "${EDI_BUNDLED_COLLECTION}"
+         "${EDI_BUNDLED_COLLECTION}/*")
+    foreach(relative IN LISTS edi_collection_files)
+        if(relative MATCHES "^\\.git(hub)?(/|$)")
+            continue()
+        endif()
+        # Only an item (a file in one of the item folders) can be left out; the index and the other files at the
+        # collection's root are what finds them, and are always installed.
+        file(SIZE "${EDI_BUNDLED_COLLECTION}/${relative}" edi_collection_bytes)
+        if(relative MATCHES "^(structures|experiments|data|projects)/" AND edi_collection_bytes GREATER EDI_BUNDLED_ITEM_LIMIT)
+            continue()
+        endif()
+        get_filename_component(edi_collection_subdirectory "${relative}" DIRECTORY)
+        install(FILES "${EDI_BUNDLED_COLLECTION}/${relative}"
+                DESTINATION "${edi_collection_destination}/${edi_collection_subdirectory}" COMPONENT desktop)
+    endforeach()
     set_property(SOURCE src/online_sources.cpp APPEND PROPERTY COMPILE_DEFINITIONS
                  "EDI_APP_BUNDLED_COLLECTION=\"${edi_collection_from_binary}\"")
 endif()

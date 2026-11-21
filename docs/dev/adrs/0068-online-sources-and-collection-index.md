@@ -38,11 +38,17 @@ no database server.
   next only when it is unavailable, by the same outage classes as a source, and "cannot be reached" is said only
   when every location failed. The index, the examples, the tutorials, Python and the CLI share the rule.
   **The desktop app adds a third location, its offline copy** (the owner, 2026-11-10): the installers bundle a copy of
-  the collection (about 14 MB, `EDI_BUNDLED_COLLECTION`, fetched from `enhantica/edi-data` `main` when the installer is
+  the collection (`EDI_BUNDLED_COLLECTION`, fetched from `enhantica/edi-data` `main` when the installer is
   built) beside the app, and the built-in source lists it last. The examples and tutorials open from it at once; the
   online locations are asked in the background only for what is new or changed: an example the copy lacks is then
   served online, and a changed file is downloaded and used once it has arrived, so no open waits for the network
-  (the owner, 2026-11-17). Offline the copy serves alone. A local build reads a copy in place
+  (the owner, 2026-11-17). Offline the copy serves alone. **A large item is not bundled** (the owner, 2026-11-18,
+  after two 30 MB WISH zips made the macOS update archive 115 MB, over the download site's 100 MB file limit): a file
+  over `EDI_BUNDLED_ITEM_LIMIT` (5,000,000 bytes) is left out of the installed copy and its index entry kept, so the
+  app downloads it from the online collection when it is opened (it is not kept between sessions). Offline, opening
+  it says the item is not installed with the app and
+  must be downloaded, and the open project stays. The release refuses any repository archive over 95 MB before it
+  publishes (`tools/release/promote.py`). A local build reads a copy in place
   (`EDI_LOCAL_COLLECTION`, cloned into `build/edi-data` by `tools/ci/app-build.sh` from the edi-data branch
   `EDI_LOCAL_COLLECTION_REF`, default `main`; `EDI_LOCAL_COLLECTION=off` builds without), so it behaves as the
   installed app. The web app, Python and the CLI have no copy.

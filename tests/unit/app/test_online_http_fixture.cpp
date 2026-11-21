@@ -155,6 +155,18 @@ public:
             if (source.id != QStringLiteral("cod")) source.override.clear();
         emit model->sourcesChanged();
     }
+    Q_INVOKABLE void exampleLocations(edi_app::Session* session, const QUrl& bundled) {
+        auto* model = session->onlineSources();
+        auto& sources = const_cast<QList<edi_app::OnlineSourcesModel::Source>&>(model->sources());
+        for (auto& source : sources) {
+            if (source.id == QStringLiteral("easydiffraction")) {
+                source.override.clear();
+                source.url = QStringLiteral("https://collection.invalid");
+                source.mirrors = {bundled.toString()};
+            } else source.enabled = false;
+        }
+        emit model->sourcesChanged();
+    }
     Q_INVOKABLE bool exampleKnown(edi_app::Session* session, const QString& id) const {
         return (session->*sessionExamples(SessionSlot{}))->knows(id);
     }

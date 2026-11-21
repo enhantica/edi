@@ -46,4 +46,29 @@ TestCase {
         verify(Payload.logUnconfirmed('{"number":7,"logAttached":false}'));
         verify(!Payload.logUnconfirmed('{"number":7}'));
     }
+    // A screenshot: typing rebuilds the payload on every letter, so the same files are encoded once and the
+    // preview names their bytes instead of printing them.
+    function test_attached_bytes_are_encoded_once_and_named_in_the_preview() {
+        const bytes = [];
+        for (let i = 0; i < 300000; ++i)
+            bytes.push(i % 251);
+        const files = [
+            {
+                "name": "screen.png",
+                "type": "image/png",
+                "size": bytes.length,
+                "data": base64Of(bytes)
+            }
+        ];
+        const first = Payload.buildPayload("problem", "a", false, null, "", "", "", null, "", files);
+        const second = Payload.buildPayload("problem", "ab", false, null, "", "", "", null, "", files);
+        verify(first.attachments === second.attachments, "the same files are not encoded again");
+        compare(second.attachments[0].data, files[0].data);
+        const preview = Payload.wireText(second, true);
+        verify(preview.indexOf(files[0].data.slice(0, 64)) < 0, "the preview does not print the bytes");
+        verify(preview.indexOf("300000 bytes") > 0, "it names them");
+        verify(Payload.wireText(second, false).indexOf(files[0].data) > 0, "the wire text carries them");
+        const other = files.slice();
+        verify(Payload.buildPayload("problem", "a", false, null, "", "", "", null, "", other).attachments !== first.attachments, "another list is encoded");
+    }
 }

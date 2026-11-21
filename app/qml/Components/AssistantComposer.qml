@@ -161,6 +161,7 @@ Rectangle {
                             id: modelRow
                             required property var model
                             readonly property string modelId: model.id
+                            readonly property bool modelAvailable: model.available === true
                             readonly property alias selector: modelRadio
                             objectName: "assistant.choice.model.row." + modelId
                             Item {
@@ -176,7 +177,7 @@ Rectangle {
                                     ButtonGroup.group: modelSelection
                                     readonly property bool selectionCurrent: composer.assistant.selectedModel === modelRow.modelId
                                     checked: selectionCurrent
-                                    enabled: composer.choicesEnabled && modelRow.model.available
+                                    enabled: composer.choicesEnabled && modelRow.modelAvailable
                                     Accessible.name: modelRow.model.displayName
                                     ToolTip.text: modelRow.model.displayName
                                     onClicked: choicePopup.chooseModel(modelRow.modelId)
@@ -194,10 +195,10 @@ Rectangle {
                                 textFormat: Text.PlainText
                                 horizontalAlignment: Text.AlignLeft
                                 elide: Text.ElideRight
-                                color: modelRow.model.available ? EaStyle.Colors.themeForeground : EaStyle.Colors.themeForegroundDisabled
+                                color: modelRow.modelAvailable ? EaStyle.Colors.themeForeground : EaStyle.Colors.themeForegroundDisabled
                                 ToolTip.text: text
                                 TapHandler {
-                                    enabled: composer.choicesEnabled && modelRow.model.available
+                                    enabled: composer.choicesEnabled && modelRow.modelAvailable
                                     onTapped: choicePopup.chooseModel(modelRow.modelId)
                                 }
                             }

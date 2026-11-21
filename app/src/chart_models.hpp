@@ -5,11 +5,35 @@
 #include <QAbstractListModel>
 #include <QColor>
 #include <QList>
+#include <QPointer>
+#include <QQuickItem>
 #include <QString>
 #include <QStringList>
 #include <QtQml/qqmlregistration.h>
 
 namespace edi_app {
+
+// Graphs keeps raw series pointers in its hover renderer beyond a series' removal.
+// ChartView routes pointer readouts through edi's MouseAreas instead (ADR-0044).
+class ChartHoverGuard : public QObject {
+    Q_OBJECT
+    QML_ELEMENT
+    Q_PROPERTY(QQuickItem* view READ view WRITE setView NOTIFY viewChanged)
+
+   public:
+    explicit ChartHoverGuard(QObject* parent = nullptr) : QObject(parent) {}
+    QQuickItem* view() const { return view_; }
+    void setView(QQuickItem* view);
+
+   signals:
+    void viewChanged();
+
+   protected:
+    bool eventFilter(QObject* watched, QEvent* event) override;
+
+   private:
+    QPointer<QQuickItem> view_;
+};
 
 // A chart's legend (edi ADR-0017 §15): one row per presented series, in the order the core's presentation
 // lists them. Roles `label` (the series' name, or a structure's for its ticks), `color` (the series' colour
