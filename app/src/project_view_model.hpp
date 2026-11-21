@@ -10,6 +10,7 @@
 #include <QList>
 #include <QStringList>
 #include <QObject>
+#include <array>
 #include <QPointer>
 #include <QTemporaryDir>
 #include <QTimer>
@@ -475,11 +476,34 @@ class ProjectViewModel : public QObject, public ProjectEditor {
         edi::WorkStamps stamps;
         std::string identity;
     };
-    mutable std::optional<IdentityMemo> identity_memo_;
+    // One per project the identity is asked of, the model's and the scan template's: the model's, made in the
+    // background (makeTextsLater), never evicts the template's, which a run's end asks for (syncOutOfDate).
+    mutable std::array<std::optional<IdentityMemo>, 2> identity_memos_;
+    std::optional<IdentityMemo>& identityMemoFor(const edi::Project* project) const;
+    // The scan template made as a copy of the model, which has the model's identity while the model's is current.
+    void copyModelToTemplate();
     // A shared copy of the scan's template, made again only when the template changes: the workers that calculate or
     // read a shown point take it instead of a copy made per point on the GUI thread.
     std::shared_ptr<const edi::Project> templateSnapshot() const;
+    // A shared copy of the model, made again only after a publication that changed it: the workers that read the whole
+    // model (the report, the texts) share it instead of each copying the model on the GUI thread.
+    std::shared_ptr<const edi::Project> modelSnapshot() const;
+    // What the report is built from, shared: a scan's template, else the model.
+    // Made again at most once per publication, as modelSnapshot: a scan's results reach the template outside its edit
+    // stamps, so templateSnapshot (made again only when its inputs change) can lack the newest results.
+    std::shared_ptr<const edi::Project> reportSnapshot() const;
+    // Both copies are made again after any change the texts or the report are told of (invalidateTexts,
+    // ReportViewModel::refresh): a settings edit, a template fit or its undo, a save, as well as a publication.
+    void invalidateSnapshots() { ++snapshot_epoch_; }
     mutable std::shared_ptr<const edi::Project> template_snapshot_;
+    mutable std::shared_ptr<const edi::Project> model_snapshot_;
+    mutable std::uint64_t model_snapshot_revision_ = 0;
+    mutable std::shared_ptr<const edi::Project> report_template_snapshot_;
+    mutable std::uint64_t report_template_revision_ = 0;
+    mutable edi::WorkStamps model_snapshot_stamps_;
+    std::uint64_t model_revision_ = 1;  // counts publications (publish)
+    std::uint64_t snapshot_epoch_ = 1;  // counts invalidations (invalidateSnapshots)
+    mutable std::uint64_t model_snapshot_epoch_ = 0, report_template_epoch_ = 0;
     mutable edi::WorkStamps template_snapshot_stamps_;
     void refreshSpellingLater();
     // While a fit runs every followed point publishes: the texts and the spelling, each made from a copy of the
@@ -757,6 +781,11 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     bool scanViewShown() const { return !scan_views_shown_.empty(); }
     // No dataset read is in flight or waits to be applied.
     bool viewSettled() const { return !view_reading_ && view_applied_ == view_request_; }
+#if EDI_UI_INSTRUMENTATION
+    // The UI trace (ui_probe.hpp): the scan dataset whose data the project holds now, and the count of applied views.
+    int traceAppliedDataset() const { return trace_applied_dataset_; }
+    std::uint64_t traceViewApplied() const { return view_applied_; }
+#endif
     // Drops a followed file's pending receipt without counting it (Follow off, a new scan).
     void releaseFollow() { followRendered(false); }
     // A followed scan's newest finished file becomes the current dataset at once (the evolution's line, the list,
@@ -883,6 +912,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // ADR-0031 §1: the structure id, the experiment id and a scan's dataset file last selected in this project, in
     // the app's settings keyed by the project's folder; stored only once restored.
     QStringList storedSelection() const;
+    std::uint64_t noteSelection() const;
     void storeSelection() const;
     QString selectionKey() const;
     bool selection_restored_ = false;
@@ -1231,6 +1261,9 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     bool applying_setting_ = false;
     // The newest dataset view asked for: a projection read off the GUI thread applies only while it is the newest.
     std::uint64_t view_request_ = 0, view_applied_ = 0;
+#if EDI_UI_INSTRUMENTATION
+    int trace_applied_dataset_ = -1;
+#endif
     int view_wanted_ = -1;       // the dataset of the newest request
     int projected_dataset_ = -1;  // the dataset the model holds now (a failed read leaves the one before)
     bool listing_dataset_folder_ = false;

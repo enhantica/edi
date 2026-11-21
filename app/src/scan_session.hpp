@@ -58,7 +58,10 @@ class ScanSession : public QObject {
     // Indexes the results again (after a run or an undo); the refusal, if any.
     QString reindex(const edi::Project& project, bool writing = false);
     const edi::ScanDatasets& datasets() const { return datasets_; }
-    const edi::ScanResultIndex& index() const { return index_; }
+    const edi::ScanResultIndex& index() const { return *index_; }
+    // The index as one unchanging copy, shared with readers on other threads: the session's next change to the index
+    // makes its own copy first (writableIndex), so a reader never sees it change and the index is not copied per read.
+    std::shared_ptr<const edi::ScanResultIndex> indexSnapshot() const { return index_; }
     int place(const std::string& file) const;
     const edi::ScanPlaces& places() const { return places_; }
     // A series' rule for its per-experiment rows, made from `project` the first time it is asked for in a load.
@@ -125,7 +128,9 @@ class ScanSession : public QObject {
 
     edi::ScanDatasets datasets_;
     edi::ScanPlaces places_;
-    edi::ScanResultIndex index_;
+    // Every change goes through writableIndex.
+    edi::ScanResultIndex& writableIndex();
+    std::shared_ptr<edi::ScanResultIndex> index_ = std::make_shared<edi::ScanResultIndex>();
     // A series' rule for its results_experiments.csv rows (edi::SeriesBankRule), made once per load when first asked.
     mutable edi::SeriesBankRule bank_rule_;
     Run run_;

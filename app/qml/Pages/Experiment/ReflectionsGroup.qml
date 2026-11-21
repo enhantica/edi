@@ -36,6 +36,9 @@ DataTable {
     readonly property bool magnetic: experiment !== null && experiment.reflections !== null && experiment.reflections.magnetic
 
     columns: magnetic ? [numberColumnWidth, -1, -1, -1, -1, -1, -1] : [numberColumnWidth, -1, -1, -1, -1]
+    // Widths from column types, not rows (ADR-0097 rule 4): an id or label, then values.
+    columnTypes: ["", "text"]
+    defaultColumnType: "number"
 
     header: EaComponents.ListViewHeader {
         EaComponents.ListViewLabel {

@@ -61,6 +61,8 @@
 #include <QPointer>
 #include <QQmlEngine>
 #include <QQmlListReference>
+#include <QFont>
+#include <QFontMetricsF>
 #include <QRegularExpression>
 #include <QScreen>
 #include <QStandardPaths>
@@ -89,6 +91,7 @@
 #include <private/qqmlcontextdata_p.h>
 #include <private/qqmlcontext_p.h>
 #include <private/qqmlimport_p.h>
+#include <private/qquickrepeater_p.h>
 #include <private/qqmltypenamecache_p.h>
 #include <private/qqmllistwrapper_p.h>
 #include <private/qqmltypewrapper_p.h>
@@ -1355,11 +1358,13 @@ QV4::ReturnedValue panelUsageGet(const PanelUsageFrame& frame, const QV4::Value&
     return static_cast<QV4::Object*>(prototype) != nullptr ? prototype->get(name, nullptr, &value)
                                                             : QV4::Encode::undefined();
 }
+// Property names are looked up as engine identifiers: interned once, they are not new garbage at every read, which
+// forced full JS collections of 0.2-0.7 s while a page's tables were fitted.
 QJSValue panelUsageRead(const PanelUsageFrame& frame, const QJSValue& source, const char* name) {
     if (!panelUsageReady(frame)) return {};
     QV4::Scope scope(frame.vm());
     QV4::ScopedValue value(scope, QJSValuePrivate::convertToReturnedValue(frame.vm(), source));
-    QV4::ScopedString key(scope, frame.vm()->newString(QString::fromLatin1(name)));
+    QV4::ScopedString key(scope, frame.vm()->newIdentifier(QString::fromLatin1(name)));
     QV4::ScopedValue result(scope, panelUsageGet(frame, *value, key));
     frame.checked();
     return QJSValuePrivate::fromReturnedValue(result->asReturnedValue());
@@ -1608,7 +1613,7 @@ QV4::ReturnedValue panelUsageResolveContext(const PanelUsageFrame& frame, QV4::S
 QJSValue panelUsageContextRead(const PanelUsageFrame& frame, const char* name) {
     if (!panelUsageReady(frame)) return {};
     QV4::Scope scope(frame.vm());
-    QV4::ScopedString key(scope, frame.vm()->newString(QString::fromLatin1(name)));
+    QV4::ScopedString key(scope, frame.vm()->newIdentifier(QString::fromLatin1(name)));
     QV4::ScopedValue result(scope, panelUsageResolveContext(frame, key, nullptr));
     frame.checked();
     return QJSValuePrivate::fromReturnedValue(result->asReturnedValue());
@@ -1619,7 +1624,7 @@ void panelUsageContextWrite(const PanelUsageFrame& frame, const char* name, cons
     QV4::Scoped<QV4::QmlContext> qml(scope, frame.qmlScope);
     if (static_cast<QV4::QmlContext*>(qml) == nullptr) { frame.vm()->throwReferenceError(QString::fromLatin1(name)); return; }
     QV4::Scoped<QV4::QQmlContextWrapper> wrapper(scope, qml->d()->qml());
-    QV4::ScopedString key(scope, frame.vm()->newString(QString::fromLatin1(name)));
+    QV4::ScopedString key(scope, frame.vm()->newIdentifier(QString::fromLatin1(name)));
     QV4::ScopedValue actual(scope, QJSValuePrivate::convertToReturnedValue(frame.vm(), value));
     wrapper->put(key, actual);
     frame.checked();
@@ -1649,7 +1654,7 @@ QJSValue panelUsageGlobalCall(const PanelUsageFrame& frame, const char* name, co
     *call.thisObject = QV4::Encode::undefined();
     for (qsizetype i = 0; i < arguments.size(); ++i)
         call.args[i] = QJSValuePrivate::convertToReturnedValue(frame.vm(), arguments[i]);
-    QV4::ScopedString key(scope, frame.vm()->newString(QString::fromLatin1(name)));
+    QV4::ScopedString key(scope, frame.vm()->newIdentifier(QString::fromLatin1(name)));
     QV4::ScopedValue callable(scope, panelUsageResolveContext(frame, key, call.thisObject, true));
     frame.checked();
     if (!panelUsageReady(frame)) return {};
@@ -1667,7 +1672,7 @@ QJSValue panelUsageMemberCall(const PanelUsageFrame& frame, const QJSValue& rece
     *call.thisObject = QJSValuePrivate::convertToReturnedValue(frame.vm(), receiver);
     for (qsizetype i = 0; i < arguments.size(); ++i)
         call.args[i] = QJSValuePrivate::convertToReturnedValue(frame.vm(), arguments[i]);
-    QV4::ScopedString key(scope, frame.vm()->newString(QString::fromLatin1(name)));
+    QV4::ScopedString key(scope, frame.vm()->newIdentifier(QString::fromLatin1(name)));
     QV4::ScopedValue result(scope);
     if (call.thisObject->isNullOrUndefined()) {
         result = frame.vm()->throwTypeError(QStringLiteral("Cannot call method '%1' of %2")
@@ -1691,7 +1696,7 @@ QJSValue panelUsageDeferredMemberCall(const PanelUsageFrame& frame, const QJSVal
     if (!panelUsageReady(frame)) return {};
     QV4::Scope scope(frame.vm());
     QV4::ScopedValue object(scope, QJSValuePrivate::convertToReturnedValue(frame.vm(), receiver));
-    QV4::ScopedString key(scope, frame.vm()->newString(QString::fromLatin1(name)));
+    QV4::ScopedString key(scope, frame.vm()->newIdentifier(QString::fromLatin1(name)));
     const auto values = arguments();
     if (!panelUsageReady(frame)) return {};
     QV4::JSCallArguments call(scope, static_cast<int>(values.size()));
@@ -1909,7 +1914,7 @@ void assistantMemberWrite(const PanelUsageFrame& frame, const QJSValue& receiver
     if (!panelUsageReady(frame)) return;
     QV4::Scope scope(frame.vm());
     QV4::ScopedValue object(scope, QJSValuePrivate::convertToReturnedValue(frame.vm(), receiver));
-    QV4::ScopedString key(scope, frame.vm()->newString(QString::fromLatin1(property)));
+    QV4::ScopedString key(scope, frame.vm()->newIdentifier(QString::fromLatin1(property)));
     QV4::ScopedValue actual(scope, QJSValuePrivate::convertToReturnedValue(frame.vm(), value));
     QV4::Runtime::StoreElement::call(frame.vm(), *object, *key, *actual);
     frame.checked();
@@ -4270,6 +4275,82 @@ QString shownNumberText(const QString& text) {
 }
 }  // namespace
 
+namespace {
+// A number's text for a cell `room` wide (ADR-0097 rule 4): the text when it fits, else the rule's ×10ⁿ form (owner
+// records 2026-11-09 and 2026-11-11, item 6) with as many significant digits as fit; when none does, the narrowest form
+// cut short with an ellipsis. A value with an s.u. keeps every digit and writes the s.u. at the same power; a text that
+// is not a number is cut short the same way when it does not fit.
+QString fittedNumberText(const QString& text, double room, const QFontMetricsF& metrics) {
+    if (room <= 0 || metrics.horizontalAdvance(text) <= room) return text;
+    static const QString superscripts = QStringLiteral("⁰¹²³⁴⁵⁶⁷⁸⁹");
+    static const QRegularExpression pattern(QString::fromUtf8(
+        R"(^([-−+]?)([0-9]*\.?[0-9]+)(\([0-9]+\))?(?:×10(⁻?[⁰¹²³⁴⁵⁶⁷⁸⁹]+)|[eE]([-+]?[0-9]+))?((?: ?%)|(?: \S.*))?$)"));
+    const QRegularExpressionMatch match = pattern.match(text);
+    // Not a number (a word, a list): cut short like any text, never clipped silently.
+    if (!match.hasMatch()) return metrics.elidedText(text, Qt::ElideRight, room);
+    const QString sign = match.captured(1) == QStringLiteral("+") ? QString() : match.captured(1);
+    const QString mantissa = match.captured(2), su = match.captured(3), suffix = match.captured(6);
+    int power = match.captured(5).toInt();  // a written e-notation exponent, else 0
+    if (!match.captured(4).isEmpty()) {
+        power = 0;
+        for (const QChar c : match.captured(4)) {
+            if (c == QChar(0x207B)) continue;
+            power = power * 10 + static_cast<int>(superscripts.indexOf(c));
+        }
+        if (match.captured(4).startsWith(QChar(0x207B))) power = -power;
+    }
+    // The digits and where the point falls among them; the first non-zero digit leads the new mantissa.
+    const qsizetype point = mantissa.contains(QLatin1Char('.')) ? mantissa.indexOf(QLatin1Char('.')) : mantissa.size();
+    const QString digits = QString(mantissa).remove(QLatin1Char('.'));
+    const qsizetype lead = digits.indexOf(QRegularExpression(QStringLiteral("[1-9]")));
+    if (lead < 0) {
+        // Zero: "0", or with an s.u. "0(3)" at the power of the s.u.'s last digit, so its meaning stays.
+        const int decimals = static_cast<int>(mantissa.size() - std::min(point + 1, mantissa.size()));
+        const int place = power - decimals;
+        const QString zero = QStringLiteral("0") + su + (!su.isEmpty() && place != 0 ? powerOfTen(place) : QString()) + suffix;
+        if (metrics.horizontalAdvance(zero) <= room) return zero;
+        const QString narrower = metrics.horizontalAdvance(zero) < metrics.horizontalAdvance(text) ? zero : text;
+        return metrics.elidedText(narrower, Qt::ElideRight, room);
+    }
+    const int exponent = power + static_cast<int>(point - lead - 1);
+    const auto written = [&](const QString& significant) {
+        QString out = sign + significant.left(1);
+        if (significant.size() > 1) out += QLatin1Char('.') + significant.mid(1);
+        return out + su + (exponent != 0 ? powerOfTen(exponent) : QString()) + suffix;
+    };
+    // When nothing fits, the narrowest form is shown, the text as it was included.
+    QString narrowest = text;
+    const auto consider = [&](const QString& candidate) {
+        if (metrics.horizontalAdvance(candidate) < metrics.horizontalAdvance(narrowest)) narrowest = candidate;
+        return metrics.horizontalAdvance(candidate) <= room;
+    };
+    if (!su.isEmpty()) {
+        const QString scientific = written(digits.mid(lead));
+        return consider(scientific) ? scientific : metrics.elidedText(narrowest, Qt::ElideRight, room);
+    }
+    // Without an s.u. the digits round to fewer until the text fits: a decimal while 0.001 <= |x| < 1000, as the rule
+    // writes numbers, else times a power of ten.
+    const double value = (QString(mantissa).prepend(QLatin1Char('0'))).toDouble() * std::pow(10.0, power);
+    for (qsizetype count = std::min<qsizetype>(digits.size() - lead, 15); count >= 1; --count) {
+        const QString rounded = QString::number(value, 'e', static_cast<int>(count - 1));
+        const qsizetype at = rounded.indexOf(QLatin1Char('e'));
+        const int roundedPower = rounded.mid(at + 1).toInt();
+        QString candidate;
+        if (roundedPower >= -3 && roundedPower <= 2) {
+            candidate = sign + QString::number(rounded.left(at).toDouble() * std::pow(10.0, roundedPower), 'f',
+                                               std::max(0, static_cast<int>(count) - 1 - roundedPower)) + suffix;
+        } else {
+            const QString significant = rounded.left(at).remove(QLatin1Char('.'));
+            candidate = sign + significant.left(1) + (significant.size() > 1 ? QLatin1Char('.') + significant.mid(1) : QString())
+                + powerOfTen(roundedPower) + suffix;
+        }
+        if (consider(candidate)) return candidate;
+    }
+    // Not even one digit fits: cut short with an ellipsis, never clipped silently (ADR-0051).
+    return metrics.elidedText(narrowest, Qt::ElideRight, room);
+}
+}  // namespace
+
 QJSValue ApplicationInfo::parameterBound(const QJSValue& value) const {
     const auto f = panelUsageEngine(this);
     if (value.strictlyEquals(QJSValue(qInf()))) return QJSValue(QStringLiteral("inf"));
@@ -4402,9 +4483,25 @@ void parameterTextRefit(const PanelUsageFrame& f, bool scalable, bool textCell =
     // The text never depends on the cell's width (owner record 2026-11-11, item 6). A number in a text cell shows by
     // the rule for numbers while it is not being edited, and as written while it is.
     QJSValue shown = panelUsageContextRead(f, textCell ? "written" : "valueText");
-    if (textCell && panelUsageTruth(panelUsageContextRead(f, "numeric")) &&
-        !panelUsageTruth(panelUsageContextRead(f, "activeFocus")))
+    const bool focused = panelUsageTruth(panelUsageContextRead(f, "activeFocus"));
+    const bool numeric = textCell ? panelUsageTruth(panelUsageContextRead(f, "numeric")) : scalable;
+    if (textCell && numeric && !focused)
         shown = panelUsageMemberCall(f, panelUsageContextRead(f, "NumberText"), "compact", {shown});
+    // A text cell may show a number its page wrote as text (a moment's components, modulus or angles), edited or not:
+    // fitted the same way while it is not edited, as the fitter leaves any text that is not a number as it is.
+    const bool fits = numeric || (textCell && (panelUsageTruth(panelUsageContextRead(f, "readOnly"))
+        || panelUsageContextRead(f, "accepts").toString() == QLatin1String("number")));
+    // A table cell (a parameter's or a numeric text cell) fits the number to its column once the table has sized it
+    // (ADR-0097 rule 4); a cell that makes its text smaller instead (fitDigits) and an edited one keep the text.
+    if (fits && !focused && !(scalable && panelUsageTruth(panelUsageContextRead(f, "fitDigits")))) {
+        const double width = panelUsageContextRead(f, "width").toNumber();
+        const double implicit = panelUsageContextRead(f, "implicitWidth").toNumber();
+        const double room = panelUsageContextRead(f, "room").toNumber();
+        if (std::abs(width - implicit) >= 0.5 && room > 0) {
+            const QFontMetricsF metrics(panelUsageContextRead(f, "font").toVariant().value<QFont>());
+            shown = QJSValue(fittedNumberText(shown.toString(), room, metrics));
+        }
+    }
     if (current()) panelUsageContextWrite(f, "shownValue", shown);
 }
 } // namespace
@@ -6281,7 +6378,7 @@ QJSValue tableArrayFrom(const PanelUsageFrame& f, const QJSValue& value) {
 bool tableHas(const PanelUsageFrame& f, const QJSValue& object, const char* property) {
     if (!panelUsageReady(f)) return false;
     QV4::Scope scope(f.vm());
-    QV4::ScopedValue key(scope, f.vm()->newString(QString::fromLatin1(property)));
+    QV4::ScopedValue key(scope, f.vm()->newIdentifier(QString::fromLatin1(property)));
     QV4::ScopedValue value(scope, QJSValuePrivate::convertToReturnedValue(f.vm(), object));
     QV4::ScopedValue result(scope, QV4::Runtime::In::call(f.vm(), *key, *value)); f.checked(); return result->toBoolean();
 }
@@ -6308,17 +6405,22 @@ void tableIncrement(const PanelUsageFrame& f, const char* name, bool explicitTab
     const auto number = panelUsageNumber(f, original); if (!number) return;
     if (explicitTable) projectWrite(f, "table", name, QJSValue(*number + 1)); else panelUsageContextWrite(f, name, QJSValue(*number + 1));
 }
+QList<QQuickItem*> tableNativeCells(QObject* row);
+// A row's cells as a JS array, from the items themselves (tableNativeCells): read through JS, each row copied its
+// content list and its cells' list into new arrays, garbage that forced full JS collections while tables were fitted.
 QJSValue tableCellsOf(const PanelUsageFrame& f, const QJSValue& row) {
-    QJSValue first = consentNull();
-    if (panelUsageTruth(row) && panelUsageTruth(panelUsageRead(f, row, "contentRowData"))) {
-        const auto array = panelUsageContextRead(f, "Array");
-        const auto children = panelUsageRead(f, row, "contentRowData");
-        const auto cells = panelUsageMemberCall(f, array, "from", {children});
-        first = panelUsageMemberCall(f, cells, "find", {tableCallback(f, 131, {}, 1)});
+    if (!panelUsageReady(f) || !panelUsageTruth(row)) return consentNull();
+    const QList<QQuickItem*> cells = tableNativeCells(row.toQObject());
+    if (cells.isEmpty()) return consentNull();
+    QV4::Scope scope(f.vm());
+    QV4::ScopedArrayObject array(scope, f.vm()->newArrayObject());
+    QV4::ScopedValue wrapped(scope);
+    for (qsizetype index = 0; index < cells.size(); ++index) {
+        wrapped = QV4::QObjectWrapper::wrap(f.vm(), cells[index]);
+        array->put(static_cast<uint>(index), wrapped);
     }
-    if (!panelUsageTruth(first) || !panelUsageTruth(panelUsageRead(f, first, "parent"))) return consentNull();
-    const auto array = panelUsageContextRead(f, "Array"); const auto parent = panelUsageRead(f, first, "parent");
-    return panelUsageMemberCall(f, array, "from", {panelUsageRead(f, parent, "children")});
+    f.checked();
+    return QJSValuePrivate::fromReturnedValue(array->asReturnedValue());
 }
 QJSValue tableControlWidth(const PanelUsageFrame& f, const QJSValue& child) {
     return tableHas(f, child, "fittedWidth") ? panelUsageRead(f, child, "fittedWidth") : tableNullish(panelUsageRead(f, child, "implicitWidth"), QJSValue(0));
@@ -7136,6 +7238,14 @@ void ApplicationInfo::tableStyleCells() const {
     panelUsageGlobalCall(f, "fitColumns", {});
 }
 namespace {
+// The text a column of a declared type is sized to hold (ADR-0097 rule 4): numbers ten characters, short texts (units)
+// five, names twelve; icon and check-box columns, and an undeclared one, take their header's width.
+QString tableTypeSample(const QString& type) {
+    if (type == QLatin1String("number")) return QStringLiteral("-0.0000000");
+    if (type == QLatin1String("short")) return QStringLiteral("00000");
+    if (type == QLatin1String("text")) return QStringLiteral("MMMMMMMMMMMM");
+    return {};
+}
 // Whether a table that is visible may be measured now: a small model at once, a large one only where it can be seen.
 bool tableMeasurable(const PanelUsageFrame& f) {
     if (!panelUsageTruth(panelUsageContextRead(f, "visible"))) return false;
@@ -7148,11 +7258,61 @@ bool tableMeasurable(const PanelUsageFrame& f) {
 void ApplicationInfo::tableFitWholeModel() const {
     const auto f = panelUsageEngine(this); const auto life = panelUsageContextRead(f, "columnFitLife"); if (!tableAlive(f, life)) return;
     if (!panelUsageTruth(panelUsageContextRead(f, "refitting"))) return;
+    // A table that declares its column types (ADR-0097 rule 4) takes its columns' widths from them: no row is made or
+    // measured, so a change of the content never moves a column and costs nothing.
+    const auto types = panelUsageContextRead(f, "columnTypes");
+    const QString fallback = panelUsageContextRead(f, "defaultColumnType").toString();
+    const int typed = panelUsageTruth(types) ? panelUsageRead(f, types, "length").toInt() : 0;
+    if (typed > 0 || !fallback.isEmpty()) {
+        const auto columns = panelUsageContextRead(f, "columns");
+        const int count = panelUsageRead(f, columns, "length").toInt();
+        auto widths = f->newArray(static_cast<uint>(count));
+        const double inset = projectInvoke(f, "metrics", "advanceWidth", {QJSValue(QStringLiteral("00"))}).toNumber();
+        for (int index = 0; panelUsageReady(f) && index < count; ++index) {
+            // A column's own type, else the table's default for a flex column; a fixed column keeps its width.
+            QString type = index < typed ? textIndex(f, types, QJSValue(index)).toString() : QString();
+            if (type.isEmpty() && textIndex(f, columns, QJSValue(index)).strictlyEquals(QJSValue(-1))) type = fallback;
+            const QString sample = tableTypeSample(type);
+            const double width = sample.isEmpty() ? 0.0
+                : projectInvoke(f, "metrics", "advanceWidth", {QJSValue(sample)}).toNumber() + inset;
+            widths.setProperty(static_cast<quint32>(index), QJSValue(width));
+        }
+        if (!editorLife(f, life)) return;
+        panelUsageContextWrite(f, "unfitted", QJSValue(false)); if (!editorLife(f, life)) return;
+        panelUsageContextWrite(f, "refitting", QJSValue(false)); if (!editorLife(f, life)) return;
+        panelUsageContextWrite(f, "contentWidths", widths); if (!editorLife(f, life)) return;
+        panelUsageGlobalCall(f, "combineWidths", {}); if (!editorLife(f, life)) return;
+        panelUsageGlobalCall(f, "styleCells", {});
+        return;
+    }
     if (!tableMeasurable(f)) {
         panelUsageContextWrite(f, "refitting", QJSValue(false));
         if (editorLife(f, life)) panelUsageContextWrite(f, "unfitted", QJSValue(true));
         return;
     }
+    // A table's first fit is made at once; every later one (a value, a row count or a group shown) is measured in
+    // slices, and the widths it already has stay until it ends: a refit of a shown table at each followed run measured
+    // all its rows in one go.
+    const auto fitted = panelUsageContextRead(f, "contentWidths");
+    const bool sliced = panelUsageTruth(fitted) && panelUsageRead(f, fitted, "length").toInt() > 0;
+    // Values that changed while the table shows (a running fit's rows): the rows on screen are measured as they are,
+    // with the widths held as the floor, and no row is made beside the view; the whole model is measured again once the
+    // values have been still for a second (DataTable's quietRefit), so a wider row off screen fits then.
+    if (sliced && panelUsageTruth(panelUsageContextRead(f, "liveRefit"))) {
+        panelUsageContextWrite(f, "liveRefit", QJSValue(false)); if (!editorLife(f, life)) return;
+        const auto widths = panelUsageGlobalCall(f, "fitColumns", {consentNull(), fitted});
+        if (!editorLife(f, life)) return;
+        panelUsageContextWrite(f, "unfitted", QJSValue(false)); if (!editorLife(f, life)) return;
+        panelUsageContextWrite(f, "refitting", QJSValue(false)); if (!editorLife(f, life)) return;
+        if (panelUsageTruth(widths)) {
+            panelUsageContextWrite(f, "contentWidths", widths); if (!editorLife(f, life)) return;
+            panelUsageGlobalCall(f, "combineWidths", {}); if (!editorLife(f, life)) return;
+        }
+        panelUsageMemberCall(f, panelUsageContextRead(f, "quietRefit"), "restart", {});
+        return;
+    }
+    panelUsageContextWrite(f, "liveRefit", QJSValue(false)); if (!editorLife(f, life)) return;
+    panelUsageContextWrite(f, "measureSliced", QJSValue(sliced)); if (!editorLife(f, life)) return;
     panelUsageContextWrite(f, "unfitted", QJSValue(false)); if (!editorLife(f, life)) return;
     panelUsageContextWrite(f, "measuredWidths", consentNull()); if (!editorLife(f, life)) return;
     const int run = panelUsageContextRead(f, "measureRun").toInt() + 1;
@@ -7184,7 +7344,8 @@ void ApplicationInfo::tableMeasureRows(int run, int from) const {
     // columns to their headers alone, so the pass stops there and goes on from that row 100 ms later, for at most ten
     // seconds; a row still not made then is left out.
     bool waiting = false;
-    while (panelUsageReady(f) && next < total && (total <= atOnce || started.elapsed() < 20)) {
+    const bool atOnceAllowed = total <= atOnce && !panelUsageTruth(panelUsageContextRead(f, "measureSliced"));
+    while (panelUsageReady(f) && next < total && (atOnceAllowed || started.elapsed() < 20)) {
         const auto row = panelUsageMemberCall(f, panelUsageRead(f, measuring, "items"), "create", {QJSValue(next)});
         if (!editorLife(f, life)) return;
         if (!panelUsageTruth(row)) {
@@ -7315,19 +7476,28 @@ void ApplicationInfo::tableDestroyed() const {
 }
 QJSValue ApplicationInfo::tableTextWidth(int row, const QString& role) const {
     const auto f = panelUsageEngine(this); QJSValue text(QString{});
-    auto model = panelUsageContextRead(f, "model"); const auto method = panelUsageRead(f, model, "text");
+    auto model = panelUsageContextRead(f, "sourceModel"); const auto method = panelUsageRead(f, model, "text");
     if (tableTypeof(f, method).strictlyEquals(QJSValue(QStringLiteral("function")))) {
-        model = panelUsageContextRead(f, "model"); text = panelUsageMemberCall(f, model, "text", {QJSValue(row), QJSValue(role)});
+        model = panelUsageContextRead(f, "sourceModel"); text = panelUsageMemberCall(f, model, "text", {QJSValue(row), QJSValue(role)});
     } else {
-        model = panelUsageContextRead(f, "model");
+        model = panelUsageContextRead(f, "sourceModel");
         if (tableTypeof(f, panelUsageRead(f, model, "get")).strictlyEquals(QJSValue(QStringLiteral("function")))) {
-            model = panelUsageContextRead(f, "model"); const auto object = panelUsageMemberCall(f, model, "get", {QJSValue(row)});
+            model = panelUsageContextRead(f, "sourceModel"); const auto object = panelUsageMemberCall(f, model, "get", {QJSValue(row)});
             const auto value = tableNullish(textIndex(f, object, QJSValue(role)), QJSValue(QString{})); text = panelUsageGlobalCall(f, "String", {value});
         }
     }
     return projectInvoke(f, "metrics", "advanceWidth", {text});
 }
 QJSValue ApplicationInfo::tableAdvance(const QString& text) const { return projectInvoke(panelUsageEngine(this), "metrics", "advanceWidth", {QJSValue(text)}); }
+// A fixed column's width from its type (ADR-0097 rule 4): the type's sample or the title, whichever is wider, with a
+// cell's margins, as tableTextColumnWidth gives a measured one. No row is read.
+QJSValue ApplicationInfo::tableTypeColumnWidth(const QString& type, const QString& title) const {
+    const auto f = panelUsageEngine(this);
+    const double sample = projectInvoke(f, "metrics", "advanceWidth", {QJSValue(tableTypeSample(type))}).toNumber();
+    const double heading = projectInvoke(f, "metrics", "advanceWidth", {QJSValue(title)}).toNumber();
+    const double spacing = assistantContextField(f, "AppSizes", "fieldSpacing").toNumber();
+    return QJSValue(std::ceil(std::max(sample, heading)) + spacing * 2);
+}
 QJSValue ApplicationInfo::tableTextColumnWidth(const QString& role, const QString& title, bool natural) const {
     const auto f = panelUsageEngine(this);
     if (!natural) {
@@ -7340,13 +7510,17 @@ QJSValue ApplicationInfo::tableTextColumnWidth(const QString& role, const QStrin
     // entering that layout again from its width/column bindings, including while rows are removed.
     const auto model = panelUsageContextRead(f, "model");
     const int count = panelUsageTruth(model) ? panelUsageRead(f, model, "count").toInt() : 0;
+    // A long model (a scan's datasets) is read for its first measuredAtOnce rows only, as tableMeasureRows does
+    // above 1000 rows: reading every row's text cost seconds on a large scan.
+    const int atOnce = panelUsageContextRead(f, "measuredAtOnce").toInt();
+    const int limit = count > 1000 ? std::min(count, atOnce) : count;
     QJSValue widths = textIndex(f, panelUsageContextRead(f, "rowWidths"), QJSValue(role));
     bool replace = !panelUsageTruth(widths);
-    if (!replace) replace = panelUsageRead(f, widths, "length").toInt() != count;
+    if (!replace) replace = panelUsageRead(f, widths, "length").toInt() != limit;
     if (replace) {
         if (!panelUsageReady(f)) return {};
         widths = f->newArray();
-        for (int row = 0; panelUsageReady(f) && row < count; ++row) {
+        for (int row = 0; panelUsageReady(f) && row < limit; ++row) {
             const auto measured = panelUsageGlobalCall(f, "textWidth", {QJSValue(double(row)), QJSValue(role)}); panelUsageMemberCall(f, widths, "push", {measured});
         }
         textIndexWrite(f, panelUsageContextRead(f, "rowWidths"), QJSValue(role), widths);
@@ -7365,11 +7539,16 @@ void ApplicationInfo::tableRemeasure() const {
 }
 void ApplicationInfo::tableDataChanged(const QJSValue& topLeft, const QJSValue& bottomRight) const {
     const auto f = panelUsageEngine(this); if (!tableAlive(f, panelUsageContextRead(f, "ownerLife"))) return;
+    // Typed columns do not follow the content (tableFitWholeModel): a changed row needs no measuring.
+    const auto types = assistantContextField(f, "table", "columnTypes");
+    if ((panelUsageTruth(types) && panelUsageRead(f, types, "length").toInt() > 0)
+        || !assistantContextField(f, "table", "defaultColumnType").toString().isEmpty()) return;
     // Changed rows fit the columns again, number columns included (their widths come from the measured rows), but a
     // table that cannot be seen is only marked unfitted and measured once it is (tableOnScreenChanged): a refit of a
     // series' 100 runs at each fitted run, off screen, was most of the GUI thread's stalls during a fit.
     const auto table = panelUsageContextRead(f, "table");
     if (panelUsageTruth(panelUsageRead(f, table, "onScreen"))) {
+        assistantMemberWrite(f, table, "liveRefit", QJSValue(true)); if (!editorLife(f, panelUsageContextRead(f, "ownerLife"))) return;
         projectInvoke(f, "table", "refit"); if (!editorLife(f, panelUsageContextRead(f, "ownerLife"))) return;
     } else {
         assistantMemberWrite(f, table, "unfitted", QJSValue(true)); if (!editorLife(f, panelUsageContextRead(f, "ownerLife"))) return;
@@ -7681,6 +7860,75 @@ QJSValue ApplicationInfo::sidebarEdge(const QJSValue& group, bool last) const {
     if (!assistantRelation(f, panelUsageRead(f, shown, "length"), QJSValue(0), 1)) return QJSValue(false);
     const auto index = last ? viewArithmetic(f, panelUsageRead(f, shown, "length"), QJSValue(1), 0) : QJSValue(0);
     return QJSValue(textIndex(f, shown, index).strictlyEquals(group));
+}
+void ApplicationInfo::sidebarColumnChanged(QObject* parent) const {
+    auto it = sidebar_columns_.find(parent);
+    if (it == sidebar_columns_.end() || it->dirty) return;
+    it->dirty = true;
+    ++sidebar_revision_;
+    emit const_cast<ApplicationInfo*>(this)->sidebarRevisionChanged();
+}
+bool ApplicationInfo::sidebarEdgeCached(QObject* group, bool last) const {
+    auto* self = const_cast<ApplicationInfo*>(this);
+    auto* item = qobject_cast<QQuickItem*>(group);
+    QQuickItem* parent = item != nullptr ? item->parentItem() : nullptr;
+    if (parent == nullptr) return false;
+    auto found = sidebar_columns_.find(parent);
+    if (found == sidebar_columns_.end()) {
+        found = sidebar_columns_.insert(parent, SidebarColumn{});
+        QObject::connect(parent, &QQuickItem::childrenChanged, this, [this, parent] { sidebarColumnChanged(parent); });
+        QObject::connect(parent, &QObject::destroyed, this, [this, parent] { sidebar_columns_.remove(parent); });
+    }
+    SidebarColumn& column = *found;
+    if (column.dirty) {
+        // As orderedChildren and shownGroups: the column's children in the order it lays them out, each Repeater's
+        // delegates in its place; then the groups among them (a `collapsible` property) that their tab lists.
+        for (const auto& watch : std::as_const(column.watches)) QObject::disconnect(watch);
+        column.watches.clear();
+        column.shown.clear();
+        const QList<QQuickItem*> children = parent->childItems();
+        QList<QQuickItem*> repeated;
+        QList<QQuickItem*> repeaters;
+        for (QQuickItem* child : children) {
+            if (auto* repeater = qobject_cast<QQuickRepeater*>(child)) {
+                repeaters.append(child);
+                for (int i = 0; i < repeater->count(); ++i)
+                    if (QQuickItem* delegate = repeater->itemAt(i)) repeated.append(delegate);
+                column.watches.append(QObject::connect(repeater, &QQuickRepeater::countChanged, this,
+                                                       [this, parent] { sidebarColumnChanged(parent); }));
+            }
+        }
+        QList<QQuickItem*> ordered;
+        for (QQuickItem* child : children) {
+            if (auto* repeater = qobject_cast<QQuickRepeater*>(child)) {
+                for (int i = 0; i < repeater->count(); ++i)
+                    if (QQuickItem* delegate = repeater->itemAt(i)) ordered.append(delegate);
+            } else if (!repeated.contains(child)) {
+                ordered.append(child);
+            }
+        }
+        for (QQuickItem* candidate : std::as_const(ordered)) {
+            const QMetaObject* meta = candidate->metaObject();
+            if (meta->indexOfProperty("collapsible") < 0) continue;
+            const int listed = meta->indexOfProperty("listed");
+            if (listed >= 0) {
+                const QMetaProperty property = meta->property(listed);
+                if (property.hasNotifySignal()) {
+                    column.watches.append(QObject::connect(candidate, property.notifySignal(), self,
+                                                           metaObject()->method(metaObject()->indexOfSlot("sidebarListedChanged()"))));
+                }
+                if (!property.read(candidate).toBool()) continue;
+            }
+            column.shown.append(candidate);
+        }
+        column.dirty = false;
+    }
+    if (column.shown.isEmpty()) return false;
+    return (last ? column.shown.last() : column.shown.first()).data() == group;
+}
+void ApplicationInfo::sidebarListedChanged() {
+    // A group's `listed` changed: its column, found from the sender.
+    if (auto* item = qobject_cast<QQuickItem*>(sender())) sidebarColumnChanged(item->parentItem());
 }
 QJSValue ApplicationInfo::sidebarOrderedChildren(const QJSValue& parent) const {
     const auto f = panelUsageEngine(this); const auto children = controlEmptyArray(f);
@@ -8138,7 +8386,15 @@ QJSValue ApplicationInfo::numberPresentation(NumberOperation operation, const QJ
     case NumberOwnUncertainty: return shownSu(value, second);
     case NumberCompact:
     case NumberWrittenNarrow: return value.isString() ? QJSValue(shownNumberText(value.toString())) : value;
-    case NumberFitted: return value;
+    case NumberFitted: {
+        // value: the number's text; second: the room; third: the cell's FontMetrics; fourth: a shorter form to try first.
+        if (!value.isString() || !second.isNumber()) return value;
+        const QFontMetricsF metrics(third.property(QStringLiteral("font")).toVariant().value<QFont>());
+        const double room = second.toNumber();
+        if (room <= 0 || metrics.horizontalAdvance(value.toString()) <= room) return value;
+        if (fourth.isString() && metrics.horizontalAdvance(fourth.toString()) <= room) return fourth;
+        return QJSValue(fittedNumberText(value.toString(), room, metrics));
+    }
     case NumberAxisFormat:
     case NumberAxisTick:
     case NumberAxisStep: return QJSValue();  // answered above
@@ -8536,6 +8792,8 @@ void ApplicationInfo::saveReportPreview() const {
     }
     if (panelUsageTruth(panelUsageRead(f, report, "calculating"))) { projectWrite(f, "group", "savePending", QJSValue(true)); return; }
     projectWrite(f, "group", "saving", QJSValue(true)); projectWrite(f, "group", "savePending", QJSValue(false));
+    // The model is brought up to date first, so the figures taken next and the text the save writes are one build's.
+    panelUsageMemberCall(f, report, "prepareSave");
     const auto write = panelUsageClosure(f, 200, {report}, 0);
     if (panelUsageTruth(panelUsageRead(f, report, "writesPdf"))) {
         const auto preview = assistantContextField(f, "group", "preview");
@@ -8661,48 +8919,73 @@ QJSValue ApplicationInfo::reportTableDotWidth() const {
     const auto f = panelUsageEngine(this); const auto font = assistantContextField(f, "metrics", "font"); Q_UNUSED(font)
     return numberMath(f, "ceil", [&] { return QJSValueList{projectInvoke(f, "metrics", "advanceWidth", {QJSValue(QStringLiteral("."))})}; });
 }
+namespace {
+// A report cell's number parts: before its decimal point, the point, and after it (an s.u. bracket, an exponent and
+// units after a space); none for a text that is not a number. Native, as each cell of every report table asks once.
+struct ReportNumberParts {
+    QString left;
+    bool dot = false;
+    QString right;
+};
+std::optional<ReportNumberParts> reportNumberParts(const QString& text) {
+    static const QRegularExpression expression(QString::fromUtf8(
+        R"(^([-−+]?[0-9]*)(\.?)([0-9]*(?:\([0-9]+\))?(?:[eE][-+]?[0-9]+)?(?: [^ 0-9].*)?)$)"));
+    static const QRegularExpression digit(QStringLiteral("[0-9]"));
+    const QRegularExpressionMatch match = expression.match(text);
+    if (!match.hasMatch()) return std::nullopt;
+    const QString left = match.captured(1), right = match.captured(3);
+    if (!(left + right).contains(digit)) return std::nullopt;
+    return ReportNumberParts{left, !match.captured(2).isEmpty(), right};
+}
+}  // namespace
 QJSValue ApplicationInfo::reportTableSplit(const QJSValue& text) const {
     const auto f = panelUsageEngine(this);
-    const auto expression = panelRegex(f, QString::fromUtf8(R"(^([-−+]?[0-9]*)(\.?)([0-9]*(?:\([0-9]+\))?(?:[eE][-+]?[0-9]+)?(?: [^ 0-9].*)?)$)"));
-    const auto match = panelUsageMemberCall(f, expression, "exec", {text});
-    if (!panelUsageTruth(match)) return consentNull();
-    const auto digits = panelRegex(f, QStringLiteral("[0-9]")); const auto first = textIndex(f, match, QJSValue(1)), last = textIndex(f, match, QJSValue(3));
-    if (!panelUsageTruth(panelUsageMemberCall(f, digits, "test", {panelUsageAdd(f, first, last)}))) return consentNull();
-    auto result = panelUsageLiteral(f); panelUsageWrite(f, result.value, "left", textIndex(f, match, QJSValue(1)));
-    panelUsageWrite(f, result.value, "dot", QJSValue(!textIndex(f, match, QJSValue(2)).strictlyEquals(QJSValue(QStringLiteral("")))));
-    panelUsageWrite(f, result.value, "right", textIndex(f, match, QJSValue(3))); return panelUsageComplete(f, result);
+    const auto parts = reportNumberParts(text.toString());
+    if (!parts) return consentNull();
+    auto result = panelUsageLiteral(f); panelUsageWrite(f, result.value, "left", QJSValue(parts->left));
+    panelUsageWrite(f, result.value, "dot", QJSValue(parts->dot));
+    panelUsageWrite(f, result.value, "right", QJSValue(parts->right)); return panelUsageComplete(f, result);
 }
+// Each column measured with the cells' own font (the table's FontMetrics), natively: through the JS engine each sampled
+// cell cost a regular expression and three width calls, which made the Report page's first show slow.
 QJSValue ApplicationInfo::reportTableLayout() const {
-    const auto f = panelUsageEngine(this); const auto font = assistantContextField(f, "metrics", "font"); Q_UNUSED(font)
+    const auto f = panelUsageEngine(this);
+    const QFontMetricsF metrics(assistantContextField(f, "metrics", "font").toVariant().value<QFont>());
     const auto out = controlEmptyArray(f);
-    for (int column = 0; panelUsageReady(f) && assistantRelation(f, QJSValue(double(column)), panelUsageContextRead(f, "columnCount"), 0); ++column) {
-        double numbers = 0, others = 0; QJSValue left(0), right(0), plain(0);
-        panelUsageEach(f, panelUsageContextRead(f, "rows"), [&](const QJSValue& row) {
-            const auto text = tableNullish(textIndex(f, row, QJSValue(double(column))), QJSValue(QStringLiteral("")));
-            if (text.strictlyEquals(QJSValue(QStringLiteral("")))) return panelUsageReady(f);
-            const auto parts = projectInvoke(f, "table", "split", {text});
-            if (panelUsageTruth(parts)) {
+    const bool keyValue = panelUsageTruth(panelUsageContextRead(f, "keyValue"));
+    const auto rows = panelUsageContextRead(f, "layoutRows");
+    const auto columns = panelUsageContextRead(f, "columns");
+    const int total = panelUsageRead(f, rows, "length").toInt();
+    const int count = panelUsageContextRead(f, "columnCount").toInt();
+    const double dotWidth = panelUsageContextRead(f, "dotWidth").toNumber(), padding = panelUsageContextRead(f, "padding").toNumber();
+    // A long table (an experiment's data points) is measured on 200 rows spread over it, not on every row.
+    constexpr int kSample = 200;
+    std::vector<QStringList> sampled;
+    for (int k = 0; panelUsageReady(f) && k < std::min(total, kSample); ++k) {
+        const int index = total > kSample ? static_cast<int>(static_cast<long long>(k) * total / kSample) : k;
+        sampled.push_back(textIndex(f, rows, QJSValue(index)).toVariant().toStringList());
+    }
+    for (int column = 0; panelUsageReady(f) && column < count; ++column) {
+        int numbers = 0, others = 0; double left = 0, right = 0, plain = 0;
+        for (const QStringList& row : sampled) {
+            const QString text = column < row.size() ? row[column] : QString();
+            if (text.isEmpty()) continue;
+            if (const auto parts = reportNumberParts(text)) {
                 ++numbers;
-                left = numberMath(f, "max", [&] { return QJSValueList{left, projectInvoke(f, "metrics", "advanceWidth", {panelUsageRead(f, parts, "left")})}; });
-                right = numberMath(f, "max", [&] { return QJSValueList{right, projectInvoke(f, "metrics", "advanceWidth", {panelUsageRead(f, parts, "right")})}; });
+                left = std::max(left, metrics.horizontalAdvance(parts->left));
+                right = std::max(right, metrics.horizontalAdvance(parts->right));
             } else ++others;
-            plain = numberMath(f, "max", [&] { return QJSValueList{plain, projectInvoke(f, "metrics", "advanceWidth", {text})}; }); return panelUsageReady(f);
-        });
-        const bool numeric = numbers > 0 && others == 0; QJSValue header(0);
-        if (!panelUsageTruth(panelUsageContextRead(f, "keyValue"))) header = projectInvoke(f, "metrics", "advanceWidth", {textIndex(f, panelUsageContextRead(f, "columns"), QJSValue(double(column)))});
-        QJSValue content;
-        if (numeric) {
-            const auto leading = numberMath(f, "ceil", [&] { return QJSValueList{left}; });
-            const auto prefix = panelUsageAdd(f, leading, panelUsageContextRead(f, "dotWidth"));
-            content = panelUsageAdd(f, prefix, numberMath(f, "ceil", [&] { return QJSValueList{right}; }));
-        } else content = numberMath(f, "ceil", [&] { return QJSValueList{plain}; });
+            plain = std::max(plain, metrics.horizontalAdvance(text));
+        }
+        const bool numeric = numbers > 0 && others == 0;
+        const double header = keyValue ? 0.0 : metrics.horizontalAdvance(textIndex(f, columns, QJSValue(column)).toString());
+        const double content = numeric ? std::ceil(left) + dotWidth + std::ceil(right) : std::ceil(plain);
+        const double width = std::max(content, std::ceil(header)) + 2 * padding
+            + (keyValue && column == 0 ? panelUsageContextRead(f, "keyGap").toNumber() : 0.0);
         auto entry = panelUsageLiteral(f); panelUsageWrite(f, entry.value, "numeric", QJSValue(numeric));
-        panelUsageWrite(f, entry.value, "left", numberMath(f, "ceil", [&] { return QJSValueList{left}; }));
-        panelUsageWrite(f, entry.value, "right", numberMath(f, "ceil", [&] { return QJSValueList{right}; }));
-        const auto maximum = numberMath(f, "max", [&] { return QJSValueList{content, numberMath(f, "ceil", [&] { return QJSValueList{header}; })}; });
-        const auto padded = panelUsageAdd(f, maximum, viewArithmetic(f, QJSValue(2), panelUsageContextRead(f, "padding"), 1)); QJSValue extra(0);
-        if (panelUsageTruth(panelUsageContextRead(f, "keyValue")) && column == 0) extra = panelUsageContextRead(f, "keyGap");
-        panelUsageWrite(f, entry.value, "width", panelUsageAdd(f, padded, extra)); panelUsageMemberCall(f, out, "push", {panelUsageComplete(f, entry)});
+        panelUsageWrite(f, entry.value, "left", QJSValue(std::ceil(left)));
+        panelUsageWrite(f, entry.value, "right", QJSValue(std::ceil(right)));
+        panelUsageWrite(f, entry.value, "width", QJSValue(width)); panelUsageMemberCall(f, out, "push", {panelUsageComplete(f, entry)});
     }
     return out;
 }
@@ -9557,7 +9840,7 @@ namespace {
 QJSValue chartSpreadCall(const PanelUsageFrame& f, const QJSValue& receiver, const char* name, const QJSValue& values) {
     if (!panelUsageReady(f)) return {};
     QV4::Scope scope(f.vm()); QV4::ScopedValue object(scope, QJSValuePrivate::convertToReturnedValue(f.vm(), receiver));
-    QV4::ScopedString key(scope, f.vm()->newString(QString::fromLatin1(name))); QV4::ScopedValue function(scope, panelUsageGet(f, *object, key, true));
+    QV4::ScopedString key(scope, f.vm()->newIdentifier(QString::fromLatin1(name))); QV4::ScopedValue function(scope, panelUsageGet(f, *object, key, true));
     if (!panelUsageReady(f)) return {};
     QV4::Value* args = scope.constructUndefined(2); args[0].setEmpty(); args[1] = QJSValuePrivate::convertToReturnedValue(f.vm(), values);
     QV4::ScopedValue result(scope, QV4::Runtime::CallWithSpread::call(f.vm(), *function, *object, args, 2)); f.checked();
@@ -10243,11 +10526,18 @@ QJSValue rowInstanceOf(const PanelUsageFrame& f, const QJSValue& input, const ch
     QV4::Scope scope(f.vm()); QV4::ScopedValue value(scope, QJSValuePrivate::convertToReturnedValue(f.vm(), input)), target(scope, QJSValuePrivate::convertToReturnedValue(f.vm(), type));
     QV4::ScopedValue result(scope, QV4::Runtime::Instanceof::call(f.vm(), *value, *target)); f.checked(); return QJSValuePrivate::fromReturnedValue(result->asReturnedValue());
 }
+// A control in a row takes focus on a click as well as on Tab. Walked over the items themselves: read through JS, each
+// item's `children` list was a new array, made for every item of every row as a table was built, and that garbage
+// forced full JS collections of 0.2-0.7 s when a page first showed its tables.
+void rowFocusOnClick(QQuickItem* item) {
+    if (item == nullptr) return;
+    if (const QVariant policy = item->property("focusPolicy"); policy.isValid() && policy.toInt() == Qt::TabFocus)
+        item->setProperty("focusPolicy", static_cast<int>(Qt::StrongFocus));
+    for (QQuickItem* child : item->childItems()) rowFocusOnClick(child);
+}
 void rowFocusOnClick(const PanelUsageFrame& f, const QJSValue& item) {
-    const auto policy = panelUsageRead(f, item, "focusPolicy"), tab = assistantContextField(f, "Qt", "TabFocus");
-    if (policy.strictlyEquals(tab)) assistantMemberWrite(f, item, "focusPolicy", assistantContextField(f, "Qt", "StrongFocus"));
-    const auto original = panelUsageRead(f, item, "children"); const auto children = original.isNull() || original.isUndefined() ? controlEmptyArray(f) : original;
-    panelUsageEach(f, children, [&](const QJSValue& child) { rowFocusOnClick(f, child); return panelUsageReady(f); });
+    if (!panelUsageReady(f)) return;
+    rowFocusOnClick(qobject_cast<QQuickItem*>(item.toQObject()));
 }
 QJSValue recentRowCallback(const PanelUsageFrame& f, uint operation,
     const std::function<QJSValue(uint)>& saved, const std::function<QJSValue(uint)>& arg) {
@@ -10504,7 +10794,7 @@ void ApplicationInfo::searchCompleted(const QJSValue& alignBinding, const QJSVal
         projectWrite(f, "control", "leftPadding", QJSValue(0));
         if (panelUsageTruth(assistantContextField(f, "control", "indicator"))) projectCall(f, indicatorBinding);
     }
-    const auto content = panelUsageRead(f, assistantContextField(f, "control", "popup"), "contentItem"); assistantMemberWrite(f, content, "header", panelUsageContextRead(f, "searchHeader")); projectCall(f, modelBinding);
+    projectCall(f, modelBinding);  // the list's header (the search field) and its model, both bound
     const auto list = panelUsageRead(f, assistantContextField(f, "control", "popup"), "contentItem"); assistantMemberWrite(f, list, "headerPositioning", assistantContextField(f, "ListView", "OverlayHeader")); projectCall(f, focusBinding);
 }
 void ApplicationInfo::searchSchedule(const QJSValue& original) const {
@@ -10608,20 +10898,9 @@ QJSValue ApplicationInfo::atomAdpIsoWidth() const {
     for (int row = 0; panelUsageReady(f) && panelUsageTruth(assistantContextField(f, "group", "adps")) && assistantRelation(f, QJSValue(double(row)), panelUsageContextRead(f, "count"), 0) && !beta; ++row)
         beta = panelUsageMemberCall(f, assistantContextField(f, "group", "adps"), "text", {QJSValue(double(row)), QJSValue(QStringLiteral("adpType"))}).strictlyEquals(QJSValue(QStringLiteral("beta")));
     if (!beta) return QJSValue(-1);
-    auto widest = panelUsageGlobalCall(f, "advance", {projectInvoke(f, "Session", "label", {QJSValue(QStringLiteral("atom_site.adp_iso"))})});
-    for (int row = 0; panelUsageReady(f) && assistantRelation(f, QJSValue(double(row)), panelUsageContextRead(f, "count"), 0); ++row) {
-        const auto item = chartAs(f, panelUsageMemberCall(f, assistantContextField(f, "group", "adps"), "item", {QJSValue(double(row)), QJSValue(QStringLiteral("adpIso"))}), "ParameterItem");
-        if (panelUsageTruth(item)) widest = numberMath(f, "max", [&] {
-            QJSValue text;
-            if (!panelUsageRead(f, item, "fileValue").strictlyEquals(QJSValue(QStringLiteral("")))) text = panelUsageRead(f, item, "fileValue");
-            else {
-                const auto numbers = panelUsageContextRead(f, "NumberText"), value = panelUsageRead(f, item, "value");
-                const auto error = panelUsageTruth(panelUsageRead(f, item, "hasUncertainty")) ? panelUsageRead(f, item, "uncertainty") : QJSValue(0); text = panelUsageMemberCall(f, numbers, "parameter", {value, error, QJSValue(5)});
-            }
-            return QJSValueList{widest, panelUsageGlobalCall(f, "advance", {text})};
-        });
-    }
-    const auto measured = numberMath(f, "ceil", [&] { return QJSValueList{widest}; }); return panelUsageAdd(f, measured, viewArithmetic(f, assistantContextField(f, "AppSizes", "fieldSpacing"), QJSValue(2), 1));
+    // With a beta row the column holds a number, sized by its type, not by its rows (ADR-0097 rule 4).
+    const auto title = projectInvoke(f, "Session", "label", {QJSValue(QStringLiteral("atom_site.adp_iso"))});
+    return tableTypeColumnWidth(QStringLiteral("number"), title.toString());
 }
 void ApplicationInfo::scientificSelectorChanged(const QJSValue& index, int kind, const QJSValue& restoreBinding) const {
     const auto f = panelUsageEngine(this);
@@ -10795,17 +11074,12 @@ void ApplicationInfo::fitResultsPassive(const QJSValue& row) const {
         return panelUsageReady(f);
     });
 }
-QJSValue ApplicationInfo::fitResultsSummaryWidth(const QJSValue& title, const QJSValue& cell) const {
-    const auto f = panelUsageEngine(this); const auto revision = assistantContextField(f, "dialog", "resultsRevision"); Q_UNUSED(revision)
-    auto widest = projectInvoke(f, "table", "advance", {title});
-    for (int row = 0; panelUsageReady(f) && panelUsageTruth(assistantContextField(f, "dialog", "results")) && assistantRelation(f, QJSValue(double(row)), panelUsageRead(f, assistantContextField(f, "dialog", "results"), "count"), 0); ++row)
-        widest = numberMath(f, "max", [&] { const auto table = panelUsageContextRead(f, "table"); return QJSValueList{widest, panelUsageDeferredMemberCall(f, table, "advance", [&] { return QJSValueList{projectCall(f, cell, {QJSValue(row)})}; })}; });
-    const auto rounded = numberMath(f, "ceil", [&] { return QJSValueList{widest}; });
-    return panelUsageAdd(f, rounded, viewArithmetic(f, assistantContextField(f, "AppSizes", "fieldSpacing"), QJSValue(2), 1));
-}
 QJSValue ApplicationInfo::fitResultsColumnWidth(bool value) const {
     const auto f = panelUsageEngine(this); const auto title = panelUsageGlobalCall(f, "qsTr", {QJSValue(QString::fromUtf8(value ? QT_TRANSLATE_NOOP("FitResultsDialog", "Value") : QT_TRANSLATE_NOOP("FitResultsDialog", "Metric")))});
-    const auto width = panelUsageGlobalCall(f, "widestSummaryText", {title, panelUsageClosure(f, value ? 363 : 362, {}, 1)});
+    // A metric is a text and a value a number, sized by type, not by the results' rows (ADR-0097 rule 4).
+    const double sample = projectInvoke(f, "table", "advance", {QJSValue(tableTypeSample(value ? QStringLiteral("number") : QStringLiteral("text")))}).toNumber();
+    const double heading = projectInvoke(f, "table", "advance", {title}).toNumber();
+    const QJSValue width(std::ceil(std::max(sample, heading)) + assistantContextField(f, "AppSizes", "fieldSpacing").toNumber() * 2);
     return value ? panelUsageAdd(f, width, formsStyleSize(f, "fontPixelSize")) : width;
 }
 void ApplicationInfo::fitResultsRevisionChanged() const {
@@ -11183,7 +11457,7 @@ QJSValue ApplicationInfo::windowUnsavedText() const {
 
 int ApplicationInfo::schemeFor(int theme, int browser) const {
     // The owner, 2026-11-15: edi's Light and Dark override the platform's scheme; System follows it. The browser's
-    // page gets no scheme from Qt, so there System is the browser's prefers-color-scheme (edi-feedback #63).
+    // page gets no scheme from Qt, so there System is the browser's prefers-color-scheme (edi #123).
     if (theme == 0) return static_cast<int>(Qt::ColorScheme::Light);
     if (theme == 1) return static_cast<int>(Qt::ColorScheme::Dark);
     if (browser == 0) return static_cast<int>(Qt::ColorScheme::Light);

@@ -190,7 +190,7 @@ class EvolutionViewModel : public QObject {
     struct Read {
         std::shared_ptr<const edi::Project> project;
         edi::ScanPlaces places;
-        edi::ScanResultIndex index;
+        std::shared_ptr<const edi::ScanResultIndex> index;
         edi::ScanDatasets datasets;
         edi::SeriesBankRule rule;
         std::string name;
@@ -200,6 +200,7 @@ class EvolutionViewModel : public QObject {
     // The points of a parameter's column, read from the results (throws when the read refuses).
     static std::vector<Point> readPoints(const Read& read);
     std::uint64_t rebuild_request_ = 0;
+    bool rebuild_owed_ = false;  // a rebuild asked for while no chart showed the points (ADR-0096 rule 1)
     void draw();
 
     EvolutionParameterListModel* parameters_;

@@ -2,6 +2,7 @@
 #ifndef EDI_APP_REPORT_VIEW_MODEL_HPP
 #define EDI_APP_REPORT_VIEW_MODEL_HPP
 
+#include <QAbstractListModel>
 #include <QHash>
 #include <QImage>
 #include <QList>
@@ -10,8 +11,12 @@
 #include <QStringList>
 #include <QUrl>
 #include <QVariantMap>
+#include <atomic>
+#include <cstdint>
+#include <memory>
 #include <optional>
 #include <string>
+#include <vector>
 #include <QtQml/qqmlregistration.h>
 
 #include "edi/report_html.hpp"
@@ -43,6 +48,24 @@ struct SavedReport {
 // QML as the model's JSON values, rebuilt once per coalesced change. Its options are the project's report settings
 // (ADR-0036 §7), which the Contents boxes, the Embed checkbox and the Analysis page's correlation level and x axis
 // edit; the page reads the model only, never the project.
+// A long report table's rows, one `cells` string per row (cells joined by U+001F, as ReportTable splits them), for the
+// preview's windowed list: the rows stay in C++, so a table of thousands of points is never converted to QML values.
+class ReportRowsModel : public QAbstractListModel {
+    Q_OBJECT
+    QML_ELEMENT
+    QML_UNCREATABLE("Made by the report")
+
+   public:
+    explicit ReportRowsModel(QObject* parent) : QAbstractListModel(parent) {}
+    void setRows(const QStringList& rows);
+    int rowCount(const QModelIndex& parent = QModelIndex()) const override { return parent.isValid() ? 0 : static_cast<int>(rows_.size()); }
+    QVariant data(const QModelIndex& index, int role) const override;
+    QHash<int, QByteArray> roleNames() const override { return {{Qt::UserRole + 1, "cells"}}; }
+
+   private:
+    QStringList rows_;
+};
+
 class ReportViewModel : public QObject {
     Q_OBJECT
     QML_ELEMENT
@@ -50,6 +73,10 @@ class ReportViewModel : public QObject {
     // The report model as its JSON values (report_to_json), without the charts' data: the pattern presentations and
     // the structure scenes and drawings, which the chart controllers read from reportModel().
     Q_PROPERTY(QVariantMap model READ model NOTIFY modelChanged)
+    // Cheap readers of the same model: reading `model` converts the whole report to a JS object each time, which a reader
+    // that only needs to know a model was built, or only its contents list, should not pay for.
+    Q_PROPERTY(int modelRevision READ modelRevision NOTIFY modelChanged)
+    Q_PROPERTY(QVariantList contents READ contents NOTIFY modelChanged)
     // The Contents keys left out (the model's `contents`), each with everything under it: the project's
     // `_report.excluded`, or the data when it states none.
     Q_PROPERTY(QStringList hidden READ hidden WRITE setHidden NOTIFY hiddenChanged)
@@ -80,6 +107,14 @@ class ReportViewModel : public QObject {
         ensureBuilt();
         return model_;
     }
+    int modelRevision() const {
+        ensureBuilt();
+        return model_revision_;
+    }
+    QVariantList contents() const {
+        ensureBuilt();
+        return model_.value(QStringLiteral("contents")).toList();
+    }
     const edi::ReportModel& reportModel() const {
         ensureBuilt();
         return report_;
@@ -94,6 +129,10 @@ class ReportViewModel : public QObject {
     const edi::ReportStructure* structure(const QString& id) const;
     // An experiment's reliability text in the model (edi::reliability_text); empty with none.
     Q_INVOKABLE QString reliability(const QString& experiment) const;
+    // A long table's rows, by the key the model gives it (`rows_key`), as a list model, and an evenly spread sample of
+    // at most 200 of them split into cells, which the table measures its columns on.
+    Q_INVOKABLE QObject* rowsModel(const QString& key);
+    Q_INVOKABLE QVariantList sampleRows(const QString& key) const;
     QStringList hidden() const;
     void setHidden(const QStringList& keys);
     bool embedLibraries() const;
@@ -116,6 +155,9 @@ class ReportViewModel : public QObject {
     // rows are left as they are. A format that cannot be written leaves its old file and stops the formats after it;
     // the files written before it keep their rows. Answers with saved, or saveFailed for each failure.
     Q_INVOKABLE void saveReport(const QString& fontFamily);
+    // Brings the model up to date now, before a save takes the preview's figures: the figures, the text and the written
+    // digests then come from one build. saveReport refuses figures taken from another build.
+    Q_INVOKABLE void prepareSave();
     // One of the preview's figures for the next save's PDF, by its name in the static text (structure-0, pattern-1,
     // ...); a null image is left out.
     Q_INVOKABLE void setFigure(const QString& name, const QImage& image);
@@ -139,8 +181,36 @@ class ReportViewModel : public QObject {
     void saveFailed(const QString& message);
 
    private:
-    // Builds the model from the project; whether it changed.
+    // What a build reads, taken on the GUI thread: a copy of the report's input and the app's choices.
+    struct Inputs {
+        std::shared_ptr<const edi::Project> input;
+        edi::ReportOverrides choices;
+        bool vesta = false;
+        std::vector<std::size_t> colour_positions;
+        std::vector<std::string> formats;  // the formats of the saved reports on disk, whose digests are judged
+        bool embed = false;
+        std::shared_ptr<const edi::ReportLibraries> libraries;
+    };
+    // What a build makes, on any thread: the model, its JSON and QML text, and the saved reports' digests.
+    struct Built {
+        edi::ReportModel report;
+        std::string json;
+        QVariantMap model;
+        edi::ReportOptions options;
+        std::optional<edi::ReportModel> judged;
+        std::optional<std::string> cif_digest;
+        QHash<QString, QString> digests;  // by format
+        QHash<QString, QStringList> rows;  // long tables' rows, moved out of `model`, by key
+    };
+    Inputs prepare() const;
+    static Built make(const Inputs& inputs);
+    // Takes a build's results; whether the model changed.
+    bool adopt(Built&& built) const;
+    // Builds the model from the project now, on the GUI thread (a save, or a read while the page is hidden); whether
+    // it changed.
     bool build() const;
+    // Builds the model on a worker and announces it when it lands, unless a newer request replaced it (ADR-0096 rule 3).
+    void requestBuild();
     // A read while a change is pending builds the model first. A model the read changed is announced afterwards, so
     // the readers that read it before (the chart controllers) read it again.
     void ensureBuilt() const;
@@ -177,10 +247,29 @@ class ReportViewModel : public QObject {
     mutable edi::ReportModel report_;
     mutable std::string json_;  // report_'s JSON: a rebuild that writes the same announces nothing
     mutable QVariantMap model_;
+    mutable int model_revision_ = 0;
     // The options report_ was built with, and judged()'s model when its choices are not the default ones.
     mutable edi::ReportOptions options_;
     mutable std::optional<edi::ReportModel> judged_;
     mutable std::optional<std::string> cif_digest_;
+    mutable QHash<QString, QString> digests_;  // the saved reports' digests by format, from the last build
+    mutable QHash<QString, QStringList> rows_;    // long tables' rows by key, from the last build
+    QHash<QString, ReportRowsModel*> rows_models_;
+    // One request state for the model (ADR-0096 rules 1 and 3, ADR-0020): `build_generation_` is the newest wanted
+    // build, `adopted_generation_` the one the model holds. At most one build runs on a worker (`building_`); a change
+    // meanwhile owes one more (`rebuild_owed_`), started when it returns, so the project is copied for a worker once
+    // per build, not once per change. Hiding the page or a change while it is hidden supersedes a running build: its
+    // result is dropped, and the page catches up once when shown. `wanted_` lets a worker skip a superseded build.
+    mutable std::uint64_t build_generation_ = 0;
+    mutable std::uint64_t adopted_generation_ = 0;
+    mutable bool building_ = false;
+    mutable bool rebuild_owed_ = false;
+    std::shared_ptr<std::atomic<std::uint64_t>> wanted_ = std::make_shared<std::atomic<std::uint64_t>>(0);
+    // The model is the newest wanted one.
+    bool current() const { return !dirty_ && !rebuild_owed_ && adopted_generation_ == build_generation_; }
+    // Drops a running build's result (hidden page, hidden change).
+    void supersede() const;
+    std::uint64_t figures_generation_ = 0;  // the build prepareSave brought the model to
     QHash<QString, QImage> figures_;  // setFigure's images, which the next save takes
 };
 

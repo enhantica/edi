@@ -154,7 +154,11 @@ std::vector<std::pair<double, double>> excluded_of(const edi::ExperimentBase& ex
 
 }  // namespace
 
-ScanViewModel::ScanViewModel(QObject* parent) : QObject(parent) {}
+ScanViewModel::ScanViewModel(QObject* parent) : QObject(parent) {
+    delivery_.setSingleShot(true);
+    delivery_.setInterval(50);
+    connect(&delivery_, &QTimer::timeout, this, &ScanViewModel::publishDelivery);
+}
 
 ScanViewModel::~ScanViewModel() { stop(); }
 
@@ -453,8 +457,9 @@ void ScanViewModel::readNext() {
     const QPointer<ScanViewModel> self(this);
     const std::uint64_t generation = generation_;
     const std::shared_ptr<std::atomic<bool>> stop = stop_;
-    const auto index = session_ != nullptr ? std::make_shared<const edi::ScanResultIndex>(session_->index())
-                                           : std::make_shared<const edi::ScanResultIndex>();
+    // The session's shared copy of its index, which only a series' rows read: never a copy per batch.
+    static const auto kNoIndex = std::make_shared<const edi::ScanResultIndex>();
+    const std::shared_ptr<const edi::ScanResultIndex> index = session_ != nullptr && datasets_ ? session_->indexSnapshot() : kNoIndex;
     // By bank the units are the banks at one point; otherwise the points (or a scan's files).
     const bool by_bank = rows_by_bank_ && series_;
     const std::size_t at_point = by_bank ? std::min<std::size_t>(static_cast<std::size_t>(bank_point_), files_.empty() ? 0 : files_.size() - 1) : 0;
@@ -595,11 +600,23 @@ void ScanViewModel::deliver(std::size_t first, std::vector<Read>& done) {
     placeRange();
     if (series_) publishBackground();
     // File-index rows and labels stay fixed while batches arrive; extracted values reorder them once at the end.
-    if (loaded_ == count()) placeRows();
+    const bool complete = loaded_ == count();
+    if (complete) placeRows();
+    // The batches' patterns reach the views at most every 50 ms (ADR-0096 rule 4): a scan of tens of thousands of
+    // files arrives in thousands of batches, and each drew the Stacked and Map views again. The last one at once.
+    if (complete) {
+        delivery_.stop();
+        publishDelivery();
+    } else if (!delivery_.isActive()) {
+        delivery_.start();
+    }
+    readNext();
+}
+
+void ScanViewModel::publishDelivery() {
     emit loadedChanged();
     ++revision_;
     emit revisionChanged();
-    readNext();
 }
 
 void ScanViewModel::placeRows() {

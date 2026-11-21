@@ -29,6 +29,8 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QSettings>
+#include <atomic>
+#include <mutex>
 #include <QUrl>
 #include <limits>
 #include <string_view>
@@ -484,7 +486,7 @@ ProjectViewModel::ProjectViewModel(edi::Project project, QObject* parent, const 
         }
     }
     if (scan_) {
-        scan_template_ = *project_;
+        copyModelToTemplate();
         int shown = std::max(0, templateIndex());
         const std::vector<std::string>& files = scan_session_ ? scan_session_->datasets().files : std::vector<std::string>();
         for (std::size_t i = 0; i < files.size() && !selection.value(2).isEmpty(); ++i) {
@@ -502,7 +504,25 @@ ProjectViewModel::ProjectViewModel(edi::Project project, QObject* parent, const 
     }
     selection_store_timer_.setSingleShot(true);
     selection_store_timer_.setInterval(200);
-    connect(&selection_store_timer_, &QTimer::timeout, this, &ProjectViewModel::storeSelection);
+    connect(&selection_store_timer_, &QTimer::timeout, this, [this] {
+        // While a fit runs, a followed scan or series changes the dataset every run, and each write of the settings file
+        // holds Qt's settings lock while it syncs to disk, which stalled the GUI thread's own settings reads (the
+        // assistant reads them once a second during a fit). The write waits for the end of the fit; the selection itself
+        // was recorded when it changed (publishCurrent and the dataset signal below), so a project opened again meanwhile reads the newest one, and
+        // closing the project writes it.
+        if (fit_ != nullptr && fit_->running()) {
+            selection_store_timer_.start();
+            return;
+        }
+        storeSelection();
+    });
+    // A scan's dataset also changes outside publishCurrent (a followed file, a dataset view, a template row), each
+    // announcing it by this signal: every change is recorded at once and its write waits for the timer.
+    connect(this, &ProjectViewModel::currentExperimentIndexChanged, this, [this] {
+        if (retired_ || !selection_restored_) return;
+        noteSelection();
+        selection_store_timer_.start();
+    });
     selection_restored_ = true;
     storeSelection();
     restoreViewSettings();
@@ -793,18 +813,67 @@ void ProjectViewModel::setCurrentExperimentIndex(int index) {
     }
 }
 
+namespace {
+// The selections asked to be written and not yet on disk, by settings file and project key, each with its generation:
+// a worker writes only the newest one for its key, and a read takes a pending value before the file's.
+class PendingSelections {
+   public:
+    std::uint64_t put(const QString& path, const QString& key, const QStringList& value) {
+        const std::lock_guard lock(mutex_);
+        const std::uint64_t generation = ++counter_;
+        pending_.insert(slot(path, key), {generation, value});
+        return generation;
+    }
+    bool newest(const QString& path, const QString& key, std::uint64_t generation) {
+        const std::lock_guard lock(mutex_);
+        const auto it = pending_.constFind(slot(path, key));
+        return it != pending_.cend() && it->generation == generation;
+    }
+    void written(const QString& path, const QString& key, std::uint64_t generation) {
+        const std::lock_guard lock(mutex_);
+        const auto it = pending_.find(slot(path, key));
+        if (it != pending_.end() && it->generation == generation) pending_.erase(it);
+    }
+    std::optional<QStringList> value(const QString& path, const QString& key) {
+        const std::lock_guard lock(mutex_);
+        const auto it = pending_.constFind(slot(path, key));
+        return it != pending_.cend() ? std::optional(it->value) : std::nullopt;
+    }
+
+   private:
+    struct Entry {
+        std::uint64_t generation = 0;
+        QStringList value;
+    };
+    static QString slot(const QString& path, const QString& key) { return path + QLatin1Char('\n') + key; }
+    std::mutex mutex_;
+    std::uint64_t counter_ = 0;
+    QHash<QString, Entry> pending_;
+};
+
+PendingSelections& pending_selections() {
+    static PendingSelections pending;
+    return pending;
+}
+}  // namespace
+
 QStringList ProjectViewModel::storedSelection() const {
     if (project_->path.empty() || settings_file_path().isEmpty()) {
         return {};
     }
+    // A selection still on its way to the file is the newest one: a project closed and opened again at once reads it.
+    if (const std::optional<QStringList> pending = pending_selections().value(settings_file_path(), selectionKey()))
+        return *pending;
     QSettings store(settings_file_path(), QSettings::IniFormat);
     store.beginGroup(QStringLiteral("Selections"));
     return store.value(selectionKey()).toStringList();
 }
 
-void ProjectViewModel::storeSelection() const {
+std::uint64_t ProjectViewModel::noteSelection() const {
+    // The newest selection is recorded at once, before any write of the file, so a project opened again reads it
+    // (storedSelection) even while the write waits for a fit to end. Recording takes a lock, never the disk.
     if (!selection_restored_ || project_->path.empty() || settings_file_path().isEmpty()) {
-        return;
+        return 0;
     }
     const StructureViewModel* structure = currentStructure();
     const ExperimentViewModel* experiment = scan_ ? nullptr : currentExperiment();
@@ -813,10 +882,32 @@ void ProjectViewModel::storeSelection() const {
         current_dataset_ < static_cast<int>(scan_session_->datasets().files.size())) {
         dataset = QString::fromStdString(scan_session_->datasets().files[static_cast<std::size_t>(current_dataset_)]);
     }
-    QSettings store(settings_file_path(), QSettings::IniFormat);
-    store.beginGroup(QStringLiteral("Selections"));
-    store.setValue(selectionKey(), QStringList{structure ? structure->name() : QString(),
-                                               experiment ? experiment->name() : QString(), dataset});
+    return pending_selections().put(settings_file_path(), selectionKey(),
+                                    {structure ? structure->name() : QString(), experiment ? experiment->name() : QString(), dataset});
+}
+
+void ProjectViewModel::storeSelection() const {
+    // The file is written on a worker, one write at a time, as a followed scan changes the dataset every run and a
+    // write of the settings file took tens of milliseconds on the GUI thread. A write still pending at quit is waited
+    // for with the rest of the pool (main.cpp).
+    const std::uint64_t generation = noteSelection();
+    if (generation == 0) return;
+    const QString path = settings_file_path(), key = selectionKey();
+    const std::optional<QStringList> value = pending_selections().value(path, key);
+    if (!value) return;
+    run_in_background([path, key, value = *value, generation] {
+        static std::mutex writing;
+        const std::lock_guard lock(writing);
+        // Only the newest selection asked for under this file and key is written; another project's key is its own.
+        if (!pending_selections().newest(path, key, generation)) return;
+        {
+            QSettings store(path, QSettings::IniFormat);
+            store.beginGroup(QStringLiteral("Selections"));
+            store.setValue(key, value);
+            store.sync();
+        }
+        pending_selections().written(path, key, generation);
+    });
 }
 
 void ProjectViewModel::setStackedSpacing(const QString& spacing) {
@@ -884,7 +975,10 @@ void ProjectViewModel::publishCurrent() {
     if (retired_) return;
     const bool changed = current_structure_ != published_structure_index_ || currentStructure() != published_structure_ ||
         currentExperimentIndex() != published_experiment_index_ || currentExperiment() != published_experiment_;
-    if (changed && selection_restored_) selection_store_timer_.start();
+    if (changed && selection_restored_) {
+        noteSelection();
+        selection_store_timer_.start();
+    }
     if (current_structure_ != published_structure_index_) {
         published_structure_index_ = current_structure_;
         emit currentStructureIndexChanged();
@@ -4601,7 +4695,7 @@ void ProjectViewModel::viewDataset(int index, bool refresh) {
         return;
     }
     if (!scan_template_) {
-        scan_template_ = *project_;
+        copyModelToTemplate();
     }
     // The dataset already shown, with nothing pending: only its results row changed (a new row, Reset, Undo, a
     // run's end), so it is shown again at once from its row, with no file to read.
@@ -4895,6 +4989,9 @@ void ProjectViewModel::applyDatasetView(std::uint64_t request, int index, Datase
         }
     }
     applied = true;
+#if EDI_UI_INSTRUMENTATION
+    trace_applied_dataset_ = index;
+#endif
 }
 
 void ProjectViewModel::syncOutOfDate() {
@@ -4951,6 +5048,9 @@ QString ProjectViewModel::prepareScan(bool fresh) {
     QString warning = tr("The scan preparation changed the project, but its presentation failed. Undo or reopen before further changes.");
     editing_ = true;
     const auto release = qScopeGuard([this] { editing_ = false; });
+    // The run's template is the copy the scan fits from, made now if no dataset was shown yet (viewDataset makes it
+    // then): its identity is memoised on that copy, so the run's end finds it unchanged without a save to hash.
+    if (scan_ && !scan_template_) copyModelToTemplate();
     run_identity_ = templateIdentityOf(scanTemplateOrModel());
     previous_run_.reset();
     if (!fresh) { previous_run_ = scan_session_->run(); return {}; }
@@ -7019,6 +7119,7 @@ void ProjectViewModel::publishTemplate() {
 }
 
 void ProjectViewModel::publish(bool structural) {
+    ++model_revision_;  // every publication: modelSnapshot is made again
     if (structural) {
         drag_undo_.reset();  // the parameters it names may be gone; its full record still restores them by name
         registry_->rebuild(*project_);
@@ -7047,7 +7148,8 @@ void ProjectViewModel::publish(bool structural) {
         structure->sync();
     }
     for (ExperimentViewModel* experiment : experiment_models_) {
-        experiment->sync();
+        if (view) experiment->syncValues();
+        else experiment->sync();
         if (retired_) return;
     }
     structure_list_->setStructures(structure_models_);
@@ -7078,7 +7180,10 @@ void ProjectViewModel::publish(bool structural) {
         refreshTextsLater();
     } else {
         saved_files_.reset();
-        discovered_files_.reset();
+        // The discovered files give the sidebar its generated groups, which only a structural change adds or removes:
+        // a fit's result for each followed run changes values, and remaking them saved the whole project on the GUI
+        // thread once a run.
+        if (structural || fit_ == nullptr || !fit_->running()) discovered_files_.reset();
         refreshTextsAndReport();
     }
     if (retired_) return;
@@ -7283,6 +7388,7 @@ void ProjectViewModel::syncParameterTable(bool refresh_report) {
 
 void ProjectViewModel::invalidateTexts() {
     const PublicationScope publication(*this);
+    invalidateSnapshots();
     if (retired_) return;
     for (ExperimentViewModel* experiment : experiment_models_) {
         experiment->text()->invalidate();
@@ -7549,6 +7655,28 @@ std::string ProjectViewModel::discoveredFile(const std::string& relative) const 
     return file_of(*discovered_files_, relative);
 }
 
+std::shared_ptr<const edi::Project> ProjectViewModel::modelSnapshot() const {
+    if (!model_snapshot_ || model_snapshot_revision_ != model_revision_ || model_snapshot_epoch_ != snapshot_epoch_ ||
+        !edi::unchanged_since(*project_, model_snapshot_stamps_)) {
+        model_snapshot_ = std::make_shared<const edi::Project>(*project_);
+        model_snapshot_revision_ = model_revision_;
+        model_snapshot_epoch_ = snapshot_epoch_;
+        model_snapshot_stamps_ = edi::work_stamps(*project_);
+    }
+    return model_snapshot_;
+}
+
+std::shared_ptr<const edi::Project> ProjectViewModel::reportSnapshot() const {
+    if (!scan_template_) return modelSnapshot();
+    if (!report_template_snapshot_ || report_template_revision_ != model_revision_ ||
+        report_template_epoch_ != snapshot_epoch_) {
+        report_template_snapshot_ = std::make_shared<const edi::Project>(*scan_template_);
+        report_template_revision_ = model_revision_;
+        report_template_epoch_ = snapshot_epoch_;
+    }
+    return report_template_snapshot_;
+}
+
 std::shared_ptr<const edi::Project> ProjectViewModel::templateSnapshot() const {
     if (!scan_template_) return nullptr;
     if (!template_snapshot_ || !edi::unchanged_since(*scan_template_, template_snapshot_stamps_)) {
@@ -7558,13 +7686,25 @@ std::shared_ptr<const edi::Project> ProjectViewModel::templateSnapshot() const {
     return template_snapshot_;
 }
 
+std::optional<ProjectViewModel::IdentityMemo>& ProjectViewModel::identityMemoFor(const edi::Project* project) const {
+    return identity_memos_[project == project_.get() ? 0 : 1];
+}
+
 std::string ProjectViewModel::templateIdentityOf(const edi::Project& project) const {
-    if (identity_memo_ && identity_memo_->project == &project && edi::unchanged_since(project, identity_memo_->stamps)) {
-        return identity_memo_->identity;
+    std::optional<IdentityMemo>& memo = identityMemoFor(&project);
+    if (memo && memo->project == &project && edi::unchanged_since(project, memo->stamps)) {
+        return memo->identity;
     }
-    IdentityMemo memo{&project, edi::work_stamps(project), ScanSession::templateIdentity(project)};
-    identity_memo_ = std::move(memo);
-    return identity_memo_->identity;
+    memo = IdentityMemo{&project, edi::work_stamps(project), ScanSession::templateIdentity(project)};
+    return memo->identity;
+}
+
+void ProjectViewModel::copyModelToTemplate() {
+    scan_template_ = *project_;
+    const std::optional<IdentityMemo>& model = identityMemoFor(project_.get());
+    if (model && model->project == project_.get() && edi::unchanged_since(*project_, model->stamps)) {
+        identityMemoFor(&*scan_template_) = IdentityMemo{&*scan_template_, edi::work_stamps(*scan_template_), model->identity};
+    }
 }
 
 void ProjectViewModel::refreshTextsLater() {
@@ -7579,7 +7719,7 @@ void ProjectViewModel::refreshTextsLater() {
 void ProjectViewModel::makeTextsLater() {
     // From an uncalculated copy, as discoveredFile's: the values are the shown ones; a computed category waits for the
     // next publication that is not a view.
-    const auto copy = std::make_shared<const edi::Project>(*project_);
+    const auto copy = modelSnapshot();
     const edi::WorkStamps stamps = edi::work_stamps(*project_);
     const std::uint64_t request = ++texts_request_;
     const QPointer<ProjectViewModel> self(this);
@@ -7603,7 +7743,7 @@ void ProjectViewModel::makeTextsLater() {
                 }
                 self->saved_files_ = std::move(files);
                 if (!identity.empty()) {
-                    self->identity_memo_ = IdentityMemo{self->project_.get(), stamps, std::move(identity)};
+                    self->identityMemoFor(self->project_.get()) = IdentityMemo{self->project_.get(), stamps, std::move(identity)};
                 }
                 self->refreshTextsAndReport();
             },
@@ -7621,7 +7761,7 @@ void ProjectViewModel::refreshSpellingLater() {
 }
 
 void ProjectViewModel::makeSpellingLater() {
-    const auto copy = std::make_shared<const edi::Project>(*project_);
+    const auto copy = modelSnapshot();
     const edi::WorkStamps stamps = edi::work_stamps(*project_);
     const std::uint64_t request = ++spelling_request_;
     const QPointer<ProjectViewModel> self(this);

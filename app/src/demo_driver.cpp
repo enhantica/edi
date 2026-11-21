@@ -6,6 +6,8 @@
 #include <algorithm>
 
 #include <QCoreApplication>
+#include <QDirIterator>
+#include <QCryptographicHash>
 #include <QDir>
 #include <QEventLoop>
 #include <QFile>
@@ -31,6 +33,7 @@
 #include <system_error>
 
 #include "analysis_view_model.hpp"
+#include "background.hpp"
 #include "crysta/project_output.hpp"
 #include "edi/categories.hpp"
 #include "edi/palette.hpp"
@@ -39,10 +42,12 @@
 #include "fit_view_model.hpp"
 #include "parameter_item.hpp"
 #include "parameter_table_model.hpp"
+#include "pattern_chart_controller.hpp"
 #include "project_view_model.hpp"
 #include "scan_session.hpp"
 #include "scan_view_model.hpp"
 #include "session.hpp"
+#include "ui_probe.hpp"
 #include "structure_view_model.hpp"
 
 namespace edi_app {
@@ -92,7 +97,7 @@ QString copy_cli_project(const QString& id, const QDir& into) {
 }
 
 DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QString& only, QObject* parent)
-    : QObject(parent), window_(window), output_dir_(output_dir) {
+    : QObject(parent), window_(window), output_dir_(output_dir), only_(only) {
     // A new atom is random (edi::new_atom_site): the demo draws it from one seed, so its images repeat.
     AtomSiteListModel::fixRandomSeed(17);
     const QString experiment = QStringLiteral("appBar.tab.experiment");
@@ -1022,6 +1027,111 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
                                                  open_example("pd-neut-cwl_lbco_simulation") +
                                                  QStringList{"appBar.tab.experiment", basic, "experiments.loadData.0"}});
     }
+    // The GUI watchdog's scenarios (ADR-0096), run only when asked, each traced with EDI_UI_TRACE=1 for
+    // tools/ci/gui_watchdog.py: `e58-pages` shows every page with the scan EDI_DEMO_SCAN_PROJECT open; `e58-banks` steps
+    // through a copy of the five-bank NCAF set's experiments on Experiment and on Analysis; `e58-pattern` presses the
+    // scan's next and previous dataset ten times each on both pages' Pattern, at the driver's 100 ms pace; `e58-series`
+    // fits the series EDI_DEMO_SCAN_PROJECT to its end. A step's trace name is the measured step's; the steps before
+    // the first named one only set the scenario up and are not measured.
+    const auto named = [this](const QString& trace, int navigation = 0) {
+        steps_.back().trace = trace;
+        steps_.back().navigation = navigation;
+    };
+    if (only.startsWith(QLatin1String("e58-pages"))) {
+        steps_.push_back({"e58-pages-00-opened", {"resize:1480x800", "open-project:" + qEnvironmentVariable("EDI_DEMO_SCAN_PROJECT")}});
+        const QStringList pages{"home", "project", "structure", "experiment", "analysis", "report", "experiment", "report",
+                                "analysis"};
+        for (qsizetype i = 0; i < pages.size(); ++i) {
+            steps_.push_back({QStringLiteral("e58-pages-%1-page-%2").arg(i + 1, 2, 10, QLatin1Char('0')).arg(pages[i]),
+                              {"appBar.tab." + pages[i]}});
+            named("page-" + pages[i]);
+        }
+    }
+    // `e58-fit`: numbers fitted to their typed columns, with the project EDI_DEMO_FIT_PROJECT open (long written tokens):
+    // the Analysis table after a fit and the Structure tables at the smallest window, then a value cell edited across a
+    // resize and left.
+    if (only.startsWith(QLatin1String("e58-fit"))) {
+        const QString open = "open-project:" + qEnvironmentVariable("EDI_DEMO_FIT_PROJECT");
+        steps_.push_back({"e58-fit-1-analysis", {"resize:1024x640", open, "appBar.tab.analysis", "mainArea.tab.pattern",
+                                                 "statusBar.fit.button", "wait-fit", "choose:OK"}});
+        steps_.push_back({"e58-fit-2-structure", {"appBar.tab.structure", "expand:group.atom_site", "expand:group.atom_site_aniso"}});
+        steps_.push_back({"e58-fit-3-edit-resized", {"appBar.tab.analysis", "parameters.value.0", "resize:1600x900", "resize:1024x640"}});
+        steps_.push_back({"e58-fit-4-left", {"key:Tab"}});
+    }
+    // `e58-tabs`: every page, then each of its main and sidebar tabs, as EDI_UI_TAB_INVENTORY declares them (the pages in
+    // the app bar's order, each page's tabs in declaration order), with the scan EDI_DEMO_SCAN_PROJECT open.
+    if (only.startsWith(QLatin1String("e58-tabs"))) {
+        steps_.push_back({"e58-tabs-000-opened", {"resize:1480x800", "open-project:" + qEnvironmentVariable("EDI_DEMO_SCAN_PROJECT")}});
+        const QJsonObject pages = QJsonDocument::fromJson(qgetenv("EDI_UI_TAB_INVENTORY")).object();
+        int n = 0;
+        const auto add = [&](const QString& name, const QString& object) {
+            // Captured a set time after the click: a view that keeps drawing while it loads (Map on a long scan) never
+            // settles, and the trace, not the image, is what this scenario measures.
+            steps_.push_back({QStringLiteral("e58-tabs-%1-%2").arg(++n, 3, 10, QLatin1Char('0')).arg(name), {object, "capture-now"}});
+            named(name);
+            steps_.back().skip_unavailable = true;
+        };
+        for (const QString& page : {QStringLiteral("home"), QStringLiteral("project"), QStringLiteral("structure"),
+                                    QStringLiteral("experiment"), QStringLiteral("analysis"), QStringLiteral("report")}) {
+            if (!pages.contains(page)) continue;
+            add("page-" + page, "appBar.tab." + page);
+            for (const char* area : {"main", "sidebar"}) {
+                for (const QJsonValue& tab : pages.value(page).toObject().value(QString::fromLatin1(area)).toArray()) {
+                    add(QStringLiteral("tab-%1-%2-%3").arg(QString::fromLatin1(area), page, tab.toObject().value("key").toString()),
+                        tab.toObject().value("object").toString());
+                }
+            }
+        }
+    }
+    if (only.startsWith(QLatin1String("e58-banks"))) {
+        const QString banks = copy_cli_project(QStringLiteral("pd-neut-tof_ncaf-wish-5bank_start-5"), QDir(loaded_files_.path()));
+        steps_.push_back({"e58-banks-00-opened", {"resize:1480x800", "open-project:" + banks, "appBar.tab.experiment"}});
+        int n = 0;
+        for (const QString& page : {QStringLiteral("experiment"), QStringLiteral("analysis")}) {
+            for (const QString& direction : {QStringLiteral("next"), QStringLiteral("previous")}) {
+                if (page == QLatin1String("analysis") && direction == QLatin1String("next"))
+                    steps_.push_back({QStringLiteral("e58-banks-%1-to-analysis").arg(++n, 2, 10, QLatin1Char('0')), {"appBar.tab.analysis"}});
+                for (int i = 0; i < 4; ++i) {
+                    steps_.push_back({QStringLiteral("e58-banks-%1-%2-%3-%4").arg(++n, 2, 10, QLatin1Char('0')).arg(page, direction).arg(i),
+                                      {direction == QLatin1String("next") ? "mainArea.blocks.down" : "mainArea.blocks.up"}});
+                    named(QStringLiteral("%1-%2-%3").arg(page, direction).arg(i));
+                }
+            }
+        }
+    }
+    if (only.startsWith(QLatin1String("e58-pattern"))) {
+        steps_.push_back({"e58-pattern-00-opened", {"resize:1480x800", "open-project:" + qEnvironmentVariable("EDI_DEMO_SCAN_PROJECT"),
+                                                    "appBar.tab.experiment", "mainArea.tab.pattern"}});
+        int n = 0;
+        for (const QString& page : {QStringLiteral("experiment"), QStringLiteral("analysis")}) {
+            for (const QString& direction : {QStringLiteral("next"), QStringLiteral("previous")}) {
+                const bool next = direction == QLatin1String("next");
+                if (page == QLatin1String("analysis") && next)
+                    steps_.push_back({QStringLiteral("e58-pattern-%1-to-analysis").arg(++n, 2, 10, QLatin1Char('0')),
+                                      {"appBar.tab.analysis", "mainArea.tab.pattern"}});
+                // Ten presses on a 100 ms schedule (run_step), each without a capture or a wait.
+                for (int i = 0; i < 10; ++i) {
+                    steps_.push_back({QStringLiteral("e58-pattern-%1-%2-%3-%4").arg(++n, 2, 10, QLatin1Char('0')).arg(page, direction).arg(i),
+                                      {next ? "mainArea.blocks.down" : "mainArea.blocks.up"}});
+                    steps_.back().capture = false;
+                    named(QStringLiteral("%1-%2-%3").arg(page, direction).arg(i), next ? 1 : -1);
+                }
+                steps_.push_back({QStringLiteral("e58-pattern-%1-%2-%3-settled").arg(++n, 2, 10, QLatin1Char('0')).arg(page, direction), {"wait-settled"}});
+            }
+        }
+    }
+    if (only.startsWith(QLatin1String("e58-series"))) {
+        steps_.push_back({"e58-series-0-opened", {"resize:1480x800", "open-project:" + qEnvironmentVariable("EDI_DEMO_SCAN_PROJECT"),
+                                                  analysis, basic, "mainArea.tab.pattern"}});
+        steps_.push_back({"e58-series-1-fit-start", {"statusBar.fit.button", "capture-now"}});
+        named(QStringLiteral("fit-start"));
+        steps_.push_back({"e58-series-2-fit-running", {"wait-files:50", "capture-now"}});
+        named(QStringLiteral("fit-running"));
+        steps_.push_back({"e58-series-3-fit-ended", {"wait-fit"}});
+        named(QStringLiteral("fit-ended"));
+        steps_.push_back({"e58-series-4-end-settled", {"wait-settled"}});
+        named(QStringLiteral("end-settled"));
+    }
     if (only.startsWith(QLatin1String("stall-"))) {
         steps_.push_back({"stall-1-opened",
                           {"resize:1480x800", "open-project:" + qEnvironmentVariable("EDI_DEMO_SCAN_PROJECT"),
@@ -1711,7 +1821,9 @@ void DemoDriver::start() {
 
 void DemoDriver::run_step() {
     if (current_ == steps_.size()) {
-        QCoreApplication::exit(!documentation_ || saveDocumentationManifest("complete") ? 0 : 1);
+        const int code = !documentation_ || saveDocumentationManifest("complete") ? 0 : 1;
+        if (trace_complete(code)) return;
+        QCoreApplication::exit(code);
         return;
     }
     documentation_skip_ = false;
@@ -1719,9 +1831,511 @@ void DemoDriver::run_step() {
         std::fprintf(stdout, "docs-capture: %s\n", qPrintable(steps_[current_].image));
         std::fflush(stdout);
     }
+    const Step& step = steps_[current_];
+    if (!step.trace.isEmpty()) trace_step_begin(step);
     action_ = 0;
+    // Next and previous presses go out on a 100 ms schedule from the first of a run of them, as a held key would.
+    if (step.navigation != 0) {
+        if (!nav_clock_.isValid()) nav_clock_.start();
+        const qint64 now = nav_clock_.elapsed();
+        if (current_ == 0 || steps_[current_ - 1].navigation == 0) {
+            nav_base_ = now;
+            nav_index_ = 0;
+        }
+        const qint64 due = nav_base_ + 100 * nav_index_++;
+        QTimer::singleShot(static_cast<int>(std::max<qint64>(0, due - now)), Qt::PreciseTimer, this, [this] { next_action(); });
+        return;
+    }
     next_action();
 }
+
+QImage DemoDriver::grab() {
+    // The window grab renders a frame on the GUI thread for the driver, not for the user: the GUI watchdog leaves it
+    // out (ui_probe.hpp).
+#if EDI_UI_INSTRUMENTATION
+    const int id = ++tool_id_;
+    trace_measurement(true, id, QStringLiteral("QQuickWindow::grabWindow"));
+    QImage frame = window_.grabWindow();
+    trace_measurement(false, id, QStringLiteral("QQuickWindow::grabWindow"));
+    return frame;
+#else
+    return window_.grabWindow();
+#endif
+}
+
+namespace {
+ProjectViewModel* open_project(QQuickWindow& window);  // below
+}  // namespace
+
+#if EDI_UI_INSTRUMENTATION
+void DemoDriver::trace_collect_tabs(QQuickItem* root) {
+    std::function<void(QQuickItem*)> walk = [&](QQuickItem* item) {
+        for (QQuickItem* child : item->childItems()) {
+            const QString name = child->objectName();
+            if (name.startsWith(QLatin1String("mainArea.")) && name.contains(QLatin1String(".tab.")) &&
+                !view_tabs_.contains(child))
+                view_tabs_.append(child);
+            if (name.startsWith(QLatin1String("sideBar.tab.")) && !side_tabs_.contains(child)) side_tabs_.append(child);
+            walk(child);
+        }
+    };
+    walk(root);
+}
+
+void DemoDriver::trace_tab_inventory() {
+    if (tab_inventory_sent_) return;
+    QJsonObject pages;
+    for (const QPointer<QQuickItem>& tab : page_tabs_) {
+        if (!tab) continue;
+        const QString page = tab->objectName().mid(11);
+        QJsonArray main, sidebar;
+        if (auto* loader = qvariant_cast<QQuickItem*>(tab->property("page")); loader != nullptr) {
+            if (loader->property("status").toInt() != 1) return;  // a page still being built: not yet
+            std::function<void(QQuickItem*)> walk = [&](QQuickItem* item) {
+                for (QQuickItem* child : item->childItems()) {
+                    const QString name = child->objectName();
+                    const QJsonObject entry{{"key", name.section(QLatin1Char('.'), -1)}, {"object", name}};
+                    if (name.startsWith(QLatin1String("mainArea.")) && name.contains(QLatin1String(".tab."))) main.append(entry);
+                    if (name.startsWith(QLatin1String("sideBar.tab."))) sidebar.append(entry);
+                    walk(child);
+                }
+            };
+            walk(loader);
+        }
+        pages.insert(page, QJsonObject{{"main", main}, {"sidebar", sidebar}});
+    }
+    tab_inventory_sent_ = true;
+    EDI_UI_TRACE("tab-inventory", {{"witness", "qml-tab-bars"}, {"pages", pages}});
+}
+
+void DemoDriver::trace_measurement(bool enter, int id, const QString& callback) {
+    // The span marker and the callback witness of the driver's own work, at one instant (tools/ci/gui_watchdog.py).
+    if (!ui_trace_on()) return;
+    if (enter) {
+        ui_trace_group({{"tool-begin", {{"id", id}, {"callback", callback}}},
+                        {"measurement-enter", {{"id", id}, {"callback", callback}}}});
+    } else {
+        ui_trace_group({{"measurement-leave", {{"id", id}, {"callback", callback}}},
+                        {"tool-end", {{"id", id}, {"callback", callback}}}});
+    }
+}
+
+void DemoDriver::trace_step_begin(const Step& step) {
+    if (!ui_trace_on()) return;
+    if (!trace_begun_) {
+        trace_begun_ = true;
+        trace_scenario_ = only_.section(QLatin1Char('-'), 0, 1);
+        trace_watch();  // the observers are in place before the first input
+        EDI_UI_TRACE("begin", {{"scenario", trace_scenario_}});
+    }
+    // A step that only waits (a fit's progress) issues its wait as its action.
+    if (step.navigation == 0 && !step.actions.isEmpty() && step.actions.first().startsWith(QLatin1String("wait-"))) {
+        trace_issue(step.actions.first());
+    }
+    // The watchdog's control: EDI_UI_BLOCK_MS blocks the GUI thread once inside the measured steps, outside the
+    // driver's own work, so a check that cannot see a blocked GUI thread is caught. Production never sets it.
+    if (const int block = qEnvironmentVariableIntValue("EDI_UI_BLOCK_MS"); block > 0 && !blocked_) {
+        blocked_ = true;
+        EDI_UI_TRACE("block-begin", {{"ms", block}});
+        QThread::msleep(static_cast<unsigned long>(block));
+        EDI_UI_TRACE("block-end", {{"ms", block}});
+    }
+}
+
+void DemoDriver::trace_issue(const QString& action) {
+    if (!ui_trace_on()) return;
+    const Step& step = steps_[current_];
+    const QJsonObject now = trace_state();
+    Pending pending;
+    pending.request = ++request_id_;
+    pending.name = step.trace;
+    if (action.startsWith(QLatin1String("appBar.tab."))) {
+        pending.page = action.mid(11);
+    } else if ((action.startsWith(QLatin1String("mainArea.")) && action.contains(QLatin1String(".tab."))) ||
+               action.startsWith(QLatin1String("sideBar.tab."))) {
+        pending.object = action;
+    } else if (action.startsWith(QLatin1String("mainArea.blocks."))) {
+        pending.before = now.value(QStringLiteral("selection")).toInt();
+        if (step.navigation != 0) {
+            pending.direction = step.navigation > 0 ? QStringLiteral("next") : QStringLiteral("previous");
+            FrameWatch watch;
+            watch.request = pending.request;
+            watch.chart = find_held(QStringLiteral("chart"), false);
+            if (watch.chart) watch.controller = watch.chart->findChild<PatternChartController*>();
+            if (watch.controller) watch.base = watch.controller->traceGeneration();
+            frame_watches_.append(watch);
+        }
+    } else if (action == QLatin1String("statusBar.fit.button")) {
+        pending.fit = QStringLiteral("start");
+    } else if (action.startsWith(QLatin1String("wait-files"))) {
+        pending.fit = QStringLiteral("running");
+    } else if (action == QLatin1String("wait-fit")) {
+        pending.fit = QStringLiteral("ended");
+    } else {
+        pending.fit = QStringLiteral("settled");
+    }
+    pending_.push_back(pending);
+    EDI_UI_TRACE("action", {{"request", pending.request}, {"name", step.trace}, {"command", action},
+                            {"before_selection", now.value(QStringLiteral("selection"))}});
+}
+
+void DemoDriver::trace_issued(const Step&) {
+    if (!ui_trace_on() || pending_.empty()) return;
+    // The press's target is the selection it made, read from the model at once.
+    const int dataset = trace_state().value(QStringLiteral("selection")).toInt();
+    pending_.back().dataset = dataset;
+    if (!frame_watches_.isEmpty() && frame_watches_.last().request == pending_.back().request)
+        frame_watches_.last().dataset = dataset;
+}
+
+bool DemoDriver::trace_complete(int code) {
+    if (!trace_begun_) return false;
+    // The trace's last tick follows its end, so the measured interval is closed by a tick.
+    EDI_UI_TRACE("complete", {{"scenario", trace_scenario_}});
+    QTimer::singleShot(50, this, [code] { QCoreApplication::exit(code); });
+    return true;
+}
+
+void DemoDriver::trace_watch() {
+    if (watching_) {
+        return;
+    }
+    watching_ = true;
+    // The tab buttons are found once: reading their state is all a frame costs.
+    std::function<void(QQuickItem*)> walk = [&](QQuickItem* item) {
+        for (QQuickItem* child : item->childItems()) {
+            if (child->objectName().startsWith(QLatin1String("appBar.tab."))) page_tabs_.append(child);
+            walk(child);
+        }
+    };
+    walk(window_.contentItem());
+    trace_collect_tabs(window_.contentItem());
+    input_identity_ = trace_input();
+    if (ProjectViewModel* project = open_project(window_); project != nullptr) {
+        // What was loaded, counted from the model: the patterns (a scan's datasets or the experiments), structures,
+        // experiments and the current pattern's points.
+        const edi::Project& core = project->project();
+        int data_points = 0;
+        if (const ExperimentViewModel* experiment = project->currentExperiment(); experiment != nullptr) {
+            const auto& held = *core.experiments[experiment->tracePlace()];
+            if (held.data) data_points = static_cast<int>(held.data->intensity_meas.size());
+        }
+        // A series' fitted points, a scan's datasets, or none; each holds one measured pattern per bank with data.
+        const int banks = static_cast<int>(core.experiments.size());
+        const int with_data = static_cast<int>(std::count_if(core.experiments.begin(), core.experiments.end(),
+                                                             [](const auto& bank) { return bank->data.has_value(); }));
+        const int series_points = project->property("seriesPointCount").toInt();
+        const bool scan = project->scanTemplate() != nullptr;
+        const int points = series_points > 0 ? series_points
+                           : scan && project->experiments() != nullptr ? project->experiments()->rowCount() : 0;
+        EDI_UI_TRACE("input", {{"identity", input_identity_}, {"input", input_identity_}, {"banks", banks},
+                               {"measured", with_data > 0}, {"measured_banks", with_data},
+                               {"points", points}, {"data_points", data_points},
+                               {"structures", static_cast<int>(core.structures.size())}});
+        if (FitViewModel* fit = project->fit(); fit != nullptr) {
+            fit_running_ = fit->running();
+            connect(fit, &FitViewModel::runningChanged, this, [this, fit] {
+                fit_running_ = fit->running();
+                if (fit_running_) ++fit_runs_;
+            });
+        }
+    }
+    connect(&window_, &QQuickWindow::afterAnimating, this, &DemoDriver::trace_frame);
+    // At synchronisation the GUI thread waits, so the native state and the chart's geometry are read there and are
+    // what the frame shows; the frame's swap then writes them, with the transitions published for it, at one instant.
+    // Both run on the render thread: they are dropped before quitting, so none can run while the driver goes away.
+    trace_sync_ = connect(&window_, &QQuickWindow::afterSynchronizing, this, [this] {
+        const QJsonObject displayed = trace_state();
+        QJsonArray frames, presented;
+        // One observation a swap, so the swap's render names one request: a press's first frame comes first (it must
+        // be the first swap after the press); a settled frame waits for the next swap, which checks it again.
+        FrameWatch* chosen = nullptr;
+        bool settling = false;
+        for (FrameWatch& watch : frame_watches_) {
+            if (watch.chart && !watch.first) {
+                chosen = &watch;
+                break;
+            }
+        }
+        QString buffers;
+        if (chosen == nullptr) {
+            for (FrameWatch& watch : frame_watches_) {
+                if (!watch.chart || !watch.presented || watch.settled || !watch.controller) continue;
+                // Settled: the chart's current upload was made from the selected dataset's data, the series objects
+                // hold that upload now (read back from them), and every measured point they draw is a point of the
+                // selected data as the project holds it. The generation named is the one drawn.
+                const PatternChartController* controller = watch.controller;
+                if (controller->traceIdentity() != watch.native) continue;
+                const QString held = controller->traceBufferIdentity();
+                if (held.isEmpty() || held != controller->traceUploadIdentity()) continue;
+                if (!trace_matches_expected(watch)) continue;
+                chosen = &watch;
+                settling = true;
+                buffers = held;
+                break;
+            }
+        }
+        if (chosen != nullptr) {
+            FrameWatch& watch = *chosen;
+            QJsonObject frame = trace_geometry(watch.chart);
+            frame.insert(QStringLiteral("request"), watch.request);
+            if (!settling) {
+                watch.first = true;
+                frame.insert(QStringLiteral("phase"), QStringLiteral("first"));
+                frames.append(frame);
+            } else {
+                watch.settled = true;
+                watch.presentation.insert(QStringLiteral("generation"), static_cast<double>(watch.controller->traceGeneration()));
+                watch.presentation.insert(QStringLiteral("upload_identity"), watch.controller->traceUploadIdentity());
+                watch.presentation.insert(QStringLiteral("buffer_identity"), buffers);
+                for (auto it = watch.presentation.begin(); it != watch.presentation.end(); ++it) frame.insert(it.key(), it.value());
+                frame.insert(QStringLiteral("phase"), QStringLiteral("settled"));
+                frames.append(frame);
+                presented.append(watch.presentation);
+            }
+        }
+        const std::lock_guard lock(trace_mutex_);
+        synced_frame_ = ui_trace_frame_synced();
+        synced_displayed_ = displayed;
+        synced_transitions_ = std::exchange(published_transitions_, {});
+        synced_frames_ = frames;
+        synced_presented_ = presented;
+    }, Qt::DirectConnection);
+    trace_swap_ = connect(&window_, &QQuickWindow::frameSwapped, this, [this] {
+        std::vector<std::pair<const char*, QJsonObject>> events;
+        QJsonArray requests;
+        {
+            const std::lock_guard lock(trace_mutex_);
+            for (const QJsonValue& value : std::exchange(synced_frames_, {})) {
+                QJsonObject frame = value.toObject();
+                requests.append(frame.value(QStringLiteral("request")));
+                frame.insert(QStringLiteral("frame"), synced_frame_);
+                frame.insert(QStringLiteral("witness"), QStringLiteral("afterSynchronizing/frameSwapped"));
+                events.emplace_back("frame", frame);
+            }
+            QJsonObject render{{"frame", synced_frame_},
+                               {"transitions", std::exchange(synced_transitions_, {})},
+                               {"displayed", synced_displayed_}};
+            // The request whose first or settled frame this is, and for a settled one its presentation (request,
+            // input, dataset, generation, data and buffer identities), on the render itself.
+            const QJsonArray presented = std::exchange(synced_presented_, {});
+            // At most one observation a swap (above): its request, and a settled one's presentation.
+            if (!requests.isEmpty()) render.insert(QStringLiteral("request"), requests.first());
+            if (!presented.isEmpty()) {
+                const QJsonObject shown = presented.first().toObject();
+                for (auto it = shown.begin(); it != shown.end(); ++it) render.insert(it.key(), it.value());
+            }
+            events.emplace_back("render", render);
+        }
+        ui_trace_group(events);
+    }, Qt::DirectConnection);
+    connect(QCoreApplication::instance(), &QCoreApplication::aboutToQuit, this, [this] {
+        disconnect(trace_sync_);
+        disconnect(trace_swap_);
+    });
+}
+
+QJsonObject DemoDriver::trace_geometry(QQuickItem* chart) const {
+    // The pattern chart's three panes and its three axes (their titles), each a scene rectangle and whether it shows.
+    static const std::pair<const char*, const char*> kEntries[] = {
+        {"pattern", "chart.view.main"},  {"bragg", "chart.view.bragg"},      {"residual", "chart.view.residual"},
+        {"x", "chart.title.x"},          {"intensity", "chart.title.y"},     {"residual-axis", "chart.title.residual"}};
+    QJsonObject rects, shown;
+    for (const auto& [name, object] : kEntries) {
+        auto* item = chart->findChild<QQuickItem*>(QString::fromLatin1(object));
+        const QRectF r = item != nullptr ? item->mapRectToScene(QRectF(0, 0, item->width(), item->height())) : QRectF();
+        rects.insert(QString::fromLatin1(name), QJsonArray{r.x(), r.y(), r.width(), r.height()});
+        shown.insert(QString::fromLatin1(name),
+                     item != nullptr && item->isVisible() && item->opacity() > 0 && r.width() > 0 && r.height() > 0);
+    }
+    return {{"panes", QJsonArray{"pattern", "bragg", "residual"}}, {"axes", QJsonArray{"x", "intensity", "residual"}},
+            {"geometry", rects}, {"visible", shown}};
+}
+
+QString DemoDriver::trace_input() {
+    // The project's content, not its folder: an ordinary run and its control open copies in different places.
+    const ProjectViewModel* project = open_project(window_);
+    if (project == nullptr) return {};
+    QCryptographicHash hash(QCryptographicHash::Sha256);
+    QStringList files;
+    QDirIterator it(QString::fromStdString(project->project().path), {QStringLiteral("*.edi")}, QDir::Files,
+                    QDirIterator::Subdirectories);
+    while (it.hasNext()) files.append(it.next());
+    files.sort();
+    const QDir root(QString::fromStdString(project->project().path));
+    for (const QString& path : files) {
+        QFile file(path);
+        if (file.open(QIODevice::ReadOnly)) {
+            hash.addData(root.relativeFilePath(path).toUtf8());
+            hash.addData(file.readAll());
+        }
+    }
+    return QString::fromLatin1(hash.result().toHex().left(16));
+}
+
+QJsonObject DemoDriver::trace_state() {
+    QString page;
+    for (const QPointer<QQuickItem>& tab : page_tabs_) {
+        if (tab && tab->property("checked").toBool()) page = tab->objectName().mid(11);
+    }
+    // The shown page's selected main and sidebar tabs: checked, visible and on screen (another page's are off screen).
+    const auto selected = [this](const QList<QPointer<QQuickItem>>& tabs) -> QJsonValue {
+        for (const QPointer<QQuickItem>& tab : tabs) {
+            if (tab && tab->property("checked").toBool() && tab->isVisible() && on_screen(tab))
+                return tab->objectName().section(QLatin1Char('.'), -1);
+        }
+        return QJsonValue::Null;
+    };
+    const ProjectViewModel* project = open_project(window_);
+    return {{"input", input_identity_}, {"page", page}, {"tab", selected(view_tabs_)}, {"sidebar_tab", selected(side_tabs_)},
+            {"selection", project != nullptr ? project->property("currentExperimentIndex").toInt() : -1}};
+}
+
+QString DemoDriver::trace_native_identity() {
+    // The selected pattern's measured data as the project holds them, read from the model, not from a chart: empty
+    // while a scan's selected dataset is still being read.
+    ProjectViewModel* project = open_project(window_);
+    if (project == nullptr) return {};
+    const ExperimentViewModel* experiment = project->currentExperiment();
+    if (experiment == nullptr) return {};
+    const int selection = project->property("currentExperimentIndex").toInt();
+    if (project->scanTemplate() != nullptr && (project->traceAppliedDataset() != selection || !project->viewSettled()))
+        return {};
+    const std::uint64_t key = project->traceViewApplied() * 1000003u + static_cast<std::uint64_t>(selection + 1);
+    if (native_cache_.first != key || native_cache_.second.isEmpty()) {
+        const auto& held = *project->project().experiments[experiment->tracePlace()];
+        native_cache_ = std::make_pair(key, held.data ? ui_trace_identity(&held.data->intensity_meas.get()) : QString());
+    }
+    return native_cache_.second;
+}
+
+void DemoDriver::trace_expect(FrameWatch& watch) {
+    const PatternChartController* controller = watch.controller;
+    if (controller == nullptr || watch.expected_generation == controller->traceGeneration()) return;
+    ProjectViewModel* project = open_project(window_);
+    const int place = controller->traceExperimentPlace();
+    if (project == nullptr || place < 0) return;
+    watch.expected.clear();
+    watch.expected_presentation.reset();
+    watch.expected_generation = controller->traceGeneration();
+    // The selected data, captured from the project and presented with the chart's own view: what the chart should
+    // draw for this upload.
+    const edi::PatternSource source = edi::capture_pattern(project->project(), static_cast<std::size_t>(place), controller->traceAxis());
+    edi::PatternPresentation presentation = edi::present_pattern(source, controller->traceView());
+    for (const edi::PatternSeries& series : presentation.series) {
+        if (series.kind != edi::SeriesKind::Measured) continue;
+        for (const edi::PresentedPoint& point : series.points)
+            if (std::isfinite(point.x) && std::isfinite(point.y)) watch.expected.append(QPointF(point.x, point.y));
+    }
+    watch.expected_presentation = std::move(presentation);
+}
+
+bool DemoDriver::trace_matches_expected(const FrameWatch& watch) const {
+    // Every buffer the chart draws (lines, band edges and fills, bars, component areas and outlines, the measured marks
+    // and their bars, in the representation shown) is the one the selected data give, and none is left from before.
+    const PatternChartController* controller = watch.controller;
+    return controller != nullptr && watch.expected_generation == controller->traceGeneration() && !watch.expected.isEmpty() &&
+           watch.expected_presentation.has_value() && controller->traceMatches(*watch.expected_presentation);
+}
+
+void DemoDriver::trace_frame() {
+    QJsonObject state = trace_state();
+    const int selection = state.value(QStringLiteral("selection")).toInt();
+    const QString native = trace_native_identity();
+    // A press's dataset is presented once the chart has uploaded data whose content is that dataset's, as the project
+    // holds it: an upload of anything else, or one made before the press, is not.
+    for (FrameWatch& watch : frame_watches_) {
+        if (watch.presented || !watch.controller || watch.dataset < 0) continue;
+        if (watch.native.isEmpty() && selection == watch.dataset) watch.native = native;
+        if (!watch.native.isEmpty() && watch.controller->traceGeneration() > watch.base &&
+            watch.controller->traceIdentity() == watch.native && !watch.controller->traceUploadIdentity().isEmpty()) {
+            watch.presented = true;
+            watch.generation = watch.controller->traceGeneration();
+            watch.upload = watch.controller->traceUploadIdentity();
+            watch.presentation = {{"request", watch.request}, {"dataset", watch.dataset},
+                                  {"generation", static_cast<double>(watch.controller->traceGeneration())},
+                                  {"data_identity", watch.native}, {"input", input_identity_},
+                                  {"upload_identity", watch.upload}};
+            EDI_UI_TRACE("presented", watch.presentation);
+        }
+        if (watch.presented && !watch.settled && watch.controller) trace_expect(watch);
+    }
+    // The steps' actions, in order: each writes its state, its publication and then the step, once the native state
+    // shows what it asked for.
+    while (!pending_.empty()) {
+        const Pending& pending = pending_.front();
+        bool reached = false;
+        // A press another press replaced before its dataset was read is written as it is now, superseded and with no
+        // data identity: its dataset was never shown.
+        bool superseded = false;
+        if (!pending.page.isEmpty()) {
+            reached = state.value(QStringLiteral("page")).toString() == pending.page;
+        } else if (!pending.object.isEmpty()) {
+            const QQuickItem* button = find_held(pending.object, false);
+            reached = button != nullptr && button->property("checked").toBool();
+        } else if (pending.dataset >= 0) {
+            superseded = selection != pending.dataset;
+            reached = superseded || !native.isEmpty();
+        } else if (pending.before >= 0) {
+            reached = selection != pending.before;
+        } else if (pending.fit == QLatin1String("start") || pending.fit == QLatin1String("running")) {
+            reached = fit_running_;
+        } else if (!pending.fit.isEmpty()) {
+            reached = !fit_running_;
+        }
+        if (!reached) break;
+        const QString transition = QStringLiteral("t%1").arg(pending.request);
+        QJsonObject reached_state = state;
+        reached_state.insert(QStringLiteral("request"), pending.request);
+        reached_state.insert(QStringLiteral("selected_object"), pending.object);
+        if (!pending.page.isEmpty()) {
+            // A page visit: its tab buttons are collected once it is built, and the inventory once every page is.
+            for (const QPointer<QQuickItem>& tab : page_tabs_) {
+                if (tab && tab->objectName() == QLatin1String("appBar.tab.") + pending.page) {
+                    if (auto* loader = qvariant_cast<QQuickItem*>(tab->property("page")); loader != nullptr) trace_collect_tabs(loader);
+                }
+            }
+            trace_tab_inventory();
+        }
+        reached_state.insert(QStringLiteral("transition"), transition);
+        QJsonObject publication{{"transition", transition}, {"input", input_identity_}};
+        if (superseded) {
+            reached_state.insert(QStringLiteral("superseded"), true);
+            publication.insert(QStringLiteral("superseded"), true);
+        } else if (pending.dataset >= 0) {
+            reached_state.insert(QStringLiteral("data_identity"), native);
+            publication.insert(QStringLiteral("data_identity"), native);
+        }
+        if (!pending.fit.isEmpty()) {
+            const ProjectViewModel* project = open_project(window_);
+            const FitViewModel* fit = project != nullptr ? project->fit() : nullptr;
+            reached_state.insert(QStringLiteral("fitting"), fit_running_);
+            reached_state.insert(QStringLiteral("completed"), fit != nullptr ? fit->scanProcessed() : 0);
+            reached_state.insert(QStringLiteral("run"), fit_runs_);
+            publication.insert(QStringLiteral("run"), fit_runs_);
+        }
+        EDI_UI_TRACE("state", reached_state);
+        {
+            const std::lock_guard lock(trace_mutex_);
+            published_transitions_.append(transition);
+        }
+        publication.insert(QStringLiteral("frame"), ui_trace_next_frame());
+        EDI_UI_TRACE("transition-publication", publication);
+        QJsonObject step{{"name", pending.name}, {"request", pending.request}};
+        if (!pending.direction.isEmpty()) {
+            step.insert(QStringLiteral("direction"), pending.direction);
+            step.insert(QStringLiteral("dataset"), pending.dataset);
+        }
+        EDI_UI_TRACE("step", step);
+        pending_.pop_front();
+    }
+}
+#else
+void DemoDriver::trace_step_begin(const Step&) {}
+void DemoDriver::trace_issue(const QString&) {}
+void DemoDriver::trace_issued(const Step&) {}
+bool DemoDriver::trace_complete(int) { return false; }
+#endif
 
 void DemoDriver::next_action() {
     const Step& step = steps_[current_];
@@ -1731,6 +2345,29 @@ void DemoDriver::next_action() {
         ++current_;
         run_step();
         return;
+    }
+    // A tab the app does not offer in this state (Correlations before a fit) cannot be shown: the step is skipped and
+    // the trace says so, rather than the run stopping there.
+    // A page still loading can offer a tab a moment later (Pattern once the experiments are listed), so the frame
+    // settles once before a tab is taken as not offered.
+    if (step.skip_unavailable && action_ == 0 && !step.actions.isEmpty()) {
+        QQuickItem* item = find(step.actions.first(), false);
+        const bool offered = item != nullptr && item->isVisible() && item->isEnabled() && on_screen(item);
+        if (!offered && !availability_settled_) {
+            availability_settled_ = true;
+            settle_then([this] { next_action(); });
+            return;
+        }
+        availability_settled_ = false;
+        if (!offered) {
+#if EDI_UI_INSTRUMENTATION
+            ui_trace("step-skipped", QJsonObject{{"name", step.trace}, {"control", step.actions.first()},
+                                                 {"reason", item == nullptr ? "missing" : !item->isVisible() ? "hidden" : !item->isEnabled() ? "disabled" : "off screen"}});
+#endif
+            ++current_;
+            run_step();
+            return;
+        }
     }
     // capture-now captures a set time after the actions; capture-at:<ms> after that many milliseconds, to show an
     // animation partway.
@@ -1807,8 +2444,21 @@ void DemoDriver::next_action() {
             }
             return;
         }
+        const bool tab_button = (action.startsWith(QLatin1String("mainArea.")) && action.contains(QLatin1String(".tab."))) ||
+                                action.startsWith(QLatin1String("sideBar.tab."));
+        const bool issues = !step.trace.isEmpty() && (action.startsWith(QLatin1String("appBar.tab.")) ||
+                                                      action.startsWith(QLatin1String("mainArea.blocks.")) ||
+                                                      action == QLatin1String("statusBar.fit.button") || tab_button);
+        if (issues) trace_issue(action);
         if (!perform(action)) {
             return;  // fail() has ended the run
+        }
+        if (issues && step.navigation != 0) {
+            trace_issued(step);
+            // The press is the step: the next one follows on its schedule, with no capture or wait in between.
+            ++current_;
+            run_step();
+            return;
         }
         // A hover is what the step shows, so its pointer stays.
         if (!action.startsWith(QLatin1String("hover:"))) {
@@ -1835,7 +2485,19 @@ void DemoDriver::next_action() {
         // Every documentation screenshot is WebP at quality 85 (owner record 2026-11-10); other captures stay PNG.
         const bool webp = documentation_;
         const QString path = output_dir_.filePath(steps_[current_].image + (webp ? QStringLiteral(".webp") : QStringLiteral(".png")));
-        if (!(webp ? previous_frame_.save(path, "WEBP", 85) : previous_frame_.save(path))) {
+        // While traced, the image is written on a worker, so writing it is not the GUI thread's work.
+        bool saved = true;
+#if EDI_UI_INSTRUMENTATION
+        if (ui_trace_on() && !webp) {
+            // A copy of its own: the worker never shares image data with the GUI thread, which frees and replaces
+            // previous_frame_ while the image is written.
+            run_in_background([image = previous_frame_.copy(), path] { image.save(path); });
+        } else
+#endif
+        {
+            saved = webp ? previous_frame_.save(path, "WEBP", 85) : previous_frame_.save(path);
+        }
+        if (!saved) {
             fail(QStringLiteral("cannot write %1").arg(path));
             return;
         }
@@ -1851,7 +2513,7 @@ void DemoDriver::next_action() {
     };
     if (unsettled) {
         QTimer::singleShot(unsettled_ms, this, [this, save] {
-            previous_frame_ = window_.grabWindow();
+            previous_frame_ = grab();
             save();
         });
         return;
@@ -2085,7 +2747,7 @@ void DemoDriver::tutorial_next_then(const std::function<void()>& next, int step,
         QDir folder(shots);
         folder.mkpath(id);
         folder.cd(id);
-        window_.grabWindow().save(folder.filePath(QStringLiteral("%1.png").arg(now + 1, 3, 10, QLatin1Char('0'))));
+        grab().save(folder.filePath(QStringLiteral("%1.png").arg(now + 1, 3, 10, QLatin1Char('0'))));
         if (QFile list(folder.filePath(QStringLiteral("steps.txt"))); list.open(QIODevice::Append | QIODevice::Text))
             list.write(QStringLiteral("%1\t%2\t%3\n").arg(now + 1, 3, 10, QLatin1Char('0')).arg(shown.title, shown.text).toUtf8());
         shot_step_ = now;
@@ -2121,7 +2783,7 @@ void DemoDriver::tutorial_next_then(const std::function<void()>& next, int step,
     }
     if (waited_ms > kStuckMs) {
         // The window as it stands, beside the run's captures, to show where the tutorial stopped.
-        window_.grabWindow().save(output_dir_.filePath(steps_[current_].image + QStringLiteral("-stuck.png")));
+        grab().save(output_dir_.filePath(steps_[current_].image + QStringLiteral("-stuck.png")));
         fail(QStringLiteral("step %1: tutorial %2 stays at step %3 of %4: Next %5")
                  .arg(steps_[current_].image, id).arg(now + 1).arg(count)
                  .arg(clickable ? QStringLiteral("does not advance it") : QStringLiteral("is off")));
@@ -2611,8 +3273,18 @@ bool DemoDriver::on_screen(QQuickItem* item) const {
     return !shown.isEmpty();
 }
 
+QQuickItem* DemoDriver::find_held(const QString& object_name, bool must_be_usable) {
+    // A press of a held key repeats on one control: the one found last, while it can still take the press, rather than
+    // a walk of every item in the window at each press, which made the presses themselves the slowest part.
+    QPointer<QQuickItem>& held = held_items_[object_name];
+    if (held && held->isVisible() && (!must_be_usable || held->isEnabled()) && on_screen(held)) return held;
+    held = find(object_name, must_be_usable);
+    return held;
+}
+
 bool DemoDriver::click(const QString& object_name) {
-    QQuickItem* item = find(object_name, true);
+    QQuickItem* item = current_ < steps_.size() && steps_[current_].navigation != 0 ? find_held(object_name, true)
+                                                                                   : find(object_name, true);
     // A click at an item off screen reaches nothing, so the run stops rather than capture an unchanged page.
     if (item == nullptr || !item->isVisible() || !item->isEnabled() || !on_screen(item)) {
         fail(QStringLiteral("step %1: control '%2' is %3")
@@ -2669,13 +3341,24 @@ void DemoDriver::settle_then(const std::function<void()>& next) {
         const bool opening = session != nullptr && session->openingExample();
         // A page still being made after a project opened keeps its tab disabled, which no frame shows.
         bool preparing = false;
-        for (const QString& tab : {QStringLiteral("appBar.tab.structure"), QStringLiteral("appBar.tab.experiment"),
-                                   QStringLiteral("appBar.tab.analysis"), QStringLiteral("appBar.tab.report")}) {
-            const QQuickItem* item = find(tab, false);
-            preparing = preparing || (item != nullptr && item->property("preparing").toBool());
+        // The app bar's tabs live as long as the window: found once, not by a walk of every item at each poll.
+        static const QString kTabs[] = {QStringLiteral("appBar.tab.structure"), QStringLiteral("appBar.tab.experiment"),
+                                        QStringLiteral("appBar.tab.analysis"), QStringLiteral("appBar.tab.report")};
+        for (const QString& tab : kTabs) {
+            QPointer<QQuickItem>& item = app_bar_tabs_[tab];
+            if (!item) item = find(tab, false);
+            preparing = preparing || (item && item->property("preparing").toBool());
         }
-        const QImage frame = window_.grabWindow();
-        if (!calculating && !opening && !preparing && !previous_frame_.isNull() && frame == previous_frame_) {
+        const QImage frame = grab();
+#if EDI_UI_INSTRUMENTATION
+        const int compare = ++tool_id_;
+        trace_measurement(true, compare, QStringLiteral("compare-images"));
+#endif
+        const bool same = !previous_frame_.isNull() && frame == previous_frame_;
+#if EDI_UI_INSTRUMENTATION
+        trace_measurement(false, compare, QStringLiteral("compare-images"));
+#endif
+        if (!calculating && !opening && !preparing && same) {
             next();
             return;
         }
@@ -3137,7 +3820,7 @@ bool DemoDriver::timed_slider(int count) {
 
 void DemoDriver::fail(const QString& message) {
     if (documentation_) {
-        window_.grabWindow().save(output_dir_.filePath("failure.png"));
+        grab().save(output_dir_.filePath("failure.png"));
         saveDocumentationManifest("failed", message);
     }
     std::fprintf(stderr, "edi_app --demo: %s\n", qPrintable(message));

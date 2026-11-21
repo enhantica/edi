@@ -95,7 +95,7 @@ Item {
     readonly property real topHeight: chart.report && !chart.reportToolbar ? Math.max(sideMargin, rightMargin) + (chart.reliability !== "" ? Math.round(em * 1.5) : 0) : topMargin + toolbarLines.height + belowToolbar + (chart.reliability !== "" ? Math.round(em * 1.5) : 0)
     // A report figure's reliability text (edi::reliability_text), above its main plot at the left; the app's own
     // charts show it in the page's selector line.
-    readonly property string reliability: chart.report && chart.report.model ? chart.report.reliability(chart.reportExperiment) : ""
+    readonly property string reliability: chart.report && chart.report.modelRevision >= 0 ? chart.report.reliability(chart.reportExperiment) : ""
     // The panes' heights, as easydiffractionbeta divides them: of what the toolbar and the x axis leave, the
     // main pane takes 0.7 and the residual 0.3, each less half of what the tick rows take between them. A
     // structure's row is 1.5 em high, in a pane half an em higher.

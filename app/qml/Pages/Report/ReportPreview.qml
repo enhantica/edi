@@ -113,13 +113,16 @@ Flickable {
             rows: preview.keyValues(block.category.rows)
         }
         Item {
-            visible: block.category.rows.length > 0 && block.category.table.rows.length > 0
+            visible: block.category.rows.length > 0 && (block.category.table.row_count ?? block.category.table.rows.length) > 0
             width: 1
             height: 6.2 * preview.pt
         }
         ReportTable {
             columns: block.category.table.columns
             rows: block.category.table.rows
+            report: preview.report
+            rowsKey: block.category.table.rows_key ?? ""
+            storedRows: block.category.table.row_count ?? 0
         }
     }
 
@@ -199,14 +202,21 @@ Flickable {
                 }
             }
         }
+        // Each category is made a slice at a time (asynchronous), so a long report's first show does not hold the
+        // window: made all at once, the 44k scan's report took 1.2 s in one frame.
         Repeater {
             model: record.modelData.categories
-            delegate: CategoryBlock {
+            delegate: Loader {
+                id: categorySlot
                 required property var modelData
                 required property int index
-                category: modelData
-                // A heading after the figure is spaced as one after a table.
-                under: index === 0 && !preview.charts ? 3 : 0
+                width: parent ? parent.width : 0
+                asynchronous: true
+                sourceComponent: CategoryBlock {
+                    category: categorySlot.modelData
+                    // A heading after the figure is spaced as one after a table.
+                    under: categorySlot.index === 0 && !preview.charts ? 3 : 0
+                }
             }
         }
     }
@@ -339,12 +349,17 @@ Flickable {
             }
             Repeater {
                 model: preview.shown("analysis") ? (preview.model.analysis_categories ?? []) : []
-                delegate: CategoryBlock {
+                delegate: Loader {
+                    id: analysisSlot
                     required property var modelData
                     required property int index
-                    category: modelData
-                    level: 3
-                    under: index === 0 ? 2 : 0
+                    width: parent ? parent.width : 0
+                    asynchronous: true
+                    sourceComponent: CategoryBlock {
+                        category: analysisSlot.modelData
+                        level: 3
+                        under: analysisSlot.index === 0 ? 2 : 0
+                    }
                 }
             }
         }

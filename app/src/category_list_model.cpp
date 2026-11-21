@@ -2,6 +2,8 @@
 #include "category_list_model.hpp"
 
 #include <QHash>
+#include <QMetaMethod>
+#include <QScopedValueRollback>
 #include <algorithm>
 #include <string>
 #include <utility>
@@ -88,6 +90,47 @@ std::vector<const edi::Category*> presentation_order(const std::vector<edi::Cate
 
 CategoryListModel::CategoryListModel(QObject* parent) : QAbstractListModel(parent) {}
 
+void CategoryListMirror::setSource(CategoryListModel* source) {
+    if (source_ == source) {
+        return;
+    }
+    for (const auto& connection : {reset_, inserted_, removed_, changed_}) {
+        disconnect(connection);
+    }
+    source_ = source;
+    if (source_ != nullptr) {
+        reset_ = connect(source_, &QAbstractItemModel::modelReset, this, &CategoryListMirror::follow);
+        inserted_ = connect(source_, &QAbstractItemModel::rowsInserted, this, &CategoryListMirror::follow);
+        removed_ = connect(source_, &QAbstractItemModel::rowsRemoved, this, &CategoryListMirror::follow);
+        changed_ = connect(source_, &QAbstractItemModel::dataChanged, this, &CategoryListMirror::follow);
+    }
+    follow();
+    emit sourceChanged();
+}
+
+void CategoryListMirror::follow() {
+    if (source_ != nullptr) {
+        mirror(*source_);
+    } else {
+        setCategories({});
+    }
+}
+
+bool CategoryListModel::observed() const {
+    const auto connected = [this](auto signal) { return isSignalConnected(QMetaMethod::fromSignal(signal)); };
+    return connected(&QAbstractItemModel::rowsInserted) || connected(&QAbstractItemModel::rowsRemoved) ||
+           connected(&QAbstractItemModel::rowsMoved) || connected(&QAbstractItemModel::dataChanged) ||
+           connected(&QAbstractItemModel::modelReset) || connected(&CategoryListModel::countChanged);
+}
+
+void CategoryListModel::settle() const {
+    if (!owed_) return;
+    auto* self = const_cast<CategoryListModel*>(this);
+    const QScopedValueRollback quiet(self->quiet_, true);
+    self->setCategories(std::vector<edi::Category>(categories_), std::function<std::string()>(text_),
+                        std::function<std::vector<edi::Category>()>(calculated_));
+}
+
 void CategoryListModel::refresh() {
     setCategories(std::vector<edi::Category>(categories_), std::function<std::string()>(text_),
                   std::function<std::vector<edi::Category>()>(calculated_));
@@ -99,6 +142,11 @@ void CategoryListModel::setCategories(const std::vector<edi::Category>& categori
     categories_ = categories;
     text_ = text;
     calculated_ = calculated;
+    if (!quiet_ && !observed()) {
+        owed_ = true;
+        return;
+    }
+    owed_ = false;
     // The Atomic displacement and Magnetic moments groups list every atom site, so their headers count the sites.
     int sites = 0;
     for (const edi::Category& category : categories) {
@@ -168,6 +216,14 @@ void CategoryListModel::setCategories(const std::vector<edi::Category>& categori
     std::stable_sort(target.begin(), target.end(), [](const Row& a, const Row& b) {
         return edi::category_order(a.id.toStdString()) < edi::category_order(b.id.toStdString());
     });
+    applyRows(target);
+}
+
+void CategoryListModel::applyRows(const std::vector<Row>& target) {
+    if (quiet_) {
+        rows_ = target;
+        return;
+    }
     const std::size_t before = rows_.size();
     const auto find = [](const std::vector<Row>& rows, const QString& id, std::size_t from) {
         for (std::size_t i = from; i < rows.size(); ++i) {
@@ -217,6 +273,7 @@ void CategoryListModel::setCategories(const std::vector<edi::Category>& categori
 }
 
 bool CategoryListModel::contains(const QString& categoryId) const {
+    settle();
     for (const Row& row : rows_) {
         if (row.id == categoryId) {
             return true;
@@ -226,6 +283,7 @@ bool CategoryListModel::contains(const QString& categoryId) const {
 }
 
 int CategoryListModel::itemCount(const QString& categoryId) const {
+    settle();
     for (const Row& row : rows_) {
         if (row.id == categoryId) {
             return row.items;
@@ -235,10 +293,12 @@ int CategoryListModel::itemCount(const QString& categoryId) const {
 }
 
 int CategoryListModel::rowCount(const QModelIndex& parent) const {
+    settle();
     return parent.isValid() ? 0 : static_cast<int>(rows_.size());
 }
 
 QVariant CategoryListModel::data(const QModelIndex& index, int role) const {
+    settle();
     if (!index.isValid() || index.row() >= static_cast<int>(rows_.size())) {
         return {};
     }

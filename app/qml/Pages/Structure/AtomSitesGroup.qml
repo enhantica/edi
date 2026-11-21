@@ -43,7 +43,11 @@ Column {
         equalColumns: true
 
         // The type's combo box as wide as its widest type, its icon and arrow (the owner, 2026-10-27).
-        columns: [numberColumnWidth, textColumnWidth("label", Session.label("atom_site.id")), Math.max(group.typeWidth, (fittedWidths[2] ?? 0) + autoColumnPadding / 2), -1, -1, -1, group.wyckoffWidth, -1, AppSizes.iconColumnWidth]
+        // Widths from column types, not rows (ADR-0097 rule 4): the label and type are short texts, the
+        // coordinates, occupancy and B numbers.
+        columnTypes: ["", "short", "short"]
+        defaultColumnType: "number"
+        columns: [numberColumnWidth, typeColumnWidth("short", Session.label("atom_site.id")), Math.max(group.typeWidth, (fittedWidths[2] ?? 0) + autoColumnPadding / 2), -1, -1, -1, group.wyckoffWidth, -1, AppSizes.iconColumnWidth]
 
         header: EaComponents.ListViewHeader {
             EaComponents.ListViewLabel {

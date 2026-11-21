@@ -116,6 +116,8 @@ class ParameterFilterModel : public QSortFilterProxyModel {
     Variability variability() const { return variability_; }
     void setVariability(Variability variability);
     void setSourceModel(QAbstractItemModel* source) override;
+    // Whether a change of these source roles can change what the filters show or count.
+    bool affectsFilters(const QList<int>& roles) const;
     QString datablockFilter() const { return datablock_filter_; }
     void setDatablockFilter(const QString& datablock);
     QStringList datablocks() const { return datablocks_; }

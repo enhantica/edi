@@ -74,9 +74,12 @@ SideBarGroup {
             currentRow: group.project ? group.project.currentExperimentIndex : -1
             onRowActivated: row => ApplicationInfo.activateFormBlock(row, false)
 
-            // Datablock as wide as its header and its widest name: a narrow row cuts the data file, never the datablock
-            // (on a scan's long rows it was squeezed to its first letter, the owner, 2026-11-17).
-            columns: [numberColumnWidth, group.scan && !group.series ? group.startColumnWidth : 0.001, AppSizes.iconOnlyColumnWidth, group.fitColumnWidth, textColumnWidth("name", qsTr("Datablock")), -1, group.scanColumns.length ? group.scanColumns.length * AppSizes.dataColumnWidth * 1.4 : 0.001, group.scan ? 0.001 : AppSizes.iconColumnWidth]
+            // Datablock as wide as its header and a text column (ADR-0097 rule 4): a narrow row cuts the data file,
+            // never the datablock (on a scan's long rows it was squeezed to its first letter, the owner, 2026-11-17).
+            columns: [numberColumnWidth, group.scan && !group.series ? group.startColumnWidth : 0.001, AppSizes.iconOnlyColumnWidth, group.fitColumnWidth, typeColumnWidth("text", qsTr("Datablock")), -1, group.scanColumns.length ? group.scanColumns.length * AppSizes.dataColumnWidth * 1.4 : 0.001, group.scan ? 0.001 : AppSizes.iconColumnWidth]
+            // The data file column is sized by its type, so a scan's rows changing one by one never measure rows again
+            // (ADR-0097 rule 4); its long paths elide.
+            columnTypes: ["", "", "", "", "", "text", "", ""]
 
             header: EaComponents.ListViewHeader {
                 EaComponents.ListViewLabel {
@@ -126,11 +129,11 @@ SideBarGroup {
                                 property int horizontalAlignment: Text.AlignHCenter
                                 width: AppSizes.dataColumnWidth * 1.4
                                 height: EaStyle.Sizes.tableRowHeight
-                                EaComponents.ListViewLabel {
-                                    elide: Text.ElideRight
+                                // A scan value fitted to its column, in full on hover (NumberLabel).
+                                NumberLabel {
                                     anchors.fill: parent
                                     horizontalAlignment: column.horizontalAlignment
-                                    text: column.modelData
+                                    number: column.modelData
                                 }
                             }
                         }

@@ -107,7 +107,12 @@ EaComponents.ListViewParameter {
     // The value as edited: the same text, so a cell left as it was changes nothing.
     readonly property string editText: written ? item.fileEditValue : item !== null ? NumberText.full(item.value) : value
 
-    onActiveFocusChanged: ApplicationInfo.parameterEditorFocusChanged(ApplicationInfo.ParameterCellEditor)
+    // Fitted again once an edit has settled: the column may have changed while the cell was edited.
+    onActiveFocusChanged: {
+        ApplicationInfo.parameterEditorFocusChanged(ApplicationInfo.ParameterCellEditor);
+        if (!activeFocus)
+            Qt.callLater(refit);
+    }
     onTextChanged: ApplicationInfo.editorTextChanged()
     // A free value is in the status bar's green, the one green token (EaStyle.Colors.green; the owner, 2026-10-22).
     color: warned ? EaStyle.Colors.red : !enabled || readOnly ? EaStyle.Colors.themeForegroundMinor : item && item.free && canFit ? EaStyle.Colors.green : EaStyle.Colors.themeForeground

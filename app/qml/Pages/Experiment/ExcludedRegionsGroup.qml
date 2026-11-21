@@ -28,6 +28,9 @@ Column {
         sourceModel: group.regions
 
         columns: [numberColumnWidth, -1, -1, -1].concat(group.singleCrystal ? [-1] : []).concat([AppSizes.iconColumnWidth])
+        // Widths from column types, not rows (ADR-0097 rule 4): an id or label, then values.
+        columnTypes: ["", "text"]
+        defaultColumnType: "number"
 
         header: EaComponents.ListViewHeader {
             EaComponents.ListViewLabel {

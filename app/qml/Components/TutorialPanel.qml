@@ -1497,9 +1497,9 @@ Popup {
         if (name.includes("@")) {
             const parameter = panel.parameterNamed(panel.dotted(name.split("@")[1]));
             const table = ItemLocator.findAnywhere(window, "parameters.list");
-            if (table === null || parameter === null || !table.model || table.model.rowOf === undefined)
+            if (table === null || parameter === null || !table.sourceModel || table.sourceModel.rowOf === undefined)
                 return false;
-            const row = table.model.rowOf(parameter);
+            const row = table.sourceModel.rowOf(parameter);
             return row >= 0 && table.revealRow !== undefined && table.revealRow(row);
         }
         const match = /^(\w+)\.\w+\.(\d+)$/.exec(name);

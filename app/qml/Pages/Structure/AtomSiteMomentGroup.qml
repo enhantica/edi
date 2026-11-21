@@ -110,15 +110,17 @@ Column {
         defaultInfoText: qsTr("No atom sites yet")
         sourceModel: group.moments
 
+        columnTypes: ["", "short", "short"]
         equalColumns: true
         // The symmetry form takes what the equal component columns leave, right-aligned like the components, so it
         // stands clear of |M| (the owner, 2026-11-03).
         // |M| and its two angles beside the components, read only (edi ADR-0089 point 6).
-        columns: [numberColumnWidth, textColumnWidth("label", Session.label("atom_site.id")), Math.max(group.ionWidth, (fittedWidths[2] ?? 0) + autoColumnPadding / 2), components, components, components, derived, derived, derived, -1]
+        columns: [numberColumnWidth, typeColumnWidth("short", Session.label("atom_site.id")), Math.max(group.ionWidth, (fittedWidths[2] ?? 0) + autoColumnPadding / 2), components, components, components, derived, derived, derived, -1]
         // The derived columns hold shorter numbers than the components: a narrower floor, so all six fit the sidebar.
         readonly property real derived: Math.max(EaStyle.Sizes.fontPixelSize * 4.5, Math.ceil(widestValue) + autoColumnPadding / 2)
         readonly property real components: group.componentsWidth(table, widestValue)
-        property real widestValue: 0
+        // The widest number a component holds, from the number type rather than the cells shown (ADR-0097 rule 4).
+        readonly property real widestValue: typeColumnWidth("number", "") - AppSizes.fieldSpacing * 2
 
         header: EaComponents.ListViewHeader {
             EaComponents.ListViewLabel {
@@ -223,8 +225,6 @@ Column {
                 }
             }
             ParameterCell {
-                onImplicitWidthChanged: table.widestValue = Math.max(table.widestValue, implicitWidth)
-                Component.onCompleted: table.widestValue = Math.max(table.widestValue, implicitWidth)
                 columnAlignment: Text.AlignHCenter
                 significantDigits: 5
                 objectName: `atomSiteMoment.mx.${row.index}`
@@ -235,8 +235,6 @@ Column {
                 helpToolTip: true
             }
             ParameterCell {
-                onImplicitWidthChanged: table.widestValue = Math.max(table.widestValue, implicitWidth)
-                Component.onCompleted: table.widestValue = Math.max(table.widestValue, implicitWidth)
                 columnAlignment: Text.AlignHCenter
                 significantDigits: 5
                 objectName: `atomSiteMoment.my.${row.index}`
@@ -247,8 +245,6 @@ Column {
                 helpToolTip: true
             }
             ParameterCell {
-                onImplicitWidthChanged: table.widestValue = Math.max(table.widestValue, implicitWidth)
-                Component.onCompleted: table.widestValue = Math.max(table.widestValue, implicitWidth)
                 columnAlignment: Text.AlignHCenter
                 significantDigits: 5
                 objectName: `atomSiteMoment.mz.${row.index}`
@@ -261,8 +257,6 @@ Column {
             // The moment's modulus, read only.
             TextCell {
                 property int columnAlignment: Text.AlignRight
-                onImplicitWidthChanged: table.widestValue = Math.max(table.widestValue, implicitWidth)
-                Component.onCompleted: table.widestValue = Math.max(table.widestValue, implicitWidth)
 
                 objectName: `atomSiteMoment.modulus.${row.index}`
                 horizontalAlignment: columnAlignment
@@ -321,11 +315,13 @@ Column {
         readonly property bool spherical: group.form === "spherical"
         readonly property var titles: spherical ? [Session.label("atom_site_moment.spherical_modulus"), qsTr("θ (deg)"), qsTr("φ (deg)")] : [qsTr("Mx (x ‖ a)"), qsTr("My"), qsTr("Mz (z ‖ c*)")]
 
+        columnTypes: ["", "short", "short"]
         equalColumns: true
         // In spherical form the modulus is the first component, so the |M| column takes no width and is hidden.
-        columns: [numberColumnWidth, textColumnWidth("label", Session.label("atom_site.id")), group.ionWidth, components, components, components, spherical ? 0 : components, -1]
+        columns: [numberColumnWidth, typeColumnWidth("short", Session.label("atom_site.id")), group.ionWidth, components, components, components, spherical ? 0 : components, -1]
         readonly property real components: group.componentsWidth(converted, widestValue)
-        property real widestValue: 0
+        // The widest number a component holds, from the number type rather than the cells shown (ADR-0097 rule 4).
+        readonly property real widestValue: typeColumnWidth("number", "") - AppSizes.fieldSpacing * 2
 
         header: EaComponents.ListViewHeader {
             EaComponents.ListViewLabel {
@@ -407,8 +403,6 @@ Column {
             }
             TextCell {
                 property int columnAlignment: Text.AlignRight
-                onImplicitWidthChanged: converted.widestValue = Math.max(converted.widestValue, implicitWidth)
-                Component.onCompleted: converted.widestValue = Math.max(converted.widestValue, implicitWidth)
 
                 objectName: `atomSiteMoment.form.0.${formRow.index}`
                 horizontalAlignment: columnAlignment
@@ -421,8 +415,6 @@ Column {
             }
             TextCell {
                 property int columnAlignment: Text.AlignRight
-                onImplicitWidthChanged: converted.widestValue = Math.max(converted.widestValue, implicitWidth)
-                Component.onCompleted: converted.widestValue = Math.max(converted.widestValue, implicitWidth)
 
                 objectName: `atomSiteMoment.form.1.${formRow.index}`
                 horizontalAlignment: columnAlignment
@@ -435,8 +427,6 @@ Column {
             }
             TextCell {
                 property int columnAlignment: Text.AlignRight
-                onImplicitWidthChanged: converted.widestValue = Math.max(converted.widestValue, implicitWidth)
-                Component.onCompleted: converted.widestValue = Math.max(converted.widestValue, implicitWidth)
 
                 objectName: `atomSiteMoment.form.2.${formRow.index}`
                 horizontalAlignment: columnAlignment
@@ -449,8 +439,6 @@ Column {
             }
             TextCell {
                 property int columnAlignment: Text.AlignRight
-                onImplicitWidthChanged: converted.widestValue = Math.max(converted.widestValue, implicitWidth)
-                Component.onCompleted: converted.widestValue = Math.max(converted.widestValue, implicitWidth)
 
                 objectName: `atomSiteMoment.formModulus.${formRow.index}`
                 horizontalAlignment: columnAlignment

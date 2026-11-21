@@ -3,23 +3,32 @@
 #define EDI_APP_DEMO_DRIVER_HPP
 
 #include <QDir>
+#include <QHash>
 #include <QElapsedTimer>
 #include <QImage>
 #include <QJsonArray>
 #include <QJsonObject>
 #include <QObject>
+#include <QPointer>
 #include <QString>
 #include <QStringList>
 #include <QTemporaryDir>
 #include <QTimer>
+#include <cstdint>
+#include <deque>
 #include <functional>
+#include <mutex>
 #include <optional>
 #include <vector>
+
+#include "edi/presentation.hpp"
 
 class QQuickItem;
 class QQuickWindow;
 
 namespace edi_app {
+
+class PatternChartController;
 
 // Copies the CLI project docs/user/cli/<id>/project of this build's source tree into <into>/<id>/project, for a
 // test project the app does not bundle. Returns the copy's path, or an empty string when it cannot be made.
@@ -83,6 +92,9 @@ class DemoDriver : public QObject {
         QStringList highlights{};
         bool capture = true;
         QString fit_phase{};
+        QString trace{};     // the measured step's name in the UI trace (ui_probe.hpp); empty for a set-up step
+        int navigation = 0;  // +1 or -1 for a next or previous dataset press, whose selection the trace names
+        bool skip_unavailable = false;  // a tab the app does not offer now (hidden or disabled) is skipped, traced
     };
 
     void run_step();
@@ -92,6 +104,7 @@ class DemoDriver : public QObject {
     bool on_screen(QQuickItem* item) const;  // any part of it shown: inside the window and every clip
     bool click_item(QQuickItem* item);
     void park_pointer();
+    QImage grab();  // window_.grabWindow(), bracketed in the UI trace as the driver's own work
     bool click(const QString& object_name);
     void settle_then(const std::function<void()>& next);
     // Waits until the fit has ended or, with `files`, until a running scan has fitted that many files.
@@ -133,12 +146,97 @@ class DemoDriver : public QObject {
     QQuickWindow& window_;
     QDir output_dir_;
     std::vector<Step> steps_;
+    bool availability_settled_ = false;  // the current skip_unavailable step has waited for the frame to settle once
     std::size_t current_ = 0;
     qsizetype action_ = 0;
     QImage previous_frame_;
     int settle_attempts_ = 0;
     int preparing_attempts_ = 0;
     QTemporaryDir loaded_files_;
+    // The UI trace's hooks (ui_probe.hpp): no-ops, with no state, where EDI_UI_INSTRUMENTATION is off.
+    void trace_step_begin(const Step& step);    // a measured step starts: the trace's begin, a wait's action, the control
+    void trace_issue(const QString& action);    // a measured step's action is about to be issued
+    void trace_issued(const Step& step);        // a next or previous press has been issued
+    bool trace_complete(int code);              // the trace's end, when it began; true if it ends the run itself
+    QString only_;
+#if EDI_UI_INSTRUMENTATION
+    void trace_measurement(bool enter, int id, const QString& callback);
+    int tool_id_ = 0;
+    bool blocked_ = false;  // EDI_UI_BLOCK_MS has blocked once
+    bool trace_begun_ = false;
+    QString trace_scenario_;
+    int request_id_ = 0;
+    // A measured step's action, open until the native state reaches what it asked for: then its state, the transition's
+    // publication and the step itself are written, in that order and in the steps' order.
+    struct Pending {
+        int request = 0;
+        QString name;              // the scenario's step
+        QString page;              // a page the action shows
+        int before = -1;           // the selection before a next or previous press
+        int dataset = -1;          // the selection the press made
+        QString direction;         // "next" or "previous"
+        QString object;            // a main or sidebar tab button the action selects
+        QString fit;               // "start", "running", "ended" or "settled"
+    };
+    std::deque<Pending> pending_;
+    // A next or previous press's chart: its first swapped frame after the press, and the first frame swapped once the
+    // chart has uploaded the selected dataset's own data (its settled frame).
+    struct FrameWatch {
+        int request = 0;
+        int dataset = -1;
+        qint64 base = 0;  // the chart's upload count before the press
+        QPointer<QQuickItem> chart;
+        QPointer<PatternChartController> controller;
+        QString native;   // the selected dataset's data identity, read from the project once that dataset is applied
+        qint64 generation = 0;  // the upload that presented it
+        QString upload;         // that upload's points as the series objects held them after the fill
+        // The measured series the chart should draw for that upload: the selected data, read from the project and
+        // presented here with the chart's own view, for the upload generation it was made for.
+        qint64 expected_generation = -1;
+        QList<QPointF> expected;                      // finite measured points
+        std::optional<edi::PatternPresentation> expected_presentation;  // what the chart should draw for it
+        bool first = false, presented = false, settled = false;
+        QJsonObject presentation;  // request, dataset, generation, data_identity, input
+    };
+    void trace_watch();
+    QJsonObject trace_state();
+    QString trace_native_identity();
+    void trace_frame();
+    QString trace_input();
+    QJsonObject trace_geometry(QQuickItem* chart) const;
+    std::mutex trace_mutex_;            // the render thread reads what the GUI thread publishes for the next frame
+    QJsonArray published_transitions_;  // published since the last frame was synchronised
+    QJsonObject synced_displayed_;      // the last synchronised frame's native state, its transitions and number
+    QJsonArray synced_transitions_;
+    QJsonArray synced_frames_;          // the frame observations of the last synchronised frame
+    QJsonArray synced_presented_;       // the presentations the last synchronised frame shows for the first time
+    qint64 synced_frame_ = 0;
+    QMetaObject::Connection trace_sync_, trace_swap_;
+    QList<FrameWatch> frame_watches_;   // GUI thread; the render thread reads them only while the GUI thread waits
+    QString input_identity_;
+    std::pair<std::uint64_t, QString> native_cache_;  // the native identity, by the project's applied view
+    // The expected measured series for the chart's current upload (GUI thread), and whether what the chart draws is
+    // exactly that, every drawn path whole (render thread, while the GUI thread waits).
+    void trace_expect(FrameWatch& watch);
+    bool trace_matches_expected(const FrameWatch& watch) const;
+    QList<QPointer<QQuickItem>> page_tabs_, view_tabs_, side_tabs_;
+    // The main and sidebar tab buttons under `root` (a page as it is built), each found once.
+    void trace_collect_tabs(QQuickItem* root);
+    bool tab_inventory_sent_ = false;
+    // The pages' tab bars as built, once every page is: the `tab-inventory` event.
+    void trace_tab_inventory();
+    int fit_runs_ = 0;
+    bool fit_running_ = false;
+    bool watching_ = false;
+#endif
+    QElapsedTimer nav_clock_;  // the 100 ms schedule of next and previous presses
+    QHash<QString, QPointer<QQuickItem>> app_bar_tabs_;  // the settle poll's tabs, found once
+    // find(), reusing the item found last for the name while it is still visible, usable and on screen: for the
+    // presses of a held key.
+    QQuickItem* find_held(const QString& object_name, bool must_be_usable);
+    QHash<QString, QPointer<QQuickItem>> held_items_;
+    qint64 nav_base_ = -1;
+    int nav_index_ = 0;
     QElapsedTimer timer_;
     std::vector<double> pre_fit_values_;
     QString loaded_cli_project_;

@@ -94,6 +94,9 @@ Column {
         sourceModel: group.structure ? group.structure.bonds : []
 
         columns: [numberColumnWidth, -1, -1, -1, -1, -1]
+        // Widths from column types, not rows (ADR-0097 rule 4): each end's site label and symmetry code, then the
+        // distance.
+        columnTypes: ["", "text", "short", "text", "short", "number"]
 
         header: EaComponents.ListViewHeader {
             EaComponents.ListViewLabel {
@@ -157,11 +160,11 @@ Column {
                 horizontalAlignment: Text.AlignLeft
                 text: row.modelData.symmetry2
             }
-            CellLabel {
+            // A number fitted to its typed column, in full on hover (NumberLabel).
+            NumberLabel {
                 objectName: `geom.bonds.distance.${row.index}`
-                elide: Text.ElideRight
                 horizontalAlignment: Text.AlignHCenter
-                text: Session.display("geom_bond.distance", row.modelData.distance)
+                number: Session.display("geom_bond.distance", row.modelData.distance)
             }
         }
     }

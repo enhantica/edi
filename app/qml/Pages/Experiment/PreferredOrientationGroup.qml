@@ -26,6 +26,9 @@ Column {
         sourceModel: group.rows
 
         columns: [numberColumnWidth, -1, -1, -1, -1, -1, -1, AppSizes.iconColumnWidth]
+        // Widths from column types, not rows (ADR-0097 rule 4): an id or label, then values.
+        columnTypes: ["", "text"]
+        defaultColumnType: "number"
 
         header: EaComponents.ListViewHeader {
             EaComponents.ListViewLabel {

@@ -142,6 +142,7 @@ struct Tutorial {
 // sees; the base's own fallback (gui-components ProjectConfig.js) is never shown.
 class ApplicationInfo : public QObject {
     Q_OBJECT
+    Q_PROPERTY(int sidebarRevision READ sidebarRevision NOTIFY sidebarRevisionChanged)
     QML_ELEMENT
     QML_SINGLETON
     Q_PROPERTY(QString name READ name CONSTANT)
@@ -604,6 +605,7 @@ class ApplicationInfo : public QObject {
     Q_INVOKABLE QJSValue tableTextWidth(int row, const QString& role) const;
     Q_INVOKABLE QJSValue tableAdvance(const QString& text) const;
     Q_INVOKABLE QJSValue tableTextColumnWidth(const QString& role, const QString& title, bool natural) const;
+    Q_INVOKABLE QJSValue tableTypeColumnWidth(const QString& type, const QString& title) const;
     Q_INVOKABLE void tableForgetWidths() const;
     Q_INVOKABLE void tableRemeasure() const;
     Q_INVOKABLE void tableDataChanged(const QJSValue& topLeft, const QJSValue& bottomRight) const;
@@ -627,6 +629,12 @@ class ApplicationInfo : public QObject {
     Q_INVOKABLE void sidebarSetOpen(const QJSValue& key, const QJSValue& open, const QJSValue& group) const;
     Q_INVOKABLE QJSValue sidebarEdge(const QJSValue& group, bool last) const;
     Q_INVOKABLE QJSValue sidebarOrderedChildren(const QJSValue& parent) const;
+    // Whether `group` is the first (or last) group its column shows, from one map per column worked out once per change
+    // of the column (its children, a Repeater's count, a group's `listed`), not per group: every group's binding read
+    // the whole column, so a page of n groups made n² reads as it was built. A binding reads sidebarRevision first, so
+    // it is evaluated again at each such change (SideBarGroups).
+    Q_INVOKABLE bool sidebarEdgeCached(QObject* group, bool last) const;
+    int sidebarRevision() const { return sidebar_revision_; }
     Q_INVOKABLE QJSValue sidebarShownGroups(const QJSValue& group) const;
     Q_INVOKABLE void statusItemActionChanged(QObject* control, QObject* accessible, bool live) const;
     Q_INVOKABLE void comboCellCompleted(const QJSValue& installBindings) const;
@@ -839,7 +847,6 @@ class ApplicationInfo : public QObject {
     Q_INVOKABLE QJSValue appColour(int kind, const QJSValue& first, const QJSValue& second, const QJSValue& third) const;
     Q_INVOKABLE QJSValue fitResultProjection(int kind) const;
     Q_INVOKABLE void fitResultsPassive(const QJSValue& row) const;
-    Q_INVOKABLE QJSValue fitResultsSummaryWidth(const QJSValue& title, const QJSValue& cell) const;
     Q_INVOKABLE QJSValue fitResultsColumnWidth(bool value) const;
     Q_INVOKABLE void fitResultsRevisionChanged() const;
     Q_INVOKABLE void fitResultsShowEvolution() const;
@@ -980,6 +987,15 @@ class ApplicationInfo : public QObject {
     Q_INVOKABLE QString licenceLinkTarget(const QString& from, const QString& link) const;
 
    private:
+    struct SidebarColumn {
+        QList<QPointer<QObject>> shown;  // the column's groups it shows, in its order
+        bool dirty = true;
+        QList<QMetaObject::Connection> watches;  // the Repeaters' counts and the groups' `listed`, made at each refresh
+    };
+    mutable QHash<QObject*, SidebarColumn> sidebar_columns_;
+    mutable int sidebar_revision_ = 0;
+    void sidebarColumnChanged(QObject* parent) const;
+    Q_SLOT void sidebarListedChanged();
     // One column of the notices' "Components" list: 0 the name, 1 the licence, 2 the use, 3 the version.
     static QStringList componentColumn(int column);
     const bool assistant_available_;
@@ -1090,6 +1106,7 @@ class ApplicationInfo : public QObject {
     // At most twice a second while the user moves, clicks, scrolls or types anywhere in the app: the Home page's idle
     // spin waits for a pause in these.
     Q_SIGNAL void userInput();
+    Q_SIGNAL void sidebarRevisionChanged();
 
    protected:
     bool eventFilter(QObject* watched, QEvent* event) override;

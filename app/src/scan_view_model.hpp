@@ -4,6 +4,7 @@
 
 #include <QFont>
 #include <QObject>
+#include <QTimer>
 #include <QList>
 #include <QString>
 #include <QStringList>
@@ -292,6 +293,9 @@ class ScanViewModel : public QObject {
     int loaded_ = 0;
     int failed_ = 0;
     int revision_ = 0;
+    // The batches delivered since the views were last told (publishDelivery), told at most every 50 ms.
+    QTimer delivery_;
+    void publishDelivery();
     std::uint64_t pattern_generation_ = 0;  // the last Pattern::generation given
     bool has_values_ = false;  // the scan has an extract rule
     QString x_title_, row_title_, extracted_title_, error_, row_note_;

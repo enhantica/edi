@@ -21,7 +21,14 @@ EaComponents.ListView {
 
     // The selection model needs an explicit empty model while a page is being attached.
     property var sourceModel: null
-    model: sourceModel ?? null
+    // An item model is shown through a mirror: another block's model of the same kind (the next experiment's rows)
+    // keeps the rows made for the last one, each reading its new data (ADR-0096 rule 2). A plain list is shown as it
+    // is. Code that calls the model's own functions uses sourceModel.
+    readonly property bool mirrorsRows: sourceModel !== null && typeof sourceModel === "object" && typeof sourceModel.rowCount === "function"
+    readonly property ListModelMirror rowsMirror: ListModelMirror {
+        source: table.mirrorsRows ? table.sourceModel : null
+    }
+    model: mirrorsRows && rowsMirror ? rowsMirror : (sourceModel ?? null)
     multiSelection: false
     // A click on any cell makes its row current, an editable cell's too (the owner, 2026-10-22): an editor taking
     // focus selects its row, as a click on the row's background does.
@@ -53,6 +60,12 @@ EaComponents.ListView {
     // columns; a number column keeps its widest text, and a row still too wide scrolls sideways. Widths follow the content: a change of the content fits them again,
     // and scrolling changes none.
     property var columns: []
+    // One type per column ("number", "short", "text", or "" for an icon, a check box or a column sized by its header):
+    // when given, the widths come from the types and no row is measured, so changing data never moves a column
+    // (ADR-0097 rule 4). A table without it fits its columns to its rows (ADR-0029).
+    property var columnTypes: []
+    // The type of every flex column (-1) that columnTypes leaves untyped, e.g. "number" for a table of values.
+    property string defaultColumnType: ""
     // The width the columns need. A number column is never narrower than its widest text, so a row wider than the
     // table scrolls sideways, its header with it.
     readonly property real rowsWidth: columnWidths.reduce((sum, width) => sum + Math.max(0, width), 0) + EaStyle.Sizes.tableColumnSpacing * Math.max(0, columnWidths.length - 1) + rowPadding * 2 + EaStyle.Sizes.borderThickness * 2
@@ -157,6 +170,16 @@ EaComponents.ListView {
     // background did not, measured a frame at a time). A larger one (a pattern's points) is measured a frame's worth
     // of rows at a time, so the window keeps responding; a new change of the content starts it again.
     readonly property int measuredAtOnce: 200
+    // A refit of a table that has its widths already is measured in slices like a long model, whatever its length, and
+    // the columns keep their widths until it ends (ADR-0096 rule 2); only the first fit is made at once.
+    property bool liveRefit: false
+    property bool measureSliced: false
+    // The whole model measured again a second after its values last changed (tableFitWholeModel).
+    Timer {
+        id: quietRefit
+        interval: 1000
+        onTriggered: table.refit()
+    }
     property int measureRun: 0
     property var measuredWidths: null
     function measureRows(run, from) {
@@ -293,6 +316,10 @@ EaComponents.ListView {
     function textColumnWidth(role: string, title: string): real {
         return ApplicationInfo.tableTextColumnWidth(role, title, false);
     }
+    // A fixed column sized by its type ("number", "short", "text") and its title, never by its rows (ADR-0097 rule 4).
+    function typeColumnWidth(type: string, title: string): real {
+        return ApplicationInfo.tableTypeColumnWidth(type, title);
+    }
     // The widest of the column's texts and its title, with a cell's margins, however wide the table is.
     function naturalTextColumnWidth(role: string, title: string): real {
         return ApplicationInfo.tableTextColumnWidth(role, title, true);
@@ -333,7 +360,8 @@ EaComponents.ListView {
     Connections {
         property var ownerLife: null
         Component.onCompleted: ApplicationInfo.tableOwnerCallback(3)
-        target: table.model
+        // Only an item model signals changed rows; a plain list has nothing to connect.
+        target: table.mirrorsRows ? table.rowsMirror : null
         ignoreUnknownSignals: true
         function onDataChanged(topLeft, bottomRight) {
             ApplicationInfo.tableDataChanged(topLeft, bottomRight);

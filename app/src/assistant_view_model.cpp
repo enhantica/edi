@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "assistant_view_model.hpp"
+
+#include <QMetaMethod>
 #include "assistant_control_routes.hpp"
 #include "assistant_file_primitives.hpp"
 #include "assistant_history.hpp"
@@ -16704,11 +16706,25 @@ struct AssistantViewModel::State {
             if (!property("activeJobId", &AssistantViewModel::activeJobId, &AssistantViewModel::activeJobIdChanged)) return;
             if (!property("canCancel", &AssistantViewModel::canCancel, &AssistantViewModel::canCancelChanged)) return;
             if (!property("lastError", &AssistantViewModel::lastError, &AssistantViewModel::lastErrorChanged)) return;
-            if (!property("contextPreview", &AssistantViewModel::contextPreview, &AssistantViewModel::contextPreviewChanged)) return;
+            // The context text, and the consent identity made from it, serialise the whole project. Their readers ask
+            // for them when they need them, so they are worked out here only while something listens for a change (an
+            // open connection dialog, a send waiting for consent): a closed panel costs nothing per change (ADR-0096
+            // rule 1).
+            const auto listened = [&](void (AssistantViewModel::*signal)()) {
+                return projection.receiver->isSignalConnected(QMetaMethod::fromSignal(signal));
+            };
+            const bool preview_listened = listened(&AssistantViewModel::contextPreviewChanged);
+            const bool context_listened = preview_listened || listened(&AssistantViewModel::contextConsentIdentityChanged)
+                                          || listened(&AssistantViewModel::contextConsentRequiredChanged)
+                                          || listened(&AssistantViewModel::contextApprovalBlockedChanged);
+            if (preview_listened
+                && !property("contextPreview", &AssistantViewModel::contextPreview, &AssistantViewModel::contextPreviewChanged)) return;
             if (!property("draftAdmissionReady", &AssistantViewModel::draftAdmissionReady, &AssistantViewModel::draftAdmissionReadyChanged)) return;
-            if (!property("contextConsentIdentity", &AssistantViewModel::contextConsentIdentity, &AssistantViewModel::contextConsentIdentityChanged, true)) return;
-            if (!property("contextConsentRequired", &AssistantViewModel::contextConsentRequired, &AssistantViewModel::contextConsentRequiredChanged, true)) return;
-            if (!property("contextApprovalBlocked", &AssistantViewModel::contextApprovalBlocked, &AssistantViewModel::contextApprovalBlockedChanged, true)) return;
+            if (context_listened) {
+                if (!property("contextConsentIdentity", &AssistantViewModel::contextConsentIdentity, &AssistantViewModel::contextConsentIdentityChanged, true)) return;
+                if (!property("contextConsentRequired", &AssistantViewModel::contextConsentRequired, &AssistantViewModel::contextConsentRequiredChanged, true)) return;
+                if (!property("contextApprovalBlocked", &AssistantViewModel::contextApprovalBlocked, &AssistantViewModel::contextApprovalBlockedChanged, true)) return;
+            }
             if (!property("skillSourceRevision", &AssistantViewModel::skillSourceRevision, &AssistantViewModel::skillSourceRevisionChanged)) return;
             if (!property("skillSourceError", &AssistantViewModel::skillSourceError, &AssistantViewModel::skillSourceErrorChanged)) return;
             if (!property("skillSourceImporting", &AssistantViewModel::skillSourceImporting, &AssistantViewModel::skillSourceImportingChanged)) return;

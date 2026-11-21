@@ -48,6 +48,8 @@ SideBarGroup {
             defaultInfoText: qsTr("No matching examples")
             sourceModel: Session.examples
             columns: [numberColumnWidth, -1]
+            // Widths from column types, not rows (ADR-0097 rule 4): the name and description.
+            columnTypes: ["", "text"]
             header: EaComponents.ListViewHeader {
                 visible: false
                 implicitHeight: 0

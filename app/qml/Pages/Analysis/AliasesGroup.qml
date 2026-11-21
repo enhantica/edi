@@ -31,6 +31,8 @@ Column {
         sourceModel: group.aliases
 
         columns: [numberColumnWidth, -1, -1, AppSizes.iconColumnWidth]
+        // Widths from column types, not rows (ADR-0097 rule 4): the alias, then its parameter.
+        columnTypes: ["", "text", "text"]
 
         header: EaComponents.ListViewHeader {
             EaComponents.ListViewLabel {

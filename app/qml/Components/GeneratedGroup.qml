@@ -113,6 +113,9 @@ Column {
                 sourceModel: categoryData.loop ? categoryData.rows : null
                 // The cells a Repeater makes come before it, so the Repeater, declared last, takes the last width.
                 columns: ApplicationInfo.nativeListProjection(0)
+                // Widths from column types, not rows (ADR-0097 rule 4): a parameter or a choice is a text,
+                // any other value a number.
+                columnTypes: [""].concat(categoryData.cells.map(cell => cell.kind === "parameter" || cell.kind === "choice" ? "text" : "number"))
 
                 header: EaComponents.ListViewHeader {
                     EaComponents.ListViewLabel {

@@ -583,6 +583,8 @@ AppDialog {
                 // URL, so every text shows whole.
                 tableRowHeight: Math.ceil(EaStyle.Sizes.fontPixelSize * 5.5)
                 columns: [numberColumnWidth, -1, AppSizes.iconColumnWidth, AppSizes.iconColumnWidth]
+                // Widths from column types, not rows (ADR-0097 rule 4): one text.
+                columnTypes: ["", "text"]
                 // Without a header, as the Examples list: each row's three lines say what they are.
                 header: EaComponents.ListViewHeader {
                     visible: false
@@ -901,6 +903,8 @@ AppDialog {
                     sourceModel: aiPage.original ? aiPage.original.skillSources : null
                     defaultInfoText: qsTr("No skill sources")
                     columns: [numberColumnWidth, -1, AppSizes.iconColumnWidth, AppSizes.iconColumnWidth]
+                    // Widths from column types, not rows (ADR-0097 rule 4): one text.
+                    columnTypes: ["", "text"]
                     header: EaComponents.ListViewHeader {
                         EaComponents.ListViewLabel {}
                         EaComponents.ListViewLabel {

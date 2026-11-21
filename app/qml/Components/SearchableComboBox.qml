@@ -151,6 +151,8 @@ EaElements.ComboBox {
     Component.onCompleted: ApplicationInfo.searchCompleted(() => {
         control.contentItemLabel.horizontalAlignment = Qt.binding(() => control.inTable ? control.horizontalAlignment : Text.AlignLeft);
     }, () => {
+        // A short list has no search field, and its header is not made: every box in a table row made one before.
+        control.popup.contentItem.header = Qt.binding(() => control.searchable ? searchHeader : null);
         control.popup.contentItem.model = Qt.binding(() => control.popup.visible ? control.delegateModel : null);
     }, () => {
         control.popup.focus = Qt.binding(() => control.searchable);

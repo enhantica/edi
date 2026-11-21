@@ -29,6 +29,8 @@ Column {
         sourceModel: group.vectors
 
         columns: [numberColumnWidth, -1, -1, AppSizes.iconColumnWidth]
+        // Widths from column types, not rows (ADR-0097 rule 4): an id, then the vector.
+        columnTypes: ["", "short", "text"]
 
         header: EaComponents.ListViewHeader {
             EaComponents.ListViewLabel {

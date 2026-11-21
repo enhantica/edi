@@ -62,7 +62,11 @@ WorkflowPage {
                 project: page.project
             }
             Repeater {
-                model: page.structure ? page.structure.categories : null
+                // One list following the current structure's categories, so a next structure keeps the groups
+                // (ADR-0096 rule 2).
+                model: CategoryListMirror {
+                    source: page.structure ? page.structure.categories : null
+                }
                 delegate: CategoryGroup {
                     textSource: page.structure ? page.structure.text : null
                     shownTier: "Basic"
@@ -74,7 +78,11 @@ WorkflowPage {
     extrasItem: Component {
         EaComponents.SideBarColumn {
             Repeater {
-                model: page.structure ? page.structure.categories : null
+                // One list following the current structure's categories, so a next structure keeps the groups
+                // (ADR-0096 rule 2).
+                model: CategoryListMirror {
+                    source: page.structure ? page.structure.categories : null
+                }
                 delegate: CategoryGroup {
                     textSource: page.structure ? page.structure.text : null
                     shownTier: "Extras"
