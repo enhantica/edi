@@ -1,14 +1,14 @@
 # SPDX-License-Identifier: BSD-3-Clause
-"""Fail a pull request whose system shards run more than 20 % longer than main's.
+"""Fail a nightly run whose system shards run more than 20 % longer than the previous night's.
 
     system_shard_time.py --current RUN.json --main RUN.json --run-id ID --head-sha SHA
 
 Each file is a GitHub Actions run with its jobs: the run's fields plus a `jobs` list as the
 REST API returns it, and `expected_system_shards`, each platform's part count from the workflow
-matrix. The current document must be run ID at this pull request's source head SHA (not its
-merge commit), so a stale or foreign record is refused. Every `system · <platform> ·
-<part>/<parts>` job is compared with the job of the same name in a main push run whose system
-shards passed. Other jobs
+matrix. The current document must be run ID at its head SHA, so a stale or foreign record is
+refused. Every `system · <platform> · <part>/<parts>` job is compared with the job of the same
+name in an earlier scheduled (or, before the system tier moved to the night, push) run on main
+whose system shards passed. Other jobs
 are ignored. Evidence that cannot be compared (a missing or unfinished shard, a duplicate, a bad
 timestamp, a zero baseline) is refused with exit 2; a shard over the limit exits 1 and names the
 shard and main's time.
@@ -100,19 +100,20 @@ def minutes(seconds: Fraction) -> str:
 
 
 def require_identity(current: dict, run_id: str, head_sha: str) -> None:
-    """The current document is this run, at this pull request's source head."""
+    """The current document is this run, at its head."""
     if str(current.get('id')) != run_id or current.get('head_sha') != head_sha:
         raise RefusedError(
             f'the current record is run {current.get("id")} at {current.get("head_sha")}, '
-            f'not this run {run_id} at the pull request head {head_sha}'
+            f'not this run {run_id} at the head {head_sha}'
         )
 
 
 def compare(current: dict, main: dict) -> list[str]:
     """The shards over the limit, one line each."""
-    if main.get('head_branch') != 'main' or main.get('event') != 'push':
+    # The system tier runs at night; an older main push run (before that) still holds shard times.
+    if main.get('head_branch') != 'main' or main.get('event') not in {'schedule', 'push'}:
         raise RefusedError(
-            'the baseline must be a push run on main, '
+            'the baseline must be a scheduled or push run on main, '
             f'not {main.get("event")} on {main.get("head_branch")}'
         )
     if main.get('status') != 'completed':
