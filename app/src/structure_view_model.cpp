@@ -1213,6 +1213,10 @@ void StructureViewModel::sync() {
     propagation_vectors_->sync();
     scattering_lengths_->sync();
     emit magneticChanged();
+    emit derivedPropagationVectorChanged();
+    emit propagationNotDerivedChanged();
+    emit magneticSettingsChanged();
+    emit magneticSettingTabulatedChanged();
     emit magneticGroupChanged();
     emit parentGroupChanged();
     syncAtomTypes();
