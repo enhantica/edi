@@ -10977,7 +10977,7 @@ void ApplicationInfo::fitResultsPassive(const QJSValue& row) const {
 QJSValue ApplicationInfo::fitResultsColumnWidth(bool value) const {
     const auto f = panelUsageEngine(this); const auto title = panelUsageGlobalCall(f, "qsTr", {QJSValue(QString::fromUtf8(value ? QT_TRANSLATE_NOOP("FitResultsDialog", "Value") : QT_TRANSLATE_NOOP("FitResultsDialog", "Metric")))});
     // A metric is a text and a value a number, sized by type, not by the results' rows (ADR-0097 rule 4).
-    const double sample = projectInvoke(f, "table", "advance", {QJSValue(tableTypeSample(QStringLiteral(value ? "number" : "text")))}).toNumber();
+    const double sample = projectInvoke(f, "table", "advance", {QJSValue(tableTypeSample(value ? QStringLiteral("number") : QStringLiteral("text")))}).toNumber();
     const double heading = projectInvoke(f, "table", "advance", {title}).toNumber();
     const QJSValue width(std::ceil(std::max(sample, heading)) + assistantContextField(f, "AppSizes", "fieldSpacing").toNumber() * 2);
     return value ? panelUsageAdd(f, width, formsStyleSize(f, "fontPixelSize")) : width;
