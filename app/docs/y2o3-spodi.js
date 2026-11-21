@@ -106,11 +106,13 @@
             "reveal:" + group, "expand:" + group, "reveal:" + targets[0]];
         shot(id, page, description, actions, targets);
     }
-    shot("guide-project-actions", "project", "Open or save the current project",
+    shot("guide-project-actions", "project", "Create, load or save a project",
         ["appBar.tab.project", "sideBar.tab.basic", "reveal:group.getStarted", "expand:group.getStarted"],
-        ["project.open", "project.saveAs"]);
+        ["project.create", "project.load", "project.saveAs"]);
+    shot("guide-project-load", "project", "Open a project or import one from another program",
+        ["project.load"], ["project.load.menu"]);
     shot("guide-project-open", "project", "Choose a project folder or archive",
-        ["save-as:docs-saved-project", "project.open"], ["project.openChoice"]);
+        ["key:Escape", "save-as:docs-saved-project", "project.load", "project.load.edi"], ["project.openChoice"]);
     shot("guide-project-save", "project", "Choose a save format or save a copy",
         ["key:Escape", "project.saveAs"], ["project.saveChoice"]);
     shot("guide-project-recent", "project", "Find recent projects",

@@ -13,7 +13,8 @@ import EasyApplication.Gui.Logic as EaLogic
 import edi.app
 
 // Get started (easydiffractionbeta Pages/Project/SideBarBasic/GetStarted.qml): create a new project, open one from its
-// project.edi or a .zip, or save the open one as a folder or a .zip, or a copy of it (edi ADR-0017 §13, ADR-0052).
+// project.edi or a .zip or import one from another program, or save the open one as a folder or a .zip, or a copy of
+// it (edi ADR-0017 §13, ADR-0052).
 SideBarGroup {
     id: group
     // The tab's last shown group draws no bottom border (edi ADR-0017 section 3).
@@ -24,47 +25,115 @@ SideBarGroup {
     // The one group that starts open: the first thing a new user needs (the owner, 2026-09-29; edi ADR-0017 §3).
     collapsed: false
 
-    Grid {
-        columns: 2
+    // Create, Load ▾ and Save as side by side at equal widths, as on the Structure and Experiment pages (the owner,
+    // 2026-11-21). The Load menu opens an EasyDiffraction project or imports one from another program; an import
+    // becomes a new, unsaved project.
+    Row {
+        id: buttons
+
+        readonly property real buttonWidth: (EaStyle.Sizes.sideBarContentWidth - 2 * spacing) / 3
+
         spacing: EaStyle.Sizes.fontPixelSize
 
         EaElements.SideBarButton {
             objectName: "project.create"
+            width: buttons.buttonWidth
             fontIcon: "plus-circle"
             text: qsTr("Create a new project")
+            ToolTip.text: qsTr("Start a new, empty project")
             onClicked: ApplicationInfo.createProjectClicked()
         }
 
         EaElements.SideBarButton {
-            objectName: "project.open"
+            id: loadButton
+            objectName: "project.load"
+            width: buttons.buttonWidth
             fontIcon: "upload"
-            text: qsTr("Open project…")
-            onClicked: ApplicationInfo.askOpenProjectChoice()
+            text: qsTr("Load project")
+
+            // The menu's caret, from the icon font: the text fonts have no such character.
+            EaElements.Label {
+                anchors.right: parent.right
+                anchors.rightMargin: EaStyle.Sizes.fontPixelSize * 0.75
+                anchors.verticalCenter: parent.verticalCenter
+                font.family: EaStyle.Fonts.iconsFamily
+                font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.9
+                color: loadButton.enabled ? EaStyle.Colors.themeForeground : EaStyle.Colors.themeForegroundDisabled
+                text: "caret-down"
+            }
+            ToolTip.text: qsTr("Open an EasyDiffraction project or import one from another program")
+            onClicked: loadMenu.open()
+
+            EaElements.Menu {
+                id: loadMenu
+                objectName: "project.load.menu"
+                y: loadButton.height
+                // Nothing below the last item (the owner, 2026-11-04).
+                bottomPadding: 0
+                width: Math.max(loadButton.width, EaStyle.Sizes.fontPixelSize * 26)
+
+                readonly property real labelWidth: EaStyle.Sizes.fontPixelSize * 13
+
+                LoadMenuHeader {
+                    first: true
+                    text: qsTr("Project")
+                }
+                LoadMenuItem {
+                    objectName: "project.load.edi"
+                    labelWidth: loadMenu.labelWidth
+                    fontIcon: "folder-open"
+                    text: qsTr("Open EasyDiffraction file…")
+                    hint: "project.edi .zip"
+                    toolTip: qsTr("Open an EasyDiffraction project from its folder or a .zip of it")
+                    // A folder or a .zip, first, on every platform: a chooser picks files or a folder, never both (edi
+                    // ADR-0052 §3).
+                    onTriggered: ApplicationInfo.askOpenProjectChoice()
+                }
+                LoadMenuHeader {
+                    text: qsTr("Import from another program")
+                }
+                // Not implemented yet: shown, disabled (edi ADR-0017 §4).
+                LoadMenuItem {
+                    objectName: "project.import.cryspy"
+                    labelWidth: loadMenu.labelWidth
+                    enabled: false
+                    fontIcon: "file-import"
+                    text: qsTr("Import cryspy…")
+                    hint: ".rcif"
+                    toolTip: qsTr("Import a cryspy project")
+                }
+                LoadMenuItem {
+                    objectName: "project.import.fullProf"
+                    labelWidth: loadMenu.labelWidth
+                    // The importers read files from the disk; the browser has none to give them yet.
+                    enabled: !WebFiles.available
+                    fontIcon: "file-import"
+                    text: qsTr("Import FullProf…")
+                    hint: ".pcr"
+                    toolTip: qsTr("Import a FullProf project from its .pcr file and the data files beside it")
+                    onTriggered: importFullProfDialog.open()
+                }
+                LoadMenuItem {
+                    objectName: "project.import.gsas"
+                    labelWidth: loadMenu.labelWidth
+                    enabled: !WebFiles.available
+                    fontIcon: "file-import"
+                    text: qsTr("Import GSAS-II…")
+                    hint: ".gpx"
+                    toolTip: qsTr("Import a GSAS-II project from its .gpx file or a GSAS-II text bundle")
+                    onTriggered: importGsasDialog.open()
+                }
+            }
         }
 
         EaElements.SideBarButton {
             objectName: "project.saveAs"
+            width: buttons.buttonWidth
             enabled: Session.project !== null
             fontIcon: "file-export"
             text: qsTr("Save project as…")
+            ToolTip.text: qsTr("Save the project as a folder or a .zip, or save a copy of it")
             onClicked: AppState.saveAsRequested()
-        }
-
-        // Opening a project from a URL is not implemented: shown, disabled (edi ADR-0017 §4).
-        EaElements.SideBarButton {
-            objectName: "project.openUrl"
-            enabled: false
-            fontIcon: "link"
-            text: qsTr("Open project from URL…")
-        }
-
-        EaElements.SideBarButton {
-            objectName: "project.exportFullProf"
-            visible: !WebFiles.available
-            enabled: Session.project !== null
-            fontIcon: "file-export"
-            text: qsTr("Export to FullProf…")
-            onClicked: fullProfExportChoice.open()
         }
     }
 
@@ -184,13 +253,13 @@ SideBarGroup {
         id: openChoice
         objectName: "open.choice"
         enterAccepts: true
-        property string format: "folder"
+        property bool zip: false
         parent: Overlay.overlay
         title: qsTr("Open project")
         standardButtons: Dialog.Ok | Dialog.Cancel
         contentWidth: Math.max(openChoiceColumn.implicitWidth, Math.round(AppSizes.messagesDialogContentWidth / 2))
         contentHeight: openChoiceColumn.implicitHeight
-        onAboutToShow: format = "folder"
+        onAboutToShow: zip = false
         onAccepted: ApplicationInfo.openProjectChoice()
         onClosed: ApplicationInfo.openProjectPicker()
 
@@ -201,21 +270,14 @@ SideBarGroup {
             ChoiceRadioButton {
                 objectName: "open.folder"
                 text: qsTr("Folder")
-                checked: openChoice.format === "folder"
-                onClicked: openChoice.format = "folder"
+                checked: !openChoice.zip
+                onClicked: openChoice.zip = false
             }
             ChoiceRadioButton {
                 objectName: "open.zip"
                 text: qsTr("Zip archive")
-                checked: openChoice.format === "zip"
-                onClicked: openChoice.format = "zip"
-            }
-            ChoiceRadioButton {
-                objectName: "open.fullProf"
-                text: qsTr("FullProf PCR file")
-                visible: !WebFiles.available
-                checked: openChoice.format === "pcr"
-                onClicked: openChoice.format = "pcr"
+                checked: openChoice.zip
+                onClicked: openChoice.zip = true
             }
         }
     }
@@ -243,46 +305,24 @@ SideBarGroup {
             Qt.callLater(Session.openProject, selectedFile);
         }
     }
-    AppDialog {
-        id: fullProfExportChoice
-        objectName: "export.fullProf.choice"
-        parent: Overlay.overlay
-        title: qsTr("Export to FullProf")
-        standardButtons: Dialog.Ok | Dialog.Cancel
-        contentWidth: fullProfFixed.implicitWidth
-        contentHeight: fullProfFixed.implicitHeight
+    // Imports open as a new, unsaved project, as Open does: on the next turn it replaces this page.
+    FileDialog {
+        id: importFullProfDialog
+        title: qsTr("Import a FullProf project")
+        nameFilters: [qsTr("FullProf control files (*.pcr *.PCR)")]
+        currentFolder: DialogFolders.folder("importProject", "")
         onAccepted: {
-            fullProfExportFolder.sourceProject = Session.project;
-            fullProfExportFolder.fixed = fullProfFixed.checked;
-            Qt.callLater(fullProfExportFolder.open);
-        }
-
-        EaElements.CheckBox {
-            id: fullProfFixed
-            checked: true
-            text: qsTr("Fix all parameters for a forward calculation")
-        }
-    }
-    FolderDialog {
-        id: fullProfExportFolder
-        property var sourceProject
-        property bool fixed: true
-        title: qsTr("Choose where to create the FullProf project folder")
-        currentFolder: DialogFolders.folder("exportFullProf", "")
-        onAccepted: {
-            if (sourceProject === Session.project) {
-                DialogFolders.remember("exportFullProf", selectedFolder);
-                Session.exportFullProf(selectedFolder, fixed);
-            }
+            DialogFolders.remember("importProject", selectedFile);
+            Qt.callLater(Session.openProject, selectedFile);
         }
     }
     FileDialog {
-        id: openFullProfDialog
-        title: qsTr("Open a FullProf PCR file")
-        nameFilters: [qsTr("FullProf control files (*.pcr *.PCR)")]
-        currentFolder: DialogFolders.folder("openProject", "")
+        id: importGsasDialog
+        title: qsTr("Import a GSAS-II project")
+        nameFilters: [qsTr("GSAS-II projects (*.gpx *.gsas.json)")]
+        currentFolder: DialogFolders.folder("importProject", "")
         onAccepted: {
-            DialogFolders.remember("openProject", selectedFile);
+            DialogFolders.remember("importProject", selectedFile);
             Qt.callLater(Session.openProject, selectedFile);
         }
     }
