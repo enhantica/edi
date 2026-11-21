@@ -78,16 +78,33 @@ SideBarGroup {
                     first: true
                     text: qsTr("Project")
                 }
+                // The browser's own chooser copies a folder into its storage; Chrome and Edge open it on the disk.
                 LoadMenuItem {
-                    objectName: "project.load.edi"
+                    objectName: "project.load.folder"
                     labelWidth: loadMenu.labelWidth
                     fontIcon: "folder-open"
-                    text: qsTr("Open EasyDiffraction file…")
-                    hint: "project.edi .zip"
-                    toolTip: qsTr("Open an EasyDiffraction project from its folder or a .zip of it")
-                    // A folder or a .zip, first, on every platform: a chooser picks files or a folder, never both (edi
-                    // ADR-0052 §3).
-                    onTriggered: ApplicationInfo.askOpenProjectChoice()
+                    text: qsTr("Open EasyDiffraction folder…")
+                    hint: "project.edi"
+                    toolTip: qsTr("Open an EasyDiffraction project from its folder")
+                    onTriggered: group.openProject(false)
+                }
+                LoadMenuItem {
+                    objectName: "project.load.zip"
+                    labelWidth: loadMenu.labelWidth
+                    fontIcon: "archive"
+                    text: qsTr("Open EasyDiffraction zip…")
+                    hint: ".zip"
+                    toolTip: qsTr("Open an EasyDiffraction project from a .zip of its folder")
+                    onTriggered: group.openProject(true)
+                }
+                // Not implemented yet: shown, disabled (edi ADR-0017 §4).
+                LoadMenuItem {
+                    objectName: "project.load.url"
+                    labelWidth: loadMenu.labelWidth
+                    enabled: false
+                    fontIcon: "link"
+                    text: qsTr("Open from URL…")
+                    toolTip: qsTr("Open an EasyDiffraction project from a web address")
                 }
                 LoadMenuHeader {
                     text: qsTr("Import from another program")
@@ -161,7 +178,7 @@ SideBarGroup {
 
                 LoadMenuHeader {
                     first: true
-                    text: qsTr("EasyDiffraction")
+                    text: qsTr("Project")
                 }
                 LoadMenuItem {
                     objectName: "project.saveAs.folder"
@@ -193,7 +210,7 @@ SideBarGroup {
                     ToolTip.text: qsTr("Write the project there and keep working where it is")
                 }
                 LoadMenuHeader {
-                    text: qsTr("Export a copy for another program")
+                    text: qsTr("Export to another program (always a copy)")
                 }
                 // Not implemented yet: shown, disabled (edi ADR-0017 §4).
                 LoadMenuItem {
@@ -258,6 +275,20 @@ SideBarGroup {
     }
     function chooseCreate() {
         ApplicationInfo.chooseCreateProject();
+    }
+
+    // Open project (edi ADR-0052 §3, §9): once unsaved changes are dealt with, the system's folder chooser for the
+    // project folder holding project.edi, or its file chooser for a .zip; in the browser the browser's own chooser.
+    function openProject(zip) {
+        const life = group.createLife;
+        AppState.afterChanges(() => {
+            if (!life.alive)
+                return;
+            if (WebFiles.available)
+                Session.openWebProject(zip ? "file" : "folder");
+            else
+                Qt.callLater(() => (zip ? openZipDialog : openFolderDialog).open());
+        });
     }
 
     // Save on the untitled project opens Create project here: it names the project and saves it, its work kept.
@@ -336,43 +367,6 @@ SideBarGroup {
             width: replaceProject.contentWidth
             wrapMode: Text.Wrap
             text: qsTr("A project named %1 already exists in %2. Replace it?").arg(replaceProject.projectName).arg(replaceProject.folder)
-        }
-    }
-
-    // Open project (edi ADR-0052 §3, §9; owner, 2026-10-25): the same small dialog on every platform, Folder or Zip
-    // archive, then the matching chooser: a folder chooser for the project folder holding project.edi, or a file
-    // chooser for a .zip. In the browser the browser's own chooser: Chrome and Edge open it on the disk, where Save
-    // writes it back; other browsers copy it into the browser's storage.
-    AppDialog {
-        id: openChoice
-        objectName: "open.choice"
-        enterAccepts: true
-        property bool zip: false
-        parent: Overlay.overlay
-        title: qsTr("Open project")
-        standardButtons: Dialog.Ok | Dialog.Cancel
-        contentWidth: Math.max(openChoiceColumn.implicitWidth, Math.round(AppSizes.messagesDialogContentWidth / 2))
-        contentHeight: openChoiceColumn.implicitHeight
-        onAboutToShow: zip = false
-        onAccepted: ApplicationInfo.openProjectChoice()
-        onClosed: ApplicationInfo.openProjectPicker()
-
-        Column {
-            id: openChoiceColumn
-            objectName: "project.openChoice"
-
-            ChoiceRadioButton {
-                objectName: "open.folder"
-                text: qsTr("Folder")
-                checked: !openChoice.zip
-                onClicked: openChoice.zip = false
-            }
-            ChoiceRadioButton {
-                objectName: "open.zip"
-                text: qsTr("Zip archive")
-                checked: openChoice.zip
-                onClicked: openChoice.zip = true
-            }
         }
     }
 

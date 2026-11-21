@@ -109,10 +109,8 @@
     shot("guide-project-actions", "project", "Create, load or save a project",
         ["appBar.tab.project", "sideBar.tab.basic", "reveal:group.getStarted", "expand:group.getStarted"],
         ["project.create", "project.load", "project.saveAs"]);
-    shot("guide-project-load", "project", "Open a project or import one from another program",
-        ["project.load"], ["project.load.menu"]);
-    shot("guide-project-open", "project", "Choose a project folder or archive",
-        ["key:Escape", "save-as:docs-saved-project", "project.load", "project.load.edi"], ["project.openChoice"]);
+    shot("guide-project-open", "project", "Open a project folder or archive, or import one from another program",
+        ["save-as:docs-saved-project", "project.load"], ["project.load.menu"]);
     shot("guide-project-save", "project", "Save as an EasyDiffraction folder or .zip, or export a copy",
         ["key:Escape", "project.saveAs"], ["project.saveAs.menu"]);
     shot("guide-project-recent", "project", "Find recent projects",
