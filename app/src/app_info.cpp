@@ -4475,9 +4475,12 @@ void parameterTextRefit(const PanelUsageFrame& f, bool scalable, bool textCell =
     const bool numeric = textCell ? panelUsageTruth(panelUsageContextRead(f, "numeric")) : scalable;
     if (textCell && numeric && !focused)
         shown = panelUsageMemberCall(f, panelUsageContextRead(f, "NumberText"), "compact", {shown});
+    // A read-only text cell may show a number its page wrote (a moment's modulus or angles): fitted the same way, as
+    // the fitter leaves any text that is not a number as it is.
+    const bool fits = numeric || (textCell && panelUsageTruth(panelUsageContextRead(f, "readOnly")));
     // A table cell (a parameter's or a numeric text cell) fits the number to its column once the table has sized it
     // (ADR-0097 rule 4); a cell that makes its text smaller instead (fitDigits) and an edited one keep the text.
-    if (numeric && !focused && !(scalable && panelUsageTruth(panelUsageContextRead(f, "fitDigits")))) {
+    if (fits && !focused && !(scalable && panelUsageTruth(panelUsageContextRead(f, "fitDigits")))) {
         const double width = panelUsageContextRead(f, "width").toNumber();
         const double implicit = panelUsageContextRead(f, "implicitWidth").toNumber();
         const double room = panelUsageContextRead(f, "room").toNumber();
