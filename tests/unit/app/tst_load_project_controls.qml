@@ -1,0 +1,86 @@
+import QtQuick
+import QtTest
+import edi.app
+import EdiAcceptance 1.0
+import "UiInteraction.js" as Ui
+import "RenderedTable.js" as Render
+
+TestCase {
+    id: test
+    name: "LoadProjectControls"
+    when: windowShown
+    property var app: null
+    Component {
+        id: application
+        Main {}
+    }
+
+    function normalized(text) {
+        return text.replace(/(?:…|\.\.\.)$/, "");
+    }
+
+    function init() {
+        failOnWarning(Probe.softwareOffscreenWithoutGl() ? /\A(?!(?:QRhiGles2: Failed to create (?:temporary context|context)|window doesn\x27t exist\.)\z)[\s\S]*\z/ : /.*/);
+        Session.closeProject();
+        app = application.createObject(null, {width: 1280, height: 800, visible: true});
+        verify(app !== null, "The project entry controls run in the production Main window");
+        app.requestActivate();
+        tryCompare(app, "active", true, 2000, "Real input belongs to the active production window");
+        Ui.click(test, Probe, app, "appBar.tab.home");
+        Ui.click(test, Probe, app, "home.start");
+        Ui.click(test, Probe, app, "appBar.tab.project");
+    }
+
+    function cleanup() {
+        Probe.clearWatches();
+        Session.closeProject();
+        if (app) {
+            app.close();
+            app.destroy();
+        }
+        app = null;
+    }
+
+    function group() {
+        const groups = Render.descendants(Ui.page(app)).filter(item => item.objectName === "group.getStarted");
+        compare(groups.length, 1, "The actual Project page owns one Get started group");
+        return groups[0];
+    }
+
+    function projectButtons() {
+        return Render.descendants(group()).filter(item =>
+            String(item).includes("SideBarButton") && typeof item.text === "string" && item.visible);
+    }
+
+    function test_three_project_buttons() {
+        const buttons = projectButtons();
+        compare(JSON.stringify(buttons.map(item => normalized(item.text))),
+                JSON.stringify(["Create a new project", "Load project", "Save project as"]),
+                "Get started shows the three requested actions, without the old import or URL buttons");
+        for (const button of buttons) {
+            Ui.scrollIntoView(button);
+            verify(Ui.rendered(button), "Each project entry button is visibly available in its real sidebar");
+        }
+    }
+
+    function test_load_project_opens_the_ordered_choices() {
+        const load = projectButtons().filter(item => normalized(item.text) === "Load project");
+        compare(load.length, 1, "Get started has one actual Load project button");
+        Ui.scrollIntoView(load[0]);
+        verify(Ui.rendered(load[0]) && load[0].enabled, "Load project accepts real input before a project exists");
+        const point = Ui.clickPoint(load[0]);
+        mouseClick(load[0], point.x, point.y);
+        const expected = ["Open EasyDiffraction file", "Import cryspy", "Import FullProf", "Import GSAS-II"];
+        function choices() {
+            return Render.descendants(Ui.windowRoot(app)).filter(item =>
+                typeof item.text === "string" && typeof item.clicked === "function" &&
+                expected.includes(normalized(item.text)) && Ui.rendered(item));
+        }
+        tryVerify(() => choices().length === 4, 2000,
+                  "Clicking Load project exposes all four real program choices");
+        const ordered = choices().sort((left, right) => left.mapToItem(null, 0, 0).y - right.mapToItem(null, 0, 0).y);
+        compare(JSON.stringify(ordered.map(item => normalized(item.text))), JSON.stringify(expected),
+                "The rendered popup lists EasyDiffraction, cryspy, FullProf and GSAS-II in order");
+        keyClick(Qt.Key_Escape);
+    }
+}
