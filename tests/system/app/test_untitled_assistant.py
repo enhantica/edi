@@ -51,9 +51,7 @@ def test_assistant_create_from_untitled(tmp_path, shown):
         )
         title = native.qml(actor, 'Session.project.title')
         assert isinstance(title, str), 'The work container exposes its title as text'
-        assert not title, (
-            'The work container has no invented project title'
-        )
+        assert not title, 'The work container has no invented project title'
         assert native.qml(
             actor,
             '(function(){const p=Session.project;if(!p.createStructure())return false;'
