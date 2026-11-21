@@ -193,7 +193,6 @@ struct Bank {
 
     bool tof() const { return job < 0; }
     bool simulation() const { return std::abs(job) > 1; }
-    bool has_cw_irf() const { return !tof() && npr == 7 && model->peak.fullprof_cw_irf.has_value(); }
     const PdDataBase& data() const { return *model->data; }
 };
 
@@ -394,7 +393,7 @@ void write_setup(std::ostream& out, const Bank& bank, std::size_t index) {
             << ' ' << value(instrument.setup_wavelength_2_to_1_ratio) << ' ' << bank.origin << ' '
             << experiment.peak.cutoff_fwhm << ' ' << bank.cthm << ' ' << value(experiment.absorption.mu_r) << ' '
             << (experiment.peak.asym_beba_limit ? value(experiment.peak.asym_beba_limit)
-                                               : experiment.peak.fullprof_fcj_limit.value_or(180.)) << " 0 "
+                                               : 180.) << " 0 "
             << (value(instrument.setup_wavelength_2_to_1_ratio) > 0. ? value(experiment.absorption.mu_r) : 0.) << '\n';
     }
 }
@@ -483,12 +482,6 @@ void write_profile(std::ostream& out, Structure& structure, const Bank& bank, st
                                   field(peak.broad_gauss_w),
                                   peak.mixing_eta_1 ? field(peak.mixing_eta_1) : field(peak.broad_lorentz_x),
                                   field(peak.broad_lorentz_y), {0.}, {0.}};
-        if (bank.has_cw_irf()) {
-            const auto& instrument = *peak.fullprof_cw_irf;
-            for (std::size_t i = 0; i < instrument.size(); ++i) {
-                widths[i].value -= instrument[i];
-            }
-        }
         pair_rows(out, "U V W X Y GauSiz LorSiz Size-Model", widths, " 0");
     }
     std::vector<Field> cell;
@@ -977,26 +970,11 @@ void write_pcr(Project& project, const fs::path& folder, bool fixed) {
     for (const auto& bank : banks) {
         out << bank.job << ' ' << bank.npr << ' ' << bank.nba << ' ' << bank.model->excluded_regions.size()
             << ' ' << bank.neutron_lengths.size() << ' ' << static_cast<int>(bank.texture)
-            << " 0 0 " << static_cast<int>(bank.has_cw_irf()) << " 0 " << static_cast<int>(bank.tof()) << " 0 0 0\n";
+            << " 0 0 0 0 " << static_cast<int>(bank.tof()) << " 0 0 0\n";
     }
     out << "!File names of data(patterns) files\n";
     for (const auto& bank : banks) {
         out << bank.file << '\n';
-    }
-    for (std::size_t i = 0; i < banks.size(); ++i) {
-        const auto& bank = banks[i];
-        if (!bank.has_cw_irf()) {
-            continue;
-        }
-        const auto name = fs::path(bank.file).replace_extension(".irf");
-        out << "! Resolution file for Pattern# " << i + 1 << '\n' << name.string() << '\n';
-        auto irf = output_file(folder / name);
-        irf << "Resolution function for EasyDiffraction output ireso 1\nPROF 7 0 0 0\n";
-        for (double width : *bank.model->peak.fullprof_cw_irf) {
-            irf << width << ' ';
-        }
-        irf << "0\n";
-        irf.close();
     }
     out << "!Mat Pcr NLI Rpa Sym Sho\n0 2 0 1 0 0\n!Ipr Ppl Ioc Ls1 Ls2 Ls3 Prf Ins Hkl Fou Ana\n";
     for (std::size_t i = 0; i < banks.size(); ++i) {

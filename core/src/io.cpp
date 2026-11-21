@@ -854,7 +854,7 @@ const std::set<std::string>& known_covered_tags() {
         "_peak.broad_lorentz_gamma_1", "_peak.broad_lorentz_gamma_2", "_peak.broad_lorentz_size",
         "_peak.broad_lorentz_strain", "_peak.broad_lorentz_x", "_peak.broad_lorentz_y",
         "_peak.mixing_eta_0", "_peak.mixing_eta_1", "_peak.cutoff_fwhm", "_peak.decay_beta_0", "_peak.decay_beta_1", "_peak.rise_alpha_0",
-        "_peak.rise_alpha_1", "_peak.type", "_peak.fullprof_fcj_limit", "_peak.beba_evaluation", "_peak.fullprof_cw_irf",
+        "_peak.rise_alpha_1", "_peak.type",
         // The CW asymmetry coefficients (read only on the rung that carries them).
         "_peak.asym_beba_a0", "_peak.asym_beba_a1", "_peak.asym_beba_b0", "_peak.asym_beba_b1",
         "_peak.asym_beba_limit",
@@ -2426,33 +2426,6 @@ BraggPdExperiment parse_experiment_block(const Block& block, const std::string& 
     if (const std::string* digest = block.find("_data_source.digest")) experiment.data_digest = *digest;
     read_background_estimate(block, experiment, where);
     validate_experiment_selectors(block, resolved.peak_type, resolved.mode, where);
-    if (const std::string* limit = block.find("_peak.fullprof_fcj_limit")) {
-        const auto value = to_double(*limit, where);
-        if (resolved.mode != BeamModeEnum::CONSTANT_WAVELENGTH || !std::isfinite(value)) {
-            fail_domain(where, "bad-fullprof-fcj-limit",
-                        "_peak.fullprof_fcj_limit requires a finite CW angle");
-        }
-        experiment.peak.fullprof_fcj_limit = value;
-    }
-    if (const std::string* evaluation = block.find("_peak.beba_evaluation")) {
-        if (resolved.mode != BeamModeEnum::CONSTANT_WAVELENGTH || *evaluation != "pattern-point") {
-            fail_domain(where, "bad-beba-evaluation",
-                        "_peak.beba_evaluation requires 'pattern-point' on a CW profile");
-        }
-        experiment.peak.fullprof_beba_point = true;
-    }
-    if (const std::string* irf = block.find("_peak.fullprof_cw_irf")) {
-        auto widths = std::array<double, 5>{};
-        std::istringstream tokens(*irf);
-        tokens.imbue(std::locale::classic());
-        if (resolved.mode != BeamModeEnum::CONSTANT_WAVELENGTH ||
-            !std::all_of(widths.begin(), widths.end(), [&](double& width) {
-                return static_cast<bool>(tokens >> width) && std::isfinite(width);
-            }) || !(tokens >> std::ws).eof()) {
-            fail_domain(where, "bad-fullprof-cw-irf", "_peak.fullprof_cw_irf requires five finite CW widths");
-        }
-        experiment.peak.fullprof_cw_irf = widths;
-    }
     experiment.peak.cutoff_fwhm = to_double(block.require("_peak.cutoff_fwhm", where), where);
 
     if (resolved.mode == BeamModeEnum::CONSTANT_WAVELENGTH) {

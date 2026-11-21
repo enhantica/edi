@@ -5203,9 +5203,6 @@ crysta::BraggPdExperiment to_crysta_cwl_experiment(const ExperimentBase& e, bool
     crysta::BraggPdExperiment built(std::move(peak), std::move(instrument),
                              param(seed_scale(e), crysta::SCALE, "scale"), background);
     built.cutoff_fwhm = e.peak.cutoff_fwhm;
-    built.fullprof_fcj_limit = e.peak.fullprof_fcj_limit;
-    built.fullprof_beba_point = e.peak.fullprof_beba_point;
-    built.fullprof_cw_irf = e.peak.fullprof_cw_irf;
     built.kind = crysta::BeamModeEnum::ConstantWavelength;  // before the post-build fill: the
     // TOF-only abscor guard reads it
     apply_post_build_fields(e, built);

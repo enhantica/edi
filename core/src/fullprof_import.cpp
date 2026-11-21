@@ -1489,9 +1489,6 @@ void cw_profile(const PCR& pcr, Pattern& pattern, Refinement& refine, const Code
     const auto nonzero = [&](std::size_t i) { return shape.values[i] != 0. || shape.codes[i] != 0.; };
     const bool beba = nonzero(2) || nonzero(3) || nonzero(4) || nonzero(5);
     const auto base = pattern.cw_resolution.value_or(CwResolution{});
-    if (pattern.cw_resolution) {
-        peak.fullprof_cw_irf = base.widths;
-    }
     const bool fcj_from_pcr = shape.values.size() >= 8 && shape.codes.size() >= 8 && (nonzero(6) || nonzero(7));
     pcr.zero(width.values, 7, width.values.size(), "CWL anisotropic size model");
     pcr.zero(width.codes, 6, width.codes.size(), "CWL size refinement");
@@ -1515,9 +1512,6 @@ void cw_profile(const PCR& pcr, Pattern& pattern, Refinement& refine, const Code
         pcr.fail("Unsupported FullProf FCJ profile");
     }
     select_peak_profile(exp, profile);
-    if (fcj) {
-        peak.fullprof_fcj_limit = pattern.asymmetry_limit;
-    }
     const auto width_at = [&](std::size_t column) {
         auto coded = width.at(column);
         coded.value += base.widths[column];
@@ -1574,7 +1568,6 @@ void cw_profile(const PCR& pcr, Pattern& pattern, Refinement& refine, const Code
         refine.set(peak.asym_fcj_2, apertures[1]);
     }
     if (beba) {
-        peak.fullprof_beba_point = true;
         const auto transform = [&](OptionalParameter& a, OptionalParameter& b, std::size_t i) {
             const auto mapped = profile_pair(pcr, refine, shape.at(i), shape.at(i + 1), -1., -3., -1.);
             refine.set(a, mapped[0]);
