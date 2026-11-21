@@ -129,11 +129,11 @@ SideBarGroup {
                                 property int horizontalAlignment: Text.AlignHCenter
                                 width: AppSizes.dataColumnWidth * 1.4
                                 height: EaStyle.Sizes.tableRowHeight
-                                EaComponents.ListViewLabel {
-                                    elide: Text.ElideRight
+                                // A scan value fitted to its column, in full on hover (NumberLabel).
+                                NumberLabel {
                                     anchors.fill: parent
                                     horizontalAlignment: column.horizontalAlignment
-                                    text: column.modelData
+                                    number: column.modelData
                                 }
                             }
                         }

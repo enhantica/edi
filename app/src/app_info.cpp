@@ -4279,27 +4279,39 @@ namespace {
 // A number's text for a cell `room` wide (ADR-0097 rule 4): the text when it fits, else the rule's ×10ⁿ form (owner
 // records 2026-11-09 and 2026-11-11, item 6) with as many significant digits as fit; when none does, the narrowest form
 // cut short with an ellipsis. A value with an s.u. keeps every digit and writes the s.u. at the same power; a text that
-// is not a number is returned as it is.
+// is not a number is cut short the same way when it does not fit.
 QString fittedNumberText(const QString& text, double room, const QFontMetricsF& metrics) {
     if (room <= 0 || metrics.horizontalAdvance(text) <= room) return text;
     static const QString superscripts = QStringLiteral("⁰¹²³⁴⁵⁶⁷⁸⁹");
     static const QRegularExpression pattern(QString::fromUtf8(
-        R"(^([-−+]?)([0-9]*\.?[0-9]+)(\([0-9]+\))?(?:×10(⁻?[⁰¹²³⁴⁵⁶⁷⁸⁹]+))?((?: ?%)|(?: \S.*))?$)"));
+        R"(^([-−+]?)([0-9]*\.?[0-9]+)(\([0-9]+\))?(?:×10(⁻?[⁰¹²³⁴⁵⁶⁷⁸⁹]+)|[eE]([-+]?[0-9]+))?((?: ?%)|(?: \S.*))?$)"));
     const QRegularExpressionMatch match = pattern.match(text);
-    if (!match.hasMatch()) return text;
+    // Not a number (a word, a list): cut short like any text, never clipped silently.
+    if (!match.hasMatch()) return metrics.elidedText(text, Qt::ElideRight, room);
     const QString sign = match.captured(1) == QStringLiteral("+") ? QString() : match.captured(1);
-    const QString mantissa = match.captured(2), su = match.captured(3), suffix = match.captured(5);
-    int power = 0;
-    for (const QChar c : match.captured(4)) {
-        if (c == QChar(0x207B)) continue;
-        power = power * 10 + static_cast<int>(superscripts.indexOf(c));
+    const QString mantissa = match.captured(2), su = match.captured(3), suffix = match.captured(6);
+    int power = match.captured(5).toInt();  // a written e-notation exponent, else 0
+    if (!match.captured(4).isEmpty()) {
+        power = 0;
+        for (const QChar c : match.captured(4)) {
+            if (c == QChar(0x207B)) continue;
+            power = power * 10 + static_cast<int>(superscripts.indexOf(c));
+        }
+        if (match.captured(4).startsWith(QChar(0x207B))) power = -power;
     }
-    if (match.captured(4).startsWith(QChar(0x207B))) power = -power;
     // The digits and where the point falls among them; the first non-zero digit leads the new mantissa.
     const qsizetype point = mantissa.contains(QLatin1Char('.')) ? mantissa.indexOf(QLatin1Char('.')) : mantissa.size();
     const QString digits = QString(mantissa).remove(QLatin1Char('.'));
     const qsizetype lead = digits.indexOf(QRegularExpression(QStringLiteral("[1-9]")));
-    if (lead < 0) return text;  // zero
+    if (lead < 0) {
+        // Zero: "0", or with an s.u. "0(3)" at the power of the s.u.'s last digit, so its meaning stays.
+        const int decimals = static_cast<int>(mantissa.size() - std::min(point + 1, mantissa.size()));
+        const int place = power - decimals;
+        const QString zero = QStringLiteral("0") + su + (!su.isEmpty() && place != 0 ? powerOfTen(place) : QString()) + suffix;
+        if (metrics.horizontalAdvance(zero) <= room) return zero;
+        const QString narrower = metrics.horizontalAdvance(zero) < metrics.horizontalAdvance(text) ? zero : text;
+        return metrics.elidedText(narrower, Qt::ElideRight, room);
+    }
     const int exponent = power + static_cast<int>(point - lead - 1);
     const auto written = [&](const QString& significant) {
         QString out = sign + significant.left(1);
@@ -4475,9 +4487,10 @@ void parameterTextRefit(const PanelUsageFrame& f, bool scalable, bool textCell =
     const bool numeric = textCell ? panelUsageTruth(panelUsageContextRead(f, "numeric")) : scalable;
     if (textCell && numeric && !focused)
         shown = panelUsageMemberCall(f, panelUsageContextRead(f, "NumberText"), "compact", {shown});
-    // A read-only text cell may show a number its page wrote (a moment's modulus or angles): fitted the same way, as
-    // the fitter leaves any text that is not a number as it is.
-    const bool fits = numeric || (textCell && panelUsageTruth(panelUsageContextRead(f, "readOnly")));
+    // A text cell may show a number its page wrote as text (a moment's components, modulus or angles), edited or not:
+    // fitted the same way while it is not edited, as the fitter leaves any text that is not a number as it is.
+    const bool fits = numeric || (textCell && (panelUsageTruth(panelUsageContextRead(f, "readOnly"))
+        || panelUsageContextRead(f, "accepts").toString() == QLatin1String("number")));
     // A table cell (a parameter's or a numeric text cell) fits the number to its column once the table has sized it
     // (ADR-0097 rule 4); a cell that makes its text smaller instead (fitDigits) and an edited one keep the text.
     if (fits && !focused && !(scalable && panelUsageTruth(panelUsageContextRead(f, "fitDigits")))) {

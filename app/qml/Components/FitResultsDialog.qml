@@ -210,13 +210,13 @@ AppDialog {
                     color: EaStyle.Colors.themeForeground
                     text: row.metric
                 }
-                EaComponents.ListViewLabel {
-                    elide: Text.ElideRight
+                // A value fitted to its column (NumberLabel); an outcome word is not a number and shows as it is.
+                NumberLabel {
                     objectName: `fit.results.value.${row.index}`
                     rightPadding: EaStyle.Sizes.fontPixelSize
                     horizontalAlignment: Text.AlignRight
                     color: row.outcome !== "" ? FitOutcomes.textColor(row.outcome) : EaStyle.Colors.themeForeground
-                    text: row.outcome !== "" ? FitOutcomes.word(row.outcome) : row.value
+                    number: row.outcome !== "" ? FitOutcomes.word(row.outcome) : row.value
                 }
             }
         }

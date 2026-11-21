@@ -201,11 +201,11 @@ Column {
             // header.
             Repeater {
                 model: ApplicationInfo.nativeListProjection(2)
-                delegate: CellLabel {
-                    elide: Text.ElideRight
+                // A number fitted to its typed column, in full on hover (NumberLabel).
+                delegate: NumberLabel {
                     required property var modelData
                     horizontalAlignment: Text.AlignHCenter
-                    text: group.shown("pd_calc.component_intensities_net", modelData)
+                    number: group.shown("pd_calc.component_intensities_net", modelData)
                 }
             }
         }
