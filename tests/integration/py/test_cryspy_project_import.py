@@ -121,3 +121,32 @@ def test_cryspy_import_round_trip_retains_source_values_and_leaves_the_source_un
     assert SOURCE.read_bytes() == original, (
         'Importing and saving never rewrite the original cryspy project'
     )
+
+
+@pytest.mark.parametrize(
+    ('declaration', 'item'),
+    [
+        ('_unsupported_model_value 0.37', '_unsupported_model_value'),
+        (
+            'loop_\n_unsupported_model_label\n_unsupported_model_value\none 0.37',
+            '_unsupported_model_label',
+        ),
+    ],
+)
+def test_cryspy_refuses_unconverted_scalar_and_loop_items(tmp_path, declaration, item):
+    source = tmp_path / 'unsupported.rcif'
+    text = SOURCE.read_text(encoding='utf-8').replace(
+        'data_pbso4', 'data_pbso4\n' + declaration, 1
+    )
+    source.write_text(text, encoding='utf-8')
+    with pytest.raises(edi.IoError, match=re.escape(item)):
+        edi.Project.load(source)
+
+
+@pytest.mark.parametrize('marked', ['8.479343(100)A+', '8.479343()A-'])
+def test_cryspy_refuses_constraint_marks_instead_of_discarding_the_relation(tmp_path, marked):
+    source = tmp_path / 'constrained.rcif'
+    text = SOURCE.read_text(encoding='utf-8').replace('8.479343(100)', marked, 1)
+    source.write_text(text, encoding='utf-8')
+    with pytest.raises(edi.IoError, match='constraint mark'):
+        edi.Project.load(source)

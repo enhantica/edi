@@ -42,9 +42,9 @@ def test_get_started_declares_exactly_the_three_project_actions():
 
 def test_load_popup_declares_the_native_and_program_choices_in_order():
     expected = [
-        'Open EasyDiffraction folder',
-        'Open EasyDiffraction zip',
-        'Open EasyDiffraction from URL',
+        'Open project folder',
+        'Open project zip',
+        'Open project from URL',
         'Import cryspy',
         'Import FullProf',
         'Import GSAS-II',
@@ -61,7 +61,7 @@ def test_load_popup_declares_the_native_and_program_choices_in_order():
 
 
 def test_save_as_popup_declares_the_five_destination_choices_in_order():
-    expected = ['As EasyDiffraction folder', 'As Zip', 'As cryspy', 'As FullProf', 'As GSAS-II']
+    expected = ['As project folder', 'As project zip', 'As cryspy', 'As FullProf', 'As GSAS-II']
     candidates = [
         [label for label in labels(body) if label in expected]
         for path in [SOURCE, ROOT / 'app/qml/Main.qml']
@@ -69,6 +69,6 @@ def test_save_as_popup_declares_the_five_destination_choices_in_order():
         if kind in {'Menu', 'Popup', 'AppDialog', 'EaElements.Menu', 'EaElements.Popup'}
     ]
     assert expected in candidates, (
-        'One Save project as popup offers As EasyDiffraction folder, As Zip, '
+        'One Save project as popup offers As project folder, As project zip, '
         'As cryspy, As FullProf and As GSAS-II in that order'
     )
