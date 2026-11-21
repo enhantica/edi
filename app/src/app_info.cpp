@@ -7395,6 +7395,15 @@ QJSValue ApplicationInfo::tableTextWidth(int row, const QString& role) const {
     return projectInvoke(f, "metrics", "advanceWidth", {text});
 }
 QJSValue ApplicationInfo::tableAdvance(const QString& text) const { return projectInvoke(panelUsageEngine(this), "metrics", "advanceWidth", {QJSValue(text)}); }
+// A fixed column's width from its type (ADR-0097 rule 4): the type's sample or the title, whichever is wider, with a
+// cell's margins, as tableTextColumnWidth gives a measured one. No row is read.
+QJSValue ApplicationInfo::tableTypeColumnWidth(const QString& type, const QString& title) const {
+    const auto f = panelUsageEngine(this);
+    const double sample = projectInvoke(f, "metrics", "advanceWidth", {QJSValue(tableTypeSample(type))}).toNumber();
+    const double heading = projectInvoke(f, "metrics", "advanceWidth", {QJSValue(title)}).toNumber();
+    const double spacing = assistantContextField(f, "AppSizes", "fieldSpacing").toNumber();
+    return QJSValue(std::ceil(std::max(sample, heading)) + spacing * 2);
+}
 QJSValue ApplicationInfo::tableTextColumnWidth(const QString& role, const QString& title, bool natural) const {
     const auto f = panelUsageEngine(this);
     if (!natural) {
@@ -10770,20 +10779,9 @@ QJSValue ApplicationInfo::atomAdpIsoWidth() const {
     for (int row = 0; panelUsageReady(f) && panelUsageTruth(assistantContextField(f, "group", "adps")) && assistantRelation(f, QJSValue(double(row)), panelUsageContextRead(f, "count"), 0) && !beta; ++row)
         beta = panelUsageMemberCall(f, assistantContextField(f, "group", "adps"), "text", {QJSValue(double(row)), QJSValue(QStringLiteral("adpType"))}).strictlyEquals(QJSValue(QStringLiteral("beta")));
     if (!beta) return QJSValue(-1);
-    auto widest = panelUsageGlobalCall(f, "advance", {projectInvoke(f, "Session", "label", {QJSValue(QStringLiteral("atom_site.adp_iso"))})});
-    for (int row = 0; panelUsageReady(f) && assistantRelation(f, QJSValue(double(row)), panelUsageContextRead(f, "count"), 0); ++row) {
-        const auto item = chartAs(f, panelUsageMemberCall(f, assistantContextField(f, "group", "adps"), "item", {QJSValue(double(row)), QJSValue(QStringLiteral("adpIso"))}), "ParameterItem");
-        if (panelUsageTruth(item)) widest = numberMath(f, "max", [&] {
-            QJSValue text;
-            if (!panelUsageRead(f, item, "fileValue").strictlyEquals(QJSValue(QStringLiteral("")))) text = panelUsageRead(f, item, "fileValue");
-            else {
-                const auto numbers = panelUsageContextRead(f, "NumberText"), value = panelUsageRead(f, item, "value");
-                const auto error = panelUsageTruth(panelUsageRead(f, item, "hasUncertainty")) ? panelUsageRead(f, item, "uncertainty") : QJSValue(0); text = panelUsageMemberCall(f, numbers, "parameter", {value, error, QJSValue(5)});
-            }
-            return QJSValueList{widest, panelUsageGlobalCall(f, "advance", {text})};
-        });
-    }
-    const auto measured = numberMath(f, "ceil", [&] { return QJSValueList{widest}; }); return panelUsageAdd(f, measured, viewArithmetic(f, assistantContextField(f, "AppSizes", "fieldSpacing"), QJSValue(2), 1));
+    // With a beta row the column holds a number, sized by its type, not by its rows (ADR-0097 rule 4).
+    const auto title = projectInvoke(f, "Session", "label", {QJSValue(QStringLiteral("atom_site.adp_iso"))});
+    return tableTypeColumnWidth(QStringLiteral("number"), title.toString());
 }
 void ApplicationInfo::scientificSelectorChanged(const QJSValue& index, int kind, const QJSValue& restoreBinding) const {
     const auto f = panelUsageEngine(this);
@@ -10957,17 +10955,12 @@ void ApplicationInfo::fitResultsPassive(const QJSValue& row) const {
         return panelUsageReady(f);
     });
 }
-QJSValue ApplicationInfo::fitResultsSummaryWidth(const QJSValue& title, const QJSValue& cell) const {
-    const auto f = panelUsageEngine(this); const auto revision = assistantContextField(f, "dialog", "resultsRevision"); Q_UNUSED(revision)
-    auto widest = projectInvoke(f, "table", "advance", {title});
-    for (int row = 0; panelUsageReady(f) && panelUsageTruth(assistantContextField(f, "dialog", "results")) && assistantRelation(f, QJSValue(double(row)), panelUsageRead(f, assistantContextField(f, "dialog", "results"), "count"), 0); ++row)
-        widest = numberMath(f, "max", [&] { const auto table = panelUsageContextRead(f, "table"); return QJSValueList{widest, panelUsageDeferredMemberCall(f, table, "advance", [&] { return QJSValueList{projectCall(f, cell, {QJSValue(row)})}; })}; });
-    const auto rounded = numberMath(f, "ceil", [&] { return QJSValueList{widest}; });
-    return panelUsageAdd(f, rounded, viewArithmetic(f, assistantContextField(f, "AppSizes", "fieldSpacing"), QJSValue(2), 1));
-}
 QJSValue ApplicationInfo::fitResultsColumnWidth(bool value) const {
     const auto f = panelUsageEngine(this); const auto title = panelUsageGlobalCall(f, "qsTr", {QJSValue(QString::fromUtf8(value ? QT_TRANSLATE_NOOP("FitResultsDialog", "Value") : QT_TRANSLATE_NOOP("FitResultsDialog", "Metric")))});
-    const auto width = panelUsageGlobalCall(f, "widestSummaryText", {title, panelUsageClosure(f, value ? 363 : 362, {}, 1)});
+    // A metric is a text and a value a number, sized by type, not by the results' rows (ADR-0097 rule 4).
+    const double sample = projectInvoke(f, "table", "advance", {QJSValue(tableTypeSample(QStringLiteral(value ? "number" : "text")))}).toNumber();
+    const double heading = projectInvoke(f, "table", "advance", {title}).toNumber();
+    const QJSValue width(std::ceil(std::max(sample, heading)) + assistantContextField(f, "AppSizes", "fieldSpacing").toNumber() * 2);
     return value ? panelUsageAdd(f, width, formsStyleSize(f, "fontPixelSize")) : width;
 }
 void ApplicationInfo::fitResultsRevisionChanged() const {

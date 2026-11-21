@@ -149,7 +149,7 @@ AppDialog {
             id: components
 
             objectName: "about.components"
-            readonly property var naturalWidths: [naturalTextColumnWidth("component", qsTr("Component")), naturalTextColumnWidth("version", qsTr("Version")), naturalTextColumnWidth("licence", qsTr("Licence"))]
+            readonly property var naturalWidths: [typeColumnWidth("text", qsTr("Component")), typeColumnWidth("short", qsTr("Version")), typeColumnWidth("text", qsTr("Licence"))]
 
             width: ApplicationInfo.aboutComponentsWidth()
             // As many rows as fit in the window with the popup's title and OK button, so the popup is never taller than

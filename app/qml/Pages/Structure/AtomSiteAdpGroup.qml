@@ -42,12 +42,15 @@ Column {
 
         // A beta component is small (about 1e-4 to 1e-2) and so has more characters than a U or B: with a beta row
         // present iso/eq is only as wide as its header and values, and the six component columns share the rest,
-        // each showing five significant digits, in smaller text where they would not fit. Measured again on every
-        // change of the rows.
+        // each showing five significant digits, in smaller text where they would not fit. Sized by the number type,
+        // not by the rows (ADR-0097 rule 4).
         readonly property real isoWidth: ApplicationInfo.atomAdpIsoWidth()
         // Equal-width numeric columns, the one exception to the table rule (the owner, 2026-10-24).
         equalColumns: true
-        columns: [numberColumnWidth, textColumnWidth("label", Session.label("atom_site.id")), Math.max(group.typeWidth, (fittedWidths[2] ?? 0) + autoColumnPadding / 2), isoWidth, -1, -1, -1, -1, -1, -1]
+        // Widths from column types, not rows (ADR-0097 rule 4): short label and type, then numbers.
+        columnTypes: ["", "short", "short"]
+        defaultColumnType: "number"
+        columns: [numberColumnWidth, typeColumnWidth("short", Session.label("atom_site.id")), Math.max(group.typeWidth, (fittedWidths[2] ?? 0) + autoColumnPadding / 2), isoWidth, -1, -1, -1, -1, -1, -1]
 
         header: EaComponents.ListViewHeader {
             EaComponents.ListViewLabel {

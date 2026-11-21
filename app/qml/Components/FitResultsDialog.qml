@@ -82,9 +82,6 @@ AppDialog {
     function passive(row) {
         ApplicationInfo.fitResultsPassive(row);
     }
-    function widestSummaryText(title, cell) {
-        return ApplicationInfo.fitResultsSummaryWidth(title, cell);
-    }
     readonly property real metricColumnWidth: ApplicationInfo.fitResultsColumnWidth(false)
     readonly property real valueColumnWidth: ApplicationInfo.fitResultsColumnWidth(true)
 
@@ -232,10 +229,10 @@ AppDialog {
         // A long dataset list scrolls inside the table, so the dialog stays on the screen.
         readonly property real tableHeight: Math.min(agreementTable.contentHeight, agreementTable.headerItem ? agreementTable.headerItem.height + EaStyle.Sizes.tableRowHeight * 8 : agreementTable.contentHeight)
 
-        // The table at its full width: the dataset column fits its longest name, each factor its own width.
-        // Measure the model's text, never fitted cells: fitting follows the table's assigned width.
-        readonly property real datasetWidth: Math.max(EaStyle.Sizes.fontPixelSize * 6, agreementTable.naturalTextColumnWidth("label", qsTr("Dataset")) + agreementTable.autoColumnPadding)
-        // Any room beyond the natural table width belongs to the dataset column, after measurement.
+        // The table at its full width: the dataset column sized as a text (ADR-0097 rule 4), each factor its own
+        // width.
+        readonly property real datasetWidth: Math.max(EaStyle.Sizes.fontPixelSize * 6, agreementTable.typeColumnWidth("text", qsTr("Dataset")) + agreementTable.autoColumnPadding)
+        // Any room beyond the natural table width belongs to the dataset column.
         readonly property real datasetColumnWidth: datasetWidth + Math.max(0, width - naturalWidth)
         readonly property real naturalWidth: AppSizes.iconOnlyColumnWidth + datasetWidth + dialog.factorColumns.length * dialog.factorWidth + (dialog.factorColumns.length + 1) * EaStyle.Sizes.tableColumnSpacing + 2 * agreementTable.rowPadding + 2 * EaStyle.Sizes.borderThickness
         // Never wider than the window: a wider table scrolls sideways, so every column can be reached.

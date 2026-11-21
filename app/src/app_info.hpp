@@ -605,6 +605,7 @@ class ApplicationInfo : public QObject {
     Q_INVOKABLE QJSValue tableTextWidth(int row, const QString& role) const;
     Q_INVOKABLE QJSValue tableAdvance(const QString& text) const;
     Q_INVOKABLE QJSValue tableTextColumnWidth(const QString& role, const QString& title, bool natural) const;
+    Q_INVOKABLE QJSValue tableTypeColumnWidth(const QString& type, const QString& title) const;
     Q_INVOKABLE void tableForgetWidths() const;
     Q_INVOKABLE void tableRemeasure() const;
     Q_INVOKABLE void tableDataChanged(const QJSValue& topLeft, const QJSValue& bottomRight) const;
@@ -846,7 +847,6 @@ class ApplicationInfo : public QObject {
     Q_INVOKABLE QJSValue appColour(int kind, const QJSValue& first, const QJSValue& second, const QJSValue& third) const;
     Q_INVOKABLE QJSValue fitResultProjection(int kind) const;
     Q_INVOKABLE void fitResultsPassive(const QJSValue& row) const;
-    Q_INVOKABLE QJSValue fitResultsSummaryWidth(const QJSValue& title, const QJSValue& cell) const;
     Q_INVOKABLE QJSValue fitResultsColumnWidth(bool value) const;
     Q_INVOKABLE void fitResultsRevisionChanged() const;
     Q_INVOKABLE void fitResultsShowEvolution() const;

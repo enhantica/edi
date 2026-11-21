@@ -38,6 +38,8 @@ Column {
         sourceModel: group.formFactors
 
         columns: [numberColumnWidth, group.typeWidth, group.typeWidth, -1, group.coefficientWidth, group.coefficientWidth, group.coefficientWidth]
+        // Widths from column types, not rows (ADR-0097 rule 4): the approximation is a text.
+        columnTypes: ["", "", "", "text"]
 
         header: EaComponents.ListViewHeader {
             EaComponents.ListViewLabel {

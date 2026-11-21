@@ -316,6 +316,10 @@ EaComponents.ListView {
     function textColumnWidth(role: string, title: string): real {
         return ApplicationInfo.tableTextColumnWidth(role, title, false);
     }
+    // A fixed column sized by its type ("number", "short", "text") and its title, never by its rows (ADR-0097 rule 4).
+    function typeColumnWidth(type: string, title: string): real {
+        return ApplicationInfo.tableTypeColumnWidth(type, title);
+    }
     // The widest of the column's texts and its title, with a cell's margins, however wide the table is.
     function naturalTextColumnWidth(role: string, title: string): real {
         return ApplicationInfo.tableTextColumnWidth(role, title, true);
