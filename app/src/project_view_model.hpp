@@ -1144,7 +1144,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     QString replaceData(int index, edi::BraggPdExperiment replacement, bool restoring = false);
     // Keeps a replaced experiment alive until its view model is gone: the old model and its pattern hold it by
     // reference, and they are rebuilt only when the edit publishes (the owner's crash of 2026-11-19).
-    void keepUntilModelGone(const edi::ExperimentBase* experiment, std::shared_ptr<const edi::ExperimentBase> held);
+    void keepUntilModelGone(const edi::ExperimentBase* experiment, const std::shared_ptr<const edi::ExperimentBase>& held);
 
     bool restoreScanRun(const ScanRun& run, bool restoring = false);
     // The results read again from disk (after a run, an undo or a load), with every view of them.

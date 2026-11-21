@@ -4732,7 +4732,7 @@ struct AssistantViewModel::State {
             std::vector<std::pair<std::string, bool>> before_flags;
             auto edit = assistant_native_edit(*project->assistantProject(), tool, run->fallback_args, before_flags);
             if (!edit) return false;
-            if (!original()) return true;
+            if (!original() || !native_call) return true;
             const auto scope = begin_own_edit();
             native_call->may_have_written = true;
             ProjectViewModel::EditOutcome result;
@@ -4779,6 +4779,7 @@ struct AssistantViewModel::State {
             // The original owner, captured before any callback (the log's message handler, input release, the edit's
             // publication) can stop, replace or destroy it; each later step proves it still holds.
             const auto receiver = run->receiver;
+            if (!native_call) return true;
             const auto record = native_call->record;
             const auto receipt = native_call->receipt;
             const auto rpc = native_call->rpc;
@@ -4795,7 +4796,7 @@ struct AssistantViewModel::State {
             // Release the unentered entry's prepared input and own edit before the ordinary edit.
             if (const auto input = std::exchange(run->input, nullptr)) target->finishWidgetInput(input);
             if (const auto scope = std::exchange(run->edit_scope, 0)) end_own_edit(scope);
-            if (!original()) return true;
+            if (!original() || !native_call) return true;
             const auto scope = begin_own_edit();
             native_call->may_have_written = true;
             ProjectViewModel::EditOutcome result;

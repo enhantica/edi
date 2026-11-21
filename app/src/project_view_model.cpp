@@ -3352,7 +3352,7 @@ bool ProjectViewModel::setSameForAll(ParameterItem* parameter, bool on) {
 }
 
 void ProjectViewModel::keepUntilModelGone(const edi::ExperimentBase* experiment,
-                                          std::shared_ptr<const edi::ExperimentBase> held) {
+                                          const std::shared_ptr<const edi::ExperimentBase>& held) {
     for (ExperimentViewModel* model : experiment_models_) {
         if (model->experiment() == experiment) {
             connect(model, &QObject::destroyed, this, [held] {});
@@ -4701,10 +4701,11 @@ void ProjectViewModel::viewDatasetNow(int index, bool reread) {
     DatasetView view;
     try {
         view.values = pointValues(index);
-        if (reread || !project_->experiment().data || scan_session_->datasets().joint()) {
+        const auto& held = project_->experiment().data;
+        if (reread || !held || scan_session_->datasets().joint()) {
             readDataset(view, scan_session_->datasets(), index, beamModes());
         } else {
-            view.data = *project_->experiment().data;
+            view.data = *held;
         }
     } catch (const std::exception& refusal) {
         view_applied_ = request;
@@ -7601,6 +7602,8 @@ void ProjectViewModel::makeTextsLater() {
     const std::uint64_t request = ++texts_request_;
     const QPointer<ProjectViewModel> self(this);
     run_in_background([self, copy, stamps, request] {
+        // A background step must not throw: a failure leaves the shown texts to the next publication.
+        try {
         SavedFiles files;
         std::string identity;
         try {
@@ -7614,17 +7617,22 @@ void ProjectViewModel::makeTextsLater() {
         QMetaObject::invokeMethod(
             QCoreApplication::instance(),
             [self, stamps, request, files = std::move(files), identity = std::move(identity)]() mutable {
-                if (self.isNull() || self->retired_ || request != self->texts_request_ ||
-                    !edi::unchanged_since(*self->project_, stamps)) {
-                    return;  // a newer view or an edit came meanwhile: its own publication covers it
+                try {
+                    if (self.isNull() || self->retired_ || request != self->texts_request_ ||
+                        !edi::unchanged_since(*self->project_, stamps)) {
+                        return;  // a newer view or an edit came meanwhile: its own publication covers it
+                    }
+                    self->saved_files_ = std::move(files);
+                    if (!identity.empty()) {
+                        self->identity_memo_ = IdentityMemo{self->project_.get(), stamps, std::move(identity)};
+                    }
+                    self->refreshTextsAndReport();
+                } catch (...) {
                 }
-                self->saved_files_ = std::move(files);
-                if (!identity.empty()) {
-                    self->identity_memo_ = IdentityMemo{self->project_.get(), stamps, std::move(identity)};
-                }
-                self->refreshTextsAndReport();
             },
             Qt::QueuedConnection);
+        } catch (...) {
+        }
     });
 }
 
@@ -7643,6 +7651,8 @@ void ProjectViewModel::makeSpellingLater() {
     const std::uint64_t request = ++spelling_request_;
     const QPointer<ProjectViewModel> self(this);
     run_in_background([self, copy, stamps, request] {
+        // As above: nothing here may throw; the next publication spells the fields.
+        try {
         std::optional<edi::SaveSpelling> spelling;
         try {
             spelling = edi::input_spelling(*copy);
@@ -7652,13 +7662,18 @@ void ProjectViewModel::makeSpellingLater() {
         QMetaObject::invokeMethod(
             QCoreApplication::instance(),
             [self, stamps, request, spelling = std::move(spelling)] {
-                if (self.isNull() || self->retired_ || !spelling || request != self->spelling_request_ ||
-                    !edi::unchanged_since(*self->project_, stamps)) {
-                    return;
+                try {
+                    if (self.isNull() || self->retired_ || !spelling || request != self->spelling_request_ ||
+                        !edi::unchanged_since(*self->project_, stamps)) {
+                        return;
+                    }
+                    self->registry_->applySpelling(*self->project_, *spelling);
+                } catch (...) {
                 }
-                self->registry_->applySpelling(*self->project_, *spelling);
             },
             Qt::QueuedConnection);
+        } catch (...) {
+        }
     });
 }
 

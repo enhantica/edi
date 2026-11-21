@@ -918,7 +918,7 @@ QList<edi_app::TagChip> ApplicationInfo::sourceKindTags(const QStringList& kinds
 }
 
 QUrl ApplicationInfo::rememberedFolder(const QString& stored, const QUrl& fallback) const {
-    const QUrl remembered(stored);
+    QUrl remembered(stored);
     if (!stored.isEmpty() && remembered.isLocalFile() && QFileInfo(remembered.toLocalFile()).isDir()) return remembered;
     return fallback;
 }
@@ -11691,12 +11691,12 @@ void ApplicationInfo::postFeedback(const QString& url, const QString& body, cons
         QString detail = answered.value(status == 201 ? QStringLiteral("warning") : QStringLiteral("error")).toString();
         if (detail.isEmpty() && reply->error() != QNetworkReply::NoError) detail = reply->errorString();
         if (status != 201) qWarning("feedback not sent: status %d, %s", status, qPrintable(detail));
-        QJSValue callback = completed;
+        const QJSValue& callback = completed;
         if (callback.isCallable()) callback.call({QJSValue(status), QJSValue(detail), QJSValue(QString::fromUtf8(answer))});
     });
 }
 edi_app::FeedbackFile ApplicationInfo::fileAttachment(const QString& path, bool automatic) const {
-    constexpr qint64 limit = 5 * 1024 * 1024;  // the feedback service's limit for one file (app/feedback/Payload.js)
+    constexpr qint64 limit = qint64{5} * 1024 * 1024;  // the feedback service's limit for one file (app/feedback/Payload.js)
     QFile file(path);
     if (!file.open(QIODevice::ReadOnly)) return {};
     const qint64 whole = file.size();
@@ -11716,7 +11716,7 @@ edi_app::FeedbackFile ApplicationInfo::fileAttachment(const QString& path, bool 
     return attached;
 }
 edi_app::FeedbackFile ApplicationInfo::textAttachment(const QString& name, const QString& text) const {
-    constexpr qint64 limit = 5 * 1024 * 1024;  // the feedback service's limit for one file (app/feedback/Payload.js)
+    constexpr qint64 limit = qint64{5} * 1024 * 1024;  // the feedback service's limit for one file (app/feedback/Payload.js)
     edi_app::FeedbackFile attached;
     if (name.isEmpty() || text.isEmpty()) return attached;
     const QByteArray bytes = text.toUtf8();
