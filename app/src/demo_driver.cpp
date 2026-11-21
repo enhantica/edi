@@ -1058,6 +1058,7 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
             // settles, and the trace, not the image, is what this scenario measures.
             steps_.push_back({QStringLiteral("e58-tabs-%1-%2").arg(++n, 3, 10, QLatin1Char('0')).arg(name), {object, "capture-now"}});
             named(name);
+            steps_.back().skip_unavailable = true;
         };
         for (const QString& page : {QStringLiteral("home"), QStringLiteral("project"), QStringLiteral("structure"),
                                     QStringLiteral("experiment"), QStringLiteral("analysis"), QStringLiteral("report")}) {
@@ -2333,6 +2334,29 @@ void DemoDriver::next_action() {
         ++current_;
         run_step();
         return;
+    }
+    // A tab the app does not offer in this state (Correlations before a fit) cannot be shown: the step is skipped and
+    // the trace says so, rather than the run stopping there.
+    // A page still loading can offer a tab a moment later (Pattern once the experiments are listed), so the frame
+    // settles once before a tab is taken as not offered.
+    if (step.skip_unavailable && action_ == 0 && !step.actions.isEmpty()) {
+        QQuickItem* item = find(step.actions.first(), false);
+        const bool offered = item != nullptr && item->isVisible() && item->isEnabled() && on_screen(item);
+        if (!offered && !availability_settled_) {
+            availability_settled_ = true;
+            settle_then([this] { next_action(); });
+            return;
+        }
+        availability_settled_ = false;
+        if (!offered) {
+#if EDI_UI_INSTRUMENTATION
+            ui_trace("step-skipped", QJsonObject{{"name", step.trace}, {"control", step.actions.first()},
+                                                 {"reason", item == nullptr ? "missing" : !item->isVisible() ? "hidden" : !item->isEnabled() ? "disabled" : "off screen"}});
+#endif
+            ++current_;
+            run_step();
+            return;
+        }
     }
     // capture-now captures a set time after the actions; capture-at:<ms> after that many milliseconds, to show an
     // animation partway.

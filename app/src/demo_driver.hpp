@@ -94,6 +94,7 @@ class DemoDriver : public QObject {
         QString fit_phase{};
         QString trace{};     // the measured step's name in the UI trace (ui_probe.hpp); empty for a set-up step
         int navigation = 0;  // +1 or -1 for a next or previous dataset press, whose selection the trace names
+        bool skip_unavailable = false;  // a tab the app does not offer now (hidden or disabled) is skipped, traced
     };
 
     void run_step();
@@ -145,6 +146,7 @@ class DemoDriver : public QObject {
     QQuickWindow& window_;
     QDir output_dir_;
     std::vector<Step> steps_;
+    bool availability_settled_ = false;  // the current skip_unavailable step has waited for the frame to settle once
     std::size_t current_ = 0;
     qsizetype action_ = 0;
     QImage previous_frame_;
