@@ -127,13 +127,107 @@ SideBarGroup {
         }
 
         EaElements.SideBarButton {
+            id: saveButton
             objectName: "project.saveAs"
             width: buttons.buttonWidth
             enabled: Session.project !== null
             fontIcon: "file-export"
-            text: qsTr("Save project as…")
-            ToolTip.text: qsTr("Save the project as a folder or a .zip, or save a copy of it")
-            onClicked: AppState.saveAsRequested()
+            text: qsTr("Save project as")
+
+            EaElements.Label {
+                anchors.right: parent.right
+                anchors.rightMargin: EaStyle.Sizes.fontPixelSize * 0.75
+                anchors.verticalCenter: parent.verticalCenter
+                font.family: EaStyle.Fonts.iconsFamily
+                font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.9
+                color: saveButton.enabled ? EaStyle.Colors.themeForeground : EaStyle.Colors.themeForegroundDisabled
+                text: "caret-down"
+            }
+            ToolTip.text: qsTr("Save the project as an EasyDiffraction folder or .zip, or export a copy for another program")
+            onClicked: saveMenu.open()
+
+            EaElements.Menu {
+                id: saveMenu
+                objectName: "project.saveAs.menu"
+                y: saveButton.height
+                bottomPadding: 0
+                width: Math.max(saveButton.width, EaStyle.Sizes.fontPixelSize * 26)
+
+                readonly property real labelWidth: EaStyle.Sizes.fontPixelSize * 13
+                // A browser without the File System Access API writes no folder on the disk: a .zip copy only.
+                readonly property bool diskWritable: !WebFiles.available || WebStorage.diskAccess
+                property bool copy: false
+                onAboutToShow: copy = !diskWritable
+
+                LoadMenuHeader {
+                    first: true
+                    text: qsTr("EasyDiffraction")
+                }
+                LoadMenuItem {
+                    objectName: "project.saveAs.folder"
+                    labelWidth: saveMenu.labelWidth
+                    enabled: saveMenu.diskWritable
+                    fontIcon: "folder-open"
+                    text: qsTr("As EasyDiffraction folder…")
+                    hint: "project.edi"
+                    toolTip: saveMenu.diskWritable ? qsTr("Save the project as a folder holding project.edi") : qsTr("This browser cannot write a folder on your disk; Chrome and Edge can")
+                    onTriggered: AppState.saveAsFormatRequested(false, saveMenu.copy)
+                }
+                LoadMenuItem {
+                    objectName: "project.saveAs.zip"
+                    labelWidth: saveMenu.labelWidth
+                    fontIcon: "archive"
+                    text: qsTr("As Zip…")
+                    hint: ".zip"
+                    toolTip: qsTr("Save the project as a .zip of its folder")
+                    onTriggered: AppState.saveAsFormatRequested(true, saveMenu.copy)
+                }
+                // Applies to the two EasyDiffraction choices above; the exports below always write a copy.
+                EaElements.CheckBox {
+                    objectName: "project.saveAs.copy"
+                    leftPadding: EaStyle.Sizes.fontPixelSize * 0.5
+                    enabled: saveMenu.diskWritable
+                    text: qsTr("Save a copy")
+                    checked: saveMenu.copy
+                    onToggled: saveMenu.copy = checked
+                    ToolTip.text: qsTr("Write the project there and keep working where it is")
+                }
+                LoadMenuHeader {
+                    text: qsTr("Export a copy for another program")
+                }
+                // Not implemented yet: shown, disabled (edi ADR-0017 §4).
+                LoadMenuItem {
+                    objectName: "project.export.cryspy"
+                    labelWidth: saveMenu.labelWidth
+                    enabled: false
+                    fontIcon: "file-export"
+                    text: qsTr("As cryspy…")
+                    hint: ".rcif"
+                    toolTip: qsTr("Export a copy of the project for cryspy")
+                }
+                LoadMenuItem {
+                    objectName: "project.export.fullProf"
+                    labelWidth: saveMenu.labelWidth
+                    enabled: !WebFiles.available
+                    fontIcon: "file-export"
+                    text: qsTr("As FullProf…")
+                    hint: ".pcr"
+                    toolTip: qsTr("Export a copy of the project as a FullProf .pcr with its data files; the app keeps working on this project")
+                    onTriggered: {
+                        exportFullProfFolder.sourceProject = Session.project;
+                        exportFullProfFolder.open();
+                    }
+                }
+                LoadMenuItem {
+                    objectName: "project.export.gsas"
+                    labelWidth: saveMenu.labelWidth
+                    enabled: false
+                    fontIcon: "file-export"
+                    text: qsTr("As GSAS-II…")
+                    hint: ".gpx"
+                    toolTip: qsTr("Export a copy of the project for GSAS-II")
+                }
+            }
         }
     }
 
@@ -324,6 +418,19 @@ SideBarGroup {
         onAccepted: {
             DialogFolders.remember("importProject", selectedFile);
             Qt.callLater(Session.openProject, selectedFile);
+        }
+    }
+    // A FullProf export writes a new folder beside the chosen one's other projects and leaves this project open.
+    FolderDialog {
+        id: exportFullProfFolder
+        property var sourceProject
+        title: qsTr("Choose where to create the FullProf project folder")
+        currentFolder: DialogFolders.folder("exportProject", "")
+        onAccepted: {
+            if (sourceProject === Session.project) {
+                DialogFolders.remember("exportProject", selectedFolder);
+                Session.exportFullProf(selectedFolder, false);
+            }
         }
     }
 }

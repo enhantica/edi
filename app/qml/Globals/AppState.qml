@@ -81,6 +81,9 @@ QtObject {
     // Save as, asked for from a page (Get started); the window's folder dialog answers (Main.qml; edi
     // ADR-0017 §13).
     signal saveAsRequested
+    // Save as with the format already chosen from Get started's Save menu: the EasyDiffraction folder or a .zip, and
+    // whether to write a copy and keep working where the project is.
+    signal saveAsFormatRequested(bool zip, bool copy)
     // That Save as ended: saved at the place chosen, or cancelled or refused.
     signal saveAsFinished(bool saved)
     // Run `action` (opening, creating or closing a project, quitting) once the open project's unsaved changes are

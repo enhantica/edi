@@ -826,6 +826,9 @@ EaComponents.ApplicationWindow {
         function onSaveAsRequested() {
             window.saveProjectAs();
         }
+        function onSaveAsFormatRequested(zip, copy) {
+            saveAsChoice.saveWith(zip, copy);
+        }
     }
 
     // Unsaved changes are saved or discarded before the project is replaced, closed or the app quits (edi ADR-0052): a
@@ -955,6 +958,18 @@ EaComponents.ApplicationWindow {
         onAccepted: {
             Session.setNextSaveData(linkedData ? dataChoice : "");
             ApplicationInfo.acceptProjectSaveChoice();
+        }
+        // The format and copy chosen from Get started's Save menu: the same save as this dialog's OK, without asking
+        // again. Linked measured data follows Data on save's preset.
+        function saveWith(asZip, asCopy) {
+            if (Session.project === null)
+                return;
+            window.assistantSaveIntent = "";
+            linkedData = Session.project.hasLinkedData();
+            dataChoice = Session.project.presetSaveData();
+            zip = asZip || !diskWritable;
+            copy = asCopy || !diskWritable;
+            accept();
         }
 
         Column {

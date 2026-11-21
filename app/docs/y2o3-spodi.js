@@ -113,8 +113,8 @@
         ["project.load"], ["project.load.menu"]);
     shot("guide-project-open", "project", "Choose a project folder or archive",
         ["key:Escape", "save-as:docs-saved-project", "project.load", "project.load.edi"], ["project.openChoice"]);
-    shot("guide-project-save", "project", "Choose a save format or save a copy",
-        ["key:Escape", "project.saveAs"], ["project.saveChoice"]);
+    shot("guide-project-save", "project", "Save as an EasyDiffraction folder or .zip, or export a copy",
+        ["key:Escape", "project.saveAs"], ["project.saveAs.menu"]);
     shot("guide-project-recent", "project", "Find recent projects",
         ["key:Escape", "reveal:group.recentProjects", "expand:group.recentProjects"], ["group.recentProjects"]);
     panel("guide-structure-symmetry", "structure", "basic", "group.space_group", "Choose the crystal symmetry and setting", ["spaceGroup.itNumber", "spaceGroup.nameHM"]);
