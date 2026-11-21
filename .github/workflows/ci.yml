@@ -465,8 +465,11 @@ jobs:
           }
           record "$GITHUB_RUN_ID" >"$RUNNER_TEMP/current.json"
           declare_shards "$RUNNER_TEMP/current.json" HEAD
+          # Only an earlier scheduled run can be the baseline: Sunday's two schedules can overlap, and a run
+          # started later may finish first.
+          created="$(jq -r .created_at "$RUNNER_TEMP/current.json")"
           for id in $(gh api "$api/workflows/ci.yml/runs?branch=main&event=schedule&status=completed&per_page=20" \
-              --jq '.workflow_runs[].id'); do
+              --jq ".workflow_runs[] | select(.id != $GITHUB_RUN_ID and .created_at < \"$created\") | .id"); do
             record "$id" >"$RUNNER_TEMP/main.json"
             if jq -e '[.jobs[] | select(.name | startswith("system · "))] | length > 0 and all(.conclusion == "success")' \
                 "$RUNNER_TEMP/main.json" >/dev/null; then
@@ -477,6 +480,9 @@ jobs:
             fi
             rm "$RUNNER_TEMP/main.json"
           done
+          # The first night has no baseline: say so explicitly, so the comparator reports it.
+          [ -f "$RUNNER_TEMP/main.json" ] || jq -n --arg before "$created" \
+            '{no_baseline: true, searched: ("scheduled runs on main started before " + $before)}' >"$RUNNER_TEMP/main.json"
       - name: Compare the system shards with main
         run: >-
           python3 tools/ci/system_shard_time.py --current "$RUNNER_TEMP/current.json" --main "$RUNNER_TEMP/main.json"

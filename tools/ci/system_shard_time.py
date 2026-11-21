@@ -7,11 +7,10 @@ Each file is a GitHub Actions run with its jobs: the run's fields plus a `jobs` 
 REST API returns it, and `expected_system_shards`, each platform's part count from the workflow
 matrix. The current document must be run ID at its head SHA, so a stale or foreign record is
 refused. Every `system · <platform> · <part>/<parts>` job is compared with the job of the same
-name in an earlier scheduled (or, before the system tier moved to the night, push) run on main
-whose system shards passed. Other jobs
-are ignored. Evidence that cannot be compared (a missing or unfinished shard, a duplicate, a bad
-timestamp, a zero baseline) is refused with exit 2; a shard over the limit exits 1 and names the
-shard and main's time.
+name in a scheduled run on main that started before this one and passed its system shards.
+Other jobs are ignored. Evidence that cannot be compared (a missing or unfinished shard, a
+duplicate, a bad timestamp, a zero baseline, a baseline not started first) is refused with
+exit 2; a shard over the limit exits 1 and names the shard and main's time.
 """
 
 from __future__ import annotations
@@ -110,14 +109,23 @@ def require_identity(current: dict, run_id: str, head_sha: str) -> None:
 
 def compare(current: dict, main: dict) -> list[str]:
     """The shards over the limit, one line each."""
-    # The system tier runs at night; an older main push run (before that) still holds shard times.
-    if main.get('head_branch') != 'main' or main.get('event') not in {'schedule', 'push'}:
+    if main.get('head_branch') != 'main' or main.get('event') != 'schedule':
         raise RefusedError(
-            'the baseline must be a scheduled or push run on main, '
+            'the baseline must be a scheduled run on main, '
             f'not {main.get("event")} on {main.get("head_branch")}'
         )
     if main.get('status') != 'completed':
         raise RefusedError('the baseline main run has not finished')
+    # The baseline started before this run: an overlapping later run is no baseline.
+    started, base_started = current.get('created_at'), main.get('created_at')
+    if (
+        not isinstance(started, str)
+        or not isinstance(base_started, str)
+        or base_started >= started
+    ):
+        raise RefusedError(
+            f'the baseline run started at {base_started}, not before this run at {started}'
+        )
     if current.get('expected_system_shards') != main.get('expected_system_shards'):
         raise RefusedError('this run and main declare different system shards')
     now, base = shards(current, 'current'), shards(main, 'main')
@@ -144,7 +152,17 @@ def main(argv: list[str] | None = None) -> int:
     try:
         current = load(args.current, 'current')
         require_identity(current, args.run_id, args.head_sha)
-        over = compare(current, load(args.main, 'main'))
+        main_run = load(args.main, 'main')
+    except RefusedError as e:
+        print(f'system shard time: cannot compare with main: {e}')
+        return 2
+    if main_run.get('no_baseline') is True:
+        # No earlier scheduled run passed its system shards: the first night compares nothing.
+        searched = main_run.get('searched')
+        print(f'system shard time: no earlier nightly run to compare with ({searched})')
+        return 0
+    try:
+        over = compare(current, main_run)
     except RefusedError as e:
         print(f'system shard time: cannot compare with main: {e}')
         return 2
