@@ -29,7 +29,7 @@
       "title": "Rebuild a FullProf or EasyDiffraction project",
       "summary": "Use selected FullProf files to reconstruct an Edi project by hand, or use saved Edi data to prepare a FullProf project, and compare fixed-input calculations.",
       "path": "fullprof-intake/SKILL.md",
-      "sha256": "4dec1288857f1849a823c472af761121f5be8bf4cae2c98a7e367bc85da958b6",
+      "sha256": "4e553b2d88ec435279d2df4b050907cb1a17f030761afa40c3569e3a6412018d",
       "requires": [
         "selected_files"
       ],
