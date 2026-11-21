@@ -335,21 +335,34 @@ SideBarGroup {
             columnTypes: ["", "text", "number", "number", "short", "number", "number", "number", "number"]
             onRowActivated: row => group.selected = parameterFilter.parameterAt(row)
 
-            // A layout of its own (the owner, 2026-10-27): the name a little wider than its longest shown name, icons
-            // and text; the units, min and max as their text; start, value, s.u. and change each fit their widest
-            // text and share what is left; free at the right with a wider gap before it. Start and change are the
-            // report's fit table columns, empty before a fit (owner record 2026-11-10).
-            // Every number column is as wide as its widest text and its header, so no number loses digits or its
-            // exponent; the name takes what is left. In a narrow sidebar the margins go first, then the min and max
-            // columns, then the name down to a few characters; a row still too wide scrolls sideways (DataTable).
+            // A layout of its own (the owner, 2026-10-27): every column as wide as its type (ADR-0097 decision 4), the
+            // name taking what is left, free at the right with a wider gap before it. Start and change are the report's
+            // fit table columns, empty before a fit (owner record 2026-11-10). In a narrow sidebar the margins go
+            // first, then whole columns by priority, so the name keeps its minimum width.
             readonly property var fittedColumns: [2, 3, 4, 5, 6, 7, 8]
-            readonly property var rangeColumns: [7, 8]
+            // Columns drop by priority while the rest do not fit beside the name's minimum width (ADR-0097 decision 4):
+            // Min and Max first, then Change, s.u., Start, the row number and the units. Name, Value and Free stay. The
+            // header and the rows show the same columns (shows()).
+            readonly property var dropOrder: [[7, 8], [6], [5], [2], [0], [4]]
             readonly property real freeWidth: group.freeColumnWidth
             readonly property real nameMinimum: Math.min((fittedWidths[1] ?? 0) + EaStyle.Sizes.fontPixelSize, EaStyle.Sizes.fontPixelSize * 8)
             readonly property real fittedRoom: width - rowPadding * 2 - EaStyle.Sizes.borderThickness * 2 - EaStyle.Sizes.tableColumnSpacing * ((group.measured ? 9 : 8) + (group.sameShown ? 1 : 0)) - numberColumnWidth - freeWidth - group.sameColumnWidth - nameMinimum
             readonly property real fittedSum: fittedColumns.reduce((sum, column) => sum + (fittedWidths[column] ?? 0), 0)
-            readonly property bool rangeShown: fittedRoom >= fittedSum
-            readonly property var shownColumns: rangeShown ? fittedColumns : fittedColumns.filter(column => !rangeColumns.includes(column))
+            readonly property var droppedColumns: {
+                let dropped = [];
+                for (let step = 0; step < dropOrder.length; ++step) {
+                    const kept = fittedColumns.filter(column => !dropped.includes(column));
+                    const room = fittedRoom + (dropped.includes(0) ? numberColumnWidth : 0);
+                    if (kept.reduce((sum, column) => sum + (fittedWidths[column] ?? 0), 0) <= room)
+                        break;
+                    dropped = dropped.concat(dropOrder[step]);
+                }
+                return dropped;
+            }
+            function shows(column: int): bool {
+                return !droppedColumns.includes(column);
+            }
+            readonly property var shownColumns: fittedColumns.filter(column => shows(column))
             readonly property real shownSum: shownColumns.reduce((sum, column) => sum + (fittedWidths[column] ?? 0), 0)
             readonly property real columnMargin: Math.max(0, Math.min(autoColumnPadding, Math.floor((fittedRoom - shownSum) / shownColumns.length)))
             function fittedColumn(column: int): real {
@@ -357,8 +370,8 @@ SideBarGroup {
             }
             // The name takes the rest, set here rather than by the table's rule, so it follows only the table's width
             // and the measured texts, never the rows in view.
-            readonly property real nameWidth: Math.max(EaStyle.Sizes.fontPixelSize * 4, Math.floor(fittedRoom + nameMinimum - shownColumns.reduce((sum, column) => sum + fittedColumn(column), 0)))
-            readonly property var wantedColumns: [numberColumnWidth, nameWidth].concat(fittedColumns.map(column => fittedColumn(column))).concat(group.measured ? [freeWidth] : []).concat(group.sameShown ? [group.sameColumnWidth] : [])
+            readonly property real nameWidth: Math.max(EaStyle.Sizes.fontPixelSize * 4, Math.floor(fittedRoom + nameMinimum + (shows(0) ? 0 : numberColumnWidth) - shownColumns.reduce((sum, column) => sum + fittedColumn(column), 0)))
+            readonly property var wantedColumns: [shows(0) ? numberColumnWidth : 0, nameWidth].concat(fittedColumns.map(column => fittedColumn(column))).concat(group.measured ? [freeWidth] : []).concat(group.sameShown ? [group.sameColumnWidth] : [])
             // Applied a moment later: new widths remake rows and measure them again, which would otherwise feed back
             // into the widths while they are being worked out.
             function applyColumns() {
@@ -371,6 +384,7 @@ SideBarGroup {
             header: EaComponents.ListViewHeader {
                 EaComponents.ListViewLabel {
                     elide: Text.ElideRight
+                    visible: table.shows(0)
                     horizontalAlignment: Text.AlignHCenter
                 }
                 EaComponents.ListViewLabel {
@@ -380,6 +394,7 @@ SideBarGroup {
                 }
                 EaComponents.ListViewLabel {
                     elide: Text.ElideRight
+                    visible: table.shows(2)
                     horizontalAlignment: Text.AlignRight
                     text: qsTr("Start")
                 }
@@ -390,11 +405,13 @@ SideBarGroup {
                 }
                 EaComponents.ListViewLabel {
                     elide: Text.ElideRight
+                    visible: table.shows(4)
                     horizontalAlignment: Text.AlignLeft
                     text: ""
                 }
                 EaComponents.ListViewLabel {
                     elide: Text.ElideRight
+                    visible: table.shows(5)
                     horizontalAlignment: Text.AlignRight
                     text: qsTr("s.u.")
                 }
@@ -402,19 +419,20 @@ SideBarGroup {
                 EaComponents.ListViewLabel {
                     elide: Text.ElideRight
                     readonly property bool keepsAlignment: true
+                    visible: table.shows(6)
                     horizontalAlignment: Text.AlignRight
                     rightPadding: 0
                     text: qsTr("Change")
                 }
                 EaComponents.ListViewLabel {
                     elide: Text.ElideRight
-                    visible: table.rangeShown
+                    visible: table.shows(7)
                     horizontalAlignment: Text.AlignRight
                     text: qsTr("Min")
                 }
                 EaComponents.ListViewLabel {
                     elide: Text.ElideRight
-                    visible: table.rangeShown
+                    visible: table.shows(8)
                     horizontalAlignment: Text.AlignRight
                     text: qsTr("Max")
                 }
@@ -489,6 +507,7 @@ SideBarGroup {
                 objectName: `parameters.row.${index}`
                 EaComponents.ListViewLabel {
                     elide: Text.ElideRight
+                    visible: table.shows(0)
                     horizontalAlignment: Text.AlignHCenter
                     marksCurrentRow: true
                     text: row.index + 1
@@ -527,6 +546,7 @@ SideBarGroup {
                 }
                 NumberLabel {
                     objectName: `parameters.start.${row.index}`
+                    visible: table.shows(2)
                     horizontalAlignment: Text.AlignRight
                     color: EaStyle.Colors.themeForegroundMinor
                     number: row.parameter ? row.parameter.startText : ""
@@ -542,12 +562,14 @@ SideBarGroup {
                 }
                 EaComponents.ListViewLabel {
                     elide: Text.ElideRight
+                    visible: table.shows(4)
                     color: EaStyle.Colors.themeForegroundMinor
                     horizontalAlignment: Text.AlignLeft
                     text: row.units
                 }
                 NumberLabel {
                     objectName: `parameters.su.${row.index}`
+                    visible: table.shows(5)
                     horizontalAlignment: Text.AlignRight
                     number: row.parameter ? (row.parameter.fileValue !== "" ? row.parameter.fileSu : row.parameter.hasUncertainty ? NumberText.error(row.parameter.uncertainty, 0, row.parameter.value) : "") : ""
                     narrow: row.parameter && row.parameter.hasUncertainty ? NumberText.ownUncertainty(row.parameter.uncertainty, row.parameter.value) : ""
@@ -568,6 +590,7 @@ SideBarGroup {
                 // width, as the report and notebook tables draw it.
                 Item {
                     objectName: `parameters.change.${row.index}`
+                    visible: table.shows(6)
                     property int horizontalAlignment: Text.AlignRight
                     readonly property bool keepsAlignment: true
                     readonly property real gap: EaStyle.Sizes.fontPixelSize * 0.25
@@ -597,14 +620,14 @@ SideBarGroup {
                     }
                 }
                 NumberLabel {
-                    visible: table.rangeShown
+                    visible: table.shows(7)
                     horizontalAlignment: Text.AlignRight
                     color: EaStyle.Colors.themeForegroundMinor
                     number: group.bound(row.minimum)
                     full: NumberText.plainFull(row.minimum)
                 }
                 NumberLabel {
-                    visible: table.rangeShown
+                    visible: table.shows(8)
                     horizontalAlignment: Text.AlignRight
                     color: EaStyle.Colors.themeForegroundMinor
                     number: group.bound(row.maximum)

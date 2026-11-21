@@ -55,7 +55,10 @@ sidebar whose width is chosen automatically from a few fixed ratios, never dragg
    Text that does not fit is elided (at the end for names and labels, in the middle for paths and file names) and
    shows its full text in a tooltip. A number that does not fit in its column's width is written in the app's one
    scientific form (`1.23×10⁵`, ADR-0051) with as many significant digits as fit; a value with an s.u. keeps all its
-   digits and writes the s.u. at the same power. The full value is in the tooltip. No column
+   digits and writes the s.u. at the same power. The full value is in the tooltip. A table too narrow for all its
+   columns drops whole columns by priority while the rest do not fit beside the name's minimum width; its header and
+   rows always show the same columns. The Analysis parameter table drops Min and Max first, then Change, s.u., Start,
+   the row number and the units; Name, Value and Free always show. No column
    measures its rows, and widths do not change when values change. This amends ADR-0029's width rule ("row numbers
    fit the largest displayed number; labels and units fit their content, capped at a quarter of the table width;
    numeric columns share the remaining space"): the declared-once, shared header/cell widths and the alignments of
