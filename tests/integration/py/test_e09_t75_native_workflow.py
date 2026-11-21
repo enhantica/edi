@@ -15,6 +15,11 @@ ROOT = Path(__file__).resolve().parents[3]
 CONSUMERS = ['audit', 'core', 'system', 'notebooks', 'cli-python', 'docs', 'app']
 APP_JOBS = {'linux-64': 'app', 'osx-arm64': 'app-macos', 'win-64': 'app-windows'}
 SDK_OS = {'linux-64': 'Linux', 'osx-arm64': 'macOS', 'win-64': 'Windows'}
+NIGHTLY_MARKERS = {
+    'notebooks': 'Notebooks run at night and on a manual run',
+    'docs': 'The docs build runs at night and on a manual run',
+}
+NIGHTLY_GUARD = "env.NIGHTLY == 'true'"
 
 
 def jobs():
@@ -157,6 +162,8 @@ def require_public_steps(job, name, platform):
     steps = job['steps']
     if name == 'app':
         require_desktop_sdk_and_msvc(steps, platform)
+    if name in NIGHTLY_MARKERS:
+        require_nightly_work(job, NIGHTLY_MARKERS[name])
     builds = [
         (i, step)
         for i, step in enumerate(steps)
@@ -165,7 +172,8 @@ def require_public_steps(job, name, platform):
     assert len(builds) == 1, 'Every native route crosses one explicit core-build boundary'
     index, build = builds[0]
     expected_condition = {
-        'notebooks': 'github.event.pull_request.head.repo.fork == false',
+        'docs': NIGHTLY_GUARD,
+        'notebooks': NIGHTLY_GUARD + ' && (github.event.pull_request.head.repo.fork == false)',
         'app': "runner.os != 'Windows' && (steps.inputs.outputs.run == 'true')",
     }.get(name)
     assert step_condition(build) == expected_condition and not build.get('continue-on-error'), (
@@ -193,6 +201,31 @@ def require_desktop_sdk_and_msvc(steps, platform):
     assert active(windows[0], 'schedule', bindings={'runner.os': SDK_OS[platform]}) == (
         platform == 'win-64'
     ), 'Only the Windows job reaches the installer-aligned MSVC build'
+
+
+def require_nightly_work(job, marker_name):
+    nightly = {'if': job.get('env', {}).get('NIGHTLY', False)}
+    markers = [step for step in job['steps'] if step.get('name') == marker_name]
+    assert len(markers) == 1, 'A single skip receipt keeps the required check name'
+    marker = markers[0]
+    assert set(marker) == {'name', 'if', 'run'} and marker['run'] == (
+        f'echo "{marker_name}; this $GITHUB_EVENT_NAME run does not."'
+    ), 'The skip receipt only reports the cadence'
+    outcomes = {('build', 'outcome'): 'success', ('tutorials', 'outcome'): 'success'}
+    for event in ('pull_request', 'push', 'schedule', 'workflow_dispatch'):
+        full = event in {'schedule', 'workflow_dispatch'}
+        enabled = active(nightly, event)
+        assert enabled == full, 'Only the nightly and manual events enable the real work'
+        selected = [
+            step
+            for step in job['steps']
+            if active(
+                step, event, outputs=outcomes, bindings={'env.NIGHTLY': str(enabled).lower()}
+            )
+        ]
+        assert selected == (
+            [step for step in job['steps'] if step is not marker] if full else [marker]
+        ), 'PR and push run only the receipt; nightly and manual run every actual step'
 
 
 def assert_first_public_use(name, build, use, expected_condition):
@@ -671,11 +704,16 @@ def public_native_transfer(steps, index, name):
     assert len(transports) == 1, 'Each consumer selects one same-run native artifact action'
     transfer_index, transfer = transports[0]
     assert transfer_index < index, 'Artifact selection precedes restoration and first use'
+    assert set(transfer['with']) == {'platform'}, (
+        'Default native consumers restore this run and cannot select another producer run'
+    )
     assert transfer.get('with', {}).get('platform') in {
         "${{ runner.os == 'macOS' && 'osx-arm64' || 'linux-64' }}",
         '${{ matrix.sdk }}',
     }, 'Each consumer requests its actual platform artifact rather than a sibling platform'
-    guard = "runner.os != 'Windows'" if name == 'app' else None
+    guard = {'app': "runner.os != 'Windows'", **dict.fromkeys(NIGHTLY_MARKERS, NIGHTLY_GUARD)}.get(
+        name
+    )
     assert step_condition(transfer) == guard and not transfer.get('continue-on-error'), (
         'The native artifact action cannot be optional or bypassed'
     )

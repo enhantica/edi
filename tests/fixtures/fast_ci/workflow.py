@@ -23,10 +23,11 @@ def resolve(value, matrix):
     return value
 
 
-FULL_EVENTS = ('push', 'schedule', 'workflow_dispatch')
+SYSTEM_EVENTS = ('schedule', 'workflow_dispatch')
 APP_CACHE_PATHS = (
     'build/app/app/edi_app',
     'build/app/app/edi_app_tests',
+    'build/app/app/edi_assistant_guard',
     'build/tutorial-transactions',
 )
 
@@ -39,9 +40,13 @@ def reachable(node, jobs, matrix, event='push'):
             for key, item in matrix.items():
                 condition = condition.replace('matrix.' + key, repr(item))
         node['if'] = condition
-    assert active(node, event, states=dict.fromkeys(jobs, 'success')), (
-        f'The required workflow artifact or time-gate path must execute on {event}'
-    )
+    assert active(
+        node,
+        event,
+        states=dict.fromkeys(jobs, 'success'),
+        outputs={('inputs', 'run'): 'true'},
+        bindings={'runner.os': matrix.get('platform')},
+    ), f'The required workflow artifact or time-gate path must execute on {event}'
     continuation = node.get('continue-on-error', False)
     if isinstance(continuation, str):
         continuation = active({'if': continuation}, event, states=dict.fromkeys(jobs, 'success'))
@@ -120,22 +125,25 @@ def workflow_shell(workflow, job, step):
 
 
 def artifact_routes(workflow, root):
-    require_events(workflow, ('pull_request', *FULL_EVENTS))
-    for event in FULL_EVENTS:
+    require_events(workflow, ('pull_request', 'push', *SYSTEM_EVENTS))
+    for event in SYSTEM_EVENTS:
         _artifact_routes(workflow, root / event, event)
 
 
-def _artifact_routes(workflow, root, event):
+def app_uploads(workflow, root, event):
     jobs = workflow['jobs']
     producers = {
         name: job
         for name, job in jobs.items()
-        if any('app-build' in s.get('run', '') for s in job.get('steps', []))
+        if job.get('name') != 'app · Windows'
+        and any('app-build' in s.get('run', '') for s in job.get('steps', []))
     }
     assert producers, 'System shards require a normal-app artifact producer'
     uploads = {}
     for name, job in producers.items():
-        for matrix in matrix_cases(job):
+        static_platform = job.get('env', {}).get('APP_PLATFORM')
+        placements = [{'platform': static_platform}] if static_platform else matrix_cases(job)
+        for matrix in placements:
             reachable(job, jobs, matrix, event)
             build_steps = [s for s in job['steps'] if 'app-build' in s.get('run', '')]
             build_step = build_steps[0]
@@ -165,13 +173,24 @@ def _artifact_routes(workflow, root, event):
                         and tuple(sorted(options['path'].splitlines())) == APP_CACHE_PATHS
                     ), (
                         'The app cache must transfer exactly the app, native test runner '
-                        'and tutorial observer package'
+                        'assistant guard and tutorial observer package'
                     )
+                    binding = 'env.APP_PLATFORM' if static_platform else 'matrix.platform'
                     assert (
-                        options.get('key') == 'edi-app-${{ matrix.platform }}-${{ github.run_id }}'
+                        options.get('key') == 'edi-app-${{ ' + binding + ' }}-${{ github.run_id }}'
                     ), 'The app cache identity must bind the platform and this exact workflow run'
                 identity = options['key' if cached else 'name']
-                uploads[cached, resolve(identity, matrix)] = name
+                if static_platform:
+                    identity = identity.replace('${{ env.APP_PLATFORM }}', static_platform)
+                resource = cached, resolve(identity, matrix)
+                assert resource not in uploads, 'An app resource has only one workflow producer'
+                uploads[resource] = name
+    return uploads
+
+
+def _artifact_routes(workflow, root, event):
+    jobs = workflow['jobs']
+    uploads = app_uploads(workflow, root, event)
     consumers = {
         name: job
         for name, job in jobs.items()
@@ -206,7 +225,7 @@ def _artifact_routes(workflow, root, event):
                         and tuple(sorted(options['path'].splitlines())) == APP_CACHE_PATHS
                     ), (
                         'System reuse must restore exactly the app, native test runner '
-                        'and tutorial observer package'
+                        'assistant guard and tutorial observer package'
                     )
                 pattern = resolve(
                     options.get('key' if cached else 'name', options.get('pattern', '')), matrix
@@ -218,8 +237,8 @@ def _artifact_routes(workflow, root, event):
                 ]
                 if compatible:
                     reachable(step, jobs, matrix, event)
-                    assert set(compatible) & dependencies(jobs, name), (
-                        'Each system consumer must wait for its actual artifact producer'
+                    assert len(compatible) == 1 and compatible[0] in dependencies(jobs, name), (
+                        'Each system consumer must wait for its unique platform artifact producer'
                     )
                     matched = True
             assert matched, 'Every system matrix case must restore the producer app artifact'
@@ -232,7 +251,7 @@ def _artifact_routes(workflow, root, event):
 
 
 def timing_route(workflow, root):
-    require_events(workflow, ('pull_request', 'push'))
+    require_events(workflow, ('pull_request', 'push', 'schedule'))
     jobs = workflow['jobs']
     systems = {
         name
@@ -247,17 +266,21 @@ def timing_route(workflow, root):
         if not steps:
             continue
         assert systems and systems <= dependencies(jobs, name), (
-            'The push comparator must depend on every completed system job'
+            'The scheduled comparator must depend on every completed system job'
         )
-        reachable(job, jobs, {})
+        reachable(job, jobs, {}, 'schedule')
+        for event in ('pull_request', 'push', 'workflow_dispatch'):
+            assert not active(job, event, states=dict.fromkeys(jobs, 'success')), (
+                'The workflow comparator runs on schedule only'
+            )
         for step in steps:
-            reachable(step, jobs, {})
+            reachable(step, jobs, {}, 'schedule')
             for code in (0, 1, 2):
                 run_boundary(
                     step['run'], root / name, 'timing', code, workflow_shell(workflow, job, step)
                 )
         found = True
-    assert found, 'Push CI must invoke and enforce the same tested shard comparator'
+    assert found, 'Scheduled CI must invoke and enforce the same tested shard comparator'
     for slow in (False, True):
         timing_evidence(workflow, root / ('slow' if slow else 'green'), slow=slow)
 
@@ -283,9 +306,9 @@ def timing_evidence(workflow, root, *, slow=False, api_mutation=None):  # noqa: 
     for current in (True, False):
         document = run_record('feature' if current else 'main', [2400], current=current)
         document['expected_system_shards'] = inventory
+        document['event'] = 'schedule'
+        document['head_branch'] = 'main'
         if current:
-            document['event'] = 'push'
-            document['head_branch'] = 'main'
             document['head_sha'] = 'd' * 40
         template = document['jobs'][0]
         document['jobs'] = []
@@ -317,7 +340,9 @@ def timing_evidence(workflow, root, *, slow=False, api_mutation=None):  # noqa: 
 from pathlib import Path
 args=sys.argv[1:]; endpoint=next(x for x in args if x.startswith('repos/'))
 documents=json.loads(Path(os.environ['EVIDENCE_ROOT']+'/runs.json').read_text())
-if '/workflows/' in endpoint: print('222')
+if '/workflows/' in endpoint:
+ assert 'branch=main&event=schedule&status=completed' in endpoint, 'Nightly baseline required'
+ print('222')
 else:
  run=re.search(r'/runs/(\d+)',endpoint).group(1); record=documents[run]
  if '/jobs' in endpoint:
@@ -362,11 +387,12 @@ os.execv(sys.executable,[sys.executable,*sys.argv[3:]])
         'GITHUB_RUN_ID': '111',
         'GITHUB_SHA': 'd' * 40,
         'GITHUB_EVENT_PATH': str(root / 'event.json'),
+        'GITHUB_EVENT_NAME': 'schedule',
     }
     steps = [step for step in job['steps'] if 'run' in step]
     completed = []
     for step in steps:
-        reachable(step, workflow['jobs'], {})
+        reachable(step, workflow['jobs'], {}, 'schedule')
         command = (
             step['run']
             .replace('${{ github.event.pull_request.head.sha }}', 'c' * 40)
@@ -394,7 +420,7 @@ os.execv(sys.executable,[sys.executable,*sys.argv[3:]])
             break
     if api_mutation:
         assert completed[-1].returncode != 0, (
-            'Stale run id or push head evidence must refuse before a green timing verdict'
+            'Stale run id or scheduled head evidence must refuse before a green timing verdict'
         )
         return
     compared = root / 'compared.json'
@@ -403,11 +429,11 @@ os.execv(sys.executable,[sys.executable,*sys.argv[3:]])
     )
     current, main = json.loads(compared.read_text())
     assert (
-        current['id'] == 111 and current['head_sha'] == 'd' * 40 and current['event'] == 'push'
-    ), 'The comparator must consume this push run id and pushed head, not main or stale evidence'
-    assert main['id'] == 222 and main['head_sha'] == 'b' * 40 and main['event'] == 'push', (
-        'The baseline must be the selected main run id and head'
+        current['id'] == 111 and current['head_sha'] == 'd' * 40 and current['event'] == 'schedule'
+    ), 'The comparator must consume this exact scheduled run and head'
+    assert main['id'] == 222 and main['head_sha'] == 'b' * 40 and main['event'] == 'schedule', (
+        'The baseline must be the previous successful scheduled main run'
     )
-    assert (completed[-1].returncode == 0) == (not slow), (
-        'The real comparator must enforce this push versus main after collection'
+    assert completed[-1].returncode == int(slow), (
+        'The comparator must enforce nightly against nightly: ' + completed[-1].stdout
     )
