@@ -4884,12 +4884,12 @@ NB_MODULE(_edi, m) {
                     edi::ExperimentSet set;
                     set.id = id;
                     set.template_experiment_id = template_experiment;
-                    project.experiment_sets.push_back(std::move(set));
+                    project.experiment_sets.push_back(set);
                     for (const std::string& name : all) {
                         edi::ExperimentSetMember member;
                         member.experiment_id = name;
                         member.set_id = id;
-                        project.experiment_set_members.push_back(std::move(member));
+                        project.experiment_set_members.push_back(member);
                     }
                 } catch (...) {
                     project.experiment_sets.assign(sets_before);

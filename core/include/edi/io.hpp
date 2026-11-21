@@ -56,7 +56,11 @@ class ReadingScope {
     ReadingScope(const ReadingScope&) = delete;
     ReadingScope& operator=(const ReadingScope&) = delete;
     ~ReadingScope() {
-        if (std::uncaught_exceptions() > active_ && detail::failed_file().empty()) detail::failed_file() = path_;
+        // Recording the path is a courtesy to the message: a failure to copy it must not end the program.
+        try {
+            if (std::uncaught_exceptions() > active_ && detail::failed_file().empty()) detail::failed_file() = path_;
+        } catch (...) {
+        }
     }
 
    private:

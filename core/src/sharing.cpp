@@ -71,7 +71,7 @@ std::string ensure_alias(Project& project, const std::string& unique_name, Added
     ParameterAlias alias;
     alias.id = id;
     alias.parameter_unique_name = unique_name;
-    project.aliases.push_back(std::move(alias));
+    project.aliases.push_back(alias);
     added.aliases.push_back(id);
     return id;
 }
@@ -98,7 +98,7 @@ void add_constraint(Project& project, const std::string& lhs, const std::string&
     ParameterConstraint constraint;
     constraint.id = id;
     constraint.expression = expression;
-    project.constraints.push_back(std::move(constraint));
+    project.constraints.push_back(constraint);
     added.constraints.push_back(id);
 }
 
@@ -198,6 +198,13 @@ std::string ratio_expression(const std::string& lhs, const std::string& er, cons
     return lhs + " = " + er + " * " + ap + " / " + ar;
 }
 
+// The constraint that makes `member` the same as `leader`.
+std::string same_as(const std::string& member, const std::string& leader) {
+    std::string equation = member;
+    equation.append(" = ").append(leader);
+    return equation;
+}
+
 }  // namespace
 
 std::vector<std::string> sharing_scope(const Project& project, const std::string& experiment) {
@@ -241,7 +248,7 @@ bool shared_across_experiments(const Project& project, const std::string& experi
     }
     for (std::size_t i = 1; i < scope.size(); ++i) {
         const std::string member = alias_naming(project, block_of(scope[i]) + "." + path);
-        if (member.empty() || constraint_with(project, member + " = " + leader) == nullptr) {
+        if (member.empty() || constraint_with(project, same_as(member, leader)) == nullptr) {
             return false;
         }
     }
@@ -252,15 +259,16 @@ void share_across_experiments(Project& project, const std::string& experiment, c
     const std::vector<std::string> scope = sharing_scope(project, experiment);
     for (const std::string& member : scope) {
         if (!has_parameter(project, block_of(member) + "." + path)) {
-            throw std::invalid_argument("experiment '" + member + "' has no parameter '" + path +
-                                        "', so it cannot be the same for all experiments");
+            std::string message = "experiment '" + member;
+            message.append("' has no parameter '").append(path).append("', so it cannot be the same for all experiments");
+            throw std::invalid_argument(message);
         }
     }
     Added added;
     const std::string leader = ensure_alias(project, block_of(scope.front()) + "." + path, added);
     for (std::size_t i = 1; i < scope.size(); ++i) {
         const std::string member = ensure_alias(project, block_of(scope[i]) + "." + path, added);
-        add_constraint(project, member, member + " = " + leader, added);
+        add_constraint(project, member, same_as(member, leader), added);
     }
     settle(project, added);
 }
@@ -274,7 +282,7 @@ void unshare_across_experiments(Project& project, const std::string& experiment,
     for (std::size_t i = 1; i < scope.size(); ++i) {
         const std::string member = alias_naming(project, block_of(scope[i]) + "." + path);
         if (!member.empty()) {
-            remove_constraint(project, member + " = " + leader);
+            remove_constraint(project, same_as(member, leader));
             remove_unused_alias(project, member);
         }
     }

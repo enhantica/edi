@@ -2674,6 +2674,7 @@ bool ProjectViewModel::loadSeriesOfJointFits(ExperimentViewModel* experiment, co
                     }
                 }
                 if (error.isEmpty()) discardCopy();
+                // cppcheck-suppress nullPointerRedundantCheck ; checked again below, after calls that can delete it
                 self->setLastError(refusal);
                 if (!self || self->retired_) return;
                 self->announceRefused(refusal);

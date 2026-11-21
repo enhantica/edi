@@ -127,6 +127,8 @@ void CollectionExamples::checkOnline(int generation, const QStringList& online, 
     ++checking_;
     fetch_from(this, network_, online, QStringLiteral("index.json"),
                [this, generation, online, bundled](const QByteArray& bytes, const QString& error, bool) {
+        // A network callback must not throw: a failure here only leaves the copy as it was.
+        try {
         if (generation != generation_) return;
         --checking_;
         // Whatever the answer, the requests waiting for it are answered after it.
@@ -160,12 +162,19 @@ void CollectionExamples::checkOnline(int generation, const QStringList& online, 
             const QString name = QString::fromStdString(edi::online::file_name(file));
             fetch_from(this, network_, online, QString::fromStdString(file.path),
                        [this, generation, id, file, name](const QByteArray& fetched, const QString& fetchError, bool) {
-                if (generation != generation_ || !fetchError.isEmpty()) return;
-                if (!content_problem(fetched, file.bytes, QString::fromStdString(file.sha256), name).isEmpty()) return;
-                updated_.insert(id, {fetched, name});
+                try {
+                    if (generation != generation_ || !fetchError.isEmpty()) return;
+                    if (!content_problem(fetched, file.bytes, QString::fromStdString(file.sha256), name).isEmpty()) return;
+                    updated_.insert(id, {fetched, name});
+                } catch (...) {
+                    qCInfo(lcCollection, "online collection update not kept");
+                }
             });
         }
         updateNotice();
+        } catch (...) {
+            qCInfo(lcCollection, "online collection not checked");
+        }
     });
 }
 
