@@ -78,7 +78,7 @@ SideBarGroup {
                 LoadMenuHeader {
                     id: loadProjectHeader
                     first: true
-                    text: qsTr("Project")
+                    text: qsTr("EasyDiffraction project")
                 }
                 // The browser's own chooser copies a folder into its storage; Chrome and Edge open it on the disk.
                 LoadMenuItem {
@@ -201,7 +201,7 @@ SideBarGroup {
                 LoadMenuHeader {
                     id: saveProjectHeader
                     first: true
-                    text: qsTr("Project")
+                    text: qsTr("EasyDiffraction project")
                 }
                 LoadMenuItem {
                     id: saveasFolderItem
