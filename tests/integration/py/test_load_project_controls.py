@@ -1,4 +1,4 @@
-"""Project entry controls follow the requested three-button and four-choice design."""
+"""Project entry controls follow the requested button and ordered-popup design."""
 
 import re
 from pathlib import Path
@@ -40,16 +40,23 @@ def test_get_started_declares_exactly_the_three_project_actions():
     )
 
 
-def test_load_popup_declares_the_four_program_choices_in_order():
-    expected = ['Open EasyDiffraction file', 'Import cryspy', 'Import FullProf', 'Import GSAS-II']
+def test_load_popup_declares_the_native_and_program_choices_in_order():
+    expected = [
+        'Open EasyDiffraction folder',
+        'Open EasyDiffraction zip',
+        'Open EasyDiffraction from URL',
+        'Import cryspy',
+        'Import FullProf',
+        'Import GSAS-II',
+    ]
     candidates = [
         [label for label in labels(body) if label in expected]
         for kind, body in objects(SOURCE.read_text(encoding='utf-8'))
         if kind in {'Menu', 'Popup', 'AppDialog', 'EaElements.Menu', 'EaElements.Popup'}
     ]
     assert expected in candidates, (
-        'One Load project popup offers Open EasyDiffraction file, Import cryspy, '
-        'Import FullProf and Import GSAS-II in that order'
+        'One Load project popup offers folder, zip and URL, followed by '
+        'cryspy, FullProf and GSAS-II in that order'
     )
 
 

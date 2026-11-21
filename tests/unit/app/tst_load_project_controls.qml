@@ -53,7 +53,24 @@ TestCase {
             String(item).includes("SideBarButton") && typeof item.text === "string" && item.visible);
     }
 
-    function test_three_project_buttons() {
+    function states() {
+        return [{tag: "empty", loaded: false}, {tag: "loaded", loaded: true}];
+    }
+
+    function prepareState(data) {
+        if (data.loaded) {
+            verify(Session.openProject(SettingsProof.copyProject(Probe.repoUrl("tests/fixtures/loop_parameter_ids/line-segment"))),
+                   "The loaded-state check starts from an ordinary open project");
+            Ui.click(test, Probe, app, "appBar.tab.project");
+        }
+    }
+
+    function test_three_project_buttons_data() {
+        return states();
+    }
+
+    function test_three_project_buttons(data) {
+        prepareState(data);
         const buttons = projectButtons();
         compare(JSON.stringify(buttons.map(item => normalized(item.text))),
                 JSON.stringify(["Create a new project", "Load project", "Save project as"]),
@@ -64,24 +81,29 @@ TestCase {
         }
     }
 
-    function test_load_project_opens_the_ordered_choices() {
+    function test_load_project_opens_the_ordered_choices_data() {
+        return states();
+    }
+
+    function test_load_project_opens_the_ordered_choices(data) {
+        prepareState(data);
         const load = projectButtons().filter(item => normalized(item.text) === "Load project");
         compare(load.length, 1, "Get started has one actual Load project button");
         Ui.scrollIntoView(load[0]);
         verify(Ui.rendered(load[0]) && load[0].enabled, "Load project accepts real input before a project exists");
         const point = Ui.clickPoint(load[0]);
         mouseClick(load[0], point.x, point.y);
-        const expected = ["Open EasyDiffraction file", "Import cryspy", "Import FullProf", "Import GSAS-II"];
+        const expected = ["Open EasyDiffraction folder", "Open EasyDiffraction zip", "Open EasyDiffraction from URL", "Import cryspy", "Import FullProf", "Import GSAS-II"];
         function choices() {
             return Render.descendants(Ui.windowRoot(app)).filter(item =>
                 typeof item.text === "string" && typeof item.clicked === "function" &&
                 expected.includes(normalized(item.text)) && Ui.rendered(item));
         }
-        tryVerify(() => choices().length === 4, 2000,
-                  "Clicking Load project exposes all four real program choices");
+        tryVerify(() => choices().length === 6, 2000,
+                  "Clicking Load project exposes all six real project and program choices");
         const ordered = choices().sort((left, right) => left.mapToItem(null, 0, 0).y - right.mapToItem(null, 0, 0).y);
         compare(JSON.stringify(ordered.map(item => normalized(item.text))), JSON.stringify(expected),
-                "The rendered popup lists EasyDiffraction, cryspy, FullProf and GSAS-II in order");
+                "The rendered popup lists folder, zip, URL, cryspy, FullProf and GSAS-II in order");
         keyClick(Qt.Key_Escape);
     }
 

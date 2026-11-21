@@ -15,8 +15,10 @@ ROOT = Path(__file__).resolve().parents[3]
 @pytest.mark.parametrize(
     'scenario',
     [
-        'three_project_buttons',
-        'load_project_opens_the_ordered_choices',
+        'three_project_buttons:empty',
+        'three_project_buttons:loaded',
+        'load_project_opens_the_ordered_choices:empty',
+        'load_project_opens_the_ordered_choices:loaded',
         'save_project_as_opens_the_ordered_choices',
         'save_copy_belongs_to_native_choices',
     ],
