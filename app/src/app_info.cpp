@@ -1356,11 +1356,13 @@ QV4::ReturnedValue panelUsageGet(const PanelUsageFrame& frame, const QV4::Value&
     return static_cast<QV4::Object*>(prototype) != nullptr ? prototype->get(name, nullptr, &value)
                                                             : QV4::Encode::undefined();
 }
+// Property names are looked up as engine identifiers: interned once, they are not new garbage at every read, which
+// forced full JS collections of 0.2-0.7 s while a page's tables were fitted.
 QJSValue panelUsageRead(const PanelUsageFrame& frame, const QJSValue& source, const char* name) {
     if (!panelUsageReady(frame)) return {};
     QV4::Scope scope(frame.vm());
     QV4::ScopedValue value(scope, QJSValuePrivate::convertToReturnedValue(frame.vm(), source));
-    QV4::ScopedString key(scope, frame.vm()->newString(QString::fromLatin1(name)));
+    QV4::ScopedString key(scope, frame.vm()->newIdentifier(QString::fromLatin1(name)));
     QV4::ScopedValue result(scope, panelUsageGet(frame, *value, key));
     frame.checked();
     return QJSValuePrivate::fromReturnedValue(result->asReturnedValue());
@@ -1609,7 +1611,7 @@ QV4::ReturnedValue panelUsageResolveContext(const PanelUsageFrame& frame, QV4::S
 QJSValue panelUsageContextRead(const PanelUsageFrame& frame, const char* name) {
     if (!panelUsageReady(frame)) return {};
     QV4::Scope scope(frame.vm());
-    QV4::ScopedString key(scope, frame.vm()->newString(QString::fromLatin1(name)));
+    QV4::ScopedString key(scope, frame.vm()->newIdentifier(QString::fromLatin1(name)));
     QV4::ScopedValue result(scope, panelUsageResolveContext(frame, key, nullptr));
     frame.checked();
     return QJSValuePrivate::fromReturnedValue(result->asReturnedValue());
@@ -1620,7 +1622,7 @@ void panelUsageContextWrite(const PanelUsageFrame& frame, const char* name, cons
     QV4::Scoped<QV4::QmlContext> qml(scope, frame.qmlScope);
     if (static_cast<QV4::QmlContext*>(qml) == nullptr) { frame.vm()->throwReferenceError(QString::fromLatin1(name)); return; }
     QV4::Scoped<QV4::QQmlContextWrapper> wrapper(scope, qml->d()->qml());
-    QV4::ScopedString key(scope, frame.vm()->newString(QString::fromLatin1(name)));
+    QV4::ScopedString key(scope, frame.vm()->newIdentifier(QString::fromLatin1(name)));
     QV4::ScopedValue actual(scope, QJSValuePrivate::convertToReturnedValue(frame.vm(), value));
     wrapper->put(key, actual);
     frame.checked();
@@ -1650,7 +1652,7 @@ QJSValue panelUsageGlobalCall(const PanelUsageFrame& frame, const char* name, co
     *call.thisObject = QV4::Encode::undefined();
     for (qsizetype i = 0; i < arguments.size(); ++i)
         call.args[i] = QJSValuePrivate::convertToReturnedValue(frame.vm(), arguments[i]);
-    QV4::ScopedString key(scope, frame.vm()->newString(QString::fromLatin1(name)));
+    QV4::ScopedString key(scope, frame.vm()->newIdentifier(QString::fromLatin1(name)));
     QV4::ScopedValue callable(scope, panelUsageResolveContext(frame, key, call.thisObject, true));
     frame.checked();
     if (!panelUsageReady(frame)) return {};
@@ -1668,7 +1670,7 @@ QJSValue panelUsageMemberCall(const PanelUsageFrame& frame, const QJSValue& rece
     *call.thisObject = QJSValuePrivate::convertToReturnedValue(frame.vm(), receiver);
     for (qsizetype i = 0; i < arguments.size(); ++i)
         call.args[i] = QJSValuePrivate::convertToReturnedValue(frame.vm(), arguments[i]);
-    QV4::ScopedString key(scope, frame.vm()->newString(QString::fromLatin1(name)));
+    QV4::ScopedString key(scope, frame.vm()->newIdentifier(QString::fromLatin1(name)));
     QV4::ScopedValue result(scope);
     if (call.thisObject->isNullOrUndefined()) {
         result = frame.vm()->throwTypeError(QStringLiteral("Cannot call method '%1' of %2")
@@ -1692,7 +1694,7 @@ QJSValue panelUsageDeferredMemberCall(const PanelUsageFrame& frame, const QJSVal
     if (!panelUsageReady(frame)) return {};
     QV4::Scope scope(frame.vm());
     QV4::ScopedValue object(scope, QJSValuePrivate::convertToReturnedValue(frame.vm(), receiver));
-    QV4::ScopedString key(scope, frame.vm()->newString(QString::fromLatin1(name)));
+    QV4::ScopedString key(scope, frame.vm()->newIdentifier(QString::fromLatin1(name)));
     const auto values = arguments();
     if (!panelUsageReady(frame)) return {};
     QV4::JSCallArguments call(scope, static_cast<int>(values.size()));
@@ -1910,7 +1912,7 @@ void assistantMemberWrite(const PanelUsageFrame& frame, const QJSValue& receiver
     if (!panelUsageReady(frame)) return;
     QV4::Scope scope(frame.vm());
     QV4::ScopedValue object(scope, QJSValuePrivate::convertToReturnedValue(frame.vm(), receiver));
-    QV4::ScopedString key(scope, frame.vm()->newString(QString::fromLatin1(property)));
+    QV4::ScopedString key(scope, frame.vm()->newIdentifier(QString::fromLatin1(property)));
     QV4::ScopedValue actual(scope, QJSValuePrivate::convertToReturnedValue(frame.vm(), value));
     QV4::Runtime::StoreElement::call(frame.vm(), *object, *key, *actual);
     frame.checked();
@@ -6282,7 +6284,7 @@ QJSValue tableArrayFrom(const PanelUsageFrame& f, const QJSValue& value) {
 bool tableHas(const PanelUsageFrame& f, const QJSValue& object, const char* property) {
     if (!panelUsageReady(f)) return false;
     QV4::Scope scope(f.vm());
-    QV4::ScopedValue key(scope, f.vm()->newString(QString::fromLatin1(property)));
+    QV4::ScopedValue key(scope, f.vm()->newIdentifier(QString::fromLatin1(property)));
     QV4::ScopedValue value(scope, QJSValuePrivate::convertToReturnedValue(f.vm(), object));
     QV4::ScopedValue result(scope, QV4::Runtime::In::call(f.vm(), *key, *value)); f.checked(); return result->toBoolean();
 }
@@ -6309,17 +6311,22 @@ void tableIncrement(const PanelUsageFrame& f, const char* name, bool explicitTab
     const auto number = panelUsageNumber(f, original); if (!number) return;
     if (explicitTable) projectWrite(f, "table", name, QJSValue(*number + 1)); else panelUsageContextWrite(f, name, QJSValue(*number + 1));
 }
+QList<QQuickItem*> tableNativeCells(QObject* row);
+// A row's cells as a JS array, from the items themselves (tableNativeCells): read through JS, each row copied its
+// content list and its cells' list into new arrays, garbage that forced full JS collections while tables were fitted.
 QJSValue tableCellsOf(const PanelUsageFrame& f, const QJSValue& row) {
-    QJSValue first = consentNull();
-    if (panelUsageTruth(row) && panelUsageTruth(panelUsageRead(f, row, "contentRowData"))) {
-        const auto array = panelUsageContextRead(f, "Array");
-        const auto children = panelUsageRead(f, row, "contentRowData");
-        const auto cells = panelUsageMemberCall(f, array, "from", {children});
-        first = panelUsageMemberCall(f, cells, "find", {tableCallback(f, 131, {}, 1)});
+    if (!panelUsageReady(f) || !panelUsageTruth(row)) return consentNull();
+    const QList<QQuickItem*> cells = tableNativeCells(row.toQObject());
+    if (cells.isEmpty()) return consentNull();
+    QV4::Scope scope(f.vm());
+    QV4::ScopedArrayObject array(scope, f.vm()->newArrayObject());
+    QV4::ScopedValue wrapped(scope);
+    for (qsizetype index = 0; index < cells.size(); ++index) {
+        wrapped = QV4::QObjectWrapper::wrap(f.vm(), cells[index]);
+        array->put(static_cast<uint>(index), wrapped);
     }
-    if (!panelUsageTruth(first) || !panelUsageTruth(panelUsageRead(f, first, "parent"))) return consentNull();
-    const auto array = panelUsageContextRead(f, "Array"); const auto parent = panelUsageRead(f, first, "parent");
-    return panelUsageMemberCall(f, array, "from", {panelUsageRead(f, parent, "children")});
+    f.checked();
+    return QJSValuePrivate::fromReturnedValue(array->asReturnedValue());
 }
 QJSValue tableControlWidth(const PanelUsageFrame& f, const QJSValue& child) {
     return tableHas(f, child, "fittedWidth") ? panelUsageRead(f, child, "fittedWidth") : tableNullish(panelUsageRead(f, child, "implicitWidth"), QJSValue(0));
@@ -9705,7 +9712,7 @@ namespace {
 QJSValue chartSpreadCall(const PanelUsageFrame& f, const QJSValue& receiver, const char* name, const QJSValue& values) {
     if (!panelUsageReady(f)) return {};
     QV4::Scope scope(f.vm()); QV4::ScopedValue object(scope, QJSValuePrivate::convertToReturnedValue(f.vm(), receiver));
-    QV4::ScopedString key(scope, f.vm()->newString(QString::fromLatin1(name))); QV4::ScopedValue function(scope, panelUsageGet(f, *object, key, true));
+    QV4::ScopedString key(scope, f.vm()->newIdentifier(QString::fromLatin1(name))); QV4::ScopedValue function(scope, panelUsageGet(f, *object, key, true));
     if (!panelUsageReady(f)) return {};
     QV4::Value* args = scope.constructUndefined(2); args[0].setEmpty(); args[1] = QJSValuePrivate::convertToReturnedValue(f.vm(), values);
     QV4::ScopedValue result(scope, QV4::Runtime::CallWithSpread::call(f.vm(), *function, *object, args, 2)); f.checked();
@@ -10391,11 +10398,18 @@ QJSValue rowInstanceOf(const PanelUsageFrame& f, const QJSValue& input, const ch
     QV4::Scope scope(f.vm()); QV4::ScopedValue value(scope, QJSValuePrivate::convertToReturnedValue(f.vm(), input)), target(scope, QJSValuePrivate::convertToReturnedValue(f.vm(), type));
     QV4::ScopedValue result(scope, QV4::Runtime::Instanceof::call(f.vm(), *value, *target)); f.checked(); return QJSValuePrivate::fromReturnedValue(result->asReturnedValue());
 }
+// A control in a row takes focus on a click as well as on Tab. Walked over the items themselves: read through JS, each
+// item's `children` list was a new array, made for every item of every row as a table was built, and that garbage
+// forced full JS collections of 0.2-0.7 s when a page first showed its tables.
+void rowFocusOnClick(QQuickItem* item) {
+    if (item == nullptr) return;
+    if (const QVariant policy = item->property("focusPolicy"); policy.isValid() && policy.toInt() == Qt::TabFocus)
+        item->setProperty("focusPolicy", static_cast<int>(Qt::StrongFocus));
+    for (QQuickItem* child : item->childItems()) rowFocusOnClick(child);
+}
 void rowFocusOnClick(const PanelUsageFrame& f, const QJSValue& item) {
-    const auto policy = panelUsageRead(f, item, "focusPolicy"), tab = assistantContextField(f, "Qt", "TabFocus");
-    if (policy.strictlyEquals(tab)) assistantMemberWrite(f, item, "focusPolicy", assistantContextField(f, "Qt", "StrongFocus"));
-    const auto original = panelUsageRead(f, item, "children"); const auto children = original.isNull() || original.isUndefined() ? controlEmptyArray(f) : original;
-    panelUsageEach(f, children, [&](const QJSValue& child) { rowFocusOnClick(f, child); return panelUsageReady(f); });
+    if (!panelUsageReady(f)) return;
+    rowFocusOnClick(qobject_cast<QQuickItem*>(item.toQObject()));
 }
 QJSValue recentRowCallback(const PanelUsageFrame& f, uint operation,
     const std::function<QJSValue(uint)>& saved, const std::function<QJSValue(uint)>& arg) {

@@ -507,8 +507,9 @@ ProjectViewModel::ProjectViewModel(edi::Project project, QObject* parent, const 
     connect(&selection_store_timer_, &QTimer::timeout, this, [this] {
         // While a fit runs, a followed scan or series changes the dataset every run, and each write of the settings file
         // holds Qt's settings lock while it syncs to disk, which stalled the GUI thread's own settings reads (the
-        // assistant reads them once a second during a fit). The newest selection waits for the end of the fit; until
-        // then a reopened project reads it from the pending values, and closing the project writes it.
+        // assistant reads them once a second during a fit). The write waits for the end of the fit; the selection itself
+        // was recorded when it changed (publishCurrent), so a project opened again meanwhile reads the newest one, and
+        // closing the project writes it.
         if (fit_ != nullptr && fit_->running()) {
             selection_store_timer_.start();
             return;
@@ -861,9 +862,11 @@ QStringList ProjectViewModel::storedSelection() const {
     return store.value(selectionKey()).toStringList();
 }
 
-void ProjectViewModel::storeSelection() const {
+std::uint64_t ProjectViewModel::noteSelection() const {
+    // The newest selection is recorded at once, before any write of the file, so a project opened again reads it
+    // (storedSelection) even while the write waits for a fit to end. Recording takes a lock, never the disk.
     if (!selection_restored_ || project_->path.empty() || settings_file_path().isEmpty()) {
-        return;
+        return 0;
     }
     const StructureViewModel* structure = currentStructure();
     const ExperimentViewModel* experiment = scan_ ? nullptr : currentExperiment();
@@ -872,13 +875,20 @@ void ProjectViewModel::storeSelection() const {
         current_dataset_ < static_cast<int>(scan_session_->datasets().files.size())) {
         dataset = QString::fromStdString(scan_session_->datasets().files[static_cast<std::size_t>(current_dataset_)]);
     }
-    // The values are read here; the file is written on a worker, one write at a time, as a followed scan changes the
-    // dataset every run and a write of the settings file took tens of milliseconds on the GUI thread. A write still
-    // pending at quit is waited for with the rest of the pool (main.cpp).
+    return pending_selections().put(settings_file_path(), selectionKey(),
+                                    {structure ? structure->name() : QString(), experiment ? experiment->name() : QString(), dataset});
+}
+
+void ProjectViewModel::storeSelection() const {
+    // The file is written on a worker, one write at a time, as a followed scan changes the dataset every run and a
+    // write of the settings file took tens of milliseconds on the GUI thread. A write still pending at quit is waited
+    // for with the rest of the pool (main.cpp).
+    const std::uint64_t generation = noteSelection();
+    if (generation == 0) return;
     const QString path = settings_file_path(), key = selectionKey();
-    const QStringList value{structure ? structure->name() : QString(), experiment ? experiment->name() : QString(), dataset};
-    const std::uint64_t generation = pending_selections().put(path, key, value);
-    run_in_background([path, key, value, generation] {
+    const std::optional<QStringList> value = pending_selections().value(path, key);
+    if (!value) return;
+    run_in_background([path, key, value = *value, generation] {
         static std::mutex writing;
         const std::lock_guard lock(writing);
         // Only the newest selection asked for under this file and key is written; another project's key is its own.
@@ -958,7 +968,10 @@ void ProjectViewModel::publishCurrent() {
     if (retired_) return;
     const bool changed = current_structure_ != published_structure_index_ || currentStructure() != published_structure_ ||
         currentExperimentIndex() != published_experiment_index_ || currentExperiment() != published_experiment_;
-    if (changed && selection_restored_) selection_store_timer_.start();
+    if (changed && selection_restored_) {
+        noteSelection();
+        selection_store_timer_.start();
+    }
     if (current_structure_ != published_structure_index_) {
         published_structure_index_ = current_structure_;
         emit currentStructureIndexChanged();

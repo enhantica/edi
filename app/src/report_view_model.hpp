@@ -73,6 +73,10 @@ class ReportViewModel : public QObject {
     // The report model as its JSON values (report_to_json), without the charts' data: the pattern presentations and
     // the structure scenes and drawings, which the chart controllers read from reportModel().
     Q_PROPERTY(QVariantMap model READ model NOTIFY modelChanged)
+    // Cheap readers of the same model: reading `model` converts the whole report to a JS object each time, which a reader
+    // that only needs to know a model was built, or only its contents list, should not pay for.
+    Q_PROPERTY(int modelRevision READ modelRevision NOTIFY modelChanged)
+    Q_PROPERTY(QVariantList contents READ contents NOTIFY modelChanged)
     // The Contents keys left out (the model's `contents`), each with everything under it: the project's
     // `_report.excluded`, or the data when it states none.
     Q_PROPERTY(QStringList hidden READ hidden WRITE setHidden NOTIFY hiddenChanged)
@@ -102,6 +106,14 @@ class ReportViewModel : public QObject {
     QVariantMap model() const {
         ensureBuilt();
         return model_;
+    }
+    int modelRevision() const {
+        ensureBuilt();
+        return model_revision_;
+    }
+    QVariantList contents() const {
+        ensureBuilt();
+        return model_.value(QStringLiteral("contents")).toList();
     }
     const edi::ReportModel& reportModel() const {
         ensureBuilt();
@@ -235,6 +247,7 @@ class ReportViewModel : public QObject {
     mutable edi::ReportModel report_;
     mutable std::string json_;  // report_'s JSON: a rebuild that writes the same announces nothing
     mutable QVariantMap model_;
+    mutable int model_revision_ = 0;
     // The options report_ was built with, and judged()'s model when its choices are not the default ones.
     mutable edi::ReportOptions options_;
     mutable std::optional<edi::ReportModel> judged_;

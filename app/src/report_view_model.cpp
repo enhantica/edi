@@ -271,6 +271,7 @@ bool ReportViewModel::adopt(Built&& built) const {
     json_ = std::move(built.json);
     report_ = std::move(built.report);
     model_ = std::move(built.model);
+    ++model_revision_;
     return true;
 }
 

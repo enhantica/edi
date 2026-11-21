@@ -912,6 +912,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // ADR-0031 §1: the structure id, the experiment id and a scan's dataset file last selected in this project, in
     // the app's settings keyed by the project's folder; stored only once restored.
     QStringList storedSelection() const;
+    std::uint64_t noteSelection() const;
     void storeSelection() const;
     QString selectionKey() const;
     bool selection_restored_ = false;

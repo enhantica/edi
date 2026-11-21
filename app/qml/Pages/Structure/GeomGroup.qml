@@ -94,6 +94,9 @@ Column {
         sourceModel: group.structure ? group.structure.bonds : []
 
         columns: [numberColumnWidth, -1, -1, -1, -1, -1]
+        // Widths from column types, not rows (ADR-0097 rule 4): each end's site label and symmetry code, then the
+        // distance.
+        columnTypes: ["", "text", "short", "text", "short", "number"]
 
         header: EaComponents.ListViewHeader {
             EaComponents.ListViewLabel {

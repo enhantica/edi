@@ -26,6 +26,8 @@ Column {
         sourceModel: group.lengths
 
         columns: [numberColumnWidth, -1, -1, AppSizes.iconColumnWidth]
+        // Widths from column types, not rows (ADR-0097 rule 4): an element or isotope, then its length.
+        columnTypes: ["", "short", "number"]
 
         header: EaComponents.ListViewHeader {
             EaComponents.ListViewLabel {
