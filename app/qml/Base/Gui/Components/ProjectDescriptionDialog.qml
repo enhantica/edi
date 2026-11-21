@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
-// Pinned gui-components copy; the project's location joins its folder and name with one separator, and the
-// location the dialog shows is the one Create project saves into (the owner, 2026-10-08). It also asks for the title
-// and the authors, in the Project page's order (the owner, 2026-10-13). Each field says what it is for (the owner,
+// Pinned gui-components copy; the project's location joins its folder and name with one separator (the owner,
+// 2026-10-08): the Location field holds the folder and Create saves into its short-name folder. It also asks for
+// the title and the authors, in the Project page's order (the owner, 2026-10-13). Each field says what it is for (the owner,
 // 2026-11-19): Short name · Folder names the project folder; Title, Authors and Description are shown in the report
 // (the CIF export does not read them); Location is the folder in which the project folder is created. "Folder", never
 // "Directory".
@@ -54,8 +54,13 @@ EaElements.Dialog {
     signal replaceAsked(string name, string folder)
     // OK: a location already taken asks first, "Replace it?", and the form stays as typed until the answer (the
     // owner, 2026-11-04); Replace comes back through accept() with replaceExisting set.
+    // Where Create saves: the short-name folder inside the Location field's folder, joined once; none without a folder.
+    function chosenLocation() {
+        const folder = projectLocationField.text.trim();
+        return folder === "" ? "" : joinedPath(folder, projectName);
+    }
     function tryAccept() {
-        const location = projectLocationField.text;
+        const location = chosenLocation();
         if (showsLocation && !replaceExisting && location !== "" && Session.locationExists(location)) {
             replaceAsked(projectName, Session.existingParentFolder(location));
             return;
@@ -73,7 +78,7 @@ EaElements.Dialog {
         ok.clicked.connect(dialog.tryAccept);
     }
 
-    onAccepted: projectLocation = projectLocationField.text
+    onAccepted: projectLocation = chosenLocation()
     // OK is named as the dialog starts to show, and the name field takes the keyboard as it opens: what the user
     // types goes into the name at once.
     onAboutToShow: {
@@ -192,7 +197,7 @@ EaElements.Dialog {
                 horizontalAlignment: TextInput.AlignLeft
 
                 placeholderText: qsTr("The folder in which the project folder is created")
-                text: dialog.joinedPath(dialog.projectParentDirectory ? EaLogic.Utils.urlToLocalFile(dialog.projectParentDirectory) : dialog.defaultProjectParentDirectory, dialog.projectName)
+                text: dialog.projectParentDirectory ? EaLogic.Utils.urlToLocalFile(dialog.projectParentDirectory) : dialog.defaultProjectParentDirectory
 
                 Keys.onReturnPressed: dialog.tryAccept()
                 Keys.onEnterPressed: dialog.tryAccept()
