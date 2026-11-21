@@ -70,49 +70,64 @@ SideBarGroup {
                 y: loadButton.height
                 // Nothing below the last item (the owner, 2026-11-04).
                 bottomPadding: 0
-                width: Math.max(loadButton.width, EaStyle.Sizes.fontPixelSize * 26)
+                // As wide as its widest entry, never narrower than its button.
+                contentWidth: Math.max(loadButton.width - leftPadding - rightPadding, loadProjectHeader.implicitWidth, importHeader.implicitWidth, loadFolderItem.implicitWidth, loadZipItem.implicitWidth, loadUrlItem.implicitWidth, importCryspyItem.implicitWidth, importFullprofItem.implicitWidth, importGsasItem.implicitWidth)
 
-                readonly property real labelWidth: EaStyle.Sizes.fontPixelSize * 13
+                readonly property real labelWidth: Math.max(loadFolderItem.labelImplicitWidth, loadZipItem.labelImplicitWidth, loadUrlItem.labelImplicitWidth, importCryspyItem.labelImplicitWidth, importFullprofItem.labelImplicitWidth, importGsasItem.labelImplicitWidth)
 
                 LoadMenuHeader {
+                    id: loadProjectHeader
                     first: true
                     text: qsTr("Project")
                 }
                 // The browser's own chooser copies a folder into its storage; Chrome and Edge open it on the disk.
                 LoadMenuItem {
+                    id: loadFolderItem
                     objectName: "project.load.folder"
                     labelWidth: loadMenu.labelWidth
+                    hintRight: true
+                    rightPadding: leftPadding
                     fontIcon: "folder-open"
-                    text: qsTr("Open EasyDiffraction folder…")
+                    text: qsTr("Open project folder…")
                     hint: "project.edi"
                     toolTip: qsTr("Open an EasyDiffraction project from its folder")
                     onTriggered: group.openProject(false)
                 }
                 LoadMenuItem {
+                    id: loadZipItem
                     objectName: "project.load.zip"
                     labelWidth: loadMenu.labelWidth
+                    hintRight: true
+                    rightPadding: leftPadding
                     fontIcon: "archive"
-                    text: qsTr("Open EasyDiffraction zip…")
+                    text: qsTr("Open project zip…")
                     hint: ".zip"
                     toolTip: qsTr("Open an EasyDiffraction project from a .zip of its folder")
                     onTriggered: group.openProject(true)
                 }
                 // Not implemented yet: shown, disabled (edi ADR-0017 §4).
                 LoadMenuItem {
+                    id: loadUrlItem
                     objectName: "project.load.url"
                     labelWidth: loadMenu.labelWidth
+                    hintRight: true
+                    rightPadding: leftPadding
                     enabled: false
                     fontIcon: "link"
-                    text: qsTr("Open EasyDiffraction from URL…")
+                    text: qsTr("Open project from URL…")
                     toolTip: qsTr("Open an EasyDiffraction project from a web address")
                 }
                 LoadMenuHeader {
+                    id: importHeader
                     text: qsTr("Import from another program")
                 }
                 // Not implemented yet: shown, disabled (edi ADR-0017 §4).
                 LoadMenuItem {
+                    id: importCryspyItem
                     objectName: "project.import.cryspy"
                     labelWidth: loadMenu.labelWidth
+                    hintRight: true
+                    rightPadding: leftPadding
                     enabled: false
                     fontIcon: "file-import"
                     text: qsTr("Import cryspy…")
@@ -120,8 +135,11 @@ SideBarGroup {
                     toolTip: qsTr("Import a cryspy project")
                 }
                 LoadMenuItem {
+                    id: importFullprofItem
                     objectName: "project.import.fullProf"
                     labelWidth: loadMenu.labelWidth
+                    hintRight: true
+                    rightPadding: leftPadding
                     // The importers read files from the disk; the browser has none to give them yet.
                     enabled: !WebFiles.available
                     fontIcon: "file-import"
@@ -131,8 +149,11 @@ SideBarGroup {
                     onTriggered: importFullProfDialog.open()
                 }
                 LoadMenuItem {
+                    id: importGsasItem
                     objectName: "project.import.gsas"
                     labelWidth: loadMenu.labelWidth
+                    hintRight: true
+                    rightPadding: leftPadding
                     enabled: !WebFiles.available
                     fontIcon: "file-import"
                     text: qsTr("Import GSAS-II…")
@@ -168,39 +189,48 @@ SideBarGroup {
                 objectName: "project.saveAs.menu"
                 y: saveButton.height
                 bottomPadding: 0
-                width: Math.max(saveButton.width, EaStyle.Sizes.fontPixelSize * 26)
+                // As wide as its widest entry, never narrower than its button.
+                contentWidth: Math.max(saveButton.width - leftPadding - rightPadding, saveProjectHeader.implicitWidth, exportHeader.implicitWidth, saveasFolderItem.implicitWidth, saveasZipItem.implicitWidth, exportCryspyItem.implicitWidth, exportFullprofItem.implicitWidth, exportGsasItem.implicitWidth, saveCopyBox.implicitWidth)
 
-                readonly property real labelWidth: EaStyle.Sizes.fontPixelSize * 13
+                readonly property real labelWidth: Math.max(saveasFolderItem.labelImplicitWidth, saveasZipItem.labelImplicitWidth, exportCryspyItem.labelImplicitWidth, exportFullprofItem.labelImplicitWidth, exportGsasItem.labelImplicitWidth)
                 // A browser without the File System Access API writes no folder on the disk: a .zip copy only.
                 readonly property bool diskWritable: !WebFiles.available || WebStorage.diskAccess
                 property bool copy: false
                 onAboutToShow: copy = !diskWritable
 
                 LoadMenuHeader {
+                    id: saveProjectHeader
                     first: true
                     text: qsTr("Project")
                 }
                 LoadMenuItem {
+                    id: saveasFolderItem
                     objectName: "project.saveAs.folder"
                     labelWidth: saveMenu.labelWidth
+                    hintRight: true
+                    rightPadding: leftPadding
                     enabled: saveMenu.diskWritable
                     fontIcon: "folder-open"
-                    text: qsTr("As EasyDiffraction folder…")
+                    text: qsTr("As project folder…")
                     hint: "project.edi"
                     toolTip: saveMenu.diskWritable ? qsTr("Save the project as a folder holding project.edi") : qsTr("This browser cannot write a folder on your disk; Chrome and Edge can")
                     onTriggered: AppState.saveAsFormatRequested(false, saveMenu.copy)
                 }
                 LoadMenuItem {
+                    id: saveasZipItem
                     objectName: "project.saveAs.zip"
                     labelWidth: saveMenu.labelWidth
+                    hintRight: true
+                    rightPadding: leftPadding
                     fontIcon: "archive"
-                    text: qsTr("As Zip…")
+                    text: qsTr("As project zip…")
                     hint: ".zip"
                     toolTip: qsTr("Save the project as a .zip of its folder")
                     onTriggered: AppState.saveAsFormatRequested(true, saveMenu.copy)
                 }
                 // Applies to the two EasyDiffraction choices above; the exports below always write a copy.
                 EaElements.CheckBox {
+                    id: saveCopyBox
                     objectName: "project.saveAs.copy"
                     leftPadding: EaStyle.Sizes.fontPixelSize * 0.5
                     enabled: saveMenu.diskWritable
@@ -210,12 +240,16 @@ SideBarGroup {
                     ToolTip.text: qsTr("Write the project there and keep working where it is")
                 }
                 LoadMenuHeader {
+                    id: exportHeader
                     text: qsTr("Export to another program (always a copy)")
                 }
                 // Not implemented yet: shown, disabled (edi ADR-0017 §4).
                 LoadMenuItem {
+                    id: exportCryspyItem
                     objectName: "project.export.cryspy"
                     labelWidth: saveMenu.labelWidth
+                    hintRight: true
+                    rightPadding: leftPadding
                     enabled: false
                     fontIcon: "file-export"
                     text: qsTr("As cryspy…")
@@ -223,8 +257,11 @@ SideBarGroup {
                     toolTip: qsTr("Export a copy of the project for cryspy")
                 }
                 LoadMenuItem {
+                    id: exportFullprofItem
                     objectName: "project.export.fullProf"
                     labelWidth: saveMenu.labelWidth
+                    hintRight: true
+                    rightPadding: leftPadding
                     enabled: !WebFiles.available
                     fontIcon: "file-export"
                     text: qsTr("As FullProf…")
@@ -236,8 +273,11 @@ SideBarGroup {
                     }
                 }
                 LoadMenuItem {
+                    id: exportGsasItem
                     objectName: "project.export.gsas"
                     labelWidth: saveMenu.labelWidth
+                    hintRight: true
+                    rightPadding: leftPadding
                     enabled: false
                     fontIcon: "file-export"
                     text: qsTr("As GSAS-II…")
