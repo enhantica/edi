@@ -795,10 +795,57 @@ void ProjectViewModel::setCurrentExperimentIndex(int index) {
     }
 }
 
+namespace {
+// The selections asked to be written and not yet on disk, by settings file and project key, each with its generation:
+// a worker writes only the newest one for its key, and a read takes a pending value before the file's.
+class PendingSelections {
+   public:
+    std::uint64_t put(const QString& path, const QString& key, const QStringList& value) {
+        const std::lock_guard lock(mutex_);
+        const std::uint64_t generation = ++counter_;
+        pending_.insert(slot(path, key), {generation, value});
+        return generation;
+    }
+    bool newest(const QString& path, const QString& key, std::uint64_t generation) {
+        const std::lock_guard lock(mutex_);
+        const auto it = pending_.constFind(slot(path, key));
+        return it != pending_.cend() && it->generation == generation;
+    }
+    void written(const QString& path, const QString& key, std::uint64_t generation) {
+        const std::lock_guard lock(mutex_);
+        const auto it = pending_.find(slot(path, key));
+        if (it != pending_.end() && it->generation == generation) pending_.erase(it);
+    }
+    std::optional<QStringList> value(const QString& path, const QString& key) {
+        const std::lock_guard lock(mutex_);
+        const auto it = pending_.constFind(slot(path, key));
+        return it != pending_.cend() ? std::optional(it->value) : std::nullopt;
+    }
+
+   private:
+    struct Entry {
+        std::uint64_t generation = 0;
+        QStringList value;
+    };
+    static QString slot(const QString& path, const QString& key) { return path + QLatin1Char('\n') + key; }
+    std::mutex mutex_;
+    std::uint64_t counter_ = 0;
+    QHash<QString, Entry> pending_;
+};
+
+PendingSelections& pending_selections() {
+    static PendingSelections pending;
+    return pending;
+}
+}  // namespace
+
 QStringList ProjectViewModel::storedSelection() const {
     if (project_->path.empty() || settings_file_path().isEmpty()) {
         return {};
     }
+    // A selection still on its way to the file is the newest one: a project closed and opened again at once reads it.
+    if (const std::optional<QStringList> pending = pending_selections().value(settings_file_path(), selectionKey()))
+        return *pending;
     QSettings store(settings_file_path(), QSettings::IniFormat);
     store.beginGroup(QStringLiteral("Selections"));
     return store.value(selectionKey()).toStringList();
@@ -818,19 +865,21 @@ void ProjectViewModel::storeSelection() const {
     // The values are read here; the file is written on a worker, one write at a time, as a followed scan changes the
     // dataset every run and a write of the settings file took tens of milliseconds on the GUI thread. A write still
     // pending at quit is waited for with the rest of the pool (main.cpp).
-    // Each write carries its generation; a worker writes only the newest one asked for, so a slower, older write never
-    // lands after a newer one (the pool may run them in any order).
-    static std::atomic<std::uint64_t> newest{0};
-    const std::uint64_t generation = ++newest;
-    run_in_background([path = settings_file_path(), key = selectionKey(), generation,
-                       value = QStringList{structure ? structure->name() : QString(),
-                                           experiment ? experiment->name() : QString(), dataset}] {
+    const QString path = settings_file_path(), key = selectionKey();
+    const QStringList value{structure ? structure->name() : QString(), experiment ? experiment->name() : QString(), dataset};
+    const std::uint64_t generation = pending_selections().put(path, key, value);
+    run_in_background([path, key, value, generation] {
         static std::mutex writing;
         const std::lock_guard lock(writing);
-        if (generation != newest.load()) return;  // a newer selection is on its way and is written instead
-        QSettings store(path, QSettings::IniFormat);
-        store.beginGroup(QStringLiteral("Selections"));
-        store.setValue(key, value);
+        // Only the newest selection asked for under this file and key is written; another project's key is its own.
+        if (!pending_selections().newest(path, key, generation)) return;
+        {
+            QSettings store(path, QSettings::IniFormat);
+            store.beginGroup(QStringLiteral("Selections"));
+            store.setValue(key, value);
+            store.sync();
+        }
+        pending_selections().written(path, key, generation);
     });
 }
 
