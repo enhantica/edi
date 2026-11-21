@@ -17,12 +17,14 @@ It contains serialized Python records whose usual reader can invoke Python objec
 
 ## Decision
 
-- The Qt-free core admits a GPX through the normal project loader. Its reader interprets the
+- The Qt-free core admits a GPX through the shared import base
+  ([ADR-0098](0098-project-import-from-other-programs.md)), which names the project after the file,
+  records the source in its description and checks every parameter's metadata. Its reader interprets the
   primitive records and recognized NumPy numeric storage layouts as data. A file cannot resolve
   a Python object or request an import, callable or file lookup. The reader bounds bytes,
-  objects, arrays and stack size and refuses unsupported record operations. The desktop
-  Open project file picker uses the same loader. The converted project is unsaved and the
-  existing Save As operation produces the standard Edi files.
+  objects, arrays and stack size and refuses unsupported record operations. Load project > Import GSAS-II...
+  uses the same loader. The converted project is unsaved and the existing Save As operation
+  produces the standard Edi files.
 - A developer-side GSAS-II exporter emits ASCII JSON using the `gsas-ii-pnc-v1` format.
   Use the exporter on trusted local inputs because it uses the upstream GPX reader. The core
   accepts this bundle with the `.gsas.json` suffix and uses the same model translation as for
@@ -82,6 +84,54 @@ These mappings use the upstream `GetSampleSigGam`, `GetReflPos`, `getPowderProfi
 Profile differences are reported on the total and the background-subtracted Bragg signal.
 The reference calculation uses zero refinement cycles and the comparison reapplies the Edi
 calculation after reopening the saved project.
+
+## What EasyDiffraction does not have
+
+The import maps GSAS-II's model onto crysta's existing one (ADR-0098, point 6). This is
+everything GSAS-II can describe that the import approximates, drops or refuses. Each item is
+future work for crysta as a general feature, never a GSAS-II-only option.
+
+### Calculated differently (the project imports, results differ)
+
+- **FCJ asymmetry.** crysta uses its own FCJ quadrature and profile window, and splits SH/L
+  into two equal apertures. GSAS-II's `getFCJVoigt3` gives slightly different low-angle shapes.
+- **Zero shift.** The two engines apply the zero shift at different stages, so intensities
+  and widths are evaluated at slightly different angles.
+- **Sample size and microstrain.** Fixed isotropic size and strain are added into the profile
+  widths (CW) or the TOF size and strain terms. Their separate values are lost on save.
+- **Scale.** The histogram and phase scales become one linked scale divided by the cell volume
+  (and by 100 for CW). A refined phase scale and histogram scale cannot both stay free.
+- **Scattering lengths.** crysta uses its Sears neutron table, not GSAS-II's values.
+
+### Refused (the import stops and names the item)
+
+- Phases: Pawley or Le Bail intensities, texture, modulated or incommensurate phases,
+  rigid bodies, hydrogen riding (`HydIds`), magnetic modulation, phase types other than
+  nuclear and the paired nuclear-magnetic CW form, gray or nonstandard magnetic groups,
+  fixed or nonstandard space-group operators, fractional symmetry translations that do not
+  match a crysta setting, space groups without a matching crysta setting, magnetic g factors,
+  independent magnetic site refinement, magnetic sites without a nuclear site.
+- Atoms: atom record layouts and displacement models other than isotropic and anisotropic
+  ADPs, site refine flags other than position, occupancy and ADP, ADP ties to a derived
+  isotropic value.
+- Instrument: powder modes other than `PNC`, `PXC` and `PNT`, neutron wavelength doublets,
+  CW and TOF instrument parameters outside the mapped set (active reciprocal calibration,
+  linear-in-d variance, inverse-d² decay), a free SH/L below its floor, a refined
+  polarization azimuth, auxiliary instrument settings, sample geometries other than
+  Debye–Scherrer and Bragg–Brentano, hydrostatic strain.
+- Background: bases other than the Chebyshev forms, additional background peaks or a
+  background file, a background linked between histograms.
+- Refinement: active restraints, constraints outside phase equivalences with simple
+  multipliers, constraints between phases and histograms, held variables, active
+  parameters with no counterpart, sequential refinement setups.
+
+### Dropped or converted with loss
+
+- GSAS-II's histogram and phase scale split, and its size and strain decomposition (see
+  above). The reverse developer workflow rebuilds them with a fixed size of 1 µm and zero
+  microstrain.
+- The GPX notebook, covariance and (inactive) rigid-body entries are skipped; any other
+  unknown tree entry is refused.
 
 ## Run the PbSO₄ verification
 

@@ -1,4 +1,4 @@
-# 0096. Open and export FullProf projects
+# 0096. Import and export FullProf projects
 
 - **Status:** Proposed
 - **Date:** 2026-11-19
@@ -14,9 +14,11 @@ describes the equivalent manual construction through normal project actions.
 
 ## Decision
 
-1. Desktop Open Project accepts a labelled FullProf PCR file through the core's ordinary project
-   loader. It constructs a detached native project with measured data embedded. The user chooses
-   the native destination when saving. The browser chooser needs a companion-file selection flow.
+1. Load project > Import FullProf... reads a PCR file through the shared import base
+   ([ADR-0098](0098-project-import-from-other-programs.md)), which also names the project after the
+   PCR file and checks its parameter metadata. The result is a new, unsaved project with its
+   measured data embedded; the user chooses where to save it. The browser has no import yet,
+   because it needs a way to pick the companion files.
 2. A legacy single-pattern project uses a same-stem companion or FullProf's recorded data filename.
    The multi-pattern format uses its declared filenames in pattern order. Companions reside beside
    the selected PCR. EDI uses its ordinary FullProf reflection reader for single-crystal INT data.
@@ -79,17 +81,7 @@ Use the native relation graph to identify these directions, including chains, be
 shared signed FullProf codewords in the target units. A nonlinear transfer or a dependent moved
 by several independent variables needs a fixed export or a manual translation. The browser requires a separate multi-file output flow.
 
-## FullProf CW profile conventions
-
-Import selects the FullProf-compatible FCJ quadrature and copies `AsyLim` into
-`_peak.fullprof_fcj_limit`. The imported Bérar–Baldinozzi profile selects pattern-point
-evaluation. Leave the native profiles on their existing defaults when the corresponding
-interchange items are absent. The compatible profiles and their derivatives use the same
-settings. For a supported `Res=1` CW project, store the five instrumental width terms in
-`_peak.fullprof_cw_irf` alongside the combined peak parameters. Export recreates an IRF
-and subtracts its width terms from the corresponding PCR coefficients, leaving the refinement
-directions attached to the PCR shifts. The YVO₃ case demonstrates why this decomposition
-matters to FullProf's profile window.
+## Other conventions
 
 Translate the observation mask using the actual grid and data dialect. Legacy D20
 (`Ins=3`) rounds bounds to the nearest channel. Measured CW XYDATA uses the channel
@@ -104,6 +96,67 @@ keeps the converted site's occupancy normalization and expanded orbit consistent
 Map source names to valid native datablock keys before building links or parameter
 identities. Native saves fill the inactive second-wavelength slots of a single-wavelength
 X-ray project with the same defaults used by the ordinary EDI reader.
+
+## What EasyDiffraction does not have
+
+The import maps FullProf's model onto crysta's existing one (ADR-0098, point 6). The list
+below is everything FullProf can describe that the import refuses, approximates or drops.
+Each item is future work for crysta as a general feature, never a FullProf-only option.
+
+### Calculated differently (the project imports, results differ)
+
+- **FCJ asymmetry.** crysta uses its own FCJ quadrature and profile window. FullProf's
+  quadrature and its `AsyLim` angle above which asymmetry is switched off are not kept, so
+  low-angle peaks differ slightly.
+- **Bérar–Baldinozzi asymmetry.** crysta evaluates the width and angle of the correction
+  at each reflection's 2θ, which keeps every reflection's integrated intensity. FullProf
+  evaluates them at the pattern points and, judging from its output, uses the opposite sign
+  of z and a different F_b. The import keeps P1 to P4 as crysta's A0, B0, A1, B1 with pseudo-Voigt (`Npr=5`);
+  low-angle peak shapes differ.
+- **Instrumental resolution file (`Res=1`, CW).** Its width terms are added to the PCR's
+  U, V, W, X, Y and only the sums are kept. FullProf's split between instrument and sample
+  is lost, and an export writes the sums inline with no IRF. FullProf's profile window,
+  which depends on that split, can then differ (the YVO₃ case shows it).
+- **Scattering lengths.** crysta uses its Sears neutron table; FullProf's built-in values
+  can differ in the last digits.
+
+### Refused (the import stops and names the item)
+
+- Profiles: CW `Npr` other than the supported Gaussian, Lorentzian, pseudo-Voigt and TCH
+  forms, TOF `Npr` other than the supported back-to-back forms, the FCJ profile `Npr=7`
+  with FCJ terms written in the PCR, Bérar–Baldinozzi asymmetry with a profile other than
+  pseudo-Voigt or together with FCJ, anisotropic size models, size terms on non-TCH
+  profiles, per-phase profiles or profile families within one pattern.
+- Instrument: resolution models other than `Res=1` CW polynomial and the TOF polynomial
+  with `NPROF 9`, the IRF directives and records it does not know, extra CW instrument
+  terms (secondary absorption, wavelength terms), X-ray doublet or polarization
+  coefficients outside the supported set, X-ray polarization geometry `Ilo`, data formats
+  `Ins` it does not read, `Job`/`Uni` axes it does not support.
+- Sample: preferred orientation, TOF absorption (`ABSCOR2` and other models), X-ray
+  absorption geometry, TOF extinction, single-crystal extinction laws other than the
+  supported Larson forms, the single-crystal `lambda/2` contamination term.
+- Background: `Nba=-4` and other background forms with no crysta counterpart, a decreasing
+  terminal interpolated background.
+- Atoms and symmetry: tabulated or X-ray scattering factors given in the PCR, anomalous
+  scattering terms, atom models `N_t` other than the supported ones, space groups and
+  phase types it cannot resolve to a crysta setting, incommensurate or non-collinear
+  magnetic propagation vectors, magnetic operator layouts, centrings, phases or form
+  factors it cannot convert, `MAG_ONLY` without a combined magnetic phase, turbostratic
+  layers, an overall B together with anisotropic displacements.
+- Refinement: parameter limits (`Nre`), restrained phases, refinement weighting `Iwg`
+  other than the plain chi-squared, chi-squared weighting of single-crystal datasets,
+  joint powder and integrated-intensity refinement, clustered powder reflections,
+  external reflection models (`Irf`), the refinement geometry or search algorithm `Cry`
+  other than profile or integrated intensities, a single-crystal dataset linked to
+  several structures, nonpositive F amplitudes.
+
+### Dropped or converted with loss
+
+- Codewords become free flags and native constraints. A codeword relation that is not
+  affine with one free source cannot be written back on export (see Export).
+- FullProf's output-only settings (print flags, Fourier maps, reflection lists) are not
+  imported.
+- A `COMM` title becomes the project title; other comment lines are not kept.
 
 ## References
 
