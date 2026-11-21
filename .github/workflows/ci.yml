@@ -30,9 +30,11 @@ on:
         default: false
 
 # The schedule is part of the key, so a nightly run and a main push never cancel each other.
+# A main push shares one group with the installers' release builds, so the two queue rather than compete for
+# runners; neither cancels the other.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}-${{ github.event.schedule }}
-  cancel-in-progress: true
+  group: ${{ github.event_name == 'push' && 'edi-main-push-and-release' || format('{0}-{1}-{2}', github.workflow, github.event.pull_request.number || github.ref, github.event.schedule) }}
+  cancel-in-progress: ${{ github.event_name != 'push' }}
 
 permissions:
   contents: read

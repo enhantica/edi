@@ -49,8 +49,10 @@ permissions:
   contents: read
   actions: read
 
+# A release build (a prerelease draft or a calendar release's qualification) queues with Tests' main pushes
+# (ci.yml) instead of running beside them.
 concurrency:
-  group: desktop-installers-${{ github.event_name == 'push' && github.ref || inputs.prepare_preview_release && format('calendar-{0}', github.ref) || github.run_id }}
+  group: ${{ (inputs.prepare_preview_release || inputs.release_plan_run) && 'edi-main-push-and-release' || format('desktop-installers-{0}', github.event_name == 'push' && github.ref || github.run_id) }}
   cancel-in-progress: ${{ github.event_name == 'push' }}
 
 jobs:
