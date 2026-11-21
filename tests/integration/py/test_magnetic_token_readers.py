@@ -10,6 +10,15 @@ from tests.fixtures.magnetic_pnma import reference, token_inputs
 
 # These registered synthetic parser probes need fit preparation, not a full measured pattern.
 PROBE_EXPERIMENT = (reference.ROOT / 'compound-experiment.edi').read_text()
+RETIRED_PARENT_FLAG = '_parent_space_group.derived'
+# COMCIFS magCIF P 1 example (BNS 1.1); OG 1.1.1 uses the same P1 symbol.
+P1_DESCRIPTORS = {
+    '_space_group_magn.number_BNS': '1.1',
+    '_space_group_magn.name_BNS': 'P1',
+    '_space_group_magn.name_OG': 'P1',
+    '_space_group_magn.name_UNI': 'P1.1',
+    '_space_group_magn.number_OG': '1.1.1',
+}
 
 
 def stored_tokens(path, tag):
@@ -28,13 +37,28 @@ def loaded(source, route, root):
     return api.Project.load(reference.project(root / 'input', source, experiment=PROBE_EXPERIMENT))
 
 
+def description_errors(saved, tag):
+    if tag in P1_DESCRIPTORS:
+        for item, expected in P1_DESCRIPTORS.items():
+            if [gemmi.cif.as_string(value) for value in stored_tokens(saved, item)] != [expected]:
+                return [f'the P1 magnetic table must supply {item} = {expected} exactly once']
+    elif tag == RETIRED_PARENT_FLAG:
+        if stored_tokens(saved, tag):
+            return ['the retired parent flag must be absent from the native writer']
+        if stored_tokens(saved, '_parent_space_group.IT_number') != ['1']:
+            return ['the parent IT number must survive removal of only the retired flag']
+    return []
+
+
 def saved_errors(project, root, case, kind, token):  # noqa: PLR0912 — lexical states and persistence stages
     project.save_as(root / 'saved')
     saved = root / 'saved/structures/cosio.edi'
     cells = stored_tokens(saved, case.tag)
-    failures = []
+    derived = case.tag in P1_DESCRIPTORS or case.tag == RETIRED_PARENT_FLAG
+    failures = description_errors(saved, case.tag)
     if (
-        kind == 'valid'
+        not derived
+        and kind == 'valid'
         and case.kind in {'text', 'selector'}
         and not any(gemmi.cif.as_string(value) == case.good for value in cells)
     ):
@@ -64,7 +88,7 @@ def saved_errors(project, root, case, kind, token):  # noqa: PLR0912 — lexical
             and any(abs(float(gemmi.cif.as_string(value))) > 0 for value in cells)
         ):
             failures.append('absent coefficient did not take declared zero')
-    if kind == 'literal':
+    if kind == 'literal' and not derived:
         if not any(
             value not in {'?', '.'} and gemmi.cif.as_string(value) == token[1:-1]
             for value in cells
@@ -77,7 +101,9 @@ def saved_errors(project, root, case, kind, token):  # noqa: PLR0912 — lexical
     if kind == 'valid' or (kind == 'literal' and case.kind == 'text'):
         again = api.Project.load(root / 'saved')
         again.save_as(root / 'second-valid')
-        if cells != stored_tokens(root / 'second-valid/structures/cosio.edi', case.tag):
+        second = root / 'second-valid/structures/cosio.edi'
+        failures.extend(description_errors(second, case.tag))
+        if cells != stored_tokens(second, case.tag):
             failures.append('second save changes the held declared field')
         if len(again.structure.atom_site_moment):
             again.structure.atom_site_moment[0].crystalaxis_x.free = True
@@ -96,7 +122,7 @@ def admitted(source, route, root):
 
 def observed_errors(source, route, root, case, kind, token):
     ignored = case.variant == 'redundant' and case.tag.startswith('_atom_site_moment.spherical_')
-    must_admit = ignored or kind == 'valid'
+    must_admit = ignored or kind == 'valid' or case.tag in P1_DESCRIPTORS
     try:
         project = admitted(source, route, root)
     except (ValueError, RuntimeError, KeyError) as error:
