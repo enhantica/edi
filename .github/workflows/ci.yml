@@ -322,9 +322,8 @@ jobs:
   # next run's split.
   system:
     name: system · ${{ matrix.platform }} · ${{ matrix.part }}/3
-    # The system tier takes 15 to 25 minutes a part, so pull requests skip it; main pushes, the nightly and manual
-    # runs keep it.
-    if: ${{ !cancelled() && needs.changes.result == 'success' && github.event.pull_request.head.repo.fork == false && github.event_name != 'pull_request' }}
+    # The system tier takes 15 to 25 minutes a part, so only the nightly and manual runs take it.
+    if: ${{ !cancelled() && needs.changes.result == 'success' && github.event.pull_request.head.repo.fork == false && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') }}
     environment: crysta-sdk
     # The tests that drive the app run the app and its test runner the app job built (edi-app-<platform>), so no
     # system job compiles them.
@@ -437,7 +436,7 @@ jobs:
   system-time:
     name: system time
     # A shard that did not finish leaves the comparison incomplete, which refuses.
-    if: ${{ !cancelled() && needs.changes.result == 'success' && github.event_name == 'push' }}
+    if: ${{ !cancelled() && needs.changes.result == 'success' && github.event_name == 'schedule' }}
     needs: [changes, system]
     runs-on: *linux
     permissions:
@@ -466,7 +465,7 @@ jobs:
           }
           record "$GITHUB_RUN_ID" >"$RUNNER_TEMP/current.json"
           declare_shards "$RUNNER_TEMP/current.json" HEAD
-          for id in $(gh api "$api/workflows/ci.yml/runs?branch=main&event=push&status=completed&per_page=20" \
+          for id in $(gh api "$api/workflows/ci.yml/runs?branch=main&event=schedule&status=completed&per_page=20" \
               --jq '.workflow_runs[].id'); do
             record "$id" >"$RUNNER_TEMP/main.json"
             if jq -e '[.jobs[] | select(.name | startswith("system · "))] | length > 0 and all(.conclusion == "success")' \
@@ -483,10 +482,10 @@ jobs:
           python3 tools/ci/system_shard_time.py --current "$RUNNER_TEMP/current.json" --main "$RUNNER_TEMP/main.json"
           --run-id "$GITHUB_RUN_ID" --head-sha '${{ github.sha }}'
 
-  # On main, the three parts' durations become the recorded times the next runs split by.
+  # At night, the three parts' durations become the recorded times the next runs split by.
   system-durations:
     name: system durations · ${{ matrix.platform }}
-    if: github.event_name == 'push'
+    if: github.event_name == 'schedule'
     needs: system
     strategy:
       matrix:
@@ -530,17 +529,26 @@ jobs:
     # validates and restores this run's default native build before notebook execution.
     needs: [changes, native, core, crysta-sdk]
     env:
+      # Pull requests and main pushes run only the marker step below; the nightly and manual runs do the work.
+      NIGHTLY: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' }}
       CRYSTA_SOURCE_SHA: ${{ needs.changes.outputs.crysta_sha }}
     runs-on: *linux
     steps:
+      - name: Notebooks run at night and on a manual run
+        if: env.NIGHTLY != 'true'
+        run: echo "Notebooks run at night and on a manual run; this $GITHUB_EVENT_NAME run does not."
       - uses: actions/checkout@v5
+        if: env.NIGHTLY == 'true'
       - uses: ./.github/actions/setup-pixi
+        if: env.NIGHTLY == 'true'
       # The compiler cache (core), between runs: the native job keeps it; this job only reads it.
       - id: ccache
+        if: env.NIGHTLY == 'true'
         uses: ./.github/actions/ccache
         with:
           max-size: 400M
       - uses: actions/cache/restore@v4
+        if: env.NIGHTLY == 'true'
         with:
           path: ~/.cache/edi-ccache
           key: ccache-core-${{ steps.ccache.outputs.key-prefix }}${{ github.run_id }}-${{ github.run_attempt }}
@@ -548,16 +556,18 @@ jobs:
             ccache-core-${{ steps.ccache.outputs.key-prefix }}
             ccache-core-${{ runner.os }}-${{ runner.arch }}-
       - uses: ./.github/actions/crysta-sdk
+        if: env.NIGHTLY == 'true'
         with:
           platform: ${{ runner.os == 'macOS' && 'osx-arm64' || 'linux-64' }}
       - uses: ./.github/actions/edi-native
+        if: env.NIGHTLY == 'true'
         with:
           platform: ${{ runner.os == 'macOS' && 'osx-arm64' || 'linux-64' }}
       - name: Build the native code
-        if: github.event.pull_request.head.repo.fork == false
+        if: ${{ env.NIGHTLY == 'true' && (github.event.pull_request.head.repo.fork == false) }}
         run: pixi run core-build
       - name: Execute the verification notebooks
-        if: github.event.pull_request.head.repo.fork == false
+        if: ${{ env.NIGHTLY == 'true' && (github.event.pull_request.head.repo.fork == false) }}
         run: pixi run notebook-tests
         env:
           # Name every test over a second, so a slow one shows in the log.
@@ -645,17 +655,26 @@ jobs:
     # every failure.
     needs: [changes, core, crysta-sdk]
     env:
+      # Pull requests and main pushes run only the marker step below; the nightly and manual runs do the work.
+      NIGHTLY: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' }}
       CRYSTA_SOURCE_SHA: ${{ needs.changes.outputs.crysta_sha }}
     runs-on: *linux
     steps:
+      - name: The docs build runs at night and on a manual run
+        if: env.NIGHTLY != 'true'
+        run: echo "The docs build runs at night and on a manual run; this $GITHUB_EVENT_NAME run does not."
       - uses: actions/checkout@v5
+        if: env.NIGHTLY == 'true'
       - uses: ./.github/actions/setup-pixi
+        if: env.NIGHTLY == 'true'
       # The compiler cache (core), between runs: the native job keeps it; this job only reads it.
       - id: ccache
+        if: env.NIGHTLY == 'true'
         uses: ./.github/actions/ccache
         with:
           max-size: 400M
       - uses: actions/cache/restore@v4
+        if: env.NIGHTLY == 'true'
         with:
           path: ~/.cache/edi-ccache
           key: ccache-core-${{ steps.ccache.outputs.key-prefix }}${{ github.run_id }}-${{ github.run_attempt }}
@@ -663,30 +682,36 @@ jobs:
             ccache-core-${{ steps.ccache.outputs.key-prefix }}
             ccache-core-${{ runner.os }}-${{ runner.arch }}-
       - name: Prepare notebooks
+        if: env.NIGHTLY == 'true'
         run: pixi run notebook-prepare
       - uses: ./.github/actions/crysta-sdk
+        if: env.NIGHTLY == 'true'
         with:
           platform: ${{ runner.os == 'macOS' && 'osx-arm64' || 'linux-64' }}
       - uses: ./.github/actions/edi-native
+        if: env.NIGHTLY == 'true'
         with:
           platform: ${{ runner.os == 'macOS' && 'osx-arm64' || 'linux-64' }}
       - name: Build the native code
+        if: env.NIGHTLY == 'true'
         id: build
         run: pixi run core-build
       - name: Execute notebooks for rendering
+        if: env.NIGHTLY == 'true'
         run: pixi run notebook-exec-ci
         env:
           # Name every test over a second, so a slow one shows in the log.
           PYTEST_ADDOPTS: --durations=0 --durations-min=1
       - name: Strict docs build
+        if: env.NIGHTLY == 'true'
         run: pixi run docs-build
       # The repository keeps tutorial notebooks without outputs: run them, then build the public site from them.
       - name: Run the tutorial notebooks
         id: tutorials
-        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        if: ${{ env.NIGHTLY == 'true' && (!cancelled() && steps.build.outcome == 'success') }}
         run: pixi run notebooks-run
       - name: Build the public site
-        if: ${{ !cancelled() && steps.tutorials.outcome == 'success' }}
+        if: ${{ env.NIGHTLY == 'true' && (!cancelled() && steps.tutorials.outcome == 'success') }}
         run: pixi run site-build --require-outputs
 
   # The desktop app, one job per platform with a static name, so a skipped or cancelled job still shows its
