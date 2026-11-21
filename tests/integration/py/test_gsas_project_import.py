@@ -47,21 +47,60 @@ def test_gsas_text_import_round_trips_settings_and_observations(tmp_path):
     project.save_as(tmp_path / 'saved')
     reopened = edi.Project.load(tmp_path / 'saved/project.edi')
     experiment = reopened.experiments['powder']
-    assert experiment.linked_structure.structure_id == 'phase'
-    assert experiment.linked_structure.scale.free is True
-    assert experiment.linked_structure.scale.value == pytest.approx(0.313969)
-    assert experiment.peak.broad_gauss_u.free is True
+    assert experiment.linked_structure.structure_id == 'phase', (
+        'GSAS-II import and native reopen preserve converted profile parameters and '
+        'measured observations.'
+    )
+    assert experiment.linked_structure.scale.free is True, (
+        'GSAS-II import and native reopen preserve converted profile parameters and '
+        'measured observations.'
+    )
+    assert experiment.linked_structure.scale.value == pytest.approx(0.313969), (
+        'GSAS-II import and native reopen preserve converted profile parameters and '
+        'measured observations.'
+    )
+    assert experiment.peak.broad_gauss_u.free is True, (
+        'GSAS-II import and native reopen preserve converted profile parameters and '
+        'measured observations.'
+    )
     assert experiment.peak.broad_gauss_u.value == pytest.approx(
         354.031 * 8 * math.log(2) / 10000, abs=5e-7
+    ), (
+        'GSAS-II import and native reopen preserve converted profile parameters and '
+        'measured observations.'
     )
-    assert experiment.peak.broad_lorentz_x.value == pytest.approx(0.05729578)
-    assert experiment.peak.broad_lorentz_y.value == pytest.approx(0.0109377643, abs=5e-8)
-    assert experiment.peak.asym_fcj_1.value == pytest.approx(0.001)
-    assert experiment.peak.asym_fcj_2.value == pytest.approx(0.001)
-    assert experiment.instrument.calib_twotheta_offset.value == pytest.approx(-0.001)
-    assert tuple(experiment.data.two_theta) == (10, 20, 30)
-    assert tuple(experiment.data.intensity_meas) == (4, 8, 12)
-    assert tuple(experiment.data.intensity_meas_su) == (2, 4, 2)
+    assert experiment.peak.broad_lorentz_x.value == pytest.approx(0.05729578), (
+        'GSAS-II import and native reopen preserve converted profile parameters and '
+        'measured observations.'
+    )
+    assert experiment.peak.broad_lorentz_y.value == pytest.approx(0.0109377643, abs=5e-8), (
+        'GSAS-II import and native reopen preserve converted profile parameters and '
+        'measured observations.'
+    )
+    assert experiment.peak.asym_fcj_1.value == pytest.approx(0.001), (
+        'GSAS-II import and native reopen preserve converted profile parameters and '
+        'measured observations.'
+    )
+    assert experiment.peak.asym_fcj_2.value == pytest.approx(0.001), (
+        'GSAS-II import and native reopen preserve converted profile parameters and '
+        'measured observations.'
+    )
+    assert experiment.instrument.calib_twotheta_offset.value == pytest.approx(-0.001), (
+        'GSAS-II import and native reopen preserve converted profile parameters and '
+        'measured observations.'
+    )
+    assert tuple(experiment.data.two_theta) == (10, 20, 30), (
+        'GSAS-II import and native reopen preserve converted profile parameters and '
+        'measured observations.'
+    )
+    assert tuple(experiment.data.intensity_meas) == (4, 8, 12), (
+        'GSAS-II import and native reopen preserve converted profile parameters and '
+        'measured observations.'
+    )
+    assert tuple(experiment.data.intensity_meas_su) == (2, 4, 2), (
+        'GSAS-II import and native reopen preserve converted profile parameters and '
+        'measured observations.'
+    )
 
 
 def test_gsas_cw_import_uses_native_parameter_metadata_before_save(tmp_path):
@@ -112,8 +151,12 @@ def test_gsas_cw_import_uses_native_parameter_metadata_before_save(tmp_path):
         'setup_monochromator_twotheta': 'degrees',
     }.items():
         parameter = getattr(experiment.instrument, field)
-        assert parameter.name == field
-        assert parameter.units == units
+        assert parameter.name == field, (
+            'GSAS-II CW parameters retain their declared native names and units before saving.'
+        )
+        assert parameter.units == units, (
+            'GSAS-II CW parameters retain their declared native names and units before saving.'
+        )
 
     for field in (
         'broad_gauss_u',
@@ -124,7 +167,9 @@ def test_gsas_cw_import_uses_native_parameter_metadata_before_save(tmp_path):
         'asym_fcj_1',
         'asym_fcj_2',
     ):
-        assert getattr(experiment.peak, field).name == field
+        assert getattr(experiment.peak, field).name == field, (
+            'GSAS-II CW parameters retain their declared native names and units before saving.'
+        )
 
 
 def test_gsas_text_refuses_zero_weight(tmp_path):
@@ -181,13 +226,31 @@ def test_gsas_powder_bundle_preserves_zero_weight_and_fit_range(tmp_path):
     project = edi.Project.load(source)
     project.save_as(tmp_path / 'saved')
     reopened = edi.Project.load(tmp_path / 'saved/project.edi')
-    assert reopened.analysis.fitting_mode == 'joint'
+    assert reopened.analysis.fitting_mode == 'joint', (
+        'GSAS-II powder imports preserve joint banks, fit ranges, background order '
+        'and zero-weight exclusions.'
+    )
     for experiment in reopened.experiments:
-        assert tuple(experiment.data.two_theta) == (10, 20, 30, 40)
-        assert experiment.background_x_min == 20
-        assert experiment.background_x_max == 40
-        assert tuple(term.coef.value for term in experiment.background_terms) == (4, 0, 2)
-        assert 'gsas-zero-weight-1' in experiment.excluded_region_ids
+        assert tuple(experiment.data.two_theta) == (10, 20, 30, 40), (
+            'GSAS-II powder imports preserve joint banks, fit ranges, background order '
+            'and zero-weight exclusions.'
+        )
+        assert experiment.background_x_min == 20, (
+            'GSAS-II powder imports preserve joint banks, fit ranges, background order '
+            'and zero-weight exclusions.'
+        )
+        assert experiment.background_x_max == 40, (
+            'GSAS-II powder imports preserve joint banks, fit ranges, background order '
+            'and zero-weight exclusions.'
+        )
+        assert tuple(term.coef.value for term in experiment.background_terms) == (4, 0, 2), (
+            'GSAS-II powder imports preserve joint banks, fit ranges, background order '
+            'and zero-weight exclusions.'
+        )
+        assert 'gsas-zero-weight-1' in experiment.excluded_region_ids, (
+            'GSAS-II powder imports preserve joint banks, fit ranges, background order '
+            'and zero-weight exclusions.'
+        )
 
 
 def test_gsas_free_axial_aperture_is_one_parameter_after_save(tmp_path):
@@ -199,7 +262,15 @@ def test_gsas_free_axial_aperture_is_one_parameter_after_save(tmp_path):
     project.save_as(tmp_path / 'saved')
     reopened = edi.Project.load(tmp_path / 'saved/project.edi')
     peak = reopened.experiments['powder'].peak
-    assert peak.asym_fcj_1.value == peak.asym_fcj_2.value == 0.01
-    assert peak.asym_fcj_1.free is True
-    assert peak.asym_fcj_2.free is False
-    assert len(reopened.analysis.constraints) == 1
+    assert peak.asym_fcj_1.value == peak.asym_fcj_2.value == 0.01, (
+        'A free GSAS-II axial aperture remains one independent parameter after native reopen.'
+    )
+    assert peak.asym_fcj_1.free is True, (
+        'A free GSAS-II axial aperture remains one independent parameter after native reopen.'
+    )
+    assert peak.asym_fcj_2.free is False, (
+        'A free GSAS-II axial aperture remains one independent parameter after native reopen.'
+    )
+    assert len(reopened.analysis.constraints) == 1, (
+        'A free GSAS-II axial aperture remains one independent parameter after native reopen.'
+    )
