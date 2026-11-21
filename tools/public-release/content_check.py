@@ -158,6 +158,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument('--head', default='HEAD', help="the change's last commit (default HEAD)")
     parser.add_argument('--title', help="the pull request's title")
     parser.add_argument('--body-file', type=Path, help="a file holding the pull request's body")
+    parser.add_argument(
+        '--squash',
+        action='store_true',
+        help='the title and body are also the squash commit sent to main: check them as a commit',
+    )
     args = parser.parse_args(argv)
     if set(args.base) == {'0'}:
         args.base = 'root'
@@ -170,6 +175,13 @@ def main(argv: list[str] | None = None) -> int:
             first_limit=SUBJECT_LIMIT,
             rest_limit=PR_BODY_LIMIT,
         )
+        if args.squash:
+            problems += text_problems(
+                'squash commit',
+                f'{args.title}\n{body}',
+                first_limit=SUBJECT_LIMIT,
+                rest_limit=BODY_LIMIT,
+            )
     for problem in problems:
         print(f'content check: {problem}')
     print(f'content check: {len(problems)} problem(s)', file=sys.stderr)
