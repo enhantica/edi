@@ -2,6 +2,7 @@
 
 #include <atomic>
 #include <bit>
+#include <cmath>
 #include <crysta/model.hpp>
 #include <crysta/structure_geometry.hpp>
 #include <iomanip>
@@ -285,7 +286,6 @@ TEST_CASE("E04-T10 gate 1 every CLI scene equals independently loaded crysta geo
                     if (k) label += "/";
                     label += rows.atom_site_id[rr];
                     if (rows.occupancy[rr] > rows.occupancy[rs[major]]) major = k;
-                    asymmetric = asymmetric || rows.site_symmetry[rr] == "1_555";
                     CHECK_MESSAGE(
                         (part.row == rr && part.site_id == rows.atom_site_id[rr] &&
                          bits(part.occupancy, rows.occupancy[rr])),
@@ -301,6 +301,16 @@ TEST_CASE("E04-T10 gate 1 every CLI scene equals independently loaded crysta geo
                     });
                     REQUIRE_MESSAGE(site != refsites.end(),
                                     " gate 2 engine labels resolve into independent loaded sites");
+                    const std::array<double, 3> position{rows.fract_x[rr], rows.fract_y[rr],
+                                                         rows.fract_z[rr]};
+                    bool own_position = true;
+                    for (std::size_t axis = 0; axis != 3; ++axis) {
+                        double coordinate = site->fract[axis].value();
+                        if (coordinate < 0 || coordinate > 1) coordinate -= std::floor(coordinate);
+                        own_position =
+                            own_position && std::abs(position[axis] - coordinate) < 1e-10;
+                    }
+                    asymmetric = asymmetric || own_position;
                     const auto symbol = site->type_symbol.get();
                     const auto pos = symbol.find_first_of("ABCDEFGHIJKLMNOPQRSTUVWXYZ");
                     const auto element = pos == std::string::npos
@@ -458,10 +468,11 @@ TEST_CASE("E04-T10 I8 selection labels legend and feature independence") {
         const auto a = edi::present_structure(s, o);
         REQUIRE_MESSAGE(a.atoms.size() == 3, " I8 subsets keep the complete geometry description");
         CHECK_MESSAGE(a.has_copies, " I8 exact symmetry codes distinguish non-asymmetric copies");
-        CHECK_MESSAGE(a.labels.size() == (subset == edi::AtomSubset::All    ? 3
-                                          : subset == edi::AtomSubset::None ? 0
-                                                                            : 1),
-                      " I8 labels are restricted to drawn atoms");
+        CHECK_MESSAGE(
+            a.labels.size() == (subset == edi::AtomSubset::All    ? 3
+                                : subset == edi::AtomSubset::None ? 0
+                                                                  : 2),
+            " I8 identity images translated into the cell remain in the asymmetric unit");
         CHECK_MESSAGE(a.bonds.size() == 1, " I7 bonds do not disappear with an atom subset");
         CHECK_MESSAGE(a.legend.size() == (subset == edi::AtomSubset::None ? 0 : 4),
                       " I8 legend contains first-seen elements without duplicates");
@@ -474,6 +485,27 @@ TEST_CASE("E04-T10 I8 selection labels legend and feature independence") {
             vec(label.anchor, {a.atoms[label.atom].centre.x, a.atoms[label.atom].centre.y,
                                a.atoms[label.atom].centre.z});
         }
+    }
+    auto periodic = source();
+    periodic.atom_site_id = col<std::string>({"H", "H", "H", "He"});
+    periodic.site_symmetry = col<std::string>({"1_655", "1_555", "2_555", ""});
+    periodic.cluster_id = col<std::int32_t>({1, 2, 3, 4});
+    const auto canonical = edi::present_structure(periodic, {});
+    REQUIRE_MESSAGE(canonical.atoms.size() == 4,
+                    "Periodic image selection preserves all independent positions");
+    for (std::size_t row = 0; row != canonical.atoms.size(); ++row) {
+        CHECK_MESSAGE(
+            canonical.atoms[row].asymmetric == (row == 1),
+            "An untranslated identity image excludes its translated and nonidentity duplicates");
+    }
+    periodic.site_symmetry = col<std::string>({"1_655", "1_455", "2_555", ""});
+    const auto translated = edi::present_structure(periodic, {});
+    REQUIRE_MESSAGE(translated.atoms.size() == 4,
+                    "Translated identity selection preserves all positions");
+    for (std::size_t row = 0; row != translated.atoms.size(); ++row) {
+        CHECK_MESSAGE(translated.atoms[row].asymmetric == (row == 0),
+                      "Without an untranslated image the first engine identity image represents "
+                      "the site once");
     }
     edi::SceneOptions off;
     off.bonds = false;

@@ -331,6 +331,8 @@ std::uint64_t AssistantWidgetInput::start(Request request) {
         !QMetaObject::invokeMethod(request.target,"textAt",Qt::DirectConnection,Q_RETURN_ARG(QString,optionText),Q_ARG(int,request.option)))
         throw ControlInputRefusal(ControlCause::Unavailable,"The original offered choice text is unavailable");
     if(!self || serial_!=originalSerial || request_)return 0;
+    // textAt ran the control's own code: the control it asked must still be there, and still current, before its names are read.
+    if(!request.target || !request.current())throw ControlInputRefusal(ControlCause::Superseded,"The original offered choice changed");
     const auto searchNames=request.target->property("searchNames");
     const auto names=searchNames.isValid()?searchNames:request.target->property("names");
     const auto searchText=names.isValid()?names.toStringList().value(request.option):optionText;

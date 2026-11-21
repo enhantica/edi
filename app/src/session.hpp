@@ -544,6 +544,7 @@ class Session : public QObject {
         QString web_copy;
         WebPlace web_place;
         bool web_from_file = false;
+        bool untitled = false;
     };
     std::optional<SetAside> aside_;
     bool aside_next_ = false;  // the next replaceProject sets the open project aside
@@ -599,6 +600,9 @@ class Session : public QObject {
     void keepChanges();
     QTimer* keep_timer_ = nullptr;
     bool untitled_ = false;
+    // The untitled place a Create moved to the browser for its first save: a save that does not complete puts it back.
+    std::optional<WebPlace> untitled_revert_;
+    void revertUntitledAdoption();
     void setUntitled(bool untitled);
     // The memory folder the browser copied the open project into, released with it.
     QString web_copy_;

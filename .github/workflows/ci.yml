@@ -322,13 +322,12 @@ jobs:
   # next run's split.
   system:
     name: system · ${{ matrix.platform }} · ${{ matrix.part }}/3
-    # The system tier takes 15 to 25 minutes a part, so pull requests skip it; main pushes, the nightly and manual
-    # runs keep it.
-    if: ${{ !cancelled() && needs.changes.result == 'success' && github.event.pull_request.head.repo.fork == false && github.event_name != 'pull_request' }}
+    # The system tier takes 15 to 25 minutes a part, so only the nightly and manual runs take it.
+    if: ${{ !cancelled() && needs.changes.result == 'success' && github.event.pull_request.head.repo.fork == false && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') }}
     environment: crysta-sdk
     # The tests that drive the app run the app and its test runner the app job built (edi-app-<platform>), so no
     # system job compiles them.
-    needs: [changes, app, crysta-sdk]
+    needs: [changes, app, app-macos, crysta-sdk]
     env:
       CRYSTA_SOURCE_SHA: ${{ needs.changes.outputs.crysta_sha }}
     strategy:
@@ -385,11 +384,10 @@ jobs:
           platform: ${{ runner.os == 'macOS' && 'osx-arm64' || 'linux-64' }}
       - name: Build the native code
         run: pixi run core-build
-      # The app job keeps each platform's app as soon as it is built. `needs.app.result` is one result for both
-      # platforms, so it is not asked whether the build passed: whenever the app job ran, each part restores its own
-      # platform's app, and a part whose app was never built fails here.
+      # Each platform's app job keeps its app as soon as it is built. Whenever that job ran, each part restores its
+      # own platform's app, and a part whose app was never built fails here.
       - name: Fetch the app and its test runner the app job built
-        if: needs.app.result != 'skipped'
+        if: (matrix.platform == 'Linux' && needs.app.result || needs.app-macos.result) != 'skipped'
         uses: actions/cache/restore@v4
         with:
           path: |
@@ -400,12 +398,12 @@ jobs:
           key: edi-app-${{ matrix.platform }}-${{ github.run_id }}
           fail-on-cache-miss: true
       - name: Make them executable
-        if: needs.app.result != 'skipped'
+        if: (matrix.platform == 'Linux' && needs.app.result || needs.app-macos.result) != 'skipped'
         run: chmod +x build/app/app/edi_app build/app/app/edi_app_tests build/app/app/edi_assistant_guard
       # The app loads Qt and its other libraries from the app environment, which this job does not
       # otherwise install.
       - name: Install the app's environment
-        if: needs.app.result != 'skipped'
+        if: (matrix.platform == 'Linux' && needs.app.result || needs.app-macos.result) != 'skipped'
         run: pixi install -e app
       - name: Restore the recorded test durations
         uses: actions/cache/restore@v4
@@ -438,7 +436,7 @@ jobs:
   system-time:
     name: system time
     # A shard that did not finish leaves the comparison incomplete, which refuses.
-    if: ${{ !cancelled() && needs.changes.result == 'success' && github.event_name == 'push' }}
+    if: ${{ !cancelled() && needs.changes.result == 'success' && github.event_name == 'schedule' }}
     needs: [changes, system]
     runs-on: *linux
     permissions:
@@ -467,7 +465,7 @@ jobs:
           }
           record "$GITHUB_RUN_ID" >"$RUNNER_TEMP/current.json"
           declare_shards "$RUNNER_TEMP/current.json" HEAD
-          for id in $(gh api "$api/workflows/ci.yml/runs?branch=main&event=push&status=completed&per_page=20" \
+          for id in $(gh api "$api/workflows/ci.yml/runs?branch=main&event=schedule&status=completed&per_page=20" \
               --jq '.workflow_runs[].id'); do
             record "$id" >"$RUNNER_TEMP/main.json"
             if jq -e '[.jobs[] | select(.name | startswith("system · "))] | length > 0 and all(.conclusion == "success")' \
@@ -484,10 +482,10 @@ jobs:
           python3 tools/ci/system_shard_time.py --current "$RUNNER_TEMP/current.json" --main "$RUNNER_TEMP/main.json"
           --run-id "$GITHUB_RUN_ID" --head-sha '${{ github.sha }}'
 
-  # On main, the three parts' durations become the recorded times the next runs split by.
+  # At night, the three parts' durations become the recorded times the next runs split by.
   system-durations:
     name: system durations · ${{ matrix.platform }}
-    if: github.event_name == 'push'
+    if: github.event_name == 'schedule'
     needs: system
     strategy:
       matrix:
@@ -531,17 +529,26 @@ jobs:
     # validates and restores this run's default native build before notebook execution.
     needs: [changes, native, core, crysta-sdk]
     env:
+      # Pull requests and main pushes run only the marker step below; the nightly and manual runs do the work.
+      NIGHTLY: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' }}
       CRYSTA_SOURCE_SHA: ${{ needs.changes.outputs.crysta_sha }}
     runs-on: *linux
     steps:
+      - name: Notebooks run at night and on a manual run
+        if: env.NIGHTLY != 'true'
+        run: echo "Notebooks run at night and on a manual run; this $GITHUB_EVENT_NAME run does not."
       - uses: actions/checkout@v5
+        if: env.NIGHTLY == 'true'
       - uses: ./.github/actions/setup-pixi
+        if: env.NIGHTLY == 'true'
       # The compiler cache (core), between runs: the native job keeps it; this job only reads it.
       - id: ccache
+        if: env.NIGHTLY == 'true'
         uses: ./.github/actions/ccache
         with:
           max-size: 400M
       - uses: actions/cache/restore@v4
+        if: env.NIGHTLY == 'true'
         with:
           path: ~/.cache/edi-ccache
           key: ccache-core-${{ steps.ccache.outputs.key-prefix }}${{ github.run_id }}-${{ github.run_attempt }}
@@ -549,16 +556,18 @@ jobs:
             ccache-core-${{ steps.ccache.outputs.key-prefix }}
             ccache-core-${{ runner.os }}-${{ runner.arch }}-
       - uses: ./.github/actions/crysta-sdk
+        if: env.NIGHTLY == 'true'
         with:
           platform: ${{ runner.os == 'macOS' && 'osx-arm64' || 'linux-64' }}
       - uses: ./.github/actions/edi-native
+        if: env.NIGHTLY == 'true'
         with:
           platform: ${{ runner.os == 'macOS' && 'osx-arm64' || 'linux-64' }}
       - name: Build the native code
-        if: github.event.pull_request.head.repo.fork == false
+        if: ${{ env.NIGHTLY == 'true' && (github.event.pull_request.head.repo.fork == false) }}
         run: pixi run core-build
       - name: Execute the verification notebooks
-        if: github.event.pull_request.head.repo.fork == false
+        if: ${{ env.NIGHTLY == 'true' && (github.event.pull_request.head.repo.fork == false) }}
         run: pixi run notebook-tests
         env:
           # Name every test over a second, so a slow one shows in the log.
@@ -646,17 +655,26 @@ jobs:
     # every failure.
     needs: [changes, core, crysta-sdk]
     env:
+      # Pull requests and main pushes run only the marker step below; the nightly and manual runs do the work.
+      NIGHTLY: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' }}
       CRYSTA_SOURCE_SHA: ${{ needs.changes.outputs.crysta_sha }}
     runs-on: *linux
     steps:
+      - name: The docs build runs at night and on a manual run
+        if: env.NIGHTLY != 'true'
+        run: echo "The docs build runs at night and on a manual run; this $GITHUB_EVENT_NAME run does not."
       - uses: actions/checkout@v5
+        if: env.NIGHTLY == 'true'
       - uses: ./.github/actions/setup-pixi
+        if: env.NIGHTLY == 'true'
       # The compiler cache (core), between runs: the native job keeps it; this job only reads it.
       - id: ccache
+        if: env.NIGHTLY == 'true'
         uses: ./.github/actions/ccache
         with:
           max-size: 400M
       - uses: actions/cache/restore@v4
+        if: env.NIGHTLY == 'true'
         with:
           path: ~/.cache/edi-ccache
           key: ccache-core-${{ steps.ccache.outputs.key-prefix }}${{ github.run_id }}-${{ github.run_attempt }}
@@ -664,73 +682,118 @@ jobs:
             ccache-core-${{ steps.ccache.outputs.key-prefix }}
             ccache-core-${{ runner.os }}-${{ runner.arch }}-
       - name: Prepare notebooks
+        if: env.NIGHTLY == 'true'
         run: pixi run notebook-prepare
       - uses: ./.github/actions/crysta-sdk
+        if: env.NIGHTLY == 'true'
         with:
           platform: ${{ runner.os == 'macOS' && 'osx-arm64' || 'linux-64' }}
       - uses: ./.github/actions/edi-native
+        if: env.NIGHTLY == 'true'
         with:
           platform: ${{ runner.os == 'macOS' && 'osx-arm64' || 'linux-64' }}
       - name: Build the native code
+        if: env.NIGHTLY == 'true'
         id: build
         run: pixi run core-build
       - name: Execute notebooks for rendering
+        if: env.NIGHTLY == 'true'
         run: pixi run notebook-exec-ci
         env:
           # Name every test over a second, so a slow one shows in the log.
           PYTEST_ADDOPTS: --durations=0 --durations-min=1
       - name: Strict docs build
+        if: env.NIGHTLY == 'true'
         run: pixi run docs-build
       # The repository keeps tutorial notebooks without outputs: run them, then build the public site from them.
       - name: Run the tutorial notebooks
         id: tutorials
-        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        if: ${{ env.NIGHTLY == 'true' && (!cancelled() && steps.build.outcome == 'success') }}
         run: pixi run notebooks-run
       - name: Build the public site
-        if: ${{ !cancelled() && steps.tutorials.outcome == 'success' }}
+        if: ${{ env.NIGHTLY == 'true' && (!cancelled() && steps.tutorials.outcome == 'success') }}
         run: pixi run site-build --require-outputs
 
+  # The desktop app, one job per platform with a static name, so a skipped or cancelled job still shows its
+  # platform. Linux and macOS share one step list (the `app-steps` anchor); Windows builds with MSVC below.
   app:
-    name: app · ${{ matrix.platform }}
-    if: ${{ !cancelled() && needs.changes.result == 'success' && github.event.pull_request.head.repo.fork == false && inputs.core_only != true }}
+    name: app · Linux
+    if: &app-if ${{ !cancelled() && needs.changes.result == 'success' && github.event.pull_request.head.repo.fork == false && inputs.core_only != true }}
     environment: crysta-sdk
     # After the core tests, which take the runners first. It runs even when core fails, so one round lists
     # every failure.
-    needs: [changes, core, crysta-sdk]
+    needs: &app-needs [changes, core, crysta-sdk]
     env:
+      APP_PLATFORM: Linux
       CRYSTA_SOURCE_SHA: ${{ needs.changes.outputs.crysta_sha }}
       # edi's own C++ builds without a warning (ADR-0093).
       EDI_WERROR: 'ON'
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - platform: Linux
-            runner: *linux
-            sdk: linux-64
-          - platform: macOS
-            runner: *macos
-            sdk: osx-arm64
-    runs-on: ${{ matrix.runner }}
-    steps:
-      - uses: actions/checkout@v5
-        with:
-          fetch-depth: 0  # the app's version line is `git describe`
+    runs-on: *linux
+    steps: &app-steps
+      - *windows-git
+      - *native-checkout
+      - *windows-checkout
       - uses: ./.github/actions/setup-pixi
+        if: runner.os != 'Windows'
+      # Windows compiles the sources the Windows installer compiles, through the installer's own Qt, SDK and
+      # compiler settings (tools/ci/app-windows-build.py). It builds only; the app's tests run on Linux and macOS.
+      - name: Set up the locked packaging environment
+        if: runner.os == 'Windows'
+        uses: ./.github/actions/setup-pixi
+        with:
+          manifest-path: tools/installer/pixi.toml
+      - *windows-compiler
+      - name: Turn on the compiler cache (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          {
+            echo "CCACHE_DIR=${{ runner.temp }}/edi-ccache"
+            echo "CCACHE_MAXSIZE=2G"
+            echo "CCACHE_COMPILERCHECK=content"
+            echo "CMAKE_C_COMPILER_LAUNCHER=ccache"
+            echo "CMAKE_CXX_COMPILER_LAUNCHER=ccache"
+          } >>"$GITHUB_ENV"
+      - name: Restore the compiler cache (Windows)
+        if: runner.os == 'Windows'
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ runner.temp }}/edi-ccache
+          key: ccache-app-windows-${{ hashFiles('tools/installer/pixi.lock') }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            ccache-app-windows-${{ hashFiles('tools/installer/pixi.lock') }}-
+            ccache-app-windows-
       # The compiler cache (app), between runs: this job keeps it for the next run.
       - id: ccache
+        if: runner.os != 'Windows'
         uses: ./.github/actions/ccache
         with:
           max-size: 1G
       - uses: ./.github/actions/crysta-sdk
         with:
-          platform: ${{ runner.os == 'macOS' && 'osx-arm64' || 'linux-64' }}
+          platform: ${{ runner.os == 'Windows' && 'win-64' || runner.os == 'macOS' && 'osx-arm64' || 'linux-64' }}
+      - name: Unpack the pinned crysta source
+        if: runner.os == 'Windows'
+        run: |
+          mkdir -p .crysta
+          pixi run --manifest-path tools/installer/pixi.toml python tools/ci/crysta_source_archive.py extract "$CRYSTA_SDK_ARCHIVES/crysta-src-$CRYSTA_SOURCE_SHA.tar.gz" .crysta
+          printf '%s\n' "$CRYSTA_SOURCE_SHA" >.crysta/CRYSTA_SOURCE_SHA
+      - name: Build the app with MSVC, warnings as errors
+        if: runner.os == 'Windows'
+        run: pixi run --manifest-path tools/installer/pixi.toml python tools/ci/app-windows-build.py --crysta-source .crysta --work build/app-windows
+      - name: Save the compiler cache (Windows)
+        if: ${{ always() && runner.os == 'Windows' }}
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ runner.temp }}/edi-ccache
+          key: ccache-app-windows-${{ hashFiles('tools/installer/pixi.lock') }}-${{ github.run_id }}-${{ github.run_attempt }}
       - uses: ./.github/actions/edi-native
+        if: runner.os != 'Windows'
         with:
           platform: ${{ runner.os == 'macOS' && 'osx-arm64' || 'linux-64' }}
       # A pull request builds and tests the app only when it changes an app input (tools/ci/app_inputs.py) or runs
       # paired with a crysta branch; main pushes, the nightly and manual runs always do (owner record 2026-11-09).
       - name: Decide whether this run builds and tests the app
+        if: runner.os != 'Windows'
         id: inputs
         env:
           BASE: ${{ github.event.pull_request.base.sha }}
@@ -742,12 +805,12 @@ jobs:
           pixi run python tools/ci/app_inputs.py "$BASE" HEAD >> "$GITHUB_OUTPUT"
       # The CI evidence accepts this job's skipped build and test steps only after this step succeeded.
       - name: App inputs unchanged, so the app is not built or tested
-        if: steps.inputs.outputs.run == 'false'
+        if: ${{ runner.os != 'Windows' && (steps.inputs.outputs.run == 'false') }}
         run: echo "No app input changed since ${{ github.event.pull_request.base.sha }}; main's last run tested this app."
       # The compiler cache is saved right after the build, so a run whose tests fail still leaves it for the next run
       # (actions/cache saves only when the whole job succeeds, which left every red run's successor cold).
       - name: Restore the compiler cache
-        if: steps.inputs.outputs.run == 'true'
+        if: ${{ runner.os != 'Windows' && (steps.inputs.outputs.run == 'true') }}
         uses: actions/cache/restore@v4
         with:
           path: ~/.cache/edi-ccache
@@ -756,20 +819,20 @@ jobs:
             ccache-app-${{ steps.ccache.outputs.key-prefix }}
             ccache-app-${{ runner.os }}-${{ runner.arch }}-
       - name: Zero the compiler cache's statistics
-        if: steps.inputs.outputs.run == 'true'
+        if: ${{ runner.os != 'Windows' && (steps.inputs.outputs.run == 'true') }}
         run: pixi run -e app ccache --zero-stats
       - name: Build the native code
-        if: steps.inputs.outputs.run == 'true'
+        if: ${{ runner.os != 'Windows' && (steps.inputs.outputs.run == 'true') }}
         run: pixi run core-build
       - name: Build the app host, the test runner and the image comparator
         id: apphost
-        if: steps.inputs.outputs.run == 'true'
+        if: ${{ runner.os != 'Windows' && (steps.inputs.outputs.run == 'true') }}
         run: pixi run -e app app-build
       - name: Compiler cache statistics
-        if: steps.inputs.outputs.run == 'true'
+        if: ${{ runner.os != 'Windows' && (steps.inputs.outputs.run == 'true') }}
         run: pixi run -e app ccache --show-stats
       - name: Save the compiler cache
-        if: ${{ !cancelled() && steps.inputs.outputs.run == 'true' }}
+        if: ${{ runner.os != 'Windows' && (!cancelled() && steps.inputs.outputs.run == 'true') }}
         uses: actions/cache/save@v4
         with:
           path: ~/.cache/edi-ccache
@@ -778,12 +841,12 @@ jobs:
       # The task also packs the build files the observer's receipt names, which the system jobs unpack before their
       # tests (tools/ci/tutorial_transaction_inputs.py).
       - name: Build the tutorial transaction observer for the system jobs
-        if: (github.event_name != 'pull_request') && steps.inputs.outputs.run == 'true'
+        if: ${{ runner.os != 'Windows' && ((github.event_name != 'pull_request') && steps.inputs.outputs.run == 'true') }}
         run: pixi run -e app --skip-deps tutorial-transactions
       # The system jobs run this app and its test runner rather than building their own. They go through this run's
       # cache, not an artifact: anyone can download a public repository's artifacts, and these are binaries.
       - name: Keep the app and its test runner for the system jobs
-        if: steps.inputs.outputs.run == 'true'
+        if: ${{ runner.os != 'Windows' && (steps.inputs.outputs.run == 'true') }}
         uses: actions/cache/save@v4
         with:
           path: |
@@ -791,11 +854,11 @@ jobs:
             build/app/app/edi_app_tests
             build/app/app/edi_assistant_guard
             build/tutorial-transactions
-          key: edi-app-${{ matrix.platform }}-${{ github.run_id }}
+          key: edi-app-${{ env.APP_PLATFORM }}-${{ github.run_id }}
       # The checks and test tiers below need the app build, not each other: each runs and reports even when an
       # earlier one failed (owner, 2026-11-15).
       - name: Check assistant edits, controls and runtime lifetime
-        if: ${{ !cancelled() && steps.apphost.outcome == 'success' }}
+        if: ${{ runner.os != 'Windows' && (!cancelled() && steps.apphost.outcome == 'success') }}
         run: |
           status=0
           pixi run -e app --skip-deps app-test-trial-lock || status=1
@@ -808,52 +871,52 @@ jobs:
       # The integration tests whose wiring vectors run on the real app skip in the core job, which has no app. They
       # run here, on every run, on the test runner just built from this commit; without it they fail.
       - name: Native wiring vectors on this run's test runner
-        if: ${{ !cancelled() && steps.apphost.outcome != 'failure' }}
+        if: ${{ runner.os != 'Windows' && (!cancelled() && steps.apphost.outcome != 'failure') }}
         run: pixi run --skip-deps native-wiring
         env:
           EDI_APP_TEST_RUNNER: ${{ github.workspace }}/build/app/app/edi_app_tests
       - name: qmllint over edi's QML (zero warnings)
-        if: ${{ !cancelled() && steps.inputs.outputs.run == 'true' }}
+        if: ${{ runner.os != 'Windows' && (!cancelled() && steps.inputs.outputs.run == 'true') }}
         run: pixi run -e app --skip-deps app-lint
       - name: qmlformat changes nothing
-        if: ${{ !cancelled() && steps.inputs.outputs.run == 'true' }}
+        if: ${{ runner.os != 'Windows' && (!cancelled() && steps.inputs.outputs.run == 'true') }}
         run: pixi run -e app --skip-deps app-format-check
       # The C++ static checks over edi's own code (ADR-0093), on the compile commands of the two trees built above.
       # They run after a failed step too, so one round lists every finding.
       - name: moc for every app target, which clang-tidy reads
-        if: ${{ !cancelled() && steps.inputs.outputs.run == 'true' }}
+        if: ${{ runner.os != 'Windows' && (!cancelled() && steps.inputs.outputs.run == 'true') }}
         run: pixi run -e app --skip-deps app-moc
       - name: clang-tidy with the Clang Static Analyzer (zero findings)
-        if: ${{ !cancelled() && steps.inputs.outputs.run == 'true' }}
+        if: ${{ runner.os != 'Windows' && (!cancelled() && steps.inputs.outputs.run == 'true') }}
         run: pixi run -e cpp-lint cpp-tidy
       - name: cppcheck (zero findings)
-        if: ${{ !cancelled() && steps.inputs.outputs.run == 'true' }}
+        if: ${{ runner.os != 'Windows' && (!cancelled() && steps.inputs.outputs.run == 'true') }}
         run: pixi run -e cpp-lint cpp-cppcheck
       # The Qt test prerequisites, made before the tests that use them and outside their timing: standalone
       # log, feedback and browser-geometry probes, plus a documentation capture from the app just built.
       - name: Prepare the onboarding test prerequisites
         id: onboarding
-        if: ${{ !cancelled() && github.event_name != 'pull_request' && steps.apphost.outcome == 'success' }}
+        if: ${{ runner.os != 'Windows' && (!cancelled() && github.event_name != 'pull_request' && steps.apphost.outcome == 'success') }}
         run: pixi run -e app --skip-deps onboarding-probes && pixi run -e app --skip-deps onboarding-capture
       # About 9 minutes on each platform, so main pushes, the nightly and manual runs only.
       - name: The app group's Python tests (tests/integration/app)
-        if: ${{ !cancelled() && github.event_name != 'pull_request' && steps.onboarding.outcome == 'success' }}
+        if: ${{ runner.os != 'Windows' && (!cancelled() && github.event_name != 'pull_request' && steps.onboarding.outcome == 'success') }}
         run: pixi run --skip-deps group-app
         env:
           # Name every test over a second, so a slow one shows in the log.
           PYTEST_ADDOPTS: --durations=0 --durations-min=1
       # The app's own tests run only at night and on a manual run.
       - name: The app's Qt Quick Test tier
-        if: ${{ !cancelled() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && steps.apphost.outcome == 'success' }}
+        if: ${{ runner.os != 'Windows' && (!cancelled() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && steps.apphost.outcome == 'success') }}
         run: pixi run -e app --skip-deps app-test
       - name: The UI test against the one committed image set
-        if: ${{ !cancelled() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && steps.apphost.outcome == 'success' }}
+        if: ${{ runner.os != 'Windows' && (!cancelled() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && steps.apphost.outcome == 'success') }}
         run: pixi run -e app --skip-deps app-ui-test
       - name: Upload the UI test's images and similarity maps
-        if: ${{ !cancelled() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && steps.apphost.outcome == 'success' }}
+        if: ${{ runner.os != 'Windows' && (!cancelled() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && steps.apphost.outcome == 'success') }}
         uses: actions/upload-artifact@v4
         with:
-          name: app-ui-${{ matrix.platform }}
+          name: app-ui-${{ env.APP_PLATFORM }}
           path: |
             build/app/ui-actual
             build/app/ui-diff
@@ -864,78 +927,49 @@ jobs:
       # Linux only: the lists do not depend on the platform.
       - name: Stage the desktop, Python and CLI surfaces
         id: surfaces
-        if: ${{ !cancelled() && matrix.platform == 'Linux' && steps.apphost.outcome == 'success' }}
+        if: ${{ runner.os != 'Windows' && (!cancelled() && env.APP_PLATFORM == 'Linux' && steps.apphost.outcome == 'success') }}
         run: pixi run --skip-deps python tests/fixtures/distribution_licences/stage.py --surfaces desktop,python,cli
       - name: Check those surfaces' notices
-        if: ${{ !cancelled() && steps.surfaces.outcome == 'success' }}
+        if: ${{ runner.os != 'Windows' && (!cancelled() && steps.surfaces.outcome == 'success') }}
         run: pixi run --skip-deps python -m pytest tests/system/py/test_distribution_licences.py -k "desktop or python or cli"
       - name: app-build recovers a build/app configured under another toolchain
-        if: ${{ !cancelled() && needs.changes.outputs.app_build == 'true' && steps.inputs.outputs.run == 'true' }}
+        if: ${{ runner.os != 'Windows' && (!cancelled() && needs.changes.outputs.app_build == 'true' && steps.inputs.outputs.run == 'true') }}
         run: pixi run -e app --skip-deps app-build-recovery
       - name: Compile the app for WebAssembly
-        if: ${{ !cancelled() && matrix.platform == 'Linux' }}
+        if: ${{ runner.os != 'Windows' && (!cancelled() && env.APP_PLATFORM == 'Linux') }}
         run: echo "WebAssembly builds and browser checks run in the dedicated app · WebAssembly job."
+
+  app-macos:
+    name: app · macOS
+    if: *app-if
+    environment: crysta-sdk
+    needs: *app-needs
+    env:
+      APP_PLATFORM: macOS
+      CRYSTA_SOURCE_SHA: ${{ needs.changes.outputs.crysta_sha }}
+      EDI_WERROR: 'ON'
+    runs-on: *macos
+    steps: *app-steps
+
+  app-windows:
+    name: app · Windows
+    if: *app-if
+    environment: crysta-sdk
+    needs: *app-needs
+    env:
+      APP_PLATFORM: Windows
+      CRYSTA_SOURCE_SHA: ${{ needs.changes.outputs.crysta_sha }}
+      EDI_WERROR: 'ON'
+    runs-on: windows-2022
+    defaults:
+      run:
+        shell: bash
+    steps: *app-steps
 
   # The app as a WebAssembly site (ADR-0023): the multithread kit, start page and isolation shim,
   # packed as one site folder and uploaded as the `edi-webapp` artifact. The toolchain (Emscripten, Qt's wasm
   # kit, Eigen, Chrome) installs into the runner's ~/.cache/edi-wasm on each run. crysta is compiled for
   # wasm from the pinned SDK's source.
-  # The app compiled with MSVC and edi's warnings as errors (ADR-0093) on every run: the app jobs build and test it on
-  # Linux and macOS, and this compiles the same sources the Windows installer compiles, through the installer's own Qt,
-  # SDK and compiler settings (tools/ci/app-windows-build.py). It builds only; the app's tests run in the app jobs.
-  app-windows:
-    name: app · Windows
-    if: ${{ !cancelled() && needs.changes.result == 'success' && needs.crysta-sdk.result == 'success' && github.event.pull_request.head.repo.fork == false && inputs.core_only != true }}
-    environment: crysta-sdk
-    needs: [changes, crysta-sdk]
-    env:
-      CRYSTA_SOURCE_SHA: ${{ needs.changes.outputs.crysta_sha }}
-    runs-on: windows-2022
-    defaults:
-      run:
-        shell: bash
-    steps:
-      - *windows-git
-      - *native-checkout
-      - *windows-checkout
-      - name: Set up the locked packaging environment
-        uses: ./.github/actions/setup-pixi
-        with:
-          manifest-path: tools/installer/pixi.toml
-      - *windows-compiler
-      - name: Turn on the compiler cache
-        run: |
-          {
-            echo "CCACHE_DIR=${{ runner.temp }}/edi-ccache"
-            echo "CCACHE_MAXSIZE=2G"
-            echo "CCACHE_COMPILERCHECK=content"
-            echo "CMAKE_C_COMPILER_LAUNCHER=ccache"
-            echo "CMAKE_CXX_COMPILER_LAUNCHER=ccache"
-          } >>"$GITHUB_ENV"
-      - uses: actions/cache/restore@v4
-        with:
-          path: ${{ runner.temp }}/edi-ccache
-          key: ccache-app-windows-${{ hashFiles('tools/installer/pixi.lock') }}-${{ github.run_id }}-${{ github.run_attempt }}
-          restore-keys: |
-            ccache-app-windows-${{ hashFiles('tools/installer/pixi.lock') }}-
-            ccache-app-windows-
-      - uses: ./.github/actions/crysta-sdk
-        with:
-          platform: win-64
-      - name: Unpack the pinned crysta source
-        run: |
-          mkdir -p .crysta
-          pixi run --manifest-path tools/installer/pixi.toml python tools/ci/crysta_source_archive.py extract "$CRYSTA_SDK_ARCHIVES/crysta-src-$CRYSTA_SOURCE_SHA.tar.gz" .crysta
-          printf '%s\n' "$CRYSTA_SOURCE_SHA" >.crysta/CRYSTA_SOURCE_SHA
-      - name: Build the app with MSVC, warnings as errors
-        run: pixi run --manifest-path tools/installer/pixi.toml python tools/ci/app-windows-build.py --crysta-source .crysta --work build/app-windows
-      - name: Save the compiler cache
-        if: always()
-        uses: actions/cache/save@v4
-        with:
-          path: ${{ runner.temp }}/edi-ccache
-          key: ccache-app-windows-${{ hashFiles('tools/installer/pixi.lock') }}-${{ github.run_id }}-${{ github.run_attempt }}
-
   app-wasm:
     name: app · WebAssembly
     # Browser input changes qualify the multithread kit and both isolation routes on pull requests too.

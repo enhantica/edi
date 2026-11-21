@@ -437,6 +437,7 @@ def _assert_licence_steps(job, positions, name, event, context, active):
                 expected = name == 'app-wasm' or platform == 'Linux'
                 selected = {
                     **context,
+                    'bindings': {'runner.os': platform, 'env.APP_PLATFORM': platform},
                     'outputs': {
                         **context['outputs'],
                         ('surfaces', 'outcome'): 'success' if expected else 'skipped',
@@ -715,13 +716,14 @@ def test_c11_t41_edi_ci_tiers_name_pr_merge_and_local_surfaces() -> None:
                         'app': 'success',
                         'crysta-sdk': 'success',
                     },
-                ) == (name == 'core' or event != 'pull_request'), (
-                    'PRs execute core; full events also execute every system part'
+                ) == (name == 'core' or event in {'schedule', 'workflow_dispatch'}), (
+                    'Core runs on every event; nightly and manual also execute every system part'
                 )
         durations = jobs['system-durations']
         assert (
-            durations.get('if') == "github.event_name == 'push'" and durations['needs'] == 'system'
-        ), 'duration refresh follows all system parts on main pushes only'
+            durations.get('if') == "github.event_name == 'schedule'"
+            and durations['needs'] == 'system'
+        ), 'Nightly duration refresh follows all system parts'
     assert 'edi verification' in workflow.lower() or 'crysta-consumer' in workflow
     local = ROOT / 'tools/ci/local-ci.sh'
     assert local.is_file()

@@ -605,23 +605,39 @@ QJsonArray ProjectViewModel::assistantParameterText(const QJsonArray& rows) cons
 }
 
 void ProjectViewModel::setName(const QString& name) {
-    edi::Project& project = *project_;
-    apply_setting(edi::Edit::project_name(project, name.toStdString()));
+    editName(name);
 }
 
 void ProjectViewModel::setTitle(const QString& title) {
-    edi::Project& project = *project_;
-    apply_setting(edi::Edit::assign(project.metadata.title, title.toStdString()));
+    editTitle(title);
 }
 
 void ProjectViewModel::setDescription(const QString& description) {
-    edi::Project& project = *project_;
-    apply_setting(edi::Edit::assign(project.metadata.description, description.toStdString()));
+    editDescription(description);
 }
 
 void ProjectViewModel::setAuthors(const QString& authors) {
+    editAuthors(authors);
+}
+
+QString ProjectViewModel::editName(const QString& name) {
     edi::Project& project = *project_;
-    apply_setting(edi::Edit::assign(project.metadata.authors, authors.toStdString()));
+    return apply_setting(edi::Edit::project_name(project, name.toStdString()));
+}
+
+QString ProjectViewModel::editTitle(const QString& title) {
+    edi::Project& project = *project_;
+    return apply_setting(edi::Edit::assign(project.metadata.title, title.toStdString()));
+}
+
+QString ProjectViewModel::editDescription(const QString& description) {
+    edi::Project& project = *project_;
+    return apply_setting(edi::Edit::assign(project.metadata.description, description.toStdString()));
+}
+
+QString ProjectViewModel::editAuthors(const QString& authors) {
+    edi::Project& project = *project_;
+    return apply_setting(edi::Edit::assign(project.metadata.authors, authors.toStdString()));
 }
 
 void ProjectViewModel::setSuRule(const QString& rule) {

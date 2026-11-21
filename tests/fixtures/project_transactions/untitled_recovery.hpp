@@ -1,4 +1,4 @@
-// Untitled recovery uses the real Project page, edit timer and storage callbacks.
+// Recovery uses the real Structure entrance, edit timer and storage callbacks.
 QJsonObject untitledWorkState(const edi::Project& project) {
     QJsonArray cells;
     for (const auto& structure : project.structures) {
@@ -29,6 +29,11 @@ QJsonObject untitledRecovery() {
                         "AppState.open(AppState.Page.Project)");
     open.evaluate();
     need(!open.hasError(), "The ordinary Project page entrance executes");
+    const bool projectPageEmpty = !session->hasProject();
+    QQmlExpression structure(qmlContext(window.get()), window.get(),
+                             "AppState.open(AppState.Page.Structure)");
+    structure.evaluate();
+    need(!structure.hasError(), "The ordinary Structure page entrance executes");
     const auto pageReady = [&] {
         const int wanted = window->property("pagesWanted").toInt();
         return wanted > 0 && window->property("pagesBuilt").toInt() == wanted;
@@ -40,9 +45,11 @@ QJsonObject untitledRecovery() {
         QThread::msleep(1);
     }
     need(pageReady(), "The real Project page finishes loading before observing untitled state");
-    QJsonObject result{{"untitled", session->hasProject()},
+    QJsonObject result{{"projectPageEmpty", projectPageEmpty},
+                       {"untitled", session->hasProject()},
                        {"needsSaveAs", session->needsSaveAs()}};
     if (!session->hasProject()) return result;
+    result["defaultTitle"] = session->project()->title();
     need(session->project()->createStructure(), "The real untitled project accepts a structure");
     session->project()->currentStructure()->cell()->lengthA()->setValue(7.125);
     session->project()->setTitle("Unsaved neutron work");

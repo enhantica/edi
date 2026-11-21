@@ -86,8 +86,8 @@ def test_full_ci_consumers_run_on_every_event_and_only_skip_core_only_repairs():
                     'crysta-sdk': 'success',
                 },
                 core_only=True,
-            ) == (not public or key != 'system' or event != 'pull_request'), (
-                'core-only repairs retain core and pin currency, with system excluded from PRs'
+            ) == (key != 'system' or event in {'schedule', 'workflow_dispatch'}), (
+                'core-only repairs retain core and pin currency, with system on nightly or manual'
             )
 
 
@@ -216,7 +216,10 @@ def test_later_jobs_report_after_core_and_native_results(event, upstream):
         states = {'changes': 'success', 'core': upstream, 'app': upstream, 'crysta-sdk': 'success'}
         if name == 'notebooks':
             states['native'] = upstream
-        expected = event != 'pull_request' or name not in {'system', 'app-wasm'}
+        expected = not (
+            (name == 'system' and event in {'pull_request', 'push'})
+            or (name == 'app-wasm' and event == 'pull_request')
+        )
         assert active(jobs[name], event, states=states) == expected, (
             'every event-required later job reports despite failed or skipped core/native/app'
         )
