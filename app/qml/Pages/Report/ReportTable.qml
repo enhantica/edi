@@ -88,8 +88,11 @@ Flickable {
         width: table.layout[column] ? table.layout[column].width : 0
         height: table.rowHeight
 
-        // Unsized, so each form keeps its own size as it had when both were made.
+        // The cell's size, as both forms had when they were the cell's own children (a label takes its parent's
+        // height).
         Loader {
+            width: cell.width
+            height: cell.height
             sourceComponent: cell.parts ? numberForm : textForm
         }
         Component {
