@@ -66,11 +66,59 @@ def jobs():
 
 def test_all_three_hosts_share_the_native_qualification_path():
     boundary(jobs())
+    app_boundary(jobs())
+
+
+def app_boundary(document):
+    names = {f'app · {platform}' for platform in PLATFORMS}
+    desktop = {
+        key: job
+        for key, job in document.items()
+        if key in {'app', 'app-linux', 'app-macos', 'app-windows'} or job.get('name') in names
+    }
+    assert {job.get('name') for job in desktop.values()} == names, (
+        'Desktop app jobs declare each platform name before matrix expansion or runner allocation'
+    )
+    assert len(desktop) == len(names), 'Each desktop app platform has one named job'
+    shared = {job.get('uses') for job in desktop.values()}
+    if shared != {None}:
+        assert len(shared) == 1 and None not in shared, (
+            'All desktop app platforms call the same reusable job design'
+        )
+    else:
+        steps = [job.get('steps', []) for job in desktop.values()]
+        assert steps[0] and all(row == steps[0] for row in steps), (
+            'All desktop app platforms execute the same shared steps'
+        )
+    for platform in PLATFORMS:
+        label = 'app · ' + platform
+        job = next(job for job in desktop.values() if job.get('name') == label)
+        assert 'matrix.' not in job['name'] and 'runner.' not in job['name'], (
+            'Skipped or cancelled desktop app jobs retain their literal platform name'
+        )
 
 
 @pytest.mark.parametrize('name', ['native', 'core', 'cli-python'])
 @pytest.mark.parametrize('damage', ['omitted', 'foreign-sdk', 'foreign-runner'])
 def test_native_platform_omission_or_sibling_sdk_cannot_pass(name, damage):
+    declared = {
+        'app-' + host.lower(): {
+            'name': 'app · ' + host,
+            'uses': './.github/workflows/app.yml',
+            'with': {'platform': host},
+        }
+        for host in PLATFORMS
+    }
+    app_boundary(declared)
+    broken = copy.deepcopy(declared)
+    if damage == 'omitted':
+        broken.pop('app-windows')
+    elif damage == 'foreign-sdk':
+        broken['app-windows']['uses'] = './.github/workflows/another-app.yml'
+    else:
+        broken['app-windows']['name'] = 'app · ${{ runner.os }}'
+    with pytest.raises(AssertionError):
+        app_boundary(broken)
     changed = copy.deepcopy(jobs())
     rows = changed[name]['strategy']['matrix']['include']
     win = next(r for r in rows if r['platform'] == 'Windows')
