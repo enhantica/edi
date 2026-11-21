@@ -230,7 +230,7 @@ def test_ci_job_names_state_area_and_platform_and_share_matrices():
         'changes',
     }
     if public:
-        # Parallel system parts and their push-only duration collector identify
+        # Parallel system parts and their duration collector identify
         # the same area/platform, with a concrete part suffix on every test job.
         required |= (
             {'system time'}
@@ -256,11 +256,13 @@ def test_ci_job_names_state_area_and_platform_and_share_matrices():
     )
     windows = [(key, job) for key, name, job in rows if name == 'app · Windows']
     assert len(windows) == 1 and windows[0][0] == 'app-windows', (
-        'note 18: the Windows build-only app job is separate from the Linux/macOS test matrix'
+        'note 18: the Windows build-only app job keeps its static job identity'
     )
     for area in ('native', 'core', 'app', 'cli-python', 'cli-native'):
         keys = {key for key, name, _ in rows if name in {area + ' · Linux', area + ' · macOS'}}
-        expected = 2 if area in {'native', 'core'} and not public else 1
+        expected = (
+            2 if (area == 'app' and public) or (area in {'native', 'core'} and not public) else 1
+        )
         assert len(keys) == expected, (
             f'{area} uses the declared per-platform jobs or shared matrix'
         )
