@@ -72,6 +72,9 @@ void ListModelMirror::follow() {
     forward(&QAbstractItemModel::modelAboutToBeReset, [this] { beginResetModel(); });
     forward(&QAbstractItemModel::modelReset, [this] {
         rows_ = source_ ? source_->rowCount() : 0;
+        // A proxy takes its role names from its own source, which may be set only now (the Parameters table's filter):
+        // they are read again with the reset, so rows made from here on have every role.
+        if (source_) roles_ = source_->roleNames();
         endResetModel();
         emit countChanged();
     });
