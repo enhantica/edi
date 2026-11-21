@@ -5,7 +5,7 @@ description: Rebuild a GSAS-II analysis in EasyDiffraction from selected text ev
 
 # Rebuild a diffraction project between GSAS-II and EasyDiffraction
 
-Version: 1.1.0. Use this workflow for an independent reconstruction with ordinary app actions or the applications' documented APIs. The C++ GPX importer is not a prerequisite. The recipe below covers the PbSO₄ case with one nuclear Pnma phase and one constant-wavelength neutron powder histogram (`PNC`). Establish a separate mapping before extending it to another model.
+Version: 1.2.0. **Load project > Import GSAS-II...** converts a GPX directly. Use this workflow for an independent reconstruction by hand with ordinary app actions or the applications' documented APIs. The importer is not a prerequisite. The recipe below covers the PbSO₄ case with one nuclear Pnma phase and one constant-wavelength neutron powder histogram (`PNC`). Establish a separate mapping before extending it to another model.
 
 ## Establish source evidence
 

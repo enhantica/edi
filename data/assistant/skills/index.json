@@ -25,11 +25,11 @@
     },
     {
       "id": "fullprof-intake",
-      "version": "1.6.0",
-      "title": "Reconstruct FullProf and Edi projects",
-      "summary": "Map selected FullProf and Edi projects in both directions, preserving observations and refinement settings, and compare fixed-input calculations.",
+      "version": "1.7.0",
+      "title": "Rebuild a FullProf or EasyDiffraction project",
+      "summary": "Use selected FullProf files to reconstruct an Edi project by hand, or use saved Edi data to prepare a FullProf project, and compare fixed-input calculations.",
       "path": "fullprof-intake/SKILL.md",
-      "sha256": "716779602553404b5af3d7f1da16332fd494f792516dc314328bab14aa3fd222",
+      "sha256": "4dec1288857f1849a823c472af761121f5be8bf4cae2c98a7e367bc85da958b6",
       "requires": [
         "selected_files"
       ],
@@ -50,11 +50,11 @@
     },
     {
       "id": "gsas-intake",
-      "version": "1.1.0",
+      "version": "1.2.0",
       "title": "Rebuild a GSAS-II or EasyDiffraction project",
       "summary": "Use selected GSAS-II text to reconstruct an Edi project, or use saved Edi data to prepare a GSAS-II project.",
       "path": "gsas-intake/SKILL.md",
-      "sha256": "f1f581199e8b6b98fbe348b23b28fcaa07c97e7e6979d14a3efee3350f706c7a",
+      "sha256": "85f6a98a74e2b0eed97af15e3a21fc1c3abafb75463406e2dc8a1767c3cd556c",
       "requires": [],
       "capabilities": [
         "inspect_project",

@@ -1,11 +1,11 @@
 ---
 name: fullprof-intake
-description: Reconstruct FullProf and Edi projects in either direction and compare their fixed-input calculations.
+description: Rebuild a FullProf analysis in EasyDiffraction by hand, or prepare a FullProf project from saved Edi data, and compare their fixed-input calculations.
 ---
 
-# Reconstruct FullProf and Edi projects
+# Rebuild a diffraction project between FullProf and EasyDiffraction
 
-Version: 1.6.0. Follow this workflow when reconstructing a PCR project by hand, without asking Edi to open or convert the PCR. A fit requires a user request. Importing the source's refinement flags prepares the model for refinement.
+Version: 1.7.0. **Load project > Import FullProf...** converts a PCR directly, and **Save project as > As FullProf...** writes a copy. Use this workflow for an independent reconstruction by hand with ordinary app actions, without asking Edi to open or convert the PCR. A fit requires a user request. Importing the source's refinement flags prepares the model for refinement.
 
 ## Inventory the source
 

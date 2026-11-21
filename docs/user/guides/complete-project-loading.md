@@ -6,20 +6,8 @@ binding decision it implements is
 [crysta],
 whose project-directory contract edi mirrors.
 
-## Open a FullProf project
-
-In the desktop app, choose **Open project… → FullProf PCR file**. Keep the input powder data,
-single-crystal `.int` and any required instrument resolution file beside the `.pcr`, with the
-filenames expected by FullProf. EDI creates a
-project with the imported phases, experiments, observations and refinement settings. Use **Save
-project as…** to write the native project. The original FullProf project stays available.
-
-The importer reads labelled single- and multi-pattern controls for supported X-ray and neutron
-powder models and neutron single-crystal experiments. It reads FullProf measured-data formats,
-including XYDATA, stepped and ILL powder data, GSAS ALT and ISIS RALF/FXYE. An INT file can contain
-several reflection datasets with their own wavelength or scale. Compatible commensurate
-magnetic phases use the native magnetic structure model. The app reports missing files,
-unsupported model terms and ambiguous conversions.
+Projects from cryspy, FullProf and GSAS-II load through the same call; the user guide's data
+formats page describes them, and edi ADR-0098 the shared import base.
 
 ## The one loader
 
@@ -161,24 +149,3 @@ demonstration of the same `import edi` API, not a CLI.
 
 Nothing here recomputes a fit metric: every number printed is one the engine produced and handed
 back on the `FitResultBase`.
-
-## Export a FullProf project
-
-Choose **Export to FullProf…** on the desktop Project page. Select a parent folder. EDI
-creates a new `<project-name>-fullprof` folder with `project.pcr` and its powder `.dat`
-or single-crystal `.int` companions. An existing folder with that name requires a different
-destination. Powder simulations export their regular calculation grid, and representable
-external calibration values are written into the PCR.
-
-**Fix all parameters for a forward calculation** evaluates the EDI model's constraints and exports
-the settled values. Clear the checkbox to export independent refinement flags and affine links
-with one free source. Run the same fixed export from the command line with
-
-```sh
-easydiffraction export-fullprof path/to/project path/to/fullprof-copy --fixed
-cd path/to/fullprof-copy
-printf 'project\n\n\n' | fp2k
-```
-
-Compare the new FullProf `.prf` with the original on the same observed coordinates or Miller
-indices.
