@@ -133,6 +133,7 @@ nav:
           - "ADR-0096 FullProf project import": dev/adrs/0096-fullprof-project-import.md
           - "ADR-0097 GSAS-II project import": dev/adrs/0097-gsas-ii-project-import.md
           - "ADR-0098 Project import from other programs": dev/adrs/0098-project-import-from-other-programs.md
+          - "ADR-0099 cryspy project import": dev/adrs/0099-cryspy-project-import.md
           - dev/adrs/template.md
       - Design:
           - dev/design/api-types.md

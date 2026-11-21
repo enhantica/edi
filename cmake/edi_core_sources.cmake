@@ -15,6 +15,7 @@ function(edi_core_sources root out)
         ${root}/core/src/fullprof_export.cpp
         ${root}/core/src/gpx_records.cpp
         ${root}/core/src/gpx_project.cpp
+        ${root}/core/src/cryspy_project.cpp
         ${root}/core/src/gsas_project.cpp
         ${root}/core/src/project_import.cpp
         ${root}/core/src/sharing.cpp

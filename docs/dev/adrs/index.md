@@ -123,6 +123,7 @@ in the same change — see `AGENTS.md` §ADRs.
 | [0096](0096-fullprof-project-import.md) | Open and export FullProf projects | Proposed | 🟡 | High | the core imports labelled PCR and measured companions through Open Project and writes fresh FullProf bundles for fixed-input verification |
 | [0097](0097-gsas-ii-project-import.md) | Import GSAS-II projects | Proposed | 🟡 | High | The core reads a bounded GPX data grammar or a versioned text bundle, maps supported powder and paired magnetic models once, and saves through the native Edi writer. |
 | [0098](0098-project-import-from-other-programs.md) | Import projects from other programs | Proposed | 🟡 | High | One base lists the importers, finds one by file suffix, names and describes the imported project and refuses parameters without metadata; importers convert to what crysta already has and list every gap. |
+| [0099](0099-cryspy-project-import.md) | Import cryspy projects | Proposed | 🟡 | High | The core reads cryspy rcif projects (unpolarised CW neutron powder, isotropic atoms), skips the calculated output, refuses every item it does not convert and lists what crysta lacks. |
 
 New cross-cutting decisions that should also bind crysta are authored as **(shared)** and, once the
 Copier agent-OS template exists (ADR-0004), live in its shared-ADR range so `copier update`

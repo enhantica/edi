@@ -15,6 +15,7 @@
 #include "edi/edits.hpp"
 #include "edi/model.hpp"
 #include "edi/parameter_walk.hpp"
+#include "cryspy_project.hpp"
 #include "fullprof_project_io.hpp"
 #include "gsas_project.hpp"
 
@@ -36,6 +37,9 @@ std::mutex& importers_mutex() {
 
 std::vector<ProjectImporter>& importers() {
     static std::vector<ProjectImporter> list{
+        {"cryspy", {".rcif"}, [](const std::string& path, const WarningSink& on_warning) {
+             return load_cryspy_project(path, on_warning);
+         }},
         {"FullProf", {".pcr"}, [](const std::string& path, const WarningSink&) {
              return detail::import_fullprof_project(path);
          }},
