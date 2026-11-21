@@ -21,6 +21,8 @@
 #include <optional>
 #include <vector>
 
+#include "edi/presentation.hpp"
+
 class QQuickItem;
 class QQuickWindow;
 
@@ -191,6 +193,14 @@ class DemoDriver : public QObject {
         qint64 expected_generation = -1;
         QList<QPointF> expected;                      // finite measured points
         QList<std::array<double, 3>> expected_band;   // (x, lower, upper) where the band has a lower end
+        // The other data channels the chart should draw for that upload, each as its presentation gives it.
+        struct Channel {
+            edi::SeriesKind kind{};
+            std::string id;
+            QList<QPointF> points;                    // finite points
+            QList<std::array<double, 3>> band;        // (x, lower, upper), for a residual drawn as a band
+        };
+        QList<Channel> expected_channels;
         bool first = false, presented = false, settled = false;
         QJsonObject presentation;  // request, dataset, generation, data_identity, input
     };

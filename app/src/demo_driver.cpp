@@ -2206,8 +2206,22 @@ void DemoDriver::trace_expect(FrameWatch& watch) {
     watch.expected_generation = controller->traceGeneration();
     const edi::PatternSource source = edi::capture_pattern(project->project(), static_cast<std::size_t>(place), controller->traceAxis());
     const edi::PatternPresentation presentation = edi::present_pattern(source, controller->traceView());
+    watch.expected_channels.clear();
     for (const edi::PatternSeries& series : presentation.series) {
-        if (series.kind != edi::SeriesKind::Measured) continue;
+        if (series.kind == edi::SeriesKind::BraggTicks) continue;
+        if (series.kind != edi::SeriesKind::Measured) {
+            FrameWatch::Channel channel{series.kind, series.id, {}, {}};
+            for (std::size_t k = 0; k < series.points.size(); ++k) {
+                const double x = series.points[k].x, y = series.points[k].y;
+                if (!std::isfinite(x) || !std::isfinite(y)) continue;
+                channel.points.append(QPointF(x, y));
+                const double high = k < series.bar_high.size() && std::isfinite(series.bar_high[k]) ? series.bar_high[k] : y;
+                const double low = k < series.bar_low.size() ? series.bar_low[k] : y;
+                channel.band.append({x, std::isfinite(low) ? low : std::nan(""), high});
+            }
+            watch.expected_channels.append(channel);
+            continue;
+        }
         for (std::size_t k = 0; k < series.points.size(); ++k) {
             const double x = series.points[k].x, y = series.points[k].y;
             if (!std::isfinite(x) || !std::isfinite(y)) continue;
@@ -2236,14 +2250,60 @@ bool DemoDriver::trace_matches_expected(const FrameWatch& watch) const {
     if (line.isEmpty() && marks.isEmpty() && band.isEmpty()) return false;
     if (!line.isEmpty() && !whole(line)) return false;
     if (!marks.isEmpty() && !whole(marks)) return false;
-    if (!band.isEmpty()) {
-        if (band.size() != watch.expected_band.size()) return false;
-        for (qsizetype i = 0; i < band.size(); ++i) {
-            const auto& [x, low, high] = band[i];
-            const auto& want = watch.expected_band[i];
-            // The band's lower edge stands on the pane's floor where the data give no lower end.
-            if (!near(x, want[0]) || !near(high, want[2]) || (std::isfinite(want[1]) && !near(low, want[1]))) return false;
+    const auto same_band = [&](const QList<std::array<double, 3>>& drawn, const QList<std::array<double, 3>>& want) {
+        if (drawn.size() != want.size()) return false;
+        for (qsizetype i = 0; i < drawn.size(); ++i) {
+            // A band's lower edge stands on the pane's floor where the data give no lower end.
+            if (!near(drawn[i][0], want[i][0]) || !near(drawn[i][2], want[i][2]) ||
+                (std::isfinite(want[i][1]) && !near(drawn[i][1], want[i][1])))
+                return false;
         }
+        return true;
+    };
+    if (!band.isEmpty() && !same_band(band, watch.expected_band)) return false;
+    // Every other data channel: what is drawn is exactly the selected data's channel, in the way it is drawn; a channel
+    // the selected data lack is drawn empty, so a previous dataset's curve left behind does not pass. A legend entry
+    // hidden by the user draws nothing; single-crystal bars are drawn per reflection and are only required present.
+    const auto points_equal = [&](const QList<QPointF>& drawn, const QList<QPointF>& want) {
+        if (drawn.size() != want.size()) return false;
+        for (qsizetype i = 0; i < drawn.size(); ++i)
+            if (!near(drawn[i].x(), want[i].x()) || !near(drawn[i].y(), want[i].y())) return false;
+        return true;
+    };
+    const bool bars = controller->traceDrawing() == QLatin1String("bars");
+    const bool banded = controller->traceDrawing() == QLatin1String("band");
+    const FrameWatch::Channel none;
+    const auto expected_of = [&](edi::SeriesKind kind) -> const FrameWatch::Channel& {
+        for (const auto& channel : watch.expected_channels)
+            if (channel.kind == kind) return channel;
+        return none;
+    };
+    const auto line_matches = [&](int index, edi::SeriesKind kind) {
+        const FrameWatch::Channel& want = expected_of(kind);
+        const QList<QPointF> drawn = controller->traceLine(index);
+        if (want.kind == kind && controller->traceHidden(want.id)) return drawn.isEmpty();
+        return points_equal(drawn, want.kind == kind ? want.points : QList<QPointF>());
+    };
+    if (!bars && !line_matches(0, edi::SeriesKind::Calculated)) return false;
+    if (!line_matches(1, edi::SeriesKind::Background)) return false;
+    if (banded) {
+        const FrameWatch::Channel& want = expected_of(edi::SeriesKind::Residual);
+        const bool hidden = want.kind == edi::SeriesKind::Residual && controller->traceHidden(want.id);
+        const QList<std::array<double, 3>> drawn = controller->traceBand(1);
+        if (hidden ? !drawn.isEmpty() : !same_band(drawn, want.kind == edi::SeriesKind::Residual ? want.band : QList<std::array<double, 3>>()))
+            return false;
+    } else if (!bars && !line_matches(2, edi::SeriesKind::Residual)) {
+        return false;
+    }
+    if (!bars) {
+        int index = 0;
+        for (const auto& channel : watch.expected_channels) {
+            if (channel.kind != edi::SeriesKind::StructureCurve) continue;
+            const QList<QPointF> drawn = controller->traceComponent(index++);
+            if (controller->traceHidden(channel.id) ? !drawn.isEmpty() : !points_equal(drawn, channel.points)) return false;
+        }
+        for (; index < controller->traceComponents(); ++index)
+            if (!controller->traceComponent(index).isEmpty()) return false;
     }
     return true;
 }

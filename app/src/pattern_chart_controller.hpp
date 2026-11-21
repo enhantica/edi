@@ -277,6 +277,15 @@ class PatternChartController : public QObject {
     QList<QPointF> traceMeasuredLine() const;
     QList<QPointF> traceMeasuredMarks() const;
     QList<std::array<double, 3>> traceMeasuredBand() const;
+    // Every other data channel as the scene draws it, read from the scene objects: the calculated (0), background (1)
+    // and residual (2) lines, a pane's band edges (0 measured, 1 residual), a structure's component outline, how the
+    // measured data are drawn, and whether a legend entry is hidden.
+    QList<QPointF> traceLine(int channel) const;
+    QList<std::array<double, 3>> traceBand(int pane) const;
+    QList<QPointF> traceComponent(int index) const;
+    int traceComponents() const { return static_cast<int>(structure_series_.size()); }
+    QString traceDrawing() const { return measured_drawing_; }
+    bool traceHidden(const std::string& id) const { return hiddenId(id); }
     // What the chart presents its data with, so the trace can present the selected data itself and compare.
     edi::PatternView traceView() const { return view(); }
     edi::PatternAxis traceAxis() const { return axis_; }

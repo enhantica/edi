@@ -1485,13 +1485,35 @@ QList<QPointF> PatternChartController::traceMeasuredMarks() const {
     return points;
 }
 
+namespace {
+QList<QPointF> finite_points(const QPointer<QXYSeries>& series) {
+    QList<QPointF> points;
+    if (series) {
+        for (const QPointF& point : series->points())
+            if (std::isfinite(point.x()) && std::isfinite(point.y())) points.append(point);
+    }
+    return points;
+}
+}  // namespace
+
+QList<QPointF> PatternChartController::traceLine(int channel) const {
+    return finite_points(channel == 0 ? calculated_series_ : channel == 1 ? background_series_ : residual_series_);
+}
+
+QList<QPointF> PatternChartController::traceComponent(int index) const {
+    return index >= 0 && index < structure_series_.size() ? finite_points(structure_series_[index].outline) : QList<QPointF>();
+}
+
 int PatternChartController::traceExperimentPlace() const {
     return experiment_ != nullptr ? static_cast<int>(experiment_->tracePlace()) : -1;
 }
 
-QList<std::array<double, 3>> PatternChartController::traceMeasuredBand() const {
+QList<std::array<double, 3>> PatternChartController::traceMeasuredBand() const { return traceBand(0); }
+
+QList<std::array<double, 3>> PatternChartController::traceBand(int pane) const {
     QList<std::array<double, 3>> edges;
-    const BandSeries& band = band_series_[0];
+    if (pane < 0 || pane >= static_cast<int>(band_series_.size())) return edges;
+    const BandSeries& band = band_series_[static_cast<std::size_t>(pane)];
     if (!band.top || !band.bottom) return edges;
     const QList<QPointF> top = band.top->points(), bottom = band.bottom->points();
     for (qsizetype i = 0; i < std::min(top.size(), bottom.size()); ++i) {
