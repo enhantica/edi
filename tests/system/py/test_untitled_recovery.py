@@ -17,9 +17,12 @@ def recovery(source_qualified_observer, tmp_path_factory):
 
 
 def test_untitled_edits_reach_autosave(recovery):
+    assert recovery['projectPageEmpty'], 'Opening Project alone creates no work container'
     assert recovery['untitled'] and recovery['needsSaveAs'], (
-        'Opening Project begins with genuine untitled work before autosave'
+        'Opening Structure begins genuine unnamed work before autosave'
     )
+    assert isinstance(recovery['defaultTitle'], str), 'The default project title remains text'
+    assert not recovery['defaultTitle'], 'Unnamed work has no invented project title'
     assert recovery['before']['structures'] == 1 and recovery['before']['cells'][0][0] == 7.125, (
         'Autosave starts from the actual nontrivial cell edit in the untitled structure'
     )

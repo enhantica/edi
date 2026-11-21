@@ -49,20 +49,27 @@ TestCase {
         Turn.end(selected, message => test.warn(message));
     }
     function draft() {
-        tryVerify(() => Session.project !== null, 2000, "Opening Project supplies an untitled project without Create");
+        verify(Session.project === null, "Opening Project alone creates no project or work container");
+        verify(!AppState.experimentPageEnabled, "Experiment remains disabled before any structure exists");
+        Ui.click(test, Probe, app, "appBar.tab.structure");
+        tryVerify(() => Session.project !== null, 2000, "Opening Structure supplies the invisible work container");
         verify(Session.needsSaveAs, "Untitled work has no owned saved destination");
-        verify(AppState.structurePageEnabled && AppState.experimentPageEnabled, "Structure and Experiment are usable as soon as Project opens, before either contains a block");
+        verify(Session.untitled, "Work remains unnamed until the Create form is accepted");
+        compare(Session.project.title, "", "Work before Create has no default project title");
+        compare(Session.project.path, "", "Work before Create owns no project folder");
+        verify(!AppState.experimentPageEnabled, "Opening Structure without adding one does not enable Experiment");
+        compare(findChild(app, "statusBar.project").valueText, "Undefined", "The status bar never presents the work container as a named project");
         return Session.project;
     }
     function work() {
         const p = draft();
-        Ui.click(test, Probe, app, "appBar.tab.experiment");
-        Ui.click(test, Probe, app, "experiments.create");
-        compare(p.experiments.count, 1, "Experiment is usable before a project is named or a structure is created");
-        Ui.click(test, Probe, app, "appBar.tab.structure");
         Ui.click(test, Probe, app, "structures.create");
         compare(p.structures.count, 1, "Structure is usable before a project is named");
+        verify(AppState.experimentPageEnabled, "Adding a structure enables Experiment before Create");
         p.currentStructure.cell.length_a.value = 7.125;
+        Ui.click(test, Probe, app, "appBar.tab.experiment");
+        Ui.click(test, Probe, app, "experiments.create");
+        compare(p.experiments.count, 1, "An experiment can be added once the unnamed work contains a structure");
         verify(p.modified, "Actual untitled edits enable ordinary Save and unsaved-work protection");
         return p;
     }
@@ -100,6 +107,16 @@ TestCase {
         Ui.click(test, Probe, app, "appBar.tab.project");
         verify(Session.project === p && Session.needsSaveAs, "Navigating all usable tabs keeps the same untitled work");
         compare(p.currentStructure.cell.length_a.value, 7.125, "Navigation retains the nontrivial scientific edit");
+        const page = Ui.page(app).item;
+        compare(page.defaultInfo, "No project yet", "The Project page hides the work container until Create");
+        compare(findChild(app, "statusBar.project").valueText, "Undefined", "Returning to Project does not expose an invented project name");
+        Ui.click(test, Probe, app, "appBar.button.reset");
+        const question = findChild(app, "unsavedChanges");
+        tryCompare(question, "opened", true, 2000, "Clear protects the actual unsaved scientific edit");
+        press(question.standardButton(Dialog.Discard));
+        tryVerify(() => Session.project === null, 2000, "Clear discards the unnamed work after confirmation");
+        compare(app.appBarCentralTabs.currentIndex, AppState.Page.Home, "Clear returns to the Home page");
+        verify(!AppState.structurePageEnabled, "Clear resets the Structure tab to its startup state");
     }
     function test_b_first_save_names_and_preserves_work() {
         work();
@@ -110,12 +127,29 @@ TestCase {
         verify(SettingsProof.fileObservation(folder, "project.edi").exists, "First Save writes into the selected parent and short-name folder");
         verify(Session.openProject(folder), "The first saved project reopens through the real loader");
         compare(Session.project.name, "lbco_hrpt-7", "The short name becomes the saved project name");
+        compare(findChild(app, "statusBar.project").valueText, "lbco_hrpt-7", "The status bar shows the project name only after creation");
         compare(Session.project.title, "Neutron work before Save", "First Save retains the entered title");
         compare(Session.project.authors, "Ada Example; Lin Example", "First Save retains separated authors");
         compare(Session.project.description, "Unsaved cobalt study", "First Save retains the description");
         compare(Session.project.structures.count, 1, "Naming an untitled project does not replace its structure");
         compare(Session.project.experiments.count, 1, "Naming an untitled project does not replace its experiment");
         compare(Session.project.currentStructure.cell.length_a.value, 7.125, "First Save and reopen preserve the independent scientific edit");
+        workAfterClearAndCreate();
+    }
+    function workAfterClearAndCreate() {
+        Session.closeProject();
+        AppState.reset();
+        AppState.open(AppState.Page.Project);
+        work();
+        Ui.click(test, Probe, app, "appBar.tab.project");
+        Ui.click(test, Probe, app, "project.create");
+        const dialog = creation(), folder = fill(dialog);
+        press(dialog.standardButton(Dialog.Ok));
+        tryVerify(() => Session.project && !Session.untitled && !Session.project.modified, 5000, "Create itself adopts and saves existing work, as first Save does");
+        verify(Session.openProject(folder), "Work named through Create reopens through the ordinary loader");
+        compare(Session.project.structures.count, 1, "Create keeps the structure made before a project existed");
+        compare(Session.project.experiments.count, 1, "Create keeps the experiment made before a project existed");
+        compare(Session.project.currentStructure.cell.length_a.value, 7.125, "Create preserves the independent scientific edit");
     }
     function test_c_cancel_first_save_keeps_work() {
         const p = work();
