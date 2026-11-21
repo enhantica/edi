@@ -2,6 +2,7 @@
 import QtQuick
 import QtQuick.Controls
 import QtTest
+import EasyApplication.Gui.Globals as EaGlobals
 import edi.app
 import EdiAcceptance 1.0
 import ReportAcceptance 1.0
@@ -40,8 +41,11 @@ TestCase {
     function cleanup() {
         if (app) {
             const dialogs = Probe.objectsWithProperty(app, "opened").filter(item => item.opened && typeof item.reject === "function");
-            for (const dialog of dialogs)
+            for (const dialog of dialogs) {
                 dialog.reject();
+                tryCompare(dialog, "visible", false, 2000, "The previous form finishes closing before its window is destroyed");
+            }
+            tryVerify(() => !EaGlobals.Vars.showProjectDescriptionDialog, 2000, "Create cancellation releases its shared dialog flag before the fixture retires");
             Session.closeProject();
             app.destroy();
         }
@@ -66,7 +70,7 @@ TestCase {
         Ui.click(test, Probe, app, "structures.create");
         compare(p.structures.count, 1, "Structure is usable before a project is named");
         verify(AppState.experimentPageEnabled, "Adding a structure enables Experiment before Create");
-        p.currentStructure.cell.length_a.value = 7.125;
+        p.currentStructure.cell.lengthA.value = 7.125;
         Ui.click(test, Probe, app, "appBar.tab.experiment");
         Ui.click(test, Probe, app, "experiments.create");
         compare(p.experiments.count, 1, "An experiment can be added once the unnamed work contains a structure");
@@ -106,7 +110,7 @@ TestCase {
         const p = work();
         Ui.click(test, Probe, app, "appBar.tab.project");
         verify(Session.project === p && Session.needsSaveAs, "Navigating all usable tabs keeps the same untitled work");
-        compare(p.currentStructure.cell.length_a.value, 7.125, "Navigation retains the nontrivial scientific edit");
+        compare(p.currentStructure.cell.lengthA.value, 7.125, "Navigation retains the nontrivial scientific edit");
         const page = Ui.page(app).item;
         compare(page.defaultInfo, "No project yet", "The Project page hides the work container until Create");
         compare(findChild(app, "statusBar.project").valueText, "Undefined", "Returning to Project does not expose an invented project name");
@@ -133,7 +137,7 @@ TestCase {
         compare(Session.project.description, "Unsaved cobalt study", "First Save retains the description");
         compare(Session.project.structures.count, 1, "Naming an untitled project does not replace its structure");
         compare(Session.project.experiments.count, 1, "Naming an untitled project does not replace its experiment");
-        compare(Session.project.currentStructure.cell.length_a.value, 7.125, "First Save and reopen preserve the independent scientific edit");
+        compare(Session.project.currentStructure.cell.lengthA.value, 7.125, "First Save and reopen preserve the independent scientific edit");
         workAfterClearAndCreate();
     }
     function workAfterClearAndCreate() {
@@ -149,7 +153,7 @@ TestCase {
         verify(Session.openProject(folder), "Work named through Create reopens through the ordinary loader");
         compare(Session.project.structures.count, 1, "Create keeps the structure made before a project existed");
         compare(Session.project.experiments.count, 1, "Create keeps the experiment made before a project existed");
-        compare(Session.project.currentStructure.cell.length_a.value, 7.125, "Create preserves the independent scientific edit");
+        compare(Session.project.currentStructure.cell.lengthA.value, 7.125, "Create preserves the independent scientific edit");
     }
     function test_c_cancel_first_save_keeps_work() {
         const p = work();
@@ -158,7 +162,7 @@ TestCase {
         keyClick(Qt.Key_Escape);
         tryCompare(dialog, "visible", false, 2000, "Escape cancels first Save through the real dialog");
         verify(Session.project === p && p.modified && Session.needsSaveAs, "Cancelling first Save preserves dirty untitled work");
-        compare(p.currentStructure.cell.length_a.value, 7.125, "Cancelling naming loses no scientific edit");
+        compare(p.currentStructure.cell.lengthA.value, 7.125, "Cancelling naming loses no scientific edit");
     }
     function test_d_quit_cancel_and_discard() {
         const p = work();
@@ -187,7 +191,7 @@ TestCase {
         tryCompare(app, "visible", false, 5000, "Successful first Save resumes the pending Quit");
         verify(SettingsProof.fileObservation(folder, "project.edi").exists, "Quit's Save writes the chosen named project before closing");
         verify(Session.openProject(folder), "The project saved while quitting reopens normally");
-        compare(Session.project.currentStructure.cell.length_a.value, 7.125, "Quit's Save preserves the nontrivial untitled scientific edit");
+        compare(Session.project.currentStructure.cell.lengthA.value, 7.125, "Quit's Save preserves the nontrivial untitled scientific edit");
     }
     function test_e_dialog_labels() {
         Ui.click(test, Probe, app, "project.create");
