@@ -504,7 +504,17 @@ ProjectViewModel::ProjectViewModel(edi::Project project, QObject* parent, const 
     }
     selection_store_timer_.setSingleShot(true);
     selection_store_timer_.setInterval(200);
-    connect(&selection_store_timer_, &QTimer::timeout, this, &ProjectViewModel::storeSelection);
+    connect(&selection_store_timer_, &QTimer::timeout, this, [this] {
+        // While a fit runs, a followed scan or series changes the dataset every run, and each write of the settings file
+        // holds Qt's settings lock while it syncs to disk, which stalled the GUI thread's own settings reads (the
+        // assistant reads them once a second during a fit). The newest selection waits for the end of the fit; until
+        // then a reopened project reads it from the pending values, and closing the project writes it.
+        if (fit_ != nullptr && fit_->running()) {
+            selection_store_timer_.start();
+            return;
+        }
+        storeSelection();
+    });
     selection_restored_ = true;
     storeSelection();
     restoreViewSettings();
@@ -7150,7 +7160,10 @@ void ProjectViewModel::publish(bool structural) {
         refreshTextsLater();
     } else {
         saved_files_.reset();
-        discovered_files_.reset();
+        // The discovered files give the sidebar its generated groups, which only a structural change adds or removes:
+        // a fit's result for each followed run changes values, and remaking them saved the whole project on the GUI
+        // thread once a run.
+        if (structural || fit_ == nullptr || !fit_->running()) discovered_files_.reset();
         refreshTextsAndReport();
     }
     if (retired_) return;
