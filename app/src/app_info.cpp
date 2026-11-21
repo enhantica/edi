@@ -11457,7 +11457,7 @@ QJSValue ApplicationInfo::windowUnsavedText() const {
 
 int ApplicationInfo::schemeFor(int theme, int browser) const {
     // The owner, 2026-11-15: edi's Light and Dark override the platform's scheme; System follows it. The browser's
-    // page gets no scheme from Qt, so there System is the browser's prefers-color-scheme (edi-feedback #63).
+    // page gets no scheme from Qt, so there System is the browser's prefers-color-scheme (edi #123).
     if (theme == 0) return static_cast<int>(Qt::ColorScheme::Light);
     if (theme == 1) return static_cast<int>(Qt::ColorScheme::Dark);
     if (browser == 0) return static_cast<int>(Qt::ColorScheme::Light);
