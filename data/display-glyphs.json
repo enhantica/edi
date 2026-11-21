@@ -25,7 +25,8 @@
    "code": "U+00B0",
    "font": "PT Sans",
    "sites": [
-    "crysta:data/dictionary/parameters.yaml"
+    "crysta:data/dictionary/parameters.yaml",
+    "app/src/session.cpp"
    ],
    "drawn_by": "PT Sans",
    "weight": 400
@@ -118,6 +119,7 @@
    "font": "PT Sans",
    "sites": [
     "crysta:data/dictionary/parameters.yaml",
+    "app/qml/Base/Gui/Components/ProjectDescriptionDialog.qml",
     "app/qml/Components/AppPreferencesDialog.qml",
     "app/qml/Components/AssistantComposer.qml",
     "app/qml/Components/AssistantMessage.qml",
@@ -303,7 +305,8 @@
     "app/qml/Components/PatternChart.qml",
     "app/qml/Components/ScanViewChart.qml",
     "app/qml/Pages/Structure/AtomSiteMomentGroup.qml",
-    "app/src/demo_driver.cpp"
+    "app/src/demo_driver.cpp",
+    "app/src/session.cpp"
    ],
    "drawn_by": "Noto Sans",
    "weight": 400
