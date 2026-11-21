@@ -4275,6 +4275,70 @@ QString shownNumberText(const QString& text) {
 }
 }  // namespace
 
+namespace {
+// A number's text for a cell `room` wide (ADR-0097 rule 4): the text when it fits, else the rule's ×10ⁿ form (owner
+// records 2026-11-09 and 2026-11-11, item 6) with as many significant digits as fit; when none does, the narrowest form
+// cut short with an ellipsis. A value with an s.u. keeps every digit and writes the s.u. at the same power; a text that
+// is not a number is returned as it is.
+QString fittedNumberText(const QString& text, double room, const QFontMetricsF& metrics) {
+    if (room <= 0 || metrics.horizontalAdvance(text) <= room) return text;
+    static const QString superscripts = QStringLiteral("⁰¹²³⁴⁵⁶⁷⁸⁹");
+    static const QRegularExpression pattern(QString::fromUtf8(
+        R"(^([-−+]?)([0-9]*\.?[0-9]+)(\([0-9]+\))?(?:×10(⁻?[⁰¹²³⁴⁵⁶⁷⁸⁹]+))?((?: ?%)|(?: \S.*))?$)"));
+    const QRegularExpressionMatch match = pattern.match(text);
+    if (!match.hasMatch()) return text;
+    const QString sign = match.captured(1) == QStringLiteral("+") ? QString() : match.captured(1);
+    const QString mantissa = match.captured(2), su = match.captured(3), suffix = match.captured(5);
+    int power = 0;
+    for (const QChar c : match.captured(4)) {
+        if (c == QChar(0x207B)) continue;
+        power = power * 10 + static_cast<int>(superscripts.indexOf(c));
+    }
+    if (match.captured(4).startsWith(QChar(0x207B))) power = -power;
+    // The digits and where the point falls among them; the first non-zero digit leads the new mantissa.
+    const qsizetype point = mantissa.contains(QLatin1Char('.')) ? mantissa.indexOf(QLatin1Char('.')) : mantissa.size();
+    const QString digits = QString(mantissa).remove(QLatin1Char('.'));
+    const qsizetype lead = digits.indexOf(QRegularExpression(QStringLiteral("[1-9]")));
+    if (lead < 0) return text;  // zero
+    const int exponent = power + static_cast<int>(point - lead - 1);
+    const auto written = [&](const QString& significant) {
+        QString out = sign + significant.left(1);
+        if (significant.size() > 1) out += QLatin1Char('.') + significant.mid(1);
+        return out + su + (exponent != 0 ? powerOfTen(exponent) : QString()) + suffix;
+    };
+    // When nothing fits, the narrowest form is shown, the text as it was included.
+    QString narrowest = text;
+    const auto consider = [&](const QString& candidate) {
+        if (metrics.horizontalAdvance(candidate) < metrics.horizontalAdvance(narrowest)) narrowest = candidate;
+        return metrics.horizontalAdvance(candidate) <= room;
+    };
+    if (!su.isEmpty()) {
+        const QString scientific = written(digits.mid(lead));
+        return consider(scientific) ? scientific : metrics.elidedText(narrowest, Qt::ElideRight, room);
+    }
+    // Without an s.u. the digits round to fewer until the text fits: a decimal while 0.001 <= |x| < 1000, as the rule
+    // writes numbers, else times a power of ten.
+    const double value = (QString(mantissa).prepend(QLatin1Char('0'))).toDouble() * std::pow(10.0, power);
+    for (qsizetype count = std::min<qsizetype>(digits.size() - lead, 15); count >= 1; --count) {
+        const QString rounded = QString::number(value, 'e', static_cast<int>(count - 1));
+        const qsizetype at = rounded.indexOf(QLatin1Char('e'));
+        const int roundedPower = rounded.mid(at + 1).toInt();
+        QString candidate;
+        if (roundedPower >= -3 && roundedPower <= 2) {
+            candidate = sign + QString::number(rounded.left(at).toDouble() * std::pow(10.0, roundedPower), 'f',
+                                               std::max(0, static_cast<int>(count) - 1 - roundedPower)) + suffix;
+        } else {
+            const QString significant = rounded.left(at).remove(QLatin1Char('.'));
+            candidate = sign + significant.left(1) + (significant.size() > 1 ? QLatin1Char('.') + significant.mid(1) : QString())
+                + powerOfTen(roundedPower) + suffix;
+        }
+        if (consider(candidate)) return candidate;
+    }
+    // Not even one digit fits: cut short with an ellipsis, never clipped silently (ADR-0051).
+    return metrics.elidedText(narrowest, Qt::ElideRight, room);
+}
+}  // namespace
+
 QJSValue ApplicationInfo::parameterBound(const QJSValue& value) const {
     const auto f = panelUsageEngine(this);
     if (value.strictlyEquals(QJSValue(qInf()))) return QJSValue(QStringLiteral("inf"));
@@ -4407,9 +4471,21 @@ void parameterTextRefit(const PanelUsageFrame& f, bool scalable, bool textCell =
     // The text never depends on the cell's width (owner record 2026-11-11, item 6). A number in a text cell shows by
     // the rule for numbers while it is not being edited, and as written while it is.
     QJSValue shown = panelUsageContextRead(f, textCell ? "written" : "valueText");
-    if (textCell && panelUsageTruth(panelUsageContextRead(f, "numeric")) &&
-        !panelUsageTruth(panelUsageContextRead(f, "activeFocus")))
+    const bool focused = panelUsageTruth(panelUsageContextRead(f, "activeFocus"));
+    const bool numeric = textCell ? panelUsageTruth(panelUsageContextRead(f, "numeric")) : scalable;
+    if (textCell && numeric && !focused)
         shown = panelUsageMemberCall(f, panelUsageContextRead(f, "NumberText"), "compact", {shown});
+    // A table cell (a parameter's or a numeric text cell) fits the number to its column once the table has sized it
+    // (ADR-0097 rule 4); a cell that makes its text smaller instead (fitDigits) and an edited one keep the text.
+    if (numeric && !focused && !(scalable && panelUsageTruth(panelUsageContextRead(f, "fitDigits")))) {
+        const double width = panelUsageContextRead(f, "width").toNumber();
+        const double implicit = panelUsageContextRead(f, "implicitWidth").toNumber();
+        const double room = panelUsageContextRead(f, "room").toNumber();
+        if (std::abs(width - implicit) >= 0.5 && room > 0) {
+            const QFontMetricsF metrics(panelUsageContextRead(f, "font").toVariant().value<QFont>());
+            shown = QJSValue(fittedNumberText(shown.toString(), room, metrics));
+        }
+    }
     if (current()) panelUsageContextWrite(f, "shownValue", shown);
 }
 } // namespace
@@ -8294,7 +8370,15 @@ QJSValue ApplicationInfo::numberPresentation(NumberOperation operation, const QJ
     case NumberOwnUncertainty: return shownSu(value, second);
     case NumberCompact:
     case NumberWrittenNarrow: return value.isString() ? QJSValue(shownNumberText(value.toString())) : value;
-    case NumberFitted: return value;
+    case NumberFitted: {
+        // value: the number's text; second: the room; third: the cell's FontMetrics; fourth: a shorter form to try first.
+        if (!value.isString() || !second.isNumber()) return value;
+        const QFontMetricsF metrics(third.property(QStringLiteral("font")).toVariant().value<QFont>());
+        const double room = second.toNumber();
+        if (room <= 0 || metrics.horizontalAdvance(value.toString()) <= room) return value;
+        if (fourth.isString() && metrics.horizontalAdvance(fourth.toString()) <= room) return fourth;
+        return QJSValue(fittedNumberText(value.toString(), room, metrics));
+    }
     case NumberAxisFormat:
     case NumberAxisTick:
     case NumberAxisStep: return QJSValue();  // answered above

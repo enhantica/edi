@@ -53,8 +53,9 @@ sidebar whose width is chosen automatically from a few fixed ratios, never dragg
    number (value, error, min, max: room for 10 characters in the table font), short text (units: 5), index (No.: 4),
    check box (one control width), and one *elastic* text column per table (name) that takes the remaining width.
    Text that does not fit is elided (at the end for names and labels, in the middle for paths and file names) and
-   shows its full text in a tooltip. A number that does not fit in its column's width in fixed notation is shown in
-   scientific notation with the precision that fits (`1.234e+05`); the full value is in the tooltip. No column
+   shows its full text in a tooltip. A number that does not fit in its column's width is written in the app's one
+   scientific form (`1.23×10⁵`, ADR-0051) with as many significant digits as fit; a value with an s.u. keeps all its
+   digits and writes the s.u. at the same power. The full value is in the tooltip. No column
    measures its rows, and widths do not change when values change. This amends ADR-0029's width rule ("row numbers
    fit the largest displayed number; labels and units fit their content, capped at a quarter of the table width;
    numeric columns share the remaining space"): the declared-once, shared header/cell widths and the alignments of

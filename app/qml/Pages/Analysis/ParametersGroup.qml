@@ -585,12 +585,15 @@ SideBarGroup {
                         font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.85
                         text: !row.parameter || row.parameter.changeDirection === 0 ? "" : row.parameter.changeDirection > 0 ? "arrow-up" : "arrow-down"
                     }
-                    EaElements.Label {
+                    // The room left of the arrow, so a change too long for the column is fitted, in full on hover.
+                    NumberLabel {
                         id: changePercent
                         anchors.right: changeArrow.left
                         anchors.rightMargin: parent.gap
                         anchors.verticalCenter: parent.verticalCenter
-                        text: row.parameter ? row.parameter.changeText : ""
+                        width: Math.max(0, parent.width - parent.gap - changeArrow.width)
+                        horizontalAlignment: Text.AlignRight
+                        number: row.parameter ? row.parameter.changeText : ""
                     }
                 }
                 NumberLabel {
