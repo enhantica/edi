@@ -898,6 +898,9 @@ Popup {
                     defaultInfoText: panel.assistant.sessionsLoading ? qsTr("Loading sessions…") : qsTr("No app-created sessions")
                     columns: [numberColumnWidth, -1, AppSizes.unit * 14, AppSizes.iconColumnWidth]
                     spreadColumns: [1]
+                    // Widths from column types, not rows (ADR-0097 rule 4): the session's title, which
+                    // the spread widens.
+                    columnTypes: ["", "text"]
                     header: EaComponents.ListViewHeader {
                         EaComponents.ListViewLabel {}
                         EaComponents.ListViewLabel {

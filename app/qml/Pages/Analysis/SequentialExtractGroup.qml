@@ -25,6 +25,8 @@ DataTable {
     sourceModel: analysis ? analysis.sequentialExtract : null
 
     columns: [numberColumnWidth, -1, -1, -1, AppSizes.iconOnlyColumnWidth]
+    // Widths from column types, not rows (ADR-0097 rule 4): three texts.
+    columnTypes: ["", "text", "text", "text"]
 
     header: EaComponents.ListViewHeader {
         EaComponents.ListViewLabel {

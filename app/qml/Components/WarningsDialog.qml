@@ -69,6 +69,8 @@ AppDialog {
 
             // The row number first, as in every table: the current row is marked by it (the owner, 2026-10-22).
             columns: [numberColumnWidth, AppSizes.iconOnlyColumnWidth, -1, AppSizes.iconColumnWidth]
+            // Widths from column types, not rows (ADR-0097 rule 4): the warning's text.
+            columnTypes: ["", "", "text"]
 
             header: EaComponents.ListViewHeader {
                 visible: false

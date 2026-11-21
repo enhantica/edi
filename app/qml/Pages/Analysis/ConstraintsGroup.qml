@@ -29,6 +29,8 @@ Column {
         sourceModel: group.constraints
 
         columns: [numberColumnWidth, -1, -1, AppSizes.iconColumnWidth, AppSizes.iconColumnWidth]
+        // Widths from column types, not rows (ADR-0097 rule 4): the constrained parameter, then its expression.
+        columnTypes: ["", "text", "text"]
 
         header: EaComponents.ListViewHeader {
             EaComponents.ListViewLabel {

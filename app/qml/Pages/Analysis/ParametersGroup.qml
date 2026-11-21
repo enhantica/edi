@@ -330,6 +330,9 @@ SideBarGroup {
             }
             marksCurrentRow: true
             currentRow: group.selectedRow
+            // Widths from column types, not rows (ADR-0097 rule 4): the name, start, value, units, s.u., change, min and
+            // max. A fitted run changes values, never a column, so a fit measures no row.
+            columnTypes: ["", "text", "number", "number", "short", "number", "number", "number", "number"]
             onRowActivated: row => group.selected = parameterFilter.parameterAt(row)
 
             // A layout of its own (the owner, 2026-10-27): the name a little wider than its longest shown name, icons

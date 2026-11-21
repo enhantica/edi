@@ -30,6 +30,9 @@ DataTable {
     sourceModel: analysis ? analysis.fitStart : null
 
     columns: [numberColumnWidth, -1, -1, -1]
+    // Widths from column types, not rows (ADR-0097 rule 4): the parameter, then its start and its value.
+    columnTypes: ["", "text"]
+    defaultColumnType: "number"
 
     header: EaComponents.ListViewHeader {
         EaComponents.ListViewLabel {

@@ -71,6 +71,8 @@ SideBarGroup {
             // The path takes all the width between the number and the status, so it is cut only when it does not fit
             // the row, whatever its first measure (the owner, 2026-11-02).
             spreadColumns: [1]
+            // Widths from column types, not rows (ADR-0097 rule 4): the path, which the spread widens.
+            columnTypes: ["", "text"]
             header: EaComponents.ListViewHeader {
                 EaComponents.ListViewLabel {
                     elide: Text.ElideRight

@@ -44,7 +44,10 @@ SideBarGroup {
             readonly property string atomBased: qsTr("Atom-based")
             // After Type, Crystal or Magnetic for an atom-based structure (edi ADR-0078; the owner, 2026-11-18).
             readonly property var kinds: [qsTr("Crystal"), qsTr("Magnetic")]
-            columns: [numberColumnWidth, AppSizes.iconOnlyColumnWidth, textColumnWidth("name", qsTr("Name")), -1, -1, AppSizes.iconColumnWidth]
+            columns: [numberColumnWidth, AppSizes.iconOnlyColumnWidth, -1, -1, -1, AppSizes.iconColumnWidth]
+            // Widths from column types, not rows (ADR-0097 rule 4): the name, the type and the
+            // kind, all texts.
+            columnTypes: ["", "", "text", "text", "text"]
 
             header: EaComponents.ListViewHeader {
                 EaComponents.ListViewLabel {
