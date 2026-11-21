@@ -37,10 +37,10 @@ one of them lost parameter metadata by replacing whole parameters during convers
    The importer's ADR lists all refused, dropped or approximated items (point 6).
 5. **Round-trip check.** `check_import_roundtrip` saves an imported project, opens it again and compares the value,
    the free flag and the metadata of every parameter. Corpus tools and tests use it. Opening a file does not run it.
-6. **Convert to what crysta already has (owner ruling, 2026-11-21).** An importer maps the other program's model
-   onto crysta's existing models. crysta has no program-specific options and no maths that only reproduces one
-   program. Any difference or missing feature is listed in the importer's ADR under "What EasyDiffraction does not
-   have". If it is needed later, it is added to crysta as a general feature that every project can use.
+6. **Convert to what crysta already has.** An importer maps the other program's model onto crysta's existing
+   models. crysta has no program-specific options and no maths that only reproduces one program. Any difference or
+   missing feature is listed in the importer's ADR under "What EasyDiffraction does not have". If it is needed
+   later, it is added to crysta as a general feature that every project can use.
 
 ## Consequences
 
