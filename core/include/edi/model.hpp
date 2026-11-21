@@ -2868,6 +2868,10 @@ struct RowTraits<MagneticFormFactor> {
 
 // A structure's magnetic description besides its moments, each category as written: crysta reads,
 // checks and writes it.
+// One atom type's <jn> coefficients as crysta holds them, and their item names in crysta's order: io.cpp reads them
+// through these names, never crysta's own (ADR-0003).
+using MagneticRadialCoefficients = crysta::MagneticRadialCoefficients;
+inline constexpr const auto& kMagneticRadialItems = crysta::kMagneticRadialItems;
 struct MagneticDescription {
     crysta::MagneticGroupName group;
     std::vector<std::pair<std::string, crysta::MagneticTransform>> transforms;
@@ -2879,7 +2883,7 @@ struct MagneticDescription {
     std::vector<crysta::KeptDeclaration> kept_iso;
     // The <jn> coefficients a file gives per atom type (`_atom_type_scat`, edi ADR-0078), held as written; crysta
     // takes a type's whole <j0> in place of its ion's table.
-    std::vector<std::pair<std::string, crysta::MagneticRadialCoefficients>> radial_coefficients;
+    std::vector<std::pair<std::string, MagneticRadialCoefficients>> radial_coefficients;
     // False for a magnetic structure read without `_space_group`: its symmetry comes from its
     // operators (held under P 1), and a save writes no `_space_group`, as crysta decides.
     bool space_group_declared = true;
