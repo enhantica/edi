@@ -136,13 +136,19 @@ def test_imported_asymmetry_maps_to_native_profiles_and_reports_the_gap(
     destination = tmp_path / 'native'
     imported.save_as(destination)
     saved = '\n'.join(path.read_text() for path in (destination / 'experiments').glob('*.edi'))
-    for retired in ('_peak.fullprof_fcj_limit', '_peak.beba_evaluation', '_peak.fullprof_cw_irf'):
+    for retired in ('_peak.fullprof_', '_peak.beba_evaluation'):
         assert retired not in saved, (
             'A mapped project saves native profiles without retired program-specific maths'
         )
     reopened = Project.load(destination)
     assert type(reopened.experiments[0].peak).__name__ == native_class, (
         'Saving and reopening preserves the mapped native asymmetry profile'
+    )
+    reopened_widths = [
+        getattr(reopened.experiments[0].peak, 'broad_gauss_' + field).value for field in 'uvw'
+    ]
+    assert reopened_widths == pytest.approx(expected), (
+        'Saving and reopening preserves the native Caglioti widths from the FullProf control'
     )
 
 
