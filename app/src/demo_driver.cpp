@@ -1047,6 +1047,15 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
             named("page-" + pages[i]);
         }
     }
+    // `e58-fit`: numbers fitted to their typed columns, with the project EDI_DEMO_FIT_PROJECT open (long written tokens):
+    // the Analysis and Structure tables at the smallest window, then a value cell edited across a resize and left.
+    if (only.startsWith(QLatin1String("e58-fit"))) {
+        const QString open = "open-project:" + qEnvironmentVariable("EDI_DEMO_FIT_PROJECT");
+        steps_.push_back({"e58-fit-1-analysis", {"resize:1024x640", open, "appBar.tab.analysis"}});
+        steps_.push_back({"e58-fit-2-structure", {"appBar.tab.structure"}});
+        steps_.push_back({"e58-fit-3-edit-resized", {"appBar.tab.analysis", "parameters.value.0", "resize:1600x900", "resize:1024x640"}});
+        steps_.push_back({"e58-fit-4-left", {"key:Tab"}});
+    }
     // `e58-tabs`: every page, then each of its main and sidebar tabs, as EDI_UI_TAB_INVENTORY declares them (the pages in
     // the app bar's order, each page's tabs in declaration order), with the scan EDI_DEMO_SCAN_PROJECT open.
     if (only.startsWith(QLatin1String("e58-tabs"))) {
