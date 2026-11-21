@@ -277,15 +277,9 @@ class PatternChartController : public QObject {
     QList<QPointF> traceMeasuredLine() const;
     QList<QPointF> traceMeasuredMarks() const;
     QList<std::array<double, 3>> traceMeasuredBand() const;
-    // Every other data channel as the scene draws it, read from the scene objects: the calculated (0), background (1)
-    // and residual (2) lines, a pane's band edges (0 measured, 1 residual), a structure's component outline, how the
-    // measured data are drawn, and whether a legend entry is hidden.
-    QList<QPointF> traceLine(int channel) const;
     QList<std::array<double, 3>> traceBand(int pane) const;
-    QList<QPointF> traceComponent(int index) const;
-    int traceComponents() const { return static_cast<int>(structure_series_.size()); }
-    QString traceDrawing() const { return measured_drawing_; }
-    bool traceHidden(const std::string& id) const { return hiddenId(id); }
+    // Whether every series the chart draws holds what the given presentation draws (refresh's own fills, compared).
+    bool traceMatches(const edi::PatternPresentation& expected) const;
     // What the chart presents its data with, so the trace can present the selected data itself and compare.
     edi::PatternView traceView() const { return view(); }
     edi::PatternAxis traceAxis() const { return axis_; }
@@ -512,6 +506,17 @@ class PatternChartController : public QObject {
         QPointer<QXYSeries> upper, lower, top, bottom;
     };
     std::array<BandSeries, 3> band_series_;  // the measured band, the residual band, the calculated bars
+    // What one drawing of a presentation puts in each series (fillsOf).
+    struct Fills {
+        QList<QPair<QPointer<QXYSeries>, QList<QPointF>>> series;
+        bool marks_set = false;
+        QList<QPointF> marks;
+        QList<double> marks_low, marks_high;
+        bool component_bars = false;
+        bool missing = false;  // a structure curve whose series the chart has not handed over yet
+        double bar_width = std::numeric_limits<double>::quiet_NaN();
+    };
+    Fills fillsOf(const edi::PatternPresentation& shown, bool held, bool clear_fills) const;
     QString measured_drawing_ = QStringLiteral("band");  // how the measured data are drawn (measuredStyle)
     bool structure_curves_ = false, has_calculated_ = false;
     QList<QColor> structure_curve_colors_, structure_curve_fills_;

@@ -48,6 +48,8 @@ class MeasuredLayer : public QQuickItem {
     // y + su; a point with no finite s.u. has no bar. The report preview's evolution chart draws the model's points so.
     Q_INVOKABLE void setPoints(const QList<double>& x, const QList<double>& y, const QList<double>& su);
     const QList<QPointF>& points() const { return points_; }
+    const QList<double>& lowEnds() const { return low_; }
+    const QList<double>& highEnds() const { return high_; }
 
    signals:
     void colorChanged();
