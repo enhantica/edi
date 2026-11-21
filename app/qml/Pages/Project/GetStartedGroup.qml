@@ -89,7 +89,7 @@ SideBarGroup {
                     rightPadding: leftPadding
                     fontIcon: "folder-open"
                     text: qsTr("Open project folder…")
-                    hint: "project.edi"
+                    hint: qsTr("with project.edi")
                     toolTip: qsTr("Open an EasyDiffraction project from its folder")
                     onTriggered: group.openProject(false)
                 }
@@ -212,7 +212,7 @@ SideBarGroup {
                     enabled: saveMenu.diskWritable
                     fontIcon: "folder-open"
                     text: qsTr("As project folder…")
-                    hint: "project.edi"
+                    hint: qsTr("with project.edi")
                     toolTip: saveMenu.diskWritable ? qsTr("Save the project as a folder holding project.edi") : qsTr("This browser cannot write a folder on your disk; Chrome and Edge can")
                     onTriggered: AppState.saveAsFormatRequested(false, saveMenu.copy)
                 }
