@@ -80,9 +80,9 @@ def test_assistant_create_from_untitled(tmp_path, shown):
         ), 'The ordinary assistant admits the deterministic create request'
         question = native.control_expression('unsavedChanges')
         actor.until(lambda _row: native.qml(actor, question + '.opened'))
-        assert (
-            native.qml(actor, 'Session.project.currentStructure.cell.lengthA.value') == 7.125
-        ), 'Assistant Create protects the existing scientific edit until the user answers'
+        assert native.qml(actor, 'Session.project.currentStructure.cell.lengthA.value') == 7.125, (
+            'Assistant Create protects the existing scientific edit until the user answers'
+        )
         actor.command('click', name='unsavedChanges.discard')
         native._session_completed(actor, 1)
         result = replies(actor).get(call_id)
