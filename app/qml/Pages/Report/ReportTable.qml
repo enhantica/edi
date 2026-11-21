@@ -75,7 +75,9 @@ Flickable {
         font.pixelSize: table.em
     }
 
-    // One cell: a number on its decimal point, any other text from the left, each piece a ListView label.
+    // One cell: a number on its decimal point, any other text from the left, each piece a ListView label. A cell makes
+    // only the form it shows: making both, one hidden, doubled the items of every table as the Report page first
+    // showed.
     component Cell: Item {
         id: cell
 
@@ -86,43 +88,56 @@ Flickable {
         width: table.layout[column] ? table.layout[column].width : 0
         height: table.rowHeight
 
-        EaComponents.ListViewLabel {
-            visible: !cell.parts
-            width: cell.width
-            leftPadding: table.padding
-            rightPadding: table.padding
-            horizontalAlignment: Text.AlignLeft
-            elide: Text.ElideRight
-            // An agreement factor with its subscript (FactorText).
-            textFormat: FactorText.has(cell.text) ? Text.RichText : Text.PlainText
-            text: FactorText.has(cell.text) ? FactorText.rich(cell.text) : cell.text
+        // Unsized, so each form keeps its own size as it had when both were made.
+        Loader {
+            sourceComponent: cell.parts ? numberForm : textForm
         }
-        Row {
-            visible: cell.parts !== null
-            x: cell.width - table.padding - width
-            height: cell.height
+        Component {
+            id: textForm
             EaComponents.ListViewLabel {
-                width: table.layout[cell.column] ? table.layout[cell.column].left : 0
-                horizontalAlignment: Text.AlignRight
-                elide: Text.ElideRight
-                textFormat: Text.PlainText
-                text: cell.parts ? cell.parts.left : ""
-            }
-            // A number without a point gives the point's place to what follows its digits (an s.u. or units), so
-            // `611(16)` stays together and its digits still end where the column's points are.
-            EaComponents.ListViewLabel {
-                visible: cell.parts !== null && cell.parts.dot
-                width: table.dotWidth
+                readonly property bool factor: FactorText.has(cell.text)
+                width: cell.width
+                leftPadding: table.padding
+                rightPadding: table.padding
                 horizontalAlignment: Text.AlignLeft
                 elide: Text.ElideRight
-                text: "."
+                // An agreement factor with its subscript (FactorText).
+                textFormat: factor ? Text.RichText : Text.PlainText
+                text: factor ? FactorText.rich(cell.text) : cell.text
             }
-            EaComponents.ListViewLabel {
-                width: (table.layout[cell.column] ? table.layout[cell.column].right : 0) + (cell.parts && cell.parts.dot ? 0 : table.dotWidth)
-                horizontalAlignment: Text.AlignLeft
-                elide: Text.ElideRight
-                textFormat: Text.PlainText
-                text: cell.parts ? cell.parts.right : ""
+        }
+        Component {
+            id: numberForm
+            Item {
+                width: cell.width
+                height: cell.height
+                Row {
+                    x: cell.width - table.padding - width
+                    height: cell.height
+                    EaComponents.ListViewLabel {
+                        width: table.layout[cell.column] ? table.layout[cell.column].left : 0
+                        horizontalAlignment: Text.AlignRight
+                        elide: Text.ElideRight
+                        textFormat: Text.PlainText
+                        text: cell.parts ? cell.parts.left : ""
+                    }
+                    // A number without a point gives the point's place to what follows its digits (an s.u. or units),
+                    // so `611(16)` stays together and its digits still end where the column's points are.
+                    EaComponents.ListViewLabel {
+                        visible: cell.parts !== null && cell.parts.dot
+                        width: table.dotWidth
+                        horizontalAlignment: Text.AlignLeft
+                        elide: Text.ElideRight
+                        text: "."
+                    }
+                    EaComponents.ListViewLabel {
+                        width: (table.layout[cell.column] ? table.layout[cell.column].right : 0) + (cell.parts && cell.parts.dot ? 0 : table.dotWidth)
+                        horizontalAlignment: Text.AlignLeft
+                        elide: Text.ElideRight
+                        textFormat: Text.PlainText
+                        text: cell.parts ? cell.parts.right : ""
+                    }
+                }
             }
         }
     }
