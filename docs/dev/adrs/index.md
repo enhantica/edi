@@ -121,6 +121,7 @@ in the same change — see `AGENTS.md` §ADRs.
 | [0094](0094-common-phase-scale-factor.md) | The common phase-scale factor | Accepted | ✅ | High | data loaded, a phase added, removed, switched or replaced, or Estimate multiplies the experiment's enabled phase scales by crysta's factor (a powder's peak height above its baseline, a single crystal's least squares), starting one background point at the baseline when there is none, in the same undo step; never on opening a project |
 | [0095](0095-single-crystal-reflection-admission.md) | Which single-crystal reflections a fit uses | Accepted | 🟡 | High | `_reflns.merge`, `_reflns.absences`, a region axis and `_excluded_reflection`, read and edited by crysta's rules; the Experiment page shows the selectors, counts, Rint, R-sigma and each reflection's status from crysta's admission |
 | [0096](0096-fullprof-project-import.md) | Open and export FullProf projects | Proposed | 🟡 | High | the core imports labelled PCR and measured companions through Open Project and writes fresh FullProf bundles for fixed-input verification |
+| [0097](0097-gsas-ii-project-import.md) | Import GSAS-II projects | Proposed | 🟡 | High | The core reads a bounded GPX data grammar or a versioned text bundle, maps supported powder and paired magnetic models once, and saves through the native Edi writer. |
 
 New cross-cutting decisions that should also bind crysta are authored as **(shared)** and, once the
 Copier agent-OS template exists (ADR-0004), live in its shared-ADR range so `copier update`

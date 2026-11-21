@@ -856,3 +856,19 @@ The shared-site equality is established before its displacement trial by default
 while explicit user scope, calibration, symmetry and justified distinct models
 remain binding. This gives the existing shared-site guidance an explicit point
 in the workflow instead of waiting for an anticorrelated fit to reveal it.
+
+## Independent GSAS-II project reconstruction
+
+The bundled GSAS intake skill builds on FullProf intake's evidence-first workflow.
+Its scoped constant-wavelength neutron recipe teaches reconstruction through ordinary
+Edi actions or public APIs and the reverse assembly in GSAS-II. It records acquisition
+evidence separately from the parameter mapping, so a phase CIF and readable pattern
+alone cannot certify a complete project. The prescribed comparison uses independently
+calculated profiles on the same measured grid.
+
+The same skill serves both directions. The reverse workflow starts with a saved Edi
+project and does not depend on a selected external file, so the catalog's selected-file
+prerequisite becomes conditional guidance for the forward workflow. Existing tool
+admission still scopes every read and edit. GSAS-II API examples apply only to an
+authorized external runtime. The bundled skill supplies guidance and registers no
+new action or executable.
