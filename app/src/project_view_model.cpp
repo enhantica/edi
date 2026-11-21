@@ -508,13 +508,20 @@ ProjectViewModel::ProjectViewModel(edi::Project project, QObject* parent, const 
         // While a fit runs, a followed scan or series changes the dataset every run, and each write of the settings file
         // holds Qt's settings lock while it syncs to disk, which stalled the GUI thread's own settings reads (the
         // assistant reads them once a second during a fit). The write waits for the end of the fit; the selection itself
-        // was recorded when it changed (publishCurrent), so a project opened again meanwhile reads the newest one, and
+        // was recorded when it changed (publishCurrent and the dataset signal below), so a project opened again meanwhile reads the newest one, and
         // closing the project writes it.
         if (fit_ != nullptr && fit_->running()) {
             selection_store_timer_.start();
             return;
         }
         storeSelection();
+    });
+    // A scan's dataset also changes outside publishCurrent (a followed file, a dataset view, a template row), each
+    // announcing it by this signal: every change is recorded at once and its write waits for the timer.
+    connect(this, &ProjectViewModel::currentExperimentIndexChanged, this, [this] {
+        if (retired_ || !selection_restored_) return;
+        noteSelection();
+        selection_store_timer_.start();
     });
     selection_restored_ = true;
     storeSelection();
