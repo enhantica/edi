@@ -326,18 +326,30 @@ std::uint64_t AssistantWidgetInput::start(Request request) {
     if ((request.kind == Kind::Choose || request.kind == Kind::SearchChoice) && (request.option < 0 || request.option >= request.target->property("count").toInt() ||
         (request.kind == Kind::SearchChoice && (!request.target->property("searchable").toBool() || request.value.isEmpty() || request.value.size() > static_cast<qsizetype>(edi::assistant::Limits::id_bytes)))))
         throw std::runtime_error("The actual ComboBox option is unavailable");
-    QString optionText;
-    if((request.kind==Kind::Choose || request.kind==Kind::SearchChoice) &&
-        !QMetaObject::invokeMethod(request.target,"textAt",Qt::DirectConnection,Q_RETURN_ARG(QString,optionText),Q_ARG(int,request.option)))
-        throw ControlInputRefusal(ControlCause::Unavailable,"The original offered choice text is unavailable");
-    if(!self || serial_!=originalSerial || request_)return 0;
-    // textAt ran the control's own code: the control it asked must still be there, and still current, before its names are read.
-    if(!request.target || !request.current())throw ControlInputRefusal(ControlCause::Superseded,"The original offered choice changed");
-    const auto searchNames=request.target->property("searchNames");
-    const auto names=searchNames.isValid()?searchNames:request.target->property("names");
-    const auto searchText=names.isValid()?names.toStringList().value(request.option):optionText;
-    if(request.kind==Kind::SearchChoice && searchText!=request.value)
-        throw ControlInputRefusal(ControlCause::Unavailable,"The exact search text does not match the original offered option");
+    QString optionText;  // what the choice shows; its canonical search name is checked against request.value
+    if(request.kind==Kind::Choose || request.kind==Kind::SearchChoice) {
+        // textAt, current() and each property read can run the control's own code: after each, this helper, its serial
+        // and the target must still be the ones the request began with.
+        const auto alive=[&]{ return self && serial_==originalSerial && !request_; };
+        const auto still=[&]{ if(!request.target)throw ControlInputRefusal(ControlCause::Superseded,"The original offered choice changed"); };
+        if(!QMetaObject::invokeMethod(request.target,"textAt",Qt::DirectConnection,Q_RETURN_ARG(QString,optionText),Q_ARG(int,request.option)))
+            throw ControlInputRefusal(ControlCause::Unavailable,"The original offered choice text is unavailable");
+        if(!alive())return 0;
+        still();
+        const bool current=request.current();
+        if(!alive())return 0;
+        if(!current)throw ControlInputRefusal(ControlCause::Superseded,"The original offered choice changed");
+        still();
+        const QVariant searchNames=request.target->property("searchNames");
+        if(!alive())return 0;
+        still();
+        const QVariant names=searchNames.isValid()?searchNames:request.target->property("names");
+        if(!alive())return 0;
+        still();
+        const QString searchText=names.isValid()?names.toStringList().value(request.option):optionText;
+        if(request.kind==Kind::SearchChoice && searchText!=request.value)
+            throw ControlInputRefusal(ControlCause::Unavailable,"The exact search text does not match the original offered option");
+    }
     if(!request.current())throw ControlInputRefusal(ControlCause::Superseded,"The original offered choice changed");
     if(!self || serial_!=originalSerial || request_)return 0;
     request.failure=ControlCause::None;

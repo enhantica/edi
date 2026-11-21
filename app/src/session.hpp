@@ -385,6 +385,12 @@ class Session : public QObject {
     // edi ADR-0069: a save is an operation. Each public save route makes one at its start: it belongs to the project and
     // replacement it was made for, and carries the data-on-save decision and the plan it was made from. Every route the
     // save goes through takes it explicitly; a nested or later save makes its own and never takes another's.
+    // The web app's place of the open project: its key in the browser's records, its kind and its name.
+    struct WebPlace {
+        QString key;
+        QString kind;
+        QString name;
+    };
     struct SaveOperation {
         quint64 id = 0;
         QPointer<ProjectViewModel> project;
@@ -404,6 +410,9 @@ class Session : public QObject {
         // The project held from the plan until every copy of the operation that can still write is gone. A question
         // or a browser picker waiting on the user drops it; the answer takes it again and the save checks its plan.
         std::shared_ptr<ProjectViewModel::OperationHold> hold;
+        // A Create naming untitled web work: the browser place this save writes, which the project takes only once the
+        // write has worked and the snapshot is adopted (adoptUntitled).
+        std::optional<WebPlace> place;
     };
     using SaveContinuation = std::function<void(const SaveOperation&)>;
     // After a Save as: the project is no longer an example's, an archive's or a read-only tree's temporary copy.
@@ -528,12 +537,6 @@ class Session : public QObject {
     // Copies every file under `source` to `target`, writable by the owner; those under `linked` are hard links.
     bool copyTree(const QString& source, const QString& target, const QString& linked);
 
-    // The web app's place of the open project: its key in the browser's records, its kind and its name.
-    struct WebPlace {
-        QString key;
-        QString kind;
-        QString name;
-    };
     WebPlace web_place_;
     // The project a tutorial set aside, with everything the session knew of it, its browser copy and place included, so
     // it comes back exactly as it was (edi ADR-0064).
@@ -601,8 +604,8 @@ class Session : public QObject {
     QTimer* keep_timer_ = nullptr;
     bool untitled_ = false;
     // The untitled place a Create moved to the browser for its first save: a save that does not complete puts it back.
-    std::optional<WebPlace> untitled_revert_;
-    void revertUntitledAdoption();
+    // The web save of untitled work into the place a Create names (adoptUntitled); its operation carries the place.
+    bool saveNaming(const WebPlace& place);
     void setUntitled(bool untitled);
     // The memory folder the browser copied the open project into, released with it.
     QString web_copy_;
