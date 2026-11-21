@@ -61,6 +61,8 @@
 #include <QPointer>
 #include <QQmlEngine>
 #include <QQmlListReference>
+#include <QFont>
+#include <QFontMetricsF>
 #include <QRegularExpression>
 #include <QScreen>
 #include <QStandardPaths>
@@ -8817,56 +8819,73 @@ QJSValue ApplicationInfo::reportTableDotWidth() const {
     const auto f = panelUsageEngine(this); const auto font = assistantContextField(f, "metrics", "font"); Q_UNUSED(font)
     return numberMath(f, "ceil", [&] { return QJSValueList{projectInvoke(f, "metrics", "advanceWidth", {QJSValue(QStringLiteral("."))})}; });
 }
+namespace {
+// A report cell's number parts: before its decimal point, the point, and after it (an s.u. bracket, an exponent and
+// units after a space); none for a text that is not a number. Native, as each cell of every report table asks once.
+struct ReportNumberParts {
+    QString left;
+    bool dot = false;
+    QString right;
+};
+std::optional<ReportNumberParts> reportNumberParts(const QString& text) {
+    static const QRegularExpression expression(QString::fromUtf8(
+        R"(^([-−+]?[0-9]*)(\.?)([0-9]*(?:\([0-9]+\))?(?:[eE][-+]?[0-9]+)?(?: [^ 0-9].*)?)$)"));
+    static const QRegularExpression digit(QStringLiteral("[0-9]"));
+    const QRegularExpressionMatch match = expression.match(text);
+    if (!match.hasMatch()) return std::nullopt;
+    const QString left = match.captured(1), right = match.captured(3);
+    if (!(left + right).contains(digit)) return std::nullopt;
+    return ReportNumberParts{left, !match.captured(2).isEmpty(), right};
+}
+}  // namespace
 QJSValue ApplicationInfo::reportTableSplit(const QJSValue& text) const {
     const auto f = panelUsageEngine(this);
-    const auto expression = panelRegex(f, QString::fromUtf8(R"(^([-−+]?[0-9]*)(\.?)([0-9]*(?:\([0-9]+\))?(?:[eE][-+]?[0-9]+)?(?: [^ 0-9].*)?)$)"));
-    const auto match = panelUsageMemberCall(f, expression, "exec", {text});
-    if (!panelUsageTruth(match)) return consentNull();
-    const auto digits = panelRegex(f, QStringLiteral("[0-9]")); const auto first = textIndex(f, match, QJSValue(1)), last = textIndex(f, match, QJSValue(3));
-    if (!panelUsageTruth(panelUsageMemberCall(f, digits, "test", {panelUsageAdd(f, first, last)}))) return consentNull();
-    auto result = panelUsageLiteral(f); panelUsageWrite(f, result.value, "left", textIndex(f, match, QJSValue(1)));
-    panelUsageWrite(f, result.value, "dot", QJSValue(!textIndex(f, match, QJSValue(2)).strictlyEquals(QJSValue(QStringLiteral("")))));
-    panelUsageWrite(f, result.value, "right", textIndex(f, match, QJSValue(3))); return panelUsageComplete(f, result);
+    const auto parts = reportNumberParts(text.toString());
+    if (!parts) return consentNull();
+    auto result = panelUsageLiteral(f); panelUsageWrite(f, result.value, "left", QJSValue(parts->left));
+    panelUsageWrite(f, result.value, "dot", QJSValue(parts->dot));
+    panelUsageWrite(f, result.value, "right", QJSValue(parts->right)); return panelUsageComplete(f, result);
 }
+// Each column measured with the cells' own font (the table's FontMetrics), natively: through the JS engine each sampled
+// cell cost a regular expression and three width calls, which made the Report page's first show slow.
 QJSValue ApplicationInfo::reportTableLayout() const {
-    const auto f = panelUsageEngine(this); const auto font = assistantContextField(f, "metrics", "font"); Q_UNUSED(font)
+    const auto f = panelUsageEngine(this);
+    const QFontMetricsF metrics(assistantContextField(f, "metrics", "font").toVariant().value<QFont>());
     const auto out = controlEmptyArray(f);
-    for (int column = 0; panelUsageReady(f) && assistantRelation(f, QJSValue(double(column)), panelUsageContextRead(f, "columnCount"), 0); ++column) {
-        double numbers = 0, others = 0; QJSValue left(0), right(0), plain(0);
-        const auto measure = [&](const QJSValue& row) {
-            const auto text = tableNullish(textIndex(f, row, QJSValue(double(column))), QJSValue(QStringLiteral("")));
-            if (text.strictlyEquals(QJSValue(QStringLiteral("")))) return panelUsageReady(f);
-            const auto parts = projectInvoke(f, "table", "split", {text});
-            if (panelUsageTruth(parts)) {
+    const bool keyValue = panelUsageTruth(panelUsageContextRead(f, "keyValue"));
+    const auto rows = panelUsageContextRead(f, "layoutRows");
+    const auto columns = panelUsageContextRead(f, "columns");
+    const int total = panelUsageRead(f, rows, "length").toInt();
+    const int count = panelUsageContextRead(f, "columnCount").toInt();
+    const double dotWidth = panelUsageContextRead(f, "dotWidth").toNumber(), padding = panelUsageContextRead(f, "padding").toNumber();
+    // A long table (an experiment's data points) is measured on 200 rows spread over it, not on every row.
+    constexpr int kSample = 200;
+    std::vector<QStringList> sampled;
+    for (int k = 0; panelUsageReady(f) && k < std::min(total, kSample); ++k) {
+        const int index = total > kSample ? static_cast<int>(static_cast<long long>(k) * total / kSample) : k;
+        sampled.push_back(textIndex(f, rows, QJSValue(index)).toVariant().toStringList());
+    }
+    for (int column = 0; panelUsageReady(f) && column < count; ++column) {
+        int numbers = 0, others = 0; double left = 0, right = 0, plain = 0;
+        for (const QStringList& row : sampled) {
+            const QString text = column < row.size() ? row[column] : QString();
+            if (text.isEmpty()) continue;
+            if (const auto parts = reportNumberParts(text)) {
                 ++numbers;
-                left = numberMath(f, "max", [&] { return QJSValueList{left, projectInvoke(f, "metrics", "advanceWidth", {panelUsageRead(f, parts, "left")})}; });
-                right = numberMath(f, "max", [&] { return QJSValueList{right, projectInvoke(f, "metrics", "advanceWidth", {panelUsageRead(f, parts, "right")})}; });
+                left = std::max(left, metrics.horizontalAdvance(parts->left));
+                right = std::max(right, metrics.horizontalAdvance(parts->right));
             } else ++others;
-            plain = numberMath(f, "max", [&] { return QJSValueList{plain, projectInvoke(f, "metrics", "advanceWidth", {text})}; }); return panelUsageReady(f);
-        };
-        // A long table (an experiment's data points) is measured on 200 rows spread over it, not on every row.
-        constexpr int kSample = 200;
-        const auto rows = panelUsageContextRead(f, "layoutRows");
-        const int total = panelUsageRead(f, rows, "length").toInt();
-        for (int k = 0; panelUsageReady(f) && k < std::min(total, kSample); ++k) {
-            const int index = total > kSample ? static_cast<int>(static_cast<long long>(k) * total / kSample) : k;
-            if (!measure(textIndex(f, rows, QJSValue(index)))) break;
+            plain = std::max(plain, metrics.horizontalAdvance(text));
         }
-        const bool numeric = numbers > 0 && others == 0; QJSValue header(0);
-        if (!panelUsageTruth(panelUsageContextRead(f, "keyValue"))) header = projectInvoke(f, "metrics", "advanceWidth", {textIndex(f, panelUsageContextRead(f, "columns"), QJSValue(double(column)))});
-        QJSValue content;
-        if (numeric) {
-            const auto leading = numberMath(f, "ceil", [&] { return QJSValueList{left}; });
-            const auto prefix = panelUsageAdd(f, leading, panelUsageContextRead(f, "dotWidth"));
-            content = panelUsageAdd(f, prefix, numberMath(f, "ceil", [&] { return QJSValueList{right}; }));
-        } else content = numberMath(f, "ceil", [&] { return QJSValueList{plain}; });
+        const bool numeric = numbers > 0 && others == 0;
+        const double header = keyValue ? 0.0 : metrics.horizontalAdvance(textIndex(f, columns, QJSValue(column)).toString());
+        const double content = numeric ? std::ceil(left) + dotWidth + std::ceil(right) : std::ceil(plain);
+        const double width = std::max(content, std::ceil(header)) + 2 * padding
+            + (keyValue && column == 0 ? panelUsageContextRead(f, "keyGap").toNumber() : 0.0);
         auto entry = panelUsageLiteral(f); panelUsageWrite(f, entry.value, "numeric", QJSValue(numeric));
-        panelUsageWrite(f, entry.value, "left", numberMath(f, "ceil", [&] { return QJSValueList{left}; }));
-        panelUsageWrite(f, entry.value, "right", numberMath(f, "ceil", [&] { return QJSValueList{right}; }));
-        const auto maximum = numberMath(f, "max", [&] { return QJSValueList{content, numberMath(f, "ceil", [&] { return QJSValueList{header}; })}; });
-        const auto padded = panelUsageAdd(f, maximum, viewArithmetic(f, QJSValue(2), panelUsageContextRead(f, "padding"), 1)); QJSValue extra(0);
-        if (panelUsageTruth(panelUsageContextRead(f, "keyValue")) && column == 0) extra = panelUsageContextRead(f, "keyGap");
-        panelUsageWrite(f, entry.value, "width", panelUsageAdd(f, padded, extra)); panelUsageMemberCall(f, out, "push", {panelUsageComplete(f, entry)});
+        panelUsageWrite(f, entry.value, "left", QJSValue(std::ceil(left)));
+        panelUsageWrite(f, entry.value, "right", QJSValue(std::ceil(right)));
+        panelUsageWrite(f, entry.value, "width", QJSValue(width)); panelUsageMemberCall(f, out, "push", {panelUsageComplete(f, entry)});
     }
     return out;
 }
