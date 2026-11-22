@@ -1001,11 +1001,13 @@ print(markers[0].parent)`, saved, reopened, reopenControl || 'normal'], { encodi
       const viewport = await restoreCanvasViewport(evaluate);
       await writeFile(join(output, `${mode}-create-${name}-viewport.json`), JSON.stringify(viewport,null,2));
     };
-    const openEmptyStructure = () =>
-      click(/^Structure$/, 'tab', 'appBar.tab.structure', undefined, async () => {
+    const openEmptyStructure = async () => {
+      await waitControlGeometry(evaluate, frame, 'appBar.tab.structure', {timeoutMs:180000});
+      await click(/^Structure$/, 'tab', 'appBar.tab.structure', undefined, async () => {
         await waitAX(/Structures \(0\)/);
         await waitControlGeometry(evaluate, frame, 'structures.create');
       });
+    };
     const createWithStructure = async name => {
       await createEmpty(name);
       await openEmptyStructure();
