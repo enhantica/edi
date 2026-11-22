@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-22T00:55:04Z
+# measured_utc = 2026-11-22T02:38:36Z
 #
-# Recorded from: measured test run (16 node(s) measured once, 183901 banked, 0 stale row(s) dropped)
-# Collected tests: 266614; with a reported duration: 82903
+# Recorded from: measured test run (5 node(s) measured once, 183914 banked, 0 stale row(s) dropped)
+# Collected tests: 266614; with a reported duration: 82902
 # Module-scoped fixture costs recorded: 217
 #
 # Breaches are decided PER TIER against the table
@@ -31,8 +31,8 @@
 # measurement nobody took and which passes every tier threshold.
 # inventory_python = 266614
 # inventory_cpp = 0
-# inventory_measured = 183917
-# inventory_unmeasured = 82697
+# inventory_measured = 183919
+# inventory_unmeasured = 82695
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
 # inventory_pr_python = 91949
 
@@ -253528,8 +253528,8 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_linked_save_inventory.py::tes
 UNMEASURED:failed-in-this-run	tests/system/py/test_linked_save_inventory.py::test_one_linked_inventory_controls_save_default_and_plan[unsaved-unset-count-21-separate-powder]
 UNMEASURED:failed-in-this-run	tests/system/py/test_linked_save_inventory.py::test_one_linked_inventory_controls_save_default_and_plan[unsaved-unset-count-21-separate-single-crystal-cwl]
 UNMEASURED:failed-in-this-run	tests/system/py/test_linked_save_inventory.py::test_one_linked_inventory_controls_save_default_and_plan[unsaved-unset-count-21-separate-single-crystal-tof]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_load_project_native_controls.py::test_load_project_controls_in_the_production_window[load_project_opens_the_ordered_choices:empty]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_load_project_native_controls.py::test_load_project_controls_in_the_production_window[load_project_opens_the_ordered_choices:loaded]
+0.000	tests/system/py/test_load_project_native_controls.py::test_load_project_controls_in_the_production_window[load_project_opens_the_ordered_choices:empty]
+0.000	tests/system/py/test_load_project_native_controls.py::test_load_project_controls_in_the_production_window[load_project_opens_the_ordered_choices:loaded]
 0.000	tests/system/py/test_load_project_native_controls.py::test_load_project_controls_in_the_production_window[save_copy_belongs_to_native_choices]
 0.000	tests/system/py/test_load_project_native_controls.py::test_load_project_controls_in_the_production_window[save_project_as_opens_the_ordered_choices]
 3.840	tests/system/py/test_load_project_native_controls.py::test_load_project_controls_in_the_production_window[three_project_buttons:empty]
@@ -266784,7 +266784,7 @@ UNMEASURED:not-completed-in-this-run	tests/unit/py/test_web_science_identity.py:
 # module-cost: 1.895	tests/system/py/test_linked_experiment_payloads.py
 # module-cost: 2.844	tests/system/py/test_linked_input_publication_contract.py
 # module-cost: 1.692	tests/system/py/test_linked_save_inventory.py
-# module-cost: 42.103	tests/system/py/test_load_project_native_controls.py
+# module-cost: 15.301	tests/system/py/test_load_project_native_controls.py
 # module-cost: 1.504	tests/system/py/test_magnetic_token_consumer_inventory.py
 # module-cost: 28.190	tests/system/py/test_onboarding_extra_tables.py
 # module-cost: 1.011	tests/system/py/test_online_collection.py
