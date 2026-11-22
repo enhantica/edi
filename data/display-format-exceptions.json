@@ -274,6 +274,36 @@
    "file": "core/src/report.cpp",
    "match": "std::snprintf(digits, sizeof(digits), \"%.3g\", value);",
    "reason": "the shared table-number presentation rule prevents a nonzero value being shown as zero; otherwise the caller's item-formatted decimal is preserved"
+  },
+  {
+   "file": "core/src/adapter.cpp",
+   "match": "text << '+' << std::setprecision(std::numeric_limits<double>::max_digits10) << shift;",
+   "reason": "an operation's translation written into its symmetry text when no small fraction matches it, at full precision; not a displayed value of an item"
+  },
+  {
+   "file": "core/src/fullprof_export.cpp",
+   "match": "out << std::setprecision(std::numeric_limits<double>::max_digits10);",
+   "reason": "the FullProf control file writer, at full precision so a loaded project reads back the same numbers"
+  },
+  {
+   "file": "core/src/fullprof_export.cpp",
+   "match": "data << std::fixed << std::setprecision(8);",
+   "reason": "the FullProf intensity file writer, in the fixed columns its format line declares"
+  },
+  {
+   "file": "core/src/fullprof_export.cpp",
+   "match": "const auto number = [](double x) { return std::format(\"{:.6g}\", x); };",
+   "reason": "the plain-text fit summary written beside a FullProf project for that program's users; a file writer"
+  },
+  {
+   "file": "core/src/fullprof_export.cpp",
+   "match": "const auto percent = [](double x) { return std::format(\"{:.2f} %\", 100. * x); };",
+   "reason": "the agreement factors in the plain-text fit summary beside a FullProf project; a file writer"
+  },
+  {
+   "file": "core/src/fullprof_import.cpp",
+   "match": "text << std::setprecision(std::numeric_limits<double>::max_digits10) << value;",
+   "reason": "a number read from a FullProf file turned into project text at full precision, so nothing is lost; not a displayed value"
   }
  ],
  "names": [
@@ -561,6 +591,56 @@
    "file": "app/qml/Pages/Structure/AppearanceGroup.qml",
    "literal": "Cell",
    "reason": "a view toggle, an app-only setting (I1)"
+  },
+  {
+   "file": "core/src/cryspy_export.cpp",
+   "literal": "Uiso",
+   "reason": "the ADP type token a site declares and CrysPy's own keyword for it, not the expanded-site U iso column name"
+  },
+  {
+   "file": "core/src/cryspy_project.cpp",
+   "literal": "Uiso",
+   "reason": "the ADP type token a site declares, not the expanded-site U iso column name"
+  },
+  {
+   "file": "core/src/fullprof_export.cpp",
+   "literal": "Uiso",
+   "reason": "the ADP type token a site declares, not the expanded-site U iso column name"
+  },
+  {
+   "file": "core/src/gsas_project.cpp",
+   "literal": "Uiso",
+   "reason": "the ADP type token a site declares, not the expanded-site U iso column name"
+  },
+  {
+   "file": "core/src/gpx_project.cpp",
+   "literal": "Range",
+   "reason": "a key of a GSAS-II project's histogram record, not a displayed label"
+  },
+  {
+   "file": "core/src/gpx_project.cpp",
+   "literal": "Cell",
+   "reason": "a key of a GSAS-II project's phase record, not a displayed label"
+  },
+  {
+   "file": "core/src/gpx_project.cpp",
+   "literal": "Extinction",
+   "reason": "a key of a GSAS-II project's phase link record, not a displayed label"
+  },
+  {
+   "file": "core/src/gpx_project.cpp",
+   "literal": "Absorption",
+   "reason": "a key of a GSAS-II project's sample record, not a displayed label"
+  },
+  {
+   "file": "core/src/gpx_project.cpp",
+   "literal": "Constraints",
+   "reason": "the name of a GSAS-II project's constraints record, not a displayed label"
+  },
+  {
+   "file": "core/src/gpx_project.cpp",
+   "literal": "Background",
+   "reason": "the name of a GSAS-II project's background record, not a displayed label"
   }
  ]
 }
