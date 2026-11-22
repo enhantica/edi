@@ -84,6 +84,10 @@ QtObject {
     // Save as with the format already chosen from Get started's Save menu: the EasyDiffraction folder or a .zip, and
     // whether to write a copy and keep working where the project is.
     signal saveAsFormatRequested(bool zip, bool copy)
+    // Open project (a folder, or a .zip with `zip`) and Import, asked for from Get started's Load menu. The window
+    // answers them: dealing with unsaved changes can close the project and rebuild that page, so the page cannot.
+    signal openProjectRequested(bool zip)
+    signal importProjectRequested(var importer)
     // That Save as ended: saved at the place chosen, or cancelled or refused.
     signal saveAsFinished(bool saved)
     // Run `action` (opening, creating or closing a project, quitting) once the open project's unsaved changes are

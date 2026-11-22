@@ -319,31 +319,15 @@ SideBarGroup {
         ApplicationInfo.chooseCreateProject();
     }
 
-    // Open project (edi ADR-0052 §3, §9): once unsaved changes are dealt with, the system's folder chooser for the
-    // project folder holding project.edi, or its file chooser for a .zip; in the browser the browser's own chooser.
+    // Open project (edi ADR-0052 §3, §9) and Import (edi ADR-0098): the window deals with unsaved changes, then shows
+    // the chooser (Main.qml).
     function openProject(zip) {
-        const life = group.createLife;
-        AppState.afterChanges(() => {
-            if (!life.alive)
-                return;
-            if (WebFiles.available)
-                Session.openWebProject(zip ? "file" : "folder");
-            else
-                Qt.callLater(() => (zip ? openZipDialog : openFolderDialog).open());
-        });
+        AppState.openProjectRequested(zip);
+    }
+    function importProject(importer) {
+        AppState.importProjectRequested(importer);
     }
 
-    // Import (edi ADR-0098): once unsaved changes are dealt with, as Open does, the file chooser for the importer's
-    // files; the imported project then replaces this page.
-    function importProject(importer) {
-        const life = group.createLife;
-        AppState.afterChanges(() => {
-            if (!life.alive)
-                return;
-            importDialog.importer = importer;
-            Qt.callLater(() => importDialog.open());
-        });
-    }
     function importToolTip(importer) {
         switch (importer.key) {
         case "fullProf":
@@ -468,41 +452,6 @@ SideBarGroup {
         }
     }
 
-    // The system's choosers. On the next turn the opened project replaces this page, dialogs and all
-    // (AppState.afterChanges).
-    // Both open where a project was last chosen.
-    FolderDialog {
-        id: openFolderDialog
-        title: qsTr("Open an edi project folder")
-        acceptLabel: qsTr("Open")
-        currentFolder: DialogFolders.folder("openProject", "")
-        onAccepted: {
-            DialogFolders.remember("openProject", selectedFolder);
-            Qt.callLater(Session.openProject, selectedFolder);
-        }
-    }
-    FileDialog {
-        id: openZipDialog
-        title: qsTr("Open an edi project archive")
-        nameFilters: [qsTr("edi project archives (*.zip)")]
-        currentFolder: DialogFolders.folder("openProject", "")
-        onAccepted: {
-            DialogFolders.remember("openProject", selectedFile);
-            Qt.callLater(Session.openProject, selectedFile);
-        }
-    }
-    // Imports open as a new, unsaved project, as Open does: on the next turn it replaces this page.
-    FileDialog {
-        id: importDialog
-        property var importer: null
-        title: importer !== null ? qsTr("Import a %1 project").arg(importer.program) : ""
-        nameFilters: importer !== null ? [importer.nameFilter] : []
-        currentFolder: DialogFolders.folder("importProject", "")
-        onAccepted: {
-            DialogFolders.remember("importProject", selectedFile);
-            Qt.callLater(Session.openProject, selectedFile);
-        }
-    }
     FolderDialog {
         id: exportFolder
         property string program: ""

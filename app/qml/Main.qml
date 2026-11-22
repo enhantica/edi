@@ -830,6 +830,22 @@ EaComponents.ApplicationWindow {
         function onSaveAsFormatRequested(zip, copy) {
             saveAsChoice.saveWith(zip, copy);
         }
+        // Once unsaved changes are dealt with (saved, discarded or none), the chooser: here, since a discard closes the
+        // project and the page that asked is rebuilt. In the browser, its own chooser.
+        function onOpenProjectRequested(zip) {
+            AppState.afterChanges(() => {
+                if (WebFiles.available)
+                    Session.openWebProject(zip ? "file" : "folder");
+                else
+                    Qt.callLater(() => (zip ? openZipDialog : openFolderDialog).open());
+            });
+        }
+        function onImportProjectRequested(importer) {
+            AppState.afterChanges(() => {
+                importDialog.importer = importer;
+                Qt.callLater(() => importDialog.open());
+            });
+        }
     }
 
     // Unsaved changes are saved or discarded before the project is replaced, closed or the app quits (edi ADR-0052): a
@@ -1044,6 +1060,41 @@ EaComponents.ApplicationWindow {
                 checked: saveAsChoice.dataChoice === "linked"
                 onClicked: saveAsChoice.dataChoice = "linked"
             }
+        }
+    }
+
+    // Open project's and Import's choosers (Get started's Load menu), both opening where one was last chosen. The
+    // project read replaces the current one on the next turn.
+    FolderDialog {
+        id: openFolderDialog
+        title: qsTr("Open an edi project folder")
+        acceptLabel: qsTr("Open")
+        currentFolder: DialogFolders.folder("openProject", "")
+        onAccepted: {
+            DialogFolders.remember("openProject", selectedFolder);
+            Qt.callLater(Session.openProject, selectedFolder);
+        }
+    }
+    FileDialog {
+        id: openZipDialog
+        title: qsTr("Open an edi project archive")
+        nameFilters: [qsTr("edi project archives (*.zip)")]
+        currentFolder: DialogFolders.folder("openProject", "")
+        onAccepted: {
+            DialogFolders.remember("openProject", selectedFile);
+            Qt.callLater(Session.openProject, selectedFile);
+        }
+    }
+    // An import opens as a new, unsaved project, as Open does.
+    FileDialog {
+        id: importDialog
+        property var importer: null
+        title: importer !== null ? qsTr("Import a %1 project").arg(importer.program) : ""
+        nameFilters: importer !== null ? [importer.nameFilter] : []
+        currentFolder: DialogFolders.folder("importProject", "")
+        onAccepted: {
+            DialogFolders.remember("importProject", selectedFile);
+            Qt.callLater(Session.openProject, selectedFile);
         }
     }
 
