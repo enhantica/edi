@@ -928,8 +928,20 @@ bool AssistantWidgetInput::eventFilter(QObject* watched, QEvent* event) {
     // The owning VM classifies genuine project input at its actual receiver.
     // This helper must not convert ordinary hover/chat/navigation or Cmd-Tab
     // into a second blanket cancellation path.
-    if (watched == window_ && request_ && !injecting_ &&
-        (event->type() == QEvent::Hide || event->type() == QEvent::Close)) {
+    if (watched == window_ && request_ && !injecting_ && event->type() == QEvent::Close) {
+        // A close the window refuses (its unsaved-work question, say) ends nothing: decided once the window has
+        // handled it, and only for the request it was sent for.
+        const QPointer<AssistantWidgetInput> self(this);
+        const QPointer<QQuickWindow> window(window_);
+        const auto original = request_;
+        const auto id = serial_;
+        QMetaObject::invokeMethod(this, [self, window, original, id] {
+            if (!self || self->request_ != original || self->serial_ != id || (window && window->isVisible())) return;
+            self->stop(original, id, false, self->interrupted_, true, ControlCause::Superseded);
+        }, Qt::QueuedConnection);
+        return false;
+    }
+    if (watched == window_ && request_ && !injecting_ && event->type() == QEvent::Hide) {
         const QPointer<QObject> original_target(watched);
         cancel();
         return !original_target;

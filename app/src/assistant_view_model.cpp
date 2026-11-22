@@ -18204,12 +18204,25 @@ bool AssistantViewModel::eventFilter(QObject* watched, QEvent* event) {
         if (event->type() == QEvent::Close) {
             // A close the window refuses (its unsaved-work question, say) tears nothing down: decided once the window
             // has handled it, by whether it is still shown.
+            // Bound to the request and window it was sent for: a later request, on this window or another, is not it.
             const QPointer<AssistantViewModel> self(this);
             auto* const original = state_.get();
             const QPointer<QQuickWindow> window(state_->action_window);
-            QMetaObject::invokeMethod(this, [self, original, window] {
+            const std::weak_ptr<State::NativeRecord> record = state_->native_call ? state_->native_call->record : nullptr;
+            const std::weak_ptr<State::NativeWidget> widget = state_->native_widget;
+            const std::weak_ptr<State::NativeCreateWidget> creation = state_->native_create_widget;
+            const bool called = state_->native_call.has_value();
+            QMetaObject::invokeMethod(this, [self, original, window, record, widget, creation, called] {
                 if (!self || self->state_.get() != original || !original->showing_actions) return;
-                if (window && window->isVisible() && original->action_window == window) return;
+                const auto same = [](const auto& was, const auto& now) {
+                    return !was.owner_before(now) && !now.owner_before(was);
+                };
+                const auto& call = original->native_call;
+                if (called != call.has_value() || (call && !same(record, call->record)) ||
+                    !same(widget, original->native_widget) || !same(creation, original->native_create_widget) ||
+                    original->action_window != window)
+                    return;
+                if (window && window->isVisible()) return;  // refused: the window is still shown
                 original->native_supersede_operation(original->widget_outcome_error);
             }, Qt::QueuedConnection);
             return false;
