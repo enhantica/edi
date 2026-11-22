@@ -1,22 +1,25 @@
 // Read current Qt geometry before trusted pointer input; synthetic states are not UI evidence.
 import assert from 'node:assert/strict';
 
-export async function waitControlGeometry(evaluate, frame, objectName, {enabled=true, timeoutMs=45000}={}) {
+export async function waitControlGeometry(evaluate, frame, objectName, {enabled=true, timeoutMs=45000, waitInViewport=false}={}) {
   const deadline=Date.now()+timeoutMs;
+  let lastOutside;
   do {
     const item=await evaluate(`(() => {try {return window.ediControlGeometry(${JSON.stringify(objectName)});}
       catch(error) {if (/no visible item|no item is named/.test(error.message)) return null; throw error;}})()`);
     if (item && item.visible === true && (!enabled || item.enabled === true)) {
+      const observation='Native dialog observations must identify the named rendered control wholly inside the browser viewport';
       assert(item.objectName===objectName && typeof item.enabled==='boolean' &&
         ['x','y','width','height'].every(key=>Number.isFinite(item[key])) &&
-        item.width>0 && item.height>0 && item.x>=0 && item.y>=0 &&
-        item.x+item.width<=1280 && item.y+item.height<=768,
-        'Native dialog observations must identify the named rendered control wholly inside the browser viewport');
-      return item;
+        item.width>0 && item.height>0, observation+': '+JSON.stringify(item));
+      if (item.x>=0 && item.y>=0 && item.x+item.width<=1280 && item.y+item.height<=768) return item;
+      assert(waitInViewport, observation+': '+JSON.stringify(item));
+      lastOutside=item;
     }
     await frame();
   } while(Date.now()<deadline);
-  throw Error('The rendered app must expose its declared native control '+objectName);
+  const reason=lastOutside ? ' wholly inside the viewport: '+JSON.stringify(lastOutside) : '';
+  throw Error('The rendered app must expose its declared native control '+objectName+reason);
 }
 
 export async function controlPointer(evaluate, objectName, containerName) {

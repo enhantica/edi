@@ -1014,7 +1014,8 @@ print(markers[0].parent)`, saved, reopened, reopenControl || 'normal'], { encodi
       await waitForProjectOpening('appBar.tab.structure');
       await click(/^Structure$/, 'tab', 'appBar.tab.structure', undefined, async () => {
         await waitAX(/Structures \(0\)/);
-        await waitControlGeometry(evaluate, frame, 'structures.create');
+        // AX can expose the incoming page before the native slide has brought its controls inside the canvas.
+        await waitControlGeometry(evaluate, frame, 'structures.create', {waitInViewport:true});
       });
     };
     const createWithStructure = async name => {

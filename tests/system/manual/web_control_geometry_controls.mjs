@@ -59,6 +59,18 @@ const pending=[null,{...dialog,visible:false},{...dialog,enabled:false},dialog];
 assert.deepEqual(await waitControlGeometry(async()=>pending.shift(),async()=>++frames,dialogName),dialog,
   'A real dialog target must wait through absence, hidden state and disabled state without requiring an AX node');
 assert.equal(frames,3,'Readiness must advance frames until the actual native target becomes actionable');
+const moving=[{...dialog,x:1400},{...dialog,x:1279},dialog];
+let motionFrames=0;
+assert.deepEqual(await waitControlGeometry(async()=>moving.shift(),async()=>++motionFrames,
+  dialogName,{waitInViewport:true}),dialog,
+  'The incoming named control must wait until its entire rectangle enters the viewport');
+assert.equal(motionFrames,2,'Transitional rectangles require fresh subsequent animation frames');
+await assert.rejects(waitControlGeometry(async()=>({...dialog,x:1279}),async()=>{},dialogName,
+  {waitInViewport:true,timeoutMs:0}), /wholly inside the viewport/,
+  'A persistently clipped native control must fail after the viewport wait');
+await assert.rejects(waitControlGeometry(async()=>({...dialog,objectName:'open.zip'}),async()=>{},
+  dialogName,{waitInViewport:true}), /Native dialog observations/,
+  'Waiting for the viewport must still reject the wrong native control immediately');
 assert.deepEqual(await waitControlGeometry(async()=>({...dialog,enabled:false}),async()=>{},dialogName,{enabled:false}),
   {...dialog,enabled:false},'Passive disabled fit-result labels must remain observable without becoming pointer targets');
 for(const state of [{...dialog,objectName:'open.zip'},{...dialog,x:NaN},{...dialog,width:'270'},
