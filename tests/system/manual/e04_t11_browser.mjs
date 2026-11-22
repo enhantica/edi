@@ -955,9 +955,14 @@ print(markers[0].parent)`, saved, reopened, reopenControl || 'normal'], { encodi
       const input=await beginPicker(/^Open project folder(?:…|\.\.\.)?$/, undefined, undefined, options);
       await send('DOM.setFileInputFiles',{...input,files:[join(inputs,name)]});
       await waitName(name);
+      await waitForOpenedAnalysis();
       await settleRenderedPage();
     };
-    const snapshot = async () => { await projectPage(); return inspectArchive(await saveArchive()); };
+    const snapshot = async () => {
+      await projectPage();
+      await waitForOpenedAnalysis();
+      return inspectArchive(await saveArchive());
+    };
     const createEmpty = async name => {
       await projectPage(); await click(/^Create a new project$/, 'button', 'project.create');
       const beforeInput = await restoreCanvasViewport(evaluate);
@@ -1127,6 +1132,7 @@ print(markers[0].parent)`, saved, reopened, reopenControl || 'normal'], { encodi
     await accessiblePress(/Examples$/);
     await openExampleRow('pd-neut-cwl_cosio-d20', /cosio.*d20/i);
     await waitName('pd-neut-cwl_cosio-d20');
+    await waitForOpenedAnalysis();
     await settleRenderedPage();
     const replacementBefore=await snapshot();
     assert.notEqual(replacementBefore.name,'routing_b','the replacement control must actually replace the old live project');
