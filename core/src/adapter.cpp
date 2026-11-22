@@ -1913,13 +1913,15 @@ namespace {
 // Signed operations (`x,y,z,+1`) of the BNS standard mapped through a setting transform, each keeping its sign.
 std::vector<std::pair<std::string, std::string>> magnetic_rows_in_setting(const std::vector<std::string>& rows,
                                                                           const crysta::MagneticSettingTransform& transform) {
-    // Each operation alone: crysta's mapping puts the identity first, so a list would lose the sign pairing.
+    // Each operation alone: crysta's mapping puts the identity first, so a list would lose the sign pairing. The
+    // identity goes in with it because the mapping refuses a group without one; the operation comes out last.
     std::vector<std::pair<std::string, std::string>> out;
     for (const std::string& row : rows) {
         const auto comma = row.rfind(',');
         const crysta::SpaceGroup moved = crysta::space_group_in_setting(
-            crysta::SpaceGroup(0, "", "", {row.substr(0, comma)}, {}, "", crysta::LatticeCentering::P), transform);
-        out.emplace_back(std::to_string(out.size() + 1), moved.operators.front() + row.substr(comma));
+            crysta::SpaceGroup(0, "", "", {"x,y,z", row.substr(0, comma)}, {}, "", crysta::LatticeCentering::P),
+            transform);
+        out.emplace_back(std::to_string(out.size() + 1), moved.operators.back() + row.substr(comma));
     }
     return out;
 }
