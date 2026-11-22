@@ -9,6 +9,7 @@ import edi as api
 import gemmi
 import pytest
 
+from tests.fixtures.magnetic_pnma.operator_contract import shifted_inversion
 from tests.fixtures.magnetic_pnma.reference import columns, project
 from tests.fixtures.magnetic_type.inputs import SOURCE, source
 
@@ -234,3 +235,44 @@ def test_saved_magnetic_categories_use_only_defined_dictionary_items(tmp_path):
     assert not any('crystal_system' in tag for tag in values), (
         'The displayed magnetic crystal system is derived and never saved'
     )
+
+
+def test_shifted_numbered_group_fills_missing_descriptors_on_two_saves(tmp_path):
+    # The pinned magnetic table's type-I BNS 2.4 entry has inversion -x,-y,-z,+1.
+    # Conjugating it by x += 1/4 adds 1/2 to the inversion's x translation.
+    transform = 'a,b,c;1/4,0,0'
+    source_text = shifted_inversion(2).replace(
+        '_space_group.name_h_m "P 1"',
+        f'_space_group_magn.number_BNS 2.4\n_space_group_magn.transform_BNS_Pp_abc "{transform}"',
+    )
+    expected = {
+        '_space_group_magn.number_bns': ['2.4'],
+        '_space_group_magn.name_bns': ['P-1'],
+        '_space_group_magn.number_og': ['2.1.4'],
+        '_space_group_magn.name_og': ['P-1'],
+        '_space_group_magn.name_uni': ['P-1.1'],
+        '_space_group_magn.point_group_name_uni': ['-1.1'],
+    }
+    input_values = columns(source_text)
+    assert set(input_values) & set(expected) == {'_space_group_magn.number_bns'}, (
+        'The shifted numbered input supplies the BNS number alone, so names must be derived'
+    )
+    model = api.Project.load(project(tmp_path / 'shifted-numbered', source_text))
+    for index in range(2):
+        folder = tmp_path / f'numbered-save-{index}'
+        saved = saved_columns(model, folder)
+        assert {tag: saved.get(tag) for tag in expected} == expected, (
+            'Both saves fill the missing descriptors from the matching shifted BNS 2.4 entry'
+        )
+        assert '_space_group_magn.point_group_number_litvin' not in saved, (
+            'Descriptor completion does not invent a Litvin number'
+        )
+        assert saved.get('_space_group_magn_transforms.pp_abc') == [transform], (
+            'Both saves keep the independently declared quarter-cell BNS origin'
+        )
+        for category in ('operation', 'centering'):
+            tag = f'_space_group_symop_magn_{category}.xyz'
+            assert sorted(saved[tag]) == sorted(input_values[tag]), (
+                'Descriptor completion preserves the signed shifted operators and centering'
+            )
+        model = api.Project.load(folder)
