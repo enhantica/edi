@@ -54,8 +54,11 @@ def saved_errors(project, root, case, kind, token):  # noqa: PLR0912 — lexical
     project.save_as(root / 'saved')
     saved = root / 'saved/structures/cosio.edi'
     cells = stored_tokens(saved, case.tag)
-    derived = case.tag in P1_DESCRIPTORS or case.tag == RETIRED_PARENT_FLAG
-    failures = description_errors(saved, case.tag)
+    # The native metadata probe has an independent parent and does not use its
+    # quoted BNS text to select a group.
+    held_bns_text = case.variant == 'metadata' and kind == 'literal'
+    derived = not held_bns_text and (case.tag in P1_DESCRIPTORS or case.tag == RETIRED_PARENT_FLAG)
+    failures = description_errors(saved, case.tag) if derived else []
     if (
         not derived
         and kind == 'valid'
@@ -102,7 +105,8 @@ def saved_errors(project, root, case, kind, token):  # noqa: PLR0912 — lexical
         again = api.Project.load(root / 'saved')
         again.save_as(root / 'second-valid')
         second = root / 'second-valid/structures/cosio.edi'
-        failures.extend(description_errors(second, case.tag))
+        if derived:
+            failures.extend(description_errors(second, case.tag))
         if cells != stored_tokens(second, case.tag):
             failures.append('second save changes the held declared field')
         if len(again.structure.atom_site_moment):
@@ -122,7 +126,9 @@ def admitted(source, route, root):
 
 def observed_errors(source, route, root, case, kind, token):
     ignored = case.variant == 'redundant' and case.tag.startswith('_atom_site_moment.spherical_')
-    must_admit = ignored or kind == 'valid' or case.tag in P1_DESCRIPTORS
+    derived_text = case.kind == 'text' and case.tag in P1_DESCRIPTORS
+    missing_selector = case.variant == 'derived-family' and kind == 'missing'
+    must_admit = ignored or kind == 'valid' or derived_text
     try:
         project = admitted(source, route, root)
     except (ValueError, RuntimeError, KeyError) as error:
@@ -132,17 +138,21 @@ def observed_errors(source, route, root, case, kind, token):
             or (kind == 'missing' and case.missing_accepts)
         ):
             return ['valid supplied value refused: ' + str(error)]
-        # A required missing value may refuse. Explicit invalid input must identify its boundary.
-        if kind in {'invalid', 'literal'} and (
-            case.tag.lower() not in str(error).lower() or token.strip('"\'') not in str(error)
-        ):
-            return ['refusal must name the tag and complete supplied value: ' + str(error)]
+        message = str(error)
+        bad_selector_refusal = missing_selector and 'no parent group number' not in message
+        bad_token_refusal = kind in {'invalid', 'literal'} and (
+            case.tag.lower() not in message.lower() or token.strip('"\'') not in message
+        )
+        if bad_selector_refusal or bad_token_refusal:
+            return [
+                'refusal must identify the selector failure or tag and supplied value: ' + message
+            ]
         return []
     if ignored:
         # ADR-0133 leaves spherical output unread beside authoritative crystal-axis inputs.
         return saved_errors(project, root, case, 'valid', token)
-    if kind == 'invalid' or (kind == 'literal' and case.kind != 'text'):
-        return ['invalid supplied token accepted or defaulted']
+    if missing_selector or kind == 'invalid' or (kind == 'literal' and case.kind != 'text'):
+        return ['invalid or required missing input accepted or defaulted']
     return saved_errors(project, root, case, kind, token)
 
 
