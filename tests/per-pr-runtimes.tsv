@@ -10,9 +10,9 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-22T06:35:26Z
+# measured_utc = 2026-11-22T07:50:18Z
 #
-# Recorded from: measured test run (662 node(s) measured once, 186002 banked, 0 stale row(s) dropped)
+# Recorded from: measured test run (4 node(s) measured once, 186657 banked, 0 stale row(s) dropped)
 # Collected tests: 258153; with a reported duration: 85674
 # Module-scoped fixture costs recorded: 215
 #
@@ -31,8 +31,8 @@
 # measurement nobody took and which passes every tier threshold.
 # inventory_python = 258153
 # inventory_cpp = 0
-# inventory_measured = 186660
-# inventory_unmeasured = 71493
+# inventory_measured = 186661
+# inventory_unmeasured = 71492
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
 # inventory_pr_python = 91888
 
@@ -3397,7 +3397,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_catalogue_fullprof.py::t
 0.000	tests/integration/py/test_catalogue_retention_escapes.py::test_catalogue_projection_refuses_every_retained_input_escape[science-loops]
 0.000	tests/integration/py/test_catalogue_retention_escapes.py::test_catalogue_projection_refuses_every_retained_input_escape[science-native]
 0.490	tests/integration/py/test_catalogue_retention_escapes.py::test_catalogue_projection_refuses_every_retained_input_escape[science-scan]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_chart_axis_labels.py::test_data_table_declares_named_component_columns
+0.000	tests/integration/py/test_chart_axis_labels.py::test_data_table_declares_named_component_columns
 UNMEASURED:failed-in-this-run	tests/integration/py/test_chart_axis_labels.py::test_tooltip_and_legend_names_follow_the_axis_vocabulary
 0.000	tests/integration/py/test_cif_import_contract.py::test_chosen_parser_failure_refuses_without_partial_import[cif2-list-experiment-collection-edi-path]
 0.000	tests/integration/py/test_cif_import_contract.py::test_chosen_parser_failure_refuses_without_partial_import[cif2-list-experiment-collection-path]
@@ -168758,7 +168758,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_contract.py::
 UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_contract.py::test_nonfinite_value_or_slope_refuses_the_strict_load[log_0_]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_contract.py::test_nonfinite_value_or_slope_refuses_the_strict_load[sqrt_-a_]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_contract.py::test_nonfinite_value_or_slope_refuses_the_strict_load[sqrt_0_]
-0.010	tests/integration/py/test_constraint_contract.py::test_projects_without_constraints_keep_the_pre_feature_writer_regression_pin
+0.080	tests/integration/py/test_constraint_contract.py::test_projects_without_constraints_keep_the_pre_feature_writer_regression_pin
 UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_contract.py::test_python_free_flag_warns_without_redirecting_to_a_leader[cell]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_contract.py::test_python_free_flag_warns_without_redirecting_to_a_leader[position]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_contract.py::test_python_free_flag_warns_without_redirecting_to_a_leader[user]
@@ -171172,8 +171172,8 @@ UNMEASURED:not-completed-in-this-run	tests/integration/py/test_e04_t11_science_i
 0.000	tests/integration/py/test_e04_t1_app_contract.py::test_adr_records_the_decision_and_comparison_plan
 0.010	tests/integration/py/test_e04_t1_app_contract.py::test_app_reachability_observer_rejects_missing_group_or_checker[empty-checker]
 0.010	tests/integration/py/test_e04_t1_app_contract.py::test_app_reachability_observer_rejects_missing_group_or_checker[missing-edge]
-0.830	tests/integration/py/test_e04_t1_app_contract.py::test_existing_projects_oracle_covers_the_registry_without_filters
-0.750	tests/integration/py/test_e04_t1_app_contract.py::test_frozen_oracle_inputs_are_the_committed_fixture_bytes
+0.770	tests/integration/py/test_e04_t1_app_contract.py::test_existing_projects_oracle_covers_the_registry_without_filters
+0.660	tests/integration/py/test_e04_t1_app_contract.py::test_frozen_oracle_inputs_are_the_committed_fixture_bytes
 0.000	tests/integration/py/test_e04_t1_app_contract.py::test_gui_pin_rejects_identity_digest_and_declaration_escapes[archive]
 0.000	tests/integration/py/test_e04_t1_app_contract.py::test_gui_pin_rejects_identity_digest_and_declaration_escapes[comment]
 0.000	tests/integration/py/test_e04_t1_app_contract.py::test_gui_pin_rejects_identity_digest_and_declaration_escapes[commit]

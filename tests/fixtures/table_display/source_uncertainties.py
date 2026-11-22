@@ -1,11 +1,17 @@
 """Exact input-only spelling transition; saved-output pins are unchanged."""
 
+import functools
 import hashlib
 import json
 import zipfile
 from pathlib import Path
 
 HERE = Path(__file__).parent
+
+
+@functools.cache
+def source_rows():
+    return json.loads((HERE / 'source-uncertainties.json').read_text())
 
 
 def archived_before(row):
@@ -18,7 +24,7 @@ def archived_before(row):
 
 
 def previous_bytes(name, data):
-    row = json.loads((HERE / 'source-uncertainties.json').read_text()).get(name)
+    row = source_rows().get(name)
     if row is None:
         return data
     assert hashlib.sha256(data).hexdigest() in {row['before_sha256'], row['after_sha256']}, (
@@ -30,7 +36,7 @@ def previous_bytes(name, data):
 
 def previous_content(data):
     digest = hashlib.sha256(data).hexdigest()
-    for row in json.loads((HERE / 'source-uncertainties.json').read_text()).values():
+    for row in source_rows().values():
         if digest == row['after_sha256']:
             return archived_before(row)
     return data

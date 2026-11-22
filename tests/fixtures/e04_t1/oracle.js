@@ -8899,9 +8899,9 @@ var frozen = {
         {
           "name": "cosio",
           "atoms": 6,
-          "cellA": 10.30806,
+          "cellA": 10.3081,
           "displayCell": [
-            10.30806,
+            10.3081,
             6.00219,
             4.78739,
             90.0,
@@ -8910,7 +8910,7 @@ var frozen = {
           ],
           "spaceGroup": "P n m a",
           "cell": [
-            10.30806,
+            10.3081,
             6.00219,
             4.78739,
             90.0,
@@ -8926,7 +8926,7 @@ var frozen = {
       "loaderWarning": "",
       "files": {
         "project.edi": "eccdcf0e86a1801524f44a5abe2b7201bab88d9d19517e1e3af88cd9ef5b5555",
-        "structures/cosio.edi": "4505d34c32bb8f576900ea17b478bdd8589bb5ca40f7e5d293db03ad71dcd034",
+        "structures/cosio.edi": "1e2166e842987e3577181981ce8901641f646e7c3ca8fd22b32420b52c4d9cce",
         "experiments/d20.edi": "50e40518f4864b3e310c0b76de5d43d5f48af1a8b89191a6f03cfd9ab87e280d",
         "analysis/analysis.edi": "fc3edb415512ca536353f603603646ad83eddedd88d50a81019b54e4e165a616"
       }
@@ -11591,9 +11591,9 @@ var frozen = {
         {
           "name": "cosio",
           "atoms": 6,
-          "cellA": 10.30806,
+          "cellA": 10.3081,
           "displayCell": [
-            10.30806,
+            10.3081,
             6.00219,
             4.78739,
             90.0,
@@ -11602,7 +11602,7 @@ var frozen = {
           ],
           "spaceGroup": "P n m a",
           "cell": [
-            10.30806,
+            10.3081,
             6.00219,
             4.78739,
             90.0,
@@ -13827,7 +13827,7 @@ var frozen = {
       "loaderWarning": "",
       "files": {
         "project.edi": "31a2fef1db78d2aefaadc8da4cabec19f2d3ed134a7a1b50beaa0e2ef29027e6",
-        "structures/cosio.edi": "70324d6326ee447d4c4d83d26918e6a7ce2f0fd929e261e999ee30af8d8b329a",
+        "structures/cosio.edi": "cbc2ba0b5d6242ea14082ddc0d96cd3a81c6b6ef5fec7b1fe04b3542b0a21269",
         "experiments/d20.edi": "f647dd3cc5b10ab31a05ed5660f635c9df6090c44986cc8c0857db992fe4076f",
         "analysis/analysis.edi": "38509b411c3da6e12738df723bf64732d13c1c955a4a5b36ff1d464c3d99c0d8"
       }
@@ -16324,9 +16324,9 @@ var frozen = {
       "loaderWarning": "",
       "files": {
         "project.edi": "0790df1cacc3dcbc81dc8e744e2b732ab295ebc32141347d5a1e222206a5f94a",
-        "structures/cosio_2k5.edi": "1a0d69436ecc043b523edc7d7f5c43de1754969e906f30f577c5237909c96569",
-        "structures/cosio_300k.edi": "2fd26bc4d305b15beccfeabaa8391d3ec33845624501443e783774fbed58fe5d",
-        "structures/cosio_55k.edi": "2cbf27891099826ff14e4b1817fcbbc9ef328966696e671b41635c570328dcfb",
+        "structures/cosio_2k5.edi": "28360b1e07555b0f6d3e2dadb5b318000a3641f3b1d90a1ce986a82e21dd6426",
+        "structures/cosio_300k.edi": "278251e75d461519be857862be274fed499d430f6b5b784fbf6901bf93e6c73e",
+        "structures/cosio_55k.edi": "ed04d27870adc978ada4a16e0b4bdb9362435e13179baf3bf1e3f2e340ac6757",
         "experiments/heidi_2k5.edi": "942c52ea8de5e11cc9cf892de335b19c0a7da4297ba4eb2250255c3ae3d5dfff",
         "experiments/heidi_300k.edi": "b6223d3a5a943ccaaafa1971b7b2ddce91f3e43962cbc8447b66fc27018ca965",
         "experiments/heidi_55k.edi": "bb9ae92f454146e7c6a7baa1dd248c42696acd620a624504a808a9a9854a3102",

@@ -1,5 +1,6 @@
 """Authenticate exact regression-pin retakes before historical input comparisons."""
 
+import functools
 import hashlib
 import json
 from pathlib import Path
@@ -12,6 +13,11 @@ COSIO_D20_2K = 'docs/user/cli/pd-neut-cwl_cosio-d20_2k/expected.json'
 COSIO_REPIN_SHA256 = 'c25181322f98ce89f461d9d7ba100a6850c50d80fd33c982d31012c622c9e932'
 
 
+@functools.cache
+def retake_rows():
+    return json.loads((HERE / 'retakes.json').read_text())['files']
+
+
 def matches_retake(name, data, row):
     digest = hashlib.sha256(data).hexdigest()
     return digest == row['after_sha256'] or (name == COSIO_D20_2K and digest == COSIO_REPIN_SHA256)
@@ -19,7 +25,7 @@ def matches_retake(name, data, row):
 
 def previous_bytes(name, data):
     name = repository_key(name)
-    row = json.loads((HERE / 'retakes.json').read_text())['files'].get(name)
+    row = retake_rows().get(name)
     if row is None:
         return data
     before = row['before_text'].encode()
@@ -53,7 +59,7 @@ def previous_bytes(name, data):
 
 def composed_bytes(name, data):
     name = repository_key(name)
-    row = json.loads((HERE / 'retakes.json').read_text())['files'].get(name)
+    row = retake_rows().get(name)
     if row is not None and matches_retake(name, data, row):
         return previous_bytes(name, data)
     return data

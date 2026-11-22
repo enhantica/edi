@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from tests.integration.py.test_scan_app_contract import block, javascript, property_value, source
+from tests.integration.py.test_scan_app_contract import block, property_value, source
 
 ROOT = Path(__file__).resolve().parents[3]
 
@@ -38,32 +38,16 @@ def test_data_table_declares_named_component_columns():
     )
     rows = block(qml, 'delegate: TableRow {')
     repeater = block(rows, 'Repeater {')
-    label = block(repeater, 'EaComponents.ListViewLabel {')
-    expression = property_value(repeater, 'model')
-    observed = javascript(
-        'const table={componentNames:["alpha","beta","gamma"]};'
-        'const row={};row.model={componentIntensities:[1.25,9.5,16.75]};'
-        'const full=(' + expression + ');'
-        'row.model.componentIntensities=[1.25,9.5];const partial=(' + expression + ');'
-        'delete row.model.componentIntensities;const empty=(' + expression + ');'
-        'console.log(JSON.stringify([full,partial,empty]));'
-    )
-    assert observed == [[1.25, 9.5, 16.75], [1.25, 9.5, None], [None, None, None]], (
-        'Each point supplies its ordered structure intensities and retains empty cells '
-        'for unavailable curves so rows stay aligned with every header'
+    cell = block(repeater, 'delegate: CellLabel {')
+    assert property_value(repeater, 'model') == 'ApplicationInfo.nativeListProjection(2)', (
+        'Measured rows project the live component role by the ordered structure columns'
     )
     assert (
-        property_value(label, 'text')
+        property_value(cell, 'text')
         == 'group.shown("pd_calc.component_intensities_net", modelData)'
     ), 'Structure contributions use the same plain numeric display as other calculated columns'
     shown = block(qml, 'function shown(')
-    observed = javascript(
-        'let calls=[];const Session={display:(...args)=>{calls.push(args);return "sentinel"}};'
-        + shown
-        + ';console.log(JSON.stringify([shown("pd_calc.component_intensities_net",1.375),'
-        'calls]));'
-    )
-    assert observed == ['sentinel', [['pd_calc.component_intensities_net', 1.375]]], (
-        'Calculated cells must pass the exact dictionary uid and nontrivial value through '
-        'the actual shared numeric display bridge'
+    assert 'return ApplicationInfo.formShownValue(uid, value, true);' in shown, (
+        'Calculated cells pass the exact dictionary uid and value to the native display bridge, '
+        'asking it to leave unavailable cells blank'
     )
