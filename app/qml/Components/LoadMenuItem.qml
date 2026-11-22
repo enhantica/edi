@@ -17,6 +17,15 @@ EaElements.MenuItem {
     // its items' implicitWidth then shows every label and hint whole.
     property real labelWidth: EaStyle.Sizes.fontPixelSize * 7.5
     implicitWidth: leftPadding + rightPadding + EaStyle.Sizes.fontPixelSize * 1.25 + labelWidth + 2 * EaStyle.Sizes.fontPixelSize * 0.5 + (item.hint !== "" ? hintMetrics.advanceWidth + EaStyle.Sizes.fontPixelSize * 0.75 : 0)
+    // The label's own width, for a menu that sizes its label column to its widest label.
+    readonly property real labelImplicitWidth: labelMetrics.advanceWidth
+    // Hints at the right margin rather than after the labels.
+    property bool hintRight: false
+    TextMetrics {
+        id: labelMetrics
+        font: item.font
+        text: item.text
+    }
     TextMetrics {
         id: hintMetrics
         font: item.font
@@ -63,6 +72,7 @@ EaElements.MenuItem {
             anchors.verticalCenter: parent.verticalCenter
             width: Math.max(0, item.availableWidth - EaStyle.Sizes.fontPixelSize * 2.25 - item.labelWidth)
             leftPadding: EaStyle.Sizes.fontPixelSize * 0.75
+            horizontalAlignment: item.hintRight ? Text.AlignRight : Text.AlignLeft
             elide: Text.ElideRight
             font: item.font
             color: EaStyle.Colors.themeForegroundMinor

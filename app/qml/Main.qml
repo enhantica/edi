@@ -819,12 +819,16 @@ EaComponents.ApplicationWindow {
     }
     Shortcut {
         sequences: ["Ctrl+Shift+S"]
-        onActivated: window.saveProjectAs()
+        // As the Save menu's EasyDiffraction folder entry, or a .zip copy where the browser writes no folder.
+        onActivated: saveAsChoice.saveWith(false, false)
     }
     Connections {
         target: AppState
         function onSaveAsRequested() {
-            window.saveProjectAs();
+            saveAsChoice.saveWith(false, false);
+        }
+        function onSaveAsFormatRequested(zip, copy) {
+            saveAsChoice.saveWith(zip, copy);
         }
     }
 
@@ -921,8 +925,9 @@ EaComponents.ApplicationWindow {
         }
     }
 
-    // Save as (edi ADR-0052): first the format and whether to keep working where the project is (a copy), then the
-    // system's dialog for the folder or the .zip.
+    // Save as (edi ADR-0052): the format and whether to keep working where the project is (a copy) come from Get
+    // started's Save menu (saveWith), then the system's dialog for the folder or the .zip. The dialog itself opens only
+    // for the assistant's delegated save, which presses its OK.
     AppDialog {
         id: saveAsChoice
         objectName: "saveAs.choice"
@@ -955,6 +960,18 @@ EaComponents.ApplicationWindow {
         onAccepted: {
             Session.setNextSaveData(linkedData ? dataChoice : "");
             ApplicationInfo.acceptProjectSaveChoice();
+        }
+        // The format and copy chosen from Get started's Save menu: the same save as this dialog's OK, without asking
+        // again. Linked measured data follows Data on save's preset.
+        function saveWith(asZip, asCopy) {
+            if (Session.project === null)
+                return;
+            window.assistantSaveIntent = "";
+            linkedData = Session.project.hasLinkedData();
+            dataChoice = Session.project.presetSaveData();
+            zip = asZip || !diskWritable;
+            copy = asCopy || !diskWritable;
+            accept();
         }
 
         Column {

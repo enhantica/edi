@@ -8,6 +8,8 @@
 // than a parity to prove.
 
 #include "edi/io.hpp"
+
+#include "edi/project_import.hpp"
 #include "utc_time.hpp"
 #include <type_traits>
 #include "edi/project_archive.hpp"
@@ -5109,6 +5111,21 @@ Project load_project(const std::string& path, ProjectLoadMode mode, const Warnin
     // edi ADR-0052: a project opens from its folder, its project.edi or a .zip of the folder.
     std::error_code error;
     const fs::path given(path);
+    // Another program's project file goes through its importer (ADR-0098).
+    if (is_imported_project_path(path)) {
+        // The conversion's notes reach the same sinks as a folder's warnings: the sourced one, naming the file.
+        const auto file = given.filename().string();
+        const WarningSink notes = [&on_warning, &file](const std::string& message) {
+            if (sourced_warnings != nullptr) {
+                (*sourced_warnings)(file, message);
+            } else if (on_warning) {
+                on_warning(message);
+            } else {
+                std::cerr << "Warning: " << message << "\n";
+            }
+        };
+        return import_project(path, notes);
+    }
     if (given.filename() == "project.edi" && fs::is_regular_file(given, error)) {
         const fs::path folder = given.has_parent_path() ? given.parent_path() : fs::path(".");
         return load_project_folder(folder.string(), on_warning,policy);

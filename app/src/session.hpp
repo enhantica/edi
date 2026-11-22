@@ -13,6 +13,7 @@
 #include <QStringList>
 #include <QTimer>
 #include <QUrl>
+#include <QVariantList>
 #include <QtQml/qqmlregistration.h>
 #include <functional>
 #include <memory>
@@ -255,6 +256,15 @@ class Session : public QObject {
     /// Save as's Measured data row (edi ADR-0088 point 5): the next save copies linked data into the project ("copy") or
     /// keeps it linked ("linked"), answering its question in advance; anything else clears it. Used by that save only.
     Q_INVOKABLE void setNextSaveData(const QString& choice);
+    /// Export a FullProf copy under the selected parent directory and keep the EDI project open.
+    Q_INVOKABLE bool exportFullProf(const QUrl& parentDirectory, bool fixed);
+    /// The core's project importers (edi ADR-0098), in the Load project menu's order: each a map of `key` (for object
+    /// names), `program`, `hint` (its first suffix) and `nameFilter` for a file chooser.
+    Q_INVOKABLE QVariantList projectImporters() const;
+    /// The core's project exporters, in the Save project as menu's order: each a map of `key`, `program` and `hint`.
+    Q_INVOKABLE QVariantList projectExporters() const;
+    /// Export a copy for `program` as `<project>-<key>` under the selected parent directory; the project stays open.
+    Q_INVOKABLE bool exportProjectCopy(const QString& program, const QUrl& parentDirectory);
     Q_INVOKABLE bool saveAs(const QUrl& directory);
     // Save as (edi ADR-0052): into the folder or the .zip `target` (a `file:` URL), as `zip` says. A project saved as a
     // .zip keeps the archive as its location and every later Save rewrites it. With `copy` the project is written

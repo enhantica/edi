@@ -883,9 +883,6 @@ class ApplicationInfo : public QObject {
     Q_INVOKABLE void chooseCreateProject() const;
     Q_INVOKABLE void createProjectClicked() const;
     Q_INVOKABLE void createProjectDialogEvent(int kind) const;
-    Q_INVOKABLE void openProjectChoice() const;
-    Q_INVOKABLE void openProjectPicker() const;
-    Q_INVOKABLE void askOpenProjectChoice() const;
     Q_INVOKABLE void windowSaveChoiceOpened() const;
     Q_INVOKABLE QJSValue windowUnsavedText() const;
     /// Final guarded focus/refresh/sort/warning and visual-feedback event procedures.
@@ -1097,7 +1094,6 @@ class ApplicationInfo : public QObject {
    private:
     qint64 last_input_ = 0;
     mutable class QNetworkAccessManager* feedback_network_ = nullptr;
-    mutable QPointer<QObject> pending_project_picker_;
     mutable QPointer<QObject> dataset_folder_picker_, dataset_folder_project_, dataset_folder_experiment_;
 
 };

@@ -25,11 +25,11 @@
     },
     {
       "id": "fullprof-intake",
-      "version": "1.0.12",
-      "title": "Inspect a FullProf project",
-      "summary": "Interpret actual selected text and scientific associations; use only offered app operations, with unsupported mappings explicit.",
+      "version": "1.7.0",
+      "title": "Rebuild a FullProf or EasyDiffraction project",
+      "summary": "Use selected FullProf files to reconstruct an Edi project by hand, or use saved Edi data to prepare a FullProf project, and compare fixed-input calculations.",
       "path": "fullprof-intake/SKILL.md",
-      "sha256": "6c72b3376efcfde17b104897da422c5085bcb62bed9bbd0a7a432bd2a0d823af",
+      "sha256": "4e553b2d88ec435279d2df4b050907cb1a17f030761afa40c3569e3a6412018d",
       "requires": [
         "selected_files"
       ],
@@ -40,32 +40,39 @@
       "references": [
         {
           "title": "FullProf official documentation",
-          "url": "https://www2017.ill.eu/sites/fullprof/documentation.html"
+          "url": "https://fullprofsuite.github.io/FullProf-Web/documentation.html"
         },
         {
           "title": "FullProf July2001 manual: source conventions and mappings",
-          "url": "https://www2017.ill.eu/sites/fullprof/downloads/Docs/FullProf_Manual.pdf"
+          "url": "https://fpsuite-doc.readthedocs.io/en/latest/_downloads/fc3ae97e4ca48b5b6cc53745c988f603/FullProf_Manual.pdf"
         }
       ]
     },
     {
       "id": "gsas-intake",
-      "version": "1.0.6",
-      "title": "Inspect GSAS/GSAS-II material",
-      "summary": "Inspect readable selected exports through offered actions; binary GPX is never executed and unsupported mappings remain explicit.",
+      "version": "1.2.0",
+      "title": "Rebuild a GSAS-II or EasyDiffraction project",
+      "summary": "Use selected GSAS-II text to reconstruct an Edi project, or use saved Edi data to prepare a GSAS-II project.",
       "path": "gsas-intake/SKILL.md",
-      "sha256": "eec62b9501d287479780d5e86e267bb28a096654a8f911c17cba115cb888b914",
-      "requires": [
-        "selected_files"
-      ],
+      "sha256": "85f6a98a74e2b0eed97af15e3a21fc1c3abafb75463406e2dc8a1767c3cd556c",
+      "requires": [],
       "capabilities": [
         "inspect_project",
+        "list_parameters",
         "ask_question"
       ],
       "references": [
         {
           "title": "GSAS-II Full CIF tutorial",
           "url": "https://advancedphotonsource.github.io/GSAS-II-tutorials/CIFtutorial/CIFtutorial.html"
+        },
+        {
+          "title": "GSAS-II scripting interface and parameter controls",
+          "url": "https://gsas-ii.readthedocs.io/en/latest/GSASIIscriptable.html"
+        },
+        {
+          "title": "GSAS-II data tree and powder instrument record",
+          "url": "https://gsas-ii.readthedocs.io/en/latest/objvarorg.html"
         }
       ]
     },

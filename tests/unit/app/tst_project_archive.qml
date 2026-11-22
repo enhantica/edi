@@ -298,11 +298,11 @@ TestCase {
                 });
         return rows;
     }
-    function chooseOpenFormat(zip) {
+    function chooseOpenFormat(kind) {
         const choice = findChild(app, "open.choice");
         verify(choice !== null, "Open first presents the same app format dialog on every platform");
         tryCompare(choice, "opened", true, 2000, "The Open format dialog is actually open before its system chooser");
-        const format = findChild(choice.contentItem, zip ? "open.zip" : "open.folder");
+        const format = findChild(choice.contentItem, "open." + kind);
         verify(format && format.enabled, "The selected Open format is supported on this platform");
         mouseClick(format, format.width / 2, format.height / 2);
         const ok = choice.standardButton(Dialog.Ok);
@@ -312,7 +312,7 @@ TestCase {
         application();
         const input = routeInput(data.projectName, data.route);
         clickControl("project.open");
-        chooseOpenFormat(data.route === "zip");
+        chooseOpenFormat(data.route);
         let dialogs;
         tryVerify(() => {
             dialogs = SettingsProof.projectFileDialogs(app, data.route === "folder");
@@ -325,6 +325,40 @@ TestCase {
         const metadata = SettingsProof.text(Probe.repoUrl("docs/user/cli/" + data.projectName + "/project"), "project.edi");
         const name = metadata.match(/_metadata.name\s+(?:"([^"]+)"|(\S+))/).slice(1).find(value => value !== undefined);
         compare(Session.project.name, name, "Unified Open retains the input project's declared name");
+    }
+    function test_open_fullprof_project() {
+        application();
+        clickControl("project.open");
+        chooseOpenFormat("fullProf");
+        let dialogs;
+        tryVerify(() => {
+            dialogs = SettingsProof.projectFileDialogs(app, false);
+            return dialogs.length === 1;
+        }, 2000, "The FullProf choice opens a real file chooser");
+        const input = Probe.repoUrl("knowledge/verification/fullprof/pd-neut-cwl_pbso4_basic/pbso4.pcr");
+        verify(SettingsProof.chooseProjectLocation(dialogs[0], input, false), "The native chooser accepts the PCR file");
+        tryVerify(() => Session.hasProject || Session.lastError !== "", 8000, "The deferred Open action finishes");
+        compare(Session.lastError, "", "Opening the selected FullProf control file");
+        verify(Session.hasProject, "Open imports the selected data and structure");
+        compare(Session.project.name, "pbso4");
+        verify(Session.needsSaveAs, "The imported project has its own native save destination");
+        const imported = Session.project;
+        clickControl("project.exportFullProf");
+        const choice = findChild(app, "export.fullProf.choice");
+        verify(choice !== null);
+        tryCompare(choice, "opened", true, 2000);
+        const ok = choice.standardButton(Dialog.Ok);
+        mouseClick(ok, ok.width / 2, ok.height / 2);
+        tryVerify(() => {
+            dialogs = SettingsProof.projectFileDialogs(app, true);
+            return dialogs.length === 1;
+        }, 2000, "FullProf export chooses a parent folder");
+        const parent = SettingsProof.emptyDirectory();
+        verify(SettingsProof.chooseProjectLocation(dialogs[0], parent, true));
+        const folder = parent.toString() + "/pbso4-fullprof";
+        tryVerify(() => SettingsProof.text(folder, "project.pcr").includes("NPATT"), 4000);
+        verify(SettingsProof.text(folder, "pattern_1.dat").startsWith("XYDATA"));
+        compare(Session.project, imported, "Export keeps the imported project open");
     }
     function test_web_zip_lifecycle_data() {
         const rows = [];
@@ -351,7 +385,7 @@ TestCase {
         }
         if (data.route === "open") {
             clickControl("project.open");
-            chooseOpenFormat(true);
+            chooseOpenFormat("zip");
             let dialogs;
             tryVerify(() => {
                 dialogs = SettingsProof.projectFileDialogs(app, false);

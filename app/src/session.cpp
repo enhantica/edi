@@ -11,6 +11,7 @@
 
 #include <QCoreApplication>
 #include <QDir>
+#include <QVariantMap>
 #include <QDirIterator>
 #include <QFile>
 #include <QFileInfo>
@@ -35,7 +36,9 @@
 #include "web_storage.hpp"
 #include "edi/display.hpp"
 #include "edi/report.hpp"
+#include "edi/fullprof.hpp"
 #include "edi/io.hpp"
+#include "edi/project_import.hpp"
 #include "edi/project_archive.hpp"
 #include "edi/parameter_walk.hpp"
 #include "edi/scan.hpp"
@@ -935,6 +938,80 @@ QString Session::writeBackReports() {
         return failed.arg(archive_location_, QString::fromUtf8(refusal.what()));
     }
     return {};
+}
+
+bool Session::exportFullProf(const QUrl& parentDirectory, bool fixed) {
+    if (!project_ || !parentDirectory.isLocalFile()) {
+        return false;
+    }
+    const auto directory = QDir(parentDirectory.toLocalFile()).filePath(folderNameFor(project_->name()) +
+                                                                        QStringLiteral("-fullprof"));
+    try {
+        const auto written = edi::export_fullprof_project(project_->project(), directory.toStdString(), fixed);
+        qCInfo(lcApp, "FullProf project exported: %s", written.c_str());
+    } catch (const std::exception& error) {
+        emit refused(QString::fromUtf8(error.what()));
+        return false;
+    }
+    return true;
+}
+
+namespace {
+// An object-name key for a program: the built-in ones keep the names the menus have always had.
+QString programKey(const std::string& program) {
+    if (program == "FullProf") return QStringLiteral("fullProf");
+    if (program == "GSAS-II") return QStringLiteral("gsas");
+    QString key;
+    for (const QChar c : QString::fromStdString(program)) {
+        if (c.isLetterOrNumber()) key += c.toLower();
+    }
+    return key;
+}
+}  // namespace
+
+QVariantList Session::projectImporters() const {
+    QVariantList list;
+    for (const auto& importer : edi::project_importers()) {
+        QStringList patterns;
+        for (const auto& suffix : importer.suffixes) {
+            const auto text = QString::fromStdString(suffix);
+            patterns << QStringLiteral("*") + text << QStringLiteral("*") + text.toUpper();
+        }
+        const auto program = QString::fromStdString(importer.program);
+        list.append(QVariantMap{{QStringLiteral("key"), programKey(importer.program)},
+                                {QStringLiteral("program"), program},
+                                {QStringLiteral("hint"), QString::fromStdString(importer.suffixes.front())},
+                                {QStringLiteral("nameFilter"),
+                                 tr("%1 projects (%2)").arg(program, patterns.join(QLatin1Char(' ')))}});
+    }
+    return list;
+}
+
+QVariantList Session::projectExporters() const {
+    QVariantList list;
+    for (const auto& exporter : edi::project_exporters()) {
+        list.append(QVariantMap{{QStringLiteral("key"), programKey(exporter.program)},
+                                {QStringLiteral("program"), QString::fromStdString(exporter.program)},
+                                {QStringLiteral("hint"), QString::fromStdString(exporter.hint)}});
+    }
+    return list;
+}
+
+bool Session::exportProjectCopy(const QString& program, const QUrl& parentDirectory) {
+    if (!project_ || !parentDirectory.isLocalFile()) {
+        return false;
+    }
+    const auto directory = QDir(parentDirectory.toLocalFile())
+                               .filePath(folderNameFor(project_->name()) + QLatin1Char('-') +
+                                         programKey(program.toStdString()).toLower());
+    try {
+        const auto written = edi::export_project(program.toStdString(), project_->project(), directory.toStdString());
+        qCInfo(lcApp, "%s project exported: %s", qUtf8Printable(program), written.c_str());
+    } catch (const std::exception& error) {
+        emit refused(QString::fromUtf8(error.what()));
+        return false;
+    }
+    return true;
 }
 
 bool Session::saveAs(const QUrl& directory) {
@@ -1970,7 +2047,10 @@ void Session::syncCalculationMessages() {
 
 bool Session::projectDirectoryExists(const QString& path) const {
     // A recent project is a folder or a .zip it was saved as (edi ADR-0052).
-    return !path.isEmpty() && (QFileInfo(path).isDir() || edi::is_project_archive(path.toStdString()));
+    const QFileInfo location(path);
+    const auto source = path.toStdString();
+    return !path.isEmpty() && (location.isDir() || edi::is_project_archive(source) ||
+                               (location.isFile() && edi::is_imported_project_path(source)));
 }
 
 QUrl Session::projectDirectoryUrl(const QString& path) const {

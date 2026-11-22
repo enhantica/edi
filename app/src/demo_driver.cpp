@@ -673,6 +673,17 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
         steps_.push_back({"mainview-6-structure-keeps-correlations", {"appBar.tab.structure", basic}});
         steps_.push_back({"mainview-7-dark", {"theme:dark", "appBar.tab.analysis", "mainArea.tab.pattern"}});
     }
+    // The Load and Save project menus with an imported project open, the file EDI_DEMO_IMPORT_PROJECT names (a .gpx,
+    // .gsas.json or .pcr). Run only when asked (`--demo-only importsave-`).
+    if (only.startsWith(QLatin1String("importsave-"))) {
+        const QString imported = "open-project:" + qEnvironmentVariable("EDI_DEMO_IMPORT_PROJECT");
+        steps_.push_back({"importsave-1-group", QStringList{"resize:1480x800", "theme:light"} + start +
+                                                    QStringList{imported, "appBar.tab.project", basic,
+                                                                "reveal:group.getStarted", "expand:group.getStarted"}});
+        steps_.push_back({"importsave-2-load-menu", {"project.load"}});
+        steps_.push_back({"importsave-3-save-menu", {"key:Escape", "project.saveAs"}});
+        steps_.push_back({"importsave-4-save-menu-dark", {"key:Escape", "theme:dark", "project.saveAs"}});
+    }
     // The one main view on a new empty project, its first visits and its kept tab, and after an example loads; then
     // frames taken while the pages slide,
     // where the divider beside the sidebar stays put (the owner, 2026-11-11). The new project is written under the

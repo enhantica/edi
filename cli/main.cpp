@@ -24,6 +24,7 @@
 #include <sys/ioctl.h>
 #endif
 
+#include "edi/fullprof.hpp"
 #include "edi/io.hpp"
 #include "edi/model.hpp"
 #include "edi/project_archive.hpp"
@@ -42,7 +43,8 @@ constexpr std::string_view usage =
     "[--threads auto|N] [--parallel-fits N]\n"
     "  --threads: threads per calculation (default: auto).\n"
     "  --parallel-fits: scan files fitted together (default: 1); each uses one thread.\n"
-    "    In a sequential scan, files in a group start from the preceding group's result.\n";
+    "    In a sequential scan, files in a group start from the preceding group's result.\n"
+    "       edi export-fullprof PROJECT DIRECTORY [--fixed]\n";
 
 int positive_count(std::string_view value, std::string_view option) {
     int count = 0;
@@ -284,6 +286,37 @@ int main(int argc, char** argv) {
         return 0;
     }
     if (const int code = edi_cli::run_downloads(argc, argv); code >= 0) return code;
+
+    if (argc >= 2 && std::string_view(argv[1]) == "export-fullprof") {
+        if (argc == 3 && std::string_view(argv[2]) == "--help") {
+            std::cout << "Usage: edi export-fullprof PROJECT DIRECTORY [--fixed]\n";
+            return 0;
+        }
+        const bool fixed = argc == 5 && std::string_view(argv[4]) == "--fixed";
+        if (argc != 4 && !fixed) {
+            std::cerr << "Usage: edi export-fullprof PROJECT DIRECTORY [--fixed]\n";
+            return 2;
+        }
+        try {
+            auto project = edi::load_project(argv[2]);
+            const std::string unpacked = project.scan_data_root;
+            try {
+                std::cout << edi::export_fullprof_project(project, argv[3], fixed) << '\n';
+            } catch (...) {
+                if (!unpacked.empty() && edi::is_project_archive(argv[2])) {
+                    edi::remove_archive_directory(unpacked);
+                }
+                throw;
+            }
+            if (!unpacked.empty() && edi::is_project_archive(argv[2])) {
+                edi::remove_archive_directory(unpacked);
+            }
+        } catch (const std::exception& error) {
+            std::cerr << "edi export-fullprof: " << error.what() << '\n';
+            return 1;
+        }
+        return 0;
+    }
 
     bool dry = false;
     bool machine = false;
