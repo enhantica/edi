@@ -399,13 +399,13 @@ class StructureViewModel : public QObject {
     Q_PROPERTY(bool magnetic READ magnetic NOTIFY magneticChanged)
     // The propagation vector a Magnetic structure without one has from its magnetic group: k = 0,0,0 for a group in
     // its parent's cell (types I-III, table-resolved); empty when the file gives vectors or none can be derived.
-    Q_PROPERTY(QString derivedPropagationVector READ derivedPropagationVector NOTIFY magneticChanged)
+    Q_PROPERTY(QString derivedPropagationVector READ derivedPropagationVector NOTIFY derivedPropagationVectorChanged)
     // Why the group gives no k, when a magnetic structure has no vectors and none is derived.
-    Q_PROPERTY(QString propagationNotDerived READ propagationNotDerived NOTIFY magneticChanged)
-    Q_PROPERTY(QStringList magneticSettings READ magneticSettings NOTIFY magneticChanged)
+    Q_PROPERTY(QString propagationNotDerived READ propagationNotDerived NOTIFY propagationNotDerivedChanged)
+    Q_PROPERTY(QStringList magneticSettings READ magneticSettings NOTIFY magneticSettingsChanged)
     // Whether the structure's setting is one of the list; a file's other setting (another origin, type IV) is shown as
     // written, marked operators only.
-    Q_PROPERTY(bool magneticSettingTabulated READ magneticSettingTabulated NOTIFY magneticChanged)
+    Q_PROPERTY(bool magneticSettingTabulated READ magneticSettingTabulated NOTIFY magneticSettingTabulatedChanged)
     // The types a site may take for the probes of the experiments linking the structure (edi::atom_types).
     Q_PROPERTY(QStringList atomTypes READ atomTypes NOTIFY atomTypesChanged)
     // The bond cutoffs (`_geom`): a bond is drawn between two sites at least the minimum distance apart and at most
@@ -469,6 +469,10 @@ class StructureViewModel : public QObject {
    signals:
     void nameChanged();
     void magneticChanged();
+    void derivedPropagationVectorChanged();
+    void propagationNotDerivedChanged();
+    void magneticSettingsChanged();
+    void magneticSettingTabulatedChanged();
     void atomTypesChanged();
     void minBondDistanceChanged();
     void bondDistanceIncrementChanged();

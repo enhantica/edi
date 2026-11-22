@@ -561,7 +561,7 @@
     "spherical": {
      "need": {
       "by": "deviation",
-      "ref": "D96",
+      "ref": "D98",
       "verdict": "keep"
      },
      "reason": "C",
@@ -2140,7 +2140,7 @@
     "uncertainty": {
      "need": {
       "by": "deviation",
-      "ref": "D96",
+      "ref": "D98",
       "verdict": "keep"
      },
      "reason": "C",
@@ -2149,7 +2149,7 @@
     "value": {
      "need": {
       "by": "deviation",
-      "ref": "D96",
+      "ref": "D98",
       "verdict": "keep"
      },
      "reason": "C",
@@ -4959,7 +4959,7 @@
     "experiment_sets": {
      "need": {
       "by": "deviation",
-      "ref": "D97",
+      "ref": "D99",
       "verdict": "keep"
      },
      "reason": "C",
@@ -5755,7 +5755,7 @@
     "azimuth": {
      "need": {
       "by": "deviation",
-      "ref": "D96",
+      "ref": "D98",
       "verdict": "keep"
      },
      "reason": "C",
@@ -5764,7 +5764,7 @@
     "modulus": {
      "need": {
       "by": "deviation",
-      "ref": "D96",
+      "ref": "D98",
       "verdict": "keep"
      },
      "reason": "C",
@@ -5773,7 +5773,7 @@
     "polar": {
      "need": {
       "by": "deviation",
-      "ref": "D96",
+      "ref": "D98",
       "verdict": "keep"
      },
      "reason": "C",
@@ -7052,7 +7052,7 @@
    "DerivedQuantity": {
     "need": {
      "by": "deviation",
-     "ref": "D96",
+     "ref": "D98",
      "verdict": "keep"
     },
     "reason": "C",
@@ -7559,7 +7559,7 @@
    "SphericalMoment": {
     "need": {
      "by": "deviation",
-     "ref": "D96",
+     "ref": "D98",
      "verdict": "keep"
     },
     "reason": "C",

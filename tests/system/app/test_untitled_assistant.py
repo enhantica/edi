@@ -1,4 +1,4 @@
-"""The real offline assistant can create from the untitled Project page."""
+"""The real offline assistant can create from unnamed Structure work."""
 
 import json
 import os
@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from tests.integration.app.test_assistant_misfit_workflow import replies, send
+from tests.integration.app.test_assistant_misfit_workflow import replies
 from tests.system.py import test_e11_t5_dev_native_integration as native
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -42,9 +42,13 @@ def test_assistant_create_from_untitled(tmp_path, shown):
     )
     try:
         native.qml(actor, '(function(){AppState.open(AppState.Page.Project);return true;})()')
-        assert native.qml(actor, 'Session.project !== null && Session.needsSaveAs'), (
-            'The assistant starts from the same untitled Project page as the user'
+        assert native.qml(actor, 'Session.project === null'), (
+            'Opening Project alone leaves the session empty'
         )
+        native.qml(actor, '(function(){AppState.open(AppState.Page.Structure);return true;})()')
+        assert native.qml(
+            actor, 'Session.project !== null && Session.untitled && Session.needsSaveAs'
+        ), 'Opening Structure prepares the same unnamed work the user sees'
         parent = tmp_path / 'chosen-parent'
         parent.mkdir()
         control = native.control_expression('createProject.dialog')
@@ -57,7 +61,11 @@ def test_assistant_create_from_untitled(tmp_path, shown):
         ), 'Assistant Create uses the ordinary form with a private remembered parent'
         actor.command('accept_context')
         actor.until(lambda row: row['ui']['connected'])
-        send(actor, 1)
+        actor.request('Create the requested named project with its requested title.')
+        # The shown action drives real focus and pointer events. Read its offline
+        # reply before querying the GUI for the settled turn.
+        native.history_poll(lambda: bool(actor.responses()), seconds=120 if shown else 30)
+        native._session_completed(actor, 1)
         result = replies(actor).get(call_id)
         assert result is not None and result['success'], (
             'The genuine create_project call succeeds from untitled in either presentation mode'

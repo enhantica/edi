@@ -30,7 +30,7 @@ StructureViewOptions::StructureViewOptions(QObject* parent)
 }
 
 template <class T>
-void StructureViewOptions::assign(T& field, T value, void (StructureViewOptions::*notify)()) {
+void StructureViewOptions::assign(T& field, const T& value, void (StructureViewOptions::*notify)()) {
     if (field != value) {
         field = value;
         emit(this->*notify)();

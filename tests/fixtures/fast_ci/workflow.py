@@ -23,10 +23,11 @@ def resolve(value, matrix):
     return value
 
 
-FULL_EVENTS = ('push', 'schedule', 'workflow_dispatch')
+SYSTEM_EVENTS = ('schedule', 'workflow_dispatch')
 APP_CACHE_PATHS = (
     'build/app/app/edi_app',
     'build/app/app/edi_app_tests',
+    'build/app/app/edi_assistant_guard',
     'build/tutorial-transactions',
 )
 
@@ -39,9 +40,13 @@ def reachable(node, jobs, matrix, event='push'):
             for key, item in matrix.items():
                 condition = condition.replace('matrix.' + key, repr(item))
         node['if'] = condition
-    assert active(node, event, states=dict.fromkeys(jobs, 'success')), (
-        f'The required workflow artifact or time-gate path must execute on {event}'
-    )
+    assert active(
+        node,
+        event,
+        states=dict.fromkeys(jobs, 'success'),
+        outputs={('inputs', 'run'): 'true'},
+        bindings={'runner.os': matrix.get('platform')},
+    ), f'The required workflow artifact or time-gate path must execute on {event}'
     continuation = node.get('continue-on-error', False)
     if isinstance(continuation, str):
         continuation = active({'if': continuation}, event, states=dict.fromkeys(jobs, 'success'))
@@ -120,22 +125,25 @@ def workflow_shell(workflow, job, step):
 
 
 def artifact_routes(workflow, root):
-    require_events(workflow, ('pull_request', *FULL_EVENTS))
-    for event in FULL_EVENTS:
+    require_events(workflow, ('pull_request', 'push', *SYSTEM_EVENTS))
+    for event in SYSTEM_EVENTS:
         _artifact_routes(workflow, root / event, event)
 
 
-def _artifact_routes(workflow, root, event):
+def app_uploads(workflow, root, event):
     jobs = workflow['jobs']
     producers = {
         name: job
         for name, job in jobs.items()
-        if any('app-build' in s.get('run', '') for s in job.get('steps', []))
+        if job.get('name') != 'app · Windows'
+        and any('app-build' in s.get('run', '') for s in job.get('steps', []))
     }
     assert producers, 'System shards require a normal-app artifact producer'
     uploads = {}
     for name, job in producers.items():
-        for matrix in matrix_cases(job):
+        static_platform = job.get('env', {}).get('APP_PLATFORM')
+        placements = [{'platform': static_platform}] if static_platform else matrix_cases(job)
+        for matrix in placements:
             reachable(job, jobs, matrix, event)
             build_steps = [s for s in job['steps'] if 'app-build' in s.get('run', '')]
             build_step = build_steps[0]
@@ -165,13 +173,24 @@ def _artifact_routes(workflow, root, event):
                         and tuple(sorted(options['path'].splitlines())) == APP_CACHE_PATHS
                     ), (
                         'The app cache must transfer exactly the app, native test runner '
-                        'and tutorial observer package'
+                        'assistant guard and tutorial observer package'
                     )
+                    binding = 'env.APP_PLATFORM' if static_platform else 'matrix.platform'
                     assert (
-                        options.get('key') == 'edi-app-${{ matrix.platform }}-${{ github.run_id }}'
+                        options.get('key') == 'edi-app-${{ ' + binding + ' }}-${{ github.run_id }}'
                     ), 'The app cache identity must bind the platform and this exact workflow run'
                 identity = options['key' if cached else 'name']
-                uploads[cached, resolve(identity, matrix)] = name
+                if static_platform:
+                    identity = identity.replace('${{ env.APP_PLATFORM }}', static_platform)
+                resource = cached, resolve(identity, matrix)
+                assert resource not in uploads, 'An app resource has only one workflow producer'
+                uploads[resource] = name
+    return uploads
+
+
+def _artifact_routes(workflow, root, event):
+    jobs = workflow['jobs']
+    uploads = app_uploads(workflow, root, event)
     consumers = {
         name: job
         for name, job in jobs.items()
@@ -206,7 +225,7 @@ def _artifact_routes(workflow, root, event):
                         and tuple(sorted(options['path'].splitlines())) == APP_CACHE_PATHS
                     ), (
                         'System reuse must restore exactly the app, native test runner '
-                        'and tutorial observer package'
+                        'assistant guard and tutorial observer package'
                     )
                 pattern = resolve(
                     options.get('key' if cached else 'name', options.get('pattern', '')), matrix
@@ -218,8 +237,8 @@ def _artifact_routes(workflow, root, event):
                 ]
                 if compatible:
                     reachable(step, jobs, matrix, event)
-                    assert set(compatible) & dependencies(jobs, name), (
-                        'Each system consumer must wait for its actual artifact producer'
+                    assert len(compatible) == 1 and compatible[0] in dependencies(jobs, name), (
+                        'Each system consumer must wait for its unique platform artifact producer'
                     )
                     matched = True
             assert matched, 'Every system matrix case must restore the producer app artifact'

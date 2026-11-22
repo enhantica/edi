@@ -365,7 +365,7 @@ REFERENCE_METADATA = {
 }
 STATIC_CONSTRUCTED_DEFAULTS = {
     'name': 'untitled_project',
-    'title': 'Untitled Project',
+    'title': '',
     'description': '',
     'timestamp': None,
 }

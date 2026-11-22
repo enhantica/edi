@@ -913,6 +913,13 @@ void read_magnetic(const Block& block, Structure& structure, const std::string& 
                        text("_parent_space_group.child_transform_Pp_abc"),
                        text("_parent_space_group.reference_setting"),
                        text("_parent_space_group.derived")};
+    // The retired flag is not kept, but a supplied one is still read whole, as the CIF readers read it: anything but
+    // true or false refuses, a quoted empty value included (only a bare ? or . gives no flag).
+    if (const std::string* derived = block.find("_parent_space_group.derived");
+        derived != nullptr && !block.bare_markers.contains("_parent_space_group.derived") && *derived != "true" &&
+        *derived != "false") {
+        fail_domain(where, "malformed-parent-derived", "_parent_space_group.derived '" + *derived + "' is neither true nor false");
+    }
     const auto id_text = [&](const char* id_tag, const char* text_tag) {
         std::vector<std::pair<std::string, std::string>> rows;
         if (const Loop* loop = block.loop_with(id_tag)) {
@@ -956,10 +963,10 @@ void read_magnetic(const Block& block, Structure& structure, const std::string& 
     }
     if (const Loop* loop = radial_loop) {
         for (const auto& row : loop->rows) {
-            crysta::MagneticRadialCoefficients coefficients;
+            MagneticRadialCoefficients coefficients;
             for (std::size_t index = 0; index < coefficients.values.size(); ++index) {
                 const std::string tag = "_atom_type_scat.neutron_magnetic_j" + std::to_string(2 * (index / 8)) + "_" +
-                                        crysta::kMagneticRadialItems[index % 8];
+                                        kMagneticRadialItems[index % 8];
                 const std::string value = given(*loop, row, tag.c_str());
                 coefficients.values[index] = value.empty() ? value : representable(value, tag.c_str());
             }
@@ -3682,14 +3689,16 @@ static void rename_for_saving(Project& project, const WarningSink& on_warning) {
         for (const auto& other : project.structures) {
             if (other != structure &&
                 KeyTraits<Structure>::canonical(other->name.value()) == KeyTraits<Structure>::canonical(to)) {
-                throw IoError("the structure '" + from + "' would be saved as '" + to +
-                              "', which another structure of the project is already named");
+                std::string message = "the structure '" + from;
+                message.append("' would be saved as '").append(to).append("', which another structure of the project is already named");
+                throw IoError(message);
             }
         }
         structure->name = to;
         if (on_warning) {
-            on_warning("the structure '" + from + "' is named '" + to +
-                       "' so it can be saved: a saved name is ASCII letters, digits, '_' and '-'");
+            std::string message = "the structure '" + from;
+            message.append("' is named '").append(to).append("' so it can be saved: a saved name is ASCII letters, digits, '_' and '-'");
+            on_warning(message);
         }
     }
 }
@@ -4387,7 +4396,7 @@ static Project load_project_folder(const std::string& directory, const WarningSi
                                                  analysis_file.string());
                 member.file_pattern = loop_cell(*members, row, "_sequential_fit_experiment.file_pattern",
                                                 analysis_file.string());
-                project.sequential_fit.experiments.push_back(std::move(member));
+                project.sequential_fit.experiments.push_back(member);
             }
         }
         if (const Loop* sets = block.loop_with("_experiment_set.id")) {
@@ -4396,7 +4405,7 @@ static Project load_project_folder(const std::string& directory, const WarningSi
                 set.id = loop_cell(*sets, row, "_experiment_set.id", analysis_file.string());
                 set.template_experiment_id =
                     loop_cell(*sets, row, "_experiment_set.template_experiment_id", analysis_file.string());
-                project.experiment_sets.push_back(std::move(set));
+                project.experiment_sets.push_back(set);
             }
         }
         if (const Loop* members = block.loop_with("_experiment_set_member.experiment_id")) {
@@ -4405,7 +4414,7 @@ static Project load_project_folder(const std::string& directory, const WarningSi
                 member.experiment_id =
                     loop_cell(*members, row, "_experiment_set_member.experiment_id", analysis_file.string());
                 member.set_id = loop_cell(*members, row, "_experiment_set_member.set_id", analysis_file.string());
-                project.experiment_set_members.push_back(std::move(member));
+                project.experiment_set_members.push_back(member);
             }
         }
         if (const Loop* aliases = block.loop_with("_alias.id")) {

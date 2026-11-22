@@ -24,6 +24,7 @@ from tests.fixtures.e09_t75_workflow import active
 from tests.fixtures.metadata_transition.source_bytes import read_previous
 from tests.fixtures.native_process import environment_bash, fixture_program
 from tests.fixtures.table_display.metadata_bytes import pre_catalogue_bytes
+from tests.integration.py.test_e04_t1_app_contract import APP_OUTPUTS, NIGHTLY_APP_CONDITION
 
 ROOT = Path(__file__).resolve().parents[3]
 MANIFEST = tomllib.loads((ROOT / 'pixi.toml').read_text())
@@ -230,7 +231,7 @@ def test_ci_job_names_state_area_and_platform_and_share_matrices():
         'changes',
     }
     if public:
-        # Parallel system parts and their push-only duration collector identify
+        # Parallel system parts and their duration collector identify
         # the same area/platform, with a concrete part suffix on every test job.
         required |= (
             {'system time'}
@@ -256,11 +257,13 @@ def test_ci_job_names_state_area_and_platform_and_share_matrices():
     )
     windows = [(key, job) for key, name, job in rows if name == 'app · Windows']
     assert len(windows) == 1 and windows[0][0] == 'app-windows', (
-        'note 18: the Windows build-only app job is separate from the Linux/macOS test matrix'
+        'note 18: the Windows build-only app job keeps its static job identity'
     )
     for area in ('native', 'core', 'app', 'cli-python', 'cli-native'):
         keys = {key for key, name, _ in rows if name in {area + ' · Linux', area + ' · macOS'}}
-        expected = 2 if area in {'native', 'core'} and not public else 1
+        expected = (
+            2 if (area == 'app' and public) or (area in {'native', 'core'} and not public) else 1
+        )
         assert len(keys) == expected, (
             f'{area} uses the declared per-platform jobs or shared matrix'
         )
@@ -615,10 +618,7 @@ def test_desktop_ci_sequence_builds_once_before_checks(tmp_path, platform, event
     job = next(job for _, name, job in expanded_jobs() if name == f'app · {platform}')
     # Actions stringifies YAML env values (EDI_NATIVE_ARTIFACT is declared as 1).
     env.update({key: str(value) for key, value in job.get('env', {}).items()})
-    nightly_condition = (
-        "${{ !cancelled() && (github.event_name == 'schedule' || "
-        "github.event_name == 'workflow_dispatch') && steps.apphost.outcome == 'success' }}"
-    )
+    binding = {'runner.os': platform}
     for step in job['steps']:
         cmd = step.get('run', '')
         if not re.search(
@@ -630,31 +630,33 @@ def test_desktop_ci_sequence_builds_once_before_checks(tmp_path, platform, event
         is_tier = bool(re.search(r'\bapp-(?:ui-)?test(?:\s|$)', cmd))
         condition = step.get('if')
         if is_tier:
-            assert condition == nightly_condition, (
+            assert condition == NIGHTLY_APP_CONDITION, (
                 'Owner decision: desktop app tiers use the schedule/manual condition; '
                 f'platform={platform}, event={event}, actual condition={condition!r}'
             )
-            if not enabled:
-                continue
         elif re.search(r'\bgroup-app(?:\s|$)', cmd):
             assert active(
                 step,
                 event,
-                outputs={('inputs', 'run'): 'true', ('onboarding', 'outcome'): 'success'},
+                outputs=APP_OUTPUTS,
+                bindings=binding,
             ) == (event != 'pull_request'), (
                 'The app group runs on push, nightly and full manual, and skips PRs'
             )
-            if event == 'pull_request':
-                continue
         else:
             assert str(condition).removeprefix('${{').removesuffix('}}').strip() == (
-                "!cancelled() && steps.inputs.outputs.run == 'true'"
+                "runner.os != 'Windows' && (!cancelled() && steps.inputs.outputs.run == 'true')"
                 if re.search(r'\bapp-(?:lint|format-check)\b', cmd)
-                else "steps.inputs.outputs.run == 'true'"
+                else "runner.os != 'Windows' && (steps.inputs.outputs.run == 'true')"
             ), (
-                'Build and ordinary app checks remain unconditional within the desktop job; '
+                'Build and ordinary app checks keep their input guard on Linux and macOS; '
                 f'platform={platform}, command={cmd}, actual condition={condition!r}'
             )
+        assert not active(step, event, outputs=APP_OUTPUTS, bindings={'runner.os': 'Windows'}), (
+            f'The shared step {cmd} must never run on the build-only Windows job'
+        )
+        if not active(step, event, outputs=APP_OUTPUTS, bindings=binding):
+            continue
         step_env = {
             **env,
             'GITHUB_EVENT_NAME': event,

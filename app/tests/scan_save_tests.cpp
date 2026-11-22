@@ -22,6 +22,13 @@
 #include "edi/duration_text.hpp"
 #include "project_view_model.hpp"
 #include "structure_view_model.hpp"
+
+// Keeps what a retried check found, for the steps after it, without an assignment inside the check.
+template <class T, class U>
+bool take(T*& slot, U* found) {
+    slot = found;
+    return found != nullptr;
+}
 Q_IMPORT_QML_PLUGIN(edi_appPlugin)
 
 class ScanSaveTests : public QObject {
@@ -104,7 +111,7 @@ private slots:
         };
         const auto openAnalysis = [&] {
             QQuickItem* tab = nullptr;
-            QTRY_VERIFY_WITH_TIMEOUT((tab = shown("appBar.tab.analysis")) && tab->isEnabled(), 20000);
+            QTRY_VERIFY_WITH_TIMEOUT(take(tab, shown("appBar.tab.analysis")) && tab->isEnabled(), 20000);
             click(tab);
         };
         // Atoms in the middle of the view: there a blank view has no letter, legend or toolbar.
@@ -202,15 +209,15 @@ private slots:
         // found and a click on it changes nothing here.
         const auto openExtras = [&](const char* page, const char* group) {
             QQuickItem* tab = nullptr;
-            QTRY_VERIFY_WITH_TIMEOUT((tab = shown(QString::fromLatin1(page))) && tab->isEnabled(), 20000);
+            QTRY_VERIFY_WITH_TIMEOUT(take(tab, shown(QString::fromLatin1(page))) && tab->isEnabled(), 20000);
             click(tab);
             QTRY_VERIFY_WITH_TIMEOUT(shown(QString::fromLatin1(group)), 20000);
-            QTRY_VERIFY_WITH_TIMEOUT((tab = shown("sideBar.tab.extras")), 20000);
+            QTRY_VERIFY_WITH_TIMEOUT(take(tab, shown("sideBar.tab.extras")), 20000);
             click(tab);
         };
         const auto expand = [&](const QString& group) {
             QQuickItem* item = nullptr;
-            QTRY_VERIFY_WITH_TIMEOUT((item = shown(group)), 20000);
+            QTRY_VERIFY_WITH_TIMEOUT(take(item, shown(group)), 20000);
             QVERIFY(item->setProperty("collapsed", false));
         };
         // A table's horizontal bar follows the vertical bar's policy (AsNeeded, fading when idle), never AlwaysOn.
@@ -228,15 +235,17 @@ private slots:
         // One group at a time: with auto-collapse on, expanding the next folds the one before.
         expand("group.expanded_atom_site");
         QQuickItem* atoms = nullptr;
-        QTRY_VERIFY_WITH_TIMEOUT((atoms = shown("generated.expanded_atom_site.list")) && atoms->property("count").toInt() > 0, 20000);
+        QTRY_VERIFY_WITH_TIMEOUT(take(atoms, shown("generated.expanded_atom_site.list")) && atoms->property("count").toInt() > 0, 20000);
         QVERIFY(barFades(atoms));
         // Cartesian and fractional coordinates at a rounding error from zero show as 0, never in scientific notation.
         QList<QQuickItem*> coordinates;
-        QTRY_VERIFY_WITH_TIMEOUT(!(coordinates = all([](QQuickItem* item) {
-                                      const QString name = item->objectName();
-                                      return name.startsWith("generated.expanded_atom_site.cartn_") || name.startsWith("generated.expanded_atom_site.fract_");
-                                  })).isEmpty(),
-                                 20000);
+        QTRY_VERIFY_WITH_TIMEOUT([&] {
+            coordinates = all([](QQuickItem* item) {
+                const QString name = item->objectName();
+                return name.startsWith("generated.expanded_atom_site.cartn_") || name.startsWith("generated.expanded_atom_site.fract_");
+            });
+            return !coordinates.isEmpty();
+        }(), 20000);
         int zeros = 0;
         for (QQuickItem* cell : coordinates) {
             const QString text = cell->property("text").toString();
@@ -247,11 +256,11 @@ private slots:
 
         expand("group.geom");
         QQuickItem* bonds = nullptr;
-        QTRY_VERIFY_WITH_TIMEOUT((bonds = shown("geom.bonds")) && bonds->property("count").toInt() > 0, 20000);
+        QTRY_VERIFY_WITH_TIMEOUT(take(bonds, shown("geom.bonds")) && bonds->property("count").toInt() > 0, 20000);
         QVERIFY(bonds->property("readOnly").toBool());
         QVERIFY(barFades(bonds));
         QQuickItem* symmetry = nullptr;
-        QTRY_VERIFY_WITH_TIMEOUT((symmetry = shown("geom.bonds.symmetry2.0")), 20000);
+        QTRY_VERIFY_WITH_TIMEOUT(take(symmetry, shown("geom.bonds.symmetry2.0")), 20000);
         QVERIFY2(QRegularExpression("^\\d+_\\d{3,}$").match(symmetry->property("text").toString()).hasMatch(), qPrintable(symmetry->property("text").toString()));
         QQuickItem* site = shown("geom.bonds.site1.0");
         QVERIFY(site);
@@ -263,15 +272,15 @@ private slots:
         QTRY_VERIFY_WITH_TIMEOUT(!session->project()->calculating(), 30000);
         {
             QQuickItem* tab = nullptr;
-            QTRY_VERIFY_WITH_TIMEOUT((tab = shown("appBar.tab.structure")) && tab->isEnabled(), 20000);
+            QTRY_VERIFY_WITH_TIMEOUT(take(tab, shown("appBar.tab.structure")) && tab->isEnabled(), 20000);
             click(tab);
-            QTRY_VERIFY_WITH_TIMEOUT((tab = shown("sideBar.tab.basic")), 20000);
+            QTRY_VERIFY_WITH_TIMEOUT(take(tab, shown("sideBar.tab.basic")), 20000);
             click(tab);
         }
         expand("group.space_group_magn");
         QQuickItem* bns = nullptr;
         QQuickItem* uni = nullptr;
-        QTRY_VERIFY_WITH_TIMEOUT((bns = shown("magneticSpaceGroup.selector")) && (uni = shown("magneticSpaceGroup.nameUni")), 20000);
+        QTRY_VERIFY_WITH_TIMEOUT(take(bns, shown("magneticSpaceGroup.selector")) && take(uni, shown("magneticSpaceGroup.nameUni")), 20000);
         QVERIFY(bns->width() > 0);
         QCOMPARE(bns->width(), uni->width());
 
@@ -280,7 +289,7 @@ private slots:
         openExtras("appBar.tab.experiment", "group.experiments");
         expand("group.refln");
         QQuickItem* reflections = nullptr;
-        QTRY_VERIFY_WITH_TIMEOUT((reflections = shown("reflections.list")) && reflections->property("count").toInt() > 0, 20000);
+        QTRY_VERIFY_WITH_TIMEOUT(take(reflections, shown("reflections.list")) && reflections->property("count").toInt() > 0, 20000);
         QVERIFY(reflections->property("readOnly").toBool());
         QVERIFY(barFades(reflections));
     }
@@ -337,10 +346,10 @@ private slots:
         QVERIFY2(session->openProject(QUrl::fromLocalFile(QStringLiteral(EDI_SOURCE_DIR "/docs/user/cli/pd-neut-cwl_lbco-hrpt/project"))), qPrintable(session->lastError()));
         QTRY_VERIFY_WITH_TIMEOUT(!session->project()->calculating(), 30000);
         QQuickItem* tab = nullptr;
-        QTRY_VERIFY_WITH_TIMEOUT((tab = window->findChild<QQuickItem*>(QStringLiteral("appBar.tab.analysis"))) && tab->isEnabled(), 20000);
+        QTRY_VERIFY_WITH_TIMEOUT(take(tab, window->findChild<QQuickItem*>(QStringLiteral("appBar.tab.analysis"))) && tab->isEnabled(), 20000);
         QTest::mouseClick(window, Qt::LeftButton, {}, tab->mapToScene(QPointF(tab->width() / 2, tab->height() / 2)).toPoint());
         QQuickItem* table = nullptr;
-        QTRY_VERIFY_WITH_TIMEOUT((table = window->findChild<QQuickItem*>(QStringLiteral("parameters.list"))) && table->isVisible() && table->property("count").toInt() > table->property("maxRowCountShow").toInt(), 20000);
+        QTRY_VERIFY_WITH_TIMEOUT(take(table, window->findChild<QQuickItem*>(QStringLiteral("parameters.list"))) && table->isVisible() && table->property("count").toInt() > table->property("maxRowCountShow").toInt(), 20000);
         // Scrolled to the end of the whole list, then filtered down to a few rows.
         const double end = table->property("originY").toDouble() + table->property("contentHeight").toDouble() - table->height();
         table->setProperty("contentY", end);
@@ -409,7 +418,7 @@ private slots:
         };
         QQuickItem* item = nullptr;
         for (const char* name : {"appBar.tab.analysis", "mainArea.tab.measCalc"}) {
-            QTRY_VERIFY_WITH_TIMEOUT((item = shown(QString::fromLatin1(name))), 20000);
+            QTRY_VERIFY_WITH_TIMEOUT(take(item, shown(QString::fromLatin1(name))), 20000);
             QTest::mouseClick(window, Qt::LeftButton, {}, item->mapToScene(QPointF(item->width() / 2, item->height() / 2)).toPoint());
         }
         edi_app::ExperimentViewModel* experiment = project->currentExperiment();
@@ -443,7 +452,7 @@ private slots:
         edi_app::ProjectViewModel* project = session->project();
         QTRY_VERIFY_WITH_TIMEOUT(!project->calculating(), 60000);
         QQuickItem* tab = nullptr;
-        QTRY_VERIFY_WITH_TIMEOUT((tab = window->findChild<QQuickItem*>(QStringLiteral("appBar.tab.analysis"))) && tab->isEnabled(), 20000);
+        QTRY_VERIFY_WITH_TIMEOUT(take(tab, window->findChild<QQuickItem*>(QStringLiteral("appBar.tab.analysis"))) && tab->isEnabled(), 20000);
         QTest::mouseClick(window, Qt::LeftButton, {}, tab->mapToScene(QPointF(tab->width() / 2, tab->height() / 2)).toPoint());
         edi_app::ExperimentViewModel* experiment = project->currentExperiment();
         QVERIFY(experiment);
@@ -500,11 +509,11 @@ private slots:
         QVERIFY2(session->openProject(QUrl::fromLocalFile(QStringLiteral(EDI_SOURCE_DIR "/docs/user/cli/pd-neut-cwl_lbco-hrpt/project"))), qPrintable(session->lastError()));
         QTRY_VERIFY_WITH_TIMEOUT(!session->project()->calculating(), 30000);
         QQuickItem* tab = nullptr;
-        QTRY_VERIFY_WITH_TIMEOUT((tab = shown("appBar.tab.analysis")) && tab->isEnabled(), 20000);
+        QTRY_VERIFY_WITH_TIMEOUT(take(tab, shown("appBar.tab.analysis")) && tab->isEnabled(), 20000);
         click(tab);
         // Each chart tab at a wide and a narrow window: the narrow one puts controls in the popup, which opens and closes.
         for (const char* key : {"pattern", "measCalc", "structure", "pattern"}) {
-            QTRY_VERIFY_WITH_TIMEOUT((tab = shown(QStringLiteral("mainArea.tab.%1").arg(QLatin1String(key)))) && tab->isEnabled(), 20000);
+            QTRY_VERIFY_WITH_TIMEOUT(take(tab, shown(QStringLiteral("mainArea.tab.%1").arg(QLatin1String(key)))) && tab->isEnabled(), 20000);
             click(tab);
             const QString toolbar = QLatin1String(key) == QLatin1String("pattern") ? "chart.toolbar" : QLatin1String(key) == QLatin1String("measCalc") ? "measCalc.toolbar" : "structure.toolbar";
             QTRY_VERIFY_WITH_TIMEOUT(shown(toolbar), 20000);
@@ -557,7 +566,7 @@ private slots:
         };
         const auto click = [&](const char* name) {
             QQuickItem* item = nullptr;
-            QTRY_VERIFY_WITH_TIMEOUT((item = named(name)) && item->isVisible() && item->isEnabled()
+            QTRY_VERIFY_WITH_TIMEOUT(take(item, named(name)) && item->isVisible() && item->isEnabled()
                 && window->contentItem()->boundingRect().contains(item->mapRectToScene(item->boundingRect())), 20000);
             QTest::mouseClick(window, Qt::LeftButton, {},
                               item->mapToScene(QPointF(item->width() / 2, item->height() / 2)).toPoint());
@@ -733,7 +742,7 @@ private slots:
         };
         const auto click = [&](const char* name) {
             QQuickItem* item = nullptr;
-            QTRY_VERIFY_WITH_TIMEOUT((item = shown(QString::fromLatin1(name))), 20000);
+            QTRY_VERIFY_WITH_TIMEOUT(take(item, shown(QString::fromLatin1(name))), 20000);
             QTest::mouseClick(window, Qt::LeftButton, {}, item->mapToScene(QPointF(item->width() / 2, item->height() / 2)).toPoint());
         };
         click("appBar.tab.experiment");
@@ -846,7 +855,7 @@ private slots:
         };
         const auto openPage = [&](const char* name) {
             QQuickItem* tab = nullptr;
-            QTRY_VERIFY_WITH_TIMEOUT((tab = shown(QString::fromLatin1(name))) && tab->isEnabled(), 20000);
+            QTRY_VERIFY_WITH_TIMEOUT(take(tab, shown(QString::fromLatin1(name))) && tab->isEnabled(), 20000);
             click(tab);
         };
         const QUrl lbco = QUrl::fromLocalFile(QStringLiteral(EDI_SOURCE_DIR "/docs/user/cli/pd-neut-cwl_lbco-hrpt/project"));
@@ -861,7 +870,7 @@ private slots:
         openPage("appBar.tab.analysis");
         QTRY_COMPARE_WITH_TIMEOUT(currentKey(), QStringLiteral("pattern"), 20000);
         QQuickItem* structureTab = nullptr;
-        QTRY_VERIFY_WITH_TIMEOUT((structureTab = shown("mainArea.tab.structure")), 20000);
+        QTRY_VERIFY_WITH_TIMEOUT(take(structureTab, shown("mainArea.tab.structure")), 20000);
         click(structureTab);
         QTRY_COMPARE_WITH_TIMEOUT(currentKey(), QStringLiteral("structure"), 20000);
         QVERIFY2(session->openProject(lbco), qPrintable(session->lastError()));
@@ -1128,3 +1137,4 @@ int main(int argc, char** argv) {
     return QTest::qExec(&tests, argc, argv);
 }
 #include "scan_save_tests.moc"
+

@@ -273,13 +273,17 @@ def job_contexts(workflow, event, branch, scheduled, *, names=True):
                 'runner.temp': '/tmp/ci-selection-probe',
                 'inputs.core_only': False,
                 'needs.changes.result': 'success',
+                **{f'needs.{name}.result': 'success' for name in workflow['jobs']},
                 'needs.changes.outputs.app_build': 'true',
                 'needs.changes.outputs.crysta_sha': '79' * 20,
+                'needs.changes.outputs.wasm_build': 'false',
                 **{'matrix.' + k: v for k, v in row.items()},
             }
             for step in job.get('steps', []):
                 if step.get('id'):
                     ctx['steps.' + step['id'] + '.outcome'] = 'success'
+                    if step['id'] == 'inputs':
+                        ctx['steps.inputs.outputs.run'] = 'true'
                     if str(step.get('uses', '')).startswith('actions/create-github-app-token@'):
                         ctx['steps.' + step['id'] + '.outputs.token'] = 'trace-only-token'
             runner = runner_labels(job.get('runs-on', ''), ctx)

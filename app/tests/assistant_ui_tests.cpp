@@ -36,6 +36,13 @@
 #include <sys/stat.h>
 #include <sys/xattr.h>
 #endif
+
+// Keeps what a retried check found, for the steps after it, without an assignment inside the check.
+template <class T, class U>
+bool take(T*& slot, U* found) {
+    slot = found;
+    return found != nullptr;
+}
 Q_IMPORT_QML_PLUGIN(edi_appPlugin)
 
 #ifndef __EMSCRIPTEN__
@@ -444,10 +451,10 @@ private slots:
         auto* pageLoader = tab->property("page").value<QObject*>();
         QVERIFY(pageLoader);
         QObject* page = nullptr;
-        QTRY_VERIFY((page = pageLoader->property("item").value<QObject*>()));
+        QTRY_VERIFY(take(page, pageLoader->property("item").value<QObject*>()));
         QVERIFY(QMetaObject::invokeMethod(page, "showSidebarTab", Q_ARG(QVariant, QVariant(false))));
         QQuickItem* table = nullptr;
-        QTRY_VERIFY((table = find("experiments.list")));
+        QTRY_VERIFY(take(table, find("experiments.list")));
         auto* group = table->parentItem();
         while (group && !group->property("collapsed").isValid()) group = group->parentItem();
         QVERIFY(group);
@@ -812,7 +819,7 @@ private slots:
                 if (auto* found = self(child, self)) return found;
             return nullptr;
         };
-        QTRY_VERIFY((titleCell = findTitle(table, findTitle)));  // NOLINT(bugprone-assignment-in-if-condition): polled until found.
+        QTRY_VERIFY(take(titleCell, findTitle(table, findTitle)));  // NOLINT(bugprone-assignment-in-if-condition): polled until found.
         QTRY_VERIFY(table->property("onScreen").toBool());
         QTRY_VERIFY(!table->property("refitting").toBool());
         QTRY_VERIFY(titleCell->width() > 0);
@@ -952,14 +959,22 @@ private slots:
 #endif
 };
 int main(int argc, char** argv) {
+    try {
 #ifndef __EMSCRIPTEN__
-    if (argc > 1 && QByteArray(argv[1]) == "--listen") return assistantToolPeer();
+        if (argc > 1 && QByteArray(argv[1]) == "--listen") return assistantToolPeer();
 #endif
-    QStandardPaths::setTestModeEnabled(true);
-    QGuiApplication app(argc, argv);
-    app.setAttribute(Qt::AA_Use96Dpi, true);
-    AssistantUiTests tests;
-    QTEST_SET_MAIN_SOURCE_PATH
-    return QTest::qExec(&tests, argc, argv);
+        QStandardPaths::setTestModeEnabled(true);
+        QGuiApplication app(argc, argv);
+        app.setAttribute(Qt::AA_Use96Dpi, true);
+        AssistantUiTests tests;
+        QTEST_SET_MAIN_SOURCE_PATH
+        return QTest::qExec(&tests, argc, argv);
+    } catch (const std::exception& error) {
+        qCritical("assistant UI tests stopped: %s", error.what());
+    } catch (...) {
+        qCritical("assistant UI tests stopped");
+    }
+    return 1;
 }
 #include "assistant_ui_tests.moc"
+

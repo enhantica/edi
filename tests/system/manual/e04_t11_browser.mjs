@@ -227,7 +227,7 @@ try {
       'The accessible fit action must match the actual named status-bar button label');
     return node;
   };
-  const click = async (regex, role, nativeObjectName, containerName) => {
+  const click = async (regex, role, nativeObjectName, containerName, waitReady) => {
     activeAction = `click ${regex.source}`;
     await restoreCanvasViewport(evaluate);
     const projectAction=/Save project as/.test(regex.source)?'project.saveAs':
@@ -311,7 +311,8 @@ try {
       } while (!selected && Date.now()<deadline);
       assert(selected,'page navigation must select the requested tab, not reuse labels from a hidden page');
     }
-    if (/^(?:Home|Project|Structure|Experiment|Analysis|Start)$/.test(node.name?.value || '') || /(?:Examples|Get started)$/.test(node.name?.value || '')) await settleRenderedPage();
+    if (waitReady) await waitReady();
+    else if (/^(?:Home|Project|Structure|Experiment|Analysis|Start)$/.test(node.name?.value || '') || /(?:Examples|Get started)$/.test(node.name?.value || '')) await settleRenderedPage();
 
   };
   const discardResetGuard = async () => {
@@ -919,7 +920,8 @@ print(markers[0].parent)`, saved, reopened, reopenControl || 'normal'], { encodi
     };
     let getStartedOpen = !fileRequestsOnly;
     const projectPage = async () => {
-      await click(/^Project$/);
+      const tab = await waitControlGeometry(evaluate, frame, 'appBar.tab.project');
+      if (!tab.checked) await click(/^Project$/, 'tab');
       await waitBrowser(`(() => {const tab=window.ediControlGeometry('appBar.tab.project');
         const group=window.ediControlGeometry('group.getStarted');
         return tab.checked===true && group.visible===true && group.enabled===true &&
@@ -941,11 +943,10 @@ print(markers[0].parent)`, saved, reopened, reopenControl || 'normal'], { encodi
     const snapshot = async () => { await projectPage(); return inspectArchive(await saveArchive()); };
     const createEmpty = async name => {
       await projectPage(); await click(/^Create a new project$/, 'button', 'project.create');
-      await settleRenderedPage();
       const beforeInput = await restoreCanvasViewport(evaluate);
       await writeFile(join(output, `${mode}-create-${name}-before-input.json`), JSON.stringify(beforeInput,null,2));
       await shot(`create-${name}-before-input`);
-      const namePointer = await controlPointer(evaluate, 'createProject.name');
+      const namePointer = await waitNative('createProject.name');
       for (const type of ['mousePressed','mouseReleased']) await send('Input.dispatchMouseEvent',
         {type,...namePointer,button:'left',clickCount:1});
       for (const type of ['keyDown','keyUp']) await send('Input.dispatchKeyEvent',
@@ -954,17 +955,38 @@ print(markers[0].parent)`, saved, reopened, reopenControl || 'normal'], { encodi
         await send('Input.dispatchKeyEvent', {type:'keyDown',key,text:key});
         await send('Input.dispatchKeyEvent', {type:'keyUp',key});
       }
-      for (const type of ['keyDown','keyUp']) await send('Input.dispatchKeyEvent',
-        {type,key:'Enter',code:'Enter',windowsVirtualKeyCode:13});
-      await waitName(name);
-      await settleRenderedPage();
+      const editor = await waitControlGeometry(evaluate, frame, 'createProject.name');
+      assert.equal(editor.text, name, 'The real Create project editor receives the requested short name');
+      await restoreCanvasViewport(evaluate);
+      const accept = await waitNative('createProject.accept');
+      for (const type of ['mousePressed','mouseReleased']) {
+        await send('Input.dispatchMouseEvent', {type,...accept,button:'left',clickCount:1});
+        await frame();
+      }
+      await waitBrowser(`(() => {
+        const find = objectName => {
+          try { return window.ediControlGeometry(objectName); }
+          catch (error) {
+            if (/no visible item is named|no item is named/.test(error.message)) return null;
+            throw error;
+          }
+        };
+        const editor = find('createProject.name');
+        const project = find('project.name');
+        return editor?.visible !== true && project?.visible === true &&
+          project.text === ${JSON.stringify(name)};
+      })()`, 'The Create dialog must close and the Project page must show the newly created name');
       const viewport = await restoreCanvasViewport(evaluate);
       await writeFile(join(output, `${mode}-create-${name}-viewport.json`), JSON.stringify(viewport,null,2));
-      await settleRenderedPage();
     };
+    const openEmptyStructure = () =>
+      click(/^Structure$/, 'tab', 'appBar.tab.structure', undefined, async () => {
+        await waitAX(/Structures \(0\)/);
+        await waitControlGeometry(evaluate, frame, 'structures.create');
+      });
     const createWithStructure = async name => {
       await createEmpty(name);
-      await click(/^Structure$/); await waitAX(/Structures \(0\)/);
+      await openEmptyStructure();
       const structure=await beginPicker(/^From file…$/, 'structures.load', 'structures.load.file');
       await send('DOM.setFileInputFiles',{...structure,files:[join(inputs,'blocks/structure.edi')]});
       await waitAX(/Structures \(1\)/);
@@ -995,7 +1017,7 @@ print(markers[0].parent)`, saved, reopened, reopenControl || 'normal'], { encodi
 
     if (['all','native-picker'].includes(fileRequestCase)) {
       await createEmpty('routing_native_picker');
-      await click(/^Structure$/); await waitAX(/Structures \(0\)/);
+      await openEmptyStructure();
       const bytes=await readFile(join(inputs,'blocks/structure.edi'));
       const transport=await installNativePickerTransport(evaluate,bytes,'native_structure.edi');
       try {
@@ -1004,7 +1026,7 @@ print(markers[0].parent)`, saved, reopened, reopenControl || 'normal'], { encodi
         await waitBrowser('window.__e04NativePickerTransport.calls.length===1 && window.__e04NativePickerTransport.reads===1',
           'The real Qt Load action must call the native API and read its returned File handle');
         const capture=await transport.snapshot();
-        assertNativePickerCapture(capture,['.cif','.edi'],false);
+        assertNativePickerCapture(capture,['.cif','.mcif','.edi'],false);
         await waitAX(/Structures \(1\)/);
         await writeFile(join(output,`${mode}-qt-native-picker.json`),JSON.stringify({
           capture,loadedStructures:1,inputBytes:bytes.length,

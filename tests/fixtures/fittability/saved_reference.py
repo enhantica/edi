@@ -51,6 +51,22 @@ def staged(source, target, rule, *, link_data=False):
     return target
 
 
+def historical_project_title(data, expected, source):
+    source_row = Path(source) / 'project.edi'
+    source_text = source_row.read_bytes() if source_row.is_file() else b''
+    title = re.search(rb'(?im)^_metadata\.title(?:[ \t]+([^\r\n]+))?\r?$', source_text)
+    if title and (title[1] is None or title[1].strip() not in {b'?', b'.'}):
+        return data
+    unspecified = rb'(?m)^(_metadata\.title[ \t]+)\?$'
+    assert len(re.findall(unspecified, data)) == 1, (
+        'An input without a title saves exactly one missing title marker (ADR-0017)'
+    )
+    if prior_digest(data, expected, name='project.edi') == expected:
+        return data
+    # The old default is restored only for comparison with the complete immutable record hash.
+    return re.sub(unspecified, rb'\1"Untitled Project"', data, count=1)
+
+
 def fingerprints(root, *, order_reference=None, source=None):
     result = {}
     for path in sorted(root.rglob('*')):
@@ -66,6 +82,8 @@ def fingerprints(root, *, order_reference=None, source=None):
                 rb'\1<CLOCK>',
                 content,
             )
+            if order_reference is not None and source is not None:
+                content = historical_project_title(content, order_reference[relative], source)
         if relative == 'analysis/analysis.edi':
             if order_reference is not None:
                 assert source is not None, 'Saved-byte stop-rule checks require the original input'

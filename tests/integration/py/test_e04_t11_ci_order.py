@@ -86,8 +86,8 @@ def test_full_ci_consumers_run_on_every_event_and_only_skip_core_only_repairs():
                     'crysta-sdk': 'success',
                 },
                 core_only=True,
-            ) == (not public or key != 'system' or event != 'pull_request'), (
-                'core-only repairs retain core and pin currency, with system excluded from PRs'
+            ) == (key != 'system' or event in {'schedule', 'workflow_dispatch'}), (
+                'core-only repairs retain core and pin currency, with system on nightly or manual'
             )
 
 
@@ -216,7 +216,10 @@ def test_later_jobs_report_after_core_and_native_results(event, upstream):
         states = {'changes': 'success', 'core': upstream, 'app': upstream, 'crysta-sdk': 'success'}
         if name == 'notebooks':
             states['native'] = upstream
-        expected = event != 'pull_request' or name not in {'system', 'app-wasm'}
+        expected = not (
+            (name == 'system' and event in {'pull_request', 'push'})
+            or (name == 'app-wasm' and event == 'pull_request')
+        )
         assert active(jobs[name], event, states=states) == expected, (
             'every event-required later job reports despite failed or skipped core/native/app'
         )
@@ -255,14 +258,35 @@ def test_reporting_keeps_source_cancellation_and_repair_boundaries(event, block)
 
 
 def test_newer_heads_still_cancel_superseded_runs():
-    workflow = yaml.safe_load((ROOT / '.github/workflows/ci.yml').read_text())
-    assert workflow['concurrency'] == {
+    workflows = ROOT / '.github/workflows'
+    tests = yaml.safe_load((workflows / 'ci.yml').read_text())['concurrency']
+    installers = yaml.safe_load((workflows / 'installers.yml').read_text())['concurrency']
+    shared = 'edi-main-push-and-release'
+    release = 'inputs.prepare_preview_release || inputs.release_plan_run'
+    assert tests == {
         'group': (
-            '${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}'
-            '-${{ github.event.schedule }}'
+            f"${{{{ github.event_name == 'push' && '{shared}' || "
+            "format('{0}-{1}-{2}', github.workflow, github.event.pull_request.number || "
+            'github.ref, github.event.schedule) }}'
         ),
-        'cancel-in-progress': True,
-    }, 'newer runs supersede the same PR/ref and schedule; nightly cannot cancel a main push'
+        'cancel-in-progress': "${{ github.event_name != 'push' }}",
+        'queue': "${{ github.event_name == 'push' && 'max' || 'single' }}",
+    }, (
+        'Main-push Tests retain running and queued work; other Tests supersede only '
+        'within the same workflow, PR or ref, and schedule'
+    )
+    assert installers == {
+        'group': (
+            f"${{{{ ({release}) && '{shared}' || "
+            "format('desktop-installers-{0}', github.event_name == 'push' && "
+            'github.ref || github.run_id) }}'
+        ),
+        'cancel-in-progress': "${{ github.event_name == 'push' }}",
+        'queue': f"${{{{ ({release}) && 'max' || 'single' }}}}",
+    }, (
+        'Both release entry points share the multi-run Tests queue; ordinary installer '
+        'pushes still supersede by ref and other installer runs keep their own group'
+    )
 
 
 @pytest.mark.parametrize(
