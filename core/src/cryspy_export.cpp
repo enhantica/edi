@@ -36,35 +36,27 @@ std::string plain(double value, const std::string& what) {
     return std::format("{}", value);
 }
 
-// A text value as one CIF token: quoted when it would otherwise read as syntax (a tag, a block or loop keyword, a
-// comment, an empty or unknown mark) or holds a space.
+// A text value as one token cryspy's reader keeps whole. That reader (pycifstar) cuts a line at its first `#`, even
+// inside quotes, and treats every quote character as an opening or closing quote, so a value holding `#`, `'` or `"`
+// cannot be written at all and is refused by name. Otherwise the value is quoted when it would read as syntax (a tag,
+// a reserved word, the unknown or inapplicable mark, a text field) or holds a space.
 std::string value_token(const std::string& text, const std::string& what) {
+    if (text.find_first_of("#'\"\n\r") != std::string::npos) {
+        unsupported(what + " '" + text + "' holds a character cryspy cannot read in a value (#, a quote or a line break)");
+    }
     const auto lower = lowercase(text);
     const bool reserved = lower.starts_with("data_") || lower.starts_with("loop_") || lower.starts_with("save_") ||
-                          lower == "global_" || lower == "stop_" || lower == "." || lower == "?";
+                          lower.starts_with("global_") || lower.starts_with("stop_") || lower == "." || lower == "?";
     const bool needs_quotes =
-        text.empty() || reserved || std::string("_#$'\";[]").find(text.front()) != std::string::npos ||
+        text.empty() || reserved || std::string("_$;[]").find(text.front()) != std::string::npos ||
         std::any_of(text.begin(), text.end(), [](unsigned char c) { return std::isspace(c); });
-    if (text.find('\n') != std::string::npos || text.find('\r') != std::string::npos) {
-        unsupported(what + " '" + text + "' spans lines");
-    }
-    if (!needs_quotes) return text;
-    for (const char quote : {'\'', '"'}) {
-        // A quote ends a quoted value only when a space or the line's end follows it.
-        bool safe = true;
-        for (std::size_t i = 0; i < text.size(); ++i) {
-            if (text[i] == quote && (i + 1 == text.size() || std::isspace(static_cast<unsigned char>(text[i + 1])))) {
-                safe = false;
-            }
-        }
-        if (safe) return quote + text + quote;
-    }
-    unsupported(what + " '" + text + "' cannot be written as one cryspy value");
+    return needs_quotes ? "'" + text + "'" : text;
 }
 
 // A cryspy block name: data_ followed by a token without spaces.
 std::string block_name(const std::string& name) {
-    if (name.empty() || std::any_of(name.begin(), name.end(), [](unsigned char c) { return std::isspace(c); })) {
+    if (name.empty() || name.find_first_of("#'\"") != std::string::npos ||
+        std::any_of(name.begin(), name.end(), [](unsigned char c) { return std::isspace(c); })) {
         unsupported("the name '" + name + "' cannot name a cryspy block");
     }
     return name;

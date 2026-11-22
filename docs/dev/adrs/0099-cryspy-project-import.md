@@ -67,8 +67,10 @@ The conventions below come from cryspy's source at the snapshot recorded in
      rounded up, because cryspy's reader keeps only digit brackets. A value that would need an
      exponent before its bracket is refused. Other numbers use their shortest exact spelling, so
      neighbouring grid points stay distinct.
-   - Text values are quoted when they would read as CIF syntax (`data_Pb`, a leading `_`) or hold
-     a space.
+   - Text values follow cryspy's own reader (pycifstar), which cuts a line at its first `#` even
+     inside quotes and treats every quote character as a delimiter: a label, type, phase link,
+     region id or space-group text holding `#`, `'` or `"` is refused by name. Other values are
+     quoted when they would read as CIF syntax (`data_Pb`, a leading `_`) or hold a space.
    - cryspy evaluates every peak over the whole pattern; EasyDiffraction's profile window is not
      written. This is the same convention difference the import records (cut-off 0).
 6. **Verification.** An imported reference project's cell, sites, instrument and measurements are
