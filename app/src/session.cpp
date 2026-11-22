@@ -11,7 +11,6 @@
 
 #include <QCoreApplication>
 #include <QDir>
-#include <QVariantMap>
 #include <QDirIterator>
 #include <QFile>
 #include <QFileInfo>
@@ -969,8 +968,8 @@ QString programKey(const std::string& program) {
 }
 }  // namespace
 
-QVariantList Session::projectImporters() const {
-    QVariantList list;
+QList<ProjectProgram> Session::projectImporters() const {
+    QList<ProjectProgram> list;
     for (const auto& importer : edi::project_importers()) {
         QStringList patterns;
         for (const auto& suffix : importer.suffixes) {
@@ -978,21 +977,17 @@ QVariantList Session::projectImporters() const {
             patterns << QStringLiteral("*") + text << QStringLiteral("*") + text.toUpper();
         }
         const auto program = QString::fromStdString(importer.program);
-        list.append(QVariantMap{{QStringLiteral("key"), programKey(importer.program)},
-                                {QStringLiteral("program"), program},
-                                {QStringLiteral("hint"), QString::fromStdString(importer.suffixes.front())},
-                                {QStringLiteral("nameFilter"),
-                                 tr("%1 projects (%2)").arg(program, patterns.join(QLatin1Char(' ')))}});
+        list.append({programKey(importer.program), program, QString::fromStdString(importer.suffixes.front()),
+                     tr("%1 projects (%2)").arg(program, patterns.join(QLatin1Char(' ')))});
     }
     return list;
 }
 
-QVariantList Session::projectExporters() const {
-    QVariantList list;
+QList<ProjectProgram> Session::projectExporters() const {
+    QList<ProjectProgram> list;
     for (const auto& exporter : edi::project_exporters()) {
-        list.append(QVariantMap{{QStringLiteral("key"), programKey(exporter.program)},
-                                {QStringLiteral("program"), QString::fromStdString(exporter.program)},
-                                {QStringLiteral("hint"), QString::fromStdString(exporter.hint)}});
+        list.append({programKey(exporter.program), QString::fromStdString(exporter.program),
+                     QString::fromStdString(exporter.hint), {}});
     }
     return list;
 }
