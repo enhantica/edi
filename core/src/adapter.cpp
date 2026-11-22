@@ -1430,9 +1430,17 @@ std::vector<std::string> texts(const std::vector<std::pair<std::string, std::str
 
 // A magnetic structure without a BNS number names its group from its operations: the table group of its family that,
 // in the held setting, has the same signed operations. Its names and the setting's transform are kept, so a save, which
-// writes no `_space_group`, still carries the family.
+// writes no `_space_group`, still carries the family. With a BNS number whose table group these operations are, the
+// table fills only the names the file left empty, so the save carries the same identity.
 void identify_magnetic_group(Structure& s, const SpaceGroupSettingName& setting) {
-    if (!s.magnetic->group.number_bns.empty()) return;
+    const crysta::MagneticSpaceGroupEntry* numbered = nullptr;
+    if (const std::string& bns = s.magnetic->group.number_bns; !bns.empty()) {
+        try {
+            numbered = &crysta::magnetic_space_group(bns);
+        } catch (const std::invalid_argument&) {
+            return;  // a number the table does not hold names nothing more
+        }
+    }
     crysta::SpaceGroup held;
     try {
         held = crysta::space_group_from_file(setting.name_h_m, setting.coord_system_code.empty()
@@ -1448,6 +1456,26 @@ void identify_magnetic_group(Structure& s, const SpaceGroupSettingName& setting)
     try {
         own = signed_group(texts(s.magnetic->operations), texts(s.magnetic->centerings));
     } catch (const std::invalid_argument&) {
+        return;
+    }
+    if (numbered != nullptr) {
+        try {
+            if (signed_group(texts(magnetic_rows_in_setting(numbered->operations, *parsed)),
+                             texts(magnetic_rows_in_setting(numbered->centerings, *parsed))) != own) {
+                return;
+            }
+        } catch (const std::invalid_argument&) {
+            return;
+        }
+        const crysta::MagneticGroupName table = group_name(*numbered);
+        s.magnetic.modify([&table](MagneticDescription& magnetic) {
+            crysta::MagneticGroupName& name = magnetic.group;
+            for (auto [kept, from] : {std::pair{&name.name_bns, &table.name_bns}, std::pair{&name.name_uni, &table.name_uni},
+                                      std::pair{&name.number_og, &table.number_og}, std::pair{&name.name_og, &table.name_og},
+                                      std::pair{&name.point_group_name_uni, &table.point_group_name_uni}}) {
+                if (kept->empty()) *kept = *from;
+            }
+        });
         return;
     }
     const std::string family = std::to_string(setting.it_number) + ".";
