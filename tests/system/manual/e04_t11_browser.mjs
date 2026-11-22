@@ -202,6 +202,28 @@ try {
     } while (Date.now() < deadline);
     throw Error(`UI never exposed an enabled accessible control/state matching ${regex}`);
   };
+  const waitForOpenedAnalysis = async () => {
+    const deadline = Date.now() + 180000;
+    do {
+      const ready = await evaluate(`(() => {
+        const visibleControl = name => {
+          try { return window.ediControlGeometry(name); }
+          catch(error) {
+            if (error.message === \`ediControlGeometry: no item is named '\${name}'\` ||
+                error.message === \`ediControlGeometry: no visible item is named '\${name}'\`) return null;
+            throw error;
+          }
+        };
+        // The indicator can be absent before the upload finishes. Also require
+        // native Analysis readiness so that the initial empty page cannot pass.
+        return !visibleControl('statusBar.opening') &&
+          visibleControl('appBar.tab.analysis')?.enabled === true;
+      })()`);
+      if (ready) return waitAX(/^Analysis$/, true, 'tab');
+      await frame();
+    } while (Date.now() < deadline);
+    throw Error('Project opening must finish and enable the Analysis tab');
+  };
   const settleRenderedPage = async () => {
     const deadline = Date.now() + 15000;
     let previous, stable = 0;
@@ -558,7 +580,7 @@ try {
   const exampleName = fitCase === 'ncaf' ? /ncaf.*wish/i : /lbco.*hrpt/i;
   const exampleId = fitCase === 'ncaf' ? 'pd-neut-tof_ncaf-wish' : 'pd-neut-cwl_lbco-hrpt';
   await openExampleRow(exampleId, exampleName);
-  await waitAX(/^Analysis$/,true,'tab');
+  await waitForOpenedAnalysis();
   await waitAX(/^Save project as/, true, 'button');
   await click(/^Structure$/); await waitAX(/Cell|Space group/i); await shot('structure');
   await click(/^Experiment$/); await waitAX(/HRPT|Measured/i); await shot('pattern');
@@ -617,7 +639,7 @@ print(json.dumps(dict(name=name, analysis=analysis, scientific=scientific)))`, a
     await statusActions.retired('project-closed',first);
     await click(/Examples$/, 'button');
     await openExampleRow(exampleId,exampleName);
-    await waitAX(/^Analysis$/,true,'tab');
+    await waitForOpenedAnalysis();
     await click(/^Analysis$/);
     const recreated=await statusActions.live('recreated-fit',{oldBackendDOMNodeId:first.backendDOMNodeId});
     assert.notEqual(recreated.nodeId,first.nodeId,'The recreated active AX node is not its retired predecessor');
@@ -850,7 +872,7 @@ print(markers[0].parent)`, saved, reopened, reopenControl || 'normal'], { encodi
   await send('DOM.setFileInputFiles', { ...picker,
     files: [unpack.stdout.trim()] });
   // Neither a no-op upload nor Session.openProject's refusal can enable this from the proved empty state.
-  await waitAX(/^Analysis$/, true, 'tab');
+  await waitForOpenedAnalysis();
   const reopenedArchive = await saveArchive();
   const after = inspectArchive(reopenedArchive);
   const roundtrip = spawnSync('python', ['-m', 'tests.fixtures.e04_t11_wasm.reopen', saved, reopenedArchive],
