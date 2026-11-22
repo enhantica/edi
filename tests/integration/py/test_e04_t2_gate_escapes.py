@@ -134,6 +134,7 @@ def windows_job_escapes(workflow):
         'command',
         'disabled-job',
         'disabled-step',
+        'unguarded-step',
         'test-tier',
     ):
         changed = deepcopy(workflow)
@@ -159,6 +160,8 @@ def windows_job_escapes(workflow):
             windows['if'] = False
         elif escape == 'disabled-step':
             build['if'] = False
+        elif escape == 'unguarded-step':
+            build.pop('if')
         else:
             windows['steps'].append({'name': app_contract.APP_TIER_STEPS[0][0], 'run': 'true'})
         yield changed
@@ -168,18 +171,18 @@ def windows_job_escapes(workflow):
     'damage', ['duplicate-platform', 'missing-platform', 'wrong-binding', 'wrong-row']
 )
 def test_live_app_gate_rejects_matrix_damage(tmp_path, monkeypatch, damage):
+    """Reject damage to static platform jobs under the frozen matrix gate name."""
     workflow = yaml.safe_load((app_contract.ROOT / '.github/workflows/ci.yml').read_text())
     app_contract.test_local_and_ci_gates_reach_app_tests()
     job = workflow['jobs']['app']
-    rows = job['strategy']['matrix']['include']
     if damage == 'duplicate-platform':
-        rows.append(deepcopy(rows[0]))
+        workflow['jobs']['app-copy'] = deepcopy(job)
     elif damage == 'missing-platform':
-        rows.pop()
+        del workflow['jobs']['app-macos']
     elif damage == 'wrong-binding':
         job['runs-on'] = '${{ matrix.platform }}'
     else:
-        rows[0]['runner'] = 'ubuntu-latest'
+        job['runs-on'] = RUNNERS['macOS']
     (tmp_path / '.github/workflows').mkdir(parents=True)
     (tmp_path / '.github/workflows/ci.yml').write_text(yaml.safe_dump(workflow))
     (tmp_path / 'pixi.toml').write_text((app_contract.ROOT / 'pixi.toml').read_text())

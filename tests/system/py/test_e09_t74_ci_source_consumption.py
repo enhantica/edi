@@ -14,7 +14,9 @@ from pathlib import Path
 import pytest
 import yaml
 
+from tests.fixtures.e09_t75_workflow import active as condition_active
 from tests.fixtures.native_process import environment_bash
+from tests.integration.py.test_e09_t75_native_workflow import APP_JOBS, SDK_OS
 from tests.integration.py.test_e09_t75_sdk_consumer import SHA, consumer
 from tests.system.py.test_e09_t75_native_execution import assert_restored, restore
 
@@ -109,11 +111,14 @@ if args and args[0] in {consuming_tasks!r} and (not skip or args[0] in {direct_t
     pixi.chmod(0o755)
     home = root / 'home'
     home.mkdir()
+    job = document['jobs'][job_name]
+    event = 'schedule' if 'NIGHTLY' in job.get('env', {}) else 'pull_request'
     environment = {
         **build.env,
         'HOME': str(home),
         'GITHUB_ENV': str(root / 'github-env'),
         'GITHUB_OUTPUT': str(root / 'github-output'),
+        'GITHUB_EVENT_NAME': event,
     }
     expected = build.second
 
@@ -126,8 +131,10 @@ if args and args[0] in {consuming_tasks!r} and (not skip or args[0] in {direct_t
                 key = expression.removeprefix('inputs.')
                 assert key in (inputs or {}), ' unit 8: composite input must be supplied'
                 return str(inputs[key])
+            if expression.startswith('github.event_name == '):
+                return str(condition_active({'if': expression}, event)).lower()
             context = {
-                'github.event_name': 'pull_request',
+                'github.event_name': event,
                 'runner.temp': str(root),
                 'matrix.platform': 'Linux',
                 'vars.ENHANTICA_APP_ID': 'fixture-installation-id',
@@ -145,7 +152,6 @@ if args and args[0] in {consuming_tasks!r} and (not skip or args[0] in {direct_t
         return {key: render(value, inputs) for key, value in (values or {}).items()}
 
     environment.update(env_values(document.get('env')))
-    job = document['jobs'][job_name]
     environment.update(env_values(job.get('env')))
     repositories = set()
 
@@ -240,7 +246,7 @@ if args and args[0] in {consuming_tasks!r} and (not skip or args[0] in {direct_t
     'job_name',
     sorted(
         source_edges(yaml.safe_load((ROOT / '.github/workflows/ci.yml').read_text())).keys()
-        - {'cli-native'}
+        - {'cli-native', 'app-macos', 'app-windows'}
     ),
 )
 def test_actual_workflow_consumes_its_common_output_at_fetch_or_build(tmp_path, job_name):
@@ -259,32 +265,44 @@ def test_actual_workflow_consumes_its_common_output_at_fetch_or_build(tmp_path, 
 
     public = public_profile(document['jobs'])
     area = job_name.removesuffix('-macos')
-    for index, runner in enumerate(self_hosted_runners(document['jobs'][job_name])):
-        platform = {'Linux': 'linux-64', 'macOS': 'osx-arm64'}[runner[1]]
-        if public:
-            public_build_boundary(document['jobs'], job_name, platform)
-        # Each independently executing system part gets its own real transport
-        # fixture; parts sharing an SDK must not share a mutable fixture checkout.
-        home = tmp_path / (f'{platform}-part-{index + 1}' if area == 'system' else platform)
-        if area == 'native' or public:
-            home.mkdir()
-            acquired, _ = consumer(home, platform=platform)
-            assert acquired.returncode == 0, (
-                'every native producer acquires its independently pinned SDK'
-            )
-            assert (
-                home / 'edi/build/crysta-consumer-prefix/.crysta-sha'
-            ).read_text().strip() == SHA, 'native acquisition installs the common pinned commit'
-        else:
-            result = restore(home, area, platform)
-            assert_restored(result)
-            repo = home / 'edi'
-            assert (repo / 'build/crysta-prefix/.crysta-sha').read_text().strip() == SHA, (
-                f'{job_name} restores against the common pinned SDK commit on {platform}'
-            )
-            assert (repo / 'build/ci/.crysta-linked-sha').read_text().strip() == SHA, (
-                f'{job_name} native bytes remain linked to the same SDK commit on {platform}'
-            )
+    jobs = document['jobs']
+    candidates = APP_JOBS.values() if public and area == 'app' else [job_name]
+    for candidate in candidates:
+        assert candidate in links and links[candidate] == links[job_name], (
+            'Every static app job consumes the exact shared source output'
+        )
+        runners = self_hosted_runners(jobs[candidate])
+        for index, runner in enumerate(runners):
+            sdk = next(sdk for sdk, os in SDK_OS.items() if os == runner[1])
+            if public:
+                public_build_boundary(jobs, area, sdk)
+            # The offline link witness uses a Unix SDK. The Windows workflow
+            # still proves its source edge and installer SDK route above.
+            if sdk != 'win-64':
+                key = f'{sdk}-part-{index + 1}' if area == 'system' else sdk
+                exercise_source_acquisition(tmp_path / key, candidate, area, sdk, public=public)
+
+
+def exercise_source_acquisition(home, job_name, area, platform, *, public):
+    if area == 'native' or public:
+        home.mkdir()
+        acquired, _ = consumer(home, platform=platform)
+        assert acquired.returncode == 0, (
+            'every native producer acquires its independently pinned SDK'
+        )
+        assert (
+            home / 'edi/build/crysta-consumer-prefix/.crysta-sha'
+        ).read_text().strip() == SHA, 'native acquisition installs the common pinned commit'
+    else:
+        result = restore(home, area, platform)
+        assert_restored(result)
+        repo = home / 'edi'
+        assert (repo / 'build/crysta-prefix/.crysta-sha').read_text().strip() == SHA, (
+            f'{job_name} restores against the common pinned SDK commit on {platform}'
+        )
+        assert (repo / 'build/ci/.crysta-linked-sha').read_text().strip() == SHA, (
+            f'{job_name} native bytes remain linked to the same SDK commit on {platform}'
+        )
 
 
 @pytest.mark.parametrize(

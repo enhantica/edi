@@ -152,7 +152,7 @@ class StructureViewOptions : public QObject {
 
    private:
     template <class T>
-    void assign(T& field, T value, void (StructureViewOptions::*notify)());
+    void assign(T& field, const T& value, void (StructureViewOptions::*notify)());
     // The same for an option kept for the session only: drawn, never written to the structure.
     edi::SceneOptions options_;
     // Whether the structure states show_moments, so a structure that does not keeps its bytes.

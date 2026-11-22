@@ -40,8 +40,10 @@ TestCase {
     function cleanup() {
         if (app) {
             const dialogs = Probe.objectsWithProperty(app, "opened").filter(item => item.opened && typeof item.reject === "function");
-            for (const dialog of dialogs)
+            for (const dialog of dialogs) {
                 dialog.reject();
+                tryCompare(dialog, "visible", false, 2000, "The rejected form closes before its window is destroyed");
+            }
             Session.closeProject();
             app.destroy();
         }
@@ -49,20 +51,23 @@ TestCase {
         Turn.end(selected, message => test.warn(message));
     }
     function draft() {
-        tryVerify(() => Session.project !== null, 2000, "Opening Project supplies an untitled project without Create");
-        verify(Session.needsSaveAs, "Untitled work has no owned saved destination");
-        verify(AppState.structurePageEnabled && AppState.experimentPageEnabled, "Structure and Experiment are usable as soon as Project opens, before either contains a block");
+        verify(Session.project === null, "Opening Project alone creates no work container");
+        AppState.open(AppState.Page.Structure);
+        tryVerify(() => Session.project !== null, 2000, "Opening Structure supplies the unnamed work");
+        verify(Session.untitled && Session.needsSaveAs, "Untitled work has no owned saved destination");
+        verify(AppState.structurePageEnabled && !AppState.experimentPageEnabled, "Experiment waits for the first structure");
         return Session.project;
     }
     function work() {
         const p = draft();
-        Ui.click(test, Probe, app, "appBar.tab.experiment");
-        Ui.click(test, Probe, app, "experiments.create");
-        compare(p.experiments.count, 1, "Experiment is usable before a project is named or a structure is created");
         Ui.click(test, Probe, app, "appBar.tab.structure");
         Ui.click(test, Probe, app, "structures.create");
         compare(p.structures.count, 1, "Structure is usable before a project is named");
-        p.currentStructure.cell.length_a.value = 7.125;
+        p.currentStructure.cell.lengthA.value = 7.125;
+        verify(AppState.experimentPageEnabled, "Adding a structure enables Experiment before naming the project");
+        Ui.click(test, Probe, app, "appBar.tab.experiment");
+        Ui.click(test, Probe, app, "experiments.create");
+        compare(p.experiments.count, 1, "Experiment is usable before a project is named");
         verify(p.modified, "Actual untitled edits enable ordinary Save and unsaved-work protection");
         return p;
     }
@@ -99,7 +104,7 @@ TestCase {
         const p = work();
         Ui.click(test, Probe, app, "appBar.tab.project");
         verify(Session.project === p && Session.needsSaveAs, "Navigating all usable tabs keeps the same untitled work");
-        compare(p.currentStructure.cell.length_a.value, 7.125, "Navigation retains the nontrivial scientific edit");
+        compare(p.currentStructure.cell.lengthA.value, 7.125, "Navigation retains the nontrivial scientific edit");
     }
     function test_b_first_save_names_and_preserves_work() {
         work();
@@ -115,7 +120,7 @@ TestCase {
         compare(Session.project.description, "Unsaved cobalt study", "First Save retains the description");
         compare(Session.project.structures.count, 1, "Naming an untitled project does not replace its structure");
         compare(Session.project.experiments.count, 1, "Naming an untitled project does not replace its experiment");
-        compare(Session.project.currentStructure.cell.length_a.value, 7.125, "First Save and reopen preserve the independent scientific edit");
+        compare(Session.project.currentStructure.cell.lengthA.value, 7.125, "First Save and reopen preserve the independent scientific edit");
     }
     function test_c_cancel_first_save_keeps_work() {
         const p = work();
@@ -124,7 +129,7 @@ TestCase {
         keyClick(Qt.Key_Escape);
         tryCompare(dialog, "visible", false, 2000, "Escape cancels first Save through the real dialog");
         verify(Session.project === p && p.modified && Session.needsSaveAs, "Cancelling first Save preserves dirty untitled work");
-        compare(p.currentStructure.cell.length_a.value, 7.125, "Cancelling naming loses no scientific edit");
+        compare(p.currentStructure.cell.lengthA.value, 7.125, "Cancelling naming loses no scientific edit");
     }
     function test_d_quit_cancel_and_discard() {
         const p = work();
@@ -147,13 +152,26 @@ TestCase {
         const question = findChild(app, "unsavedChanges");
         tryCompare(question, "opened", true, 2000, "Quit with untitled edits offers its ordinary Save choice");
         press(question.standardButton(Dialog.Save));
-        const dialog = creation(), folder = fill(dialog);
-        verify(app.visible, "Pending Quit waits for the first-save form to finish");
-        press(dialog.standardButton(Dialog.Ok));
-        tryCompare(app, "visible", false, 5000, "Successful first Save resumes the pending Quit");
-        verify(SettingsProof.fileObservation(folder, "project.edi").exists, "Quit's Save writes the chosen named project before closing");
+        const choice = findChild(app, "saveAs.choice");
+        tryCompare(choice, "opened", true, 2000, "Quit's Save opens the ordinary Save As choice for work with no destination");
+        const folder = SettingsProof.childUrl(SettingsProof.emptyDirectory(), "lbco_hrpt-quit");
+        press(choice.standardButton(Dialog.Ok));
+        let picker;
+        tryVerify(() => {
+            picker = Probe.objectsWithProperty(app, "selectedFile").find(item => item.visible && item.title === "Save the project as a folder");
+            return !!picker;
+        }, 3000, "The ordinary Save As choice opens its native folder-file picker");
+        // Supply the platform picker's answer through its production acceptance signal.
+        picker.selectedFile = folder;
+        picker.accepted();
+        picker.close();
+        tryVerify(() => Session.project && !Session.project.modified && !Session.needsSaveAs, 5000, "Save As writes and adopts the selected folder");
+        verify(app.visible, "The original Quit is abandoned while selecting a save destination");
+        verify(SettingsProof.fileObservation(folder, "project.edi").exists, "Quit's Save writes the chosen project folder");
+        app.close();
+        tryCompare(app, "visible", false, 5000, "A new Quit closes once the project is saved");
         verify(Session.openProject(folder), "The project saved while quitting reopens normally");
-        compare(Session.project.currentStructure.cell.length_a.value, 7.125, "Quit's Save preserves the nontrivial untitled scientific edit");
+        compare(Session.project.currentStructure.cell.lengthA.value, 7.125, "Quit's Save preserves the nontrivial untitled scientific edit");
     }
     function test_e_dialog_labels() {
         Ui.click(test, Probe, app, "project.create");

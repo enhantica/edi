@@ -277,7 +277,7 @@ def require_existing_tof_writer_goldens(tmp_path: Path) -> None:
         )['project.edi'].decode()
         assert re.fullmatch(
             r'_metadata\.name +untitled_project\n'
-            r'_metadata\.title +"Untitled Project"\n'
+            r'_metadata\.title +\?\n'
             r'_metadata\.description +\?\n'
             r'_metadata\.created +<NORMALIZED-WALL-CLOCK>\n'
             r'_metadata\.last_modified +<NORMALIZED-WALL-CLOCK>\n'
@@ -286,8 +286,8 @@ def require_existing_tof_writer_goldens(tmp_path: Path) -> None:
             r'_edi\.schema_version 3\n',
             normalized,
         ), (
-            'the new TOF golden artifact must be exactly the schema-3 default identity record; '
-            'only its two independently generated wall-clock values are variable'
+            'the TOF golden identity is the exact schema-3 record with an unspecified title; '
+            'only its two independently generated wall-clock values vary'
         )
         assert project_record_datetime(record, 'last_modified') > project_record_datetime(
             record, 'created'

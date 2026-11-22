@@ -22,6 +22,14 @@ only exact source hashes and input-derived descriptors change. Repeating the
 same adaptation is stable. Unrecognised source hashes, changed scientific bytes,
 duplicate declarations and inconsistent old scalar witnesses refuse.
 
+The five CoSiO structure digests follow the re-saved examples in `09c48d5a` and
+the explicit magnetic family declarations in `255d9fc6`. Run
+`python -m tests.fixtures.e04_t1.adapt_cosio_structure_inputs` to reproduce the
+adaptation from the previous inputs and the archived `b1d25154` examples. The
+two powder structure summaries follow their saved a-axis length, from 10.30806
+to 10.3081 Å. All other structure and displayed-value witnesses retain their
+values.
+
 The app acceptance tier is `tests/unit/app`. Build its `test_*.cpp` support sources
 into the Qt Quick Test runner (AUTOMOC), linked to the same registered `edi.app`
 module and engine setup the production host uses. Run its `tst_*.qml` files with
