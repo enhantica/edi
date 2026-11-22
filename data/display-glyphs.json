@@ -227,7 +227,9 @@
    "font": "PT Sans",
    "sites": [
     "crysta:data/dictionary/parameters.yaml",
-    "app/qml/Pages/Structure/MagneticFormFactorsGroup.qml"
+    "app/qml/Pages/Structure/MagneticFormFactorsGroup.qml",
+    "core/src/cryspy_export.cpp",
+    "core/src/fullprof_import.cpp"
    ],
    "drawn_by": "PT Sans",
    "weight": 400
@@ -400,7 +402,10 @@
     "app/src/app_info.cpp",
     "app/src/assistant_native_create.cpp",
     "app/src/assistant_native_tools.cpp",
-    "app/src/fit_view_model.cpp"
+    "app/src/fit_view_model.cpp",
+    "core/src/cryspy_export.cpp",
+    "core/src/fullprof_export.cpp",
+    "core/src/fullprof_import.cpp"
    ],
    "drawn_by": "PT Sans",
    "weight": 400
