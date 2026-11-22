@@ -862,8 +862,8 @@ EaComponents.ApplicationWindow {
         property var action: null
         property var abandoned: null
         property var nativeCreation: null
-        // Save on untitled work opens Create project: what waited goes on once Create has named and saved the work, and
-        // is abandoned if Create closes with it still untitled.
+        // Save on untitled work opens Create project: what waited goes on once that Create's own save has named the work,
+        // and is abandoned when the Create is cancelled or its naming settles without a name (Session).
         property var afterNaming: null
         property var afterNamingAbandoned: null
         function settleNaming(named) {
@@ -875,15 +875,15 @@ EaComponents.ApplicationWindow {
         }
         Connections {
             target: Session
-            function onUntitledChanged() {
-                if (unsavedChanges.afterNaming !== null && Session.hasProject && !Session.untitled)
-                    unsavedChanges.settleNaming(true);
+            function onUntitledNamingSettled(named) {
+                if (unsavedChanges.afterNaming !== null || unsavedChanges.afterNamingAbandoned !== null)
+                    unsavedChanges.settleNaming(named);
             }
         }
         Connections {
             target: AppState
             function onUntitledSaveClosed() {
-                if ((unsavedChanges.afterNaming !== null || unsavedChanges.afterNamingAbandoned !== null) && Session.untitled)
+                if (unsavedChanges.afterNaming !== null || unsavedChanges.afterNamingAbandoned !== null)
                     unsavedChanges.settleNaming(false);
             }
         }

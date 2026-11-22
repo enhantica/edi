@@ -121,11 +121,12 @@ SideBarGroup {
             }
         }
         onOpened: ApplicationInfo.createProjectDialogEvent(0)
-        onRejected: ApplicationInfo.createProjectDialogEvent(1)
-        onClosed: {
-            ApplicationInfo.createProjectDialogEvent(2);
+        // Only Cancel ends a waiting naming here; an accepted Create settles from its own save (Session).
+        onRejected: {
+            ApplicationInfo.createProjectDialogEvent(1);
             AppState.untitledSaveClosed();
         }
+        onClosed: ApplicationInfo.createProjectDialogEvent(2)
         // A new project's folder is beside the last project opened, else under the user's documents, unless one was
         // chosen before; it is saved there at once (the owner, 2026-10-08 and 2026-11-02). The browser has no folder to
         // save into: Save As downloads it.
