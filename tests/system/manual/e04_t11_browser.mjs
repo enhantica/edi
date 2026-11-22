@@ -887,14 +887,14 @@ print(markers[0].parent)`, saved, reopened, reopenControl || 'normal'], { encodi
         functionDeclaration:'function() { this.click(); }',userGesture:true});
       await frame(); await settleRenderedPage();
     };
-    const beginPicker = async (regex, menu, action) => {
+    const beginPicker = async (regex, menu, action, menuLabel = /^Load\b/) => {
       lastEvents.delete('Page.fileChooserOpened');
       const opened=event('Page.fileChooserOpened');
       if (/Open project folder/.test(regex.source)) {
         await click(/^Load project$/, 'button', 'project.load');
         await click(regex, 'menuitem', 'project.load.folder');
       } else {
-        if (menu) await click(/^Load\b/, 'button', menu);
+        if (menu) await click(menuLabel, 'button', menu);
         await click(regex, menu ? 'menuitem' : 'button', action);
       }
       const chooser = await opened;
@@ -907,6 +907,8 @@ print(markers[0].parent)`, saved, reopened, reopenControl || 'normal'], { encodi
       assert(actual.result.value,'each request must cross the actual browser picker, not reuse an earlier input');
       return picker;
     };
+    const beginExperimentDataPicker = (regex, action) =>
+      beginPicker(regex, 'experiments.loadData.0', action, /^Load data…$/);
     let getStartedOpen = !fileRequestsOnly;
     const projectPage = async () => {
       const tab = await waitControlGeometry(evaluate, frame, 'appBar.tab.project');
@@ -1031,7 +1033,7 @@ print(markers[0].parent)`, saved, reopened, reopenControl || 'normal'], { encodi
       await click(/^Experiment$/); await waitAX(/Experiments \(0\)/);
       await click(/^Create experiment$/,'button','experiments.create');
       await waitAX(/Experiments \(1\)/);
-      await beginPicker(/^Folder as a series(?:…|\.\.\.)?$/,'experiments.load','experiments.load.dataFolder');
+      await beginExperimentDataPicker(/^Folder as a series(?:…|\.\.\.)?$/, 'experiments.load.dataFolder');
       const picker=await evaluate(`(() => {const input=window.__e04FileInput;
         return {id:input.id,directory:input.webkitdirectory,multiple:input.multiple,
           connected:input.isConnected,request:input.__e04Picker};})()`);
@@ -1144,9 +1146,9 @@ print(markers[0].parent)`, saved, reopened, reopenControl || 'normal'], { encodi
     await click(/^Experiment$/); await waitAX(/Experiments \(0\)/);
     await click(/^Create experiment$/, 'button', 'experiments.create');
     await waitAX(/Experiments \(1\)/);
-    await beginPicker(/^From file…$/, 'experiments.load', 'experiments.load.dataFile');
+    await beginExperimentDataPicker(/^File…$/, 'experiments.load.dataFile');
     assert.equal(await evaluate('window.__e04FileInput.multiple'),true,
-      'Measured data From file must open a real multiple-file browser chooser for the selected experiment');
+      'Measured data File must open a real multiple-file browser chooser for the selected experiment');
     await evaluate("window.__e04FileInput.dispatchEvent(new Event('cancel')); true"); await frame();
     await waitAX(/Experiments \(1\)/);
     }
