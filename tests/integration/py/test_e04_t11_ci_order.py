@@ -258,14 +258,35 @@ def test_reporting_keeps_source_cancellation_and_repair_boundaries(event, block)
 
 
 def test_newer_heads_still_cancel_superseded_runs():
-    workflow = yaml.safe_load((ROOT / '.github/workflows/ci.yml').read_text())
-    assert workflow['concurrency'] == {
+    workflows = ROOT / '.github/workflows'
+    tests = yaml.safe_load((workflows / 'ci.yml').read_text())['concurrency']
+    installers = yaml.safe_load((workflows / 'installers.yml').read_text())['concurrency']
+    shared = 'edi-main-push-and-release'
+    release = 'inputs.prepare_preview_release || inputs.release_plan_run'
+    assert tests == {
         'group': (
-            '${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}'
-            '-${{ github.event.schedule }}'
+            f"${{{{ github.event_name == 'push' && '{shared}' || "
+            "format('{0}-{1}-{2}', github.workflow, github.event.pull_request.number || "
+            'github.ref, github.event.schedule) }}'
         ),
-        'cancel-in-progress': True,
-    }, 'newer runs supersede the same PR/ref and schedule; nightly cannot cancel a main push'
+        'cancel-in-progress': "${{ github.event_name != 'push' }}",
+        'queue': "${{ github.event_name == 'push' && 'max' || 'single' }}",
+    }, (
+        'Main-push Tests retain running and queued work; other Tests supersede only '
+        'within the same workflow, PR or ref, and schedule'
+    )
+    assert installers == {
+        'group': (
+            f"${{{{ ({release}) && '{shared}' || "
+            "format('desktop-installers-{0}', github.event_name == 'push' && "
+            'github.ref || github.run_id) }}'
+        ),
+        'cancel-in-progress': "${{ github.event_name == 'push' }}",
+        'queue': f"${{{{ ({release}) && 'max' || 'single' }}}}",
+    }, (
+        'Both release entry points share the multi-run Tests queue; ordinary installer '
+        'pushes still supersede by ref and other installer runs keep their own group'
+    )
 
 
 @pytest.mark.parametrize(
