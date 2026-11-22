@@ -77,7 +77,7 @@ console.log('dialog readiness and passive-result protocol controls green; no rea
 const {waitForSaveSettled,projectFailureRecorder,projectDialogExpression}=await import('./web_project_save.mjs');
 const saveButton={...actual,objectName:'appBar.button.save'};
 const saveState=(shown=[],button=saveButton)=>({controls:Object.fromEntries([
-  'project.saveChoice','saveAs.zip','saveAs.accept','webNotice.text','appBar.button.save',
+  'project.saveAs.zip','project.saveAs.copy','project.saveChoice','saveAs.zip','saveAs.accept','webNotice.text','appBar.button.save',
   'unsavedChanges.title','unsavedChanges.discard','webStorageWarning.text','save.error',
 ].map(name=>[name,name==='appBar.button.save'?{present:true,item:button}:
   shown.includes(name)?{present:true,item:{...actual,objectName:name}}:{present:false}]))});
@@ -87,7 +87,7 @@ const saveStates=[saveState(['saveAs.accept']),saveState(['webNotice.text']),
 await waitForSaveSettled(async()=>saveStates.shift(),async()=>observedSaveFrames++,saveButton);
 assert.equal(observedSaveFrames,3,
   'A completed download must still wait for the closing dialog, notice and native Save readiness');
-for(const name of ['project.saveChoice','saveAs.zip','saveAs.accept','webNotice.text',
+for(const name of ['project.saveAs.zip','project.saveAs.copy','project.saveChoice','saveAs.zip','saveAs.accept','webNotice.text',
   'unsavedChanges.title','unsavedChanges.discard','webStorageWarning.text','save.error'])
   await assert.rejects(waitForSaveSettled(async()=>saveState([name]),async()=>{},saveButton,{timeoutMs:0}),
     /previous save must visibly finish/,'Any visible save or guard popup blocks the next guarded action');

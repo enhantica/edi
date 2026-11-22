@@ -231,23 +231,13 @@ try {
     activeAction = `click ${regex.source}`;
     await restoreCanvasViewport(evaluate);
     const projectAction=/Save project as/.test(regex.source)?'project.saveAs':
-      /Open project/.test(regex.source)?'project.open':/Create a new project/.test(regex.source)?'project.create':null;
+      /Load project/.test(regex.source)?'project.load':/Create a new project/.test(regex.source)?'project.create':null;
     if(projectAction) {
       const shown=await evaluate(`(() => {const group=window.ediControlGeometry('group.getStarted');
         const item=window.ediControlGeometry(${JSON.stringify(projectAction)});
         return item.x>=group.x && item.y>=group.y && item.x+item.width<=group.x+group.width && item.y+item.height<=group.y+group.height;})()`);
       if(!shown)await click(/Get started$/,'button');
       nativeObjectName=projectAction;containerName='group.getStarted';
-    }
-    if (role==='radio' && (regex.test('Folder') || regex.test('Zip archive'))) {
-      const opening=await evaluate(`(() => {try {return window.ediControlGeometry('open.folder').visible;}
-        catch(error) {if (/no visible item|no item is named/.test(error.message)) return false; throw error;}})()`);
-      const target=(opening?'open.':'saveAs.')+(regex.test('Folder')?'folder':'zip');
-      await settleRenderedPage();
-      const point=await waitNative(target);
-      console.log(`browser ${mode}: native choice ${target}, pointer ${point.x},${point.y}`);
-      for(const type of ['mousePressed','mouseReleased']) {await send('Input.dispatchMouseEvent',{type,...point,button:'left',clickCount:1});await frame();}
-      return;
     }
     if(regex.source==='^OK$') {
       // The default shortcut activates only after the dialog's entry transition.
@@ -262,7 +252,7 @@ try {
     assert(node.backendDOMNodeId, 'UI actions require a real browser-backed accessible control');
     if (node.role?.value === 'tab' && /^(Home|Project|Structure|Experiment|Analysis|Report)$/.test(node.name?.value || ''))
       nativeObjectName ||= `appBar.tab.${node.name.value.toLowerCase()}`;
-    const names={'Open project…':'project.open','Save project as…':'project.saveAs','Zip archive':'saveAs.zip'};
+    const names={'Load project':'project.load','Save project as':'project.saveAs'};
     nativeObjectName ||= names[node.name?.value];
     let x, y;
     const groupName=/(?:^| )Examples$/.test(node.name?.value||'')?'group.examples':
@@ -296,8 +286,8 @@ try {
       await frame();
     }
     await frame();
-    if(projectAction==='project.open' || projectAction==='project.create')
-      await waitGuardedDialog(projectAction==='project.open'?'open.folder':'createProject.name');
+    if(projectAction==='project.create')
+      await waitGuardedDialog('createProject.name');
     if (node.role?.value === 'tab' && /^(?:Home|Project|Structure|Experiment|Analysis|Report)$/.test(node.name?.value || '')) {
       const deadline=Date.now()+45000;
       let selected=false;
@@ -579,9 +569,7 @@ try {
     const download = event('Browser.downloadProgress', item => item.state === 'completed');
     download.catch(()=>{});
     await click(/^Save project as/);
-    // The app's format choice precedes the browser download, including the fallback.
-    await click(/^Zip archive$/,'radio');
-    await click(/^OK$/,'button');
+    await click(/^As project zip(?:…|\.\.\.)?$/, 'menuitem', 'project.saveAs.zip');
     const completed=await download;
     const state=await waitForSaveSettled(evaluate,frame,before);
     await settleRenderedPage();
@@ -826,9 +814,8 @@ print(json.dumps(dict(name=name, analysis=analysis, scientific=scientific)))`, a
   await shot('empty-before-reopen');
   lastEvents.delete('Page.fileChooserOpened');
   const chooser = event('Page.fileChooserOpened');
-  await click(/^Open project(?:…|\.\.\.)?$/);
-  await waitNative('open.folder');
-  await click(/^Folder$/, 'radio'); await click(/^OK$/, 'button');
+  await click(/^Load project$/, 'button', 'project.load');
+  await click(/^Open project folder(?:…|\.\.\.)?$/, 'menuitem', 'project.load.folder');
   const opened = await chooser;
   await writeFile(join(output, `${mode}-reopen-picker.json`), JSON.stringify(opened,null,2));
   const picked = await send('Runtime.evaluate', {expression:'window.__e04FileInput'});
@@ -902,10 +889,12 @@ print(markers[0].parent)`, saved, reopened, reopenControl || 'normal'], { encodi
     const beginPicker = async (regex, menu, action) => {
       lastEvents.delete('Page.fileChooserOpened');
       const opened=event('Page.fileChooserOpened');
-      if (menu) await click(/^Load\b/, 'button', menu);
-      await click(regex, menu ? 'menuitem' : 'button', action);
-      if (/Open project/.test(regex.source)) {
-        await waitNative('open.folder'); await click(/^Folder$/, 'radio'); await click(/^OK$/, 'button');
+      if (/Open project folder/.test(regex.source)) {
+        await click(/^Load project$/, 'button', 'project.load');
+        await click(regex, 'menuitem', 'project.load.folder');
+      } else {
+        if (menu) await click(/^Load\b/, 'button', menu);
+        await click(regex, menu ? 'menuitem' : 'button', action);
       }
       const chooser = await opened;
       await writeFile(join(output, `${mode}-request-picker.json`), JSON.stringify(chooser,null,2));
@@ -933,7 +922,7 @@ print(markers[0].parent)`, saved, reopened, reopenControl || 'normal'], { encodi
     };
     const openFolder = async name => {
       await projectPage();
-      const input=await beginPicker(/^Open project(?:…|\.\.\.)?$/);
+      const input=await beginPicker(/^Open project folder(?:…|\.\.\.)?$/);
       await send('DOM.setFileInputFiles',{...input,files:[join(inputs,name)]});
       await waitName(name);
       await settleRenderedPage();
@@ -1051,11 +1040,11 @@ print(markers[0].parent)`, saved, reopened, reopenControl || 'normal'], { encodi
     for (const newerFirst of [false,true]) {
     await openFolder('routing_initial');
     await projectPage(); await armReads();
-    const first=await beginPicker(/^Open project(?:…|\.\.\.)?$/);
+    const first=await beginPicker(/^Open project folder(?:…|\.\.\.)?$/);
     const firstId=await evaluate('window.__e04FileInput.__e04Picker');
     await send('DOM.setFileInputFiles',{...first,files:[join(inputs,'routing_a')]});
     await waitBrowser('window.__e04Reads.length===1','first folder read must be pending');
-    const second=await beginPicker(/^Open project(?:…|\.\.\.)?$/);
+    const second=await beginPicker(/^Open project folder(?:…|\.\.\.)?$/);
     const secondId=await evaluate('window.__e04FileInput.__e04Picker');
     await send('DOM.setFileInputFiles',{...second,files:[join(inputs,'routing_b')]});
     await waitBrowser('window.__e04Reads.length===2','both folder requests must overlap before either completion');
@@ -1079,7 +1068,7 @@ print(markers[0].parent)`, saved, reopened, reopenControl || 'normal'], { encodi
     if (fileRequestCase !== 'all') await openFolder('routing_b');
     // A folder read started for B must not replace a project opened while that read is pending.
     await armReads();
-    const obsolete=await beginPicker(/^Open project(?:…|\.\.\.)?$/);
+    const obsolete=await beginPicker(/^Open project folder(?:…|\.\.\.)?$/);
     const obsoleteId=await evaluate('window.__e04FileInput.__e04Picker');
     await send('DOM.setFileInputFiles',{...obsolete,files:[join(inputs,'routing_a')]});
     await waitBrowser('window.__e04Reads.length===1','replacement exercise must reach a pending upload');

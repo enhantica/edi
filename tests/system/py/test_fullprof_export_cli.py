@@ -150,6 +150,10 @@ def test_imported_asymmetry_maps_to_native_profiles_and_reports_the_gap(
     assert reopened_widths == pytest.approx(expected), (
         'Saving and reopening preserves the native Caglioti widths from the FullProf control'
     )
+    exported = export_fixed(destination, tmp_path / 'fullprof')
+    assert any('AsyLim' in row for row in exported), (
+        'The standalone exporter writes the asymmetry control for each native-saved mapped profile'
+    )
 
 
 @pytest.mark.parametrize(

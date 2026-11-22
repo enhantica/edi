@@ -15,7 +15,11 @@ import edi
 import pytest
 
 from tests.fixtures.native_process import environment_bash
-from tests.fixtures.project_archive.recalculated_copy import compare_members, input_bytes
+from tests.fixtures.project_archive.recalculated_copy import (
+    compare_copy_metadata,
+    compare_members,
+    input_bytes,
+)
 
 ROOT = Path(__file__).resolve().parents[3]
 CASES = tuple(
@@ -159,7 +163,13 @@ def assert_app_archive_matches_exports(output, tmp_path):
     else:
         actual = {name: base64.b64decode(body) for name, body in evidence['saved'].items()}
     if evidence['kind'] == 'copy':
-        compare_members(expected, actual, tmp_path, edi)
+        compare_members(
+            expected,
+            actual,
+            tmp_path,
+            edi,
+            save_interval=(evidence['started'], evidence['finished']),
+        )
     else:
         assert actual == expected, (
             'App ZIP rewrites retain every canonical folder member and report byte exactly'
@@ -273,3 +283,24 @@ def test_recalculated_copy_cannot_hide_inputs_after_computed_categories(changed)
         'A changed scientific input before or after computed geometry '
         'cannot borrow the copy exemption'
     )
+
+
+@pytest.mark.parametrize('escape', ['stale', 'future', 'other-field', 'missing', 'duplicate'])
+def test_copy_save_timestamp_cannot_hide_another_change(escape):
+    before = b'_metadata.name sample\n_metadata.last_modified "01 Jan 2000 00:00:00"\n'
+    after = before.replace(b'00:00:00', b'00:00:01')
+    interval = (946684801000, 946684801000)
+    assert compare_copy_metadata(before, after, interval) is None, (
+        'A copy admits the independently authored next UTC second while retaining all other bytes'
+    )
+    escaped = {
+        'stale': before,
+        'future': after.replace(b'00:00:01', b'00:00:02'),
+        'other-field': after.replace(b'sample', b'changed'),
+        'missing': b'_metadata.name sample\n',
+        'duplicate': after + b'_metadata.last_modified "01 Jan 2000 00:00:01"\n',
+    }[escape]
+    with pytest.raises(
+        ValueError, match=r'A (?:newly saved )?copy retains|A newly saved copy advances'
+    ):
+        compare_copy_metadata(before, escaped, interval)

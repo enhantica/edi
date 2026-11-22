@@ -45,9 +45,7 @@ def test_load_popup_declares_the_native_and_program_choices_in_order():
         'Open project folder',
         'Open project zip',
         'Open project from URL',
-        'Import cryspy',
-        'Import FullProf',
-        'Import GSAS-II',
+        'Import %1',
     ]
     candidates = [
         [label for label in labels(body) if label in expected]
@@ -55,8 +53,22 @@ def test_load_popup_declares_the_native_and_program_choices_in_order():
         if kind in {'Menu', 'Popup', 'AppDialog', 'EaElements.Menu', 'EaElements.Popup'}
     ]
     assert expected in candidates, (
-        'One Load project popup offers folder, zip and URL, followed by '
-        'cryspy, FullProf and GSAS-II in that order'
+        'One Load project popup offers folder, zip and URL, followed by registered imports'
+    )
+    delegates = [
+        body
+        for kind, body in objects(SOURCE.read_text(encoding='utf-8'))
+        if kind == 'Instantiator'
+    ]
+    assert len(delegates) == 1 and delegates[0][:5] == [
+        'model',
+        ':',
+        'Session.projectImporters',
+        '(',
+        ')',
+    ], 'The import entries come from the common core registry, including further programs'
+    assert labels(delegates[0]) == ['Import %1'], (
+        'The common import delegate names its registered program without separate GUI entries'
     )
 
 

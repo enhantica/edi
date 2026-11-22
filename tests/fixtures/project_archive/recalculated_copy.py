@@ -5,6 +5,7 @@ Cell metrics, geometry, observed thresholds and R factors also use explicit
 physical forms from the written inputs and ADR-0050.
 """
 
+import datetime
 import math
 import re
 
@@ -241,7 +242,36 @@ def check_geometry(body):  # noqa: PLR0914 - separate physical operands
         close_saved(row['_geom_bond.distance'], np.linalg.norm(left - right))
 
 
-def compare_members(before, after, directory, engine):
+def compare_copy_metadata(before, after, save_interval):
+    pattern = rb'(?m)^_metadata\.last_modified[ \t]+"([^"\n]+)"[ \t]*$'
+    previous, current = re.findall(pattern, before), re.findall(pattern, after)
+    require(len(previous) == len(current) == 1, 'A copy retains exactly one last-save timestamp')
+
+    def seconds(value):
+        try:
+            return (
+                datetime.datetime
+                .strptime(value.decode(), '%d %b %Y %H:%M:%S')
+                .replace(tzinfo=datetime.UTC)
+                .timestamp()
+            )
+        except (ValueError, UnicodeError) as error:
+            raise ValueError('A copy retains the declared STAR UTC timestamp format') from error
+
+    old_time, new_time = seconds(previous[0]), seconds(current[0])
+    started, finished = (math.floor(value / 1000) for value in save_interval)
+    require(
+        max(started, old_time + 1) <= new_time <= max(finished, old_time + 1),
+        'A newly saved copy advances its timestamp within the observed save interval',
+    )
+    require(
+        re.sub(pattern, b'<last-save-time>', before)
+        == re.sub(pattern, b'<last-save-time>', after),
+        'A copy retains every other project byte after its save timestamp is checked',
+    )
+
+
+def compare_members(before, after, directory, engine, *, save_interval=None):
     require(before.keys() == after.keys(), 'A recalculated copy retains exactly every member name')
     source, output = directory / 'reference-input', directory / 'reference-calculated'
     for name, body in before.items():
@@ -265,7 +295,9 @@ def compare_members(before, after, directory, engine):
     fresh.save_as(output)
     for name, body in before.items():
         actual = after[name]
-        if name.startswith('structures/') and name.endswith('.edi'):
+        if name == 'project.edi' and save_interval is not None:
+            compare_copy_metadata(body, actual, save_interval)
+        elif name.startswith('structures/') and name.endswith('.edi'):
             require(
                 input_bytes(body) == input_bytes(actual),
                 'A recalculated copy retains every non-derived structure byte',

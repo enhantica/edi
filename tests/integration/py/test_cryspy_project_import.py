@@ -9,6 +9,8 @@ import edi
 import gemmi
 import pytest
 
+from tests.fixtures.project_save.reference import declared_rule, expected_pair
+
 HOME = Path(__file__).resolve().parents[2] / 'fixtures/project_imports'
 SOURCE = HOME / 'cryspy-pbso4.rcif'
 
@@ -109,9 +111,19 @@ def test_cryspy_import_round_trip_retains_source_values_and_leaves_the_source_un
     project.save_as(tmp_path / 'native')
     reopened = edi.Project.load(tmp_path / 'native')
     source = reference()
-    assert reopened.structures[0].cell.length_a.value == pytest.approx(
-        number(source['pbso4'], '_cell_length_a'), abs=5e-7
-    ), 'A native save and reopen retains the independently read cryspy cell value'
+    token = source['pbso4'].find_value('_cell_length_a')
+    match = re.fullmatch(r'([-+]?\d+)\.(\d+)\((\d+)\)', token)
+    assert match is not None, 'The independent cryspy cell source carries its decimal uncertainty'
+    source_su = int(match[3]) * 10 ** -len(match[2])
+    written_value, written_su = expected_pair(
+        number(source['pbso4'], '_cell_length_a'), source_su, declared_rule(tmp_path / 'native')
+    )
+    assert reopened.structures[0].cell.length_a.value == pytest.approx(written_value, abs=5e-7), (
+        'A native save retains the source cell under the independently rounded project s.u. rule'
+    )
+    assert reopened.structures[0].cell.length_a.uncertainty == pytest.approx(
+        written_su, abs=1e-12
+    ), 'A native save retains the independently rounded source cell uncertainty'
     expected = [
         gemmi.cif.as_number(value) for value in source['pd'].find_values('_pd_meas_intensity')
     ]

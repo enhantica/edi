@@ -62,7 +62,7 @@ export function checkNoticeControls() {
 
 export function assertFallbackChoices(folder,zip,copy,tooltip) {
   assert.equal(folder.enabled,false,'Without File System Access, Folder must be visible but disabled');
-  assert.equal(zip.checked,true,'Without File System Access, Zip archive must be selected');
+  assert.match(zip.text,/^As project zip(?:…|\.\.\.)?$/,'The fallback menu must name its actual ZIP destination');
   assert.equal(zip.enabled,true,'The fallback ZIP format must remain usable');
   assert.equal(copy.checked,true,'Fallback Save-as must keep working in browser storage as a copy');
   assert.equal(copy.enabled,false,'Fallback Save-a-copy must be checked and disabled');
@@ -85,10 +85,10 @@ export function assertBrowserWarning(text,icon,privateStorage=false) {
 }
 
 export function checkChoiceAndWarningControls() {
-  const folder={enabled:false},zip={checked:true,enabled:true},copy={checked:true,enabled:false};
+  const folder={enabled:false},zip={text:'As project zip…',enabled:true},copy={checked:true,enabled:false};
   const tooltip='This browser cannot write a folder; Chrome and Edge can.';
   assertFallbackChoices(folder,zip,copy,tooltip);
-  for(const [index,key,value] of [[0,'enabled',true],[1,'checked',false],[1,'enabled',false],[2,'checked',false],[2,'enabled',true]]){
+  for(const [index,key,value] of [[0,'enabled',true],[1,'text','As project folder…'],[1,'enabled',false],[2,'checked',false],[2,'enabled',true]]){
     const choices=[{...folder},{...zip},{...copy}];choices[index][key]=value;
     assert.throws(()=>assertFallbackChoices(...choices,tooltip),/must/,
       'Every disabled or checked fallback choice must independently enforce the owner decision');

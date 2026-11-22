@@ -93,7 +93,7 @@ TestCase {
         settle();
     }
     function click(name) {
-        const found = Ui.control(Probe, app, name) || named(name);
+        const found = Ui.control(Probe, app, name) || Ui.find(Ui.windowRoot(app), name) || named(name);
         press(Ui.target(found));
     }
     function type(field, value) {
@@ -279,9 +279,11 @@ TestCase {
         } else if (data.kind === "project-open") {
             Session.closeProject();
             settle();
-            click("project.open");
-            click("open.folder");
-            press(named("open.choice").standardButton(Dialog.Ok));
+            if (Ui.control(Probe, app, "home.start"))
+                click("home.start");
+            click("appBar.tab.project");
+            click("project.load");
+            click("project.load.folder");
             let dialogs = [];
             tryVerify(() => {
                 dialogs = SettingsProof.projectFileDialogs(app, true);
@@ -292,9 +294,7 @@ TestCase {
             required = [/project.*open|open.*project/i];
         } else if (data.kind === "project-save") {
             click("project.saveAs");
-            const choice = named("saveAs.choice");
-            verify(choice !== null, "Save As presents its real format choice before the destination");
-            press(choice.standardButton(Dialog.Ok));
+            click("project.saveAs.folder");
             let dialogs = [];
             tryVerify(() => {
                 dialogs = SettingsProof.projectFileDialogs(app, false);

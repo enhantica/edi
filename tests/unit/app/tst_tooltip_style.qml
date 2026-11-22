@@ -85,7 +85,7 @@ TestCase {
     function click(name) {
         let item;
         tryVerify(() => {
-            item = Ui.control(Probe, app, name);
+            item = Ui.control(Probe, app, name) || Ui.find(Ui.windowRoot(app), name);
             return item !== null && item.enabled && Ui.clickPoint(item) !== null && !Ui.moving(app.contentItem);
         }, 4000, "The tooltip route exposes its actual settled control: " + name);
         verify(waitForPolish(item), "The tooltip route control finishes its own layout before input");
@@ -411,13 +411,13 @@ TestCase {
         click("appBar.tab." + page);
         let modal = null;
         if (data.scope.startsWith("save-")) {
-            modal = findChild(app, "saveAs.choice");
-            verify(modal !== null, "The live census includes the actual Save-as dialog");
-            modal.open();
+            click("project.saveAs");
+            modal = findChild(app, "project.saveAs.menu");
+            verify(modal !== null, "The live census includes the actual Save project as menu");
         } else if (data.scope === "web-open") {
-            modal = findChild(app, "open.choice");
-            verify(modal !== null, "The live census includes the actual web Open dialog");
-            modal.open();
+            click("project.load");
+            modal = findChild(app, "project.load.menu");
+            verify(modal !== null, "The live census includes the actual web Load project menu");
         } else if (data.scope === "browser-warning") {
             modal = (findChild(app, "webStorageWarning") || findChild(app, "browserSaved"));
             verify(modal !== null, "The live census includes the actual browser-storage warning popup");
