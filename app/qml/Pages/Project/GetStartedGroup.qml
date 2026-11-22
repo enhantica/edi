@@ -127,31 +127,38 @@ SideBarGroup {
                 }
                 // One entry per importer the core knows (edi ADR-0098), in its order: a program added there appears
                 // here with no change to this page.
-                Instantiator {
-                    model: Session.projectImporters()
-                    delegate: LoadMenuItem {
-                        required property var modelData
-                        objectName: "project.import." + modelData.key
+                Component {
+                    id: importItem
+                    LoadMenuItem {
+                        property var importer: null
+                        objectName: importer !== null ? "project.import." + importer.key : ""
                         hintRight: true
                         rightPadding: leftPadding
                         // The importers read files from the disk; the browser has none to give them yet.
                         enabled: !WebFiles.available
                         fontIcon: "file-import"
-                        text: qsTr("Import %1…").arg(modelData.program)
-                        hint: modelData.hint
+                        text: importer !== null ? qsTr("Import %1…").arg(importer.program) : ""
+                        hint: importer !== null ? importer.hint : ""
                     }
-                    onObjectAdded: (index, object) => {
-                        const item = object as LoadMenuItem;
-                        const importer = Session.projectImporters()[index];
+                }
+                // Created once the menu holds its own entries, in the list's order, right after the import header.
+                Component.onCompleted: {
+                    const importers = Session.projectImporters();
+                    const at = group.menuIndexAfter(loadMenu, importHeader);
+                    for (let i = 0; i < importers.length; ++i) {
+                        const importer = importers[i];
+                        const item = importItem.createObject(null, {
+                            importer: importer
+                        }) as LoadMenuItem;
                         item.labelWidth = Qt.binding(() => loadMenu.labelWidth);
                         item.toolTip = group.importToolTip(importer);
                         item.triggered.connect(() => group.importProject(importer));
-                        loadMenu.insertItem(group.menuIndexAfter(loadMenu, importHeader) + index, item);
+                        loadMenu.insertItem(at + i, item);
                         loadMenu.importItemsWidth = Math.max(loadMenu.importItemsWidth, item.implicitWidth);
                         loadMenu.importLabelsWidth = Math.max(loadMenu.importLabelsWidth, item.labelImplicitWidth);
                     }
-                    onObjectRemoved: (index, object) => loadMenu.removeItem(object)
                 }
+                onCurrentIndexChanged: group.skipHeader(loadMenu)
             }
         }
 
@@ -188,6 +195,7 @@ SideBarGroup {
                 readonly property bool diskWritable: !WebFiles.available || WebStorage.diskAccess
                 property bool copy: false
                 onAboutToShow: copy = !diskWritable
+                onCurrentIndexChanged: group.skipHeader(saveMenu)
 
                 LoadMenuHeader {
                     id: saveProjectHeader
@@ -342,6 +350,26 @@ SideBarGroup {
         default:
             return qsTr("Import a %1 project").arg(importer.program);
         }
+    }
+    // A group title is never a choice: when keyboard navigation (or a menu opened from the keyboard) lands on one, the
+    // next enabled entry in the same direction is chosen instead.
+    property int lastMenuIndex: -1
+    function skipHeader(menu) {
+        const index = menu.currentIndex;
+        const item = index >= 0 ? menu.itemAt(index) : null;
+        if (item === null || item.activeFocusOnTab) {
+            group.lastMenuIndex = index;
+            return;
+        }
+        const step = index < group.lastMenuIndex ? -1 : 1;
+        for (let i = index + step; i >= 0 && i < menu.count; i += step) {
+            const next = menu.itemAt(i);
+            if (next !== null && next.activeFocusOnTab && next.enabled) {
+                menu.currentIndex = i;
+                return;
+            }
+        }
+        menu.currentIndex = group.lastMenuIndex;
     }
     // The menu position just after `header`, where the entries generated for it go.
     function menuIndexAfter(menu, header) {
