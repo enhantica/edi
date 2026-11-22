@@ -466,8 +466,9 @@ void require_paired_constraints(const Records& record, Id input, Id nuclear_phas
                 const auto& term = record.sequence(terms.front());
                 require(term.size() == 2, "invalid held magnetic variable");
                 const auto* variable = std::get_if<ObjectState>(&record.value(term[1]));
-                require(variable && variable->type == Factory::Variable && variable->state,
-                        "invalid held magnetic variable");
+                if (!variable || variable->type != Factory::Variable || !variable->state) {
+                    refuse("invalid held magnetic variable");
+                }
                 const auto state = *variable->state;
                 const auto& name = record.text(record.field(state, "name"));
                 const auto axis =
@@ -507,8 +508,9 @@ void require_paired_constraints(const Records& record, Id input, Id nuclear_phas
                 require(term.size() == 2 && record.number(term[0]) == 1.,
                         "unsupported magnetic constraint multiplier");
                 const auto* variable = std::get_if<ObjectState>(&record.value(term[1]));
-                require(variable && variable->type == Factory::Variable && variable->state,
-                        "invalid magnetic constraint variable");
+                if (!variable || variable->type != Factory::Variable || !variable->state) {
+                    refuse("invalid magnetic constraint variable");
+                }
                 states[j] = *variable->state;
                 const auto& item = record.text(record.field(states[j], "name"));
                 if (j == 0) name = item;
@@ -558,8 +560,9 @@ Array adp_ties(const Records& record, Id constraints, const std::vector<Id>& pha
                 require(term.size() == 2 && record.number(term[0]) == 1.,
                         "unsupported GSAS-II constraint multiplier");
                 const auto* variable = std::get_if<ObjectState>(&record.value(term[1]));
-                require(variable && variable->type == Factory::Variable && variable->state,
-                        "invalid GSAS-II constraint variable");
+                if (!variable || variable->type != Factory::Variable || !variable->state) {
+                    refuse("invalid GSAS-II constraint variable");
+                }
                 const auto state = *variable->state;
                 require(record.text(record.field(state, "name")) == "AUiso" &&
                             record.none(record.field(state, "histogram")),

@@ -129,7 +129,7 @@ struct Line {
     std::string text;
     std::string comment;
     std::string original_comment;
-    std::size_t number;
+    std::size_t number = 0;
 };
 
 struct PCR {
@@ -208,8 +208,8 @@ struct PCR {
 };
 
 struct Coded {
-    double value;
-    double code;
+    double value = 0.;
+    double code = 0.;
     double multiplier = 1.;
 };
 
@@ -234,11 +234,11 @@ struct Refinement {
         }
     }
 
-    void set(OptionalParameter& parameter, Coded coded) {
+    void set(OptionalParameter& parameter, const Coded& coded) {
         set(parameter.value(), coded);
     }
 
-    void set(OptionalParameter& parameter, const ParameterSpec& spec, Coded coded) {
+    void set(OptionalParameter& parameter, const ParameterSpec& spec, const Coded& coded) {
         Parameter field;
         field.spec = &spec;
         parameter = field;
@@ -322,7 +322,7 @@ fs::path sibling_input(const PCR& pcr, const fs::path& name) {
     return match;
 }
 
-std::string companion_basename(std::string reference) {
+std::string companion_basename(const std::string& reference) {
     // Old FullProf files retain workstation paths. Resolve their basename
     // beside the control, as a portable project, without inspecting that path.
     const auto separator = reference.find_last_of("/\\");
@@ -1192,7 +1192,7 @@ void refinement_flags(const PCR& pcr, Project& project, const Refinement& refine
     }
     struct Member {
         ParameterEntry entry;
-        double direction;
+        double direction = 0.;
     };
     std::map<int, std::vector<Member>> groups;
     for (const auto& entry : parameter_entries(project)) {
@@ -1269,8 +1269,8 @@ void read_background(const PCR& pcr, Pattern& pattern, Refinement& refine,
             pcr.fail("Missing interpolated background points");
         }
         struct Knot {
-            double position;
-            Coded intensity;
+            double position = 0.;
+            Coded intensity{};
             bool used = false;
         };
         std::vector<Knot> knots;
@@ -1287,7 +1287,7 @@ void read_background(const PCR& pcr, Pattern& pattern, Refinement& refine,
         if (knots.back().position != *positions.rbegin()) {
             pcr.fail("A decreasing terminal FullProf background needs manual conversion", points);
         }
-        const auto add = [&](double x, Coded intensity) {
+        const auto add = [&](double x, const Coded& intensity) {
             auto point = std::make_shared<LineSegment>();
             point->position = x;
             exp.background.push_back(point);
@@ -1598,7 +1598,7 @@ void tof_profile(const PCR& pcr, Pattern& pattern, Refinement& refine, const Cod
     pcr.zero(sigma.values, 6, 8, "anisotropic TOF size");
     pcr.zero(sigma.codes, 6, 7, "anisotropic TOF size code");
     const auto base = pattern.resolution.value_or(TofResolution{});
-    const auto width_pair = [&](Coded raw, Coded contribution, double base_value) {
+    const auto width_pair = [&](Coded raw, const Coded& contribution, double base_value) {
         raw.value += base_value;
         return profile_pair(pcr, refine, raw, contribution, 1., -1., 1.);
     };
@@ -1782,7 +1782,9 @@ void classic_combined_magnetic_symmetry(const PCR& pcr, Structure& structure, st
                                         std::size_t end) {
     const auto counts = pcr.require("nsym cen laue magmat", start + 1, end);
     auto declaration = counts;
-    while (declaration > start && pcr.lines[--declaration].text.empty()) {
+    while (declaration > start) {
+        --declaration;
+        if (!pcr.lines[declaration].text.empty()) break;
     }
     const auto& group = pcr.lines[declaration].text;
     const auto setting = fullprof_default_space_group(group);
@@ -1968,7 +1970,9 @@ void structure_block(const PCR& pcr, Project& project, std::vector<Pattern>& pat
         combined_magnetic_symmetry(pcr, *structure, phase, atom_header);
     } else {
         auto group = atom_header;
-        while (group > phase && pcr.lines[--group].text.empty()) {
+        while (group > phase) {
+            --group;
+            if (!pcr.lines[group].text.empty()) break;
         }
         auto symbol = pcr.lines[group].text;
         std::string origin;
@@ -2389,7 +2393,7 @@ void classic_magnetic_overlay(const PCR& pcr, Project& project, Pattern& pattern
         Row values;
         Row codes;
         MagneticType type;
-        std::size_t line;
+        std::size_t line = 0;
     };
     std::vector<SiteMoment> sites;
     auto row = atom_header;
@@ -2513,7 +2517,9 @@ std::vector<std::size_t> phase_starts(const PCR& pcr) {
     if (phases.empty()) {
         for (const auto declaration : headers(pcr, "nat ", 1, pcr.lines.size())) {
             auto title = declaration;
-            while (title > 1 && pcr.lines[--title].text.empty()) {
+            while (title > 1) {
+                --title;
+                if (!pcr.lines[title].text.empty()) break;
             }
             const auto& text = pcr.lines[title].text;
             if (title > 1 && !text.empty() && std::isalpha(static_cast<unsigned char>(text.front())) &&
@@ -2542,7 +2548,7 @@ void resolve_pattern_profiles(const PCR& pcr, const std::vector<std::size_t>& ph
             line = pcr.require("irf ", line + 1, end);
             const auto flags = pcr.after(line, end, 3);
             const int profile = flags[1] == 0. ? patterns[bank].profile : integer(flags[1], pcr.path.string());
-            if (profiles[bank] && *profiles[bank] != profile) {
+            if (const auto& known = profiles[bank]; known && *known != profile) {
                 pcr.fail("EDI requires a common profile family for the phases in a powder pattern", line);
             }
             profiles[bank] = profile;

@@ -8,6 +8,7 @@
 #include <cctype>
 #include <cmath>
 #include <filesystem>
+#include <format>
 #include <fstream>
 #include <map>
 #include <numeric>
@@ -24,7 +25,7 @@
 namespace edi {
 namespace {
 namespace fs = std::filesystem;
-constexpr std::uintmax_t max_rcif_bytes = 64U * 1024U * 1024U;
+constexpr std::uintmax_t max_rcif_bytes = std::uintmax_t{64} * 1024U * 1024U;
 
 [[noreturn]] void refuse(const std::string& message) { throw IoError(message); }
 
@@ -42,6 +43,12 @@ struct Loop {
         const auto found = std::find(tags.begin(), tags.end(), tag);
         if (found == tags.end()) return std::nullopt;
         return static_cast<std::size_t>(found - tags.begin());
+    }
+    // The column of `tag`, which the loop must have.
+    std::size_t required(const std::string& tag) const {
+        const auto found = column(tag);
+        if (!found) refuse("cryspy loop has no " + tag);
+        return *found;
     }
     const std::string& at(std::size_t row, std::size_t column) const { return values[row * tags.size() + column]; }
 };
@@ -338,10 +345,11 @@ Structure crystal(const Block& block) {
             set(site.occupancy, number(atoms->at(row, *occupancy), "occupancy of " + label));
         }
         const auto adp = atoms->column("_atom_site_adp_type");
-        const auto kind = adp ? lowercase(atoms->at(row, *adp)) : std::string("biso");
+        const std::string given = adp ? atoms->at(row, *adp) : std::string("Biso");
+        const auto kind = lowercase(given);
         if (kind != "biso" && kind != "uiso") {
-            refuse("cryspy atom " + label + " has ADP type " + atoms->at(row, *adp) +
-                   ": the import converts isotropic displacements only");
+            refuse(std::format("cryspy atom {} has ADP type {}: the import converts isotropic displacements only", label,
+                               given));
         }
         const auto tag = kind == "biso" ? "_atom_site_b_iso_or_equiv" : "_atom_site_u_iso_or_equiv";
         site.adp_type = kind == "biso" ? "Biso" : "Uiso";
@@ -436,7 +444,7 @@ BraggPdExperiment powder(const Block& block, const std::vector<Structure>& struc
     if (phases == nullptr || phases->rows() == 0) refuse("cryspy experiment '" + block.name + "' links no phase");
     experiment.linked_structures.clear();
     for (std::size_t row = 0; row < phases->rows(); ++row) {
-        const auto& label = phases->at(row, *phases->column("_phase_label"));
+        const auto& label = phases->at(row, phases->required("_phase_label"));
         const auto structure = std::find_if(structures.begin(), structures.end(), [&](const Structure& s) {
             return s.name.value() == detail::imported_name(label, "phase_");
         });
@@ -456,7 +464,7 @@ BraggPdExperiment powder(const Block& block, const std::vector<Structure>& struc
 
     const Loop* measured = block.loop_with("_pd_meas_2theta");
     if (measured == nullptr || measured->rows() < 2) refuse("cryspy experiment '" + block.name + "' has no measurements");
-    const auto angle_column = *measured->column("_pd_meas_2theta");
+    const auto angle_column = measured->required("_pd_meas_2theta");
     const auto intensity = measured->column("_pd_meas_intensity");
     const auto sigma = measured->column("_pd_meas_intensity_sigma");
     if (!intensity || !sigma) {
@@ -493,12 +501,13 @@ BraggPdExperiment powder(const Block& block, const std::vector<Structure>& struc
     }
     if (const Loop* excluded = block.loop_with("_exclude_2theta_min")) {
         const auto id = excluded->column("_exclude_id");
-        const auto from = excluded->column("_exclude_2theta_min");
+        const auto from = excluded->required("_exclude_2theta_min");
         const auto to = excluded->column("_exclude_2theta_max");
         if (!to) refuse("cryspy experiment '" + block.name + "' has an excluded region without its end");
+        const auto until = *to;
         for (std::size_t row = 0; row < excluded->rows(); ++row) {
-            ExcludedRegion region{number(excluded->at(row, *from), "excluded start").value.get(),
-                                  number(excluded->at(row, *to), "excluded end").value.get()};
+            ExcludedRegion region{number(excluded->at(row, from), "excluded start").value.get(),
+                                  number(excluded->at(row, until), "excluded end").value.get()};
             region.id = id ? detail::imported_name(excluded->at(row, *id), "region_") : "region-" + std::to_string(row + 1);
             experiment.excluded_regions.push_back(region);
         }
@@ -520,7 +529,7 @@ BraggPdExperiment powder(const Block& block, const std::vector<Structure>& struc
         auto point = std::make_shared<LineSegment>();
         point->id = std::to_string(row + 1);
         point->position =
-            number(background->at(row, *background->column("_pd_background_2theta")), "background 2theta").value.get();
+            number(background->at(row, background->required("_pd_background_2theta")), "background 2theta").value.get();
         set(point->intensity, number(background->at(row, *level), "background intensity"));
         experiment.background.push_back(point);
     }

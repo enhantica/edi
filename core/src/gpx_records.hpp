@@ -23,14 +23,14 @@ struct Bytes {
     std::string value;
 };
 struct Dtype {
-    char kind;
-    std::size_t width;
+    char kind = 0;
+    std::size_t width = 0;
     char endian = '<';
 };
 struct Array {
-    Dtype dtype;
+    Dtype dtype{};
     std::vector<std::size_t> shape;
-    Id storage;
+    Id storage{};
     bool fortran_order = false;
     bool masked_layout = false;
     std::optional<Id> mask;
@@ -49,7 +49,7 @@ enum class Factory {
     LegacyReconstruct
 };
 struct ObjectState {
-    Factory type;
+    Factory type = Factory::Array;
     std::optional<Id> state;
 };
 using Value = std::variant<std::monostate, bool, std::int64_t, double, std::string, Sequence,

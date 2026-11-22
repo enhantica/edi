@@ -1524,12 +1524,15 @@ bool Session::openExampleNamed(const QString& exampleId) {
                 finish(false, QStringLiteral("a tutorial already holds a project aside"));
                 return;
             }
+            // receiver was checked above; the check after openProjectAt is for that call, which can end the session.
+            // cppcheck-suppress nullPointerRedundantCheck
             receiver->aside_next_ = aside;
             // The downloaded project's read is this request's own attempt: only a file it failed on goes with it.
             QString failed;
             bool opened = false;
             {
                 LoadAttempt attempt(receiver);
+                // cppcheck-suppress nullPointerRedundantCheck
                 opened = receiver->openProjectAt(archive, exampleId);
                 if (!receiver) return;
                 if (!opened) failed = receiver->report(&attempt);

@@ -4788,7 +4788,7 @@ NB_MODULE(_edi, m) {
         "The project importers as (program, suffixes) pairs, in the Load project menu's order.");
     m.def(
         "register_project_importer",
-        [](const std::string& program, const std::vector<std::string>& suffixes, nb::callable convert) {
+        [](const std::string& program, const std::vector<std::string>& suffixes, const nb::callable& convert) {
             // The registry outlives the interpreter, so it keeps its own reference and never releases it.
             PyObject* function = convert.inc_ref().ptr();
             edi::register_project_importer(

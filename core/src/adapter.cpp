@@ -1937,6 +1937,7 @@ void set_magnetic_setting(Structure& s, const std::string& transform) {
         throw std::invalid_argument("the setting " + transform + " is not one of this group's tabulated settings");
     }
     const std::optional<crysta::MagneticSettingTransform> parsed = crysta::parse_setting_transform(transform);
+    if (!parsed) throw std::invalid_argument("the setting " + transform + " cannot be read");
     const crysta::MagneticSpaceGroupEntry& entry = crysta::magnetic_space_group(s.magnetic->group.number_bns);
     Structure trial = s;
     trial.magnetic.modify([&transform](MagneticDescription& magnetic) { set_bns_transform(magnetic, transform); });
@@ -9230,6 +9231,7 @@ detail::FullProfMagneticOperators detail::fullprof_magnetic_operators(const Stru
     check_magnetic_acceptance(structure);
     const auto& magnetic = structure.magnetic.get();
     std::vector<crysta::MagneticOperation> operators;
+    operators.reserve(magnetic.operations.size());
     for (const auto& row : magnetic.operations) {
         operators.push_back(crysta::parse_magnetic_operation(row.second));
     }

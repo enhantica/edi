@@ -174,7 +174,7 @@ void admit_experiment(const BraggPdExperiment& experiment, const Project& projec
         ++linked;
     }
     if (linked == 0) refuse("no structure is linked");
-    if (!experiment.data) refuse("cryspy needs measured intensities with their sigmas");
+    if (!experiment.data) unsupported(where + "cryspy needs measured intensities with their sigmas");
     const auto& data = *experiment.data;
     const auto& x = data.axis();
     const auto& y = data.intensity_meas.get();
@@ -236,11 +236,11 @@ void write_crystal(std::ostream& out, const Structure& structure, const Numbers&
         const auto id = site->id.value();
         const auto type = site->adp_type.value();
         if (type != "Biso" && type != "Uiso") {
-            unsupported("atom " + id + " of " + name + " has " + type +
-                        " displacements; the cryspy export writes isotropic ones");
+            unsupported(std::format("atom {} of {} has {} displacements; the cryspy export writes isotropic ones", id,
+                                    name, type));
         }
         const bool b = type == "Biso";
-        const auto what = "atom " + id + " of " + name;
+        const auto what = std::format("atom {} of {}", id, name);
         out << value_token(id, "the label of " + what) << " "
             << value_token(site->type_symbol.value(), "the type of " + what) << " "
             << number(site->fract_x, "x of " + what) << " " << number(site->fract_y, "y of " + what) << " "
@@ -255,6 +255,8 @@ void write_crystal(std::ostream& out, const Structure& structure, const Numbers&
 void write_powder(std::ostream& out, const BraggPdExperiment& experiment, const Numbers& number) {
     const auto name = experiment.name.value();
     const auto of = [&](const std::string& what) { return what + " of " + name; };
+    if (!experiment.data) unsupported("experiment " + name + " has no measured data");
+    const auto& data = *experiment.data;
     const auto& peak = experiment.peak;
     const bool beba = peak.type.value_or("cwl-tch-pseudo-voigt") == "cwl-pseudo-voigt-berar-baldinozzi";
     const auto& instrument = experiment.instrument;
@@ -274,7 +276,7 @@ void write_powder(std::ostream& out, const BraggPdExperiment& experiment, const 
             << "_pd_instr_reflex_asymmetry_p3 " << number(peak.asym_beba_a1, of("asymmetry A1")) << "\n"
             << "_pd_instr_reflex_asymmetry_p4 " << number(peak.asym_beba_b1, of("asymmetry B1")) << "\n";
     }
-    const auto& x = experiment.data->axis();
+    const auto& x = data.axis();
     out << "\n_range_2theta_min " << plain(x.front(), of("the first point")) << "\n_range_2theta_max "
         << plain(x.back(), of("the last point")) << "\n";
 
@@ -303,8 +305,8 @@ void write_powder(std::ostream& out, const BraggPdExperiment& experiment, const 
     }
 
     out << "\nloop_\n_pd_meas_2theta\n_pd_meas_intensity\n_pd_meas_intensity_sigma\n";
-    const auto& y = experiment.data->intensity_meas.get();
-    const auto& sigma = experiment.data->intensity_meas_su.get();
+    const auto& y = data.intensity_meas.get();
+    const auto& sigma = data.intensity_meas_su.get();
     for (std::size_t i = 0; i < x.size(); ++i) {
         const auto what = of("measured point " + std::to_string(i + 1));
         out << plain(x[i], what) << " " << plain(y[i], what) << " " << plain(sigma[i], what) << "\n";

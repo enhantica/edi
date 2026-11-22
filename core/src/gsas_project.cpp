@@ -34,7 +34,7 @@ void note(const std::string& message) {
         (*conversion_notes)(message);
     }
 }
-constexpr std::size_t max_gsas_bytes = 16U * 1024U * 1024U;
+constexpr std::size_t max_gsas_bytes = std::size_t{16} * 1024U * 1024U;
 
 std::string lowercase_filename(const std::string& path) {
     auto filename = fs::path(path).filename().string();
@@ -701,7 +701,10 @@ void apply_adp_ties(Project& project, const Value& ties) {
                 (*atom)->adp_iso.free = false;
                 ParameterConstraint relation;
                 relation.id = id;
-                relation.expression = id + " = " + leader;
+                std::string expression = id;
+                expression += " = ";
+                expression += leader;
+                relation.expression = expression;
                 project.constraints.push_back(relation);
             }
         }

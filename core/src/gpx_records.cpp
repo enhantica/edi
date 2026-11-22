@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <memory>
 #include <utility>
 
 namespace edi::gpx {
@@ -10,8 +11,9 @@ namespace {
 std::int64_t decimal(std::string_view line) {
     if (line.ends_with('L')) line.remove_suffix(1);
     std::int64_t result{};
-    const auto end = line.data() + line.size();
-    const auto parsed = std::from_chars(line.data(), end, result);
+    const char* const begin = std::to_address(line.begin());
+    const char* const end = std::to_address(line.end());
+    const auto parsed = std::from_chars(begin, end, result);
     require(parsed.ec == std::errc{} && parsed.ptr == end, "invalid GPX integer");
     return result;
 }

@@ -11,9 +11,9 @@ double fullprof_range_tolerance(double value);
 double fullprof_powder_scale_in_native_units(const Structure& structure);
 
 struct FullProfRelationDirection {
-    const Parameter* target;
-    const Parameter* source;
-    double slope;
+    const Parameter* target = nullptr;
+    const Parameter* source = nullptr;
+    double slope = 0.;
     std::string name;
 };
 std::vector<FullProfRelationDirection> fullprof_relation_directions(Project& model);
@@ -24,21 +24,21 @@ std::string fullprof_signed_operator(const std::string& spatial, const std::stri
 std::string fullprof_inverted_operator(const std::string& operation);
 struct FullProfSiteGeometry {
     std::string letter;
-    std::array<double, 3> representative;
-    std::array<int, 9> rotation;
-    int general_multiplicity;
-    int site_multiplicity;
+    std::array<double, 3> representative{};
+    std::array<int, 9> rotation{};
+    int general_multiplicity = 0;
+    int site_multiplicity = 0;
 };
 FullProfSiteGeometry fullprof_site_geometry(const Structure& structure, const AtomSite& site);
 std::array<double, 6> fullprof_rotated_beta(const std::array<double, 6>& beta, const std::array<int, 9>& rotation);
 struct FullProfEnumeratedMoment {
     std::string ion;
-    std::array<double, 3> position;
-    std::array<double, 3> moment;
-    std::array<double, 3> codes;
-    double occupancy;
-    double b_iso;
-    double b_iso_code;
+    std::array<double, 3> position{};
+    std::array<double, 3> moment{};
+    std::array<double, 3> codes{};
+    double occupancy = 0.;
+    double b_iso = 0.;
+    double b_iso_code = 0.;
 };
 std::optional<MagneticDescription> fullprof_magnetic_overlay_group(
     const Structure& structure, const std::vector<FullProfEnumeratedMoment>& moments);

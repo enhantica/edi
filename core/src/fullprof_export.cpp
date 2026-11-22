@@ -39,15 +39,15 @@ double value(const OptionalParameter& field) {
 }
 
 struct Field {
-    double value;
+    double value = 0.;
     double code = 0.;
 };
 
 class Codes {
     struct Direction {
-        std::size_t ordinal;
+        std::size_t ordinal = 0;
         std::string path;
-        double slope;
+        double slope = 0.;
     };
 
 public:
@@ -179,12 +179,12 @@ bool token_field(std::string_view text) {
 }
 
 struct Bank {
-    const BraggPdExperiment* model;
+    const BraggPdExperiment* model = nullptr;
     std::string file;
-    int job;
-    int npr;
-    int nba;
-    bool texture;
+    int job = 0;
+    int npr = 0;
+    int nba = 0;
+    bool texture = false;
     double step = 0.;
     double origin = 0.;
     double range_min = 0.;
@@ -195,7 +195,10 @@ struct Bank {
 
     bool tof() const { return job < 0; }
     bool simulation() const { return std::abs(job) > 1; }
-    const PdDataBase& data() const { return *model->data; }
+    const PdDataBase& data() const {
+        if (!model->data) unsupported("experiment " + model->name.value() + " has no measured data");
+        return *model->data;
+    }
 };
 
 Bank bank_for(const BraggPdExperiment& experiment, std::size_t index) {
@@ -347,10 +350,14 @@ void add_neutron_lengths(std::map<std::string, double>& lengths, const Structure
         if (!overrides.empty() && held == overrides.end()) {
             unsupported("missing custom neutron scattering length for " + type);
         }
-        if (held == overrides.end() && !standard) {
+        double length = 0.;
+        if (held != overrides.end()) {
+            length = held->second;
+        } else if (standard) {
+            length = *standard;
+        } else {
             unsupported("unknown isotope scattering length for " + type);
         }
-        const auto length = held == overrides.end() ? *standard : held->second;
         const auto [entry, fresh] = lengths.emplace(symbol, length);
         if (!fresh && entry->second != length) {
             unsupported("FullProf patterns share one scattering length per atom type " + symbol);
@@ -901,7 +908,9 @@ void write_single_crystal(Project& project, const fs::path& folder, Codes& codes
          << (tof ? 0. : wavelength) << " 0 0\n";
     data << std::fixed << std::setprecision(8);
     for (std::size_t dataset = 0; dataset < project.experiments.size(); ++dataset) {
-        const auto& rows = *project.experiments[dataset]->reflections;
+        const auto& reflections = project.experiments[dataset]->reflections;
+        if (!reflections) unsupported("experiment " + project.experiments[dataset]->name.value() + " has no reflections");
+        const auto& rows = *reflections;
         for (std::size_t i = 0; i < rows.size(); ++i) {
             const auto h = rows.index_h.get()[i];
             const auto k = rows.index_k.get()[i];
