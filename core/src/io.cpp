@@ -86,6 +86,8 @@ struct Loop {
     const std::vector<std::vector<std::string>> rows;
     // The (row, column) cells given as a bare `?` or `.`, which a decoded cell cannot tell from a quoted one.
     std::set<std::pair<std::size_t, std::size_t>> bare_markers;
+    // The cells given as a quoted empty text, with their quote: supplied, unlike an absent cell, as crysta keeps them.
+    std::map<std::pair<std::size_t, std::size_t>, char> quoted_empty;
     Loop(std::vector<std::string> tags_in, std::vector<std::vector<std::string>> rows_in,
          const std::string& where)
         : tags(std::move(tags_in)), rows(std::move(rows_in)) {
@@ -500,6 +502,7 @@ Block parse_block(const std::string& text, const std::string& where, bool requir
             }
             const std::size_t columns = tags.size();
             std::set<std::pair<std::size_t, std::size_t>> bare;
+            std::map<std::pair<std::size_t, std::size_t>, char> quoted_empty;
             while (index < size && !is_control(tokens[index])) {
                 std::vector<std::string> row;
                 for (std::size_t column = 0; column < columns; ++column) {
@@ -510,6 +513,9 @@ Block parse_block(const std::string& text, const std::string& where, bool requir
                     }
                     if (is_bare_marker(tokens[index])) {
                         bare.emplace(rows.size(), column);
+                    } else if (tokens[index].quoted && tokens[index].text.empty() &&
+                               (text[tokens[index].offset] == '\'' || text[tokens[index].offset] == '"')) {
+                        quoted_empty.emplace(std::pair{rows.size(), column}, text[tokens[index].offset]);
                     }
                     row.push_back(tokens[index].text);
                     ++index;
@@ -518,6 +524,7 @@ Block parse_block(const std::string& text, const std::string& where, bool requir
             }
             block.loops.emplace_back(std::move(tags), std::move(rows), where);
             block.loops.back().bare_markers = std::move(bare);
+            block.loops.back().quoted_empty = std::move(quoted_empty);
         } else if (is_tag(token)) {
             if (index + 1 >= size || is_control(tokens[index + 1])) {
                 fail_syntax(where, "tag-without-value",
@@ -972,8 +979,15 @@ void read_magnetic(const Block& block, Structure& structure, const std::string& 
                 const std::string value = given(*loop, row, tag.c_str());
                 coefficients.values[index] = value.empty() ? value : representable(value, tag.c_str());
             }
-            const std::string source = given(*loop, row, "_atom_type_scat.neutron_magnetic_source");
-            coefficients.source = source.empty() ? source : representable(source, "_atom_type_scat.neutron_magnetic_source");
+            const char* const source_tag = "_atom_type_scat.neutron_magnetic_source";
+            const std::string source = given(*loop, row, source_tag);
+            coefficients.source = source.empty() ? source : representable(source, source_tag);
+            // A quoted empty source is supplied text: held as its quoted token, as crysta holds and writes it.
+            if (const int column = loop->column(source_tag); column >= 0) {
+                const auto quoted = loop->quoted_empty.find(
+                    {static_cast<std::size_t>(&row - loop->rows.data()), static_cast<std::size_t>(column)});
+                if (quoted != loop->quoted_empty.end()) coefficients.source = std::string(2, quoted->second);
+            }
             magnetic.radial_coefficients.emplace_back(key(*loop, row, "_atom_type_scat.symbol"), std::move(coefficients));
         }
     }

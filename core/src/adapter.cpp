@@ -1530,14 +1530,19 @@ void identify_magnetic_group(Structure& s, const SpaceGroupSettingName& setting)
         return;
     }
     if (numbered != nullptr) {
-        try {
-            if (signed_group(texts(magnetic_rows_in_setting(numbered->operations, *parsed)),
-                             texts(magnetic_rows_in_setting(numbered->centerings, *parsed))) != own) {
-                return;
+        // In the setting the group was accepted in: the claimed BNS transform when it gives one (a type I group at a
+        // shifted origin, family_setting), else the held setting's own.
+        std::vector<crysta::MagneticSettingTransform> settings{*parsed};
+        if (const auto claimed = claimed_setting(s.magnetic)) settings.insert(settings.begin(), *claimed);
+        const auto same = [&](const crysta::MagneticSettingTransform& in) {
+            try {
+                return signed_group(texts(magnetic_rows_in_setting(numbered->operations, in)),
+                                    texts(magnetic_rows_in_setting(numbered->centerings, in))) == own;
+            } catch (const std::invalid_argument&) {
+                return false;
             }
-        } catch (const std::invalid_argument&) {
-            return;
-        }
+        };
+        if (std::none_of(settings.begin(), settings.end(), same)) return;
         const crysta::MagneticGroupName table = group_name(*numbered);
         s.magnetic.modify([&table](MagneticDescription& magnetic) {
             crysta::MagneticGroupName& name = magnetic.group;
