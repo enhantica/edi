@@ -158,7 +158,6 @@ def workflow_control():
                 ],
             },
             'system-time': {
-                'if': "github.event_name == 'schedule'",
                 'needs': 'system',
                 'steps': [
                     {
@@ -282,7 +281,7 @@ def test_timing_route_oracle_executes_and_enforces_each_exercised_pr_boundary(tm
         step['run'] = 'if false; then ' + step['run'] + '; fi'
     else:
         (job if mutation == 'job-continue' else step)['continue-on-error'] = True
-    with pytest.raises(AssertionError, match=r'Scheduled|workflow|process|comparator'):
+    with pytest.raises(AssertionError, match=r'Push|workflow|process|comparator'):
         timing_route(broken, tmp_path / 'negative')
 
 

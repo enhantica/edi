@@ -486,8 +486,13 @@ def test_shard_time_gate_refuses_unprovable_evidence(tmp_path, mutation):
 
 
 def test_timing_gate_is_wired_after_system_shards_on_pull_requests(tmp_path):
-    """Retained inventory name for the nightly timing route."""
+    """Keep the timing job off and replay the shipped push route offline."""
     workflow = yaml.safe_load((ROOT / '.github/workflows/ci.yml').read_text())
+    job = workflow['jobs']['system-time']
+    assert job.get('if') is False, (
+        'The advisory timing job stays disabled while system shards run off push'
+    )
+    job['if'] = "github.event_name == 'push'"
     timing_route(workflow, tmp_path)
 
 
