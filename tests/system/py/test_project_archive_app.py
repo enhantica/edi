@@ -79,6 +79,7 @@ CASES += tuple(
 
 
 def run_archive_actor(case):
+    cases = case if isinstance(case, list) else [case]
     binary = Path(os.environ.get('EDI_APP_TEST_RUNNER', ROOT / 'build/app/app/edi_app_tests'))
     assert binary.is_file(), 'Project opening gates require the actual built app test host'
     result = subprocess.run(
@@ -90,11 +91,11 @@ def run_archive_actor(case):
             str(ROOT / 'tests/unit/app/tst_project_archive.qml'),
             '-o',
             '-,txt',
-            'ProjectArchive::' + case,
+            *['ProjectArchive::' + actor for actor in cases],
         ],
         capture_output=True,
         text=True,
-        timeout=90 if case == 'test_save_copy' else 45,
+        timeout=90 if case == 'test_save_copy' else 45 * len(cases),
         check=False,
     )
     output = result.stdout + result.stderr
@@ -103,29 +104,31 @@ def run_archive_actor(case):
 
 
 @pytest.fixture(scope='module')
-def copy_actors():
-    # One display and Qt process; the real test still opens, saves and tears down
-    # each independent folder/ZIP case. Keep each actor's evidence separate.
-    output = run_archive_actor('test_save_copy')
+def archive_actors(request):
+    # Each Qt data row still creates and destroys its own actual window and project.
+    # Share only the display and native host, as the copy actors already do.
+    cases = [
+        item.callspec.params['case']
+        for item in request.session.items
+        if item.path == request.node.path
+        and getattr(item, 'callspec', None) is not None
+        and 'case' in item.callspec.params
+    ]
+    output = run_archive_actor(cases)
     return {
         case: '\n'.join(
             line
             for line in output.splitlines()
-            if 'ProjectArchive::test_save_copy(' + case.split(':', 1)[1] + ')' in line
+            if 'ProjectArchive::' + case.partition(':')[0] + '(' + case.partition(':')[2] + ')'
+            in line
         )
-        for case in CASES
-        if case.startswith('test_save_copy:')
+        for case in cases
     }
 
 
 @pytest.fixture
-def archive_actor(request):
-    case = request.node.callspec.params['case']
-    return (
-        request.getfixturevalue('copy_actors')[case]
-        if case.startswith('test_save_copy:')
-        else run_archive_actor(case)
-    )
+def archive_actor(request, archive_actors):
+    return archive_actors[request.node.callspec.params['case']]
 
 
 @pytest.mark.parametrize('case', CASES)

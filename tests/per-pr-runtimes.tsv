@@ -10,11 +10,11 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-22T00:31:11Z
+# measured_utc = 2026-11-22T00:55:04Z
 #
-# Recorded from: measured test run (18 node(s) measured once, 183899 banked, 0 stale row(s) dropped)
-# Collected tests: 266614; with a reported duration: 82912
-# Module-scoped fixture costs recorded: 215
+# Recorded from: measured test run (16 node(s) measured once, 183901 banked, 0 stale row(s) dropped)
+# Collected tests: 266614; with a reported duration: 82903
+# Module-scoped fixture costs recorded: 217
 #
 # Breaches are decided PER TIER against the table
 # below, which the loader validates against the code constants - a manifest must state
@@ -31,8 +31,8 @@
 # measurement nobody took and which passes every tier threshold.
 # inventory_python = 266614
 # inventory_cpp = 0
-# inventory_measured = 183914
-# inventory_unmeasured = 82700
+# inventory_measured = 183917
+# inventory_unmeasured = 82697
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
 # inventory_pr_python = 91949
 
@@ -253530,10 +253530,10 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_linked_save_inventory.py::tes
 UNMEASURED:failed-in-this-run	tests/system/py/test_linked_save_inventory.py::test_one_linked_inventory_controls_save_default_and_plan[unsaved-unset-count-21-separate-single-crystal-tof]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_load_project_native_controls.py::test_load_project_controls_in_the_production_window[load_project_opens_the_ordered_choices:empty]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_load_project_native_controls.py::test_load_project_controls_in_the_production_window[load_project_opens_the_ordered_choices:loaded]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_load_project_native_controls.py::test_load_project_controls_in_the_production_window[save_copy_belongs_to_native_choices]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_load_project_native_controls.py::test_load_project_controls_in_the_production_window[save_project_as_opens_the_ordered_choices]
+0.000	tests/system/py/test_load_project_native_controls.py::test_load_project_controls_in_the_production_window[save_copy_belongs_to_native_choices]
+0.000	tests/system/py/test_load_project_native_controls.py::test_load_project_controls_in_the_production_window[save_project_as_opens_the_ordered_choices]
 3.840	tests/system/py/test_load_project_native_controls.py::test_load_project_controls_in_the_production_window[three_project_buttons:empty]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_load_project_native_controls.py::test_load_project_controls_in_the_production_window[three_project_buttons:loaded]
+0.000	tests/system/py/test_load_project_native_controls.py::test_load_project_controls_in_the_production_window[three_project_buttons:loaded]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_local_crysta_launcher.py::test_local_launcher_refuses_ci_before_installing
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_local_crysta_launcher.py::test_local_launcher_uses_the_build_only_environment_through_sdk_and_app[False]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_local_crysta_launcher.py::test_local_launcher_uses_the_build_only_environment_through_sdk_and_app[True]
@@ -255025,8 +255025,8 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_preserved_project_record_publ
 0.000	tests/system/py/test_project_archive_app.py::test_copy_save_timestamp_cannot_hide_another_change[stale]
 0.000	tests/system/py/test_project_archive_app.py::test_opening_measurement_declares_both_targets_for_every_real_route
 0.970	tests/system/py/test_project_archive_app.py::test_real_app_opens_project_routes_and_cancels_pending_work[test_cancel]
-3.480	tests/system/py/test_project_archive_app.py::test_real_app_opens_project_routes_and_cancels_pending_work[test_create_completion:enter]
-3.410	tests/system/py/test_project_archive_app.py::test_real_app_opens_project_routes_and_cancels_pending_work[test_create_completion:ok]
+0.000	tests/system/py/test_project_archive_app.py::test_real_app_opens_project_routes_and_cancels_pending_work[test_create_completion:enter]
+0.000	tests/system/py/test_project_archive_app.py::test_real_app_opens_project_routes_and_cancels_pending_work[test_create_completion:ok]
 2.910	tests/system/py/test_project_archive_app.py::test_real_app_opens_project_routes_and_cancels_pending_work[test_drop:pd-neut-cwl_cosio-d20_scan-3f-folder]
 2.260	tests/system/py/test_project_archive_app.py::test_real_app_opens_project_routes_and_cancels_pending_work[test_drop:pd-neut-cwl_cosio-d20_scan-3f-record]
 2.050	tests/system/py/test_project_archive_app.py::test_real_app_opens_project_routes_and_cancels_pending_work[test_drop:pd-neut-cwl_cosio-d20_scan-3f-zip]
@@ -255047,13 +255047,13 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_project_archive_app.py::test_
 1.120	tests/system/py/test_project_archive_app.py::test_real_app_opens_project_routes_and_cancels_pending_work[test_open:sc-neut-tof_taurine-senju-record]
 UNMEASURED:failed-in-this-run	tests/system/py/test_project_archive_app.py::test_real_app_opens_project_routes_and_cancels_pending_work[test_open:sc-neut-tof_taurine-senju-zip]
 UNMEASURED:failed-in-this-run	tests/system/py/test_project_archive_app.py::test_real_app_opens_project_routes_and_cancels_pending_work[test_open_choice_completion:enter]
-4.820	tests/system/py/test_project_archive_app.py::test_real_app_opens_project_routes_and_cancels_pending_work[test_open_choice_completion:ok]
+0.000	tests/system/py/test_project_archive_app.py::test_real_app_opens_project_routes_and_cancels_pending_work[test_open_choice_completion:ok]
 2.740	tests/system/py/test_project_archive_app.py::test_real_app_opens_project_routes_and_cancels_pending_work[test_open_dialog:pd-neut-cwl_cosio-d20_scan-3f-folder]
-2.350	tests/system/py/test_project_archive_app.py::test_real_app_opens_project_routes_and_cancels_pending_work[test_open_dialog:pd-neut-cwl_cosio-d20_scan-3f-zip]
+0.000	tests/system/py/test_project_archive_app.py::test_real_app_opens_project_routes_and_cancels_pending_work[test_open_dialog:pd-neut-cwl_cosio-d20_scan-3f-zip]
 2.280	tests/system/py/test_project_archive_app.py::test_real_app_opens_project_routes_and_cancels_pending_work[test_open_dialog:sc-neut-cwl_tb2ti2o7-heidi_basic-folder]
 2.200	tests/system/py/test_project_archive_app.py::test_real_app_opens_project_routes_and_cancels_pending_work[test_open_dialog:sc-neut-cwl_tb2ti2o7-heidi_basic-zip]
 2.920	tests/system/py/test_project_archive_app.py::test_real_app_opens_project_routes_and_cancels_pending_work[test_open_dialog:sc-neut-tof_taurine-senju-folder]
-2.290	tests/system/py/test_project_archive_app.py::test_real_app_opens_project_routes_and_cancels_pending_work[test_open_dialog:sc-neut-tof_taurine-senju-zip]
+0.000	tests/system/py/test_project_archive_app.py::test_real_app_opens_project_routes_and_cancels_pending_work[test_open_dialog:sc-neut-tof_taurine-senju-zip]
 1.920	tests/system/py/test_project_archive_app.py::test_real_app_opens_project_routes_and_cancels_pending_work[test_project_actions]
 0.409	tests/system/py/test_project_archive_app.py::test_real_app_opens_project_routes_and_cancels_pending_work[test_save_copy:pd-neut-cwl_cosio-d20_scan-3f-folder]
 0.380	tests/system/py/test_project_archive_app.py::test_real_app_opens_project_routes_and_cancels_pending_work[test_save_copy:pd-neut-cwl_cosio-d20_scan-3f-zip]
@@ -255062,13 +255062,13 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_project_archive_app.py::test_
 UNMEASURED:failed-in-this-run	tests/system/py/test_project_archive_app.py::test_real_app_opens_project_routes_and_cancels_pending_work[test_save_copy:sc-neut-tof_taurine-senju-folder]
 UNMEASURED:failed-in-this-run	tests/system/py/test_project_archive_app.py::test_real_app_opens_project_routes_and_cancels_pending_work[test_save_copy:sc-neut-tof_taurine-senju-zip]
 4.260	tests/system/py/test_project_archive_app.py::test_real_app_opens_project_routes_and_cancels_pending_work[test_save_dialog_layout]
-2.840	tests/system/py/test_project_archive_app.py::test_real_app_opens_project_routes_and_cancels_pending_work[test_save_folder_choice]
+0.000	tests/system/py/test_project_archive_app.py::test_real_app_opens_project_routes_and_cancels_pending_work[test_save_folder_choice]
 1.200	tests/system/py/test_project_archive_app.py::test_real_app_opens_project_routes_and_cancels_pending_work[test_save_pending]
 4.380	tests/system/py/test_project_archive_app.py::test_real_app_opens_project_routes_and_cancels_pending_work[test_save_unwritable:bundled-example]
 4.350	tests/system/py/test_project_archive_app.py::test_real_app_opens_project_routes_and_cancels_pending_work[test_save_unwritable:read-only-zip]
-3.370	tests/system/py/test_project_archive_app.py::test_real_app_opens_project_routes_and_cancels_pending_work[test_save_zip:pd-neut-cwl_cosio-d20_scan-3f]
-3.050	tests/system/py/test_project_archive_app.py::test_real_app_opens_project_routes_and_cancels_pending_work[test_save_zip:sc-neut-cwl_tb2ti2o7-heidi_basic]
-3.110	tests/system/py/test_project_archive_app.py::test_real_app_opens_project_routes_and_cancels_pending_work[test_save_zip:sc-neut-tof_taurine-senju]
+0.250	tests/system/py/test_project_archive_app.py::test_real_app_opens_project_routes_and_cancels_pending_work[test_save_zip:pd-neut-cwl_cosio-d20_scan-3f]
+0.180	tests/system/py/test_project_archive_app.py::test_real_app_opens_project_routes_and_cancels_pending_work[test_save_zip:sc-neut-cwl_tb2ti2o7-heidi_basic]
+0.240	tests/system/py/test_project_archive_app.py::test_real_app_opens_project_routes_and_cancels_pending_work[test_save_zip:sc-neut-tof_taurine-senju]
 0.000	tests/system/py/test_project_archive_app.py::test_recalculated_copy_cannot_hide_inputs_after_computed_categories[loop]
 0.000	tests/system/py/test_project_archive_app.py::test_recalculated_copy_cannot_hide_inputs_after_computed_categories[scalar]
 UNMEASURED:failed-in-this-run	tests/system/py/test_project_chooser_defaults.py::test_real_save_chooser_receives_project_name_and_current_folder[copy-folder-folder]
@@ -255083,10 +255083,10 @@ UNMEASURED:not-completed-in-this-run	tests/system/py/test_project_creation_overw
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_project_creation_overwrite.py::test_failed_replace_keeps_old_bytes_and_explains_the_reason
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_project_creation_overwrite.py::test_fresh_creation_is_the_independent_overwrite_control
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_project_creation_overwrite.py::test_replace_equals_creation_in_an_empty_folder
-4.200	tests/system/py/test_project_dialog_lifecycle.py::test_web_zip_opens_from_real_controls_without_destroying_a_signal_handler[empty-open]
-3.390	tests/system/py/test_project_dialog_lifecycle.py::test_web_zip_opens_from_real_controls_without_destroying_a_signal_handler[empty-recent]
-4.350	tests/system/py/test_project_dialog_lifecycle.py::test_web_zip_opens_from_real_controls_without_destroying_a_signal_handler[replace-open]
-4.700	tests/system/py/test_project_dialog_lifecycle.py::test_web_zip_opens_from_real_controls_without_destroying_a_signal_handler[replace-recent]
+0.000	tests/system/py/test_project_dialog_lifecycle.py::test_web_zip_opens_from_real_controls_without_destroying_a_signal_handler[empty-open]
+0.000	tests/system/py/test_project_dialog_lifecycle.py::test_web_zip_opens_from_real_controls_without_destroying_a_signal_handler[empty-recent]
+0.000	tests/system/py/test_project_dialog_lifecycle.py::test_web_zip_opens_from_real_controls_without_destroying_a_signal_handler[replace-open]
+0.000	tests/system/py/test_project_dialog_lifecycle.py::test_web_zip_opens_from_real_controls_without_destroying_a_signal_handler[replace-recent]
 0.230	tests/system/py/test_project_file_text_contract.py::test_every_saved_file_obeys_dictionary_order_and_reopen_fixed_point[pd-neut-cwl_cosio-d20_scan-3f]
 0.090	tests/system/py/test_project_file_text_contract.py::test_every_saved_file_obeys_dictionary_order_and_reopen_fixed_point[pd-neut-cwl_lbco-hrpt]
 0.290	tests/system/py/test_project_file_text_contract.py::test_every_saved_file_obeys_dictionary_order_and_reopen_fixed_point[pd-neut-tof_ferrite-austenite-beer]
@@ -266784,6 +266784,7 @@ UNMEASURED:not-completed-in-this-run	tests/unit/py/test_web_science_identity.py:
 # module-cost: 1.895	tests/system/py/test_linked_experiment_payloads.py
 # module-cost: 2.844	tests/system/py/test_linked_input_publication_contract.py
 # module-cost: 1.692	tests/system/py/test_linked_save_inventory.py
+# module-cost: 42.103	tests/system/py/test_load_project_native_controls.py
 # module-cost: 1.504	tests/system/py/test_magnetic_token_consumer_inventory.py
 # module-cost: 28.190	tests/system/py/test_onboarding_extra_tables.py
 # module-cost: 1.011	tests/system/py/test_online_collection.py
@@ -266795,8 +266796,9 @@ UNMEASURED:not-completed-in-this-run	tests/unit/py/test_web_science_identity.py:
 # module-cost: 27.704	tests/system/py/test_pattern_range.py
 # module-cost: 179.025	tests/system/py/test_plain_data_app.py
 # module-cost: 2.643	tests/system/py/test_preserved_project_record_publication.py
-# module-cost: 33.311	tests/system/py/test_project_archive_app.py
+# module-cost: 49.220	tests/system/py/test_project_archive_app.py
 # module-cost: 5.190	tests/system/py/test_project_creation_overwrite.py
+# module-cost: 21.952	tests/system/py/test_project_dialog_lifecycle.py
 # module-cost: 64.280	tests/system/py/test_project_page_readiness.py
 # module-cost: 138.678	tests/system/py/test_project_tooltip_style.py
 # module-cost: 3.052	tests/system/py/test_project_transactions.py
