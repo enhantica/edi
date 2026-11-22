@@ -4497,7 +4497,18 @@ struct AssistantViewModel::State {
         }
         return false; // In particular the assistant composer is outside this tree.
     }
+    // Input inside the unsaved-work prompt a Create left to the user answers that prompt; it takes nothing over.
+    bool answers_user_prompt(const QQuickItem* control) const {
+        const QObject* prompt = native_creation && native_creation->ordinary_user_prompt && native_creation->ordinary_waiting
+                                    ? native_creation->ordinary_guard.data()
+                                    : nullptr;
+        if (prompt == nullptr) return false;
+        for (const QQuickItem* item = control; item != nullptr; item = item->parentItem())
+            if (item->parent() == prompt) return true;
+        return false;
+    }
     bool retire_manual_input(QQuickItem* control) {
+        if (answers_user_prompt(control)) return true;
         if (!manual_control(control) || !manual_request_current()) return true;
         const QPointer<QQuickItem> original(control);
         const QPointer<AssistantViewModel> receiver(&owner);
@@ -8300,6 +8311,7 @@ struct AssistantViewModel::State {
         bool had_original_project=false,ordinary_waiting=false,prior_saved=false,prior_save_attempted=false,prior_save_uncertain=false;
         QSet<QString> consumed_inputs;
         QPointer<QObject> ordinary_guard;
+        bool ordinary_user_prompt = false;  // the unsaved-work prompt is the user's to answer (untitled work)
         QPointer<QQuickItem> ordinary_save;
         bool ordinary_guard_accepted=false;
         QString ordinary_name, ordinary_title, ordinary_description, ordinary_intent, ordinary_location, ordinary_failure, ordinary_failure_target;
@@ -18189,6 +18201,19 @@ bool AssistantViewModel::eventFilter(QObject* watched, QEvent* event) {
     if (watched == state_->action_window && state_->showing_actions &&
         (event->type() == QEvent::Hide || event->type() == QEvent::Close) &&
         (!state_->widget_input || !state_->widget_input->injecting())) {
+        if (event->type() == QEvent::Close) {
+            // A close the window refuses (its unsaved-work question, say) tears nothing down: decided once the window
+            // has handled it, by whether it is still shown.
+            const QPointer<AssistantViewModel> self(this);
+            auto* const original = state_.get();
+            const QPointer<QQuickWindow> window(state_->action_window);
+            QMetaObject::invokeMethod(this, [self, original, window] {
+                if (!self || self->state_.get() != original || !original->showing_actions) return;
+                if (window && window->isVisible() && original->action_window == window) return;
+                original->native_supersede_operation(original->widget_outcome_error);
+            }, Qt::QueuedConnection);
+            return false;
+        }
         const QPointer<QObject> original_target(watched);
         state_->native_supersede_operation(state_->widget_outcome_error);
         return !original_target;
@@ -19397,7 +19422,7 @@ void AssistantViewModel::nativeProjectCreateSaveChoice(const QString& intent,QOb
     creation->ordinary_guard=guard;creation->ordinary_save=target;
     // Untitled work cannot be saved without a name, which only the user gives: its prompt is left to the user, and the
     // window's continuation settles this Create (Discard, Cancel, or Save then the naming form) through nativeProjectCreateReady.
-    if(s->result_session() && s->result_session()->untitled())return;
+    if(s->result_session() && s->result_session()->untitled()){creation->ordinary_user_prompt=true;return;}
     const auto current=[s,receiver,creation,guard,target,window,intent] {
         if(!receiver || receiver->state_.get()!=s || !window || s->action_window!=window || !s->normal_project_create_current(creation))return false;
         if(creation->ordinary_guard_accepted)return true; // Actual Save may close its original dialog.
