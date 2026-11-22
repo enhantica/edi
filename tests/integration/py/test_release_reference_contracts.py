@@ -253,10 +253,14 @@ def deliveries(tmp_path):
         'releases': [release],
     }).encode()
     result = []
-    for platform in ['linux-x86_64', 'macos-arm64', 'windows-x86_64']:
+    for platform, suffix in [
+        ('linux-x86_64', '.zip'),
+        ('macos-arm64', '.dmg'),
+        ('windows-x86_64', '.exe'),
+    ]:
         folder = tmp_path / platform
         folder.mkdir()
-        archive = folder / f'EasyDiffraction-{version}-{platform}-online.zip'
+        archive = folder / f'EasyDiffraction-{version}-{platform}-online{suffix}'
         archive.write_bytes(b'qualified installer ' + platform.encode())
         (folder / 'preview-history.json').write_bytes(history)
         metadata = {
@@ -264,8 +268,8 @@ def deliveries(tmp_path):
             'platform': platform,
             'kind': 'online',
             'edi_commit': commit,
-            'zip': archive.name,
-            'zip_sha256': hashlib.sha256(archive.read_bytes()).hexdigest(),
+            'download': archive.name,
+            'download_sha256': hashlib.sha256(archive.read_bytes()).hexdigest(),
             'repository_url': f'https://download.easydiffraction.org/repository/testing/{platform}/',
         }
         (folder / 'installer.json').write_text(json.dumps(metadata))
@@ -289,6 +293,12 @@ def test_draft_preparation_retains_qualified_platform_bytes(tmp_path):
     commit, release, folders = deliveries(tmp_path)
     before = {f.name: tree(f) for f in folders}
     actual, notes, assets = draft.prepare(commit, folders)
+    assert {path.name for path, _ in assets} == {
+        'EasyDiffraction-2026.11.17-linux-x86_64-online.zip',
+        'EasyDiffraction-2026.11.17-macos-arm64-online.dmg',
+        'EasyDiffraction-2026.11.17-windows-x86_64-online.exe',
+        'SHA256SUMS',
+    }, 'A draft publishes the Linux ZIP, macOS DMG, single Windows EXE and their manifest'
     assert actual == release and 'Save fitted projects' in notes, (
         'A draft must retain the source identity and user notes qualified by every platform'
     )
@@ -313,7 +323,8 @@ def test_draft_preparation_refuses_identity_drift(tmp_path, fault):
     draft = module('draft_reference_bad', 'tools/release/preview_draft.py')
     commit, _, folders = deliveries(tmp_path)
     if fault == 'bytes':
-        next(folders[0].glob('*.zip')).write_bytes(b'replaced delivery')
+        metadata = json.loads((folders[0] / 'installer.json').read_text())
+        (folders[0] / metadata['download']).write_bytes(b'replaced delivery')
     elif fault == 'source':
         commit = 'b' * 40
     elif fault == 'history':

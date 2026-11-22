@@ -34,14 +34,14 @@ TestCase {
     function clickControl(name) {
         let item;
         tryVerify(() => {
-            item = Ui.control(Probe, app, name);
+            item = Ui.control(Probe, app, name) || Ui.find(Ui.windowRoot(app), name);
             return item !== null && item.enabled && Ui.clickPoint(item) !== null && !Ui.moving(app.contentItem);
         }, 4000, "The actual project action is enabled in its settled viewport: " + name);
         verify(waitForPolish(item), "The actual project action finishes layout before pointer input");
         app.update();
         verify(waitForRendering(app.contentItem), "The actual application draws before project input");
         tryVerify(() => {
-            item = Ui.control(Probe, app, name);
+            item = Ui.control(Probe, app, name) || Ui.find(Ui.windowRoot(app), name);
             return item !== null && item.enabled && Ui.clickPoint(item) !== null && !Ui.moving(app.contentItem);
         }, 4000, "The rebuilt page retains an exposed action at the actual input frame: " + name);
         const point = Ui.clickPoint(item);
@@ -66,7 +66,7 @@ TestCase {
     function completedProjectStaysOpen(name) {
         tryVerify(() => {
             const creates = Probe.objectsWithProperty(app, "projectName").filter(dialog => dialog.projectParentDirectory !== undefined);
-            const opens = Probe.objectsWithProperty(app, "enterAccepts").filter(dialog => dialog.objectName === "open.choice");
+            const opens = Probe.objectsWithProperty(app, "opened").filter(dialog => dialog.objectName === "project.load.menu");
             return creates.length > 0 && opens.length > 0 && creates.concat(opens).every(dialog => !dialog.visible && !dialog.opened);
         }, 2000, "Accepted Create and Open dialogs finish closing on the actual replacement page");
         for (let turn = 0; turn < 12; ++turn) {
@@ -77,7 +77,7 @@ TestCase {
             verify(waitForRendering(app.contentItem), "The completed project action is checked after each actual application frame");
             verify(Session.hasProject && Session.project.name === name, "The created or opened project remains open on every following turn");
             const creates = Probe.objectsWithProperty(app, "projectName").filter(dialog => dialog.projectParentDirectory !== undefined);
-            const opens = Probe.objectsWithProperty(app, "enterAccepts").filter(dialog => dialog.objectName === "open.choice");
+            const opens = Probe.objectsWithProperty(app, "opened").filter(dialog => dialog.objectName === "project.load.menu");
             console.log("PROJECT_DIALOG_COMPLETION " + JSON.stringify({
                 turn,
                 name: Session.project.name,
@@ -92,7 +92,7 @@ TestCase {
             }));
             verify(creates.length > 0, "The current real Project page retains its Create dialog for inspection");
             verify(creates.every(dialog => !dialog.visible && !dialog.opened), "An accepted project action never reopens any empty Create dialog on a following turn");
-            verify(opens.length > 0 && opens.every(dialog => !dialog.visible && !dialog.opened), "An accepted project action keeps every Open choice dialog closed on following turns");
+            verify(opens.length > 0 && opens.every(dialog => !dialog.visible && !dialog.opened), "An accepted project action keeps every Load project menu closed on following turns");
         }
     }
     function test_create_completion_data() {
@@ -148,18 +148,16 @@ TestCase {
         const input = SettingsProof.copyProject(Probe.repoUrl("tests/fixtures/loop_parameter_ids/line-segment"));
         const metadata = SettingsProof.text(input, "project.edi");
         const name = metadata.match(/_metadata.name\s+(?:"([^"]+)"|(\S+))/).slice(1).find(value => value !== undefined);
-        clickControl("project.open");
-        const choice = findChild(app, "open.choice");
-        verify(choice !== null, "Open completion uses the actual Project page format dialog");
-        tryCompare(choice, "opened", true, 2000, "The actual Open choice dialog receives Enter or OK only after opening");
-        const folder = findChild(choice.contentItem, "open.folder");
-        verify(folder !== null && folder.enabled && folder.checked, "The actual Open choice defaults to its supported Folder route");
-        if (data.enter)
+        clickControl("project.load");
+        const choice = findChild(app, "project.load.menu");
+        verify(choice !== null, "Open completion uses the actual Load project menu");
+        tryCompare(choice, "opened", true, 2000, "The actual Load menu receives keyboard or pointer input only after opening");
+        if (data.enter) {
+            keyClick(Qt.Key_Down);
+            tryVerify(() => choice.currentItem && choice.currentItem.objectName === "project.load.folder", 2000, "Keyboard navigation selects the first enabled native folder entry");
             keyClick(Qt.Key_Return);
-        else {
-            const ok = choice.standardButton(Dialog.Ok);
-            verify(ok !== null && ok.enabled, "Open completion uses the actual choice dialog's OK control");
-            mouseClick(ok, ok.width / 2, ok.height / 2);
+        } else {
+            clickControl("project.load.folder");
         }
         let dialogs;
         tryVerify(() => {
@@ -174,22 +172,23 @@ TestCase {
         application();
         canonicalProject(cases[2]);
         clickControl("project.saveAs");
-        const dialog = findChild(app, "saveAs.choice");
-        verify(dialog !== null, "Save as geometry is observed on the real application dialog");
-        tryCompare(dialog, "opened", true, 2000, "Save as geometry is measured after the real dialog opens");
-        const folder = findChild(dialog.contentItem, "saveAs.folder"), zip = findChild(dialog.contentItem, "saveAs.zip"), copy = findChild(dialog.contentItem, "saveAs.copy");
-        verify(folder && zip && copy, "The compact dialog exposes its actual format radios and separate copy checkbox");
+        const dialog = findChild(app, "project.saveAs.menu");
+        verify(dialog !== null, "Save geometry is observed on the actual Save project as menu");
+        tryCompare(dialog, "opened", true, 2000, "Save geometry is measured after the real menu opens");
+        const folder = Ui.find(Ui.windowRoot(app), "project.saveAs.folder"), zip = Ui.find(Ui.windowRoot(app), "project.saveAs.zip"), copy = Ui.find(Ui.windowRoot(app), "project.saveAs.copy");
+        verify(folder && zip && copy, "The menu exposes both native destinations and the separate copy checkbox");
         const folderEnd = folder.mapToItem(dialog.contentItem, 0, folder.height).y;
         const zipTop = zip.mapToItem(dialog.contentItem, 0, 0).y;
         const zipEnd = zip.mapToItem(dialog.contentItem, 0, zip.height).y;
         const copyTop = copy.mapToItem(dialog.contentItem, 0, 0).y;
-        verify(zipTop >= folderEnd && copyTop - zipEnd > zipTop - folderEnd, "Folder and Zip archive form a tighter group than the separated Save a copy choice");
-        const content = Math.max(folder.implicitWidth, zip.implicitWidth, copy.implicitWidth);
-        const halfWidth = Math.round(AppSizes.messagesDialogContentWidth / 2);
-        const expectedWidth = Math.max(content, halfWidth);
-        verify(Math.abs(dialog.contentWidth - expectedWidth) <= 1, "Save as fits its widest choice with the recorded floor of about half the normal message width");
-        verify(dialog.leftPadding > 0 && dialog.rightPadding > 0, "The compact format dialog retains the app's usual side margins");
-        compare(dialog.width, dialog.contentWidth + dialog.leftPadding + dialog.rightPadding, "Dialog margins surround the compact content without clipping a choice");
+        verify(zipTop >= folderEnd && copyTop >= zipEnd, "The copy checkbox follows both native destinations without overlap");
+        const exportItem = Ui.find(Ui.windowRoot(app), "project.export.fullProf");
+        verify(exportItem !== null && exportItem.mapToItem(dialog.contentItem, 0, 0).y >= copyTop + copy.height, "The always-copy exports follow the native copy option");
+        for (const item of [folder, zip, copy, exportItem])
+            verify(item.width >= item.implicitWidth && Ui.rendered(item), "The fitted menu renders each destination and its complete label and hint");
+        for (const item of [folder, zip, exportItem])
+            verify(item.leftPadding > 0 && item.rightPadding === item.leftPadding, "Each destination row retains equal positive left and right margins");
+        compare(dialog.width, dialog.contentWidth + dialog.leftPadding + dialog.rightPadding, "Menu margins surround its content without an unused dialog column");
         dialog.close();
     }
     function test_project_actions() {
@@ -202,11 +201,13 @@ TestCase {
         }, 4000, "The working project exposes its actual Get started group");
         const actions = Render.descendants(group).filter(item => item.objectName.startsWith("project.") && typeof item.text === "string");
         const visible = actions.filter(item => item.visible);
-        compare(visible.filter(item => /^Open project[.\u2026]/.test(item.text)).length, 1, "The Project page has one Open project action for records and ZIP archives");
-        compare(visible.filter(item => /^Save project as[.\u2026]/.test(item.text)).length, 1, "The Project page has one Save project as action");
-        compare(visible.filter(item => item.enabled).map(item => item.objectName).sort().join(","), ["project.create", "project.open", "project.saveAs"].sort().join(","), "Create, Open and Save as are the only working Get started actions");
-        const url = visible.find(item => item.objectName === "project.openUrl");
-        verify(url !== undefined && !url.enabled, "Open from URL stays present and disabled");
+        compare(visible.filter(item => item.objectName === "project.load").length, 1, "The Project page has one Load project action for native projects and imports");
+        compare(visible.filter(item => item.objectName === "project.saveAs").length, 1, "The Project page has one Save project as action");
+        compare(visible.filter(item => item.enabled).map(item => item.objectName).sort().join(","), ["project.create", "project.load", "project.saveAs"].sort().join(","), "Create, Load and Save as are the three working Get started actions");
+        clickControl("project.load");
+        const url = Ui.find(Ui.windowRoot(app), "project.load.url");
+        verify(url !== null && !url.enabled, "Open from URL stays present and disabled inside Load project");
+        keyClick(Qt.Key_Escape);
     }
     function test_open_data() {
         let rows = [];
@@ -298,21 +299,17 @@ TestCase {
                 });
         return rows;
     }
-    function chooseOpenFormat(zip) {
-        const choice = findChild(app, "open.choice");
-        verify(choice !== null, "Open first presents the same app format dialog on every platform");
-        tryCompare(choice, "opened", true, 2000, "The Open format dialog is actually open before its system chooser");
-        const format = findChild(choice.contentItem, zip ? "open.zip" : "open.folder");
-        verify(format && format.enabled, "The selected Open format is supported on this platform");
-        mouseClick(format, format.width / 2, format.height / 2);
-        const ok = choice.standardButton(Dialog.Ok);
-        mouseClick(ok, ok.width / 2, ok.height / 2);
+    function chooseOpenFormat(kind) {
+        const choice = findChild(app, "project.load.menu");
+        verify(choice !== null, "Load project presents the same menu on every platform");
+        tryCompare(choice, "opened", true, 2000, "The Load project menu is open before choosing a native destination or importer");
+        clickControl(kind === "fullProf" ? "project.import.fullProf" : "project.load." + kind);
     }
     function test_open_dialog(data) {
         application();
         const input = routeInput(data.projectName, data.route);
-        clickControl("project.open");
-        chooseOpenFormat(data.route === "zip");
+        clickControl("project.load");
+        chooseOpenFormat(data.route);
         let dialogs;
         tryVerify(() => {
             dialogs = SettingsProof.projectFileDialogs(app, data.route === "folder");
@@ -325,6 +322,36 @@ TestCase {
         const metadata = SettingsProof.text(Probe.repoUrl("docs/user/cli/" + data.projectName + "/project"), "project.edi");
         const name = metadata.match(/_metadata.name\s+(?:"([^"]+)"|(\S+))/).slice(1).find(value => value !== undefined);
         compare(Session.project.name, name, "Unified Open retains the input project's declared name");
+    }
+    function test_open_fullprof_project() {
+        application();
+        clickControl("project.load");
+        chooseOpenFormat("fullProf");
+        let dialogs;
+        tryVerify(() => {
+            dialogs = SettingsProof.projectFileDialogs(app, false);
+            return dialogs.length === 1;
+        }, 2000, "The FullProf choice opens a real file chooser");
+        const input = Probe.repoUrl("knowledge/verification/fullprof/pd-neut-cwl_pbso4_basic/pbso4.pcr");
+        verify(SettingsProof.chooseProjectLocation(dialogs[0], input, false), "The native chooser accepts the PCR file");
+        tryVerify(() => Session.hasProject || Session.lastError !== "", 8000, "The deferred Open action finishes");
+        compare(Session.lastError, "", "Opening the selected FullProf control file");
+        verify(Session.hasProject, "Open imports the selected data and structure");
+        compare(Session.project.name, "pbso4");
+        verify(Session.needsSaveAs, "The imported project has its own native save destination");
+        const imported = Session.project;
+        clickControl("project.saveAs");
+        clickControl("project.export.fullProf");
+        tryVerify(() => {
+            dialogs = SettingsProof.projectFileDialogs(app, true);
+            return dialogs.length === 1;
+        }, 2000, "FullProf export chooses a parent folder");
+        const parent = SettingsProof.emptyDirectory();
+        verify(SettingsProof.chooseProjectLocation(dialogs[0], parent, true));
+        const folder = parent.toString() + "/pbso4-fullprof";
+        tryVerify(() => SettingsProof.text(folder, "project.pcr").includes("NPATT"), 4000);
+        verify(SettingsProof.text(folder, "pattern_1.dat").startsWith("XYDATA"));
+        compare(Session.project, imported, "Export keeps the imported project open");
     }
     function test_web_zip_lifecycle_data() {
         const rows = [];
@@ -350,8 +377,8 @@ TestCase {
             verify(!Session.hasProject, "The empty-window route starts without an open project");
         }
         if (data.route === "open") {
-            clickControl("project.open");
-            chooseOpenFormat(true);
+            clickControl("project.load");
+            chooseOpenFormat("zip");
             let dialogs;
             tryVerify(() => {
                 dialogs = SettingsProof.projectFileDialogs(app, false);
@@ -380,7 +407,7 @@ TestCase {
         tryCompare(Session.project, "calculating", false, 15000, "The downloaded project's own calculation settles after opening");
         compare(Session.lastError, "", "The downloaded project opens without a reported error");
         clickControl("project.saveAs");
-        const choice = findChild(app, "saveAs.choice");
+        const choice = findChild(app, "project.saveAs.menu");
         verify(choice !== null, "The project remains interactive after the opening signal handler returns");
         tryCompare(choice, "opened", true, 2000, "A second real action works after ZIP opening");
         choice.close();
@@ -407,18 +434,15 @@ TestCase {
         const source = SettingsProof.localPath(input);
         const directory = data.input === "zip" ? source.substring(0, source.lastIndexOf("/")) : source;
         clickControl("project.saveAs");
-        const choice = findChild(app, "saveAs.choice");
-        verify(choice !== null, "The real Save-as format dialog precedes its chooser");
-        tryCompare(choice, "opened", true, 2000, "The real Save-as dialog opens before format selection");
-        const format = findChild(choice.contentItem, data.zip ? "saveAs.zip" : "saveAs.folder");
-        const copy = findChild(choice.contentItem, "saveAs.copy");
-        verify(format && copy, "The requested format and copy choices are actual controls");
-        if (!format.checked)
-            mouseClick(format, format.width / 2, format.height / 2);
+        const choice = findChild(app, "project.saveAs.menu");
+        verify(choice !== null, "The real Save project as menu precedes its chooser");
+        tryCompare(choice, "opened", true, 2000, "The real Save menu opens before destination selection");
+        const copy = Ui.find(Ui.windowRoot(app), "project.saveAs.copy");
+        verify(copy !== null && !copy.checked, "Native Save as starts with copy optional and unchecked");
         if (copy.checked !== data.copy)
-            mouseClick(copy, copy.width / 2, copy.height / 2);
-        const ok = choice.standardButton(Dialog.Ok);
-        mouseClick(ok, ok.width / 2, ok.height / 2);
+            clickControl("project.saveAs.copy");
+        compare(copy.checked, data.copy, "Real input selects copy retention before choosing the destination");
+        clickControl(data.zip ? "project.saveAs.zip" : "project.saveAs.folder");
         let dialogs;
         tryVerify(() => {
             dialogs = SettingsProof.projectFileDialogs(app, false).concat(SettingsProof.projectFileDialogs(app, true));
@@ -463,24 +487,16 @@ TestCase {
     }
     function saveChoice(zip, copy, target) {
         clickControl("project.saveAs");
-        const dialog = findChild(app, "saveAs.choice");
-        verify(dialog !== null, "Save as first opens the application format-and-copy dialog");
-        tryCompare(dialog, "opened", true, 2000, "The application Save as choice finishes opening");
-        const folder = findChild(dialog.contentItem, "saveAs.folder"), archive = findChild(dialog.contentItem, "saveAs.zip"), checkbox = findChild(dialog.contentItem, "saveAs.copy");
-        verify(folder && archive && checkbox, "Save as exposes Folder, Zip archive and Save a copy choices");
-        verify(folder.checked && !archive.checked && !checkbox.checked, "Each Save as starts in Folder mode without Save a copy");
-        const format = zip ? archive : folder;
-        if (!format.checked) {
-            verify(waitForPolish(format), "The chosen Save as format is laid out before input");
-            mouseClick(format, format.width / 2, format.height / 2);
-        }
+        const dialog = findChild(app, "project.saveAs.menu");
+        verify(dialog !== null, "Save as first opens the application destination menu");
+        tryCompare(dialog, "opened", true, 2000, "The application Save project as menu finishes opening");
+        const folder = Ui.find(Ui.windowRoot(app), "project.saveAs.folder"), archive = Ui.find(Ui.windowRoot(app), "project.saveAs.zip"), checkbox = Ui.find(Ui.windowRoot(app), "project.saveAs.copy");
+        verify(folder && archive && checkbox, "Save as exposes native folder, zip and copy destinations");
+        verify(folder.enabled && archive.enabled && !checkbox.checked, "Each native Save as enables both formats with copy initially unchecked");
         if (copy)
-            mouseClick(checkbox, checkbox.width / 2, checkbox.height / 2);
-        compare(format.checked, true, "Real input selects the required Save as format");
+            clickControl("project.saveAs.copy");
         compare(checkbox.checked, copy, "Real input selects whether Save as keeps the current location");
-        const accept = dialog.standardButton(Dialog.Ok);
-        verify(accept && accept.enabled, "The format choice has an actual enabled confirmation button");
-        mouseClick(accept, accept.width / 2, accept.height / 2);
+        clickControl(zip ? "project.saveAs.zip" : "project.saveAs.folder");
         let dialogs;
         tryVerify(() => {
             dialogs = SettingsProof.projectFileDialogs(app, false);
@@ -543,13 +559,30 @@ TestCase {
         finish();
         return JSON.stringify([head, entries.sort((a, b) => a[0].localeCompare(b[0]))]);
     }
-    function compareRecalculatedCopy(actual, expected) {
+    function saveStamp(text) {
+        const rows = text.match(/^_metadata\.last_modified[^\n]*$/gm) || [];
+        compare(rows.length, 1, "A copied project retains exactly one declared last-save timestamp");
+        const stamp = rows[0].match(/"(\d{2}) ([A-Za-z]{3}) (\d{4}) (\d{2}):(\d{2}):(\d{2})"$/);
+        verify(stamp !== null, "The last-save value retains the declared STAR UTC timestamp format");
+        const month = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"].indexOf(stamp[2]);
+        verify(month >= 0, "The saved UTC timestamp names a real calendar month");
+        return {
+            row: rows[0],
+            seconds: Date.UTC(Number(stamp[3]), month, Number(stamp[1]), Number(stamp[4]), Number(stamp[5]), Number(stamp[6])) / 1000
+        };
+    }
+    function compareRecalculatedCopy(actual, expected, started, finished) {
         compare(Object.keys(actual).sort().join("\n"), Object.keys(expected).sort().join("\n"), "A recalculated copy retains every member name");
         for (const name of Object.keys(expected)) {
             if (name.startsWith("structures/") && name.endsWith(".edi")) {
                 compare(structureInput(actual[name]), structureInput(expected[name]), "A recalculated copy retains every non-derived structure byte: " + name);
             } else if (name.startsWith("experiments/") && name.endsWith(".edi") && /^_experiment_type.sample_form[ \t]+"single crystal"$/m.test(Qt.atob(expected[name]))) {
                 verify(Qt.atob(actual[name]).includes("\n_refln.intensity_calc\n"), "A recalculated single-crystal copy writes its reflection results: " + name);
+            } else if (name === "project.edi") {
+                const before = Qt.atob(expected[name]), after = Qt.atob(actual[name]);
+                const oldStamp = saveStamp(before), newStamp = saveStamp(after);
+                verify(newStamp.seconds >= Math.max(Math.floor(started / 1000), oldStamp.seconds + 1) && newStamp.seconds <= Math.max(Math.floor(finished / 1000), oldStamp.seconds + 1), "A newly saved folder copy advances its save timestamp within the independently observed save interval");
+                compare(after.replace(newStamp.row, "<last-save-time>"), before.replace(oldStamp.row, "<last-save-time>"), "A folder copy retains every project byte except its independently checked last-save timestamp");
             } else {
                 compare(actual[name], expected[name], "A recalculated copy retains unrelated member bytes: " + name);
             }
@@ -571,7 +604,9 @@ TestCase {
         const folder = canonicalProject(data.projectName);
         const original = SettingsProof.projectFolderBytes(folder), location = Session.projectLocation, path = Session.project.path;
         const destination = data.zip ? SettingsProof.childUrl(SettingsProof.emptyDirectory(), "copy.zip") : SettingsProof.emptyDirectory();
+        const started = Date.now();
         saveChoice(data.zip, true, destination);
+        const finished = Date.now();
         compare(Session.projectLocation, location, "Save a copy leaves the current persistent location unchanged");
         compare(Session.project.path, path, "Save a copy leaves the open project's working location unchanged");
         compareFolder(SettingsProof.projectFolderBytes(folder), original);
@@ -580,14 +615,18 @@ TestCase {
             verify(archive.length > 0, "Save a copy as Zip archive writes a real nonempty archive");
             evidence({
                 kind: "copy",
+                started,
+                finished,
                 original,
                 archive
             });
         } else {
             const saved = SettingsProof.projectFolderBytes(destination);
-            compareRecalculatedCopy(saved, original);
+            compareRecalculatedCopy(saved, original, started, finished);
             evidence({
                 kind: "copy",
+                started,
+                finished,
                 original,
                 saved
             });
@@ -625,6 +664,43 @@ TestCase {
         verify(Session.openProject(archive), "The rewritten ZIP reopens through the ordinary application route");
         compare(Session.project.name, "zip-next-save", "The rewritten ZIP contains the edited scientific project's current state");
     }
+    function test_browser_warning_save_as_requires_confirmation() {
+        application();
+        canonicalProject(cases[2]);
+        const warning = findChild(app, "webStorageWarning");
+        const choice = findChild(app, "saveAs.choice");
+        verify(warning !== null && choice !== null, "The real application retains its browser warning and delegated Save-as dialog");
+        // Open the actual warning on the native host to inspect its unchanged action;
+        // browser storage and download behavior remain in the Chromium consumer.
+        warning.open();
+        tryCompare(warning, "opened", true, 2000, "The warning finishes opening before real action input");
+        const saveAs = warning.standardButton(Dialog.Apply);
+        verify(saveAs !== null && saveAs.enabled && /Save project as/.test(saveAs.text), "The actual warning exposes its enabled Save-as action");
+        verify(waitForPolish(saveAs), "The warning action completes layout before pointer input");
+        mouseClick(saveAs, saveAs.width / 2, saveAs.height / 2);
+        tryCompare(choice, "opened", true, 2000, "Warning Save-as opens the surviving confirmation dialog");
+        let renderedChoice;
+        tryVerify(() => {
+            renderedChoice = Ui.find(Ui.windowRoot(app), "project.saveChoice");
+            return renderedChoice !== null;
+        }, 2000, "The browser confirmation observer targets the actual named column in the visual tree");
+        verify(renderedChoice instanceof Item, "The observed confirmation column is a visual Item supported by the browser hook");
+        verify(waitForPolish(renderedChoice), "The observed confirmation column completes its real layout");
+        verify(renderedChoice.width > 0 && renderedChoice.height > 0, "The browser confirmation target has a positive rendered extent");
+        compare(SettingsProof.projectFileDialogs(app, false).concat(SettingsProof.projectFileDialogs(app, true)).length, 0, "The warning route cannot reach a chooser before its dialog is confirmed");
+        const ok = choice.standardButton(Dialog.Ok);
+        verify(ok !== null && ok.enabled, "The surviving Save-as dialog exposes its actual confirmation control");
+        verify(waitForPolish(ok), "The surviving confirmation completes layout before pointer input");
+        mouseClick(ok, ok.width / 2, ok.height / 2);
+        let dialogs;
+        tryVerify(() => {
+            dialogs = SettingsProof.projectFileDialogs(app, false).concat(SettingsProof.projectFileDialogs(app, true));
+            return dialogs.length === 1;
+        }, 2000, "Confirming warning Save-as reaches exactly one real system chooser");
+        tryCompare(choice, "opened", false, 2000, "Confirmation closes the actual Save-as choice dialog");
+        tryCompare(renderedChoice, "visible", false, 2000, "The same visual confirmation target becomes hidden after real acceptance");
+        dialogs[0].close();
+    }
     function test_save_unwritable_data() {
         return [
             {
@@ -647,13 +723,14 @@ TestCase {
             verify(input.toString().length > 0 && !SettingsProof.archiveLocationWritable(input), "The read-only ZIP fixture prevents both file writes and replacement through its parent directory");
             verify(Session.openProject(input), "The no-write-back route opens the actual read-only ZIP");
         }
+        tryVerify(() => Session.hasProject, 4000, "The example or read-only archive finishes opening before its save route is exercised");
         const before = data.example ? "" : SettingsProof.projectArchiveBytes(input);
         Session.project.name = "needs-new-location";
         verify(Session.needsSaveAs, "A bundled example or genuinely read-only ZIP requires a new destination");
         clickControl("appBar.button.save");
         const dialog = findChild(app, "saveAs.choice");
-        verify(dialog !== null, "Ordinary Save routes an unwritable source to the actual Save as dialog");
-        tryCompare(dialog, "opened", true, 2000, "Ordinary Save asks for a format and destination instead of a write error");
+        verify(dialog !== null, "Ordinary Save keeps its fallback format dialog for an unwritable source");
+        tryCompare(dialog, "opened", true, 2000, "Ordinary Save asks for a destination instead of a write error");
         if (!data.example)
             compare(SettingsProof.projectArchiveBytes(input), before, "Asking for another destination leaves every read-only input ZIP byte intact");
         dialog.close();

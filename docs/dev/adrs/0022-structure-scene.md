@@ -107,13 +107,15 @@ and extent while they are on (the owner, 2026-11-16). They are drawn round each 
 atom (any element but hydrogen, the noble gases and the non-metals that usually sit at the corners: B, C, N, O, F, Si,
 P, S, Cl, As, Se, Br, Te, I) with at least four bonded neighbours among those non-metals, the convex hull of their centres from
 the same `_geom_bond` rows (§2: no neighbour search, and the polyhedra follow the bond settings of §8). A flat face of
-more than three corners is one fan of triangles, so a see-through face is drawn once. Each polyhedron takes its centre
-atom's colour, or grey; its opacity is 0.5 by default. Bonds can be hidden while the polyhedra stay. The structure
-file has no `_structure_view` item for them yet, so these settings last for the session, unlike the rest of
-the appearance, which each structure saves. The extent is "inside the cell", the corners being the drawn atoms, or
-"complete for atoms in the cell": each pair of sites bonds up to the longest bond the rows list between them, and a
-centre takes every atom that near in its own cell and the cells next to it, so its polyhedron is whole; the corners
-outside the cell are not drawn as atoms.
+more than three corners is one fan of triangles, so a see-through face is drawn once; corners all in one plane enclose
+no volume and make no polyhedron. Each polyhedron takes its centre atom's colour, or grey; its opacity is 0.5 by
+default. Bonds can be hidden while the polyhedra stay. Each structure saves these settings with the rest of its
+appearance as `_structure_view.polyhedra`, `polyhedra_colour`, `polyhedra_opacity`, `polyhedra_extent`,
+`polyhedra_centres`, `polyhedra_corners` and `polyhedra_max_distance`, each once crysta's dictionary declares it; until
+then that setting lasts for the session, and a file without it shows the default. The extent is "inside the cell", the
+corners being the drawn atoms, or "complete for atoms in the cell": each pair of sites bonds up to the longest bond the
+rows list between them, or the maximum distance when one is set, and a centre takes every atom that near in whichever
+cell it sits, so its polyhedron is whole; the corners outside the cell are not drawn as atoms.
 
 ## Consequences
 

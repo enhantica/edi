@@ -54,7 +54,7 @@ void summarise_series_row(std::vector<double>& d, std::vector<double>& intensity
         if (!std::isfinite(d[i]) || d[i] <= 0.0 || !std::isfinite(intensity[i])) {
             continue;
         }
-        const auto bucket = std::min(buckets - 1, static_cast<std::size_t>((std::log(d[i]) - log_low) / span * buckets));
+        const auto bucket = std::min(buckets - 1, static_cast<std::size_t>((std::log(d[i]) - log_low) / span * static_cast<double>(buckets)));
         if (lowest[bucket] < 0 || intensity[i] < intensity[static_cast<std::size_t>(lowest[bucket])]) {
             lowest[bucket] = static_cast<std::ptrdiff_t>(i);
         }
@@ -171,6 +171,8 @@ void ScanViewModel::clear() {
     directory_.clear();
     source_.reset();
     datasets_.reset();
+    session_ = nullptr;
+    rule_ = {};
     patterns_.clear();
     values_.clear();
     value_texts_.clear();
@@ -181,6 +183,9 @@ void ScanViewModel::setScan(const ScanSession* session, const edi::Project* proj
     // Results read again over the same files (after a run or an undo) leave what was read: the patterns are the same.
     if (!joint_ && session != nullptr && project != nullptr && session->datasets().files == files_ &&
         session->datasets().directory == directory_ && extracted_title == extracted_title_ && !files_.empty()) {
+        if (session_ != nullptr) {
+            rule_ = session->bankRule(*project);  // the project's rule as it is now
+        }
         if (conversion_changed) {
             placeAxis();
             ++revision_;
@@ -196,6 +201,7 @@ void ScanViewModel::setScan(const ScanSession* session, const edi::Project* proj
         series_ = false;
         series_experiments_.clear();
         emit seriesChanged();
+        emit seriesExperimentsChanged();
     }
     if (session != nullptr && project != nullptr && !project->experiments.empty()) {
         files_ = session->datasets().files;
@@ -204,6 +210,10 @@ void ScanViewModel::setScan(const ScanSession* session, const edi::Project* proj
         // A series of joint fits draws its points on d: its experiments share no native axis.
         const bool series = session->datasets().joint();
         datasets_ = series ? std::make_shared<const edi::ScanDatasets>(session->datasets()) : nullptr;
+        // What a series row's per-experiment rows are read against: the session's rule, and its index as each batch
+        // is asked for (a fit adds rows meanwhile).
+        session_ = series ? session : nullptr;
+        rule_ = series ? session->bankRule(*project) : edi::SeriesBankRule{};
         QStringList names;
         if (series) {
             for (const std::string& name : session->datasets().experiments) names.append(QString::fromStdString(name));
@@ -213,6 +223,7 @@ void ScanViewModel::setScan(const ScanSession* session, const edi::Project* proj
             series_ = series;
             series_experiments_ = names;
             emit seriesChanged();
+            emit seriesExperimentsChanged();
         }
         if (series) {
             readSeriesBanks(project);
@@ -252,6 +263,7 @@ void ScanViewModel::setJoint(const edi::Project* project) {
         series_ = false;
         series_experiments_.clear();
         emit seriesChanged();
+        emit seriesExperimentsChanged();
     }
     // Every experiment's points as they are now; one without data draws nothing and counts as not read.
     std::vector<Pattern> next;
@@ -441,6 +453,8 @@ void ScanViewModel::readNext() {
     const QPointer<ScanViewModel> self(this);
     const std::uint64_t generation = generation_;
     const std::shared_ptr<std::atomic<bool>> stop = stop_;
+    const auto index = session_ != nullptr ? std::make_shared<const edi::ScanResultIndex>(session_->index())
+                                           : std::make_shared<const edi::ScanResultIndex>();
     // By bank the units are the banks at one point; otherwise the points (or a scan's files).
     const bool by_bank = rows_by_bank_ && series_;
     const std::size_t at_point = by_bank ? std::min<std::size_t>(static_cast<std::size_t>(bank_point_), files_.empty() ? 0 : files_.size() - 1) : 0;
@@ -449,7 +463,8 @@ void ScanViewModel::readNext() {
         batch.push_back(by_bank ? files_.at(at_point) : files_.at(unit));
     }
     run_in_background([self, generation, stop, first, batch = std::move(batch), source = source_, directory = directory_,
-                       mode = mode_, values = has_values_, datasets = datasets_, chosen = rows_experiment_, by_bank,
+                       mode = mode_, values = has_values_, datasets = datasets_, index, rule = rule_,
+                       chosen = rows_experiment_, by_bank,
                        at_point] {
         std::vector<Read> done;
         for (std::size_t k = 0; k < batch.size(); ++k) {
@@ -468,8 +483,10 @@ void ScanViewModel::readNext() {
                         if (by_bank ? e == first + k : chosen < 0 || static_cast<std::size_t>(chosen) == e)
                             experiments.push_back(e);
                     }
-                    const std::vector<double> scales = edi::series_point_scales(*source, key);
-                    edi::SeriesRowPattern row = edi::series_row_pattern(*source, *datasets, point, experiments, scales);
+                    const edi::SeriesPointCheck check = edi::series_point_check(rule, *datasets, *index, point);
+                    const std::vector<double> scales = edi::series_point_scales(*source, key, check);
+                    edi::SeriesRowPattern row =
+                        edi::series_row_pattern(*source, *datasets, point, experiments, scales, check);
                     if (experiments.size() == 1) {
                         read.bank = static_cast<int>(experiments.front());
                         read.scale = experiments.front() < scales.size() ? scales[experiments.front()] : 1.0;

@@ -5,6 +5,7 @@
 #include <QPair>
 #include <QByteArray>
 #include <QObject>
+#include <QTemporaryDir>
 #include <QPointer>
 #include <QScopeGuard>
 #include <optional>
@@ -41,6 +42,23 @@ class QJSEngine;
 #include "web_storage.hpp"
 
 namespace edi_app {
+
+class LoadAttempt;
+
+// A program the core imports projects from or exports them to (edi ADR-0098), as the Load and Save project menus list
+// it: `key` for object names, `program`, `hint` (a suffix) and, for an importer, `nameFilter` for a file chooser.
+struct ProjectProgram {
+    Q_GADGET
+    QML_VALUE_TYPE(projectProgram)
+    Q_PROPERTY(QString key MEMBER key CONSTANT)
+    Q_PROPERTY(QString program MEMBER program CONSTANT)
+    Q_PROPERTY(QString hint MEMBER hint CONSTANT)
+    Q_PROPERTY(QString nameFilter MEMBER nameFilter CONSTANT)
+
+   public:
+    QString key, program, hint, nameFilter;
+    bool operator==(const ProjectProgram&) const = default;
+};
 
 // The app's one list of messages (edi ADR-0017 §14): the warnings the last open reported and the errors the
 // views used to show in red — a calculation refusal, one row per distinct refusal — and information entries (why an
@@ -145,6 +163,9 @@ class Session : public QObject {
     // Whether Save must ask where (edi ADR-0017 §13): a project with no directory yet, or a bundled example's
     // temporary working copy, is saved as.
     Q_PROPERTY(bool needsSaveAs READ needsSaveAs NOTIFY needsSaveAsChanged)
+    // An untitled project (the owner, 2026-11-19): the one the Project page holds in memory before the user names it.
+    // Structure and Experiment work on it at once; its first Save opens Create project, which names and saves it.
+    Q_PROPERTY(bool untitled READ untitled NOTIFY untitledChanged)
     // The selected figure palette (Preferences): a project created or opened takes its first colour positions in it
     // (ADR-0038), so it opens as it would if the palette had been chosen with it open.
     Q_PROPERTY(QString colourScheme READ colourScheme WRITE setColourScheme NOTIFY colourSchemeChanged)
@@ -191,11 +212,17 @@ class Session : public QObject {
     Q_INVOKABLE bool locationExists(const QString& path) const;
     QString projectLocation() const;
     bool needsSaveAs() const;
+    bool untitled() const { return untitled_; }
+    // Opens an untitled project when none is open (the Project page does, as it opens): false when one is open
+    // already or it cannot be made. `suRule` and `reportLibraries` are the new-project preferences.
+    Q_INVOKABLE bool startUntitledProject(const QString& suRule = QStringLiteral("iucr_99"), bool reportLibraries = false);
     QString colourScheme() const { return colour_scheme_; }
     void setColourScheme(const QString& scheme);
 
     // Open a project from its folder, its project.edi or a .zip of the folder; only `file:` URLs (edi ADR-0052). An
     // archive unpacks into a temporary folder: the project has no folder of its own until Save asks where to keep it.
+    // The file the last reported load failure carried (loadFailed), empty when it carried none. Forgotten once asked for.
+    Q_INVOKABLE QString takeFailedFile();
     Q_INVOKABLE bool openProject(const QUrl& location);
     // Whether `path` lies in the system's temporary folder, where downloaded examples and working copies go: such a
     // place is never a recent project (the owner, 2026-11-16).
@@ -243,6 +270,14 @@ class Session : public QObject {
     /// Save as's Measured data row (edi ADR-0088 point 5): the next save copies linked data into the project ("copy") or
     /// keeps it linked ("linked"), answering its question in advance; anything else clears it. Used by that save only.
     Q_INVOKABLE void setNextSaveData(const QString& choice);
+    /// Export a FullProf copy under the selected parent directory and keep the EDI project open.
+    Q_INVOKABLE bool exportFullProf(const QUrl& parentDirectory, bool fixed);
+    /// The core's project importers (edi ADR-0098), in the Load project menu's order; `hint` is the first suffix.
+    Q_INVOKABLE QList<edi_app::ProjectProgram> projectImporters() const;
+    /// The core's project exporters, in the Save project as menu's order; no `nameFilter`.
+    Q_INVOKABLE QList<edi_app::ProjectProgram> projectExporters() const;
+    /// Export a copy for `program` as `<project>-<key>` under the selected parent directory; the project stays open.
+    Q_INVOKABLE bool exportProjectCopy(const QString& program, const QUrl& parentDirectory);
     Q_INVOKABLE bool saveAs(const QUrl& directory);
     // Save as (edi ADR-0052): into the folder or the .zip `target` (a `file:` URL), as `zip` says. A project saved as a
     // .zip keeps the archive as its location and every later Save rewrites it. With `copy` the project is written
@@ -253,6 +288,9 @@ class Session : public QObject {
     // folder project. An empty string, else why the archive could not be written.
     Q_INVOKABLE QString writeBackReports();
     Q_INVOKABLE void clearError();
+    // A change a page could not make (the owner, 2026-11-19): said in the app's error popup (`refused`) and kept as an
+    // error in the Messages center; the page keeps its previous value.
+    Q_INVOKABLE void reportRefusal(const QString& message);
     // Where Save project as starts, with the name filled in (owner, 2026-10-25): the project's own folder or .zip
     // name (the project's name for one with neither), `.zip` for an archive, in the folder the project is in, else in
     // the user's documents.
@@ -298,6 +336,9 @@ class Session : public QObject {
     // A value of item `uid` as a save writes it, for an input field or an editable cell (edi ADR-0051).
     Q_INVOKABLE QString written(const QString& uid, double value) const;
     Q_INVOKABLE QString display(const QString& uid, double value, const QString& variant = QString()) const;
+    // A statistic of item `uid` with its units, or the one undefined text when `value` is not finite
+    // (edi::statistic_text).
+    Q_INVOKABLE QString statisticText(const QString& uid, double value) const;
     // A read-only value of item `uid` and its s.u. as a table shows them apart: rounded by the s.u. under the project's
     // rule (edi::fitted_text), or without one by the item's display format, the s.u. then empty.
     Q_INVOKABLE QString valueText(const QString& uid, double value, double su) const;
@@ -329,14 +370,17 @@ class Session : public QObject {
     void locationTextChanged();
     void projectLocationChanged();
     void needsSaveAsChanged();
+    void untitledChanged();
     // A save asks first (edi ADR-0069): it writes `bytes` in `files`, `large` says it passes 100 MB and `linked` that a
     // scan reads files outside the project. answerSaveData(`request`, ...) continues it.
     void saveDataChoiceNeeded(int request, qint64 bytes, int files, bool large, bool linked);
     void colourSchemeChanged();
     void lastErrorChanged();
+    void refused(const QString& message);
     // A project or an example could not be opened: every refused open says why (the window shows it), never a silent
-    // no-op.
-    void loadFailed(const QString& message);
+    // no-op. `file` is a copy of the project member whose reading failed, for the error popup to attach when the user
+    // sends the problem; empty when no single file is to blame. takeFailedFile returns the same path.
+    void loadFailed(const QString& message, const QString& file);
     // The web app wrote the project into its place (`kind`: "browser", "folder" or "zip"), or downloaded it as `name`.
     void webSaved(const QString& kind);
     // `fromFile`: the project came from a file the user may want to replace.
@@ -394,6 +438,10 @@ class Session : public QObject {
     void initializeSession();
     struct ProjectCreationOutcome;
     bool createProjectImpl(const QString&,const QString&,const QString&,const QString&,const QString&,const QString&,bool,const QString&,ProjectCreationOutcome*,bool replace = false);
+    // Create on an untitled project: its name, description, title and authors set, then saved at `location` (a web
+    // project into the browser's storage), and no longer untitled. A refused save keeps it untitled and says why.
+    bool adoptUntitled(const QString& name, const QString& description, const QString& location, const QString& title,
+                       const QString& authors, ProjectCreationOutcome* outcome, bool replace);
     friend class AssistantViewModel;
     quint64 assistantEpoch() const noexcept { return assistant_epoch_; }
     bool assistantOwner(quint64 epoch,ProjectViewModel* expected) const noexcept;
@@ -431,6 +479,9 @@ class Session : public QObject {
     bool assistantSaveNotified(ProjectViewModel*) const;
     ProjectViewModel* project_ = nullptr;
     QString last_error_;
+    QString report(LoadAttempt* attempt);
+    QString failed_file_;  // the last reported failure's file (takeFailedFile)
+    std::vector<std::unique_ptr<QTemporaryDir>> failed_copies_;  // every reported failure's copy (report)
     ExampleListModel* examples_;
     OnlineSourcesModel* online_sources_ = nullptr;
     OnlineSearch* online_search_ = nullptr;
@@ -570,6 +621,8 @@ class Session : public QObject {
     // Keeps the open project's unsaved state in the browser, a few seconds after its last edit.
     void keepChanges();
     QTimer* keep_timer_ = nullptr;
+    bool untitled_ = false;
+    void setUntitled(bool untitled);
     // The memory folder the browser copied the open project into, released with it.
     QString web_copy_;
     QString web_source_path_; // Current Open/staged input dependency, never a displayed origin.

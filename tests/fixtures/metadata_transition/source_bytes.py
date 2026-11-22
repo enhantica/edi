@@ -2,6 +2,7 @@
 
 import functools
 import hashlib
+import io
 import json
 import zipfile
 from pathlib import Path
@@ -14,19 +15,34 @@ from tests.fixtures.metadata_transition import (
     task_inputs,
 )
 from tests.fixtures.path_keys import repository_key
+from tests.fixtures.stop_defaults import example_inputs
+from tests.fixtures.table_display import source_uncertainties
+from tests.fixtures.table_display.source_uncertainties import previous_bytes as uncertainties
 
 ROOT = Path(__file__).resolve().parents[3]
 HERE = Path(__file__).parent
 
 
+@functools.cache
+def historical_source_rows():
+    return json.loads((HERE / 'sources.json').read_text())['files']
+
+
+@functools.cache
+def historical_source_archive():
+    # Index the immutable fixture once without retaining a filesystem handle.
+    return zipfile.ZipFile(io.BytesIO((HERE / 'sources.zip').read_bytes()))
+
+
 def previous_bytes(name, data):
+    data = uncertainties(repository_key(name), data)
+    data = example_inputs.composed_bytes(name, data)
     data = seed_updates.previous_bytes(name, data)
     data = pin_sources.previous_bytes(name, data)
     data = release_pin_bytes.previous_bytes(name, data)
     data = retired_source_fields.previous_bytes(name, data)
     data = task_inputs.previous_bytes(name, data)
-    rows = json.loads((HERE / 'sources.json').read_text())['files']
-    row = rows.get(repository_key(name))
+    row = historical_source_rows().get(repository_key(name))
     if row is None:
         return data
     if hashlib.sha256(data).hexdigest() == row['before_sha256']:
@@ -35,8 +51,7 @@ def previous_bytes(name, data):
         'A live descriptive input must match its entire independently archived source, '
         'including every scientific byte'
     )
-    with zipfile.ZipFile(HERE / 'sources.zip') as archive:
-        before = archive.read(row['before_sha256'])
+    before = historical_source_archive().read(row['before_sha256'])
     assert hashlib.sha256(before).hexdigest() == row['before_sha256'], (
         'Historical source comparisons retain their independently committed complete input'
     )
@@ -53,17 +68,17 @@ def read_previous(path):
 @functools.cache
 def archived_content_pairs():
     """Exact input identities also apply when the runner stages a private source copy."""
-    rows = json.loads((HERE / 'sources.json').read_text())['files']
-    return {row['after_sha256']: row['before_sha256'] for row in rows.values()}
+    return {row['after_sha256']: row['before_sha256'] for row in historical_source_rows().values()}
 
 
 def previous_content(data):
+    data = source_uncertainties.previous_content(data)
+    data = example_inputs.previous_content(data)
     data = task_inputs.previous_content(seed_updates.previous_content(data))
     before_hash = archived_content_pairs().get(hashlib.sha256(data).hexdigest())
     if before_hash is None:
         return data
-    with zipfile.ZipFile(HERE / 'sources.zip') as archive:
-        before = archive.read(before_hash)
+    before = historical_source_archive().read(before_hash)
     assert hashlib.sha256(before).hexdigest() == before_hash, (
         'A staged input adaptation retains the complete archived pre-migration bytes'
     )

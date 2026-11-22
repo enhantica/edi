@@ -4,7 +4,9 @@
 #include <QDateTime>
 #include <QDir>
 #include <QFile>
+#include <QFileInfo>
 #include <QLoggingCategory>
+#include <QScopeGuard>
 #include <QUrl>
 
 #include <stdexcept>
@@ -47,6 +49,7 @@ void CollectionExamples::refresh() {
     updated_.clear();
     failed_.clear();
     projects_ = 0;
+    checking_ = 0;
     // Every enabled source, once, whatever kinds it holds: the tutorials take a structure and a pattern, the
     // Examples list the projects.
     QList<OnlineSourcesModel::Source> sources;
@@ -96,8 +99,9 @@ void CollectionExamples::refresh() {
                           ++projects_;
                       }
                       updateNotice();
-                      if (pending_ == 0) settle();
+                      // Started first, so a request for an id only the online collection holds waits for it.
                       if (bundled) checkOnline(generation, online, index);
+                      if (pending_ == 0) settle();
                   });
     }
 }
@@ -105,10 +109,32 @@ void CollectionExamples::refresh() {
 // The online collection's index against the bundled one: an entry it adds is served from online, and a file it
 // changed is downloaded now and used from then on; until it has arrived the bundled file serves. Offline nothing
 // changes.
+// Whether the copy on this computer that serves `id` holds its file at `path`.
+bool CollectionExamples::heldHere(const QString& id, const QString& path) const {
+    const auto it = known_.constFind(id);
+    if (it == known_.constEnd()) return false;
+    for (const QString& base : it->sources) {
+        const QUrl url(base);
+        if (url.isLocalFile() || url.scheme().isEmpty()) {
+            const QString root = url.isLocalFile() ? url.toLocalFile() : base;
+            return QFileInfo(QDir(root).filePath(path)).isFile();
+        }
+    }
+    return false;
+}
+
 void CollectionExamples::checkOnline(int generation, const QStringList& online, const edi::online::Index& bundled) {
+    ++checking_;
     fetch_from(this, network_, online, QStringLiteral("index.json"),
                [this, generation, online, bundled](const QByteArray& bytes, const QString& error, bool) {
+        // A network callback must not throw: a failure here only leaves the copy as it was.
+        try {
         if (generation != generation_) return;
+        --checking_;
+        // Whatever the answer, the requests waiting for it are answered after it.
+        const auto answered = qScopeGuard([this] {
+            if (pending_ == 0) settle();
+        });
         edi::online::Index index;
         try {
             if (!error.isEmpty()) throw std::runtime_error(error.toStdString());
@@ -130,15 +156,25 @@ void CollectionExamples::checkOnline(int generation, const QStringList& online, 
                 continue;
             }
             if (old->files.empty() || (old->files.front().sha256 == file.sha256 && old->files.front().bytes == file.bytes)) continue;
+            // An item the app's copy leaves out for its size waits for its first Open, changed or not (ADR-0068): only
+            // a file the copy holds is brought up to date in the background.
+            if (!heldHere(id, QString::fromStdString(old->files.front().path))) continue;
             const QString name = QString::fromStdString(edi::online::file_name(file));
             fetch_from(this, network_, online, QString::fromStdString(file.path),
-                       [this, generation, id, file, name](const QByteArray& bytes, const QString& error, bool) {
-                if (generation != generation_ || !error.isEmpty()) return;
-                if (!content_problem(bytes, file.bytes, QString::fromStdString(file.sha256), name).isEmpty()) return;
-                updated_.insert(id, {bytes, name});
+                       [this, generation, id, file, name](const QByteArray& fetched, const QString& fetchError, bool) {
+                try {
+                    if (generation != generation_ || !fetchError.isEmpty()) return;
+                    if (!content_problem(fetched, file.bytes, QString::fromStdString(file.sha256), name).isEmpty()) return;
+                    updated_.insert(id, {fetched, name});
+                } catch (...) {
+                    qCInfo(lcCollection, "online collection update not kept");
+                }
             });
         }
         updateNotice();
+        } catch (...) {
+            qCInfo(lcCollection, "online collection not checked");
+        }
     });
 }
 
@@ -153,11 +189,16 @@ void CollectionExamples::updateNotice() {
     emit noticeChanged();
 }
 
-// Every request that waited for the sources to be read gets its answer, in order; a request made while they run
-// joins the next round.
+// Every request that waited for the sources to be read gets its answer, in order: at once for an id a source holds,
+// and for any other once the online checks have answered too, so an entry published since the bundled copy is not
+// reported absent while its index is still being read. A request made while they run joins the next round.
 void CollectionExamples::settle() {
-    const QList<std::function<void()>> waiting = std::exchange(waiting_, {});
-    for (const std::function<void()>& then : waiting) then();
+    QList<std::function<void()>> ready;
+    QList<std::pair<QString, std::function<void()>>> still;
+    for (auto& [id, then] : std::exchange(waiting_, {}))
+        (known_.contains(id) || checking_ == 0 ? ready.append(std::move(then)) : still.append({id, std::move(then)}));
+    waiting_ = std::move(still);
+    for (const std::function<void()>& then : ready) then();
 }
 
 void CollectionExamples::whenRead(const QString& id, std::function<void()> then) {
@@ -165,8 +206,9 @@ void CollectionExamples::whenRead(const QString& id, std::function<void()> then)
         then();
         return;
     }
-    waiting_.append(std::move(then));
-    if (pending_ == 0) refresh();
+    waiting_.append({id, std::move(then)});
+    // A read or a check still running answers it; reading again now would drop their answers.
+    if (pending_ == 0 && checking_ == 0) refresh();
 }
 
 QString CollectionExamples::fileName(const QString& id) const {
@@ -194,28 +236,38 @@ void CollectionExamples::fetchBytes(const QString& id, BytesDone done, FetchProg
     fetchPaired(id, it->sources, 0, false, std::move(done), std::move(progress));
 }
 
+
 // The file and the index it is checked against come from the same location, the index read in this operation: the
 // first location that answers serves both, the next only after an outage, so a file from the online collection is
 // never checked against the bundled copy's index or against an index read before the collection moved on. A file that
 // still disagrees with that index (a publication between the two reads) is read once more, index first.
 void CollectionExamples::fetchPaired(const QString& id, const QStringList& bases, int at, bool retried, BytesDone done,
-                                     FetchProgress progress) {
+                                     FetchProgress progress, bool omitted) {
     if (at >= bases.size()) {
         done({}, tr("No online source that answered holds '%1'").arg(id));
         return;
     }
     const QString& base = bases.at(at);
+    const bool here = QUrl(base).isLocalFile() || QUrl(base).scheme().isEmpty();
+    // A file the app does not hold could not be downloaded: said as what it is, with what the location answered.
+    const auto failed = [id, omitted](const QString& error) {
+        return omitted ? tr("'%1' is not installed with the app: it is downloaded from the online collection the first "
+                            "time it is opened, and the download did not succeed (%2). Check the internet connection "
+                            "and open it again.").arg(id, error)
+                       : error;
+    };
     const auto url = [](const QString& root, const QString& path) {
         QUrl out(QString::fromStdString(edi::online::location_url(root.toStdString(), path.toStdString())));
         return out.scheme().isEmpty() ? QUrl::fromLocalFile(out.toString()) : out;
     };
     const QPointer<CollectionExamples> receiver(this);
     fetch_url(this, network_, url(base, QStringLiteral("index.json")),
-              [receiver, id, bases, at, retried, done = std::move(done), progress = std::move(progress), base, url](const QByteArray& bytes, const QString& error, bool unreachable) {
+              // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks): the std::function owns the lambda; the analyzer does not follow libc++'s release of it
+              [receiver, id, bases, at, retried, done = std::move(done), progress = std::move(progress), base, url, omitted, here, failed](const QByteArray& bytes, const QString& error, bool unreachable) {
         if (!receiver) return;
         if (!error.isEmpty()) {
-            if (unreachable && at + 1 < bases.size()) receiver->fetchPaired(id, bases, at + 1, retried, done, progress);
-            else done({}, error);
+            if (unreachable && at + 1 < bases.size()) receiver->fetchPaired(id, bases, at + 1, retried, done, progress, omitted);
+            else done({}, failed(error));
             return;
         }
         edi::online::File file;
@@ -240,17 +292,18 @@ void CollectionExamples::fetchPaired(const QString& id, const QStringList& bases
             it->sha256 = QString::fromStdString(file.sha256);
         }
         fetch_url(receiver, receiver->network_, url(base, path),
-                  [receiver, id, bases, at, retried, done, progress, file, name](const QByteArray& data, const QString& failure, bool offline) {
+                  [receiver, id, bases, at, retried, done, progress, file, name, omitted, here, failed](const QByteArray& data, const QString& failure, bool offline) {
             if (!receiver) return;
             if (!failure.isEmpty()) {
-                if (offline && at + 1 < bases.size()) receiver->fetchPaired(id, bases, at + 1, retried, done, progress);
-                else done({}, failure);
+                // The app's own copy leaves out a large file: the next location is the online collection.
+                if (offline && at + 1 < bases.size()) receiver->fetchPaired(id, bases, at + 1, retried, done, progress, omitted || here);
+                else done({}, failed(failure));
                 return;
             }
             const QString problem = content_problem(data, file.bytes, QString::fromStdString(file.sha256), name);
             if (problem.isEmpty()) done(data, {});
-            else if (!retried) receiver->fetchPaired(id, bases, at, true, done, progress);
-            else done({}, problem);
+            else if (!retried) receiver->fetchPaired(id, bases, at, true, done, progress, omitted);
+            else done({}, failed(problem));
         }, [progress, expected = file.bytes](qint64 received, qint64 total) {
             if (progress) progress(received, total > 0 ? total : expected);
         });

@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "session.hpp"
+#include "load_attempt.hpp"
 #include "label_case.hpp"
 #include "assistant_result.hpp"
 #include "../../core/src/canonical_encoding.hpp"
@@ -13,6 +14,7 @@
 #include <QDirIterator>
 #include <QFile>
 #include <QFileInfo>
+#include <QTemporaryDir>
 #include <QStandardPaths>
 #include <QPair>
 #include <QPointer>
@@ -33,7 +35,9 @@
 #include "web_storage.hpp"
 #include "edi/display.hpp"
 #include "edi/report.hpp"
+#include "edi/fullprof.hpp"
 #include "edi/io.hpp"
+#include "edi/project_import.hpp"
 #include "edi/project_archive.hpp"
 #include "edi/parameter_walk.hpp"
 #include "edi/scan.hpp"
@@ -90,6 +94,28 @@ QString newWebKey() { return QUuid::createUuid().toString(QUuid::WithoutBraces);
 
 // ---- WarningListModel ---------------------------------------------------------------------------
 
+namespace {
+// A CIF import's notes as the messages list says them: crysta's code (which Python and the command line keep for
+// filtering) left out, crysta named as the app, and the propagation vector a magnetic CIF leaves out said in words.
+QString plain_message(QString text) {
+    static const QString cif_code = QStringLiteral("crysta.schema.cif_items_not_read: ");
+    if (!text.contains(cif_code)) return text;
+    text.remove(cif_code);
+    const std::pair<const char*, const char*> plain[] = {
+        {"k = 0, as the group is grey",
+         "the propagation vector is taken as k = 0: the file gives none, and a grey group allows no other"},
+        {"k = 0, as the identity transform fixes it",
+         "the propagation vector is taken as k = 0: the file gives none, and its parent-to-child transform implies it"},
+        {"no crysta item has these names", "EasyDiffraction has no items with these names"},
+        {"crysta calculates these values itself", "EasyDiffraction calculates these values itself"},
+        {"crysta cannot tell an empty, ? or . text from one left out, so it reads the item as left out",
+         "an empty, ? or . text cannot be told from a value left out, so the item is read as left out"},
+    };
+    for (const auto& [from, to] : plain) text.replace(QLatin1String(from), QLatin1String(to));
+    return text;
+}
+}  // namespace
+
 WarningListModel::WarningListModel(QObject* parent) : RowTableModel({"message", "severity"}, parent) {}
 
 void WarningListModel::setMessages(const QStringList& messages, const QStringList& sources) {
@@ -99,7 +125,7 @@ void WarningListModel::setMessages(const QStringList& messages, const QStringLis
         const QString source = sources.value(i);
         const QString key = source.isEmpty() ? QStringLiteral("load:%1").arg(i) : fileKey(QStringLiteral("load-file:"), source, messages[i]);
         if (lists(key)) continue;
-        messages_.push_back({next_id_++, key, messages[i], QStringLiteral("warning")});
+        messages_.push_back({next_id_++, key, plain_message(messages[i]), QStringLiteral("warning")});
     }
     changed();
 }
@@ -114,7 +140,7 @@ void WarningListModel::post(const QString& key, const QString& text, const QStri
             return;
         }
     }
-    messages_.push_back({next_id_++, key, text, severity});
+    messages_.push_back({next_id_++, key, plain_message(text), severity});
     changed();
 }
 
@@ -263,7 +289,10 @@ bool Session::assistantSaveNotified(ProjectViewModel*) const { return false; }
 #endif
 
 Session::~Session() {
-    delete assistant_;assistant_=nullptr;
+#if EDI_APP_ASSISTANT
+    delete assistant_;  // a build without the assistant never makes one, and has no complete type to delete
+#endif
+    assistant_=nullptr;
     // QObject normally deletes children after members. The workers/models must
     // stop before archive roots remove their files.
     project_=nullptr;
@@ -373,6 +402,7 @@ void Session::releaseTemporaryRoots(const QStringList& candidates,const QString&
 }
 
 bool Session::openProject(const QUrl& location) {
+    LoadAttempt attempt(this);
     const QPointer<Session> receiver(this);
     const QPointer<ProjectViewModel> before(project_);
     const auto binding=replacement_generation_;
@@ -388,11 +418,12 @@ bool Session::openProject(const QUrl& location) {
     if(!receiver || replacement_generation_!=binding || project_!=before)return false;
     const auto message=last_error_.isEmpty()?tr("The project at %1 could not be opened").arg(location.toLocalFile().isEmpty()?location.toString():location.toLocalFile()):last_error_;
     if(!receiver || replacement_generation_!=binding || project_!=before)return false;
-    emit loadFailed(message);
+    emit loadFailed(message, report(&attempt));
     return false;
 }
 
 bool Session::openExample(const QString& exampleId) {
+    LoadAttempt attempt(this);
     const QPointer<Session> receiver(this);
     const QPointer<ProjectViewModel> before(project_);
     const auto binding=replacement_generation_;
@@ -405,7 +436,7 @@ bool Session::openExample(const QString& exampleId) {
     if(!receiver || replacement_generation_!=binding || project_!=before)return false;
     const auto message=last_error_.isEmpty()?tr("The example %1 could not be opened").arg(exampleId):last_error_;
     if(!receiver || replacement_generation_!=binding || project_!=before)return false;
-    emit loadFailed(message);
+    emit loadFailed(message, report(&attempt));
     return false;
 }
 
@@ -585,9 +616,46 @@ QString Session::locationText() const {
 }
 
 bool Session::needsSaveAs() const {
-    // Every project in the web app has its place, which Save writes.
-    return project_ != nullptr && !WebFiles::available()
-           && (project_->path().isEmpty() || !opened_example_.isEmpty() || read_only_copy_);
+    // Every project in the web app has its place, which Save writes, except an untitled one, which Create names first.
+    return project_ != nullptr &&
+           (untitled_ || (!WebFiles::available() &&
+                          (project_->path().isEmpty() || !opened_example_.isEmpty() || read_only_copy_)));
+}
+
+void Session::setUntitled(bool untitled) {
+    if (untitled != untitled_) {
+        untitled_ = untitled;
+        emit untitledChanged();
+        emit needsSaveAsChanged();
+    }
+}
+
+bool Session::startUntitledProject(const QString& suRule, bool reportLibraries) {
+    if (project_ != nullptr) return false;
+#if EDI_APP_ASSISTANT
+    // Navigation during the assistant's Create must keep its original owner until the popup's OK (ADR-0017 §13).
+    if (assistant_->ordinaryProjectCreationPending()) return false;
+#endif
+    const QPointer<Session> receiver(this);
+    QPointer<ProjectViewModel> draft;
+    try {
+        edi::Project work = edi::empty_project("untitled", {});
+        if (suRule == QStringLiteral("iucr_19") || suRule == QStringLiteral("iucr_99")) work.su_rule = suRule.toStdString();
+        work.report_html_offline = reportLibraries;
+        draft = new ProjectViewModel(std::move(work), this, colour_scheme_);
+    } catch (const std::exception& refusal) {
+        if (receiver) setLastError(QString::fromUtf8(refusal.what()));
+        return false;
+    }
+    if (!replaceProject(draft, {}, {}, false, nullptr, nullptr, true)) {
+        if (receiver && draft && project_ != draft) draft->deleteLater();
+        return false;
+    }
+    if (!receiver || !draft || project_ != draft) return false;
+    setUntitled(true);
+    // In the web app its recovery copy is marked untitled, so a recovered one is untitled again (setWebPlace).
+    if (WebFiles::available()) setWebPlace({web_place_.key, QStringLiteral("untitled"), tr("Untitled project")});
+    return true;
 }
 
 bool Session::save() {
@@ -871,6 +939,76 @@ QString Session::writeBackReports() {
     return {};
 }
 
+bool Session::exportFullProf(const QUrl& parentDirectory, bool fixed) {
+    if (!project_ || !parentDirectory.isLocalFile()) {
+        return false;
+    }
+    const auto directory = QDir(parentDirectory.toLocalFile()).filePath(folderNameFor(project_->name()) +
+                                                                        QStringLiteral("-fullprof"));
+    try {
+        const auto written = edi::export_fullprof_project(project_->project(), directory.toStdString(), fixed);
+        qCInfo(lcApp, "FullProf project exported: %s", written.c_str());
+    } catch (const std::exception& error) {
+        emit refused(QString::fromUtf8(error.what()));
+        return false;
+    }
+    return true;
+}
+
+namespace {
+// An object-name key for a program: the built-in ones keep the names the menus have always had.
+QString programKey(const std::string& program) {
+    if (program == "FullProf") return QStringLiteral("fullProf");
+    if (program == "GSAS-II") return QStringLiteral("gsas");
+    QString key;
+    for (const QChar c : QString::fromStdString(program)) {
+        if (c.isLetterOrNumber()) key += c.toLower();
+    }
+    return key;
+}
+}  // namespace
+
+QList<ProjectProgram> Session::projectImporters() const {
+    QList<ProjectProgram> list;
+    for (const auto& importer : edi::project_importers()) {
+        QStringList patterns;
+        for (const auto& suffix : importer.suffixes) {
+            const auto text = QString::fromStdString(suffix);
+            patterns << QStringLiteral("*") + text << QStringLiteral("*") + text.toUpper();
+        }
+        const auto program = QString::fromStdString(importer.program);
+        list.append({programKey(importer.program), program, QString::fromStdString(importer.suffixes.front()),
+                     tr("%1 projects (%2)").arg(program, patterns.join(QLatin1Char(' ')))});
+    }
+    return list;
+}
+
+QList<ProjectProgram> Session::projectExporters() const {
+    QList<ProjectProgram> list;
+    for (const auto& exporter : edi::project_exporters()) {
+        list.append({programKey(exporter.program), QString::fromStdString(exporter.program),
+                     QString::fromStdString(exporter.hint), {}});
+    }
+    return list;
+}
+
+bool Session::exportProjectCopy(const QString& program, const QUrl& parentDirectory) {
+    if (!project_ || !parentDirectory.isLocalFile()) {
+        return false;
+    }
+    const auto directory = QDir(parentDirectory.toLocalFile())
+                               .filePath(folderNameFor(project_->name()) + QLatin1Char('-') +
+                                         programKey(program.toStdString()).toLower());
+    try {
+        const auto written = edi::export_project(program.toStdString(), project_->project(), directory.toStdString());
+        qCInfo(lcApp, "%s project exported: %s", qUtf8Printable(program), written.c_str());
+    } catch (const std::exception& error) {
+        emit refused(QString::fromUtf8(error.what()));
+        return false;
+    }
+    return true;
+}
+
 bool Session::saveAs(const QUrl& directory) {
     const auto operation =
         beginSave(true, false, [this, directory](const SaveOperation& answered) { saveAsWith(answered, directory); },
@@ -1029,6 +1167,8 @@ bool Session::saveProjectAsFreshWith(const SaveOperation& operation,const QUrl& 
         archive_location_.clear();releaseTemporaryFolder();if(!current())return false;
     }
     setLastError({});if(!current())return false;
+    // Saved at a place of its own (an assistant's or a window's Save As): no longer untitled.
+    setUntitled(false);if(!current())return false;
     if(notify) {
         emit projectLocationChanged();if(!current())return false;
         emit needsSaveAsChanged();if(!current())return false;
@@ -1337,7 +1477,7 @@ bool Session::openExampleNamed(const QString& exampleId) {
     if (!receiver || receiver->example_request_ != request) return true;
     emit exampleDownloadProgressChanged();
     if (!receiver || receiver->example_request_ != request) return true;
-    const auto finish = [receiver, exampleId, request](bool opened, const QString& message) {
+    const auto finish = [receiver, exampleId, request](bool opened, const QString& message, const QString& file = {}) {
         if (!receiver || receiver->example_request_ != request || !receiver->opening_example_) return;
         receiver->opening_example_ = false;
         emit receiver->openingExampleChanged();
@@ -1345,7 +1485,7 @@ bool Session::openExampleNamed(const QString& exampleId) {
         if (!opened && !message.isEmpty()) {
             receiver->setLastError(message);
             if (!receiver || receiver->example_request_ != request) return;
-            emit receiver->loadFailed(message);
+            emit receiver->loadFailed(message, file.isEmpty() ? receiver->report(nullptr) : file);
             if (!receiver || receiver->example_request_ != request) return;
         }
         emit receiver->exampleOpenFinished(exampleId, opened);
@@ -1385,13 +1525,21 @@ bool Session::openExampleNamed(const QString& exampleId) {
                 return;
             }
             receiver->aside_next_ = aside;
-            const bool opened = receiver->openProjectAt(archive, exampleId);
+            // The downloaded project's read is this request's own attempt: only a file it failed on goes with it.
+            QString failed;
+            bool opened = false;
+            {
+                LoadAttempt attempt(receiver);
+                opened = receiver->openProjectAt(archive, exampleId);
+                if (!receiver) return;
+                if (!opened) failed = receiver->report(&attempt);
+            }
             receiver->aside_next_ = false;
             if (opened) qCInfo(lcApp, "example opened: %s", qPrintable(exampleId));
             else qCWarning(lcApp, "example %s: %s could not be opened: %s", qPrintable(exampleId), qPrintable(archive.toLocalFile()), qPrintable(receiver->last_error_));
             finish(opened, opened ? QString()
                    : tr("The example %1, downloaded to %2, could not be opened%3")
-                         .arg(exampleId, archive.toLocalFile(), receiver->last_error_.isEmpty() ? QString() : QStringLiteral(": ") + receiver->last_error_));
+                         .arg(exampleId, archive.toLocalFile(), receiver->last_error_.isEmpty() ? QString() : QStringLiteral(": ") + receiver->last_error_), failed);
         }, [receiver, request, current](qint64 received, qint64 total) {
             if (!receiver || receiver->example_request_ != request || !current()) return;
             receiver->example_download_received_ = std::max<qint64>(0, received);
@@ -1570,6 +1718,56 @@ bool Session::creationOutcomeCurrent(const edi_app::ProjectCreationResult& outco
     return (!outcome.has_owner || original) && project_ == original &&
         outcome.replacement == QString::number(replacement_generation_);
 }
+bool Session::adoptUntitled(const QString& name, const QString& description, const QString& location,
+                            const QString& title, const QString& authors, ProjectCreationOutcome* outcome, bool replace) {
+    const QPointer<ProjectViewModel> project(project_);
+    if (outcome) { outcome->owner = project_; outcome->has_owner = true; outcome->replacement = replacement_generation_; }
+    project_->setName(name);
+    project_->setDescription(description);
+    project_->setTitle(title);
+    project_->setAuthors(authors);
+    bool saved = false;
+    if (location.isEmpty()) {
+        // The web app (or a project shown without a place): a browser place of its own, which Save writes.
+        if (WebFiles::available()) setWebPlace({web_place_.key, QStringLiteral("browser"), folderNameFor(name)});
+        setUntitled(false);
+        saved = !WebFiles::available() || save();
+    } else {
+        const QFileInfo existing(location);
+        if ((existing.exists() || existing.isSymLink()) && !replace) {
+            setLastError(tr("%1 exists already; nothing was saved.").arg(existing.absoluteFilePath()));
+        } else if (existing.exists() && (!existing.isDir() || !QFileInfo::exists(existing.absoluteFilePath() + QStringLiteral("/project.edi")))) {
+            setLastError(tr("%1 exists and is not a project folder; nothing was replaced.").arg(existing.absoluteFilePath()));
+        } else {
+            // Over a project folder, once the user chose Replace: the old one moves aside until the save has worked.
+            QString aside;
+            if (existing.exists()) {
+                aside = existing.absoluteFilePath() + QStringLiteral(".edi-replaced");
+                for (int n = 2; QFileInfo::exists(aside); ++n) aside = existing.absoluteFilePath() + QStringLiteral(".edi-replaced-%1").arg(n);
+                if (!QDir().rename(existing.absoluteFilePath(), aside)) {
+                    setLastError(tr("The project %1 could not be replaced: it could not be moved aside").arg(existing.fileName()));
+                    aside = QStringLiteral("-");
+                }
+            }
+            if (aside != QStringLiteral("-")) {
+                saved = saveProjectAsFresh(QUrl::fromLocalFile(location), false, false, false);
+                if (!aside.isEmpty()) {
+                    if (saved) {
+                        QDir(aside).removeRecursively();
+                    } else {
+                        QDir(location).removeRecursively();
+                        QDir().rename(aside, location);
+                    }
+                }
+            }
+        }
+        if (saved && project == project_) setUntitled(false);
+    }
+    const QString error = saved ? QString{} : last_error_;
+    if (outcome) { outcome->error = error; outcome->saved = saved; outcome->path = project ? project->path() : QString{}; }
+    return saved;
+}
+
 bool Session::createProjectImpl(const QString& name, const QString& description, const QString& location,
                             const QString& suRule, const QString& title, const QString& authors,
                             bool reportLibraries, const QString& assistantIntent, ProjectCreationOutcome* outcome, bool replace) {
@@ -1580,12 +1778,14 @@ bool Session::createProjectImpl(const QString& name, const QString& description,
         if (outcome) outcome->error = refusal;
         return false;
     }
+    // Create while a project is untitled names and saves that project, the work in it kept (the owner, 2026-11-19).
+    if (untitled_ && project_ != nullptr && assistantIntent.isEmpty()) {
+        return adoptUntitled(name, description, location, title, authors, outcome, replace);
+    }
     ProjectViewModel* created = nullptr;
     try {
         edi::Project project = edi::empty_project(name.toStdString(), description.toStdString());
-        if (!title.isEmpty()) {
-            project.metadata.title = title.toStdString();
-        }
+        project.metadata.title = title.toStdString();
         project.metadata.authors = authors.toStdString();
         if (suRule == QStringLiteral("iucr_19") || suRule == QStringLiteral("iucr_99")) {
             project.su_rule = suRule.toStdString();
@@ -1806,11 +2006,46 @@ void Session::syncCalculationMessages() {
     for (const QString& refusal : refusals) {
         warnings_->post(prefix + refusal, tr("Calculation refused: %1").arg(refusal), QStringLiteral("error"));
     }
+    // A point the 2θ offset moves below 0° or above 180° takes no part in the calculation or the fit (the owner,
+    // 2026-11-19): said once per experiment and count, in plain words, and withdrawn when none is left out.
+    const QString domain = QStringLiteral("domain:");
+    QStringList left_out;
+    if (project_ != nullptr) {
+        for (ExperimentViewModel* model : project_->experimentModels()) {
+            const edi::ExperimentBase& experiment = *model->experiment();
+            if (experiment.effective_beam_mode() != edi::BeamModeEnum::CONSTANT_WAVELENGTH || !experiment.data) continue;
+            const double offset = experiment.instrument.calib_twotheta_offset
+                                      ? experiment.instrument.calib_twotheta_offset->value.get()
+                                      : 0.0;
+            int count = 0;
+            for (const double angle : experiment.data->axis()) {
+                const double corrected = angle - offset;
+                if (!(corrected > 0.0 && corrected < 180.0)) ++count;
+            }
+            if (count == 0) continue;
+            const QString key = domain + QString::fromStdString(experiment.name) + u':' + QString::number(count);
+            left_out.append(key);
+            if (!warnings_->keys(domain).contains(key)) {
+                warnings_->post(key,
+                                tr("%1: %n point(s) fall outside 0° to 180° once the 2θ offset of %2° is applied; they "
+                                   "take no part in the calculation or the fit.", nullptr, count)
+                                    .arg(QString::fromStdString(experiment.name))
+                                    .arg(offset, 0, 'g', 6),
+                                QStringLiteral("information"));
+            }
+        }
+    }
+    for (const QString& key : warnings_->keys(domain)) {
+        if (!left_out.contains(key)) warnings_->withdraw(key);
+    }
 }
 
 bool Session::projectDirectoryExists(const QString& path) const {
     // A recent project is a folder or a .zip it was saved as (edi ADR-0052).
-    return !path.isEmpty() && (QFileInfo(path).isDir() || edi::is_project_archive(path.toStdString()));
+    const QFileInfo location(path);
+    const auto source = path.toStdString();
+    return !path.isEmpty() && (location.isDir() || edi::is_project_archive(source) ||
+                               (location.isFile() && edi::is_imported_project_path(source)));
 }
 
 QUrl Session::projectDirectoryUrl(const QString& path) const {
@@ -1831,13 +2066,15 @@ QUrl Session::suggestedSaveTarget(bool zip) const {
     if (place.isEmpty() && read_only_copy_) {
         place = read_only_source_;
     }
+    // The chooser starts where the project is (the folder holding its .zip, or its folder) and suggests the project's
+    // name, as it reads now (edi ADR-0052).
     const QFileInfo info(place);
-    const QString folder = !place.isEmpty() ? info.absolutePath()
-                                            : QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation);
-    QString name = !place.isEmpty() ? info.completeBaseName() : folderNameFor(project_->name());
-    if (!place.isEmpty() && info.suffix().compare(QStringLiteral("zip"), Qt::CaseInsensitive) != 0) {
-        name = info.fileName();  // a folder's whole name, dots and all
-    }
+    // An archive is the .zip the project saves to, or a file; a project folder may itself end in .zip.
+    const bool archive = !place.isEmpty() && (place == archive_location_ || info.isFile());
+    const QString folder = place.isEmpty() ? QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation)
+                           : archive       ? info.absolutePath()
+                                           : info.absoluteFilePath();
+    const QString name = folderNameFor(project_->name());
     return QUrl::fromLocalFile(QDir(folder).filePath(zip ? name + QStringLiteral(".zip") : name));
 }
 
@@ -1866,7 +2103,7 @@ bool Session::open(const QString& directory,const QString& example,const std::fu
         }
         opened = new ProjectViewModel(std::move(project), this, colour_scheme_);
     } catch (const std::exception& refusal) {
-        if(preparing())setLastError(QString::fromUtf8(refusal.what())); // Never overwrite a successor's error.
+        if(preparing()){if(auto* attempt=LoadAttempt::current(this))attempt->keep(); setLastError(QString::fromUtf8(refusal.what()));} // Never overwrite a successor's error.
         return false;
     }
     if(!preparing()) {
@@ -1910,6 +2147,7 @@ bool Session::openCopy(const QString& source,const QString& target,const QString
                 data = QString::fromStdString(edi::scan_datasets(project).directory);
             } catch (const std::exception&) {
                 data.clear();  // no scan directory resolves: everything is copied
+                edi::take_failed_file();  // not this open's failure
             }
         }
         if(QFileInfo::exists(target))throw std::runtime_error("The independent temporary copy target already exists");
@@ -1936,7 +2174,7 @@ bool Session::openCopy(const QString& source,const QString& target,const QString
         }
         opened = new ProjectViewModel(std::move(project), this, colour_scheme_);
     } catch (const std::exception& refusal) {
-        if(preparing())setLastError(QString::fromUtf8(refusal.what())); // Never overwrite a successor's error.
+        if(preparing()){if(auto* attempt=LoadAttempt::current(this))attempt->keep(); setLastError(QString::fromUtf8(refusal.what()));} // Never overwrite a successor's error.
         return false;
     }
     if(!preparing()) {
@@ -1977,7 +2215,7 @@ void Session::setOpenedArchive(const QString& name) {
     }
 }
 
-bool Session::replaceProject(ProjectViewModel* project, const QStringList& warnings, const QString& example, bool nativePrepared, bool* committed, quint64* committedReplacement, bool ordinaryEmptyCreate, const QString& openedFrom, const std::shared_ptr<SessionResetInputs>& resetInputs, const QStringList& warningSources) {
+bool Session::replaceProject(ProjectViewModel* project, const QStringList& warnings, const QString& example, bool nativePrepared, bool* committed, quint64* committedReplacement, [[maybe_unused]] bool ordinaryEmptyCreate, const QString& openedFrom, [[maybe_unused]] const std::shared_ptr<SessionResetInputs>& resetInputs, const QStringList& warningSources) {
     // A save holding the open project finishes first (edi ADR-0069): nothing replaces or closes it meanwhile.
     if (const QString refusal = replacementRefusal(); !refusal.isEmpty()) {
         setLastError(refusal);
@@ -2013,6 +2251,7 @@ bool Session::replaceProject(ProjectViewModel* project, const QStringList& warni
     // In the web app a project starts in the browser's own storage; an open from the disk or from a stored place
     // names its place once it is open.
     web_place_ = {};
+    setUntitled(false);  // a project replacing the untitled one is its own; startUntitledProject marks a new one
     web_from_file_ = false;web_source_path_.clear();
     if (project != nullptr && WebFiles::available()) {
         web_place_ = {newWebKey(), QStringLiteral("browser"), folderNameFor(project->name())};
@@ -2149,6 +2388,7 @@ void Session::setWebPlace(const WebPlace& place) {
     const QPointer<Session> receiver(this);const QPointer<ProjectViewModel> target(project_);  // NOLINT(clang-analyzer-core.NullDereference): this is live here.
     const auto binding=replacement_generation_;const auto pathBinding=path_generation_;
     web_place_ = place;
+    setUntitled(place.kind == QStringLiteral("untitled"));
     emit locationTextChanged();
     if(!receiver || project_!=target || replacement_generation_!=binding || pathBinding==UINT64_MAX || path_generation_!=pathBinding)return;
     emit projectLocationChanged();
@@ -2196,7 +2436,7 @@ void Session::openWebProject(const QString& kind) {
     } catch (const std::exception& refusal) {
         if(!current())return;
         setLastError(QString::fromUtf8(refusal.what()));
-        if(current())emit loadFailed(last_error_);
+        if(current())emit loadFailed(last_error_, report(nullptr));
         return;
     }
     WebStorage::instance()->pickOpen(kind, root, webOpenAnswer(root));
@@ -2216,7 +2456,7 @@ std::function<bool(const WebStorageAnswer&)> Session::openRequest(const QString&
             if(!current())return false;
             if(!answer.cancelled) {
                 setLastError(answer.message);
-                if(current())emit loadFailed(last_error_);
+                if(current())emit loadFailed(last_error_, report(nullptr));
             }
             return false;
         }
@@ -2226,7 +2466,7 @@ std::function<bool(const WebStorageAnswer&)> Session::openRequest(const QString&
             const auto message=tr("%1 was not opened: the open project was changed while it was read. Open it again to replace the project.").arg(answer.name);
             if(!current())return false;
             setLastError(message);
-            if(current())emit loadFailed(last_error_);
+            if(current())emit loadFailed(last_error_, report(nullptr));
             return false;
         }
         return true;
@@ -2240,6 +2480,7 @@ WebStorage::Answer Session::webOpenAnswer(const QString& root, bool fromFile, bo
         const PendingOpenSource pending(*this,answer.path);
         const QPointer<ProjectViewModel> before(project_);const auto beforeBinding=replacement_generation_;
         const WebPlace place{answer.key,answer.kind,answer.name};
+        LoadAttempt attempt(this);
         if(!openWebCopy(answer.path,place)) {
             if(!receiver || project_!=before || replacement_generation_!=beforeBinding)return;
             // A failed parse owns no replacement. A false publication after
@@ -2247,7 +2488,7 @@ WebStorage::Answer Session::webOpenAnswer(const QString& root, bool fromFile, bo
             if(web_copy_!=root)QDir(root).removeRecursively();
             if(!receiver || project_!=before || replacement_generation_!=beforeBinding)return;
             const auto message=last_error_;
-            emit loadFailed(message);
+            emit loadFailed(message, report(&attempt));
             return;
         }
         const QPointer<ProjectViewModel> target(project_);const auto binding=replacement_generation_;const auto pathBinding=path_generation_;
@@ -2276,7 +2517,7 @@ void Session::openStoredProject(const QString& key, bool recovery) {
     }catch(const std::exception& refusal) {
         if(!current())return;
         setLastError(QString::fromUtf8(refusal.what()));
-        if(current())emit loadFailed(last_error_);
+        if(current())emit loadFailed(last_error_, report(nullptr));
         return;
     }
     WebStorage::instance()->load(key,recovery,root,webOpenAnswer(root,false,recovery));
@@ -2291,6 +2532,7 @@ void Session::writeWebPlace(const WebPlace& place, const QString& folder, const 
     // The page writes one place's jobs in the order they are sent, so a later keep or discard is never overtaken.
     const QPointer<ProjectViewModel> project = project_;
     WebStorage::instance()->write(
+        // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks): the std::function owns the lambda; the analyzer does not follow libc++'s release of it
         place.key, place.kind, place.name, folder, false, [this, place, project, done](const WebStorageAnswer& answer) {
             if (!answer.ok) {
                 // The browser's own words ("UnknownError", "QuotaExceededError") say nothing to the user: the place
@@ -2500,6 +2742,15 @@ void Session::keepChanges() {
                                   [root](const WebStorageAnswer&) { QDir(root).removeRecursively(); });
 }
 
+void Session::reportRefusal(const QString& message) {
+    if (message.isEmpty()) {
+        return;
+    }
+    warnings_->post(QStringLiteral("refusal:%1").arg(++project_messages_), message, QStringLiteral("error"));
+    if (project_ != nullptr) project_->forgetLastError();
+    emit refused(message);
+}
+
 void Session::setLastError(const QString& error) {
     if (error != last_error_) {
         last_error_ = error;
@@ -2567,6 +2818,11 @@ QString Session::written(const QString& uid, double value) const {
         return {};
     }
     return from_bridge([&] { return edi::file_text(uid.toStdString(), value); });
+}
+
+QString Session::statisticText(const QString& uid, double value) const {
+    const std::optional<double> defined = std::isfinite(value) ? std::optional<double>(value) : std::nullopt;
+    return from_bridge([&] { return edi::statistic_text(uid.toStdString(), defined); });
 }
 
 QString Session::display(const QString& uid, double value, const QString& variant) const {
@@ -2698,4 +2954,19 @@ bool Session::completeAssistantSaveAs(const QString& token,const QUrl& target,bo
     auto choice=std::move(assistant_save_choice_);
     return choice->accepted && choice->accepted(target,zip,copy);
 }
+}
+
+// The file a reported failure carries: its own attempt's (none for a refusal that read no file). Its copy lasts as
+// long as the session: another failure, even one reported while this one is still being announced, never removes
+// a file a popup may attach. Each is one project member.
+QString edi_app::Session::report(LoadAttempt* attempt) {
+    std::unique_ptr<QTemporaryDir> copy;
+    failed_file_ = attempt ? attempt->release(copy) : QString();
+    if (copy) failed_copies_.push_back(std::move(copy));
+    return failed_file_;
+}
+
+QString edi_app::Session::takeFailedFile() {
+    const QString path = std::exchange(failed_file_, {});
+    return !path.isEmpty() && QFileInfo(path).isFile() ? path : QString();
 }

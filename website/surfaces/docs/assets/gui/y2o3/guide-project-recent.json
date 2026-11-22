@@ -7,7 +7,7 @@
     ],
     "id": "guide-project-recent",
     "image": "guide-project-recent.webp",
-    "image_sha256": "1864e122aafde21ca666d869d174f64d9ab2fb6c62c5b90d4eef8db6a06bf278",
+    "image_sha256": "67e335f1f6336995e5927948d4e61dec3874b04e27f6889d21d15288717ac1e1",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -62,7 +62,7 @@
                 784,
                 252,
                 682,
-                195
+                117
             ],
             "enabled": true,
             "label": "",
@@ -70,7 +70,7 @@
                 784,
                 252,
                 682,
-                195
+                117
             ]
         },
         "appBar": {
@@ -397,7 +397,7 @@
                 770,
                 203,
                 710,
-                258
+                180
             ],
             "enabled": true,
             "icon": "archive",
@@ -406,7 +406,7 @@
                 770,
                 203,
                 710,
-                258
+                180
             ]
         },
         "group.recentProjects.pin": {
@@ -500,7 +500,7 @@
                 19
             ],
             "enabled": true,
-            "label": "/tmp/EasyDiffraction-OxYLYn/docs-saved-project",
+            "label": "/tmp/EasyDiffraction-OOcPva/docs-saved-project",
             "visible_bounds": [
                 183.4,
                 329.40000000000003,
@@ -561,7 +561,7 @@
                 784,
                 252,
                 682,
-                195
+                117
             ],
             "enabled": true,
             "label": "",
@@ -569,7 +569,7 @@
                 784,
                 252,
                 682,
-                195
+                117
             ]
         },
         "recentProjects.path.0": {
@@ -580,7 +580,7 @@
                 39
             ],
             "enabled": true,
-            "label": "/tmp/EasyDiffraction-OxYLYn/docs-saved-project",
+            "label": "",
             "visible_bounds": [
                 815,
                 291,
@@ -596,42 +596,10 @@
                 39
             ],
             "enabled": true,
-            "label": "checkpoints/refined",
+            "label": "",
             "visible_bounds": [
                 815,
                 330,
-                570,
-                39
-            ]
-        },
-        "recentProjects.path.2": {
-            "bounds": [
-                815,
-                369,
-                570,
-                39
-            ],
-            "enabled": true,
-            "label": "checkpoints/starting",
-            "visible_bounds": [
-                815,
-                369,
-                570,
-                39
-            ]
-        },
-        "recentProjects.path.3": {
-            "bounds": [
-                815,
-                408,
-                570,
-                39
-            ],
-            "enabled": true,
-            "label": "/tmp/EasyDiffraction-OxYLYn/pd-neut-cwl_y2o3-spodi",
-            "visible_bounds": [
-                815,
-                408,
                 570,
                 39
             ]
@@ -670,40 +638,6 @@
                 39
             ]
         },
-        "recentProjects.remove.2": {
-            "bounds": [
-                1421,
-                369,
-                39,
-                39
-            ],
-            "enabled": true,
-            "icon": "minus-circle",
-            "label": "",
-            "visible_bounds": [
-                1421,
-                369,
-                39,
-                39
-            ]
-        },
-        "recentProjects.remove.3": {
-            "bounds": [
-                1421,
-                408,
-                39,
-                39
-            ],
-            "enabled": true,
-            "icon": "minus-circle",
-            "label": "",
-            "visible_bounds": [
-                1421,
-                408,
-                39,
-                39
-            ]
-        },
         "recentProjects.status.0": {
             "bounds": [
                 1389,
@@ -734,40 +668,6 @@
             "visible_bounds": [
                 1389,
                 330,
-                28,
-                39
-            ]
-        },
-        "recentProjects.status.2": {
-            "bounds": [
-                1389,
-                369,
-                28,
-                39
-            ],
-            "enabled": true,
-            "icon": "check-circle",
-            "label": "",
-            "visible_bounds": [
-                1389,
-                369,
-                28,
-                39
-            ]
-        },
-        "recentProjects.status.3": {
-            "bounds": [
-                1389,
-                408,
-                28,
-                39
-            ],
-            "enabled": true,
-            "icon": "check-circle",
-            "label": "",
-            "visible_bounds": [
-                1389,
-                408,
                 28,
                 39
             ]
@@ -888,56 +788,56 @@
         },
         "statusBar.fit": {
             "bounds": [
-                1069,
+                1068,
                 769,
-                397,
+                398,
                 19
             ],
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                1069,
+                1068,
                 769,
-                397,
+                398,
                 19
             ]
         },
         "statusBar.fit.button": {
             "bounds": [
-                1414,
+                1413,
                 769,
-                52,
+                53,
                 19
             ],
             "enabled": true,
-            "icon": "play-circle",
+            "icon": "play",
             "label": "",
             "visible_bounds": [
-                1414,
+                1413,
                 769,
-                52,
+                53,
                 19
             ]
         },
         "statusBar.fit.buttons": {
             "bounds": [
-                1414,
+                1413,
                 769,
-                52,
+                53,
                 19
             ],
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                1414,
+                1413,
                 769,
-                52,
+                53,
                 19
             ]
         },
         "statusBar.fit.outcome": {
             "bounds": [
-                1087,
+                1086,
                 769,
                 82,
                 19
@@ -946,7 +846,7 @@
             "icon": "check-circle",
             "label": "",
             "visible_bounds": [
-                1087,
+                1086,
                 769,
                 82,
                 19
@@ -957,15 +857,15 @@
         },
         "statusBar.fit.values": {
             "bounds": [
-                1186,
+                1185,
                 770,
                 211,
                 18.109375
             ],
             "enabled": true,
-            "label": "1 0.097s 3.58→2.28",
+            "label": "1 0.088s 2.46→1.34",
             "visible_bounds": [
-                1186,
+                1185,
                 770,
                 211,
                 18.109375
@@ -1059,6 +959,22 @@
                 14
             ]
         },
+        "window.projectDrop": {
+            "bounds": [
+                0,
+                0,
+                1480,
+                800
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                0,
+                0,
+                1480,
+                800
+            ]
+        },
         "workflow.home.sidebarHost": {
             "bounds": [
                 770,
@@ -1135,7 +1051,7 @@
     "qt_version": "6.11.2",
     "schema": 1,
     "script_sha256": "a0cd8f7d599e386e3db4cf752e3ae7050f99ce60356dedf20f4c9a1fbb3ecee3",
-    "source_revision": "9045d5d22d8f07b00ffd58c1610ec4b02b2beba5",
+    "source_revision": "66250b0826244790ae402c00384ea8fca62ae552",
     "state": {
         "experiments": 1,
         "fit_outcome": "success",

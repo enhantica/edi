@@ -53,3 +53,39 @@ def test_actions_equality_matches_documented_coercion(condition, expected):
 def test_unknown_condition_cannot_invent_reachability():
     with pytest.raises(AssertionError, match='must be resolved'):
         active({'if': 'github.unproven == false'}, 'workflow_dispatch')
+
+
+@pytest.mark.parametrize(
+    ('condition', 'ref', 'expected'),
+    [
+        ("startsWith(github.ref, 'refs/tags/v')", 'refs/tags/v2026.11.22', True),
+        ("startsWith(github.ref, 'refs/tags/v')", 'refs/heads/main', False),
+        ("startsWith(github.ref, 'refs/tags/v')", 'refs/tags/release-v2026.11.22', False),
+        ("startsWith(github.ref, 'REFS/TAGS/V')", 'refs/tags/v2026.11.22', True),
+        ('startsWith( github.ref , "refs/tags/v" )', 'refs/tags/v2026.11.22', True),
+        ("!startsWith(github.ref, 'refs/tags/v')", 'refs/heads/dev', True),
+    ],
+)
+def test_ref_prefix_observer_matches_documented_actions_semantics(condition, ref, expected):
+    assert active({'if': condition}, 'release', ref) is expected, (
+        'The ref-prefix call uses the actual ref, prefix position and case-insensitive match'
+    )
+
+
+@pytest.mark.parametrize(
+    'condition',
+    [
+        "contains(github.ref, 'refs/tags/v')",
+        "startsWith(github.repository, 'enhantica')",
+        'startsWith(github.ref, vars.PREFIX)',
+        'startsWith(github.ref, true)',
+        'startsWith(github.ref)',
+        "startsWith(github.ref, 'refs/tags/v', 'extra')",
+        "other.startsWith(github.ref, 'refs/tags/v')",
+        "startsWith(github.ref, 'refs/tags/v') || github.unproven == false",
+    ],
+)
+@pytest.mark.parametrize('wrapper', ['true || ({})', 'false && ({})'])
+def test_ref_prefix_observer_still_refuses_unresolved_expressions(condition, wrapper):
+    with pytest.raises(AssertionError, match=r'must be resolved|outside the bounded'):
+        active({'if': wrapper.format(condition)}, 'release', 'refs/tags/v2026.11.22')

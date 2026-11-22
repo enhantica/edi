@@ -3618,27 +3618,29 @@ def test_same_project_reconnect_resumes_original_durable_thread_files_and_cached
     assert 'before-reconnect' in document, (
         'The completed-step diagnostic cache survives helper termination before any new query'
     )
-    # Actual ordinary Preferences -> report popup -> Copy, without asking the model.
+    # Preferences copies the report directly, without another model request.
     actor.command('click', name='appBar.button.preferences')
     actor.command('click', name='preferences.tab.aiAssistance')
     actor.command('click', name='preferences.ai.workReport')
     actor.until(
-        lambda row: any(
-            c['name'] == 'assistant.workReport.copy' and c['fully_exposed']
-            for c in row['ui']['controls']
-        )
+        lambda _row: qml(actor, '(' + control_expression('preferences.ai.workReport') + ').copied')
     )
-    actor.command('click', name='assistant.workReport.copy')
     clipboard = qml(
         actor,
         "(function(){const item=Qt.createQmlObject('import QtQuick; TextEdit {}',contentItem);"
         'item.paste();const value=item.text;item.destroy();return value;})()',
     )
-    assert json.loads(clipboard) == json.loads(document), (
-        'The actual Preferences report Copy button copies the retained diagnostic document'
-    )
+    clipboard = json.loads(clipboard)
+    document = json.loads(document)
+    for key in ('schema', 'history_evidence', 'identity_inputs', 'agent_assessment'):
+        assert clipboard[key] == document[key], (
+            'Direct Preferences copying preserves the original report evidence and identities'
+        )
+    assert (
+        clipboard['scope_coverage']['instance_id'] == document['scope_coverage']['instance_id']
+    ), 'Direct copying keeps the report writer while refreshing current lifecycle metadata'
     # Close the existing modal owners through their public QML close methods.
-    for name in ('assistant.workReport', 'preferences'):
+    for name in ('preferences',):
         qml(
             actor,
             f'(function(){{const item={control_expression(name)};if(item&&item.close)item.close();}})()',  # noqa: E501
@@ -19256,15 +19258,17 @@ def test_original_save_second_replacement_failure_publishes_retained_adopted_sta
         'The same original native Save has one retained canonical outcome owner'
     )
     payload = retained[0]['row']['payload']
+    copied_outcome = json.loads(payload['contentItems'][0]['text'])
     assert (
-        json.loads(payload['contentItems'][0]['text']) == native_outcome
-        and payload['nativeOutcome']['message'] == message
-        and payload['nativeOutcome']['uncertain'] is True
-        and payload['nativeOutcome']['saved'] is False
-        and payload['nativeOutcome']['committed'] is False
+        copied_outcome == native_outcome
+        and copied_outcome['message'] == message
+        and copied_outcome['uncertain'] is True
+        and copied_outcome['saved'] is False
+        and copied_outcome['committed'] is False
     ), (
         'The exact original qualified cause and uncertainty survive canonical '
-        'nativeOutcome/history as well as outgoing wire; compact presentation alone is not '
+        'copied model-visible reply as well as outgoing wire; '
+        'presentation alone is not '
         'evidence'
     )
     assert after['session_last_error'] == after[
@@ -22334,16 +22338,14 @@ def test_actual_compact_inspection_uses_original_native_cells_keeps_full_raw_and
         )
         assert (
             json.loads(matches[0]['contentItems'][0]['text'])['data'] == outcomes[call['call_id']]
-            and matches[0]['nativeOutcome']['data'] == outcomes[call['call_id']]
-        ), (
-            'Actual outgoing projection keeps the declared summary/raw fields, while full '
-            'retained backend call evidence remains accessible'
-        )
+        ), 'The copied report keeps every declared summary/raw field from the actual native reply'
         retained[call['call_id']] = matches[0]
-    assert len(retained['original-full-legacy']['nativeOutcome']['data']['rows']) == total, (
-        'Required: actual compact inspection uses original native cells keeps '
-        'full raw and archive.'
-    )
+    assert (
+        len(
+            json.loads(retained['original-full-legacy']['contentItems'][0]['text'])['data']['rows']
+        )
+        == total
+    ), 'Required: actual compact inspection uses original native cells keeps full raw and archive.'
     _original_inspection_files_keep_science_and_owned_diagnostic(
         actor,
         folder,

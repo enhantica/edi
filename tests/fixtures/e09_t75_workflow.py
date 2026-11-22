@@ -28,12 +28,20 @@ def active(  # noqa: PLR0913 - each keyword is one workflow context input
     cancelled=False,
     wasm_build=False,
     prerelease=False,
+    bindings=None,
 ):
     ref = event_ref(event) if ref is None else ref
     value = node.get('if', 'success()')
     if isinstance(value, bool):
         value = 'true' if value else 'false'
     value = str(value).strip().removeprefix('${{').removesuffix('}}').strip()
+    # Resolve only the declared ref-prefix call; other calls and unresolved
+    # arguments remain in the AST and fail the bounded grammar below.
+    value = re.sub(
+        r"""(?<![\w.])startsWith\(\s*github\.ref\s*,\s*(['"])([^'"\\]*)\1\s*\)""",
+        lambda match: str(ref.casefold().startswith(match[2].casefold())).lower(),
+        value,
+    )
     # Before: every status function assumed a successful, uncancelled run. After:
     # the caller supplies preceding job results and actual run cancellation. GitHub
     # applies success() implicitly unless the condition includes a status function.
@@ -63,6 +71,7 @@ def active(  # noqa: PLR0913 - each keyword is one workflow context input
         ] = item
     for ident, item in (states or {}).items():
         values['needs.' + ident + '.result'] = item
+    values.update(bindings or {})
     for name, item in values.items():
         value = re.sub(r'\b' + re.escape(name) + r'\b', repr(item), value)
     for name, item in [
@@ -109,8 +118,11 @@ def condition_value(node):
     if isinstance(node, ast.UnaryOp) and isinstance(node.op, ast.Not):
         return not condition_value(node.operand)
     if isinstance(node, ast.BoolOp):
-        values = [condition_value(item) for item in node.values]
-        return all(values) if isinstance(node.op, ast.And) else any(values)
+        for item in node.values:
+            value = condition_value(item)
+            if bool(value) == isinstance(node.op, ast.Or):
+                return value
+        return value
     if isinstance(node, ast.Compare):
         left = condition_value(node.left)
         for operator, right_node in zip(node.ops, node.comparators, strict=True):

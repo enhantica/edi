@@ -635,7 +635,7 @@ function drawSingleCrystal(figure, crystal) {
   };
   const layout = {
     height: figure.clientHeight,
-    // The toolbar stands above the plot, as on the pattern chart.
+    // The toolbar stands above the plot, as on the pattern chart, and the statistics' line above that.
     margin: { l: 16, r: 16, t: crystal.statistics ? 66 : 48, b: 16 },
     font: { family: font, color: pageStyle('--chart-ink') || undefined },
     showlegend: false,

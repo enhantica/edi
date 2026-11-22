@@ -1,4 +1,4 @@
-name: Publish qualified calendar release
+name: Publish release
 
 on:
   workflow_dispatch:
@@ -19,6 +19,8 @@ jobs:
     permissions:
       contents: write
       actions: write
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
     steps:
       - uses: actions/checkout@v5
         with:
@@ -78,6 +80,21 @@ jobs:
         run: python tools/release/publish_assets.py --repo "$GITHUB_REPOSITORY" --folder publication --finalize
         env:
           GH_TOKEN: ${{ github.token }}
+      # A run that fails or is cancelled before publishing deletes the release's draft, so no draft is left holding
+      # the version (edi ADR-0071); a run of this workflow makes the draft again.
+      - name: Delete the draft of a failed publication
+        if: failure() || cancelled()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ -f publication/release.json ]; then
+            commit=$(python3 -c 'import json; print(json.load(open("publication/release.json"))["commit"])')
+            python tools/release/prepare.py --repo "$GITHUB_REPOSITORY" --source "$commit" --withdraw stable
+          fi
+      # The tag publish_assets.py gave the release, for the download repositories below.
+      - name: The published release tag
+        id: tag
+        run: echo "tag=v$(python3 -c 'import json; print(json.load(open("publication/release.json"))["version"])')" >> "$GITHUB_OUTPUT"
       - name: Refresh the public release notes
         run: gh workflow run pages.yml --repo "$GITHUB_REPOSITORY" --ref main -f component=docs
         env:
@@ -99,3 +116,45 @@ jobs:
           mkdir released-webapp
           unzip -q publication/assets/EasyDiffraction-*-webapp.zip -d released-webapp
           bash tools/ci/push_deploy_branch.sh released-webapp/webapp deploy-app
+      # Last: the Windows online installer and the filled-in text for Microsoft's SmartScreen file submission, with the
+      # steps on the run's summary page (edi ADR-0091). The release is out by now, so nothing here may fail it.
+      - name: Prepare the SmartScreen submission
+        if: success()
+        continue-on-error: true
+        env:
+          REPO: ${{ github.repository }}
+        run: |
+          python3 tools/release/smartscreen.py --publication publication --repo "$REPO" --output smartscreen-submission \
+            || echo "::warning::The SmartScreen submission could not be prepared; submit by hand if needed."
+      - name: Keep the SmartScreen submission files
+        if: success()
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        with:
+          name: smartscreen-submission
+          path: smartscreen-submission
+          if-no-files-found: warn
+          retention-days: 30
+
+  # download.easydiffraction.org's update repositories come from enhantica/edi-download, which rebuilds them from a
+  # published release (edi ADR-0071): every release asks it for its own, so users get the update as soon as the
+  # release is out rather than after the next nightly run.
+  publish-downloads:
+    needs: publish
+    if: github.ref == 'refs/heads/main' && github.repository == 'enhantica/edi' && github.event.pull_request.head.repo.fork == false
+    environment: public-site
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Mint a token for edi-download
+        id: download-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ vars.ENHANTICA_APP_ID }}
+          private-key: ${{ secrets.ENHANTICA_APP_KEY }}
+          owner: enhantica
+          repositories: edi-download
+      - name: Publish this release's download repositories
+        env:
+          GH_TOKEN: ${{ steps.download-token.outputs.token }}
+          TAG: ${{ needs.publish.outputs.tag }}
+        run: gh workflow run publish.yml --repo enhantica/edi-download --ref main -f tag="$TAG"

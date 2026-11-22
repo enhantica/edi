@@ -19,6 +19,7 @@
 
 #include "assistant_message_presentation.hpp"
 #include "example_list_model.hpp"
+#include "run_log.hpp"
 
 #include "edi/palette.hpp"
 
@@ -298,6 +299,17 @@ class ApplicationInfo : public QObject {
 #endif
     // Puts `text` on the clipboard (the web build's needs the click that asks for it).
     Q_INVOKABLE void copyText(const QString& text) const;
+    // A file for Help and feedback to attach (edi ADR-0063). A picked file past the 5 MB limit for one attachment
+    // comes back unread with its real size, which the form refuses; the failing input an error popup attaches
+    // (`automatic`) keeps its first 5 MB and says so in `cut`. An unreadable file gives one with no name.
+    Q_INVOKABLE edi_app::FeedbackFile fileAttachment(const QString& path, bool automatic = false) const;
+    // `text` as a file named `name` for the same form (the assistant's work report). Past the 5 MB limit it comes back
+    // unsent with its real size, which the form refuses, as a picked file does.
+    Q_INVOKABLE edi_app::FeedbackFile textAttachment(const QString& name, const QString& text) const;
+    // Posts the feedback message `body` (JSON) to `url` and calls `completed(status, detail, answer)`: the HTTP status,
+    // or 0 when no answer came, what happened (the service's error or warning, or the network's reason) and the
+    // answer's text (edi ADR-0063).
+    Q_INVOKABLE void postFeedback(const QString& url, const QString& body, const QJSValue& completed) const;
     Q_INVOKABLE QString fileSizeKilobytes(qint64 bytes) const;
     // Declaration-only members of existing global ApplicationInfo (QML singleton ApplicationInfo).
     /// Capture the original session draft intent in its existing view field.
@@ -363,6 +375,8 @@ class ApplicationInfo : public QObject {
     Q_INVOKABLE void afterProjectChanges(const QJSValue& action, const QJSValue& abandoned, bool creating = false) const;
     Q_INVOKABLE void openWorkflowPage(const QJSValue& page) const;
     Q_INVOKABLE void resetWorkflow() const;
+    // The Structure page opened with no project: an untitled one starts (Session::startUntitledProject).
+    void startUntitledOnProjectPage(const QJSValue& page) const;
     Q_INVOKABLE void saveCurrentProject() const;
     Q_INVOKABLE void saveCurrentProjectAs(const QJSValue& intent) const;
     Q_INVOKABLE QJSValue finishProjectSaveAs(const QJSValue& target, const QJSValue& zip, const QJSValue& copy) const;
@@ -869,9 +883,6 @@ class ApplicationInfo : public QObject {
     Q_INVOKABLE void chooseCreateProject() const;
     Q_INVOKABLE void createProjectClicked() const;
     Q_INVOKABLE void createProjectDialogEvent(int kind) const;
-    Q_INVOKABLE void openProjectChoice() const;
-    Q_INVOKABLE void openProjectPicker() const;
-    Q_INVOKABLE void askOpenProjectChoice() const;
     Q_INVOKABLE void windowSaveChoiceOpened() const;
     Q_INVOKABLE QJSValue windowUnsavedText() const;
     /// Final guarded focus/refresh/sort/warning and visual-feedback event procedures.
@@ -879,6 +890,10 @@ class ApplicationInfo : public QObject {
     /// Hands edi's Theme (0 light, 1 dark, 2 system) to Qt's colour scheme, so what Qt draws itself, such as the
     /// Windows title bar's buttons, follows edi's theme; system gives the choice back to the platform.
     Q_INVOKABLE void applyColorScheme(int theme) const;
+    /// The Qt colour scheme (Qt::ColorScheme) edi's `theme` asks for, given the browser's prefers-color-scheme
+    /// (`browser`: 1 dark, 0 light, -1 not in a browser): Light and Dark override, System follows the browser in a
+    /// page and the platform otherwise.
+    Q_INVOKABLE int schemeFor(int theme, int browser) const;
     /// Preserve the generic loaded text item's original dirty-property relation without narrowing its type.
     Q_INVOKABLE void workflowTextItemChanged() const;
 #if EDI_APP_ASSISTANT
@@ -1078,7 +1093,7 @@ class ApplicationInfo : public QObject {
 
    private:
     qint64 last_input_ = 0;
-    mutable QPointer<QObject> pending_project_picker_;
+    mutable class QNetworkAccessManager* feedback_network_ = nullptr;
     mutable QPointer<QObject> dataset_folder_picker_, dataset_folder_project_, dataset_folder_experiment_;
 
 };

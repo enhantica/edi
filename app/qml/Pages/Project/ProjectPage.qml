@@ -14,9 +14,11 @@ WorkflowPage {
     id: page
 
     readonly property ProjectViewModel project: Session.project
+    // Untitled work is not a project yet: the page looks as it does with none until it is created (edi ADR-0017 §13).
+    readonly property bool created: project !== null && !Session.untitled
 
     pageName: "project"
-    defaultInfo: project ? "" : qsTr("No project yet")
+    defaultInfo: created ? "" : qsTr("No project yet")
     mainTabs: [
         IconTabButton {
             objectName: "mainArea.project.tab.description"
@@ -26,11 +28,11 @@ WorkflowPage {
     ]
     mainItems: [
         DescriptionTab {
-            project: page.project
+            project: page.created ? page.project : null
         }
     ]
-    textEnabled: project !== null
-    extrasEnabled: project !== null
+    textEnabled: created
+    extrasEnabled: created
     basicItem: Component {
         EaComponents.SideBarColumn {
             GetStartedGroup {}

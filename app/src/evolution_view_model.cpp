@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "evolution_view_model.hpp"
 
+#include <QCoreApplication>
+#include <QMetaObject>
+#include <QPointer>
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
@@ -9,6 +12,7 @@
 #include <limits>
 #include <map>
 
+#include "background.hpp"
 #include "edi/categories.hpp"
 #include "edi/scan.hpp"
 
@@ -31,9 +35,11 @@ double bar_of(double error) { return std::isfinite(error) ? error : 0.0; }
 
 // The bucket of `x` among `buckets` over a range starting at `half_low` (halved values, so the widest finite range
 // does not overflow) with halved width `half_span`; the first bucket for a share that is not a finite number.
-int bucket_of(double x, double half_low, double half_span, int buckets) {
+std::size_t bucket_of(double x, double half_low, double half_span, std::size_t buckets) {
     const double share = half_span > 0.0 ? (x / 2.0 - half_low) / half_span : 0.0;
-    return std::isfinite(share) ? std::min(buckets - 1, static_cast<int>(std::clamp(share, 0.0, 1.0) * buckets)) : 0;
+    return std::isfinite(share)
+               ? std::min(buckets - 1, static_cast<std::size_t>(std::clamp(share, 0.0, 1.0) * static_cast<double>(buckets)))
+               : 0;
 }
 
 // `value` moved by `pad`, or left where it is when that would leave the finite numbers.
@@ -66,8 +72,9 @@ EvolutionViewModel::EvolutionViewModel(QObject* parent)
     connect(&row_redraw_, &QTimer::timeout, this, [this] {
         if (row_redraw_due_) {
             row_redraw_due_ = false;
-            finish();
-            row_redraw_.start();
+            if (finish()) {
+                row_redraw_.start();
+            }
         }
     });
 }
@@ -77,8 +84,9 @@ void EvolutionViewModel::finishRow() {
         row_redraw_due_ = true;
         return;
     }
-    finish();
-    row_redraw_.start();
+    if (finish()) {  // false: an observer deleted this view while it published
+        row_redraw_.start();
+    }
 }
 
 void EvolutionViewModel::setScan(const ScanSession* session, const edi::Project* project,
@@ -161,6 +169,7 @@ void EvolutionViewModel::syncExperiments() {
         if (experiments_.isEmpty()) per_experiment_ = false;
         current_experiment_ = std::min(current_experiment_, static_cast<int>(experiments_.size()) - 1);
         emit seriesChanged();
+        emit experimentsChanged();
         emit perExperimentChanged();
         emit currentExperimentChanged();
         emit xTitleChanged();  // a series that records nothing is placed by its runs
@@ -214,6 +223,7 @@ bool EvolutionViewModel::syncNames() {
         current_ = current;
         emit currentParameterChanged();
         emit yTitleChanged();
+        emit yLabelChanged();
     }
     return changed;
 }
@@ -252,16 +262,22 @@ void EvolutionViewModel::addRow(int dataset, const std::vector<std::string>& cel
         }
         const bool by_value = x_mode_ == 0 && !extracted_title_.isEmpty();
         bool added = false;
-        edi::evolution_experiment_point(
-            *project_, session_->places(), session_->index(), names_[current_].toStdString(), by_value,
-            files[static_cast<std::size_t>(dataset)], [&](std::size_t experiment, const edi::EvolutionPoint& point) {
-                if (current_experiment_ >= 0 && experiment != static_cast<std::size_t>(current_experiment_)) {
-                    return;
-                }
-                points_.push_back({point.x, point.y, point.su, static_cast<int>(point.dataset),
-                                   allBanks() ? static_cast<int>(experiment) : -1});
-                added = true;
-            });
+        try {
+            edi::evolution_experiment_point(
+                *project_, session_->places(), session_->index(), session_->bankRule(*project_), session_->datasets(),
+                names_[current_].toStdString(), by_value, files[static_cast<std::size_t>(dataset)],
+                [&](std::size_t experiment, const edi::EvolutionPoint& point) {
+                    if (current_experiment_ >= 0 && experiment != static_cast<std::size_t>(current_experiment_)) {
+                        return;
+                    }
+                    points_.push_back({point.x, point.y, point.su, static_cast<int>(point.dataset),
+                                       allBanks() ? static_cast<int>(experiment) : -1});
+                    added = true;
+                });
+        } catch (const std::exception& refusal) {
+            emit refused(QString::fromUtf8(refusal.what()));
+            return;
+        }
         if (added) {
             finishRow();
         }
@@ -309,6 +325,7 @@ void EvolutionViewModel::setCurrentParameter(int index) {
         current_ = index;
         emit currentParameterChanged();
         emit yTitleChanged();
+        emit yLabelChanged();
         rebuild();
     }
 }
@@ -345,87 +362,129 @@ void EvolutionViewModel::setLayer(MeasuredLayer* layer) {
 }
 
 void EvolutionViewModel::rebuild() {
+    const std::uint64_t request = ++rebuild_request_;
     points_.clear();
-    try {
-        readPoints();
-    } catch (const std::exception& refusal) {
-        points_.clear();
-        emit refused(QString::fromUtf8(refusal.what()));
-    }
-    finish();
-}
-
-void EvolutionViewModel::readPoints() {
     template_point_ = per_experiment_ ? std::nullopt : templatePoint();
     if (template_point_) {
         points_.push_back(*template_point_);
+    }
+    if (template_point_ || session_ == nullptr || project_ == nullptr || current_ < 0) {
+        finish();
         return;
     }
-    if (session_ != nullptr && project_ != nullptr && current_ >= 0) {
-        // The core's points (edi::evolution_series), the report's too, read twice. The first read finds their x range
-        // and count; above the drawing limit the second keeps per bucket of that range only the lowest and the
-        // highest point: the points thinning the whole column keeps, without ever holding it.
-        const std::string name = names_[current_].toStdString();
-        const bool by_value = x_mode_ == 0 && !extracted_title_.isEmpty();
-        const auto points = [&](const std::function<void(const edi::EvolutionPoint&)>& visit) {
-            if (per_experiment_) {
-                edi::evolution_experiment_series(
-                    *project_, session_->places(), session_->index(), name, by_value,
-                    [&](std::size_t experiment, const edi::EvolutionPoint& point) {
-                        if (current_experiment_ < 0 || experiment == static_cast<std::size_t>(current_experiment_)) {
-                            bank_ = static_cast<int>(experiment);
-                            visit(point);
-                        }
-                    });
-                return;
-            }
-            edi::evolution_series(*project_, session_->places(), session_->index(), name, by_value, visit);
-        };
-        double low = std::numeric_limits<double>::infinity(), high = -low;
-        std::size_t count = 0;
+    // The points are read on a worker from a copy of what they come from (edi ADR-0089 point 7): a series' files can
+    // be long, and the chart keeps its last drawing until they are in. Rows a fit adds meanwhile are read again.
+    Read read;
+    read.project = std::make_shared<const edi::Project>(*project_);
+    read.places = session_->places();
+    read.index = session_->index();
+    read.datasets = session_->datasets();
+    if (per_experiment_) {
+        read.rule = session_->bankRule(*project_);
+    }
+    read.name = names_[current_].toStdString();
+    read.by_value = x_mode_ == 0 && !extracted_title_.isEmpty();
+    read.per_experiment = per_experiment_;
+    read.experiment = current_experiment_;
+    read.all_banks = allBanks();
+    const std::int64_t end = read.index.end;
+    const QPointer<EvolutionViewModel> self(this);
+    run_in_background([self, request, end, read = std::move(read)]() {
+        std::vector<Point> points;
+        QString error;
+        try {
+            points = readPoints(read);
+        } catch (const std::exception& refusal) {
+            points.clear();
+            error = QString::fromUtf8(refusal.what());
+        }
+        QMetaObject::invokeMethod(
+            QCoreApplication::instance(),
+            [self, request, end, points = std::move(points), error]() mutable {
+                if (!self || request != self->rebuild_request_) {
+                    return;  // a newer read was asked for, or the view is gone
+                }
+                self->points_ = std::move(points);
+                if (!error.isEmpty()) {
+                    emit self->refused(error);
+                    if (!self || request != self->rebuild_request_) return;  // deleted or superseded by an observer
+                }
+                self->finish();
+                if (!self || request != self->rebuild_request_) return;
+                if (self->session_ != nullptr && self->session_->index().end != end) {
+                    self->rebuild();
+                }
+            },
+            Qt::QueuedConnection);
+    });
+}
+
+std::vector<EvolutionViewModel::Point> EvolutionViewModel::readPoints(const Read& read) {
+    std::vector<Point> found_points;
+    // The core's points (edi::evolution_series), the report's too, read twice. The first read finds their x range and
+    // count; above the drawing limit the second keeps per bucket of that range only the lowest and the highest point:
+    // the points thinning the whole column keeps, without ever holding it.
+    int bank = -1;
+    const auto points = [&](const std::function<void(const edi::EvolutionPoint&)>& visit) {
+        if (read.per_experiment) {
+            edi::evolution_experiment_series(*read.project, read.places, read.index, read.rule, read.datasets,
+                                             read.name, read.by_value,
+                                             [&](std::size_t experiment, const edi::EvolutionPoint& point) {
+                                                 if (read.experiment < 0 ||
+                                                     experiment == static_cast<std::size_t>(read.experiment)) {
+                                                     bank = static_cast<int>(experiment);
+                                                     visit(point);
+                                                 }
+                                             });
+            return;
+        }
+        edi::evolution_series(*read.project, read.places, read.index, read.name, read.by_value, visit);
+    };
+    double low = std::numeric_limits<double>::infinity(), high = -low;
+    std::size_t count = 0;
+    points([&](const edi::EvolutionPoint& point) {
+        low = std::min(low, point.x);
+        high = std::max(high, point.x);
+        ++count;
+    });
+    if (count <= static_cast<std::size_t>(kThinningLimit)) {
         points([&](const edi::EvolutionPoint& point) {
-            low = std::min(low, point.x);
-            high = std::max(high, point.x);
-            ++count;
+            found_points.push_back({point.x, point.y, point.su, static_cast<int>(point.dataset), read.all_banks ? bank : -1});
         });
-        if (count <= static_cast<std::size_t>(kThinningLimit)) {
-            points([this](const edi::EvolutionPoint& point) {
-                points_.push_back({point.x, point.y, point.su, static_cast<int>(point.dataset), allBanks() ? bank_ : -1});
-            });
-        } else {
-            // Per bank its own extrema (one curve each): every bank keeps its excursions, and each point its bank.
-            const int buckets = kThinningLimit / 2;
-            const double x0 = low / 2.0, span = high / 2.0 - low / 2.0;
-            std::map<int, std::pair<std::vector<std::optional<Point>>, std::vector<std::optional<Point>>>> by_bank;
-            points([&](const edi::EvolutionPoint& found) {
-                const Point point{found.x, found.y, found.su, static_cast<int>(found.dataset), allBanks() ? bank_ : -1};
-                auto& [lowest, highest] = by_bank[point.bank];
-                if (lowest.empty()) {
-                    lowest.resize(buckets);
-                    highest.resize(buckets);
-                }
-                const auto bucket = static_cast<std::size_t>(bucket_of(point.x, x0, span, buckets));
-                if (!lowest[bucket] || point.y < lowest[bucket]->y) {
-                    lowest[bucket] = point;
-                }
-                if (!highest[bucket] || point.y > highest[bucket]->y) {
-                    highest[bucket] = point;
-                }
-            });
-            for (const auto& [bank, extrema] : by_bank) {
-                const auto& [lowest, highest] = extrema;
-                std::optional<int> last;
-                for (std::size_t bucket = 0; bucket < lowest.size(); ++bucket) {
-                    for (const std::optional<Point>& point : {lowest[bucket], highest[bucket]}) {
-                        if (point && last != point->dataset) {
-                            points_.push_back(*point);
-                            last = point->dataset;
-                        }
-                    }
+        return found_points;
+    }
+    // Per bank its own extrema (one curve each): every bank keeps its excursions, and each point its bank.
+    const auto buckets = static_cast<std::size_t>(kThinningLimit / 2);
+    const double x0 = low / 2.0, span = high / 2.0 - low / 2.0;
+    std::map<int, std::pair<std::vector<std::optional<Point>>, std::vector<std::optional<Point>>>> by_bank;
+    points([&](const edi::EvolutionPoint& found) {
+        const Point point{found.x, found.y, found.su, static_cast<int>(found.dataset), read.all_banks ? bank : -1};
+        auto& [lowest, highest] = by_bank[point.bank];
+        if (lowest.empty()) {
+            lowest.resize(buckets);
+            highest.resize(buckets);
+        }
+        const std::size_t bucket = bucket_of(point.x, x0, span, buckets);
+        if (!lowest[bucket] || point.y < lowest[bucket]->y) {
+            lowest[bucket] = point;
+        }
+        if (!highest[bucket] || point.y > highest[bucket]->y) {
+            highest[bucket] = point;
+        }
+    });
+    for (const auto& [key, extrema] : by_bank) {
+        const auto& [lowest, highest] = extrema;
+        std::optional<int> last;
+        for (std::size_t bucket = 0; bucket < buckets; ++bucket) {
+            for (const std::optional<Point>& point : {lowest[bucket], highest[bucket]}) {
+                if (point && last != point->dataset) {
+                    found_points.push_back(*point);
+                    last = point->dataset;
                 }
             }
         }
     }
+    return found_points;
 }
 
 void EvolutionViewModel::thin() {
@@ -438,7 +497,7 @@ void EvolutionViewModel::thin() {
     const auto [low, high] =
         std::minmax_element(points_.begin(), points_.end(), [](const Point& a, const Point& b) { return a.x < b.x; });
     const double x0 = low->x / 2.0, span = high->x / 2.0 - low->x / 2.0;
-    const int buckets = kThinningLimit / 2;
+    const auto buckets = static_cast<std::size_t>(kThinningLimit / 2);
     std::map<int, std::pair<std::vector<int>, std::vector<int>>> by_bank;
     for (std::size_t i = 0; i < points_.size(); ++i) {
         auto& [lowest, highest] = by_bank[points_[i].bank];
@@ -446,7 +505,7 @@ void EvolutionViewModel::thin() {
             lowest.assign(buckets, -1);
             highest.assign(buckets, -1);
         }
-        const auto bucket = static_cast<std::size_t>(bucket_of(points_[i].x, x0, span, buckets));
+        const std::size_t bucket = bucket_of(points_[i].x, x0, span, buckets);
         if (lowest[bucket] < 0 || points_[i].y < points_[static_cast<std::size_t>(lowest[bucket])].y) {
             lowest[bucket] = static_cast<int>(i);
         }
@@ -458,7 +517,7 @@ void EvolutionViewModel::thin() {
     for (const auto& [bank, extrema] : by_bank) {
         const auto& [lowest, highest] = extrema;
         std::optional<int> last;
-        for (std::size_t bucket = 0; bucket < lowest.size(); ++bucket) {
+        for (std::size_t bucket = 0; bucket < buckets; ++bucket) {
             for (const int i : {lowest[bucket], highest[bucket]}) {
                 if (i >= 0 && last != points_[static_cast<std::size_t>(i)].dataset) {
                     kept.push_back(points_[static_cast<std::size_t>(i)]);
@@ -470,7 +529,7 @@ void EvolutionViewModel::thin() {
     points_ = std::move(kept);
 }
 
-void EvolutionViewModel::finish() {
+bool EvolutionViewModel::finish() {
     thin();
     double x_min = 0.0, x_max = 1.0, y_min = 0.0, y_max = 1.0;
     if (!points_.empty()) {
@@ -503,15 +562,23 @@ void EvolutionViewModel::finish() {
             emit(this->*signal)();
         }
     };
+    // An observer may delete this view in any notification: nothing is touched after that.
+    const QPointer<EvolutionViewModel> self(this);
     update(x_min_, x_min, &EvolutionViewModel::xMinChanged);
+    if (!self) return false;
     update(x_max_, x_max, &EvolutionViewModel::xMaxChanged);
+    if (!self) return false;
     update(y_min_, y_min, &EvolutionViewModel::yMinChanged);
+    if (!self) return false;
     update(y_max_, y_max, &EvolutionViewModel::yMaxChanged);
+    if (!self) return false;
     if (static_cast<int>(points_.size()) != published_count_) {
         published_count_ = static_cast<int>(points_.size());
         emit countChanged();
+        if (!self) return false;
     }
     draw();
+    return static_cast<bool>(self);
 }
 
 void EvolutionViewModel::draw() {

@@ -183,20 +183,27 @@ void give_members_unix_modes(std::string& archive) {
         throw IoError("cannot finish the archive: no end of its central directory");
     }
     const std::size_t end = archive.size() - kEndRecord;
+    // An offset the archive states, checked against its end before it indexes the bytes (size_t is 32 bits on the web).
+    const auto offset = [end](std::uint64_t value) {
+        if (value > end) {
+            throw IoError("cannot finish the archive: an offset lies past its end");
+        }
+        return static_cast<std::size_t>(value);
+    };
     std::uint64_t entries = u16(end + 10);
-    std::uint64_t at = u32(end + 16);
+    std::size_t at = u32(end + 16);
     // A ZIP64 archive (more members, or a larger directory, than the end record holds) keeps the full count and
     // offset in the ZIP64 end record, which its locator, just before the end record, names. A maximal value alone is
     // no proof: a classic archive of exactly 65,535 members holds 0xFFFF there, with no locator.
     constexpr std::size_t kLocator = 20;
     const bool locator = end >= kLocator && u32(end - kLocator) == 0x07064b50U;
     if ((entries == 0xFFFFU || at == 0xFFFFFFFFU) && locator) {
-        const std::uint64_t record = u64(end - kLocator + 8);
+        const std::size_t record = offset(u64(end - kLocator + 8));
         if (record + 56 > end || u32(record) != 0x06064b50U) {
             throw IoError("cannot finish the archive: its ZIP64 end record does not read");
         }
         entries = u64(record + 32);
-        at = u64(record + 48);
+        at = offset(u64(record + 48));
     }
     for (std::uint64_t entry = 0; entry < entries; ++entry) {
         if (at + 46 > end || u32(at) != 0x02014b50U) {

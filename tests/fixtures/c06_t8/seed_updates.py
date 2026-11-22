@@ -1,5 +1,6 @@
 """Compose exact seed updates ahead of immutable historical source comparisons."""
 
+import functools
 import hashlib
 import json
 import re
@@ -8,17 +9,22 @@ from pathlib import Path
 
 from tests.fixtures.c06_t8.variant_name_projection import restore_variant_name
 from tests.fixtures.path_keys import repository_key
-from tests.fixtures.stop_defaults import retention
+from tests.fixtures.stop_defaults import example_inputs, retention
 
 HERE = Path(__file__).parent
 ROOT = HERE.parents[2]
 
 
+@functools.cache
+def seed_update_rows():
+    return json.loads((HERE / 'seed-updates.json').read_text())['files']
+
+
 def previous_bytes(name, data):
     name = repository_key(name)
-    data = retention.previous_bytes(name, data)
+    data = example_inputs.composed_bytes(name, retention.previous_bytes(name, data))
     data = restore_variant_name(name, data)
-    row = json.loads((HERE / 'seed-updates.json').read_text())['files'].get(name)
+    row = seed_update_rows().get(name)
     if row is None:
         return data
     assert hashlib.sha256(data).hexdigest() == row['current_sha256'], (
@@ -60,7 +66,7 @@ def previous_bytes(name, data):
 
 def previous_content(data):
     digest = hashlib.sha256(data).hexdigest()
-    rows = json.loads((HERE / 'seed-updates.json').read_text())['files']
+    rows = seed_update_rows()
     variants = json.loads((HERE / 'variant-name-projection.json').read_text())['files']
     names = {name for name, row in rows.items() if row['current_sha256'] == digest}
     names.update(name for name, row in variants.items() if row['after_sha256'] == digest)

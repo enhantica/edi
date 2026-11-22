@@ -116,6 +116,12 @@ std::string display_text(std::string_view uid, double value, std::string_view va
 /// The same value as a display shows it, by the app's one rule for numbers: a decimal when 0.001 <= |x| < 1000, else
 /// three significant digits with a power of ten ("8.40×10⁻⁵"; "8.40e-5" without `display`).
 std::string shown_text(std::string_view uid, double value, std::string_view variant = {}, bool display = true);
+/// The one text every surface shows for a value the data leave undefined: an s.u. the fit cannot compute, an agreement
+/// factor over no merged group.
+inline constexpr std::string_view kUndefinedValue = "undefined";
+/// A statistic of item `uid` as a summary line shows it: the number by its dictionary format with the item's units
+/// ("1.23 %"), or kUndefinedValue when it has no finite value.
+std::string statistic_text(std::string_view uid, std::optional<double> value, std::string_view variant = {});
 /// A single crystal's reflection as its chart's hover reads it (edi ADR-0049): its Miller indices, the measured value
 /// with its s.u. by `su_rule` (alone, by its format, without one) and the calculated value by its format, each named by
 /// its dictionary label, in F² (`squared`) or F. A value that is not finite is left out.
@@ -168,6 +174,9 @@ struct SaveSpelling {
     std::vector<std::string> exact_cells;  ///< structure names
 };
 SaveSpelling save_spelling(const Project& project);
+/// Widget spelling validates the inputs' round trip only. Never reconstructs a calculated pattern;
+/// Save/Text/export keep save_spelling's full output-preservation validation.
+SaveSpelling input_spelling(const Project& project);
 /// Whether `spelling` writes `parameter` of `project` exactly.
 bool written_exactly(const SaveSpelling& spelling, const Project& project, const Parameter& parameter);
 

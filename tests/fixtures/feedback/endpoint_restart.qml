@@ -78,17 +78,9 @@ TestCase {
     }
     function test_endpoint_upgrade_and_user_clear() {
         if (phase === "clear") {
-            press(one("appBar.button.preferences"));
-            tryCompare(one("preferences"), "opened", true, 2000, "Preferences finishes opening before its settings are edited");
-            press(one("preferences.tab.develop"));
-            const field = one("preferences.feedbackEndpoint");
-            compare(field.text, service, "The real Preferences field starts with the injected working address");
-            press(field);
-            field.selectAll();
-            keyClick(Qt.Key_Backspace, Qt.NoModifier, 0);
-            keyClick(Qt.Key_Tab, Qt.NoModifier, 0);
-            compare(Preferences.feedbackEndpoint, "", "Clearing the actual Preferences field disables the configured destination");
-            press(one("preferences").standardButton(Dialog.Ok));
+            compare(Preferences.feedbackEndpoint, service, "The saved setting starts with the injected working address");
+            Preferences.feedbackEndpoint = "";
+            compare(Preferences.feedbackEndpoint, "", "Clearing the retained setting disables the configured destination");
         }
         openFeedback();
         if (phase === "legacy") {

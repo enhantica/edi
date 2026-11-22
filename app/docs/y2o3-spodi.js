@@ -106,13 +106,13 @@
             "reveal:" + group, "expand:" + group, "reveal:" + targets[0]];
         shot(id, page, description, actions, targets);
     }
-    shot("guide-project-actions", "project", "Open or save the current project",
+    shot("guide-project-actions", "project", "Create, load or save a project",
         ["appBar.tab.project", "sideBar.tab.basic", "reveal:group.getStarted", "expand:group.getStarted"],
-        ["project.open", "project.saveAs"]);
-    shot("guide-project-open", "project", "Choose a project folder or archive",
-        ["save-as:docs-saved-project", "project.open"], ["project.openChoice"]);
-    shot("guide-project-save", "project", "Choose a save format or save a copy",
-        ["key:Escape", "project.saveAs"], ["project.saveChoice"]);
+        ["project.create", "project.load", "project.saveAs"]);
+    shot("guide-project-open", "project", "Open a project folder or archive, or import one from another program",
+        ["save-as:docs-saved-project", "project.load"], ["project.load.menu"]);
+    shot("guide-project-save", "project", "Save as an EasyDiffraction folder or .zip, or export a copy",
+        ["key:Escape", "project.saveAs"], ["project.saveAs.menu"]);
     shot("guide-project-recent", "project", "Find recent projects",
         ["key:Escape", "reveal:group.recentProjects", "expand:group.recentProjects"], ["group.recentProjects"]);
     panel("guide-structure-symmetry", "structure", "basic", "group.space_group", "Choose the crystal symmetry and setting", ["spaceGroup.itNumber", "spaceGroup.nameHM"]);

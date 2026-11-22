@@ -181,3 +181,43 @@ MIGRATIONS.update({
     )
     for argument in arguments
 })
+
+
+# Retire the one-shot cut-over kit after public publication.
+# The original API mutation, pagination, snapshot and owner-checklist cases now
+# witness absence of the retired executables. Live content/SPDX/fork checks stay.
+PUBLIC_BOOTSTRAP = 'tests/integration/py/test_retired_public_bootstrap.py::'
+PUBLIC_BOOTSTRAP_REPLACEMENTS = [
+    PUBLIC_BOOTSTRAP + f'test_one_time_public_bootstrap_entrypoints_are_retired[{tool}]'
+    for tool in ('cutover.py', 'snapshot.py', 'spdx.py')
+]
+PUBLIC_BOOTSTRAP_INPUTS = (
+    'tests/integration/py/test_e04_t12_cut_configuration.py::test_e04_t12_check_only_cut_performs_no_mutation',
+    'tests/integration/py/test_e04_t12_cut_configuration.py::test_e04_t12_cut_reads_every_configuration_page[labels]',
+    'tests/integration/py/test_e04_t12_cut_configuration.py::test_e04_t12_cut_reads_every_configuration_page[pulls]',
+    'tests/integration/py/test_e04_t12_cut_configuration.py::test_e04_t12_cut_reads_every_configuration_page[rulesets]',
+    'tests/integration/py/test_e04_t12_cut_configuration.py::test_e04_t12_cut_refuses_unreadable_or_incomplete_listing[labels-malformed]',
+    'tests/integration/py/test_e04_t12_cut_configuration.py::test_e04_t12_cut_refuses_unreadable_or_incomplete_listing[labels-unreadable]',
+    'tests/integration/py/test_e04_t12_cut_configuration.py::test_e04_t12_cut_refuses_unreadable_or_incomplete_listing[pulls-malformed]',
+    'tests/integration/py/test_e04_t12_cut_configuration.py::test_e04_t12_cut_refuses_unreadable_or_incomplete_listing[pulls-unreadable]',
+    'tests/integration/py/test_e04_t12_cut_configuration.py::test_e04_t12_cut_refuses_unreadable_or_incomplete_listing[rulesets-malformed]',
+    'tests/integration/py/test_e04_t12_cut_configuration.py::test_e04_t12_cut_refuses_unreadable_or_incomplete_listing[rulesets-unreadable]',
+    'tests/integration/py/test_e04_t12_cut_configuration.py::test_e04_t12_cut_refuses_unreadable_or_incomplete_listing[runner-groups-short]',
+    'tests/integration/py/test_e04_t12_cut_configuration.py::test_e04_t12_cut_refuses_unreadable_or_incomplete_listing[runner-groups-unreadable]',
+    'tests/integration/py/test_e04_t12_cut_configuration.py::test_e04_t12_cut_refuses_unreadable_or_incomplete_listing[runner-groups-untotalled]',
+    'tests/integration/py/test_e04_t12_cut_configuration.py::test_e04_t12_environment_policy_matches_workflow_events[pull_request-False-refs/pull/17/merge]',
+    'tests/integration/py/test_e04_t12_cut_configuration.py::test_e04_t12_environment_policy_matches_workflow_events[pull_request-True-refs/pull/23/merge]',
+    'tests/integration/py/test_e04_t12_cut_configuration.py::test_e04_t12_environment_policy_matches_workflow_events[push-False-refs/heads/main]',
+    'tests/integration/py/test_e04_t12_cut_configuration.py::test_e04_t12_recreation_reconciles_existing_labels_and_reaches_all_grants[encoded]',
+    'tests/integration/py/test_e04_t12_cut_configuration.py::test_e04_t12_recreation_reconciles_existing_labels_and_reaches_all_grants[ordinary]',
+    'tests/system/py/test_e04_t12_public_release.py::test_cutover_checklist_covers_settings_and_owner_boundary',
+    'tests/system/py/test_e04_t12_public_release.py::test_cutover_resnapshots_newer_main_without_mutating_source',
+)
+MIGRATIONS.update(dict.fromkeys(PUBLIC_BOOTSTRAP_INPUTS, PUBLIC_BOOTSTRAP_REPLACEMENTS))
+
+MIGRATIONS[
+    'tests/integration/py/test_e04_t12_public_content.py::'
+    'test_e04_t12_transformed_snapshot_keeps_the_content_workflow_observer'
+] = [
+    'tests/system/py/test_public_content_workflows.py::test_current_public_workflows_keep_the_content_observer'
+]

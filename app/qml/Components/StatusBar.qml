@@ -40,7 +40,8 @@ EaElements.StatusBar {
     signal updateRequested
     readonly property real updateRoom: updateGroup.visible ? updateGroup.width + EaStyle.Sizes.fontPixelSize * 1.2 : 0
 
-    visible: DesktopUpdates.available || EaGlobals.Vars.appBarCurrentIndex !== 0 || AppState.analysisPageEnabled || assistantStatusNeeded || AppState.tutorialRunning
+    // Never on Home, in any case (owner, 2026-11-17): Home has its own Update available link.
+    visible: EaGlobals.Vars.appBarCurrentIndex !== 0
 
     // The items show their keys only when all of them fit with their keys in the bar's width; otherwise each
     // shows its icon and value (the owner, 2026-10-03). Measured from the items' own widths, so it holds for
@@ -89,7 +90,7 @@ EaElements.StatusBar {
         room: bar.items.indexOf(projectItem) < bar.roomFor
         keyIcon: "archive"
         keyText: Session.categoryTitle("metadata")
-        valueText: bar.project ? bar.project.name : qsTr("Undefined")
+        valueText: bar.project && !Session.untitled ? bar.project.name : qsTr("Undefined")
         ToolTip.text: qsTr("Current project")
     }
     StatusBarItem {

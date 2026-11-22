@@ -120,7 +120,7 @@ def assert_comparisons(root, evidence, row):
         reference['path'] == path.relative_to(root).as_posix()
         and sha256(previous_bytes(reference['path'], path.read_bytes())) == reference['sha256']
     ), 'Gate 3/5: authoring comparisons preserve the independent scientific reference bytes'
-    pins = json.loads(path.read_text())['quantities']
+    pins = json.loads(previous_bytes(reference['path'], path.read_bytes()))['quantities']
     rows = {item['quantity']: item for item in row['comparisons']}
     assert len(rows) == len(row['comparisons']) and rows.keys() == pins.keys(), (
         'Gate 3/5: authoring comparisons retain every reference and separate regression quantity'

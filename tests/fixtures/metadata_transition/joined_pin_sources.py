@@ -7,6 +7,7 @@ import zipfile
 from pathlib import Path
 
 from tests.fixtures.path_keys import repository_key
+from tests.fixtures.stop_defaults import retention
 
 HERE = Path(__file__).parent
 ROOT = HERE.resolve().parents[2]
@@ -16,6 +17,7 @@ AFTER = 'b2c6d9b1547ed6506d2bc36cae5f9a43b748895a'
 
 
 def previous_bytes(name, data):
+    data = retention.composed_bytes(name, data)
     name = repository_key(name)
     rows = json.loads((HERE / 'joined-pin-sources.json').read_text())['files']
     row = rows.get(name)

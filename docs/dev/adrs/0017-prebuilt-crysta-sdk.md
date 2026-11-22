@@ -157,3 +157,13 @@ package skip logic; install that environment frozen and run the same native CMak
 commands in it. Keep clean-environment isolation, Mac developer-tool preflight,
 source selection, targets, install prefix and app arguments unchanged. This does
 not qualify the local build as a tested SDK or change CI/release SDK selection.
+
+### Documentation native reuse (2026-11-19)
+
+The prior within-run `edi-native` transport also serves Docs site across runs. Documentation searches completed
+Tests and Desktop installers runs at its exact checked-out HEAD for a non-expired `edi-native-linux-64` archive.
+It never waits for a running producer. With no match it builds locally; API or validation failures refuse rather
+than admit unknown bytes. The optional producer run is explicit in the composite action and restore's expected
+identity; commit/tree, workspace, platform, locked Python ABI, qualified crysta SDK/library and every file digest
+still match independently. The SDK cache step stays. Notebook execution follows the validated restore/build
+without repeating core-build. A hit removes edi's native configure/compile/link work from documentation.

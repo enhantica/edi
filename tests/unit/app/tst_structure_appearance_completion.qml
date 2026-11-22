@@ -19,15 +19,6 @@ Item {
             visible: true
         }
     }
-    Component {
-        id: viewFactory
-        StructureView {
-            x: 0
-            width: 600
-            height: 900
-            shown: true
-        }
-    }
     TestCase {
         id: test
         name: "StructureAppearanceCompletion"
@@ -43,8 +34,6 @@ Item {
             Session.closeProject();
         }
         function retire() {
-            if (view)
-                view.destroy();
             if (page)
                 page.destroy();
             view = page = null;
@@ -52,36 +41,50 @@ Item {
         }
         function click(item) {
             verify(item !== null && item !== undefined && item.visible && item.enabled, "Appearance input reaches a real visible enabled control");
+            let morePopup = null;
+            if (item.objectName.startsWith("structure.toolbar.") && item.x < -1000) {
+                const original = item;
+                click(findChild(view, "structure.toolbar.more"));
+                morePopup = findChild(view, "structure.toolbar.more.popup");
+                tryCompare(morePopup, "opened", true, 1000, "Actual More input opens the hidden toolbar actions");
+                tryVerify(() => {
+                    item = Render.descendants(morePopup.contentItem).find(control => control.objectName === original.objectName + ".overflow" && control.visible && control.enabled);
+                    return item !== undefined;
+                }, 1000, "The production overflow popup exposes the requested toolbar action");
+            }
             Ui.scrollIntoView(Ui.target(item));
             verify(waitForPolish(surface), "Appearance input follows the completed real layout");
-            tryVerify(() => Ui.clickPoint(Ui.target(item)) !== null, 1000, "The real appearance control has an exposed pointer target after its actual tab transition");
+            tryVerify(() => Ui.clickPoint(Ui.target(item)) !== null, 1000, "The real appearance control has an exposed pointer target after its actual tab transition: " + item.objectName);
             const point = Ui.clickPoint(Ui.target(item));
             const globalPoint = Ui.target(item).mapToItem(surface, point.x, point.y);
             verify(globalPoint.x >= 0 && globalPoint.y >= 0 && globalPoint.x < surface.width && globalPoint.y < surface.height, "Actual appearance pointer input lies inside the real test window");
             mouseClick(Ui.target(item), point.x, point.y);
-            verify(waitForRendering(surface), "The actual appearance control renders after input");
+            verify(waitForPolish(surface), "The actual appearance control completes its layout after input");
+            if (morePopup && morePopup.visible) {
+                keyClick(Qt.Key_Escape);
+                tryCompare(morePopup, "visible", false, 1000, "Real Escape closes More before the next appearance action");
+            }
         }
-        function expand() {
+        function expand(name = "appearance") {
             click(findChild(page, "sideBar.tab.extras"));
-            const group = findChild(page, "group.appearance");
-            verify(group !== null && group.visible, "Structure Extra contains the actual Appearance group");
+            let group;
+            tryVerify(() => {
+                group = Ui.find(page, "group." + name, true);
+                return group !== null;
+            }, 1500, "Structure Extra exposes its current Appearance or Polyhedra group");
             if (group.collapsed)
                 click(group);
             tryVerify(() => !group.collapsed, 1500, "The real Appearance group reaches its expanded geometry");
+            tryVerify(() => !group.folding, 1500, "Sidebar input waits for the real group to finish folding");
             return group;
         }
         function bind(render = true) {
             page = pageFactory.createObject(surface);
             verify(page !== null && waitForPolish(page), "The appearance witness uses the production Structure page");
-            if (render) {
-                view = viewFactory.createObject(surface, {
-                    structure: Session.project.currentStructure,
-                    options: Session.project.structureViewOptions
-                });
-                verify(view !== null && waitForPolish(view), "The appearance witness creates the real Structure view");
-                tryVerify(() => view.has3D && view.current && view.atomCount > 0, 10000, "Appearance witnesses run the actual 3D renderer with real atoms");
-                verify(waitForRendering(view), "The actual 3D structure completes a frame before appearance input");
-            }
+            click(findChild(page, "mainArea.tab.structure"));
+            view = findChild(page, "structure.view");
+            tryVerify(() => view && view.has3D && view.current && view.atomCount > 0, 10000, "The production Structure page renders its own real main-view structure");
+            verify(waitForRendering(view), "The page's actual 3D structure completes a frame before appearance input");
             return expand();
         }
         function open(render = true) {
@@ -132,6 +135,7 @@ Item {
             return named(findChild(page, "group.appearance"), /polyhedr/i, item => typeof item.checked === "boolean" || item.popup !== undefined);
         }
         function setPoly(shown) {
+            expand("appearance");
             const control = polyToggle();
             if (typeof control.checked === "boolean") {
                 if (control.checked !== shown)
@@ -141,7 +145,7 @@ Item {
                 choose(control, shown ? /^(?:show|shown|on|yes|true)$/i : /^(?:hide|hidden|off|no|false)$/i);
         }
         function opacityControl() {
-            return named(findChild(page, "group.appearance"), /polyhedr.*opacity|opacity.*polyhedr/i, item => item.enabled);
+            return findChild(expand("polyhedra"), "structure.polyhedra.opacity");
         }
         function setOpacity(fraction) {
             const field = opacityControl();
@@ -149,22 +153,12 @@ Item {
             edit(field, percent ? fraction * 100 : fraction);
         }
         function colourControl() {
-            return named(findChild(page, "group.appearance"), /polyhedr.*colo[u]?r|colo[u]?r.*polyhedr/i, item => item.enabled);
+            return findChild(expand("polyhedra"), "structure.polyhedra.colour");
         }
         function setColour(value) {
             const control = colourControl();
-            const input = Render.descendants(control).find(item => typeof item.selectAll === "function" && !item.readOnly);
-            if (input !== undefined)
-                edit(input, value);
-            else {
-                click(control);
-                let dialogs;
-                tryVerify(() => {
-                    dialogs = SettingsProof.colourDialogs(page);
-                    return dialogs.length === 1;
-                }, 1500, "The real polyhedra colour control opens its actual platform chooser");
-                verify(SettingsProof.chooseColour(dialogs[0], value), "The actual platform colour chooser receives the external test colour");
-            }
+            choose(control, value === "atom" ? /atom/i : /grey/i);
+            tryCompare(Session.project.structureViewOptions, "polyhedraColour", value, 1000, "The actual colour selector commits the declared polyhedra colour mode");
             verify(waitForRendering(surface), "The actual polyhedra colour input reaches a rendered frame");
         }
         function picture() {
@@ -181,11 +175,18 @@ Item {
             return JSON.stringify(bytes);
         }
         function uiSnapshot() {
-            const toggle = polyToggle(), opacity = textInput(opacityControl()), colour = colourControl();
+            expand("appearance");
+            const toggle = findChild(page, "structure.appearance.polyhedra");
+            verify(toggle !== null, "Appearance retains the actual polyhedra state even when an unbonded legacy structure hides its toggle");
+            const opacity = textInput(opacityControl()), colour = colourControl();
             return JSON.stringify({
                 checked: typeof toggle.checked === "boolean" ? toggle.checked : toggle.currentText,
                 opacity: opacity.text,
-                colours: Render.descendants(colour).filter(item => item.visible && item.color !== undefined).map(item => String(item.color))
+                colour: colour.currentText,
+                centres: textInput(findChild(expand("polyhedra"), "structure.polyhedra.centres")).text,
+                corners: textInput(findChild(page, "structure.polyhedra.corners")).text,
+                distance: textInput(findChild(page, "structure.polyhedra.maxDistance")).text,
+                extent: findChild(page, "structure.polyhedra.extent").currentText
             });
         }
         function test_existing_toolbar_switches_have_the_same_full_extra_settings() {
@@ -231,6 +232,7 @@ Item {
             open();
             const toolbar = findChild(view, "structure.toolbar.atomView");
             verify(toolbar !== null && toolbar.visible && toolbar.enabled && toolbar.count > 1, "Atom view is a real toolbar combobox, alongside the existing drawn-Atoms choice");
+            expand("appearance");
             const extra = findChild(page, "structure.appearance.atomView");
             verify(extra !== null && extra.visible && extra.enabled, "Extra exposes the same atom-view setting as the toolbar");
             choose(toolbar, /ionic/i);
@@ -268,10 +270,10 @@ Item {
         function test_polyhedra_colour_and_opacity_affect_the_actual_3d_render() {
             open();
             setPoly(true);
-            setColour("#2468c8");
+            setColour("atom");
             setOpacity(.37);
             const blue = picture();
-            setColour("#c45a27");
+            setColour("grey");
             const warm = picture();
             verify(warm !== blue, "The real colour chooser changes rendered polyhedra, beyond the sidebar and toolbar");
             setOpacity(.63);
@@ -289,8 +291,13 @@ Item {
             open(false);
             projectA = root;
             setPoly(true);
-            setColour("#2468c8");
+            setColour("grey");
             setOpacity(.37);
+            const poly = expand("polyhedra");
+            edit(findChild(poly, "structure.polyhedra.centres"), "Fe");
+            edit(findChild(poly, "structure.polyhedra.corners"), "O");
+            edit(findChild(poly, "structure.polyhedra.maxDistance"), 1.7);
+            choose(findChild(poly, "structure.polyhedra.extent"), /complete/i);
             const selected = uiSnapshot();
             verify(selected !== defaults, "The explicit polyhedra appearance differs from the other project's observed defaults");
             verify(Session.save(), "The actual session saves the explicit polyhedra appearance");

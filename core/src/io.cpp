@@ -8,6 +8,8 @@
 // than a parity to prove.
 
 #include "edi/io.hpp"
+
+#include "edi/project_import.hpp"
 #include "utc_time.hpp"
 #include <type_traits>
 #include "edi/project_archive.hpp"
@@ -84,6 +86,8 @@ struct Loop {
     const std::vector<std::vector<std::string>> rows;
     // The (row, column) cells given as a bare `?` or `.`, which a decoded cell cannot tell from a quoted one.
     std::set<std::pair<std::size_t, std::size_t>> bare_markers;
+    // The cells given as a quoted empty text, with their quote: supplied, unlike an absent cell, as crysta keeps them.
+    std::map<std::pair<std::size_t, std::size_t>, char> quoted_empty;
     Loop(std::vector<std::string> tags_in, std::vector<std::vector<std::string>> rows_in,
          const std::string& where)
         : tags(std::move(tags_in)), rows(std::move(rows_in)) {
@@ -269,11 +273,18 @@ bool is_space(char character) {
     return character == ' ' || character == '\t' || character == '\n' || character == '\r';
 }
 
+// "CIF line N: " for the line holding text[index], so a refusal says where the file went wrong.
+std::string cif_line_prefix(const std::string& text, std::size_t index) {
+    const auto end = text.begin() + static_cast<std::ptrdiff_t>(std::min(index, text.size()));
+    return "CIF line " + std::to_string(1 + std::count(text.begin(), end, '\n')) + ": ";
+}
+
 // ADR-0016: a token is decoded exactly once, here, and remembers whether it was delimited — a
 // quoted `'data_x'`, `'_x'` or `'loop_'` is a VALUE, never a control word.
 struct Token {
     std::string text;
     bool quoted = false;
+    std::size_t offset = 0;  // where the token starts in the text, for a refusal's line
 };
 
 // A CIF2 list value, `[a b [c d]]`, read from its opening `[` at `index` to its matching `]` as one token: brackets
@@ -314,11 +325,12 @@ Token list_token(const std::string& text, std::size_t& index, bool cif2, const s
                 fail_syntax(where, "list-runs-into-value",
                             "a list value runs into '" + text.substr(index, 20) + "' after its closing ]");
             }
-            return {text.substr(begin, index - begin), false};
+            return {text.substr(begin, index - begin), false, begin};
         }
         ++index;
     }
-    fail_syntax(where, "unterminated-list", "a list value opened with [ does not close");
+    fail_syntax(where, "unterminated-list",
+                cif_line_prefix(text, begin) + "a list value opened with [ does not close");
 }
 
 std::vector<Token> tokenize(const std::string& text, const std::string& where) {
@@ -332,6 +344,7 @@ std::vector<Token> tokenize(const std::string& text, const std::string& where) {
         // the next line that begins with `;`. Consumed as a single token so published-CIF prose
         // (author lists, section titles with `~2~`/`^-^` markup) never leaks as stray tokens.
         if (character == ';' && (index == 0 || text[index - 1] == '\n')) {
+            const std::size_t opened = index;
             ++index;  // opening ';'
             std::string token;
             bool closed = false;
@@ -348,9 +361,10 @@ std::vector<Token> tokenize(const std::string& text, const std::string& where) {
                 token += text[index++];
             }
             if (!closed) {
-                fail_syntax(where, "unterminated-text-field", "unterminated ; text field");
+                fail_syntax(where, "unterminated-text-field",
+                            cif_line_prefix(text, opened) + "unterminated ; text field");
             }
-            tokens.push_back({token, true});
+            tokens.push_back({token, true, opened});
             continue;
         }
         if (is_space(character)) {
@@ -365,6 +379,7 @@ std::vector<Token> tokenize(const std::string& text, const std::string& where) {
         }
         if (character == '\'' || character == '"') {  // quoted string
             const char quote = character;
+            const std::size_t opened = index;
             ++index;
             std::string token;
             bool closed = false;
@@ -378,9 +393,9 @@ std::vector<Token> tokenize(const std::string& text, const std::string& where) {
                 token += text[index++];
             }
             if (!closed) {
-                fail_syntax(where, "unterminated-string", "unterminated quoted string");
+                fail_syntax(where, "unterminated-string", cif_line_prefix(text, opened) + "unterminated quoted string");
             }
-            tokens.push_back({token, true});
+            tokens.push_back({token, true, opened});
             continue;
         }
         if (character == '[') {
@@ -388,10 +403,11 @@ std::vector<Token> tokenize(const std::string& text, const std::string& where) {
             continue;
         }
         std::string token;  // bare token
+        const std::size_t opened = index;
         while (index < size && !is_space(text[index])) {
             token += text[index++];
         }
-        tokens.push_back({token, false});
+        tokens.push_back({token, false, opened});
     }
     return tokens;
 }
@@ -486,14 +502,20 @@ Block parse_block(const std::string& text, const std::string& where, bool requir
             }
             const std::size_t columns = tags.size();
             std::set<std::pair<std::size_t, std::size_t>> bare;
+            std::map<std::pair<std::size_t, std::size_t>, char> quoted_empty;
             while (index < size && !is_control(tokens[index])) {
                 std::vector<std::string> row;
                 for (std::size_t column = 0; column < columns; ++column) {
                     if (index >= size || is_control(tokens[index])) {
-                        fail_syntax(where, "truncated-loop-row", "truncated loop row for " + tags[0]);
+                        const std::size_t at = index < size ? tokens[index].offset : text.size();
+                        fail_syntax(where, "truncated-loop-row",
+                                    cif_line_prefix(text, at) + "truncated loop row for " + tags[0]);
                     }
                     if (is_bare_marker(tokens[index])) {
                         bare.emplace(rows.size(), column);
+                    } else if (tokens[index].quoted && tokens[index].text.empty() &&
+                               (text[tokens[index].offset] == '\'' || text[tokens[index].offset] == '"')) {
+                        quoted_empty.emplace(std::pair{rows.size(), column}, text[tokens[index].offset]);
                     }
                     row.push_back(tokens[index].text);
                     ++index;
@@ -502,9 +524,11 @@ Block parse_block(const std::string& text, const std::string& where, bool requir
             }
             block.loops.emplace_back(std::move(tags), std::move(rows), where);
             block.loops.back().bare_markers = std::move(bare);
+            block.loops.back().quoted_empty = std::move(quoted_empty);
         } else if (is_tag(token)) {
             if (index + 1 >= size || is_control(tokens[index + 1])) {
-                fail_syntax(where, "tag-without-value", "tag " + token.text + " has no value (truncated)");
+                fail_syntax(where, "tag-without-value",
+                            cif_line_prefix(text, token.offset) + "tag " + token.text + " has no value (truncated)");
             }
             const std::string tag = current(token.text, tokens[index + 1].text);
             if (is_bare_marker(tokens[index + 1])) {
@@ -513,7 +537,8 @@ Block parse_block(const std::string& text, const std::string& where, bool requir
             block.items.emplace_back(tag, tokens[index + 1].text);
             index += 2;
         } else {
-            fail_syntax(where, "unexpected-token", "unexpected token '" + token.text + "'");
+            fail_syntax(where, "unexpected-token",
+                        cif_line_prefix(text, token.offset) + "unexpected token '" + token.text + "'");
         }
     }
     if (require_data && !have_data) {
@@ -897,6 +922,13 @@ void read_magnetic(const Block& block, Structure& structure, const std::string& 
                        text("_parent_space_group.child_transform_Pp_abc"),
                        text("_parent_space_group.reference_setting"),
                        text("_parent_space_group.derived")};
+    // The retired flag is not kept, but a supplied one is still read whole, as the CIF readers read it: anything but
+    // true or false refuses, a quoted empty value included (only a bare ? or . gives no flag).
+    if (const std::string* derived = block.find("_parent_space_group.derived");
+        derived != nullptr && !block.bare_markers.contains("_parent_space_group.derived") && *derived != "true" &&
+        *derived != "false") {
+        fail_domain(where, "malformed-parent-derived", "_parent_space_group.derived '" + *derived + "' is neither true nor false");
+    }
     const auto id_text = [&](const char* id_tag, const char* text_tag) {
         std::vector<std::pair<std::string, std::string>> rows;
         if (const Loop* loop = block.loop_with(id_tag)) {
@@ -921,6 +953,56 @@ void read_magnetic(const Block& block, Structure& structure, const std::string& 
             magnetic.transforms.push_back({key(*loop, row, "_space_group_magn_transforms.id"),
                                            {cell("_space_group_magn_transforms.Pp_abc"),
                                             cell("_space_group_magn_transforms.source")}});
+        }
+        if (std::count_if(magnetic.transforms.begin(), magnetic.transforms.end(),
+                          [](const auto& row) { return row.second.source == "BNS"; }) > 1) {
+            fail_domain(where, "duplicate-bns-transform", "_space_group_magn_transforms gives more than one BNS row");
+        }
+    }
+    // The <jn> coefficients a file gives per atom type, held as written; crysta checks that each is a number.
+    const Loop* radial_loop = nullptr;
+    for (const Loop& candidate : block.loops) {
+        if (std::none_of(candidate.tags.begin(), candidate.tags.end(),
+                         [](const std::string& tag) { return tag.starts_with("_atom_type_scat."); })) continue;
+        if (radial_loop != nullptr)
+            fail_domain(where, "duplicate-coefficient-loop", "_atom_type_scat: coefficients must be in one loop");
+        if (candidate.column("_atom_type_scat.symbol") < 0)
+            fail_domain(where, "absent-key", "_atom_type_scat.symbol: every coefficient row needs an atom-type key");
+        radial_loop = &candidate;
+    }
+    if (const Loop* loop = radial_loop) {
+        for (const auto& row : loop->rows) {
+            MagneticRadialCoefficients coefficients;
+            for (std::size_t index = 0; index < coefficients.values.size(); ++index) {
+                const std::string tag = "_atom_type_scat.neutron_magnetic_j" + std::to_string(2 * (index / 8)) + "_" +
+                                        kMagneticRadialItems[index % 8];
+                const std::string value = given(*loop, row, tag.c_str());
+                coefficients.values[index] = value.empty() ? value : representable(value, tag.c_str());
+            }
+            const char* const source_tag = "_atom_type_scat.neutron_magnetic_source";
+            const std::string source = given(*loop, row, source_tag);
+            coefficients.source = source.empty() ? source : representable(source, source_tag);
+            // A quoted empty source is supplied text: held as its quoted token, as crysta holds and writes it.
+            if (const int column = loop->column(source_tag); column >= 0) {
+                const auto quoted = loop->quoted_empty.find(
+                    {static_cast<std::size_t>(&row - loop->rows.data()), static_cast<std::size_t>(column)});
+                if (quoted != loop->quoted_empty.end()) coefficients.source = std::string(2, quoted->second);
+            }
+            magnetic.radial_coefficients.emplace_back(key(*loop, row, "_atom_type_scat.symbol"), std::move(coefficients));
+        }
+    }
+    // The dictionary's scalar spelling of the transform to the BNS standard: kept as the loop's BNS row, which is how
+    // the structure is written, unless the loop already gives one.
+    if (const std::string scalar = text("_space_group_magn.transform_BNS_Pp_abc"); !scalar.empty()) {
+        const bool listed = std::any_of(magnetic.transforms.begin(), magnetic.transforms.end(),
+                                        [](const auto& row) { return row.second.source == "BNS"; });
+        if (!listed) {
+            std::string id = "1";
+            for (int next = 2; std::any_of(magnetic.transforms.begin(), magnetic.transforms.end(),
+                                           [&id](const auto& row) { return row.first == id; });
+                 ++next)
+                id = std::to_string(next);
+            magnetic.transforms.push_back({id, {scalar, "BNS"}});
         }
     }
     // The `_iso_*` declarations, kept as crysta keeps them: its reading of the same text, so the order and every
@@ -1235,16 +1317,29 @@ Structure structure_from_block(const Block& block, const std::string& where) {
                         "isotropic type '" + site->adp_type.value() + "'");
         }
     }
-    // An anisotropic site without a tensor row gets the tensor of its isotropic value, and every tensor loads as
-    // its site symmetry ties it, with adp_iso its equivalent (ADR 0027).
-    add_missing_aniso_rows(structure);
-    complete_atom_site_aniso(structure);
     read_magnetic(block, structure, where);
+    // A Magnetic structure is written without `_space_group` (edi ADR-0078): its family table setting is found again
+    // from its operators, else its symmetry comes from them alone. Older files also declare `_space_group`: when a
+    // BNS number is given, resolve the family the same way, before applying any displacement or coordinate ties.
     if (group_omitted) {
         structure.magnetic.modify([](MagneticDescription& magnetic) { magnetic.space_group_declared = false; });
+    } else {
+        identify_declared_magnetic_family(structure);
     }
+    if (group_omitted || !structure.magnetic->group.number_bns.empty()) {
+        adopt_magnetic_family_setting(structure);
+    }
+    // A BNS transform that parses names the setting: it must map the BNS standard onto the operations.
+    if (!bns_transform_consistent(structure.magnetic)) {
+        fail_domain(where, "inconsistent-bns-transform",
+                    "the BNS transform does not map the BNS standard setting onto the magnetic operations");
+    }
+    // An anisotropic site without a tensor row gets the tensor of its isotropic value, and every tensor loads as
+    // its resolved site symmetry ties it, with adp_iso its equivalent (ADR 0027).
+    add_missing_aniso_rows(structure);
+    complete_atom_site_aniso(structure);
     // crysta's one acceptance rule for a magnetic structure, as its own load applies it.
-    if (!structure.magnetic->operations.empty()) {
+    if (!structure.magnetic->operations.empty() || !structure.magnetic->radial_coefficients.empty()) {
         try {
             check_magnetic_acceptance(structure);
             complete_atom_site_moments(structure);  // tied components as crysta's load sets them
@@ -1929,6 +2024,39 @@ void read_background_estimate(const Block& block, ExperimentBase& experiment, co
 
 // The `_linked_structure` loop of a powder or a single crystal: every row a linked structure with its scale and an
 // optional enabled flag (absent = taking part).
+// A name its saved file can carry (persistable_name): subscript and superscript digits become digits (Fe₂P₂O becomes
+// Fe2P2O; the code points are written as numbers, as none of them is shown) and every other character outside ASCII letters, digits, `_` and `-` becomes `_`. A name that still cannot
+// be saved, such as a reserved device name, is returned as it was, for the save to refuse by name.
+std::string savable_name(const std::string& name) {
+    if (persistable_name(name)) {
+        return name;
+    }
+    std::string result;
+    for (std::size_t index = 0; index < name.size();) {
+        const auto lead = static_cast<unsigned char>(name[index]);
+        const std::size_t length = lead < 0x80 ? 1 : lead >= 0xf0 ? 4 : lead >= 0xe0 ? 3 : lead >= 0xc0 ? 2 : 1;
+        char32_t code = length == 1 ? lead : lead & (0x7f >> length);
+        for (std::size_t next = 1; next < length && index + next < name.size(); ++next) {
+            code = (code << 6) | (static_cast<unsigned char>(name[index + next]) & 0x3f);
+        }
+        index += length;
+        if (code >= char32_t{0x2080} && code <= char32_t{0x2089}) {
+            result += static_cast<char>('0' + (code - char32_t{0x2080}));
+        } else if (code == char32_t{0x2070} || (code >= char32_t{0x2074} && code <= char32_t{0x2079})) {
+            result += static_cast<char>('0' + (code - char32_t{0x2070}));
+        } else if (code == char32_t{0x00b9} || code == char32_t{0x00b2} || code == char32_t{0x00b3}) {
+            result += code == char32_t{0x00b9} ? '1' : code == char32_t{0x00b2} ? '2' : '3';
+        } else if ((code >= 'a' && code <= 'z') || (code >= 'A' && code <= 'Z') || (code >= '0' && code <= '9') ||
+                   code == '_' || code == '-') {
+            result += static_cast<char>(code);
+        } else {
+            result += '_';
+        }
+    }
+    return persistable_name(result) ? result : name;
+}
+
+// A structure the app reads from a file can always be saved under its name (savable_name); the rename is reported.
 std::vector<std::shared_ptr<LinkedStructure>> read_linked_structures(const Block& block, const std::string& where) {
     const Loop* linked = block.loop_with("_linked_structure.structure_id");
     std::vector<std::shared_ptr<LinkedStructure>> links;
@@ -3434,9 +3562,11 @@ static Block edi_text_block(const std::string& text, const std::string& where, b
     return parse_block(text, where, true, true);
 }
 
+static Structure named_for_saving(Structure structure, const WarningSink& on_warning);
+
 Structure structure_from_edi_text(const std::string& text, const std::string& where,
                                   const WarningSink& on_warning) {
-    return structure_from_block(edi_text_block(text, where, false, on_warning), where);
+    return named_for_saving(structure_from_block(edi_text_block(text, where, false, on_warning), where), on_warning);
 }
 
 BraggPdExperiment experiment_from_edi_text(const std::string& text, const std::string& where,
@@ -3498,7 +3628,7 @@ BraggPdExperiment simulation_experiment(const std::string& name, const Experimen
         text += "_instrument.calib_twotheta_offset 0.\n\n"
                 "_peak.type cwl-tch-pseudo-voigt\n"
                 "_peak.broad_gauss_u 0.1\n_peak.broad_gauss_v -0.1\n_peak.broad_gauss_w 0.1\n"
-                "_peak.broad_lorentz_x 0.\n_peak.broad_lorentz_y 0.1\n_peak.cutoff_fwhm 8.\n\n"
+                "_peak.broad_lorentz_x 0.\n_peak.broad_lorentz_y 0.\n_peak.cutoff_fwhm 8.\n\n"
                 "_data_range.two_theta_min 10.\n_data_range.two_theta_max 150.\n"
                 "_data_range.two_theta_step 0.05\n";
     } else {
@@ -3540,10 +3670,66 @@ bool holds_experiment(const Project& project, const std::string& name) {
 
 }  // namespace
 
+static Structure named_for_saving(Structure structure, const WarningSink& on_warning) {
+    if (const std::string name = savable_name(structure.name.value()); name != structure.name.value()) {
+        if (on_warning) {
+            on_warning("the structure '" + structure.name.value() + "' is named '" + name +
+                       "' so it can be saved: a saved name is ASCII letters, digits, '_' and '-'");
+        }
+        structure.name = name;
+    }
+    return structure;
+}
+
+// An experiment imported on its own names its structures as their files do; an imported structure takes its savable
+// name (named_for_saving), so the experiment's links and texture rows take the same one.
+static void link_savable_names(BraggPdExperiment& experiment) {
+    for (const auto& link : experiment.linked_structures) {
+        link->structure_id = savable_name(link->structure_id.value());
+    }
+    for (const auto& row : experiment.preferred_orientation) {
+        row->structure_id = savable_name(row->structure_id.value());
+    }
+}
+
+// Each structure of a loaded project whose name a save cannot write takes its savable name through the model's own
+// rename, so its links, texture rows, phase results, aliases, correlations and fit parameter names follow it. Two
+// structures that would share a name are refused, naming both.
+static void rename_for_saving(Project& project, const WarningSink& on_warning) {
+    for (const auto& structure : project.structures) {
+        const std::string from = structure->name.value();
+        const std::string to = savable_name(from);
+        if (to == from) {
+            continue;
+        }
+        for (const auto& other : project.structures) {
+            if (other != structure &&
+                KeyTraits<Structure>::canonical(other->name.value()) == KeyTraits<Structure>::canonical(to)) {
+                std::string message = "the structure '" + from;
+                message.append("' would be saved as '").append(to).append("', which another structure of the project is already named");
+                throw IoError(message);
+            }
+        }
+        structure->name = to;
+        if (on_warning) {
+            std::string message = "the structure '" + from;
+            message.append("' is named '").append(to).append("' so it can be saved: a saved name is ASCII letters, digits, '_' and '-'");
+            on_warning(message);
+        }
+    }
+}
+
+// The structure as its file names it; a project folder renames it after loading, so every reference follows.
+static Structure load_structure_as_named(const std::string& path, const WarningSink& on_warning) {
+    return reading_file(path, [&] {
+        const Block block = edi_text_block(read_file(path), path, false, on_warning);
+        require_edi_schema(block, path);
+        return structure_from_block(block, path);
+    });
+}
+
 Structure load_structure_file(const std::string& path, const WarningSink& on_warning) {
-    const Block block = edi_text_block(read_file(path), path, false, on_warning);
-    require_edi_schema(block, path);
-    return structure_from_block(block, path);
+    return named_for_saving(load_structure_as_named(path, on_warning), on_warning);
 }
 
 Structure load_structure_edi_file(const std::string& path) { return load_structure_file(path); }
@@ -3552,8 +3738,14 @@ Structure load_structure_cif_file(const std::string& path) { return load_structu
 
 BraggPdExperiment load_experiment_edi_file(const std::string& path) { return load_experiment_file(path); }
 
+static BraggPdExperiment load_experiment_file_unrecorded(const std::string& path, const WarningSink& on_warning);
+
 
 BraggPdExperiment load_experiment_file(const std::string& path, const WarningSink& on_warning) {
+    return reading_file(path, [&] { return load_experiment_file_unrecorded(path, on_warning); });
+}
+
+static BraggPdExperiment load_experiment_file_unrecorded(const std::string& path, const WarningSink& on_warning) {
     const std::string text = read_file(path);
     const Block block = edi_text_block(text, path, true, on_warning);
     require_edi_schema(block, path);
@@ -3623,6 +3815,7 @@ std::vector<BraggPdExperiment> load_experiment_edi_files(const Project& project,
     }
     for (const std::string& path : paths) {
         BraggPdExperiment experiment = load_experiment_file(path, on_warning);
+        link_savable_names(experiment);
         require_held_links(project, experiment, path + ": ");
         if (!names.insert(KeyTraits<BraggPdExperiment>::canonical(experiment.name)).second) {
             throw IoError(path + ": an experiment named '" +
@@ -3828,6 +4021,9 @@ class SourcedWarningsScope {
 }  // namespace
 
 // `data_root`, when given, is where a scan's data files are, for a project read from a scratch save of one.
+static Structure load_structure_as_named(const std::string& path, const WarningSink& on_warning);
+static void link_savable_names(BraggPdExperiment& experiment);
+static void rename_for_saving(Project& project, const WarningSink& on_warning);
 static Project load_project_folder(const std::string& directory, const WarningSink& on_warning,
                                    ProjectLoadPolicy policy=ProjectLoadPolicy::Complete, bool assistant_result=false,
                                    const std::string& data_root = {}) {
@@ -3881,7 +4077,7 @@ static Project load_project_folder(const std::string& directory, const WarningSi
     for (const std::string& path : structure_files) {
         const fs::path file(path);
         source = relative_to_root(path);
-        Structure structure = load_structure_file(file.string(), file_warning);
+        Structure structure = load_structure_as_named(file.string(), file_warning);
         structure_source[datablock_key(structure.name, "structure")] = source;
         if (std::any_of(project.structures.begin(), project.structures.end(),
                         [&](const std::shared_ptr<Structure>& held) {
@@ -3905,13 +4101,16 @@ static Project load_project_folder(const std::string& directory, const WarningSi
     for (const std::string& path : experiment_files) {
         const fs::path file(path);
         source = relative_to_root(path);
-        const Block experiment_block = edi_text_block(read_file(file.string()), file.string(), true, file_warning);
+        const Block experiment_block = reading_file(file.string(), [&] {
+            return edi_text_block(read_file(file.string()), file.string(), true, file_warning);
+        });
         if (const std::string* calculator = experiment_block.find("_calculator.type")) {
             if (*calculator != "crysta" && warned_calculators.insert(*calculator).second) {
                 warn("unsupported _calculator.type \"" + *calculator + "\" - using crysta");
             }
         }
-        BraggPdExperiment experiment = experiment_from_block(experiment_block, file.string(), assistant_result);
+        BraggPdExperiment experiment = reading_file(
+            file.string(), [&] { return experiment_from_block(experiment_block, file.string(), assistant_result); });
         // Older files carry FullProf's second absorption coefficient, which has no effect on the
         // Hewat cylinder and is no longer kept. A nonzero value is said once; it is not saved again.
         if (const std::string* abscor2 = experiment_block.find("_absorption.abscor2")) {
@@ -3976,6 +4175,7 @@ static Project load_project_folder(const std::string& directory, const WarningSi
     if (fs::is_regular_file(report_settings)) {
         source = "reports/report.edi";
         const std::string where = report_settings.string();
+        const ReadingScope reading(where);  // its reading and every check of its values
         const Block block = parse_block(read_file(where), where, false);
         try {
             for (const auto& [tag, value] : block.items) {
@@ -4004,8 +4204,8 @@ static Project load_project_folder(const std::string& directory, const WarningSi
     const fs::path analysis_file = root / "analysis" / "analysis.edi";
     source = "analysis/analysis.edi";
     if (fs::is_regular_file(analysis_file)) {
-        const Block block =
-            parse_block(read_file(analysis_file.string()), analysis_file.string(), false);
+        const ReadingScope reading(analysis_file.string());  // its reading and every check of its values
+        const Block block = parse_block(read_file(analysis_file.string()), analysis_file.string(), false);
         const std::string* mode = block.find("_fitting_mode.type");
         if (assistant_result && (block.find("_sequential_fit.data_dir") || (mode && *mode == "sequential"))) {
             throw IoError("assistant result external scan declarations are unsupported");
@@ -4212,7 +4412,7 @@ static Project load_project_folder(const std::string& directory, const WarningSi
                                                  analysis_file.string());
                 member.file_pattern = loop_cell(*members, row, "_sequential_fit_experiment.file_pattern",
                                                 analysis_file.string());
-                project.sequential_fit.experiments.push_back(std::move(member));
+                project.sequential_fit.experiments.push_back(member);
             }
         }
         if (const Loop* sets = block.loop_with("_experiment_set.id")) {
@@ -4221,7 +4421,7 @@ static Project load_project_folder(const std::string& directory, const WarningSi
                 set.id = loop_cell(*sets, row, "_experiment_set.id", analysis_file.string());
                 set.template_experiment_id =
                     loop_cell(*sets, row, "_experiment_set.template_experiment_id", analysis_file.string());
-                project.experiment_sets.push_back(std::move(set));
+                project.experiment_sets.push_back(set);
             }
         }
         if (const Loop* members = block.loop_with("_experiment_set_member.experiment_id")) {
@@ -4230,7 +4430,7 @@ static Project load_project_folder(const std::string& directory, const WarningSi
                 member.experiment_id =
                     loop_cell(*members, row, "_experiment_set_member.experiment_id", analysis_file.string());
                 member.set_id = loop_cell(*members, row, "_experiment_set_member.set_id", analysis_file.string());
-                project.experiment_set_members.push_back(std::move(member));
+                project.experiment_set_members.push_back(member);
             }
         }
         if (const Loop* aliases = block.loop_with("_alias.id")) {
@@ -4577,6 +4777,7 @@ static Project load_project_folder(const std::string& directory, const WarningSi
     }
     if (fs::exists(record_link)) {
         const std::string record_where = record_file.string();
+        const ReadingScope reading(record_where);  // its reading and every check of its values
         std::error_code record_status_error;
         const fs::file_status record_status = fs::status(record_file, record_status_error);
         if (record_status_error && record_status.type() != fs::file_type::not_found) {
@@ -4866,9 +5067,13 @@ static Project load_project_folder(const std::string& directory, const WarningSi
     }
     // The declared and symmetry relations, as crysta reads them: refused when they cannot hold,
     // every parameter marked, a dependent's free flag cleared with a warning (not for the bracket of a
-    // dependent saved with its s.u.). No one file is their source.
+    // dependent saved with its s.u.). No one file is their warnings' source.
     source.clear();
-    refresh_relations(project, warn, true);
+    {
+        // The declared relations come from the analysis file: a refusal of one is about that file.
+        const ReadingScope reading(fs::is_regular_file(analysis_file) ? analysis_file.string() : std::string());
+        refresh_relations(project, warn, true);
+    }
     // A held fit's dependents take their s.u. from their relations and the seeds (crysta's rule).
     restore_dependent_uncertainties(project);
     // A structure whose magnetic operators form no table setting takes no Wyckoff letter; each one a
@@ -4894,6 +5099,7 @@ static Project load_project_folder(const std::string& directory, const WarningSi
     for (const std::string& note : clear_unfittable_free(project)) {
         warn("crysta.domain.unfittable_free_ignored: " + note);
     }
+    rename_for_saving(project, on_warning);
     return project;
 }
 
@@ -4928,6 +5134,21 @@ Project load_project(const std::string& path, ProjectLoadMode mode, const Warnin
     // edi ADR-0052: a project opens from its folder, its project.edi or a .zip of the folder.
     std::error_code error;
     const fs::path given(path);
+    // Another program's project file goes through its importer (ADR-0098).
+    if (is_imported_project_path(path)) {
+        // The conversion's notes reach the same sinks as a folder's warnings: the sourced one, naming the file.
+        const auto file = given.filename().string();
+        const WarningSink notes = [&on_warning, &file](const std::string& message) {
+            if (sourced_warnings != nullptr) {
+                (*sourced_warnings)(file, message);
+            } else if (on_warning) {
+                on_warning(message);
+            } else {
+                std::cerr << "Warning: " << message << "\n";
+            }
+        };
+        return import_project(path, notes);
+    }
     if (given.filename() == "project.edi" && fs::is_regular_file(given, error)) {
         const fs::path folder = given.has_parent_path() ? given.parent_path() : fs::path(".");
         return load_project_folder(folder.string(), on_warning,policy);
@@ -5843,3 +6064,30 @@ std::vector<std::pair<std::string, std::string>> project_edi_files(const Project
     return files;
 }
 }  // namespace edi
+
+edi::EdiTextKind edi::edi_text_kind(const std::string& text) {
+    std::vector<Token> tokens;
+    try {
+        tokens = tokenize(text, "<text>");
+    } catch (const std::exception&) {
+        return EdiTextKind::Other;
+    }
+    bool cell = false;
+    for (const Token& token : tokens) {
+        if (!is_tag(token)) {
+            continue;
+        }
+        const std::string category = detail::one_row_category(token.text);
+        if (category == "_experiment_type") {
+            return EdiTextKind::Experiment;
+        }
+        cell = cell || category == "_cell";
+    }
+    return cell ? EdiTextKind::Structure : EdiTextKind::Other;
+}
+
+// The file whose reading failed most recently on this thread (edi::reading_file).
+std::string& edi::detail::failed_file() {
+    thread_local std::string file;
+    return file;
+}

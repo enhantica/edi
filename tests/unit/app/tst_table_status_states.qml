@@ -31,6 +31,16 @@ Item {
         }
     }
     Component {
+        id: componentProjection
+        Item {
+            property var table: ({
+                    componentNames: ["alpha", "beta", "gamma"]
+                })
+            property var row
+            readonly property var values: ApplicationInfo.nativeListProjection(2)
+        }
+    }
+    Component {
         id: recentGroup
         RecentProjectsGroup {
             width: 950
@@ -98,6 +108,7 @@ Item {
             }
         }
         function test_calculation_states_update_the_existing_cell() {
+            tryVerify(() => Session.project !== null, 5000, "The requested asynchronous example becomes the active project");
             supplied.append({
                 x: 12,
                 intensityMeas: 8,
@@ -121,6 +132,29 @@ Item {
             compare(Session.project.structures.count, declaredPhaseCount, "The independently named input declares one structure");
             compare(table.componentNames.length, declaredPhaseCount, "Each declared structure has its appended component column");
             compare(cells.length, baseColumnCount + declaredPhaseCount, "The measured row retains all base columns and its declared structure component");
+            const projection = createTemporaryObject(componentProjection, surface, {
+                row: {
+                    model: {
+                        componentIntensities: [1.25, 9.5, 16.75]
+                    }
+                }
+            });
+            compare(projection.values, [1.25, 9.5, 16.75], "The native projection preserves the independent intensities in header order");
+            projection.row = {
+                model: {
+                    componentIntensities: [1.25, 9.5]
+                }
+            };
+            compare(projection.values.slice(0, 2), [1.25, 9.5], "A partial curve still displays the values for its first two headers");
+            compare(projection.values.length, 3, "A partial curve retains the slot for every header");
+            verify(Number.isNaN(projection.values[2]), "The missing third intensity holds an empty-cell sentinel");
+            projection.row = {
+                model: {}
+            };
+            compare(projection.values.length, 3, "An absent curve still holds all three column slots");
+            verify(projection.values.every(value => Number.isNaN(value)), "Every unavailable intensity uses the empty-cell sentinel");
+            compare(group.shown("pd_calc.component_intensities_net", NaN), "", "The actual measured-table display bridge renders the missing sentinel as blank");
+            compare(group.shown("pd_calc.component_intensities_net", 1.375), "1.375", "The actual measured-table display bridge renders a nontrivial contribution");
             const cell = cells[8];
             const states = [
                 {

@@ -151,6 +151,7 @@ qt_add_qml_module(edi_app_module
         src/report_pdf.hpp src/report_pdf.cpp
         src/project_view_model.hpp src/project_view_model.cpp
         src/session.hpp src/session.cpp
+        src/load_attempt.hpp src/load_attempt.cpp
         src/online_sources.hpp src/online_sources.cpp
         src/collection_origin.hpp
         src/online_search.hpp src/online_search.cpp
@@ -162,7 +163,12 @@ qt_add_qml_module(edi_app_module
     QML_FILES
         qml/Main.qml
         feedback/Payload.js
+        feedback/Likes.js
         qml/Components/AppDialog.qml
+        qml/Components/ErrorDialog.qml
+        qml/Components/LikesBar.qml
+        qml/Components/SurveyBar.qml
+        qml/Components/BarButton.qml
         qml/Components/AppPreferencesDialog.qml
         qml/Components/LoadMenuHeader.qml
         qml/Components/LoadMenuItem.qml
@@ -214,6 +220,7 @@ qt_add_qml_module(edi_app_module
         qml/Components/ScanViewChart.qml
         qml/Components/SingleCrystalChart.qml
         qml/Components/SingleCrystalTable.qml
+        qml/Components/ChartView.qml
         qml/Components/CorrelationChart.qml
         qml/Components/SearchableComboBox.qml
         qml/Components/SelectedPatternLine.qml
@@ -317,6 +324,8 @@ qt_add_qml_module(edi_app_module
         qml/Pages/Structure/AtomSiteMomentGroup.qml
         qml/Pages/Structure/MagneticFormFactorsGroup.qml
         qml/Pages/Structure/MagneticSpaceGroupGroup.qml
+        qml/Pages/Structure/MagneticSymbolsGroup.qml
+        qml/Pages/Structure/ParentSpaceGroupGroup.qml
         qml/Pages/Structure/PolyhedraGroup.qml
         qml/Pages/Structure/PropagationVectorsGroup.qml
         qml/Pages/Structure/AtomSitesGroup.qml
@@ -472,6 +481,21 @@ if(NOT EMSCRIPTEN)
     target_compile_definitions(edi_scan_refresh_tests PRIVATE EDI_SOURCE_DIR="${PROJECT_SOURCE_DIR}")
     set_target_properties(edi_scan_refresh_tests PROPERTIES AUTOMOC ON WIN32_EXECUTABLE FALSE MACOSX_BUNDLE FALSE
         QT_QML_MODULE_NO_IMPORT_SCAN TRUE)
+    qt_add_executable(edi_chart_hover_tests EXCLUDE_FROM_ALL tests/chart_hover_tests.cpp)
+    target_link_libraries(edi_chart_hover_tests PRIVATE edi_app_module edi_app_moduleplugin ${EDI_GUI_BASE_TARGETS} Qt6::Test)
+    target_include_directories(edi_chart_hover_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+    set_target_properties(edi_chart_hover_tests PROPERTIES AUTOMOC ON WIN32_EXECUTABLE FALSE MACOSX_BUNDLE FALSE)
+    if(TARGET edi_assistant_native)
+        target_link_libraries(edi_chart_hover_tests PRIVATE edi_assistant_native)
+    endif()
+    qt_add_executable(edi_linked_structure_calculation_tests EXCLUDE_FROM_ALL tests/linked_structure_calculation_tests.cpp)
+    target_link_libraries(edi_linked_structure_calculation_tests PRIVATE edi_app_module edi_app_moduleplugin ${EDI_GUI_BASE_TARGETS} Qt6::Test)
+    target_include_directories(edi_linked_structure_calculation_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+    target_compile_definitions(edi_linked_structure_calculation_tests PRIVATE EDI_SOURCE_DIR="${PROJECT_SOURCE_DIR}")
+    set_target_properties(edi_linked_structure_calculation_tests PROPERTIES AUTOMOC ON WIN32_EXECUTABLE FALSE MACOSX_BUNDLE FALSE)
+    if(TARGET edi_assistant_native)
+        target_link_libraries(edi_linked_structure_calculation_tests PRIVATE edi_assistant_native)
+    endif()
     qt_add_executable(edi_scan_save_tests EXCLUDE_FROM_ALL tests/scan_save_tests.cpp)
     target_link_libraries(edi_scan_save_tests PRIVATE edi_app_module edi_app_moduleplugin ${EDI_GUI_BASE_TARGETS} Qt6::Test)
     target_include_directories(edi_scan_save_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
@@ -535,6 +559,8 @@ set_target_properties(edi_app_ui_compare PROPERTIES WIN32_EXECUTABLE FALSE MACOS
 # compiled in, over the same edi.app module and engine setup the host uses. The cases are the tests
 # lane's; a glob keeps the two lanes off one file. Never linked into edi_app.
 file(GLOB EDI_APP_TEST_SUPPORT CONFIGURE_DEPENDS ${PROJECT_SOURCE_DIR}/tests/unit/app/test_*.cpp)
+# The implementation's own support for its visible cases in tests/fixtures/app_cases (`edi_app_tests -input tests/fixtures/app_cases`).
+list(APPEND EDI_APP_TEST_SUPPORT ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_drop_events.cpp)
 # The runner prints the commit it was built from (`<sha>-dirty` when tracked files differed), so the latency
 # bank attributes the frame times it prints to a revision; regenerated on every build, as lib's.
 set(EDI_APP_BUILD_COMMIT_CPP "${CMAKE_BINARY_DIR}/edi_app_build_commit.cpp")
@@ -551,6 +577,14 @@ add_dependencies(edi_app_tests edi_app_build_commit)
 # The app names it too: its test observers report the build they observe.
 target_sources(edi_app PRIVATE "${EDI_APP_BUILD_COMMIT_CPP}")
 add_dependencies(edi_app edi_app_build_commit)
+if(TARGET edi_linked_structure_calculation_tests)
+    target_sources(edi_linked_structure_calculation_tests PRIVATE "${EDI_APP_BUILD_COMMIT_CPP}")
+    add_dependencies(edi_linked_structure_calculation_tests edi_app_build_commit)
+endif()
+if(TARGET edi_chart_hover_tests)
+    target_sources(edi_chart_hover_tests PRIVATE "${EDI_APP_BUILD_COMMIT_CPP}")
+    add_dependencies(edi_chart_hover_tests edi_app_build_commit)
+endif()
 if(TARGET edi_scan_save_tests)
     target_sources(edi_scan_save_tests PRIVATE "${EDI_APP_BUILD_COMMIT_CPP}")
     add_dependencies(edi_scan_save_tests edi_app_build_commit)
@@ -589,7 +623,7 @@ if(EDI_DEPLOY_APP AND APPLE)
     set_source_files_properties("${app_icon}" PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
     set_target_properties(edi_app PROPERTIES MACOSX_BUNDLE_ICON_FILE App.icns)
     set_target_properties(edi_app PROPERTIES MACOSX_BUNDLE TRUE OUTPUT_NAME EasyDiffraction
-        MACOSX_BUNDLE_GUI_IDENTIFIER org.easyscience.easydiffraction
+        MACOSX_BUNDLE_GUI_IDENTIFIER org.easydiffraction.app
         MACOSX_BUNDLE_BUNDLE_NAME EasyDiffraction)
     set(CMAKE_INSTALL_BINDIR EasyDiffraction.app/Contents/MacOS)
     set(CMAKE_INSTALL_LIBEXECDIR EasyDiffraction.app/Contents/libexec)
@@ -620,9 +654,10 @@ if(NOT EMSCRIPTEN)
 endif()
 install(FILES ${EDI_APP_LICENCE_FILES} DESTINATION ${CMAKE_INSTALL_DOCDIR} COMPONENT desktop)
 
-# The EasyDiffraction data collection (enhantica/edi-data, about 14 MB), installed with the desktop app: examples open
-# from it at once, and the online collection is asked in the background only for what is new or changed (edi
-# ADR-0068). Empty installs none.
+# The EasyDiffraction data collection (enhantica/edi-data), installed with the desktop app: examples open from it at
+# once, and the online collection is asked in the background only for what is new or changed (edi ADR-0068). A file
+# over EDI_BUNDLED_ITEM_LIMIT is left out, its index entry kept: the app downloads it the first time it is opened
+# (two 30 MB WISH zips made the macOS update archive too large to publish). Empty installs none.
 set(EDI_BUNDLED_COLLECTION "" CACHE PATH "A copy of the edi-data collection to install as the app's offline copy")
 if(EDI_BUNDLED_COLLECTION AND NOT EMSCRIPTEN)
     if(NOT EXISTS "${EDI_BUNDLED_COLLECTION}/index.json")
@@ -635,8 +670,23 @@ if(EDI_BUNDLED_COLLECTION AND NOT EMSCRIPTEN)
         set(edi_collection_destination ${CMAKE_INSTALL_DATADIR}/edi/collection)
         set(edi_collection_from_binary ../${CMAKE_INSTALL_DATADIR}/edi/collection)
     endif()
-    install(DIRECTORY "${EDI_BUNDLED_COLLECTION}/" DESTINATION ${edi_collection_destination} COMPONENT desktop
-            PATTERN ".git" EXCLUDE PATTERN ".github" EXCLUDE)
+    set(EDI_BUNDLED_ITEM_LIMIT 5000000 CACHE STRING "Largest collection file, in bytes, installed with the app")
+    file(GLOB_RECURSE edi_collection_files LIST_DIRECTORIES false RELATIVE "${EDI_BUNDLED_COLLECTION}"
+         "${EDI_BUNDLED_COLLECTION}/*")
+    foreach(relative IN LISTS edi_collection_files)
+        if(relative MATCHES "^\\.git(hub)?(/|$)")
+            continue()
+        endif()
+        # Only an item (a file in one of the item folders) can be left out; the index and the other files at the
+        # collection's root are what finds them, and are always installed.
+        file(SIZE "${EDI_BUNDLED_COLLECTION}/${relative}" edi_collection_bytes)
+        if(relative MATCHES "^(structures|experiments|data|projects)/" AND edi_collection_bytes GREATER EDI_BUNDLED_ITEM_LIMIT)
+            continue()
+        endif()
+        get_filename_component(edi_collection_subdirectory "${relative}" DIRECTORY)
+        install(FILES "${EDI_BUNDLED_COLLECTION}/${relative}"
+                DESTINATION "${edi_collection_destination}/${edi_collection_subdirectory}" COMPONENT desktop)
+    endforeach()
     set_property(SOURCE src/online_sources.cpp APPEND PROPERTY COMPILE_DEFINITIONS
                  "EDI_APP_BUNDLED_COLLECTION=\"${edi_collection_from_binary}\"")
 endif()
@@ -682,6 +732,17 @@ add_dependencies(edi_trial_lock_tests edi_app_build_commit)
 set_target_properties(edi_trial_lock_tests PROPERTIES AUTOMOC ON WIN32_EXECUTABLE FALSE MACOSX_BUNDLE FALSE)
 if(TARGET edi_assistant_native)
     target_link_libraries(edi_trial_lock_tests PRIVATE edi_assistant_native)
+endif()
+
+# Which file an error report attaches, over every load route (ADR-0063).
+qt_add_executable(edi_load_attempt_tests tests/load_attempt_tests.cpp)
+target_link_libraries(edi_load_attempt_tests PRIVATE edi_app_module edi_app_moduleplugin ${EDI_GUI_BASE_TARGETS} Qt6::QuickTest)
+target_compile_definitions(edi_load_attempt_tests PRIVATE EDI_SOURCE_DIR="${PROJECT_SOURCE_DIR}")
+target_sources(edi_load_attempt_tests PRIVATE "${EDI_APP_BUILD_COMMIT_CPP}")
+add_dependencies(edi_load_attempt_tests edi_app_build_commit)
+set_target_properties(edi_load_attempt_tests PROPERTIES AUTOMOC ON WIN32_EXECUTABLE FALSE MACOSX_BUNDLE FALSE)
+if(TARGET edi_assistant_native)
+    target_link_libraries(edi_load_attempt_tests PRIVATE edi_assistant_native)
 endif()
 
 qt_add_executable(edi_assistant_ui_tests tests/assistant_ui_tests.cpp)

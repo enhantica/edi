@@ -43,12 +43,20 @@ QtObject {
     // The Stacked and Map views' zoom, one per view and shared by the pages that show them (edi ADR-0041):
     // {stacked: {x, y}, map: {x, y}}, each [min, max] or empty for the whole range.
     property var scanZoom: ({})
-    // A project opened, reset or closed starts with its full view (no range set, as a chart writes it); the toolbar's
-    // choices stay.
+    // The Meas vs calc view's axes scale (0 linear, 1 square root, 2 log) and zoom, and each single-crystal view's zoom
+    // ({comparison, stacked, axis}), one per view and shared by the pages that show it: a change on one page's copy
+    // shows on every other's.
+    property int measCalcScale: 0
+    property list<real> measCalcZoom: []
+    property var singleCrystalZoom: ({})
+    // A project opened, reset or closed starts with its full view (no range set, as a chart writes it, the comparison
+    // and single-crystal zooms included); the toolbar's choices stay.
     property Connections patternViewReset: Connections {
         target: Session
         function onProjectChanged() {
             ApplicationInfo.resetPatternProjectView();
+            AppState.measCalcZoom = [];
+            AppState.singleCrystalZoom = {};
         }
     }
 
@@ -73,6 +81,9 @@ QtObject {
     // Save as, asked for from a page (Get started); the window's folder dialog answers (Main.qml; edi
     // ADR-0017 §13).
     signal saveAsRequested
+    // Save as with the format already chosen from Get started's Save menu: the EasyDiffraction folder or a .zip, and
+    // whether to write a copy and keep working where the project is.
+    signal saveAsFormatRequested(bool zip, bool copy)
     // That Save as ended: saved at the place chosen, or cancelled or refused.
     signal saveAsFinished(bool saved)
     // Run `action` (opening, creating or closing a project, quitting) once the open project's unsaved changes are
@@ -104,6 +115,16 @@ QtObject {
     // Help and feedback, asked for from Home, About or the crash popup: the window's form opens on `kind` ("feedback",
     // "question", "problem" or "idea"), with `log` attached instead of this run's when it is not empty (Main.qml).
     signal feedbackRequested(string kind, string log)
+    // An error popup's Send to developers (edi ADR-0062): the form opens as a problem with `message`, this run's log and
+    // `file`, the file edi could not read, attached when not empty.
+    signal problemReported(string message, string file)
+    // The post-crash popup's Send to developers: the form opens as a problem with the crashed run's `log` and `text`
+    // (what went wrong, RunLog.crashedDiagnostic) filled in.
+    signal crashReported(string log, string text)
+    // Home's "Enjoying EasyDiffraction?": the likes bar now, whatever its timing rule (owner, 2026-11-17).
+    signal likesRequested
+    // Home's Update available link: the update dialog the status bar opens on the other pages.
+    signal updateDialogRequested
     // What's new, asked for from Home (Main.qml).
     signal whatsNewRequested
     // A built-in tutorial to run (its manifest entry), asked for from Home's Tutorials; the window's panel runs it.
@@ -124,8 +145,15 @@ QtObject {
         ApplicationInfo.openWorkflowPage(page);
     }
 
-    // The app bar's reset: close the project and open the Project page, where a new project starts (the owner,
-    // 2026-10-11).
+    // The untitled project's first Save (the owner, 2026-11-19): the Project page opens and its Create project dialog
+    // names the project and saves it.
+    signal untitledSaveRequested
+    function requestUntitledSave() {
+        open(AppState.Page.Project);
+        untitledSaveRequested();
+    }
+
+    // Clear returns to Home without a project; opening Project starts untitled work (edi ADR-0017 §13).
     function reset() {
         ApplicationInfo.resetWorkflow();
     }

@@ -314,6 +314,22 @@ QString RunLog::crashedLogText() const {
     return QString::fromUtf8(file.readAll());
 }
 
+QString RunLog::crashedDiagnostic() const {
+    const QStringList lines = crashedLogText().split(u'\n');
+    for (const QString& level : {QStringLiteral("FATAL"), QStringLiteral("ERROR"), QStringLiteral("WARNING")}) {
+        for (auto line = lines.crbegin(); line != lines.crend(); ++line) {
+            // A record: time, +seconds, level, source, message, location, separated by two spaces.
+            const QStringList fields = line->split(QStringLiteral("  "), Qt::SkipEmptyParts);
+            if (fields.size() >= 6 && fields.at(2).trimmed() == level) {
+                const QString message = fields.mid(4, fields.size() - 5).join(QStringLiteral("  ")).trimmed();
+                return level + u' ' + fields.at(3).trimmed() + QStringLiteral(": ") + message + QStringLiteral(" (") +
+                       fields.last().trimmed() + u')';
+            }
+        }
+    }
+    return {};
+}
+
 void RunLog::note(const QString& text) const { qCInfo(lcApp).noquote() << text; }
 
 QString RunLog::logText() const {
@@ -379,6 +395,13 @@ void RunLog::install(RunLog* log) {
 
 RunLog* RunLog::instance() { return g_log; }
 
+void RunLog::reportCaught(const QString& message) {
+    qCritical("caught an error: %s", qPrintable(message));
+    if (RunLog* log = g_log) {
+        QMetaObject::invokeMethod(log, [log, message] { emit log->errorCaught(message); }, Qt::QueuedConnection);
+    }
+}
+
 RunLog* RunLog::create(QQmlEngine*, QJSEngine*) {
     // A QML test has no run log of the app's: it gets one that writes nowhere.
     static RunLog* const fallback = new RunLog(Options{QString(), {}, 3, 0, false}, QCoreApplication::instance());
@@ -430,8 +453,7 @@ namespace {
 
 RunLog::Header run_log_header() {
     const ApplicationInfo info;
-    const QSettings settings(QSettings::IniFormat, QSettings::UserScope, QStringLiteral("EasyScience"),
-                             QStringLiteral("EasyDiffraction"));
+    const QSettings settings(settings_store_path(), QSettings::IniFormat);
     const QDateTime now = QDateTime::currentDateTime();
     const auto value = [&](const char* key, const QVariant& fallback) {
         return settings.value(QLatin1String(key), fallback).toString();

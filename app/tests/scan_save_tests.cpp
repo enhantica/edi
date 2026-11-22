@@ -21,6 +21,14 @@
 #include "session.hpp"
 #include "edi/duration_text.hpp"
 #include "project_view_model.hpp"
+#include "structure_view_model.hpp"
+
+// Keeps what a retried check found, for the steps after it, without an assignment inside the check.
+template <class T, class U>
+bool take(T*& slot, U* found) {
+    slot = found;
+    return found != nullptr;
+}
 Q_IMPORT_QML_PLUGIN(edi_appPlugin)
 
 class ScanSaveTests : public QObject {
@@ -103,7 +111,7 @@ private slots:
         };
         const auto openAnalysis = [&] {
             QQuickItem* tab = nullptr;
-            QTRY_VERIFY_WITH_TIMEOUT((tab = shown("appBar.tab.analysis")) && tab->isEnabled(), 20000);
+            QTRY_VERIFY_WITH_TIMEOUT(take(tab, shown("appBar.tab.analysis")) && tab->isEnabled(), 20000);
             click(tab);
         };
         // Atoms in the middle of the view: there a blank view has no letter, legend or toolbar.
@@ -197,16 +205,19 @@ private slots:
         const auto click = [window](QQuickItem* item) {
             QTest::mouseClick(window, Qt::LeftButton, {}, item->mapToScene(QPointF(item->width() / 2, item->height() / 2)).toPoint());
         };
-        const auto openExtras = [&](const char* page) {
+        // The page's own first group on screen first: while the pages slide, the previous page's Extra tab is still
+        // found and a click on it changes nothing here.
+        const auto openExtras = [&](const char* page, const char* group) {
             QQuickItem* tab = nullptr;
-            QTRY_VERIFY_WITH_TIMEOUT((tab = shown(QString::fromLatin1(page))) && tab->isEnabled(), 20000);
+            QTRY_VERIFY_WITH_TIMEOUT(take(tab, shown(QString::fromLatin1(page))) && tab->isEnabled(), 20000);
             click(tab);
-            QTRY_VERIFY_WITH_TIMEOUT((tab = shown("sideBar.tab.extras")), 20000);
+            QTRY_VERIFY_WITH_TIMEOUT(shown(QString::fromLatin1(group)), 20000);
+            QTRY_VERIFY_WITH_TIMEOUT(take(tab, shown("sideBar.tab.extras")), 20000);
             click(tab);
         };
         const auto expand = [&](const QString& group) {
             QQuickItem* item = nullptr;
-            QTRY_VERIFY_WITH_TIMEOUT((item = shown(group)), 20000);
+            QTRY_VERIFY_WITH_TIMEOUT(take(item, shown(group)), 20000);
             QVERIFY(item->setProperty("collapsed", false));
         };
         // A table's horizontal bar follows the vertical bar's policy (AsNeeded, fading when idle), never AlwaysOn.
@@ -220,19 +231,21 @@ private slots:
         QVERIFY2(session->openProject(QUrl::fromLocalFile(QStringLiteral(EDI_SOURCE_DIR "/docs/user/cli/pd-neut-cwl_lbco-hrpt/project"))), qPrintable(session->lastError()));
         QTRY_VERIFY_WITH_TIMEOUT(!session->project()->calculating(), 30000);
 
-        openExtras("appBar.tab.structure");
+        openExtras("appBar.tab.structure", "group.structures");
         // One group at a time: with auto-collapse on, expanding the next folds the one before.
         expand("group.expanded_atom_site");
         QQuickItem* atoms = nullptr;
-        QTRY_VERIFY_WITH_TIMEOUT((atoms = shown("generated.expanded_atom_site.list")) && atoms->property("count").toInt() > 0, 20000);
+        QTRY_VERIFY_WITH_TIMEOUT(take(atoms, shown("generated.expanded_atom_site.list")) && atoms->property("count").toInt() > 0, 20000);
         QVERIFY(barFades(atoms));
         // Cartesian and fractional coordinates at a rounding error from zero show as 0, never in scientific notation.
         QList<QQuickItem*> coordinates;
-        QTRY_VERIFY_WITH_TIMEOUT(!(coordinates = all([](QQuickItem* item) {
-                                      const QString name = item->objectName();
-                                      return name.startsWith("generated.expanded_atom_site.cartn_") || name.startsWith("generated.expanded_atom_site.fract_");
-                                  })).isEmpty(),
-                                 20000);
+        QTRY_VERIFY_WITH_TIMEOUT([&] {
+            coordinates = all([](QQuickItem* item) {
+                const QString name = item->objectName();
+                return name.startsWith("generated.expanded_atom_site.cartn_") || name.startsWith("generated.expanded_atom_site.fract_");
+            });
+            return !coordinates.isEmpty();
+        }(), 20000);
         int zeros = 0;
         for (QQuickItem* cell : coordinates) {
             const QString text = cell->property("text").toString();
@@ -243,11 +256,11 @@ private slots:
 
         expand("group.geom");
         QQuickItem* bonds = nullptr;
-        QTRY_VERIFY_WITH_TIMEOUT((bonds = shown("geom.bonds")) && bonds->property("count").toInt() > 0, 20000);
+        QTRY_VERIFY_WITH_TIMEOUT(take(bonds, shown("geom.bonds")) && bonds->property("count").toInt() > 0, 20000);
         QVERIFY(bonds->property("readOnly").toBool());
         QVERIFY(barFades(bonds));
         QQuickItem* symmetry = nullptr;
-        QTRY_VERIFY_WITH_TIMEOUT((symmetry = shown("geom.bonds.symmetry2.0")), 20000);
+        QTRY_VERIFY_WITH_TIMEOUT(take(symmetry, shown("geom.bonds.symmetry2.0")), 20000);
         QVERIFY2(QRegularExpression("^\\d+_\\d{3,}$").match(symmetry->property("text").toString()).hasMatch(), qPrintable(symmetry->property("text").toString()));
         QQuickItem* site = shown("geom.bonds.site1.0");
         QVERIFY(site);
@@ -259,24 +272,24 @@ private slots:
         QTRY_VERIFY_WITH_TIMEOUT(!session->project()->calculating(), 30000);
         {
             QQuickItem* tab = nullptr;
-            QTRY_VERIFY_WITH_TIMEOUT((tab = shown("appBar.tab.structure")) && tab->isEnabled(), 20000);
+            QTRY_VERIFY_WITH_TIMEOUT(take(tab, shown("appBar.tab.structure")) && tab->isEnabled(), 20000);
             click(tab);
-            QTRY_VERIFY_WITH_TIMEOUT((tab = shown("sideBar.tab.basic")), 20000);
+            QTRY_VERIFY_WITH_TIMEOUT(take(tab, shown("sideBar.tab.basic")), 20000);
             click(tab);
         }
         expand("group.space_group_magn");
         QQuickItem* bns = nullptr;
         QQuickItem* uni = nullptr;
-        QTRY_VERIFY_WITH_TIMEOUT((bns = shown("magneticSpaceGroup.selector")) && (uni = shown("magneticSpaceGroup.nameUni")), 20000);
+        QTRY_VERIFY_WITH_TIMEOUT(take(bns, shown("magneticSpaceGroup.selector")) && take(uni, shown("magneticSpaceGroup.nameUni")), 20000);
         QVERIFY(bns->width() > 0);
         QCOMPARE(bns->width(), uni->width());
 
         QVERIFY2(session->openProject(QUrl::fromLocalFile(QStringLiteral(EDI_SOURCE_DIR "/docs/user/cli/pd-neut-cwl_lbco-hrpt/project"))), qPrintable(session->lastError()));
         QTRY_VERIFY_WITH_TIMEOUT(!session->project()->calculating(), 30000);
-        openExtras("appBar.tab.experiment");
+        openExtras("appBar.tab.experiment", "group.experiments");
         expand("group.refln");
         QQuickItem* reflections = nullptr;
-        QTRY_VERIFY_WITH_TIMEOUT((reflections = shown("reflections.list")) && reflections->property("count").toInt() > 0, 20000);
+        QTRY_VERIFY_WITH_TIMEOUT(take(reflections, shown("reflections.list")) && reflections->property("count").toInt() > 0, 20000);
         QVERIFY(reflections->property("readOnly").toBool());
         QVERIFY(barFades(reflections));
     }
@@ -333,10 +346,10 @@ private slots:
         QVERIFY2(session->openProject(QUrl::fromLocalFile(QStringLiteral(EDI_SOURCE_DIR "/docs/user/cli/pd-neut-cwl_lbco-hrpt/project"))), qPrintable(session->lastError()));
         QTRY_VERIFY_WITH_TIMEOUT(!session->project()->calculating(), 30000);
         QQuickItem* tab = nullptr;
-        QTRY_VERIFY_WITH_TIMEOUT((tab = window->findChild<QQuickItem*>(QStringLiteral("appBar.tab.analysis"))) && tab->isEnabled(), 20000);
+        QTRY_VERIFY_WITH_TIMEOUT(take(tab, window->findChild<QQuickItem*>(QStringLiteral("appBar.tab.analysis"))) && tab->isEnabled(), 20000);
         QTest::mouseClick(window, Qt::LeftButton, {}, tab->mapToScene(QPointF(tab->width() / 2, tab->height() / 2)).toPoint());
         QQuickItem* table = nullptr;
-        QTRY_VERIFY_WITH_TIMEOUT((table = window->findChild<QQuickItem*>(QStringLiteral("parameters.list"))) && table->isVisible() && table->property("count").toInt() > table->property("maxRowCountShow").toInt(), 20000);
+        QTRY_VERIFY_WITH_TIMEOUT(take(table, window->findChild<QQuickItem*>(QStringLiteral("parameters.list"))) && table->isVisible() && table->property("count").toInt() > table->property("maxRowCountShow").toInt(), 20000);
         // Scrolled to the end of the whole list, then filtered down to a few rows.
         const double end = table->property("originY").toDouble() + table->property("contentHeight").toDouble() - table->height();
         table->setProperty("contentY", end);
@@ -405,7 +418,7 @@ private slots:
         };
         QQuickItem* item = nullptr;
         for (const char* name : {"appBar.tab.analysis", "mainArea.tab.measCalc"}) {
-            QTRY_VERIFY_WITH_TIMEOUT((item = shown(QString::fromLatin1(name))), 20000);
+            QTRY_VERIFY_WITH_TIMEOUT(take(item, shown(QString::fromLatin1(name))), 20000);
             QTest::mouseClick(window, Qt::LeftButton, {}, item->mapToScene(QPointF(item->width() / 2, item->height() / 2)).toPoint());
         }
         edi_app::ExperimentViewModel* experiment = project->currentExperiment();
@@ -439,7 +452,7 @@ private slots:
         edi_app::ProjectViewModel* project = session->project();
         QTRY_VERIFY_WITH_TIMEOUT(!project->calculating(), 60000);
         QQuickItem* tab = nullptr;
-        QTRY_VERIFY_WITH_TIMEOUT((tab = window->findChild<QQuickItem*>(QStringLiteral("appBar.tab.analysis"))) && tab->isEnabled(), 20000);
+        QTRY_VERIFY_WITH_TIMEOUT(take(tab, window->findChild<QQuickItem*>(QStringLiteral("appBar.tab.analysis"))) && tab->isEnabled(), 20000);
         QTest::mouseClick(window, Qt::LeftButton, {}, tab->mapToScene(QPointF(tab->width() / 2, tab->height() / 2)).toPoint());
         edi_app::ExperimentViewModel* experiment = project->currentExperiment();
         QVERIFY(experiment);
@@ -496,18 +509,23 @@ private slots:
         QVERIFY2(session->openProject(QUrl::fromLocalFile(QStringLiteral(EDI_SOURCE_DIR "/docs/user/cli/pd-neut-cwl_lbco-hrpt/project"))), qPrintable(session->lastError()));
         QTRY_VERIFY_WITH_TIMEOUT(!session->project()->calculating(), 30000);
         QQuickItem* tab = nullptr;
-        QTRY_VERIFY_WITH_TIMEOUT((tab = shown("appBar.tab.analysis")) && tab->isEnabled(), 20000);
+        QTRY_VERIFY_WITH_TIMEOUT(take(tab, shown("appBar.tab.analysis")) && tab->isEnabled(), 20000);
         click(tab);
         // Each chart tab at a wide and a narrow window: the narrow one puts controls in the popup, which opens and closes.
         for (const char* key : {"pattern", "measCalc", "structure", "pattern"}) {
-            QTRY_VERIFY_WITH_TIMEOUT((tab = shown(QStringLiteral("mainArea.tab.%1").arg(QLatin1String(key)))) && tab->isEnabled(), 20000);
+            QTRY_VERIFY_WITH_TIMEOUT(take(tab, shown(QStringLiteral("mainArea.tab.%1").arg(QLatin1String(key)))) && tab->isEnabled(), 20000);
             click(tab);
             const QString toolbar = QLatin1String(key) == QLatin1String("pattern") ? "chart.toolbar" : QLatin1String(key) == QLatin1String("measCalc") ? "measCalc.toolbar" : "structure.toolbar";
             QTRY_VERIFY_WITH_TIMEOUT(shown(toolbar), 20000);
             for (int round = 0; round < 2; ++round) {
                 window->resize(1024, 700);
                 QQuickItem* more = nullptr;
-                QTRY_VERIFY_WITH_TIMEOUT((more = shown(toolbar + ".more")), 20000);
+                // A toolbar with fewer controls (Meas vs calc) may still fit: then it has no popup to open, and the
+                // resize alone is what must stay free of warnings.
+                if (!QTest::qWaitFor([&] { return (more = shown(toolbar + ".more")) != nullptr; }, 3000)) {
+                    window->resize(1480, 900);
+                    continue;
+                }
                 click(more);
                 QTRY_VERIFY_WITH_TIMEOUT(more->property("checked").toBool(), 5000);
                 click(more);
@@ -521,6 +539,287 @@ private slots:
         }
         QVERIFY2(warnings.isEmpty(), qPrintable(warnings.join(QLatin1Char('\n'))));
     }
+    // Work before Create (the owner, 2026-11-19): the open Project page holds an untitled project that takes a
+    // structure at once, Create names and saves that same project with its structure, and the Create form's fields say
+    // what each is for.
+    void untitledWorkIsKeptByCreate() {
+        QQmlApplicationEngine engine;
+        edi_app::configure_engine(engine);
+        engine.loadFromModule("edi.app", "Main");
+        QVERIFY(!engine.rootObjects().isEmpty());
+        auto* window = qobject_cast<QQuickWindow*>(engine.rootObjects().constFirst());
+        QVERIFY(window);
+        window->show();
+        QVERIFY(QTest::qWaitForWindowExposed(window));
+        auto* session = engine.singletonInstance<edi_app::Session*>("edi.app", "Session");
+        QVERIFY(session && !session->hasProject());
+        const auto named = [window](const char* name) {
+            const QString wanted = QString::fromLatin1(name);
+            const auto visit = [&](auto&& visit, QQuickItem* item) -> QQuickItem* {
+                if (item->objectName() == wanted) return item;
+                for (auto* child : item->childItems()) {
+                    if (auto* found = visit(visit, child)) return found;
+                }
+                return nullptr;
+            };
+            return visit(visit, window->contentItem());
+        };
+        const auto click = [&](const char* name) {
+            QQuickItem* item = nullptr;
+            QTRY_VERIFY_WITH_TIMEOUT(take(item, named(name)) && item->isVisible() && item->isEnabled()
+                && window->contentItem()->boundingRect().contains(item->mapRectToScene(item->boundingRect())), 20000);
+            QTest::mouseClick(window, Qt::LeftButton, {},
+                              item->mapToScene(QPointF(item->width() / 2, item->height() / 2)).toPoint());
+        };
+        QQmlExpression state(qmlContext(window), window, QStringLiteral(
+            "JSON.stringify([EaGlobals.Vars.appBarCurrentIndex, AppState.reached, Session.hasProject, Session.untitled, "
+            "AppState.projectPageEnabled, AppState.structurePageEnabled, AppState.experimentPageEnabled, "
+            "AppState.analysisPageEnabled, AppState.reportPageEnabled])"));
+        const QString startup = state.evaluate().toString();
+        QVERIFY(!state.hasError());
+        QCOMPARE(startup, QStringLiteral("[0,0,false,false,false,false,false,false,false]"));
+        click("home.start");
+        QTRY_VERIFY_WITH_TIMEOUT(session->hasProject(), 20000);
+        QVERIFY(session->untitled());
+        QVERIFY(session->needsSaveAs());
+        click("project.create");
+        QTRY_VERIFY_WITH_TIMEOUT(named("createProject.name") && named("createProject.name")->isVisible(), 20000);
+        const auto placeholder = [&](const char* name) {
+            const auto* field = named(name);
+            return field ? field->property("placeholderText").toString() : QString();
+        };
+        QVERIFY2(placeholder("createProject.name").contains(QStringLiteral("project folder")), qPrintable(placeholder("createProject.name")));
+        QVERIFY(placeholder("createProject.title").contains(QStringLiteral("report")));
+        QVERIFY(placeholder("createProject.authors").contains(QStringLiteral("report")));
+        QVERIFY(placeholder("createProject.location").contains(QStringLiteral("folder in which")));
+        QTest::keyClick(window, Qt::Key_Escape);
+        QTRY_VERIFY_WITH_TIMEOUT(!named("createProject.name") || !named("createProject.name")->isVisible(), 20000);
+        QVERIFY(session->project()->createStructure());
+        QCOMPARE(session->project()->project().structures.size(), std::size_t{1});
+        QTemporaryDir folder;
+        QVERIFY(folder.isValid());
+        const QString location = folder.path() + QStringLiteral("/lbco_hrpt-7");
+        edi_app::ProjectViewModel* before = session->project();
+        QVERIFY2(session->createProject(QStringLiteral("lbco_hrpt-7"), QStringLiteral("Before Create"), location),
+                 qPrintable(session->lastError()));
+        QCOMPARE(session->project(), before);
+        QVERIFY(!session->untitled());
+        QVERIFY(!session->needsSaveAs());
+        QCOMPARE(session->project()->project().structures.size(), std::size_t{1});
+        QVERIFY(QFileInfo::exists(location + QStringLiteral("/project.edi")));
+        click("appBar.button.reset");
+        QTRY_VERIFY(!session->hasProject());
+        QTRY_COMPARE(state.evaluate().toString(), startup);
+        QVERIFY(!state.hasError());
+        click("home.start");
+        QTRY_VERIFY(session->hasProject());
+        QVERIFY(session->untitled());
+        QVERIFY(session->needsSaveAs());
+        QVERIFY(session->project()->project().structures.empty());
+        QVERIFY(session->project()->project().experiments.empty());
+        click("appBar.button.reset");
+        QTRY_VERIFY(!session->hasProject());
+        QTRY_COMPARE(state.evaluate().toString(), startup);
+    }
+
+    // A 2θ offset that moves the lowest points below 0° leaves them out of the calculation instead of refusing it, and
+    // says so once (the owner, 2026-11-19). The expected outcome is independent of the engine: with an offset one
+    // degree above the first angle, every point below that angle plus 0° has no d-spacing.
+    void offsetBelowZeroLeavesPointsOut() {
+        edi_app::Session session(nullptr);
+        QVERIFY2(session.openProject(QUrl::fromLocalFile(QStringLiteral(EDI_SOURCE_DIR "/docs/user/cli/pd-neut-cwl_cosio-d20_2k/project"))),
+                 qPrintable(session.lastError()));
+        edi_app::ProjectViewModel* project = session.project();
+        QTRY_VERIFY_WITH_TIMEOUT(!project->calculating(), 60000);
+        edi::BraggPdExperiment& experiment = *project->project().experiments[0];
+        QVERIFY(experiment.data && experiment.instrument.calib_twotheta_offset);
+        const std::vector<double>& axis = experiment.data->axis();
+        const double offset = axis.front() + 1.0;
+        const auto below = std::count_if(axis.begin(), axis.end(), [offset](double angle) { return angle - offset <= 0.0; });
+        QVERIFY(below > 0);
+        QVERIFY(project->assign_parameter_value(*experiment.instrument.calib_twotheta_offset, offset).isEmpty());
+        QTRY_VERIFY_WITH_TIMEOUT(!project->calculating(), 60000);
+        edi_app::ExperimentViewModel* model = project->experimentModels().value(0);
+        QVERIFY(model);
+        QVERIFY2(model->pattern()->calculationError().isEmpty(), qPrintable(model->pattern()->calculationError()));
+        QVERIFY(model->pattern()->calculatedPointCount() > 0);
+        const QStringList notes = session.loadWarnings()->keys(QStringLiteral("domain:"));
+        QCOMPARE(notes.size(), 1);
+        QVERIFY2(notes.front().endsWith(u':' + QString::number(below)), qPrintable(notes.front()));
+    }
+
+    // A form-factor coefficient the chosen approximation does not use keeps its value but no longer fits (the owner,
+    // 2026-11-19): switching Co to <j0> fixes a free C2, its row still names the type and the ion, and one Undo brings
+    // back the dipole approximation with C2 free.
+    void unusedFormFactorCoefficientIsFixed() {
+        edi_app::Session session(nullptr);
+        QVERIFY2(session.openProject(QUrl::fromLocalFile(QStringLiteral(EDI_SOURCE_DIR "/docs/user/cli/pd-neut-cwl_cosio-d20_2k/project"))),
+                 qPrintable(session.lastError()));
+        edi_app::ProjectViewModel* project = session.project();
+        QTRY_VERIFY_WITH_TIMEOUT(!project->calculating(), 60000);
+        edi_app::StructureViewModel* structure = project->structureModels().value(0);
+        QVERIFY(structure);
+        edi_app::MagneticFormFactorListModel* rows = structure->magneticFormFactors();
+        QVERIFY(rows);
+        int co = -1;
+        for (int row = 0; row < rows->rowCount(); ++row) {
+            if (rows->text(row, QStringLiteral("type")).startsWith(QStringLiteral("Co"))) co = row;
+        }
+        QVERIFY2(co >= 0, "CoSiO lists Co's form factor");
+        const auto c2 = [&]() -> const edi::Parameter* {
+            for (const auto& item : structure->structure()->magnetic_form_factors) {
+                if (QString::fromStdString(item->id.value()).startsWith(QStringLiteral("Co"))) return &item->j2_coefficient;
+            }
+            return nullptr;
+        };
+        // The example's Co row: dipole, C2 free (written `0()`).
+        QCOMPARE(rows->text(co, QStringLiteral("approximation")), QStringLiteral("dipole"));
+        QVERIFY(c2() != nullptr && c2()->free.get());
+        const double value = c2()->value.get();
+        rows->setApproximation(co, QStringLiteral("j0"));
+        QTRY_COMPARE_WITH_TIMEOUT(rows->text(co, QStringLiteral("approximation")), QStringLiteral("j0"), 20000);
+        QVERIFY(c2() != nullptr);
+        QCOMPARE(c2()->value.get(), value);
+        QVERIFY(!c2()->free.get());
+        QVERIFY(!rows->text(co, QStringLiteral("type")).isEmpty());
+        QVERIFY(!rows->text(co, QStringLiteral("ion")).isEmpty());
+        project->undo();
+        QTRY_COMPARE_WITH_TIMEOUT(rows->text(co, QStringLiteral("approximation")), QStringLiteral("dipole"), 20000);
+        QVERIFY(c2() != nullptr && c2()->free.get());
+    }
+
+    // The owner's path of 2026-11-19 (a crash after two binding-loop warnings): the Experiments row's data file is
+    // replaced, the new data is calculated, and Pattern, Meas vs calc and the pages switch without a warning or a fault.
+    void replacedDataIsCalculatedAndPagesSwitch() {
+        static QStringList loops;
+        loops.clear();
+        static QtMessageHandler previous = nullptr;
+        previous = qInstallMessageHandler([](QtMsgType type, const QMessageLogContext& context, const QString& text) {
+            if (text.contains(QStringLiteral("Binding loop"))) loops.append(text);
+            if (previous) previous(type, context, text);
+        });
+        const auto restore = qScopeGuard([] { qInstallMessageHandler(previous); });
+        QTemporaryDir copy;
+        QVERIFY(copy.isValid());
+        const QString source = QStringLiteral(EDI_SOURCE_DIR "/docs/user/cli/pd-neut-cwl_cosio-d20_2k/project");
+        std::function<bool(const QString&, const QString&)> copyTree = [&](const QString& from, const QString& to) {
+            if (!QDir().mkpath(to)) return false;
+            for (const QFileInfo& entry : QDir(from).entryInfoList(QDir::Files | QDir::Dirs | QDir::NoDotAndDotDot)) {
+                const QString target = to + u'/' + entry.fileName();
+                if (entry.isDir() ? !copyTree(entry.filePath(), target) : !QFile::copy(entry.filePath(), target)) return false;
+            }
+            return true;
+        };
+        QVERIFY(copyTree(source, copy.path() + QStringLiteral("/project")));
+        const QString data = copy.path() + QStringLiteral("/d20_2K.dat");
+        QVERIFY(QFile::copy(QStringLiteral(EDI_SOURCE_DIR "/docs/user/cli/pd-neut-cwl_cosio-d20_scan-162f/project/experiments/d20_scan/01_001_497p3790.dat"), data));
+
+        QQmlApplicationEngine engine;
+        edi_app::configure_engine(engine);
+        engine.loadFromModule("edi.app", "Main");
+        QVERIFY(!engine.rootObjects().isEmpty());
+        auto* window = qobject_cast<QQuickWindow*>(engine.rootObjects().constFirst());
+        QVERIFY(window);
+        window->resize(1480, 900);
+        window->show();
+        QVERIFY(QTest::qWaitForWindowExposed(window));
+        auto* session = engine.singletonInstance<edi_app::Session*>("edi.app", "Session");
+        QVERIFY(session);
+        QVERIFY2(session->openProject(QUrl::fromLocalFile(copy.path() + QStringLiteral("/project"))), qPrintable(session->lastError()));
+        edi_app::ProjectViewModel* project = session->project();
+        QTRY_VERIFY_WITH_TIMEOUT(!project->calculating(), 60000);
+        const auto shown = [window](const QString& name) -> QQuickItem* {
+            QQuickItem* result = nullptr;
+            std::function<void(QQuickItem*)> walk = [&](QQuickItem* parent) {
+                for (QQuickItem* child : parent->childItems()) {
+                    const QPointF at = child->mapToScene(QPointF());
+                    if (child->objectName() == name && child->isVisible() && child->isEnabled() && at.x() >= 0 && at.x() < window->width()) result = child;
+                    walk(child);
+                }
+            };
+            walk(window->contentItem());
+            return result;
+        };
+        const auto click = [&](const char* name) {
+            QQuickItem* item = nullptr;
+            QTRY_VERIFY_WITH_TIMEOUT(take(item, shown(QString::fromLatin1(name))), 20000);
+            QTest::mouseClick(window, Qt::LeftButton, {}, item->mapToScene(QPointF(item->width() / 2, item->height() / 2)).toPoint());
+        };
+        click("appBar.tab.experiment");
+        click("mainArea.tab.measCalc");
+        QVERIFY(project->currentExperiment());
+        QTRY_VERIFY_WITH_TIMEOUT(project->currentExperiment()->pattern()->calculatedPointCount() > 0, 60000);
+
+        // Hover moves across the middle of the window, where the charts are (the owner's crash came from a mouse move
+        // over a chart after the replacement).
+        const auto hover = [window] {
+            for (int x = 420; x < window->width() - 40; x += 23) {
+                QTest::mouseMove(window, QPoint(x, window->height() / 2 + (x % 97) - 48));
+                QCoreApplication::processEvents();
+            }
+        };
+        hover();
+        // A fit first, as the owner had one: its results are what the replacement makes outdated.
+        project->fit()->start();
+        QTRY_VERIFY_WITH_TIMEOUT(project->fit()->running(), 20000);
+        QTRY_VERIFY_WITH_TIMEOUT(!project->fit()->running(), 900000);
+        QTRY_VERIFY_WITH_TIMEOUT(!project->calculating(), 60000);
+        QVERIFY2(!project->currentExperiment()->fitOutcome().isEmpty(), "the fit left its outcome on the experiment");
+        QVERIFY(!project->fit()->outOfDate());
+        QVERIFY2(project->loadDataInto(project->currentExperiment(), QUrl::fromLocalFile(data)), qPrintable(project->lastError()));
+        hover();
+        QTRY_VERIFY_WITH_TIMEOUT(!project->calculating(), 60000);
+        hover();
+        // The new data is calculated as any other edit's is.
+        QTRY_VERIFY_WITH_TIMEOUT(project->currentExperiment()->pattern()->calculatedPointCount() > 0, 60000);
+        // The fit described the old data: the project no longer holds it, so the experiment's line drops its outcome
+        // (and a save writes none).
+        QVERIFY(project->currentExperiment()->fitOutcome().isEmpty());
+        QVERIFY(project->project().fit_result.result_kind.empty());
+        for (const char* name : {"mainArea.tab.pattern", "mainArea.tab.measCalc", "appBar.tab.structure", "appBar.tab.analysis",
+                                 "mainArea.tab.measCalc", "mainArea.tab.pattern", "appBar.tab.experiment", "mainArea.tab.measCalc"}) {
+            click(name);
+            hover();
+            QTest::qWait(200);
+            hover();
+        }
+        QTRY_VERIFY_WITH_TIMEOUT(!project->calculating(), 60000);
+        QVERIFY2(loops.isEmpty(), qPrintable(loops.join(u'\n')));
+        // A second replacement, then one Undo: the data is the first replacement's, which no fit described.
+        const QString second = copy.path() + QStringLiteral("/d20_second.dat");
+        QVERIFY(QFile::copy(QStringLiteral(EDI_SOURCE_DIR "/docs/user/cli/pd-neut-cwl_cosio-d20_scan-162f/project/experiments/d20_scan/01_002_497p3410.dat"), second));
+        QVERIFY2(project->loadDataInto(project->currentExperiment(), QUrl::fromLocalFile(second)), qPrintable(project->lastError()));
+        QTRY_VERIFY_WITH_TIMEOUT(!project->calculating(), 60000);
+        project->undo();
+        QTRY_VERIFY_WITH_TIMEOUT(!project->calculating(), 60000);
+        QVERIFY(project->project().fit_result.result_kind.empty());
+        QVERIFY(project->currentExperiment()->fitOutcome().isEmpty());
+        // A second Undo brings back the fitted data and the fit that described it.
+        project->undo();
+        QTRY_VERIFY_WITH_TIMEOUT(!project->project().fit_result.result_kind.empty(), 20000);
+        QTRY_VERIFY_WITH_TIMEOUT(!project->currentExperiment()->fitOutcome().isEmpty(), 20000);
+    }
+
+    void undoReplacementRestoresTheAbsenceOfFit() {
+        edi_app::Session session(nullptr);
+        QVERIFY2(session.openProject(QUrl::fromLocalFile(QStringLiteral(EDI_SOURCE_DIR "/docs/user/cli/pd-neut-cwl_cosio-d20_2k/project"))),
+                 qPrintable(session.lastError()));
+        auto* project = session.project();
+        QTRY_VERIFY_WITH_TIMEOUT(!project->calculating(), 60000);
+        auto& model = const_cast<edi::Project&>(project->project());
+        edi::clear_fit_result(model);
+        const QString data = QStringLiteral(EDI_SOURCE_DIR "/docs/user/cli/pd-neut-cwl_cosio-d20_scan-162f/project/experiments/d20_scan/01_001_497p3790.dat");
+        QVERIFY2(project->loadDataInto(project->currentExperiment(), QUrl::fromLocalFile(data)), qPrintable(project->lastError()));
+        QTRY_VERIFY_WITH_TIMEOUT(!project->calculating(), 60000);
+        model.fit_result.result_kind = "single";
+        model.fit_result.message = "describes only the replacement";
+        model.experiments.front()->fit_n_data_points = 7;
+        project->undo();
+        QTRY_VERIFY_WITH_TIMEOUT(!project->calculating(), 60000);
+        QVERIFY(project->project().fit_result.result_kind.empty());
+        QVERIFY(!project->project().experiments.front()->fit_share_held());
+    }
+
     void eachPageOpensOnItsDefaultTabThenTheUsersPick() {
         QQmlApplicationEngine engine;
         edi_app::configure_engine(engine);
@@ -556,7 +855,7 @@ private slots:
         };
         const auto openPage = [&](const char* name) {
             QQuickItem* tab = nullptr;
-            QTRY_VERIFY_WITH_TIMEOUT((tab = shown(QString::fromLatin1(name))) && tab->isEnabled(), 20000);
+            QTRY_VERIFY_WITH_TIMEOUT(take(tab, shown(QString::fromLatin1(name))) && tab->isEnabled(), 20000);
             click(tab);
         };
         const QUrl lbco = QUrl::fromLocalFile(QStringLiteral(EDI_SOURCE_DIR "/docs/user/cli/pd-neut-cwl_lbco-hrpt/project"));
@@ -571,7 +870,7 @@ private slots:
         openPage("appBar.tab.analysis");
         QTRY_COMPARE_WITH_TIMEOUT(currentKey(), QStringLiteral("pattern"), 20000);
         QQuickItem* structureTab = nullptr;
-        QTRY_VERIFY_WITH_TIMEOUT((structureTab = shown("mainArea.tab.structure")), 20000);
+        QTRY_VERIFY_WITH_TIMEOUT(take(structureTab, shown("mainArea.tab.structure")), 20000);
         click(structureTab);
         QTRY_COMPARE_WITH_TIMEOUT(currentKey(), QStringLiteral("structure"), 20000);
         QVERIFY2(session->openProject(lbco), qPrintable(session->lastError()));
@@ -703,6 +1002,7 @@ private slots:
                 QVERIFY(QMetaObject::invokeMethod(labels, "itemAt", Q_RETURN_ARG(QQuickItem*, first), Q_ARG(int, 0)));
                 QPointer<QQuickItem> original(first);
                 layer->setCurrent(dataset);
+                QCoreApplication::processEvents();  // the labels are announced once per event-loop turn
                 if (before > 0 && labels->property("count").toInt() == before) {
                     QVERIFY(original);
                     QQuickItem* after = nullptr;
@@ -725,6 +1025,21 @@ private slots:
         const auto labels = layer.labelledDatasets();
         QVERIFY(labels.contains(30));
         QVERIFY(labels.size() <= 7);
+        // Announced once per event-loop turn, against what was last announced: a read before delivery (which
+        // refreshes the cache) and a second move in the same turn still end in one announcement of the new choice,
+        // and a turn with no move announces nothing.
+        QSignalSpy announced(&layer, &edi_app::ScanLayer::labelledDatasetsChanged);
+        QCoreApplication::processEvents();
+        announced.clear();
+        layer.setCurrent(5);
+        QVERIFY(layer.labelledDatasets() != labels);
+        layer.setHeight(100.001);
+        QCOMPARE(announced.size(), 0);
+        QCoreApplication::processEvents();
+        QVERIFY(layer.labelledDatasets() != labels);
+        QCOMPARE(announced.size(), 1);
+        QCoreApplication::processEvents();
+        QCOMPARE(announced.size(), 1);
         layer.setActive(false);
         QVERIFY(layer.labelledDatasets().isEmpty());
     }
@@ -822,3 +1137,4 @@ int main(int argc, char** argv) {
     return QTest::qExec(&tests, argc, argv);
 }
 #include "scan_save_tests.moc"
+

@@ -58,7 +58,14 @@ function(edi_apply_warnings)
             if(NOT path MATCHES "${own}" OR path MATCHES "${skip}")
                 continue()
             endif()
-            set_source_files_properties(${path} TARGET_DIRECTORY ${target} PROPERTIES COMPILE_OPTIONS "${warnings}")
+            set(options ${warnings})
+            # MSVC's optimizer reports unreachable code (C4702) inside Qt's private QML headers once their templates
+            # are inlined, a code-generation warning that treating them as external headers does not reach; only the
+            # file that includes them leaves it out.
+            if(MSVC AND path MATCHES "/app/src/app_info\\.cpp$")
+                list(APPEND options /wd4702)
+            endif()
+            set_source_files_properties(${path} TARGET_DIRECTORY ${target} PROPERTIES COMPILE_OPTIONS "${options}")
         endforeach()
     endforeach()
 endfunction()

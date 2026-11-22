@@ -3,8 +3,8 @@ import assert from 'node:assert/strict';
 import {writeFile} from 'node:fs/promises';
 import {join} from 'node:path';
 
-const controls=['project.saveChoice','saveAs.zip','saveAs.accept','webNotice.text',
-  'appBar.button.save','open.folder','unsavedChanges.title','unsavedChanges.discard',
+const controls=['project.saveAs.zip','project.saveAs.copy','project.saveChoice','saveAs.zip','saveAs.accept','webNotice.text',
+  'appBar.button.save','project.load.folder','unsavedChanges.title','unsavedChanges.discard',
   'createProject.name','webStorageWarning.text','save.error'];
 export const projectDialogExpression=`(() => {
   const controls={};
@@ -37,7 +37,7 @@ export async function waitForSaveSettled(evaluate,frame,before,{timeoutMs=45000}
         'Save readiness cannot reuse retargeted, hidden or malformed native controls');
       return found.item;
     };
-    const blocked=['project.saveChoice','saveAs.zip','saveAs.accept','webNotice.text',
+    const blocked=['project.saveAs.zip','project.saveAs.copy','project.saveChoice','saveAs.zip','saveAs.accept','webNotice.text',
       'unsavedChanges.title','unsavedChanges.discard','webStorageWarning.text','save.error']
       .map(read).some(Boolean);
     const save=read('appBar.button.save');

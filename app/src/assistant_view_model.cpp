@@ -1443,6 +1443,7 @@ struct AssistantViewModel::State {
     QString observed_native_error;
     std::uint64_t generation = 0;
     QTimer timer{&owner};
+    QElapsedTimer fit_sync_clock;  // while a fit runs, when the context was last made
     QString history_path, history_archive_thread;
     std::unique_ptr<AssistantHistoryArchive> history_archive,history_legacy_archive;
     bool history_cache_was_cleared=false;
@@ -1450,6 +1451,7 @@ struct AssistantViewModel::State {
     QJsonArray history_initial_snapshot;
     std::uint64_t history_retry_revision=0;
     QString history_error; // Local durability, never account/native authority.
+    QString alias_cleanup_error; // An unfinished alias the assistant could not remove; cleared by the next sent message.
     Object history_seen_metadata;
     Object published_app_messages() const {
         const QPointer<Session> session(qobject_cast<Session*>(owner.parent()));
@@ -3456,6 +3458,8 @@ struct AssistantViewModel::State {
             {"calculating",target && target->calculating()},
             {"fitting",target && target->fit()->nativeRunning()},{"fit_undo_available",target && target->fitUndoAvailable()},{"show_actions",show_actions},{"calculations",calculations},{"interface_groups",interface_groups}};
         if(target)native_state["project_modified"]=target->modified();
+        // The Project page's untitled project: its work is unsaved until it is named (save_project, or the user's Create).
+        if(target && result_session())native_state["untitled"]=result_session()->untitled();
         // Whether fit results, R-factors and a report exist now (an assistant Undo restores the accepted fit's, ADR-0055).
         if(target)native_state["fit_result_current"]=target->fit()->results()->rowCount()>0;
         if(!selected_structure_id.isEmpty())native_state["selected_structure_id"]=selected_structure_id;
@@ -3917,9 +3921,19 @@ struct AssistantViewModel::State {
             {"already_admitted",!source->attachment.isEmpty() || source->acquired}});
         return {{"sources",rows}};
     }
+    // A selector's options by canonical name: its `names` where it shows display text, else its model.
+    static QStringList canonical_options(const QQuickItem* combo) {
+        const QVariant names=combo->property("names");
+        return names.isValid() ? names.toStringList() : combo->property("model").toStringList();
+    }
+    // Storage names can differ from the keyed full paths shown in a decorated picker.
+    static QStringList search_options(const QQuickItem* combo) {
+        const QVariant names=combo->property("searchNames");
+        return names.isValid() ? names.toStringList() : canonical_options(combo);
+    }
     static QString input_reader_hint(const QString& name) {
         const auto suffix=QFileInfo(name).suffix().toLower();
-        if(suffix=="cif" || suffix=="edi")return "structure";
+        if(suffix=="cif" || suffix=="mcif" || suffix=="edi")return "structure";
         if(suffix=="xy" || suffix=="xye" || suffix=="dat" || suffix=="txt" || suffix=="csv")return "measurement";
         return "unknown";
     }
@@ -4021,11 +4035,19 @@ struct AssistantViewModel::State {
         qsizetype relation_row = 0, relation_field = 0;
         bool relation_constraint = false, relation_visible = false;
         qsizetype relation_base = 0, completed_steps = 0;
+        // An alias add_relations appended whose parameter is not chosen yet: removed if the run stops there, so no alias
+        // is left on the selector's default target.
+        const void* partial_alias = nullptr;
+        bool partial_alias_removed = false, partial_alias_deferred = false;
+        Object partial_alias_left;  // the unfinished alias it could not remove: id, parameter, reason
         // The tool and arguments as admitted, so a refused cue can still run the operation as normal mode does.
         QString fallback_tool;
         Object fallback_args;
         QString cue_skipped;
         bool cue_fallback = false;
+        // add_relations after a step whose control could not be shown: that step and the rest run through the
+        // ordinary model methods, like normal mode.
+        bool relation_ordinary = false;
         const void* relation_key = nullptr;
         ProjectEditor::RelationAction relation_action;
         bool step_counted = false, estimate_then_names = false;
@@ -4041,6 +4063,11 @@ struct AssistantViewModel::State {
         std::shared_ptr<ProjectViewModel::WidgetParameterInput> input;
     };
     std::shared_ptr<NativeWidget> native_widget;
+    // An unfinished alias a stopped add_relations still owes removing, because its stop came while the project could
+    // not take an edit. Every later provider request waits until it is settled, so no successor can see or use it.
+    struct OwedAliasCleanup { QPointer<ProjectViewModel> project; const void* row = nullptr; std::string id, parameter; int waits = 0; };
+    std::vector<OwedAliasCleanup> owed_alias_cleanups;
+    bool owed_alias_timer = false;
     // Weak entries count retired callback captures until their actual owners die.
     std::vector<std::weak_ptr<NativeWidget>> parameter_widget_frames;
     struct NativeCreation;
@@ -4497,6 +4524,11 @@ struct AssistantViewModel::State {
         // sidebar/focus operation is added before this real user action.
         if (original_widget && original_widget->tool == "save_project") original_widget->save_manual_takeover = true;
         if (original_creation) original_creation->manual_takeover = true;
+        // The user's own input cancels the operation: nothing refused from here on runs it without its cue.
+        ++native_superseding;
+        const auto takeover = qScopeGuard([this, receiver] {
+            if (receiver && receiver->state_.get() == this) --native_superseding;
+        });
         if (showing_actions) try { emit owner.actionManualTakeover(); } catch (...) {}
         if (!original_request()) return false; // A never cancels/acts through new B.
         if (manual_request_current()) native_supersede_operation(widget_outcome_error);
@@ -4572,6 +4604,14 @@ struct AssistantViewModel::State {
         // externally reentrant QML stage cleanup, and fence any continuation
         // after its ordinary completion/pointer notifications against B.
         try { if (original_cleanup() && helper) helper->cancel(); } catch (...) {}
+        // Every exit of add_relations, Stop and retirement included, removes an alias it left unfinished; the retained
+        // outcome then says so.
+        // The helper's cancellation callbacks may have replaced or destroyed the original owner: only it cleans up.
+        if (run->tool == "add_relations" && original_cleanup()) {
+            drop_partial_alias(run);
+            if ((run->partial_alias_removed || run->partial_alias_deferred || !run->partial_alias_left.isEmpty()) && original_cleanup())
+                try { widget_sequence_retain(run); } catch (...) {}
+        }
         if (original_cleanup() && publishing && (!generic_busy || generic_revoke_pending ||
             generic_clear_pending || generic_context_pending || !generic_authenticated || generic_retiring))
             try { widget_showing(false); } catch (...) {}
@@ -4630,7 +4670,16 @@ struct AssistantViewModel::State {
     static QString cue_skipped_message(const QString& reason) {
         return QObject::tr("Show actions could not show this click (%1), so it ran without the visible click.").arg(reason);
     }
+    // Only a cue that could not be shown runs without it. A cancellation, a takeover, a stale scientific context or a
+    // blocked owner refuses as it always did: nothing of the operation runs after it.
+    template <class Call>
+    bool cue_fallback_admitted(const Call& call) const noexcept {
+        return native_superseding == 0 && !native_blocked && native_call && !native_call->retiring && call.record &&
+               !call.record->retired && call.receipt && !call.receipt->retired && !call.receipt->stale &&
+               (!native_receipt || !native_receipt->stale);
+    }
     bool widget_cue_fallback(const std::shared_ptr<NativeWidget>& run, const QString& message) noexcept {
+        if (!cue_fallback_admitted(run->call)) return false;
         const auto& tool = run->fallback_tool;
         const bool edit_tool = tool == "set_parameters" || tool == "set_free" || tool == "add_relations";
         const bool own_path = tool == "edit_relation" || tool == "undo_fit" || tool == "run_fit";
@@ -4643,7 +4692,20 @@ struct AssistantViewModel::State {
         run->cue_fallback = true;
         run->cue_skipped = message.isEmpty() ? QStringLiteral("The original control could not be shown") : message;
         const auto receiver = run->receiver;
+        const auto record = native_call->record;
+        const auto receipt = native_call->receipt;
+        const auto rpc = native_call->rpc;
+        const QPointer<ProjectViewModel> target(project);
+        // A callback (the message handler, the helper's cleanup) may stop, take over or replace the operation: before
+        // anything runs, the original call must still be current and admitted. If it is not, whoever settled it owns
+        // the reply.
+        const auto original = [&] {
+            return receiver && receiver->state_.get() == this && native_call && native_call->record == record &&
+                   native_call->receipt == receipt && native_call->rpc == rpc && target && project == target &&
+                   !record->answered && !record->discarded && !record->completed && cue_fallback_admitted(run->call);
+        };
         try { qInfo().noquote() << "assistant: Show actions cue skipped for" << tool << "reason" << run->cue_skipped; } catch (...) {}
+        if (!original() || !widget_owned(run)) return true;
         try {
             if (tool == "edit_relation") {
                 run->relation_visible = false;
@@ -4659,6 +4721,7 @@ struct AssistantViewModel::State {
             if (tool == "run_fit") {
                 if (native_fit) return false;  // a fit already started
                 widget_end(run);
+                if (!original() || native_fit) return true;
                 try { native_start_fit_normal(); }
                 catch (const std::exception& error) {
                     if (receiver && receiver->state_.get() == this && native_call)
@@ -4669,8 +4732,7 @@ struct AssistantViewModel::State {
             std::vector<std::pair<std::string, bool>> before_flags;
             auto edit = assistant_native_edit(*project->assistantProject(), tool, run->fallback_args, before_flags);
             if (!edit) return false;
-            const auto record = native_call->record;
-            const QPointer<ProjectViewModel> target(project);
+            if (!original() || !native_call) return true;
             const auto scope = begin_own_edit();
             native_call->may_have_written = true;
             ProjectViewModel::EditOutcome result;
@@ -4691,8 +4753,260 @@ struct AssistantViewModel::State {
             return false;
         }
     }
+    // A later set_parameters/set_free entry whose control could not be shown (the first uses widget_cue_fallback):
+    // the entries already done stay, the unentered rest runs once through the ordinary edit normal mode uses (one
+    // Undo), and the result names the skipped cue. An entry whose input began, a manual draft, a cancellation or a
+    // stale context still refuses.
+    bool widget_parameter_fallback(const std::shared_ptr<NativeWidget>& run, const QString& message) noexcept {
+        try {
+            if ((run->tool != "set_parameters" && run->tool != "set_free") || run->parameter_entries.empty() || run->cue_fallback ||
+                run->completed_steps == 0 || run->parameter_at >= run->parameter_entries.size() || !run->window ||
+                !run->create_parent.expired() || !cue_fallback_admitted(run->call) || !widget_current(run) || !project ||
+                run->project != project)
+                return false;
+            if (run->parameter_uncertain || (run->input && (run->input->consumed || run->input->outcome.applied))) return false;
+            if (widget_input && widget_input->manualDraftPresent()) return false;
+            const bool values = run->tool == "set_parameters";
+            QJsonArray rest;
+            for (auto at = run->parameter_at; at < run->parameter_entries.size(); ++at) {
+                const auto& entry = run->parameter_entries[at];
+                rest.append(values ? Object{{"path", entry.path}, {"value", entry.value}} : Object{{"path", entry.path}, {"free", entry.free}});
+            }
+            const auto remaining = static_cast<qsizetype>(run->parameter_entries.size() - run->parameter_at);
+            std::vector<std::pair<std::string, bool>> before_flags;
+            auto edit = assistant_native_edit(*project->assistantProject(), run->tool, Object{{values ? "values" : "flags", rest}}, before_flags);
+            if (!edit) return false;
+            // The original owner, captured before any callback (the log's message handler, input release, the edit's
+            // publication) can stop, replace or destroy it; each later step proves it still holds.
+            const auto receiver = run->receiver;
+            if (!native_call) return true;
+            const auto record = native_call->record;
+            const auto receipt = native_call->receipt;
+            const auto rpc = native_call->rpc;
+            const QPointer<ProjectViewModel> target(project);
+            const auto original = [&] {
+                return receiver && receiver->state_.get() == this && native_call && native_call->record == record &&
+                       native_call->receipt == receipt && native_call->rpc == rpc && target && project == target &&
+                       widget_owned(run) && cue_fallback_admitted(run->call);
+            };
+            run->cue_fallback = true;
+            run->cue_skipped = message.isEmpty() ? QStringLiteral("The original control could not be shown") : message;
+            try { qInfo().noquote() << "assistant: Show actions cue skipped for" << run->tool << "entry" << run->parameter_at << "reason" << run->cue_skipped; } catch (...) {}
+            if (!original()) return true;  // whoever settled it owns the reply
+            // Release the unentered entry's prepared input and own edit before the ordinary edit.
+            if (const auto input = std::exchange(run->input, nullptr)) target->finishWidgetInput(input);
+            if (const auto scope = std::exchange(run->edit_scope, 0)) end_own_edit(scope);
+            if (!original() || !native_call) return true;
+            const auto scope = begin_own_edit();
+            native_call->may_have_written = true;
+            ProjectViewModel::EditOutcome result;
+            try { result = target->applyRecordedEdit(*edit, false); }
+            catch (...) { if (receiver && receiver->state_.get() == this) end_own_edit(scope); throw; }
+            if (!receiver || receiver->state_.get() != this) return true;
+            end_own_edit(scope);
+            if (!target || project != target || !native_call || native_call->record != record || native_call->receipt != receipt ||
+                native_call->rpc != rpc || !widget_owned(run))
+                return true;  // whoever replaced the call owns its reply
+            const bool complete = result.applied && result.published;
+            native_finish(complete,
+                {{"status", !result.applied ? "partial" : result.published ? "edited" : "applied_unconfirmed"},
+                 {"steps_completed", static_cast<qint64>(run->completed_steps + (result.applied ? remaining : 0))},
+                 {"complete", complete}, {"atomic", false}, {"calculation_pending", target->calculating()},
+                 {"cue_skipped", bounded_error(run->cue_skipped)},
+                 {"message", bounded_error(result.message.isEmpty() ? cue_skipped_message(run->cue_skipped) : result.message)}});
+            if (receiver && receiver->state_.get() == this && widget_owned(run)) widget_end(run);
+            return true;
+        } catch (...) {
+            return false;
+        }
+    }
+    // A later add_relations step whose control could not be shown (the first step uses widget_cue_fallback): the
+    // earlier visible steps stay, this step and the rest run through the ordinary model methods, and the result names
+    // the skipped cue. A step whose edit already began, a cancellation or a stale context still refuses.
+    bool widget_relation_fallback(const std::shared_ptr<NativeWidget>& run, const QString& message) noexcept {
+        try {
+            if (run->tool != "add_relations" || run->relation_ordinary || run->completed_steps == 0 || !run->window ||
+                !run->create_parent.expired() || !cue_fallback_admitted(run->call) || !widget_current(run))
+                return false;
+            // The input of a counted step belongs to the step before; only this step's own input can have begun.
+            if (const auto& input = run->relation_input; input && !run->step_counted && (input->consumed || input->outcome.applied))
+                return false;
+            run->relation_ordinary = true;
+            run->cue_skipped = message.isEmpty() ? QStringLiteral("The original control could not be shown") : message;
+            const auto receiver = run->receiver;
+            try { qInfo().noquote() << "assistant: Show actions cue skipped for add_relations step reason" << run->cue_skipped; } catch (...) {}
+            // The log's message handler may have stopped or replaced the operation: then whoever did owns its reply.
+            if (!receiver || receiver->state_.get() != this || !widget_owned(run)) return true;
+            // Release this step's prepared input and own edit, so the ordinary step prepares its own.
+            if (const auto input = std::exchange(run->relation_input, nullptr); input && run->project)
+                run->project->finishWidgetRelations(input);
+            if (!receiver || receiver->state_.get() != this || !widget_owned(run)) return true;
+            if (const auto scope = std::exchange(run->edit_scope, 0)) end_own_edit(scope);
+            run->step_counted = false; run->reveal_steps = 0;
+            // Continue after the refusing callback has unwound.
+            QTimer::singleShot(0, &owner, [this, run] {
+                if (!widget_owned(run)) return;
+                try { widget_relation_step(run); } catch (...) { if (widget_owned(run)) widget_refuse(run, widget_outcome_error); }
+            });
+            return true;
+        } catch (...) {
+            return false;
+        }
+    }
+    // The alias add_relations appended and left on its default target, removed when the run ends (refused, stopped,
+    // signed out, disconnected) before its parameter was chosen; only that exact row, still in the current project.
+    // An Append that applied before its step was recorded (Stop during its publication) owns the last row.
+    void drop_partial_alias(const std::shared_ptr<NativeWidget>& run) noexcept {
+        try {
+            const void* partial = std::exchange(run->partial_alias, nullptr);
+            const QPointer<ProjectViewModel> target(run->project);
+            if (run->tool != "add_relations" || !target || target != project) return;
+            const auto input = run->relation_input;
+            if (!partial && input && !run->step_counted && input->consumed && input->outcome.applied &&
+                input->expected.kind == ProjectEditor::RelationAction::Kind::AliasAppend) {
+                const auto& aliases = target->assistantProject()->aliases;
+                const auto position = run->relation_base + run->relation_row;
+                if (position >= 0 && position + 1 == static_cast<qsizetype>(aliases.size()))
+                    partial = aliases[static_cast<std::size_t>(position)].get();
+            }
+            if (!partial) return;
+            // The row as the run left it: a later rename or retarget makes it someone else's, never removed.
+            std::string id, parameter;
+            for (const auto& row : target->assistantProject()->aliases)
+                if (row.get() == partial) { id = row->id.value(); parameter = row->parameter_unique_name.value(); }
+            if (id.empty() && parameter.empty()) return;
+            // Stopped while its requested parameter was publishing: the row is already complete, so it stays.
+            const auto rows = run->relation_args.value("aliases").toArray();
+            if (!run->relation_constraint && run->relation_row >= 0 && run->relation_row < rows.size() &&
+                rows.at(run->relation_row).toObject().value("parameter").toString().toStdString() == parameter)
+                return;
+            // Remove is its own ordinary relation action: release this run's prepared one first.
+            if (input) target->finishWidgetRelations(input);
+            const QPointer<AssistantViewModel> receiver(&owner);
+            const auto removal = remove_unfinished_alias(target, partial, id, parameter);
+            if (!receiver || receiver->state_.get() != this) return;
+            run->partial_alias_removed = removal == AliasRemoval::Removed;
+            if (removal == AliasRemoval::Waiting) {
+                // The project cannot take an edit yet (Stop from inside a publication, a Save, a dataset read): the
+                // removal is owed, and later provider requests wait for it, for a bounded time.
+                run->partial_alias_deferred = true;
+                owed_alias_cleanups.push_back({target, partial, std::move(id), std::move(parameter), 0});
+                schedule_owed_aliases();
+            } else if (removal == AliasRemoval::Refused || removal == AliasRemoval::Failed) {
+                const auto reason = alias_removal_reason(removal, target);
+                run->partial_alias_left = {{"id", QString::fromStdString(id)}, {"parameter", QString::fromStdString(parameter)}, {"reason", reason}};
+                report_alias_left(id, parameter, reason);
+            }
+        } catch (...) {}  // the original outcome stands; a later reread shows the row
+    }
+    // Removed: the row is gone. Gone: nothing is owed any more (the row is missing, renamed or retargeted, or the
+    // project was replaced). Waiting: the project will take the edit after a publication, Save or read. Refused: it
+    // will not without the user (failed publication, dataset not shown). Failed: Remove ran and the row is still there.
+    enum class AliasRemoval { Removed, Gone, Waiting, Refused, Failed };
+    // Removes the exact unfinished alias row if the project still holds it unchanged. The removal's notifications may
+    // replace the project or the assistant, so everything after it goes through the captured owners.
+    AliasRemoval remove_unfinished_alias(const QPointer<ProjectViewModel>& target, const void* row, const std::string& id,
+                                         const std::string& parameter) noexcept {
+        const QPointer<AssistantViewModel> receiver(&owner);
+        bool attempted = false;
+        try {
+            if (!target || project != target) return AliasRemoval::Gone;
+            int at = -1, index = 0;
+            for (const auto& alias : target->assistantProject()->aliases) {
+                if (alias.get() == row && alias->id.value() == id && alias->parameter_unique_name.value() == parameter) at = index;
+                ++index;
+            }
+            if (at < 0) return AliasRemoval::Gone;
+            if (!target->readyForEdit()) return target->editRefusalPersistent() ? AliasRemoval::Refused : AliasRemoval::Waiting;
+            const auto scope = begin_own_edit();
+            attempted = true;
+            try { target->analysis()->aliases()->remove(at); }
+            catch (...) { if (receiver && receiver->state_.get() == this) end_own_edit(scope); throw; }
+            if (!receiver || receiver->state_.get() != this) return AliasRemoval::Failed;
+            end_own_edit(scope);
+            if (!target) return AliasRemoval::Gone;
+            const auto& aliases = target->assistantProject()->aliases;
+            return std::none_of(aliases.begin(), aliases.end(), [row](const auto& alias) { return alias.get() == row; })
+                ? AliasRemoval::Removed : AliasRemoval::Failed;
+        } catch (...) {
+            return attempted ? AliasRemoval::Failed : AliasRemoval::Refused;
+        }
+    }
+    QString alias_removal_reason(AliasRemoval removal, const QPointer<ProjectViewModel>& target) const {
+        if (removal == AliasRemoval::Failed) return QObject::tr("its removal did not take effect");
+        if (removal == AliasRemoval::Waiting) return QObject::tr("the project stayed busy");
+        try {
+            if (target) if (const auto refusal = target->editRefusal(); !refusal.isEmpty()) return refusal;
+        } catch (...) {}
+        return QObject::tr("the project could not take the edit");
+    }
+    // What the user sees when an unfinished alias stays: its id, its current target and why.
+    void report_alias_left(const std::string& id, const std::string& parameter, const QString& reason) noexcept {
+        const QPointer<AssistantViewModel> receiver(&owner);
+        try {
+            const auto message = QObject::tr("The assistant stopped before choosing the parameter of alias %1 and could not remove it "
+                                             "(%2). It still points at %3: correct or remove it.")
+                .arg(QString::fromStdString(id), reason, QString::fromStdString(parameter));
+            alias_cleanup_error = message;
+            try { qInfo().noquote() << "assistant:" << message; } catch (...) {}
+            // The log's message handler may have destroyed the assistant or replaced its State.
+            if (!receiver || receiver->state_.get() != this) return;
+            emit owner.lastErrorChanged();
+        } catch (...) {}
+    }
+    // Settles every owed alias removal it can. A removal still waiting stays owed for at most about 30 s; a refusal
+    // that waiting cannot clear, a failed removal or that bound ends the obligation and tells the user which alias
+    // stayed, so later requests are never held for good. True when nothing is owed any more.
+    bool settle_owed_aliases() noexcept {
+        const QPointer<AssistantViewModel> receiver(&owner);
+        try {
+            for (std::size_t at = 0; at < owed_alias_cleanups.size();) {
+                const auto owed = owed_alias_cleanups[at];
+                auto removal = remove_unfinished_alias(owed.project, owed.row, owed.id, owed.parameter);
+                if (!receiver || receiver->state_.get() != this) return false;
+                const auto same = [&owed](const auto& entry) { return entry.row == owed.row && entry.project == owed.project; };
+                if (removal == AliasRemoval::Waiting) {
+                    const auto found = std::find_if(owed_alias_cleanups.begin(), owed_alias_cleanups.end(), same);
+                    if (found != owed_alias_cleanups.end() && ++found->waits < 600) { ++at; continue; }
+                }
+                std::erase_if(owed_alias_cleanups, same);
+                if (removal == AliasRemoval::Removed || removal == AliasRemoval::Gone) {
+                    try { qInfo().noquote() << "assistant: owed unfinished alias" << (removal == AliasRemoval::Removed ? "removed" : "no longer owed"); } catch (...) {}
+                } else {
+                    report_alias_left(owed.id, owed.parameter, alias_removal_reason(removal, owed.project));
+                }
+                if (!receiver || receiver->state_.get() != this) return false;
+                at = 0;
+            }
+            return owed_alias_cleanups.empty();
+        } catch (...) {
+            return false;
+        }
+    }
+    void schedule_owed_aliases() noexcept {
+        if (owed_alias_timer || owed_alias_cleanups.empty()) return;
+        try {
+            const QPointer<AssistantViewModel> receiver(&owner);
+            owed_alias_timer = true;
+            QTimer::singleShot(50, &owner, [this, receiver] {
+                if (!receiver || receiver->state_.get() != this) return;
+                owed_alias_timer = false;
+                if (!settle_owed_aliases()) { if (receiver && receiver->state_.get() == this) schedule_owed_aliases(); return; }
+                // Requests that waited for the removal run now, in order (the same replay an account check uses).
+                if (!receiver || receiver->state_.get() != this || account_confirmation_pending || !agent) return;
+                const QPointer<CodexAgent> transport(agent.get());
+                if (transport) transport->resumeDeferredRequests(transport->outputGeneration());
+            });
+        } catch (...) { owed_alias_timer = false; }
+    }
     void widget_refuse(const std::shared_ptr<NativeWidget>& run, const QString& message,
                        std::source_location caller = std::source_location::current()) noexcept {
+        if (widget_owned(run) && (widget_relation_fallback(run, message) || widget_parameter_fallback(run, message))) return;
+        {
+            const QPointer<AssistantViewModel> alive(&owner);
+            drop_partial_alias(run);
+            if (!alive || alive->state_.get() != this) return;  // the removal's notifications destroyed this assistant
+        }
         if (const auto parent = run->create_parent.lock()) {
             if (!widget_owned(run)) return;
             const auto receiver = run->receiver;
@@ -4844,6 +5158,10 @@ struct AssistantViewModel::State {
     }
     void native_supersede_operation(const QString& message) noexcept {
         const QPointer<AssistantViewModel> receiver(&owner);
+        ++native_superseding;
+        const auto superseded = qScopeGuard([this, receiver] {
+            if (receiver && receiver->state_.get() == this) --native_superseding;
+        });
         const auto call = native_call;
         const auto widget = native_widget;
         const auto creation = native_create_widget;
@@ -4989,7 +5307,7 @@ struct AssistantViewModel::State {
     void widget_commit_ready(const std::shared_ptr<NativeWidget>& run) {
         const auto* entry=widget_parameter_entry(run);
         if (!widget_entry_current(run,entry)) throw std::runtime_error("The visible native request or exact live parameter binding is no longer current");
-        if(run->tool!="run_fit" && (run->tool!="edit_relation" || run->relation_visible) && !widget_page_selected(run))
+        if(run->tool!="run_fit" && (run->tool!="edit_relation" || run->relation_visible) && !run->relation_ordinary && !widget_page_selected(run))
             throw std::runtime_error("The original workflow page is no longer current; no control edit was prepared");
         if (run->tool != "run_fit") run->edit_scope = begin_own_edit();
         if (run->tool == "edit_background") {
@@ -5328,6 +5646,9 @@ struct AssistantViewModel::State {
             widget_refuse(run, QObject::tr("Finish the current manual input before revealing its parameter")); return false;
         }
         const QPointer<QQuickItem> originalField(field);
+        // One rule for every control: one the user can already see and press is pressed as it is. Layout settling, group
+        // checks and row scope only serve to bring a control into view, never to veto one already in view.
+        if (widget_input->usableTarget(*field) && widget_full_row_visible(field)) return true;
         if(!widget_settle_control_layout(run,field)) {
             if(run->receiver && run->receiver->state_.get()==this && widget_entry_owned(run,entry))
                 widget_refuse(run,QObject::tr("The original control group changed while its pending layout was settled"));
@@ -7046,7 +7367,9 @@ struct AssistantViewModel::State {
         widget_background_next(run);
     }
     bool widget_relation_current(const std::shared_ptr<NativeWidget>& run) const {
-        if (!widget_current(run) || !widget_page_selected(run)) return false;
+        if (!widget_current(run)) return false;
+        if (run->relation_ordinary) return true;  // the ordinary model methods need no shown page
+        if (!widget_page_selected(run)) return false;
         const auto* extra = widget_sidebar_tab(run, "extras");
         return extra && extra->property("checked").toBool();
     }
@@ -7095,6 +7418,13 @@ struct AssistantViewModel::State {
         Object result{{"status", complete ? "edited" : count ? "partial" : "refused"}, {"steps_completed", static_cast<qint64>(count)},
             {"complete", complete}, {"atomic", false}, {"calculation_pending", run->project && run->project->calculating()},
             {"message", bounded_error(message)}};
+        if(!run->cue_skipped.isEmpty()) {
+            result["cue_skipped"]=bounded_error(run->cue_skipped);
+            result["message"]=bounded_error(message+QLatin1Char(' ')+cue_skipped_message(run->cue_skipped));
+        }
+        if(run->partial_alias_removed)result["incomplete_alias_removed"]=true;
+        else if(!run->partial_alias_left.isEmpty())result["incomplete_alias_left"]=run->partial_alias_left;
+        else if(run->partial_alias_deferred)result["incomplete_alias_removal"]=QStringLiteral("pending");
         if(run->estimate_then_names) {
             result["applied"]=true;
             result["published"]=run->call.record->estimate_receipt && run->call.record->estimate_receipt->published;
@@ -7169,7 +7499,10 @@ struct AssistantViewModel::State {
         const auto& expected = input->expected;
         using Action = ProjectEditor::RelationAction;
         switch (expected.kind) {
-        case Action::Kind::AliasAppend: actual = position + 1 == static_cast<qsizetype>(declaration.aliases.size()); break;
+        case Action::Kind::AliasAppend:
+            actual = position + 1 == static_cast<qsizetype>(declaration.aliases.size());
+            if (actual) run->partial_alias = declaration.aliases[static_cast<std::size_t>(position)].get();
+            break;
         case Action::Kind::ConstraintAppend: {
             actual = position < static_cast<qsizetype>(declaration.constraints.size()) &&
                 declaration.constraints[static_cast<std::size_t>(position)].get() == input->applied_result.constraint &&
@@ -7179,7 +7512,10 @@ struct AssistantViewModel::State {
             break;
         }
         case Action::Kind::AliasId: actual = position < static_cast<qsizetype>(declaration.aliases.size()) && declaration.aliases[static_cast<std::size_t>(position)].get() == expected.row && declaration.aliases[static_cast<std::size_t>(position)]->id.value() == expected.text.toStdString(); break;
-        case Action::Kind::AliasParameter: actual = position < static_cast<qsizetype>(declaration.aliases.size()) && declaration.aliases[static_cast<std::size_t>(position)].get() == expected.row && declaration.aliases[static_cast<std::size_t>(position)]->parameter_unique_name.value() == expected.text.toStdString(); break;
+        case Action::Kind::AliasParameter:
+            actual = position < static_cast<qsizetype>(declaration.aliases.size()) && declaration.aliases[static_cast<std::size_t>(position)].get() == expected.row && declaration.aliases[static_cast<std::size_t>(position)]->parameter_unique_name.value() == expected.text.toStdString();
+            if (actual && delivered && input->outcome.published) run->partial_alias = nullptr;
+            break;
         case Action::Kind::ConstraintId: actual = position < static_cast<qsizetype>(declaration.constraints.size()) && declaration.constraints[static_cast<std::size_t>(position)].get() == expected.row && declaration.constraints[static_cast<std::size_t>(position)]->id.value() == expected.text.toStdString(); break;
         case Action::Kind::ConstraintExpression: actual = position < static_cast<qsizetype>(declaration.constraints.size()) && declaration.constraints[static_cast<std::size_t>(position)].get() == expected.row && declaration.constraints[static_cast<std::size_t>(position)]->expression.value() == expected.text.toStdString(); break;
         case Action::Kind::ConstraintEnabled: actual = position < static_cast<qsizetype>(declaration.constraints.size()) && declaration.constraints[static_cast<std::size_t>(position)].get() == expected.row && declaration.constraints[static_cast<std::size_t>(position)]->enabled.get() == expected.enabled; break;
@@ -7265,11 +7601,14 @@ struct AssistantViewModel::State {
             : run->relation_field == 2 ? (run->relation_constraint ? projectModel.constraints[static_cast<std::size_t>(at)]->expression.value() : projectModel.aliases[static_cast<std::size_t>(at)]->parameter_unique_name.value()) == value.toStdString()
             : run->relation_field == 3 && projectModel.constraints[static_cast<std::size_t>(at)]->enabled.get() == action.enabled;
         if (unchanged) {
+            // The alias already has its requested parameter: it is complete, no longer disposable.
+            if (run->relation_field == 2 && !run->relation_constraint) run->partial_alias = nullptr;
             ++run->relation_field;
             if (run->relation_field == (run->relation_constraint ? 4 : 3)) { ++run->relation_row; run->relation_field = 0; run->relation_key = nullptr; }
             widget_relation_step(run); return;
         }
         run->relation_action = action;
+        if (run->relation_ordinary) { run->relation_input.reset(); widget_relation_edit_apply(run); return; }
         widget_relation_edit_step(run); // Same original cue/model path as standalone edits.
     }
     void widget_constraint_step(const std::shared_ptr<NativeWidget>& run) {
@@ -7281,8 +7620,9 @@ struct AssistantViewModel::State {
         // cppcheck-suppress nullPointerRedundantCheck ; taken from the live run just above; the later check is for re-entry
         const QPointer<ConstraintListModel> constraintModel(target->analysis()->constraints());
         const QPointer<QQuickItem> control(widget_relation_named(run,QStringLiteral("constraints.append")));
-        if(!constraintModel || !control){widget_refuse(run,widget_outcome_error);return;}
-        if(!widget_reveal_parameter(run,control))return;
+        const bool ordinary=run->relation_ordinary;
+        if(!constraintModel || (!control && !ordinary)){widget_refuse(run,widget_outcome_error);return;}
+        if(!ordinary && !widget_reveal_parameter(run,control))return;
         if(!receiver || receiver->state_.get()!=this || !widget_owned(run))return;
         if(widget_input->manualDraftPresent()){control_failure(run,ControlCause::ManualInput);widget_refuse(run,QObject::tr("Finish the current manual input first"));return;}
         const auto row=run->relation_row;const auto values=rows.at(row).toObject();
@@ -7291,15 +7631,11 @@ struct AssistantViewModel::State {
         run->relation_action.text=values.value("id").toString();run->relation_action.expression=values.value("expression").toString();
         run->relation_action.enabled=values.value("enabled").toBool();
         widget_commit_ready(run);
-        if(!receiver || receiver->state_.get()!=this || !widget_owned(run) || !target || !constraintModel || !control)return;
-        AssistantWidgetInput::Request request;request.kind=AssistantWidgetInput::Kind::FileLoadCue;request.target=control;
-        auto current=[this,run,receiver,target,constraintModel,control,row]{return receiver && receiver->state_.get()==this && target && constraintModel && control && widget_relation_current(run) && run->relation_row==row && constraintModel==target->analysis()->constraints();};
-        request.current=current;request.restoreCurrent=current;request.prepareCommit=current;request.finishCommit=[]{};
-        request.completed=[this,run,receiver,target,constraintModel,control,row](bool delivered,const QString& message,ControlCause cause){
-            if(!receiver || receiver->state_.get()!=this || !widget_owned(run))return;
-            control_failure(run,delivered?ControlCause::None:cause);
+        if(!receiver || receiver->state_.get()!=this || !widget_owned(run) || !target || !constraintModel || (!control && !ordinary))return;
+        // The same ordinary append, after the visible cue or, once a step could not be shown, without it.
+        auto commit=[this,run,receiver,target,constraintModel,row] {
             try {
-                if(!delivered || !target || !constraintModel || !control || !widget_relation_current(run) || run->relation_row!=row){widget_refuse(run,message);return;}
+                if(!target || !constraintModel || !widget_relation_current(run) || run->relation_row!=row){widget_refuse(run,widget_outcome_error);return;}
                 const auto input=run->relation_input;const auto scope=run->edit_scope;
                 const auto cleanup=qScopeGuard([this,run,receiver,target,input,scope]() noexcept {try {if(target)target->finishWidgetRelations(input);if(receiver && receiver->state_.get()==this && run->edit_scope==scope){run->edit_scope=0;end_own_edit(scope);}}catch(...) {}});
                 if(!input){widget_refuse(run,widget_outcome_error);return;}
@@ -7310,6 +7646,16 @@ struct AssistantViewModel::State {
                 target->finishWidgetRelations(input);if(run->edit_scope==scope){run->edit_scope=0;end_own_edit(scope);}
                 widget_relation_done(run,true,{});
             }catch(...){if(receiver && receiver->state_.get()==this && widget_owned(run))widget_refuse(run,widget_outcome_error);}
+        };
+        if(ordinary){commit();return;}
+        AssistantWidgetInput::Request request;request.kind=AssistantWidgetInput::Kind::FileLoadCue;request.target=control;
+        auto current=[this,run,receiver,target,constraintModel,control,row]{return receiver && receiver->state_.get()==this && target && constraintModel && control && widget_relation_current(run) && run->relation_row==row && constraintModel==target->analysis()->constraints();};
+        request.current=current;request.restoreCurrent=current;request.prepareCommit=current;request.finishCommit=[]{};
+        request.completed=[this,run,receiver,control,commit](bool delivered,const QString& message,ControlCause cause){
+            if(!receiver || receiver->state_.get()!=this || !widget_owned(run))return;
+            control_failure(run,delivered?ControlCause::None:cause);
+            if(!delivered || !control){widget_refuse(run,message);return;}
+            commit();
         };
         control_start(run->call,control_target(run),std::move(request));
     }
@@ -7466,17 +7812,20 @@ struct AssistantViewModel::State {
         const bool physicalChoice=run->relation_action.kind==K::AliasParameter;
         int option=-1;
         if(physicalChoice) {
-            // The actual current popup offers this exact canonical parameter.
-            const auto options=target->property("model").toStringList();
+            // The actual current popup offers this exact canonical parameter: the selector's canonical names (its model
+            // shows them as display text), else its model.
+            const auto options=canonical_options(target);
             if(!receiver || receiver->state_.get()!=this || !target || !widget_relation_row_current(run) ||
                 run->relation_row!=row || run->relation_field!=field || run->relation_base!=base || run->relation_key!=key || run->relation_constraint!=constraint)return;
             option=static_cast<int>(options.indexOf(run->relation_action.text));
             if(option<0 || options.count(run->relation_action.text)!=1){control_failure(run,ControlCause::Unavailable); widget_refuse(run,QObject::tr("The exact original alias parameter is unavailable"));return;}
         }
         AssistantWidgetInput::Request request;request.kind=physicalChoice?(target->property("searchable").toBool()?AssistantWidgetInput::Kind::SearchChoice:AssistantWidgetInput::Kind::Choose):AssistantWidgetInput::Kind::FileLoadCue;request.target=target;
-        if(physicalChoice){request.option=option;request.value=run->relation_action.text;}
-        auto current=[this,run,target,row,field,base,key,constraint,physicalChoice,option]{return run->receiver && run->receiver->state_.get()==this && target &&
-            run->relation_row==row && run->relation_field==field && run->relation_base==base && run->relation_key==key && run->relation_constraint==constraint && widget_relation_row_current(run) && (!physicalChoice || target->property("model").toStringList().indexOf(run->relation_action.text)==option);};
+        // Search the offered full path, retaining every [key]; the choice still commits its storage name.
+        if(physicalChoice){request.option=option;request.value=search_options(target).value(option);}
+        const auto searchText=request.value;
+        auto current=[this,run,target,row,field,base,key,constraint,physicalChoice,option,searchText]{return run->receiver && run->receiver->state_.get()==this && target &&
+            run->relation_row==row && run->relation_field==field && run->relation_base==base && run->relation_key==key && run->relation_constraint==constraint && widget_relation_row_current(run) && (!physicalChoice || (canonical_options(target).indexOf(run->relation_action.text)==option && search_options(target).value(option)==searchText));};
         auto restore=current;
         std::function<bool()> prepare=[this,run,current,physicalChoice] {if(!current())return false;if(physicalChoice)widget_commit_ready(run);return current();};
         std::function<void()> finish=[this,run,receiver,physicalChoice] {
@@ -8021,6 +8370,8 @@ struct AssistantViewModel::State {
     }
     quint64 native_serial = 0, native_accepted_serial = 0;
     bool native_blocked = false, native_discard_pending = false;
+    // Inside native_supersede_operation: a refusal then is a cancellation, never a cue to skip (cue_fallback_admitted).
+    int native_superseding = 0;
     // Fixed local first-cause facts only: no payload, identity, path or what().
     // This is diagnostic storage, never a recovery or admission authority.
     struct NativeFailure {
@@ -9377,19 +9728,15 @@ struct AssistantViewModel::State {
             handle->startNative(native_fit_callback(captured, original_call), original_call.fit_attempt);
         } catch (...) {
             if (captured && captured->nativeRunning()) {
-                if (native_call) {
-                    NativeCall& held_call = *native_call;
-                    if (held_call.record == original_call.record && held_call.receipt == receipt && held_call.rpc == original_call.rpc) held_call.may_have_written = true;
-                }
+                if (native_call && native_call->record == original_call.record && native_call->receipt == receipt && native_call->rpc == original_call.rpc)
+                    native_call->may_have_written = true;
                 captured->cancel();
                 if (original_scope()) native_fence();
                 return;
             }
             if (native_fit == captured) native_fit.clear();
-            if (native_call) {
-                NativeCall& held_call = *native_call;
-                if (held_call.record == original_call.record && held_call.receipt == receipt && held_call.rpc == original_call.rpc) held_call.may_have_written = false;
-            }
+            if (native_call && native_call->record == original_call.record && native_call->receipt == receipt && native_call->rpc == original_call.rpc)
+                native_call->may_have_written = false;
             throw; // Preparation failed before actual submission; no future report is owed.
         }
         if (!captured || native_fit != captured || !native_call || native_call->record != original_call.record ||
@@ -10975,7 +11322,7 @@ struct AssistantViewModel::State {
         const auto op=run->arguments.value("operation");
         if(op=="select")return selection_current(run);
         if(op=="peak_profile")return edi::effective_peak_type_view(*run->operation_member)==run->arguments.value("value").toString().toStdString();
-        if(op=="absorption_type")return (run->operation_member->absorption.type?std::string_view(*run->operation_member->absorption.type):std::string_view("none"))==run->arguments.value("value").toString().toStdString();
+        if(op=="absorption_type")return run->operation_member->absorption.type.value_or("none")==run->arguments.value("value").toString().toStdString();
         if(op=="extinction_type")return run->operation_member->extinction.type.value_or("none")==run->arguments.value("value").toString().toStdString();
         if(op=="mosaic_distribution")return run->operation_member->extinction.mosaic_distribution.value_or("")==run->arguments.value("value").toString().toStdString();
         if(op=="cutoff_fwhm")return run->operation_member->peak.cutoff_fwhm==run->arguments.value("value").toDouble();
@@ -11884,7 +12231,7 @@ struct AssistantViewModel::State {
         }
         // A cue is presentation: when Show actions cannot reveal or cue the original control before anything was
         // applied, the operation runs as normal mode runs it (same reader, same Undo) and reports the skipped cue.
-        if (!uncertain && run->visible_delivery && run->ordinary && !run->cue_fallback && run->completed_steps == 0 &&
+        if (!uncertain && cue_fallback_admitted(run->call) && run->visible_delivery && run->ordinary && !run->cue_fallback && run->completed_steps == 0 &&
             !run->individual_tool.isEmpty() && !selection_action(run) && !run->origin_unavailable &&
             !(run->file_input && (run->file_input->consumed || run->file_input->source_changed)) &&
             !(run->control_input && run->control_input->consumed)) {
@@ -12174,6 +12521,17 @@ struct AssistantViewModel::State {
                     ancestor == run->form->property("footer").value<QQuickItem*>()));
             if (!inside) continue;
             candidates.append(item);
+        }
+        // Found nowhere in the page's sidebar, its open menu or the Create form: the one control of that name anywhere in the
+        // window that the user can see and press (a main-area toolbar, a popup) is the control.
+        if (candidates.isEmpty() && widget_input) {
+            for (auto* item : widget_items()) {
+                if (item->objectName() != name || item->window() != run->window || !item->isVisible() || !item->isEnabled() ||
+                    !widget_input->usableTarget(*item)) continue;
+                if (found) return nullptr;
+                found = item;
+            }
+            return found;
         }
         if (candidates.size() == 1) return candidates.first();
         // A table can hold a second copy of a row for a moment (measuring its columns, a delegate being replaced): the
@@ -12480,6 +12838,10 @@ struct AssistantViewModel::State {
         if((structure_app_action(run->individual_tool) || run->individual_tool=="edit_experiment") && step.kind==AssistantWidgetInput::Kind::FileLoadCue) {structure_cue(run,step);return;}
         if (step.target.startsWith("appBar.tab.")) run->page = step.target.mid(11);
         if (step.target == "structures.load.file" || step.target == "experiments.load.dataFile") { create_widget_load_structure(run); return; }
+        if (const auto* route=control_route(step.target); route && *route->group) {
+            const QPointer<QQuickItem> group(create_widget_named(run,QString::fromLatin1(route->group)));
+            if(group && group->property("collapsed").toBool() && create_widget_missing_target(run,step))return;
+        }
         const QPointer<QQuickItem> target(create_widget_named(run, step.target));
         if (!run->individual_tool.isEmpty() && step.target.startsWith("experiments.row.")) {
             if(!target) { if(create_widget_missing_target(run,step))return;throw ActionRefusal("control_unavailable","experiment"); }
@@ -13898,7 +14260,7 @@ struct AssistantViewModel::State {
             "For a delegated fit use one loop: current evidence -> implicated block -> actual assessment -> honest saved endpoint. Start broad numerical assessment with offered inspect_data view=summary and suitable explicit positive partitions; reuse unchanged measured/sigma/geometry facts. Use exact peak-containing measured/calculated/residual windows, separate Bragg rows or relevant SC F-squared detail for unresolved questions. Off-peak evidence is baseline ONLY; parameter lists do not establish residual/peak agreement and summaries do not assign peaks, establish alignment, validate total physical widths, supply a fit metric or prove correlations. Complete native raw arrays remain available for explicit requests or justified detailed diagnostics; do not resend them merely because a fit ran. Check current/adopted calculation, units, weighting and exclusions. Resolve observed position mismatch with eligible cell/offset/scale and supplied wavelength anchored before widths/ADPs absorb it; assess baseline bias before ADPs. Estimate is not baseline validation. Establish baseline evidence before profile interpretation. Add ONE new unvalidated group at a time while retaining accepted useful eligible free groups by default. Before each fit reconcile the COMPLETE actual free population with previously assessed accepted groups plus the one new scientific block. Free-by-default flags, earlier setup and a successful set_free reply are not evidence that a group is accepted. Distinct new categories do not become one block because they were freed in one batch or all set up before the first fit; keep other unvalidated categories fixed. For new introductions, background is separate from profile, and coordinates are separate from ADPs. This does not split an evidence-justified within-profile coefficient group or forbid simultaneous X/Y; explicit user combined groups still win. Hold an accepted group only for explicit user/calibration/native-dependence requirements or a stated diagnostic based on observed correlation, confounding or instability; keep that comparison restorable. Before constructing flags collect the chosen category's intended eligible members across sites; one exact whole eligible uniform group belongs in one request, not atom-by-atom category alternation. Read the complete current free population: set_free changes listed flags only; omitted alignment/scale flags are not implicitly fixed. Assess each newly introduced background, profile, coordinate or ADP block before introducing another; keep earlier accepted groups cumulative. A failed new block calls for diagnosis/repair of that block while retaining accepted stages, not a new unrelated category or a repeated all-free restart. Do not routinely freeze/re-release successful groups or require a final fixed/free sweep or extra fit. Explicit user combined groups/subsets/order/flags and automatic-background eligibility remain authoritative; no universal all-free stage or category-first order is implied. Settle actual setup/free replies and calculation before dependent fits. Read returned status/adopted FIRST: only an adopted outcome establishes this candidate as live work; adopted cancellation can retain a partial result. A refused/error/superseded or unadopted attempt does not adopt that candidate; reconcile actual current state. Inspect actual changes, CURRENT peak/baseline residuals, total physical widths and uncertainty BEFORE another fit consumes sole latest-fit Undo. Restore an unacceptable latest adopted candidate only while native fit_undo_available; refused/unadopted attempts do not authorize undoing earlier science, and Undo is not selective reversal or a checkpoint bank and does not restore flags. Fixing retains current values. Promptly diagnose a restorable simpler supported candidate of the implicated factor; stall/no_step/rejection needs fresh evidence/eligibility/anchors, not unrelated ADPs. Revisit temporary freezes as evidence changes. Weak identifiability needs a justified comparison or an explicit unresolved limitation. Convergence, lower objective, positive ADPs, negative-ADP Undo or absent/unavailable diagnostics is not scientific completion. Continue justified work or report specific incompleteness; diagnose large chi-square rather than force it to one. Preserve calibration, composition, symmetry and user flags; defaults/initial free flags are starts, not user anchors. Native conventions/units/settings/total widths/profile resets come from current engine facts. Live frames and old trial statistics do not certify a later model. Only actual fit_reason=unanchored_cw_dilation identifies that supported anchor problem; unknown errors do not. Use the refinement-strategy scientific references for applicable profile/SC/mixed-site details, not a compulsory recipe.\n\n"
             "Before ANY FullProf occupancy setter, establish nuclear normalization and actual site/general multiplicities m/M: qraw=OccFP*M/m; for an established common positive phase factor c, OccEDI=qraw/c for EVERY phase site/species and mapped phase scale=mapped(SFP)*c*c once. Preserve partial/shared fractions and multiplicity-weighted composition. Never copy raw PCR0.5 as chemical conversion, infer c from max occupancy, clamp, force all ones or guess unresolved c. Use the detailed verified fullprof-intake mapping and read back actual chemical occupancies, scale/profile before completion. \n\n"
             "Keep original operations and authority distinct. Initial declarations are not ownership evidence or a reason to forbid supported sharing; preserve unrelated rows and genuine composition/no-sharing constraints. Use current returned members/options/relation IDs. Selection is UI state, not scientific Edit/Undo; replacement may reset optional settings. Numeric values use actual units and supported native setters. Detailed operation prerequisites/results remain in each offered tool contract.\n\n"
-            "The app owns normal navigation, reveal, file-load cues and scientific commits in both modes. Complete native validation and initial route admission precede scientific input; an unmapped route refuses before the first scientific input, while a later refusal retains actual effects. Already-equal entries settle before navigation, filter input, setters or Undo. Show actions uses real offered selector/searchable-alias/Free rows through the original popup and prearmed sole ordinary action; never follow that physical choice with a second setter/Return commit. Other fields retain their ordinary cue/setter path. Normal mode can be atomic while visible work can retain a real partial prefix and separate Undo steps. Read applied/published/complete/atomic/steps_completed/uncertain literally: completed steps are the settled requested prefix including equal no-ops, not an Undo count; an applied unconfirmed entry is not complete. Preserve user drafts and current controls. Normal mode follows the last changed requested original editor/Main page without pointer or typing delays. ON retains immediate text entry and ordinary pointer/navigation pace, without a separate scientific draft/focus protocol. Analysis reuses a suitable category, resets conflicting name/variability filters even if they expose the first requested row, keeps unit-cell rows unfiltered and scrolls to actual rows rather than typing full paths. Original manual filters/selection and stale-operation fences remain authoritative. The normal sidebar stays exposed across the complete request; genuine manual takeover leaves it exposed. Visible relation append finishes requested Aliases before Constraints, and related aliases belong together immediately before their relation/use; no manual Draft/Confirm surface is needed. A real manual edit requires fresh inspection before another write. Only AI Stop requests interruption of the official turn; ordinary input or app switching does not. Neither authorizes replay or discard. Reconcile any recoverable reconnect/partial result with inspect_project before further science; uncertain earlier effects remain spent. Follow the common control-failure contract below, retain actual reasons, and never switch modes, clamp science or bypass original owners to force success.\n\n"
+            "The app owns normal navigation, reveal, file-load cues and scientific commits in both modes. Complete native validation and initial route admission precede scientific input; an unmapped route refuses before the first scientific input, while a later refusal retains actual effects. Already-equal entries settle before navigation, filter input, setters or Undo. Show actions unfolds Experiments, clicks the target table row's Load data button, chooses From file, then loads the admitted measurement, just as structure loading uses its ordinary group and selector. Alias searches type only the plain canonical parameter name a user would enter, never decorated picker text or icon names, then pick the matching offered entry. Show actions uses real offered selector/searchable-alias/Free rows through the original popup and prearmed sole ordinary action; never follow that physical choice with a second setter/Return commit. Other fields retain their ordinary cue/setter path. Normal mode can be atomic while visible work can retain a real partial prefix and separate Undo steps. Read applied/published/complete/atomic/steps_completed/uncertain literally: completed steps are the settled requested prefix including equal no-ops, not an Undo count; an applied unconfirmed entry is not complete. Preserve user drafts and current controls. Normal mode follows the last changed requested original editor/Main page without pointer or typing delays. ON retains immediate text entry and ordinary pointer/navigation pace, without a separate scientific draft/focus protocol. Analysis reuses a suitable category, resets conflicting name/variability filters even if they expose the first requested row, keeps unit-cell rows unfiltered and scrolls to actual rows rather than typing full paths. Original manual filters/selection and stale-operation fences remain authoritative. The normal sidebar stays exposed across the complete request; genuine manual takeover leaves it exposed. Visible relation append finishes requested Aliases before Constraints, and related aliases belong together immediately before their relation/use; no manual Draft/Confirm surface is needed. A real manual edit requires fresh inspection before another write. Only AI Stop requests interruption of the official turn; ordinary input or app switching does not. Neither authorizes replay or discard. Reconcile any recoverable reconnect/partial result with inspect_project before further science; uncertain earlier effects remain spent. Follow the common control-failure contract below, retain actual reasons, and never switch modes, clamp science or bypass original owners to force success.\n\n"
             "When creation or a fit is requested, save the settled current project before the final result unless told not to. Use save_project's ordinary owned Save or genuine default Folder/ZIP/copy Save As continuation; complete delegated routine choices without duplicate permission/plan approval or asking the user to operate a normal chooser. Retain explicit basenames/no-clobber and actual path/copy/commit/current-owner/uncertain facts. A successful ordinary saved=true/active=true without failure can be reported plainly; presentation_complete/reopened flags do not require unrequested caveats, another Save or an invented reopen. Save can round/adopt values and recalculate. Before final fitted conclusions, inspect authoritative values/uncertainties and current residual evidence AFTER Save, comparing the accepted pre-Save state. A run_fit statistic remains pre-Save/pre-edit unless an offered metric explicitly belongs to the post-Save model. Parameter reads, calculation-current/no-error flags and unquantified residual inspection do not verify chi-square/Rwp or objective equality. Do not invent a current-metric API, degrees of freedom or silent refit. Disclose only actually observed material rounding/undetermined quantities; qualify unverified scientific numbers. This does not invalidate a successful ordinary Save or require a reopen, repeated save or a warning solely for presentation/reopen flags. Use a supplied native formatted value/SU pair verbatim or explicit numerical uncertainty, not invented parenthetic precision. show_report and edi:report navigate the current ordinary Report preview only: they do not generate/export/save a report or choose another application. Automatic work reports are useful evidence; their failure never vetoes science or requires Clear/new session.\n\n"
             "Use hosted public search/read when a needed scientific convention or supported route remains unresolved after current native inspection. Queries contain public concepts only: never credentials, private paths, raw measurements or unpublished sample information. Prefer primary scientific documentation and actual current Edi source when relevant; retain URLs, distinguish inference from implemented support, and report exact genuine capability limits. Research cannot grant tools, writes, path access or uncertain replay. Existing complete skill bodies are already supplied; do not reopen identical bodies merely to rediscover them. Keep actual research actions and URLs/citations in ordinary results and the automatic project report. No research detour is required to repeat a known native fact.\n\n"
             "In everything written to the user, project titles and descriptions included, say fit, fitting and fitted, never refine, refining or refinement: these are Edi's words. Act autonomously within delegated routine scope; ask only for genuinely missing/conflicting scientific information, changed objective/chemical assumptions or an indispensable real user/runtime action. When a needed answer is one of a few distinct choices, ask with the request_user_input tool, never request_user_input_async, giving those choices as options: Edi shows it as a question card and waits for the answer. Plain text is for an open question only, as the FINAL response of that turn. Optional purpose is intent metadata, never fabricated success; when omitted, Edi records its native label and fallback provenance. Omission does not remove the genuine scientific operands/objective requirement. Correct only a named prewrite argument field without replaying an entered/uncertain operation. Use concise human progress, results, actual pending/partial/failure reasons and material decisions/assumptions, with useful citations; technical tool IDs belong in diagnostics. Put app/tool/skill improvement suggestions only in diagnostics.developer_feedback for the hidden diagnostic work report, never purpose, chat or the scientific report. Keep scientific limitations and user-needed errors in chat. Report done/max_iterations/no_step/cancelled/error literally. Ordinary equations are unboxed by default with readable spacing; preserve explicit requested/quoted notation and history. Do not disclose hidden reasoning or pretend unavailable checks were performed.\n\n");
@@ -15162,6 +15524,17 @@ struct AssistantViewModel::State {
     void generic_server_request(const QJsonValue& id, const QString& method, const Object& params, ServerRequestFailure& diagnostic) {
         const auto publication = file_projection();
         if (!generic_bound(params) || generic_revoke_pending) { diagnostic.stage = "BOUND_REJECT"; agent->reject(id); return; }
+        if (!owed_alias_cleanups.empty()) {
+            const QPointer<AssistantViewModel> alive(&owner);
+            const bool settled = settle_owed_aliases();
+            if (!alive || alive->state_.get() != this || !publication.input_current()) return;
+            if (!settled) {
+                diagnostic.stage = "ALIAS_CLEANUP_WAIT";
+                (void)agent->deferServerRequest(id, agent->outputGeneration());
+                schedule_owed_aliases();
+                return;
+            }
+        }
         if(account_confirmation_pending) {
             diagnostic.stage="ACCOUNT_IDENTITY_WAIT";
             (void)agent->deferServerRequest(id,agent->outputGeneration());return;
@@ -15602,7 +15975,7 @@ struct AssistantViewModel::State {
             throw std::runtime_error("Agent input could not be admitted");
         }
         generic_writing_input = false;
-        error.clear();
+        error.clear(); alias_cleanup_error.clear();
         try { notify(); } catch (...) {} // Presentation cannot revoke a real admitted row.
         return publicId;
     }
@@ -16436,6 +16809,7 @@ struct AssistantViewModel::State {
                     code.startsWith("edi.assistant.") && static_cast<std::uint64_t>(code.toUtf8().size()) <= Limits::id_bytes)
                     emitted_code = code;
             }
+            // NOLINTNEXTLINE(bugprone-exception-escape): only libc++'s container growth past max_size() raises length_error here
             QMetaObject::invokeMethod(&owner, [this, publication, text, incoming, emitted_code, incoming_generation] {
                 if (!publication.input_current() || !controller || incoming_generation != generation) return;
                 try {
@@ -16501,6 +16875,14 @@ struct AssistantViewModel::State {
                 }
                 if (selected_rows_dirty && !flush_selected_rows(projection)) return;
                 if (!projection.current()) return;
+                // While a fit runs the project changes with every followed point: its context is made again at most
+                // once a second, and on the first tick after the run ends, so the panel ends on the final state.
+                if (project && project->fit() && project->fit()->running()) {
+                    if (fit_sync_clock.isValid() && fit_sync_clock.elapsed() < 1000) return;
+                    fit_sync_clock.start();
+                } else {
+                    fit_sync_clock.invalidate();
+                }
                 sync();
             } catch (...) { if (projection.current()) { error = storage_error; render_dirty = true; } }
         });
@@ -16975,6 +17357,7 @@ struct AssistantViewModel::State {
             const auto publication = file_projection();
             const auto scope = generation;
             const auto captured = object(text);
+            // NOLINTNEXTLINE(bugprone-exception-escape): only libc++'s container growth past max_size() raises length_error here
             if (!QMetaObject::invokeMethod(&owner, [this, publication, text, scope, captured] {
                 if (!publication.input_current() || !controller || scope != generation) return;
                 const auto current_turn = object(controller->state()).value("active_turn_id").toString();
@@ -17459,13 +17842,8 @@ bool AssistantViewModel::prepareOrdinaryProjectCreation(ProjectViewModel* target
             normal->ordinary_failure=QStringLiteral("The original normal Create dialog confirmation no longer owns this request.");return false;
         }
         if(!s->normal_project_create_current(normal))return false;
-        // FIRST Session::createProjectImpl retains native metadata defaults
-        // for an empty Title, whether omitted or explicitly left empty in its
-        // original form. Input spelling and actual created value differ here.
-        const QString expectedTitle=normal->ordinary_title.isEmpty()
-            ?QString::fromStdString(edi::ProjectMetadata{}.title):normal->ordinary_title;
         if(!target || !edi::empty_for_population(*target->assistantProject()) ||
-            !target->path().isEmpty() || target->name()!=normal->ordinary_name || target->title()!=expectedTitle || target->description()!=normal->ordinary_description ||
+            !target->path().isEmpty() || target->name()!=normal->ordinary_name || target->title()!=normal->ordinary_title || target->description()!=normal->ordinary_description ||
             location!=normal->ordinary_location) {
             normal->ordinary_failure=QStringLiteral("The original normal Create target or form defaults changed before adoption.");return false;
         }
@@ -18128,7 +18506,7 @@ bool AssistantViewModel::canCancel() const {
     if (state_->generic_mode) return state_->native_worker_admitted() || state_->generic_retiring || state_->generic_connecting || state_->generic_busy || state_->generic_clear_pending || state_->generic_context_pending || state_->file_selection.has_value() || state_->file_staging;
 #endif
     return state_->auth_pending || state_->file_selection.has_value() || state_->file_staging || state_->core.value("can_cancel").toBool(); }
-QString AssistantViewModel::lastError() const { return !state_->error.isEmpty() ? state_->error : !state_->workflow_error.isEmpty() ? state_->workflow_error : !state_->preference_save_error.isEmpty() ? state_->preference_save_error : !state_->preference_error.isEmpty() ? state_->preference_error : state_->history_error; }
+QString AssistantViewModel::lastError() const { return !state_->error.isEmpty() ? state_->error : !state_->alias_cleanup_error.isEmpty() ? state_->alias_cleanup_error : !state_->workflow_error.isEmpty() ? state_->workflow_error : !state_->preference_save_error.isEmpty() ? state_->preference_save_error : !state_->preference_error.isEmpty() ? state_->preference_error : state_->history_error; }
 QVariantMap AssistantViewModel::usage() const {
     QVariantMap result{{"available",false},{"stale",false},{"buckets",QVariantList{}},
         {"state",QStringLiteral("unavailable")},{"loading",false},{"caption",tr("Usage")},
@@ -18298,7 +18676,7 @@ bool AssistantViewModel::addWebSkillSource(const QString& token,const QUrl& url)
         original->release_skill_source_selection(token);emit skillSourcesChanged();return false;
     }
     try {
-        auto task=AssistantSkillWebImport::start(this,url,[receiver,original,proof,serial,token](std::unique_ptr<QTemporaryDir> folder,const QString& label,const QString& failure) {
+        auto task=AssistantSkillWebImport::start(this,url,[receiver,original,proof,serial,token](std::unique_ptr<QTemporaryDir> folder,[[maybe_unused]] const QString& label,const QString& failure) {
             if(!receiver || receiver->state_.get()!=original)return;
             const auto owned=[&]{return proof.input_current() && serial==original->skill_source_serial &&
                 original->skill_source_selection && original->skill_source_selection->id==token;};
@@ -18816,6 +19194,63 @@ QString AssistantViewModel::submitDraftImpl(const QString& text,bool* accountWai
     }
     return {};
 }
+#ifndef __EMSCRIPTEN__
+// The copied or attached work report without what a reader does not use (owner, 2026-11-19): each tool reply once
+// (the text the model read, not its native duplicate and projected copy), the skill texts and tool schema as names,
+// sizes and hashes, and compact JSON. The retained report itself is unchanged.
+static void trim_work_report(Object& document) {
+    auto history = document.value("history_evidence").toArray();
+    for (qsizetype at = 0; at < history.size(); ++at) {
+        auto entry = history.at(at).toObject();
+        auto row = entry.value("row").toObject();
+        auto payload = row.value("payload").toObject();
+        if (!payload.contains("contentItems")) continue;
+        const auto reply = payload.value("contentItems");
+        if (payload.contains("nativeOutcome"))
+            payload["nativeOutcome"] = QStringLiteral("omitted: row.payload.contentItems is the reply the model read");
+        row["payload"] = payload;
+        entry["row"] = row;
+        auto evidence = entry.value("work_evidence").toObject();
+        auto value = evidence.value("value").toObject();
+        auto projected = value.value("projected_reply").toObject();
+        auto projectedValue = projected.value("value").toObject();
+        if (projectedValue.value("contentItems") == reply) {
+            projectedValue["contentItems"] = QStringLiteral("same as row.payload.contentItems");
+            projected["value"] = projectedValue;
+            value["projected_reply"] = projected;
+            evidence["value"] = value;
+            entry["work_evidence"] = evidence;
+        }
+        history[at] = entry;
+    }
+    if (document.contains("history_evidence")) document["history_evidence"] = history;
+    auto identity = document.value("identity_inputs").toObject();
+    if (identity.isEmpty()) return;
+    auto skills = identity.value("skills").toArray();
+    for (qsizetype at = 0; at < skills.size(); ++at) {
+        auto skill = skills.at(at).toObject();
+        auto body = skill.value("body").toObject();
+        if (!body.value("value").isString()) continue;
+        body["value"] = Object{{"bytes", static_cast<qint64>(body.value("value").toString().toUtf8().size())}};
+        skill["body"] = body;
+        skills[at] = skill;
+    }
+    if (identity.contains("skills")) identity["skills"] = skills;
+    auto schema = identity.value("tool_schema").toObject();
+    auto schemaBody = schema.value("body").toObject();
+    if (schemaBody.value("value").isArray()) {
+        const auto tools = schemaBody.value("value").toArray();
+        const auto bytes = QJsonDocument(tools).toJson(QJsonDocument::Compact);
+        QJsonArray names;
+        for (const auto& tool : tools) names.append(tool.toObject().value("name"));
+        schemaBody["value"] = Object{{"tools", names}, {"bytes", static_cast<qint64>(bytes.size())},
+                                     {"sha256", QString::fromLatin1(QCryptographicHash::hash(bytes, QCryptographicHash::Sha256).toHex())}};
+        schema["body"] = schemaBody;
+        identity["tool_schema"] = schema;
+    }
+    document["identity_inputs"] = identity;
+}
+#endif
 QString AssistantViewModel::workReportDocument() {
 #ifndef __EMSCRIPTEN__
     if(QThread::currentThread()!=thread())return {};
@@ -18844,7 +19279,8 @@ QString AssistantViewModel::workReportDocument() {
             {"requested_scope_id",state_->work_reports.scope()},
             {"requested_snapshot_revision",QString::number(state_->work_reports.revision())}};
         document["scope_coverage"]=scope;
-        return QString::fromUtf8(QJsonDocument(document).toJson(QJsonDocument::Indented));
+        trim_work_report(document);
+        return QString::fromUtf8(QJsonDocument(document).toJson(QJsonDocument::Compact));
     }catch(...) {return {}; }
 #else
     return {};
@@ -18915,6 +19351,13 @@ void AssistantViewModel::approvePlan(const QString& id) {
     const auto revision = state_->controller->revision();
     state_->command({{"type", "approve_plan"}, {"plan_id", id}, {"project_id", QString::fromStdString(revision.project_id)},
                      {"revision", QString::number(revision.revision)}});
+}
+bool AssistantViewModel::ordinaryProjectCreationPending() const {
+#ifndef __EMSCRIPTEN__
+    return state_->native_creation && state_->native_creation->ordinary_project;
+#else
+    return false;
+#endif
 }
 bool AssistantViewModel::nativeProjectCreateCurrent(const QString& intent) const {
 #ifndef __EMSCRIPTEN__

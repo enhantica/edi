@@ -45,6 +45,7 @@ std::vector<SeriesGroup> group_series_files(const std::vector<std::string>& name
     std::vector<SeriesGroup> groups;
     const auto each_alone = [&names] {
         std::vector<SeriesGroup> alone;
+        alone.reserve(names.size());
         for (const std::string& name : names) {
             alone.push_back({name, {name}});
         }
@@ -123,17 +124,17 @@ std::vector<std::string> declare_series_unchecked(Project& project, BraggPdExper
         SequentialFitExperiment member;
         member.experiment_id = names[g];
         member.file_pattern = groups[g].pattern;
-        project.sequential_fit.experiments.push_back(std::move(member));
+        project.sequential_fit.experiments.push_back(member);
     }
     ExperimentSet set;
     set.id = set_id;
     set.template_experiment_id = names.front();
-    project.experiment_sets.push_back(std::move(set));
+    project.experiment_sets.push_back(set);
     for (const std::string& name : names) {
         ExperimentSetMember member;
         member.experiment_id = name;
         member.set_id = set_id;
-        project.experiment_set_members.push_back(std::move(member));
+        project.experiment_set_members.push_back(member);
     }
     return names;
 }

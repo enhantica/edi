@@ -167,6 +167,7 @@ SideBarGroup {
                     property int horizontalAlignment: Text.AlignLeft
                     height: parent ? parent.height : 0
                     EaElements.RadioButton {
+                        id: startButton
                         objectName: `experiments.start.${row.index}`
                         anchors.left: parent.left
                         anchors.verticalCenter: parent.verticalCenter
@@ -174,7 +175,7 @@ SideBarGroup {
                         checked: row.isTemplate
                         EaElements.ToolTip {
                             text: qsTr("The sequential fit starts from this dataset's fitted values")
-                            requested: parent.hovered
+                            requested: startButton.hovered
                         }
                         onClicked: {
                             if (!row.isTemplate)
@@ -194,8 +195,9 @@ SideBarGroup {
                 }
                 // How the project's last fit ended on this experiment: the app's check box, ticked in the outcome's colour
                 // (green converged, orange a warning, red failed) and empty when it took no part (the owner, 2026-11-17).
-                // Nobody sets it: it takes no focus and its clicks go nowhere, but it keeps its colour, which a disabled
-                // check box would draw grey.
+                // Nobody sets it: it takes no focus, no hover highlight, and its clicks go nowhere, but it keeps its
+                // colour, which a disabled check box would draw grey. An experiment without measured data cannot be
+                // fitted, so its box is drawn disabled and says why (the owner, 2026-11-17).
                 Item {
                     property int horizontalAlignment: Text.AlignLeft
                     height: parent ? parent.height : 0
@@ -207,18 +209,22 @@ SideBarGroup {
                         anchors.verticalCenter: parent.verticalCenter
                         padding: 0
                         focusPolicy: Qt.NoFocus
+                        hoverEnabled: false
+                        enabled: !fileCell.empty
                         checked: row.fitOutcome !== "" && !FitOutcomes.ring(row.fitOutcome)
                         color: FitOutcomes.color(row.fitOutcome)
-                        MouseArea {
-                            id: fitHover
-                            anchors.fill: parent
-                            hoverEnabled: true
-                            acceptedButtons: Qt.AllButtons
-                        }
-                        EaElements.ToolTip {
-                            text: FitOutcomes.word(row.fitOutcome)
-                            requested: fitHover.containsMouse && text !== ""
-                        }
+                    }
+                    // Beside the box, not in it: a disabled box takes no hover, and its tooltip still has to show.
+                    MouseArea {
+                        id: fitHover
+                        anchors.fill: fitBox
+                        hoverEnabled: true
+                        acceptedButtons: Qt.AllButtons
+                    }
+                    EaElements.ToolTip {
+                        parent: fitBox
+                        text: fileCell.empty ? qsTr("Load data to include this experiment in the fit") : FitOutcomes.word(row.fitOutcome)
+                        requested: fitHover.containsMouse && text !== ""
                     }
                 }
                 // The datablock name, editable: a refused rename returns the cell to the stored name and shows why.
@@ -470,7 +476,7 @@ SideBarGroup {
 
         LoadMenuHeader {
             first: true
-            text: dataMenu.replacing ? qsTr("Replace measured data") : qsTr("Measured data")
+            text: dataMenu.replacing ? qsTr("Replace measured data") : Session.categoryTitle("data")
         }
         LoadMenuItem {
             objectName: "experiments.load.dataFile"

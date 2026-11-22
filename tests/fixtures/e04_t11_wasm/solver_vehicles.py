@@ -224,6 +224,8 @@ def vehicle(source, destination):
         if any(tag.lower() in selectors for tag in tags):
             raise ValueError('Historical vehicle cannot override an explicit source solver')
     suffix = b'\n_minimizer.descent ladder\n_minimizer.stop_rules chi_square_change\n'
+    if not block.find_value('_minimizer.max_iterations'):
+        suffix += b'_minimizer.max_iterations 1000\n'
     if not float(block.find_value('_minimizer.chi_square_tolerance') or '0'):
         suffix += b'_minimizer.chi_square_tolerance 1e-6\n'
     shutil.copytree(source, destination)

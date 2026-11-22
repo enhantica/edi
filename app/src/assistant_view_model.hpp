@@ -273,6 +273,7 @@ class AssistantViewModel : public QObject {
     QString submitDraftImpl(const QString&,bool* accountWaiting);
     void finishHistoryInitialization() noexcept;
     bool ordinarySaveNotification(ProjectViewModel*) const noexcept;
+    bool ordinaryProjectCreationPending() const;
     struct ProjectResetInputs;
     std::shared_ptr<ProjectResetInputs> prepareProjectResetInputs();
     bool attachProject(ProjectViewModel* project, bool managedResult, bool ordinaryEmptyCreate = false, const std::shared_ptr<ProjectResetInputs>& resetInputs = {}); // Session-only exact attachment result.

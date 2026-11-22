@@ -20,7 +20,9 @@ import pytest
 import yaml
 
 from tests.fixtures.e04_t1.project_actor import is_verification
+from tests.fixtures.e09_t75_workflow import active
 from tests.fixtures.metadata_transition.source_bytes import read_previous
+from tests.fixtures.stop_defaults import example_inputs
 from tests.integration.py.ci_runner_contract import self_hosted_runners
 
 # The published replacement also reports every spin-box indicator edit to Preferences.
@@ -48,12 +50,9 @@ def without_comments(source):
     return re.sub(r'//[^\n]*|/\*.*?\*/', '', source, flags=re.DOTALL)
 
 
-def report_model_exception_spans(source, relative_path):  # noqa: PLR0911 - each failed identity check refuses independently
-    # OWNER DECISION 2026-10-14, hub 3f2ce1cf6, decision-records.md:
-    # "the report model crosses into the Report page untyped for now".
-    # The planned schema successor removes this sole temporary exception.
-    # Its exact task identity and the owner citation live in the hub acceptance receipt.
-    if relative_path != 'app/src/report_view_model.hpp':
+def owned_property_spans(source, relative_path, header, owner, declaration, *, invokable=False):  # noqa: PLR0911 - each failed identity check refuses independently
+    # Except only the one declared property of its qualified owner and header.
+    if relative_path != header:
         return set()
     classes = []
     for match in re.finditer(r'\b(?:class|struct)\s+(\w+)[^;{}]*\{', source):
@@ -64,7 +63,7 @@ def report_model_exception_spans(source, relative_path):  # noqa: PLR0911 - each
         if depth:
             return set()
         classes.append((match[1], match.end(), end))
-    if sum(name == 'ReportViewModel' for name, _, _ in classes) != 1:
+    if sum(name == owner for name, _, _ in classes) != 1:
         return set()
     namespaces = []
     for match in re.finditer(r'\bnamespace\s*(\w+(?:::\w+)*)?\s*\{', source):
@@ -75,12 +74,14 @@ def report_model_exception_spans(source, relative_path):  # noqa: PLR0911 - each
         if depth:
             return set()
         namespaces.append((match[1], match.end(), end))
-    properties = list(re.finditer(r'Q_PROPERTY\s*\((.*?)\)', source, re.DOTALL))
-    named = [
-        m
-        for m in properties
-        if re.fullmatch(r'\s*QVariantMap\s+model\s+READ\s+model\s+NOTIFY\s+modelChanged\s*', m[1])
-    ]
+    properties = list(
+        re.finditer(
+            r'Q_INVOKABLE\s+([^;{]+)' if invokable else r'Q_PROPERTY\s*\((.*?)\)',
+            source,
+            re.DOTALL,
+        )
+    )
+    named = [m for m in properties if re.fullmatch(declaration, m[1])]
     if len(named) != 1:
         return set()
     prop = named[0]
@@ -88,9 +89,56 @@ def report_model_exception_spans(source, relative_path):  # noqa: PLR0911 - each
     if enclosing != ['edi_app']:
         return set()
     owners = [entry for entry in classes if entry[1] <= prop.start() < entry[2]]
-    if not owners or min(owners, key=lambda entry: entry[2] - entry[1])[0] != 'ReportViewModel':
+    if not owners or min(owners, key=lambda entry: entry[2] - entry[1])[0] != owner:
         return set()
     return {prop.span()}
+
+
+def report_model_exception_spans(source, relative_path):
+    # The legacy report map remains until its typed schema successor.
+    return owned_property_spans(
+        source,
+        relative_path,
+        'app/src/report_view_model.hpp',
+        'ReportViewModel',
+        r'\s*QVariantMap\s+model\s+READ\s+model\s+NOTIFY\s+modelChanged\s*',
+    )
+
+
+def structure_bonds_exception_spans(source, relative_path):
+    return owned_property_spans(
+        source,
+        relative_path,
+        'app/src/structure_view_model.hpp',
+        'StructureViewModel',
+        r'\s*QVariantList\s+bonds\s+READ\s+bonds\s+NOTIFY\s+bondsChanged\s*',
+    )
+
+
+def shipped_method_exception_spans(source, relative_path):
+    # Labelled API regression pins from the shipped toolbar and comparison-plot owners.
+    rows = [
+        (
+            'app/src/toolbar_row.hpp',
+            'ToolbarRow',
+            (
+                r'\s*QVariantMap\s+layout\s*\(\s*const\s+QVariantList\s*&\s*units,\s*double\s+left,'
+                r'\s*double\s+right,\s*double\s+spacing,\s*double\s+groupSpacing,'
+                r'\s*double\s+moreWidth\s*\)\s*const\s*'
+            ),
+        ),
+        (
+            'app/src/experiment_view_model.hpp',
+            'ExperimentViewModel',
+            r'\s*QVariantMap\s+measCalcPoints\s*\(\s*int\s+scale\s*=\s*0\s*\)\s*const\s*',
+        ),
+    ]
+    return set().union(
+        *(
+            owned_property_spans(source, relative_path, header, owner, declaration, invokable=True)
+            for header, owner, declaration in rows
+        )
+    )
 
 
 def assistant_exception_spans(source, relative_path):
@@ -134,6 +182,8 @@ def api_violations(source, relative_path=None):
                 forbidden.add(name or old_name)
     allowed = report_model_exception_spans(source, relative_path)
     allowed |= assistant_exception_spans(source, relative_path)
+    allowed |= structure_bonds_exception_spans(source, relative_path)
+    allowed |= shipped_method_exception_spans(source, relative_path)
     for start, end in sorted(allowed, reverse=True):
         source = source[:start] + ' ' * (end - start) + source[end:]
     surfaces = re.finditer(r'Q_PROPERTY\s*\((.*?)\)|Q_INVOKABLE\s+([^;{]+)', source, re.DOTALL)
@@ -241,6 +291,64 @@ REPORT_EXCEPTION = (
     'Q_PROPERTY(QVariantMap model READ model NOTIFY modelChanged) }; }'
 )
 REPORT_HEADER = 'app/src/report_view_model.hpp'
+
+
+def test_structure_bonds_legacy_container_is_scoped_to_its_declared_owner():
+    source = (
+        'namespace edi_app { class StructureViewModel : public QObject { '
+        'Q_PROPERTY(QVariantList bonds READ bonds NOTIFY bondsChanged) }; }'
+    )
+    header = 'app/src/structure_view_model.hpp'
+    assert not api_violations(source, header), (
+        'The shipped structure bond list is the one named legacy container for this owner'
+    )
+    for changed, path in [
+        (source, 'app/src/other.hpp'),
+        (source.replace('namespace edi_app', 'namespace other'), header),
+        (source.replace('class StructureViewModel', 'class Other'), header),
+        (source.replace('bonds READ bonds', 'other READ other'), header),
+        (source.replace('QVariantList', 'QVariantMap'), header),
+        (source.replace('};', 'Q_PROPERTY(QVariantList extra READ extra) };'), header),
+    ]:
+        assert api_violations(changed, path), (
+            'The legacy bond-list exception cannot admit another owner, member, type or API'
+        )
+
+
+def test_shipped_container_methods_cannot_admit_another_untyped_surface():
+    rows = [
+        (
+            'app/src/toolbar_row.hpp',
+            'ToolbarRow',
+            (
+                'QVariantMap layout(const QVariantList& units, '
+                'double left, double right, double spacing, '
+                'double groupSpacing, double moreWidth) const'
+            ),
+        ),
+        (
+            'app/src/experiment_view_model.hpp',
+            'ExperimentViewModel',
+            'QVariantMap measCalcPoints(int scale = 0) const',
+        ),
+    ]
+    for path, owner, declaration in rows:
+        source = (
+            'namespace edi_app { '
+            f'class {owner} : public QObject {{ Q_INVOKABLE {declaration}; }}; }}'
+        )
+        assert not api_violations(source, path), (
+            'Only the named shipped container method of its qualified owner is retained'
+        )
+        for changed, header in [
+            (source, 'app/src/other.hpp'),
+            (source.replace(owner, 'Other'), path),
+            (source.replace('QVariantMap', 'QVariantHash'), path),
+            (source.replace('};', 'Q_PROPERTY(QVariantMap extra READ extra) };'), path),
+        ]:
+            assert api_violations(changed, header), (
+                'Shipped legacy method pins do not permit another owner, type, member or API'
+            )
 
 
 def test_report_model_owner_exception_is_exactly_one_named_property():
@@ -431,15 +539,58 @@ def assert_local_app_checks(manifest):
 
 
 NIGHTLY_APP_CONDITION = (
-    "${{ !cancelled() && (github.event_name == 'schedule' || "
-    "github.event_name == 'workflow_dispatch') && steps.apphost.outcome == 'success' }}"
+    "${{ runner.os != 'Windows' && (!cancelled() && (github.event_name == 'schedule' || "
+    "github.event_name == 'workflow_dispatch') && steps.apphost.outcome == 'success') }}"
 )
+APP_EVENTS = ('pull_request', 'push', 'schedule', 'workflow_dispatch')
+APP_OUTPUTS = {
+    ('inputs', 'run'): 'true',
+    ('apphost', 'outcome'): 'success',
+    ('onboarding', 'outcome'): 'success',
+}
+APP_JOB_PLATFORMS = {'app': 'Linux', 'app-macos': 'macOS', 'app-windows': 'Windows'}
 APP_GROUP_TITLE = "The app group's Python tests (tests/integration/app)"
 APP_TIER_STEPS = (
     ("The app's Qt Quick Test tier", 'app-test'),
     ('The UI test against the one committed image set', 'app-ui-test'),
 )
 APP_IMAGE_UPLOAD_TITLE = "Upload the UI test's images and similarity maps"
+
+WINDOWS_APP_TITLE = 'app · Windows'
+WINDOWS_BUILD_TITLE = 'Build the app with MSVC, warnings as errors'
+WINDOWS_BUILD_COMMAND = (
+    'pixi run --manifest-path tools/installer/pixi.toml python '
+    'tools/ci/app-windows-build.py --crysta-source .crysta --work build/app-windows'
+)
+
+
+def assert_windows_app_build(job):
+    assert job.get('name') == WINDOWS_APP_TITLE, (
+        'gate 7: Windows build-only app job retains its independent display identity'
+    )
+    assert [runner[1] for runner in self_hosted_runners(job)] == ['Windows'], (
+        'gate 7: the separate app builder executes exactly once on Windows'
+    )
+    steps = job.get('steps', [])
+    builds = [step for step in steps if step.get('name') == WINDOWS_BUILD_TITLE]
+    assert len(builds) == 1, 'gate 7: Windows has exactly one MSVC warnings-as-errors app build'
+    assert shlex.split(builds[0].get('run', '')) == shlex.split(WINDOWS_BUILD_COMMAND), (
+        'gate 7: Windows executes the declared build-only MSVC app command'
+    )
+    forbidden = {APP_GROUP_TITLE, APP_IMAGE_UPLOAD_TITLE, *(title for title, _ in APP_TIER_STEPS)}
+    for event in APP_EVENTS:
+        assert active(builds[0], event, bindings={'runner.os': 'Windows'}), (
+            'gate 7: the Windows MSVC app build step executes in every governed full event'
+        )
+        assert all(
+            not active(builds[0], event, bindings={'runner.os': platform})
+            for platform in ('Linux', 'macOS')
+        ), 'gate 7: the MSVC build stays inactive on Linux and macOS'
+        assert not any(
+            active(step, event, outputs=APP_OUTPUTS, bindings={'runner.os': 'Windows'})
+            for step in steps
+            if step.get('name') in forbidden
+        ), 'gate 7: Windows remains build-only on every event'
 
 
 def assert_nightly_app_steps(job):
@@ -476,16 +627,14 @@ def assert_nightly_app_steps(job):
         'owner decision: keep the group-app command present once before Qt Quick Test; '
         f'actual group steps={groups}'
     )
-    from tests.fixtures.e09_t75_workflow import active  # noqa: PLC0415
-
-    for event in ('pull_request', 'push', 'schedule', 'workflow_dispatch'):
-        assert active(
-            groups[0],
-            event,
-            outputs={('inputs', 'run'): 'true', ('onboarding', 'outcome'): 'success'},
-        ) == (event != 'pull_request'), (
-            'owner decision: app group skips PRs and runs on push, nightly and full dispatch'
-        )
+    for event in APP_EVENTS:
+        for platform in APP_JOB_PLATFORMS.values():
+            assert active(
+                groups[0], event, outputs=APP_OUTPUTS, bindings={'runner.os': platform}
+            ) == (platform != 'Windows' and event != 'pull_request'), (
+                'owner decision: the Linux and macOS app group runs on push, nightly and full '
+                'dispatch and skips PRs; Windows stays build-only'
+            )
     titles = [step.get('name') for step in job['steps']]
     assert titles.index(APP_GROUP_TITLE) < titles.index(APP_TIER_STEPS[0][0]), (
         'owner decision: group-app runs before Qt Quick Test so a Qt Quick failure cannot skip '
@@ -500,8 +649,9 @@ def assert_nightly_app_step_escape_controls():
             {
                 'name': APP_GROUP_TITLE,
                 'if': (
-                    "${{ !cancelled() && github.event_name != 'pull_request' "
-                    "&& steps.onboarding.outcome == 'success' }}"
+                    "${{ runner.os != 'Windows' && (!cancelled() && "
+                    "github.event_name != 'pull_request' "
+                    "&& steps.onboarding.outcome == 'success') }}"
                 ),
                 'run': 'pixi run --skip-deps group-app',
             },
@@ -533,6 +683,8 @@ def assert_nightly_app_step_escape_controls():
             '${{ !cancelled() }}',
             "${{ github.event_name == 'push' }}",
             "${{ github.event_name == 'pull_request' }}",
+            NIGHTLY_APP_CONDITION.replace("runner.os != 'Windows' && ", ''),
+            NIGHTLY_APP_CONDITION.replace("runner.os != 'Windows'", "runner.os == 'Windows'"),
         ):
             broken = copy.deepcopy(job)
             step = next(step for step in broken['steps'] if step['name'] == title)
@@ -558,6 +710,7 @@ def assert_nightly_app_step_escape_controls():
         "github.event_name != 'push'",
         "github.event_name != 'schedule'",
         "github.event_name != 'workflow_dispatch'",
+        job['steps'][0]['if'].replace("runner.os != 'Windows' && ", ''),
     ):
         broken = copy.deepcopy(job)
         if condition is None:
@@ -606,31 +759,41 @@ def test_local_and_ci_gates_reach_app_tests():
     manifest = tomllib.loads((ROOT / 'pixi.toml').read_text())
     assert_local_app_checks(manifest)
     workflow = yaml.safe_load((ROOT / '.github/workflows/ci.yml').read_text())
-    # : both desktop platforms share one matrix; keep the original gate payload.
-    app_jobs = []
-    for name, job in workflow['jobs'].items():
-        if name not in {'app', 'app-macos'} and not job.get('name', '').startswith('app · '):
-            continue
-        if 'WebAssembly' in job.get('name', ''):
-            continue
-        app_jobs.extend(runner[1] for runner in self_hosted_runners(job))
-        assert job.get('if') is not False, (
-            ' owner decisions: both app jobs remain active and required'
+    jobs = {
+        name: job
+        for name, job in workflow['jobs'].items()
+        if name in APP_JOB_PLATFORMS
+        or (job.get('name', '').startswith('app · ') and name != 'app-wasm')
+    }
+    assert jobs.keys() == APP_JOB_PLATFORMS.keys(), (
+        'gate 7: the desktop app has exactly one static job per platform'
+    )
+    assert_windows_app_build(jobs['app-windows'])
+    for name, platform in APP_JOB_PLATFORMS.items():
+        job = jobs[name]
+        assert job.get('name') == f'app · {platform}' and 'strategy' not in job, (
+            f'gate 7: {platform} has its stable display name without matrix expansion'
         )
+        assert [runner[1] for runner in self_hosted_runners(job)] == [platform], (
+            f'gate 7: {platform} executes once on its declared OS and architecture'
+        )
+        for event in APP_EVENTS:
+            assert active(
+                job,
+                event,
+                states={'changes': 'success', 'core': 'success', 'crysta-sdk': 'success'},
+            ), f'gate 7: {platform} participates in each full event'
+        if platform == 'Windows':
+            continue
         assert_nightly_app_steps(job)
-        commands = '\n'.join(
-            step.get('run', '') for step in job['steps'] if step.get('if') is not False
-        )
-        for script in (
-            'app-build',
-            'app-lint',
-            'app-format-check',
-            'group-app',
-        ):
-            assert script in commands, f'gate 6/7: {name} invokes the shared {script} task'
-
-    assert sorted(app_jobs) == ['Linux', 'macOS'], (
-        'gate 7: both desktop platforms execute app checks'
+        for script in ('app-build', 'app-lint', 'app-format-check', 'group-app'):
+            assert any(
+                step.get('run', '').endswith(f' {script}')
+                and active(step, 'schedule', outputs=APP_OUTPUTS, bindings={'runner.os': platform})
+                for step in job['steps']
+            ), f'gate 6/7: {name} invokes the shared {script} task'
+    assert jobs['app']['steps'] == jobs['app-macos']['steps'] == jobs['app-windows']['steps'], (
+        'gate 7: all three desktop jobs share the same step list'
     )
 
 
@@ -808,7 +971,7 @@ def oracle_input_bytes(path):
         'sc-neut-cwl_tb2ti2o7-heidi_simulation',
         'sc-neut-cwl_cosio-heidi',
     }:
-        return path.read_bytes()
+        return example_inputs.previous_bytes(path.relative_to(ROOT), path.read_bytes())
     return read_previous(path)
 
 
@@ -854,6 +1017,24 @@ def test_frozen_oracle_inputs_are_the_committed_fixture_bytes():
     )
 
 
+def assert_series_oracle_sources(project):
+    series = project['series']
+    points = {
+        'pd-neut-tof_ncaf-wish-5bank_scan-6p': 6,
+        'pd-neut-tof_ncaf-wish-5bank_synthetic-100p': 100,
+    }
+    assert len(series['banks']) == len(set(series['banks'])) and series['points'], (
+        'A joint-series oracle retains its complete bank and point identities'
+    )
+    assert len(series['points']) == points[project['id']], (
+        'Each declared public series retains its independently authored point population'
+    )
+    for relative, digest in series['files'].items():
+        assert (
+            hashlib.sha256((ROOT / project['path'] / relative).read_bytes()).hexdigest() == digest
+        ), 'Each series bank and point is bound to its independent measured input bytes'
+
+
 def test_existing_projects_oracle_covers_the_registry_without_filters():
     # The manual estimate extension changes only the LBCO experiment source hash;
     # all project-block values, other files and the complete registry stay pinned.
@@ -867,17 +1048,16 @@ def test_existing_projects_oracle_covers_the_registry_without_filters():
 
     selection = current_cases()
     expected_app_ids = [row['id'] for row in selection]
-    app_only_ids = []
+    app_only_ids = ['pd-neut-tof_ncaf-wish-5bank_synthetic-100p']
     assert oracle['app_only_ids'] == app_only_ids, (
-        'The catalogue form retires every former single-crystal app-only entry'
+        'The declared synthetic series is the sole app-only example beside the shared catalogue'
     )
     assert [row['id'] for row in registry['projects'] if row.get('app-only')] == app_only_ids, (
         'The registry must refuse every app-only entry outside the declared list'
     )
-    assert oracle['app_ids'] == [*expected_app_ids, *app_only_ids], (
-        'The complete app oracle must be exactly the catalogue followed by '
-        'the declared app-only list'
-    )
+    assert oracle['app_ids'] == [
+        row for row in ids if row in {*expected_app_ids, *app_only_ids}
+    ], 'The complete app oracle retains every shared and app-only case in registry order'
     metadata = json.loads((ROOT / 'app/examples/metadata.json').read_text())
     assert list(metadata['examples']) == oracle['app_ids'], (
         'App metadata must contain every declared catalogue and app-only identity in order'
@@ -923,6 +1103,8 @@ def test_existing_projects_oracle_covers_the_registry_without_filters():
                 'gate 3: scan projects exercise every read-only scan field'
             )
     for project in oracle['projects']:
+        if project.get('series'):
+            assert_series_oracle_sources(project)
         for dataset in project.get('datasets', []):
             directory = project['analysis']['_sequential_fit.data_dir']
             source = ROOT / project['path'] / directory / dataset['file']

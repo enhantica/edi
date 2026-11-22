@@ -8,7 +8,7 @@
     ],
     "id": "scan-project-settings",
     "image": "scan-project-settings.webp",
-    "image_sha256": "5d54b2825d7f1e7e2cfa46ebfec689b99ac26dcffb6e1b9cb1fe3c67dddcaa85",
+    "image_sha256": "7e57ac24f1492aa25f672a9eca18bf6815934215fb578b6def1b2ae0ed8dee8f",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -338,7 +338,7 @@
                 19
             ],
             "enabled": true,
-            "label": ".",
+            "label": "",
             "visible_bounds": [
                 183.4,
                 253.70000000000002,
@@ -386,7 +386,7 @@
                 19
             ],
             "enabled": true,
-            "label": "/tmp/EasyDiffraction-rEKkVY/pd-neut-cwl_cosio-d20_scan-213f/project",
+            "label": "/tmp/EasyDiffraction-NIgjLP/pd-neut-cwl_cosio-d20_scan-213f/project",
             "visible_bounds": [
                 183.4,
                 347.40000000000003,
@@ -574,56 +574,56 @@
         },
         "statusBar.fit": {
             "bounds": [
-                868,
+                859,
                 769,
-                598,
+                607,
                 19
             ],
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                868,
+                859,
                 769,
-                598,
+                607,
                 19
             ]
         },
         "statusBar.fit.button": {
             "bounds": [
-                1414,
+                1413,
                 769,
-                52,
+                53,
                 19
             ],
             "enabled": true,
-            "icon": "play-circle",
+            "icon": "play",
             "label": "",
             "visible_bounds": [
-                1414,
+                1413,
                 769,
-                52,
+                53,
                 19
             ]
         },
         "statusBar.fit.buttons": {
             "bounds": [
-                1344,
+                1343,
                 769,
-                122,
+                123,
                 19
             ],
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                1344,
+                1343,
                 769,
-                122,
+                123,
                 19
             ]
         },
         "statusBar.fit.follow": {
             "bounds": [
-                1379,
+                1378,
                 772,
                 28,
                 14
@@ -632,7 +632,7 @@
             "icon": "crosshairs",
             "label": "",
             "visible_bounds": [
-                1379,
+                1378,
                 772,
                 28,
                 14
@@ -640,7 +640,7 @@
         },
         "statusBar.fit.outcome": {
             "bounds": [
-                886,
+                877,
                 769,
                 82,
                 19
@@ -649,7 +649,7 @@
             "icon": "check-circle",
             "label": "",
             "visible_bounds": [
-                886,
+                877,
                 769,
                 82,
                 19
@@ -657,7 +657,7 @@
         },
         "statusBar.fit.reset": {
             "bounds": [
-                1344,
+                1343,
                 772,
                 28,
                 14
@@ -666,7 +666,7 @@
             "icon": "eraser",
             "label": "",
             "visible_bounds": [
-                1344,
+                1343,
                 772,
                 28,
                 14
@@ -677,17 +677,17 @@
         },
         "statusBar.fit.values": {
             "bounds": [
-                985,
+                976,
                 770,
-                342,
+                350,
                 18.109375
             ],
             "enabled": true,
-            "label": "213/213 213 0 51s 4.32–6.25",
+            "label": "213/213 213 0 173s 4.40–6.30",
             "visible_bounds": [
-                985,
+                976,
                 770,
-                342,
+                350,
                 18.109375
             ]
         },
@@ -779,6 +779,22 @@
                 14
             ]
         },
+        "window.projectDrop": {
+            "bounds": [
+                0,
+                0,
+                1480,
+                800
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                0,
+                0,
+                1480,
+                800
+            ]
+        },
         "workflow.home.sidebarHost": {
             "bounds": [
                 770,
@@ -855,11 +871,11 @@
     "qt_version": "6.11.2",
     "schema": 1,
     "script_sha256": "db1af167615f4344703ac808b4364deaf281536e8d9bb793c3e81bda9f74db6e",
-    "source_revision": "9045d5d22d8f07b00ffd58c1610ec4b02b2beba5",
+    "source_revision": "66250b0826244790ae402c00384ea8fca62ae552",
     "state": {
         "experiments": 1,
         "fit_outcome": "success",
-        "fit_result_rows": 6,
+        "fit_result_rows": 8,
         "fit_results_open": false,
         "fit_running": false,
         "fit_status": "Success",

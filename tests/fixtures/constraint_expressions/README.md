@@ -28,3 +28,10 @@ PYTHONPATH=. python tests/fixtures/constraint_expressions/generate_byte_pins.py
 The main generator validates inputs against retained content receipts rather
 than requiring historical commits to remain reachable. The `model_commit`
 strings are provenance only. Regeneration keeps every prior capture.
+
+`unconstrained_regression.json` retains the pre-feature analysis, experiment
+and structure bytes. Only its `project.edi` regression digest was renewed
+against the shipped `b1d25154` writer. To repeat that capture with that writer
+build, run
+`python -m tests.fixtures.constraint_expressions.freeze_unconstrained edi --project-block-only`.
+It checks all other saved-file digests before updating the project block.

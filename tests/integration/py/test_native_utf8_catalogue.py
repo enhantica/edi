@@ -39,8 +39,12 @@ def test_declared_utf8_mode_reads_and_emits_the_real_catalogue_in_a_legacy_local
     )
     rows = json.loads(run.stdout.decode('utf-8'))
     registry = json.loads((ROOT / 'app/examples/metadata.json').read_text(encoding='utf-8'))
-    assert {row['id'] for row in rows} == set(registry['examples']), (
-        'Declared utf8 mode reads and emits the real catalogue in a legacy locale.'
+    app_only = {'pd-neut-tof_ncaf-wish-5bank_synthetic-100p'}
+    assert app_only <= set(registry['examples']), (
+        'The desktop catalogue retains the declared synthetic series example'
+    )
+    assert {row['id'] for row in rows} == set(registry['examples']) - app_only, (
+        'Legacy-locale CLI output retains every shared example and excludes the app-only series'
     )
     assert any('₂' in row['title'] for row in rows), (
         'Declared utf8 mode reads and emits the real catalogue in a legacy locale.'

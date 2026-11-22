@@ -145,7 +145,7 @@ def token(row):
     return 'external_witness'
 
 
-def payload(kind, row, name, shape, value):
+def payload(kind, row, name, shape, value, *, atom_type_keys=()):
     block = gemmi.cif.read_string(STRUCTURE if kind == 'structure' else EXPERIMENT).sole_block()
     aliases = {key(n) for n in row['cif_names'] + row['edi_names']}
     for item in list(block):
@@ -157,6 +157,10 @@ def payload(kind, row, name, shape, value):
                     block.find_loop(tag).erase()
     if shape == 'item':
         block.set_pair(name, value)
+    elif atom_type_keys:
+        loop = block.init_loop('', ['_atom_type_scat.symbol', name])
+        for symbol in atom_type_keys:
+            loop.add_row([symbol, value])
     else:
         loop = block.init_loop('', [name])
         loop.add_row([value])

@@ -176,8 +176,15 @@ def test_weight_fraction_role_and_menu_preserve_live_uncertainty_and_single_phas
     assert re.search(r'\bListViewParameter\b', components.split('REPLACED')[0]), (
         'The weight-fraction menu ships from the pinned upstream ListViewParameter'
     )
-    assert 'ListViewParameter' not in components.split('REPLACED')[1].split(')')[0], (
-        'The upstream parameter menu is consumed without a local replacement'
+    assert 'ListViewParameter' in components.split('REPLACED')[1].split(')')[0], (
+        'The declared parameter overlay supplies the qualified-name link menu'
+    )
+    overlay = (ROOT / 'app/qml/Base/Gui/Components/ListViewParameter.qml').read_text()
+    assert all(
+        'parameter.' + role in property_value(overlay, role) for role in ('value', 'error')
+    ), 'The shipped parameter overlay consumes the live value and separate uncertainty'
+    assert 'control.openContextMenu(menuArea)' in overlay and 'control.fullName' in overlay, (
+        'The actual parameter menu retains its context action and datablock-qualified name'
     )
     reference = ROOT / 'tests/fixtures/table_display/ListViewParameter.qml'
     assert hashlib.sha256(reference.read_bytes()).hexdigest() == gui_base.PARAMETER_SHA256, (

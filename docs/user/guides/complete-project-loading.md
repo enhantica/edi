@@ -6,6 +6,9 @@ binding decision it implements is
 [crysta],
 whose project-directory contract edi mirrors.
 
+Projects from cryspy, FullProf and GSAS-II load through the same call; the user guide's data
+formats page describes them, and edi ADR-0098 the shared import base.
+
 ## The one loader
 
 `edi.Project.load(dir)` is the **single** loader (*one loader, project contents

@@ -5,10 +5,16 @@ from pathlib import Path
 
 import pytest
 
-from tests.fixtures.fast_chart_redraws.rendering import capture
+from tests.fixtures.fast_chart_redraws.rendering import capture, native_arguments
 
 ROOT = Path(__file__).resolve().parents[3]
 CASES = [
+    *[
+        f'test_constrained_moment_nuclear_counterfactual:{mode}-{axis}-{quantity}'
+        for mode in ('fixed', 'expression', 'alias')
+        for axis in ('q', 'sine')
+        for quantity in ('f2', 'f')
+    ],
     'test_powder_comparison_has_one_point_per_data_row_and_identity_line',
     'test_creating_single_crystal_experiment_immediately_draws_simulated_bars',
     *[
@@ -36,16 +42,26 @@ CASES = [
 ]
 
 
-@pytest.mark.parametrize('case', CASES)
-def test_single_crystal_pattern_from_independent_references(case):
+@pytest.fixture(scope='module')
+def native_host():
     binary = Path(os.environ.get('EDI_APP_TEST_RUNNER', ROOT / 'build/app/app/edi_app_tests'))
-    assert binary.is_file(), 'Single-crystal pattern acceptance requires the actual native Qt host'
-    status, output = capture([
-        binary,
-        '-input',
-        ROOT / 'tests/unit/app/tst_single_crystal_pattern.qml',
-        'SingleCrystalPattern::' + case,
-    ])
+    assert binary.is_file(), 'Single-crystal acceptance requires the actual native Qt host'
+    # Freezing and hashing the shared host is module setup, outside individual GUI workflows.
+    native_arguments([binary])
+    return binary
+
+
+@pytest.mark.parametrize('case', CASES)
+def test_single_crystal_pattern_from_independent_references(case, native_host):
+    status, output = capture(
+        [
+            native_host,
+            '-input',
+            ROOT / 'tests/unit/app/tst_single_crystal_pattern.qml',
+            'SingleCrystalPattern::' + case,
+        ],
+        env={**os.environ, 'OMP_NUM_THREADS': '1', 'OPENBLAS_NUM_THREADS': '1'},
+    )
     assert 'Could not find the following test functions' not in output, (
         'The selected native single-crystal function must exist before product behavior is judged'
     )

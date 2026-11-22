@@ -1,4 +1,4 @@
-name: crysta SDK
+name: Build crysta
 
 # The crysta SDK edi builds against (edi ADR-0083): pixi.toml's CRYSTA_COMMIT, built here once per commit and
 # platform and kept in the cache under that commit, with crysta's source at the same commit. Every edi job and
@@ -46,10 +46,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # dev builds only the web app, which needs the Linux SDK alone.
         include:
           - platform: linux-64
             runner: ubuntu-24.04
+          - platform: osx-arm64
+            runner: macos-15
+          - platform: win-64
+            runner: windows-2022
     runs-on: ${{ matrix.runner }}
     defaults:
       run:

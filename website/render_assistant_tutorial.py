@@ -24,7 +24,7 @@ sys.path.insert(0, str(ROOT))
 from import_gui_captures import DOCS, figure, page, viewer  # noqa: E402
 from render_app_tutorials import copy_bundle, scenes_of  # noqa: E402
 
-COLLECTION = 'https://raw.githubusercontent.com/enhantica/edi-data/dev'
+COLLECTION = 'https://raw.githubusercontent.com/enhantica/edi-data/main'
 FOLDER = 'assistant'
 MARKER = ('<!-- assistant-result -->', '<!-- /assistant-result -->')
 

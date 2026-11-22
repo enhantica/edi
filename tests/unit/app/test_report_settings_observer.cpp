@@ -51,6 +51,7 @@
 #include <algorithm>
 #include <atomic>
 #include <chrono>
+#include <cmath>
 #include <condition_variable>
 #include <initializer_list>
 #include <memory>
@@ -61,6 +62,7 @@
 #include <vector>
 
 #include "edi/fit_job.hpp"
+#include "edi/structure_scene.hpp"
 #include "engine_setup.hpp"
 #include "fit_view_model.hpp"
 #include "measured_layer.hpp"
@@ -164,6 +166,83 @@ class ReportSettingsProof : public QObject {
     Q_PROPERTY(QString webExportError READ webExportError)
 public:
     explicit ReportSettingsProof(QQmlEngine* engine) : engine_(engine) {}
+    // Read-only carrier: all coordinates/options come from independent fixtures.
+    Q_INVOKABLE QVariantMap polyhedraWitness(const QVariantMap& input, bool complete) const {
+        const auto points = input.value("points").toList();
+        std::vector<edi::Vec3> vertices;
+        for (const auto& point : points) {
+            const auto xyz = point.toList();
+            vertices.push_back({xyz.at(0).toDouble(), xyz.at(1).toDouble(), xyz.at(2).toDouble()});
+        }
+        const auto encodeFaces = [](const auto& faces) {
+            QVariantList result;
+            for (const auto& face : faces)
+                result.append(QVariant(QVariantList{int(face[0]), int(face[1]), int(face[2])}));
+            return result;
+        };
+        if (input.value("hull").toBool())
+            return {{"faces", encodeFaces(edi::convex_hull(vertices))}};
+        edi::SceneSource source;
+        source.current = true;
+        source.structure_id = "independent";
+        const auto matrix = input.value("matrix").toList();
+        for (int i = 0; i < 9; ++i) source.cartn_matrix[i] = matrix.at(i).toDouble();
+        std::vector<std::string> ids{"Fe1"}, sym{"1_555"};
+        std::vector<std::int32_t> clusters{1}, site1, site2;
+        std::vector<double> fx{0}, fy{0}, fz{0}, x{0}, y{0}, z{0}, occ{1}, distances;
+        source.site_types.push_back({"Fe1", "Fe"});
+        const auto fractional = input.value("fractional").toList();
+        for (int i = 0; i < int(vertices.size()); ++i) {
+            const auto& v = vertices[i];
+            const auto frac = fractional.at(i).toList();
+            fx.push_back(frac.at(0).toDouble()); fy.push_back(frac.at(1).toDouble()); fz.push_back(frac.at(2).toDouble());
+            x.push_back(v.x); y.push_back(v.y); z.push_back(v.z); occ.push_back(1);
+            const auto id = "O" + std::to_string(i + 1);
+            ids.push_back(id); sym.push_back("1_555"); clusters.push_back(i + 2);
+            source.site_types.push_back({id, "O"});
+            site1.push_back(1); site2.push_back(i + 2);
+            distances.push_back(std::sqrt(v.x*v.x + v.y*v.y + v.z*v.z));
+        }
+        source.atom_site_id = std::make_shared<const std::vector<std::string>>(ids);
+        source.site_symmetry = std::make_shared<const std::vector<std::string>>(sym);
+        source.cluster_id = std::make_shared<const std::vector<std::int32_t>>(clusters);
+        source.fract_x = std::make_shared<const std::vector<double>>(fx);
+        source.fract_y = std::make_shared<const std::vector<double>>(fy);
+        source.fract_z = std::make_shared<const std::vector<double>>(fz);
+        source.cartn_x = std::make_shared<const std::vector<double>>(x);
+        source.cartn_y = std::make_shared<const std::vector<double>>(y);
+        source.cartn_z = std::make_shared<const std::vector<double>>(z);
+        source.occupancy = std::make_shared<const std::vector<double>>(occ);
+        source.bond_site_1 = std::make_shared<const std::vector<std::int32_t>>(site1);
+        source.bond_site_2 = std::make_shared<const std::vector<std::int32_t>>(site2);
+        source.bond_distance = std::make_shared<const std::vector<double>>(distances);
+        edi::SceneOptions options;
+        options.polyhedra = true;
+        options.polyhedra_centres = {"Fe"}; options.polyhedra_corners = {"O"};
+        options.polyhedra_complete = complete;
+        options.polyhedra_max_distance = input.value("cutoff").toDouble();
+        const auto scene = edi::present_structure(source, options);
+        QVariantList corners, faces;
+        for (const auto& poly : scene.polyhedra) if (poly.atom == 0) {
+            for (const auto& v : poly.corners) corners.append(QVariant(QVariantList{v.x, v.y, v.z}));
+            faces = encodeFaces(poly.faces);
+        }
+        return {{"current", scene.current}, {"corners", corners}, {"faces", faces}};
+    }
+    Q_INVOKABLE QVariantMap momentRelationFacts(QObject* object) const {
+        const auto* view = qobject_cast<edi_app::ProjectViewModel*>(object);
+        if (!view) return {};
+        const auto& project = view->project();
+        QVariantList moments, aliases, constraints;
+        for (const auto& structure : project.structures)
+            for (const auto& moment : structure->atom_site_moment)
+                moments.append(QVariant(QVariantList{double(moment->crystalaxis_x.value), double(moment->crystalaxis_y.value), double(moment->crystalaxis_z.value)}));
+        for (const auto& alias : project.aliases)
+            aliases.append(QVariant(QVariantList{QString::fromStdString(alias->id.value()), QString::fromStdString(alias->parameter_unique_name.value())}));
+        for (const auto& constraint : project.constraints)
+            constraints.append(QVariant(QVariantList{QString::fromStdString(constraint->id.value()), QString::fromStdString(constraint->expression.value())}));
+        return {{"moments", moments}, {"aliases", aliases}, {"constraints", constraints}};
+    }
     // Public Qt text layout, using the rendered label's own font and available width.
     // The QML gate checks its line count against the actual label before reading line text.
     Q_INVOKABLE QVariantList tooltipTextLines(QObject* label, bool word, bool anywhere) const {

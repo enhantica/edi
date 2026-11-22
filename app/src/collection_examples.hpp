@@ -50,6 +50,7 @@ public:
     void whenRead(const QString& id, std::function<void()> then);
     /// Download (or copy) the entry's file, checked against the index; `done` gets the bytes or an error.
     void fetchBytes(const QString& id, BytesDone done, FetchProgress progress = {});
+    bool heldHere(const QString& id, const QString& path) const;
     /// The entry's zip in a temporary folder; `done` gets the archive or an error.
     void fetchProject(const QString& id, ProjectDone done, FetchProgress progress = {});
     /// The file name the entry's path ends with; empty for an unknown entry.
@@ -66,7 +67,10 @@ private:
         QString sha256;
     };
     void updateNotice();
-    void fetchPaired(const QString& id, const QStringList& bases, int at, bool retried, BytesDone done, FetchProgress progress);
+    // `omitted`: a location on this computer did not hold the file (left out of the app for its size), so a failure of
+    // the online ones is said as the download it is.
+    void fetchPaired(const QString& id, const QStringList& bases, int at, bool retried, BytesDone done, FetchProgress progress,
+                     bool omitted = false);
     void settle();
     void checkOnline(int generation, const QStringList& online, const edi::online::Index& bundled);
 
@@ -83,7 +87,9 @@ private:
     int projects_ = 0;
     int pending_ = 0;
     QString notice_;
-    QList<std::function<void()>> waiting_;
+    // Requests for an id, answered once a source holds it or every source and online check has answered.
+    QList<std::pair<QString, std::function<void()>>> waiting_;
+    int checking_ = 0;  // online checks of a bundled collection still running
     std::unique_ptr<QTemporaryDir> downloads_;
     int generation_ = 0;
 };

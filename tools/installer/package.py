@@ -19,12 +19,17 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 SYSTEM = {'Linux': 'linux', 'Darwin': 'macos', 'Windows': 'windows'}[platform.system()]
-APP_COMPONENT = 'org.easyscience.edi'
-ASSISTANT_COMPONENT = 'org.easyscience.edi.assistant'
+APP_COMPONENT = 'org.easydiffraction.app'
+ASSISTANT_COMPONENT = 'org.easydiffraction.app.assistant'
 ASSISTANT_RUNTIME = Path('libexec/edi/codex')
-# macOS ships its maintenance tool as its own signed component, app-versioned (edi ADR-0091).
-MAINTENANCE_COMPONENT = 'org.easyscience.edi.maintenancetool'
-MAINTENANCE_TOOL = 'MaintenanceTool.app'
+# macOS and Windows ship their maintenance tool as a signed, app-versioned component (ADR-0091).
+MAINTENANCE_COMPONENT = 'org.easydiffraction.app.maintenancetool'
+# The id each component replaced, so an install made before edi ADR-0091 updates in place.
+REPLACED_COMPONENTS = {
+    APP_COMPONENT: 'org.easyscience.edi',
+    ASSISTANT_COMPONENT: 'org.easyscience.edi.assistant',
+    MAINTENANCE_COMPONENT: 'org.easyscience.edi.maintenancetool',
+}
 SUFFIX = '.exe' if SYSTEM == 'windows' else ''
 PLATFORM_ID = {'linux': 'linux-x86_64', 'macos': 'macos-arm64', 'windows': 'windows-x86_64'}[
     SYSTEM
@@ -149,6 +154,24 @@ def payload_manifest(stage: Path) -> dict:
     return result
 
 
+def write_controller(config: Path) -> None:
+    """Write the stylesheet and the controller, holding both wordmarks."""
+    style = ROOT / 'tools/installer'
+    step_list_inset = '23' if SYSTEM == 'macos' else '9'
+    stylesheet = (style / 'Installer.qss').read_text(encoding='utf-8')
+    (config / 'Installer.qss').write_text(
+        stylesheet.replace('@STEP_LIST_INSET@', step_list_inset), encoding='utf-8'
+    )
+    controller = (style / 'Installer.qs').read_text(encoding='utf-8')
+    for marker, filename in (
+        ('@WORDMARK@', 'InstallerLogo.png'),
+        ('@DARK_WORDMARK@', 'InstallerLogoDark.png'),
+    ):
+        image = base64.b64encode((style / filename).read_bytes()).decode('ascii')
+        controller = controller.replace(marker, image)
+    (config / 'Installer.qs').write_text(controller, encoding='utf-8')
+
+
 def write_metadata(
     config: Path,
     meta: Path,
@@ -170,9 +193,10 @@ def write_metadata(
             'Title': 'EasyDiffraction installer',
             'Publisher': 'EasyScience',
             'ProductUrl': 'https://easydiffraction.org/',
-            'TargetDir': '/Applications/EasyDiffraction'
-            if SYSTEM == 'macos'
-            else '@HomeDir@/EasyDiffraction',
+            'TargetDir': {
+                'macos': '/Applications/EasyDiffraction',
+                'windows': '@ApplicationsDirUser@/EasyDiffraction',
+            }.get(SYSTEM, '@HomeDir@/EasyDiffraction'),
             'MaintenanceToolName': 'MaintenanceTool',
             'AllowNonAsciiCharacters': 'true',
             'AllowSpaceInPath': 'true',
@@ -184,29 +208,22 @@ def write_metadata(
             'StyleSheet': 'Installer.qss',
         },
     )
-    icons = ROOT / 'app/resources/logo'
     style = ROOT / 'tools/installer'
-    stylesheet = (style / 'Installer.qss').read_text(encoding='utf-8')
-    step_list_inset = '23' if SYSTEM == 'macos' else '9'
-    (config / 'Installer.qss').write_text(
-        stylesheet.replace('@STEP_LIST_INSET@', step_list_inset), encoding='utf-8'
-    )
-    controller = (style / 'Installer.qs').read_text(encoding='utf-8')
-    for marker, filename in (
-        ('@WORDMARK@', 'InstallerLogo.png'),
-        ('@DARK_WORDMARK@', 'InstallerLogoDark.png'),
-    ):
-        image = base64.b64encode((style / filename).read_bytes()).decode('ascii')
-        controller = controller.replace(marker, image)
-    (config / 'Installer.qs').write_text(controller, encoding='utf-8')
+    write_controller(config)
+    # The installer's own icon, the app logo coming out of a box, distinct from the app's.
     if SYSTEM in {'macos', 'windows'}:
-        icon = 'App.icns' if SYSTEM == 'macos' else 'App.ico'
-        shutil.copy2(icons / icon, config / icon)
-        ET.SubElement(configuration.getroot(), 'InstallerApplicationIcon').text = 'App'
+        icon = 'Installer.icns' if SYSTEM == 'macos' else 'Installer.ico'
+        shutil.copy2(style / icon, config / icon)
+        ET.SubElement(configuration.getroot(), 'InstallerApplicationIcon').text = 'Installer'
         ET.SubElement(configuration.getroot(), 'StartMenuDir').text = 'EasyDiffraction'
+    if SYSTEM == 'windows':
+        # Run as administrator, the installer suggests Program Files (Installer.qs, edi ADR-0071).
+        ET.SubElement(
+            configuration.getroot(), 'AdminTargetDir'
+        ).text = '@ApplicationsDirX64@/EasyDiffraction'
     if SYSTEM in {'linux', 'windows'}:
-        shutil.copy2(icons / 'App.png', config / 'App.png')
-        ET.SubElement(configuration.getroot(), 'InstallerWindowIcon').text = 'App.png'
+        shutil.copy2(style / 'Installer.png', config / 'Installer.png')
+        ET.SubElement(configuration.getroot(), 'InstallerWindowIcon').text = 'Installer.png'
     if repository_url:
         if not repository_url.startswith(('https://', 'file://')):
             raise RuntimeError('Online repositories require HTTPS or a local fixture URL')
@@ -231,6 +248,7 @@ def write_metadata(
             'Default': 'true',
             'ForcedInstallation': 'true',
             'RequiresAdminRights': 'false',
+            'Replaces': REPLACED_COMPONENTS[APP_COMPONENT],
             'Script': 'installscript.qs',
         },
     )
@@ -257,6 +275,7 @@ def write_assistant_metadata(meta: Path, version: str) -> None:
             'Dependencies': APP_COMPONENT,
             'Default': 'false',
             'RequiresAdminRights': 'false',
+            'Replaces': REPLACED_COMPONENTS[ASSISTANT_COMPONENT],
         },
     )
 
@@ -273,32 +292,49 @@ def write_maintenance_tool_metadata(meta: Path, version: str) -> None:
             'Virtual': 'true',
             'ForcedInstallation': 'true',
             'RequiresAdminRights': 'false',
+            'Replaces': REPLACED_COMPONENTS[MAINTENANCE_COMPONENT],
             'Script': 'maintenancescript.qs',
         },
     )
     shutil.copy2(ROOT / 'tools/installer/maintenancescript.qs', meta / 'maintenancescript.qs')
 
 
+def maintenance_tool_name() -> str:
+    return 'MaintenanceTool.app' if SYSTEM == 'macos' else 'MaintenanceTool.exe'
+
+
 def maintenance_tool_executable(bundle: Path) -> Path:
-    return bundle / 'Contents/MacOS/MaintenanceTool'
+    return bundle / 'Contents/MacOS/MaintenanceTool' if SYSTEM == 'macos' else bundle
 
 
 def build_maintenance_tool(tools: Path, output: Path) -> Path:
-    """Build the macOS maintenance tool on its own and sign it (edi ADR-0091).
+    """Build the maintenance tool on its own and sign it (edi ADR-0091).
 
-    Without it the installer writes the tool from its own binary, which breaks a real signature,
-    and macOS kills it. Release builds sign with the Developer ID and notarise; others sign ad hoc.
+    Without it the installer writes the tool from its own binary, which breaks a real signature:
+    macOS kills it, and Windows runs it unsigned. Release builds sign with the Developer ID and
+    notarise on macOS and sign through KeyLocker on Windows; others sign ad hoc on macOS only.
     """
-    if SYSTEM != 'macos':
-        raise RuntimeError('Only macOS builds the maintenance tool separately')
+    if SYSTEM not in {'macos', 'windows'}:
+        raise RuntimeError('Only macOS and Windows build the maintenance tool separately')
     tools, work = tools.resolve(), output.resolve() / 'maintenance-tool'
     if work.exists():
         raise RuntimeError(
             'Maintenance tool output already exists; choose a fresh output directory'
         )
+    if SYSTEM == 'windows':
+        # binarycreator on Windows has no --mt. The maintenance tool is the Framework's
+        # installerbase.exe, unchanged: the installer keeps its pages and data beside it in
+        # maintenancetool.dat, so the signed binary stays as shipped.
+        work.mkdir(parents=True)
+        bundle = work / maintenance_tool_name()
+        shutil.copy2(tools / 'bin/installerbase.exe', bundle)
+        if windows_signing():
+            sign_windows(bundle)
+        return bundle
     config = work / 'config'
     config.mkdir(parents=True)
-    shutil.copy2(ROOT / 'app/resources/logo/App.icns', config / 'App.icns')
+    icon = 'App.icns'
+    shutil.copy2(ROOT / 'app/resources/logo' / icon, config / icon)
     xml_file(
         config / 'config.xml',
         'Installer',
@@ -309,34 +345,44 @@ def build_maintenance_tool(tools: Path, output: Path) -> Path:
             'Publisher': 'EasyScience',
             'MaintenanceToolName': 'MaintenanceTool',
             'InstallerApplicationIcon': 'App',
+            # The installer's look, light and dark, for the maintenance tool's pages too.
+            'ControlScript': 'Installer.qs',
+            'StyleSheet': 'Installer.qss',
         },
     )
-    # --mt writes the bundle named by MaintenanceToolName into the working directory.
+    write_controller(config)
+    # --mt writes the tool named by MaintenanceToolName into the working directory.
+    template = ['-t', macos_installer_template(tools, work)] if SYSTEM == 'macos' else []
     run(
         [
-            tools / 'bin/binarycreator',
+            tools / ('bin/binarycreator' + SUFFIX),
             '--verbose',
-            '-t',
-            macos_installer_template(tools, work),
+            *template,
             '--mt',
             '-c',
             config / 'config.xml',
         ],
         cwd=work,
     )
-    bundle = work / MAINTENANCE_TOOL
+    bundle = work / maintenance_tool_name()
     if macos_signing():
         notarise_macos(bundle)
-    else:
+    elif windows_signing():
+        sign_windows(bundle)
+    elif SYSTEM == 'macos':
         run(['codesign', '--force', '--sign', '-', bundle])
     check_maintenance_tool(bundle)
     return bundle
 
 
 def check_maintenance_tool(bundle: Path) -> None:
-    """Require a valid signature, and the Developer ID when signing is on."""
+    """Require a valid signature: ad hoc or the Developer ID on macOS, KeyLocker's on Windows."""
     if not maintenance_tool_executable(bundle).is_file():
         raise RuntimeError(f'Maintenance tool is missing: {bundle}')
+    if SYSTEM == 'windows':
+        if os.environ.get('EDI_CODESIGN') == '1':
+            verify_windows_signature(bundle)
+        return
     run(['codesign', '--verify', '--strict', '--verbose=2', bundle])
     if os.environ.get('EDI_CODESIGN') != '1':
         return
@@ -361,31 +407,34 @@ def add_maintenance_tool(
 ) -> str:
     """Put the signed maintenance tool into its component; return its executable's checksum."""
     if bundle is None:
-        if macos_signing():
+        if macos_signing() or windows_signing():
             raise RuntimeError('Signing needs the separately signed maintenance tool')
         bundle = build_maintenance_tool(tools, output)
     check_maintenance_tool(bundle)
     meta = packages / MAINTENANCE_COMPONENT / 'meta'
     meta.mkdir(parents=True)
     write_maintenance_tool_metadata(meta, version)
-    target = meta.parent / 'data/maintenancetool' / MAINTENANCE_TOOL
+    target = meta.parent / 'data/maintenancetool' / maintenance_tool_name()
     target.parent.mkdir(parents=True)
-    run(['ditto', bundle, target])
+    if SYSTEM == 'macos':
+        run(['ditto', bundle, target])
+    else:
+        shutil.copy2(bundle, target)
     return sha256(maintenance_tool_executable(target))
 
 
 def verify_installed_maintenance_tool(target: Path, metadata: dict) -> None:
     """Before running it, require the installed tool to be the shipped one (edi ADR-0091)."""
-    if SYSTEM != 'macos':
+    if SYSTEM not in {'macos', 'windows'}:
         return
-    bundle = target / MAINTENANCE_TOOL
+    bundle = target / maintenance_tool_name()
     check_maintenance_tool(bundle)
     expected = metadata.get('maintenance_tool_sha256')
     if expected and sha256(maintenance_tool_executable(bundle)) != expected:
         raise RuntimeError(
             'The installer wrote its own maintenance tool instead of the signed one'
         )
-    if (target / 'maintenancetool').exists():
+    if SYSTEM == 'macos' and (target / 'maintenancetool').exists():
         raise RuntimeError('The installer left the shipped maintenance tool in place')
 
 
@@ -675,22 +724,42 @@ def macos_installer_template(tools: Path, output: Path) -> Path:
     return thin
 
 
-def archive_installer(installer: Path, runtime: Path | None, *, ad_hoc: bool = True) -> Path:
-    """Archive the complete bootstrap including its portable runtime libraries."""
-    archive = installer.with_suffix('.zip')
-    archive.unlink(missing_ok=True)
+def deliver_installer(installer: Path, runtime: Path | None, *, ad_hoc: bool = True) -> Path:
+    """The one file users download (edi ADR-0071).
+
+    macOS: a disk image holding the installer app, so the app and its maintenance tool stay
+    intact; Windows: the self-contained installer itself; Linux: a ZIP of the installer with its
+    portable runtime libraries.
+    """
+    if SYSTEM == 'windows':
+        return installer
     if SYSTEM == 'macos':
+        image = installer.with_suffix('.dmg')
+        image.unlink(missing_ok=True)
         if ad_hoc:
             run(['codesign', '--force', '--deep', '--sign', '-', installer])
-        run(['ditto', '-c', '-k', '--sequesterRsrc', '--keepParent', installer, archive])
-    else:
-        with zipfile.ZipFile(archive, 'w', compression=zipfile.ZIP_DEFLATED) as zipped:
-            zipped.write(installer, installer.name)
-            if runtime:
-                for path in sorted(runtime.rglob('*')):
-                    if path.is_file():
-                        zipped.write(path, path.relative_to(installer.parent))
-    with zipfile.ZipFile(archive, 'a', compression=zipfile.ZIP_DEFLATED) as zipped:
+        folder = installer.parent / (installer.stem + '-image')
+        if folder.exists():
+            shutil.rmtree(folder)
+        folder.mkdir()
+        run(['ditto', installer, folder / installer.name])
+        shutil.copy2(ROOT / 'website/BRANDING-LICENSE', folder / 'BRANDING-LICENSE.txt')
+        try:
+            run([
+                'hdiutil', 'create', '-volname', 'EasyDiffraction', '-srcfolder', folder,
+                '-fs', 'HFS+', '-format', 'UDZO', '-ov', image,
+            ])  # fmt: skip
+        finally:
+            shutil.rmtree(folder)
+        return image
+    archive = installer.with_suffix('.zip')
+    archive.unlink(missing_ok=True)
+    with zipfile.ZipFile(archive, 'w', compression=zipfile.ZIP_DEFLATED) as zipped:
+        zipped.write(installer, installer.name)
+        if runtime:
+            for path in sorted(runtime.rglob('*')):
+                if path.is_file():
+                    zipped.write(path, path.relative_to(installer.parent))
         zipped.write(ROOT / 'website/BRANDING-LICENSE', 'BRANDING-LICENSE.txt')
     return archive
 
@@ -781,7 +850,7 @@ def package_app(
     )
     maintenance_sha256 = (
         add_maintenance_tool(source / 'packages', maintenance_tool, tools, output, version)
-        if SYSTEM == 'macos'
+        if SYSTEM in {'macos', 'windows'}
         else None
     )
     if repository_url:
@@ -819,13 +888,13 @@ def package_app(
         ],
         env=tool_environment,
     )
-    archive = archive_installer(installer, runtime)
+    download = deliver_installer(installer, runtime)
     (output / 'installer.json').write_text(
         json.dumps(
             {
                 'installer': installer.name,
-                'zip': archive.name,
-                'zip_sha256': sha256(archive),
+                'download': download.name,
+                'download_sha256': sha256(download),
                 'ifw': '4.11.0',
                 'platform': PLATFORM_ID,
                 'version': version,
@@ -935,10 +1004,25 @@ def sign_windows(path: Path) -> None:
     verify_windows_signature(path)
 
 
-def seal_installer(output: Path) -> None:
-    """Finish a signed installer after packaging and archive it again.
+def seal_disk_image(image: Path) -> None:
+    """Sign, notarise and staple the disk image itself, so Gatekeeper accepts the download."""
+    (identity,) = required_environment('EDI_CODESIGN_MAC_IDENTITY')
+    run(['codesign', '--force', '--timestamp', '--sign', identity, image])
+    run(['codesign', '--verify', '--strict', '--verbose=2', image])
+    submit_for_notarisation(image)
+    run(['xcrun', 'stapler', 'staple', image])
+    run(['xcrun', 'stapler', 'validate', image])
+    run([
+        'spctl', '--assess', '--type', 'open', '--context', 'context:primary-signature',
+        '--verbose=4', image,
+    ])  # fmt: skip
 
-    macOS signs, notarises and staples here; Windows signs and verifies.
+
+def seal_installer(output: Path) -> None:
+    """Finish a signed installer after packaging and make its download again.
+
+    macOS signs, notarises and staples the installer app and then its disk image; Windows signs
+    and verifies the installer, which is the download.
     """
     output = output.resolve()
     metadata_path = output / 'installer.json'
@@ -950,8 +1034,10 @@ def seal_installer(output: Path) -> None:
         sign_windows(installer)
     else:
         raise RuntimeError('Linux installers are not signed')
-    archive = archive_installer(installer, None, ad_hoc=False)
-    metadata.update({'zip': archive.name, 'zip_sha256': sha256(archive)})
+    download = deliver_installer(installer, None, ad_hoc=False)
+    if SYSTEM == 'macos':
+        seal_disk_image(download)
+    metadata.update({'download': download.name, 'download_sha256': sha256(download)})
     metadata_path.write_text(json.dumps(metadata, indent=2) + '\n')
 
 
@@ -1022,26 +1108,41 @@ def check_linux_dependencies(root: Path, env: dict) -> dict:
     return receipts
 
 
-def unpack_installer(archive: Path, output: Path) -> Path:
-    """Unpack our distribution archive and restore executable permissions."""
+def unpack_installer(download: Path, output: Path) -> Path:
+    """Take the installer out of its download: the disk image or the ZIP."""
     output.mkdir(parents=True)
-    with zipfile.ZipFile(archive) as zipped:
-        for member in zipped.infolist():
-            if Path(member.filename).is_absolute() or '..' in Path(member.filename).parts:
-                raise RuntimeError('Installer archive escapes its extraction directory')
-        if SYSTEM == 'macos':
-            run(['ditto', '-x', '-k', archive, output])
-        else:
+    suffix = '.app' if SYSTEM == 'macos' else '.exe' if SYSTEM == 'windows' else '.run'
+    if download.suffix == '.dmg':
+        mount = output.parent / (output.name + ' image')
+        run(['hdiutil', 'attach', '-nobrowse', '-readonly', '-mountpoint', mount, download])
+        try:
+            found = list(mount.glob('*' + suffix))
+            if len(found) != 1:
+                raise RuntimeError('Disk image must contain one installer app')
+            run(['ditto', found[0], output / found[0].name])
+        finally:
+            run(['hdiutil', 'detach', mount])
+    else:
+        with zipfile.ZipFile(download) as zipped:
+            for member in zipped.infolist():
+                if Path(member.filename).is_absolute() or '..' in Path(member.filename).parts:
+                    raise RuntimeError('Installer archive escapes its extraction directory')
             zipped.extractall(output)  # noqa: S202 - validated paths; zip extraction creates no links
             for member in zipped.infolist():
                 path = output / member.filename
                 if path.is_file():
                     path.chmod((member.external_attr >> 16) & 0o777)
-    suffix = '.app' if SYSTEM == 'macos' else '.exe' if SYSTEM == 'windows' else '.run'
     candidates = list(output.glob('*' + suffix))
     if len(candidates) != 1:
-        raise RuntimeError('Installer archive must contain one platform bootstrap')
+        raise RuntimeError('Installer download must contain one platform bootstrap')
     return candidates[0]
+
+
+def installer_from_download(download: Path, output: Path) -> Path:
+    """The installer itself: unpacked from a disk image or ZIP, or the download on Windows."""
+    if download.suffix in {'.zip', '.dmg'}:
+        return unpack_installer(download, output)
+    return download
 
 
 def verify_installed_payload(target: Path, *, with_assistant: bool) -> None:
@@ -1081,8 +1182,7 @@ def exercise_installer(
     metadata = (
         json.loads(metadata_path.read_text(encoding='utf-8')) if metadata_path.is_file() else {}
     )
-    if installer.suffix == '.zip':
-        installer = unpack_installer(installer, output / 'downloaded installer')
+    installer = installer_from_download(installer, output / 'downloaded installer')
     home, target = output / 'isolated home', output / 'installed app'
     home.mkdir(exist_ok=True)
     if target.exists():
@@ -1122,15 +1222,7 @@ def exercise_installer(
             if SYSTEM == 'macos'
             else 'bin/EasyDiffraction' + SUFFIX
         )
-        with (output / 'app.log').open('w') as log:
-            run(
-                [app, '--testmode', output / 'smoke'],
-                env=env,
-                cwd=home,
-                stdout=log,
-                stderr=subprocess.STDOUT,
-                timeout=45,
-            )
+        smoke_installed_app(app, output, env, home)
         receipt = json.loads((output / 'smoke/result.json').read_text(encoding='utf-8'))
         verify_installed_identity(metadata, receipt)
         if (
@@ -1165,6 +1257,36 @@ def exercise_installer(
     (output / 'passed.json').write_text(
         json.dumps({'passed': True, 'smoke': receipt}, indent=2) + '\n'
     )
+
+
+# A hosted runner's first start of a freshly installed app can take long (a cold disk, a font
+# cache, a macOS signature check), so the smoke run has two minutes and one more try after a
+# timeout; a failure is not retried.
+SMOKE_TIMEOUT = 120
+SMOKE_TRIES = 2
+
+
+def smoke_installed_app(app: Path, output: Path, env: dict, home: Path) -> None:
+    for attempt in range(1, SMOKE_TRIES + 1):
+        shutil.rmtree(output / 'smoke', ignore_errors=True)
+        with (output / 'app.log').open('w' if attempt == 1 else 'a') as log:
+            log.write(f'--- smoke run {attempt} of {SMOKE_TRIES}\n')
+            log.flush()
+            try:
+                run(
+                    [app, '--testmode', output / 'smoke'],
+                    env=env,
+                    cwd=home,
+                    stdout=log,
+                    stderr=subprocess.STDOUT,
+                    timeout=SMOKE_TIMEOUT,
+                )
+            except subprocess.TimeoutExpired:
+                if attempt == SMOKE_TRIES:
+                    raise
+                print(f'smoke run timed out after {SMOKE_TIMEOUT} s; trying once more', flush=True)
+            else:
+                return
 
 
 def relocate_linux(stage: Path, patchelf: Path, qt_prefix: Path) -> None:

@@ -955,6 +955,7 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
         retire_scope(); ready = false; connection.clear(); capabilities = A{};
         conversation = id("conversation");
     }
+    // NOLINTNEXTLINE(bugprone-exception-escape): only libc++'s container growth past max_size() raises length_error here
     void interrupt_output() noexcept {
         plan.reset(); response_done = true; turn.clear(); request.clear();
         // Revoke human-answer authority immediately, but retain the correlated
@@ -1252,10 +1253,12 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
             auto next_job = job_id; auto next_candidate_job = job_id; auto next_active_call = admitting_call;
             const auto self = shared_from_this();
             FitJob::Hooks callbacks;
+            // NOLINTNEXTLINE(bugprone-exception-escape): only libc++'s container growth past max_size() raises length_error here
             callbacks.iterated = [self, job_id](const IterationRecord& iteration) {
                 if (self->open && self->active_job == job_id)
                     self->safe_emit("job_progress", [&] { return O{{"job_id", job_id}, {"objective", iteration.objective_value ? J(*iteration.objective_value) : J(nullptr)}, {"reduced_chi_square", iteration.reduced_chi_square}}; }, self->trial ? &self->trial->scope : nullptr);
             };
+            // NOLINTNEXTLINE(bugprone-exception-escape): only libc++'s container growth past max_size() raises length_error here
             callbacks.finished = [self, job_id](const FitReport& report) noexcept { self->settle_fit(job_id, report); };
             const auto now = hooks.monotonic_ms();
             const auto elapsed = now >= active_plan.started ? now - active_plan.started : active_plan.max_ms;
@@ -1287,6 +1290,7 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
             const auto candidate_id = trial->id;
             struct BaselineEvidence { std::optional<double> objective; bool error = false, cancelled = false; };
             auto evidence = std::make_shared<BaselineEvidence>();
+            // NOLINTNEXTLINE(bugprone-exception-escape): only libc++'s container growth past max_size() raises length_error here
             work::Delivery completion = [self, candidate_id, job_id, evidence]() noexcept {
                 if (!self->open || !self->trial || self->trial->id != candidate_id || self->trial->job_id != job_id) return;
                 auto& candidate = *self->trial; candidate.baseline_ticket = 0;
@@ -1309,6 +1313,7 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
                 }
             };
             const auto baseline_ticket = worker.submit("assistant-baseline",
+                // NOLINTNEXTLINE(bugprone-exception-escape): only libc++'s container growth past max_size() raises length_error here
                 [baseline, evidence, expired, mode, completion = std::move(completion)](const work::CancelToken& token, const work::Emit&) mutable -> work::Delivery {
                     try {
                         evidence->cancelled = token.cancelled() || expired();

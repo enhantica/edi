@@ -77,6 +77,17 @@ report through Help and feedback, and kept until `RunLog.dismissCrash()`. Two in
 each other as crashed. On Linux and macOS, Ctrl+C and SIGTERM quit the app as closing its window does, so
 they are not reported as crashes.
 
+**Errors end in a popup, never a silent close.** Every error the app catches is shown in one popup
+(`ErrorDialog.qml`, built on the app's `AppDialog` and buttons) with a clear message, **Send to developers** and
+**OK**; there is no copy button, which only confused (owner, 2026-11-17). Send opens Help and feedback (ADR-0063) as a
+problem with the message in its text, "Include app version, system and log" ticked and the saved name, e-mail and
+affiliation kept, so one more click sends it. A refused open, a refused change, a fit that did not run and a file the browser could not use all
+take this popup. An exception that would leave an event handler is caught by the application's `notify()`, logged as
+Critical and shown in the same popup instead of closing the app. A file edi could not read (a structure, experiment
+or data file whose text it refuses) is named with the line where reading stopped, and Send attaches that file. A
+crash that cannot be caught in the process is offered on the next start, as above, with Send to developers and OK, Send
+carrying the crashed run's log and its last error record.
+
 ## Consequences
 
 - The log stays on the user's disk; it leaves the machine only when the user sends a report with the log included.

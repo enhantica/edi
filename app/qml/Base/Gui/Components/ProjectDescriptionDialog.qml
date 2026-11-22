@@ -1,7 +1,10 @@
 // SPDX-License-Identifier: BSD-3-Clause
-// Pinned gui-components copy; the project's location joins its folder and name with one separator, and the
-// location the dialog shows is the one Create project saves into (the owner, 2026-10-08). It also asks for the title
-// and the authors, in the Project page's order (the owner, 2026-10-13).
+// Pinned gui-components copy; the project's location joins its folder and name with one separator (the owner,
+// 2026-10-08): the Location field holds the folder and Create saves into its short-name folder. It also asks for
+// the title and the authors, in the Project page's order (the owner, 2026-10-13). Each field says what it is for (the owner,
+// 2026-11-19): Short name · Folder names the project folder; Title, Authors and Description are shown in the report
+// (the CIF export does not read them); Location is the folder in which the project folder is created. "Folder", never
+// "Directory".
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Dialogs
@@ -51,8 +54,13 @@ EaElements.Dialog {
     signal replaceAsked(string name, string folder)
     // OK: a location already taken asks first, "Replace it?", and the form stays as typed until the answer (the
     // owner, 2026-11-04); Replace comes back through accept() with replaceExisting set.
+    // Where Create saves: the short-name folder inside the Location field's folder, joined once; none without a folder.
+    function chosenLocation() {
+        const folder = projectLocationField.text.trim();
+        return folder === "" ? "" : joinedPath(folder, projectName);
+    }
     function tryAccept() {
-        const location = projectLocationField.text;
+        const location = chosenLocation();
         if (showsLocation && !replaceExisting && location !== "" && Session.locationExists(location)) {
             replaceAsked(projectName, Session.existingParentFolder(location));
             return;
@@ -70,7 +78,7 @@ EaElements.Dialog {
         ok.clicked.connect(dialog.tryAccept);
     }
 
-    onAccepted: projectLocation = projectLocationField.text
+    onAccepted: projectLocation = chosenLocation()
     // OK is named as the dialog starts to show, and the name field takes the keyboard as it opens: what the user
     // types goes into the name at once.
     onAboutToShow: {
@@ -89,7 +97,7 @@ EaElements.Dialog {
         Column {
             EaElements.Label {
                 enabled: false
-                text: qsTr("Name")
+                text: qsTr("Short name · Folder")
             }
 
             EaElements.TextField {
@@ -100,9 +108,9 @@ EaElements.Dialog {
                 implicitWidth: dialog.inputFieldWidth
                 horizontalAlignment: TextInput.AlignLeft
                 validator: RegularExpressionValidator {
-                    regularExpression: /^[a-zA-Z][a-zA-Z0-9_\-\.]{1,30}$/
+                    regularExpression: /^[a-zA-Z][a-zA-Z0-9_\-]{1,30}$/
                 }
-                placeholderText: qsTr("Enter project name here")
+                placeholderText: qsTr("e.g. lbco-hrpt: becomes the project folder name; letters, digits, - and _")
 
                 Keys.onReturnPressed: dialog.tryAccept()
                 Keys.onEnterPressed: dialog.tryAccept()
@@ -124,7 +132,7 @@ EaElements.Dialog {
 
                 implicitWidth: dialog.inputFieldWidth
                 horizontalAlignment: TextInput.AlignLeft
-                placeholderText: qsTr("Enter project title here (optional)")
+                placeholderText: qsTr("Optional: the title shown at the top of the report")
 
                 Keys.onReturnPressed: dialog.tryAccept()
                 Keys.onEnterPressed: dialog.tryAccept()
@@ -146,7 +154,7 @@ EaElements.Dialog {
 
                 implicitWidth: dialog.inputFieldWidth
                 horizontalAlignment: TextInput.AlignLeft
-                placeholderText: qsTr("Enter authors here, separated by ; (optional)")
+                placeholderText: qsTr("Optional, separated by ;  shown under the title in the report")
 
                 Keys.onReturnPressed: dialog.tryAccept()
                 Keys.onEnterPressed: dialog.tryAccept()
@@ -167,7 +175,7 @@ EaElements.Dialog {
 
                 editorObjectName: "createProject.description"
                 implicitWidth: dialog.inputFieldWidth
-                placeholderText: qsTr("Enter project description here (optional)")
+                placeholderText: qsTr("Optional: a few lines shown in the report under the authors")
             }
         }
 
@@ -188,8 +196,8 @@ EaElements.Dialog {
                 rightPadding: chooseParentDirectoryButton.width
                 horizontalAlignment: TextInput.AlignLeft
 
-                placeholderText: qsTr("Enter project location here")
-                text: dialog.joinedPath(dialog.projectParentDirectory ? EaLogic.Utils.urlToLocalFile(dialog.projectParentDirectory) : dialog.defaultProjectParentDirectory, dialog.projectName)
+                placeholderText: qsTr("The folder in which the project folder is created")
+                text: dialog.projectParentDirectory ? EaLogic.Utils.urlToLocalFile(dialog.projectParentDirectory) : dialog.defaultProjectParentDirectory
 
                 Keys.onReturnPressed: dialog.tryAccept()
                 Keys.onEnterPressed: dialog.tryAccept()
@@ -200,7 +208,7 @@ EaElements.Dialog {
                     anchors.right: parent.right
 
                     fontIcon: "folder-open"
-                    ToolTip.text: qsTr("Choose project parent directory")
+                    ToolTip.text: qsTr("Choose the folder in which the project folder is created")
 
                     showBackground: false
 
@@ -210,12 +218,12 @@ EaElements.Dialog {
         }
     }
 
-    // Choose project parent directory dialog
+    // The folder in which the project folder is created
 
     FolderDialog {
         id: projectParentDirDialog
 
-        title: qsTr("Choose project parent directory")
+        title: qsTr("Choose the folder for the project")
         selectedFolder: dialog.projectParentDirectory
         onAccepted: dialog.projectParentDirectory = selectedFolder
     }

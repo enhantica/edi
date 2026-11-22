@@ -133,6 +133,15 @@
 .md-typeset .ed-contact-form textarea,.md-typeset .ed-survey-form textarea{min-height:8rem;resize:vertical}
 .md-typeset .ed-contact-form button,.md-typeset .ed-survey-form button{align-self:flex-start;font:inherit;font-weight:700;cursor:pointer;padding:.55rem 1.4rem;border:none;border-radius:.2rem;background:var(--md-primary-fg-color);color:var(--md-primary-bg-color)}
 .md-typeset .ed-contact-status:empty{display:none}
+/* Attached files (as the app's form): a light paperclip link under the message, then the list and any limit refused. */
+.md-typeset .ed-contact-files{display:flex;flex-direction:column;align-items:flex-start;gap:.35rem;margin-top:-.4rem}
+.md-typeset .ed-contact-form .ed-contact-attach,.md-typeset .ed-contact-form .ed-contact-remove{font-weight:400;padding:0;background:none;color:var(--md-typeset-a-color)}
+.md-typeset .ed-contact-form .ed-contact-attach svg{width:.8em;height:.8em;margin-right:.4em;fill:currentColor;vertical-align:-.05em}
+.md-typeset .ed-contact-file-list{list-style:none;margin:0;padding:0}
+.md-typeset .ed-contact-file-list li{margin:0;display:flex;gap:.6rem;align-items:baseline}
+.md-typeset .ed-contact-file-list:empty,.md-typeset .ed-contact-file-error:empty{display:none}
+.md-typeset .ed-contact-file-error{margin:0;color:#d9534f}
+.md-typeset .ed-contact-form.ed-contact-dropping{outline:2px solid var(--md-accent-fg-color);outline-offset:.4rem;border-radius:.2rem}
 .md-typeset .ed-contact-note{font-size:.7rem;color:var(--md-default-fg-color--light);margin-top:-.2rem}
 /* The answer to a sent message, over the page as in the app: a check or a warning colour along its top. */
 .ed-contact-notice{max-width:26rem;padding:1.4rem 1.6rem 1.2rem;border:none;border-top:.25rem solid var(--md-accent-fg-color);border-radius:.3rem;background:var(--md-default-bg-color);color:var(--md-default-fg-color);font-size:.85rem;box-shadow:0 .4rem 1.6rem rgba(0,0,0,.35)}

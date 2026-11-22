@@ -9,7 +9,14 @@ import subprocess
 from pathlib import Path
 
 from plan import markdown_note, note_interfaces, release_body, release_title
-from promote import ROOT, components_validator, digest, validate_cli, validate_wheel
+from promote import (
+    ROOT,
+    components_validator,
+    digest,
+    installer_name,
+    validate_cli,
+    validate_wheel,
+)
 from publish_assets import (
     check_existing,
     claim_reservation,
@@ -55,11 +62,11 @@ def prepare(
             raise ValueError('Unexpected or duplicate installer platform')
         if not re.fullmatch(r'[0-9]{4}\.(0[1-9]|1[0-2])\.(0|[1-9][0-9]*)', version):
             raise ValueError('Expected a calendar version')
-        archive = delivery / f'EasyDiffraction-{version}-{platform}-online.zip'
+        archive = delivery / installer_name(version, platform, 'online')
         if (
             metadata['edi_commit'] != commit
             or metadata['kind'] != 'online'
-            or metadata['zip'] != archive.name
+            or metadata['download'] != archive.name
             or metadata['repository_url'] != testing_repository(platform)
         ):
             raise ValueError(f'Installer identity differs for {platform}')
@@ -71,7 +78,7 @@ def prepare(
         ):
             raise ValueError(f'Installer qualification differs for {platform}')
         checksum = digest(archive)
-        if metadata['zip_sha256'] != checksum:
+        if metadata['download_sha256'] != checksum:
             raise ValueError(f'Installer checksum differs for {platform}')
         archives[platform] = (archive, checksum)
         for validator, assets in optional.items():
@@ -87,7 +94,7 @@ def prepare(
         or recorded['sequence'] != 'calendar'
         or release['commit'] != commit
         or any(
-            path.name != f'EasyDiffraction-{release["version"]}-{platform}-online.zip'
+            path.name != installer_name(release['version'], platform, 'online')
             for platform, (path, _) in archives.items()
         )
     ):

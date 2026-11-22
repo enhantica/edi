@@ -1,4 +1,4 @@
-"""The owner requires every table status column to use the existing icon cell.
+"""Status columns retain icon cells; the Fit column uses its declared checkbox.
 
 The closed census is a mechanical convention gate, paired with live delegate
 checks in TableInteractions and TableNotes. It does not claim pixel correctness.
@@ -15,7 +15,7 @@ ROOT = Path(__file__).resolve().parents[3]
 PAGES = ROOT / 'app/qml/Pages'
 COLUMNS = {
     'Project/RecentProjectsGroup.qml': ('', 2),
-    'Experiment/ExperimentsGroup.qml': ('Fit', 2),
+    'Experiment/ExperimentsGroup.qml': ('Fit', 3),
     'Experiment/MeasuredRangeGroup.qml': ('status', 8),
 }
 # Mask comments and string interiors before balancing QML braces. Keep positions.
@@ -114,15 +114,27 @@ def test_status_columns_use_shared_icons_with_word_tooltips(path):
     ]
     if any(kind == 'NumberLabel' for kind, _ in cells):
         numeric_cell = (ROOT / 'app/qml/Components/NumberLabel.qml').read_text()
-        assert re.search(r'^EaComponents\.ListViewLabel\s*\{', numeric_cell, re.MULTILINE), (
-            'Numeric cells counted in the status census inherit the canonical list-view label'
-        )
+        text_cell = (ROOT / 'app/qml/Components/CellLabel.qml').read_text()
+        assert re.search(r'^CellLabel\s*\{', numeric_cell, re.MULTILINE) and re.search(
+            r'^EaComponents\.ListViewLabel\s*\{', text_cell, re.MULTILINE
+        ), 'Numeric status cells inherit the canonical list-view label through CellLabel'
     index = COLUMNS[path][1]
     assert len(cells) > index, 'The declared status column has an actual row cell'
     kind, body = cells[index]
-    assert kind == 'IconCell', (
-        'Every status column uses the shared coloured icon and tooltip cell, including calculation'
-    )
+    if path == 'Experiment/ExperimentsGroup.qml':
+        assert kind == 'Item' and 'EaElements.CheckBox {' in body, (
+            'The experiment Fit column uses its declared checkbox with a separate word tooltip'
+        )
+        checkbox = block(body, 'EaElements.CheckBox {')
+        assert 'FitOutcomes.color(row.fitOutcome)' in checkbox, (
+            'The Fit checkbox retains its row outcome colour'
+        )
+        assert 'FitOutcomes.word(row.fitOutcome)' in body, (
+            'The Fit checkbox retains the outcome word in its hover tooltip'
+        )
+        # The preceding unnamed data-status icon is a distinct retained column.
+        kind, body = cells[index - 1]
+    assert kind == 'IconCell', 'Other status columns retain the shared icon and word tooltip cell'
     for binding in ('icon', 'iconColor', 'toolTip'):
         assert re.search(rf'(?m)^\s*{binding}\s*:\s*\S', body), (
             'Status icons declare their glyph, state colour and word tooltip'

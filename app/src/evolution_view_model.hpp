@@ -9,6 +9,8 @@
 #include <QStringList>
 #include <QTimer>
 #include <QtQml/qqmlregistration.h>
+#include <cstdint>
+#include <memory>
 #include <optional>
 #include <string>
 #include <vector>
@@ -54,7 +56,7 @@ class EvolutionViewModel : public QObject {
     Q_PROPERTY(QString xTitle READ xTitle NOTIFY xTitleChanged)
     Q_PROPERTY(QString yTitle READ yTitle NOTIFY yTitleChanged)
     // The y title as the parameter table names it (yTitle is the results column, the tooltip's full name).
-    Q_PROPERTY(QString yLabel READ yLabel NOTIFY yTitleChanged)
+    Q_PROPERTY(QString yLabel READ yLabel NOTIFY yLabelChanged)
     Q_PROPERTY(double xMin READ xMin NOTIFY xMinChanged)
     Q_PROPERTY(double xMax READ xMax NOTIFY xMaxChanged)
     Q_PROPERTY(double yMin READ yMin NOTIFY yMinChanged)
@@ -69,7 +71,7 @@ class EvolutionViewModel : public QObject {
     // for every bank, one curve each on its own layer (bankLayer; the owner, 2026-11-16).
     Q_PROPERTY(bool series READ series NOTIFY seriesChanged)
     Q_PROPERTY(bool perExperiment READ perExperiment WRITE setPerExperiment NOTIFY perExperimentChanged)
-    Q_PROPERTY(QStringList experiments READ experiments NOTIFY seriesChanged)
+    Q_PROPERTY(QStringList experiments READ experiments NOTIFY experimentsChanged)
     Q_PROPERTY(int currentExperiment READ currentExperiment WRITE setCurrentExperiment NOTIFY currentExperimentChanged)
     // The layer the points are drawn on (the chart's).
     Q_PROPERTY(edi_app::MeasuredLayer* layer READ layer WRITE setLayer NOTIFY layerChanged)
@@ -149,6 +151,7 @@ class EvolutionViewModel : public QObject {
     void pickingChanged();
     void xTitleChanged();
     void yTitleChanged();
+    void yLabelChanged();
     void xMinChanged();
     void xMaxChanged();
     void yMinChanged();
@@ -157,6 +160,7 @@ class EvolutionViewModel : public QObject {
     void outOfDateChanged();
     void fittedChanged();
     void seriesChanged();
+    void experimentsChanged();
     void perExperimentChanged();
     void currentExperimentChanged();
     void layerChanged();
@@ -182,14 +186,25 @@ class EvolutionViewModel : public QObject {
     bool scanRows() const;
     std::optional<Point> template_point_;
     void rebuild();
-    // The points of the current parameter's column, read from the results (throws when the read refuses).
-    void readPoints();
+    // What a rebuild reads the points from, copied so a worker can read them (rebuild).
+    struct Read {
+        std::shared_ptr<const edi::Project> project;
+        edi::ScanPlaces places;
+        edi::ScanResultIndex index;
+        edi::ScanDatasets datasets;
+        edi::SeriesBankRule rule;
+        std::string name;
+        bool by_value = false, per_experiment = false, all_banks = false;
+        int experiment = -1;
+    };
+    // The points of a parameter's column, read from the results (throws when the read refuses).
+    static std::vector<Point> readPoints(const Read& read);
+    std::uint64_t rebuild_request_ = 0;
     void draw();
 
     EvolutionParameterListModel* parameters_;
     QPointer<MeasuredLayer> layer_;
     QList<QPointer<MeasuredLayer>> bank_layers_;
-    int bank_ = -1;  // the bank whose points a read visits now
     bool allBanks() const { return per_experiment_ && current_experiment_ < 0; }
     QStringList names_;
     QStringList labels_;  // names_' labels, as the selector shows them
@@ -211,7 +226,8 @@ class EvolutionViewModel : public QObject {
     void finishRow();
     // The x of a dataset: its first extracted value, or its place in the scan from 1; nullopt when not finite.
     std::optional<double> xOf(int dataset, const std::vector<std::string>* extracted) const;
-    void finish();
+    // Publishes the points; false when an observer deleted this view meanwhile (nothing may touch it then).
+    bool finish();
     bool range_with_errors() const {
         return project_ != nullptr && project_->evolution_range.value_or("values") == "values_su";
     }

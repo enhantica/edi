@@ -7,6 +7,7 @@
 #include <QQuickWindow>
 #include <QScopeGuard>
 #include <QStandardItemModel>
+#include <QStandardPaths>
 #include <QDir>
 #include <QFile>
 #include <QTemporaryDir>
@@ -14,6 +15,12 @@
 #include <QJsonArray>
 #include <QJsonObject>
 #include <QCryptographicHash>
+#include <QGuiApplication>
+#include <iostream>
+#ifndef __EMSCRIPTEN__
+#include "codex_agent.hpp"
+#include "assistant_runtime_config.hpp"
+#endif
 #include "edi/io.hpp"
 #include "fit_view_model.hpp"
 #include <QtQml/qqmlextensionplugin.h>
@@ -29,7 +36,97 @@
 #include <sys/stat.h>
 #include <sys/xattr.h>
 #endif
+
+// Keeps what a retried check found, for the steps after it, without an assignment inside the check.
+template <class T, class U>
+bool take(T*& slot, U* found) {
+    slot = found;
+    return found != nullptr;
+}
 Q_IMPORT_QML_PLUGIN(edi_appPlugin)
+
+#ifndef __EMSCRIPTEN__
+// An authored local peer delivers one requested tool call through the real assistant transport.
+// It has no provider connection and never performs an application edit itself.
+static int assistantToolPeer() {
+    using Object = QJsonObject;
+    const auto write = [](const Object& row) {
+        std::cout << QJsonDocument(row).toJson(QJsonDocument::Compact).toStdString() << '\n' << std::flush;
+    };
+    const auto event = [&](const QString& method, const Object& params) {
+        write({{"method", method}, {"params", params}});
+    };
+    Object policy, item;
+    for (std::string line; std::getline(std::cin, line);) {
+        const auto request = QJsonDocument::fromJson(QByteArray::fromStdString(line)).object();
+        const auto method = request.value("method").toString();
+        const auto params = request.value("params").toObject();
+        if (method.isEmpty()) {
+            if (request.value("id") != "load-call") continue;
+            item["status"] = "completed";
+            item["success"] = request.value("result").toObject().value("success");
+            item["contentItems"] = request.value("result").toObject().value("contentItems");
+            event("item/completed", {{"threadId", "load-thread"}, {"turnId", "load-turn"}, {"item", item}});
+            event("turn/completed", {{"threadId", "load-thread"}, {"turn", Object{{"id", "load-turn"}, {"status", "completed"}, {"error", QJsonValue::Null}}}});
+            continue;
+        }
+        if (!request.contains("id")) continue;
+        Object result;
+        if (method == "account/read")
+            result = {{"account", Object{{"type", "chatgpt"}, {"email", "ui@example.invalid"}, {"planType", "plus"}}}, {"requiresOpenaiAuth", false}};
+        else if (method == "model/list")
+            result = {{"data", QJsonArray{Object{{"id", "gpt-6-luna"}, {"model", "gpt-6-luna"}, {"displayName", "Local UI peer"},
+                {"hidden", false}, {"defaultReasoningEffort", "medium"},
+                {"supportedReasoningEfforts", QJsonArray{Object{{"reasoningEffort", "medium"}}}}}}}, {"nextCursor", QJsonValue::Null}};
+        else if (method == "skills/list") {
+            QJsonArray skills;
+            const auto folders = params.value("cwds").toArray();
+            if (!folders.isEmpty()) {
+                const QString folder = folders.first().toString();
+                const QDir root(folder + "/.agents/skills");
+                for (const auto& name : root.entryList(QDir::Dirs | QDir::NoDotAndDotDot))
+                    skills.append(Object{{"name", name}, {"path", root.filePath(name + "/SKILL.md")}, {"enabled", true}});
+                result = {{"data", QJsonArray{Object{{"cwd", folder}, {"skills", skills}, {"errors", QJsonArray{}}}}}};
+            }
+        } else if (method == "thread/start") {
+            const auto effort = params.value("config").toObject().value("model_reasoning_effort");
+            const auto tools = params.value("dynamicTools").toArray();
+            QJsonArray advertised;
+            for (const auto& value : tools) {
+                const auto tool = value.toObject();
+                advertised.append(Object{{"type", "function"}, {"name", tool.value("name")}, {"parameters", tool.value("inputSchema")}});
+            }
+            policy = {{"schema", "edi.runtime-policy/1"}, {"flavour", "edi-app-server/1"},
+                {"upstreamVersion", EDI_CODEX_RUNTIME_VERSION}, {"upstreamCommit", "092d3acd6bec3e3a14bdc7e7a2810ab628ab759d"},
+                {"sourcePatchSha256", edi_app::CodexAgent::policyPatch()}, {"threadId", "load-thread"}, {"turnId", QJsonValue::Null},
+                {"isolation", "isolated"}, {"toolMode", "direct"}, {"sandbox", "readOnly"}, {"approvalPolicy", "never"},
+                {"modelNetwork", false}, {"requestedTools", tools}, {"advertisedTools", advertised}, {"dispatchEqualsAdvertisement", true},
+                {"model", params.value("model")}, {"reasoningEffort", effort}};
+            result = {{"thread", Object{{"id", "load-thread"}, {"ephemeral", false}}}, {"cwd", params.value("cwd")},
+                {"modelProvider", "openai"}, {"model", params.value("model")}, {"reasoningEffort", effort},
+                {"approvalPolicy", "never"}, {"approvalsReviewer", "user"},
+                {"sandbox", Object{{"type", "readOnly"}, {"networkAccess", false}}}, {"ediPolicy", policy}};
+        } else if (method == "turn/start") {
+            policy["turnId"] = "load-turn";
+            result = {{"turn", Object{{"id", "load-turn"}, {"status", "inProgress"}}}, {"ediPolicy", policy}};
+        } else if (method == "thread/list") result = {{"data", QJsonArray{}}, {"nextCursor", QJsonValue::Null}};
+        else if (method == "account/rateLimits/read") result = {{"rateLimits", QJsonValue::Null}};
+        write({{"id", request.value("id")}, {"result", result}});
+        if (method == "turn/start") {
+            event("turn/started", {{"threadId", "load-thread"}, {"turn", Object{{"id", "load-turn"}, {"status", "inProgress"}}}});
+            const auto arguments = QJsonDocument::fromJson(qgetenv("EDI_UI_LOAD_ARGUMENTS")).object();
+            const auto tool = qEnvironmentVariable("EDI_UI_TOOL", "load_data");
+            item = {{"id", "load-item"}, {"type", "dynamicToolCall"}, {"tool", tool},
+                {"arguments", arguments}, {"status", "inProgress"}};
+            event("item/started", {{"threadId", "load-thread"}, {"turnId", "load-turn"}, {"item", item}});
+            write({{"id", "load-call"}, {"method", "item/tool/call"}, {"params", Object{{"threadId", "load-thread"},
+                {"turnId", "load-turn"}, {"callId", "load-item"}, {"tool", tool}, {"arguments", arguments}}}});
+        }
+    }
+    return 0;
+}
+
+#endif
 
 class WorkingAssistant : public edi_app::AssistantViewModel {
     Q_OBJECT
@@ -49,6 +146,7 @@ private slots:
     void initTestCase() {
         qputenv("QT_QUICK_CONTROLS_HOVER_ENABLED", "1");
         edi_app::use_fresh_settings();
+        QVERIFY(QDir().mkpath(QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation)));
         const auto root = QString::fromUtf8(EDI_SOURCE_DIR);
         const auto cod = QUrl::fromLocalFile(root + "/tests/fixtures/online_sources/cod/").toString();
         const auto edb = QUrl::fromLocalFile(root + "/tests/fixtures/online_sources/easydiffraction/").toString();
@@ -81,8 +179,18 @@ private slots:
         QVERIFY(QTest::qWaitForWindowActive(window));
         edi_app::AssistantWidgetInput input(*window);
         QString diagnostic;
+        const auto findItem = [&](const char* name) {
+            const auto walk = [&](QQuickItem* item, auto&& self) -> QQuickItem* {
+                if(item->objectName() == name) return item;
+                for(auto* child : item->childItems())
+                    if(auto* found = self(child, self)) return found;
+                return nullptr;
+            };
+            if(auto* item = walk(window->contentItem(), walk)) return item;
+            return root->findChild<QQuickItem*>(name);
+        };
         const auto click = [&](const char* name) {
-            auto* target = root->findChild<QQuickItem*>(name);
+            auto* target = findItem(name);
             if (!target) { diagnostic = QString("Missing %1").arg(name); return false; }
             bool done = false, delivered = false;
             edi_app::AssistantWidgetInput::Request request;
@@ -108,13 +216,23 @@ private slots:
         };
         auto* dataFile = root->findChild<QQuickItem*>("experiments.load.dataFile");
         QVERIFY(dataFile);
-        QVERIFY(!dataFile->isEnabled());
+        QCOMPARE(dataFile->property("text").toString(), QString("File…"));
         QVERIFY2(click("experiments.create"), qPrintable(diagnostic));
         QTRY_VERIFY(project.currentExperiment());
-        QVERIFY2(click("experiments.load"), qPrintable(diagnostic));
-        auto* menu = root->findChild<QObject*>("experiments.load.menu");
+        auto* group = root->findChild<QQuickItem*>("group.experiments");
+        QVERIFY(group);
+        group->setProperty("collapsed", true);
+        auto* title = qobject_cast<QQuickItem*>(group->property("titleArea").value<QObject*>());
+        QVERIFY(title);
+        QTest::mouseClick(window, Qt::LeftButton, Qt::NoModifier,
+                          title->mapToScene(QPointF(title->width() / 2, title->height() / 2)).toPoint());
+        QTRY_VERIFY(!group->property("collapsed").toBool());
+        QTRY_VERIFY(findItem("experiments.loadData.0"));
+        QVERIFY2(click("experiments.loadData.0"), qPrintable(diagnostic));
+        auto* menu = root->findChild<QObject*>("experiments.load.dataMenu");
         QVERIFY(menu);
         QTRY_VERIFY(menu->property("visible").toBool());
+        QCOMPARE(menu->property("target").value<QObject*>(), project.currentExperiment());
         QVERIFY(dataFile->isEnabled());
         QVERIFY2(click("experiments.load.dataWeb"), qPrintable(diagnostic));
         auto* popup = root->findChild<QObject*>("onlineLoad");
@@ -124,6 +242,16 @@ private slots:
         QVERIFY(root->findChild<QObject*>("onlineLoad.source"));
         QVERIFY(root->findChild<QObject*>("onlineLoad.search"));
         QVERIFY(QMetaObject::invokeMethod(popup, "close"));
+        QTRY_VERIFY(!popup->property("visible").toBool());
+        auto* structures = root->findChild<QQuickItem*>("group.structures");
+        QVERIFY(structures);
+        if(structures->property("collapsed").toBool()) {
+            auto* structureTitle = qobject_cast<QQuickItem*>(structures->property("titleArea").value<QObject*>());
+            QVERIFY(structureTitle);
+            QTest::mouseClick(window, Qt::LeftButton, Qt::NoModifier,
+                              structureTitle->mapToScene(QPointF(structureTitle->width() / 2, structureTitle->height() / 2)).toPoint());
+        }
+        QTRY_VERIFY(!structures->property("collapsed").toBool());
         QVERIFY2(click("structures.load"), qPrintable(diagnostic));
         auto* structureFile = root->findChild<QQuickItem*>("structures.load.file");
         QVERIFY(structureFile);
@@ -134,6 +262,314 @@ private slots:
         for (auto* original : popups)
             structurePopup |= original->property("visible").toBool() && original->property("kind") == "structure";
         QVERIFY(structurePopup);
+    }
+#ifndef __EMSCRIPTEN__
+    void keyedAliasAndBackgroundNamingShown_data() {
+        QTest::addColumn<bool>("alias");
+        QTest::newRow("background-position-button") << false;
+        QTest::newRow("keyed-atom-alias") << true;
+    }
+    void keyedAliasAndBackgroundNamingShown() {
+        QFETCH(bool, alias);
+        const auto previousPeer = qgetenv("EDI_CODEX_DEVELOPMENT_EXECUTABLE");
+        const auto previousArguments = qgetenv("EDI_UI_LOAD_ARGUMENTS");
+        const auto previousTool = qgetenv("EDI_UI_TOOL");
+        const auto restore = qScopeGuard([&] {
+            for (const auto& entry : {qMakePair("EDI_CODEX_DEVELOPMENT_EXECUTABLE", previousPeer),
+                     qMakePair("EDI_UI_LOAD_ARGUMENTS", previousArguments), qMakePair("EDI_UI_TOOL", previousTool)}) {
+                if (entry.second.isNull()) qunsetenv(entry.first);
+                else qputenv(entry.first, entry.second);
+            }
+        });
+        qputenv("EDI_CODEX_DEVELOPMENT_EXECUTABLE", QCoreApplication::applicationFilePath().toUtf8());
+        qputenv("EDI_UI_TOOL", alias ? "add_relations" : "edit_background");
+        QQmlApplicationEngine engine;
+        edi_app::configure_engine(engine);
+        edi_app::test::assistant_defaults();
+        QQmlComponent component(&engine);
+        component.setData("import edi.app\nMain { width: 1400; height: 1000; visible: true }", QUrl());
+        QScopedPointer<QObject> root(component.create());
+        QVERIFY2(root, qPrintable(component.errorString()));
+        auto* window = qobject_cast<QQuickWindow*>(root.data());
+        QVERIFY(window);
+        window->requestActivate();
+        QVERIFY(QTest::qWaitForWindowActive(window));
+        auto* session = engine.singletonInstance<edi_app::Session*>("edi.app", "Session");
+        QVERIFY(session);
+        if (!session->hasProject()) QVERIFY(session->startUntitledProject());
+        auto* project = session->project();
+        QVERIFY(project->loadStructure(QUrl::fromLocalFile(QString::fromUtf8(EDI_SOURCE_DIR) + "/tests/fixtures/assistant_save_replay/lbco.cif")));
+        project->createExperiment();
+        QTRY_VERIFY(project->currentExperiment());
+        QVERIFY(project->loadDataInto(project->currentExperiment(), QUrl::fromLocalFile(QString::fromUtf8(EDI_SOURCE_DIR) + "/tests/fixtures/plain_data/cwl/three_columns/pattern.xye")));
+        auto* background = project->currentExperiment()->background();
+        background->append();
+        QVERIFY(background->count() > 0);
+        QVERIFY(background->setId(0, "manual-anchor"));
+        QTRY_VERIFY_WITH_TIMEOUT(!project->calculating() && project->viewSettled(), 10000);
+        auto* assistant = session->assistant();
+        assistant->setActionWindow(window);
+        assistant->setShowActions(true);
+        const auto find = [&](const QString& name) {
+            const auto walk = [&](QQuickItem* item, auto&& self) -> QQuickItem* {
+                if (item->objectName() == name) return item;
+                for (auto* child : item->childItems()) if (auto* found = self(child, self)) return found;
+                return nullptr;
+            };
+            return walk(window->contentItem(), walk);
+        };
+        QString path, uniqueName;
+        for (const auto& entry : edi::parameter_entries(*project->assistantProject())) {
+            if (!QString::fromStdString(entry.path).contains("atom_sites[La].adp_iso")) continue;
+            path = QString::fromStdString(entry.path);
+            for (const auto& slot : edi::named_slots(*project->assistantProject()))
+                if (slot.parameter == entry.parameter) uniqueName = QString::fromStdString(slot.unique_name);
+        }
+        QCOMPARE(path, QString("structure.atom_sites[La].adp_iso"));
+        QVERIFY(!uniqueName.isEmpty());
+        const QJsonObject arguments = alias
+            ? QJsonObject{{"purpose", "Alias the La isotropic displacement"},
+                {"aliases", QJsonArray{QJsonObject{{"id", "la_adp"}, {"path", path}}}}, {"constraints", QJsonArray{}}}
+            : QJsonObject{{"purpose", "Name background points by position"},
+                {"experiment", project->experiments()->text(0, "name")}, {"operation", "name_from_positions"}};
+        qputenv("EDI_UI_LOAD_ARGUMENTS", QJsonDocument(arguments).toJson(QJsonDocument::Compact));
+        assistant->signIn();
+        QTRY_VERIFY2_WITH_TIMEOUT(assistant->connected(), qPrintable(assistant->lastError()), 10000);
+        QTRY_VERIFY2_WITH_TIMEOUT(assistant->draftAdmissionReady(), qPrintable(assistant->lastError()), 10000);
+        QPointF pointer;
+        bool buttonPressed = false, selectedEntryPressed = false;
+        QString typed;
+        QObject observer;
+        connect(assistant, &edi_app::AssistantViewModel::actionPointerMoved, &observer,
+            [&](const QPointF& point) { pointer = point; });
+        QTimer searchObserver;
+        const auto sampleSearch = [&] {
+            auto* combo = find("alias.parameter.0");
+            auto* popup = combo ? combo->property("popup").value<QObject*>() : nullptr;
+            auto* content = popup ? popup->property("contentItem").value<QObject*>() : nullptr;
+            auto* header = content ? content->property("headerItem").value<QObject*>() : nullptr;
+            auto* search = header ? header->findChild<QObject*>("comboBox.search") : nullptr;
+            if (search && !search->property("text").toString().isEmpty())
+                typed = search->property("text").toString();
+        };
+        connect(&searchObserver, &QTimer::timeout, &observer, sampleSearch);
+        searchObserver.start(10);
+        connect(assistant, &edi_app::AssistantViewModel::actionPointerPressed, &observer, [&] {
+            sampleSearch();
+            auto* button = find("background.namePoints");
+            if (button && button->isVisible() &&
+                QLineF(pointer, button->mapToScene(QPointF(button->width() / 2, button->height() / 2))).length() < 1)
+                buttonPressed = true;
+            auto* combo = find("alias.parameter.0");
+            auto* popup = combo ? combo->property("popup").value<QObject*>() : nullptr;
+            auto* content = popup ? popup->property("contentItem").value<QObject*>() : nullptr;
+            QQuickItem* entry = nullptr;
+            const int option = combo ? static_cast<int>(combo->property("names").toStringList().indexOf(uniqueName)) : -1;
+            if (content && option >= 0 && typed == path &&
+                QMetaObject::invokeMethod(content, "itemAtIndex", Q_RETURN_ARG(QQuickItem*, entry), Q_ARG(int, option)) &&
+                entry && entry->isVisible() && entry->mapRectToScene(entry->boundingRect()).contains(pointer))
+                selectedEntryPressed = true;
+        });
+        assistant->send(alias ? "Alias the La atom isotropic displacement as la_adp." : "Name the background points from their positions.");
+        QTRY_COMPARE_WITH_TIMEOUT(assistant->state(), QString("idle"), 30000);
+        searchObserver.stop();
+        if (alias) {
+            QCOMPARE(typed, path);
+            QVERIFY(selectedEntryPressed);
+            auto* combo = find("alias.parameter.0");
+            QVERIFY(combo);
+            const auto option = combo->property("names").toStringList().indexOf(uniqueName);
+            QVERIFY(option >= 0);
+            QCOMPARE(combo->property("currentIndex").toInt(), option);
+            QCOMPARE(combo->property("model").toStringList()[option].section(" · ", 1), path);
+            const auto& aliases = project->assistantProject()->aliases;
+            QCOMPARE(aliases.size(), std::size_t(1));
+            QCOMPARE(QString::fromStdString(aliases[0]->id.value()), QString("la_adp"));
+            QCOMPARE(QString::fromStdString(aliases[0]->parameter_unique_name.value()), uniqueName);
+            qInfo().noquote() << "Shown alias search:" << typed << "selected:" << uniqueName;
+        } else {
+            QVERIFY2(buttonPressed, qPrintable(assistant->lastError()));
+            const auto expected = edi::position_point_ids(*project->currentExperiment()->experiment());
+            for (std::size_t i = 0; i < expected.size(); ++i)
+                QCOMPARE(background->text(static_cast<int>(i), "id"), QString::fromStdString(expected[i]));
+            qInfo() << "Shown background naming: cue pressed background.namePoints; position IDs applied";
+        }
+        assistant->clearHistory();
+    }
+    void loadDataReplaysShownActions_data() {
+        QTest::addColumn<bool>("show");
+        QTest::newRow("shown") << true;
+        QTest::newRow("ordinary") << false;
+    }
+    void loadDataReplaysShownActions() {
+        QFETCH(bool, show);
+        const auto previousPeer = qgetenv("EDI_CODEX_DEVELOPMENT_EXECUTABLE");
+        const auto previousArguments = qgetenv("EDI_UI_LOAD_ARGUMENTS");
+        const auto restore = qScopeGuard([&] {
+            if (previousPeer.isNull()) qunsetenv("EDI_CODEX_DEVELOPMENT_EXECUTABLE");
+            else qputenv("EDI_CODEX_DEVELOPMENT_EXECUTABLE", previousPeer);
+            if (previousArguments.isNull()) qunsetenv("EDI_UI_LOAD_ARGUMENTS");
+            else qputenv("EDI_UI_LOAD_ARGUMENTS", previousArguments);
+        });
+        qputenv("EDI_CODEX_DEVELOPMENT_EXECUTABLE", QCoreApplication::applicationFilePath().toUtf8());
+        QQmlApplicationEngine engine;
+        edi_app::configure_engine(engine);
+        edi_app::test::assistant_defaults();
+        QQmlComponent component(&engine);
+        component.setData("import edi.app\nMain { width: 1400; height: 1000; visible: true }", QUrl());
+        QScopedPointer<QObject> root(component.create());
+        QVERIFY2(root, qPrintable(component.errorString()));
+        auto* window = qobject_cast<QQuickWindow*>(root.data());
+        QVERIFY(window);
+        window->requestActivate();
+        QVERIFY(QTest::qWaitForWindowActive(window));
+        auto* session = engine.singletonInstance<edi_app::Session*>("edi.app", "Session");
+        QVERIFY(session);
+        if (!session->hasProject()) QVERIFY(session->startUntitledProject());
+        auto* project = session->project();
+        QVERIFY(project->loadStructure(QUrl::fromLocalFile(QString::fromUtf8(EDI_SOURCE_DIR) + "/tests/fixtures/assistant_save_replay/lbco.cif")));
+        project->createExperiment();
+        QTRY_VERIFY(project->currentExperiment());
+        QTRY_VERIFY_WITH_TIMEOUT(!project->calculating() && project->viewSettled(), 10000);
+        auto* assistant = session->assistant();
+        assistant->setActionWindow(window);
+        assistant->setShowActions(show);
+        const auto find = [&](const QString& name) {
+            const auto walk = [&](QQuickItem* item, auto&& self) -> QQuickItem* {
+                if (item->objectName() == name) return item;
+                for (auto* child : item->childItems()) if (auto* found = self(child, self)) return found;
+                return nullptr;
+            };
+            if (auto* item = walk(window->contentItem(), walk)) return item;
+            return root->findChild<QQuickItem*>(name);
+        };
+        auto* tab = find("appBar.tab.experiment");
+        QVERIFY(tab);
+        QTRY_VERIFY(tab->isEnabled());
+        QTest::mouseClick(window, Qt::LeftButton, Qt::NoModifier,
+            tab->mapToScene(QPointF(tab->width() / 2, tab->height() / 2)).toPoint());
+        auto* pageLoader = tab->property("page").value<QObject*>();
+        QVERIFY(pageLoader);
+        QObject* page = nullptr;
+        QTRY_VERIFY(take(page, pageLoader->property("item").value<QObject*>()));
+        QVERIFY(QMetaObject::invokeMethod(page, "showSidebarTab", Q_ARG(QVariant, QVariant(false))));
+        QQuickItem* table = nullptr;
+        QTRY_VERIFY(take(table, find("experiments.list")));
+        auto* group = table->parentItem();
+        while (group && !group->property("collapsed").isValid()) group = group->parentItem();
+        QVERIFY(group);
+        QVERIFY(group->setProperty("collapsed", true));
+        QTRY_VERIFY(group->property("collapsed").toBool());
+        QTemporaryDir selected;
+        QVERIFY(selected.isValid());
+        const auto path = selected.filePath("pattern.xye");
+        QVERIFY(QFile::copy(QString::fromUtf8(EDI_SOURCE_DIR) + "/tests/fixtures/plain_data/cwl/three_columns/pattern.xye", path));
+        const auto token = assistant->beginFileSelection();
+        QVERIFY2(!token.isEmpty(), qPrintable(assistant->lastError()));
+        QVERIFY2(assistant->addSelectedFiles(token, {QUrl::fromLocalFile(path)}), qPrintable(assistant->lastError()));
+        const auto file = assistant->selectedFiles()->text(0, "id");
+        QVERIFY(!file.isEmpty());
+        const QJsonObject arguments{{"purpose", "Load the selected measurements"},
+            {"experiment", project->experiments()->text(0, "name")}, {"file_id", file}};
+        qputenv("EDI_UI_LOAD_ARGUMENTS", QJsonDocument(arguments).toJson(QJsonDocument::Compact));
+        assistant->signIn();
+        QTRY_VERIFY2_WITH_TIMEOUT(assistant->connected(), qPrintable(assistant->lastError()), 10000);
+        QTRY_VERIFY2_WITH_TIMEOUT(assistant->draftAdmissionReady(), qPrintable(assistant->lastError()), 10000);
+        QStringList observed;
+        QPointF pointer;
+        QObject observer;
+        connect(assistant, &edi_app::AssistantViewModel::actionPointerMoved, &observer, [&](const QPointF& point) { pointer = point; });
+        connect(assistant, &edi_app::AssistantViewModel::actionPointerPressed, &observer, [&] {
+            const auto hits = [&](QQuickItem* item) {
+                return item && item->isVisible() && item->mapRectToScene(item->boundingRect()).contains(pointer);
+            };
+            auto* title = qobject_cast<QQuickItem*>(group->property("titleArea").value<QObject*>());
+            if (hits(title)) observed << "unfold";
+            else if (hits(find("experiments.loadData.0"))) observed << "load-data";
+            else if (hits(find("experiments.load.dataFile"))) observed << "from-file";
+        });
+        const auto loaded = [&] {
+            return !project->assistantProject()->experiments[0]->calculation_only;
+        };
+        connect(project, &edi_app::ProjectViewModel::edited, &observer, [&] {
+            if (loaded() && !observed.contains("loaded")) observed << "loaded";
+        });
+        assistant->send("Load the attached measurements into this experiment.");
+        QTRY_VERIFY2_WITH_TIMEOUT(loaded(), qPrintable(assistant->lastError() + " cues=" + observed.join(",")), 20000);
+        QTRY_COMPARE_WITH_TIMEOUT(assistant->state(), QString("idle"), 10000);
+        QVERIFY(observed.contains("loaded"));
+        const QStringList expected = show ? QStringList{"unfold", "load-data", "from-file", "loaded"} : QStringList{"loaded"};
+        QCOMPARE(observed, expected);
+        qInfo().noquote() << "load_data" << (show ? "shown:" : "ordinary:") << observed.join(" -> ");
+        // Compare the displayed measurement with the same file through the user's ordinary loader.
+        auto* actual = project->currentExperiment()->pattern();
+        project->createExperiment();
+        QTRY_VERIFY_WITH_TIMEOUT(!project->calculating() && project->viewSettled(), 10000);
+        QVERIFY(project->loadDataInto(project->currentExperiment(), QUrl::fromLocalFile(path)));
+        auto* manual = project->currentExperiment()->pattern();
+        QTRY_VERIFY_WITH_TIMEOUT(!project->calculating() && project->viewSettled(), 10000);
+        QTRY_COMPARE(actual->rowCount(), manual->rowCount());
+        QVERIFY(actual->rowCount() > 0);
+        for (int row = 0; row < actual->rowCount(); ++row)
+            for (const int role : {edi_app::PatternModel::XRole, edi_app::PatternModel::IntensityMeasRole, edi_app::PatternModel::IntensityMeasSuRole})
+                QCOMPARE(actual->data(actual->index(row), role), manual->data(manual->index(row), role));
+        assistant->clearHistory();
+    }
+#endif
+    void aliasSearchTypesPlainNameAndSelectsDecoratedEntry() {
+        QQmlApplicationEngine engine;
+        edi_app::configure_engine(engine);
+        QQmlComponent component(&engine);
+        component.setData(R"(
+            import QtQuick
+            import QtQuick.Controls
+            import edi.app
+            ApplicationWindow {
+                width: 800; height: 600; visible: true
+                SearchableComboBox {
+                    objectName: "alias.parameter.0"
+                    searchThreshold: 0
+                    x: 40; y: 40; width: 500
+                    readonly property var names: ["phase.cell.length_a", "phase.cell.length_b"]
+                    model: ["cube a · phase.cell.length_a", "cube b · phase.cell.length_b"]
+                    currentIndex: 0
+                }
+            }
+        )", QUrl("qrc:/alias-search.qml"));
+        QScopedPointer<QObject> root(component.create());
+        QVERIFY2(root, qPrintable(component.errorString()));
+        auto* window = qobject_cast<QQuickWindow*>(root.data());
+        QVERIFY(window);
+        QVERIFY(QTest::qWaitForWindowActive(window));
+        auto* target = root->findChild<QQuickItem*>("alias.parameter.0");
+        QVERIFY(target);
+        edi_app::AssistantWidgetInput input(*window);
+        QString typed, diagnostic;
+        bool done = false, delivered = false;
+        edi_app::AssistantWidgetInput::Request request;
+        request.kind = edi_app::AssistantWidgetInput::Kind::SearchChoice;
+        request.target = target;
+        request.option = 1;
+        request.value = "phase.cell.length_b";
+        request.current = [target, window] { return target->window() == window; };
+        request.restoreCurrent = request.current;
+        request.prepareCommit = [&] {
+            auto* popup = target->property("popup").value<QObject*>();
+            auto* content = popup ? popup->property("contentItem").value<QObject*>() : nullptr;
+            auto* header = content ? content->property("headerItem").value<QObject*>() : nullptr;
+            auto* search = header ? header->findChild<QObject*>("comboBox.search") : nullptr;
+            typed = search ? search->property("text").toString() : QString();
+            return true;
+        };
+        request.finishCommit = [] {};
+        request.completed = [&](bool ok, const QString& message, edi_app::ControlCause) {
+            delivered = ok; diagnostic = message; done = true;
+        };
+        input.start(std::move(request));
+        QVERIFY(QTest::qWaitFor([&] { return done; }, 10000));
+        QVERIFY2(delivered, qPrintable(diagnostic));
+        QCOMPARE(typed, QString("phase.cell.length_b"));
+        QCOMPARE(target->property("currentIndex").toInt(), 1);
     }
     void testModelDefaultsAndExplicitChoice() {
         QQmlApplicationEngine engine;
@@ -383,7 +819,7 @@ private slots:
                 if (auto* found = self(child, self)) return found;
             return nullptr;
         };
-        QTRY_VERIFY((titleCell = findTitle(table, findTitle)));  // NOLINT(bugprone-assignment-in-if-condition): polled until found.
+        QTRY_VERIFY(take(titleCell, findTitle(table, findTitle)));  // NOLINT(bugprone-assignment-in-if-condition): polled until found.
         QTRY_VERIFY(table->property("onScreen").toBool());
         QTRY_VERIFY(!table->property("refitting").toBool());
         QTRY_VERIFY(titleCell->width() > 0);
@@ -413,7 +849,8 @@ private slots:
         assistant.setShowActions(true);
         engine.rootContext()->setContextProperty("testAssistant", &assistant);
         QQmlComponent component(&engine);
-        component.setData("import QtQuick\nimport QtQuick.Controls\nimport edi.app\nApplicationWindow { width: 1200; height: 200; visible: true; footer: StatusBar { assistantChatShown: true } }", QUrl());
+        // The status bar is never shown on Home (owner, 2026-11-17), so the window starts on the next page.
+        component.setData("import QtQuick\nimport QtQuick.Controls\nimport EasyApplication.Gui.Globals as EaGlobals\nimport edi.app\nApplicationWindow { width: 1200; height: 200; visible: true; footer: StatusBar { assistantChatShown: true } Component.onCompleted: EaGlobals.Vars.appBarCurrentIndex = 1 }", QUrl());
         QScopedPointer<QObject> bar(component.create());
         QVERIFY2(bar, qPrintable(component.errorString()));
         auto* window = qobject_cast<QQuickWindow*>(bar.data());
@@ -521,5 +958,23 @@ private slots:
     }
 #endif
 };
-QTEST_MAIN(AssistantUiTests)
+int main(int argc, char** argv) {
+    try {
+#ifndef __EMSCRIPTEN__
+        if (argc > 1 && QByteArray(argv[1]) == "--listen") return assistantToolPeer();
+#endif
+        QStandardPaths::setTestModeEnabled(true);
+        QGuiApplication app(argc, argv);
+        app.setAttribute(Qt::AA_Use96Dpi, true);
+        AssistantUiTests tests;
+        QTEST_SET_MAIN_SOURCE_PATH
+        return QTest::qExec(&tests, argc, argv);
+    } catch (const std::exception& error) {
+        qCritical("assistant UI tests stopped: %s", error.what());
+    } catch (...) {
+        qCritical("assistant UI tests stopped");
+    }
+    return 1;
+}
 #include "assistant_ui_tests.moc"
+

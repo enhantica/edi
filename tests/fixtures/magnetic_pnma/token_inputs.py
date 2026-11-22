@@ -79,7 +79,7 @@ def cases():
             for part in components
         ]
         for redundant in (False, True):
-            # A malformed redundant form must not be discarded as though it were absent.
+            # Cartn remains checked; ADR-0133 leaves redundant spherical output unread.
             if redundant and form == 'crystalaxis':
                 continue
             prefix_tags = (
@@ -460,7 +460,7 @@ GRAMMAR_BAD['centrings'] += ('x,y,z,+1,', 'x,y,z,+1,0', 'x,y,z,+1,,', 'x+1/0,y,z
 
 
 def partial_moment_declarations(form):
-    """A declared converted form has three columns, even beside another form."""
+    """Complete input forms and partial redundant forms exercise crystal-axis priority."""
     for variant in ('selected', 'redundant'):
         case = next(
             c for c in cases() if c.family == 'moments' and form in c.tag and c.variant == variant

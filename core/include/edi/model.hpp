@@ -217,6 +217,7 @@ struct RowHold : std::enable_shared_from_this<RowHold> {
     // fail to allocate, and that ends the program rather than leave a column that disagrees with
     // its row.
     template <typename V>
+    // NOLINTNEXTLINE(bugprone-exception-escape): only libc++'s container growth past max_size() raises length_error here
     void write(std::size_t column, std::uint64_t identity, const V& value) const noexcept {
         for (const Holding& held : tables) {
             static_cast<crysta::Column<V>*>(held.table->values[column])->write(held.row, value);
@@ -1293,6 +1294,7 @@ class OptionalParameter {
         }
         return *this;
     }
+    // NOLINTNEXTLINE(bugprone-exception-escape): only libc++'s container growth past max_size() raises length_error here
     OptionalParameter& operator=(OptionalParameter&& other) noexcept {
         if (this != &other) {
             reset();
@@ -2484,6 +2486,7 @@ class ItemVec final : public detail::KeyedBase {
         // Takes `item` as row `row`, whose values the columns already hold: its cells write to
         // this table from now on, beside every other table that holds the row, and the table
         // notes what they hold.
+        // NOLINTNEXTLINE(bugprone-exception-escape): only libc++'s container growth past max_size() raises length_error here
         void take(T& item, std::shared_ptr<detail::RowHold> record, std::size_t row) noexcept {
             record->tables.push_back(detail::Holding{&notes, row});  // room: record_of
             detail::CellHold::hold(item, record.get());
@@ -2865,6 +2868,10 @@ struct RowTraits<MagneticFormFactor> {
 
 // A structure's magnetic description besides its moments, each category as written: crysta reads,
 // checks and writes it.
+// One atom type's <jn> coefficients as crysta holds them, and their item names in crysta's order: io.cpp reads them
+// through these names, never crysta's own (ADR-0003).
+using MagneticRadialCoefficients = crysta::MagneticRadialCoefficients;
+inline constexpr const auto& kMagneticRadialItems = crysta::kMagneticRadialItems;
 struct MagneticDescription {
     crysta::MagneticGroupName group;
     std::vector<std::pair<std::string, crysta::MagneticTransform>> transforms;
@@ -2874,13 +2881,16 @@ struct MagneticDescription {
     std::vector<std::pair<std::string, std::string>> propagation_vectors;
     // An imported magCIF's `_iso_*` declarations, read-only: crysta writes them back unchanged.
     std::vector<crysta::KeptDeclaration> kept_iso;
+    // The <jn> coefficients a file gives per atom type (`_atom_type_scat`, edi ADR-0078), held as written; crysta
+    // takes a type's whole <j0> in place of its ion's table.
+    std::vector<std::pair<std::string, MagneticRadialCoefficients>> radial_coefficients;
     // False for a magnetic structure read without `_space_group`: its symmetry comes from its
     // operators (held under P 1), and a save writes no `_space_group`, as crysta decides.
     bool space_group_declared = true;
 
     bool empty() const noexcept {
         return group.empty() && transforms.empty() && operations.empty() && centerings.empty() &&
-               parent.empty() && propagation_vectors.empty() && kept_iso.empty();
+               parent.empty() && propagation_vectors.empty() && kept_iso.empty() && radial_coefficients.empty();
     }
     friend bool operator==(const MagneticDescription&, const MagneticDescription&) = default;
 };
@@ -4908,7 +4918,7 @@ void validate_descent(const std::string& descent, const std::string& where);
 struct ProjectMetadata {
     ProjectMetadata();
     std::string name = "untitled_project";
-    std::string title = "Untitled Project";
+    std::string title;
     std::string description;
     std::string authors;        // the project's authors, separated by "; "
     std::string path;           // kept in step with Project.path by load / save_as
@@ -5387,6 +5397,9 @@ class Project : public detail::ProjectAnchor {
                               const FileCompleteCallback& on_file_complete = {},
                               const CancelCallback& should_cancel = {},
                               const FileFittedCallback& on_file_fitted = {});
+    // The header a series of joint fits of this project writes to analysis/results_experiments.csv, as crysta's
+    // driver makes it from the project fit_scan hands it: the file is read against it.
+    std::vector<std::string> series_experiments_header() const;
 
     // PLURAL storage — a collection holding one element is honest, and the in-repo
     // `experiments` precedent now has its structures half. The singular accessors below are the
@@ -6237,6 +6250,10 @@ struct SpaceGroupSymopMagnCenteringCategory {
 };
 struct ParentPropagationVectorCategory {
     static constexpr const char* name = "_parent_propagation_vector";
+    static constexpr const char* derived = "held as written in the structure's magnetic description; crysta checks it";
+};
+struct AtomTypeScatCategory {
+    static constexpr const char* name = "_atom_type_scat";
     static constexpr const char* derived = "held as written in the structure's magnetic description; crysta checks it";
 };
 struct SpaceGroupMagnTransformsCategory {

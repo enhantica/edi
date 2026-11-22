@@ -62,3 +62,17 @@ rewritten by this projection.
 their existing `saved-main.json` SHA-256 anchors. It introduces no new numeric pin
 or changed endpoint. `freeze_fitted_experiment.py` refuses any candidate whose
 entire bytes do not match those original hashes, including an extra newline.
+
+The retained public release advances only labelled saved-byte regressions using
+`python -m tests.fixtures.fittability.advance_release_pins --seal <committed-report.json>
+--capture <retained-release-result.json> --parameters <sealed-equivalence.json>
+--measurements <sealed-measured-loops.json>`.
+The reports must match their committed SHA-256 seals and cover the same complete
+case set. The current extension is never imported by this generator. The ordered
+transition retains every original endpoint and adds hashes for newly copied helper
+assets. Before: invented starting uncertainties, omitted undefined phase-fraction
+uncertainties and the preceding serializer's last uncertainty bits. After: empty
+free markers, explicit `(nan)` for undefined derived uncertainties, and the released
+serializer's byte spelling. Independently sealed parameter/free-flag equivalence
+and measured-input checks justify this regression-only update; physical references
+and fitted-value tolerances remain unchanged.

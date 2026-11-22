@@ -23,6 +23,10 @@ on:
         description: Build and test Windows only for diagnosis
         default: false
         type: boolean
+      capture_pages:
+        description: Only capture every installer and maintenance tool page, light and dark, on Linux and Windows
+        default: false
+        type: boolean
   push:
     branches: [main]
     paths:
@@ -45,9 +49,12 @@ permissions:
   contents: read
   actions: read
 
+# A release build (a prerelease draft or a calendar release's qualification) queues with Tests' main pushes
+# (ci.yml) instead of running beside them.
 concurrency:
-  group: desktop-installers-${{ github.event_name == 'push' && github.ref || inputs.prepare_preview_release && format('calendar-{0}', github.ref) || github.run_id }}
+  group: ${{ (inputs.prepare_preview_release || inputs.release_plan_run) && 'edi-main-push-and-release' || format('desktop-installers-{0}', github.event_name == 'push' && github.ref || github.run_id) }}
   cancel-in-progress: ${{ github.event_name == 'push' }}
+  queue: ${{ (inputs.prepare_preview_release || inputs.release_plan_run) && 'max' || 'single' }}
 
 jobs:
   # The crysta SDK, built once per crysta commit (edi ADR-0083).
@@ -92,7 +99,7 @@ jobs:
   installers:
     needs: [preview-version, crysta-sdk]
     if: >-
-      github.event.pull_request.head.repo.fork == false && !cancelled() && inputs.preview_run == ''
+      github.event.pull_request.head.repo.fork == false && !cancelled() && inputs.preview_run == '' && !inputs.capture_pages
       && (needs.preview-version.result == 'success' || needs.preview-version.result == 'skipped')
     name: installer · ${{ matrix.runner == 'windows-2022' && 'Windows' || matrix.runner == 'macos-15' && 'macOS' || 'Linux' }}
     # A signing run takes the codesign environment (main only); every other run, pull requests included, keeps
@@ -257,8 +264,8 @@ jobs:
         run: |
           echo "$P12_BASE64" | base64 --decode > "$RUNNER_TEMP/client.p12"
           echo "SM_CLIENT_CERT_FILE=$(cygpath -w "$RUNNER_TEMP/client.p12")" >> "$GITHUB_ENV"
-      # Without an input the action only installs smctl; build.py, standalone_cli.py and package.py
-      # sign the app, the command-line edi.exe and the installers with it (edi ADR-0091).
+      # Without an input the action only installs smctl; build.py, standalone_cli.py and package.py sign the app and
+      # its helper programs, the command-line edi.exe, the maintenance tool and the installers with it (edi ADR-0091).
       - name: Install the KeyLocker signing tool
         if: github.event.pull_request.head.repo.fork == false && env.EDI_CODESIGN == '1' && runner.os == 'Windows'
         uses: digicert/code-signing-software-trust-action@v1
@@ -268,6 +275,9 @@ jobs:
         if: github.event.pull_request.head.repo.fork == false
         run: pixi run --manifest-path tools/installer/pixi.toml python "${{ github.workspace }}/tools/installer/build.py" --crysta-source "${{ github.workspace }}/.crysta" --work "${{ github.workspace }}/build/installer" --collection "${{ github.workspace }}/.edi-data"
         env:
+          # The Windows app's C++ under MSVC's /W4 as errors on a pull request (ADR-0093); the CI app jobs cover Linux and
+          # macOS, and a release build is never stopped by a warning.
+          EDI_WERROR: ${{ github.event_name == 'pull_request' && runner.os == 'Windows' && 'ON' || 'OFF' }}
           EDI_CODESIGN_MAC_IDENTITY: ${{ runner.os == 'macOS' && vars.CODESIGN_MAC_IDENTITY || '' }}
           EDI_NOTARY_APPLE_ID: ${{ env.EDI_CODESIGN == '1' && runner.os == 'macOS' && secrets.CODESIGN_MAC_NOTARY_APPLE_ID || '' }}
           EDI_NOTARY_PASSWORD: ${{ env.EDI_CODESIGN == '1' && runner.os == 'macOS' && secrets.CODESIGN_MAC_NOTARY_PASSWORD || '' }}
@@ -308,18 +318,23 @@ jobs:
           QT_QPA_PLATFORM: offscreen
           QT_QUICK_BACKEND: software
       # The installers ship this tool instead of writing one from their own binary, which a real signature
-      # forbids: Developer ID, hardened runtime and notarised on release builds, ad hoc otherwise (edi ADR-0091).
-      - name: Build and sign the macOS maintenance tool
-        if: github.event.pull_request.head.repo.fork == false && runner.os == 'macOS'
+      # forbids. Release builds sign it (macOS: Developer ID, hardened runtime, notarised; Windows: KeyLocker);
+      # otherwise macOS signs it ad hoc and Windows leaves it unsigned (edi ADR-0091).
+      - name: Build and sign the maintenance tool
+        if: github.event.pull_request.head.repo.fork == false && runner.os != 'Linux'
         run: pixi run --manifest-path tools/installer/pixi.toml python "${{ github.workspace }}/tools/installer/package.py" maintenance-tool --tools "${{ github.workspace }}/build/installer/ifw/tools" --output "${{ github.workspace }}/build/installer/maintenance"
         env:
-          EDI_CODESIGN_MAC_IDENTITY: ${{ env.EDI_CODESIGN == '1' && vars.CODESIGN_MAC_IDENTITY || '' }}
-          EDI_NOTARY_APPLE_ID: ${{ env.EDI_CODESIGN == '1' && secrets.CODESIGN_MAC_NOTARY_APPLE_ID || '' }}
-          EDI_NOTARY_PASSWORD: ${{ env.EDI_CODESIGN == '1' && secrets.CODESIGN_MAC_NOTARY_PASSWORD || '' }}
-          EDI_NOTARY_TEAM_ID: ${{ env.EDI_CODESIGN == '1' && vars.CODESIGN_MAC_TEAM_ID || '' }}
+          EDI_CODESIGN_MAC_IDENTITY: ${{ env.EDI_CODESIGN == '1' && runner.os == 'macOS' && vars.CODESIGN_MAC_IDENTITY || '' }}
+          EDI_NOTARY_APPLE_ID: ${{ env.EDI_CODESIGN == '1' && runner.os == 'macOS' && secrets.CODESIGN_MAC_NOTARY_APPLE_ID || '' }}
+          EDI_NOTARY_PASSWORD: ${{ env.EDI_CODESIGN == '1' && runner.os == 'macOS' && secrets.CODESIGN_MAC_NOTARY_PASSWORD || '' }}
+          EDI_NOTARY_TEAM_ID: ${{ env.EDI_CODESIGN == '1' && runner.os == 'macOS' && vars.CODESIGN_MAC_TEAM_ID || '' }}
+          SM_HOST: ${{ env.EDI_CODESIGN == '1' && runner.os == 'Windows' && vars.CODESIGN_WIN_KEYLOCKER_HOST || '' }}
+          SM_API_KEY: ${{ env.EDI_CODESIGN == '1' && runner.os == 'Windows' && secrets.CODESIGN_WIN_KEYLOCKER_API_KEY || '' }}
+          SM_CLIENT_CERT_PASSWORD: ${{ env.EDI_CODESIGN == '1' && runner.os == 'Windows' && secrets.CODESIGN_WIN_CERT_P12_PASSWORD || '' }}
+          EDI_CODESIGN_WIN_KEYPAIR_ALIAS: ${{ env.EDI_CODESIGN == '1' && runner.os == 'Windows' && vars.CODESIGN_WIN_KEYLOCKER_KEYPAIR_ALIAS || '' }}
       - name: Create the offline qualification installer
-        run: pixi run --manifest-path tools/installer/pixi.toml python "${{ github.workspace }}/tools/installer/package.py" package --stage "${{ github.workspace }}/build/installer/stage" --tools "${{ github.workspace }}/build/installer/ifw/tools" --output "${{ github.workspace }}/build/installer/package" ${{ runner.os == 'macOS' && format('--maintenance-tool "{0}/build/installer/maintenance/maintenance-tool/MaintenanceTool.app"', github.workspace) || '' }}
-      - name: Sign the offline installer and archive it again
+        run: pixi run --manifest-path tools/installer/pixi.toml python "${{ github.workspace }}/tools/installer/package.py" package --stage "${{ github.workspace }}/build/installer/stage" --tools "${{ github.workspace }}/build/installer/ifw/tools" --output "${{ github.workspace }}/build/installer/package" ${{ runner.os != 'Linux' && format('--maintenance-tool "{0}/build/installer/maintenance/maintenance-tool/MaintenanceTool{1}"', github.workspace, runner.os == 'macOS' && '.app' || '.exe') || '' }}
+      - name: Sign the offline installer and its download
         if: github.event.pull_request.head.repo.fork == false && env.EDI_CODESIGN == '1' && runner.os != 'Linux'
         run: pixi run --manifest-path tools/installer/pixi.toml python "${{ github.workspace }}/tools/installer/package.py" seal --output "${{ github.workspace }}/build/installer/package"
         env:
@@ -334,11 +349,11 @@ jobs:
       - name: Install, launch, calculate, render and uninstall
         shell: bash
         run: |
-          installer=$(cat build/installer/package/installer.json | sed -n 's/.*"zip": "\([^"]*\)".*/\1/p')
+          installer=$(cat build/installer/package/installer.json | sed -n 's/.*"download": "\([^"]*\)".*/\1/p')
           pixi run --manifest-path tools/installer/pixi.toml python "${{ github.workspace }}/tools/installer/package.py" test --installer "${{ github.workspace }}/build/installer/package/$installer" --output "${{ github.workspace }}/build/installer/test"
       - name: Create the online distribution installer
-        run: pixi run --manifest-path tools/installer/pixi.toml python "${{ github.workspace }}/tools/installer/package.py" package --kind online --stage "${{ github.workspace }}/build/installer/stage" --tools "${{ github.workspace }}/build/installer/ifw/tools" --output "${{ github.workspace }}/build/installer/online" ${{ runner.os == 'macOS' && format('--maintenance-tool "{0}/build/installer/maintenance/maintenance-tool/MaintenanceTool.app"', github.workspace) || '' }}
-      - name: Sign the online installer and archive it again
+        run: pixi run --manifest-path tools/installer/pixi.toml python "${{ github.workspace }}/tools/installer/package.py" package --kind online --stage "${{ github.workspace }}/build/installer/stage" --tools "${{ github.workspace }}/build/installer/ifw/tools" --output "${{ github.workspace }}/build/installer/online" ${{ runner.os != 'Linux' && format('--maintenance-tool "{0}/build/installer/maintenance/maintenance-tool/MaintenanceTool{1}"', github.workspace, runner.os == 'macOS' && '.app' || '.exe') || '' }}
+      - name: Sign the online installer and its download
         if: github.event.pull_request.head.repo.fork == false && env.EDI_CODESIGN == '1' && runner.os != 'Linux'
         run: pixi run --manifest-path tools/installer/pixi.toml python "${{ github.workspace }}/tools/installer/package.py" seal --output "${{ github.workspace }}/build/installer/online"
         env:
@@ -350,7 +365,7 @@ jobs:
           SM_API_KEY: ${{ env.EDI_CODESIGN == '1' && runner.os == 'Windows' && secrets.CODESIGN_WIN_KEYLOCKER_API_KEY || '' }}
           SM_CLIENT_CERT_PASSWORD: ${{ env.EDI_CODESIGN == '1' && runner.os == 'Windows' && secrets.CODESIGN_WIN_CERT_P12_PASSWORD || '' }}
           EDI_CODESIGN_WIN_KEYPAIR_ALIAS: ${{ runner.os == 'Windows' && vars.CODESIGN_WIN_KEYLOCKER_KEYPAIR_ALIAS || '' }}
-      - name: Qualify the online ZIP with local component transport
+      - name: Qualify the online installer with local component transport
         shell: bash
         run: |
           pixi run --manifest-path tools/installer/pixi.toml python - <<'PYTHON'
@@ -361,13 +376,13 @@ jobs:
           metadata = json.loads((package / 'installer.json').read_text())
           subprocess.run([
               'python', str(root / 'tools/installer/package.py'), 'test',
-              '--installer', str(package / metadata['zip']),
+              '--installer', str(package / metadata['download']),
               '--repository', (package / 'repository').as_uri() + '/',
               '--output', str(root / 'build/installer/online-test'),
           ], check=True)
           subprocess.run([
               'python', str(root / 'tools/installer/package.py'), 'test',
-              '--installer', str(package / metadata['zip']),
+              '--installer', str(package / metadata['download']),
               '--repository', (package / 'repository').as_uri() + '/',
               '--output', str(root / 'build/installer/online-assistant-test'),
               '--with-assistant',
@@ -392,7 +407,7 @@ jobs:
           sys.path.insert(0, 'tools/release')
           from promote import components_name, pack_components
           pack_components(target, delivery / components_name(metadata['version'], metadata['platform'], channel))
-          os.link(package / metadata['zip'], delivery / metadata['zip'])
+          os.link(package / metadata['download'], delivery / metadata['download'])
           shutil.copy2(package / 'installer.json', delivery / 'installer.json')
           shutil.copy2('build/installer/stage/build-inputs.json', delivery / 'build-inputs.json')
           shutil.copy2('build/installer/online-test/passed.json', delivery / 'qualification.json')
@@ -401,7 +416,7 @@ jobs:
           offline_metadata = json.loads((offline / 'installer.json').read_text())
           shutil.copy2(offline / 'installer.json', delivery / 'offline-installer.json')
           shutil.copy2('build/installer/test/passed.json', delivery / 'offline-qualification.json')
-          os.link(offline / offline_metadata['zip'], delivery / offline_metadata['zip'])
+          os.link(offline / offline_metadata['download'], delivery / offline_metadata['download'])
           cli_receipt = Path('build/installer/cli-qualification.json')
           if cli_receipt.is_file():
               cli = json.loads(cli_receipt.read_text())
@@ -457,6 +472,69 @@ jobs:
             build/installer/protocol/passed.json
             build/installer/package/installer.json
           if-no-files-found: ignore
+
+  # Every page of the installer and its maintenance tool, light and dark, from a small marker installer (no app
+  # build): Linux under a virtual display with the theme forced, Windows with its own app theme set. The pictures are a
+  # run artifact for a person to look at; nothing is committed and nothing else runs.
+  installer-pages:
+    if: github.event_name == 'workflow_dispatch' && inputs.capture_pages
+    name: installer pages · ${{ matrix.runner == 'windows-2022' && 'Windows' || 'Linux' }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [ubuntu-24.04, windows-2022]
+    steps:
+      - name: Enable long source paths on Windows
+        if: runner.os == 'Windows'
+        run: |
+          git config --global core.longpaths true
+          git config --global core.protectNTFS false
+      - uses: actions/checkout@v5
+        if: runner.os != 'Windows'
+      - name: Check out Windows-compatible source paths
+        if: runner.os == 'Windows'
+        uses: actions/checkout@v5
+        with:
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /*
+            !**/[aA][uU][xX]
+            !**/[aA][uU][xX].*
+            !**/[cC][oO][nN]
+            !**/[cC][oO][nN].*
+            !**/[pP][rR][nN]
+            !**/[pP][rR][nN].*
+            !**/[nN][uU][lL]
+            !**/[nN][uU][lL].*
+            !**/[cC][oO][mM][1-9]
+            !**/[cC][oO][mM][1-9].*
+            !**/[lL][pP][tT][1-9]
+            !**/[lL][pP][tT][1-9].*
+      - name: Set up the locked packaging environment
+        uses: ./.github/actions/setup-pixi
+        with:
+          manifest-path: tools/installer/pixi.toml
+      - name: Acquire the pinned Qt Installer Framework
+        run: pixi run --manifest-path tools/installer/pixi.toml python "${{ github.workspace }}/tools/installer/package.py" tools --output "${{ github.workspace }}/build/installer/ifw"
+      - name: A virtual display and a screen grabber on Linux
+        if: runner.os == 'Linux'
+        run: sudo apt-get install -y xvfb imagemagick
+      - name: Capture every page, light and dark
+        shell: bash
+        run: |
+          capture=(pixi run --manifest-path tools/installer/pixi.toml python "${{ github.workspace }}/tools/installer/capture_pages.py" --tools "${{ github.workspace }}/build/installer/ifw/tools" --output "${{ github.workspace }}/build/installer/pages")
+          if [[ "$RUNNER_OS" == Linux ]]; then xvfb-run -a -s "-screen 0 1280x900x24" "${capture[@]}"; else "${capture[@]}"; fi
+      - name: Keep the page captures
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: installer-pages-${{ runner.os }}
+          path: |
+            build/installer/pages/pages
+            build/installer/pages/*.log
+          if-no-files-found: warn
 
   qualify-release:
     name: record qualified release inputs
@@ -541,25 +619,48 @@ jobs:
           python3 tools/release/preview_draft.py --repo "$GITHUB_REPOSITORY" \
             --commit "$commit" preview-delivery/installer-{Linux,macOS,Windows}-"$selected"
 
+  # A failed or cancelled preview release deletes the draft it reserved, so no draft is left holding a version that
+  # is never published (edi ADR-0071).
+  remove-failed-preview-draft:
+    name: Remove the draft of a failed preview release
+    needs: [preview-version, installers, draft-preview-release]
+    if: >-
+      always() && github.event_name == 'workflow_dispatch' && inputs.prepare_preview_release && inputs.preview_run == ''
+      && needs.preview-version.result == 'success'
+      && (needs.installers.result != 'success' || needs.draft-preview-release.result != 'success')
+    environment: crysta-sdk
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.14'
+      - name: Delete this source's preview draft
+        env:
+          GH_TOKEN: ${{ secrets.GH_API_PERSONAL_ACCESS_TOKEN }}
+        run: python tools/release/prepare.py --repo "$GITHUB_REPOSITORY" --withdraw preview
+
   publish-installers:
     name: Deploy testing installer components
     needs: installers
     if: >-
       ${{ !cancelled() && github.event_name == 'workflow_dispatch' && !inputs.windows_only
       && inputs.publish_components && inputs.release_plan_run == '' && !github.event.repository.private
+      && github.ref == 'refs/heads/main'
       && (needs.installers.result == 'success' || (inputs.preview_run != '' && needs.installers.result == 'skipped')) }}
     runs-on: ubuntu-24.04
+    # The public site's queue and reviewed environment, shared with pages.yml's publishers: the testing repositories
+    # join the site behind easydiffraction.org (edi-sites' deploy-docs). GitHub Pages is the developers' test site,
+    # deployed from edi's dev branch (the owner, 2026-11-17). Main only, the branch that environment admits.
     concurrency:
       group: pages-publication
       cancel-in-progress: false
     permissions:
       contents: read
       actions: read
-      pages: write
-      id-token: write
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+    environment: public-site
     steps:
       - uses: actions/checkout@v5
       - name: Download tested platform repositories
@@ -616,18 +717,21 @@ jobs:
                   raise RuntimeError('Testing repositories do not match the preview feed')
           (root / 'feed.json').write_bytes(payload)
           PYTHON
+      - name: Mint a token for edi-sites
+        id: sites-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ vars.ENHANTICA_APP_ID }}
+          private-key: ${{ secrets.ENHANTICA_APP_KEY }}
+          owner: enhantica
+          repositories: edi-sites
       - name: Preserve documentation, web app and previous components
-        run: python3 tools/ci/pages_update.py --repo "$GITHUB_REPOSITORY" --component installers --incoming components --site site
         env:
-          GH_TOKEN: ${{ github.token }}
-      - name: Upload the assembled site
-        uses: actions/upload-pages-artifact@v3
-        with:
-          name: pages-site-installers-${{ github.run_attempt }}
-          path: site
-          retention-days: 90
-      - name: Deploy installers to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
-        with:
-          artifact_name: pages-site-installers-${{ github.run_attempt }}
+          SITES_TOKEN: ${{ steps.sites-token.outputs.token }}
+        run: |
+          bash tools/ci/fetch_deploy_branch.sh deploy-docs "$RUNNER_TEMP/deployed"
+          python3 tools/ci/pages_update.py --repo "$GITHUB_REPOSITORY" --component installers --incoming components --site site --base "$RUNNER_TEMP/deployed"
+      - name: Update the deploy-docs branch
+        env:
+          SITES_TOKEN: ${{ steps.sites-token.outputs.token }}
+        run: bash tools/ci/push_deploy_branch.sh site deploy-docs

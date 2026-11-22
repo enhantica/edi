@@ -178,8 +178,116 @@ def measured_range(path):
     return [values[0], values[-1], (values[-1] - values[0]) / (len(values) - 1), len(values)]
 
 
+def ascii_dataset(file, *, samples=True):
+    rows = []
+    for line in file.read_bytes().decode().split('\n'):
+        fields = line.split()
+        if len(fields) not in {2, 3}:
+            continue
+        try:
+            row = [float(field) for field in fields]
+        except ValueError:
+            continue
+        # The owner rule skips negative scan points. The scan reference
+        # in scan_template/REFERENCE.md uses Poisson sqrt(y), with tiny
+        # sigma replaced below; the single-pattern importer differs.
+        if row[1] < 0:
+            continue
+        if len(row) == 2:
+            row.append(math.sqrt(row[1]))
+        rows.append(row)
+    if len(rows) < 2:
+        raise ValueError('Scan range witness requires independent measured ASCII rows')
+    axis = [row[0] for row in rows]
+    dataset = {
+        'file': file.name,
+        'sha256': hashlib.sha256(file.read_bytes()).hexdigest(),
+        'range': [axis[0], axis[-1], (axis[-1] - axis[0]) / (len(axis) - 1), len(axis)],
+    }
+    if samples:
+        # Independent ASCII convention: diffraction-lib bragg_pd.py,
+        # as cited in scan_template/REFERENCE.md; never an app-generated value.
+        dataset['samples'] = [
+            {
+                'index': index,
+                'values': [
+                    rows[index][0],
+                    rows[index][1],
+                    1.0 if rows[index][2] < 0.0001 else rows[index][2],
+                ],
+            }
+            for index in sorted({0, len(rows) // 2, len(rows) - 1})
+        ]
+    return dataset
+
+
+def series_inputs(project, analysis):
+    """Independent grouped file identities from the authored per-bank declarations."""
+    if not (project / 'analysis/analysis.edi').is_file():
+        return None
+    declared = tables(
+        project / 'analysis/analysis.edi', ('_joint_fit', '_sequential_fit_experiment')
+    )
+    rows = declared.get('sequential_fit_experiment', [])
+    if not rows:
+        return None
+    banks = [row['experiment_id'] for row in declared.get('joint_fit', [])]
+    patterns = {row['experiment_id']: row['file_pattern'] for row in rows}
+    if (
+        not banks
+        or len(banks) != len(set(banks))
+        or len(rows) != len(patterns)
+        or set(banks) != set(patterns)
+    ):
+        raise ValueError('Every declared joint-series bank needs exactly one file pattern')
+    relative = analysis.get('_sequential_fit.data_dir')
+    if not isinstance(relative, str) or not relative or Path(relative).is_absolute():
+        raise ValueError('A joint series has a project-relative data directory')
+    directory = project / relative
+    if not directory.resolve().is_relative_to(project.resolve()):
+        raise ValueError('The declared series data directory stays inside its project')
+    points = None
+    files = {}
+    for bank in banks:
+        pattern = patterns[bank]
+        if not isinstance(pattern, str) or not pattern.startswith('*') or pattern.count('*') != 1:
+            raise ValueError('The authored series witness uses one leading point-key wildcard')
+        matches = sorted(directory.glob(pattern))
+        keys = []
+        for file in matches:
+            if (
+                not file.is_file()
+                or file.is_symlink()
+                or file.parent.resolve() != directory.resolve()
+            ):
+                raise ValueError('Every series input is a regular file in its declared directory')
+            key = file.name[: -len(pattern[1:])] if pattern[1:] else file.name
+            if not key:
+                raise ValueError('An authored joint-series point key is nonempty')
+            keys.append(key)
+            files[file.relative_to(project).as_posix()] = hashlib.sha256(
+                file.read_bytes()
+            ).hexdigest()
+        if not keys or len(keys) != len(set(keys)) or (points is not None and points != keys):
+            raise ValueError('Every series point contains every declared bank exactly once')
+        points = keys
+    if analysis.get('_sequential_fit.reverse') == 'true':
+        points.reverse()
+    return {
+        'banks': banks,
+        'points': points,
+        'files': files,
+        'first_point': {
+            bank: ascii_dataset(directory / patterns[bank].replace('*', points[0]))
+            for bank in banks
+        },
+    }
+
+
 def scan_inputs(project, analysis):
     """Independent file catalogue and measured-range witnesses; never import the app."""
+    if series_inputs(project, analysis) is not None:
+        return []
     keys = ('_sequential_fit.data_dir', '_sequential_fit.file_pattern')
     declared = [key in analysis for key in keys]
     if not any(declared):
@@ -195,45 +303,7 @@ def scan_inputs(project, analysis):
     datasets = []
     selected = {0, len(files) // 2, len(files) - 1}
     for file_index, file in enumerate(files):
-        rows = []
-        for line in file.read_bytes().decode().split('\n'):
-            fields = line.split()
-            if len(fields) not in {2, 3}:
-                continue
-            try:
-                row = [float(field) for field in fields]
-            except ValueError:
-                continue
-            # The owner rule skips negative scan points. The scan reference
-            # in scan_template/REFERENCE.md uses Poisson sqrt(y), with tiny
-            # sigma replaced below; the single-pattern importer differs.
-            if row[1] < 0:
-                continue
-            if len(row) == 2:
-                row.append(math.sqrt(row[1]))
-            rows.append(row)
-        if len(rows) < 2:
-            raise ValueError('Scan range witness requires independent measured ASCII rows')
-        axis = [row[0] for row in rows]
-        dataset = {
-            'file': file.name,
-            'sha256': hashlib.sha256(file.read_bytes()).hexdigest(),
-            'range': [axis[0], axis[-1], (axis[-1] - axis[0]) / (len(axis) - 1), len(axis)],
-        }
-        if file_index in selected:
-            # Independent ASCII convention: diffraction-lib bragg_pd.py,
-            # as cited in scan_template/REFERENCE.md; never an app-generated value.
-            dataset['samples'] = [
-                {
-                    'index': index,
-                    'values': [
-                        rows[index][0],
-                        rows[index][1],
-                        1.0 if rows[index][2] < 0.0001 else rows[index][2],
-                    ],
-                }
-                for index in sorted({0, len(rows) // 2, len(rows) - 1})
-            ]
+        dataset = ascii_dataset(file, samples=file_index in selected)
         datasets.append(dataset)
     return datasets
 
@@ -292,8 +362,8 @@ def report_cell(file):
 
 def app_only_ids(registry):
     identities = [row['id'] for row in registry if row.get('app-only')]
-    if identities:
-        message = 'Every user example now has its catalogue form; app-only rows are retired'
+    if identities != ['pd-neut-tof_ncaf-wish-5bank_synthetic-100p']:
+        message = 'Only the declared synthetic series belongs exclusively to the app catalogue'
         raise ValueError(message)
     return identities
 
@@ -361,6 +431,7 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915 - one input capture retains old
             'structures': structures,
             'experiments': [p.stem for p in sorted((project / 'experiments').glob('*.edi'))],
             'datasets': scan_inputs(project, scalars(analysis) if analysis.exists() else {}),
+            'series': series_inputs(project, scalars(analysis)) if analysis.exists() else None,
             'loaderWarning': loader_warning(
                 scalars(analysis) if analysis.exists() else {},
                 [scalars(file) for file in sorted((project / 'experiments').glob('*.edi'))],
@@ -562,7 +633,9 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915 - one input capture retains old
         catalogue_ids = [row['id'] for row in current_cases()]
         data['catalogue_ids'] = catalogue_ids
     data['app_only_ids'] = app_only
-    data['app_ids'] = [*catalogue_ids, *app_only]
+    data['app_ids'] = [
+        entry['id'] for entry in registry if entry['id'] in {*catalogue_ids, *app_only}
+    ]
     if catalogue:
         metadata = json.loads((ROOT / 'app/examples/metadata.json').read_text())
         if list(metadata['examples']) != data['app_ids']:

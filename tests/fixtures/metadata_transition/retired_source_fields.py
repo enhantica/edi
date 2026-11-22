@@ -9,6 +9,8 @@ import zipfile
 from pathlib import Path
 
 from tests.fixtures.path_keys import repository_key
+from tests.fixtures.stop_defaults import example_inputs
+from tests.fixtures.table_display.source_uncertainties import previous_bytes as uncertainties
 
 HERE = Path(__file__).parent
 ROOT = HERE.resolve().parents[2]
@@ -21,10 +23,15 @@ def rows():
 
 
 def previous_bytes(name, data):
+    data = example_inputs.composed_bytes(name, data)
     row = rows().get(repository_key(name))
     if row is None:
         return data
     digest = hashlib.sha256(data).hexdigest()
+    if digest not in {row['before_sha256'], row['after_sha256']}:
+        data = uncertainties(repository_key(name), data)
+        data = example_inputs.composed_bytes(name, data)
+        digest = hashlib.sha256(data).hexdigest()
     if digest == row['before_sha256']:
         return data
     assert digest == row['after_sha256'], (

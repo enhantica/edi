@@ -343,7 +343,7 @@ SideBarGroup {
             readonly property var rangeColumns: [7, 8]
             readonly property real freeWidth: group.freeColumnWidth
             readonly property real nameMinimum: Math.min((fittedWidths[1] ?? 0) + EaStyle.Sizes.fontPixelSize, EaStyle.Sizes.fontPixelSize * 8)
-            readonly property real fittedRoom: width - rowPadding * 2 - EaStyle.Sizes.borderThickness * 2 - EaStyle.Sizes.tableColumnSpacing * (9 + (group.sameShown ? 1 : 0)) - numberColumnWidth - freeWidth - group.sameColumnWidth - nameMinimum
+            readonly property real fittedRoom: width - rowPadding * 2 - EaStyle.Sizes.borderThickness * 2 - EaStyle.Sizes.tableColumnSpacing * ((group.measured ? 9 : 8) + (group.sameShown ? 1 : 0)) - numberColumnWidth - freeWidth - group.sameColumnWidth - nameMinimum
             readonly property real fittedSum: fittedColumns.reduce((sum, column) => sum + (fittedWidths[column] ?? 0), 0)
             readonly property bool rangeShown: fittedRoom >= fittedSum
             readonly property var shownColumns: rangeShown ? fittedColumns : fittedColumns.filter(column => !rangeColumns.includes(column))
@@ -355,7 +355,7 @@ SideBarGroup {
             // The name takes the rest, set here rather than by the table's rule, so it follows only the table's width
             // and the measured texts, never the rows in view.
             readonly property real nameWidth: Math.max(EaStyle.Sizes.fontPixelSize * 4, Math.floor(fittedRoom + nameMinimum - shownColumns.reduce((sum, column) => sum + fittedColumn(column), 0)))
-            readonly property var wantedColumns: [numberColumnWidth, nameWidth].concat(fittedColumns.map(column => fittedColumn(column))).concat([freeWidth]).concat(group.sameShown ? [group.sameColumnWidth] : [])
+            readonly property var wantedColumns: [numberColumnWidth, nameWidth].concat(fittedColumns.map(column => fittedColumn(column))).concat(group.measured ? [freeWidth] : []).concat(group.sameShown ? [group.sameColumnWidth] : [])
             // Applied a moment later: new widths remake rows and measure them again, which would otherwise feed back
             // into the widths while they are being worked out.
             function applyColumns() {
@@ -610,6 +610,7 @@ SideBarGroup {
                 Item {
                     // At the table's right edge, under the title's arrow (the owner, 2026-11-17).
                     property int horizontalAlignment: Text.AlignRight
+                    visible: group.measured
                     height: parent.height
 
                     EaComponents.ListViewCheckBox {

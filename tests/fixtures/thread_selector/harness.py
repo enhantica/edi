@@ -165,7 +165,7 @@ def desktop(plan):
     results = {}
     for count in ('3',) if plan.get('escape') else (*COUNTS, 'restore'):
         config = Path(plan['scratch']) / ('machine-' + str(count))
-        settings = config / 'EasyScience/EasyDiffraction/settings.ini'
+        settings = config / 'EasyDiffraction/EasyDiffraction/settings.ini'
         settings.parent.mkdir(parents=True, exist_ok=True)
         env = dict(
             os.environ,

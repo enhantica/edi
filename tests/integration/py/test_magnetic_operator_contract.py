@@ -47,15 +47,25 @@ def test_identity_family_does_not_take_pnma_cell_or_position_ties(tmp_path, synt
         text = (target / 'structures/cosio.edi').read_text()
         block = gemmi.cif.read_string(text).sole_block()
         assert list(block.find_values('_atom_site.wyckoff_letter')) == ['.'], (
-            'ADR-0108 an operator-defined save writes the absent-letter token'
+            'ADR-0108 the unmatched declaration still has no table letter after reload'
         )
         assert list(block.find_values('_atom_site.multiplicity')) == ['1'], (
             'ADR-0108 identity has one image, independently of the declared Pnma table'
         )
-        assert reference.columns(text)['_space_group.name_h_m'] == ['P n m a'], (
-            'ADR-0108 the declared table group is retained without becoming the geometry source'
+        columns = reference.columns(text)
+        assert columns['_space_group.name_h_m'] == ['P n m a'], (
+            'The unmatched legacy group remains declared when no BNS number replaces it'
         )
-        assert not any('operator_defined' in key for key in reference.columns(text)), (
+        assert '_space_group_magn.number_bns' not in columns, (
+            'Saving must not invent a BNS identity for the incompatible declared family'
+        )
+        assert columns['_space_group_symop_magn_operation.xyz'] == ['x,y,z,+1'], (
+            'The authored identity operation remains the symmetry used across both saves'
+        )
+        assert columns['_atom_site.fract_y'] == ['0.37'], (
+            'The legacy declaration does not impose the Pnma mirror after reload'
+        )
+        assert not any('operator_defined' in key for key in columns), (
             'ADR-0108 computed symmetry status is not persisted as a second authority'
         )
         model = api.Project.load(target)
@@ -136,9 +146,13 @@ def test_rejected_anisotropic_transition_keeps_the_warm_project(tmp_path, setter
     model.analysis.calculate()
     before = np.asarray(model.experiment.data.intensity_calc).copy()
     action = (
-        (lambda: model.structure.set_magnetic_symmetry(['x,y,z,+1'], ['x,y,z,+1']))
+        (
+            lambda: model.structure.set_magnetic_symmetry(
+                ['x,y,z,+1', '-x+1/97,-y,-z,+1'], ['x,y,z,+1']
+            )
+        )
         if setter == 'operators'
-        else (lambda: model.structure.set_magnetic_space_group('1.1'))
+        else (lambda: model.structure.set_magnetic_space_group('1.3'))
     )
     with pytest.raises((ValueError, RuntimeError), match=r'(?i)aniso|tensor|displacement'):
         action()
@@ -208,7 +222,34 @@ def test_omitted_nuclear_group_stays_absent_on_second_save(tmp_path):
         )
         assert list(
             gemmi.cif.read_string(text).sole_block().find_values('_atom_site.wyckoff_letter')
-        ) == ['.'], 'ADR-0108 omitted-group operator geometry does not acquire a table letter'
+        ) == ['a'], 'ADR-0108 a matching undeclared P1 family uses its table letter a'
+        model = api.Project.load(target)
+
+
+@pytest.mark.parametrize('kind', ['type-iv', 'untabulated-origin'])
+def test_unmatched_magnetic_families_keep_absent_letters(tmp_path, kind):
+    source = (
+        commensurate.structure(**commensurate.VALID['anti-translation-in-operations'])
+        if kind == 'type-iv'
+        else inputs.shifted_inversion(97)
+    )
+    model = api.Project.load(reference.project(tmp_path / 'input', source))
+    for index in range(2):
+        target = tmp_path / f'saved-{index}'
+        model.save_as(target)
+        saved = (target / 'structures/cosio.edi').read_text()
+        values = reference.columns(saved)
+        block = gemmi.cif.read_string(saved).sole_block()
+        assert list(block.find_values('_atom_site.wyckoff_letter')) == ['.'], (
+            'ADR-0108 anti-translations and untabulated origins keep absent Wyckoff letters'
+        )
+        assert values['_atom_site.multiplicity'] == ['2'], (
+            'ADR-0108 either authored nontrivial family keeps its two spatial images'
+        )
+        assert (
+            values['_space_group_symop_magn_operation.xyz']
+            == reference.columns(source)['_space_group_symop_magn_operation.xyz']
+        ), 'ADR-0108 saving an untabulated family preserves its exact supplied operations'
         model = api.Project.load(target)
 
 

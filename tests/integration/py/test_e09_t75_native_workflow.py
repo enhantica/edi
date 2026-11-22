@@ -13,6 +13,13 @@ from tests.integration.py.ci_runner_contract import platform_job, self_hosted_ru
 
 ROOT = Path(__file__).resolve().parents[3]
 CONSUMERS = ['audit', 'core', 'system', 'notebooks', 'cli-python', 'docs', 'app']
+APP_JOBS = {'linux-64': 'app', 'osx-arm64': 'app-macos', 'win-64': 'app-windows'}
+SDK_OS = {'linux-64': 'Linux', 'osx-arm64': 'macOS', 'win-64': 'Windows'}
+NIGHTLY_MARKERS = {
+    'notebooks': 'Notebooks run at night and on a manual run',
+    'docs': 'The docs build runs at night and on a manual run',
+}
+NIGHTLY_GUARD = "env.NIGHTLY == 'true'"
 
 
 def jobs():
@@ -31,13 +38,31 @@ def public_profile(data):
 
 
 def public_build_boundary(data, name, platform=None):
-    job = data[name]
+    if name == 'app' and platform is None:
+        for sdk in APP_JOBS:
+            public_build_boundary(data, 'app', sdk)
+        return
+    if name == 'app':
+        job = data[APP_JOBS[platform]]
+        assert job['steps'] is data['app']['steps'], (
+            'All desktop app jobs share one YAML step list'
+        )
+        assert job['name'] == f'app · {SDK_OS[platform]}', (
+            'Every desktop job has its static OS name'
+        )
+    else:
+        job = data[name]
+    require_public_job(job, name, platform)
+    require_public_steps(job, name, platform)
+
+
+def require_public_job(job, name, platform):
     runners = self_hosted_runners(job)
     assert all(runner[0] == 'github-hosted' for runner in runners), (
         'public native jobs must use the approved standard hosted platforms'
     )
     if platform is not None:
-        expected_os = {'linux-64': 'Linux', 'osx-arm64': 'macOS', 'win-64': 'Windows'}[platform]
+        expected_os = SDK_OS[platform]
         if name == 'system':
             legs = job['strategy']['matrix']['include']
             expected = {
@@ -58,7 +83,7 @@ def public_build_boundary(data, name, platform=None):
         assert any(
             term.strip(' ()') == 'github.event.pull_request.head.repo.fork == false'
             for term in terms
-        ) and '||' not in str(job.get('if', '')), (
+        ) and (name == 'system' or '||' not in str(job.get('if', ''))), (
             'public SDK native jobs must retain the positive trusted-pull-request fork boundary'
         )
         for core_only in (False, True):
@@ -75,7 +100,10 @@ def public_build_boundary(data, name, platform=None):
                 },
             ), 'every public SDK job must refuse forks with either core-only input'
     for event in ('pull_request', 'push', 'schedule', 'workflow_dispatch'):
-        expected = not (name in {'system', 'app-wasm'} and event == 'pull_request')
+        expected = not (
+            (name == 'system' and event in {'pull_request', 'push'})
+            or (name == 'app-wasm' and event == 'pull_request')
+        )
         assert (
             active(
                 job,
@@ -88,7 +116,7 @@ def public_build_boundary(data, name, platform=None):
                 },
             )
             == expected
-        ), 'trusted PRs retain fast SDK jobs; full events also require system and WebAssembly'
+        ), 'system is nightly or manual, WebAssembly skips PRs, and fast SDK jobs retain scope'
         assert active(
             job,
             event,
@@ -109,7 +137,13 @@ def public_build_boundary(data, name, platform=None):
     needs = [needs] if isinstance(needs, str) else needs
     expected_needs = {'changes', 'crysta-sdk'}
     if name == 'system':
-        expected_needs.add('app')
+        expected_needs.update({'app', 'app-macos'})
+        public_system_app_route(job)
+        if platform is not None:
+            sdk = next(
+                step for step in job['steps'] if step.get('uses') == './.github/actions/crysta-sdk'
+            )
+            assert selects_sdk(sdk, platform), 'Every system part acquires the SDK for its OS'
     elif name == 'core':
         expected_needs.add('native')
     elif name == 'notebooks':
@@ -122,7 +156,14 @@ def public_build_boundary(data, name, platform=None):
     assert job.get('env', {}).get('CRYSTA_SOURCE_SHA') == (
         '${{ needs.changes.outputs.crysta_sha }}'
     ), 'Each native consumer retains the workflow-resolved engine source identity'
+
+
+def require_public_steps(job, name, platform):
     steps = job['steps']
+    if name == 'app':
+        require_desktop_sdk_and_msvc(steps, platform)
+    if name in NIGHTLY_MARKERS:
+        require_nightly_work(job, NIGHTLY_MARKERS[name])
     builds = [
         (i, step)
         for i, step in enumerate(steps)
@@ -131,23 +172,60 @@ def public_build_boundary(data, name, platform=None):
     assert len(builds) == 1, 'Every native route crosses one explicit core-build boundary'
     index, build = builds[0]
     expected_condition = {
-        'notebooks': 'github.event.pull_request.head.repo.fork == false',
-        'app': "steps.inputs.outputs.run == 'true'",
+        'docs': NIGHTLY_GUARD,
+        'notebooks': NIGHTLY_GUARD + ' && (github.event.pull_request.head.repo.fork == false)',
+        'app': "runner.os != 'Windows' && (steps.inputs.outputs.run == 'true')",
     }.get(name)
-    assert build.get('if') == expected_condition and not build.get('continue-on-error'), (
+    assert step_condition(build) == expected_condition and not build.get('continue-on-error'), (
         'The native build or restore follows the declared protected execution scope'
     )
     if name == 'native':
         producer_boundary(job)
         first_use = 'cpp-test'
     else:
-        public_native_transfer(steps, index)
+        public_native_transfer(steps, index, name)
         first_use = FIRST_USE[name]
     uses = [i for i, step in enumerate(steps) if first_use in step.get('run', '')]
     assert uses and index < uses[0], (
         'Each native build or restore finishes before the first public native use'
     )
     assert_first_public_use(name, build, steps[uses[0]], expected_condition)
+
+
+def require_desktop_sdk_and_msvc(steps, platform):
+    sdk = next(step for step in steps if step.get('uses') == './.github/actions/crysta-sdk')
+    assert selects_sdk(sdk, platform), 'The desktop build acquires its exact pinned SDK'
+    windows = [step for step in steps if 'tools/ci/app-windows-build.py' in step.get('run', '')]
+    assert len(windows) == 1, 'The shared app steps include one MSVC build'
+    assert steps.index(sdk) < steps.index(windows[0]), 'MSVC builds after the pinned SDK arrives'
+    assert active(windows[0], 'schedule', bindings={'runner.os': SDK_OS[platform]}) == (
+        platform == 'win-64'
+    ), 'Only the Windows job reaches the installer-aligned MSVC build'
+
+
+def require_nightly_work(job, marker_name):
+    nightly = {'if': job.get('env', {}).get('NIGHTLY', False)}
+    markers = [step for step in job['steps'] if step.get('name') == marker_name]
+    assert len(markers) == 1, 'A single skip receipt keeps the required check name'
+    marker = markers[0]
+    assert set(marker) == {'name', 'if', 'run'} and marker['run'] == (
+        f'echo "{marker_name}; this $GITHUB_EVENT_NAME run does not."'
+    ), 'The skip receipt only reports the cadence'
+    outcomes = {('build', 'outcome'): 'success', ('tutorials', 'outcome'): 'success'}
+    for event in ('pull_request', 'push', 'schedule', 'workflow_dispatch'):
+        full = event in {'schedule', 'workflow_dispatch'}
+        enabled = active(nightly, event)
+        assert enabled == full, 'Only the nightly and manual events enable the real work'
+        selected = [
+            step
+            for step in job['steps']
+            if active(
+                step, event, outputs=outcomes, bindings={'env.NIGHTLY': str(enabled).lower()}
+            )
+        ]
+        assert selected == (
+            [step for step in job['steps'] if step is not marker] if full else [marker]
+        ), 'PR and push run only the receipt; nightly and manual run every actual step'
 
 
 def assert_first_public_use(name, build, use, expected_condition):
@@ -157,9 +235,61 @@ def assert_first_public_use(name, build, use, expected_condition):
         )
         require_reporting_step(use, 'build')
     else:
-        assert use.get('if') == expected_condition and not use.get('continue-on-error'), (
+        assert step_condition(use) == expected_condition and not use.get('continue-on-error'), (
             'The first public native use executes whenever its protected restore succeeds'
         )
+
+
+def step_condition(step):
+    value = step.get('if')
+    if isinstance(value, str):
+        return value.removeprefix('${{').removesuffix('}}').strip()
+    return value
+
+
+def selects_sdk(step, platform):
+    expression = step_condition({'if': step['with']['platform']})
+    return active(
+        {'if': f"({expression}) == '{platform}'"},
+        'schedule',
+        bindings={'runner.os': SDK_OS[platform]},
+    )
+
+
+def public_system_app_route(job):
+    steps = job['steps']
+    transfers = [
+        step for step in steps if step.get('with', {}).get('key', '').startswith('edi-app-')
+    ]
+    assert len(transfers) == 1, 'System restores exactly one app cache'
+    transfer = transfers[0]
+    assert transfer['with']['key'] == 'edi-app-${{ matrix.platform }}-${{ github.run_id }}', (
+        'System restores the current run app for its own platform'
+    )
+    assert transfer['with'].get('fail-on-cache-miss') is True, (
+        'A missing app cache fails its shard'
+    )
+    consumers = [
+        step
+        for step in steps
+        if step is transfer
+        or step.get('run', '').startswith(('chmod +x build/app/', 'pixi install -e app'))
+    ]
+    assert len(consumers) == 3, (
+        'Restoring the app, making it executable and installing Qt each run'
+    )
+    results = ('success', 'failure', 'skipped', 'cancelled')
+    for platform, needed in (('Linux', 'app'), ('macOS', 'app-macos')):
+        for linux in results:
+            for macos in results:
+                inputs = {'needs.app.result': linux, 'needs.app-macos.result': macos}
+                for step in consumers:
+                    observed = active(
+                        step, 'schedule', bindings={**inputs, 'matrix.platform': platform}
+                    )
+                    assert observed == (inputs[f'needs.{needed}.result'] != 'skipped'), (
+                        'Each system part uses its own app result, even when its sibling skips'
+                    )
 
 
 @pytest.mark.parametrize(
@@ -196,6 +326,16 @@ def test_public_system_boundary_proves_every_part_and_sdk(damage):
         legs[-1]['sdk'] = 'linux-64'
     with pytest.raises(AssertionError, match='each system part'):
         public_build_boundary(damaged, 'system', 'osx-arm64')
+    if damage == 'wrong-sdk':
+        damaged = copy.deepcopy(data)
+        app_cache = next(
+            step
+            for step in damaged['system']['steps']
+            if step.get('with', {}).get('key', '').startswith('edi-app-')
+        )
+        app_cache['if'] = "needs.app.result != 'skipped'"
+        with pytest.raises(AssertionError, match='its own app result'):
+            public_build_boundary(damaged, 'system', 'osx-arm64')
 
 
 def test_d6_one_unfiltered_native_matrix_uploads_the_prescribed_artifacts():
@@ -555,7 +695,7 @@ def require_public_producer_escapes(defect):
             public_build_boundary({'native': disabled_use}, 'native', 'linux-64')
 
 
-def public_native_transfer(steps, index):
+def public_native_transfer(steps, index, name):
     transports = [
         (i, step)
         for i, step in enumerate(steps)
@@ -564,11 +704,17 @@ def public_native_transfer(steps, index):
     assert len(transports) == 1, 'Each consumer selects one same-run native artifact action'
     transfer_index, transfer = transports[0]
     assert transfer_index < index, 'Artifact selection precedes restoration and first use'
+    assert set(transfer['with']) == {'platform'}, (
+        'Default native consumers restore this run and cannot select another producer run'
+    )
     assert transfer.get('with', {}).get('platform') in {
         "${{ runner.os == 'macOS' && 'osx-arm64' || 'linux-64' }}",
         '${{ matrix.sdk }}',
     }, 'Each consumer requests its actual platform artifact rather than a sibling platform'
-    assert not transfer.get('if') and not transfer.get('continue-on-error'), (
+    guard = {'app': "runner.os != 'Windows'", **dict.fromkeys(NIGHTLY_MARKERS, NIGHTLY_GUARD)}.get(
+        name
+    )
+    assert step_condition(transfer) == guard and not transfer.get('continue-on-error'), (
         'The native artifact action cannot be optional or bypassed'
     )
     for step in steps:
@@ -578,6 +724,9 @@ def public_native_transfer(steps, index):
 
 
 def native_action_boundary(action):
+    assert action['inputs']['run-id'].get('default') == '', (  # noqa: PLC1901 - absence and non-string defaults refuse
+        'Native downloads default to the current run when no producer is supplied'
+    )
     steps = action['runs']['steps']
     downloads = [step for step in steps if step.get('uses') == 'actions/download-artifact@v4']
     assert len(downloads) == 1, 'Native restoration selects exactly one addressed artifact'
@@ -589,8 +738,11 @@ def native_action_boundary(action):
     assert options.get('path') == 'build/edi-native-artifact', (
         'The native checker reads the selected download directory'
     )
-    assert options.get('run-id', '${{ github.run_id }}') == '${{ github.run_id }}', (
-        'Native downloads address this exact run'
+    assert options.get('run-id') == '${{ inputs.run-id }}', (
+        'Native downloads address only the caller-selected producer or the current run'
+    )
+    assert options.get('github-token') == "${{ inputs.run-id != '' && github.token || '' }}", (
+        'An explicit producer uses this repository token; default restoration stays same-run'
     )
     assert options.get('repository', '${{ github.repository }}') == '${{ github.repository }}', (
         'Native downloads address this repository'
@@ -607,6 +759,9 @@ def native_action_boundary(action):
         )
     selectors = [step for step in steps if 'EDI_NATIVE_ARTIFACT=1' in step.get('run', '')]
     assert len(selectors) == 1, 'The consumer explicitly enables refuse-without-compile mode'
+    assert selectors[0].get('env', {}).get('PRODUCER_RUN_ID') == '${{ inputs.run-id }}', (
+        'The restore checker receives the same producer identity selected for download'
+    )
     assert steps.index(download) < steps.index(selectors[0]), (
         'Artifact download precedes selection for restoration'
     )
@@ -634,17 +789,36 @@ def test_native_action_refuses_foreign_optional_and_fallback_routes(tmp_path, da
     import os  # noqa: PLC0415
     import subprocess  # noqa: PLC0415 - execute only the authored transport selector
 
-    environment = tmp_path / 'job-environment'
-    subprocess.run(
-        [environment_bash(), '-e', '-c', selector],
-        env={**os.environ, 'GITHUB_ENV': str(environment)},
-        check=True,
-        capture_output=True,
-        timeout=5,
-    )
-    assert environment.read_text() == 'EDI_NATIVE_ARTIFACT=1\n', (
-        'The actual action selects artifact mode before any native use'
-    )
+    for run_id in ('', '431'):
+        environment = tmp_path / ('job-environment-' + (run_id or 'current'))
+        subprocess.run(
+            [environment_bash(), '-e', '-c', selector],
+            env={**os.environ, 'GITHUB_ENV': str(environment), 'PRODUCER_RUN_ID': run_id},
+            check=True,
+            capture_output=True,
+            timeout=5,
+        )
+        expected = 'EDI_NATIVE_ARTIFACT=1\n'
+        if run_id:
+            expected += 'EDI_NATIVE_PRODUCER_RUN_ID=431\n'
+        assert environment.read_text() == expected, (
+            'The action selects artifact mode and forwards only the explicitly addressed producer'
+        )
+    for section, key, replacement in (
+        ('download', 'github-token', '${{ secrets.OTHER_TOKEN }}'),
+        ('selector', 'PRODUCER_RUN_ID', '${{ github.run_id }}'),
+        ('input', 'default', '431'),
+    ):
+        changed = copy.deepcopy(action)
+        download, select = changed['runs']['steps']
+        spelling = {
+            'download': download['with'],
+            'selector': select['env'],
+            'input': changed['inputs']['run-id'],
+        }
+        spelling[section][key] = replacement
+        with pytest.raises(AssertionError):
+            native_action_boundary(changed)
     mutant = copy.deepcopy(action)
     download = mutant['runs']['steps'][0]
     if damage == 'cache':

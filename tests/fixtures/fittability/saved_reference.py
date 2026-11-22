@@ -16,6 +16,9 @@ from pathlib import Path
 from tests.fixtures.metadata_transition.retired_source_fields import saved_absorption
 from tests.fixtures.metadata_transition.task_inputs import saved_analysis, saved_experiment
 from tests.fixtures.project_categories.historical_bytes import native_edi_bytes, prior_digest
+from tests.fixtures.stop_defaults import example_inputs
+
+ROOT = Path(__file__).resolve().parents[3]
 
 
 def staged(source, target, rule, *, link_data=False):
@@ -32,6 +35,10 @@ def staged(source, target, rule, *, link_data=False):
                 symlinks=True,
                 ignore=shutil.ignore_patterns('__pycache__'),
             ) if child.is_dir() else shutil.copy2(child, target / child.name)
+    analysis = target / 'analysis/analysis.edi'
+    if analysis.is_file() and source.is_relative_to(ROOT):
+        name = (source / 'analysis/analysis.edi').relative_to(ROOT).as_posix()
+        analysis.write_bytes(example_inputs.composed_bytes(name, analysis.read_bytes()))
     record = (
         (source / 'project.edi').read_text()
         if (source / 'project.edi').is_file()
@@ -42,6 +49,22 @@ def staged(source, target, rule, *, link_data=False):
         record + '\n_su_format.rule ' + rule + '\n', encoding='utf-8', newline='\n'
     )
     return target
+
+
+def historical_project_title(data, expected, source):
+    source_row = Path(source) / 'project.edi'
+    source_text = source_row.read_bytes() if source_row.is_file() else b''
+    title = re.search(rb'(?im)^_metadata\.title(?:[ \t]+([^\r\n]+))?\r?$', source_text)
+    if title and (title[1] is None or title[1].strip() not in {b'?', b'.'}):
+        return data
+    unspecified = rb'(?m)^(_metadata\.title[ \t]+)\?$'
+    assert len(re.findall(unspecified, data)) == 1, (
+        'An input without a title saves exactly one missing title marker (ADR-0017)'
+    )
+    if prior_digest(data, expected, name='project.edi') == expected:
+        return data
+    # The old default is restored only for comparison with the complete immutable record hash.
+    return re.sub(unspecified, rb'\1"Untitled Project"', data, count=1)
 
 
 def fingerprints(root, *, order_reference=None, source=None):
@@ -59,6 +82,8 @@ def fingerprints(root, *, order_reference=None, source=None):
                 rb'\1<CLOCK>',
                 content,
             )
+            if order_reference is not None and source is not None:
+                content = historical_project_title(content, order_reference[relative], source)
         if relative == 'analysis/analysis.edi':
             if order_reference is not None:
                 assert source is not None, 'Saved-byte stop-rule checks require the original input'

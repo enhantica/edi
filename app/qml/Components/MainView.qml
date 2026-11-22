@@ -64,6 +64,26 @@ EaComponents.MainContent {
             showMainTab(ownTab);
     }
 
+    // A tab hidden or disabled while it is current (Stacked, Map or Evolution once the scan or the joint fit ends, Meas
+    // vs calc for an experiment without both values) leaves the bar on the page's own tab rather than on a page with
+    // nothing to show; the user's pick comes back with the tab.
+    readonly property bool currentHidden: {
+        const tab = bar && currentKey !== "" ? bar.itemAt(tabIndex) : null;
+        return tab !== null && (!tab.visible || !tab.enabled);
+    }
+    // Moved after the change has settled, never inside it: switching the tab from this handler re-evaluated
+    // currentHidden while it was still notifying (a binding loop), and the bar and the pages moved under each other.
+    onCurrentHiddenChanged: {
+        if (currentHidden)
+            Qt.callLater(leaveHiddenTab);
+    }
+    function leaveHiddenTab() {
+        if (!currentHidden || tabIndex === ownTab || !available(defaultKey))
+            return;
+        pickPending = currentKey === chosenKey;
+        showMainTab(ownTab);
+    }
+
     // The tab bar, reached from its first tab (the base names it nowhere).
     readonly property var bar: structureTab.TabBar.tabBar
     readonly property int tabIndex: bar ? bar.currentIndex : 0
@@ -91,11 +111,17 @@ EaComponents.MainContent {
     // loading): the page opens on its own tab and moves to the pick once it is, unless the user picked another.
     property bool pickPending: false
     readonly property bool pickReady: pickPending && available(chosenKey)
+    // Taken after the change has settled: clearing pickPending inside this handler re-evaluated pickReady while it was
+    // still notifying (a binding loop, logged before the owner's crash of 2026-11-19).
     onPickReadyChanged: {
-        if (pickReady) {
-            pickPending = false;
-            showMainTab(tabOf(chosenKey));
-        }
+        if (pickReady)
+            Qt.callLater(takePick);
+    }
+    function takePick() {
+        if (!pickReady)
+            return;
+        pickPending = false;
+        showMainTab(tabOf(chosenKey));
     }
     onProjectChanged: {
         ownTabOpened = false;
@@ -240,17 +266,18 @@ EaComponents.MainContent {
 
                 objectName: "singleCrystal.measCalc"
                 anchors.fill: parent
-                visible: measCalcTab.singleCrystal
+                // Nothing of an experiment without both values is drawn, not even the previous experiment's points.
+                visible: measCalcTab.singleCrystal && measCalcTab.available
                 comparison: true
                 experiment: measCalcTab.singleCrystal ? measCalcTab.experiment : null
                 project: view.project
-                shown: measCalcTab.shown && measCalcTab.singleCrystal
+                shown: measCalcTab.shown && measCalcTab.singleCrystal && measCalcTab.available
             }
             MeasCalcChart {
                 id: measCalcPowder
 
                 anchors.fill: parent
-                visible: !measCalcTab.singleCrystal
+                visible: !measCalcTab.singleCrystal && measCalcTab.available
                 experiment: measCalcTab.singleCrystal ? null : measCalcTab.experiment
                 shown: measCalcTab.shown && !measCalcTab.singleCrystal && measCalcTab.available
             }
@@ -340,7 +367,7 @@ EaComponents.MainContent {
     SaveImageButton {
         id: saveImage
 
-        readonly property Item source: ({
+        readonly property var source: ({
                 "structure": view.hasStructures ? structureView.imageItem : null,
                 "pattern": view.hasExperiments ? chartView.imageItem : null,
                 "meascalc": measCalcTab.available ? (measCalcTab.singleCrystal ? measCalcCrystal.imageItem : measCalcPowder.imageItem) : null,

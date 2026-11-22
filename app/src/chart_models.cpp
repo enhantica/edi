@@ -1,7 +1,29 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "chart_models.hpp"
 
+#include <QEvent>
+
 namespace edi_app {
+
+void ChartHoverGuard::setView(QQuickItem* view) {
+    if (view_ == view) return;
+    if (view_) view_->removeEventFilter(this);
+    view_ = view;
+    if (view_) {
+        view_->setAcceptHoverEvents(false);
+        view_->installEventFilter(this);
+    }
+    emit viewChanged();
+}
+
+bool ChartHoverGuard::eventFilter(QObject* watched, QEvent* event) {
+    if (watched == view_ && (event->type() == QEvent::HoverEnter || event->type() == QEvent::HoverMove ||
+                             event->type() == QEvent::HoverLeave)) {
+        event->ignore();
+        return true;
+    }
+    return QObject::eventFilter(watched, event);
+}
 
 ChartLegendModel::ChartLegendModel(QObject* parent) : QAbstractListModel(parent) {}
 

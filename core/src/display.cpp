@@ -503,6 +503,13 @@ double display_step(std::string_view uid, double value, std::string_view variant
     return crysta::display_step(value, format_of(found, variant));
 }
 
+std::string statistic_text(std::string_view uid, std::optional<double> value, std::string_view variant) {
+    if (!value || !std::isfinite(*value)) return std::string(kUndefinedValue);
+    const std::string units = units_label(uid, variant);
+    const std::string number = shown_text(uid, *value, variant);
+    return units.empty() ? number : number + " " + units;
+}
+
 std::pair<double, double> slider_limits(double value, double half_width, double step, double lower, double upper) {
     double unit = std::pow(10.0, std::floor(std::log10(half_width)));
     if (step > unit) unit = step;

@@ -608,7 +608,7 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     steps_.push_back({"t17-75-free-header", start + open_example("pd-neut-cwl_lbco-hrpt")
                                                 + QStringList{analysis, basic, "parameters.freeHeader"}});
     steps_.push_back({"t17-76-free-header-fixed", {"parameters.freeHeader.fixed"}});
-    // Reset to the initial state lands on the Project page (owner, 2026-10-11).
+    // Clear returns to Home with no project (ADR-0017 §13).
     steps_.push_back({"t17-77-reset", {"appBar.button.reset"}});
     // 8: a created experiment's Load data… button, left-aligned under Data file.
     steps_.push_back({"t17-24-load-data", start + open_example("pd-neut-cwl_cosio-d20")
@@ -672,6 +672,17 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
         steps_.push_back({"mainview-5-analysis-correlations", {"mainArea.tab.correlations"}});
         steps_.push_back({"mainview-6-structure-keeps-correlations", {"appBar.tab.structure", basic}});
         steps_.push_back({"mainview-7-dark", {"theme:dark", "appBar.tab.analysis", "mainArea.tab.pattern"}});
+    }
+    // The Load and Save project menus with an imported project open, the file EDI_DEMO_IMPORT_PROJECT names (a .gpx,
+    // .gsas.json or .pcr). Run only when asked (`--demo-only importsave-`).
+    if (only.startsWith(QLatin1String("importsave-"))) {
+        const QString imported = "open-project:" + qEnvironmentVariable("EDI_DEMO_IMPORT_PROJECT");
+        steps_.push_back({"importsave-1-group", QStringList{"resize:1480x800", "theme:light"} + start +
+                                                    QStringList{imported, "appBar.tab.project", basic,
+                                                                "reveal:group.getStarted", "expand:group.getStarted"}});
+        steps_.push_back({"importsave-2-load-menu", {"project.load"}});
+        steps_.push_back({"importsave-3-save-menu", {"key:Escape", "project.saveAs"}});
+        steps_.push_back({"importsave-4-save-menu-dark", {"key:Escape", "theme:dark", "project.saveAs"}});
     }
     // The one main view on a new empty project, its first visits and its kept tab, and after an example loads; then
     // frames taken while the pages slide,
@@ -876,12 +887,12 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     // (`--demo-only collapsed-`).
     if (only.startsWith(QLatin1String("collapsed-"))) {
         const QString root = QString::fromUtf8(EDI_CLI_PROJECTS_DIR) + "/";
-        const QString structure = QStringLiteral("appBar.tab.structure");
+        const QString structureTab = QStringLiteral("appBar.tab.structure");
         // The tables get their rows while their groups are folded and off screen; only then are the groups opened.
         steps_.push_back({"collapsed-0-elsewhere", {"resize:1480x800", "open-project:" + root + "pd-neut-cwl_cosio-d20_2k/project",
-                                                    structure, extras, "appBar.tab.experiment", "appBar.tab.analysis",
+                                                    structureTab, extras, "appBar.tab.experiment", "appBar.tab.analysis",
                                                     "appBar.tab.project"}});
-        steps_.push_back({"collapsed-1-symop", {structure, extras, "expand:group.space_group_symop",
+        steps_.push_back({"collapsed-1-symop", {structureTab, extras, "expand:group.space_group_symop",
                                                 "assert-table:generated.space_group_symop.list"}});
         steps_.push_back({"collapsed-2-atoms", {"expand:group.expanded_atom_site", "reveal:group.expanded_atom_site",
                                                 "assert-table:generated.expanded_atom_site.list"}});
@@ -2360,7 +2371,7 @@ bool DemoDriver::perform(const QString& action) {
         for (const QString& name : folder.entryList(QDir::Files, QDir::Name)) {
             files.append(QUrl::fromLocalFile(folder.filePath(name)));
         }
-        QQuickItem* group = find(QStringLiteral("experiments.group"), false);
+        QQuickItem* group = find(QStringLiteral("group.experiments"), false);
         if (group == nullptr || files.isEmpty() ||
             !QMetaObject::invokeMethod(group, "askSeries", Q_ARG(QVariant, QVariant(files)))) {
             fail(QStringLiteral("step %1: no series dialog for %2").arg(steps_[current_].image, folder.path()));

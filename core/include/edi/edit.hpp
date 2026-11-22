@@ -882,12 +882,24 @@ class Edit {
     static Edit magnetic_space_group(Structure& structure, std::string number_bns) {
         return Edit([&structure, number_bns = std::move(number_bns)] { set_magnetic_space_group(structure, number_bns); });
     }
+    // Crystal or Magnetic (set_structure_magnetic).
+    static Edit structure_magnetic(Structure& structure, bool magnetic) {
+        return Edit([&structure, magnetic] { set_structure_magnetic(structure, magnetic); });
+    }
+    // The transform to the BNS standard (set_magnetic_setting).
+    static Edit magnetic_setting(Structure& structure, std::string transform) {
+        return Edit([&structure, transform = std::move(transform)] { set_magnetic_setting(structure, transform); });
+    }
     // The propagation vectors, checked as a whole (set_propagation_vectors).
     static Edit propagation_vectors(Structure& structure, std::vector<std::pair<std::string, std::string>> rows) {
         return Edit([&structure, rows = std::move(rows)] { set_propagation_vectors(structure, rows); });
     }
     // Whether a site carries a magnetic moment (edi ADR-0078): marking it adds its moment row, all three
     // components zero; unmarking removes the row.
+    // A site's element (set_site_type): its moment and the magnetic form factors follow it.
+    static Edit site_type(Structure& structure, AtomSite& site, std::string type_symbol) {
+        return Edit([&structure, &site, type_symbol = std::move(type_symbol)] { set_site_type(structure, site, type_symbol); });
+    }
     static Edit moment_site(Structure& structure, const AtomSite& site, bool magnetic) {
         return Edit([&structure, &site, magnetic] {
             std::optional<std::size_t> found;
@@ -911,6 +923,7 @@ class Edit {
         return Edit([&structure, type_symbol = std::move(type_symbol), ion = std::move(ion)] {
             MagneticFormFactor& row = form_factor_row(structure, type_symbol);
             row.ion = ion;
+            fix_unusable_coefficients(structure, type_symbol);
             drop_default_form_factor(structure, type_symbol);
         });
     }
@@ -922,6 +935,8 @@ class Edit {
                                             "' is none of j0, dipole and beyond_dipole");
             }
             form_factor_row(structure, type_symbol).approximation = approximation;
+            // An unused coefficient keeps its value but no longer fits, in the same undo step.
+            fix_unusable_coefficients(structure, type_symbol);
             drop_default_form_factor(structure, type_symbol);
         });
     }
@@ -1201,6 +1216,7 @@ class Edit {
     // `scaled`, when given, receives what the factor did (applied, a background point started, the peaks' overlap).
     static Edit rescaled(Project& project, const ExperimentBase& experiment, Edit change,
                          const std::shared_ptr<CommonScaleOutcome>& scaled = nullptr) {
+        // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks): the std::function owns the lambda; the analyzer does not follow libc++'s release of it
         return Edit(ResultOperation{}, [&project, &experiment, change = std::move(change), scaled] {
             AppliedResult applied = change.apply_result();
             const ExperimentBase* target = applied.experiment != nullptr ? applied.experiment : &experiment;
@@ -1292,6 +1308,7 @@ class Edit {
     // (indices into `replacement`'s experiments), the first the load's target, as members of the project after it.
     static Edit replace_project(Project& project, Project replacement, const std::vector<std::size_t>& produced) {
         auto next = std::make_shared<const Project>(std::move(replacement));
+        // NOLINTNEXTLINE(bugprone-exception-escape): only libc++'s container growth past max_size() raises length_error here
         return Edit(ResultOperation{}, [&project, next, produced] {
             replace_into(project, Project(*next));
             AppliedResult result;

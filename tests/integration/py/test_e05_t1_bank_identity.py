@@ -141,7 +141,12 @@ def test_named_bank_oracle_refuses_field_identity_escapes(mutation, tmp_path):
         rows[0][1] = str(int(rows[0][1]) + 1)
     path = tmp_path / 'analysis.edi'
     path.write_text(bank_text(rows, tags))
-    with pytest.raises(AssertionError, match=' gate 8'):
+    expected = (
+        'Every bank result must retain its declared metric columns'
+        if mutation.startswith('renamed-')
+        else ' gate 8'
+    )
+    with pytest.raises(AssertionError, match=expected):
         check_banks(path, REFERENCE)
 
 

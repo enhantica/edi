@@ -12,6 +12,7 @@ import pytest
 import yaml
 
 from tests.fixtures.metadata_transition import pin_sources as source
+from tests.fixtures.stop_defaults import retention
 
 ROOT = Path(__file__).resolve().parents[3]
 
@@ -25,6 +26,10 @@ def test_pin_annotation_retains_its_exact_committed_source_document(name, monkey
     assert source.previous_bytes(name, data) == before, (
         'Pin annotation retains its exact committed source document.'
     )
+    if name == retention.COSIO_D20_2K:
+        assert hashlib.sha256(data).hexdigest() == retention.COSIO_REPIN_SHA256, (
+            'The CoSiO D20 2 K regression pin retains the exact 69e1206b document'
+        )
     metadata = json.loads(data)['source']['pins']
     assert metadata == row['metadata'], (
         'Pin annotation retains its exact committed source document.'

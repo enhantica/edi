@@ -40,8 +40,6 @@ Item {
     }
 
     onMeasureChanged: Qt.callLater(lines.layout)
-    // Nothing left to show: the popup closes rather than stay open empty.
-    onOverflowChanged: if (overflow.length === 0) morePopup.close()
     Component.onCompleted: Qt.callLater(lines.collect)
 
     ChartToolButton {
@@ -51,10 +49,8 @@ Item {
         visible: false
         fontIcon: "ellipsis-h"
         toolTip: qsTr("More chart options")
-        // By `visible`, not `opened`: a press on this button already closes the popup (a press outside it), and
-        // `opened` turns false as the closing starts, so the click that follows opened it again.
-        checked: morePopup.visible
-        onClicked: morePopup.visible ? morePopup.close() : morePopup.open()
+        checked: morePopup.opened
+        onClicked: morePopup.opened ? morePopup.close() : morePopup.open()
     }
     // The app's popup (EaElements.Menu: its frame and its open and close animation) in the chart's background colour,
     // holding one row of the controls that do not fit, as they look in the toolbar, each with its tooltip (the owner,
@@ -80,62 +76,61 @@ Item {
 
             spacing: lines.spacing
 
-            // One copy per movable control, made once and shown while its control is in the popup: copies made and
-            // destroyed on every resize left their tooltips binding to deleted controls (QML warnings).
             Repeater {
-                model: lines.units.filter(unit => unit.movable)
+                model: lines.overflow
 
                 delegate: Item {
                     id: entry
 
                     required property var modelData
-                    readonly property var control: modelData.item
-                    readonly property bool box: control?.closedTexts !== undefined
+                    readonly property bool box: modelData.closedTexts !== undefined
                     // A colour map's box keeps its gradients in the popup too: copied as itself (the owner, 2026-11-17).
-                    readonly property bool colourMap: box && control?.maps !== undefined
+                    readonly property bool colourMap: box && modelData.maps !== undefined
 
-                    visible: !!control && lines.overflow.indexOf(control) >= 0
                     width: colourMap ? mapCopy.width : box ? boxCopy.width : buttonCopy.width
                     height: AppSizes.toolbarControlSize
 
                     ColourMapComboBox {
                         id: mapCopy
 
-                        objectName: entry.colourMap ? entry.control.objectName + ".overflow" : ""
+                        objectName: entry.colourMap ? entry.modelData.objectName + ".overflow" : ""
                         visible: entry.colourMap
-                        enabled: entry.colourMap && entry.control.enabled
-                        toolTip: entry.colourMap ? entry.control.toolTip ?? "" : ""
-                        maps: entry.colourMap ? entry.control.maps : []
-                        direction: entry.colourMap ? entry.control.direction : "auto"
-                        chartBackground: entry.colourMap ? entry.control.chartBackground : "white"
-                        dark: entry.colourMap && entry.control.dark
-                        shownIndex: entry.colourMap ? entry.control.currentIndex : 0
-                        onActivated: index => entry.control.activated(index)
+                        enabled: entry.colourMap && entry.modelData.enabled
+                        toolTip: entry.colourMap ? entry.modelData.toolTip ?? "" : ""
+                        maps: entry.colourMap ? entry.modelData.maps : []
+                        direction: entry.colourMap ? entry.modelData.direction : "auto"
+                        chartBackground: entry.colourMap ? entry.modelData.chartBackground : "white"
+                        dark: entry.colourMap && entry.modelData.dark
+                        fitShown: entry.colourMap && entry.modelData.fitShown
+                        shownIndex: entry.colourMap ? entry.modelData.currentIndex : 0
+                        onActivated: index => entry.modelData.activated(index)
                     }
                     ToolbarComboBox {
                         id: boxCopy
 
-                        objectName: entry.box && !entry.colourMap ? entry.control?.objectName + ".overflow" : ""
+                        objectName: entry.box && !entry.colourMap ? entry.modelData.objectName + ".overflow" : ""
                         visible: entry.box && !entry.colourMap
-                        enabled: entry.control?.enabled ?? false
-                        toolTip: entry.control?.toolTip ?? ""
-                        model: entry.box ? entry.control.model : []
-                        closedTexts: entry.box ? entry.control.closedTexts : []
-                        closedOnly: entry.box && entry.control.closedOnly
-                        shownIndex: entry.box ? entry.control.currentIndex : 0
-                        onActivated: index => entry.control?.activated(index)
+                        enabled: entry.modelData.enabled
+                        toolTip: entry.modelData.toolTip ?? ""
+                        model: entry.box ? entry.modelData.model : []
+                        closedTexts: entry.box ? entry.modelData.closedTexts : []
+                        closedOnly: entry.box && entry.modelData.closedOnly
+                        fitShown: entry.box && entry.modelData.fitShown
+                        shownIndex: entry.box ? entry.modelData.currentIndex : 0
+                        onActivated: index => entry.modelData.activated(index)
                     }
                     ChartToolButton {
                         id: buttonCopy
 
-                        objectName: entry.box ? "" : entry.control?.objectName + ".overflow"
+                        objectName: entry.box ? "" : entry.modelData.objectName + ".overflow"
                         visible: !entry.box
-                        enabled: entry.control?.enabled ?? false
-                        available: entry.control?.available ?? true
-                        fontIcon: entry.control?.fontIcon ?? ""
-                        toolTip: entry.control?.toolTip ?? ""
-                        checked: entry.control?.checked ?? false
-                        onClicked: entry.control?.clicked()
+                        enabled: entry.modelData.enabled
+                        available: entry.modelData.available ?? true
+                        fontIcon: entry.modelData.fontIcon ?? ""
+                        toolTip: entry.modelData.toolTip ?? ""
+                        checked: entry.modelData.checked ?? false
+                        alert: entry.modelData.alert ?? false
+                        onClicked: entry.modelData.clicked()
 
                         // A button drawn with a letter (view along a, b, c) has no icon: its letter, in its colour.
                         EaElements.Label {
@@ -144,8 +139,8 @@ Item {
                             font.family: EaStyle.Fonts.ptSansBold.name
                             font.bold: true
                             font.pixelSize: EaStyle.Sizes.fontPixelSize * 1.15
-                            color: entry.control?.letterColor ?? EaStyle.Colors.themeForeground
-                            text: String(entry.control?.objectName).split(".").pop()
+                            color: entry.modelData.letterColor ?? EaStyle.Colors.themeForeground
+                            text: String(entry.modelData.objectName).split(".").pop()
                         }
                     }
                 }

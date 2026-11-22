@@ -52,9 +52,12 @@ CategoryPresentation category_presentation(const QString& id) {
     const QString icon = QString::fromStdString(edi::category_icon(key));
     // Extra's peak group holds only the cutoff, so it is not read as a second profile group.
     const QString extras_title = id == QStringLiteral("peak") ? QObject::tr("Peak cutoff") : QString();
+    // The magnetic space group's derived symbols, one CIF category with the BNS group but a group of their own on
+    // Extra (edi ADR-0078).
+    const bool symbols = id == QStringLiteral("space_group_magn_symbols");
     return {place.tier,
-            QString::fromStdString(edi::category_label(key)),
-            icon.isEmpty() ? QStringLiteral("question") : icon,
+            symbols ? QObject::tr("Magnetic group symbols") : QString::fromStdString(edi::category_label(key)),
+            symbols ? QStringLiteral("hashtag") : icon.isEmpty() ? QStringLiteral("question") : icon,
             place.extras_part,
             QString::fromStdString(edi::category_tooltip(key)),
             place.needs_data,
@@ -68,9 +71,8 @@ namespace {
 // shown elsewhere has no sidebar group: the experiment type is edited in the Experiments explorer, and a
 // structure's saved view (`_structure_view`) in Extra's Appearance group.
 std::vector<const edi::Category*> presentation_order(const std::vector<edi::Category>& categories) {
-    // The parent group shows in the Magnetic space group group when it differs from the space group (edi
-    // ADR-0078).
-    static const char* const kShownElsewhere[] = {"experiment_type", "structure_view", "parent_space_group"};
+    // A Magnetic structure's parent space group has its own group on Extra (edi ADR-0078).
+    static const char* const kShownElsewhere[] = {"experiment_type", "structure_view"};
     std::vector<const edi::Category*> ordered;
     for (const edi::Category& category : categories) {
         if (std::find(std::begin(kShownElsewhere), std::end(kShownElsewhere), category.id) == std::end(kShownElsewhere)) {

@@ -45,8 +45,8 @@ class StructureViewOptions : public QObject {
     Q_PROPERTY(edi_app::OptionListModel* momentViewOptions READ momentViewOptions CONSTANT)
     // How the arrows are coloured — "atom", "greyed" or "single" — the app's preference, not saved with a project.
     Q_PROPERTY(QString momentColours READ momentColours WRITE setMomentColours NOTIFY momentColoursChanged)
-    // Coordination polyhedra: shown, coloured "atom" (the centre's colour) or "grey", and their opacity in [0, 1]. Kept
-    // for the session: the structure file has no item for them yet.
+    // Coordination polyhedra: shown, coloured "atom" (the centre's colour) or "grey", and their opacity in [0, 1]. Saved
+    // with the structure as each has a `_structure_view` item in crysta's dictionary, kept for the session until then.
     Q_PROPERTY(bool polyhedra READ polyhedra WRITE setPolyhedra NOTIFY polyhedraChanged)
     Q_PROPERTY(QString polyhedraColour READ polyhedraColour WRITE setPolyhedraColour NOTIFY polyhedraColourChanged)
     Q_PROPERTY(double polyhedraOpacity READ polyhedraOpacity WRITE setPolyhedraOpacity NOTIFY polyhedraOpacityChanged)
@@ -56,9 +56,9 @@ class StructureViewOptions : public QObject {
     Q_PROPERTY(edi_app::OptionListModel* polyhedraExtentOptions READ polyhedraExtentOptions CONSTANT)
     // The polyhedra's centre and corner atoms, element symbols separated by commas or spaces ("" is the default:
     // cations as centres, anions as corners), and the longest centre-corner distance in Angstrom (0: the bond cut-offs).
-    Q_PROPERTY(QString polyhedraCentres READ polyhedraCentres WRITE setPolyhedraCentres NOTIFY polyhedraDefinitionChanged)
-    Q_PROPERTY(QString polyhedraCorners READ polyhedraCorners WRITE setPolyhedraCorners NOTIFY polyhedraDefinitionChanged)
-    Q_PROPERTY(double polyhedraMaxDistance READ polyhedraMaxDistance WRITE setPolyhedraMaxDistance NOTIFY polyhedraDefinitionChanged)
+    Q_PROPERTY(QString polyhedraCentres READ polyhedraCentres WRITE setPolyhedraCentres NOTIFY polyhedraCentresChanged)
+    Q_PROPERTY(QString polyhedraCorners READ polyhedraCorners WRITE setPolyhedraCorners NOTIFY polyhedraCornersChanged)
+    Q_PROPERTY(double polyhedraMaxDistance READ polyhedraMaxDistance WRITE setPolyhedraMaxDistance NOTIFY polyhedraMaxDistanceChanged)
     // The atom views diffraction-lib offers, for the Appearance group's selector.
     Q_PROPERTY(edi_app::OptionListModel* atomViewOptions READ atomViewOptions CONSTANT)
     Q_PROPERTY(edi_app::OptionListModel* momentFormOptions READ momentFormOptions CONSTANT)
@@ -141,7 +141,9 @@ class StructureViewOptions : public QObject {
     void polyhedraChanged();
     void polyhedraColourChanged();
     void polyhedraExtentChanged();
-    void polyhedraDefinitionChanged();
+    void polyhedraCentresChanged();
+    void polyhedraCornersChanged();
+    void polyhedraMaxDistanceChanged();
     void polyhedraOpacityChanged();  // the material's alone: nothing is presented again
     // An option a structure saves changed: what the project keeps.
     void changed();
@@ -150,10 +152,8 @@ class StructureViewOptions : public QObject {
 
    private:
     template <class T>
-    void assign(T& field, T value, void (StructureViewOptions::*notify)());
+    void assign(T& field, const T& value, void (StructureViewOptions::*notify)());
     // The same for an option kept for the session only: drawn, never written to the structure.
-    template <class T>
-    void assignSession(T& field, T value, void (StructureViewOptions::*notify)());
     edi::SceneOptions options_;
     // Whether the structure states show_moments, so a structure that does not keeps its bytes.
     bool moments_declared_ = false;

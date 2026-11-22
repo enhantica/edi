@@ -157,7 +157,7 @@ int main(int argc, char** argv) {
 #endif
         }
     });
-    QObject::connect(&process, qOverload<int, QProcess::ExitStatus>(&QProcess::finished), &app, [&](int code, QProcess::ExitStatus status) {
+    QObject::connect(&process, qOverload<int, QProcess::ExitStatus>(&QProcess::finished), &app, [&]([[maybe_unused]] int code, [[maybe_unused]] QProcess::ExitStatus status) {
         forward(process.readAllStandardOutput(), stdout);
         forward(process.readAllStandardError(), stderr);
 #ifdef Q_OS_WIN

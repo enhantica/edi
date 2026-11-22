@@ -5,6 +5,7 @@ import argparse
 import datetime
 import json
 import re
+import sys
 from operator import itemgetter
 from pathlib import Path
 
@@ -23,6 +24,28 @@ GROUPS = {
     '[scope] maintenance': 'Changed',
     '[scope] documentation': 'Changed',
 }
+
+
+BOT_LABELS = frozenset({'[bot] release', '[bot] backmerge'})
+
+
+def label_problem(labels: set[str]) -> str | None:
+    """Why a pull request's labels cannot make its release note, or None when they can.
+
+    One rule for the release notes and the pull-request label check: a bot release or backmerge
+    needs nothing else; any other pull request needs one scope label and an interface label.
+    """
+    if labels & BOT_LABELS:
+        return None
+    if len(labels & GROUPS.keys()) != 1:
+        return 'needs exactly one release scope label'
+    if not any(
+        label.removeprefix(INTERFACE_LABEL_PREFIX) in INTERFACE_IDS
+        for label in labels
+        if label.startswith(INTERFACE_LABEL_PREFIX)
+    ):
+        return 'needs at least one release interface label'
+    return None
 
 
 def version_key(version: str) -> tuple[int, int, int]:
@@ -204,7 +227,7 @@ def release_plan(
         labels = {
             label['name'] if isinstance(label, dict) else label for label in request['labels']
         }
-        if labels.intersection({'[bot] release', '[bot] backmerge'}):
+        if labels & BOT_LABELS:
             continue
         scopes = labels.intersection(GROUPS)
         if len(scopes) != 1:
@@ -273,7 +296,24 @@ def markdown_notes(release: dict) -> str:
     return '\n'.join(lines)
 
 
+def check_labels(names: list[str]) -> int:
+    """The pull-request label check: print the problem and return 1, or return 0."""
+    problem = label_problem(set(names))
+    if problem:
+        scopes = ', '.join(f'`{name}`' for name in GROUPS)
+        interfaces = ', '.join(f'`{INTERFACE_LABEL_PREFIX}{short}`' for short in INTERFACE_IDS)
+        print(
+            f'This pull request {problem}: one of {scopes}, and one or more of {interfaces} '
+            '(or `[bot] release`).'
+        )
+        return 1
+    print('Release labels: ' + ', '.join(sorted(names)))
+    return 0
+
+
 def main() -> None:
+    if sys.argv[1:2] == ['--check-labels']:
+        raise SystemExit(check_labels(json.loads(sys.argv[2])))
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--pull-requests', type=Path, required=True)
     parser.add_argument('--history', type=Path, required=True)

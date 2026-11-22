@@ -227,27 +227,17 @@ try {
       'The accessible fit action must match the actual named status-bar button label');
     return node;
   };
-  const click = async (regex, role, nativeObjectName, containerName) => {
+  const click = async (regex, role, nativeObjectName, containerName, waitReady) => {
     activeAction = `click ${regex.source}`;
     await restoreCanvasViewport(evaluate);
     const projectAction=/Save project as/.test(regex.source)?'project.saveAs':
-      /Open project/.test(regex.source)?'project.open':/Create a new project/.test(regex.source)?'project.create':null;
+      /Load project/.test(regex.source)?'project.load':/Create a new project/.test(regex.source)?'project.create':null;
     if(projectAction) {
       const shown=await evaluate(`(() => {const group=window.ediControlGeometry('group.getStarted');
         const item=window.ediControlGeometry(${JSON.stringify(projectAction)});
         return item.x>=group.x && item.y>=group.y && item.x+item.width<=group.x+group.width && item.y+item.height<=group.y+group.height;})()`);
       if(!shown)await click(/Get started$/,'button');
       nativeObjectName=projectAction;containerName='group.getStarted';
-    }
-    if (role==='radio' && (regex.test('Folder') || regex.test('Zip archive'))) {
-      const opening=await evaluate(`(() => {try {return window.ediControlGeometry('open.folder').visible;}
-        catch(error) {if (/no visible item|no item is named/.test(error.message)) return false; throw error;}})()`);
-      const target=(opening?'open.':'saveAs.')+(regex.test('Folder')?'folder':'zip');
-      await settleRenderedPage();
-      const point=await waitNative(target);
-      console.log(`browser ${mode}: native choice ${target}, pointer ${point.x},${point.y}`);
-      for(const type of ['mousePressed','mouseReleased']) {await send('Input.dispatchMouseEvent',{type,...point,button:'left',clickCount:1});await frame();}
-      return;
     }
     if(regex.source==='^OK$') {
       // The default shortcut activates only after the dialog's entry transition.
@@ -262,7 +252,7 @@ try {
     assert(node.backendDOMNodeId, 'UI actions require a real browser-backed accessible control');
     if (node.role?.value === 'tab' && /^(Home|Project|Structure|Experiment|Analysis|Report)$/.test(node.name?.value || ''))
       nativeObjectName ||= `appBar.tab.${node.name.value.toLowerCase()}`;
-    const names={'Open project…':'project.open','Save project as…':'project.saveAs','Zip archive':'saveAs.zip'};
+    const names={'Load project':'project.load','Save project as':'project.saveAs'};
     nativeObjectName ||= names[node.name?.value];
     let x, y;
     const groupName=/(?:^| )Examples$/.test(node.name?.value||'')?'group.examples':
@@ -296,8 +286,8 @@ try {
       await frame();
     }
     await frame();
-    if(projectAction==='project.open' || projectAction==='project.create')
-      await waitGuardedDialog(projectAction==='project.open'?'open.folder':'createProject.name');
+    if(projectAction==='project.create')
+      await waitGuardedDialog('createProject.name');
     if (node.role?.value === 'tab' && /^(?:Home|Project|Structure|Experiment|Analysis|Report)$/.test(node.name?.value || '')) {
       const deadline=Date.now()+45000;
       let selected=false;
@@ -311,7 +301,8 @@ try {
       } while (!selected && Date.now()<deadline);
       assert(selected,'page navigation must select the requested tab, not reuse labels from a hidden page');
     }
-    if (/^(?:Home|Project|Structure|Experiment|Analysis|Start)$/.test(node.name?.value || '') || /(?:Examples|Get started)$/.test(node.name?.value || '')) await settleRenderedPage();
+    if (waitReady) await waitReady();
+    else if (/^(?:Home|Project|Structure|Experiment|Analysis|Start)$/.test(node.name?.value || '') || /(?:Examples|Get started)$/.test(node.name?.value || '')) await settleRenderedPage();
 
   };
   const discardResetGuard = async () => {
@@ -579,9 +570,7 @@ try {
     const download = event('Browser.downloadProgress', item => item.state === 'completed');
     download.catch(()=>{});
     await click(/^Save project as/);
-    // The app's format choice precedes the browser download, including the fallback.
-    await click(/^Zip archive$/,'radio');
-    await click(/^OK$/,'button');
+    await click(/^As project zip(?:…|\.\.\.)?$/, 'menuitem', 'project.saveAs.zip');
     const completed=await download;
     const state=await waitForSaveSettled(evaluate,frame,before);
     await settleRenderedPage();
@@ -826,9 +815,8 @@ print(json.dumps(dict(name=name, analysis=analysis, scientific=scientific)))`, a
   await shot('empty-before-reopen');
   lastEvents.delete('Page.fileChooserOpened');
   const chooser = event('Page.fileChooserOpened');
-  await click(/^Open project(?:…|\.\.\.)?$/);
-  await waitNative('open.folder');
-  await click(/^Folder$/, 'radio'); await click(/^OK$/, 'button');
+  await click(/^Load project$/, 'button', 'project.load');
+  await click(/^Open project folder(?:…|\.\.\.)?$/, 'menuitem', 'project.load.folder');
   const opened = await chooser;
   await writeFile(join(output, `${mode}-reopen-picker.json`), JSON.stringify(opened,null,2));
   const picked = await send('Runtime.evaluate', {expression:'window.__e04FileInput'});
@@ -899,13 +887,15 @@ print(markers[0].parent)`, saved, reopened, reopenControl || 'normal'], { encodi
         functionDeclaration:'function() { this.click(); }',userGesture:true});
       await frame(); await settleRenderedPage();
     };
-    const beginPicker = async (regex, menu, action) => {
+    const beginPicker = async (regex, menu, action, menuLabel = /^Load\b/) => {
       lastEvents.delete('Page.fileChooserOpened');
       const opened=event('Page.fileChooserOpened');
-      if (menu) await click(/^Load\b/, 'button', menu);
-      await click(regex, menu ? 'menuitem' : 'button', action);
-      if (/Open project/.test(regex.source)) {
-        await waitNative('open.folder'); await click(/^Folder$/, 'radio'); await click(/^OK$/, 'button');
+      if (/Open project folder/.test(regex.source)) {
+        await click(/^Load project$/, 'button', 'project.load');
+        await click(regex, 'menuitem', 'project.load.folder');
+      } else {
+        if (menu) await click(menuLabel, 'button', menu);
+        await click(regex, menu ? 'menuitem' : 'button', action);
       }
       const chooser = await opened;
       await writeFile(join(output, `${mode}-request-picker.json`), JSON.stringify(chooser,null,2));
@@ -917,9 +907,12 @@ print(markers[0].parent)`, saved, reopened, reopenControl || 'normal'], { encodi
       assert(actual.result.value,'each request must cross the actual browser picker, not reuse an earlier input');
       return picker;
     };
+    const beginExperimentDataPicker = (regex, action) =>
+      beginPicker(regex, 'experiments.loadData.0', action, /^Load data…$/);
     let getStartedOpen = !fileRequestsOnly;
     const projectPage = async () => {
-      await click(/^Project$/);
+      const tab = await waitControlGeometry(evaluate, frame, 'appBar.tab.project');
+      if (!tab.checked) await click(/^Project$/, 'tab');
       await waitBrowser(`(() => {const tab=window.ediControlGeometry('appBar.tab.project');
         const group=window.ediControlGeometry('group.getStarted');
         return tab.checked===true && group.visible===true && group.enabled===true &&
@@ -933,7 +926,7 @@ print(markers[0].parent)`, saved, reopened, reopenControl || 'normal'], { encodi
     };
     const openFolder = async name => {
       await projectPage();
-      const input=await beginPicker(/^Open project(?:…|\.\.\.)?$/);
+      const input=await beginPicker(/^Open project folder(?:…|\.\.\.)?$/);
       await send('DOM.setFileInputFiles',{...input,files:[join(inputs,name)]});
       await waitName(name);
       await settleRenderedPage();
@@ -941,11 +934,10 @@ print(markers[0].parent)`, saved, reopened, reopenControl || 'normal'], { encodi
     const snapshot = async () => { await projectPage(); return inspectArchive(await saveArchive()); };
     const createEmpty = async name => {
       await projectPage(); await click(/^Create a new project$/, 'button', 'project.create');
-      await settleRenderedPage();
       const beforeInput = await restoreCanvasViewport(evaluate);
       await writeFile(join(output, `${mode}-create-${name}-before-input.json`), JSON.stringify(beforeInput,null,2));
       await shot(`create-${name}-before-input`);
-      const namePointer = await controlPointer(evaluate, 'createProject.name');
+      const namePointer = await waitNative('createProject.name');
       for (const type of ['mousePressed','mouseReleased']) await send('Input.dispatchMouseEvent',
         {type,...namePointer,button:'left',clickCount:1});
       for (const type of ['keyDown','keyUp']) await send('Input.dispatchKeyEvent',
@@ -954,17 +946,38 @@ print(markers[0].parent)`, saved, reopened, reopenControl || 'normal'], { encodi
         await send('Input.dispatchKeyEvent', {type:'keyDown',key,text:key});
         await send('Input.dispatchKeyEvent', {type:'keyUp',key});
       }
-      for (const type of ['keyDown','keyUp']) await send('Input.dispatchKeyEvent',
-        {type,key:'Enter',code:'Enter',windowsVirtualKeyCode:13});
-      await waitName(name);
-      await settleRenderedPage();
+      const editor = await waitControlGeometry(evaluate, frame, 'createProject.name');
+      assert.equal(editor.text, name, 'The real Create project editor receives the requested short name');
+      await restoreCanvasViewport(evaluate);
+      const accept = await waitNative('createProject.accept');
+      for (const type of ['mousePressed','mouseReleased']) {
+        await send('Input.dispatchMouseEvent', {type,...accept,button:'left',clickCount:1});
+        await frame();
+      }
+      await waitBrowser(`(() => {
+        const find = objectName => {
+          try { return window.ediControlGeometry(objectName); }
+          catch (error) {
+            if (/no visible item is named|no item is named/.test(error.message)) return null;
+            throw error;
+          }
+        };
+        const editor = find('createProject.name');
+        const project = find('project.name');
+        return editor?.visible !== true && project?.visible === true &&
+          project.text === ${JSON.stringify(name)};
+      })()`, 'The Create dialog must close and the Project page must show the newly created name');
       const viewport = await restoreCanvasViewport(evaluate);
       await writeFile(join(output, `${mode}-create-${name}-viewport.json`), JSON.stringify(viewport,null,2));
-      await settleRenderedPage();
     };
+    const openEmptyStructure = () =>
+      click(/^Structure$/, 'tab', 'appBar.tab.structure', undefined, async () => {
+        await waitAX(/Structures \(0\)/);
+        await waitControlGeometry(evaluate, frame, 'structures.create');
+      });
     const createWithStructure = async name => {
       await createEmpty(name);
-      await click(/^Structure$/); await waitAX(/Structures \(0\)/);
+      await openEmptyStructure();
       const structure=await beginPicker(/^From file…$/, 'structures.load', 'structures.load.file');
       await send('DOM.setFileInputFiles',{...structure,files:[join(inputs,'blocks/structure.edi')]});
       await waitAX(/Structures \(1\)/);
@@ -995,7 +1008,7 @@ print(markers[0].parent)`, saved, reopened, reopenControl || 'normal'], { encodi
 
     if (['all','native-picker'].includes(fileRequestCase)) {
       await createEmpty('routing_native_picker');
-      await click(/^Structure$/); await waitAX(/Structures \(0\)/);
+      await openEmptyStructure();
       const bytes=await readFile(join(inputs,'blocks/structure.edi'));
       const transport=await installNativePickerTransport(evaluate,bytes,'native_structure.edi');
       try {
@@ -1004,7 +1017,7 @@ print(markers[0].parent)`, saved, reopened, reopenControl || 'normal'], { encodi
         await waitBrowser('window.__e04NativePickerTransport.calls.length===1 && window.__e04NativePickerTransport.reads===1',
           'The real Qt Load action must call the native API and read its returned File handle');
         const capture=await transport.snapshot();
-        assertNativePickerCapture(capture,['.cif','.edi'],false);
+        assertNativePickerCapture(capture,['.cif','.mcif','.edi'],false);
         await waitAX(/Structures \(1\)/);
         await writeFile(join(output,`${mode}-qt-native-picker.json`),JSON.stringify({
           capture,loadedStructures:1,inputBytes:bytes.length,
@@ -1020,7 +1033,7 @@ print(markers[0].parent)`, saved, reopened, reopenControl || 'normal'], { encodi
       await click(/^Experiment$/); await waitAX(/Experiments \(0\)/);
       await click(/^Create experiment$/,'button','experiments.create');
       await waitAX(/Experiments \(1\)/);
-      await beginPicker(/^From folder…$/,'experiments.load','experiments.load.dataFolder');
+      await beginExperimentDataPicker(/^Folder as a series(?:…|\.\.\.)?$/, 'experiments.load.dataFolder');
       const picker=await evaluate(`(() => {const input=window.__e04FileInput;
         return {id:input.id,directory:input.webkitdirectory,multiple:input.multiple,
           connected:input.isConnected,request:input.__e04Picker};})()`);
@@ -1051,11 +1064,11 @@ print(markers[0].parent)`, saved, reopened, reopenControl || 'normal'], { encodi
     for (const newerFirst of [false,true]) {
     await openFolder('routing_initial');
     await projectPage(); await armReads();
-    const first=await beginPicker(/^Open project(?:…|\.\.\.)?$/);
+    const first=await beginPicker(/^Open project folder(?:…|\.\.\.)?$/);
     const firstId=await evaluate('window.__e04FileInput.__e04Picker');
     await send('DOM.setFileInputFiles',{...first,files:[join(inputs,'routing_a')]});
     await waitBrowser('window.__e04Reads.length===1','first folder read must be pending');
-    const second=await beginPicker(/^Open project(?:…|\.\.\.)?$/);
+    const second=await beginPicker(/^Open project folder(?:…|\.\.\.)?$/);
     const secondId=await evaluate('window.__e04FileInput.__e04Picker');
     await send('DOM.setFileInputFiles',{...second,files:[join(inputs,'routing_b')]});
     await waitBrowser('window.__e04Reads.length===2','both folder requests must overlap before either completion');
@@ -1079,7 +1092,7 @@ print(markers[0].parent)`, saved, reopened, reopenControl || 'normal'], { encodi
     if (fileRequestCase !== 'all') await openFolder('routing_b');
     // A folder read started for B must not replace a project opened while that read is pending.
     await armReads();
-    const obsolete=await beginPicker(/^Open project(?:…|\.\.\.)?$/);
+    const obsolete=await beginPicker(/^Open project folder(?:…|\.\.\.)?$/);
     const obsoleteId=await evaluate('window.__e04FileInput.__e04Picker');
     await send('DOM.setFileInputFiles',{...obsolete,files:[join(inputs,'routing_a')]});
     await waitBrowser('window.__e04Reads.length===1','replacement exercise must reach a pending upload');
@@ -1133,9 +1146,9 @@ print(markers[0].parent)`, saved, reopened, reopenControl || 'normal'], { encodi
     await click(/^Experiment$/); await waitAX(/Experiments \(0\)/);
     await click(/^Create experiment$/, 'button', 'experiments.create');
     await waitAX(/Experiments \(1\)/);
-    await beginPicker(/^From file…$/, 'experiments.load', 'experiments.load.dataFile');
+    await beginExperimentDataPicker(/^File…$/, 'experiments.load.dataFile');
     assert.equal(await evaluate('window.__e04FileInput.multiple'),true,
-      'Measured data From file must open a real multiple-file browser chooser for the selected experiment');
+      'Measured data File must open a real multiple-file browser chooser for the selected experiment');
     await evaluate("window.__e04FileInput.dispatchEvent(new Event('cancel')); true"); await frame();
     await waitAX(/Experiments \(1\)/);
     }

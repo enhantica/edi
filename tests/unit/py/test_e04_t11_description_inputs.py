@@ -6,7 +6,9 @@ from pathlib import Path
 import pytest
 
 from tests.fixtures.metadata_transition import retired_source_fields
+from tests.fixtures.stop_defaults import example_inputs
 from tests.fixtures.table_display import metadata_bytes
+from tests.fixtures.table_display.source_uncertainties import previous_bytes as source_bytes
 
 ROOT = Path(__file__).resolve().parents[3]
 BASE = 'docs/user/cli/pd-neut-cwl_lbco-hrpt_start-4/project/'
@@ -149,6 +151,24 @@ def test_full_experiment_source_guard_refuses_genuine_scientific_row_changes(
 
 
 def test_description_reversal_has_no_unnamed_path_or_metadata_wildcard():
+    import json  # noqa: PLC0415
+
+    rows = json.loads(
+        (ROOT / 'tests/fixtures/table_display/source-uncertainties.json').read_text()
+    )
+    for name, row in rows.items():
+        current = (ROOT / name).read_bytes()
+        assert hashlib.sha256(current).hexdigest() == row['after_sha256'], (
+            'Every admitted uncertainty edit binds the exact current source input'
+        )
+        assert hashlib.sha256(source_bytes(name, current)).hexdigest() == row['before_sha256'], (
+            'The uncertainty projection recovers the exact independent prior input'
+        )
+        with pytest.raises(AssertionError, match='entire independently archived source'):
+            source_bytes(name, current + b'# unowned scientific edit\n')
+        assert source_bytes('unlisted/' + name, current) == current, (
+            'Unlisted paths cannot borrow an admitted uncertainty projection'
+        )
     raw = b'_edi.schema_version 3\n_metadata.purpose refinement\n_cell.length_a 4.125\n'
     assert metadata_bytes.pre_description_bytes('unreviewed/project.edi', raw) == raw, (
         'Only the two individually reviewed source paths participate in this reversal'
@@ -401,11 +421,12 @@ def test_catalogue_reversal_refuses_real_scientific_and_data_edits(
 
 def assert_retired_source_fields_require_complete_current_and_archived_bytes():
     for name, row in retired_source_fields.rows().items():
-        raw = (ROOT / name).read_bytes()
+        raw = source_bytes(name, (ROOT / name).read_bytes())
         before = retired_source_fields.previous_bytes(name, raw)
-        assert hashlib.sha256(raw).hexdigest() == row['after_sha256'], (
-            'Every release source projection binds its complete committed current input'
-        )
+        assert (
+            hashlib.sha256(example_inputs.composed_bytes(name, raw)).hexdigest()
+            == row['after_sha256']
+        ), 'Every release source projection binds its complete committed current input'
         assert hashlib.sha256(before).hexdigest() == row['before_sha256'], (
             'Every release source projection retains its complete independent older input'
         )

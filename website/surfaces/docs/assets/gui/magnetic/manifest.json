@@ -145,11 +145,11 @@
             "scene": "group-bonds"
         },
         {
-            "action": "reveal:group.geom_bond",
+            "action": "reveal:group.geom",
             "scene": "group-bonds"
         },
         {
-            "action": "expand:group.geom_bond",
+            "action": "expand:group.geom",
             "scene": "group-bonds"
         },
         {
@@ -169,11 +169,11 @@
             "scene": "group-form-factors"
         }
     ],
-    "binary_sha256": "930017e29ba7c0ffac4bfbdbf09a5bea4beb135a2c33f624ca74e8fc4fe8d6bf",
+    "binary_sha256": "6b270a81225af60207e9664a9d77ce7e7a96c47e78c931c73331f97a7c9b9ce5",
     "dependencies": [
         {
             "file": "inputs/analysis/analysis.edi",
-            "sha256": "fc3edb415512ca536353f603603646ad83eddedd88d50a81019b54e4e165a616"
+            "sha256": "ac6dc09c04b367bb0ccdba2ef4dfe86dfacd79da57e48011a6fdb3e3549df691"
         }
     ],
     "error": "",
@@ -241,7 +241,7 @@
         },
         "structure": {
             "file": "inputs/structures/cosio.edi",
-            "sha256": "6221e1604607d65988c9eaefee54aa246caef1e86b57ea75fed6e66b53ff29c2"
+            "sha256": "1e2166e842987e3577181981ce8901641f646e7c3ca8fd22b32420b52c4d9cce"
         }
     },
     "logical_size": [
@@ -322,7 +322,7 @@
             "status": "captured"
         },
         {
-            "description": "Read the bonds",
+            "description": "Inspect bond settings and the computed bonds",
             "id": "group-bonds",
             "image": "group-bonds.webp",
             "metadata": "group-bonds.json",
@@ -341,8 +341,8 @@
         }
     ],
     "schema": 1,
-    "script_sha256": "3e0f9063e5fd3773de550ce84fd05a6b3c5986ae0d13ddaef80e9fc4fbb132f1",
-    "source_revision": "9045d5d22d8f07b00ffd58c1610ec4b02b2beba5",
+    "script_sha256": "bacb0119e34809368b4a4ed147d4ce1cfb8628ba03cebbf3ebd126a48519fb0f",
+    "source_revision": "66250b0826244790ae402c00384ea8fca62ae552",
     "status": "complete",
     "workflow": "reference"
 }

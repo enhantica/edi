@@ -11,6 +11,7 @@ import yaml
 
 from tests.fixtures.metadata_transition import joined_pin_sources
 from tests.fixtures.path_keys import repository_key
+from tests.fixtures.stop_defaults import retention
 
 HERE = Path(__file__).parent
 ROOT = HERE.resolve().parents[2]
@@ -31,6 +32,7 @@ def rows():
 
 
 def previous_bytes(name, data):
+    data = retention.composed_bytes(name, data)
     row = rows().get(repository_key(name))
     if row is None:
         return data

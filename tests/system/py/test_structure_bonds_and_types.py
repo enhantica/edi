@@ -21,12 +21,15 @@ CASES = [
 def test_real_structure_bonds_and_probe_types(case):
     binary = Path(os.environ.get('EDI_APP_TEST_RUNNER', ROOT / 'build/app/app/edi_app_tests'))
     assert binary.is_file(), 'Structure bond and atom-type acceptance requires the actual Qt host'
-    status, output = capture([
-        binary,
-        '-input',
-        ROOT / 'tests/unit/app/tst_structure_bonds_and_types.qml',
-        'StructureBondsAndTypes::' + case,
-    ])
+    status, output = capture(
+        [
+            binary,
+            '-input',
+            ROOT / 'tests/unit/app/tst_structure_bonds_and_types.qml',
+            'StructureBondsAndTypes::' + case,
+        ],
+        env={**os.environ, 'OMP_NUM_THREADS': '1', 'OPENBLAS_NUM_THREADS': '1'},
+    )
     assert 'Could not find the following test functions' not in output, (
         'The requested native Structure function resolves before product behavior is judged'
     )

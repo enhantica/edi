@@ -10,6 +10,7 @@ from pathlib import Path
 
 from tests.fixtures.path_keys import repository_key
 from tests.fixtures.project_categories.historical_bytes import native_edi_bytes
+from tests.fixtures.stop_defaults import example_inputs
 
 HERE = Path(__file__).parent
 
@@ -29,6 +30,7 @@ def archived(digest):
 
 
 def previous_bytes(name, data):
+    data = example_inputs.composed_bytes(name, data)
     row = rows().get(repository_key(name))
     if row is None:
         return data
@@ -43,6 +45,7 @@ def previous_bytes(name, data):
 
 
 def previous_content(data):
+    data = example_inputs.previous_content(data)
     digest = hashlib.sha256(data).hexdigest()
     matching = {row['before_sha256'] for row in rows().values() if row['after_sha256'] == digest}
     assert len(matching) <= 1, 'One complete task input cannot have ambiguous historical origins'

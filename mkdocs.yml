@@ -130,6 +130,10 @@ nav:
           - "ADR-0093 C++ static checks": dev/adrs/0093-cpp-warnings-and-static-checks.md
           - "ADR-0094 Common phase-scale factor": dev/adrs/0094-common-phase-scale-factor.md
           - "ADR-0095 Single-crystal reflection admission": dev/adrs/0095-single-crystal-reflection-admission.md
+          - "ADR-0096 FullProf project import": dev/adrs/0096-fullprof-project-import.md
+          - "ADR-0097 GSAS-II project import": dev/adrs/0097-gsas-ii-project-import.md
+          - "ADR-0098 Project import from other programs": dev/adrs/0098-project-import-from-other-programs.md
+          - "ADR-0099 cryspy project import and export": dev/adrs/0099-cryspy-project-import.md
           - dev/adrs/template.md
       - Design:
           - dev/design/api-types.md
@@ -141,7 +145,6 @@ nav:
           - dev/design/scan-view-timings.md
           - "Scan renderer": dev/design/scan-renderer-interface.md
           - "Scan updates": dev/design/scan-update-interface.md
-          - "Public release": dev/public-release-checklist.md
           - "Where tests live": dev/design/where-tests-live.md
       - Requirements:
           - "RWG requirements": dev/requirements/rwg-edi-coverage.md

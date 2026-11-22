@@ -343,6 +343,7 @@ void OnlineSearch::search() {
         // The count first; up to 100 matches load at once, a longer answer by its id list, 100 at a time (the owner,
         // 2026-11-04).
         fetch(QUrl(QString::fromStdString(edi::online::cod_search_url(root, query, "count"))),
+              // NOLINTNEXTLINE(bugprone-exception-escape): only libc++'s container growth past max_size() raises length_error here
               [this, generation, query, root](const QByteArray& bytes, const QString& error, bool unreachable) {
                   if (generation != generation_) return;
                   if (!error.isEmpty()) {
@@ -558,6 +559,7 @@ void OnlineSearch::load(int row, QObject* project, QObject* target) {
     // A full experiment brings the structures it links (the owner, 2026-11-04): their entries come from the index.
     const QStringList ids = fields.structureIds;
     const edi::online::Entry own = *entry;
+    // NOLINTNEXTLINE(bugprone-exception-escape): only libc++'s container growth past max_size() raises length_error here
     withIndex(bases, [this, generation, ids, own, plan, start](const edi::online::Index* index, const QString& error, bool unreachable) {
         if (generation != generation_) return;
         if (index == nullptr) {
@@ -775,6 +777,7 @@ void OnlineSearch::withIndex(const QStringList& bases, const std::function<void(
         done(cached.get(), {}, false);
         return;
     }
+    // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks): the std::function owns the lambda; the analyzer does not follow libc++'s release of it
     fetchFrom(bases, QStringLiteral("index.json"), [this, key, done](const QByteArray& bytes, const QString& error, bool unreachable) {
         if (!error.isEmpty()) {
             done(nullptr, error, unreachable);
@@ -797,6 +800,7 @@ void OnlineSearch::fetchFrom(const QStringList& bases, const QString& path, cons
 // published after the index was read: the index is read again and the file once more before the download is refused.
 void OnlineSearch::fetchChecked(const QStringList& bases, const QString& path, long long bytes, const QString& digest, const QString& name,
                                 const Bytes& done) {
+    // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks): the std::function owns the lambda; the analyzer does not follow libc++'s release of it
     fetchFrom(bases, path, [this, bases, path, bytes, digest, name, done](const QByteArray& data, const QString& error, bool unreachable) {
         if (!error.isEmpty()) {
             done({}, error, unreachable);
@@ -819,6 +823,7 @@ void OnlineSearch::fetchChecked(const QStringList& bases, const QString& path, l
                 return;
             }
             const edi::online::File file = found->files.front();
+            // NOLINTNEXTLINE(bugprone-exception-escape): only libc++'s container growth past max_size() raises length_error here
             fetchFrom(bases, path, [file, name, done](const QByteArray& refetched, const QString& failure, bool offline) {
                 if (!failure.isEmpty()) {
                     done({}, failure, offline);

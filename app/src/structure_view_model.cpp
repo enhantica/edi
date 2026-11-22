@@ -41,8 +41,32 @@ const std::vector<edi::SpaceGroupSettingName>& space_group_settings() {
 // any ADP type, so its count is the sites', not the anisotropic tensors' the core loop holds (the owner, 2026-11-04).
 std::vector<edi::Category> shown_categories(edi::Structure& structure) {
     std::vector<edi::Category> categories = edi::structure_categories(structure);
+    // Crystal or Magnetic (edi ADR-0078): a Crystal structure shows no magnetic group, the moments included; a Magnetic
+    // one shows its Magnetic space group in place of Space group, its derived symbols and parent group on Extra.
+    static const std::set<std::string> magnetic_ids{"space_group_magn", "parent_space_group", "parent_propagation_vector",
+                                                    "space_group_symop_magn_operation", "space_group_symop_magn_centering",
+                                                    "atom_site_moment", "magnetic_form_factor"};
+    const bool magnetic = edi::structure_magnetic(structure);
+    std::erase_if(categories, [magnetic](const edi::Category& category) {
+        return magnetic ? category.id == "space_group" : magnetic_ids.contains(category.id);
+    });
+    if (magnetic) {
+        const auto has = [&categories](const char* id) {
+            return std::any_of(categories.begin(), categories.end(), [id](const edi::Category& category) { return category.id == id; });
+        };
+        // A grey group gives no moment yet, so the core lists only the moments: the groups a Magnetic structure always has.
+        if (!has("space_group_magn")) categories.push_back({"space_group_magn"});
+        if (!has("parent_space_group")) categories.push_back({"parent_space_group"});
+        if (!has("parent_propagation_vector"))
+            categories.push_back({"parent_propagation_vector", true, structure.magnetic->propagation_vectors.size()});
+        if (!has("space_group_symop_magn_operation"))
+            categories.push_back({"space_group_symop_magn_operation", true, structure.magnetic->operations.size()});
+        categories.push_back({"space_group_magn_symbols"});
+    }
     // The bond cutoffs and the bonds they give: a designed group in Extra (GeomGroup.qml).
-    categories.push_back({"geom"});
+    edi::Category geom;
+    geom.id = "geom";
+    categories.push_back(std::move(geom));
     for (edi::Category& category : categories)
         if (category.id == "atom_site_aniso") category.rows = structure.atom_sites.size();
     return categories;
@@ -338,11 +362,12 @@ bool AtomSiteListModel::setText(int row, const QString& role, const QString& val
     edi::Structure& structure = structure_;
     const std::string text = value.toStdString();
     const edi::Edit edit = label                                      ? edi::Edit::rename_atom_site(structure, *site, text)
-                           : role == QLatin1String("typeSymbol")      ? edi::Edit::assign(site->type_symbol, text)
+                           : role == QLatin1String("typeSymbol")      ? edi::Edit::site_type(structure, *site, text)
                            : role == QLatin1String("wyckoffLetter")   ? edi::Edit::assign(site->wyckoff_letter, text)
                                                                       : edi::Edit::adp_type(structure, *site, text);
     // A type change can add or remove a tensor row, which changes the parameter set.
-    return editor_.apply_creation_control(edit, label || role == QLatin1String("adpType"),
+    // A new element can drop a moment its ions cannot carry, which changes the parameter set too.
+    return editor_.apply_creation_control(edit, label || role == QLatin1String("adpType") || role == QLatin1String("typeSymbol"),
         {ProjectEditor::CreationAction::Kind::AtomText,site,role,value}).isEmpty();
 }
 
@@ -388,7 +413,7 @@ void AtomSiteListModel::remove(int row) {
     }
     edi::Structure& structure = structure_;
     editor_.apply_creation_control(edi::Edit::erase_atom_site(structure, static_cast<std::size_t>(row)), true,
-        {ProjectEditor::CreationAction::Kind::AtomRemove,keyAt(row)});
+        {ProjectEditor::CreationAction::Kind::AtomRemove, keyAt(row), {}, {}, 0});
 }
 
 // ---- AtomSiteAdpListModel -----------------------------------------------------------------------
@@ -442,9 +467,51 @@ void AtomSiteAdpListModel::setType(int row, const QString& type) {
 
 // ---- AtomSiteMomentListModel --------------------------------------------------------------------
 
+namespace {
+// A refusal in plain words for the page (the owner, 2026-11-19): crysta's text names the item it refused
+// (`_category.item 'value' ...`), which the page does not show; the known propagation-vector reasons are said as
+// what the user can do.
+QString plain_refusal(const QString& raw) {
+    QString text = raw;
+    static const QRegularExpression tag(QStringLiteral(R"(^_[A-Za-z0-9_]+\.[A-Za-z0-9_.-]+\s+'[^']*'\s*:?\s*)"));
+    text.remove(tag);
+    static const QRegularExpression vector(QStringLiteral(R"(^propagation vector '[^']*' \(([^)]*)\):\s*(.*)$)"));
+    const QRegularExpressionMatch found = vector.match(text);
+    if (!found.hasMatch()) {
+        return text.isEmpty() ? text : text.left(1).toUpper() + text.mid(1);
+    }
+    const QString k = found.captured(1);
+    const QString reason = found.captured(2);
+    static const QRegularExpression axis(QStringLiteral(R"(cell's ([abc])' axis is not a period)"));
+    if (const QRegularExpressionMatch along = axis.match(reason); along.hasMatch()) {
+        const QString letter = along.captured(1);
+        const QStringList parts = k.split(QLatin1Char(','));
+        const int index = letter.at(0).unicode() - 'a';
+        int times = 0;
+        if (index >= 0 && index < parts.size()) {
+            const QStringList fraction = parts.at(index).trimmed().split(QLatin1Char('/'));
+            if (fraction.size() == 2) times = fraction.at(1).toInt();
+        }
+        const QString longer = times == 2 ? QObject::tr("twice as long") : times > 2 ? QObject::tr("%1 times as long").arg(times)
+                                                                                    : QObject::tr("longer");
+        return QObject::tr("k = %1 needs a cell %2 along %3, which this magnetic group's cell cannot carry. Choose a "
+                           "group with that cell, or a k this cell carries.").arg(k, longer, letter);
+    }
+    if (reason.contains(QLatin1String("grey group admits only k = 0"))) {
+        return QObject::tr("A grey group (every moment zero) carries only k = 0,0,0. Choose a magnetic subgroup first.");
+    }
+    static const QRegularExpression translation(QStringLiteral(R"(the translation \(([^)]*)\) does not keep it)"));
+    if (const QRegularExpressionMatch kept = translation.match(reason); kept.hasMatch()) {
+        return QObject::tr("k = %1 does not agree with the group's translation %2, so this group cannot carry it.")
+            .arg(k, kept.captured(1));
+    }
+    return QObject::tr("k = %1 was not taken: %2").arg(k, reason);
+}
+}  // namespace
+
 AtomSiteMomentListModel::AtomSiteMomentListModel(edi::Structure& structure, ProjectEditor& editor,
                                                  ParameterRegistry& registry, QObject* parent)
-    : RowTableModel({"label", "ion", "mx", "my", "mz", "symmform"}, parent),
+    : RowTableModel({"label", "ion", "mx", "my", "mz", "symmform", "type"}, parent),
       structure_(structure),
       editor_(editor),
       registry_(registry) {
@@ -480,6 +547,8 @@ void AtomSiteMomentListModel::sync() {
         } else {
             values << QVariant() << QVariant() << QVariant() << QString();
         }
+        // The site's element: the ion choices follow it (the owner, 2026-11-19).
+        values.append(QString::fromStdString(site->type_symbol.value()));
         rows.append({site.get(), values});
     }
     setTableRows(rows);
@@ -487,7 +556,7 @@ void AtomSiteMomentListModel::sync() {
     emit revisionChanged();
 }
 
-QStringList AtomSiteMomentListModel::ions(int row) const {
+QStringList AtomSiteMomentListModel::ions(int row, const QString& /*type*/) const {
     const auto* site = static_cast<const edi::AtomSite*>(keyAt(row));
     QStringList out{QStringLiteral("none")};
     if (site != nullptr) {
@@ -532,6 +601,23 @@ const edi::MagneticFormFactor* form_factor_of(const edi::Structure& structure, c
     }
     return nullptr;
 }
+
+// The terms an atom type's given coefficients carry whole (<j0>, <j2>, <j4>, <j6>), or nothing when its file gives
+// none or no whole <j0>, which leaves it on its ion's table (crysta's rule, ADR-0108 §5).
+std::optional<std::array<bool, 4>> given_terms(const edi::Structure& structure, const std::string& type_symbol) {
+    for (const auto& [symbol, given] : structure.magnetic->radial_coefficients) {
+        if (symbol != type_symbol) continue;
+        std::array<bool, 4> whole{};
+        for (std::size_t term = 0; term < 4; ++term) {
+            whole[term] = std::all_of(given.values.begin() + static_cast<std::ptrdiff_t>(8 * term),
+                                      given.values.begin() + static_cast<std::ptrdiff_t>(8 * term + 7),
+                                      [](const std::string& value) { return !value.empty(); });
+        }
+        if (whole[0]) return whole;
+        break;
+    }
+    return std::nullopt;
+}
 }  // namespace
 
 void MagneticFormFactorListModel::sync() {
@@ -545,8 +631,10 @@ void MagneticFormFactorListModel::sync() {
             continue;
         }
         const edi::MagneticFormFactor* declared = form_factor_of(structure_, type);
-        const std::string ion = declared != nullptr && !declared->ion.value().empty() ? declared->ion.value()
-                                                                                      : crysta::magnetic_type_ion(type);
+        // A type whose file gives its coefficients shows them as its source, read only: they replace the ion's table.
+        const std::string ion = given_terms(structure_, type) ? QObject::tr("given").toStdString()
+                                : declared != nullptr && !declared->ion.value().empty() ? declared->ion.value()
+                                                                                        : crysta::magnetic_type_ion(type);
         QList<QVariant> values{QString::fromStdString(type), QString::fromStdString(ion),
                                QString::fromStdString(declared != nullptr ? declared->approximation.value() : "j0")};
         if (declared != nullptr) {
@@ -569,6 +657,9 @@ bool MagneticFormFactorListModel::hasTerm(int row, int n) const {
     const std::string ion = text(row, QStringLiteral("ion")).toStdString();
     if (ion.empty() || n < 0 || n > 2) {
         return false;
+    }
+    if (const std::optional<std::array<bool, 4>> given = given_terms(structure_, text(row, QStringLiteral("type")).toStdString())) {
+        return (*given)[static_cast<std::size_t>(n) + 1];
     }
     try {
         return crysta::magnetic_ion_table(ion).has[static_cast<std::size_t>(n)];
@@ -610,12 +701,20 @@ const edi::AtomSiteMoment* moment_of(const edi::Structure& structure, const edi:
 // s.u. comes from: crysta's mapping of the fit's seeds through the project's relation graph
 // (edi::moment_input_covariance; crysta's rule for an undefined s.u., edi ADR-0078). Nothing is
 // rebuilt here. A structure no project holds has no seeds, so its forms show no s.u.
+// Relations that cannot hold (an alias naming an atom the structure no longer has) leave every s.u. undefined: the
+// table is read from a binding, where a refusal would end the app; the edit that broke them says why.
 std::array<double, 81> moment_covariance(const edi::Project* project, const edi::Structure& structure,
                                          const edi::AtomSiteMoment& moment) {
     if (project != nullptr) {
         for (std::size_t index = 0; index < project->structures.size(); ++index) {
             if (project->structures[index].get() == &structure) {
-                return edi::moment_input_covariance(*project, index, moment.id.value());
+                try {
+                    return edi::moment_input_covariance(*project, index, moment.id.value());
+                } catch (const std::exception&) {
+                    std::array<double, 81> undefined{};
+                    undefined.fill(std::numeric_limits<double>::quiet_NaN());
+                    return undefined;
+                }
             }
         }
     }
@@ -710,6 +809,7 @@ QString AtomSiteMomentListModel::setComponent(int row, const QString& form, int 
             }
         }
     }
+    refusal = plain_refusal(refusal);
     if (refusal != refusal_) {
         refusal_ = refusal;
         emit refusalChanged();
@@ -735,7 +835,7 @@ void PropagationVectorListModel::sync() {
 
 bool PropagationVectorListModel::replace(std::vector<std::pair<std::string, std::string>> rows) {
     edi::Structure& structure = structure_;
-    const QString refusal = editor_.apply(edi::Edit::propagation_vectors(structure, std::move(rows)), true);
+    const QString refusal = plain_refusal(editor_.apply(edi::Edit::propagation_vectors(structure, std::move(rows)), true));
     if (refusal != refusal_) {
         refusal_ = refusal;
         emit refusalChanged();
@@ -763,8 +863,7 @@ bool PropagationVectorListModel::setVector(int row, const QString& vector) {
 
 void PropagationVectorListModel::append() {
     auto rows = structure_.magnetic->propagation_vectors;
-    // The next free id, and a half-order vector along a to start from; crysta refuses it with its reason
-    // when the cell and the group cannot carry it.
+    // The next free id and k = 0,0,0 for the user to edit: no vector the user did not enter (the owner, 2026-11-19).
     int n = static_cast<int>(rows.size()) + 1;
     const auto taken = [&rows](const std::string& id) {
         return std::any_of(rows.begin(), rows.end(), [&id](const auto& row) { return row.first == id; });
@@ -772,7 +871,7 @@ void PropagationVectorListModel::append() {
     while (taken(std::to_string(n))) {
         ++n;
     }
-    rows.emplace_back(std::to_string(n), "1/2,0,0");
+    rows.emplace_back(std::to_string(n), "0,0,0");
     replace(std::move(rows));
 }
 
@@ -891,9 +990,118 @@ MagneticGroupView StructureViewModel::magneticGroup() const {
             name_uni.clear();  // A number the table does not have shows no symbol.
         }
     }
+    std::string setting, og_setting;
+    for (const auto& row : structure_.magnetic->transforms) {
+        if (row.second.source == "BNS") setting = row.second.pp_abc;
+        if (row.second.source == "OG") og_setting = row.second.pp_abc;
+    }
+    // A file that gives no transform: the held setting's own (`a,b,c;0,0,0` for the BNS standard), never blank.
+    if (setting.empty()) setting = edi::held_magnetic_setting(structure_);
     return MagneticGroupView{QString::fromStdString(group.number_bns), QString::fromStdString(group.name_bns),
                              QString::fromStdString(name_uni), QString::fromStdString(group.number_og),
-                             QString::fromStdString(group.name_og)};
+                             QString::fromStdString(group.name_og), QString::fromStdString(group.point_group_name_uni),
+                             QString::fromStdString(group.point_group_number_litvin), QString::fromStdString(setting),
+                             QString::fromStdString(og_setting)};
+}
+
+QStringList StructureViewModel::magneticGroupNumbersBns() {
+    static const QStringList numbers = [] {
+        QStringList out;
+        for (const crysta::MagneticSpaceGroupEntry& group : crysta::magnetic_space_groups())
+            out.append(QString::fromStdString(group.number_bns));
+        return out;
+    }();
+    return numbers;
+}
+
+QStringList StructureViewModel::magneticGroupNamesBns() {
+    static const QStringList names = [] {
+        QStringList out;
+        for (const crysta::MagneticSpaceGroupEntry& group : crysta::magnetic_space_groups())
+            out.append(QString::fromStdString(group.name_bns));
+        return out;
+    }();
+    return names;
+}
+
+bool StructureViewModel::magnetic() const { return edi::structure_magnetic(structure_); }
+
+namespace {
+// Why the magnetic group gives no propagation vector; empty when it gives k = 0,0,0: no operation is a translation
+// with time reversal (an anti-translation) and the magnetic cell is the parent's.
+QString underived_propagation(const edi::MagneticDescription& magnetic) {
+    const auto anti_translation = [](const std::string& text) {
+        try {
+            const crysta::MagneticOperation operation = crysta::parse_magnetic_operation(text);
+            return operation.theta < 0 && operation.rotation == std::array<int, 9>{1, 0, 0, 0, 1, 0, 0, 0, 1} &&
+                   operation.translation != std::array<double, 3>{};
+        } catch (const std::invalid_argument&) {
+            return false;
+        }
+    };
+    for (const auto* rows : {&magnetic.operations, &magnetic.centerings}) {
+        for (const auto& row : *rows) {
+            if (anti_translation(row.second)) {
+                return QObject::tr("k is not derived for a group with an anti-translation (type IV); give it here");
+            }
+        }
+    }
+    std::string child = magnetic.parent.child_transform_pp_abc;
+    std::erase(child, ' ');
+    if (!child.empty() && child != "a,b,c;0,0,0") {
+        return QObject::tr("k is not derived: the magnetic cell is not the parent's (%1); give it here")
+            .arg(QString::fromStdString(magnetic.parent.child_transform_pp_abc));
+    }
+    return {};
+}
+}  // namespace
+
+QString StructureViewModel::derivedPropagationVector() const {
+    const edi::MagneticDescription& magnetic = structure_.magnetic;
+    if (!edi::structure_magnetic(structure_) || !magnetic.propagation_vectors.empty() || !underived_propagation(magnetic).isEmpty()) {
+        return {};
+    }
+    return QStringLiteral("0,0,0");
+}
+
+QString StructureViewModel::propagationNotDerived() const {
+    const edi::MagneticDescription& magnetic = structure_.magnetic;
+    if (!edi::structure_magnetic(structure_) || !magnetic.propagation_vectors.empty()) return {};
+    return underived_propagation(magnetic);
+}
+
+bool StructureViewModel::setMagnetic(bool magnetic) {
+    const QString refusal = plain_refusal(editor_.apply(edi::Edit::structure_magnetic(structure_, magnetic), true));
+    if (refusal != magnetic_group_refusal_) {
+        magnetic_group_refusal_ = refusal;
+        emit magneticGroupRefusalChanged();
+    }
+    return refusal.isEmpty();
+}
+
+QStringList StructureViewModel::magneticSettings() const {
+    QStringList out;
+    if (!edi::structure_magnetic(structure_)) return out;
+    for (const std::string& transform : edi::magnetic_setting_transforms(structure_)) out.append(QString::fromStdString(transform));
+    return out;
+}
+
+bool StructureViewModel::magneticSettingTabulated() const {
+    return magneticSettings().contains(magneticGroup().setting);
+}
+
+bool StructureViewModel::chooseMagneticSetting(int index) {
+    const QStringList settings = magneticSettings();
+    if (index < 0 || index >= settings.size()) {
+        return false;
+    }
+    const QString refusal = plain_refusal(
+        editor_.apply(edi::Edit::magnetic_setting(structure_, settings.at(index).toStdString()), true));
+    if (refusal != magnetic_group_refusal_) {
+        magnetic_group_refusal_ = refusal;
+        emit magneticGroupRefusalChanged();
+    }
+    return refusal.isEmpty();
 }
 
 QStringList StructureViewModel::magneticGroupNames() {
@@ -912,8 +1120,8 @@ bool StructureViewModel::setMagneticGroup(int index) {
     if (index < 0 || index >= static_cast<int>(groups.size())) {
         return false;
     }
-    const QString refusal = editor_.apply(
-        edi::Edit::magnetic_space_group(structure_, groups[static_cast<std::size_t>(index)].number_bns), true);
+    const QString refusal = plain_refusal(editor_.apply(
+        edi::Edit::magnetic_space_group(structure_, groups[static_cast<std::size_t>(index)].number_bns), true));
     if (refusal != magnetic_group_refusal_) {
         magnetic_group_refusal_ = refusal;
         emit magneticGroupRefusalChanged();
@@ -950,6 +1158,7 @@ void StructureViewModel::setMinBondDistance(double distance) {
     if (std::isfinite(distance) && distance >= 0.0 && distance != minBondDistance()) {
         editor_.apply(edi::Edit::assign(structure_.geom.min_bond_distance_cutoff, distance), true);
     }
+    emit minBondDistanceChanged();
     emit bondsChanged();
 }
 
@@ -957,6 +1166,7 @@ void StructureViewModel::setBondDistanceIncrement(double increment) {
     if (std::isfinite(increment) && increment >= 0.0 && increment != bondDistanceIncrement()) {
         editor_.apply(edi::Edit::assign(structure_.geom.bond_distance_inc, increment), true);
     }
+    emit bondDistanceIncrementChanged();
     emit bondsChanged();
 }
 
@@ -1003,9 +1213,15 @@ void StructureViewModel::sync() {
     propagation_vectors_->sync();
     scattering_lengths_->sync();
     emit magneticChanged();
+    emit derivedPropagationVectorChanged();
+    emit propagationNotDerivedChanged();
+    emit magneticSettingsChanged();
+    emit magneticSettingTabulatedChanged();
     emit magneticGroupChanged();
     emit parentGroupChanged();
     syncAtomTypes();
+    emit minBondDistanceChanged();
+    emit bondDistanceIncrementChanged();
     emit bondsChanged();
     categories_->setCategories(shown_categories(structure_), [this] { return text_->discoveryText().toStdString(); },
                                [this] { return edi::calculated_categories(structure_); });

@@ -304,7 +304,16 @@ from edi._edi import (  # noqa: E402 - after the __path__ resolution
     _structure_from_edi_text as _structure_from_edi_text,
 )
 from edi._edi import (  # noqa: E402 - after the __path__ resolution
+    check_import_roundtrip as check_import_roundtrip,
+)
+from edi._edi import (  # noqa: E402 - after the __path__ resolution
     log_level as log_level,
+)
+from edi._edi import (  # noqa: E402 - after the __path__ resolution
+    project_importers as project_importers,
+)
+from edi._edi import (  # noqa: E402 - after the __path__ resolution
+    register_project_importer as register_project_importer,
 )
 from edi._edi import (  # noqa: E402 - after the __path__ resolution
     set_log_level as set_log_level,
@@ -412,6 +421,7 @@ __all__ = [
     'ValidationError',
     'VerbosityEnum',
     'WeightFraction',
+    'check_import_roundtrip',
     'download_all_tutorials',
     'download_data',
     'download_tutorial',
@@ -424,6 +434,8 @@ __all__ = [
     'machine_report',
     'parameter_table',
     'progress_report',
+    'project_importers',
+    'register_project_importer',
     'scan_progress_line',
     'scan_summary',
     'set_log_level',

@@ -1,5 +1,6 @@
 """Authenticate exact regression-pin retakes before historical input comparisons."""
 
+import functools
 import hashlib
 import json
 from pathlib import Path
@@ -7,10 +8,24 @@ from pathlib import Path
 from tests.fixtures.path_keys import repository_key
 
 HERE = Path(__file__).parent
+COSIO_D20_2K = 'docs/user/cli/pd-neut-cwl_cosio-d20_2k/expected.json'
+# The complete edi 69e1206b document after the CoSiO cell length re-save.
+COSIO_REPIN_SHA256 = 'c25181322f98ce89f461d9d7ba100a6850c50d80fd33c982d31012c622c9e932'
+
+
+@functools.cache
+def retake_rows():
+    return json.loads((HERE / 'retakes.json').read_text())['files']
+
+
+def matches_retake(name, data, row):
+    digest = hashlib.sha256(data).hexdigest()
+    return digest == row['after_sha256'] or (name == COSIO_D20_2K and digest == COSIO_REPIN_SHA256)
 
 
 def previous_bytes(name, data):
-    row = json.loads((HERE / 'retakes.json').read_text())['files'].get(repository_key(name))
+    name = repository_key(name)
+    row = retake_rows().get(name)
     if row is None:
         return data
     before = row['before_text'].encode()
@@ -18,7 +33,7 @@ def previous_bytes(name, data):
         raise ValueError('The retained source must match its complete frozen byte identity')
     if data == before:
         return data
-    if hashlib.sha256(data).hexdigest() != row['after_sha256']:
+    if not matches_retake(name, data, row):
         raise ValueError('The stop-default retake requires every current document byte')
     old, current = json.loads(before), json.loads(data)
 
@@ -40,3 +55,11 @@ def previous_bytes(name, data):
 
     restore(old, current)
     return before
+
+
+def composed_bytes(name, data):
+    name = repository_key(name)
+    row = retake_rows().get(name)
+    if row is not None and matches_retake(name, data, row):
+        return previous_bytes(name, data)
+    return data

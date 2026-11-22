@@ -142,8 +142,8 @@ void FitAgreementModel::setRecord(const edi::Project& project) {
         const std::string form = edi::token(edi::SampleFormEnum::SINGLE_CRYSTAL);
         column(QString::fromStdString(edi::label("fit_result.prof_r_factor", form)));
         column(QString::fromStdString(edi::label("fit_result.prof_wr_factor", form)));
-        // Then which reflections the fit used (crysta's admission): Rint and R-sigma in per cent, "n/a" where
-        // undefined, the merge mode and the counts.
+        // Then which reflections the fit used (crysta's admission): Rint and R-sigma with their units, the one
+        // undefined text where undefined (edi::statistic_text), the merge mode and the counts.
         column(QStringLiteral("R<sub>int</sub>"));
         column(QStringLiteral("R<sub>sigma</sub>"));
         column(tr("Merge"));
@@ -173,11 +173,12 @@ void FitAgreementModel::setRecord(const edi::Project& project) {
             } catch (const std::exception&) {
                 admitted.reset();  // a project crysta cannot take shows no admission
             }
-            const auto ratio = [](const std::optional<double>& value) {
-                return value && std::isfinite(*value) ? QString::number(*value * 100.0, 'f', 2) : QStringLiteral("n/a");
+            // Each with its units, as the sidebar and the report show them (edi::statistic_text).
+            const auto ratio = [](const char* uid, const std::optional<double>& value) {
+                return QString::fromStdString(edi::statistic_text(uid, value));
             };
             if (admitted) {
-                values << ratio(admitted->r_int) << ratio(admitted->r_sigma)
+                values << ratio("fit_result_bank.r_int", admitted->r_int) << ratio("fit_result_bank.r_sigma", admitted->r_sigma)
                        << QString::fromStdString(edi::option_label("reflns.merge", experiment.reflns_merge.value_or("none")))
                        << QString::number(admitted->measured) << QString::number(admitted->unique)
                        << QString::number(admitted->used) << QString::number(admitted->excluded)

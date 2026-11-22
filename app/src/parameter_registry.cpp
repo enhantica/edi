@@ -270,9 +270,9 @@ void ParameterRegistry::publishValues() {
 }
 
 void ParameterRegistry::refreshSpelling(const edi::Project& project) {
-    // A field shows a value as the save writes it, exactly where the save does: a cell that rounded would not
-    // load, or every value. That follows any edit, so it is read again with the rule at every publish.
-    setSpelling(project, edi::save_spelling(project));
+    // Widget formatting checks whether rounded inputs load. Rebuilding a current pattern here and
+    // checking its rounded outputs repeated a full TOF calculation on the GUI thread after each edit.
+    setSpelling(project, edi::input_spelling(project));
 }
 
 void ParameterRegistry::setSpelling(const edi::Project& project, const edi::SaveSpelling& spelling) {

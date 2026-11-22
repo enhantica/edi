@@ -95,18 +95,8 @@ try {
   await click('home.start');
   await click('appBar.tab.project');
   const chooser = page.waitForEvent('filechooser', {timeout:10000});
-  await click('project.open');
-  await click('open.zip');
-  let previous, stable = 0;
-  const deadline = Date.now() + 10000;
-  while (stable < 2 && Date.now() < deadline) {
-    await frame();
-    const current = (await cdp.send('Page.captureScreenshot', {format:'png'})).data;
-    stable = current === previous ? stable + 1 : 0;
-    previous = current;
-  }
-  assert(stable >= 2, 'The real open-project dialog must finish its entry transition before default Enter');
-  await page.keyboard.press('Enter');
+  await click('project.load');
+  await click('project.load.zip');
   await (await chooser).setFiles(join(root,
     'tests/fixtures/project_archive/sc-neut-cwl_tb2ti2o7-heidi_basic.zip'));
   await click('appBar.tab.structure');

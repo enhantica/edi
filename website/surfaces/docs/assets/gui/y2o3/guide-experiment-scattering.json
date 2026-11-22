@@ -7,7 +7,7 @@
     ],
     "id": "guide-experiment-scattering",
     "image": "guide-experiment-scattering.webp",
-    "image_sha256": "24a99683a83a0305b8634a9668d217a3cc85102e79c4c420df9fd9d8415c88fe",
+    "image_sha256": "e1e58e460dbf31c3f57cd5f98b00bd07eda2e328c0d171da3ea170ab48cba6a0",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -521,9 +521,25 @@
                 88.09375
             ]
         },
+        "chart.toolbar": {
+            "bounds": [
+                0,
+                182,
+                770,
+                35
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                0,
+                182,
+                770,
+                35
+            ]
+        },
         "chart.toolbar.hover": {
             "bounds": [
-                414.25,
+                444.125,
                 182,
                 35,
                 35
@@ -532,7 +548,7 @@
             "icon": "comment-alt",
             "label": "",
             "visible_bounds": [
-                414.25,
+                444.125,
                 182,
                 35,
                 35
@@ -540,7 +556,7 @@
         },
         "chart.toolbar.includedRange": {
             "bounds": [
-                491.25,
+                521.125,
                 182,
                 35,
                 35
@@ -549,7 +565,7 @@
             "icon": "eraser",
             "label": "",
             "visible_bounds": [
-                491.25,
+                521.125,
                 182,
                 35,
                 35
@@ -557,7 +573,7 @@
         },
         "chart.toolbar.legend": {
             "bounds": [
-                375.75,
+                405.625,
                 182,
                 35,
                 35
@@ -566,7 +582,7 @@
             "icon": "align-left",
             "label": "",
             "visible_bounds": [
-                375.75,
+                405.625,
                 182,
                 35,
                 35
@@ -574,7 +590,7 @@
         },
         "chart.toolbar.measuredStyle": {
             "bounds": [
-                259.5,
+                289.375,
                 182,
                 102.25,
                 35
@@ -582,7 +598,7 @@
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                259.5,
+                289.375,
                 182,
                 102.25,
                 35
@@ -590,7 +606,7 @@
         },
         "chart.toolbar.pan": {
             "bounds": [
-                578.75,
+                608.625,
                 182,
                 35,
                 35
@@ -599,7 +615,7 @@
             "icon": "arrows-alt",
             "label": "",
             "visible_bounds": [
-                578.75,
+                608.625,
                 182,
                 35,
                 35
@@ -607,7 +623,7 @@
         },
         "chart.toolbar.reset": {
             "bounds": [
-                655.75,
+                685.625,
                 182,
                 35,
                 35
@@ -616,40 +632,7 @@
             "icon": "home",
             "label": "",
             "visible_bounds": [
-                655.75,
-                182,
-                35,
-                35
-            ]
-        },
-        "chart.toolbar.save": {
-            "bounds": [
-                694.25,
-                182,
-                45.5,
-                35
-            ],
-            "enabled": true,
-            "label": "",
-            "visible_bounds": [
-                694.25,
-                182,
-                45.5,
-                35
-            ]
-        },
-        "chart.toolbar.save.button": {
-            "bounds": [
-                704.75,
-                182,
-                35,
-                35
-            ],
-            "enabled": true,
-            "icon": "camera",
-            "label": "",
-            "visible_bounds": [
-                704.75,
+                685.625,
                 182,
                 35,
                 35
@@ -657,7 +640,7 @@
         },
         "chart.toolbar.structureCurves": {
             "bounds": [
-                452.75,
+                482.625,
                 182,
                 35,
                 35
@@ -666,7 +649,7 @@
             "icon": "layer-group",
             "label": "",
             "visible_bounds": [
-                452.75,
+                482.625,
                 182,
                 35,
                 35
@@ -674,7 +657,7 @@
         },
         "chart.toolbar.subtractBackground": {
             "bounds": [
-                529.75,
+                559.625,
                 182,
                 35,
                 35
@@ -683,7 +666,7 @@
             "icon": "chart-area",
             "label": "",
             "visible_bounds": [
-                529.75,
+                559.625,
                 182,
                 35,
                 35
@@ -691,7 +674,7 @@
         },
         "chart.toolbar.xaxis": {
             "bounds": [
-                149.75,
+                169.125,
                 182,
                 106.25,
                 35
@@ -699,7 +682,7 @@
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                149.75,
+                169.125,
                 182,
                 106.25,
                 35
@@ -707,7 +690,7 @@
         },
         "chart.toolbar.yscale": {
             "bounds": [
-                30,
+                49.375,
                 182,
                 116.25,
                 35
@@ -715,7 +698,7 @@
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                30,
+                49.375,
                 182,
                 116.25,
                 35
@@ -723,7 +706,7 @@
         },
         "chart.toolbar.zoom": {
             "bounds": [
-                617.25,
+                647.125,
                 182,
                 35,
                 35
@@ -732,7 +715,7 @@
             "icon": "expand",
             "label": "",
             "visible_bounds": [
-                617.25,
+                647.125,
                 182,
                 35,
                 35
@@ -1057,7 +1040,7 @@
             "bounds": [
                 28,
                 133,
-                714,
+                728,
                 35
             ],
             "enabled": true,
@@ -1065,7 +1048,7 @@
             "visible_bounds": [
                 28,
                 133,
-                714,
+                728,
                 35
             ]
         },
@@ -1073,7 +1056,7 @@
             "bounds": [
                 28,
                 133,
-                637,
+                651,
                 35
             ],
             "enabled": true,
@@ -1081,13 +1064,13 @@
             "visible_bounds": [
                 28,
                 133,
-                637,
+                651,
                 35
             ]
         },
         "mainArea.blocks.down": {
             "bounds": [
-                707,
+                721,
                 133,
                 35,
                 35
@@ -1096,7 +1079,7 @@
             "icon": "arrow-circle-down",
             "label": "",
             "visible_bounds": [
-                707,
+                721,
                 133,
                 35,
                 35
@@ -1104,7 +1087,7 @@
         },
         "mainArea.blocks.up": {
             "bounds": [
-                668.5,
+                682.5,
                 133,
                 35,
                 35
@@ -1113,63 +1096,64 @@
             "icon": "arrow-circle-up",
             "label": "",
             "visible_bounds": [
-                668.5,
+                682.5,
                 133,
                 35,
                 35
             ]
         },
-        "mainArea.divider": {
+        "mainArea.saveImage": {
             "bounds": [
-                770,
-                77,
-                1,
-                681
+                3.5,
+                719.5,
+                35,
+                35
             ],
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                770,
-                77,
-                1,
-                681
+                3.5,
+                719.5,
+                35,
+                35
             ]
         },
-        "mainArea.tab.correlations": {
+        "mainArea.saveImage.button": {
             "bounds": [
-                126.640625,
+                3.5,
+                719.5,
+                35,
+                35
+            ],
+            "enabled": true,
+            "icon": "camera",
+            "label": "",
+            "visible_bounds": [
+                3.5,
+                719.5,
+                35,
+                35
+            ]
+        },
+        "mainArea.tab.measCalc": {
+            "bounds": [
+                57.765625,
                 77,
-                86.15625,
+                88.53125,
                 42
             ],
             "enabled": true,
-            "label": "Correlations",
+            "label": "Meas vs calc",
             "visible_bounds": [
-                126.640625,
+                57.765625,
                 77,
-                86.15625,
-                42
-            ]
-        },
-        "mainArea.tab.map": {
-            "bounds": [
-                273.375,
-                77,
-                39.5625,
-                42
-            ],
-            "enabled": false,
-            "label": "Map",
-            "visible_bounds": [
-                273.375,
-                77,
-                39.5625,
+                88.53125,
                 42
             ]
         },
         "mainArea.tab.pattern": {
             "bounds": [
-                68.875,
+                0,
                 77,
                 57.765625,
                 42
@@ -1177,41 +1161,9 @@
             "enabled": true,
             "label": "Pattern",
             "visible_bounds": [
-                68.875,
+                0,
                 77,
                 57.765625,
-                42
-            ]
-        },
-        "mainArea.tab.stacked": {
-            "bounds": [
-                212.796875,
-                77,
-                60.578125,
-                42
-            ],
-            "enabled": false,
-            "label": "Stacked",
-            "visible_bounds": [
-                212.796875,
-                77,
-                60.578125,
-                42
-            ]
-        },
-        "mainArea.tab.structure": {
-            "bounds": [
-                0,
-                77,
-                68.875,
-                42
-            ],
-            "enabled": true,
-            "label": "Structure",
-            "visible_bounds": [
-                0,
-                77,
-                68.875,
                 42
             ]
         },
@@ -1359,56 +1311,56 @@
         },
         "statusBar.fit": {
             "bounds": [
-                1069,
+                1068,
                 769,
-                397,
+                398,
                 19
             ],
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                1069,
+                1068,
                 769,
-                397,
+                398,
                 19
             ]
         },
         "statusBar.fit.button": {
             "bounds": [
-                1414,
+                1413,
                 769,
-                52,
+                53,
                 19
             ],
             "enabled": true,
-            "icon": "play-circle",
+            "icon": "play",
             "label": "",
             "visible_bounds": [
-                1414,
+                1413,
                 769,
-                52,
+                53,
                 19
             ]
         },
         "statusBar.fit.buttons": {
             "bounds": [
-                1414,
+                1413,
                 769,
-                52,
+                53,
                 19
             ],
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                1414,
+                1413,
                 769,
-                52,
+                53,
                 19
             ]
         },
         "statusBar.fit.outcome": {
             "bounds": [
-                1087,
+                1086,
                 769,
                 82,
                 19
@@ -1417,7 +1369,7 @@
             "icon": "check-circle",
             "label": "",
             "visible_bounds": [
-                1087,
+                1086,
                 769,
                 82,
                 19
@@ -1428,15 +1380,15 @@
         },
         "statusBar.fit.values": {
             "bounds": [
-                1186,
+                1185,
                 770,
                 211,
                 18.109375
             ],
             "enabled": true,
-            "label": "1 0.097s 3.58→2.28",
+            "label": "1 0.088s 2.46→1.34",
             "visible_bounds": [
-                1186,
+                1185,
                 770,
                 211,
                 18.109375
@@ -1530,6 +1482,22 @@
                 14
             ]
         },
+        "window.projectDrop": {
+            "bounds": [
+                0,
+                0,
+                1480,
+                800
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                0,
+                0,
+                1480,
+                800
+            ]
+        },
         "workflow.experiment.mainContent": {
             "bounds": [
                 0,
@@ -1606,7 +1574,7 @@
     "qt_version": "6.11.2",
     "schema": 1,
     "script_sha256": "a0cd8f7d599e386e3db4cf752e3ae7050f99ce60356dedf20f4c9a1fbb3ecee3",
-    "source_revision": "9045d5d22d8f07b00ffd58c1610ec4b02b2beba5",
+    "source_revision": "66250b0826244790ae402c00384ea8fca62ae552",
     "state": {
         "experiments": 1,
         "fit_outcome": "success",

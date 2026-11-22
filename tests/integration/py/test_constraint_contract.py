@@ -12,6 +12,7 @@ from pathlib import Path
 import edi as engine
 import pytest
 
+from tests.fixtures.constraint_expressions.freeze_unconstrained import legacy_writer_copy, snapshot
 from tests.fixtures.weight_fractions.single_phase_bytes import historical_single_fraction
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -379,27 +380,27 @@ def test_projects_without_constraints_keep_the_pre_feature_writer_regression_pin
     tmp_path, record_property
 ):
     fixture = ROOT / 'tests/fixtures/constraint_expressions'
-    snapshot = runpy.run_path(str(fixture / 'freeze_unconstrained.py'))['snapshot']
     expected = json.loads((fixture / 'unconstrained_regression.json').read_text())
-    from tests.fixtures.fitting_modes.historical_bytes import historical_analysis  # noqa: PLC0415
-    from tests.fixtures.table_display.stored_id_bytes import ordinal_copy  # noqa: PLC0415
 
     source = MATERIALIZE(tmp_path / 'input')
     project = engine.Project.load(source)
     project.save_as(tmp_path / 'saved')
-    legacy = ordinal_copy(source, tmp_path / 'saved', tmp_path / 'ordinal-pin')
-    analysis = legacy / 'analysis/analysis.edi'
-    analysis.write_bytes(historical_analysis(source, analysis.read_bytes()))
-    from tests.fixtures.report_units.iucr_reference import without_default_rule  # noqa: PLC0415
+    legacy = legacy_writer_copy(source, tmp_path / 'saved', tmp_path / 'ordinal-pin')
 
-    record = legacy / 'project.edi'
-    record.write_bytes(without_default_rule('project.edi', record.read_bytes()))
     record_property('weight_fraction_before', 'no derived column in the unconstrained writer pin')
     record_property('weight_fraction_after', 'checked single enabled fraction 1.0 without s.u.')
     assert snapshot(legacy, historical_fractions=True, order_reference=expected) == expected, (
-        'without relation loops saved files must retain their pre-feature regression bytes, '
-        'normalizing metadata clocks, stored keys, inactive Joint weights and checked unity column'
+        'Unconstrained saves retain the project-block and pre-feature pins after normalizing '
+        'metadata clocks, stored keys, inactive Joint weights and the checked unity column'
     )
+
+    record = legacy / 'project.edi'
+    original_record = record.read_bytes()
+    record.write_bytes(original_record + b'# unrelated change\n')
+    assert snapshot(legacy, historical_fractions=True, order_reference=expected) != expected, (
+        'The shipped project-block pin still detects unrelated project metadata byte changes'
+    )
+    record.write_bytes(original_record)
 
     for path in (legacy / 'experiments').glob('*.edi'):
         original = path.read_bytes()

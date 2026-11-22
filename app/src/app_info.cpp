@@ -23,6 +23,7 @@
 #include "pattern_chart_controller.hpp"
 #include "project_view_model.hpp"
 #include "edi/display.hpp"
+#include "edi/io.hpp"
 #include "edi/report.hpp"
 #include "edi/model.hpp"
 #include "edi/palette.hpp"
@@ -38,6 +39,11 @@
 #include <QImage>
 #include <QDir>
 #include <QFile>
+#include <QFileInfo>
+#include <QMimeDatabase>
+#include <QNetworkAccessManager>
+#include <QNetworkReply>
+#include <QNetworkRequest>
 #include <QDateTime>
 #include <QEvent>
 #include <QGuiApplication>
@@ -1012,7 +1018,7 @@ QJSValue messageScriptProperty(const QPointer<QJSEngine>& engine, const QJSValue
     // The managed API leaves every thrown value pending; never catch or inspect its type.
     return value.property(name);
 }
-QJSValue messageScriptIndex(const QPointer<QJSEngine>& engine, const QJSValue& source,
+[[maybe_unused]] QJSValue messageScriptIndex(const QPointer<QJSEngine>& engine, const QJSValue& source,
                            quint32 index) {
     if (!messageScriptReady(engine)) return {};
     const QJSManagedValue value(source, engine.data());
@@ -1042,7 +1048,7 @@ QJSValue messageScriptCall(const QPointer<QJSEngine>& engine, const QJSValue& fu
     // non-Error throws. It also supplies TypeError for a non-callable managed value.
     return callable.callWithInstance(receiver, arguments);
 }
-QJSValue messageScriptArray(const QPointer<QJSEngine>& engine, const QJSValue& value) {
+[[maybe_unused]] QJSValue messageScriptArray(const QPointer<QJSEngine>& engine, const QJSValue& value) {
     if (!messageScriptReady(engine)) return {};
     const QJSValue array = messageScriptProperty(engine, engine->globalObject(), QStringLiteral("Array"));
     if (!messageScriptReady(engine)) return {};
@@ -1702,7 +1708,7 @@ QJSValue panelUsageDeferredMemberCall(const PanelUsageFrame& frame, const QJSVal
     frame.checked(); return QJSValuePrivate::fromReturnedValue(result->asReturnedValue());
 }
 
-QJSValue panelUsageView(const PanelUsageFrame& engine, QObject* panel) {
+[[maybe_unused]] QJSValue panelUsageView(const PanelUsageFrame& engine, QObject* panel) {
     return panelUsageReady(engine) ? engine->newQObject(panel) : QJSValue();
 }
 QJSValue panelUsageField(const PanelUsageFrame& engine, const QJSValue& panel, const char* property, const char* field) {
@@ -1806,7 +1812,7 @@ bool panelUsageGreater(const PanelUsageFrame& frame, const QJSValue& first, cons
     frame.checked();
     return result;
 }
-QJSValue panelAllowanceWindow(const PanelUsageFrame& engine, const QJSValue& view, const QJSValue& minutes) {
+[[maybe_unused]] QJSValue panelAllowanceWindow(const PanelUsageFrame& engine, const QJSValue& view, const QJSValue& minutes) {
     QJSValue selected(QJSValue::NullValue);
     const auto buckets = panelUsageBuckets(engine, view);
     panelUsageEach(engine, buckets, [&](const QJSValue& bucket) {
@@ -1820,12 +1826,12 @@ QJSValue panelAllowanceWindow(const PanelUsageFrame& engine, const QJSValue& vie
     });
     return panelUsageReady(engine) ? selected : QJSValue();
 }
-QJSValue panelUsageArg(const PanelUsageFrame& engine, const QJSValue& text,
+[[maybe_unused]] QJSValue panelUsageArg(const PanelUsageFrame& engine, const QJSValue& text,
                       const std::function<QJSValue()>& argument) {
     if (!panelUsageReady(engine)) return {};
     return panelUsageDeferredMemberCall(engine, text, "arg", [&] { return QJSValueList{argument()}; });
 }
-QJSValue panelUsageMath(const PanelUsageFrame& engine, const char* operation,
+[[maybe_unused]] QJSValue panelUsageMath(const PanelUsageFrame& engine, const char* operation,
                        const std::function<QJSValue()>& argument) {
     if (!panelUsageReady(engine)) return {};
     const auto math = panelUsageContextRead(engine, "Math");
@@ -1873,7 +1879,7 @@ QJSValue panelUsagePlanWord(const PanelUsageFrame& engine, const QJSValue& word)
     return panelUsageAdd(engine, head, tail);
 }
 
-QJSValue panelUsageWindowLabel(const PanelUsageFrame& engine, const QJSValue& bucket, const QJSValue& window) {
+[[maybe_unused]] QJSValue panelUsageWindowLabel(const PanelUsageFrame& engine, const QJSValue& bucket, const QJSValue& window) {
     auto duration = panelUsageRead(engine, window, "windowDurationMins");
     if (!panelUsageReady(engine)) return {};
     QJSValue label;
@@ -1936,18 +1942,18 @@ bool assistantEditorIdle(const PanelUsageFrame& frame) {
     const auto length = panelUsageRead(frame, preedit, "length");
     return panelUsageReady(frame) && length.strictlyEquals(QJSValue(0));
 }
-bool assistantDraftMatchesEditor(const PanelUsageFrame& frame, const QJSValue& draft) {
+[[maybe_unused]] bool assistantDraftMatchesEditor(const PanelUsageFrame& frame, const QJSValue& draft) {
     const auto revision = panelUsageRead(frame, draft, "revision");
     if (!assistantSameName(frame, revision, "textRevision")) return false;
     const auto text = panelUsageRead(frame, draft, "text");
     const auto current = assistantContextField(frame, "editor", "text");
     return panelUsageReady(frame) && text.strictlyEquals(current) && assistantEditorIdle(frame);
 }
-QJSValue assistantMessageText(const PanelUsageFrame& frame, double index, const char* role) {
+[[maybe_unused]] QJSValue assistantMessageText(const PanelUsageFrame& frame, double index, const char* role) {
     const auto messages = assistantContextField(frame, "assistant", "messages");
     return panelUsageMemberCall(frame, messages, "text", {QJSValue(index), QJSValue(QString::fromLatin1(role))});
 }
-bool assistantContains(const PanelUsageFrame& frame, const QJSValue& ancestor, const QJSValue& item) {
+[[maybe_unused]] bool assistantContains(const PanelUsageFrame& frame, const QJSValue& ancestor, const QJSValue& item) {
     for (QJSValue current = item; panelUsageReady(frame) && panelUsageTruth(current);
          current = panelUsageRead(frame, current, "parent")) {
         if (current.strictlyEquals(ancestor)) return true;
@@ -1957,12 +1963,12 @@ bool assistantContains(const PanelUsageFrame& frame, const QJSValue& ancestor, c
 bool assistantContainsCall(const PanelUsageFrame& frame, const QJSValue& ancestor, const QJSValue& item) {
     return panelUsageTruth(panelUsageGlobalCall(frame, "containsAssistantItem", {ancestor, item}));
 }
-void assistantIncrementEpoch(const PanelUsageFrame& frame) {
+[[maybe_unused]] void assistantIncrementEpoch(const PanelUsageFrame& frame) {
     const auto value = panelUsageContextRead(frame, "assistantFocusEpoch");
     const auto number = panelUsageNumber(frame, value);
     if (number) panelUsageContextWrite(frame, "assistantFocusEpoch", QJSValue(*number + 1));
 }
-void assistantFocusOpener(const PanelUsageFrame& frame) {
+[[maybe_unused]] void assistantFocusOpener(const PanelUsageFrame& frame) {
     const auto enabled = assistantContextField(frame, "assistantToggle", "enabled");
     if (!panelUsageReady(frame)) return;
     if (panelUsageTruth(enabled)) {
@@ -1987,7 +1993,7 @@ QJSValue assistantGeometryArray(const PanelUsageFrame& frame, const QJSValueList
     }
     return panelUsageComplete(frame, literal);
 }
-bool assistantGeometryFinite(const PanelUsageFrame& frame, const QJSValue& values) {
+[[maybe_unused]] bool assistantGeometryFinite(const PanelUsageFrame& frame, const QJSValue& values) {
     const auto number = panelUsageContextRead(frame, "Number");
     const auto predicate = panelUsageRead(frame, number, "isFinite");
     return panelUsageTruth(panelUsageMemberCall(frame, values, "every", {predicate}));
@@ -2050,7 +2056,7 @@ bool consentOwner(const PanelUsageFrame& f, const QJSValue& component, const QJS
     const auto actual = panelUsageRead(f, component, "assistant");
     return panelUsageReady(f) && owner.strictlyEquals(actual);
 }
-bool consentPanelOwner(const PanelUsageFrame& f, const QJSValue& component, const QJSValue& draft, const QJSValue& owner) {
+[[maybe_unused]] bool consentPanelOwner(const PanelUsageFrame& f, const QJSValue& component, const QJSValue& draft, const QJSValue& owner) {
     if (!consentQtObject(f, component) || !consentQtObject(f, draft) || !consentQtObject(f, owner)) return false;
     const auto actual = panelUsageRead(f, component, "assistant");
     return panelUsageReady(f) && owner.strictlyEquals(actual);
@@ -2065,7 +2071,7 @@ bool consentFieldsEqual(const PanelUsageFrame& f, const QJSValue& left, const ch
     const auto b = panelUsageRead(f, right, rightKey);
     return panelUsageReady(f) && a.strictlyEquals(b);
 }
-QJSValue consentStatus(const PanelUsageFrame& f, const char* status) {
+[[maybe_unused]] QJSValue consentStatus(const PanelUsageFrame& f, const char* status) {
     const auto literal = panelUsageLiteral(f);
     panelUsageWrite(f, literal.value, "status", QJSValue(QString::fromLatin1(status)));
     return panelUsageComplete(f, literal);
@@ -3304,19 +3310,30 @@ void ApplicationInfo::openWorkflowPage(const QJSValue& page) const {
     panelUsageContextWrite(frame, "reached", maximum);
     const auto globals = assistantContextField(frame, "EaGlobals", "Vars");
     assistantMemberWrite(frame, globals, "appBarCurrentIndex", page);
+    startUntitledOnProjectPage(page);
+}
+void ApplicationInfo::startUntitledOnProjectPage(const QJSValue& page) const {
+    // Work before Create starts only when the user opens Structure; Project alone creates nothing (ADR-0017 §13).
+    const auto frame = panelUsageEngine(this);
+    if (!panelUsageReady(frame) || page.toInt() < projectPage(frame, "Structure").toInt()) return;
+    if (!assistantContextField(frame, "Session", "project").isNull()) return;
+    const auto rule = assistantContextField(frame, "Preferences", "newProjectSuRule");
+    const bool libraries = assistantContextField(frame, "Preferences", "newReportLibraries").strictlyEquals(QJSValue(QStringLiteral("embedded")));
+    projectInvoke(frame, "Session", "startUntitledProject", {rule, QJSValue(libraries)});
 }
 void ApplicationInfo::resetWorkflow() const {
     const auto frame = panelUsageEngine(this);
     projectInvoke(frame, "Session", "closeProject");
-    const auto page = projectPage(frame, "Project");
+    const auto page = projectPage(frame, "Home");
     panelUsageContextWrite(frame, "reached", page);
     const auto globals = assistantContextField(frame, "EaGlobals", "Vars");
-    const auto currentPage = projectPage(frame, "Project");
-    assistantMemberWrite(frame, globals, "appBarCurrentIndex", currentPage);
+    assistantMemberWrite(frame, globals, "appBarCurrentIndex", page);
 }
 void ApplicationInfo::saveCurrentProject() const {
     const auto frame = panelUsageEngine(this);
     if (assistantContextField(frame, "Session", "project").isNull() || !panelUsageReady(frame)) return;
+    // An untitled project's first Save is Create project: it names the project and saves it (the owner, 2026-11-19).
+    if (panelUsageTruth(assistantContextField(frame, "Session", "untitled"))) { projectInvoke(frame, "AppState", "requestUntitledSave"); return; }
     if (panelUsageTruth(assistantContextField(frame, "Session", "needsSaveAs"))) { projectInvoke(frame, "window", "saveProjectAs"); return; }
     const auto saved = projectInvoke(frame, "Session", "save");
     if (!panelUsageTruth(saved) && !projectFieldIs(frame, "Session", "lastError", QJSValue(QString{}))) projectInvoke(frame, "saveError", "open");
@@ -3531,6 +3548,24 @@ void ApplicationInfo::acceptProjectSavePicker(bool zip) const {
     if (!saved) projectInvoke(frame, "saveError", "open");
     projectInvoke(frame, "AppState", "saveAsFinished", {QJSValue(saved)});
 }
+namespace {
+// A structure file, which a window drop loads into the open project as Load structure does: a CIF or magnetic CIF
+// file, or an .edi file whose tags are a structure's (edi::edi_text_kind, the loaders' own reading of the whole file).
+// A folder is a project to open whatever its name, and so is project.edi.
+bool dropped_structure(const QUrl& url) {
+    const QFileInfo file(url.toLocalFile());
+    if (!file.isFile()) return false;
+    const QString suffix = file.suffix().toLower();
+    if (suffix == QLatin1String("cif") || suffix == QLatin1String("mcif")) return true;
+    if (suffix != QLatin1String("edi") || file.fileName().compare(QLatin1String("project.edi"), Qt::CaseInsensitive) == 0) {
+        return false;
+    }
+    QFile text(file.filePath());
+    if (!text.open(QIODevice::ReadOnly)) return false;
+    return edi::edi_text_kind(text.readAll().toStdString()) == edi::EdiTextKind::Structure;
+}
+}  // namespace
+
 void ApplicationInfo::dropProject(const QJSValue& drop) const {
     const auto frame = panelUsageEngine(this);
     const auto hasUrls = panelUsageRead(frame, drop, "hasUrls");
@@ -3540,6 +3575,13 @@ void ApplicationInfo::dropProject(const QJSValue& drop) const {
     panelUsageMemberCall(frame, drop, "accept");
     const auto actualUrls = panelUsageRead(frame, drop, "urls");
     const auto url = panelUsageIndex(frame, actualUrls, 0);
+    // A structure goes into the project the drop was made on, now: it replaces nothing, so no unsaved-changes guard
+    // and no deferred action that could find another project by then. Anything else opens as a project.
+    const auto project = assistantContextField(frame, "Session", "project");
+    if (dropped_structure(url.toVariant().toUrl()) && consentQtObject(frame, project)) {
+        panelUsageMemberCall(frame, project, "loadStructure", {url});
+        return;
+    }
     const auto action = panelUsageClosure(frame, 20, {url});
     projectInvoke(frame, "AppState", "afterChanges", {action});
 }
@@ -3744,7 +3786,7 @@ bool editorLife(const PanelUsageFrame& f, const QJSValue& life) { return panelUs
 bool editorOriginal(const PanelUsageFrame& f, const QJSValue& life, const QJSValue& original, const QJSValue& owner) {
     return editorLife(f, life) && assistantSameName(f, original, "draft") && assistantSameName(f, owner, "ownerToken");
 }
-QJSValue editorRecord(const PanelUsageFrame& f, bool parameter, const QJSValue& owner, const char* kind) {
+[[maybe_unused]] QJSValue editorRecord(const PanelUsageFrame& f, bool parameter, const QJSValue& owner, const char* kind) {
     const auto literal = panelUsageLiteral(f);
     panelUsageWrite(f, literal.value, "owner", owner);
     if (parameter) panelUsageWrite(f, literal.value, "item", editorGet(f, "item"));
@@ -3769,7 +3811,13 @@ void editorFinally(const PanelUsageFrame& f, const std::function<void()>& body) 
 struct EditorFinally {
     const PanelUsageFrame& frame;
     std::function<void()> release;
-    ~EditorFinally() { editorFinally(frame, release); }
+    // A destructor must not throw: with no release set there is nothing to run, and a release that fails is dropped.
+    ~EditorFinally() {
+        try {
+            if (release) editorFinally(frame, release);
+        } catch (...) {
+        }
+    }
 };
 } // namespace
 
@@ -4416,7 +4464,7 @@ void ApplicationInfo::loadFormFiles(bool experiments) const {
         assistantMemberWrite(f, group, "webRequestProject", project);
         if (experiments) projectWrite(f, "group", "webDataExperiment", consentNull());
         const auto requestOwner = panelUsageContextRead(f, "group");
-        const auto request = projectInvoke(f, "WebFiles", "openFiles", {QJSValue(QStringLiteral(".cif,.edi")), QJSValue(experiments)});
+        const auto request = projectInvoke(f, "WebFiles", "openFiles", {QJSValue(experiments ? QStringLiteral(".cif,.edi") : QStringLiteral(".cif,.mcif,.edi")), QJSValue(experiments)});
         assistantMemberWrite(f, requestOwner, "webRequest", request);
     } else projectInvoke(f, "loadDialog", "open");
 }
@@ -4437,7 +4485,7 @@ bool ApplicationInfo::chooseStructureFile() const {
         if (!consentFieldEquals(f, original, "project", actualProject) || !pickerSessionProject(f, original)) {
             panelUsageContextWrite(f, "webIntent", consentNull()); return false;
         }
-        const auto request = projectInvoke(f, "WebFiles", "openFiles", {QJSValue(QStringLiteral(".edi,.cif")), QJSValue(false)});
+        const auto request = projectInvoke(f, "WebFiles", "openFiles", {QJSValue(QStringLiteral(".edi,.cif,.mcif")), QJSValue(false)});
         if (!editorLife(f, life) || !assistantSameName(f, original, "webIntent")) return false;
         const auto currentProject = panelUsageContextRead(f, "project");
         if (request.strictlyEquals(QJSValue(0)) || !consentFieldEquals(f, original, "project", currentProject)
@@ -5417,7 +5465,7 @@ bool ApplicationInfo::composerHasDraft() const {
 namespace {
 QJSValue assistantUiCallback(const PanelUsageFrame& f, uint operation,
     const std::function<QJSValue(uint)>& retained, const std::function<QJSValue(uint)>& arg);
-QJSValue choiceText(const PanelUsageFrame& f, const char* text) {
+[[maybe_unused]] QJSValue choiceText(const PanelUsageFrame& f, const char* text) {
     if (!panelUsageReady(f)) return {};
     if (auto* qml = qobject_cast<QQmlEngine*>(f.data())) qml->markCurrentFunctionAsTranslationBinding();
     return QJSValue(QCoreApplication::translate("AssistantComposer", text));
@@ -7288,14 +7336,17 @@ QJSValue ApplicationInfo::tableTextColumnWidth(const QString& role, const QStrin
         return panelUsageMemberCall(f, math, "min", {needed, viewArithmetic(f, width, share, 1)});
     }
     const auto revision = panelUsageContextRead(f, "modelRevision"); Q_UNUSED(revision);
+    // The view's count can flush pending layout. A content-sized table must measure its model without
+    // entering that layout again from its width/column bindings, including while rows are removed.
+    const auto model = panelUsageContextRead(f, "model");
+    const int count = panelUsageTruth(model) ? panelUsageRead(f, model, "count").toInt() : 0;
     QJSValue widths = textIndex(f, panelUsageContextRead(f, "rowWidths"), QJSValue(role));
     bool replace = !panelUsageTruth(widths);
-    if (!replace) { const auto length = panelUsageRead(f, widths, "length"); replace = !assistantSameName(f, length, "count"); }
+    if (!replace) replace = panelUsageRead(f, widths, "length").toInt() != count;
     if (replace) {
         if (!panelUsageReady(f)) return {};
         widths = f->newArray();
-        for (int row = 0; panelUsageReady(f) && panelUsageTruth(panelUsageContextRead(f, "model"))
-             && assistantRelation(f, QJSValue(double(row)), panelUsageContextRead(f, "count"), 0); ++row) {
+        for (int row = 0; panelUsageReady(f) && row < count; ++row) {
             const auto measured = panelUsageGlobalCall(f, "textWidth", {QJSValue(double(row)), QJSValue(role)}); panelUsageMemberCall(f, widths, "push", {measured});
         }
         textIndexWrite(f, panelUsageContextRead(f, "rowWidths"), QJSValue(role), widths);
@@ -10736,7 +10787,7 @@ QJSValue ApplicationInfo::fitResultProjection(int kind) const {
     const auto f = panelUsageEngine(this);
     if (kind == 0) return panelUsageMemberCall(f, assistantContextField(f, "dialog", "factorColumns"), "reduce", {panelUsageClosure(f, 360, {}, 2), QJSValue(QStringLiteral(""))});
     if (kind == 1) return panelUsageMemberCall(f, assistantContextField(f, "dialog", "factorColumns"), "some", {panelUsageClosure(f, 361, {}, 1)});
-    return panelUsageDeferredMemberCall(f, assistantGeometryArray(f, {assistantContextField(f, "AppSizes", "iconOnlyColumnWidth"), QJSValue(-1)}), "concat", [&] { return QJSValueList{panelUsageMemberCall(f, assistantContextField(f, "dialog", "factorColumns"), "map", {panelUsageClosure(f, 364, {}, 0)})}; });
+    return panelUsageDeferredMemberCall(f, assistantGeometryArray(f, {assistantContextField(f, "AppSizes", "iconOnlyColumnWidth"), assistantContextField(f, "agreementArea", "datasetColumnWidth")}), "concat", [&] { return QJSValueList{panelUsageMemberCall(f, assistantContextField(f, "dialog", "factorColumns"), "map", {panelUsageClosure(f, 364, {}, 0)})}; });
 }
 void ApplicationInfo::fitResultsPassive(const QJSValue& row) const {
     const auto f = panelUsageEngine(this); panelUsageEach(f, panelUsageRead(f, row, "resources"), [&](const QJSValue& handler) {
@@ -10895,7 +10946,6 @@ QJSValue lifecycleCallback(const PanelUsageFrame& f, uint op,
         });
         if (!panelUsageTruth(panelUsageRead(f, outcome, "success")) && panelUsageTruth(panelUsageRead(f, outcome, "current")) && panelUsageTruth(projectInvoke(f, "Session", "creationOutcomeCurrent", {outcome})) && assistantRelation(f, panelUsageRead(f, panelUsageRead(f, outcome, "error"), "length"), QJSValue(0), 1) && panelUsageRead(f, original, "assistant").isNull()) return projectInvoke(f, "AppState", "createFailed");
     }
-    if (op == 388) return projectInvoke(f, "openChoice", "open");
     if (op == 389) {
         if (!panelUsageTruth(panelUsageContextRead(f, "box"))) return {};
         return projectCall(f, saved(0));
@@ -11041,7 +11091,7 @@ void ApplicationInfo::retireAssistantCreate(const QJSValue& id, bool manual) con
 #endif  // EDI_APP_ASSISTANT
 QJSValue ApplicationInfo::createProjectNameError(const QJSValue& name) const {
     const auto f = panelUsageEngine(this); if (panelUsageTruth(projectInvoke(f, "createDialog", "acceptsProjectName", {name}))) return QJSValue(QStringLiteral(""));
-    return mainText(f, QT_TRANSLATE_NOOP("GetStartedGroup", "Project Name must contain 2–31 characters: start with an ASCII letter, then use letters, digits, underscore, hyphen or period. Put human-readable text in Title. The supplied Name was not changed."));
+    return mainText(f, QT_TRANSLATE_NOOP("GetStartedGroup", "Project Name must contain 2–31 characters: start with an ASCII letter, then use letters, digits, underscore or hyphen. Put human-readable text in Title. The supplied Name was not changed."));
 }
 QJSValue ApplicationInfo::createProjectDefaults(const QJSValue& name, const QJSValue& description, const QJSValue& title) const {
     const auto f = panelUsageEngine(this); if (!panelUsageContextRead(f, "createIntent").isNull() || panelUsageTruth(assistantContextField(f, "createDialog", "visible"))) return panelUsageComplete(f, panelUsageLiteral(f));
@@ -11070,6 +11120,8 @@ void ApplicationInfo::chooseCreateProject() const {
 }
 void ApplicationInfo::createProjectClicked() const {
     const auto f = panelUsageEngine(this); const auto original = createGroupField(f, "assistantCreate"), state = panelUsageContextRead(f, "AppState");
+    // Create on the untitled project names and saves it, its work kept: nothing to ask about first.
+    if (panelUsageTruth(assistantContextField(f, "Session", "untitled"))) { projectInvoke(f, "group", "chooseCreate"); return; }
     panelUsageMemberCall(f, state, "afterChanges", {panelUsageClosure(f, 384, {original}), panelUsageClosure(f, 385, {original}), QJSValue(true)});
 }
 void ApplicationInfo::createProjectDialogEvent(int kind) const {
@@ -11095,23 +11147,6 @@ void ApplicationInfo::createProjectDialogEvent(int kind) const {
     assistantMemberWrite(f, panelUsageRead(f, panelUsageContextRead(f, "EaGlobals"), "Vars"), "showProjectDescriptionDialog", QJSValue(false));
     const auto qt = panelUsageContextRead(f, "Qt"); panelUsageMemberCall(f, qt, "callLater", {panelUsageClosure(f, 387, {life, original, name, description, location, title, authors})});
 }
-void ApplicationInfo::openProjectChoice() const {
-    const auto f = panelUsageEngine(this);
-    if (panelUsageTruth(assistantContextField(f, "WebFiles", "available"))) projectInvoke(f, "Session", "openWebProject", {panelUsageTruth(panelUsageContextRead(f, "zip")) ? QJSValue(QStringLiteral("file")) : QJSValue(QStringLiteral("folder"))});
-    else {
-        const char* name = panelUsageTruth(panelUsageContextRead(f, "zip")) ? "openZipDialog" : "openFolderDialog";
-        const auto picker = panelUsageContextRead(f, name);
-        pending_project_picker_ = consentQtObject(f, picker) ? picker.toQObject() : nullptr;
-    }
-}
-void ApplicationInfo::openProjectPicker() const {
-    // A native panel opens after the choice popup has closed and its script callback has returned (ADR-0052).
-    const QPointer<QObject> picker = std::exchange(pending_project_picker_, {});
-    if (picker) {
-        QMetaObject::invokeMethod(picker, "open", Qt::QueuedConnection);
-    }
-}
-void ApplicationInfo::askOpenProjectChoice() const { const auto f = panelUsageEngine(this); const auto state = panelUsageContextRead(f, "AppState"); panelUsageMemberCall(f, state, "afterChanges", {projectGuardedClosure(f, 388)}); }
 void ApplicationInfo::windowSaveChoiceOpened() const {
     const auto f = panelUsageEngine(this); if (panelUsageTruth(panelUsageContextRead(f, "nativeAcceptButton"))) assistantMemberWrite(f, panelUsageContextRead(f, "nativeAcceptButton"), "objectName", QJSValue(QStringLiteral("saveAs.accept")));
 }
@@ -11128,10 +11163,25 @@ QJSValue ApplicationInfo::windowUnsavedText() const {
     });
 }
 
+int ApplicationInfo::schemeFor(int theme, int browser) const {
+    // The owner, 2026-11-15: edi's Light and Dark override the platform's scheme; System follows it. The browser's
+    // page gets no scheme from Qt, so there System is the browser's prefers-color-scheme (edi-feedback #63).
+    if (theme == 0) return static_cast<int>(Qt::ColorScheme::Light);
+    if (theme == 1) return static_cast<int>(Qt::ColorScheme::Dark);
+    if (browser == 0) return static_cast<int>(Qt::ColorScheme::Light);
+    if (browser == 1) return static_cast<int>(Qt::ColorScheme::Dark);
+    return static_cast<int>(Qt::ColorScheme::Unknown);
+}
+
 void ApplicationInfo::applyColorScheme(int theme) const {
-    // The owner, 2026-11-15: edi's Light and Dark override the platform's scheme; System follows it.
-    const auto scheme = theme == 0 ? Qt::ColorScheme::Light : theme == 1 ? Qt::ColorScheme::Dark : Qt::ColorScheme::Unknown;
-    QGuiApplication::styleHints()->setColorScheme(scheme);
+    int browser = -1;
+#ifdef Q_OS_WASM
+    const auto query = emscripten::val::global("window").call<emscripten::val>("matchMedia", std::string("(prefers-color-scheme: dark)"));
+    browser = query["matches"].as<bool>() ? 1 : 0;
+#endif
+    const auto scheme = static_cast<Qt::ColorScheme>(schemeFor(theme, browser));
+    if (QGuiApplication::styleHints()->colorScheme() != scheme || scheme == Qt::ColorScheme::Unknown)
+        QGuiApplication::styleHints()->setColorScheme(scheme);
 }
 
 void ApplicationInfo::finishUiEvent(int kind, const QJSValue& value) const {
@@ -11584,6 +11634,59 @@ void ApplicationInfo::assistantMessageReset(const QJSValue& component) const {
 #endif  // EDI_APP_ASSISTANT
 
 void ApplicationInfo::copyText(const QString& text) const { QGuiApplication::clipboard()->setText(text); }
+void ApplicationInfo::postFeedback(const QString& url, const QString& body, const QJSValue& completed) const {
+    if (!feedback_network_) {
+        feedback_network_ = new QNetworkAccessManager(const_cast<ApplicationInfo*>(this));
+    }
+    QNetworkRequest request{QUrl(url)};
+    request.setHeader(QNetworkRequest::ContentTypeHeader, QStringLiteral("application/json"));
+    request.setTransferTimeout(60000);
+    QNetworkReply* reply = feedback_network_->post(request, body.toUtf8());
+    QObject::connect(reply, &QNetworkReply::finished, reply, [reply, completed] {
+        reply->deleteLater();
+        const int status = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+        const QByteArray answer = reply->readAll();
+        // The service says why it refused in {"error": ...}; without an answer, the network's own reason.
+        // A message taken with a file it could not attach says so in {"warning": ...}.
+        const QJsonObject answered = QJsonDocument::fromJson(answer).object();
+        QString detail = answered.value(status == 201 ? QStringLiteral("warning") : QStringLiteral("error")).toString();
+        if (detail.isEmpty() && reply->error() != QNetworkReply::NoError) detail = reply->errorString();
+        if (status != 201) qWarning("feedback not sent: status %d, %s", status, qPrintable(detail));
+        const QJSValue& callback = completed;
+        if (callback.isCallable()) callback.call({QJSValue(status), QJSValue(detail), QJSValue(QString::fromUtf8(answer))});
+    });
+}
+edi_app::FeedbackFile ApplicationInfo::fileAttachment(const QString& path, bool automatic) const {
+    constexpr qint64 limit = qint64{5} * 1024 * 1024;  // the feedback service's limit for one file (app/feedback/Payload.js)
+    QFile file(path);
+    if (!file.open(QIODevice::ReadOnly)) return {};
+    const qint64 whole = file.size();
+    edi_app::FeedbackFile attached;
+    attached.name = QFileInfo(path).fileName();
+    attached.type = QMimeDatabase().mimeTypeForFile(path).name();
+    // A file the user picked keeps its real size and is refused past the limit, unread; only the failing input
+    // attached by an error popup is sent as its marked first part.
+    if (!automatic && whole > limit) {
+        attached.size = whole;
+        return attached;
+    }
+    const QByteArray bytes = file.read(limit);
+    attached.size = bytes.size();
+    attached.cut = whole > bytes.size();
+    attached.data = QString::fromLatin1(bytes.toBase64());
+    return attached;
+}
+edi_app::FeedbackFile ApplicationInfo::textAttachment(const QString& name, const QString& text) const {
+    constexpr qint64 limit = qint64{5} * 1024 * 1024;  // the feedback service's limit for one file (app/feedback/Payload.js)
+    edi_app::FeedbackFile attached;
+    if (name.isEmpty() || text.isEmpty()) return attached;
+    const QByteArray bytes = text.toUtf8();
+    attached.name = name;
+    attached.type = QMimeDatabase().mimeTypeForFile(name, QMimeDatabase::MatchExtension).name();
+    attached.size = bytes.size();
+    if (bytes.size() <= limit) attached.data = QString::fromLatin1(bytes.toBase64());
+    return attached;
+}
 namespace {
 struct SessionBrowserFrame {
     QPointer<QJSEngine> engine;

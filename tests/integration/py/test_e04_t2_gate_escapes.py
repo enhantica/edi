@@ -124,24 +124,77 @@ def test_image_family_inventory_rejects_damage(damage):
         assert_image_families(names, examples, captures)
 
 
+def windows_job_escapes(workflow):
+    for escape in (
+        'missing',
+        'duplicate',
+        'runner',
+        'missing-build',
+        'duplicate-build',
+        'command',
+        'disabled-job',
+        'disabled-step',
+        'unguarded-step',
+        'test-tier',
+    ):
+        changed = deepcopy(workflow)
+        windows = changed['jobs']['app-windows']
+        build = next(
+            step
+            for step in windows['steps']
+            if step.get('name') == app_contract.WINDOWS_BUILD_TITLE
+        )
+        if escape == 'missing':
+            del changed['jobs']['app-windows']
+        elif escape == 'duplicate':
+            changed['jobs']['extra-windows'] = deepcopy(windows)
+        elif escape == 'runner':
+            windows['runs-on'] = 'ubuntu-24.04'
+        elif escape == 'missing-build':
+            windows['steps'].remove(build)
+        elif escape == 'duplicate-build':
+            windows['steps'].append(deepcopy(build))
+        elif escape == 'command':
+            build['run'] = 'true'
+        elif escape == 'disabled-job':
+            windows['if'] = False
+        elif escape == 'disabled-step':
+            build['if'] = False
+        elif escape == 'unguarded-step':
+            build.pop('if')
+        else:
+            windows['steps'].append({'name': app_contract.APP_TIER_STEPS[0][0], 'run': 'true'})
+        yield changed
+
+
 @pytest.mark.parametrize(
     'damage', ['duplicate-platform', 'missing-platform', 'wrong-binding', 'wrong-row']
 )
 def test_live_app_gate_rejects_matrix_damage(tmp_path, monkeypatch, damage):
+    """Reject damage to static platform jobs under the frozen matrix gate name."""
     workflow = yaml.safe_load((app_contract.ROOT / '.github/workflows/ci.yml').read_text())
+    app_contract.test_local_and_ci_gates_reach_app_tests()
     job = workflow['jobs']['app']
-    rows = job['strategy']['matrix']['include']
     if damage == 'duplicate-platform':
-        rows.append(deepcopy(rows[0]))
+        workflow['jobs']['app-copy'] = deepcopy(job)
     elif damage == 'missing-platform':
-        rows.pop()
+        del workflow['jobs']['app-macos']
     elif damage == 'wrong-binding':
         job['runs-on'] = '${{ matrix.platform }}'
     else:
-        rows[0]['runner'] = 'ubuntu-latest'
+        job['runs-on'] = RUNNERS['macOS']
     (tmp_path / '.github/workflows').mkdir(parents=True)
     (tmp_path / '.github/workflows/ci.yml').write_text(yaml.safe_dump(workflow))
     (tmp_path / 'pixi.toml').write_text((app_contract.ROOT / 'pixi.toml').read_text())
+    if damage == 'duplicate-platform':
+        original = yaml.safe_load((app_contract.ROOT / '.github/workflows/ci.yml').read_text())
+        for changed in windows_job_escapes(original):
+            (tmp_path / '.github/workflows/ci.yml').write_text(yaml.safe_dump(changed))
+            with monkeypatch.context() as patch:
+                patch.setattr(app_contract, 'ROOT', tmp_path)
+                with pytest.raises(AssertionError, match='gate 7:'):
+                    app_contract.test_local_and_ci_gates_reach_app_tests()
+        (tmp_path / '.github/workflows/ci.yml').write_text(yaml.safe_dump(workflow))
     monkeypatch.setattr(app_contract, 'ROOT', tmp_path)
     with pytest.raises(AssertionError, match=r'gate 7:|E01:'):
         app_contract.test_local_and_ci_gates_reach_app_tests()

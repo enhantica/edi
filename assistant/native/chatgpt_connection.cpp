@@ -161,7 +161,11 @@ struct ChatGptConnection::State : QObject {
         ++generation; sink = {}; callback.close(); timer.stop();
         for (auto& [id, op] : operations) { (void)id; op->settled = true; if (op->owned) op->owned->cancel(); }
         operations.clear();
-        if (release_records) release_records();
+        // A destructor must not throw: a failing release is dropped rather than ending the program.
+        try {
+            if (release_records) release_records();
+        } catch (...) {
+        }
     }
     std::uint64_t now() {
         if (thread() != QThread::currentThread()) throw std::invalid_argument("Wrong native owner thread");
@@ -310,11 +314,13 @@ struct ChatGptConnection::State : QObject {
         HttpHeaders headers;
         if (authorized) headers.emplace_back("Authorization", "Bearer " + credentials.value("access_token").toString().toUtf8());
         request({HttpMethod::get, url, std::move(headers), {}, Limits::http_json_bytes, Limits::http_json_ms},
+            // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks): the std::function owns the lambda; the analyzer does not follow libc++'s release of it
             [done = std::move(done)](int status, const QByteArray& bytes) { if (status != 200) throw std::invalid_argument("Provider refused request"); done(document(bytes)); });
     }
     void token(const QUrlQuery& fields, std::function<void(Object)> done) {
         request({HttpMethod::post, QUrl("https://auth.openai.com/api/accounts/oauth/token"),
                  {{"Content-Type", "application/x-www-form-urlencoded"}}, fields.query(QUrl::FullyEncoded).toUtf8(), Limits::http_json_bytes, Limits::http_json_ms},
+            // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks): the std::function owns the lambda; the analyzer does not follow libc++'s release of it
             [done = std::move(done)](int status, const QByteArray& body) { if (status != 200) throw std::invalid_argument("Authorization refused"); done(document(body)); });
     }
     std::uint64_t record_usage() const {

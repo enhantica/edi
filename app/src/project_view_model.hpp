@@ -245,14 +245,14 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // A series of joint fits (ADR-0088): a scan whose points each hold one file per experiment, its banks. The
     // Experiments group shows it as one ordinary row; the charts choose a run (the series
     // variable, currentExperimentIndex as for a scan) and a bank (currentBank, the experiment the side bar shows).
-    Q_PROPERTY(bool series READ series NOTIFY scanChanged)
+    Q_PROPERTY(bool series READ series NOTIFY seriesModeChanged)
     Q_PROPERTY(int currentBank READ currentBank WRITE setCurrentBank NOTIFY currentBankChanged)
-    Q_PROPERTY(QStringList bankLabels READ bankLabels NOTIFY seriesChanged)
+    Q_PROPERTY(QStringList bankLabels READ bankLabels NOTIFY bankLabelsChanged)
     // The series' name (its experiment set, else its first structure), what its points record ("Temperature (K)",
     // or "Run" when nothing is recorded) and how many points it lists (incomplete ones last).
-    Q_PROPERTY(QString seriesName READ seriesName NOTIFY seriesChanged)
-    Q_PROPERTY(QString seriesVariable READ seriesVariable NOTIFY seriesChanged)
-    Q_PROPERTY(int seriesPointCount READ seriesPointCount NOTIFY seriesChanged)
+    Q_PROPERTY(QString seriesName READ seriesName NOTIFY seriesNameChanged)
+    Q_PROPERTY(QString seriesVariable READ seriesVariable NOTIFY seriesVariableChanged)
+    Q_PROPERTY(int seriesPointCount READ seriesPointCount NOTIFY seriesPointCountChanged)
     // Counted up whenever a run's facts change, so a binding reading pointName or pointProblem reads them again.
     Q_PROPERTY(int seriesRevision READ seriesRevision NOTIFY seriesChanged)
     Q_PROPERTY(QString missingDataFolder READ missingDataFolder NOTIFY missingDataFolderChanged)
@@ -419,6 +419,9 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     CorrelationViewModel* correlations() const { return correlations_; }
     int templateIndex() const;
     QString lastError() const { return last_error_; }
+    // The last refusal was reported in the error popup and the Messages center: a cell that committed it keeps its
+    // value in the normal colour, not marked as an error (the owner, 2026-11-19).
+    void forgetLastError() { setLastError({}); }
     bool calculating() const { return calculating_; }
     bool adjusting() const { return adjusting_; }
     void setAdjusting(bool adjusting);
@@ -473,7 +476,17 @@ class ProjectViewModel : public QObject, public ProjectEditor {
         std::string identity;
     };
     mutable std::optional<IdentityMemo> identity_memo_;
+    // A shared copy of the scan's template, made again only when the template changes: the workers that calculate or
+    // read a shown point take it instead of a copy made per point on the GUI thread.
+    std::shared_ptr<const edi::Project> templateSnapshot() const;
+    mutable std::shared_ptr<const edi::Project> template_snapshot_;
+    mutable edi::WorkStamps template_snapshot_stamps_;
     void refreshSpellingLater();
+    // While a fit runs every followed point publishes: the texts and the spelling, each made from a copy of the
+    // whole project, are made at most once a second then, the last after the latest point (edi ADR-0089 point 7).
+    QTimer texts_coalesce_, spelling_coalesce_;
+    void makeTextsLater();
+    void makeSpellingLater();
     bool view_calculation_ = false;
     std::uint64_t texts_request_ = 0;
     std::uint64_t spelling_request_ = 0;
@@ -501,6 +514,10 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // Whether an edit or a fit would be taken now, without the refusal a too-early press shows (a tutorial's Next
     // waits for this rather than meeting "still being published").
     Q_INVOKABLE bool readyForEdit() const { return editReadinessRefusal(false).isEmpty(); }
+    // A refusal that waiting does not clear: a replaced owner, a failed publication (Undo or reopen) or a dataset
+    // that could not be shown (choose it again).
+    bool editRefusalPersistent() const;
+    QString editRefusal() const { return editReadinessRefusal(false); }
     Q_INVOKABLE bool createStructure();
     // Duplicate structure: a copy of the current structure (edi::structure_copy) named `<name>_copy`, selected and
     // linked to no experiment. One undoable step.
@@ -567,6 +584,10 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     Q_INVOKABLE int previewSeriesGroups(const QList<QUrl>& files);
     /// The files' total size in bytes, for the Copy data into the project default (20 files, 50 MB).
     Q_INVOKABLE qint64 filesBytes(const QList<QUrl>& files) const;
+    // Asked while `refused` is announced: the file the load making that refusal failed on, for the error popup to
+    // attach when the user sends the problem (edi ADR-0062), or empty (a refusal after the file was read, such as a
+    // name clash, or one no load makes). `message` is not read.
+    Q_INVOKABLE QString takeRefusedFile(const QString& message);
     /// List a local folder off the GUI thread, then link its datasets through the normal scan loader.
     Q_INVOKABLE void loadDatasetFolder(edi_app::ExperimentViewModel* experiment, const QUrl& folder, bool copy = false);
     Q_PROPERTY(bool listingDatasetFolder READ listingDatasetFolder NOTIFY listingDatasetFolderChanged)
@@ -754,6 +775,10 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     bool scanProcessed() const;
     // The run ended: its status, seconds and outcome key (the worst file's, Stopped or Failed).
     void scanEnded(edi::FitStatus status, double seconds);
+    // The template file's saved correlation rows, made when its fit's result arrived during a run, are made at the run's
+    // end (settleTemplateRows): `template_rows_owed_` names the file then.
+    std::string template_rows_owed_;
+    void settleTemplateRows();
     // Every pattern, display catches up: the patterns of a scan that ended are all drawn, and the shown dataset is
     // shown as its row gives it (scanEnded waits for this).
     void scanCaughtUp();
@@ -826,7 +851,12 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     void calculationStarted();
     void templateIndexChanged();
     void scanChanged();
+    void seriesModeChanged();
     void seriesChanged();
+    void bankLabelsChanged();
+    void seriesNameChanged();
+    void seriesVariableChanged();
+    void seriesPointCountChanged();
     void currentBankChanged();
     void listingDatasetFolderChanged();
     void missingDataFolderChanged();
@@ -1063,6 +1093,9 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     struct LoadedData {
         const edi::ExperimentBase* experiment = nullptr;
         std::shared_ptr<const edi::BraggPdExperiment> before;
+        // The fit result and every bank's share before the load. Undo restores them with their data, or restores
+        // their absence, even if the replacement data were fitted meanwhile.
+        std::shared_ptr<const edi::Project> fit_state;
     };
     // The table header's free or fixed: each parameter's flag as it was, by unique name.
     struct FreeFlags {
@@ -1104,6 +1137,10 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     void syncLoadState();
     // Applies an experiment's replacement by Load data or its undo; the refusal, if any.
     QString replaceData(int index, edi::BraggPdExperiment replacement, bool restoring = false);
+    // Keeps a replaced experiment alive until its view model is gone: the old model and its pattern hold it by
+    // reference, and they are rebuilt only when the edit publishes (the owner's crash of 2026-11-19).
+    void keepUntilModelGone(const edi::ExperimentBase* experiment, const std::shared_ptr<const edi::ExperimentBase>& held);
+
     bool restoreScanRun(const ScanRun& run, bool restoring = false);
     // The results read again from disk (after a run, an undo or a load), with every view of them.
     void reloadScanResults();
@@ -1263,18 +1300,28 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     };
     // Applies a projection read for request `request`, unless a newer one was asked for since.
     void applyDatasetView(std::uint64_t request, int index, DatasetView view);
-    // The values a dataset is shown with: the template's, with its results row's over them.
-    std::vector<edi::Edit::ScanValue> datasetValues(const std::vector<std::string>& row) const;
-    // The same over `from`, read with `index`'s columns.
+    // The values a dataset is shown with: `from`'s, with its results row's over them, read with `index`'s columns.
+    // `start_row`: the results row of the dataset the fit started from (startDataset), whose cells are each value's
+    // start; empty: the template's values are. `start_known` false: no start is given (Start and Change blank).
     std::vector<edi::Edit::ScanValue> datasetValues(const std::vector<std::string>& row, const edi::Project& from,
-                                                    const edi::ScanResultIndex& index) const;
+                                                    const edi::ScanResultIndex& index,
+                                                    const std::vector<std::string>& start_row = {},
+                                                    bool start_known = true) const;
+    // The dataset a sequential fit started dataset `dataset` from, as crysta seeds a series: -1 the template (the
+    // first, one with no successful predecessor, an unfitted dataset, or any dataset of an independent scan);
+    // kStartUnknown where the saved rows cannot prove it (a Continue filled points in out of order).
+    static constexpr int kStartUnknown = -2;
+    static int startDataset(const edi::Project& from, const edi::ScanResultIndex& index, int dataset);
     // The values dataset `index` is shown with: its results row's, and a series point's per-experiment row's over them.
     std::vector<edi::Edit::ScanValue> pointValues(int index) const;
     // A series point's per-experiment values (`results_experiments.csv`) over `values`, read from `project`.
     // What every row of a series' list shows alike, when it last announced them all (syncDatasets).
     QString dataset_rows_signature_;
+    // `start`: the point its fit started from (startDataset), whose rows are the starts; -1: the template's values.
+    // `own`, `from`: the two points' checks (ScanSession::pointCheck), which their rows are read against.
     static void overlaySeriesPoint(std::vector<edi::Edit::ScanValue>& values, const edi::Project& project,
-                                   const edi::ScanDatasets& datasets, int index);
+                                   const edi::ScanDatasets& datasets, int index, int start,
+                                   const edi::SeriesPointCheck& own, const edi::SeriesPointCheck& from);
     // Reads dataset `index` into `view`: its file, or a series point's file of each experiment (beam modes in
     // project order). Throws as edi::read_scan_dataset does.
     static void readDataset(DatasetView& view, const edi::ScanDatasets& datasets, int index,
@@ -1367,6 +1414,9 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     bool modified_ = false;
     quint64 revision_ = 0;
     QString last_error_;
+    void announceRefused(const QString& message);  // every `refused`, with the file it attaches
+    void announceBrokenRelations();
+    QString broken_relations_;  // the relation problem last announced (announceBrokenRelations)
     QString published_name_, published_title_, published_description_, published_last_modified_;
     QString published_authors_, published_su_rule_;
     bool published_pattern_d_spacing_ = false;

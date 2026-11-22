@@ -78,7 +78,7 @@ def test_main_saved_bytes_regression_pin(tmp_path, case, rule):
     transitioned = dict(ORIGINAL['projects'][case][rule])
     for change in TRANSITIONS:
         if (change['case'], change['rule']) == (case, rule):
-            assert transitioned[change['path']] == change['before'], (
+            assert transitioned.get(change['path']) == change['before'], (
                 'Each byte transition binds the exact preceding immutable regression hash'
             )
             transitioned[change['path']] = change['after']
@@ -131,7 +131,10 @@ def test_main_saved_bytes_regression_pin(tmp_path, case, rule):
     assert actual == REFERENCE['projects'][case][rule], (
         'The rounded-save regression preserves every saved path and byte under both s.u. rules; '
         'only independently checked orbit representatives, immutable-hash category movement, '
-        'clocks and the checked free flag are normalized: ' + case + ' / ' + rule
+        'clocks, the checked free flag and the checked omitted title are normalized: '
+        + case
+        + ' / '
+        + rule
     )
 
 
@@ -204,7 +207,8 @@ def test_main_fitted_descriptor_bytes_regression_pin(tmp_path, case, rule):
     assert actual == REFERENCE['fit_projects'][case][rule], (
         'The fitted crystal-radius regression preserves every saved path and non-fitted byte '
         'under both s.u. rules, with checked fitted numbers, clocks and hash-verified '
-        'category movement and description spelling; canonical experiment zlib/base64: '
+        'category movement, description spelling and the checked omitted title; '
+        'canonical experiment zlib/base64: '
         + (
             base64.b64encode(zlib.compress(experiment)).decode()
             if actual != REFERENCE['fit_projects'][case][rule]

@@ -654,6 +654,23 @@ std::vector<std::array<std::uint32_t, 3>> convex_hull(const std::vector<Vec3>& p
         size = std::max(size, norm(sub(point, points[0])));
     }
     const double eps = 1e-6 * std::max(size, 1.0);
+    // Points all on one line or one plane enclose no volume, however many triangles a flat fan of them would make.
+    bool spans_volume = false;
+    for (std::size_t j = 1; j < n && !spans_volume; ++j) {
+        for (std::size_t k = j + 1; k < n && !spans_volume; ++k) {
+            const Vec3 normal = cross(sub(points[j], points[0]), sub(points[k], points[0]));
+            const double length = norm(normal);
+            if (length < eps * eps) {
+                continue;
+            }
+            for (std::size_t m = 1; m < n && !spans_volume; ++m) {
+                spans_volume = std::abs(dot(sub(points[m], points[0]), normal)) / length > eps;
+            }
+        }
+    }
+    if (!spans_volume) {
+        return faces;
+    }
     std::set<std::vector<std::size_t>> planes;  // each face's points, found once
     for (std::size_t i = 0; i < n; ++i) {
         for (std::size_t j = i + 1; j < n; ++j) {
@@ -745,6 +762,25 @@ StructureScene present_structure(const SceneSource& source, const SceneOptions& 
         scene.atoms[found->second].parts.push_back(std::move(part));
     }
 
+    // Each site's own image, the one the asymmetric unit shows: its `1_555` row, or, for a site the file places
+    // outside the cell, the identity operation's first row inside it (`1_556` for a z just below 0).
+    std::unordered_map<std::string, std::size_t> own_row;
+    if (source.atom_site_id && source.site_symmetry) {
+        const std::size_t count = std::min(source.atom_site_id->size(), source.site_symmetry->size());
+        for (std::size_t row = 0; row != count; ++row) {
+            const std::string& code = (*source.site_symmetry)[row];
+            if (!code.starts_with("1_")) {
+                continue;
+            }
+            const std::string& site = (*source.atom_site_id)[row];
+            const auto held = own_row.find(site);
+            if (held == own_row.end()) {
+                own_row.emplace(site, row);
+            } else if (code == "1_555" && (*source.site_symmetry)[held->second] != "1_555") {
+                held->second = row;
+            }
+        }
+    }
     std::unordered_map<std::string, const SceneSource::SiteAdp*> adp_of_site;
     for (const SceneSource::SiteAdp& adp : source.site_adps) {
         adp_of_site.emplace(adp.site_id, &adp);
@@ -772,7 +808,7 @@ StructureScene present_structure(const SceneSource& source, const SceneOptions& 
                 atom.label += '/';
             }
             atom.label += part.site_id;
-            if (column_value(source.site_symmetry, part.row, std::string()) == "1_555") {
+            if (const auto own = own_row.find(part.site_id); own != own_row.end() && own->second == part.row) {
                 atom.asymmetric = true;
                 crystal = crystal || source.crystal_sites.empty() || source.crystal_sites.contains(part.site_id);
             }
@@ -903,7 +939,7 @@ StructureScene present_structure(const SceneSource& source, const SceneOptions& 
                 if (corner_atom(bond.atom_1)) shells[bond.atom_2].push_back(bond.start);
             }
         }
-        // Complete: a centre takes every corner atom that near, one cell over included. Near is within the distance, or
+        // Complete: a centre takes every corner atom that near, in whichever cell it sits. Near is within the distance, or
         // up to the longest bond the geometry lists between the two sites.
         if (options.polyhedra_complete && (max_distance > 0.0 || !bond_list.empty())) {
             std::map<std::pair<std::string, std::string>, double> reach;
@@ -920,7 +956,11 @@ StructureScene present_structure(const SceneSource& source, const SceneOptions& 
             for (const auto& [id, type] : source.site_types) {
                 corner_site[id] = corner_element(element_of(type));
             }
-            const auto& m = source.cartn_matrix;
+            const auto& cartn = source.cartn_matrix;
+            const Matrix3 inverse = inverted(cartn);
+            // More corners than convex_hull takes is no polyhedron; the search stops there rather than walk every cell
+            // of a huge distance.
+            constexpr std::size_t kMaxShell = 64;
             for (std::size_t i = 0; i != scene.atoms.size(); ++i) {
                 const SceneAtom& atom = scene.atoms[i];
                 const std::size_t centre_row = atom.parts[atom.major].row;
@@ -928,7 +968,7 @@ StructureScene present_structure(const SceneSource& source, const SceneOptions& 
                     continue;
                 }
                 std::vector<Vec3> found;
-                for (std::size_t row = 0; row != n; ++row) {
+                for (std::size_t row = 0; row != n && found.size() <= kMaxShell; ++row) {
                     if (!corner_site[site(row)]) continue;
                     double limit = max_distance;
                     if (limit == 0.0) {
@@ -936,14 +976,32 @@ StructureScene present_structure(const SceneSource& source, const SceneOptions& 
                         if (longest == reach.end()) continue;
                         limit = longest->second;
                     }
-                    for (int ta = -1; ta <= 1; ++ta) {
-                        for (int tb = -1; tb <= 1; ++tb) {
-                            for (int tc = -1; tc <= 1; ++tc) {
-                                const Vec3 shift{m[0] * ta + m[1] * tb + m[2] * tc, m[3] * ta + m[4] * tb + m[5] * tc,
-                                                 m[6] * ta + m[7] * tb + m[8] * tc};
+                    // The cells a corner within the limit can sit in: along each axis, the fractional offset changes
+                    // by at most the limit times the length of that row of the inverse cell matrix (skewed cells too).
+                    const Vec3 offset = sub(atom.centre, row_centre(source, row));
+                    std::array<int, 3> low{}, high{};
+                    bool bounded = true;
+                    for (std::size_t k = 0; k != 3; ++k) {
+                        const Vec3 reciprocal{inverse[3 * k], inverse[3 * k + 1], inverse[3 * k + 2]};
+                        const double centre = dot(reciprocal, offset), reach_k = (limit + 1e-4) * norm(reciprocal);
+                        bounded = bounded && std::isfinite(centre) && std::isfinite(reach_k) && reach_k < 1e6;
+                        if (!bounded) break;
+                        low[k] = static_cast<int>(std::ceil(centre - reach_k));
+                        high[k] = static_cast<int>(std::floor(centre + reach_k));
+                    }
+                    if (!bounded) continue;
+                    for (int ta = low[0]; ta <= high[0] && found.size() <= kMaxShell; ++ta) {
+                        for (int tb = low[1]; tb <= high[1] && found.size() <= kMaxShell; ++tb) {
+                            for (int tc = low[2]; tc <= high[2] && found.size() <= kMaxShell; ++tc) {
+                                const Vec3 shift{cartn[0] * ta + cartn[1] * tb + cartn[2] * tc,
+                                                 cartn[3] * ta + cartn[4] * tb + cartn[5] * tc,
+                                                 cartn[6] * ta + cartn[7] * tb + cartn[8] * tc};
                                 const Vec3 point = add(row_centre(source, row), shift);
                                 const double distance = norm(sub(point, atom.centre));
-                                if (distance > 1e-6 && distance <= limit + 1e-4) {
+                                if (distance > 1e-6 && distance <= limit + 1e-4 &&
+                                    std::none_of(found.begin(), found.end(), [&](const Vec3& kept) {
+                                        return norm(sub(kept, point)) < 1e-6;
+                                    })) {
                                     found.push_back(point);
                                 }
                             }
@@ -967,8 +1025,8 @@ StructureScene present_structure(const SceneSource& source, const SceneOptions& 
                 }
             }
             auto faces = convex_hull(corners);
-            // Corners all in one plane (a square of four bonds) enclose nothing: no polyhedron.
-            if (faces.size() < 4) {
+            // Corners all in one plane (a square or a hexagon of bonds) enclose nothing: no polyhedron.
+            if (faces.empty()) {
                 continue;
             }
             const Rgb grey{0xA0, 0xA0, 0xA0};

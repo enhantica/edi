@@ -46,8 +46,7 @@ Row {
     property var lineFor: null
     // The width that shows the chosen entry's whole line: its line, the box's padding and arrow, and the two step buttons.
     // A row with room gives the selector this width (Evolution's parameter selector, the owner, 2026-11-17).
-    readonly property real contentWidth: Math.ceil(shownLine.fullWidth + EaStyle.Sizes.fontPixelSize * 2.5
-                                                   + (selector.indicator ? selector.indicator.width : 0)) + 2 * (up.width + spacing)
+    readonly property real contentWidth: Math.ceil(shownLine.fullWidth + EaStyle.Sizes.fontPixelSize * 2.5 + (selector.indicator ? selector.indicator.width : 0)) + 2 * (up.width + spacing)
     property real lineExtraWidth: EaStyle.Sizes.fontPixelSize * 7
 
     // A step to the previous or next block, as a pick in the box; no step past either end.

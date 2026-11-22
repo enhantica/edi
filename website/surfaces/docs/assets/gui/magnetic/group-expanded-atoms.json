@@ -7,7 +7,7 @@
     ],
     "id": "group-expanded-atoms",
     "image": "group-expanded-atoms.webp",
-    "image_sha256": "c63d46c507abd1b8b0f3c1eca5bcc4c140f569f42efaff6a63a3ccc53e4afa5e",
+    "image_sha256": "0fc28915d01b2f2a6511beeb1d4bd1d2d1bf684c5a793f9fe87e09efd07a68ef",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -55,22 +55,6 @@
                 0,
                 1480,
                 800
-            ]
-        },
-        "SideBarGroup": {
-            "bounds": [
-                784,
-                336,
-                682,
-                253.5
-            ],
-            "enabled": true,
-            "label": "",
-            "visible_bounds": [
-                784,
-                336,
-                682,
-                253.5
             ]
         },
         "appBar": {
@@ -332,1082 +316,10 @@
         "chart.legend.toggle": {
             "ambiguous": true
         },
-        "generated.expanded_atom_site.atom_site_id.0": {
-            "bounds": [
-                857,
-                375,
-                35,
-                39
-            ],
-            "enabled": true,
-            "label": "Co1",
-            "visible_bounds": [
-                857,
-                375,
-                35,
-                39
-            ]
-        },
-        "generated.expanded_atom_site.atom_site_id.1": {
-            "bounds": [
-                857,
-                414,
-                35,
-                39
-            ],
-            "enabled": true,
-            "label": "Co1",
-            "visible_bounds": [
-                857,
-                414,
-                35,
-                39
-            ]
-        },
-        "generated.expanded_atom_site.atom_site_id.2": {
-            "bounds": [
-                857,
-                453,
-                35,
-                39
-            ],
-            "enabled": true,
-            "label": "Co1",
-            "visible_bounds": [
-                857,
-                453,
-                35,
-                39
-            ]
-        },
-        "generated.expanded_atom_site.atom_site_id.3": {
-            "bounds": [
-                857,
-                492,
-                35,
-                39
-            ],
-            "enabled": true,
-            "label": "Co1",
-            "visible_bounds": [
-                857,
-                492,
-                35,
-                39
-            ]
-        },
-        "generated.expanded_atom_site.atom_site_id.4": {
-            "bounds": [
-                857,
-                531,
-                35,
-                39
-            ],
-            "enabled": true,
-            "label": "Co1",
-            "visible_bounds": [
-                857,
-                531,
-                35,
-                39
-            ]
-        },
-        "generated.expanded_atom_site.atom_site_id.5": {
-            "bounds": [
-                857,
-                570,
-                35,
-                39
-            ],
-            "enabled": true,
-            "label": "Co1",
-            "visible_bounds": [
-                857,
-                570,
-                35,
-                19.5
-            ]
-        },
-        "generated.expanded_atom_site.cartn_x.0": {
-            "bounds": [
-                1151,
-                375,
-                63,
-                39
-            ],
-            "enabled": true,
-            "label": "0.0000",
-            "visible_bounds": [
-                1151,
-                375,
-                63,
-                39
-            ]
-        },
-        "generated.expanded_atom_site.cartn_x.1": {
-            "bounds": [
-                1151,
-                414,
-                63,
-                39
-            ],
-            "enabled": true,
-            "label": "0.0000",
-            "visible_bounds": [
-                1151,
-                414,
-                63,
-                39
-            ]
-        },
-        "generated.expanded_atom_site.cartn_x.2": {
-            "bounds": [
-                1151,
-                453,
-                63,
-                39
-            ],
-            "enabled": true,
-            "label": "0.0000",
-            "visible_bounds": [
-                1151,
-                453,
-                63,
-                39
-            ]
-        },
-        "generated.expanded_atom_site.cartn_x.3": {
-            "bounds": [
-                1151,
-                492,
-                63,
-                39
-            ],
-            "enabled": true,
-            "label": "0.0000",
-            "visible_bounds": [
-                1151,
-                492,
-                63,
-                39
-            ]
-        },
-        "generated.expanded_atom_site.cartn_x.4": {
-            "bounds": [
-                1151,
-                531,
-                63,
-                39
-            ],
-            "enabled": true,
-            "label": "10.3081",
-            "visible_bounds": [
-                1151,
-                531,
-                63,
-                39
-            ]
-        },
-        "generated.expanded_atom_site.cartn_x.5": {
-            "bounds": [
-                1151,
-                570,
-                63,
-                39
-            ],
-            "enabled": true,
-            "label": "10.3081",
-            "visible_bounds": [
-                1151,
-                570,
-                63,
-                19.5
-            ]
-        },
-        "generated.expanded_atom_site.cartn_y.0": {
-            "bounds": [
-                1218,
-                375,
-                55,
-                39
-            ],
-            "enabled": true,
-            "label": "0.0000",
-            "visible_bounds": [
-                1218,
-                375,
-                55,
-                39
-            ]
-        },
-        "generated.expanded_atom_site.cartn_y.1": {
-            "bounds": [
-                1218,
-                414,
-                55,
-                39
-            ],
-            "enabled": true,
-            "label": "0.0000",
-            "visible_bounds": [
-                1218,
-                414,
-                55,
-                39
-            ]
-        },
-        "generated.expanded_atom_site.cartn_y.2": {
-            "bounds": [
-                1218,
-                453,
-                55,
-                39
-            ],
-            "enabled": true,
-            "label": "6.0022",
-            "visible_bounds": [
-                1218,
-                453,
-                55,
-                39
-            ]
-        },
-        "generated.expanded_atom_site.cartn_y.3": {
-            "bounds": [
-                1218,
-                492,
-                55,
-                39
-            ],
-            "enabled": true,
-            "label": "6.0022",
-            "visible_bounds": [
-                1218,
-                492,
-                55,
-                39
-            ]
-        },
-        "generated.expanded_atom_site.cartn_y.4": {
-            "bounds": [
-                1218,
-                531,
-                55,
-                39
-            ],
-            "enabled": true,
-            "label": "0.0000",
-            "visible_bounds": [
-                1218,
-                531,
-                55,
-                39
-            ]
-        },
-        "generated.expanded_atom_site.cartn_y.5": {
-            "bounds": [
-                1218,
-                570,
-                55,
-                39
-            ],
-            "enabled": true,
-            "label": "0.0000",
-            "visible_bounds": [
-                1218,
-                570,
-                55,
-                19.5
-            ]
-        },
-        "generated.expanded_atom_site.cartn_z.0": {
-            "bounds": [
-                1277,
-                375,
-                55,
-                39
-            ],
-            "enabled": true,
-            "label": "0.0000",
-            "visible_bounds": [
-                1277,
-                375,
-                55,
-                39
-            ]
-        },
-        "generated.expanded_atom_site.cartn_z.1": {
-            "bounds": [
-                1277,
-                414,
-                55,
-                39
-            ],
-            "enabled": true,
-            "label": "4.7874",
-            "visible_bounds": [
-                1277,
-                414,
-                55,
-                39
-            ]
-        },
-        "generated.expanded_atom_site.cartn_z.2": {
-            "bounds": [
-                1277,
-                453,
-                55,
-                39
-            ],
-            "enabled": true,
-            "label": "0.0000",
-            "visible_bounds": [
-                1277,
-                453,
-                55,
-                39
-            ]
-        },
-        "generated.expanded_atom_site.cartn_z.3": {
-            "bounds": [
-                1277,
-                492,
-                55,
-                39
-            ],
-            "enabled": true,
-            "label": "4.7874",
-            "visible_bounds": [
-                1277,
-                492,
-                55,
-                39
-            ]
-        },
-        "generated.expanded_atom_site.cartn_z.4": {
-            "bounds": [
-                1277,
-                531,
-                55,
-                39
-            ],
-            "enabled": true,
-            "label": "0.0000",
-            "visible_bounds": [
-                1277,
-                531,
-                55,
-                39
-            ]
-        },
-        "generated.expanded_atom_site.cartn_z.5": {
-            "bounds": [
-                1277,
-                570,
-                55,
-                39
-            ],
-            "enabled": true,
-            "label": "4.7874",
-            "visible_bounds": [
-                1277,
-                570,
-                55,
-                19.5
-            ]
-        },
-        "generated.expanded_atom_site.fract_x.0": {
-            "bounds": [
-                950,
-                375,
-                63,
-                39
-            ],
-            "enabled": true,
-            "label": "0.00000",
-            "visible_bounds": [
-                950,
-                375,
-                63,
-                39
-            ]
-        },
-        "generated.expanded_atom_site.fract_x.1": {
-            "bounds": [
-                950,
-                414,
-                63,
-                39
-            ],
-            "enabled": true,
-            "label": "0.00000",
-            "visible_bounds": [
-                950,
-                414,
-                63,
-                39
-            ]
-        },
-        "generated.expanded_atom_site.fract_x.2": {
-            "bounds": [
-                950,
-                453,
-                63,
-                39
-            ],
-            "enabled": true,
-            "label": "0.00000",
-            "visible_bounds": [
-                950,
-                453,
-                63,
-                39
-            ]
-        },
-        "generated.expanded_atom_site.fract_x.3": {
-            "bounds": [
-                950,
-                492,
-                63,
-                39
-            ],
-            "enabled": true,
-            "label": "0.00000",
-            "visible_bounds": [
-                950,
-                492,
-                63,
-                39
-            ]
-        },
-        "generated.expanded_atom_site.fract_x.4": {
-            "bounds": [
-                950,
-                531,
-                63,
-                39
-            ],
-            "enabled": true,
-            "label": "1.00000",
-            "visible_bounds": [
-                950,
-                531,
-                63,
-                39
-            ]
-        },
-        "generated.expanded_atom_site.fract_x.5": {
-            "bounds": [
-                950,
-                570,
-                63,
-                39
-            ],
-            "enabled": true,
-            "label": "1.00000",
-            "visible_bounds": [
-                950,
-                570,
-                63,
-                19.5
-            ]
-        },
-        "generated.expanded_atom_site.fract_y.0": {
-            "bounds": [
-                1017,
-                375,
-                63,
-                39
-            ],
-            "enabled": true,
-            "label": "0.00000",
-            "visible_bounds": [
-                1017,
-                375,
-                63,
-                39
-            ]
-        },
-        "generated.expanded_atom_site.fract_y.1": {
-            "bounds": [
-                1017,
-                414,
-                63,
-                39
-            ],
-            "enabled": true,
-            "label": "0.00000",
-            "visible_bounds": [
-                1017,
-                414,
-                63,
-                39
-            ]
-        },
-        "generated.expanded_atom_site.fract_y.2": {
-            "bounds": [
-                1017,
-                453,
-                63,
-                39
-            ],
-            "enabled": true,
-            "label": "1.00000",
-            "visible_bounds": [
-                1017,
-                453,
-                63,
-                39
-            ]
-        },
-        "generated.expanded_atom_site.fract_y.3": {
-            "bounds": [
-                1017,
-                492,
-                63,
-                39
-            ],
-            "enabled": true,
-            "label": "1.00000",
-            "visible_bounds": [
-                1017,
-                492,
-                63,
-                39
-            ]
-        },
-        "generated.expanded_atom_site.fract_y.4": {
-            "bounds": [
-                1017,
-                531,
-                63,
-                39
-            ],
-            "enabled": true,
-            "label": "0.00000",
-            "visible_bounds": [
-                1017,
-                531,
-                63,
-                39
-            ]
-        },
-        "generated.expanded_atom_site.fract_y.5": {
-            "bounds": [
-                1017,
-                570,
-                63,
-                39
-            ],
-            "enabled": true,
-            "label": "0.00000",
-            "visible_bounds": [
-                1017,
-                570,
-                63,
-                19.5
-            ]
-        },
-        "generated.expanded_atom_site.fract_z.0": {
-            "bounds": [
-                1084,
-                375,
-                63,
-                39
-            ],
-            "enabled": true,
-            "label": "0.00000",
-            "visible_bounds": [
-                1084,
-                375,
-                63,
-                39
-            ]
-        },
-        "generated.expanded_atom_site.fract_z.1": {
-            "bounds": [
-                1084,
-                414,
-                63,
-                39
-            ],
-            "enabled": true,
-            "label": "1.00000",
-            "visible_bounds": [
-                1084,
-                414,
-                63,
-                39
-            ]
-        },
-        "generated.expanded_atom_site.fract_z.2": {
-            "bounds": [
-                1084,
-                453,
-                63,
-                39
-            ],
-            "enabled": true,
-            "label": "0.00000",
-            "visible_bounds": [
-                1084,
-                453,
-                63,
-                39
-            ]
-        },
-        "generated.expanded_atom_site.fract_z.3": {
-            "bounds": [
-                1084,
-                492,
-                63,
-                39
-            ],
-            "enabled": true,
-            "label": "1.00000",
-            "visible_bounds": [
-                1084,
-                492,
-                63,
-                39
-            ]
-        },
-        "generated.expanded_atom_site.fract_z.4": {
-            "bounds": [
-                1084,
-                531,
-                63,
-                39
-            ],
-            "enabled": true,
-            "label": "0.00000",
-            "visible_bounds": [
-                1084,
-                531,
-                63,
-                39
-            ]
-        },
-        "generated.expanded_atom_site.fract_z.5": {
-            "bounds": [
-                1084,
-                570,
-                63,
-                39
-            ],
-            "enabled": true,
-            "label": "1.00000",
-            "visible_bounds": [
-                1084,
-                570,
-                63,
-                19.5
-            ]
-        },
-        "generated.expanded_atom_site.id.0": {
-            "bounds": [
-                825,
-                375,
-                28,
-                39
-            ],
-            "enabled": true,
-            "label": "1",
-            "visible_bounds": [
-                825,
-                375,
-                28,
-                39
-            ]
-        },
-        "generated.expanded_atom_site.id.1": {
-            "bounds": [
-                825,
-                414,
-                28,
-                39
-            ],
-            "enabled": true,
-            "label": "2",
-            "visible_bounds": [
-                825,
-                414,
-                28,
-                39
-            ]
-        },
-        "generated.expanded_atom_site.id.2": {
-            "bounds": [
-                825,
-                453,
-                28,
-                39
-            ],
-            "enabled": true,
-            "label": "3",
-            "visible_bounds": [
-                825,
-                453,
-                28,
-                39
-            ]
-        },
-        "generated.expanded_atom_site.id.3": {
-            "bounds": [
-                825,
-                492,
-                28,
-                39
-            ],
-            "enabled": true,
-            "label": "4",
-            "visible_bounds": [
-                825,
-                492,
-                28,
-                39
-            ]
-        },
-        "generated.expanded_atom_site.id.4": {
-            "bounds": [
-                825,
-                531,
-                28,
-                39
-            ],
-            "enabled": true,
-            "label": "5",
-            "visible_bounds": [
-                825,
-                531,
-                28,
-                39
-            ]
-        },
-        "generated.expanded_atom_site.id.5": {
-            "bounds": [
-                825,
-                570,
-                28,
-                39
-            ],
-            "enabled": true,
-            "label": "6",
-            "visible_bounds": [
-                825,
-                570,
-                28,
-                19.5
-            ]
-        },
-        "generated.expanded_atom_site.list": {
-            "bounds": [
-                784,
-                336,
-                682,
-                253.5
-            ],
-            "enabled": true,
-            "label": "",
-            "visible_bounds": [
-                784,
-                336,
-                682,
-                253.5
-            ]
-        },
-        "generated.expanded_atom_site.occupancy.0": {
-            "bounds": [
-                1336,
-                375,
-                55,
-                39
-            ],
-            "enabled": true,
-            "label": "1.0000",
-            "visible_bounds": [
-                1336,
-                375,
-                55,
-                39
-            ]
-        },
-        "generated.expanded_atom_site.occupancy.1": {
-            "bounds": [
-                1336,
-                414,
-                55,
-                39
-            ],
-            "enabled": true,
-            "label": "1.0000",
-            "visible_bounds": [
-                1336,
-                414,
-                55,
-                39
-            ]
-        },
-        "generated.expanded_atom_site.occupancy.2": {
-            "bounds": [
-                1336,
-                453,
-                55,
-                39
-            ],
-            "enabled": true,
-            "label": "1.0000",
-            "visible_bounds": [
-                1336,
-                453,
-                55,
-                39
-            ]
-        },
-        "generated.expanded_atom_site.occupancy.3": {
-            "bounds": [
-                1336,
-                492,
-                55,
-                39
-            ],
-            "enabled": true,
-            "label": "1.0000",
-            "visible_bounds": [
-                1336,
-                492,
-                55,
-                39
-            ]
-        },
-        "generated.expanded_atom_site.occupancy.4": {
-            "bounds": [
-                1336,
-                531,
-                55,
-                39
-            ],
-            "enabled": true,
-            "label": "1.0000",
-            "visible_bounds": [
-                1336,
-                531,
-                55,
-                39
-            ]
-        },
-        "generated.expanded_atom_site.occupancy.5": {
-            "bounds": [
-                1336,
-                570,
-                55,
-                39
-            ],
-            "enabled": true,
-            "label": "1.0000",
-            "visible_bounds": [
-                1336,
-                570,
-                55,
-                19.5
-            ]
-        },
-        "generated.expanded_atom_site.site_symmetry.0": {
-            "bounds": [
-                896,
-                375,
-                50,
-                39
-            ],
-            "enabled": true,
-            "label": "1_555",
-            "visible_bounds": [
-                896,
-                375,
-                50,
-                39
-            ]
-        },
-        "generated.expanded_atom_site.site_symmetry.1": {
-            "bounds": [
-                896,
-                414,
-                50,
-                39
-            ],
-            "enabled": true,
-            "label": "1_556",
-            "visible_bounds": [
-                896,
-                414,
-                50,
-                39
-            ]
-        },
-        "generated.expanded_atom_site.site_symmetry.2": {
-            "bounds": [
-                896,
-                453,
-                50,
-                39
-            ],
-            "enabled": true,
-            "label": "1_565",
-            "visible_bounds": [
-                896,
-                453,
-                50,
-                39
-            ]
-        },
-        "generated.expanded_atom_site.site_symmetry.3": {
-            "bounds": [
-                896,
-                492,
-                50,
-                39
-            ],
-            "enabled": true,
-            "label": "1_566",
-            "visible_bounds": [
-                896,
-                492,
-                50,
-                39
-            ]
-        },
-        "generated.expanded_atom_site.site_symmetry.4": {
-            "bounds": [
-                896,
-                531,
-                50,
-                39
-            ],
-            "enabled": true,
-            "label": "1_655",
-            "visible_bounds": [
-                896,
-                531,
-                50,
-                39
-            ]
-        },
-        "generated.expanded_atom_site.site_symmetry.5": {
-            "bounds": [
-                896,
-                570,
-                50,
-                39
-            ],
-            "enabled": true,
-            "label": "1_656",
-            "visible_bounds": [
-                896,
-                570,
-                50,
-                19.5
-            ]
-        },
-        "generated.expanded_atom_site.u_iso.0": {
-            "bounds": [
-                1395,
-                375,
-                63,
-                39
-            ],
-            "enabled": true,
-            "label": "0.00341",
-            "visible_bounds": [
-                1395,
-                375,
-                63,
-                39
-            ]
-        },
-        "generated.expanded_atom_site.u_iso.1": {
-            "bounds": [
-                1395,
-                414,
-                63,
-                39
-            ],
-            "enabled": true,
-            "label": "0.00341",
-            "visible_bounds": [
-                1395,
-                414,
-                63,
-                39
-            ]
-        },
-        "generated.expanded_atom_site.u_iso.2": {
-            "bounds": [
-                1395,
-                453,
-                63,
-                39
-            ],
-            "enabled": true,
-            "label": "0.00341",
-            "visible_bounds": [
-                1395,
-                453,
-                63,
-                39
-            ]
-        },
-        "generated.expanded_atom_site.u_iso.3": {
-            "bounds": [
-                1395,
-                492,
-                63,
-                39
-            ],
-            "enabled": true,
-            "label": "0.00341",
-            "visible_bounds": [
-                1395,
-                492,
-                63,
-                39
-            ]
-        },
-        "generated.expanded_atom_site.u_iso.4": {
-            "bounds": [
-                1395,
-                531,
-                63,
-                39
-            ],
-            "enabled": true,
-            "label": "0.00341",
-            "visible_bounds": [
-                1395,
-                531,
-                63,
-                39
-            ]
-        },
-        "generated.expanded_atom_site.u_iso.5": {
-            "bounds": [
-                1395,
-                570,
-                63,
-                39
-            ],
-            "enabled": true,
-            "label": "0.00341",
-            "visible_bounds": [
-                1395,
-                570,
-                63,
-                19.5
-            ]
-        },
         "group.appearance": {
             "bounds": [
                 770,
-                729.5,
+                518,
                 710,
                 42
             ],
@@ -1416,15 +328,15 @@
             "label": "Appearance",
             "visible_bounds": [
                 770,
-                729.5,
+                518,
                 710,
-                14.5
+                42
             ]
         },
         "group.appearance.pin": {
             "bounds": [
                 1433.2261363926236,
-                728.2261363926237,
+                516.7261363926237,
                 44.54772721475251,
                 44.54772721475251
             ],
@@ -1432,32 +344,32 @@
             "label": "thumbtack",
             "visible_bounds": [
                 1433.2261363926236,
-                729.5,
+                518,
                 44.54772721475251,
-                14.5
+                42
             ]
         },
         "group.expanded_atom_site": {
             "bounds": [
                 770,
-                287,
+                329.0000000000215,
                 710,
-                316.5
+                63
             ],
             "enabled": true,
             "icon": "braille",
             "label": "Atoms in the cell (39)",
             "visible_bounds": [
                 770,
-                287,
+                329.0000000000215,
                 710,
-                316.5
+                63
             ]
         },
         "group.expanded_atom_site.pin": {
             "bounds": [
                 1433.2261363926236,
-                285.72613639262374,
+                327.72613639264523,
                 44.54772721475251,
                 44.54772721475251
             ],
@@ -1465,7 +377,7 @@
             "label": "thumbtack",
             "visible_bounds": [
                 1433.2261363926236,
-                287,
+                329.0000000000215,
                 44.54772721475251,
                 43.273863607376256
             ]
@@ -1473,7 +385,7 @@
         "group.expanded_atom_site_moment": {
             "bounds": [
                 770,
-                687.5,
+                434,
                 710,
                 42
             ],
@@ -1482,7 +394,7 @@
             "label": "Moments in the cell (19)",
             "visible_bounds": [
                 770,
-                687.5,
+                434,
                 710,
                 42
             ]
@@ -1490,7 +402,7 @@
         "group.expanded_atom_site_moment.pin": {
             "bounds": [
                 1433.2261363926236,
-                686.2261363926237,
+                432.72613639262374,
                 44.54772721475251,
                 44.54772721475251
             ],
@@ -1498,32 +410,32 @@
             "label": "thumbtack",
             "visible_bounds": [
                 1433.2261363926236,
-                687.5,
+                434,
                 44.54772721475251,
                 42
             ]
         },
-        "group.geom_bond": {
+        "group.geom": {
             "bounds": [
                 770,
-                603.5,
+                203,
                 710,
                 42
             ],
             "enabled": true,
-            "icon": "grip-lines",
-            "label": "Bonds (34)",
+            "icon": "ruler-combined",
+            "label": "Bond settings",
             "visible_bounds": [
                 770,
-                603.5,
+                203,
                 710,
                 42
             ]
         },
-        "group.geom_bond.pin": {
+        "group.geom.pin": {
             "bounds": [
                 1433.2261363926236,
-                602.2261363926237,
+                201.72613639262374,
                 44.54772721475251,
                 44.54772721475251
             ],
@@ -1531,7 +443,7 @@
             "label": "thumbtack",
             "visible_bounds": [
                 1433.2261363926236,
-                603.5,
+                203,
                 44.54772721475251,
                 42
             ]
@@ -1539,7 +451,7 @@
         "group.magnetic_form_factor": {
             "bounds": [
                 770,
-                203.00000000000486,
+                245,
                 710,
                 42
             ],
@@ -1548,7 +460,7 @@
             "label": "Magnetic form factors (1)",
             "visible_bounds": [
                 770,
-                203.00000000000486,
+                245,
                 710,
                 42
             ]
@@ -1556,15 +468,15 @@
         "group.magnetic_form_factor.pin": {
             "bounds": [
                 1433.2261363926236,
-                201.7261363926286,
+                243.72613639262374,
                 44.54772721475251,
-                44.547727214752484
+                44.54772721475251
             ],
             "enabled": true,
             "label": "thumbtack",
             "visible_bounds": [
                 1433.2261363926236,
-                203.00000000000486,
+                245,
                 44.54772721475251,
                 42
             ]
@@ -1572,7 +484,7 @@
         "group.parent_space_group": {
             "bounds": [
                 770,
-                161.00000000000486,
+                119,
                 710,
                 42
             ],
@@ -1581,45 +493,12 @@
             "label": "Parent space group",
             "visible_bounds": [
                 770,
-                161.00000000000486,
+                119,
                 710,
                 42
             ]
         },
         "group.parent_space_group.pin": {
-            "bounds": [
-                1433.2261363926236,
-                159.7261363926286,
-                44.54772721475251,
-                44.547727214752484
-            ],
-            "enabled": true,
-            "label": "thumbtack",
-            "visible_bounds": [
-                1433.2261363926236,
-                161.00000000000486,
-                44.54772721475251,
-                42
-            ]
-        },
-        "group.scattering_length": {
-            "bounds": [
-                770,
-                119,
-                710,
-                42
-            ],
-            "enabled": true,
-            "icon": "ruler",
-            "label": "Scattering lengths (0)",
-            "visible_bounds": [
-                770,
-                119,
-                710,
-                42
-            ]
-        },
-        "group.scattering_length.pin": {
             "bounds": [
                 1433.2261363926236,
                 117.72613639262374,
@@ -1635,10 +514,109 @@
                 42
             ]
         },
+        "group.polyhedra": {
+            "bounds": [
+                770,
+                560,
+                710,
+                42
+            ],
+            "enabled": true,
+            "icon": "dice-d20",
+            "label": "Polyhedra",
+            "visible_bounds": [
+                770,
+                560,
+                710,
+                42
+            ]
+        },
+        "group.polyhedra.pin": {
+            "bounds": [
+                1433.2261363926236,
+                558.7261363926237,
+                44.54772721475251,
+                44.54772721475251
+            ],
+            "enabled": true,
+            "label": "thumbtack",
+            "visible_bounds": [
+                1433.2261363926236,
+                560,
+                44.54772721475251,
+                42
+            ]
+        },
+        "group.scattering_length": {
+            "bounds": [
+                770,
+                161,
+                710,
+                42
+            ],
+            "enabled": true,
+            "icon": "ruler",
+            "label": "Scattering lengths (0)",
+            "visible_bounds": [
+                770,
+                161,
+                710,
+                42
+            ]
+        },
+        "group.scattering_length.pin": {
+            "bounds": [
+                1433.2261363926236,
+                159.72613639262374,
+                44.54772721475251,
+                44.54772721475251
+            ],
+            "enabled": true,
+            "label": "thumbtack",
+            "visible_bounds": [
+                1433.2261363926236,
+                161,
+                44.54772721475251,
+                42
+            ]
+        },
+        "group.space_group_magn_symbols": {
+            "bounds": [
+                770,
+                476,
+                710,
+                42
+            ],
+            "enabled": true,
+            "icon": "hashtag",
+            "label": "Magnetic group symbols",
+            "visible_bounds": [
+                770,
+                476,
+                710,
+                42
+            ]
+        },
+        "group.space_group_magn_symbols.pin": {
+            "bounds": [
+                1433.2261363926236,
+                474.72613639262374,
+                44.54772721475251,
+                44.54772721475251
+            ],
+            "enabled": true,
+            "label": "thumbtack",
+            "visible_bounds": [
+                1433.2261363926236,
+                476,
+                44.54772721475251,
+                42
+            ]
+        },
         "group.space_group_symop": {
             "bounds": [
                 770,
-                245.00000000000486,
+                287,
                 710,
                 42
             ],
@@ -1647,15 +625,15 @@
             "label": "Symmetry operators (8)",
             "visible_bounds": [
                 770,
-                245.00000000000486,
+                287,
                 710,
-                42.00000000000003
+                42
             ]
         },
         "group.space_group_symop.pin": {
             "bounds": [
                 1433.2261363926236,
-                243.72613639262863,
+                285.72613639262374,
                 44.54772721475251,
                 44.54772721475251
             ],
@@ -1663,15 +641,15 @@
             "label": "thumbtack",
             "visible_bounds": [
                 1433.2261363926236,
-                245.00000000000486,
+                287,
                 44.54772721475251,
-                42.00000000000003
+                42
             ]
         },
         "group.space_group_symop_magn_operation": {
             "bounds": [
                 770,
-                645.5,
+                392,
                 710,
                 42
             ],
@@ -1680,7 +658,7 @@
             "label": "Magnetic operators (8)",
             "visible_bounds": [
                 770,
-                645.5,
+                392,
                 710,
                 42
             ]
@@ -1688,7 +666,7 @@
         "group.space_group_symop_magn_operation.pin": {
             "bounds": [
                 1433.2261363926236,
-                644.2261363926237,
+                390.72613639262374,
                 44.54772721475251,
                 44.54772721475251
             ],
@@ -1696,7 +674,7 @@
             "label": "thumbtack",
             "visible_bounds": [
                 1433.2261363926236,
-                645.5,
+                392,
                 44.54772721475251,
                 42
             ]
@@ -1708,7 +686,7 @@
             "bounds": [
                 28,
                 133,
-                714,
+                728,
                 35
             ],
             "enabled": true,
@@ -1716,7 +694,7 @@
             "visible_bounds": [
                 28,
                 133,
-                714,
+                728,
                 35
             ]
         },
@@ -1724,7 +702,7 @@
             "bounds": [
                 28,
                 133,
-                637,
+                651,
                 35
             ],
             "enabled": true,
@@ -1732,13 +710,13 @@
             "visible_bounds": [
                 28,
                 133,
-                637,
+                651,
                 35
             ]
         },
         "mainArea.blocks.down": {
             "bounds": [
-                707,
+                721,
                 133,
                 35,
                 35
@@ -1747,7 +725,7 @@
             "icon": "arrow-circle-down",
             "label": "",
             "visible_bounds": [
-                707,
+                721,
                 133,
                 35,
                 35
@@ -1755,7 +733,7 @@
         },
         "mainArea.blocks.up": {
             "bounds": [
-                668.5,
+                682.5,
                 133,
                 35,
                 35
@@ -1764,58 +742,43 @@
             "icon": "arrow-circle-up",
             "label": "",
             "visible_bounds": [
-                668.5,
+                682.5,
                 133,
                 35,
                 35
             ]
         },
-        "mainArea.divider": {
+        "mainArea.saveImage": {
             "bounds": [
-                770,
-                77,
-                1,
-                681
+                3.5,
+                719.5,
+                35,
+                35
             ],
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                770,
-                77,
-                1,
-                681
+                3.5,
+                719.5,
+                35,
+                35
             ]
         },
-        "mainArea.tab.correlations": {
+        "mainArea.saveImage.button": {
             "bounds": [
-                126.28125,
-                77,
-                86.15625,
-                42
+                3.5,
+                719.5,
+                35,
+                35
             ],
             "enabled": true,
-            "label": "Correlations",
+            "icon": "camera",
+            "label": "",
             "visible_bounds": [
-                126.28125,
-                77,
-                86.15625,
-                42
-            ]
-        },
-        "mainArea.tab.map": {
-            "bounds": [
-                273.015625,
-                77,
-                39.5625,
-                42
-            ],
-            "enabled": false,
-            "label": "Map",
-            "visible_bounds": [
-                273.015625,
-                77,
-                39.5625,
-                42
+                3.5,
+                719.5,
+                35,
+                35
             ]
         },
         "mainArea.tab.pattern": {
@@ -1831,22 +794,6 @@
                 69.1875,
                 77,
                 57.09375,
-                42
-            ]
-        },
-        "mainArea.tab.stacked": {
-            "bounds": [
-                212.4375,
-                77,
-                60.578125,
-                42
-            ],
-            "enabled": false,
-            "label": "Stacked",
-            "visible_bounds": [
-                212.4375,
-                77,
-                60.578125,
                 42
             ]
         },
@@ -1982,50 +929,50 @@
         },
         "statusBar.fit": {
             "bounds": [
-                1396,
+                1395,
                 769,
-                70,
+                71,
                 19
             ],
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                1396,
+                1395,
                 769,
-                70,
+                71,
                 19
             ]
         },
         "statusBar.fit.button": {
             "bounds": [
-                1414,
+                1413,
                 769,
-                52,
+                53,
                 19
             ],
             "enabled": true,
-            "icon": "play-circle",
+            "icon": "play",
             "label": "",
             "visible_bounds": [
-                1414,
+                1413,
                 769,
-                52,
+                53,
                 19
             ]
         },
         "statusBar.fit.buttons": {
             "bounds": [
-                1414,
+                1413,
                 769,
-                52,
+                53,
                 19
             ],
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                1414,
+                1413,
                 769,
-                52,
+                53,
                 19
             ]
         },
@@ -2050,7 +997,7 @@
             "bounds": [
                 887.065625,
                 772,
-                218.609375,
+                210.234375,
                 14
             ],
             "enabled": true,
@@ -2059,7 +1006,7 @@
             "visible_bounds": [
                 887.065625,
                 772,
-                218.609375,
+                210.234375,
                 14
             ]
         },
@@ -2117,9 +1064,25 @@
                 14
             ]
         },
+        "structure.toolbar": {
+            "bounds": [
+                0,
+                182,
+                770,
+                35
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                0,
+                182,
+                770,
+                35
+            ]
+        },
         "structure.toolbar.a": {
             "bounds": [
-                505.5,
+                541.125,
                 182,
                 35,
                 35
@@ -2127,15 +1090,31 @@
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                505.5,
+                541.125,
                 182,
                 35,
                 35
             ]
         },
+        "structure.toolbar.atomView": {
+            "bounds": [
+                237.875,
+                182,
+                86.25,
+                35
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                237.875,
+                182,
+                86.25,
+                35
+            ]
+        },
         "structure.toolbar.atoms": {
             "bounds": [
-                151.25,
+                114.625,
                 182,
                 109.25,
                 35
@@ -2143,7 +1122,7 @@
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                151.25,
+                114.625,
                 182,
                 109.25,
                 35
@@ -2151,7 +1130,7 @@
         },
         "structure.toolbar.axes": {
             "bounds": [
-                418,
+                453.625,
                 182,
                 35,
                 35
@@ -2160,7 +1139,7 @@
             "icon": "location-arrow",
             "label": "",
             "visible_bounds": [
-                418,
+                453.625,
                 182,
                 35,
                 35
@@ -2168,7 +1147,7 @@
         },
         "structure.toolbar.b": {
             "bounds": [
-                544,
+                579.625,
                 182,
                 35,
                 35
@@ -2176,7 +1155,7 @@
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                544,
+                579.625,
                 182,
                 35,
                 35
@@ -2184,7 +1163,7 @@
         },
         "structure.toolbar.bonds": {
             "bounds": [
-                302.5,
+                338.125,
                 182,
                 35,
                 35
@@ -2193,7 +1172,7 @@
             "icon": "link",
             "label": "",
             "visible_bounds": [
-                302.5,
+                338.125,
                 182,
                 35,
                 35
@@ -2201,7 +1180,7 @@
         },
         "structure.toolbar.c": {
             "bounds": [
-                582.5,
+                618.125,
                 182,
                 35,
                 35
@@ -2209,7 +1188,7 @@
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                582.5,
+                618.125,
                 182,
                 35,
                 35
@@ -2217,7 +1196,7 @@
         },
         "structure.toolbar.cell": {
             "bounds": [
-                341,
+                415.125,
                 182,
                 35,
                 35
@@ -2226,7 +1205,7 @@
             "icon": "vector-square",
             "label": "",
             "visible_bounds": [
-                341,
+                415.125,
                 182,
                 35,
                 35
@@ -2234,7 +1213,7 @@
         },
         "structure.toolbar.colors": {
             "bounds": [
-                66,
+                29.375,
                 182,
                 71.25,
                 35
@@ -2242,41 +1221,41 @@
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                66,
+                29.375,
                 182,
                 71.25,
                 35
             ]
         },
-        "structure.toolbar.labels": {
+        "structure.toolbar.more": {
             "bounds": [
-                264,
+                705.625,
                 182,
                 35,
                 35
             ],
             "enabled": true,
-            "icon": "tag",
+            "icon": "ellipsis-h",
             "label": "",
             "visible_bounds": [
-                264,
+                705.625,
                 182,
                 35,
                 35
             ]
         },
-        "structure.toolbar.moments": {
+        "structure.toolbar.polyhedra": {
             "bounds": [
-                379.5,
+                376.625,
                 182,
                 35,
                 35
             ],
             "enabled": true,
-            "icon": "long-arrow-alt-up",
+            "icon": "dice-d20",
             "label": "",
             "visible_bounds": [
-                379.5,
+                376.625,
                 182,
                 35,
                 35
@@ -2284,7 +1263,7 @@
         },
         "structure.toolbar.projection": {
             "bounds": [
-                467,
+                502.625,
                 182,
                 35,
                 35
@@ -2293,7 +1272,7 @@
             "icon": "cube",
             "label": "",
             "visible_bounds": [
-                467,
+                502.625,
                 182,
                 35,
                 35
@@ -2301,7 +1280,7 @@
         },
         "structure.toolbar.reset": {
             "bounds": [
-                621,
+                656.625,
                 182,
                 35,
                 35
@@ -2310,40 +1289,7 @@
             "icon": "home",
             "label": "",
             "visible_bounds": [
-                621,
-                182,
-                35,
-                35
-            ]
-        },
-        "structure.toolbar.save": {
-            "bounds": [
-                659.5,
-                182,
-                45.5,
-                35
-            ],
-            "enabled": true,
-            "label": "",
-            "visible_bounds": [
-                659.5,
-                182,
-                45.5,
-                35
-            ]
-        },
-        "structure.toolbar.save.button": {
-            "bounds": [
-                670,
-                182,
-                35,
-                35
-            ],
-            "enabled": true,
-            "icon": "camera",
-            "label": "",
-            "visible_bounds": [
-                670,
+                656.625,
                 182,
                 35,
                 35
@@ -2383,7 +1329,7 @@
         },
         "structure.view.legend": {
             "bounds": [
-                28,
+                678.75,
                 649,
                 63.25,
                 95
@@ -2391,10 +1337,26 @@
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                28,
+                678.75,
                 649,
                 63.25,
                 95
+            ]
+        },
+        "window.projectDrop": {
+            "bounds": [
+                0,
+                0,
+                1480,
+                800
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                0,
+                0,
+                1480,
+                800
             ]
         },
         "workflow.home.sidebarHost": {
@@ -2472,8 +1434,8 @@
     ],
     "qt_version": "6.11.2",
     "schema": 1,
-    "script_sha256": "3e0f9063e5fd3773de550ce84fd05a6b3c5986ae0d13ddaef80e9fc4fbb132f1",
-    "source_revision": "9045d5d22d8f07b00ffd58c1610ec4b02b2beba5",
+    "script_sha256": "bacb0119e34809368b4a4ed147d4ce1cfb8628ba03cebbf3ebd126a48519fb0f",
+    "source_revision": "66250b0826244790ae402c00384ea8fca62ae552",
     "state": {
         "experiments": 1,
         "fit_outcome": "",

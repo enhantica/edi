@@ -12,20 +12,13 @@ Item {
     width: 1200
     height: 900
     Component {
-        id: structureFactory
-        StructureView {
+        id: mainFactory
+        MainView {
             width: 1100
             height: 800
             shown: true
-        }
-    }
-    Component {
-        id: patternFactory
-        PatternChart {
-            width: 1100
-            height: 800
-            shown: true
-            settingsPage: "pattern"
+            tabKeys: ["structure", "pattern"]
+            pageKey: "saved-image-acceptance"
         }
     }
     Component {
@@ -100,25 +93,21 @@ Item {
             const project = SettingsProof.copyProject(Qt.resolvedUrl("../../fixtures/legacy_structure_project/compact-project"));
             verify(Session.openProject(project), "The independent project opens for a real image export");
             tryCompare(Session.project, "calculating", false, 15000, "The image's actual scientific calculation finishes");
+            figure = mainFactory.createObject(surface, {
+                defaultKey: data.kind
+            });
+            verify(figure !== null && waitForPolish(figure), "The image actor instantiates the production main view");
+            click(findChild(figure, "mainArea.tab." + data.kind));
+            tryCompare(figure, "currentKey", data.kind, 1500, "Actual tab input selects the image's production view");
             if (data.kind === "structure") {
-                figure = structureFactory.createObject(surface, {
-                    structure: Session.project.currentStructure,
-                    options: Session.project.structureViewOptions
-                });
-                verify(figure !== null, "The image actor instantiates the production Structure view");
-                tryVerify(() => figure.has3D && figure.current && figure.atomCount > 0, 10000, "The real Structure view contains atoms under a supported graphics API");
-            } else {
-                figure = patternFactory.createObject(surface, {
-                    experiment: Session.project.currentExperiment,
-                    axisProject: Session.project
-                });
-                verify(figure !== null, "The image actor instantiates the production Pattern chart");
+                const structure = findChild(figure, "structure.view");
+                tryVerify(() => structure && structure.has3D && structure.current && structure.atomCount > 0, 10000, "The actual Structure view contains atoms under a supported graphics API");
             }
             verify(waitForPolish(figure) && waitForRendering(figure), "The production figure has rendered before export");
             chooseBackground(data.chart);
             const directory = SettingsProof.emptyDirectory();
             const target = SettingsProof.childUrl(directory, "image.png");
-            const button = findChild(figure, data.kind === "structure" ? "structure.toolbar.save.button" : "chart.toolbar.save.button");
+            const button = findChild(figure, "mainArea.saveImage.button");
             click(button);
             let dialogs;
             tryVerify(() => {

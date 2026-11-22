@@ -3,6 +3,8 @@
 
 #include <QRegularExpression>
 
+#include "edi/display.hpp"
+
 #include <algorithm>
 #include <cmath>
 #include <optional>
@@ -22,30 +24,18 @@ StructureViewOptions::StructureViewOptions(QObject* parent)
     // Each shows its name from crysta's dictionary: Crystal axes, Cartesian, Spherical.
     moment_form_options_->setItemOptions("structure_view.moment_form", {"crystal_axes", "cartesian", "spherical"});
     moment_view_options_->setItemOptions("structure_view.moment_view", {"through_atom", "from_centre", "from_surface"});
-    // The dictionary has no polyhedra item yet: the app names them.
-    polyhedra_colour_options_->setOptions({"atom", "grey"}, "atom",
-                                          {QObject::tr("Atom colour").toStdString(), QObject::tr("Grey").toStdString()});
-    polyhedra_extent_options_->setOptions({"cell", "complete"}, "cell",
-                                          {QObject::tr("Inside the cell").toStdString(),
-                                           QObject::tr("Complete for atoms in the cell").toStdString()});
+    // Atom colour or Grey; Inside the cell or Complete for atoms in the cell.
+    polyhedra_colour_options_->setItemOptions("structure_view.polyhedra_colour", {"atom", "grey"}, "atom");
+    polyhedra_extent_options_->setItemOptions("structure_view.polyhedra_extent", {"cell", "complete"}, "cell");
 }
 
 template <class T>
-void StructureViewOptions::assign(T& field, T value, void (StructureViewOptions::*notify)()) {
+void StructureViewOptions::assign(T& field, const T& value, void (StructureViewOptions::*notify)()) {
     if (field != value) {
         field = value;
         emit(this->*notify)();
         emit drawn();
         emit changed();
-    }
-}
-
-template <class T>
-void StructureViewOptions::assignSession(T& field, T value, void (StructureViewOptions::*notify)()) {
-    if (field != value) {
-        field = value;
-        emit(this->*notify)();
-        emit drawn();
     }
 }
 
@@ -143,14 +133,14 @@ void StructureViewOptions::setBonds(bool shown) { assign(options_.bonds, shown, 
 void StructureViewOptions::setCell(bool shown) { assign(options_.cell, shown, &StructureViewOptions::cellChanged); }
 void StructureViewOptions::setAxes(bool shown) { assign(options_.axes, shown, &StructureViewOptions::axesChanged); }
 void StructureViewOptions::setPolyhedra(bool shown) {
-    assignSession(options_.polyhedra, shown, &StructureViewOptions::polyhedraChanged);
+    assign(options_.polyhedra, shown, &StructureViewOptions::polyhedraChanged);
 }
 QString StructureViewOptions::polyhedraColour() const {
     return options_.polyhedra_grey ? QStringLiteral("grey") : QStringLiteral("atom");
 }
 void StructureViewOptions::setPolyhedraColour(const QString& colour) {
     if (colour == QLatin1String("atom") || colour == QLatin1String("grey")) {
-        assignSession(options_.polyhedra_grey, colour == QLatin1String("grey"), &StructureViewOptions::polyhedraColourChanged);
+        assign(options_.polyhedra_grey, colour == QLatin1String("grey"), &StructureViewOptions::polyhedraColourChanged);
     }
 }
 QString StructureViewOptions::polyhedraExtent() const {
@@ -158,7 +148,7 @@ QString StructureViewOptions::polyhedraExtent() const {
 }
 void StructureViewOptions::setPolyhedraExtent(const QString& extent) {
     if (extent == QLatin1String("cell") || extent == QLatin1String("complete")) {
-        assignSession(options_.polyhedra_complete, extent == QLatin1String("complete"),
+        assign(options_.polyhedra_complete, extent == QLatin1String("complete"),
                       &StructureViewOptions::polyhedraExtentChanged);
     }
 }
@@ -180,15 +170,15 @@ QString symbols_text(const std::set<std::string>& symbols) {
 }  // namespace
 QString StructureViewOptions::polyhedraCentres() const { return symbols_text(options_.polyhedra_centres); }
 void StructureViewOptions::setPolyhedraCentres(const QString& elements) {
-    assignSession(options_.polyhedra_centres, element_symbols(elements), &StructureViewOptions::polyhedraDefinitionChanged);
+    assign(options_.polyhedra_centres, element_symbols(elements), &StructureViewOptions::polyhedraCentresChanged);
 }
 QString StructureViewOptions::polyhedraCorners() const { return symbols_text(options_.polyhedra_corners); }
 void StructureViewOptions::setPolyhedraCorners(const QString& elements) {
-    assignSession(options_.polyhedra_corners, element_symbols(elements), &StructureViewOptions::polyhedraDefinitionChanged);
+    assign(options_.polyhedra_corners, element_symbols(elements), &StructureViewOptions::polyhedraCornersChanged);
 }
 void StructureViewOptions::setPolyhedraMaxDistance(double distance) {
     if (std::isfinite(distance) && distance >= 0.0) {
-        assignSession(options_.polyhedra_max_distance, distance, &StructureViewOptions::polyhedraDefinitionChanged);
+        assign(options_.polyhedra_max_distance, distance, &StructureViewOptions::polyhedraMaxDistanceChanged);
     }
 }
 void StructureViewOptions::setPolyhedraOpacity(double opacity) {
@@ -196,6 +186,7 @@ void StructureViewOptions::setPolyhedraOpacity(double opacity) {
     if (clamped != polyhedra_opacity_) {
         polyhedra_opacity_ = clamped;
         emit polyhedraOpacityChanged();
+        emit changed();
     }
 }
 void StructureViewOptions::setShowMoments(bool shown) {
@@ -272,6 +263,18 @@ std::map<std::string, std::string> StructureViewOptions::toView() const {
             {"bonds", flag(options_.bonds)},
             {"cell", flag(options_.cell)},
             {"axes", flag(options_.axes)}};
+    // The polyhedra's settings, each once crysta's dictionary has its item (a file holds only items it declares).
+    const auto keep = [&view](const char* name, std::string value) {
+        if (edi::has_item(std::string("structure_view.") + name)) view[name] = std::move(value);
+    };
+    keep("polyhedra", flag(options_.polyhedra));
+    keep("polyhedra_colour", polyhedraColour().toStdString());
+    keep("polyhedra_opacity", QString::number(polyhedra_opacity_, 'g', 6).toStdString());
+    keep("polyhedra_extent", polyhedraExtent().toStdString());
+    // An empty list is the default (cations at the centres, the usual anions at the corners): left out.
+    if (!options_.polyhedra_centres.empty()) keep("polyhedra_centres", polyhedraCentres().toStdString());
+    if (!options_.polyhedra_corners.empty()) keep("polyhedra_corners", polyhedraCorners().toStdString());
+    keep("polyhedra_max_distance", QString::number(options_.polyhedra_max_distance, 'g', 6).toStdString());
     if (moments_declared_) {
         view["show_moments"] = flag(options_.moments);
         view["moment_scale"] = QString::number(options_.moment_scale, 'g', 6).toStdString();
@@ -309,6 +312,17 @@ void StructureViewOptions::setFromView(const std::map<std::string, std::string>&
     setMomentScale(number("moment_scale", defaults.moment_scale));
     setMomentForm(text("moment_form").isEmpty() ? QStringLiteral("crystal_axes") : text("moment_form"));
     setMomentView(text("moment_view").isEmpty() ? QStringLiteral("through_atom") : text("moment_view"));
+    // A file from before an item existed shows the default; a setting crysta cannot save yet stays as the session has it.
+    const auto saved = [](const char* name) { return edi::has_item(std::string("structure_view.") + name); };
+    if (saved("polyhedra")) setPolyhedra(flag("polyhedra", defaults.polyhedra));
+    if (saved("polyhedra_colour"))
+        setPolyhedraColour(text("polyhedra_colour").isEmpty() ? QStringLiteral("atom") : text("polyhedra_colour"));
+    if (saved("polyhedra_opacity")) setPolyhedraOpacity(number("polyhedra_opacity", 0.5));
+    if (saved("polyhedra_extent"))
+        setPolyhedraExtent(text("polyhedra_extent").isEmpty() ? QStringLiteral("cell") : text("polyhedra_extent"));
+    if (saved("polyhedra_centres")) setPolyhedraCentres(text("polyhedra_centres"));
+    if (saved("polyhedra_corners")) setPolyhedraCorners(text("polyhedra_corners"));
+    if (saved("polyhedra_max_distance")) setPolyhedraMaxDistance(number("polyhedra_max_distance", defaults.polyhedra_max_distance));
     moments_declared_ = view.contains("show_moments") || view.contains("moment_scale") || view.contains("moment_form") ||
                         view.contains("moment_view");
 }

@@ -44,10 +44,14 @@ def suite_steps(workflow, event, platform, repo):
             continue
         for step in job.get('steps', []):
             if step.get('name') in SUITE_STEPS[repo] and value(step.get('if'), ctx):
-                matrix = json.dumps(
-                    {k: v for k, v in ctx.items() if k.startswith('matrix.')}, sort_keys=True
-                )
-                yield (name, matrix, step['name']), job, step, ctx
+                if repo == 'edi' and name in {'app', 'app-macos', 'app-windows'}:
+                    identity = (render(job.get('name', name), ctx), actual)
+                else:
+                    matrix = json.dumps(
+                        {k: v for k, v in ctx.items() if k.startswith('matrix.')}, sort_keys=True
+                    )
+                    identity = (name, matrix)
+                yield (*identity, step['name']), job, step, ctx
 
 
 def invoke_step(tmp_path, workflow, job, step, ctx, *, failure=''):

@@ -26,12 +26,16 @@ formatting & static analysis (Python + C++)". The owner asked for the same check
    system headers. The Python bindings take crysta's base set (`-Wall -Wextra -Wpedantic`), as crysta's bindings do,
    since nanobind's headers are not system headers there. In the code built on Qt (the app host and the assistant
    adapter) GCC's `-Wnull-dereference` is off: GCC reports it after inlining Qt's smart pointers and containers, on paths
-   the code has already checked (`if (self.isNull() || ...) return; self->...`). Clang keeps it there, and clang-tidy's
+   the code has already checked (`if (self.isNull() || ...) return; self->...`). MSVC's unreachable-code warning (C4702) is off for `app/src/app_info.cpp` alone, the one file that
+   includes Qt's private QML headers: the optimizer reports it inside them once their templates are inlined, where
+   treating them as external headers does not reach. Clang keeps it there, and clang-tidy's
    analyzer checks null dereferences on every path.
 2. **`EDI_WERROR=ON` makes each of those warnings an error.** It is off for a local build and on in CI: the build scripts
    (`core-build.sh`, `app-build.sh`, `wasm-build.sh`) pass the `EDI_WERROR` environment variable to CMake. CI sets it
-   in the core jobs on Linux, macOS and Windows, where MSVC takes `/W4 /WX`, and in the app jobs, which run on Linux and
-   macOS. The WebAssembly build has its own Qt kits and keeps it off for now.
+   in the core jobs on Linux, macOS and Windows, where MSVC takes `/W4 /WX`, in the app jobs on Linux and macOS, in the
+   WebAssembly app job, and in the `app · Windows` job, which compiles the app with MSVC on every run through the
+   Windows installer's own Qt, SDK and compiler settings (`tools/ci/app-windows-build.py`). The Windows installer build
+   of a pull request takes it too (`tools/installer/build.py` passes `EDI_WERROR` on).
 3. **clang-tidy runs with the Clang Static Analyzer** over the same sources (`pixi run -e cpp-lint cpp-tidy`,
    `tools/ci/cpp-tidy.sh`), any finding an error. edi's `.clang-tidy` holds the groups of crysta's curated set that
    find faults: the analyzer, `bugprone`, `performance` and `cert`, with crysta's exceptions inside them. A
@@ -40,7 +44,11 @@ formatting & static analysis (Python + C++)". The owner asked for the same check
    edi also turns off `performance-enum-size`: most of its enums are Qt's (model roles counted from `Qt::UserRole`,
    `Q_ENUM` types that QML reads), which the meta-object system handles as `int`; `bugprone-empty-catch`, since its
    teardown and optional presentation steps are `noexcept` and drop a failure on purpose; and
-   `performance-no-int-to-ptr`, since its Qt table models key rows by small integers. crysta's style groups (`readability`, `modernize`, `misc`, `cppcoreguidelines`) follow in a sweep of their own:
+   `performance-no-int-to-ptr`, since its Qt table models key rows by small integers. `bugprone-exception-escape` does not
+   count `bad_array_new_length`, which edi never throws: libc++'s allocator throws it only for a size past `max_size()`,
+   a request no allocation could meet, and libstdc++ reports that case as `bad_alloc` from `operator new`, which the
+   check does not count either, so macOS (libc++) and Linux (libstdc++) are checked alike. `length_error`, which edi
+   does throw, stays counted; a line where only libc++'s container growth could raise it names that reason. crysta's style groups (`readability`, `modernize`, `misc`, `cppcoreguidelines`) follow in a sweep of their own:
    measured over edi's code they hold about 14 000 of the curated set's 15 200 findings, most of them braces around
    one statement, implicit conversions to bool and several declarations on one line. It reads the compile commands of the app's
    build tree, and the core's tree for the Python bindings. The bindings include nanobind's and Python's headers as
@@ -64,7 +72,9 @@ formatting & static analysis (Python + C++)". The owner asked for the same check
 8. **Both checks are CI steps of the app job on Linux and macOS** ("clang-tidy with the Clang Static Analyzer (zero
    findings)", "cppcheck (zero findings)"), after the build whose compile commands they read, and after `app-moc` runs moc for every app target: a test runner
    the job does not build still has its sources in those commands, and each includes its own `.moc`. They run after a failed
-   step too, so one round lists every finding.
+   step too, so one round lists every finding. They run on Linux and macOS only: their Windows run (the MSVC compile
+   commands) and their WebAssembly run follow later, as the owner decided on 2026-11-17, while warnings as errors (2)
+   cover every platform.
 
 ## Consequences
 

@@ -10,6 +10,15 @@ from tests.fixtures.magnetic_pnma import reference, token_inputs
 
 # These registered synthetic parser probes need fit preparation, not a full measured pattern.
 PROBE_EXPERIMENT = (reference.ROOT / 'compound-experiment.edi').read_text()
+RETIRED_PARENT_FLAG = '_parent_space_group.derived'
+# COMCIFS magCIF P 1 example (BNS 1.1); OG 1.1.1 uses the same P1 symbol.
+P1_DESCRIPTORS = {
+    '_space_group_magn.number_BNS': '1.1',
+    '_space_group_magn.name_BNS': 'P1',
+    '_space_group_magn.name_OG': 'P1',
+    '_space_group_magn.name_UNI': 'P1.1',
+    '_space_group_magn.number_OG': '1.1.1',
+}
 
 
 def stored_tokens(path, tag):
@@ -28,13 +37,31 @@ def loaded(source, route, root):
     return api.Project.load(reference.project(root / 'input', source, experiment=PROBE_EXPERIMENT))
 
 
+def description_errors(saved, tag):
+    if tag in P1_DESCRIPTORS:
+        for item, expected in P1_DESCRIPTORS.items():
+            if [gemmi.cif.as_string(value) for value in stored_tokens(saved, item)] != [expected]:
+                return [f'the P1 magnetic table must supply {item} = {expected} exactly once']
+    elif tag == RETIRED_PARENT_FLAG:
+        if stored_tokens(saved, tag):
+            return ['the retired parent flag must be absent from the native writer']
+        if stored_tokens(saved, '_parent_space_group.IT_number') != ['1']:
+            return ['the parent IT number must survive removal of only the retired flag']
+    return []
+
+
 def saved_errors(project, root, case, kind, token):  # noqa: PLR0912 — lexical states and persistence stages
     project.save_as(root / 'saved')
     saved = root / 'saved/structures/cosio.edi'
     cells = stored_tokens(saved, case.tag)
-    failures = []
+    # The native metadata probe has an independent parent and does not use its
+    # quoted BNS text to select a group.
+    held_bns_text = case.variant == 'metadata' and kind == 'literal'
+    derived = not held_bns_text and (case.tag in P1_DESCRIPTORS or case.tag == RETIRED_PARENT_FLAG)
+    failures = description_errors(saved, case.tag) if derived else []
     if (
-        kind == 'valid'
+        not derived
+        and kind == 'valid'
         and case.kind in {'text', 'selector'}
         and not any(gemmi.cif.as_string(value) == case.good for value in cells)
     ):
@@ -64,7 +91,7 @@ def saved_errors(project, root, case, kind, token):  # noqa: PLR0912 — lexical
             and any(abs(float(gemmi.cif.as_string(value))) > 0 for value in cells)
         ):
             failures.append('absent coefficient did not take declared zero')
-    if kind == 'literal':
+    if kind == 'literal' and not derived:
         if not any(
             value not in {'?', '.'} and gemmi.cif.as_string(value) == token[1:-1]
             for value in cells
@@ -77,7 +104,10 @@ def saved_errors(project, root, case, kind, token):  # noqa: PLR0912 — lexical
     if kind == 'valid' or (kind == 'literal' and case.kind == 'text'):
         again = api.Project.load(root / 'saved')
         again.save_as(root / 'second-valid')
-        if cells != stored_tokens(root / 'second-valid/structures/cosio.edi', case.tag):
+        second = root / 'second-valid/structures/cosio.edi'
+        if derived:
+            failures.extend(description_errors(second, case.tag))
+        if cells != stored_tokens(second, case.tag):
             failures.append('second save changes the held declared field')
         if len(again.structure.atom_site_moment):
             again.structure.atom_site_moment[0].crystalaxis_x.free = True
@@ -95,23 +125,34 @@ def admitted(source, route, root):
 
 
 def observed_errors(source, route, root, case, kind, token):
+    ignored = case.variant == 'redundant' and case.tag.startswith('_atom_site_moment.spherical_')
+    derived_text = case.kind == 'text' and case.tag in P1_DESCRIPTORS
+    missing_selector = case.variant == 'derived-family' and kind == 'missing'
+    must_admit = ignored or kind == 'valid' or derived_text
     try:
         project = admitted(source, route, root)
     except (ValueError, RuntimeError, KeyError) as error:
         if (
-            kind == 'valid'
+            must_admit
             or (kind == 'literal' and case.kind == 'text')
             or (kind == 'missing' and case.missing_accepts)
         ):
             return ['valid supplied value refused: ' + str(error)]
-        # A required missing value may refuse. Explicit invalid input must identify its boundary.
-        if kind in {'invalid', 'literal'} and (
-            case.tag.lower() not in str(error).lower() or token.strip('"\'') not in str(error)
-        ):
-            return ['refusal must name the tag and complete supplied value: ' + str(error)]
+        message = str(error)
+        bad_selector_refusal = missing_selector and 'no parent group number' not in message
+        bad_token_refusal = kind in {'invalid', 'literal'} and (
+            case.tag.lower() not in message.lower() or token.strip('"\'') not in message
+        )
+        if bad_selector_refusal or bad_token_refusal:
+            return [
+                'refusal must identify the selector failure or tag and supplied value: ' + message
+            ]
         return []
-    if kind == 'invalid' or (kind == 'literal' and case.kind != 'text'):
-        return ['invalid supplied token accepted or defaulted']
+    if ignored:
+        # ADR-0133 leaves spherical output unread beside authoritative crystal-axis inputs.
+        return saved_errors(project, root, case, 'valid', token)
+    if missing_selector or kind == 'invalid' or (kind == 'literal' and case.kind != 'text'):
+        return ['invalid or required missing input accepted or defaulted']
     return saved_errors(project, root, case, kind, token)
 
 
@@ -183,15 +224,16 @@ def test_native_storage_refuses_unsupported_converted_moment_spellings(tmp_path,
 def test_a_supplied_moment_form_is_complete_even_beside_another_form(tmp_path, form, route):
     errors = []
     for index, (kind, source, tag) in enumerate(token_inputs.partial_moment_declarations(form)):
+        ignored = form == 'spherical' and '_atom_site_moment.crystalaxis_x\n' in source
         try:
             model = admitted(token_inputs.cif(source), route, tmp_path / str(index))
         except (ValueError, RuntimeError, KeyError) as error:
-            if kind == 'valid':
+            if kind == 'valid' or ignored:
                 errors.append('valid complete moment form refused: ' + str(error))
             elif '_atom_site_moment.' not in str(error):
                 errors.append('incomplete declaration refusal lacks its moment tag: ' + str(error))
         else:
-            if kind == 'invalid':
+            if kind == 'invalid' and not ignored:
                 errors.append('incomplete supplied form ignored or defaulted: ' + tag)
             else:
                 values = [
@@ -204,6 +246,6 @@ def test_a_supplied_moment_form_is_complete_even_beside_another_form(tmp_path, f
                 ):
                     errors.append('complete form changes the independently stated moment')
     assert not errors, (
-        'ADR-0108 each supplied moment form has all three values, including a redundant form: '
-        + '\n'.join(errors)
+        'Selected moment input forms are complete; redundant spherical output cannot override '
+        'the independently specified crystal-axis moment: ' + '\n'.join(errors)
     )

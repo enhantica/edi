@@ -45,10 +45,17 @@ def test_reference_files_have_committed_hashes():
 def test_native_categories_survive_two_saves(tmp_path, show):
     model = load(tmp_path, show=show)
     expected = ref.columns((ref.ROOT / 'magnetic.edi').read_text())
+    retired_flag = '_parent_space_group.derived'
+    assert expected.pop(retired_flag) == ['false'], (
+        'The source exercises removal of the legacy parent-derivation flag'
+    )
     for index in range(2):
         saved = tmp_path / f'saved-{index}'
         model.save_as(saved)
         actual = ref.columns((saved / 'structures/cosio.edi').read_text())
+        assert retired_flag not in actual, (
+            'The native writer omits the retired parent flag on both saves'
+        )
         for tag, values in expected.items():
             if tag.startswith(PREFIXES):
                 assert tag in actual, 'Every declared magnetic tag survives the native reader'

@@ -34,6 +34,11 @@ def _blanked(text: str) -> list[str]:
         line = raw.rstrip()
         for pattern, blank in TIMINGS:
             line = pattern.sub(blank, line)
+        # A scan table row's third group is Elapsed and Left, whose widths follow the times too.
+        groups = line.split(' │ ')
+        if len(groups) >= 4:
+            groups[2] = '·'
+            line = ' │ '.join(groups)
         lines.append(line)
     return lines
 

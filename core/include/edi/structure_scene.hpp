@@ -119,13 +119,12 @@ struct SceneOptions {
     // near it, in its colour or grey. The centres and corners are element symbols; no centre given means every element
     // that is not a corner (the cations), no corner given means the usual anions (N, O, F, S, Cl, Se, Br, Te, I). A
     // corner is near within `polyhedra_max_distance` Angstrom, or, at 0, when the bond cut-offs bond it to the centre.
-    // Held by the app for the session: the structure file has no item for them yet.
     bool polyhedra = false;
     std::set<std::string> polyhedra_centres, polyhedra_corners;
     double polyhedra_max_distance = 0.0;
     bool polyhedra_grey = false;
     // Inside the cell, a polyhedron's corners are the drawn atoms bonded to its centre; complete, a centre in the cell
-    // also takes the bonded atoms one cell over, so its polyhedron is whole.
+    // also takes the corner atoms near it in whichever cell they sit, so its polyhedron is whole.
     bool polyhedra_complete = false;
     bool moments = true;        // `_structure_view.show_moments`
     double moment_scale = 0.75;  // Angstrom of arrow per Bohr magneton (`_structure_view.moment_scale`)

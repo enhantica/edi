@@ -26,7 +26,7 @@ QtObject {
         const folder = folders.folder(kind, "").toString();
         if (folder === "" || text === "")
             return target;
-        return folder + text.substring(text.lastIndexOf("/"));
+        return Qt.url(folder + text.substring(text.lastIndexOf("/")));
     }
     // Remembers the folder holding `chosen` (a file, or a folder: its parent, where the user was looking).
     function remember(kind: string, chosen: url) {

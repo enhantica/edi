@@ -246,11 +246,8 @@ def evaluate(expression, context=''):
 
 
 def require_availability(text):
-    control = item(text, 'experiments.load.dataFile')
-    enabled = property_value(control, 'enabled')
-    menu = object_id(text, 'loadMenu')
-    selected = property_value(menu, 'selected')
-    into_selected = property_value(menu, 'dataIntoSelected')
+    enabled = property_value(object_id(text, 'loadDataButton'), 'enabled')
+    more_visible = property_value(object_id(text, 'moreButton'), 'visible')
     created_empty = {'canLoadData': True, 'calculationOnly': True}
     created_loaded = {'canLoadData': True, 'calculationOnly': False}
     imported_empty = {'canLoadData': False, 'calculationOnly': True}
@@ -281,12 +278,13 @@ def require_availability(text):
     program = (
         'const groups=' + json.dumps(groups) + ';'
         'const observed=groups.map(group=>{'
-        'const loadMenu={selected:' + selected + '};'
-        'loadMenu.dataIntoSelected=(' + into_selected + ');'
-        'return Boolean(' + enabled + ');});'
+        'const row={experiment:group.project?group.project.currentExperiment:null};'
+        'return [Boolean(' + enabled + '),Boolean(' + more_visible + ')];});'
         'console.log(JSON.stringify(observed));'
     )
-    assert javascript(program) == [expected for *_, expected in contexts], (
+    assert javascript(program) == [
+        [expected, not scan and expected] for scan, *_, expected in contexts
+    ], (
         'Load data availability: both empty and measured selected experiments follow '
         'their admitted type in ordinary and scan projects; scan replacement is confirmed '
         'after selection, while an empty selection requires explicit creation'
@@ -502,7 +500,7 @@ def outcome_functions(text, *, include_context=True):
         + '\n'
         + '\n'.join(
             block(text, 'function ' + name + '(')
-            for name in ('word', 'icon', 'color', 'textColor')
+            for name in ('word', 'icon', 'color', 'textColor', 'ring')
         )
     )
 
@@ -827,6 +825,7 @@ def test_create_experiment_is_enabled_and_routes_to_view_model():
     assert received, 'Load wiring: the full-experiment result reaches the C++ bridge'
     program = """
 const files=['a.edi','b.edi'];
+const DialogFolders={remember:()=>{}};
 function exercise(available, target) {
     const calls=[];
     const original={loadExperiments:paths=>calls.push(['original',paths])};
@@ -905,16 +904,8 @@ def test_type_selectors_live_in_explorer_and_follow_selected_row():
 def test_data_free_experiment_type_has_a_write_boundary(axis):
     text = source('qml/Pages/Experiment/ExperimentTypeGroup.qml')
     control = item(text, 'experimentType.' + axis)
-    expected_guard = {
-        'sampleForm': 'row.editable',
-        'scatteringType': 'false',
-        'beamMode': 'row.editable',
-        'radiationProbe': 'row.editable && !row.singleCrystal',
-    }[axis]
-    assert property_value(control, 'enabled') == expected_guard, (
-        'Type wiring: data-free sample form and both supported beam modes are editable; '
-        'SC probe and scattering stay fixed; '
-        'supported axes follow the data-free guard'
+    assert property_value(control, 'enabled') == 'row.editable', (
+        'Type wiring: every admitted axis is editable before measured data is loaded'
     )
     require(
         text,
@@ -931,7 +922,7 @@ def test_data_free_experiment_type_has_a_write_boundary(axis):
     program = (
         """const Qt={binding:f=>f()}; let calls=[];
 const row={experimentIndex:3,project:{setExperimentType:(...args)=>calls.push(args)}};
-const options={revision:0,tokenAt:index=>['old','chosen','other'][index],
+const options={revision:0,isEnabled:()=>true,tokenAt:index=>['old','chosen','other'][index],
                indexOf:value=>['old','chosen','other'].indexOf(value)};
 const editorLife={alive:true}; let activation=null;
 const selector={token:'old',options,get activation(){return activation}};
@@ -1010,28 +1001,45 @@ def test_sidebar_tabs_have_requested_names():
     )
 
 
+def fit_tooltip(qml):
+    control = item(qml, 'experiments.fit.${row.index}')
+    start = qml.index(control)
+    begin, end = min(
+        ((a, b) for a, b in spans(qml) if a < start and b > start + len(control)),
+        key=lambda pair: pair[1] - pair[0],
+    )
+    return block(qml[begin:end], 'EaElements.ToolTip {')
+
+
 def assert_explorer_outcomes(qml):
     control = item(qml, 'experiments.fit.${row.index}')
-    expressions = [property_value(control, prop) for prop in ('icon', 'iconColor', 'toolTip')]
-    expressions = [
-        '(function()' + value + ')()' if value.startswith('{') else '(' + value + ')'
-        for value in expressions
-    ]
+    expressions = [property_value(control, prop) for prop in ('checked', 'color')]
+    expressions.append(property_value(fit_tooltip(qml), 'text'))
     context = outcome_functions(source('qml/Globals/FitOutcomes.qml'))
     context += (
-        '\nconst FitOutcomes={word,icon,color,textColor}; const keys='
-        + json.dumps([key for key, _word, _icon, _color in OUTCOMES])
+        '\nconst FitOutcomes={word,icon,color,textColor,ring}; const keys='
+        + json.dumps([key for key, *_ in OUTCOMES] + [''])
         + ';'
     )
     actual = evaluate(
-        'keys.map(fitOutcome=>{ const row={fitOutcome}; return ['
-        + ','.join(expressions)
-        + ']; })',
+        '[false,true].map(empty=>keys.map(fitOutcome=>{const row={fitOutcome};'
+        'const fileCell={empty};return [' + ','.join(expressions) + '];}))',
         context,
     )
-    assert actual == [[icon, color, word] for _key, word, icon, color in OUTCOMES], (
-        'Fit lists wiring: the displayed explorer tuple equals its row outcome'
-    )
+    for empty, rows in zip((False, True), actual, strict=True):
+        expected = [
+            [True, color, 'Load data to include this experiment in the fit' if empty else word]
+            for _key, word, _icon, color in OUTCOMES
+        ]
+        expected.append([
+            False,
+            'themeForegroundMinor',
+            'Load data to include this experiment in the fit' if empty else 'Not fitted',
+        ])
+        assert rows == expected, (
+            'Fit lists wiring: the displayed explorer tuple retains outcome colour, '
+            'completion check and tooltip, including empty and not-fitted experiments'
+        )
 
 
 def test_explorer_fit_column_has_outcome_model_roles():
@@ -1041,15 +1049,15 @@ def test_explorer_fit_column_has_outcome_model_roles():
 @pytest.mark.parametrize(
     ('prop', 'fallback'),
     [
-        ('icon', '"times-circle"'),
-        ('iconColor', '"red"'),
-        ('toolTip', '"Failed"'),
+        ('checked', 'false'),
+        ('color', '"red"'),
+        ('text', '"Failed"'),
     ],
 )
 def test_explorer_observer_rejects_untaken_mapping_branches(prop, fallback):
     qml = source('qml/Pages/Experiment/ExperimentsGroup.qml')
     assert_explorer_outcomes(qml)
-    control = item(qml, 'experiments.fit.${row.index}')
+    control = fit_tooltip(qml) if prop == 'text' else item(qml, 'experiments.fit.${row.index}')
     expression = property_value(control, prop)
     changed = control.replace(expression, 'false ? (' + expression + ') : ' + fallback, 1)
     assert changed != control, 'Fit lists wiring: the escape alters the actual cell expression'

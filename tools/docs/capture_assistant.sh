@@ -9,7 +9,7 @@ output=${1:?usage: capture_assistant.sh OUTPUT [light|dark]}
 theme=${2:-light}
 inputs=/tmp/edi-assistant-tutorial
 mkdir -p "$inputs"
-base=https://raw.githubusercontent.com/enhantica/edi-data/dev
+base=https://raw.githubusercontent.com/enhantica/edi-data/main
 curl -fsS -o "$inputs/tutorial-lbco.cif" "$base/structures/tutorial-lbco.cif"
 curl -fsS -o "$inputs/tutorial-hrpt.xye" "$base/data/tutorial-hrpt.xye"
 script=$(mktemp --suffix=.js)

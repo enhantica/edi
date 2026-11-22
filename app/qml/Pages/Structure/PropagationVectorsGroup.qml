@@ -23,7 +23,9 @@ Column {
 
     DataTable {
         objectName: "propagationVectors.list"
-        defaultInfoText: qsTr("No propagation vectors yet")
+        // Never blank for a Magnetic structure (the owner, 2026-11-19): without a vector in the file, the one its
+        // magnetic group gives.
+        defaultInfoText: group.structure && group.structure.derivedPropagationVector !== "" ? qsTr("k = %1, from the magnetic group (its parent's cell)").arg(group.structure.derivedPropagationVector) : group.structure && group.structure.propagationNotDerived !== "" ? group.structure.propagationNotDerived : qsTr("No propagation vectors yet")
         sourceModel: group.vectors
 
         columns: [numberColumnWidth, -1, -1, AppSizes.iconColumnWidth]
@@ -82,14 +84,16 @@ Column {
         }
     }
 
-    // Why the last change was not made, until one is.
-    EaElements.Label {
-        objectName: "propagationVectors.refusal"
-        visible: group.vectors !== null && group.vectors.refusal !== ""
-        width: EaStyle.Sizes.sideBarContentWidth
-        wrapMode: Text.WordWrap
-        color: EaStyle.Colors.red
-        text: group.vectors ? group.vectors.refusal : ""
+    // A vector the structure cannot carry is not taken: the row keeps its value and the reason shows in plain words in
+    // the app's error popup and the Messages center, not as a lasting label (the owner, 2026-11-19).
+    Connections {
+        target: group.vectors
+        function onRefusalChanged() {
+            if (group.vectors && group.vectors.refusal !== "") {
+                Session.reportRefusal(group.vectors.refusal);
+                group.vectors.clearRefusal();
+            }
+        }
     }
 
     EaElements.SideBarButton {

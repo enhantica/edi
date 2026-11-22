@@ -33,6 +33,8 @@ WorkflowPage {
             "atom_site_moment": atomSiteMomentContent,
             "magnetic_form_factor": magneticFormFactorsContent,
             "space_group_magn": magneticSpaceGroupContent,
+            "space_group_magn_symbols": magneticSymbolsContent,
+            "parent_space_group": parentSpaceGroupContent,
             "parent_propagation_vector": propagationVectorsContent,
             "scattering_length": scatteringLengthsContent,
             "geom": geomContent
@@ -124,6 +126,18 @@ WorkflowPage {
     Component {
         id: magneticSpaceGroupContent
         MagneticSpaceGroupGroup {
+            structure: page.structure
+        }
+    }
+    Component {
+        id: magneticSymbolsContent
+        MagneticSymbolsGroup {
+            structure: page.structure
+        }
+    }
+    Component {
+        id: parentSpaceGroupContent
+        ParentSpaceGroupGroup {
             structure: page.structure
         }
     }
