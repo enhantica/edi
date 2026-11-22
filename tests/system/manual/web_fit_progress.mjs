@@ -19,6 +19,14 @@ export function observesOrderedFitProgress(states, finalIteration) {
   return previous >= 0;
 }
 
+export function observesShortFitProgress(states, finalIteration) {
+  if (observesOrderedFitProgress(states, finalIteration)) return true;
+  if (!Array.isArray(states) || !Number.isSafeInteger(finalIteration) || finalIteration < 1) return false;
+  const live = states.filter(state => state?.running === true && state.visible === true);
+  // The short fit can finish all of its numbered updates between two browser frames.
+  return live.length > 0 && live.every(state => typeof state.text === 'string' && /^fitting$/i.test(state.text));
+}
+
 export function advancesLiveFitProgress(states, finalIteration) {
   if (!observesOrderedFitProgress(states, finalIteration) || finalIteration < 3) return false;
   let previous = 0;

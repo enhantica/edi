@@ -15,7 +15,7 @@ import { multithreadStartupRefusals } from './browser_multithread_refusal.mjs';
 import { installNativePickerTransport, assertNativePickerCapture, nativePickerTransportControls } from './browser_native_picker.mjs';
 import { checkDesktopOnlyAssistant } from './web_assistant_desktop_only.mjs';
 import { statusActionLifetimeChecks } from './web_status_action_lifetime.mjs';
-import { beginFitProgress, endFitProgress, advancesLiveFitProgress, observesOrderedFitProgress } from './web_fit_progress.mjs';
+import { beginFitProgress, endFitProgress, advancesLiveFitProgress, observesOrderedFitProgress, observesShortFitProgress } from './web_fit_progress.mjs';
 import { controlPointer, restoreCanvasViewport, waitControlGeometry } from './web_control_geometry.mjs';
 import {projectDialogExpression,waitForSaveSettled,projectFailureRecorder} from './web_project_save.mjs';
 import { assertSavedProject, assertSavedNativeChi } from './web_saved_fit.mjs';
@@ -763,12 +763,15 @@ print(json.dumps(dict(name=name, analysis=analysis, scientific=scientific)))`, a
   assert(!runningProgress([ownedStop],[{running:false,visible:true,text:'fitting · it 3'}],5) &&
     !runningProgress([ownedStop],[{running:true,visible:true,text:'Success · it 3'}],5),
     'completed report text and minimizer settings cannot impersonate live fitting progress');
-  if (true) {
-    assert(progress.some(value => fittingObservationKind(value) === 'control') &&
-      observesOrderedFitProgress(nativeProgress,finalIteration),
-      'Multithread fitting must expose its actual running control and ordered visible native counters');
-    if (frameLivenessRequired) assert(runningProgress(progress,nativeProgress,finalIteration),
-      'The sustained five-bank NCAF fit must advance live through intermediate frame samples');
+  assert(progress.some(value => fittingObservationKind(value) === 'control'),
+    'Fitting must expose its actual running Stop control');
+  if (frameLivenessRequired) {
+    assert(observesOrderedFitProgress(nativeProgress,finalIteration) &&
+      runningProgress(progress,nativeProgress,finalIteration),
+      'The sustained five-bank NCAF fit must expose ordered counters and advance through intermediate frame samples');
+  } else {
+    assert(observesShortFitProgress(nativeProgress,finalIteration),
+      'The short LBCO fit must show live native progress and preserve the order of any sampled counters');
   }
   assert.equal(progressAfter.running,false,
     'The native fit must stop running when the actual successful results popup is displayed');
