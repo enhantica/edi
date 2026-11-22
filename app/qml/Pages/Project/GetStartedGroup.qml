@@ -147,7 +147,7 @@ SideBarGroup {
                     const at = group.menuIndexAfter(loadMenu, importHeader);
                     for (let i = 0; i < importers.length; ++i) {
                         const importer = importers[i];
-                        const item = importItem.createObject(loadMenu, {
+                        const item = importItem.createObject(loadMenu.contentItem, {
                             importer: importer
                         }) as LoadMenuItem;
                         item.labelWidth = Qt.binding(() => loadMenu.labelWidth);
