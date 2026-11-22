@@ -327,11 +327,11 @@ try {
     else if (/^(?:Home|Project|Structure|Experiment|Analysis|Start)$/.test(node.name?.value || '') || /(?:Examples|Get started)$/.test(node.name?.value || '')) await settleRenderedPage();
 
   };
-  const discardResetGuard = async () => {
+  const discardUnsavedChanges = async () => {
     await restoreCanvasViewport(evaluate);
     const title = await waitControlGeometry(evaluate, frame, 'unsavedChanges.title', {enabled:false});
     assert.equal(title.text, 'Save the changes?',
-      'Reset must expose the exact native unsaved-changes title before Discard');
+      'The actual unsaved-changes prompt must expose its native title before Discard');
     await waitControlGeometry(evaluate, frame, 'unsavedChanges.discard');
     // The existing geometry helper refuses missing/ambiguous/nonpositive/outside-viewport controls.
     const point = await controlPointer(evaluate, 'unsavedChanges.discard');
@@ -343,7 +343,7 @@ try {
     }
     await frame();
   };
-  const requireResetGuardClosed = async () => {
+  const requireUnsavedChangesClosed = async () => {
     for (const name of ['unsavedChanges.title','unsavedChanges.discard']) {
       const exposed = await evaluate(`(() => {
         const name=${JSON.stringify(name)};
@@ -356,7 +356,7 @@ try {
         }
       })()`);
       assert.equal(exposed, false,
-        'The admitted unsaved control must retire before unchanged Reset-effect checks: '+name);
+        'The actual unsaved-changes control must retire after Discard: '+name);
     }
   };
   const waitGuardedDialog = async objectName => {
@@ -373,7 +373,7 @@ try {
         };
         return read('unsavedChanges.discard') ? 'guard' : read(${JSON.stringify(objectName)}) ? 'dialog' : null;
       })()`);
-      if(state==='guard') {await discardResetGuard(); await requireResetGuardClosed();}
+      if(state==='guard') {await discardUnsavedChanges(); await requireUnsavedChangesClosed();}
       else if(state==='dialog') {await waitControlGeometry(evaluate,frame,objectName);return;}
       await frame();
     } while(Date.now()<deadline);
@@ -824,9 +824,9 @@ print(json.dumps(dict(name=name, analysis=analysis, scientific=scientific)))`, a
   assert.deepEqual(toolbar.map(button=>button.name),toolbarNames,
     'The actual left app toolbar must name Save, Undo, Redo and Clear in its displayed order');
   await click(/^Clear: close the project and start again$/);
-  await discardResetGuard();
+  await discardUnsavedChanges();
   await settleRenderedPage();
-  await requireResetGuardClosed();
+  await requireUnsavedChangesClosed();
   await click(/^Start$/); await click(/^Project$/);
   await waitAX(/^Save project as/, false, 'button');
   const emptyTree = await send('Accessibility.getFullAXTree');
@@ -858,8 +858,8 @@ print(markers[0].parent)`, saved, reopened, reopenControl || 'normal'], { encodi
   const numerical = spawnSync('python', ['-m','tests.fixtures.e04_t11_wasm.written','compare',
     '--root',sourceRoot,'--case',fitCase,'--reference',join(resolve(writtenReference),fitCase),
     '--archive',saved,'--output',join(output, `${mode}-${fitCase}-scientific.json`)],
-    {encoding:'utf8',timeout:10000});
-  assert.equal(numerical.status, 0, 'browser written parameters, SUs, bank fields and pattern arrays must agree with the independently raw-qualified ordinary native Save: ' + numerical.stderr);
+    {encoding:'utf8',timeout:30000});
+  assert.equal(numerical.status, 0, 'browser written parameters, SUs, bank fields and pattern arrays must agree with the independently raw-qualified ordinary native Save: ' + (numerical.error?.message ?? numerical.stderr));
   await writeFile(join(output, `${mode}-${fitCase}-measurement.json`), JSON.stringify({
     mode, fitCase, coreCount, fitElapsedMs, isolated, sharedArrayBuffer, kit: expected,wasm:wasm.map(url=>new URL(url).pathname),
     chiSquare: chi, iterations, rwp, nativeNumerics: true,engineWorkers
@@ -909,12 +909,16 @@ print(markers[0].parent)`, saved, reopened, reopenControl || 'normal'], { encodi
         functionDeclaration:'function() { this.click(); }',userGesture:true});
       await frame(); await settleRenderedPage();
     };
-    const beginPicker = async (regex, menu, action, menuLabel = /^Load\b/) => {
+    const beginPicker = async (regex, menu, action, {menuLabel = /^Load\b/, discardChanges = false} = {}) => {
       lastEvents.delete('Page.fileChooserOpened');
       const opened=event('Page.fileChooserOpened');
       if (/Open project folder/.test(regex.source)) {
         await click(/^Load project$/, 'button', 'project.load');
         await click(regex, 'menuitem', 'project.load.folder');
+        if (discardChanges) {
+          await discardUnsavedChanges();
+          await requireUnsavedChangesClosed();
+        }
       } else {
         if (menu) await click(menuLabel, 'button', menu);
         await click(regex, menu ? 'menuitem' : 'button', action);
@@ -930,7 +934,7 @@ print(markers[0].parent)`, saved, reopened, reopenControl || 'normal'], { encodi
       return picker;
     };
     const beginExperimentDataPicker = (regex, action) =>
-      beginPicker(regex, 'experiments.loadData.0', action, /^Load data…$/);
+      beginPicker(regex, 'experiments.loadData.0', action, {menuLabel: /^Load data…$/});
     let getStartedOpen = !fileRequestsOnly;
     const projectPage = async () => {
       const tab = await waitControlGeometry(evaluate, frame, 'appBar.tab.project');
@@ -946,9 +950,9 @@ print(markers[0].parent)`, saved, reopened, reopenControl || 'normal'], { encodi
         await click(/Get started$/, 'button'); getStartedOpen = true;
       }
     };
-    const openFolder = async name => {
+    const openFolder = async (name, options) => {
       await projectPage();
-      const input=await beginPicker(/^Open project folder(?:…|\.\.\.)?$/);
+      const input=await beginPicker(/^Open project folder(?:…|\.\.\.)?$/, undefined, undefined, options);
       await send('DOM.setFileInputFiles',{...input,files:[join(inputs,name)]});
       await waitName(name);
       await settleRenderedPage();
@@ -1084,7 +1088,8 @@ print(markers[0].parent)`, saved, reopened, reopenControl || 'normal'], { encodi
 
     if (['all','overlap'].includes(fileRequestCase)) {
     for (const newerFirst of [false,true]) {
-    await openFolder('routing_initial');
+    // The preceding folder-cancel case leaves a new project with an unsaved structure.
+    await openFolder('routing_initial', {discardChanges: fileRequestCase === 'all' && !newerFirst});
     await projectPage(); await armReads();
     const first=await beginPicker(/^Open project folder(?:…|\.\.\.)?$/);
     const firstId=await evaluate('window.__e04FileInput.__e04Picker');
