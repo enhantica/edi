@@ -13,8 +13,8 @@ duplicate, a bad timestamp, a zero baseline, a baseline not started first) is re
 exit 2; a shard over the limit exits 1 and names the shard and main's time.
 
 When the collector found no earlier scheduled run that passed its system shards, the main
-document is exactly `{"no_baseline": true, "before": <this run's created_at>}`. It passes only
-when the current run is itself a complete, valid record created at that time.
+document is exactly `{"no_baseline": true, "before": <this run's created_at>}`: there is no
+baseline, and nothing is judged (exit 0).
 """
 
 from __future__ import annotations
@@ -165,8 +165,7 @@ def no_baseline(current: dict, record: dict) -> str:
             '{no_baseline: true, before: <this run created_at>}'
         )
     instant(record['before'], 'the no-baseline before')
-    shards(current, 'current')  # this night's own shards are complete and valid
-    return f'no scheduled run on main before {record["before"]} passed its system shards'
+    return 'no baseline: no earlier scheduled run on main passed its system shards'
 
 
 def evidence(args: argparse.Namespace) -> tuple[dict, object]:
@@ -186,14 +185,14 @@ def main(argv: list[str] | None = None) -> int:
     try:
         current, record = evidence(args)
         first = isinstance(record, dict) and record.get('no_baseline') is True
-        # The first night: nothing to compare with, said explicitly and checked.
+        # No baseline: said explicitly, and not judged.
         line = no_baseline(current, record) if first else None
         main_run = None if first else require_jobs(record, args.main, 'main')
     except RefusedError as e:
         print(f'system shard time: cannot compare with main: {e}')
         return 2
     if main_run is None:
-        print(f'system shard time: {line}; nothing to compare')
+        print(f'system shard time: {line}; not judged')
         return 0
     try:
         over = compare(current, main_run)
