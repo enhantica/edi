@@ -128,14 +128,14 @@ try {
       if (item.method === 'Runtime.consoleAPICalled') transcript.push(item.params.args.map(a => a.value ?? a.description));
     }
   };
-  send = (method, params = {}, browser = false, diagnostic = false) => new Promise((ok, fail) => {
+  send = (method, params = {}, browser = false, diagnostic = false, timeoutMs = 45000) => new Promise((ok, fail) => {
     const number = ++id;
     const timer = setTimeout(() => {
       pending.delete(number);
       const error=Error(`CDP deadline: ${method}`);
       if(!diagnostic)recordFailure(error);
       fail(error);
-    }, diagnostic ? 2000 : 45000);
+    }, diagnostic ? 2000 : timeoutMs);
     pending.set(number, { ok, fail, timer });
     ws.send(JSON.stringify({ id: number, method, params, ...(!browser && session ? { sessionId: session } : {}) }));
   });
@@ -162,8 +162,9 @@ try {
   for (const method of ['Page.enable', 'Runtime.enable', 'Network.enable', 'Accessibility.enable']) await send(method);
   await send('Browser.setDownloadBehavior', { behavior: 'allowAndName', downloadPath: output, eventsEnabled: true }, true);
   await send('Page.setInterceptFileChooserDialog', { enabled: true });
-  const evaluate = async expression => {
-    const result = await send('Runtime.evaluate', { expression, returnByValue: true, awaitPromise: true });
+  const evaluate = async (expression, timeoutMs) => {
+    const result = await send('Runtime.evaluate', { expression, returnByValue: true, awaitPromise: true },
+      false, false, timeoutMs);
     if (result.exceptionDetails) {
       await writeFile(join(output, `${mode}-evaluation-error.json`), JSON.stringify({
         expression, exceptionDetails:result.exceptionDetails,
@@ -173,8 +174,8 @@ try {
       (result.exceptionDetails?.exception?.description || result.exceptionDetails?.text || ''));
     return result.result.value;
   };
-  const frame = async () => {
-    try { return await evaluate('new Promise(resolve => requestAnimationFrame(() => resolve(true)))'); }
+  const frame = async timeoutMs => {
+    try { return await evaluate('new Promise(resolve => requestAnimationFrame(() => resolve(true)))', timeoutMs); }
     catch (error) {
       if (!/navigated|context was destroyed|Cannot find context/.test(error.message)) throw error;
       return false; // A service-worker reload is an observable navigation, not a readiness failure.
@@ -202,8 +203,9 @@ try {
     } while (Date.now() < deadline);
     throw Error(`UI never exposed an enabled accessible control/state matching ${regex}`);
   };
-  const waitForOpenedAnalysis = async () => {
+  const waitForProjectOpening = async tab => {
     const deadline = Date.now() + 180000;
+    const remaining = () => Math.max(1, deadline - Date.now());
     do {
       const ready = await evaluate(`(() => {
         const visibleControl = name => {
@@ -215,14 +217,18 @@ try {
           }
         };
         // The indicator can be absent before the upload finishes. Also require
-        // native Analysis readiness so that the initial empty page cannot pass.
+        // the requested native tab so the initial empty page cannot pass.
         return !visibleControl('statusBar.opening') &&
-          visibleControl('appBar.tab.analysis')?.enabled === true;
-      })()`);
-      if (ready) return waitAX(/^Analysis$/, true, 'tab');
-      await frame();
+          visibleControl(${JSON.stringify(tab)})?.enabled === true;
+      })()`, remaining());
+      if (ready) return;
+      await frame(remaining());
     } while (Date.now() < deadline);
-    throw Error('Project opening must finish and enable the Analysis tab');
+    throw Error('Project opening must finish and enable the requested tab '+tab);
+  };
+  const waitForOpenedAnalysis = async () => {
+    await waitForProjectOpening('appBar.tab.analysis');
+    return waitAX(/^Analysis$/, true, 'tab');
   };
   const settleRenderedPage = async () => {
     const deadline = Date.now() + 15000;
@@ -1005,7 +1011,7 @@ print(markers[0].parent)`, saved, reopened, reopenControl || 'normal'], { encodi
       await writeFile(join(output, `${mode}-create-${name}-viewport.json`), JSON.stringify(viewport,null,2));
     };
     const openEmptyStructure = async () => {
-      await waitControlGeometry(evaluate, frame, 'appBar.tab.structure', {timeoutMs:180000});
+      await waitForProjectOpening('appBar.tab.structure');
       await click(/^Structure$/, 'tab', 'appBar.tab.structure', undefined, async () => {
         await waitAX(/Structures \(0\)/);
         await waitControlGeometry(evaluate, frame, 'structures.create');
