@@ -127,11 +127,6 @@ try {
       console.log(mode,capability,'native pointer',name,point.x,point.y);
       await page.mouse.move(point.x,point.y);await page.mouse.down();await frame();await page.mouse.up();await frame();
     };
-    const accept=async()=>{
-      await settle();
-      console.log(mode,capability,'accept native dialog with default Enter');
-      await page.keyboard.press('Enter');await frame();
-    };
     const click = async (regex, role) => {const item=await control(regex,role); await page.mouse.click(item.x,item.y); await frame();};
     const activation = await control(/(?:activate|enable) screen reader/i,'button');
     const resolved = await cdp.send('DOM.resolveNode',{backendNodeId:activation.node.backendDOMNodeId});
@@ -152,20 +147,19 @@ try {
     };
     const saveAs = async (zip, copy, name) => {
       await nativeClick('project.saveAs');
-      await nativeClick(zip?'saveAs.zip':'saveAs.folder');
-      const copyChoice=await waitControlGeometry(expression=>page.evaluate(expression),frame,'saveAs.copy',{enabled:false});
+      const copyChoice=await waitControlGeometry(expression=>page.evaluate(expression),frame,'project.saveAs.copy',{enabled:false});
       if(copyChoice.checked!==copy) {
         assert.equal(copyChoice.enabled,true,'A required Save-a-copy change must be an available real dialog choice');
-        await nativeClick('saveAs.copy');
+        await nativeClick('project.saveAs.copy');
       }
-      const observed=await waitControlGeometry(expression=>page.evaluate(expression),frame,'saveAs.copy',{enabled:false});
+      const observed=await waitControlGeometry(expression=>page.evaluate(expression),frame,'project.saveAs.copy',{enabled:false});
       assert.equal(observed.checked,copy,'The actual Save-as dialog must hold the requested Save-a-copy state');
       await writeFile(join(output,capability+'-'+(name||'folder')+'-dialog.json'),JSON.stringify({
-        choice:await geometry(zip?'saveAs.zip':'saveAs.folder'),copy:observed,
+        choice:await geometry(zip?'project.saveAs.zip':'project.saveAs.folder'),copy:observed,
       },null,2));
       const completed = zip && capability==='fallback' ? page.waitForEvent('download') : null;
       const previous=capability==='folder'?await page.evaluate(()=>window.__projectArchiveWrites.length):0;
-      await accept();
+      await nativeClick(zip?'project.saveAs.zip':'project.saveAs.folder');
       if (!zip) return null;
       const path = join(output, name);
       if(completed) await (await completed).saveAs(path);
@@ -181,8 +175,8 @@ try {
     };
     const savedCopy = async () => saveAs(true, true, capability+'-copy.zip');
     const chooser=capability==='fallback'?page.waitForEvent('filechooser'):null;
-    await nativeClick('project.open');
-    await nativeClick('open.zip');await accept();
+    await nativeClick('project.load');
+    await nativeClick('project.load.zip');
     if(chooser)await (await chooser).setFiles(fixture);
     await control(/^Analysis$/,'tab');
     if(capability==='folder')assert.equal(await page.evaluate(()=>window.__projectZipPickCount),1,

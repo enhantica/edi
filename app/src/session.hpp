@@ -45,6 +45,21 @@ namespace edi_app {
 
 class LoadAttempt;
 
+// A program the core imports projects from or exports them to (edi ADR-0098), as the Load and Save project menus list
+// it: `key` for object names, `program`, `hint` (a suffix) and, for an importer, `nameFilter` for a file chooser.
+struct ProjectProgram {
+    Q_GADGET
+    QML_VALUE_TYPE(projectProgram)
+    Q_PROPERTY(QString key MEMBER key CONSTANT)
+    Q_PROPERTY(QString program MEMBER program CONSTANT)
+    Q_PROPERTY(QString hint MEMBER hint CONSTANT)
+    Q_PROPERTY(QString nameFilter MEMBER nameFilter CONSTANT)
+
+   public:
+    QString key, program, hint, nameFilter;
+    bool operator==(const ProjectProgram&) const = default;
+};
+
 // The app's one list of messages (edi ADR-0017 §14): the warnings the last open reported and the errors the
 // views used to show in red — a calculation refusal, one row per distinct refusal — and information entries (why an
 // estimate subtracted or ignored the calculated peaks). Roles `message` and `severity` ("warning", "error" or
@@ -255,6 +270,14 @@ class Session : public QObject {
     /// Save as's Measured data row (edi ADR-0088 point 5): the next save copies linked data into the project ("copy") or
     /// keeps it linked ("linked"), answering its question in advance; anything else clears it. Used by that save only.
     Q_INVOKABLE void setNextSaveData(const QString& choice);
+    /// Export a FullProf copy under the selected parent directory and keep the EDI project open.
+    Q_INVOKABLE bool exportFullProf(const QUrl& parentDirectory, bool fixed);
+    /// The core's project importers (edi ADR-0098), in the Load project menu's order; `hint` is the first suffix.
+    Q_INVOKABLE QList<edi_app::ProjectProgram> projectImporters() const;
+    /// The core's project exporters, in the Save project as menu's order; no `nameFilter`.
+    Q_INVOKABLE QList<edi_app::ProjectProgram> projectExporters() const;
+    /// Export a copy for `program` as `<project>-<key>` under the selected parent directory; the project stays open.
+    Q_INVOKABLE bool exportProjectCopy(const QString& program, const QUrl& parentDirectory);
     Q_INVOKABLE bool saveAs(const QUrl& directory);
     // Save as (edi ADR-0052): into the folder or the .zip `target` (a `file:` URL), as `zip` says. A project saved as a
     // .zip keeps the archive as its location and every later Save rewrites it. With `copy` the project is written

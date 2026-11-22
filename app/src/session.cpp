@@ -35,7 +35,9 @@
 #include "web_storage.hpp"
 #include "edi/display.hpp"
 #include "edi/report.hpp"
+#include "edi/fullprof.hpp"
 #include "edi/io.hpp"
+#include "edi/project_import.hpp"
 #include "edi/project_archive.hpp"
 #include "edi/parameter_walk.hpp"
 #include "edi/scan.hpp"
@@ -937,6 +939,76 @@ QString Session::writeBackReports() {
     return {};
 }
 
+bool Session::exportFullProf(const QUrl& parentDirectory, bool fixed) {
+    if (!project_ || !parentDirectory.isLocalFile()) {
+        return false;
+    }
+    const auto directory = QDir(parentDirectory.toLocalFile()).filePath(folderNameFor(project_->name()) +
+                                                                        QStringLiteral("-fullprof"));
+    try {
+        const auto written = edi::export_fullprof_project(project_->project(), directory.toStdString(), fixed);
+        qCInfo(lcApp, "FullProf project exported: %s", written.c_str());
+    } catch (const std::exception& error) {
+        emit refused(QString::fromUtf8(error.what()));
+        return false;
+    }
+    return true;
+}
+
+namespace {
+// An object-name key for a program: the built-in ones keep the names the menus have always had.
+QString programKey(const std::string& program) {
+    if (program == "FullProf") return QStringLiteral("fullProf");
+    if (program == "GSAS-II") return QStringLiteral("gsas");
+    QString key;
+    for (const QChar c : QString::fromStdString(program)) {
+        if (c.isLetterOrNumber()) key += c.toLower();
+    }
+    return key;
+}
+}  // namespace
+
+QList<ProjectProgram> Session::projectImporters() const {
+    QList<ProjectProgram> list;
+    for (const auto& importer : edi::project_importers()) {
+        QStringList patterns;
+        for (const auto& suffix : importer.suffixes) {
+            const auto text = QString::fromStdString(suffix);
+            patterns << QStringLiteral("*") + text << QStringLiteral("*") + text.toUpper();
+        }
+        const auto program = QString::fromStdString(importer.program);
+        list.append({programKey(importer.program), program, QString::fromStdString(importer.suffixes.front()),
+                     tr("%1 projects (%2)").arg(program, patterns.join(QLatin1Char(' ')))});
+    }
+    return list;
+}
+
+QList<ProjectProgram> Session::projectExporters() const {
+    QList<ProjectProgram> list;
+    for (const auto& exporter : edi::project_exporters()) {
+        list.append({programKey(exporter.program), QString::fromStdString(exporter.program),
+                     QString::fromStdString(exporter.hint), {}});
+    }
+    return list;
+}
+
+bool Session::exportProjectCopy(const QString& program, const QUrl& parentDirectory) {
+    if (!project_ || !parentDirectory.isLocalFile()) {
+        return false;
+    }
+    const auto directory = QDir(parentDirectory.toLocalFile())
+                               .filePath(folderNameFor(project_->name()) + QLatin1Char('-') +
+                                         programKey(program.toStdString()).toLower());
+    try {
+        const auto written = edi::export_project(program.toStdString(), project_->project(), directory.toStdString());
+        qCInfo(lcApp, "%s project exported: %s", qUtf8Printable(program), written.c_str());
+    } catch (const std::exception& error) {
+        emit refused(QString::fromUtf8(error.what()));
+        return false;
+    }
+    return true;
+}
+
 bool Session::saveAs(const QUrl& directory) {
     const auto operation =
         beginSave(true, false, [this, directory](const SaveOperation& answered) { saveAsWith(answered, directory); },
@@ -1452,12 +1524,15 @@ bool Session::openExampleNamed(const QString& exampleId) {
                 finish(false, QStringLiteral("a tutorial already holds a project aside"));
                 return;
             }
+            // receiver was checked above; the check after openProjectAt is for that call, which can end the session.
+            // cppcheck-suppress nullPointerRedundantCheck
             receiver->aside_next_ = aside;
             // The downloaded project's read is this request's own attempt: only a file it failed on goes with it.
             QString failed;
             bool opened = false;
             {
                 LoadAttempt attempt(receiver);
+                // cppcheck-suppress nullPointerRedundantCheck
                 opened = receiver->openProjectAt(archive, exampleId);
                 if (!receiver) return;
                 if (!opened) failed = receiver->report(&attempt);
@@ -1970,7 +2045,10 @@ void Session::syncCalculationMessages() {
 
 bool Session::projectDirectoryExists(const QString& path) const {
     // A recent project is a folder or a .zip it was saved as (edi ADR-0052).
-    return !path.isEmpty() && (QFileInfo(path).isDir() || edi::is_project_archive(path.toStdString()));
+    const QFileInfo location(path);
+    const auto source = path.toStdString();
+    return !path.isEmpty() && (location.isDir() || edi::is_project_archive(source) ||
+                               (location.isFile() && edi::is_imported_project_path(source)));
 }
 
 QUrl Session::projectDirectoryUrl(const QString& path) const {
@@ -1991,13 +2069,15 @@ QUrl Session::suggestedSaveTarget(bool zip) const {
     if (place.isEmpty() && read_only_copy_) {
         place = read_only_source_;
     }
+    // The chooser starts where the project is (the folder holding its .zip, or its folder) and suggests the project's
+    // name, as it reads now (edi ADR-0052).
     const QFileInfo info(place);
-    const QString folder = !place.isEmpty() ? info.absolutePath()
-                                            : QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation);
-    QString name = !place.isEmpty() ? info.completeBaseName() : folderNameFor(project_->name());
-    if (!place.isEmpty() && info.suffix().compare(QStringLiteral("zip"), Qt::CaseInsensitive) != 0) {
-        name = info.fileName();  // a folder's whole name, dots and all
-    }
+    // An archive is the .zip the project saves to, or a file; a project folder may itself end in .zip.
+    const bool archive = !place.isEmpty() && (place == archive_location_ || info.isFile());
+    const QString folder = place.isEmpty() ? QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation)
+                           : archive       ? info.absolutePath()
+                                           : info.absoluteFilePath();
+    const QString name = folderNameFor(project_->name());
     return QUrl::fromLocalFile(QDir(folder).filePath(zip ? name + QStringLiteral(".zip") : name));
 }
 

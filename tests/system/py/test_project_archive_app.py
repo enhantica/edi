@@ -15,7 +15,11 @@ import edi
 import pytest
 
 from tests.fixtures.native_process import environment_bash
-from tests.fixtures.project_archive.recalculated_copy import compare_members, input_bytes
+from tests.fixtures.project_archive.recalculated_copy import (
+    compare_copy_metadata,
+    compare_members,
+    input_bytes,
+)
 
 ROOT = Path(__file__).resolve().parents[3]
 CASES = tuple(
@@ -69,12 +73,14 @@ CASES += tuple(
 ) + (
     'test_save_folder_choice',
     'test_save_dialog_layout',
+    'test_browser_warning_save_as_requires_confirmation',
     'test_save_unwritable:read-only-zip',
     'test_save_unwritable:bundled-example',
 )
 
 
 def run_archive_actor(case):
+    cases = case if isinstance(case, list) else [case]
     binary = Path(os.environ.get('EDI_APP_TEST_RUNNER', ROOT / 'build/app/app/edi_app_tests'))
     assert binary.is_file(), 'Project opening gates require the actual built app test host'
     result = subprocess.run(
@@ -86,11 +92,11 @@ def run_archive_actor(case):
             str(ROOT / 'tests/unit/app/tst_project_archive.qml'),
             '-o',
             '-,txt',
-            'ProjectArchive::' + case,
+            *['ProjectArchive::' + actor for actor in cases],
         ],
         capture_output=True,
         text=True,
-        timeout=90 if case == 'test_save_copy' else 45,
+        timeout=90 if case == 'test_save_copy' else 45 * len(cases),
         check=False,
     )
     output = result.stdout + result.stderr
@@ -99,29 +105,31 @@ def run_archive_actor(case):
 
 
 @pytest.fixture(scope='module')
-def copy_actors():
-    # One display and Qt process; the real test still opens, saves and tears down
-    # each independent folder/ZIP case. Keep each actor's evidence separate.
-    output = run_archive_actor('test_save_copy')
+def archive_actors(request):
+    # Each Qt data row still creates and destroys its own actual window and project.
+    # Share only the display and native host, as the copy actors already do.
+    cases = [
+        item.callspec.params['case']
+        for item in request.session.items
+        if item.path == request.node.path
+        and getattr(item, 'callspec', None) is not None
+        and 'case' in item.callspec.params
+    ]
+    output = run_archive_actor(cases)
     return {
         case: '\n'.join(
             line
             for line in output.splitlines()
-            if 'ProjectArchive::test_save_copy(' + case.split(':', 1)[1] + ')' in line
+            if 'ProjectArchive::' + case.partition(':')[0] + '(' + case.partition(':')[2] + ')'
+            in line
         )
-        for case in CASES
-        if case.startswith('test_save_copy:')
+        for case in cases
     }
 
 
 @pytest.fixture
-def archive_actor(request):
-    case = request.node.callspec.params['case']
-    return (
-        request.getfixturevalue('copy_actors')[case]
-        if case.startswith('test_save_copy:')
-        else run_archive_actor(case)
-    )
+def archive_actor(request, archive_actors):
+    return archive_actors[request.node.callspec.params['case']]
 
 
 @pytest.mark.parametrize('case', CASES)
@@ -159,7 +167,13 @@ def assert_app_archive_matches_exports(output, tmp_path):
     else:
         actual = {name: base64.b64decode(body) for name, body in evidence['saved'].items()}
     if evidence['kind'] == 'copy':
-        compare_members(expected, actual, tmp_path, edi)
+        compare_members(
+            expected,
+            actual,
+            tmp_path,
+            edi,
+            save_interval=(evidence['started'], evidence['finished']),
+        )
     else:
         assert actual == expected, (
             'App ZIP rewrites retain every canonical folder member and report byte exactly'
@@ -273,3 +287,24 @@ def test_recalculated_copy_cannot_hide_inputs_after_computed_categories(changed)
         'A changed scientific input before or after computed geometry '
         'cannot borrow the copy exemption'
     )
+
+
+@pytest.mark.parametrize('escape', ['stale', 'future', 'other-field', 'missing', 'duplicate'])
+def test_copy_save_timestamp_cannot_hide_another_change(escape):
+    before = b'_metadata.name sample\n_metadata.last_modified "01 Jan 2000 00:00:00"\n'
+    after = before.replace(b'00:00:00', b'00:00:01')
+    interval = (946684801000, 946684801000)
+    assert compare_copy_metadata(before, after, interval) is None, (
+        'A copy admits the independently authored next UTC second while retaining all other bytes'
+    )
+    escaped = {
+        'stale': before,
+        'future': after.replace(b'00:00:01', b'00:00:02'),
+        'other-field': after.replace(b'sample', b'changed'),
+        'missing': b'_metadata.name sample\n',
+        'duplicate': after + b'_metadata.last_modified "01 Jan 2000 00:00:01"\n',
+    }[escape]
+    with pytest.raises(
+        ValueError, match=r'A (?:newly saved )?copy retains|A newly saved copy advances'
+    ):
+        compare_copy_metadata(before, escaped, interval)

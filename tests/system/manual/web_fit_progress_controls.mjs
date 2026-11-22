@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {runInNewContext} from 'node:vm';
 import {roundedStatusActionRect} from './web_status_action_lifetime.mjs';
 import {fittingObservationKind,hasRunningProgress} from '../../fixtures/e04_t11_wasm/browser_observations.mjs';
-import {beginFitProgress,endFitProgress,isLiveFitProgress,advancesLiveFitProgress,observesOrderedFitProgress} from './web_fit_progress.mjs';
+import {beginFitProgress,endFitProgress,isLiveFitProgress,advancesLiveFitProgress,observesOrderedFitProgress,observesShortFitProgress} from './web_fit_progress.mjs';
 
 const idle={running:false,visible:false,text:''};
 const live={running:true,visible:true,text:'fitting · it 3'};
@@ -20,6 +20,17 @@ for (const [states,final] of [[iterations([4,1]),8],[iterations([9]),8],
   [[idle],8],[[{...live,visible:false}],8],[[{...live,text:'Success · it 4'}],8]]) {
   assert(!observesOrderedFitProgress(states,final),
     'Fast-fit sampling still refuses reversed, out-of-range, absent, hidden and completed counters');count++;
+}
+const unnumbered = {...live,text:'fitting'};
+assert(observesShortFitProgress([idle,unnumbered,{...idle,text:'fitting · it 4'}],4),
+  'A short fit can show its actual running bar and finish its numbered updates between frames');count++;
+for (const [states,final] of [
+  [[idle,{...idle,text:'fitting · it 4'}],4], [[{...unnumbered,visible:false}],4],
+  [[unnumbered,...iterations([4,2])],4], [[unnumbered,...iterations([5])],4],
+  [[unnumbered,{...live,text:'Success'}],4], [[unnumbered],0],
+]) {
+  assert(!observesShortFitProgress(states,final),
+    'Inactive, hidden, terminal, disordered or out-of-range samples cannot stand in for short-fit progress');count++;
 }
 for (const values of [[0,1,1,2,5],[1,3,4,5]]) {
   assert(advancesLiveFitProgress(iterations(values),5),

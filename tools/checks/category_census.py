@@ -61,6 +61,13 @@ CIF_SOURCES = ('core/',)
 # The item suffixes the loader composes `_data_range.<axis>_min`, `_max` and `_step` from, and
 # the `_iso_` prefix the loader looks for to keep a magnetic text whole for crysta.
 TAG_FRAGMENTS = {'_min', '_max', '_step', '_iso_'}
+# Core sources that read or write another program's files (ADR-0098): their plain underscore
+# names are that program's tags, not edi's CIF tags, so only their dotted file tags are checked.
+FOREIGN_DIALECT_SOURCES = {
+    'core/src/cryspy_project.cpp': "cryspy's .rcif tags (ADR-0099)",
+    'core/src/cryspy_export.cpp': "cryspy's .rcif tags (ADR-0099)",
+    'core/src/gpx_records.cpp': "Python pickle names in GSAS-II's .gpx (ADR-0097)",
+}
 
 # Classes of model.hpp that hold no model category, each with its reason.
 NOT_MODEL = {
@@ -575,7 +582,12 @@ class Census:
                     continue
                 where = path.relative_to(self.root).as_posix()
                 text = source(path)
-                cif_source = where.startswith(CIF_SOURCES) and where != MODEL  # not the schemas
+                # not the schemas, and not another program's tags
+                cif_source = (
+                    where.startswith(CIF_SOURCES)
+                    and where != MODEL
+                    and where not in FOREIGN_DIALECT_SOURCES
+                )
                 for literal in LITERAL.finditer(text):
                     dotted = FILE_TAG.match(literal.group(1))
                     plain = CIF_TAG.fullmatch(literal.group(1)) if cif_source else None
@@ -583,6 +595,11 @@ class Census:
                         line = text.count('\n', 0, literal.start()) + 1
                         name = (dotted or plain).group(1)
                         seen.setdefault((bool(dotted), name), f'{where}:{line}')
+        for where in sorted(FOREIGN_DIALECT_SOURCES):
+            if not (self.root / where).is_file():
+                self.problems.append(
+                    f'FOREIGN_DIALECT_SOURCES lists {where}, which does not exist'
+                )
         return [(dotted, name, where) for (dotted, name), where in seen.items()]
 
     def cif_tags(self, categories: list[dict]) -> dict[str, str]:

@@ -9,6 +9,7 @@ from tests.integration.py.test_scan_app_contract import (
     block,
     item,
     javascript,
+    object_id,
     property_value,
     spans,
 )
@@ -49,6 +50,49 @@ def deferred_row(qml, route):
     ], 'Recent/example activation defers its actual selected row through the replacement lifecycle'
 
 
+def deferred_chooser(main, chooser_id, selected, purpose):
+    accepted = property_value(object_id(main, chooser_id), 'onAccepted')
+    assert accepted, 'The actual window chooser must own its acceptance handler'
+    choices = {'selectedFolder': 'file:///chosen/project', 'selectedFile': 'file:///chosen/file'}
+    expression = (
+        '(()=>{let queued=[], loaded=[], remembered=[];'
+        'const selectedFolder="file:///chosen/project", selectedFile="file:///chosen/file";'
+        'const Qt={callLater:(fn, path)=>queued.push(()=>fn(path))};'
+        'const Session={openProject:path=>loaded.push(path)};'
+        'const DialogFolders={remember:(purpose,path)=>remembered.push([purpose,path])};'
+        + accepted
+        + 'const before=loaded.slice();queued.splice(0).forEach(f=>f());'
+        'return [before,loaded,remembered];})()'
+    )
+    return expression, [[], [choices[selected]], [[purpose, choices[selected]]]]
+
+
+def check_chooser_and_refusal_observations(main, handler, choosers):
+    observer = block(main, 'function ' + handler + '(')
+    refusal_probe = (
+        '(()=>{let shown=[];const qsTr=s=>s;const refusal={message:"",title:"",'
+        'file:"",open(){shown.push([this.message,this.file,this.title])}};'
+        + observer
+        + ';'
+        + handler
+        + '("same refusal","file:///unreadable.edi");'
+        + handler
+        + '("same refusal");return shown;})()'
+    )
+    probes = [expression for expression, _ in choosers] + [refusal_probe]
+    observed = javascript('console.log(JSON.stringify([' + ','.join(probes) + ']));')
+    assert observed[:-1] == [expected for _, expected in choosers], (
+        'The window chooser must remember and defer its actual selected path to the project loader'
+    )
+    assert observed[-1] == [
+        ['same refusal', 'file:///unreadable.edi', 'The project was not opened'],
+        ['same refusal', '', 'The project was not opened'],
+    ], (
+        'Each actual per-attempt event must open the message dialog, including identical '
+        'refusals, and replace the unreadable file with the current attempt'
+    )
+
+
 @pytest.mark.parametrize(
     ('route', 'path', 'entry'),
     [
@@ -59,19 +103,22 @@ def deferred_row(qml, route):
     ],
 )
 def test_every_project_load_route_has_a_per_attempt_visible_failure_channel(route, path, entry):
-    qml = (ROOT / 'app/qml/Pages/Project' / path).read_text()
-    if route in {'open', 'zip'}:
-        selected = 'selectedFolder' if route == 'open' else 'selectedFile'
-        assert f'Qt.callLater(Session.openProject, {selected})' in qml, (
-            'The selected folder or archive must reach the real loader on the next event-loop turn'
-        )
-    elif route in {'recent', 'example'}:
-        deferred_row(qml, route)
     main = (ROOT / 'app/qml/Main.qml').read_text()
+    choosers = []
+    if route == 'open':
+        choosers = [deferred_chooser(main, 'openFolderDialog', 'selectedFolder', 'openProject')]
+    elif route == 'zip':
+        choosers = [
+            deferred_chooser(main, 'openZipDialog', 'selectedFile', 'openProject'),
+            deferred_chooser(main, 'importDialog', 'selectedFile', 'importProject'),
+        ]
+    else:
+        deferred_row((ROOT / 'app/qml/Pages/Project' / path).read_text(), route)
     handlers = []
+    components = spans(main)
     for target in re.finditer(r'^\s*target:\s*Session\s*$', main, re.MULTILINE):
         start, end = min(
-            ((a, b) for a, b in spans(main) if a < target.start() < b),
+            ((a, b) for a, b in components if a < target.start() < b),
             key=lambda span: span[1] - span[0],
         )
         component = main[start:end]
@@ -110,24 +157,7 @@ def test_every_project_load_route_has_a_per_attempt_visible_failure_channel(rout
         for wrapper in wrappers
     ), 'Every live desktop and browser loader must publish repeated per-attempt refusals'
     handler = next(match.group(1) for match in handlers if match.group(1) == 'onLoadFailed')
-    observer = block(main, 'function ' + handler + '(')
-    observed = javascript(
-        'let shown=[];const qsTr=s=>s;const refusal={message:"",title:"",'
-        'file:"",open(){shown.push([this.message,this.file,this.title])}};'
-        + observer
-        + ';'
-        + handler
-        + '("same refusal","file:///unreadable.edi");'
-        + handler
-        + '("same refusal");console.log(JSON.stringify(shown));'
-    )
-    assert observed == [
-        ['same refusal', 'file:///unreadable.edi', 'The project was not opened'],
-        ['same refusal', '', 'The project was not opened'],
-    ], (
-        'Each actual per-attempt event must open the message dialog, including identical '
-        'refusals, and replace the unreadable file with the current attempt'
-    )
+    check_chooser_and_refusal_observations(main, handler, choosers)
     assert re.search(r'\bErrorDialog\s*\{\s*id:\s*refusal\b', main), (
         'ADR-0062: load refusals must use the shared reportable error dialog'
     )

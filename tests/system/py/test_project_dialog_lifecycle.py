@@ -14,18 +14,16 @@ from tests.fixtures.native_process import environment_bash
 ROOT = Path(__file__).resolve().parents[3]
 
 
-@pytest.mark.parametrize('route', ['open', 'recent'])
-@pytest.mark.parametrize('state', ['empty', 'replace'])
-def test_web_zip_opens_from_real_controls_without_destroying_a_signal_handler(route, state):
-    fixture = ROOT / 'tests/fixtures/project_archive/browser-saved-project.zip'
-    manifest = json.loads(fixture.with_suffix('.json').read_text())
-    assert hashlib.sha256(fixture.read_bytes()).hexdigest() == manifest['sha256'], (
-        'The desktop opening witness must retain the actual frozen web download bytes'
-    )
+@pytest.fixture(scope='module')
+def web_zip_actor(request):
+    scenarios = [
+        (item.callspec.params['route'], item.callspec.params['state'])
+        for item in request.session.items
+        if item.path == request.node.path
+    ]
     binary = Path(os.environ.get('EDI_APP_TEST_RUNNER', ROOT / 'build/app/app/edi_app_tests'))
     assert binary.is_file(), 'Desktop ZIP reopening requires the actual app test host'
-    identity = 'test_web_zip_lifecycle:' + route + '-' + state
-    run = subprocess.run(
+    return subprocess.run(
         [
             environment_bash(),
             str(ROOT / 'tests/fixtures/scan_views/run.sh'),
@@ -34,13 +32,29 @@ def test_web_zip_opens_from_real_controls_without_destroying_a_signal_handler(ro
             str(ROOT / 'tests/unit/app/tst_project_archive.qml'),
             '-o',
             '-,txt',
-            'ProjectArchive::' + identity,
+            *[
+                'ProjectArchive::test_web_zip_lifecycle:' + route + '-' + state
+                for route, state in scenarios
+            ],
         ],
         capture_output=True,
         text=True,
-        timeout=45,
+        timeout=45 * len(scenarios),
         check=False,
     )
+
+
+@pytest.mark.parametrize('route', ['open', 'recent'])
+@pytest.mark.parametrize('state', ['empty', 'replace'])
+def test_web_zip_opens_from_real_controls_without_destroying_a_signal_handler(
+    route, state, web_zip_actor
+):
+    fixture = ROOT / 'tests/fixtures/project_archive/browser-saved-project.zip'
+    manifest = json.loads(fixture.with_suffix('.json').read_text())
+    assert hashlib.sha256(fixture.read_bytes()).hexdigest() == manifest['sha256'], (
+        'The desktop opening witness must retain the actual frozen web download bytes'
+    )
+    run = web_zip_actor
     output = run.stdout + run.stderr
     assert run.returncode == 0, (
         'Opening or reopening the web ZIP through real controls must not abort: ' + output

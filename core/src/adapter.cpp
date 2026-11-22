@@ -44,6 +44,7 @@
 #include "number_token.hpp"
 #include "canonical_encoding.hpp"
 #include "assistant_project_io.hpp"  // edi-only logic: core/src-private, never installed
+#include "fullprof_project_io.hpp"
 #include "import_symmetry.hpp"
 #include "identity_bridge.hpp"  // The loader's reach into crysta's identity rules
 #include "crysta/derived_values.hpp"
@@ -797,23 +798,93 @@ std::vector<std::string> atom_types(const Project& project, const Structure& str
     return {types.begin(), types.end()};
 }
 
-std::string detail::inferred_wyckoff_letter(const Structure& structure,const AtomSite& site) {
-    if (!takes_wyckoff_letter(structure)) {
-        return {};
+namespace {
+crysta::WyckoffMatch native_wyckoff_match(const Structure& structure, const AtomSite& site,
+                                         const crysta::SpaceGroup& group) {
+    const auto cell = completed_cell(structure);
+    // Crysta's CIF site policy is 0.01 Angstrom (ADR-0103).
+    constexpr double tolerance_angstrom = 0.01;
+    std::array<double, 3> tolerance{};
+    for (std::size_t axis = 0; axis < tolerance.size(); ++axis) {
+        const double length = cell.parameters[axis].value();
+        if (!std::isfinite(length) || length <= 0.) {
+            throw std::invalid_argument("Automatic Wyckoff assignment needs a valid native cell");
+        }
+        tolerance[axis] = tolerance_angstrom / length;
     }
-    const auto group=resolve_group(structure);
-    const auto cell=completed_cell(structure);
-    // Crysta's CIF site policy is 0.01 Angstrom (ADR-0103); use its
-    // matcher rather than adding a positional classifier here (edi ADR-0057).
-    constexpr double native_site_tolerance_angstrom=0.01;
-    std::array<double,3> tolerance{};
-    for(std::size_t axis=0;axis<tolerance.size();++axis) {
-        const double length=cell.parameters[axis].value();
-        if(!std::isfinite(length) || length<=0)throw std::invalid_argument("Automatic Wyckoff assignment needs a valid native cell");
-        tolerance[axis]=native_site_tolerance_angstrom/length;
+    const std::array<double, 3> fract{site.fract_x.value.get(), site.fract_y.value.get(), site.fract_z.value.get()};
+    return crysta::wyckoff_position_of(group, fract, tolerance);
+}
+}  // namespace
+
+std::string detail::inferred_wyckoff_letter(const Structure& structure, const AtomSite& site) {
+    return takes_wyckoff_letter(structure) ? native_wyckoff_match(structure, site, resolve_group(structure)).letter
+                                         : std::string{};
+}
+
+detail::FullProfSiteGeometry detail::fullprof_site_geometry(const Structure& structure, const AtomSite& site) {
+    if (takes_wyckoff_letter(structure)) {
+        const auto group = resolve_group(structure);
+        const auto match = native_wyckoff_match(structure, site, group);
+        int general = 0;
+        for (const auto& [letter, position] : group.wyckoff) {
+            general = std::max(general, position.multiplicity);
+        }
+        return {match.letter, match.fract, match.rotation, general, group.wyckoff.at(match.letter).multiplicity};
     }
-    const std::array<double,3> fract{site.fract_x.value.get(),site.fract_y.value.get(),site.fract_z.value.get()};
-    return crysta::wyckoff_position_of(group,fract,tolerance).letter;
+
+    const std::array<double, 3> fract{site.fract_x.value.get(), site.fract_y.value.get(), site.fract_z.value.get()};
+    const auto operators = crysta::magnetic_operations(to_crysta_structure(structure));
+    std::vector<std::array<double, 3>> images;
+    std::set<std::pair<std::array<int, 9>, std::array<int, 3>>> spatial;
+    std::array<double, 3> stabilizer_displacement{};
+    std::size_t stabilizer_size = 0;
+    constexpr double site_tolerance = 1.e-4;
+    for (const auto& op : operators) {
+        std::array<int, 3> shift{};
+        std::array<double, 3> image = op.translation;
+        for (std::size_t i = 0; i < 3; ++i) {
+            const int fractional = static_cast<int>(std::lround(op.translation[i] * 24.)) % 24;
+            shift[i] = (fractional + 24) % 24;
+            for (std::size_t j = 0; j < 3; ++j) {
+                image[i] += static_cast<double>(op.rotation[i * 3 + j]) * fract[j];
+            }
+        }
+        if (!spatial.emplace(op.rotation, shift).second) {
+            continue;
+        }
+        const auto same = [&image](const auto& other) {
+            for (std::size_t i = 0; i < 3; ++i) {
+                if (std::abs(std::remainder(image[i] - other[i], 1.)) > site_tolerance) {
+                    return false;
+                }
+            }
+            return true;
+        };
+        if (same(fract)) {
+            ++stabilizer_size;
+            for (std::size_t i = 0; i < fract.size(); ++i) {
+                stabilizer_displacement[i] += std::remainder(image[i] - fract[i], 1.);
+            }
+        }
+        if (std::none_of(images.begin(), images.end(), same)) {
+            images.push_back(image);
+        }
+    }
+    // FullProf computes multiplicity with a fractional tolerance. Project
+    // rounded special sites onto that same stabilizer before EDI expands the orbit.
+    auto projected = fract;
+    if (stabilizer_size > 1) {
+        for (std::size_t i = 0; i < projected.size(); ++i) {
+            projected[i] += stabilizer_displacement[i] / static_cast<double>(stabilizer_size);
+        }
+    }
+    return {"", projected, {1, 0, 0, 0, 1, 0, 0, 0, 1}, static_cast<int>(spatial.size()), static_cast<int>(images.size())};
+}
+
+std::array<double, 6> detail::fullprof_rotated_beta(const std::array<double, 6>& beta,
+                                                   const std::array<int, 9>& rotation) {
+    return crysta::rotated(beta, rotation);
 }
 
 AtomSite new_atom_site(const Structure& structure, const std::function<double()>& random) {
@@ -1459,14 +1530,19 @@ void identify_magnetic_group(Structure& s, const SpaceGroupSettingName& setting)
         return;
     }
     if (numbered != nullptr) {
-        try {
-            if (signed_group(texts(magnetic_rows_in_setting(numbered->operations, *parsed)),
-                             texts(magnetic_rows_in_setting(numbered->centerings, *parsed))) != own) {
-                return;
+        // In the setting the group was accepted in: the claimed BNS transform when it gives one (a type I group at a
+        // shifted origin, family_setting), else the held setting's own.
+        std::vector<crysta::MagneticSettingTransform> settings{*parsed};
+        if (const auto claimed = claimed_setting(s.magnetic)) settings.insert(settings.begin(), *claimed);
+        const auto same = [&](const crysta::MagneticSettingTransform& in) {
+            try {
+                return signed_group(texts(magnetic_rows_in_setting(numbered->operations, in)),
+                                    texts(magnetic_rows_in_setting(numbered->centerings, in))) == own;
+            } catch (const std::invalid_argument&) {
+                return false;
             }
-        } catch (const std::invalid_argument&) {
-            return;
-        }
+        };
+        if (std::none_of(settings.begin(), settings.end(), same)) return;
         const crysta::MagneticGroupName table = group_name(*numbered);
         s.magnetic.modify([&table](MagneticDescription& magnetic) {
             crysta::MagneticGroupName& name = magnetic.group;
@@ -1837,13 +1913,15 @@ namespace {
 // Signed operations (`x,y,z,+1`) of the BNS standard mapped through a setting transform, each keeping its sign.
 std::vector<std::pair<std::string, std::string>> magnetic_rows_in_setting(const std::vector<std::string>& rows,
                                                                           const crysta::MagneticSettingTransform& transform) {
-    // Each operation alone: crysta's mapping puts the identity first, so a list would lose the sign pairing.
+    // Each operation alone: crysta's mapping puts the identity first, so a list would lose the sign pairing. The
+    // identity goes in with it because the mapping refuses a group without one; the operation comes out last.
     std::vector<std::pair<std::string, std::string>> out;
     for (const std::string& row : rows) {
         const auto comma = row.rfind(',');
         const crysta::SpaceGroup moved = crysta::space_group_in_setting(
-            crysta::SpaceGroup(0, "", "", {row.substr(0, comma)}, {}, "", crysta::LatticeCentering::P), transform);
-        out.emplace_back(std::to_string(out.size() + 1), moved.operators.front() + row.substr(comma));
+            crysta::SpaceGroup(0, "", "", {"x,y,z", row.substr(0, comma)}, {}, "", crysta::LatticeCentering::P),
+            transform);
+        out.emplace_back(std::to_string(out.size() + 1), moved.operators.back() + row.substr(comma));
     }
     return out;
 }
@@ -1859,6 +1937,7 @@ void set_magnetic_setting(Structure& s, const std::string& transform) {
         throw std::invalid_argument("the setting " + transform + " is not one of this group's tabulated settings");
     }
     const std::optional<crysta::MagneticSettingTransform> parsed = crysta::parse_setting_transform(transform);
+    if (!parsed) throw std::invalid_argument("the setting " + transform + " cannot be read");
     const crysta::MagneticSpaceGroupEntry& entry = crysta::magnetic_space_group(s.magnetic->group.number_bns);
     Structure trial = s;
     trial.magnetic.modify([&transform](MagneticDescription& magnetic) { set_bns_transform(magnetic, transform); });
@@ -2773,6 +2852,7 @@ PlainDataLoad experiment_with_plain_data(const BraggPdExperiment& experiment, co
         std::vector<std::int32_t> codes(file.dataset.begin(), file.dataset.end());
         std::sort(codes.begin(), codes.end());
         codes.erase(std::unique(codes.begin(), codes.end()), codes.end());
+        load.dataset_codes = codes;
         const auto rows_of = [&file](std::optional<std::int32_t> code) {
             std::vector<std::int32_t> h, k, l;
             std::vector<double> f2, su, wavelength;
@@ -6214,6 +6294,104 @@ void complete_relations(Project& project) {
     }
 }
 
+std::vector<detail::FullProfRelationDirection> detail::fullprof_relation_directions(Project& model) {
+    if (std::none_of(model.constraints.begin(), model.constraints.end(),
+                     [](const auto& constraint) { return constraint->enabled.get(); })) {
+        return {};
+    }
+    RelationProject converted = relation_project(model);
+    const auto graph = crysta::compile_relations(*converted.project);
+    std::map<std::string, const Parameter*> native;
+    std::vector<const Parameter*> native_seeds;
+    std::vector<const crysta::Parameter*> seeds;
+    for (const auto& slot : named_slots(model)) {
+        native.emplace(slot.unique_name, slot.parameter);
+        if (slot.parameter->free.get()) {
+            native_seeds.push_back(slot.parameter);
+            seeds.push_back(&crysta::resolve_unique_name(*converted.project, slot.unique_name));
+        }
+    }
+    if (seeds.empty()) {
+        return {};
+    }
+    enum class DependenceOrder { Constant, Linear, Nonlinear };
+    using Order = DependenceOrder;
+    using Kind = crysta::ExpressionNodeKind;
+    std::map<const crysta::Parameter*, Order> known;
+    for (const auto* seed : seeds) {
+        known.emplace(seed, Order::Linear);
+    }
+    const auto derivatives = graph.derivatives(seeds);
+    std::vector<FullProfRelationDirection> result;
+    for (std::size_t r = 0; r < graph.relations().size(); ++r) {
+        const auto& relation = graph.relations()[r];
+        std::vector<Order> nodes;
+        for (const auto& node : relation.expression.nodes()) {
+            Order order = Order::Constant;
+            switch (node.kind) {
+                case Kind::Literal:
+                    break;
+                case Kind::Reference:
+                    if (const auto found = known.find(relation.references[node.reference]); found != known.end()) {
+                        order = found->second;
+                    }
+                    break;
+                case Kind::Negate:
+                    order = nodes[node.lhs];
+                    break;
+                case Kind::Add:
+                case Kind::Subtract:
+                    order = std::max(nodes[node.lhs], nodes[node.rhs]);
+                    break;
+                case Kind::Multiply:
+                    order = nodes[node.lhs] == Order::Constant || nodes[node.rhs] == Order::Constant
+                                ? std::max(nodes[node.lhs], nodes[node.rhs]) : Order::Nonlinear;
+                    break;
+                case Kind::Divide:
+                    order = nodes[node.rhs] == Order::Constant ? nodes[node.lhs] : Order::Nonlinear;
+                    break;
+                case Kind::PowerConstant:
+                    if (node.value == 1.) {
+                        order = nodes[node.lhs];
+                        break;
+                    }
+                    if (node.value == 0.) {
+                        break;
+                    }
+                    [[fallthrough]];
+                case Kind::Call:
+                    order = nodes[node.lhs] == Order::Constant ? Order::Constant : Order::Nonlinear;
+                    break;
+            }
+            nodes.push_back(order);
+        }
+        const auto order = nodes.at(nodes.size() - 1);
+        known.emplace(relation.target, order);
+        if (relation.source != crysta::Dependence::Constrained || order == Order::Constant) {
+            continue;
+        }
+        if (order == Order::Nonlinear) {
+            throw IoError("FullProf export: nonlinear constraint " + relation.target_name + " requires fixed export");
+        }
+        std::optional<std::size_t> active;
+        for (std::size_t k = 0; k < seeds.size(); ++k) {
+            if (derivatives[r * seeds.size() + k] == 0.) {
+                continue;
+            }
+            if (active) {
+                throw IoError("FullProf export: constraint " + relation.target_name +
+                              " combines multiple free parameters; use fixed export");
+            }
+            active = k;
+        }
+        if (active) {
+            result.push_back({native.at(relation.target_name), native_seeds[*active],
+                              derivatives[r * seeds.size() + *active], relation.target_name});
+        }
+    }
+    return result;
+}
+
 bool apply_relations(Project& project) {
     if (project.structures.empty()) {
         return false;
@@ -8899,6 +9077,205 @@ std::optional<SpaceGroupSettingName> space_group_setting_for_number(int it_numbe
 std::optional<SpaceGroupSettingName> space_group_setting_for_code(int it_number, const std::string& code) {
     return lowest_setting(
         [it_number, &code](const SpaceGroupSettingName& s) { return s.it_number == it_number && s.coord_system_code == code; });
+}
+
+std::optional<SpaceGroupSettingName> detail::unambiguous_space_group_alias(const std::string& name) {
+    const auto aliases = crysta::space_groups_named(name);
+    if (aliases.size() != 1) {
+        return std::nullopt;
+    }
+    return space_group_setting_for_code(aliases.front().it_number, aliases.front().coord_system_code);
+}
+
+namespace {
+
+int fullprof_determinant(const std::array<int, 9>& r) {
+    return r[0] * (r[4] * r[8] - r[5] * r[7]) - r[1] * (r[3] * r[8] - r[5] * r[6]) +
+           r[2] * (r[3] * r[7] - r[4] * r[6]);
+}
+
+std::string fullprof_magnetic_xyz(const crysta::MagneticOperation& operation) {
+    std::ostringstream text;
+    text.imbue(std::locale::classic());
+    for (std::size_t i = 0; i < 3; ++i) {
+        if (i != 0) {
+            text << ',';
+        }
+        bool term = false;
+        for (std::size_t j = 0; j < 3; ++j) {
+            const int value = operation.rotation[3 * i + j];
+            if (value == 0) {
+                continue;
+            }
+            if (value < 0) {
+                text << '-';
+            } else if (term) {
+                text << '+';
+            }
+            if (std::abs(value) != 1) {
+                text << std::abs(value) << '*';
+            }
+            text << "xyz"[j];
+            term = true;
+        }
+        double shift = operation.translation[i] - std::floor(operation.translation[i]);
+        if (std::abs(shift) > 1.e-10 && std::abs(1. - shift) > 1.e-10) {
+            bool fraction = false;
+            for (int denominator = 2; denominator <= 48; ++denominator) {
+                const auto numerator = std::round(shift * denominator);
+                if (std::abs(shift - numerator / denominator) < 1.e-10) {
+                    text << '+' << static_cast<int>(numerator) << '/' << denominator;
+                    fraction = true;
+                    break;
+                }
+            }
+            if (!fraction) {
+                text << '+' << std::setprecision(std::numeric_limits<double>::max_digits10) << shift;
+            }
+        }
+    }
+    text << ',' << (operation.theta == 1 ? "+1" : "-1");
+    return text.str();
+}
+
+}  // namespace
+
+std::string detail::fullprof_signed_operator(const std::string& spatial, const std::string& moment) {
+    auto operation = crysta::parse_magnetic_operation(spatial + ",+1");
+    auto axial = moment;
+    for (char& variable : axial) {
+        if (variable >= 'u' && variable <= 'w') {
+            variable = static_cast<char>('x' + variable - 'u');
+        }
+    }
+    const auto transformed = crysta::parse_magnetic_operation(axial + ",+1");
+    const int determinant = fullprof_determinant(operation.rotation);
+    for (const int sign : {1, -1}) {
+        bool matches = transformed.translation == std::array<double, 3>{};
+        for (std::size_t i = 0; i < operation.rotation.size(); ++i) {
+            matches = matches && transformed.rotation[i] == sign * determinant * operation.rotation[i];
+        }
+        if (matches) {
+            operation.theta = sign;
+            return fullprof_magnetic_xyz(operation);
+        }
+    }
+    throw IoError("FullProf magnetic moment operator is not an axial signed copy of " + spatial);
+}
+
+std::string detail::fullprof_inverted_operator(const std::string& operation) {
+    auto inverted = crysta::parse_magnetic_operation(operation);
+    for (auto& v : inverted.rotation) {
+        v = -v;
+    }
+    for (auto& v : inverted.translation) {
+        v = -v;
+    }
+    return fullprof_magnetic_xyz(inverted);
+}
+
+std::optional<MagneticDescription> detail::fullprof_magnetic_overlay_group(
+    const Structure& structure, const std::vector<FullProfEnumeratedMoment>& moments) {
+    // An enumerated P1 magnetic overlay can preserve the nuclear parameterization
+    // if every nuclear symmetry operation maps its sites, moments and directions.
+    MagneticDescription result;
+    result.centerings.emplace_back("1", "x,y,z,+1");
+    for (const auto& spatial : crysta::symmetry_operations(resolve_group(structure))) {
+        for (std::size_t i = 0; i < spatial.rotation.size(); ++i) {
+            if (i % 4 != 0 && spatial.rotation[i] != 0) {
+                return std::nullopt;
+            }
+        }
+        const auto determinant = fullprof_determinant(spatial.rotation);
+        const auto maps = [&](int theta) {
+            for (const auto& from : moments) {
+                const auto matches = [&](const auto& to) {
+                    if (from.ion != to.ion || from.occupancy != to.occupancy || from.b_iso != to.b_iso ||
+                        from.b_iso_code != to.b_iso_code) {
+                        return false;
+                    }
+                    for (std::size_t i = 0; i < 3; ++i) {
+                        const double sign = spatial.rotation[4 * i];
+                        const double mapped = sign * from.position[i] + spatial.translation[i];
+                        const double gain = theta * determinant * sign;
+                        if (std::abs(std::remainder(mapped - to.position[i], 1.)) >= 1.e-5 ||
+                            std::abs(gain * from.moment[i] - to.moment[i]) >= 1.e-5 ||
+                            std::abs(gain * from.codes[i] - to.codes[i]) >= 1.e-5) {
+                            return false;
+                        }
+                    }
+                    return true;
+                };
+                if (std::count_if(moments.begin(), moments.end(), matches) != 1) {
+                    return false;
+                }
+            }
+            return true;
+        };
+        const bool positive = maps(1);
+        const bool negative = maps(-1);
+        if (!positive && !negative) {
+            return std::nullopt;
+        }
+        for (const auto sign : {1, -1}) {
+            if ((sign == 1 && positive) || (sign == -1 && negative)) {
+                result.operations.emplace_back(std::to_string(result.operations.size() + 1),
+                    fullprof_magnetic_xyz({spatial.rotation, spatial.translation, sign}));
+            }
+        }
+    }
+    return result;
+}
+
+detail::FullProfMagneticOperators detail::fullprof_magnetic_operators(const Structure& structure) {
+    check_magnetic_acceptance(structure);
+    const auto& magnetic = structure.magnetic.get();
+    std::vector<crysta::MagneticOperation> operators;
+    operators.reserve(magnetic.operations.size());
+    for (const auto& row : magnetic.operations) {
+        operators.push_back(crysta::parse_magnetic_operation(row.second));
+    }
+    const std::array<int, 9> inversion{-1, 0, 0, 0, -1, 0, 0, 0, -1};
+    FullProfMagneticOperators result;
+    for (const auto& row : magnetic.centerings) {
+        const auto operation = crysta::parse_magnetic_operation(row.second);
+        if (operation.theta < 0) {
+            result.anti_centerings.push_back(operation.translation);
+        } else if (operation.translation != std::array<double, 3>{}) {
+            result.centerings.push_back(operation.translation);
+        }
+    }
+    result.centrosymmetric = std::any_of(operators.begin(), operators.end(), [&](const auto& operation) {
+        return operation.theta == 1 && operation.rotation == inversion &&
+            operation.translation == std::array<double, 3>{};
+    });
+    for (const auto& operation : operators) {
+        if (!result.centrosymmetric || fullprof_determinant(operation.rotation) > 0) {
+            result.operators.push_back(fullprof_magnetic_xyz(operation));
+        }
+    }
+    return result;
+}
+
+crysta::MagneticGroupName detail::fullprof_magnetic_group(const std::string& bns) {
+    const auto& entry = crysta::magnetic_space_group(bns);
+    crysta::MagneticGroupName name;
+    name.number_bns = entry.number_bns;
+    name.name_bns = entry.name_bns;
+    name.name_uni = entry.name_uni;
+    name.number_og = entry.number_og;
+    name.name_og = entry.name_og;
+    return name;
+}
+
+std::optional<double> detail::fullprof_default_neutron_length(const std::string& type) {
+    static const auto sears = crysta::neutron_scattering("sears1992");
+    const auto found = sears.b_c.find(crysta::ion_element(type));
+    return found == sears.b_c.end() ? std::nullopt : std::optional<double>(found->second);
+}
+
+std::optional<double> detail::import_atomic_mass(const std::string& type_symbol) {
+    return crysta::atomic_mass(type_symbol);
 }
 
 void assign_space_group_setting(SpaceGroup& group, const SpaceGroupSettingName& setting, bool declare_number) {

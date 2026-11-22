@@ -92,9 +92,9 @@ using WarningSink = std::function<void(const std::string&)>;
 // A warning with the project file it comes from, relative to the project (`experiments/d20.edi`), or empty when no
 // one file is its source (a relation over several).
 using SourcedWarningSink = std::function<void(const std::string& file, const std::string& message)>;
-// `path` is the project's folder, its `project.edi`, or a `.zip` of the folder (edi ADR-0052). An archive unpacks into a
-// new temporary folder first; the project then has no directory of its own (`path` empty), so its first save needs one,
-// and it reads its scan data from the unpacked folder.
+// `path` is the project's folder, its `project.edi`, a ZIP archive (ADR-0052), or another program's project file that
+// an importer reads (edi/project_import.hpp, ADR-0098). An archive is unpacked into a temporary folder first. An
+// imported project holds its data in memory and has no save location.
 Project load_project(const std::string& path, const WarningSink& on_warning = {});
 // Ordinary GUI Open/Text restoration also accepts saved construction states with absent
 // structures, experiments or data. Present content and all held-structure references still
@@ -492,6 +492,7 @@ struct PlainDataLoad {  // NOLINT(bugprone-exception-escape): an experiment's mo
     std::vector<BraggPdExperiment> more{};
     std::size_t unweighted = 0;  // FullProf reflections with an su of 0, read past
     std::vector<std::size_t> skipped_lines{};  // a plain reflection file's lines that are not reflections
+    std::vector<std::int32_t> dataset_codes{};  // reflection dataset codes, in returned experiment order
 };
 /// Whether a datablock name can name its saved file (crysta's rule: ASCII letters, digits, `_` and `-`, and not
 /// a Windows reserved device name).

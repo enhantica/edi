@@ -117,6 +117,64 @@ JSON suits structured data in programming, but for crystallographic data it is m
 }
 ```
 
+## Projects from other programs {#other-programs}
+
+On the Project page, **Get started > Load project** lists **Import cryspy...**, **Import FullProf...**
+and **Import GSAS-II...** under *Import from another program*. The import creates a new, unsaved
+project named after the file. Its description says where it came from. Save it with **Save project
+as**. The original files are not changed. If the open project has unsaved changes, you are asked
+to save them first. When the source uses something EasyDiffraction does not have, the import stops
+and names it. Where EasyDiffraction calculates an item differently from the source program, the
+import says so in a warning. Each program's design record lists what is not supported.
+
+### cryspy
+
+Select the project's `.rcif` file. EasyDiffraction reads unpolarised constant-wavelength neutron
+powder projects with isotropic atoms: the cell, space group and atoms, the wavelength, zero offset,
+peak widths and asymmetry, background points, phase scale, range, excluded regions and measured
+data. Values written with a bracket, such as `8.4793(1)`, become free parameters. cryspy's own
+calculated output in the file is not read.
+
+### FullProf
+
+Select the `.pcr` file. Keep the measured powder data, single-crystal `.int` and any instrument
+resolution file beside it, with the file names FullProf expects. The import reads single- and
+multi-pattern files for supported X-ray and neutron powder models and neutron single-crystal
+experiments, in the XYDATA, stepped, ILL, GSAS ALT and ISIS RALF/FXYE data formats. An INT file can
+hold several reflection datasets with their own wavelength or scale. Compatible commensurate
+magnetic phases become EasyDiffraction magnetic structures. FullProf codewords become free
+parameters and constraints.
+
+### GSAS-II
+
+Select the `.gpx` file. The import reads supported constant-wavelength neutron and X-ray powder
+projects and time-of-flight neutron powder projects. Compatible paired nuclear and magnetic phases
+from CW neutron projects become one EasyDiffraction structure.
+
+### Export to cryspy
+
+**Save project as > As cryspy...** writes a copy and leaves the open project as it is. Choose a
+parent folder. EasyDiffraction creates a new `<project-name>-cryspy` folder with `project.rcif`,
+which holds the structures, the experiments and their measured data. Free parameters are written
+with their standard uncertainty in brackets, so cryspy refines them. The export covers what the
+cryspy import reads; anything else, such as another peak profile or anisotropic displacements, stops
+the export and is named.
+
+### Export to FullProf
+
+**Save project as > As FullProf...** writes a copy and leaves the open project as it is. Choose a
+parent folder. EasyDiffraction creates a new `<project-name>-fullprof` folder with `project.pcr`
+and its powder `.dat` or single-crystal `.int` files. Powder simulations export their calculation
+grid. The instrument parameters go into `project.pcr` with their fitted values. When the project
+holds a fit, `fit_results.txt` beside it lists the fit's reduced chi-square and R factors and each
+free parameter's value with its standard uncertainty, which a PCR has no place for. The command
+line writes the same copy, with every parameter fixed for a forward calculation
+when `--fixed` is given:
+
+```sh
+easydiffraction export-fullprof path/to/project path/to/fullprof-copy --fixed
+```
+
 ## Importing a CIF {#cif-files}
 
 A CIF file can bring in a structure or an experiment wherever a `.edi` file can. EasyDiffraction reads both CIF 1.1 and CIF 2.0, and goes by the names inside the file rather than by its suffix.

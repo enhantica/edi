@@ -160,14 +160,8 @@ try {
     let selectedExample='sc-neut-cwl_tb2ti2o7-heidi';
     const click=async(regex,role)=>{
       await restoreCanvasViewport(expression=>evaluate(expression));
-      // Qt's dialog DOM remains closed; observe the native controls while its AX tree is unavailable.
-      // Resolve the declared native radio/checkbox, then use trusted input; the
-      // subsequent real picker/write proves that the dialog accepted the choice.
-      if(role==='radio'||role==='checkbox') {
-        const opening=await evaluate(()=>{try{return window.ediControlGeometry('open.folder').visible}
-          catch(error){if(/no visible item|no item is named/.test(error.message))return false;throw error;}});
-        const objectName=role==='checkbox'?'saveAs.copy':(opening?'open.':'saveAs.')+(regex.test('Zip archive')?'zip':'folder');
-        const rect=await geometry(objectName);console.log(mode,scenario,'native choice',objectName);
+      if(role==='checkbox') {
+        const rect=await geometry('project.saveAs.copy');
         await page.mouse.move(rect.x+rect.width/2,rect.y+rect.height/2);await page.mouse.down();await frame();await page.mouse.up();await frame();return;
       }
       if(regex.source==='^OK$') {
@@ -178,7 +172,7 @@ try {
       }
       const item=await control(regex,role);console.log(mode,scenario,'click',item.node.name?.value);
       let point=item;
-      const names={'Open project…':'project.open','Save project as…':'project.saveAs','Save the project':'appBar.button.save'};
+      const names={'Load project':'project.load','Save project as':'project.saveAs','Save the project':'appBar.button.save'};
       const groupName=/Examples$/.test(item.node.name?.value||'')?'group.examples':/Recent projects$/.test(item.node.name?.value||'')?'group.recentProjects':null;
       if(groupName){const rect=await geometry(groupName);point={x:rect.x+50,y:rect.y+15};}
       const recentLabels=[...new Set((await ax()).filter(n=>n.role?.value==='StaticText'&&/^(Continue where you left off:)| · (in this browser|on this computer)$/.test(n.name?.value||'')).map(n=>n.name.value))];
@@ -271,32 +265,33 @@ try {
       return {text,icon};
     };
     const formatChoice=async()=>{
-      if(boundary)await page.waitForFunction(()=>{try{return window.ediControlGeometry('saveAs.zip').visible;}catch{return window.__downloadBoundary.calls.length>0;}});
-      if(!boundary)await geometry('saveAs.zip');
-      const zip=await native('saveAs.zip');
-      assert(zip.visible,'Fallback Save-as must open edi format dialog before handing any ZIP to the browser');
+      await geometry('project.saveAs.zip');
+      const zip=await native('project.saveAs.zip');
+      assert(zip.visible,'Save-as must expose the real destination menu before requesting a download');
       if(!fallback){
-        assert.equal((await native('saveAs.folder')).enabled,true,'File System Access keeps the Folder format available');
-        assert.equal((await native('saveAs.copy')).enabled,true,'File System Access keeps Save-a-copy optional');
+        assert.equal((await native('project.saveAs.folder')).enabled,true,'File System Access keeps the Folder destination available');
+        assert.equal((await native('project.saveAs.copy')).enabled,true,'File System Access keeps Save-a-copy optional');
       }
       if(fallback){
-        if(boundary)assert.equal(await evaluate(()=>window.__downloadBoundary.calls.length),0,'The browser must not be asked to download before edi dialog OK');
-        const folder=await native('saveAs.folder'),copy=await native('saveAs.copy');
+        if(boundary)assert.equal(await evaluate(()=>window.__downloadBoundary.calls.length),0,'The browser must not be asked to download before choosing the ZIP destination');
+        const folder=await native('project.saveAs.folder'),copy=await native('project.saveAs.copy');
         await page.mouse.move(folder.x+folder.width/2,folder.y+folder.height/2);
-        await page.waitForFunction(name=>{try{return window.ediControlGeometry(name).visible;}catch{return false;}},observation.folderTooltip,{timeout:5000});
-        const tooltip=await native(observation.folderTooltip);
-        assertFallbackChoices(folder,zip,copy,tooltip.text);
-        await click(/^Zip archive$/,'radio');
+        const tooltip=await control(/This browser cannot write a folder.*Chrome.*Edge/);
+        assertFallbackChoices(folder,zip,copy,tooltip.node.name?.value);
       }
       return zip;
+    };
+    const chooseDestination=async folder=>{
+      const name=folder?'project.saveAs.folder':'project.saveAs.zip';
+      await pointer(name);
     };
     const exportZip=async (label,copy=true)=>{
       const download=fallback?page.waitForEvent('download'):null;download?.catch(()=>{});
       await click(/^Save project as/);
       await formatChoice();
-      if(!fallback){await geometry('saveAs.folder');await click(/^Zip archive$/,'radio');if(copy)await click(/^Save a copy/,'checkbox');}
+      if(!fallback && copy)await click(/^Save a copy/,'checkbox');
       const previous=fallback?0:await page.evaluate(async()=>{try{return (await(await(await window.__storageExportHandles).getFileHandle('destination.zip')).getFile()).lastModified;}catch{return 0;}});
-      await click(/^OK$/,'button');
+      await chooseDestination(false);
       const path=join(output,scenario+'-'+label+'.zip');
       if(fallback)await(await download).saveAs(path);
       else {
@@ -326,14 +321,14 @@ try {
       await click(/Examples$/,'button');await edit('examples.search','sc-neut-cwl_tb2ti2o7-heidi');
       await click(/^sc-neut-cwl_tb2ti2o7-heidi:/,'button');
     } else if(fallback){
-      await click(/^Open project(?:…|\.\.\.)?$/);await geometry('open.folder');await click(/^Zip archive$/,'radio');
-      const chooser=page.waitForEvent('filechooser');chooser.catch(()=>{});await click(/^OK$/,'button');await(await chooser).setFiles(fixture);
+      await click(/^Load project$/);
+      const chooser=page.waitForEvent('filechooser');chooser.catch(()=>{});await pointer('project.load.zip');await(await chooser).setFiles(fixture);
     } else {
       await page.evaluate(async encoded=>{
         const file=await(await window.__storageHandles).getFileHandle('picked.zip',{create:true});const stream=await file.createWritable();await stream.write(Uint8Array.from(atob(encoded),c=>c.charCodeAt(0)));await stream.close();
       },(await readFile(fixture)).toString('base64'));
-      await click(/^Open project(?:…|\.\.\.)?$/);await geometry('open.folder');
-      await click(scenario==='disk-folder'||chooserScenario?/^Folder$/:/^Zip archive$/,'radio');await click(/^OK$/,'button');
+      await click(/^Load project$/);
+      await pointer(scenario==='disk-folder'||chooserScenario?'project.load.folder':'project.load.zip');
       if(scenario==='disk-record') {
         const options=await page.evaluate(()=>window.__storageOpenOptions);
         await writeFile(join(output,scenario+'-picker-options.json'),JSON.stringify(options??null,null,2));
@@ -350,9 +345,8 @@ try {
       const name='Chosen browser name 19';await edit('project.name',name);
       const before=await evaluate(()=>({...window.__storagePicks}));
       await click(/^Save project as/);await formatChoice();
-      await click(folder?/^Folder$/:/^Zip archive$/,'radio');
       if(copy)await click(/^Save a copy/,'checkbox');
-      await click(/^OK$/,'button');
+      await chooseDestination(folder);
       await page.waitForFunction(({folder,before})=>folder?window.__storagePicks.directory>before.directory:window.__storagePicks.save>before.save,{folder,before});
       const facts=await evaluate(folder=>folder?window.__storageDirectoryOptions:window.__storageSaveOptions,folder);
       receipts[scenario]={facts,name,folder,copy};
@@ -393,7 +387,7 @@ try {
       const errorBefore=await errorState();
       if(errorBefore.observable)assert.equal(errorBefore.visible,false,'Any earlier storage error must be dismissed before Save-as is tested');
       await click(/^Save project as/);
-      try{await formatChoice();await click(/^OK$/,'button');}catch(error){errors.push(error.message);}
+      try{await formatChoice();await chooseDestination(false);}catch(error){errors.push(error.message);}
       await page.waitForFunction(()=>window.__downloadBoundary.calls.length>0);
       await frame();await frame();
       const held=await evaluate(()=>({calls:window.__downloadBoundary.calls,storage:window.__downloadBoundary.storage,pending:window.__downloadBoundary.pending.length}));
@@ -428,7 +422,13 @@ try {
       const first=await warning(false);
       if(scenario==='example-warning-save-as'){
         const beforeStorage=await evaluate(()=>window.__downloadBoundary.storage.slice());
-        await pointer(observation.warningSaveAs);await formatChoice();await click(/^OK$/,'button');
+        await pointer(observation.warningSaveAs);
+        // The warning's delegated Save-as route retains its format dialog;
+        // Get started's direct destination menu has already made that choice.
+        await geometry('project.saveChoice');
+        assert.equal((await native('project.saveChoice')).visible,true,'The warning Save-as action must open its surviving confirmation dialog');
+        assert.equal(await evaluate(()=>window.__downloadBoundary.calls.length),0,'The warning route must not request a download before dialog confirmation');
+        await click(/^OK$/,'button');await hidden('project.saveChoice');
         await page.waitForFunction(()=>window.__downloadBoundary.calls.length>0);await frame();
         assert.deepEqual(await evaluate(()=>window.__downloadBoundary.storage),beforeStorage,'The warning Save-as action must download without another browser-storage save');
         assert.equal(events.downloads,0,'The warning action must leave browser permission pending');
@@ -452,7 +452,7 @@ try {
       await awaitStored('another-project-first-save');await clean();
       const another=await warning(false);await pointer(observation.warningOk);await hidden(observation.warningText);
       const beforeStorage=await evaluate(()=>window.__downloadBoundary.storage.slice());
-      await click(/^Save project as/);await formatChoice();await click(/^OK$/,'button');
+      await click(/^Save project as/);await formatChoice();await chooseDestination(false);
       await page.waitForFunction(()=>window.__downloadBoundary.calls.length>0);await frame();
       assert.deepEqual(await evaluate(()=>window.__downloadBoundary.storage),beforeStorage,'Fallback Save-as must not save into browser storage even when storage works');
       assert.equal(events.downloads,0,'The healthy-storage fallback also holds browser permission before completion');
@@ -516,7 +516,7 @@ try {
     for(const [member,body] of Object.entries(snapshot))if(member!=='project.edi')assert.equal(recovered[member],body,'Recovery retains every unchanged scientific and report member: '+member);
     if(scenario==='example-folder'||scenario==='example-zip') {
       if(scenario==='example-folder'){
-        await click(/^Save project as/);await geometry('saveAs.folder');await click(/^Folder$/,'radio');await click(/^OK$/,'button');
+        await click(/^Save project as/);await chooseDestination(true);
         await location(/^test-picked-output$/);
       } else {await exportZip('becomes-working-place',false);await location(/^destination\.zip$/);}
       const external='external-next-save-'+scenario;

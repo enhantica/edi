@@ -204,6 +204,26 @@
           "proof": "tests/system/py/test_sealed_publication_contract.py",
           "overloads": 1
         },
+        "exportFullProf": {
+          "domain": "project-copy-export",
+          "proof": "tests/system/py/test_fullprof_export_cli.py",
+          "overloads": 1
+        },
+        "exportProjectCopy": {
+          "domain": "project-copy-export",
+          "proof": "tests/system/py/test_fullprof_export_cli.py",
+          "overloads": 1
+        },
+        "projectImporters": {
+          "domain": "read-only query",
+          "proof": null,
+          "overloads": 1
+        },
+        "projectExporters": {
+          "domain": "read-only query",
+          "proof": null,
+          "overloads": 1
+        },
         "saveProjectAs": {
           "domain": "save-operation",
           "proof": "tests/system/py/test_sealed_publication_contract.py",

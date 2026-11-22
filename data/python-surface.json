@@ -908,6 +908,15 @@
      "reason": "C",
      "verdict": "public"
     },
+    "excluded_region_ids": {
+     "need": {
+      "by": "deviation",
+      "ref": "D100",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
     "excluded_regions": {
      "need": {
       "by": "counterpart",
@@ -3993,6 +4002,15 @@
      "need": {
       "by": "deviation",
       "ref": "D97",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "excluded_region_ids": {
+     "need": {
+      "by": "deviation",
+      "ref": "D100",
       "verdict": "keep"
      },
      "reason": "C",
@@ -7673,6 +7691,15 @@
     "reason": "C",
     "verdict": "public"
    },
+   "check_import_roundtrip": {
+    "need": {
+     "by": "deviation",
+     "ref": "D100",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
    "download_all_tutorials": {
     "need": {
      "by": "deviation",
@@ -7776,6 +7803,24 @@
     "need": {
      "by": "deviation",
      "ref": "D40",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
+   "project_importers": {
+    "need": {
+     "by": "deviation",
+     "ref": "D100",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
+   "register_project_importer": {
+    "need": {
+     "by": "deviation",
+     "ref": "D100",
      "verdict": "keep"
     },
     "reason": "C",
@@ -8005,6 +8050,7 @@
     "data_range",
     "dataset_weight",
     "excluded_reflections",
+    "excluded_region_ids",
     "excluded_regions",
     "experiment_type",
     "extinction",
@@ -8560,6 +8606,7 @@
     "data_range",
     "dataset_weight",
     "excluded_reflections",
+    "excluded_region_ids",
     "excluded_regions",
     "experiment_type",
     "extinction",
@@ -9066,6 +9113,9 @@
     "value"
    ]
   },
+  "check_import_roundtrip": {
+   "kind": "function"
+  },
   "download_all_tutorials": {
    "kind": "function"
   },
@@ -9100,6 +9150,12 @@
    "kind": "function"
   },
   "progress_report": {
+   "kind": "function"
+  },
+  "project_importers": {
+   "kind": "function"
+  },
+  "register_project_importer": {
    "kind": "function"
   },
   "scan_progress_line": {

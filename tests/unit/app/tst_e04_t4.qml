@@ -183,9 +183,11 @@ TestCase {
             verify(item.text.length > 0 && item.width > 0, "ideas 13/17: disabled actions have visible labels and occupied layout space");
         });
         pane("project", "basic");
-        const url = named(group("getStarted"), "project.openUrl");
+        Ui.click(test, Probe, appWindow, "project.load");
+        const url = named(Ui.windowRoot(appWindow), "project.load.url");
         compare(url.enabled, false, "idea 27: URL loading placeholder is disabled");
         verify(url.text.indexOf("URL") >= 0, "idea 27: URL loading placeholder is named");
+        keyClick(Qt.Key_Escape);
     }
     function test_experiment_type_three_by_two_layout() {
         open();

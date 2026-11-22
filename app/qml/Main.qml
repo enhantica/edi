@@ -819,12 +819,32 @@ EaComponents.ApplicationWindow {
     }
     Shortcut {
         sequences: ["Ctrl+Shift+S"]
-        onActivated: window.saveProjectAs()
+        // As the Save menu's EasyDiffraction folder entry, or a .zip copy where the browser writes no folder.
+        onActivated: saveAsChoice.saveWith(false, false)
     }
     Connections {
         target: AppState
         function onSaveAsRequested() {
-            window.saveProjectAs();
+            saveAsChoice.saveWith(false, false);
+        }
+        function onSaveAsFormatRequested(zip, copy) {
+            saveAsChoice.saveWith(zip, copy);
+        }
+        // Once unsaved changes are dealt with (saved, discarded or none), the chooser: here, since a discard closes the
+        // project and the page that asked is rebuilt. In the browser, its own chooser.
+        function onOpenProjectRequested(zip) {
+            AppState.afterChanges(() => {
+                if (WebFiles.available)
+                    Session.openWebProject(zip ? "file" : "folder");
+                else
+                    Qt.callLater(() => (zip ? openZipDialog : openFolderDialog).open());
+            });
+        }
+        function onImportProjectRequested(importer) {
+            AppState.afterChanges(() => {
+                importDialog.importer = importer;
+                Qt.callLater(() => importDialog.open());
+            });
         }
     }
 
@@ -921,8 +941,9 @@ EaComponents.ApplicationWindow {
         }
     }
 
-    // Save as (edi ADR-0052): first the format and whether to keep working where the project is (a copy), then the
-    // system's dialog for the folder or the .zip.
+    // Save as (edi ADR-0052): the format and whether to keep working where the project is (a copy) come from Get
+    // started's Save menu (saveWith), then the system's dialog for the folder or the .zip. The dialog itself opens only
+    // for the assistant's delegated save, which presses its OK.
     AppDialog {
         id: saveAsChoice
         objectName: "saveAs.choice"
@@ -955,6 +976,18 @@ EaComponents.ApplicationWindow {
         onAccepted: {
             Session.setNextSaveData(linkedData ? dataChoice : "");
             ApplicationInfo.acceptProjectSaveChoice();
+        }
+        // The format and copy chosen from Get started's Save menu: the same save as this dialog's OK, without asking
+        // again. Linked measured data follows Data on save's preset.
+        function saveWith(asZip, asCopy) {
+            if (Session.project === null)
+                return;
+            window.assistantSaveIntent = "";
+            linkedData = Session.project.hasLinkedData();
+            dataChoice = Session.project.presetSaveData();
+            zip = asZip || !diskWritable;
+            copy = asCopy || !diskWritable;
+            accept();
         }
 
         Column {
@@ -1027,6 +1060,41 @@ EaComponents.ApplicationWindow {
                 checked: saveAsChoice.dataChoice === "linked"
                 onClicked: saveAsChoice.dataChoice = "linked"
             }
+        }
+    }
+
+    // Open project's and Import's choosers (Get started's Load menu), both opening where one was last chosen. The
+    // project read replaces the current one on the next turn.
+    FolderDialog {
+        id: openFolderDialog
+        title: qsTr("Open an edi project folder")
+        acceptLabel: qsTr("Open")
+        currentFolder: DialogFolders.folder("openProject", "")
+        onAccepted: {
+            DialogFolders.remember("openProject", selectedFolder);
+            Qt.callLater(Session.openProject, selectedFolder);
+        }
+    }
+    FileDialog {
+        id: openZipDialog
+        title: qsTr("Open an edi project archive")
+        nameFilters: [qsTr("edi project archives (*.zip)")]
+        currentFolder: DialogFolders.folder("openProject", "")
+        onAccepted: {
+            DialogFolders.remember("openProject", selectedFile);
+            Qt.callLater(Session.openProject, selectedFile);
+        }
+    }
+    // An import opens as a new, unsaved project, as Open does.
+    FileDialog {
+        id: importDialog
+        property var importer: null
+        title: importer !== null ? qsTr("Import a %1 project").arg(importer.program) : ""
+        nameFilters: importer !== null ? [importer.nameFilter] : []
+        currentFolder: DialogFolders.folder("importProject", "")
+        onAccepted: {
+            DialogFolders.remember("importProject", selectedFile);
+            Qt.callLater(Session.openProject, selectedFile);
         }
     }
 

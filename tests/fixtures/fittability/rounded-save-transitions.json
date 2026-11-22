@@ -2912,6 +2912,22 @@
       "before": null,
       "after": "21d13ce46983f6550e184da7707a883000e1dacc1e7fffe4bf8076aa36930ca2",
       "reason": "Retained release byte regression; parameter/free and measured-input equivalence sealed independently"
+    },
+    {
+      "case": "tests/fixtures/table_display",
+      "rule": "iucr_19",
+      "path": "source_uncertainties.py",
+      "before": "21d13ce46983f6550e184da7707a883000e1dacc1e7fffe4bf8076aa36930ca2",
+      "after": "2e778af415f8103cda4ac5505d00f6529c099535f07854aa70438061ff404586",
+      "reason": "Source uncertainty test helper caches by archive directory. The saved project copies this non-scientific helper verbatim."
+    },
+    {
+      "case": "tests/fixtures/table_display",
+      "rule": "iucr_99",
+      "path": "source_uncertainties.py",
+      "before": "21d13ce46983f6550e184da7707a883000e1dacc1e7fffe4bf8076aa36930ca2",
+      "after": "2e778af415f8103cda4ac5505d00f6529c099535f07854aa70438061ff404586",
+      "reason": "Source uncertainty test helper caches by archive directory. The saved project copies this non-scientific helper verbatim."
     }
   ],
   "retained_path_mismatches": [],

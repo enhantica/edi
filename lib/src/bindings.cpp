@@ -47,6 +47,7 @@
 #include "edi/parameter_spec.hpp"
 #include "edi/parameter_walk.hpp"
 #include "edi/project_archive.hpp"
+#include "edi/project_import.hpp"
 #include "edi/report.hpp"
 #include "edi/report_html.hpp"
 #include "edi/report_model.hpp"
@@ -3855,6 +3856,13 @@ NB_MODULE(_edi, m) {
                 }
                 self.excluded_regions.assign(std::move(rows));
             })
+        .def_prop_ro("excluded_region_ids", [](const edi::ExperimentBase& self) {
+            nb::list ids;
+            for (const auto& region : self.excluded_regions) {
+                ids.append(nb::str(region->id.value().c_str()));
+            }
+            return nb::tuple(ids);
+        })
         // A single crystal's reflections left out of the fit by their indices, as (h, k, l) rows; under a
         // merge mode the indices name their equivalents too. Assigning a list of rows replaces them all.
         .def_prop_rw(
@@ -4767,6 +4775,39 @@ NB_MODULE(_edi, m) {
             "from_json", [](const std::string& text) { return edi::report_from_json(text); }, "text"_a,
             "A model from its JSON; ValueError for malformed JSON, a missing field or another schema version.");
 
+    // Importing another program's project (ADR-0098): the importers, adding one, and the save-and-reopen check.
+    m.def(
+        "project_importers",
+        [] {
+            nb::list out;
+            for (const auto& importer : edi::project_importers()) {
+                out.append(nb::make_tuple(importer.program, nb::tuple(nb::cast(importer.suffixes))));
+            }
+            return out;
+        },
+        "The project importers as (program, suffixes) pairs, in the Load project menu's order.");
+    m.def(
+        "register_project_importer",
+        [](const std::string& program, const std::vector<std::string>& suffixes, const nb::callable& convert) {
+            // The registry outlives the interpreter, so it keeps its own reference and never releases it.
+            PyObject* function = convert.inc_ref().ptr();
+            edi::register_project_importer(
+                {program, suffixes, [function](const std::string& path, const edi::WarningSink&) {
+                     nb::gil_scoped_acquire gil;
+                     return nb::cast<edi::Project>(nb::handle(function)(path));
+                 }});
+        },
+        "program"_a, "suffixes"_a, "convert"_a,
+        "Add an importer: convert(path) returns an edi.Project, and opening a file with one of the suffixes runs it "
+        "followed by the steps every import shares.");
+    m.def(
+        "check_import_roundtrip",
+        [](edi::Project& project, const std::filesystem::path& directory) {
+            edi::check_import_roundtrip(project, directory.string());
+        },
+        "project"_a, "directory"_a,
+        "Save an imported project into directory, open it again and compare every parameter; raises edi.IoError at "
+        "the first difference.");
     nb::class_<edi::Project> project(m, "Project");
     def_parameter_walks(project);
     def_free_parameters(project);
