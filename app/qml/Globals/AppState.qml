@@ -146,7 +146,7 @@ QtObject {
     // The untitled project's first Save (the owner, 2026-11-19): the Project page opens and its Create project dialog
     // names the project and saves it.
     signal untitledSaveRequested
-    // The Create project dialog that Save opened closed (named or not: Main.qml settles what waited on it).
+    // The Create project dialog that Save opened was rejected: the waiting naming request settles "rejected" (Main.qml).
     signal untitledSaveClosed
     function requestUntitledSave() {
         open(AppState.Page.Project);

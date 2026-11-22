@@ -866,25 +866,25 @@ EaComponents.ApplicationWindow {
         // and is abandoned when the Create is cancelled or its naming settles without a name (Session).
         property var afterNaming: null
         property var afterNamingAbandoned: null
-        function settleNaming(named) {
-            const next = named ? afterNaming : afterNamingAbandoned;
-            afterNaming = null;
-            afterNamingAbandoned = null;
-            if (next)
-                next();
-        }
+        // The naming request the waiting action belongs to (Session.openUntitledNaming): only its own settlement resolves it.
+        property int afterNamingRequest: 0
         Connections {
             target: Session
-            function onUntitledNamingSettled(named) {
-                if (unsavedChanges.afterNaming !== null || unsavedChanges.afterNamingAbandoned !== null)
-                    unsavedChanges.settleNaming(named);
+            function onUntitledNamingSettled(request, outcome) {
+                if (request === 0 || request !== unsavedChanges.afterNamingRequest)
+                    return;
+                const next = outcome === "named" ? unsavedChanges.afterNaming : unsavedChanges.afterNamingAbandoned;
+                unsavedChanges.afterNaming = null;
+                unsavedChanges.afterNamingAbandoned = null;
+                unsavedChanges.afterNamingRequest = 0;
+                if (next)
+                    next();
             }
         }
         Connections {
             target: AppState
             function onUntitledSaveClosed() {
-                if (unsavedChanges.afterNaming !== null || unsavedChanges.afterNamingAbandoned !== null)
-                    unsavedChanges.settleNaming(false);
+                Session.rejectUntitledNaming(unsavedChanges.afterNamingRequest);
             }
         }
         onOpened: ApplicationInfo.unsavedProjectOpened()

@@ -3427,6 +3427,7 @@ void ApplicationInfo::acceptUnsavedProject() const {
     if (panelUsageTruth(assistantContextField(frame, "Session", "untitled"))) {
         panelUsageContextWrite(frame, "afterNaming", waiting);
         panelUsageContextWrite(frame, "afterNamingAbandoned", panelUsageContextRead(frame, "abandoned"));
+        panelUsageContextWrite(frame, "afterNamingRequest", projectInvoke(frame, "Session", "openUntitledNaming"));
         panelUsageContextWrite(frame, "action", consentNull());
         panelUsageContextWrite(frame, "abandoned", consentNull());
         projectInvoke(frame, "AppState", "requestUntitledSave");
