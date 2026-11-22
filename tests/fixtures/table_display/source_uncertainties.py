@@ -10,8 +10,12 @@ HERE = Path(__file__).parent
 
 
 @functools.cache
+def _source_rows(directory):
+    return json.loads((directory / 'source-uncertainties.json').read_text())
+
+
 def source_rows():
-    return json.loads((HERE / 'source-uncertainties.json').read_text())
+    return _source_rows(HERE)
 
 
 def archived_before(row):

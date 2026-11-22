@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-22T09:58:56Z
+# measured_utc = 2026-11-22T12:22:02Z
 #
-# Recorded from: measured test run (7 node(s) measured once, 186734 banked, 0 stale row(s) dropped)
-# Collected tests: 266631; with a reported duration: 85709
+# Recorded from: measured test run (15 node(s) measured once, 186727 banked, 0 stale row(s) dropped)
+# Collected tests: 266631; with a reported duration: 85712
 # Module-scoped fixture costs recorded: 218
 #
 # Breaches are decided PER TIER against the table
@@ -31,8 +31,8 @@
 # measurement nobody took and which passes every tier threshold.
 # inventory_python = 266631
 # inventory_cpp = 0
-# inventory_measured = 186740
-# inventory_unmeasured = 79891
+# inventory_measured = 186742
+# inventory_unmeasured = 79889
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
 # inventory_pr_python = 91966
 
@@ -179410,8 +179410,8 @@ UNMEASURED:not-completed-in-this-run	tests/integration/py/test_e01_scaffold.py::
 0.070	tests/integration/py/test_e04_t11_ci_order.py::test_split_test_step_propagates_each_real_command_failure[cpp-test]
 0.060	tests/integration/py/test_e04_t11_ci_order.py::test_split_test_step_propagates_each_real_command_failure[system-tests-part]
 0.000	tests/integration/py/test_e04_t11_file_requests.py::test_every_browser_file_receiver_preserves_request_ownership[cancel-then-other-page]
-0.000	tests/integration/py/test_e04_t11_file_requests.py::test_every_browser_file_receiver_preserves_request_ownership[overlapping-folder-uploads]
-0.000	tests/integration/py/test_e04_t11_file_requests.py::test_every_browser_file_receiver_preserves_request_ownership[replacement-during-upload]
+0.290	tests/integration/py/test_e04_t11_file_requests.py::test_every_browser_file_receiver_preserves_request_ownership[overlapping-folder-uploads]
+0.210	tests/integration/py/test_e04_t11_file_requests.py::test_every_browser_file_receiver_preserves_request_ownership[replacement-during-upload]
 0.000	tests/integration/py/test_e04_t11_file_requests.py::test_every_browser_file_receiver_preserves_request_ownership[structure-cardinality]
 UNMEASURED:not-completed-in-this-run	tests/integration/py/test_e04_t11_science_identity.py::test_declared_input_change_refuses_before_storage_can_be_retargeted
 UNMEASURED:not-completed-in-this-run	tests/integration/py/test_e04_t11_science_identity.py::test_frozen_catalogue_coordinates_domains_and_omitted_raw_storage[lbco]
@@ -181174,7 +181174,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_fittability_loading.py::
 0.010	tests/integration/py/test_fittability_saved_bytes.py::test_main_saved_bytes_regression_pin[iucr_19-tests/fixtures/single_crystal/projects/sc-neut-cwl_tbti_basic]
 0.010	tests/integration/py/test_fittability_saved_bytes.py::test_main_saved_bytes_regression_pin[iucr_19-tests/fixtures/single_crystal/projects/sc-neut-cwl_tbti_isotropic-extinction]
 0.010	tests/integration/py/test_fittability_saved_bytes.py::test_main_saved_bytes_regression_pin[iucr_19-tests/fixtures/single_crystal/projects/sc-neut-tof_taurine_basic]
-0.080	tests/integration/py/test_fittability_saved_bytes.py::test_main_saved_bytes_regression_pin[iucr_19-tests/fixtures/table_display]
+0.100	tests/integration/py/test_fittability_saved_bytes.py::test_main_saved_bytes_regression_pin[iucr_19-tests/fixtures/table_display]
 0.010	tests/integration/py/test_fittability_saved_bytes.py::test_main_saved_bytes_regression_pin[iucr_99-app/examples/pd-xray-cwl_lif/project]
 0.020	tests/integration/py/test_fittability_saved_bytes.py::test_main_saved_bytes_regression_pin[iucr_99-docs/user/cli/pd-neut-cwl_cosio-d20/project]
 0.120	tests/integration/py/test_fittability_saved_bytes.py::test_main_saved_bytes_regression_pin[iucr_99-docs/user/cli/pd-neut-cwl_cosio-d20_scan-162f/project]
@@ -181338,7 +181338,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_fittability_loading.py::
 0.010	tests/integration/py/test_fittability_saved_bytes.py::test_main_saved_bytes_regression_pin[iucr_99-tests/fixtures/single_crystal/projects/sc-neut-cwl_tbti_basic]
 0.010	tests/integration/py/test_fittability_saved_bytes.py::test_main_saved_bytes_regression_pin[iucr_99-tests/fixtures/single_crystal/projects/sc-neut-cwl_tbti_isotropic-extinction]
 0.010	tests/integration/py/test_fittability_saved_bytes.py::test_main_saved_bytes_regression_pin[iucr_99-tests/fixtures/single_crystal/projects/sc-neut-tof_taurine_basic]
-0.050	tests/integration/py/test_fittability_saved_bytes.py::test_main_saved_bytes_regression_pin[iucr_99-tests/fixtures/table_display]
+0.070	tests/integration/py/test_fittability_saved_bytes.py::test_main_saved_bytes_regression_pin[iucr_99-tests/fixtures/table_display]
 0.290	tests/integration/py/test_fitting_corpus_witness.py::test_pinned_single_crystal_fit_reaches_independent_reference
 0.070	tests/integration/py/test_fitting_correctness.py::test_exclusion_survives_save_reload_without_changing_measurements
 0.000	tests/integration/py/test_fitting_correctness.py::test_opening_saved_single_crystal_keeps_its_declared_scale
@@ -265823,7 +265823,7 @@ UNMEASURED:not-completed-in-this-run	tests/unit/py/test_e11_t5_runtime_publicati
 0.000	tests/unit/py/test_operation_entry_census.py::test_public_entries_cannot_appear_outside_the_ownership_inventory[OnlineSourcesModel]
 0.000	tests/unit/py/test_operation_entry_census.py::test_public_entries_cannot_appear_outside_the_ownership_inventory[ParameterItem]
 0.000	tests/unit/py/test_operation_entry_census.py::test_public_entries_cannot_appear_outside_the_ownership_inventory[ProjectViewModel]
-UNMEASURED:not-completed-in-this-run	tests/unit/py/test_operation_entry_census.py::test_public_entries_cannot_appear_outside_the_ownership_inventory[Session]
+0.000	tests/unit/py/test_operation_entry_census.py::test_public_entries_cannot_appear_outside_the_ownership_inventory[Session]
 0.000	tests/unit/py/test_operation_entry_census.py::test_writable_properties_cannot_bypass_the_ownership_inventory[FitViewModel]
 0.000	tests/unit/py/test_operation_entry_census.py::test_writable_properties_cannot_bypass_the_ownership_inventory[OnlineSearch]
 0.000	tests/unit/py/test_operation_entry_census.py::test_writable_properties_cannot_bypass_the_ownership_inventory[OnlineSourcesModel]
@@ -266425,7 +266425,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_report_model_json.py::test_repo
 0.000	tests/unit/py/test_scan_pair_oracle.py::test_paired_scan_oracle_refuses_each_ordinary_measurement_escape[wrong-host]
 0.000	tests/unit/py/test_scan_pair_oracle.py::test_paired_scan_oracle_refuses_each_ordinary_measurement_escape[wrong-input]
 0.000	tests/unit/py/test_scan_pair_oracle.py::test_paired_scan_oracle_refuses_each_ordinary_measurement_escape[wrong-run]
-UNMEASURED:not-completed-in-this-run	tests/unit/py/test_source_uncertainty_projection.py::test_free_marker_projection_is_bound_to_whole_inputs_and_six_significant_digits
+0.010	tests/unit/py/test_source_uncertainty_projection.py::test_free_marker_projection_is_bound_to_whole_inputs_and_six_significant_digits
 0.004	tests/unit/py/test_task_input_domains.py::test_actual_current_catalogue_inputs_preserve_their_original_raw_custody[lbco]
 0.000	tests/unit/py/test_task_input_domains.py::test_actual_current_catalogue_inputs_preserve_their_original_raw_custody[ncaf]
 0.000	tests/unit/py/test_task_input_domains.py::test_each_catalogue_source_pair_is_exact_and_idempotent[lbco]
@@ -266711,7 +266711,7 @@ UNMEASURED:not-completed-in-this-run	tests/unit/py/test_web_science_identity.py:
 # module-cost: 0.357	tests/integration/app/test_tooltip_contract.py
 # module-cost: 1.250	tests/integration/app/test_tooltip_delay.py
 # module-cost: 3.837	tests/integration/py/test_browser_capture_order.py
-# module-cost: 0.192	tests/integration/py/test_browser_warning_confirmation.py
+# module-cost: 0.161	tests/integration/py/test_browser_warning_confirmation.py
 # module-cost: 3.111	tests/integration/py/test_compiler_launcher_probes.py
 # module-cost: 1.522	tests/integration/py/test_cosio_heidi_collection.py
 # module-cost: 0.357	tests/integration/py/test_e04_t12_name_allowance.py

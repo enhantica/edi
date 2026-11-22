@@ -1031,7 +1031,7 @@ print(markers[0].parent)`, saved, reopened, reopenControl || 'normal'], { encodi
       await click(/^Experiment$/); await waitAX(/Experiments \(0\)/);
       await click(/^Create experiment$/,'button','experiments.create');
       await waitAX(/Experiments \(1\)/);
-      await beginPicker(/^From folder…$/,'experiments.load','experiments.load.dataFolder');
+      await beginPicker(/^Folder as a series(?:…|\.\.\.)?$/,'experiments.load','experiments.load.dataFolder');
       const picker=await evaluate(`(() => {const input=window.__e04FileInput;
         return {id:input.id,directory:input.webkitdirectory,multiple:input.multiple,
           connected:input.isConnected,request:input.__e04Picker};})()`);

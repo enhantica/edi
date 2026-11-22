@@ -26,6 +26,8 @@ def test_free_marker_projection_is_bound_to_whole_inputs_and_six_significant_dig
     )
     with zipfile.ZipFile(tmp_path / 'source-uncertainties.zip', 'w') as archive:
         archive.writestr(digest, before)
+    # Warm the committed archive first, as other tests do before a fixture override.
+    source_uncertainties.source_rows()
     monkeypatch.setattr(source_uncertainties, 'HERE', tmp_path)
     frozen = {'_value': ['1.23456789(52)'], '_other': ['retained']}
     assert source_free_markers.reader_values('probe.edi', frozen, after) == {

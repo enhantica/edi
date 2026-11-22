@@ -1,7 +1,6 @@
 """Bound the archived free-marker sweep to independent native save precision."""
 
 import hashlib
-import json
 import re
 from decimal import ROUND_HALF_UP, Decimal
 
@@ -13,9 +12,7 @@ def reader_values(name, expected, source):
     from tests.fixtures.cif_import_cases import columns  # noqa: PLC0415
     from tests.fixtures.project_save.reference import six_digits  # noqa: PLC0415
 
-    row = json.loads((source_uncertainties.HERE / 'source-uncertainties.json').read_text()).get(
-        name
-    )
+    row = source_uncertainties.source_rows().get(name)
     if row is None or hashlib.sha256(source).hexdigest() == row['before_sha256']:
         return expected
     before = source_uncertainties.previous_bytes(name, source)

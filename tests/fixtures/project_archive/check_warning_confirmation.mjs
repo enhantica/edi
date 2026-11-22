@@ -2,13 +2,13 @@
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {resolve,dirname,join} from 'node:path';
-import {fileURLToPath} from 'node:url';
+import {fileURLToPath,pathToFileURL} from 'node:url';
 
 const root=resolve(dirname(fileURLToPath(import.meta.url)),'../../..');
 const actor=process.argv[2]||join(root,'tests/system/manual/project_browser_storage.mjs');
 const source=await readFile(actor,'utf8');
 const qml=await readFile(join(root,'app/qml/Main.qml'),'utf8');
-const {waitControlGeometry}=await import(join(root,'tests/system/manual/web_control_geometry.mjs'));
+const {waitControlGeometry}=await import(pathToFileURL(join(root,'tests/system/manual/web_control_geometry.mjs')));
 // The concrete declarations determine the two target types, independently of the actor's requests.
 assert.match(qml,/Column\s*\{\s*id:\s*saveAsChoiceColumn\s*objectName:\s*"project\.saveChoice"/,
   'The positive observation target must be the declared visual Column');
