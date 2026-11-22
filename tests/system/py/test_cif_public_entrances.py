@@ -197,12 +197,25 @@ def test_public_entrances_account_for_every_alias_and_loop_cell(
     row, spelling, witness = probe
     declarations = []
     inputs = [case.STRUCTURE if kind == 'structure' else case.EXPERIMENT]
-    values = [case.token(row), '?', '.', "'?'", "''"]
+    keys = (
+        ('Ba', 'O')
+        if kind == 'structure'
+        and layout == 'column'
+        and row['uid'].startswith('atom_type_scat.neutron_magnetic_')
+        else ()
+    )
+    numeric_coefficient = bool(keys) and row['uid'].startswith('atom_type_scat.neutron_magnetic_j')
+    good = '0.271828' if numeric_coefficient else case.token(row)
+    values = [good, '?', '.', "'?'", "''"]
     for value in [values[witness]]:
-        inputs.append(case.payload(kind, row, spelling, layout, value))
+        inputs.append(case.payload(kind, row, spelling, layout, value, atom_type_keys=keys))
         declarations.append((spelling, value, layout))
     results = observe(tmp_path, route, kind, inputs)
     for result, (name, value, shape) in zip(results, declarations, strict=True):
+        if keys:
+            assert_scattering_rows(
+                result, name, value, row['edi_names'][0], keys, numeric_coefficient
+            )
         case.accounted(
             result,
             name,
@@ -216,6 +229,31 @@ def test_public_entrances_account_for_every_alias_and_loop_cell(
         )
 
 
+def assert_scattering_rows(result, name, value, canonical, keys, numeric_coefficient):
+    if numeric_coefficient and value.startswith("'"):
+        refusal = result.get('refused', '')
+        assert case.notices(refusal, name) and value in refusal, (
+            'A supplied quoted coefficient marker refuses at its own tag and value'
+        )
+        assert 'not a finite number' in refusal, (
+            'The keyed coefficient loop reaches numeric validation'
+        )
+        return
+    assert 'refused' not in result, (
+        'The two valid atom-type keys admit the supplied or absent coefficient: '
+        + result.get('refused', '')
+    )
+    cells = result['cells']
+    stored_keys = cells.get(case.key('_atom_type_scat.symbol'), [])
+    assert [case.decoded(symbol) for symbol in stored_keys] == list(keys), (
+        'The two scattering rows retain their distinct atom-type keys in order'
+    )
+    if value in {'?', '.'}:
+        assert case.key(canonical) not in cells, (
+            'Two bare missing markers leave no supplied coefficient column'
+        )
+
+
 @pytest.mark.parametrize('route', ['cli', 'app'])
 @pytest.mark.parametrize('kind', ['structure', 'experiment'])
 def test_public_entrances_keep_cif_grammar_and_parser_refusals(tmp_path, route, kind):
@@ -223,14 +261,20 @@ def test_public_entrances_keep_cif_grammar_and_parser_refusals(tmp_path, route, 
     wrapped = control.replace('_cell_length_a 5.1000', '_cell_length_a\n5.1000').replace(
         '10 21 2', '10\n21 2'
     )
-    results = observe(
-        tmp_path, route, kind, [control, wrapped, control + "_audit.note 'unterminated\n"]
-    )
+    payloads = [control, wrapped, control + "_audit.note 'unterminated\n"]
+    if kind == 'structure':
+        payloads.append(control + 'loop_\n_atom_type_scat.neutron_magnetic_j0_A1\n0.271828\n')
+    results = observe(tmp_path, route, kind, payloads)
     assert 'refused' not in results[0], 'The real public entrance accepts wrapped CIF tokens'
     assert 'refused' in results[1], (
         'The public entrance must refuse malformed CIF instead of retrying another reader'
     )
     assert results[1]['refused'], 'The public parser refusal retains its reason'
+    if kind == 'structure':
+        refusal = results[2].get('refused', '')
+        assert case.notices(refusal, '_atom_type_scat.symbol') and 'atom-type key' in refusal, (
+            'A coefficient loop without its atom-type key refuses at the named row key'
+        )
 
 
 @pytest.mark.parametrize('route', ['cli', 'app'])
