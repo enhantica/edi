@@ -435,12 +435,14 @@ jobs:
           path: build/test-durations-${{ matrix.part }}.json
           if-no-files-found: warn
 
-  # At night, each system shard may take at most 1.2 times as long as the same shard in main's latest earlier
-  # scheduled run whose system shards all passed. With no such run there is no baseline and nothing is judged.
+  # On a main push, each system shard may take at most 1.2 times as long as the same shard in main's previous
+  # push run whose system shards all passed. Nightly and manual runs add the nightly-only files, so they are not
+  # compared.
   system-time:
     name: system time
     # A shard that did not finish leaves the comparison incomplete, which refuses.
-    if: ${{ !cancelled() && needs.changes.result == 'success' && github.event_name == 'schedule' }}
+    # Off until a follow-up restores it: the system shards now run only at night, not on a push.
+    if: false
     needs: [changes, system]
     runs-on: *linux
     permissions:
@@ -452,8 +454,6 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          # Every read must succeed: a failed or partial job list is never taken for a run's record.
-          set -o pipefail
           api="repos/$GITHUB_REPOSITORY/actions"
           record() {
             gh api --paginate "$api/runs/$1/jobs?per_page=100" --jq '.jobs[]' | jq -s . >"$RUNNER_TEMP/jobs.json"
@@ -471,16 +471,8 @@ jobs:
           }
           record "$GITHUB_RUN_ID" >"$RUNNER_TEMP/current.json"
           declare_shards "$RUNNER_TEMP/current.json" HEAD
-          # Only an earlier scheduled run can be the baseline: Sunday's two schedules can overlap, and a run
-          # started later may finish first.
-          created="$(jq -r .created_at "$RUNNER_TEMP/current.json")"
-          # The whole listing, every page, must succeed: a failed request is never read as "no earlier run".
-          ids="$(gh api --paginate "$api/workflows/ci.yml/runs?branch=main&event=schedule&status=completed&per_page=100" \
-              --jq ".workflow_runs[] | select(.id != $GITHUB_RUN_ID and .created_at < \"$created\") | .id")" || {
-            echo "cannot list the earlier scheduled runs on main"
-            exit 1
-          }
-          for id in $ids; do
+          for id in $(gh api "$api/workflows/ci.yml/runs?branch=main&event=push&status=completed&per_page=20" \
+              --jq '.workflow_runs[].id'); do
             record "$id" >"$RUNNER_TEMP/main.json"
             if jq -e '[.jobs[] | select(.name | startswith("system · "))] | length > 0 and all(.conclusion == "success")' \
                 "$RUNNER_TEMP/main.json" >/dev/null; then
@@ -491,10 +483,6 @@ jobs:
             fi
             rm "$RUNNER_TEMP/main.json"
           done
-          # No earlier scheduled run passed its system shards: record "no baseline", which the comparator does not
-          # judge.
-          [ -f "$RUNNER_TEMP/main.json" ] || jq -n --arg before "$created" \
-            '{no_baseline: true, before: $before}' >"$RUNNER_TEMP/main.json"
       - name: Compare the system shards with main
         run: >-
           python3 tools/ci/system_shard_time.py --current "$RUNNER_TEMP/current.json" --main "$RUNNER_TEMP/main.json"

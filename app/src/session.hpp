@@ -255,11 +255,6 @@ class Session : public QObject {
     /// Save as's Measured data row (edi ADR-0088 point 5): the next save copies linked data into the project ("copy") or
     /// keeps it linked ("linked"), answering its question in advance; anything else clears it. Used by that save only.
     Q_INVOKABLE void setNextSaveData(const QString& choice);
-    /// Save on untitled work waits for the next Create to name it: the request id that Create's naming settles
-    /// (untitledNamingSettled). One request is open at a time; a newer one replaces it.
-    Q_INVOKABLE int openUntitledNaming();
-    /// The Create dialog for `request` closed without creating: it settles "rejected" unless a Create already took it.
-    Q_INVOKABLE void rejectUntitledNaming(int request);
     Q_INVOKABLE bool saveAs(const QUrl& directory);
     // Save as (edi ADR-0052): into the folder or the .zip `target` (a `file:` URL), as `zip` says. A project saved as a
     // .zip keeps the archive as its location and every later Save rewrites it. With `copy` the project is written
@@ -374,10 +369,6 @@ class Session : public QObject {
     // A Save or a moving Save as in the web app finished: `saved` once its place holds the project. A replacement
     // or a quit waiting on the Save goes on only then.
     void webSaveFinished(bool saved);
-    // The naming `request` (openUntitledNaming) has settled, once: "named" (its save worked and the project took its
-    // place), "refused" (refused or failed, lastError says why), "cancelled" (its data question was cancelled),
-    // "rejected" (the Create dialog closed) or "superseded" (the project was replaced meanwhile).
-    void untitledNamingSettled(int request, const QString& outcome);
 
    private:
     /// Opens a project folder, a project.edi or a project archive; `example` names the catalogue example a downloaded
@@ -394,25 +385,6 @@ class Session : public QObject {
     // edi ADR-0069: a save is an operation. Each public save route makes one at its start: it belongs to the project and
     // replacement it was made for, and carries the data-on-save decision and the plan it was made from. Every route the
     // save goes through takes it explicitly; a nested or later save makes its own and never takes another's.
-    // The web app's place of the open project: its key in the browser's records, its kind and its name.
-    struct WebPlace {
-        QString key;
-        QString kind;
-        QString name;
-    };
-    // One Create naming untitled work, from the Create to the QML continuation waiting on it: settled once, by the
-    // step that owns the outcome. Every copy of its save operation (a question, a queued replan, a browser write)
-    // keeps it; when the last one goes without a settlement it settles "refused".
-    struct Naming {
-        int request = 0;
-        QPointer<Session> session;
-        bool settled = false;
-        void settle(const char* outcome);
-        Naming() = default;
-        Naming(const Naming&) = delete;
-        Naming& operator=(const Naming&) = delete;
-        ~Naming();
-    };
     struct SaveOperation {
         quint64 id = 0;
         QPointer<ProjectViewModel> project;
@@ -432,25 +404,6 @@ class Session : public QObject {
         // The project held from the plan until every copy of the operation that can still write is gone. A question
         // or a browser picker waiting on the user drops it; the answer takes it again and the save checks its plan.
         std::shared_ptr<ProjectViewModel::OperationHold> hold;
-        // A Create naming untitled web work: the browser place this save writes, which the project takes only once the
-        // write has worked and the snapshot is adopted (adoptUntitled).
-        std::optional<WebPlace> place;
-        // A Create naming untitled desktop work: the destination the user approved. A new name stays a fresh
-        // destination through every answer and replan; a Replace may replace only the project folder approved.
-        enum class Destination { any, fresh, replace };
-        Destination destination = Destination::any;
-        QString approved;  // Replace: the approved project folder, canonical
-        QString identity;  // Replace: that folder's file identity when approved (folderIdentity)
-        // The naming this save serves, carried through its question, replan and browser write.
-        std::shared_ptr<Naming> naming;
-    };
-    // What a save that names untitled work writes to, set on the operation before it can ask anything (beginSave).
-    struct SaveTarget {
-        std::shared_ptr<Naming> naming;
-        std::optional<WebPlace> place;
-        SaveOperation::Destination destination = SaveOperation::Destination::any;
-        QString approved;
-        QString identity;
     };
     using SaveContinuation = std::function<void(const SaveOperation&)>;
     // After a Save as: the project is no longer an example's, an archive's or a read-only tree's temporary copy.
@@ -465,8 +418,7 @@ class Session : public QObject {
     // Create on an untitled project: its name, description, title and authors set, then saved at `location` (a web
     // project into the browser's storage), and no longer untitled. A refused save keeps it untitled and says why.
     bool adoptUntitled(const QString& name, const QString& description, const QString& location, const QString& title,
-                       const QString& authors, ProjectCreationOutcome* outcome, bool replace,
-                       const std::shared_ptr<Naming>& naming);
+                       const QString& authors, ProjectCreationOutcome* outcome, bool replace);
     friend class AssistantViewModel;
     quint64 assistantEpoch() const noexcept { return assistant_epoch_; }
     bool assistantOwner(quint64 epoch,ProjectViewModel* expected) const noexcept;
@@ -538,14 +490,7 @@ class Session : public QObject {
     // `stores`: its writer stores what links to files reach (a .zip, a browser place, a download) instead of keeping
     // the links, so its plan counts those bytes and its stage is frozen before that writer reads it.
     std::optional<SaveOperation> beginSave(bool wholeTree, bool stores, SaveContinuation again,
-                                           std::function<bool()> replan, SaveTarget target);
-    std::optional<SaveOperation> beginSave(bool wholeTree, bool stores, SaveContinuation again,
                                            std::function<bool()> replan);
-    // Whether a naming save may still write `folder`: a fresh destination must not exist, and a Replace may replace
-    // only the approved project folder (false, with `lastError`, otherwise).
-    bool destinationAdmitted(const SaveOperation& operation, const QString& folder);
-    // Save as for a Create naming untitled desktop work, keeping its approved destination through answers and replans.
-    bool saveAsNaming(const QUrl& directory, const SaveTarget& target);
 
     // Whether the project is still as `operation` planned it (its revision and linked inputs), and whether at least
     // its linked inputs are.
@@ -583,6 +528,12 @@ class Session : public QObject {
     // Copies every file under `source` to `target`, writable by the owner; those under `linked` are hard links.
     bool copyTree(const QString& source, const QString& target, const QString& linked);
 
+    // The web app's place of the open project: its key in the browser's records, its kind and its name.
+    struct WebPlace {
+        QString key;
+        QString kind;
+        QString name;
+    };
     WebPlace web_place_;
     // The project a tutorial set aside, with everything the session knew of it, its browser copy and place included, so
     // it comes back exactly as it was (edi ADR-0064).
@@ -593,7 +544,6 @@ class Session : public QObject {
         QString web_copy;
         WebPlace web_place;
         bool web_from_file = false;
-        bool untitled = false;
     };
     std::optional<SetAside> aside_;
     bool aside_next_ = false;  // the next replaceProject sets the open project aside
@@ -608,9 +558,6 @@ class Session : public QObject {
     // A browser Save, Save as or copy is being written to a place: another waits until it is, whatever project is open
     // by then. Only the write's own completion releases it.
     bool web_writing_ = false;
-    // The naming request Save on untitled work opened, until a Create takes it or its dialog is rejected.
-    int naming_open_ = 0;
-    int naming_requests_ = 0;
     // A save staged on a copy: its folder inside a new `root` and the metadata it wrote.
     struct Staged {
         QString root;
@@ -634,7 +581,7 @@ class Session : public QObject {
     bool stageCopy(const SaveOperation& operation, const char* purpose, const QString& name, Staged& staged,
                    const QString& parent = {}, bool admitted = false);
     // Writes the staged snapshot into the .zip `archive`, then the project takes it and works in its folder.
-    bool publishArchive(const SaveOperation& operation, const Staged& staged, const QString& archive);
+    bool publishArchive(const Staged& staged, const QString& archive);
     // The browser's place holds the staged snapshot: the project takes it and works in its folder, unless it was
     // edited since `revision` or a fit started. Whether it did.
     bool takeWebSave(const Staged& staged, quint64 revision);
@@ -652,9 +599,6 @@ class Session : public QObject {
     void keepChanges();
     QTimer* keep_timer_ = nullptr;
     bool untitled_ = false;
-    // The untitled place a Create moved to the browser for its first save: a save that does not complete puts it back.
-    // The web save of untitled work into the place a Create names (adoptUntitled); its operation carries the place.
-    bool saveNaming(const SaveTarget& target);
     void setUntitled(bool untitled);
     // The memory folder the browser copied the open project into, released with it.
     QString web_copy_;

@@ -3717,7 +3717,7 @@
     },
     {
       "member": "MagneticDescription::radial_coefficients",
-      "type": "std::vector<std::pair<std::string, crysta::MagneticRadialCoefficients>>",
+      "type": "std::vector<std::pair<std::string, MagneticRadialCoefficients>>",
       "not_storage": "a structure's magnetic description held as written, one value crysta reads and writes"
     },
     {

@@ -317,11 +317,6 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     void setDescription(const QString& description);
     QString authors() const;
     void setAuthors(const QString& authors);
-    // The same edits for Create's form, which must know whether each one was refused: the refusal, empty when applied.
-    QString editName(const QString& name);
-    QString editTitle(const QString& title);
-    QString editDescription(const QString& description);
-    QString editAuthors(const QString& authors);
     QString suRule() const;
     void setSuRule(const QString& rule);
     // The report's settings (ADR-0036 §7), each an undoable edit: in `reports/report.edi` the groups the report

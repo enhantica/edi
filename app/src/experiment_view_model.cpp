@@ -956,7 +956,7 @@ const edi::PatternSource& ExperimentViewModel::singleCrystalPattern(edi::Pattern
     if (axis != edi::PatternAxis::Q && axis != edi::PatternAxis::SinThetaOverLambda) {
         return kNone;
     }
-    DerivedSource& kept = single_crystal_patterns_[(axis == edi::PatternAxis::Q ? 0 : 2) + (squared ? 0 : 1)];
+    DerivedSource& kept = single_crystal_patterns_[(axis == edi::PatternAxis::Q ? 0U : 2U) + (squared ? 0U : 1U)];
     const std::size_t colour = colourPlace();
     if (!kept.source || kept.revision != pattern_generation_ || kept.place != colour) {
         if (nuclear_share_revision_ != pattern_generation_) {

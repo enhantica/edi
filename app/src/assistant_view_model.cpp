@@ -4497,18 +4497,7 @@ struct AssistantViewModel::State {
         }
         return false; // In particular the assistant composer is outside this tree.
     }
-    // Input inside the unsaved-work prompt a Create left to the user answers that prompt; it takes nothing over.
-    bool answers_user_prompt(const QQuickItem* control) const {
-        const QObject* prompt = native_creation && native_creation->ordinary_user_prompt && native_creation->ordinary_waiting
-                                    ? native_creation->ordinary_guard.data()
-                                    : nullptr;
-        if (prompt == nullptr) return false;
-        for (const QQuickItem* item = control; item != nullptr; item = item->parentItem())
-            if (item->parent() == prompt) return true;
-        return false;
-    }
     bool retire_manual_input(QQuickItem* control) {
-        if (answers_user_prompt(control)) return true;
         if (!manual_control(control) || !manual_request_current()) return true;
         const QPointer<QQuickItem> original(control);
         const QPointer<AssistantViewModel> receiver(&owner);
@@ -8311,7 +8300,6 @@ struct AssistantViewModel::State {
         bool had_original_project=false,ordinary_waiting=false,prior_saved=false,prior_save_attempted=false,prior_save_uncertain=false;
         QSet<QString> consumed_inputs;
         QPointer<QObject> ordinary_guard;
-        bool ordinary_user_prompt = false;  // the unsaved-work prompt is the user's to answer (untitled work)
         QPointer<QQuickItem> ordinary_save;
         bool ordinary_guard_accepted=false;
         QString ordinary_name, ordinary_title, ordinary_description, ordinary_intent, ordinary_location, ordinary_failure, ordinary_failure_target;
@@ -18201,32 +18189,6 @@ bool AssistantViewModel::eventFilter(QObject* watched, QEvent* event) {
     if (watched == state_->action_window && state_->showing_actions &&
         (event->type() == QEvent::Hide || event->type() == QEvent::Close) &&
         (!state_->widget_input || !state_->widget_input->injecting())) {
-        if (event->type() == QEvent::Close) {
-            // A close the window refuses (its unsaved-work question, say) tears nothing down: decided once the window
-            // has handled it, by whether it is still shown.
-            // Bound to the request and window it was sent for: a later request, on this window or another, is not it.
-            const QPointer<AssistantViewModel> self(this);
-            auto* const original = state_.get();
-            const QPointer<QQuickWindow> window(state_->action_window);
-            const std::weak_ptr<State::NativeRecord> record = state_->native_call ? state_->native_call->record : nullptr;
-            const std::weak_ptr<State::NativeWidget> widget = state_->native_widget;
-            const std::weak_ptr<State::NativeCreateWidget> creation = state_->native_create_widget;
-            const bool called = state_->native_call.has_value();
-            QMetaObject::invokeMethod(this, [self, original, window, record, widget, creation, called] {
-                if (!self || self->state_.get() != original || !original->showing_actions) return;
-                const auto same = [](const auto& was, const auto& now) {
-                    return !was.owner_before(now) && !now.owner_before(was);
-                };
-                const auto& call = original->native_call;
-                if (called != call.has_value() || (call && !same(record, call->record)) ||
-                    !same(widget, original->native_widget) || !same(creation, original->native_create_widget) ||
-                    original->action_window != window)
-                    return;
-                if (window && window->isVisible()) return;  // refused: the window is still shown
-                original->native_supersede_operation(original->widget_outcome_error);
-            }, Qt::QueuedConnection);
-            return false;
-        }
         const QPointer<QObject> original_target(watched);
         state_->native_supersede_operation(state_->widget_outcome_error);
         return !original_target;
@@ -19433,9 +19395,6 @@ void AssistantViewModel::nativeProjectCreateSaveChoice(const QString& intent,QOb
         !guard || guard->objectName()!=QStringLiteral("unsavedChanges") || !target || !window || target->window()!=window ||
         !s->normal_project_create_current(creation))return;
     creation->ordinary_guard=guard;creation->ordinary_save=target;
-    // Untitled work cannot be saved without a name, which only the user gives: its prompt is left to the user, and the
-    // window's continuation settles this Create (Discard, Cancel, or Save then the naming form) through nativeProjectCreateReady.
-    if(s->result_session() && s->result_session()->untitled()){creation->ordinary_user_prompt=true;return;}
     const auto current=[s,receiver,creation,guard,target,window,intent] {
         if(!receiver || receiver->state_.get()!=s || !window || s->action_window!=window || !s->normal_project_create_current(creation))return false;
         if(creation->ordinary_guard_accepted)return true; // Actual Save may close its original dialog.
@@ -19458,13 +19417,7 @@ void AssistantViewModel::nativeProjectCreateSaveChoice(const QString& intent,QOb
         request.current=current;request.restoreCurrent=current;request.prepareCommit=current;request.finishCommit=[]{};
         request.completed=[s,receiver,creation](bool delivered,const QString&,ControlCause) {
             if(!receiver || receiver->state_.get()!=s || s->native_creation!=creation || creation->ordinary_guard_accepted)return;
-            // The prompt closed by its own choice: Discard, Cancel, or a Save that first names untitled work. The window's
-            // continuation then settles this Create through nativeProjectCreateReady, true or false, so nothing fails here.
-            const bool closed=!creation->ordinary_guard || !creation->ordinary_guard->property("opened").toBool();
-            if(closed && creation->ordinary_waiting)return;
-            Q_UNUSED(delivered);
-            creation->ordinary_failure=QObject::tr("The original unsaved-work Save choice did not complete; no new project was created.");
-            s->native_finish_normal_project(creation,false);
+            if(!delivered || !creation->ordinary_guard_accepted){creation->ordinary_failure=QObject::tr("The original unsaved-work Save choice did not complete; no new project was created.");s->native_finish_normal_project(creation,false);}
         };
         if(!s->native_call)throw std::runtime_error("The original native request is no longer current");
         s->control_start(*s->native_call,ControlField::Project,std::move(request));

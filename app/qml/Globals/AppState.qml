@@ -65,8 +65,7 @@ QtObject {
     property int reached: AppState.Page.Home
 
     readonly property bool projectPageEnabled: reached >= AppState.Page.Project || Session.hasProject
-    // Structure is reachable from its tab once Project is open; the unnamed work starts only when Structure opens.
-    readonly property bool structurePageEnabled: reached >= AppState.Page.Project || Session.hasProject
+    readonly property bool structurePageEnabled: reached >= AppState.Page.Structure || Session.hasProject
     // A page is made once it is reached; its tab is enabled while the project allows it: Experiment, Analysis and
     // Summary (Report) need a structure, Analysis and Summary an experiment too, and removing the last one disables
     // them again (the owner, 2026-10-08). A page stays made while its tab is disabled, so it keeps its state.
@@ -146,8 +145,6 @@ QtObject {
     // The untitled project's first Save (the owner, 2026-11-19): the Project page opens and its Create project dialog
     // names the project and saves it.
     signal untitledSaveRequested
-    // The Create project dialog that Save opened was rejected: the waiting naming request settles "rejected" (Main.qml).
-    signal untitledSaveClosed
     function requestUntitledSave() {
         open(AppState.Page.Project);
         untitledSaveRequested();
