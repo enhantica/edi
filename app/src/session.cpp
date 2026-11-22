@@ -2074,7 +2074,8 @@ QUrl Session::suggestedSaveTarget(bool zip) const {
     // The chooser starts where the project is (the folder holding its .zip, or its folder) and suggests the project's
     // name, as it reads now (edi ADR-0052).
     const QFileInfo info(place);
-    const bool archive = !place.isEmpty() && info.suffix().compare(QStringLiteral("zip"), Qt::CaseInsensitive) == 0;
+    // An archive is the .zip the project saves to, or a file; a project folder may itself end in .zip.
+    const bool archive = !place.isEmpty() && (place == archive_location_ || info.isFile());
     const QString folder = place.isEmpty() ? QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation)
                            : archive       ? info.absolutePath()
                                            : info.absoluteFilePath();
