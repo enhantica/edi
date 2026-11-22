@@ -679,6 +679,14 @@ TestCase {
         verify(waitForPolish(saveAs), "The warning action completes layout before pointer input");
         mouseClick(saveAs, saveAs.width / 2, saveAs.height / 2);
         tryCompare(choice, "opened", true, 2000, "Warning Save-as opens the surviving confirmation dialog");
+        let renderedChoice;
+        tryVerify(() => {
+            renderedChoice = Ui.find(Ui.windowRoot(app), "project.saveChoice");
+            return renderedChoice !== null;
+        }, 2000, "The browser confirmation observer targets the actual named column in the visual tree");
+        verify(renderedChoice instanceof Item, "The observed confirmation column is a visual Item supported by the browser hook");
+        verify(waitForPolish(renderedChoice), "The observed confirmation column completes its real layout");
+        verify(renderedChoice.width > 0 && renderedChoice.height > 0, "The browser confirmation target has a positive rendered extent");
         compare(SettingsProof.projectFileDialogs(app, false).concat(SettingsProof.projectFileDialogs(app, true)).length, 0, "The warning route cannot reach a chooser before its dialog is confirmed");
         const ok = choice.standardButton(Dialog.Ok);
         verify(ok !== null && ok.enabled, "The surviving Save-as dialog exposes its actual confirmation control");
@@ -690,6 +698,7 @@ TestCase {
             return dialogs.length === 1;
         }, 2000, "Confirming warning Save-as reaches exactly one real system chooser");
         tryCompare(choice, "opened", false, 2000, "Confirmation closes the actual Save-as choice dialog");
+        tryCompare(renderedChoice, "visible", false, 2000, "The same visual confirmation target becomes hidden after real acceptance");
         dialogs[0].close();
     }
     function test_save_unwritable_data() {
