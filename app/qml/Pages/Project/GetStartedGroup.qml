@@ -74,6 +74,8 @@ SideBarGroup {
                 // As wide as its widest entry, never narrower than its button.
                 contentWidth: Math.max(loadButton.width - leftPadding - rightPadding, loadProjectHeader.implicitWidth, importHeader.implicitWidth, loadFolderItem.implicitWidth, loadZipItem.implicitWidth, loadUrlItem.implicitWidth, importItemsWidth)
 
+                // The entry keyboard navigation has reached, as a list's current item.
+                readonly property Item currentItem: currentIndex >= 0 ? itemAt(currentIndex) : null
                 readonly property real labelWidth: Math.max(loadFolderItem.labelImplicitWidth, loadZipItem.labelImplicitWidth, loadUrlItem.labelImplicitWidth, importLabelsWidth)
                 // The widest import entry and label: the entries come from the importer list below.
                 property real importItemsWidth: 0
@@ -190,6 +192,7 @@ SideBarGroup {
                 // As wide as its widest entry, never narrower than its button.
                 contentWidth: Math.max(saveButton.width - leftPadding - rightPadding, saveProjectHeader.implicitWidth, exportHeader.implicitWidth, saveasFolderItem.implicitWidth, saveasZipItem.implicitWidth, exportCryspyItem.implicitWidth, exportFullprofItem.implicitWidth, exportGsasItem.implicitWidth, saveCopyBox.implicitWidth)
 
+                readonly property Item currentItem: currentIndex >= 0 ? itemAt(currentIndex) : null
                 readonly property real labelWidth: Math.max(saveasFolderItem.labelImplicitWidth, saveasZipItem.labelImplicitWidth, exportCryspyItem.labelImplicitWidth, exportFullprofItem.labelImplicitWidth, exportGsasItem.labelImplicitWidth)
                 // A browser without the File System Access API writes no folder on the disk: a .zip copy only.
                 readonly property bool diskWritable: !WebFiles.available || WebStorage.diskAccess
