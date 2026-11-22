@@ -127,10 +127,12 @@ def check_reflections(body, expected, *, cell=None, cutoff=None):  # noqa: PLR09
         )
         observed = measured > (multiple if basis == 'intensity' else multiple / 2) * sigma
         fitted = np.ones(len(data), dtype=bool) if cutoff is None else measured > cutoff * sigma
+        # ADR-0104 reports observation separately; ADR-0134 also marks rows
+        # outside fit admission '<'. Counts and R-factor sets remain separate.
         require(
             [row['_refln.include_status'] for row in data]
-            == ['o' if value else '<' for value in observed],
-            'Every include status follows the independent declared observed threshold',
+            == ['o' if value else '<' for value in observed & fitted],
+            'Every include status follows the independent observed threshold and fit cutoff',
         )
         counts = {
             '_reflns.number_total': len(data),

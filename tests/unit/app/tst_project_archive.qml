@@ -664,6 +664,34 @@ TestCase {
         verify(Session.openProject(archive), "The rewritten ZIP reopens through the ordinary application route");
         compare(Session.project.name, "zip-next-save", "The rewritten ZIP contains the edited scientific project's current state");
     }
+    function test_browser_warning_save_as_requires_confirmation() {
+        application();
+        canonicalProject(cases[2]);
+        const warning = findChild(app, "webStorageWarning");
+        const choice = findChild(app, "saveAs.choice");
+        verify(warning !== null && choice !== null, "The real application retains its browser warning and delegated Save-as dialog");
+        // Open the actual warning on the native host to inspect its unchanged action;
+        // browser storage and download behavior remain in the Chromium consumer.
+        warning.open();
+        tryCompare(warning, "opened", true, 2000, "The warning finishes opening before real action input");
+        const saveAs = warning.standardButton(Dialog.Apply);
+        verify(saveAs !== null && saveAs.enabled && /Save project as/.test(saveAs.text), "The actual warning exposes its enabled Save-as action");
+        verify(waitForPolish(saveAs), "The warning action completes layout before pointer input");
+        mouseClick(saveAs, saveAs.width / 2, saveAs.height / 2);
+        tryCompare(choice, "opened", true, 2000, "Warning Save-as opens the surviving confirmation dialog");
+        compare(SettingsProof.projectFileDialogs(app, false).concat(SettingsProof.projectFileDialogs(app, true)).length, 0, "The warning route cannot reach a chooser before its dialog is confirmed");
+        const ok = choice.standardButton(Dialog.Ok);
+        verify(ok !== null && ok.enabled, "The surviving Save-as dialog exposes its actual confirmation control");
+        verify(waitForPolish(ok), "The surviving confirmation completes layout before pointer input");
+        mouseClick(ok, ok.width / 2, ok.height / 2);
+        let dialogs;
+        tryVerify(() => {
+            dialogs = SettingsProof.projectFileDialogs(app, false).concat(SettingsProof.projectFileDialogs(app, true));
+            return dialogs.length === 1;
+        }, 2000, "Confirming warning Save-as reaches exactly one real system chooser");
+        tryCompare(choice, "opened", false, 2000, "Confirmation closes the actual Save-as choice dialog");
+        dialogs[0].close();
+    }
     function test_save_unwritable_data() {
         return [
             {

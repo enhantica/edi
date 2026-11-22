@@ -73,6 +73,7 @@ CASES += tuple(
 ) + (
     'test_save_folder_choice',
     'test_save_dialog_layout',
+    'test_browser_warning_save_as_requires_confirmation',
     'test_save_unwritable:read-only-zip',
     'test_save_unwritable:bundled-example',
 )

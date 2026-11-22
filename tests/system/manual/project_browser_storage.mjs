@@ -423,6 +423,12 @@ try {
       if(scenario==='example-warning-save-as'){
         const beforeStorage=await evaluate(()=>window.__downloadBoundary.storage.slice());
         await pointer(observation.warningSaveAs);
+        // The warning's delegated Save-as route retains its format dialog;
+        // Get started's direct destination menu has already made that choice.
+        await geometry('saveAs.choice');
+        assert.equal((await native('saveAs.choice')).visible,true,'The warning Save-as action must open its surviving confirmation dialog');
+        assert.equal(await evaluate(()=>window.__downloadBoundary.calls.length),0,'The warning route must not request a download before dialog confirmation');
+        await click(/^OK$/,'button');await hidden('saveAs.choice');
         await page.waitForFunction(()=>window.__downloadBoundary.calls.length>0);await frame();
         assert.deepEqual(await evaluate(()=>window.__downloadBoundary.storage),beforeStorage,'The warning Save-as action must download without another browser-storage save');
         assert.equal(events.downloads,0,'The warning action must leave browser permission pending');
