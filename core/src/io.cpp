@@ -914,9 +914,12 @@ void read_magnetic(const Block& block, Structure& structure, const std::string& 
                        text("_parent_space_group.reference_setting"),
                        text("_parent_space_group.derived")};
     // The retired flag is not kept, but a supplied one is still read whole, as the CIF readers read it: anything but
-    // true or false refuses (a bare ? or . gives no flag).
-    if (const std::string& derived = magnetic.parent.derived; !derived.empty() && derived != "true" && derived != "false")
-        fail_domain(where, "malformed-parent-derived", "_parent_space_group.derived '" + derived + "' is neither true nor false");
+    // true or false refuses, a quoted empty value included (only a bare ? or . gives no flag).
+    if (const std::string* derived = block.find("_parent_space_group.derived");
+        derived != nullptr && !block.bare_markers.contains("_parent_space_group.derived") && *derived != "true" &&
+        *derived != "false") {
+        fail_domain(where, "malformed-parent-derived", "_parent_space_group.derived '" + *derived + "' is neither true nor false");
+    }
     const auto id_text = [&](const char* id_tag, const char* text_tag) {
         std::vector<std::pair<std::string, std::string>> rows;
         if (const Loop* loop = block.loop_with(id_tag)) {
