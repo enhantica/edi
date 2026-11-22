@@ -12,13 +12,15 @@ from pathlib import Path
 
 import pytest
 
-from tests.integration.py.test_scan_app_contract import block, item, lexical_mask
+from tests.integration.py.test_scan_app_contract import block, item, lexical_mask, spans
 
 ROOT = Path(__file__).resolve().parents[3]
 PATHS = {
     'header': 'app/src/web_files.hpp',
     'source': 'app/src/web_files.cpp',
     'folder': 'app/qml/Pages/Project/GetStartedGroup.qml',
+    'state': 'app/qml/Globals/AppState.qml',
+    'window': 'app/qml/Main.qml',
     'structure': 'app/qml/Pages/Structure/StructuresGroup.qml',
     'experiment': 'app/qml/Pages/Experiment/ExperimentsGroup.qml',
     'session': 'app/src/session.cpp',
@@ -148,12 +150,28 @@ def violations(text, case):
         )
     if case in {'overlapping-folder-uploads', 'replacement-during-upload'}:
         native_project_checks(
-            text['folder'], code, (request, receiver, stored, replacement), needs, problems
+            text, code, (request, receiver, stored, replacement), needs, problems
         )
     return problems
 
 
-def native_project_checks(folder, code, owners, needs, problems):
+@lru_cache(maxsize=16)
+def app_state_handler(window, marker):
+    position = lexical_mask(window, strings=True).find(marker)
+    if position < 0:
+        return ''
+    start, end = min(
+        ((a, b) for a, b in spans(window) if a < position < b),
+        key=lambda span: span[1] - span[0],
+    )
+    connection = window[start:end]
+    if not re.match(r'\{\s*target:\s*AppState\b', lexical_mask(connection)):
+        return ''
+    return compact_block(connection, marker)
+
+
+def native_project_checks(text, code, owners, needs, problems):
+    folder, window = text['folder'], text['window']
     request, receiver, stored, replacement = owners
     for destination, zip_route in [('folder', 'false'), ('zip', 'true')]:
         control = 'project.load.' + destination
@@ -165,12 +183,45 @@ def native_project_checks(folder, code, owners, needs, problems):
             f'onTriggered: group.openProject({zip_route})',
             'Load menu keeps the ' + destination + ' choice',
         )
-    opener = compact_block(folder, 'function openProject(zip)')
-    needs(opener, 'AppState.afterChanges(() => {', 'Load checks pending changes before opening')
     needs(
-        opener,
-        'if (WebFiles.available) Session.openWebProject(zip ? "file" : "folder")',
-        'Load preserves file/folder choice through the browser receiver',
+        compact_block(folder, 'function openProject(zip)'),
+        'AppState.openProjectRequested(zip)',
+        'Load forwards the selected folder or zip to the window',
+    )
+    needs(
+        compact(item(folder, 'project.load.menu')),
+        'item.triggered.connect(() => group.importProject(importer))',
+        'Each generated Import entry forwards its actual importer',
+    )
+    needs(
+        compact_block(folder, 'function importProject(importer)'),
+        'AppState.importProjectRequested(importer)',
+        'Import forwards the selected descriptor to the window',
+    )
+    needs(code['state'], 'signal openProjectRequested(bool zip)', 'AppState declares Open')
+    needs(code['state'], 'signal importProjectRequested(var importer)', 'AppState declares Import')
+    needs(
+        compact_block(text['state'], 'function afterChanges(action, abandoned, creating)'),
+        'ApplicationInfo.afterProjectChanges(action, abandoned, creating === true)',
+        'Window requests reach the real unsaved-changes guard',
+    )
+    needs(
+        compact_block(window, 'AppDialog {\n        id: unsavedChanges'),
+        'onDiscarded: ApplicationInfo.discardUnsavedProject()',
+        'The actual window prompt runs the Discard continuation',
+    )
+    needs(
+        app_state_handler(window, 'function onOpenProjectRequested(zip)'),
+        'AppState.afterChanges(() => { if (WebFiles.available) '
+        'Session.openWebProject(zip ? "file" : "folder"); else '
+        'Qt.callLater(() => (zip ? openZipDialog : openFolderDialog).open()); });',
+        'The window guard preserves both Open choices after page replacement',
+    )
+    needs(
+        app_state_handler(window, 'function onImportProjectRequested(importer)'),
+        'AppState.afterChanges(() => { importDialog.importer = importer; '
+        'Qt.callLater(() => importDialog.open()); });',
+        'The window guard opens the Import chooser with its selected descriptor',
     )
     needs(code['session'], 'fresh_archive_directory("web")', 'fresh root per read')
     needs(code['session'], 'pickOpen(kind,root,webOpenAnswer(root))', 'live Open receiver')
@@ -404,10 +455,34 @@ def test_every_browser_file_receiver_preserves_request_ownership(case):
             ('folder', 'group.openProject(false)', 'group.openProject(true)'),
             ('folder', 'group.openProject(true)', 'group.openProject(false)'),
             (
-                'folder',
+                'window',
                 'Session.openWebProject(zip ? "file" : "folder")',
                 'Session.openWebProject("file")',
             ),
+            (
+                'folder',
+                'AppState.openProjectRequested(zip)',
+                'AppState.openProjectRequested(true)',
+            ),
+            (
+                'folder',
+                'AppState.importProjectRequested(importer)',
+                'AppState.importProjectRequested(null)',
+            ),
+            (
+                'window',
+                'function onOpenProjectRequested(zip) {',
+                'function onOtherRequested(zip) {',
+            ),
+            (
+                'window',
+                'if (WebFiles.available)\n                    Session.openWebProject',
+                (
+                    'if (!life.alive) return;\n                if (WebFiles.available)\n'
+                    '                    Session.openWebProject'
+                ),
+            ),
+            ('window', 'importDialog.importer = importer', 'importDialog.importer = null'),
             ('storage', 'jobs_.take(job)', 'jobs_.value(job)'),
             (
                 'storage',

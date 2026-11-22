@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-22T12:22:02Z
+# measured_utc = 2026-11-22T18:55:52Z
 #
-# Recorded from: measured test run (15 node(s) measured once, 186727 banked, 0 stale row(s) dropped)
-# Collected tests: 266631; with a reported duration: 85712
+# Recorded from: measured test run (4 node(s) measured once, 186740 banked, 0 stale row(s) dropped)
+# Collected tests: 266631; with a reported duration: 85714
 # Module-scoped fixture costs recorded: 218
 #
 # Breaches are decided PER TIER against the table
@@ -31,8 +31,8 @@
 # measurement nobody took and which passes every tier threshold.
 # inventory_python = 266631
 # inventory_cpp = 0
-# inventory_measured = 186742
-# inventory_unmeasured = 79889
+# inventory_measured = 186744
+# inventory_unmeasured = 79887
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
 # inventory_pr_python = 91966
 
@@ -179410,8 +179410,8 @@ UNMEASURED:not-completed-in-this-run	tests/integration/py/test_e01_scaffold.py::
 0.070	tests/integration/py/test_e04_t11_ci_order.py::test_split_test_step_propagates_each_real_command_failure[cpp-test]
 0.060	tests/integration/py/test_e04_t11_ci_order.py::test_split_test_step_propagates_each_real_command_failure[system-tests-part]
 0.000	tests/integration/py/test_e04_t11_file_requests.py::test_every_browser_file_receiver_preserves_request_ownership[cancel-then-other-page]
-0.290	tests/integration/py/test_e04_t11_file_requests.py::test_every_browser_file_receiver_preserves_request_ownership[overlapping-folder-uploads]
-0.210	tests/integration/py/test_e04_t11_file_requests.py::test_every_browser_file_receiver_preserves_request_ownership[replacement-during-upload]
+0.440	tests/integration/py/test_e04_t11_file_requests.py::test_every_browser_file_receiver_preserves_request_ownership[overlapping-folder-uploads]
+0.220	tests/integration/py/test_e04_t11_file_requests.py::test_every_browser_file_receiver_preserves_request_ownership[replacement-during-upload]
 0.000	tests/integration/py/test_e04_t11_file_requests.py::test_every_browser_file_receiver_preserves_request_ownership[structure-cardinality]
 UNMEASURED:not-completed-in-this-run	tests/integration/py/test_e04_t11_science_identity.py::test_declared_input_change_refuses_before_storage_can_be_retargeted
 UNMEASURED:not-completed-in-this-run	tests/integration/py/test_e04_t11_science_identity.py::test_frozen_catalogue_coordinates_domains_and_omitted_raw_storage[lbco]
@@ -183383,9 +183383,9 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_plain_data_picker.py::te
 0.000	tests/integration/py/test_project_import_base.py::test_python_registration_cannot_replace_an_existing_suffix
 0.030	tests/integration/py/test_project_import_base.py::test_registered_python_converter_receives_shared_naming_description_and_roundtrip
 UNMEASURED:failed-in-this-run	tests/integration/py/test_project_load_messages.py::test_every_project_load_route_has_a_per_attempt_visible_failure_channel[example-ExamplesGroup.qml-openExample]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_project_load_messages.py::test_every_project_load_route_has_a_per_attempt_visible_failure_channel[open-GetStartedGroup.qml-openProject]
+0.560	tests/integration/py/test_project_load_messages.py::test_every_project_load_route_has_a_per_attempt_visible_failure_channel[open-GetStartedGroup.qml-openProject]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_project_load_messages.py::test_every_project_load_route_has_a_per_attempt_visible_failure_channel[recent-RecentProjectsGroup.qml-openProject]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_project_load_messages.py::test_every_project_load_route_has_a_per_attempt_visible_failure_channel[zip-GetStartedGroup.qml-openProject]
+0.630	tests/integration/py/test_project_load_messages.py::test_every_project_load_route_has_a_per_attempt_visible_failure_channel[zip-GetStartedGroup.qml-openProject]
 UNMEASURED:not-completed-in-this-run	tests/integration/py/test_project_save_final_write.py::test_final_save_write_contains_the_adopted_complement_and_optional_dependent[calculated]
 UNMEASURED:not-completed-in-this-run	tests/integration/py/test_project_save_final_write.py::test_final_save_write_contains_the_adopted_complement_and_optional_dependent[uncalculated]
 0.150	tests/integration/py/test_public_trial_provenance.py::test_exported_trial_provenance_requires_its_real_committed_document[absolute]
