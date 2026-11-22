@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-22T09:46:22Z
+# measured_utc = 2026-11-22T09:58:56Z
 #
-# Recorded from: measured test run (5 node(s) measured once, 186734 banked, 0 stale row(s) dropped)
-# Collected tests: 266631; with a reported duration: 85706
+# Recorded from: measured test run (7 node(s) measured once, 186734 banked, 0 stale row(s) dropped)
+# Collected tests: 266631; with a reported duration: 85709
 # Module-scoped fixture costs recorded: 218
 #
 # Breaches are decided PER TIER against the table
@@ -31,8 +31,8 @@
 # measurement nobody took and which passes every tier threshold.
 # inventory_python = 266631
 # inventory_cpp = 0
-# inventory_measured = 186737
-# inventory_unmeasured = 79894
+# inventory_measured = 186740
+# inventory_unmeasured = 79891
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
 # inventory_pr_python = 91966
 
@@ -205379,8 +205379,8 @@ UNMEASURED:not-completed-in-this-run	tests/system/py/test_cif_public_entrances.p
 0.180	tests/system/py/test_cif_public_entrances.py::test_public_entrances_account_for_every_alias_and_loop_cell[atom_type_scat.neutron_magnetic_source:_atom_type_scat.neutron_magnetic_source:s0:v3-item-structure-cli]
 0.830	tests/system/py/test_cif_public_entrances.py::test_public_entrances_account_for_every_alias_and_loop_cell[atom_type_scat.neutron_magnetic_source:_atom_type_scat.neutron_magnetic_source:s0:v4-column-experiment-app]
 0.180	tests/system/py/test_cif_public_entrances.py::test_public_entrances_account_for_every_alias_and_loop_cell[atom_type_scat.neutron_magnetic_source:_atom_type_scat.neutron_magnetic_source:s0:v4-column-experiment-cli]
-UNMEASURED:failed-in-this-run	tests/system/py/test_cif_public_entrances.py::test_public_entrances_account_for_every_alias_and_loop_cell[atom_type_scat.neutron_magnetic_source:_atom_type_scat.neutron_magnetic_source:s0:v4-column-structure-app]
-0.220	tests/system/py/test_cif_public_entrances.py::test_public_entrances_account_for_every_alias_and_loop_cell[atom_type_scat.neutron_magnetic_source:_atom_type_scat.neutron_magnetic_source:s0:v4-column-structure-cli]
+0.690	tests/system/py/test_cif_public_entrances.py::test_public_entrances_account_for_every_alias_and_loop_cell[atom_type_scat.neutron_magnetic_source:_atom_type_scat.neutron_magnetic_source:s0:v4-column-structure-app]
+0.210	tests/system/py/test_cif_public_entrances.py::test_public_entrances_account_for_every_alias_and_loop_cell[atom_type_scat.neutron_magnetic_source:_atom_type_scat.neutron_magnetic_source:s0:v4-column-structure-cli]
 0.650	tests/system/py/test_cif_public_entrances.py::test_public_entrances_account_for_every_alias_and_loop_cell[atom_type_scat.neutron_magnetic_source:_atom_type_scat.neutron_magnetic_source:s0:v4-item-experiment-app]
 0.170	tests/system/py/test_cif_public_entrances.py::test_public_entrances_account_for_every_alias_and_loop_cell[atom_type_scat.neutron_magnetic_source:_atom_type_scat.neutron_magnetic_source:s0:v4-item-experiment-cli]
 0.690	tests/system/py/test_cif_public_entrances.py::test_public_entrances_account_for_every_alias_and_loop_cell[atom_type_scat.neutron_magnetic_source:_atom_type_scat.neutron_magnetic_source:s0:v4-item-structure-app]
@@ -205419,8 +205419,8 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_cif_public_entrances.py::test
 0.180	tests/system/py/test_cif_public_entrances.py::test_public_entrances_account_for_every_alias_and_loop_cell[atom_type_scat.neutron_magnetic_source:_atom_type_scat.neutron_magnetic_source:s1:v3-item-structure-cli]
 0.680	tests/system/py/test_cif_public_entrances.py::test_public_entrances_account_for_every_alias_and_loop_cell[atom_type_scat.neutron_magnetic_source:_atom_type_scat.neutron_magnetic_source:s1:v4-column-experiment-app]
 0.190	tests/system/py/test_cif_public_entrances.py::test_public_entrances_account_for_every_alias_and_loop_cell[atom_type_scat.neutron_magnetic_source:_atom_type_scat.neutron_magnetic_source:s1:v4-column-experiment-cli]
-UNMEASURED:failed-in-this-run	tests/system/py/test_cif_public_entrances.py::test_public_entrances_account_for_every_alias_and_loop_cell[atom_type_scat.neutron_magnetic_source:_atom_type_scat.neutron_magnetic_source:s1:v4-column-structure-app]
-0.190	tests/system/py/test_cif_public_entrances.py::test_public_entrances_account_for_every_alias_and_loop_cell[atom_type_scat.neutron_magnetic_source:_atom_type_scat.neutron_magnetic_source:s1:v4-column-structure-cli]
+0.790	tests/system/py/test_cif_public_entrances.py::test_public_entrances_account_for_every_alias_and_loop_cell[atom_type_scat.neutron_magnetic_source:_atom_type_scat.neutron_magnetic_source:s1:v4-column-structure-app]
+0.210	tests/system/py/test_cif_public_entrances.py::test_public_entrances_account_for_every_alias_and_loop_cell[atom_type_scat.neutron_magnetic_source:_atom_type_scat.neutron_magnetic_source:s1:v4-column-structure-cli]
 0.660	tests/system/py/test_cif_public_entrances.py::test_public_entrances_account_for_every_alias_and_loop_cell[atom_type_scat.neutron_magnetic_source:_atom_type_scat.neutron_magnetic_source:s1:v4-item-experiment-app]
 0.180	tests/system/py/test_cif_public_entrances.py::test_public_entrances_account_for_every_alias_and_loop_cell[atom_type_scat.neutron_magnetic_source:_atom_type_scat.neutron_magnetic_source:s1:v4-item-experiment-cli]
 0.720	tests/system/py/test_cif_public_entrances.py::test_public_entrances_account_for_every_alias_and_loop_cell[atom_type_scat.neutron_magnetic_source:_atom_type_scat.neutron_magnetic_source:s1:v4-item-structure-app]
@@ -248389,8 +248389,8 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_cif_public_entrances.py::test
 UNMEASURED:failed-in-this-run	tests/system/py/test_cif_public_entrances.py::test_public_entrances_keep_cif_grammar_and_parser_refusals[experiment-cli]
 0.990	tests/system/py/test_cif_public_entrances.py::test_public_entrances_keep_cif_grammar_and_parser_refusals[structure-app]
 0.240	tests/system/py/test_cif_public_entrances.py::test_public_entrances_keep_cif_grammar_and_parser_refusals[structure-cli]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_cif_public_entrances.py::test_public_entrances_persist_both_quoted_empty_source_spellings[app]
-0.230	tests/system/py/test_cif_public_entrances.py::test_public_entrances_persist_both_quoted_empty_source_spellings[cli]
+0.714	tests/system/py/test_cif_public_entrances.py::test_public_entrances_persist_both_quoted_empty_source_spellings[app]
+0.210	tests/system/py/test_cif_public_entrances.py::test_public_entrances_persist_both_quoted_empty_source_spellings[cli]
 0.670	tests/system/py/test_cif_public_entrances.py::test_public_observer_reaches_the_existing_native_reader[experiment-app]
 0.210	tests/system/py/test_cif_public_entrances.py::test_public_observer_reaches_the_existing_native_reader[experiment-cli]
 0.500	tests/system/py/test_cif_public_entrances.py::test_public_observer_reaches_the_existing_native_reader[structure-app]
@@ -266760,7 +266760,7 @@ UNMEASURED:not-completed-in-this-run	tests/unit/py/test_web_science_identity.py:
 # module-cost: 20.346	tests/system/py/test_chart_fonts.py
 # module-cost: 11.490	tests/system/py/test_chart_handover.py
 # module-cost: 3.683	tests/system/py/test_ci_native_modes.py
-# module-cost: 0.867	tests/system/py/test_cif_public_entrances.py
+# module-cost: 1.186	tests/system/py/test_cif_public_entrances.py
 # module-cost: 2.693	tests/system/py/test_cod_query_ownership.py
 # module-cost: 0.959	tests/system/py/test_collection_app_boundaries.py
 # module-cost: 0.020	tests/system/py/test_collection_publication_and_formula.py
