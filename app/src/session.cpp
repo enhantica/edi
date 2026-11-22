@@ -2071,13 +2071,14 @@ QUrl Session::suggestedSaveTarget(bool zip) const {
     if (place.isEmpty() && read_only_copy_) {
         place = read_only_source_;
     }
+    // The chooser starts where the project is (the folder holding its .zip, or its folder) and suggests the project's
+    // name, as it reads now (edi ADR-0052).
     const QFileInfo info(place);
-    const QString folder = !place.isEmpty() ? info.absolutePath()
-                                            : QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation);
-    QString name = !place.isEmpty() ? info.completeBaseName() : folderNameFor(project_->name());
-    if (!place.isEmpty() && info.suffix().compare(QStringLiteral("zip"), Qt::CaseInsensitive) != 0) {
-        name = info.fileName();  // a folder's whole name, dots and all
-    }
+    const bool archive = !place.isEmpty() && info.suffix().compare(QStringLiteral("zip"), Qt::CaseInsensitive) == 0;
+    const QString folder = place.isEmpty() ? QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation)
+                           : archive       ? info.absolutePath()
+                                           : info.absoluteFilePath();
+    const QString name = folderNameFor(project_->name());
     return QUrl::fromLocalFile(QDir(folder).filePath(zip ? name + QStringLiteral(".zip") : name));
 }
 
