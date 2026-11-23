@@ -4,6 +4,7 @@
 #include <QCoreApplication>
 #include <QEvent>
 #include <QKeyEvent>
+#include <QLineF>
 #include <QMouseEvent>
 #include <QWheelEvent>
 #include <QPointingDevice>
@@ -361,6 +362,7 @@ std::uint64_t AssistantWidgetInput::start(Request request) {
     const auto id = ++serial_;
     choice_popup_.clear(); choice_content_.clear(); choice_row_.clear(); search_header_.clear(); search_editor_.clear(); choice_text_=std::move(optionText);
     center_ = center; step_ = Step::Move; draft_ = false; commit_prepared_ = false; tooltip_waits_ = 0; choice_open_waits_ = 0;
+    shown_moves_ = 0;
     emit activeChanged(true);
     if (!self) return id;
     const bool ready = self->current(id);
@@ -601,6 +603,7 @@ void AssistantWidgetInput::advance() noexcept {
         }
         switch (step_) {
         case Step::Move:
+            shown_ = center_;
             emit pointerMoved(center_);
             // cppcheck-suppress identicalConditionAfterEarlyExit ; a signal or event above can delete this object
             if (!self) return;
@@ -609,6 +612,17 @@ void AssistantWidgetInput::advance() noexcept {
               if (!stillValid) { if (self && serial_ == id && request_ == request) self->fail(request,id,ControlCause::Superseded, QT_TR_NOOP("Visible action ownership changed"), true); return; } }
             step_ = Step::Press; pace(move_ms); return;
         case Step::Press:
+            // The target moved after the pointer was shown on it (a table above it filled, edi #143): the pointer moves
+            // to where the target is now before the press, so what the user sees is what is pressed.
+            if (request->kind != Kind::Scroll && request->kind != Kind::DismissMenu && shown_moves_ < 10 &&
+                QLineF(shown_, center_).length() > 1.0) {
+                ++shown_moves_;
+                shown_ = center_;
+                emit pointerMoved(center_);
+                // cppcheck-suppress identicalConditionAfterEarlyExit ; a signal or event above can delete this object
+                if (!self || serial_ != id || request_ != request) return;
+                pace(move_ms); return;
+            }
             if (request->kind == Kind::FileLoadCue) {
                 // Presentation only: no device event, focus change or button handler.
                 emit pointerPressed();

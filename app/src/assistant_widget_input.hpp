@@ -122,6 +122,8 @@ class AssistantWidgetInput final : public QObject {
     const QString failed_ = QStringLiteral("The visible action could not be completed; inspect the current project");
     const QString interrupted_ = QStringLiteral("Visible action interrupted");
     QPointF center_;
+    QPointF shown_;      // where the visible pointer was last moved
+    int shown_moves_ = 0;  // pointer moves repeated because the target moved before its press
     bool cleanup_release_ = false;
     bool injecting_ = false, draft_ = false, commit_prepared_ = false, pressed_ = false, choice_releasing_ = false;
 };
