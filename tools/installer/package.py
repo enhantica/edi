@@ -237,6 +237,8 @@ def qt_tool(name: str) -> Path:
     prefix = Path(sys.prefix)
     for path in (
         prefix / 'lib/qt6' / name,
+        prefix / 'lib/qt6/bin' / name,
+        prefix / 'bin' / (name + '6'),
         prefix / 'Library/lib/qt6' / (name + '.exe'),
         prefix / 'Library/bin' / (name + '.exe'),
         prefix / 'bin' / name,

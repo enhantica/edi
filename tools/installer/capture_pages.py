@@ -262,17 +262,17 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument('--tools', type=Path, required=True)
     parser.add_argument('--output', type=Path, required=True)
-    parser.add_argument('--marker-only', action='store_true')
+    parser.add_argument(
+        '--marker-only', type=Path, help='only build the marker installer; write its path here'
+    )
     args = parser.parse_args()
     os.environ.pop('EDI_CODESIGN', None)  # the marker installer is never signed
     if args.marker_only:
         work = args.output.resolve()
         work.mkdir(parents=True)
-        print(
-            installer_from_download(
-                marker_installer(args.tools.resolve(), work), work / 'unpacked'
-            )
-        )
+        download = marker_installer(args.tools.resolve(), work)
+        app = installer_from_download(download, work / 'unpacked')
+        args.marker_only.write_text(f'{app}\n', encoding='utf-8')
         return
     capture(args.tools.resolve(), args.output)
 

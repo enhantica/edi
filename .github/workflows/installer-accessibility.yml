@@ -59,8 +59,8 @@ jobs:
         id: marker
         run: |
           pixi run --manifest-path tools/installer/pixi.toml python tools/installer/package.py tools --output build/installer/ifw
-          pixi run --manifest-path tools/installer/pixi.toml python tools/installer/capture_pages.py --tools build/installer/ifw/tools --output "$RUNNER_TEMP/marker" --marker-only | tee "$RUNNER_TEMP/marker.txt"
-          echo "app=$(tail -1 "$RUNNER_TEMP/marker.txt")" >> "$GITHUB_OUTPUT"
+          pixi run --manifest-path tools/installer/pixi.toml python tools/installer/capture_pages.py --tools build/installer/ifw/tools --output "$RUNNER_TEMP/marker" --marker-only "$RUNNER_TEMP/marker-app.txt"
+          echo "app=$(cat "$RUNNER_TEMP/marker-app.txt")" >> "$GITHUB_OUTPUT"
       - name: Walk this commit's installer with the accessibility client
         if: ${{ !cancelled() && steps.marker.outputs.app != '' }}
         run: bash tools/installer/a11y-check.sh "${{ steps.marker.outputs.app }}" "$RUNNER_TEMP/a11y-this-commit" --own-script
