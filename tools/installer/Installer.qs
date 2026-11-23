@@ -156,6 +156,12 @@ function headerWordmark() {
                 accept.checked = true;
         }
 
+        if (name === "TargetDirectory") {
+            var question = gui.findChild(page, "MessageLabel");
+            if (question)
+                question.text = "Choose where to install EasyDiffraction.";
+        }
+
         if (name === "TargetDirectory" && systemInfo.kernelType === "darwin") {
             var directory = gui.findChild(page, "TargetDirectoryLineEdit");
             directory.styleSheet = "margin-top: 4px;";
