@@ -184,8 +184,13 @@ AppDialog {
     objectName: "preferences"
     visible: Preferences.dialogShown
     onClosed: ApplicationInfo.preferencesClosed()
-    onOpened: if (ApplicationInfo.assistantBuilt)
-        Session.assistant.refreshSkillSources()
+    onOpened: {
+        // Each opening starts with no control focused: a choice box left focused from the last visit would take Enter
+        // for itself, and Enter presses OK.
+        contentItem.forceActiveFocus(Qt.OtherFocusReason);
+        if (ApplicationInfo.assistantBuilt)
+            Session.assistant.refreshSkillSources();
+    }
     // A page's Performance line opens the dialog on that tab.
     onAboutToShow: {
         for (let index = 0; index < bar.count; ++index) {
