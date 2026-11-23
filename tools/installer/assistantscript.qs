@@ -25,6 +25,11 @@ function Component() {
     } else {
         box.text = "Install the AI assistant";
         box.checked = component.installed;
+        // The licence, shortcut and space belong to installing, not to this choice.
+        ["LicenseCheckBox", "LicenseLink", "ShortcutCheckBox", "NoticeLabel", "SpaceLabel"].forEach(function (name) {
+            if (form[name])
+                form[name].visible = false;
+        });
     }
     box.toggled.connect(function (checked) {
         if (checked)

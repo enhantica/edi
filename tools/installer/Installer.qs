@@ -92,6 +92,9 @@ function advance(name, page) {
         if (radio)
             radio.checked = true;
     }
+    // The summary page commits by itself (installPage below).
+    if (name === "ReadyForInstallation" && installer.isInstaller())
+        return;
     if (name === "PerformInstallation") {
         // The Framework moves on when it is done, unless its details are open; then this does.
         var next = function () { gui.clickButton(buttons.NextButton, 1500); };
@@ -117,6 +120,12 @@ function Controller() {
             if (!installer.fileExists(path))
                 console.log("edi resource missing: " + path);
         });
+    }
+    if (installer.isInstaller()) {
+        // Three pages: Install (the folder and the choices), Installing, Done. The welcome and summary pages pass by
+        // themselves; the Start menu entry is "EasyDiffraction" without asking.
+        installer.setDefaultPageVisible(QInstaller.StartMenuSelection, false);
+        gui.setWizardPageButtonText(QInstaller.TargetDirectory, buttons.NextButton, "Install");
     }
     chooseWindowsTarget();
     installer.installationFinished.connect(clearQuarantine);
@@ -262,6 +271,108 @@ function writeSummary(page) {
     summary.visible = true;
 }
 
+// The install page: what EasyDiffraction is, where it goes, the choices, and the space it needs.
+var licenseUrl = "https://www.gnu.org/licenses/gpl-3.0.html";
+
+function accent() {
+    return darkTheme() ? "#4ec1ef" : "#00a3e3";
+}
+
+function installPageField(name) {
+    var page = gui.pageWidgetByObjectName("TargetDirectoryPage");
+    return page ? gui.findChild(page, name) : null;
+}
+
+function licenseAccepted() {
+    var box = installPageField("LicenseCheckBox");
+    return box ? box.checked : true;
+}
+
+function freeSpace(folder) {
+    // The nearest existing folder's volume: df on macOS and Linux, PowerShell's drive on Windows.
+    var path = folder;
+    while (path.length > 1 && !installer.fileExists(path))
+        path = path.replace(/[\\/][^\\/]*$/, "") || "/";
+    if (systemInfo.kernelType === "winnt") {
+        var drive = path.substring(0, 1);
+        var free = installer.execute("powershell", ["-NoProfile", "-Command", "(Get-PSDrive " + drive + ").Free"]);
+        return free[1] === 0 ? Number(String(free[0]).trim()) : NaN;
+    }
+    var df = installer.execute("/bin/df", ["-k", path]);
+    if (df[1] !== 0)
+        return NaN;
+    var fields = String(df[0]).trim().split("\n").pop().trim().split(/\s+/);
+    return Number(fields[3]) * 1024;
+}
+
+function neededSpace() {
+    var bytes = 0;
+    var all = installer.components();
+    for (var i = 0; i < all.length; ++i) {
+        var name = all[i].name;
+        if (name === assistantComponent && !assistantChosen())
+            continue;
+        bytes += Number(all[i].value("UncompressedSize") || 0);
+    }
+    return bytes;
+}
+
+function updateSpace() {
+    var label = installPageField("SpaceLabel");
+    var folder = installPageField("TargetDirectoryLineEdit");
+    if (!label || !folder)
+        return;
+    var free = freeSpace(String(folder.text));
+    label.text = sizeText(neededSpace()) + " needed" + (isNaN(free) ? "" : " · " + sizeText(free) + " available");
+}
+
+function setupInstallPage(page) {
+    var intro = gui.findChild(page, "MessageLabel");
+    if (intro) {
+        intro.textFormat = 1;  // Qt.RichText
+        intro.text = "<p>EasyDiffraction calculates diffraction patterns from a structural model and fits its "
+            + "parameters to experimental data.</p><p>Install to</p>";
+    }
+    var link = gui.findChild(page, "LicenseLink");
+    if (link) {
+        link.textFormat = 1;
+        link.text = '<a style="color: ' + accent() + '; text-decoration: none" href="' + licenseUrl
+            + '">read online</a>';
+    }
+    var license = gui.findChild(page, "LicenseCheckBox");
+    var shortcut = gui.findChild(page, "ShortcutCheckBox");
+    var assistantBox = gui.findChild(page, "AssistantCheckBox");
+    var folder = gui.findChild(page, "TargetDirectoryLineEdit");
+    if (!installPageReady) {
+        if (license)
+            license.checked = true;
+        if (shortcut) {
+            shortcut.visible = systemInfo.kernelType !== "darwin";
+            shortcut.checked = true;
+            shortcut.toggled.connect(function (on) { installer.setValue("EdiDesktopShortcut", on ? "true" : "false"); });
+        }
+        if (assistantBox)
+            assistantBox.toggled.connect(updateSpace);
+        if (folder)
+            folder.textChanged.connect(updateSpace);
+        installPageReady = true;
+    }
+    // An installation already in the chosen folder is updated by its maintenance tool, not installed twice.
+    var notice = gui.findChild(page, "NoticeLabel");
+    var target = folder ? String(folder.text) : installer.value("TargetDir");
+    var tool = target + (systemInfo.kernelType === "darwin" ? "/MaintenanceTool.app"
+                         : systemInfo.kernelType === "winnt" ? "/MaintenanceTool.exe" : "/MaintenanceTool");
+    if (notice) {
+        notice.text = installer.fileExists(tool)
+            ? "EasyDiffraction is already installed here. To update it, open its Maintenance Tool and choose Update."
+            : "";
+        notice.visible = notice.text !== "";
+    }
+    updateSpace();
+}
+
+var installPageReady = false;
+
 var wordmark = "";
 
 function headerWordmark() {
@@ -303,7 +414,26 @@ function headerWordmark() {
         // crashed (edi #150), so none may show. One plain sentence says what happens.
         if (name === "ReadyForInstallation")
             writeSummary(page);
+        // The installer has no summary page of its own: Install on the first page commits, unless the licence box
+        // was cleared, which brings the first page back saying why.
+        if (name === "ReadyForInstallation" && installer.isInstaller()) {
+            applyAssistantChoice();
+            if (licenseAccepted()) {
+                gui.clickButton(buttons.CommitButton);
+            } else {
+                var why = installPageField("NoticeLabel");
+                if (why) {
+                    why.text = "Accept the license to install EasyDiffraction.";
+                    why.visible = true;
+                }
+                gui.clickButton(buttons.BackButton);
+            }
+            return;
+        }
 
+        // The welcome page passes by itself (online, it fetches the component list meanwhile).
+        if (name === "Introduction" && installer.isInstaller() && captureFolder === "")
+            gui.clickButton(buttons.NextButton);
         if (name === "Introduction" && installer.isInstaller()) {
             var welcome = gui.findChild(page, "MessageLabel");
             welcome.openExternalLinks = true;
@@ -324,9 +454,7 @@ function headerWordmark() {
         }
 
         if (name === "TargetDirectory") {
-            var question = gui.findChild(page, "MessageLabel");
-            if (question)
-                question.text = "Choose where to install EasyDiffraction.";
+            setupInstallPage(page);
             // The warning line takes a line's height even when empty: shown only while it says something.
             var warning = gui.findChild(page, "WarningLabel");
             var folder = gui.findChild(page, "TargetDirectoryLineEdit");
@@ -350,6 +478,32 @@ function headerWordmark() {
         }
         if (name === "LicenseAgreement" || name === "ReadyForInstallation")
             applyAssistantChoice();
+
+        // Installing: the bar and one status line, no details.
+        if (name === "PerformInstallation") {
+            ["DetailsButton", "DetailsBrowser"].forEach(function (hidden) {
+                var widget = gui.findChild(page, hidden);
+                if (widget)
+                    widget.visible = false;
+            });
+        }
+
+        // Done: where to find it, and the program opened directly if wanted. No folder path.
+        if (name === "Finished") {
+            var done = gui.findChild(page, "MessageLabel");
+            var where = systemInfo.kernelType === "winnt" ? "in the Start menu and on your desktop"
+                : systemInfo.kernelType === "darwin" ? "in your Applications folder" : "in your applications menu";
+            if (done && installer.isInstaller() && installer.status === QInstaller.Success)
+                done.text = "EasyDiffraction is installed. You find it " + where + ".";
+            ["LocationLabel", "FinishText"].forEach(function (hidden) {
+                var widget = gui.findChild(page, hidden);
+                if (widget)
+                    widget.visible = false;
+            });
+            var run = gui.findChild(page, "RunItCheckBox");
+            if (run && captureFolder !== "")
+                run.checked = false;  // the marker installer has no program to open
+        }
 
         if (name === "TargetDirectory" && systemInfo.kernelType === "darwin") {
             var directory = gui.findChild(page, "TargetDirectoryLineEdit");

@@ -7,18 +7,21 @@ function Component() {}
 Component.prototype.createOperations = function () {
     component.createOperations();
     var target = installer.value("TargetDir");
+    // The install page's "Add a desktop shortcut" box (Installer.qs); the command line keeps it.
+    var desktopShortcut = installer.value("EdiDesktopShortcut") !== "false";
     if (systemInfo.kernelType === "winnt") {
         var program = target + "/bin/EasyDiffraction.exe";
         var folder = "workingDirectory=" + target, icon = "iconPath=" + program, about = "description=EasyDiffraction";
         component.addOperation("CreateShortcut", program, "@StartMenuDir@/EasyDiffraction.lnk", folder, icon, about);
-        component.addOperation("CreateShortcut", program, "@DesktopDir@/EasyDiffraction.lnk", folder, icon, about);
+        if (desktopShortcut)
+            component.addOperation("CreateShortcut", program, "@DesktopDir@/EasyDiffraction.lnk", folder, icon, about);
     } else if (systemInfo.kernelType === "linux") {
         var entry = "Type=Application\nName=EasyDiffraction\nComment=Diffraction analysis\n"
             + "Exec=\"" + target + "/bin/EasyDiffraction\"\nIcon=" + target + "/share/icons/EasyDiffraction.png\n"
             + "Terminal=false\nCategories=Science;Education;\n";
         component.addOperation("CreateDesktopEntry", "EasyDiffraction.desktop", entry);
         var desktop = installer.value("HomeDir") + "/Desktop";
-        if (installer.fileExists(desktop))
+        if (desktopShortcut && installer.fileExists(desktop))
             component.addOperation("CreateDesktopEntry", desktop + "/EasyDiffraction.desktop", entry);
     }
 };
