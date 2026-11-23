@@ -265,7 +265,7 @@ def write_metadata(
 
 
 def write_assistant_metadata(meta: Path, version: str) -> None:
-    xml_file(
+    root = xml_file(
         meta / 'package.xml',
         'Package',
         {
@@ -277,8 +277,16 @@ def write_assistant_metadata(meta: Path, version: str) -> None:
             'Default': 'false',
             'RequiresAdminRights': 'false',
             'Replaces': REPLACED_COMPONENTS[ASSISTANT_COMPONENT],
+            'Script': 'assistantscript.qs',
         },
     )
+    # The checkbox that replaces the component tree (edi ADR-0071).
+    interfaces = ET.SubElement(root.getroot(), 'UserInterfaces')
+    ET.SubElement(interfaces, 'UserInterface').text = 'AssistantForm.ui'
+    ET.indent(root)
+    root.write(meta / 'package.xml', encoding='utf-8', xml_declaration=True)
+    for name in ('assistantscript.qs', 'AssistantForm.ui'):
+        shutil.copy2(ROOT / 'tools/installer' / name, meta / name)
 
 
 def write_maintenance_tool_metadata(meta: Path, version: str) -> None:
