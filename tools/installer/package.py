@@ -8,6 +8,7 @@ import hashlib
 import json
 import os
 import platform
+import plistlib
 import re
 import shutil
 import subprocess
@@ -365,6 +366,7 @@ def build_maintenance_tool(tools: Path, output: Path) -> Path:
         cwd=work,
     )
     bundle = work / maintenance_tool_name()
+    set_bundle_identifier(bundle, 'org.easydiffraction.maintenancetool')
     if macos_signing():
         notarise_macos(bundle)
     elif windows_signing():
@@ -710,6 +712,22 @@ def linux_installer_runtime(tools: Path, output: Path) -> tuple[Path, Path, dict
     return template, libraries.parent, env
 
 
+def set_bundle_identifier(bundle: Path, identifier: str) -> None:
+    """Replace the Installer Framework's placeholder identifier, before the bundle is signed.
+
+    binarycreator writes com.yourcompany.installerbase into every macOS bundle it makes, and macOS
+    names the app by it in crash reports, privacy settings and the Dock.
+    """
+    if SYSTEM != 'macos':
+        return
+    info = bundle / 'Contents/Info.plist'
+    with info.open('rb') as handle:
+        values = plistlib.load(handle)
+    values['CFBundleIdentifier'] = identifier
+    with info.open('wb') as handle:
+        plistlib.dump(values, handle)
+
+
 def macos_installer_template(tools: Path, output: Path) -> Path:
     """Select the arm64 installer template before IFW attaches its payload."""
     template = tools / 'bin/installerbase'
@@ -888,6 +906,7 @@ def package_app(
         ],
         env=tool_environment,
     )
+    set_bundle_identifier(installer, 'org.easydiffraction.installer')
     download = deliver_installer(installer, runtime)
     (output / 'installer.json').write_text(
         json.dumps(
