@@ -35,6 +35,18 @@ SUFFIX = '.exe' if SYSTEM == 'windows' else ''
 PLATFORM_ID = {'linux': 'linux-x86_64', 'macos': 'macos-arm64', 'windows': 'windows-x86_64'}[
     SYSTEM
 ]
+# The platform as the download names show it (tools/release/promote.py installer_name).
+INSTALLER_PLATFORM = {'linux': 'Linux-x64', 'macos': 'macOS-arm64', 'windows': 'Windows-x64'}[
+    SYSTEM
+]
+# The installer app's name inside the macOS disk image, and the image's volume name.
+MACOS_INSTALLER_NAME = 'EasyDiffraction Installer'
+
+
+def installer_stem(version: str, kind: str) -> str:
+    """The download's name without its suffix; the online installer is the default one."""
+    offline = '-Offline' if kind == 'offline' else ''
+    return f'EasyDiffraction-Installer{offline}-{version}-{INSTALLER_PLATFORM}'
 
 
 def read_release_plan(directory: Path, source_commit: str | None = None) -> dict:
@@ -750,6 +762,52 @@ def macos_installer_template(tools: Path, output: Path) -> Path:
     return thin
 
 
+def build_disk_image(image: Path, app: Path, notice: Path) -> None:
+    """The disk image with its Finder window laid out and the installer's icon as its volume icon.
+
+    dmgbuild writes the window's layout (.DS_Store) and .VolumeIcon.icns into the image itself, so
+    Finder opens it the same way on every Mac without scripting Finder at build time.
+    """
+    import dmgbuild  # noqa: PLC0415 - macOS only (tools/installer/pixi.toml)
+
+    settings = {
+        'files': [str(app), str(notice)],
+        'icon': str(ROOT / 'tools/installer/Installer.icns'),
+        'format': 'UDZO',
+        'filesystem': 'HFS+',
+        'default_view': 'icon-view',
+        'window_rect': ((200, 120), (760, 530)),
+        'show_toolbar': False,
+        'show_status_bar': False,
+        'show_tab_view': False,
+        'show_pathbar': False,
+        'show_sidebar': False,
+        'show_icon_preview': False,
+        'arrange_by': None,
+        'icon_size': 96,
+        'text_size': 12,
+        'label_pos': 'bottom',
+        'grid_spacing': 100,
+        'icon_locations': {app.name: (250, 220), notice.name: (510, 220)},
+    }
+    dmgbuild.build_dmg(str(image), MACOS_INSTALLER_NAME, settings=settings)
+
+
+def set_file_icon(image: Path) -> None:
+    """The installer's icon on the disk image file itself.
+
+    Kept in the file's extended attributes, which a browser download does not carry, so it shows on
+    the build machine and on Finder copies only. Set after any signing, which refuses them.
+    """
+    icon = json.dumps(str(ROOT / 'tools/installer/Installer.icns'))
+    script = (
+        "ObjC.import('AppKit');"
+        f'var icon = $.NSImage.alloc.initWithContentsOfFile({icon});'
+        f'$.NSWorkspace.sharedWorkspace.setIconForFileOptions(icon, {json.dumps(str(image))}, 0);'
+    )
+    run(['osascript', '-l', 'JavaScript', '-e', script])
+
+
 def deliver_installer(installer: Path, runtime: Path | None, *, ad_hoc: bool = True) -> Path:
     """The one file users download (edi ADR-0071).
 
@@ -768,15 +826,16 @@ def deliver_installer(installer: Path, runtime: Path | None, *, ad_hoc: bool = T
         if folder.exists():
             shutil.rmtree(folder)
         folder.mkdir()
-        run(['ditto', installer, folder / installer.name])
-        shutil.copy2(ROOT / 'website/BRANDING-LICENSE', folder / 'BRANDING-LICENSE.txt')
+        app = folder / (MACOS_INSTALLER_NAME + '.app')
+        run(['ditto', installer, app])
+        notice = folder / 'BRANDING-LICENSE.txt'
+        shutil.copy2(ROOT / 'website/BRANDING-LICENSE', notice)
         try:
-            run([
-                'hdiutil', 'create', '-volname', 'EasyDiffraction', '-srcfolder', folder,
-                '-fs', 'HFS+', '-format', 'UDZO', '-ov', image,
-            ])  # fmt: skip
+            build_disk_image(image, app, notice)
         finally:
             shutil.rmtree(folder)
+        if ad_hoc:
+            set_file_icon(image)
         return image
     archive = installer.with_suffix('.zip')
     archive.unlink(missing_ok=True)
@@ -894,7 +953,7 @@ def package_app(
             env=tool_environment,
         )
     kind = 'online' if repository_url else 'offline'
-    name = f'EasyDiffraction-{version}-{PLATFORM_ID}-{kind}'
+    name = installer_stem(version, kind)
     installer = output / (
         name + ('.app' if SYSTEM == 'macos' else '.exe' if SYSTEM == 'windows' else '.run')
     )
@@ -1064,6 +1123,7 @@ def seal_installer(output: Path) -> None:
     download = deliver_installer(installer, None, ad_hoc=False)
     if SYSTEM == 'macos':
         seal_disk_image(download)
+        set_file_icon(download)
     metadata.update({'download': download.name, 'download_sha256': sha256(download)})
     metadata_path.write_text(json.dumps(metadata, indent=2) + '\n')
 

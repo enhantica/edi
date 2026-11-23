@@ -348,8 +348,10 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zstd-1.5.7-hf451053_7.conda
       - conda_source: edi-assistant-runtime[316edced] @ ../deps/assistant-runtime
       - pypi: https://files.pythonhosted.org/packages/22/31/ec5f46fd4c83185b806aa9c736e228cb780f13990a9cf4da0beb70025fcc/multivolumefile-0.2.3-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/48/9d/ced6d5b2d74d6b30e8afbb384fe7425e521ce963053a72984865aa6a326c/ds_store-1.3.4-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/4d/0a/0d97486364bdf079631fc9b72b9cad42579fe2f0ce575fc67208037ce041/pybcj-1.0.8-cp314-cp314-macosx_11_0_arm64.whl
       - pypi: https://files.pythonhosted.org/packages/66/c0/d254544ae2b8bdd311aef000fafc02828c2771b17d994b3075620ea7cc6e/greenlet-3.5.6-cp314-cp314-macosx_11_0_universal2.whl
+      - pypi: https://files.pythonhosted.org/packages/6c/4a/8812638bba991a55a4b670806ab9cf60207077401893bb308eb1b04f288c/dmgbuild-1.6.7-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/70/b8/073a79716e093db973b8823bdfb02e10fbdf65642dbe1fa3cda24832aeb2/inflate64-1.0.4-cp314-cp314-macosx_11_0_arm64.whl
       - pypi: https://files.pythonhosted.org/packages/80/c4/f5af4c1ca8c1eeb2e92ccca14ce8effdeec651d5ab6053c589b074eda6e1/psutil-7.2.2-cp36-abi3-macosx_11_0_arm64.whl
       - pypi: https://files.pythonhosted.org/packages/88/40/dc7f804abd0ea167ea8d4d9b3f5455321aaf671d040fcef647e9e952e714/py7zr-1.1.3-py3-none-any.whl
@@ -359,6 +361,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/bf/ae/48679004ab908818326a62c35586b51ccd6ba0e3a03d0ae637cd13e8df99/pycryptodomex-3.24.1-cp37-abi3-macosx_10_9_universal2.whl
       - pypi: https://files.pythonhosted.org/packages/c2/d3/c50ebaee8b8a064fe9a534e98df5051e309efb705728aadff4e6893cd87f/pyppmd-1.3.1-cp314-cp314-macosx_11_0_arm64.whl
       - pypi: https://files.pythonhosted.org/packages/e0/40/59d34a756e02f8c670f0fee987d46f7ee53d05447d43cd114ca015cb168c/playwright-1.58.0-py3-none-macosx_11_0_arm64.whl
+      - pypi: https://files.pythonhosted.org/packages/ef/5f/27dfff0e5ae012b4ddcf9db0357f64d51213b881dcef7d9acdedbf5ba42b/mac_alias-2.2.4-py3-none-any.whl
       win-64:
       - conda: https://conda.anaconda.org/conda-forge/noarch/_python_abi3_support-1.0-hd8ed1ab_3.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/ca-certificates-2026.10.23-h4c7d964_0.conda
@@ -6180,6 +6183,13 @@ packages:
   - psutil ; extra == 'test'
   - setuptools ; extra == 'test'
   requires_python: '>=3.10'
+- pypi: https://files.pythonhosted.org/packages/48/9d/ced6d5b2d74d6b30e8afbb384fe7425e521ce963053a72984865aa6a326c/ds_store-1.3.4-py3-none-any.whl
+  name: ds-store
+  version: 1.3.4
+  sha256: 6d8ae662921846c96b03c244a92aab19a5b4fb3d9cada118fc83cace9250f049
+  requires_dist:
+  - mac-alias>=2.2.2
+  requires_python: '>=3.11'
 - pypi: https://files.pythonhosted.org/packages/4d/0a/0d97486364bdf079631fc9b72b9cad42579fe2f0ce575fc67208037ce041/pybcj-1.0.8-cp314-cp314-macosx_11_0_arm64.whl
   name: pybcj
   version: 1.0.8
@@ -6210,6 +6220,15 @@ packages:
   - objgraph ; extra == 'test'
   - psutil ; extra == 'test'
   - setuptools ; extra == 'test'
+  requires_python: '>=3.10'
+- pypi: https://files.pythonhosted.org/packages/6c/4a/8812638bba991a55a4b670806ab9cf60207077401893bb308eb1b04f288c/dmgbuild-1.6.7-py3-none-any.whl
+  name: dmgbuild
+  version: 1.6.7
+  sha256: 37ee5771c377beb3203d9164aae8046ffed8531c06edf9227f5788b3c599b1bf
+  requires_dist:
+  - ds-store>=1.1.0
+  - mac-alias>=2.0.1
+  - pyobjc-framework-quartz>=3.0.4 ; extra == 'badge-icons'
   requires_python: '>=3.10'
 - pypi: https://files.pythonhosted.org/packages/70/b8/073a79716e093db973b8823bdfb02e10fbdf65642dbe1fa3cda24832aeb2/inflate64-1.0.4-cp314-cp314-macosx_11_0_arm64.whl
   name: inflate64
@@ -6607,6 +6626,11 @@ packages:
   - pyee>=13,<14
   - greenlet>=3.1.1,<4.0.0
   requires_python: '>=3.9'
+- pypi: https://files.pythonhosted.org/packages/ef/5f/27dfff0e5ae012b4ddcf9db0357f64d51213b881dcef7d9acdedbf5ba42b/mac_alias-2.2.4-py3-none-any.whl
+  name: mac-alias
+  version: 2.2.4
+  sha256: c20f95f75d7f966dd8ea2f84c317d4ff4abee0db9cc8a13b454891c15aa04226
+  requires_python: '>=3.11'
 - pypi: https://files.pythonhosted.org/packages/f1/af/009958cbf23fac551a940d34e3206e6c7eed2b8c940d0c3afd1feb0b0589/playwright-1.58.0-py3-none-manylinux1_x86_64.whl
   name: playwright
   version: 1.58.0
