@@ -118,7 +118,7 @@ struct ScanResultIndex {
     std::string directory;
     std::vector<std::ptrdiff_t> extract;
     std::vector<ScanParameterColumns> parameters;
-    /// Each point's agreement factors (crysta ADR-0132 point 8), in the file's order; none in an older file.
+    /// Each point's agreement factors, in the file's order; none in an older file.
     std::vector<ScanFactorColumn> factors;
     std::vector<Row> rows;      ///< by dataset place
     std::int64_t end = 0;       ///< the offset after the last complete row (0: no file)

@@ -3964,7 +3964,7 @@ void ProjectViewModel::loadScan() {
     evolution_->setFinder([find_column](const QString& column, bool bank) -> QObject* { return find_column(column, bank); });
     // The search text, as ParameterNames.pickerText spells it: the short name and the full name.
     evolution_->setLabeller([find_column](const QString& column, bool bank) {
-        // How well each point fits (crysta ADR-0132 point 8): χ² and the agreement factors, by what they measure.
+        // How well each point fits: χ² and the agreement factors, by what they measure.
         static const QList<QPair<QString, QString>> kFactors{
             {QStringLiteral("fit_result.reduced_chi_square"), tr("Reduced χ²")},
             {QStringLiteral("fit_result.chi_square"), tr("χ²")},
