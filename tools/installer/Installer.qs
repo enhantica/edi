@@ -182,6 +182,86 @@ function nameSummaryStep() {
     summary.title = remove && remove.checked ? "Ready to remove" : summaryTitle;
 }
 
+// The summary page in plain text, as the other pages: a heading, one line per component with its size, where it goes
+// and the space it needs. The Framework's framed tables (tree views, which macOS accessibility clients crashed, edi
+// #150) and its space line are hidden; the space figures are read from that line, the only place that has them.
+function sizeText(bytes) {
+    var units = ["B", "KB", "MB", "GB"];
+    var value = Number(bytes);
+    var unit = 0;
+    while (value >= 1000 && unit < units.length - 1) {
+        value /= 1000;
+        unit += 1;
+    }
+    return (unit === 0 ? value : value.toFixed(2)) + " " + units[unit];
+}
+
+function summaryRows(removing) {
+    var rows = "";
+    var all = installer.components();
+    for (var i = 0; i < all.length; ++i) {
+        var c = all[i];
+        if (c.value("Virtual") === "true")
+            continue;
+        var counted = removing ? c.uninstallationRequested() : c.installationRequested();
+        if (!counted)
+            continue;
+        rows += '<tr><td>' + c.value("DisplayName") + '</td><td align="right">'
+            + sizeText(c.value("UncompressedSize") || 0) + '</td></tr>';
+    }
+    return rows;
+}
+
+function writeSummary(page) {
+    ["InstallComponentsWidget", "UninstallComponentsWidget"].forEach(function (container) {
+        var widget = gui.findChild(page, container);
+        if (widget)
+            widget.visible = false;
+    });
+    var summary = gui.findChild(page, "RemoveAllMsgLabel");
+    if (!summary)
+        return;
+    var removing = installer.isUninstaller();
+    var heading = installer.isInstaller() ? "Ready to install" : installer.isUpdater() ? "Ready to update"
+        : removing ? "Ready to remove" : "Ready to apply your changes";
+    var target = installer.value("TargetDir");
+    var text = "<p><b>" + heading + "</b></p>";
+    var adding = summaryRows(false);
+    var dropping = removing ? summaryRows(true) : (installer.isPackageManager() ? summaryRows(true) : "");
+    if (adding !== "")
+        text += '<table width="100%" cellpadding="2">' + adding + "</table>";
+    if (dropping !== "")
+        text += (removing ? "" : "<p>Removed:</p>") + '<table width="100%" cellpadding="2">' + dropping + "</table>";
+    if (removing) {
+        text += '<p style="color: ' + (darkTheme() ? "#FFAB91" : "#FF5722") + '">Everything in ' + target
+            + " will be removed.</p>";
+    } else if (installer.isInstaller()) {
+        text += "<p>Install to " + target + "</p>";
+    }
+    // The space line: "Space required: X" and "Space available: Y", read and said once, plainly.
+    var space = gui.findChild(page, "SpaceItem");
+    if (space && !removing) {
+        var needed = "", available = "", warned = false;
+        var labels = gui.findChildren(space, "");
+        for (var j = 0; j < labels.length; ++j) {
+            var line = String(labels[j].text || "");
+            var figure = line.replace(/^[^:]*:\s*/, "");
+            if (/required/i.test(line))
+                needed = figure;
+            else if (/available/i.test(line) && /\d/.test(figure))
+                available = figure;
+            if (/^Space(Warning|Recommendation)$/.test(labels[j].objectName) && labels[j].visible)
+                warned = true;
+        }
+        if (needed !== "")
+            text += "<p>Space: " + needed + " needed · " + available + " available</p>";
+        space.visible = warned;  // a shortage stays said as the Framework says it
+    }
+    summary.textFormat = 1;  // Qt.RichText
+    summary.text = text;
+    summary.visible = true;
+}
+
 var wordmark = "";
 
 function headerWordmark() {
@@ -221,26 +301,8 @@ function headerWordmark() {
 
         // The summary without the Framework's component trees: a tree view is what macOS accessibility clients
         // crashed (edi #150), so none may show. One plain sentence says what happens.
-        if (name === "ReadyForInstallation") {
-            ["InstallComponentsWidget", "UninstallComponentsWidget"].forEach(function (container) {
-                var widget = gui.findChild(page, container);
-                if (widget)
-                    widget.visible = false;
-            });
-            var summary = gui.findChild(page, "RemoveAllMsgLabel");
-            if (summary && installer.isUninstaller()) {
-                // One calm line in the app's warning colour, in place of the Framework's sentence in bright red.
-                summary.text = '<span style="color: ' + (darkTheme() ? "#FFAB91" : "#FF5722") + '">'
-                    + "EasyDiffraction and everything in " + installer.value("TargetDir") + " will be removed.</span>";
-            } else if (summary) {
-                summary.text = installer.isInstaller()
-                    ? (assistantChosen() ? "EasyDiffraction and the AI assistant are ready to install."
-                                         : "EasyDiffraction is ready to install.")
-                    : installer.isUpdater() ? "EasyDiffraction is ready to update."
-                    : "Your changes to EasyDiffraction are ready to apply.";
-                summary.visible = true;
-            }
-        }
+        if (name === "ReadyForInstallation")
+            writeSummary(page);
 
         if (name === "Introduction" && installer.isInstaller()) {
             var welcome = gui.findChild(page, "MessageLabel");

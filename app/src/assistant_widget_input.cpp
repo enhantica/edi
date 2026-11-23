@@ -376,6 +376,21 @@ std::uint64_t AssistantWidgetInput::start(Request request) {
     timer_.start(0);
     return id;
 }
+bool AssistantWidgetInput::ownsHit(QQuickItem& owner) const {
+    QPointF now;
+    if (!window_ || !request_ || !visibleCenter(owner, now, false, request_->visualOnlyDisabledTarget) ||
+        QLineF(now, center_).length() > 1.0) {
+        return false;
+    }
+    QQuickItem* hit = window_->contentItem();
+    while (hit) {
+        const QPointF local = hit->mapFromScene(center_);
+        QQuickItem* child = hit->childAt(local.x(), local.y());
+        if (!child) break;
+        hit = child;
+    }
+    return hit == &owner || owner.isAncestorOf(hit);
+}
 bool AssistantWidgetInput::mouse(QEvent::Type type, Qt::MouseButton button) {
     if (!window_ || !request_ || !mouse_owner_ || (!window_->isActive() && !cleanup_release_)) return false;
     const QPointer<AssistantWidgetInput> self(this);
@@ -614,8 +629,10 @@ void AssistantWidgetInput::advance() noexcept {
         case Step::Press:
             // The target moved after the pointer was shown on it (a table above it filled, edi #143): the pointer moves
             // to where the target is now before the press, so what the user sees is what is pressed.
-            if (request->kind != Kind::Scroll && request->kind != Kind::DismissMenu && shown_moves_ < 10 &&
+            if (request->kind != Kind::Scroll && request->kind != Kind::DismissMenu &&
                 QLineF(shown_, center_).length() > 1.0) {
+                // Still moving after ten tries: nothing is pressed rather than a point the pointer is not on.
+                if (shown_moves_ >= 10) { if(self)self->fail(request,id,ControlCause::Superseded, QT_TR_NOOP("The target kept moving, so nothing was pressed"), false); return; }
                 ++shown_moves_;
                 shown_ = center_;
                 emit pointerMoved(center_);
@@ -662,6 +679,9 @@ void AssistantWidgetInput::advance() noexcept {
             // cppcheck-suppress identicalConditionAfterEarlyExit ; a signal or event above can delete this object
             { const bool stillValid = self->current(id); if (!self) return;
               if (!stillValid) { if (self && serial_ == id && request_ == request) self->fail(request,id,ControlCause::Superseded, QT_TR_NOOP("Visible action ownership changed"), true); return; } }
+            // The cue and hover above can move the layout: press only where the named control still takes the hit.
+            if (!ownsHit(*geometryTarget)) { if (self && serial_ == id && request_ == request) self->fail(request,id,ControlCause::Superseded, QT_TR_NOOP("The target moved or is covered, so nothing was pressed"), false); return; }
+            press_point_ = center_;
             pressed_ = true; // Own a balancing release even if the press reenters retirement.
             if (!mouse(QEvent::MouseButtonPress, request->kind == Kind::ContextMenu ? Qt::RightButton : Qt::LeftButton)) { if (self && serial_ == id && request_ == request) self->fail(request,id,ControlCause::Delivery, QT_TR_NOOP("The real control did not receive its press"), true); return; }
             // cppcheck-suppress identicalConditionAfterEarlyExit ; a signal or event above can delete this object
@@ -679,6 +699,7 @@ void AssistantWidgetInput::advance() noexcept {
               if (!stillValid) { if (self && serial_ == id && request_ == request) self->fail(request,id,ControlCause::Superseded, QT_TR_NOOP("Visible action ownership changed"), true); return; } }
             }
             pressed_ = false;
+            center_ = press_point_;  // the release goes where the press went
             if (!mouse(QEvent::MouseButtonRelease, request->kind == Kind::ContextMenu ? Qt::RightButton : Qt::LeftButton)) { if (self && serial_ == id && request_ == request) self->fail(request,id,ControlCause::Delivery, QT_TR_NOOP("The real control did not receive its release"), true); return; }
             // cppcheck-suppress identicalConditionAfterEarlyExit ; a signal or event above can delete this object
             if (!self || serial_ != id || request_ != request) return;
@@ -733,12 +754,15 @@ void AssistantWidgetInput::advance() noexcept {
             // cppcheck-suppress identicalConditionAfterEarlyExit ; a signal or event above can delete this object
             if(!self || serial_!=id || request_!=request)return;
             if(!current(id) || !searchEditorOwned()){if(self && serial_==id && request_==request)self->fail(request,id,ControlCause::Superseded,QT_TR_NOOP("The original popup search editor changed during its cue"),false);return;}
+            if(!ownsHit(*search_editor_)){if(self && serial_==id && request_==request)self->fail(request,id,ControlCause::Superseded,QT_TR_NOOP("The popup search editor moved or is covered, so nothing was pressed"),false);return;}
+            press_point_=center_;
             pressed_=true;
             if(!mouse(QEvent::MouseButtonPress,Qt::LeftButton)){if(self && serial_==id && request_==request)self->fail(request,id,ControlCause::Delivery,QT_TR_NOOP("The original popup search editor did not receive its press"),false);return;}
             if(self && serial_==id && request_==request){step_=Step::SearchRelease;pace(press_ms);}return;
         }
         case Step::SearchRelease:
             pressed_=false;
+            center_=press_point_;
             if(!mouse(QEvent::MouseButtonRelease,Qt::LeftButton)){if(self && serial_==id && request_==request)self->fail(request,id,ControlCause::Delivery,QT_TR_NOOP("The original popup search editor did not receive its release"),false);return;}
             // cppcheck-suppress identicalConditionAfterEarlyExit ; a signal or event above can delete this object
             if(!self || serial_!=id || request_!=request)return;
@@ -761,6 +785,8 @@ void AssistantWidgetInput::advance() noexcept {
             // cppcheck-suppress identicalConditionAfterEarlyExit ; a signal or event above can delete this object
             if(!self || serial_!=id || request_!=request)return;
             if(!current(id) || !choiceRowOwned()){if(self && serial_==id && request_==request)self->fail(request,id,ControlCause::Superseded,QT_TR_NOOP("The original offered row changed during its cue"),false);return;}
+            if(!ownsHit(*choice_row_)){if(self && serial_==id && request_==request)self->fail(request,id,ControlCause::Superseded,QT_TR_NOOP("The offered row moved or is covered, so nothing was pressed"),false);return;}
+            press_point_=center_;
             pressed_=true;
             if(!mouse(QEvent::MouseButtonPress,Qt::LeftButton)) {if(self && serial_==id && request_==request)self->fail(request,id,ControlCause::Delivery,QT_TR_NOOP("The original popup choice did not receive its press"),false);return;}
             if(self && serial_==id && request_==request){step_=Step::ChoiceRelease;pace(press_ms);}return;
@@ -774,6 +800,7 @@ void AssistantWidgetInput::advance() noexcept {
             {
                 choice_releasing_=true;
                 const auto release=qScopeGuard([self]{if(self)self->choice_releasing_=false;});
+                center_=press_point_;
                 if(!mouse(QEvent::MouseButtonRelease,Qt::LeftButton)) {if(self && serial_==id && request_==request)self->fail(request,id,ControlCause::Delivery,QT_TR_NOOP("The original popup choice did not receive its release"),false);return;}
             }
             if(self && serial_==id && request_==request)settleChoice(request,id);
