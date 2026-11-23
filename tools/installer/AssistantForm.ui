@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- SPDX-License-Identifier: BSD-3-Clause -->
+<!-- The one choice the installer offers, in place of the Framework's component tree (assistantscript.qs). -->
+<ui version="4.0">
+ <class>AssistantForm</class>
+ <widget class="QWidget" name="AssistantForm">
+  <property name="windowTitle">
+   <string>AI assistant</string>
+  </property>
+  <layout class="QVBoxLayout" name="AssistantLayout">
+   <item>
+    <widget class="QCheckBox" name="AssistantCheckBox">
+     <property name="text">
+      <string>Also install the AI assistant</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QLabel" name="AssistantDescription">
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+     <property name="text">
+      <string>The runtime for the ChatGPT assistant in EasyDiffraction.</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <spacer name="AssistantSpacer">
+     <property name="orientation">
+      <enum>Qt::Vertical</enum>
+     </property>
+    </spacer>
+   </item>
+  </layout>
+ </widget>
+</ui>

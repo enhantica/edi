@@ -96,6 +96,9 @@ function advance(name, page) {
 }
 
 function Controller() {
+    // No component tree: macOS accessibility clients crash the Framework's Qt on it (edi #150); the one choice it
+    // offered, the AI assistant, is a checkbox (assistantscript.qs).
+    installer.setDefaultPageVisible(QInstaller.ComponentSelection, false);
     chooseWindowsTarget();
     installer.installationFinished.connect(clearQuarantine);
     installer.updateFinished.connect(clearQuarantine);

@@ -310,7 +310,19 @@ The required EasyDiffraction component contains the application, Qt, crysta and 
 lifetime guard. The separate AI assistant component contains the complete verified Codex runtime
 under `libexec/edi/codex`, including on macOS where it sits beside the signed application bundle.
 The component is unchecked by default and depends on EasyDiffraction. Users can select it during
-installation or add and remove it with Maintenance Tool. The two components have independent
+installation or add and remove it with Maintenance Tool.
+
+The choice is one checkbox, "Also install the AI assistant", with a line saying what it is and its
+download size, on the installation folder page; in Maintenance Tool's add or remove flow it is a page
+of its own whose box shows whether the assistant is installed. The Framework's component tree page
+is hidden. With macOS accessibility on, a client asking the tree for its selected children crashed
+the installer (edi #150): the Qt inside Installer Framework 4.11.0, the newest release, frees table
+cells that its accessibility cache still holds, fixed upstream in qtbase after that release. One
+checkbox gives the same choice without the tree. `tools/installer/a11y-check.sh` reproduces the
+crash on a released installer and checks the built one, walking every page while a small client
+reads every element (`.github/workflows/installer-accessibility.yml`). The installer and its
+maintenance tool also carry EasyDiffraction's own bundle identifiers on macOS in place of the
+Framework's placeholder, which crash reports and privacy settings showed. The two components have independent
 payload manifests and share the release version. Publication verifies the archives for both.
 
 At startup, the desktop app uses its existing runtime manifest and executable checks to determine
