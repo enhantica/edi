@@ -2,9 +2,9 @@
 /* edi's look for the installer and its maintenance tool. The @NAME@ values are the app's theme colours and sizes,
    filled in for light and for dark by package.py (INSTALLER_THEMES); Installer.qs applies the dark one. */
 
-QWizard, QWizardPage, QWidget#SideWidget, QListWidget#PageListWidget,
-QWizard > QWidget > QWidget, QDialog, QMessageBox {
-    background-color: @BACKGROUND@;
+/* The page is see-through: one window colour behind header, page and buttons. */
+QWizardPage {
+    background: transparent;
     color: @FOREGROUND@;
 }
 
@@ -268,6 +268,11 @@ QToolTip {
     color: @FOREGROUND@;
     background-color: @BACKGROUND@;
     border: 1px solid @BORDER@;
+}
+
+QPushButton#BrowseDirectoryButton {
+    qproperty-icon: url(:/metadata/edi/browse.png);
+    qproperty-iconSize: 16px 16px;
 }
 
 QWizard QLineEdit#SearchLineEdit {

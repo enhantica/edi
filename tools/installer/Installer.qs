@@ -337,7 +337,8 @@ function setupInstallPage(page) {
     if (link) {
         link.textFormat = 1;
         link.text = '<a style="color: ' + accent() + '; text-decoration: none" href="' + licenseUrl
-            + '">read online</a>';
+            + '">read online <img src=":/metadata/edi/' + (darkTheme() ? "external-dark" : "external")
+            + '.png" width="12" height="12"></a>';
     }
     var license = gui.findChild(page, "LicenseCheckBox");
     var shortcut = gui.findChild(page, "ShortcutCheckBox");
@@ -507,8 +508,13 @@ function headerWordmark() {
             var done = gui.findChild(page, "MessageLabel");
             var where = systemInfo.kernelType === "winnt" ? "in the Start menu and on your desktop"
                 : systemInfo.kernelType === "darwin" ? "in your Applications folder" : "in your applications menu";
-            if (done && installer.isInstaller() && installer.status === QInstaller.Success)
-                done.text = "EasyDiffraction is installed. You find it " + where + ".";
+            if (done && installer.isInstaller() && installer.status === QInstaller.Success) {
+                // A large check in the accent above the sentence (the app's circle-check icon).
+                done.textFormat = 1;  // Qt.RichText
+                done.alignment = 0x0004 | 0x0020;  // Qt.AlignHCenter | Qt.AlignTop
+                done.text = '<p><img src=":/metadata/edi/' + (darkTheme() ? "done-dark" : "done")
+                    + '.png" width="64" height="64"></p><p>EasyDiffraction is installed.</p><p>You find it ' + where + ".</p>";
+            }
             ["LocationLabel", "FinishText"].forEach(function (hidden) {
                 var widget = gui.findChild(page, hidden);
                 if (widget)

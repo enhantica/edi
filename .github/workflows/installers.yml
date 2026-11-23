@@ -27,6 +27,10 @@ on:
         description: Only capture every installer and maintenance tool page, light and dark, on Linux, macOS and Windows
         default: false
         type: boolean
+      capture_linux_only:
+        description: With capture_pages, capture Linux only (a quick look while the pages change)
+        default: false
+        type: boolean
   push:
     branches: [main]
     paths:
@@ -489,6 +493,9 @@ jobs:
       matrix:
         # Windows Server 2025 has Windows 11's dark app mode, which the installer follows; 2022 has none.
         runner: [ubuntu-24.04, windows-2025, macos-15]
+        exclude:
+          - runner: ${{ inputs.capture_linux_only && 'windows-2025' || 'none' }}
+          - runner: ${{ inputs.capture_linux_only && 'macos-15' || 'none' }}
     steps:
       - name: Enable long source paths on Windows
         if: runner.os == 'Windows'

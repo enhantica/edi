@@ -74,3 +74,27 @@ QPushButton:disabled {
 QMessageBox QLabel {
     color: palette(window-text);
 }
+
+/* The main action (Install, Update, Finish: the default button) filled with the app's accent; the others quiet. */
+QPushButton:default {
+    color: white;
+    background-color: @ACCENT@;
+    border-color: @ACCENT@;
+}
+
+QPushButton:default:hover, QPushButton:default:pressed {
+    color: white;
+    background-color: #0091cb;
+    border-color: #0091cb;
+}
+
+/* The app's icons on the wizard's buttons (Qt names them by their WizardButton number). */
+QPushButton#__qt__passive_wizardbutton0 {
+    qproperty-icon: url(:/metadata/edi/back.png);
+    qproperty-iconSize: 16px 16px;
+}
+
+QPushButton#__qt__passive_wizardbutton3 {
+    qproperty-icon: url(:/metadata/edi/finish.png);
+    qproperty-iconSize: 16px 16px;
+}
