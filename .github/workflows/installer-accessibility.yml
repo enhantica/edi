@@ -60,7 +60,7 @@ jobs:
           echo "app=$(tail -1 "$RUNNER_TEMP/marker.txt")" >> "$GITHUB_OUTPUT"
       - name: Walk this commit's installer with the accessibility client
         if: ${{ !cancelled() && steps.marker.outputs.app != '' }}
-        run: bash tools/installer/a11y-check.sh "${{ steps.marker.outputs.app }}" "$RUNNER_TEMP/a11y-this-commit"
+        run: bash tools/installer/a11y-check.sh "${{ steps.marker.outputs.app }}" "$RUNNER_TEMP/a11y-this-commit" --own-script
       - name: Keep the logs and any crash report
         if: always()
         uses: actions/upload-artifact@v4
