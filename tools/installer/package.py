@@ -335,7 +335,8 @@ def write_metadata(
             'WizardStyle': 'Modern',
             'WizardDefaultWidth': '56em',
             'WizardDefaultHeight': '29em',
-            'WizardShowPageList': 'true',
+            # One centred column, no step list (the owner's three-page design, edi ADR-0071).
+            'WizardShowPageList': 'false',
             'ControlScript': 'Installer.qs',
             'StyleSheet': 'Installer.qss',
         },
@@ -349,6 +350,19 @@ def write_metadata(
         shutil.copy2(style / icon, config / icon)
         ET.SubElement(configuration.getroot(), 'InstallerApplicationIcon').text = 'Installer'
         ET.SubElement(configuration.getroot(), 'StartMenuDir').text = 'EasyDiffraction'
+    # "Open EasyDiffraction now" on the last page, ticked: the program itself, not a folder.
+    program = {
+        'macos': ('/usr/bin/open', ['@TargetDir@/EasyDiffraction.app']),
+        'windows': ('@TargetDir@/bin/EasyDiffraction.exe', []),
+    }.get(SYSTEM, ('@TargetDir@/bin/EasyDiffraction', []))
+    ET.SubElement(configuration.getroot(), 'RunProgram').text = program[0]
+    if program[1]:
+        arguments = ET.SubElement(configuration.getroot(), 'RunProgramArguments')
+        for argument in program[1]:
+            ET.SubElement(arguments, 'Argument').text = argument
+    ET.SubElement(
+        configuration.getroot(), 'RunProgramDescription'
+    ).text = 'Open EasyDiffraction now'
     if SYSTEM == 'windows':
         # Run as administrator, the installer suggests Program Files (Installer.qs, edi ADR-0071).
         ET.SubElement(
@@ -386,12 +400,8 @@ def write_metadata(
         },
     )
     shutil.copy2(ROOT / 'tools/installer/installscript.qs', meta / 'installscript.qs')
-    licenses = ET.SubElement(root.getroot(), 'Licenses')
-    ET.SubElement(
-        licenses,
-        'License',
-        {'name': 'GNU General Public License v3 (application)', 'file': 'COPYING'},
-    )
+    # No <Licenses>: the GPL needs no acceptance page, so the install page has a ticked box and a
+    # link to read it (Installer.qs); the licence text ships with the app.
     ET.indent(root)
     root.write(meta / 'package.xml', encoding='utf-8', xml_declaration=True)
 

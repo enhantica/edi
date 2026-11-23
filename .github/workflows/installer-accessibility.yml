@@ -66,14 +66,14 @@ jobs:
         run: |
           bash tools/installer/a11y-check.sh "${{ steps.marker.outputs.app }}" "$RUNNER_TEMP/a11y-this-commit" --own-script
           # The assistant box is ticked by default and installs the assistant.
-          grep -q "Installing component AI assistant" "$RUNNER_TEMP/a11y-this-commit/installer.log" \
+          grep -q "perform org.easydiffraction.app.assistant" "$RUNNER_TEMP/a11y-this-commit/installer.log" \
             || { echo "the ticked assistant box did not install the assistant"; exit 1; }
       - name: The same with the assistant box cleared
         if: ${{ !cancelled() && steps.marker.outputs.app != '' }}
         run: |
           EDI_INSTALLER_ASSISTANT=off bash tools/installer/a11y-check.sh "${{ steps.marker.outputs.app }}" \
             "$RUNNER_TEMP/a11y-no-assistant" --own-script
-          if grep -q "Installing component AI assistant" "$RUNNER_TEMP/a11y-no-assistant/installer.log"; then
+          if grep -q "perform org.easydiffraction.app.assistant" "$RUNNER_TEMP/a11y-no-assistant/installer.log"; then
             echo "the cleared assistant box still installed the assistant"; exit 1
           fi
       # The maintenance tool in each mode: add or remove components, update (the repository holds a newer version),
