@@ -13,6 +13,7 @@ import re
 import shutil
 import subprocess
 import tarfile
+import tempfile
 import urllib.request
 import xml.etree.ElementTree as ET  # noqa: S405 - generated XML only, never external XML
 import zipfile
@@ -825,7 +826,7 @@ def build_disk_image(image: Path, app: Path, notice: Path) -> None:
 
     settings = {
         'files': [str(app), str(notice)],
-        'icon': str(ROOT / 'tools/installer/Installer.icns'),
+        'icon': str(standard_icns(Path(tempfile.mkdtemp()))),
         'format': 'UDZO',
         'filesystem': 'HFS+',
         'default_view': 'icon-view',
@@ -846,13 +847,50 @@ def build_disk_image(image: Path, app: Path, notice: Path) -> None:
     dmgbuild.build_dmg(str(image), MACOS_INSTALLER_NAME, settings=settings)
 
 
+# The icns entries of Installer.icns by the iconset name iconutil reads them from.
+ICONSET_NAMES = {
+    b'icp4': 'icon_16x16.png',
+    b'ic11': 'icon_16x16@2x.png',
+    b'icp5': 'icon_32x32.png',
+    b'ic12': 'icon_32x32@2x.png',
+    b'ic07': 'icon_128x128.png',
+    b'ic13': 'icon_128x128@2x.png',
+    b'ic08': 'icon_256x256.png',
+    b'ic14': 'icon_256x256@2x.png',
+    b'ic09': 'icon_512x512.png',
+    b'ic10': 'icon_512x512@2x.png',
+}
+
+
+def standard_icns(work: Path) -> Path:
+    """Installer.icns rewritten by iconutil, for Finder.
+
+    Installer.icns keeps its small sizes as PNG, which Finder draws garbled in a window's title
+    bar; iconutil stores them in the formats Finder expects.
+    """
+    data = (ROOT / 'tools/installer/Installer.icns').read_bytes()
+    iconset = work / 'Installer.iconset'
+    iconset.mkdir(parents=True, exist_ok=True)
+    offset = 8
+    while offset < len(data):
+        kind, size = data[offset : offset + 4], int.from_bytes(data[offset + 4 : offset + 8])
+        if kind in ICONSET_NAMES:
+            (iconset / ICONSET_NAMES[kind]).write_bytes(data[offset + 8 : offset + size])
+        offset += size
+    if len(list(iconset.iterdir())) != len(ICONSET_NAMES):
+        raise RuntimeError('Installer.icns lacks an icon size the disk image needs')
+    icns = work / 'Installer.icns'
+    run(['iconutil', '-c', 'icns', '-o', icns, iconset])
+    return icns
+
+
 def set_file_icon(image: Path) -> None:
     """The installer's icon on the disk image file itself.
 
     Kept in the file's extended attributes, which a browser download does not carry, so it shows on
     the build machine and on Finder copies only. Set after any signing, which refuses them.
     """
-    icon = json.dumps(str(ROOT / 'tools/installer/Installer.icns'))
+    icon = json.dumps(str(standard_icns(Path(tempfile.mkdtemp()))))
     script = (
         "ObjC.import('AppKit');"
         f'var icon = $.NSImage.alloc.initWithContentsOfFile({icon});'
