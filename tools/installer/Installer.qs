@@ -483,27 +483,6 @@ function headerWordmark() {
             applyAssistantChoice();
 
         // Installing: the bar and one status line, no details.
-        if (name === "PerformInstallation") {
-            ["DetailsButton", "DetailsBrowser", "DownloadStatus"].forEach(function (hidden) {
-                var widget = gui.findChild(page, hidden);
-                if (widget)
-                    widget.visible = false;
-            });
-            // The percentage is said beside the bar, at the end of the status line, never drawn over the bar.
-            var bar = gui.findChild(page, "ProgressBar");
-            var status = gui.findChild(page, "ProgressLabel");
-            if (bar && status && !progressHooked) {
-                bar.textVisible = false;
-                bar.valueChanged.connect(function (value) {
-                    var base = String(status.text).replace(/ · \d+ %$/, "");
-                    var share = bar.maximum > bar.minimum
-                        ? Math.round(100 * (value - bar.minimum) / (bar.maximum - bar.minimum)) : 0;
-                    status.text = base + " · " + share + " %";
-                });
-                progressHooked = true;
-            }
-        }
-
         // Done: where to find it, and the program opened directly if wanted. No folder path.
         if (name === "Finished") {
             var done = gui.findChild(page, "MessageLabel");
