@@ -3,16 +3,16 @@ const fs = require('node:fs');
 const vm = require('node:vm');
 
 async function main() {
-  const [asset, change, outcome, dialogApi = 'native', repeat = 'once'] = process.argv.slice(2);
+  const [asset, pageSource, change, outcome, dialogApi = 'native', repeat = 'once', configuration] = process.argv.slice(2);
   const initial = {
-    reason: 'Report a problem', message: 'Submitted message A', subject: 'Submitted subject A',
+    message: 'Submitted message A',
     name: 'Person A', email: 'a@example.invalid', affiliation: 'Institute A',
   };
   const later = {
-    reason: 'Suggest an idea', message: 'Later message B\nwith a correction', subject: 'Later subject B',
+    message: 'Later message B\nwith a correction',
     name: 'Person B', email: 'b@example.invalid', affiliation: 'Institute B',
   };
-  const defaults = {...Object.fromEntries(Object.keys(initial).map(name => [name, ''])), reason: 'Share feedback'};
+  const defaults = Object.fromEntries(Object.keys(initial).map(name => [name, '']));
   const document = {readyState: 'complete', activeElement: null, modal: null};
   function element(tag) {
     const data = Object.create(null);
@@ -100,14 +100,26 @@ async function main() {
   const form = element('form');
   form.className = 'ed-contact-form';
   page.append(form);
-  const elements = Object.fromEntries(Object.entries(initial).map(([name, value]) => {
-    const field = element(name === 'reason' ? 'select' : name === 'message' ? 'textarea' : 'input');
-    Object.assign(field, {name, value, type: 'text'});
+  // Instantiate the named controls from the shipped form markup.
+  const formMarkup = fs.readFileSync(pageSource, 'utf8').match(
+    /<form\b[^>]*class="ed-contact-form"[^>]*>([\s\S]*?)<\/form>/i,
+  );
+  assert.ok(formMarkup, 'The Get in touch page has its real feedback form');
+  const elements = {};
+  for (const [, tag, attributes] of formMarkup[1].matchAll(/<(input|select|textarea)\b([^>]*)>/gi)) {
+    assert.notEqual(tag.toLowerCase(), 'select', 'The feedback form has no type chooser');
+    const name = attributes.match(/\bname="([^"]+)"/)?.[1];
+    assert.notEqual(name, 'subject', 'The feedback form has no separate subject input');
+    if (!name || attributes.includes('type="file"')) continue;
+    assert.ok(!(name in elements), 'Each named feedback editor is unique');
+    const field = element(tag);
+    Object.assign(field, {name, value: initial[name], type: attributes.match(/\btype="([^"]+)"/)?.[1]});
     form.append(field);
-    return [name, field];
-  }));
-  elements.reason.options = [];
-  elements.reason.add = function(option) { this.options.push(option); if (this.options.length === 1) this.value = option.value; };
+    elements[name] = field;
+  }
+  assert.deepEqual(Object.keys(elements).sort(), Object.keys(initial).sort(),
+    'The feedback form has the message box and only the three optional contact inputs');
+  assert.equal(elements.message.tagName, 'TEXTAREA', 'The feedback form retains one multiline message box');
   const note = element('p');
   note.className = 'ed-contact-note';
   const button = element('button');
@@ -130,15 +142,14 @@ async function main() {
   document.createElement = element;
   let resolve, reject, sent, requests = 0, acceptedEdit = false;
   const endpoint = outcome === 'no-address' ? '' : 'https://feedback.example.invalid/feedback';
-  const reasons = [
-    {value: 'feedback', text: 'Share feedback'}, {value: 'question', text: 'Ask a question'},
-    {value: 'problem', text: 'Report a problem'}, {value: 'idea', text: 'Suggest an idea'},
-  ];
+  const exported = {window: {}};
+  if (configuration)
+    vm.runInNewContext(fs.readFileSync(configuration, 'utf8'), exported, {filename: configuration});
   const context = {
     window: {
       edFeedbackEndpoint: endpoint,
       edFeedbackForm: {
-        endpoint, reasons, contact: {}, subject: {}, message: {}, privacy: '',
+        contact: {}, message: {}, privacy: '', ...exported.window.edFeedbackForm, endpoint,
         status: {
           sending: 'Sending... [configured]',
           sent: 'Your message was sent. Thank you! [configured]',
@@ -162,12 +173,6 @@ async function main() {
     },
   };
   vm.runInNewContext(fs.readFileSync(asset, 'utf8'), context, {filename: asset});
-  if (!elements.reason.options.length)
-    for (const {text} of reasons) elements.reason.add({text, value: text});
-  initial.reason = elements.reason.options.find(option => option.text === 'Report a problem').value;
-  later.reason = elements.reason.options.find(option => option.text === 'Suggest an idea').value;
-  defaults.reason = elements.reason.options[0].value;
-  for (const [name, value] of Object.entries(initial)) elements[name].value = value;
   for (const setup of subscribers) setup();
   assert.equal(form.dataset.ready, 'true', 'ADR-0063: dataset readiness survives repeated setup');
   assert.equal(form.listeners.submit.length, 1, 'ADR-0063: navigation setup retains one actual submit handler');
@@ -184,7 +189,7 @@ async function main() {
     assert.equal(requests, 1, 'ADR-0063: one submit sends one immutable request');
     assert.equal(button.disabled, true, 'ADR-0063: duplicate Send is disabled while the request is pending');
     assert.deepEqual(sent, {
-      kind: 'problem', text: initial.message, subject: initial.subject,
+      kind: 'feedback', text: initial.message,
       contact: {name: initial.name, email: initial.email, affiliation: initial.affiliation},
       app: {source: 'website', page: '/about/community/'},
     }, 'ADR-0063: the transmitted request contains the submitted draft, not later edits');
@@ -204,15 +209,15 @@ async function main() {
   }
   for (const name of Object.keys(initial)) {
     const expected = acceptedEdit && change === name ? later[name] : initial[name];
-    if (outcome === '201' && ['message', 'subject'].includes(name) && (!acceptedEdit || name !== change))
-      assert.equal(elements[name].value, '', 'ADR-0063: success clears only the submitted message and subject for the next message');
+    if (outcome === '201' && name === 'message' && (!acceptedEdit || name !== change))
+      assert.equal(elements[name].value, '', 'ADR-0063: success clears only the submitted message');
     else
       assert.equal(elements[name].value, expected, 'ADR-0063 F1: success may not clear an unsubmitted draft; failure and no-address preserve fields: ' + name);
   }
   assert.equal(button.disabled, false, 'ADR-0063: completion or refusal releases Send');
   assert.equal(sent === undefined || sent.text === initial.message, true, 'ADR-0063: completion never rewrites the transmitted payload snapshot');
   if (outcome === 'no-address') assert.match(status.textContent, /not available/, 'ADR-0063: missing-address feedback remains visible');
-  assert.equal(form.resets, 0, 'ADR-0063: sending never resets the remembered contact details or selected reason');
+  assert.equal(form.resets, 0, 'ADR-0063: sending never resets the remembered contact details');
   const notices = page.children.filter(child => child.tagName === 'DIALOG');
   assert.equal(notices.length, 1, 'ADR-0063: repeated setup inserts one real confirmation dialog after the form');
   const notice = notices[0];
@@ -227,7 +232,7 @@ async function main() {
   assert.equal(close.type, 'button', 'ADR-0063: closing the notice never submits the form');
   assert.equal(close.listeners.click.length, 1, 'ADR-0063: Close retains one actual dismissal handler');
   const words = {
-    '201': 'Your message was sent. Thank you! [configured] Your name, e-mail and affiliation are kept, so you can send another message.',
+    '201': 'Your message was sent. Thank you! [configured]',
     '429': 'Too many messages were sent from here recently. Please try again later. [configured]',
     '0': 'No connection to the feedback service. Check your connection and try again. [configured]',
     'network-error': 'No connection to the feedback service. Check your connection and try again. [configured]',
@@ -275,6 +280,6 @@ async function main() {
     assert.equal(notice.closes, 2, 'ADR-0063: the same confirmation opens and closes for both results');
     assert.equal(button.disabled, false, 'ADR-0063: confirmation reuse leaves Send unlocked');
   }
-  console.log(JSON.stringify({change, outcome, dialogApi, repeat, acceptedEdit, requests, passed: true}));
+  console.log(JSON.stringify({change, outcome, dialogApi, repeat, acceptedEdit, requests, placeholder: elements.message.placeholder, passed: true}));
 }
 main().catch(error => { console.error(error); process.exitCode = 1; });

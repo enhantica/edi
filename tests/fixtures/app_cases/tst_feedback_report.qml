@@ -66,7 +66,7 @@ Item {
             clipboard.text = "";
             clipboard.paste();
             const report = clipboard.text !== "" ? clipboard.text : Payload.reportText(form.payload);
-            verify(report.indexOf("Type: problem") === 0, report);
+            verify(report.indexOf("Type: feedback") === 0, report);
             verify(report.indexOf("not a project directory") >= 0, report);
             verify(report.indexOf("Attached files:\n- lbco.cif") >= 0, report);
             verify(report.indexOf("ZGF0YQ") < 0, "files are listed by name only");

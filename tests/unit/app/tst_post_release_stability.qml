@@ -117,7 +117,6 @@ TestCase {
         mouseClick(send, point.x, point.y);
         const form = named("feedback.form");
         tryCompare(form, "opened", true, 2000, "Send opens the existing feedback form without sending it");
-        compare(named("feedback.kind").currentValue, "problem", "Invalid relations prefill the Problem report kind");
         verify(/alias|constraint/i.test(named("feedback.text").text), "The report text carries the actual invalid-relation diagnostic");
     }
     function prepareTypingInput() {

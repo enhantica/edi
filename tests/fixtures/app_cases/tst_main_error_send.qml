@@ -41,7 +41,7 @@ TestCase {
     function expectProblem(message) {
         const form = findChild(window, "feedback.form");
         tryVerify(() => form.opened);
-        compare(form.kind, "problem");
+        compare(form.kind, "feedback", "The error report uses the shared feedback route");
         tryCompare(findChild(window, "feedback.text"), "text", message);
         verify(findChild(window, "feedback.include").checked);
     }

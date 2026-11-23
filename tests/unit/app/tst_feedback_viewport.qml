@@ -96,7 +96,7 @@ TestCase {
         return null;
     }
     function body() {
-        return flickable(one(form, "feedback.kind"));
+        return flickable(one(form, "feedback.intro"));
     }
     function showPreview() {
         form.attachedLog = Array.from({
