@@ -92,20 +92,22 @@ class ScreenFrames(threading.Thread):
                 scratch.unlink()
 
 
-def run_pages(command: list, env: dict, log: Path, pages: Path | None = None) -> None:
+def run_pages(
+    command: list, env: dict, log: Path, pages: Path | None = None, allowed: tuple = (0,)
+) -> None:
     """Run a wizard whose pages move on by themselves; it ends at its last page."""
     frames = ScreenFrames(pages, log.stem) if SYSTEM == 'windows' and pages else None
     if frames:
         frames.start()
     try:
-        _run_wizard(command, env, log)
+        _run_wizard(command, env, log, allowed)
     finally:
         if frames:
             frames.done.set()
             frames.join(timeout=90)
 
 
-def _run_wizard(command: list, env: dict, log: Path) -> None:
+def _run_wizard(command: list, env: dict, log: Path, allowed: tuple = (0,)) -> None:
     with log.open('w', encoding='utf-8') as stream:
         result = subprocess.run(
             # On Windows the wizard stays attached, and logs, only with --verbose.
@@ -113,7 +115,7 @@ def _run_wizard(command: list, env: dict, log: Path) -> None:
             env=env, stdout=stream, stderr=subprocess.STDOUT, timeout=240, check=False,
         )  # fmt: skip
         stream.write(f'\nexit {result.returncode}\n')
-    if result.returncode != 0:
+    if result.returncode not in allowed:
         raise RuntimeError(f'{command[0]} ended with {result.returncode}; its log is {log}')
     # On Windows the wizard can return at once and go on in a process of its own: wait for it.
     deadline = time.monotonic() + 240
@@ -244,6 +246,9 @@ def capture(tools: Path, output: Path) -> None:
                 env | {'EDI_INSTALLER_MAINTENANCE_MODE': mode},
                 output / f'maintenance-{mode}-{theme}.log',
                 pages,
+                # A tool that updated itself restarts and the walk closes it (3); require_pages
+                # still demands its pages.
+                allowed=(0, 3),
             )
         if maintenance.exists():  # the captured run removes the installation; this is the backstop
             subprocess.run(

@@ -88,7 +88,8 @@ jobs:
           "$installer" --root "$target" --accept-licenses --default-answer --confirm-command install
           rc=0
           for mode in add update remove; do
-            A11Y_EXPECT_PAGES=Introduction,Finished EDI_INSTALLER_MAINTENANCE_MODE=$mode bash tools/installer/a11y-check.sh "$target/MaintenanceTool.app" \
+            A11Y_EXPECT_PAGES=Introduction,Finished A11Y_EXPECT_STATUS="0 3" EDI_INSTALLER_MAINTENANCE_MODE=$mode \
+              bash tools/installer/a11y-check.sh "$target/MaintenanceTool.app" \
               "$RUNNER_TEMP/a11y-maintenance-$mode" --own-script || rc=1
           done
           exit $rc
