@@ -2105,6 +2105,9 @@ bool Session::open(const QString& directory,const QString& example,const std::fu
             warnings.append(QString::fromStdString(warning));
         }
         opened = new ProjectViewModel(std::move(project), this, colour_scheme_);
+        // A project whose relations do not hold opens; its calculation says why. Noted here so a later edit
+        // announces the problem only when it changes.
+        opened->noteOpenedRelations();
     } catch (const std::exception& refusal) {
         if(preparing()){if(auto* attempt=LoadAttempt::current(this))attempt->keep(); setLastError(QString::fromUtf8(refusal.what()));} // Never overwrite a successor's error.
         return false;
@@ -2176,6 +2179,9 @@ bool Session::openCopy(const QString& source,const QString& target,const QString
             warnings.append(QString::fromStdString(warning));
         }
         opened = new ProjectViewModel(std::move(project), this, colour_scheme_);
+        // A project whose relations do not hold opens; its calculation says why. Noted here so a later edit
+        // announces the problem only when it changes.
+        opened->noteOpenedRelations();
     } catch (const std::exception& refusal) {
         if(preparing()){if(auto* attempt=LoadAttempt::current(this))attempt->keep(); setLastError(QString::fromUtf8(refusal.what()));} // Never overwrite a successor's error.
         return false;

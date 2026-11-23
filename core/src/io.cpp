@@ -5076,7 +5076,15 @@ static Project load_project_folder(const std::string& directory, const WarningSi
     {
         // The declared relations come from the analysis file: a refusal of one is about that file.
         const ReadingScope reading(fs::is_regular_file(analysis_file) ? analysis_file.string() : std::string());
-        refresh_relations(project, warn, true);
+        try {
+            refresh_relations(project, warn, true);
+        } catch (const std::exception&) {
+            // The app opens such a project as an edit leaves one: the calculation waits until the relations are
+            // fixed, and the app says why when it opens it.
+            if (whole) {
+                throw;
+            }
+        }
     }
     // A held fit's dependents take their s.u. from their relations and the seeds (crysta's rule).
     restore_dependent_uncertainties(project);

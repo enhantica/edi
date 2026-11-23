@@ -1401,14 +1401,24 @@ bool ProjectViewModel::loadExperimentWithStructures(const QUrl& file, const QLis
 }
 
 // Checked on a copy: the calculation marks the live model's dependents itself, inside its own change.
-void ProjectViewModel::announceBrokenRelations() {
-    QString problem;
+namespace {
+QString relationProblem(const edi::Project& project) {
     try {
-        edi::Project probe(*project_);
+        edi::Project probe(project);
         edi::refresh_relations(probe, [](const std::string&) {});
     } catch (const std::exception& refusal) {
-        problem = QString::fromUtf8(refusal.what());
+        return QString::fromUtf8(refusal.what());
     }
+    return {};
+}
+} // namespace
+
+void ProjectViewModel::noteOpenedRelations() {
+    broken_relations_ = relationProblem(*project_);
+}
+
+void ProjectViewModel::announceBrokenRelations() {
+    const QString problem = relationProblem(*project_);
     if (problem == broken_relations_) return;
     broken_relations_ = problem;
     if (!problem.isEmpty())

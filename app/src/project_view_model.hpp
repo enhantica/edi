@@ -588,6 +588,9 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // attach when the user sends the problem (edi ADR-0062), or empty (a refusal after the file was read, such as a
     // name clash, or one no load makes). `message` is not read.
     Q_INVOKABLE QString takeRefusedFile(const QString& message);
+    // Notes whether the aliases and constraints hold for the project as opened, so a later edit announces a problem
+    // only when it changes.
+    void noteOpenedRelations();
     /// List a local folder off the GUI thread, then link its datasets through the normal scan loader.
     Q_INVOKABLE void loadDatasetFolder(edi_app::ExperimentViewModel* experiment, const QUrl& folder, bool copy = false);
     Q_PROPERTY(bool listingDatasetFolder READ listingDatasetFolder NOTIFY listingDatasetFolderChanged)
