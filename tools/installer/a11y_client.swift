@@ -109,10 +109,15 @@ func check(window: CGRect, title: String, placed: [Placed]) {
                 && other.frame.maxY > item.frame.minY + 2
         }
     }.sorted { $0.frame.minY < $1.frame.minY }
-    let edge = firsts.map(\.frame.minX).min() ?? 0
+    // macOS reports a check box's or radio button's frame 2 points left of what it draws (its layout
+    // rect); edges compare what is drawn.
+    func drawnX(_ item: Placed) -> CGFloat {
+        ["AXCheckBox", "AXRadioButton"].contains(item.role) ? item.frame.minX + 2 : item.frame.minX
+    }
+    let edge = firsts.map(drawnX).min() ?? 0
     pageEdges[title, default: []].insert(Int((edge - window.minX).rounded()))
-    for item in firsts where abs(item.frame.minX - edge) > 1 {
-        problems.append("left edge \(Int(item.frame.minX - edge)) px off: \(item.role) '\(item.text)'")
+    for item in firsts where abs(drawnX(item) - edge) > 1 {
+        problems.append("left edge \(Int(drawnX(item) - edge)) px off: \(item.role) '\(item.text)'")
     }
     for (above, below) in zip(firsts, firsts.dropFirst()) {
         let gap = below.frame.minY - above.frame.maxY
