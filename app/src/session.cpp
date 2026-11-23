@@ -46,16 +46,15 @@
 namespace edi_app {
 namespace {
 // A file's identity on the disk (device and inode), which a rename keeps: what a Replace approved is what it moves.
-std::optional<UntitledOperation::FileIdentity> file_identity(const QString& path) {
-#if defined(Q_OS_UNIX)
-    struct stat status {};
-    if (::lstat(QFile::encodeName(path).constData(), &status) != 0) return std::nullopt;
-    return UntitledOperation::FileIdentity{static_cast<std::uint64_t>(status.st_dev),
-                                           static_cast<std::uint64_t>(status.st_ino)};
-#else
-    if (!QFileInfo::exists(path)) return std::nullopt;
-    return UntitledOperation::FileIdentity{};
-#endif
+// The identities of a project folder and its project.edi, both read now; none unless both are.
+bool project_folder_identity(const QString& path, UntitledOperation::FileIdentity& folder,
+                             UntitledOperation::FileIdentity& file) {
+    const auto a = UntitledOperation::identity(path);
+    const auto b = UntitledOperation::identity(path + QStringLiteral("/project.edi"));
+    if (!a || !b) return false;
+    folder = *a;
+    file = *b;
+    return true;
 }
 }  // namespace
 }  // namespace edi_app
@@ -1453,7 +1452,13 @@ bool Session::publishStaged(const QString& stage, const QString& destination, bo
         }
         return {};
     };
-    if (!replace || !fs::exists(status)) {
+    const bool there = fs::exists(status) || fs::is_symlink(status);
+    // An approved folder that is gone is not a fresh destination: what the user agreed to replace is no longer there.
+    if (approved != nullptr && !there) {
+        setLastError(tr("%1 changed after you chose to replace it; nothing was replaced.").arg(destination));
+        return false;
+    }
+    if (!replace || !there) {
         if (const QString refused = move(stage.toStdString(), to.string()); !refused.isEmpty()) {
             setLastError(replace ? tr("%1 could not be written: %2").arg(destination, refused)
                                  : tr("The fresh project destination already exists; nothing was replaced."));
@@ -1465,39 +1470,67 @@ bool Session::publishStaged(const QString& stage, const QString& destination, bo
         setLastError(tr("%1 is not a folder; nothing was replaced.").arg(destination));
         return false;
     }
-    fs::path aside = to;
-    aside += ".edi-replaced";
-    for (int n = 2; fs::exists(fs::symlink_status(aside, error)); ++n) {
-        aside = to;
-        aside += ".edi-replaced-" + std::to_string(n);
+    // Whether `path` holds the approved folder (always true without an approval).
+    const auto isApproved = [approved](const QString& path) {
+        if (approved == nullptr) return true;
+        UntitledOperation::FileIdentity folder, file;
+        return project_folder_identity(path, folder, file) && folder == approved->folder && file == approved->file;
+    };
+    if (!isApproved(destination)) {
+        setLastError(tr("%1 changed after you chose to replace it; nothing was replaced.").arg(destination));
+        return false;
     }
+    // The old folder goes into a new folder of this save's own beside it, made just now and private, so nothing put
+    // there by name later is what gets checked, moved back or removed.
+    fs::path holder = to;
+    holder += ".edi-replaced";
+    for (int n = 2; !fs::create_directory(holder, error); ++n) {
+        if (error || n > 100) {
+            setLastError(tr("%1 could not be replaced: no folder could be made beside it.").arg(destination));
+            return false;
+        }
+        holder = to;
+        holder += ".edi-replaced-" + std::to_string(n);
+    }
+    fs::permissions(holder, fs::perms::owner_all, fs::perm_options::replace, error);
+    const fs::path aside = holder / to.filename();
+    const QString asidePath = QString::fromStdString(aside.string());
+    const auto dropHolder = [&holder] {
+        std::error_code ignored;
+        fs::remove(holder, ignored);  // only when empty
+    };
     if (const QString refused = move(to.string(), aside.string()); !refused.isEmpty()) {
+        dropHolder();
         setLastError(tr("%1 could not be replaced: %2").arg(destination, refused));
         return false;
     }
-    if (approved != nullptr) {
-        // What was moved must be the folder the user confirmed replacing, not one put there since.
-        const QString moved = QString::fromStdString(aside.string());
-        const auto folder = file_identity(moved);
-        const auto file = file_identity(moved + QStringLiteral("/project.edi"));
-        if (!folder || !file || *folder != approved->folder || *file != approved->file) {
-            if (!move(aside.string(), to.string()).isEmpty())
-                setLastError(tr("%1 changed after you chose to replace it, and the folder it held is now %2; nothing was "
-                                "replaced.").arg(destination, moved));
-            else
-                setLastError(tr("%1 changed after you chose to replace it; nothing was replaced.").arg(destination));
-            return false;
+    // What was moved must be the folder the user confirmed replacing, not one put there since.
+    if (!isApproved(asidePath)) {
+        if (!move(aside.string(), to.string()).isEmpty()) {
+            setLastError(tr("%1 changed after you chose to replace it, and the folder it held is now %2; nothing was "
+                            "replaced.").arg(destination, asidePath));
+        } else {
+            dropHolder();
+            setLastError(tr("%1 changed after you chose to replace it; nothing was replaced.").arg(destination));
         }
-    }
-    if (const QString refused = move(stage.toStdString(), to.string()); !refused.isEmpty()) {
-        if (!move(aside.string(), to.string()).isEmpty())
-            setLastError(tr("%1 could not be replaced, and the folder it held is now %2: %3")
-                             .arg(destination, QString::fromStdString(aside.string()), refused));
-        else
-            setLastError(tr("%1 could not be replaced: %2").arg(destination, refused));
         return false;
     }
-    fs::remove_all(aside, error);
+    if (const QString refused = move(stage.toStdString(), to.string()); !refused.isEmpty()) {
+        if (!move(aside.string(), to.string()).isEmpty()) {
+            setLastError(tr("%1 could not be replaced, and the folder it held is now %2: %3")
+                             .arg(destination, asidePath, refused));
+        } else {
+            dropHolder();
+            setLastError(tr("%1 could not be replaced: %2").arg(destination, refused));
+        }
+        return false;
+    }
+    // Removed only while it is still the folder that was replaced.
+    if (!isApproved(asidePath)) {
+        qCWarning(lcApp, "the replaced folder %s changed and was left behind", aside.string().c_str());
+        return true;
+    }
+    fs::remove_all(holder, error);
     if (error) qCWarning(lcApp, "the replaced folder %s was left behind: %s", aside.string().c_str(), error.message().c_str());
     return true;
 }
@@ -1781,11 +1814,11 @@ bool Session::createProject(const QString& name, const QString& description, con
 }
 edi_app::ProjectCreationResult Session::createProjectWithOutcome(const QString& name, const QString& description, const QString& location,
                             const QString& suRule, const QString& title, const QString& authors,
-                            bool reportLibraries, const QString& assistantIntent, bool replace) {
+                            bool reportLibraries, const QString& assistantIntent, bool replace, quint64 untitledId) {
     const QPointer<Session> receiver(this);
     ProjectCreationOutcome outcome;
     const bool success = createProjectImpl(name, description, location, suRule, title, authors,
-                                          reportLibraries, assistantIntent, &outcome, replace);
+                                          reportLibraries, assistantIntent, &outcome, replace, untitledId);
     if (!receiver) return {};
     const bool current = (!outcome.has_owner || outcome.owner) && project_ == outcome.owner &&
         replacement_generation_ == outcome.replacement;
@@ -1879,6 +1912,24 @@ void Session::rejectUntitled(quint64 id) {
     settleUntitled(op, UntitledOperation::State::Rejected);
 }
 
+bool Session::approveUntitledReplace(quint64 id, const QString& location) {
+    const auto op = current_untitled_;
+    if (!resumeUntitled(op, id) || op->state() != UntitledOperation::State::Asking) return false;
+    op->destination = {};
+    const QFileInfo existing(location);
+    const QString path = existing.absoluteFilePath();
+    // A project folder, read now, as the user saw it when they confirmed: a link or anything else is not one.
+    UntitledOperation::FileIdentity folder, file;
+    if (location.isEmpty() || !existing.isDir() || existing.isSymLink() ||
+        !QFileInfo(path + QStringLiteral("/project.edi")).isFile() || !project_folder_identity(path, folder, file))
+        return false;
+    op->destination.path = path;
+    op->destination.replace = true;
+    op->destination.folder = folder;
+    op->destination.file = file;
+    return true;
+}
+
 bool Session::acceptUntitled(quint64 id, const QString& name, const QString& description, const QString& location,
                              const QString& title, const QString& authors, bool replace) {
     const auto op = current_untitled_;
@@ -1917,21 +1968,23 @@ bool Session::acceptUntitled(quint64 id, const QString& name, const QString& des
         op->untitledKey = web_place_.key;
     } else {
         const QFileInfo existing(location);
+        const QString path = existing.absoluteFilePath();
         const bool there = existing.exists() || existing.isSymLink();
-        if (there && !replace) return refuse(tr("%1 exists already; nothing was saved.").arg(existing.absoluteFilePath()));
-        if (there && (!existing.isDir() || existing.isSymLink() ||
-                      !QFileInfo::exists(existing.absoluteFilePath() + QStringLiteral("/project.edi"))))
-            return refuse(tr("%1 exists and is not a project folder; nothing was replaced.").arg(existing.absoluteFilePath()));
-        op->destination.path = existing.absoluteFilePath();
-        op->destination.replace = there;
-        if (there) {
-            // The folder the user confirmed replacing, as it is now: only this object is moved aside later.
-            const auto folder = file_identity(op->destination.path);
-            const auto file = file_identity(op->destination.path + QStringLiteral("/project.edi"));
-            if (!folder || !file)
-                return refuse(tr("%1 could not be read; nothing was replaced.").arg(op->destination.path));
-            op->destination.folder = *folder;
-            op->destination.file = *file;
+        // A Replace replaces only the folder the user confirmed for this operation, and only while it is still that
+        // folder; anything else at the path is refused.
+        if (replace && op->destination.replace && op->destination.path == path) {
+            UntitledOperation::FileIdentity folder, file;
+            if (!project_folder_identity(path, folder, file) || folder != op->destination.folder ||
+                file != op->destination.file)
+                return refuse(tr("%1 changed after you chose to replace it; nothing was replaced.").arg(path));
+        } else {
+            if (there && !replace) return refuse(tr("%1 exists already; nothing was saved.").arg(path));
+            if (there && (!existing.isDir() || existing.isSymLink() ||
+                          !QFileInfo::exists(path + QStringLiteral("/project.edi"))))
+                return refuse(tr("%1 exists and is not a project folder; nothing was replaced.").arg(path));
+            if (there) return refuse(tr("Replacing %1 was not confirmed; nothing was replaced.").arg(path));
+            op->destination = {};  // fresh, and it stays fresh across the question and any replan
+            op->destination.path = path;
         }
     }
     const QPointer<Session> receiver(this);
@@ -2077,7 +2130,8 @@ void Session::untitledSaved(const std::shared_ptr<UntitledOperation>& op) {
 
 bool Session::createProjectImpl(const QString& name, const QString& description, const QString& location,
                             const QString& suRule, const QString& title, const QString& authors,
-                            bool reportLibraries, const QString& assistantIntent, ProjectCreationOutcome* outcome, bool replace) {
+                            bool reportLibraries, const QString& assistantIntent, ProjectCreationOutcome* outcome, bool replace,
+                            quint64 untitledId) {
     const QPointer<Session> receiver(this);
     if (outcome) { outcome->owner = project_; outcome->has_owner = project_ != nullptr; outcome->replacement = replacement_generation_; }
     if (const QString refusal = replacementRefusal(); !refusal.isEmpty()) {
@@ -2087,17 +2141,24 @@ bool Session::createProjectImpl(const QString& name, const QString& description,
     }
     // Create while a project is untitled names and saves that project, the work in it kept (the owner, 2026-11-19).
     if (untitled_ && project_ != nullptr && assistantIntent.isEmpty()) {
-        // Through the open untitled operation, the one its dialog carries (ADR-0100): one is opened for a Create that
-        // came without (a script's or a tutorial's).
+        // Through the untitled operation its dialog carries (ADR-0100), and only that one: an answer for an operation
+        // that gave way does nothing. A Create that came without one (a script's) uses the open one or opens one, and
+        // its call is its own Replace confirmation.
         if (outcome) { outcome->owner = project_; outcome->has_owner = true; outcome->replacement = replacement_generation_; }
-        quint64 id = untitledOperationId();
-        if (id == 0) id = beginUntitled(QStringLiteral("manual-create"));
-        if (!receiver) return false;
+        quint64 id = untitledId;
+        if (id == 0) {
+            id = untitledOperationId();
+            if (id == 0) id = beginUntitled(QStringLiteral("manual-create"));
+            if (!receiver) return false;
+            if (id != 0 && replace) approveUntitledReplace(id, QFileInfo(location).absoluteFilePath());
+            if (!receiver) return false;
+        }
+        const bool own = id != 0 && id == untitledOperationId();
         const QPointer<ProjectViewModel> project(project_);
-        const bool accepted = id != 0 && acceptUntitled(id, name, description, location, title, authors, replace);
+        const bool accepted = own && acceptUntitled(id, name, description, location, title, authors, replace);
         if (!receiver) return false;
         const bool saved = accepted && !untitled_;
-        if (outcome) { outcome->error = accepted ? QString{} : last_error_; outcome->saved = saved; outcome->path = project ? project->path() : QString{}; }
+        if (outcome) { outcome->error = accepted || !own ? QString{} : last_error_; outcome->saved = saved; outcome->path = project ? project->path() : QString{}; }
         return accepted;
     }
     ProjectViewModel* created = nullptr;

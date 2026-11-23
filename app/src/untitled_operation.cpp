@@ -3,7 +3,22 @@
 
 #include "project_view_model.hpp"
 
+#include <QDir>
+#include <QFile>
+
 #include <utility>
+
+#if defined(_WIN32)
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#include <windows.h>
+#else
+#include <sys/stat.h>
+#endif
 
 namespace edi_app {
 
@@ -23,6 +38,27 @@ bool UntitledOperation::settle(State terminal) {
     // Only a saved operation runs what waited for it.
     if (terminal != State::Saved) continuation_ = nullptr;
     return true;
+}
+
+std::optional<UntitledOperation::FileIdentity> UntitledOperation::identity(const QString& path) {
+#if defined(_WIN32)
+    const QString native = QDir::toNativeSeparators(path);
+    const HANDLE handle = ::CreateFileW(reinterpret_cast<const wchar_t*>(native.utf16()), 0,
+                                        FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr, OPEN_EXISTING,
+                                        FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT, nullptr);
+    if (handle == INVALID_HANDLE_VALUE) return std::nullopt;
+    BY_HANDLE_FILE_INFORMATION info{};
+    const bool read = ::GetFileInformationByHandle(handle, &info) != 0;
+    ::CloseHandle(handle);
+    if (!read) return std::nullopt;
+    return FileIdentity{static_cast<std::uint64_t>(info.dwVolumeSerialNumber),
+                        (static_cast<std::uint64_t>(info.nFileIndexHigh) << 32) |
+                            static_cast<std::uint64_t>(info.nFileIndexLow)};
+#else
+    struct stat status {};
+    if (::lstat(QFile::encodeName(path).constData(), &status) != 0) return std::nullopt;
+    return FileIdentity{static_cast<std::uint64_t>(status.st_dev), static_cast<std::uint64_t>(status.st_ino)};
+#endif
 }
 
 std::function<void()> UntitledOperation::takeContinuation() { return std::exchange(continuation_, nullptr); }

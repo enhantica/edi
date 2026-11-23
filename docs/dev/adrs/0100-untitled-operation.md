@@ -36,9 +36,12 @@ could reach a later request or another project.
    way changes nothing, not even the session's message. An answer given while the question is being asked moves the
    same operation to `writing`.
 6. **Desktop.** A fresh destination stays fresh across the question and any replan. A Replace records the identity
-   (device and inode) of the folder and of its `project.edi` when the user confirms it; the publish moves aside only
-   that object, moves it back if anything else is there, and removes only that object after the new folder is in
-   place.
+   (device and inode; on Windows the volume and file index) of the folder and of its `project.edi` when the user
+   confirms it (`approveUntitledReplace`, for that operation's id). The Create dialog's OK carries the id and the
+   confirmation to the deferred Create, which answers that operation only. A Replace is refused when the folder is
+   gone, changed or cannot be read. The publish moves the old folder into a new private folder beside it, checks it
+   there, moves it back if it is not the approved one, and removes it only while it still is, after the new folder
+   is in place.
 7. **Browser.** The first save writes into a stage of its own, `stage-<id>-<uuid>`, never the untitled place's key.
    A claim record `claim:<untitled key>` names the operation and its stage. After the stage is written, one
    IndexedDB transaction checks the claim and, only while it is still this operation's and live, records the named
