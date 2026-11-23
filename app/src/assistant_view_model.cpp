@@ -15732,6 +15732,80 @@ struct AssistantViewModel::State {
             notify();
         } else { diagnostic.stage = "UNSUPPORTED_REJECT"; agent->reject(id); } // No fabricated result for unsupported callbacks.
     }
+    // Messages sent while a fit or another app action runs (edi #147). Each keeps the conversation it was
+    // written for; they are sent in order once nothing is running, and never into another conversation.
+    struct QueuedMessage { QString id, text, thread; std::uint64_t generation = 0; };
+    QList<QueuedMessage> queued_messages;
+    quint64 queued_serial = 0;
+    bool queue_drain_scheduled = false, queue_delivering = false;
+    static constexpr qsizetype queued_message_limit = 20;
+    bool native_action_busy() const { return native_call || native_fit || native_creation; }
+    bool queue_waits() const {
+        return native_action_busy() || native_worker_admitted() || startup_restore_pending() || !session_selection_target.isEmpty() ||
+            account_confirmation_pending || generic_revoke_pending || generic_context_pending || generic_clear_pending ||
+            !generic_interrupt_rpc.isEmpty() || generic_connecting || generic_retiring || generic_writing_input ||
+            (generic_busy && generic_turn.isEmpty()) || file_selection || file_staging || attachment_clear_requested ||
+            attachment_clear_draining;
+    }
+    void return_queued_message(const QueuedMessage& message) {
+        // Back into the composer so the text is never lost.
+        emit owner.queuedMessagesChanged();
+        emit owner.queuedMessageReturned(message.text);
+    }
+    bool cancel_queued_message(const QString& id) {
+        for(qsizetype n=0;n<queued_messages.size();++n) {
+            if(queued_messages[n].id!=id)continue;
+            if(n==0 && queue_delivering)return false; // already being handed to the agent
+            const auto message=queued_messages.takeAt(n);
+            return_queued_message(message);
+            return true;
+        }
+        return false;
+    }
+    void schedule_queue_drain() {
+        if(queued_messages.isEmpty() || queue_drain_scheduled || queue_delivering)return;
+        queue_drain_scheduled=true;
+        const QPointer<AssistantViewModel> receiver(&owner);
+        // Later, from the event loop: notify() runs inside the code that just changed the state.
+        QTimer::singleShot(0,&owner,[this,receiver] {
+            if(!receiver || receiver->state_.get()!=this)return;
+            queue_drain_scheduled=false;
+            drain_queued_messages();
+        });
+    }
+    void drain_queued_messages() {
+        const QPointer<AssistantViewModel> receiver(&owner);
+        const auto alive=[&] { return receiver && receiver->state_.get()==this; };
+        while(!queued_messages.isEmpty() && !queue_delivering) {
+            if(queue_waits())return;
+            const auto message=queued_messages.front();
+            if(message.thread!=generic_thread || message.generation!=generation) {
+                queued_messages.removeFirst();
+                error=input_refusal(QObject::tr("The conversation changed before a waiting message was sent. It is back in the composer."));
+                return_queued_message(message);
+                if(!alive())return;
+                notify();
+                if(!alive())return;
+                continue;
+            }
+            queue_delivering=true;
+            QString row;
+            try { row=owner.submitDraftImpl(message.text,nullptr); } catch(...) {}
+            if(!alive())return;
+            queue_delivering=false;
+            if(row.isEmpty() && native_action_busy())return; // another action started first; keep waiting
+            qsizetype at=-1;
+            for(qsizetype n=0;n<queued_messages.size();++n)if(queued_messages[n].id==message.id){at=n;break;}
+            if(at>=0)queued_messages.removeAt(at);
+            if(row.isEmpty()) {
+                // Refused (its reason is in the error): return it and keep the rest waiting behind it.
+                if(at>=0)return_queued_message(message);
+                return;
+            }
+            emit owner.queuedMessagesChanged();
+            if(!alive())return;
+        }
+    }
     QString generic_send(const QString& text, FileProjection& projection, bool* accountWaiting=nullptr) {
         if(!message_input_ready(text,projection))return {};
         if(startup_restore_pending()) {
@@ -15797,11 +15871,18 @@ struct AssistantViewModel::State {
         if(static_cast<quint64>(contextBytes.size())!=outgoing_bytes)throw std::logic_error("Outgoing encoded identity changed");
 
         const auto context = QString::fromUtf8(contextBytes);
-        if (native_call || native_fit || native_creation) {
-            // A message sent while a fit or another app action runs waits for it (edi #147): the draft stays and the
-            // composer sends it once the action has settled; a caller that cannot wait is told so.
+        if (native_action_busy()) {
+            // A message sent while a fit or another app action runs waits for it (edi #147). The consent path
+            // keeps its own draft and resends it; an ordinary Send joins the queue, sent once the action settles.
             if (accountWaiting) { *accountWaiting = true; return {}; }
-            error = input_refusal(QObject::tr("The assistant is still running a fit or another action. Your message is kept; send it again when that has finished."));
+            if (queue_delivering) return {}; // the queued message stays first in line
+            if (queued_messages.size() >= queued_message_limit) {
+                error = input_refusal(QObject::tr("Too many messages are waiting for the running action. Your draft is kept."));
+                notify(); return {};
+            }
+            if (queued_serial == UINT64_MAX) throw std::length_error("Queued message capacity is exhausted");
+            queued_messages.append({QStringLiteral("queued-%1").arg(++queued_serial), text, generic_thread, generation});
+            emit owner.queuedMessagesChanged();
             notify(); return {};
         }
         const bool steering = generic_busy;
@@ -16648,6 +16729,9 @@ struct AssistantViewModel::State {
         if(project)project->fit()->setAssistantBusy(generic_busy || generic_connecting);
 #else
         if(project)project->fit()->setAssistantBusy(false);
+#endif
+#ifndef __EMSCRIPTEN__
+        schedule_queue_drain();
 #endif
         QElapsedTimer elapsed;
         const bool observeElapsed=lcAssistantElapsed().isDebugEnabled();
@@ -19108,6 +19192,20 @@ void AssistantViewModel::send(const QString& text) {
     (void)submitDraft(text);
 }
 QString AssistantViewModel::submitDraft(const QString& text) {return submitDraftImpl(text,nullptr);}
+QVariantList AssistantViewModel::queuedMessages() const {
+    QVariantList result;
+#ifndef __EMSCRIPTEN__
+    for(const auto& message:state_->queued_messages)result.append(QVariantMap{{"id",message.id},{"text",message.text}});
+#endif
+    return result;
+}
+bool AssistantViewModel::cancelQueuedMessage(const QString& id) {
+#ifndef __EMSCRIPTEN__
+    return state_->cancel_queued_message(id);
+#else
+    (void)id; return false;
+#endif
+}
 AssistantDraftAdmission AssistantViewModel::submitDraftAdmission(const QString& text) {
     bool waiting=false;
     const auto row=submitDraftImpl(text,&waiting);
