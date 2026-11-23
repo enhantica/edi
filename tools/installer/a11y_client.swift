@@ -83,6 +83,8 @@ let wizardButtons: Set<String> = ["Back", "Next", "Install", "Cancel", "Finish",
 let font = NSFont(name: "Helvetica Neue", size: 14) ?? NSFont.systemFont(ofSize: 14)
 var reported = Set<String>()
 var pagesSeen = 0
+// Each window's content left edge, relative to the window, on every page: one alignment across pages.
+var pageEdges: [String: Set<Int>] = [:]
 var pagesChecked = 0
 
 func check(window: CGRect, title: String, placed: [Placed]) {
@@ -108,6 +110,7 @@ func check(window: CGRect, title: String, placed: [Placed]) {
         }
     }.sorted { $0.frame.minY < $1.frame.minY }
     let edge = firsts.map(\.frame.minX).min() ?? 0
+    pageEdges[title, default: []].insert(Int((edge - window.minX).rounded()))
     for item in firsts where abs(item.frame.minX - edge) > 1 {
         problems.append("left edge \(Int(item.frame.minX - edge)) px off: \(item.role) '\(item.text)'")
     }
@@ -153,6 +156,9 @@ while kill(pid, 0) == 0 {
         }
     }
     usleep(200_000)
+}
+for (title, edges) in pageEdges where edges.count > 1 {
+    print("layout: [\(title)] pages start at different left edges: \(edges.sorted())")
 }
 print("layout-pages: \(pagesChecked)")
 print("a11y-client: \(queries) multiple-attribute queries")
