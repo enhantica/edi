@@ -6,6 +6,7 @@
 #include <QFile>
 #include <QDir>
 #include <QFileInfo>
+#include <QHash>
 #include <QJSEngine>
 #include <QJsonDocument>
 #include <QKeyEvent>
@@ -425,6 +426,14 @@ bool DemoDriver::saveDocumentationFrame(const QString& path, QString* error) {
         return refuse("Analysis and Report captures require a completed fit and a closed results popup");
     const auto collect = [this] {
         QJsonObject items;
+        // A popup (a menu, a dialog) is not an item: its content item, unnamed, is found by the popup's name.
+        QHash<const QQuickItem*, QString> popup_names;
+        for (auto* popup : window_.findChildren<QObject*>()) {
+            if (!popup->inherits("QQuickPopup") || popup->objectName().isEmpty() || !popup->property("visible").toBool())
+                continue;
+            if (auto* content = popup->property("contentItem").value<QQuickItem*>(); content && content->objectName().isEmpty())
+                popup_names.insert(content, popup->objectName());
+        }
         std::function<void(QQuickItem*)> visit = [&](QQuickItem* item) {
             if (!item->isVisible() || item->opacity() <= 0) return;
             const QRectF bounds = item->mapRectToScene(QRectF(0, 0, item->width(), item->height()));
@@ -433,7 +442,8 @@ bool DemoDriver::saveDocumentationFrame(const QString& path, QString* error) {
                 if (parent->opacity() <= 0) { visible = {}; break; }
                 if (parent->clip()) visible = visible.intersected(parent->mapRectToScene(parent->clipRect()));
             }
-            const auto name = item->objectName();
+            auto name = item->objectName();
+            if (name.isEmpty()) name = popup_names.value(item);
             if (!name.isEmpty() && !visible.isEmpty()) {
                 if (items.contains(name)) {
                     items[name] = QJsonObject{{"ambiguous", true}};
