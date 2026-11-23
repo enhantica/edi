@@ -55,12 +55,15 @@ function darkTheme() {
 // The page captures (EDI_INSTALLER_CAPTURE, a folder): each page is saved as <mode>-<page>-<theme>.png and the page
 // moves on by itself, in the installer and in the maintenance tool alike.
 var captureFolder = installer.environmentVariable("EDI_INSTALLER_CAPTURE");
+// The maintenance tool's mode in capture mode (EDI_INSTALLER_MAINTENANCE_MODE): add (add or remove components),
+// update, or remove (everything, the default).
+var maintenanceMode = installer.environmentVariable("EDI_INSTALLER_MAINTENANCE_MODE") || "remove";
 
 // Taken a moment later by a detached process, once the page has painted.
 function capture(name) {
     if (captureFolder === "")
         return;
-    var mode = installer.isInstaller() ? "installer" : "maintenance";
+    var mode = installer.isInstaller() ? "installer" : "maintenance-" + maintenanceMode;
     var file = captureFolder + "/" + mode + "-" + name + "-" + (darkTheme() ? "dark" : "light") + ".png";
     if (systemInfo.kernelType === "winnt") {
         // A process started here cannot take a screenshot; capture_pages.py takes them on Windows.
@@ -79,11 +82,13 @@ function advance(name, page) {
         if (accept)
             accept.checked = true;
     }
-    // The maintenance tool removes the installation, which shows its remaining pages without a repository.
+    // The maintenance tool takes the mode asked for; removing everything needs no repository.
     if (name === "Introduction" && !installer.isInstaller()) {
-        var remove = gui.findChild(page, "UninstallerRadioButton");
-        if (remove)
-            remove.checked = true;
+        var choice = {add: "PackageManagerRadioButton", update: "UpdaterRadioButton"}[maintenanceMode]
+            || "UninstallerRadioButton";
+        var radio = gui.findChild(page, choice);
+        if (radio)
+            radio.checked = true;
     }
     if (name === "PerformInstallation") {
         // The Framework moves on when it is done, unless its details are open; then this does.
@@ -118,7 +123,14 @@ function themePage(page) {
 
 // The assistant's own page in the maintenance tool (assistantscript.qs).
 Controller.prototype.DynamicAssistantFormCallback = function () {
-    themePage(gui.pageWidgetByObjectName("DynamicAssistantForm"));
+    var page = gui.pageWidgetByObjectName("DynamicAssistantForm");
+    themePage(page);
+    // Adding components in capture mode adds the assistant, so the mode has something to do.
+    var box = captureFolder !== "" ? gui.findChild(page, "AssistantCheckBox") : null;
+    if (box)
+        box.checked = true;
+    capture("AssistantForm");
+    advance("AssistantForm", page);
 };
 
 var wordmark = "";
