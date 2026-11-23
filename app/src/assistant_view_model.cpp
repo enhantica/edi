@@ -15797,7 +15797,13 @@ struct AssistantViewModel::State {
         if(static_cast<quint64>(contextBytes.size())!=outgoing_bytes)throw std::logic_error("Outgoing encoded identity changed");
 
         const auto context = QString::fromUtf8(contextBytes);
-        if (native_call || native_fit || native_creation) throw std::runtime_error("Wait for the current native action to settle before another input");
+        if (native_call || native_fit || native_creation) {
+            // A message sent while a fit or another app action runs waits for it (edi #147): the draft stays and the
+            // composer sends it once the action has settled; a caller that cannot wait is told so.
+            if (accountWaiting) { *accountWaiting = true; return {}; }
+            error = input_refusal(QObject::tr("The assistant is still running a fit or another action. Your message is kept; send it again when that has finished."));
+            notify(); return {};
+        }
         const bool steering = generic_busy;
         work_begin();
         if (steering && generic_turn.isEmpty()) {
