@@ -8872,7 +8872,7 @@ QJSValue ApplicationInfo::legendSegments() const {
 QJSValue ApplicationInfo::factorPresentation(const QJSValue& value, bool rich) const {
     const auto f = panelUsageEngine(this); const auto text = value.isNull() || value.isUndefined() ? QJSValue(QStringLiteral("")) : value;
     if (!rich) {
-        const auto pattern = panelRegex(f, QStringLiteral("\\b(c?)R_?(wp|p|exp|Bragg|F)\\b"));
+        const auto pattern = panelRegex(f, QStringLiteral("\\b(c?)R_?(wp|p|exp|Bragg|F|mag)\\b"));
         return panelUsageMemberCall(f, pattern, "test", {numberString(f, text)});
     }
     const auto escaped = chartEscape(f, numberString(f, text));

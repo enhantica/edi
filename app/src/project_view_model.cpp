@@ -3964,6 +3964,21 @@ void ProjectViewModel::loadScan() {
     evolution_->setFinder([find_column](const QString& column, bool bank) -> QObject* { return find_column(column, bank); });
     // The search text, as ParameterNames.pickerText spells it: the short name and the full name.
     evolution_->setLabeller([find_column](const QString& column, bool bank) {
+        // How well each point fits: χ² and the agreement factors, by what they measure.
+        static const QList<QPair<QString, QString>> kFactors{
+            {QStringLiteral("fit_result.reduced_chi_square"), tr("Reduced χ²")},
+            {QStringLiteral("fit_result.chi_square"), tr("χ²")},
+            {QStringLiteral("fit_result.r_p"), tr("Rp, profile R")},
+            {QStringLiteral("fit_result.r_wp"), tr("Rwp, weighted profile R")},
+            {QStringLiteral("fit_result.r_exp"), tr("Rexp, expected R")},
+            {QStringLiteral("fit_result.r_bragg."), tr("R_Bragg, %1")},
+            {QStringLiteral("fit_result.r_mag."), tr("R_mag, %1")}};
+        for (const auto& [prefix, text] : kFactors) {
+            if (prefix.endsWith(QLatin1Char('.')) ? column.startsWith(prefix) : column == prefix) {
+                const QString label = prefix.endsWith(QLatin1Char('.')) ? text.arg(column.mid(prefix.size())) : text;
+                return label + QStringLiteral(" · ") + column;
+            }
+        }
         const ParameterItem* item = find_column(column, bank);
         if (item == nullptr) return QString();
         const QString row = item->rowLabel().isEmpty() ? QString() : item->rowLabel() + QLatin1Char(' ');

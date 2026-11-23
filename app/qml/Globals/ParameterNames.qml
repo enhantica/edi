@@ -48,7 +48,8 @@ QtObject {
             return [
                 {
                     "text": fallback,
-                    "elides": true
+                    "elides": true,
+                    "factors": true
                 }
             ];
         return names.segments(item).concat([

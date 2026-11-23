@@ -80,6 +80,12 @@ struct ScanParameterColumns {
     std::size_t uncertainty = 0;
 };
 
+/// One agreement-factor column of `analysis/results.csv` (`fit_result.r_*`): a value with no s.u. column.
+struct ScanFactorColumn {
+    std::string name;
+    std::size_t value = 0;
+};
+
 /// What `analysis/results.csv` records, checked, with one small entry per dataset: no row's parameter cells are kept
 /// (`read_scan_row` reads one row at its offset). The header must be crysta's: `file_path`,
 /// `fit_result.reduced_chi_square`, `fit_result.success`, `fit_result.iterations`, one column per extract rule's
@@ -112,6 +118,8 @@ struct ScanResultIndex {
     std::string directory;
     std::vector<std::ptrdiff_t> extract;
     std::vector<ScanParameterColumns> parameters;
+    /// Each point's agreement factors, in the file's order; none in an older file.
+    std::vector<ScanFactorColumn> factors;
     std::vector<Row> rows;      ///< by dataset place
     std::int64_t end = 0;       ///< the offset after the last complete row (0: no file)
     std::size_t fitted = 0;     ///< datasets with a row
@@ -164,7 +172,7 @@ std::vector<std::string> read_scan_row(const Project& project, std::int64_t offs
 
 /// The parameters a scan's evolution charts list, the Evolution tab's and the report's: every free parameter of the
 /// template by its unique name, listed before any dataset is fitted, then each one `analysis/results.csv` records
-/// that is not free (any more), by its column, in the file's order.
+/// that is not free (any more), by its column, in the file's order, then the agreement factors it records.
 std::vector<std::string> evolution_parameters(const Project& project, const ScanResultIndex& index);
 
 /// One point of a parameter's evolution: a fitted dataset's value and s.u., at its x.
