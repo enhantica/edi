@@ -153,6 +153,24 @@ def set_macos_theme(theme: str) -> None:
     subprocess.run(['osascript', '-e', script], check=True, timeout=60)
 
 
+def capture_disk_image(image: Path, pages: Path, theme: str) -> None:
+    """macOS: the disk image's Finder window as users see it once the download opens."""
+    mount = Path('/Volumes/EasyDiffraction Installer')
+    subprocess.run(['hdiutil', 'attach', image], check=True, timeout=120)
+    try:
+        subprocess.run(['open', mount], check=True, timeout=60)
+        time.sleep(4)
+        subprocess.run(
+            ['screencapture', '-x', str(pages / f'disk-image-{theme}.png')], check=True, timeout=60
+        )
+    finally:
+        subprocess.run(
+            ['osascript', '-e', 'tell application "Finder" to close every window'],
+            check=False, timeout=60,
+        )  # fmt: skip
+        subprocess.run(['hdiutil', 'detach', mount], check=False, timeout=120)
+
+
 def marker_installer(tools: Path, work: Path) -> Path:
     """The offline marker installer's download."""
     repository = (work / 'repository-unused').as_uri() + '/'
@@ -185,6 +203,7 @@ def capture(tools: Path, output: Path) -> None:
             env['EDI_INSTALLER_THEME'] = theme
         if SYSTEM == 'macos':
             set_macos_theme(theme)
+            capture_disk_image(download, pages, theme)
         if 'DISPLAY' in os.environ:
             env['DISPLAY'] = os.environ['DISPLAY']
         installer = installer_command(
