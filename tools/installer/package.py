@@ -357,7 +357,7 @@ def write_metadata(
             'AllowSpaceInPath': 'true',
             # Qt's Mac wizard style everywhere: no header or footer line; the logo heads each page.
             'WizardStyle': 'Mac',
-            'WizardDefaultWidth': '640',
+            'WizardDefaultWidth': '800',
             'WizardDefaultHeight': '460',
             # One centred column, no step list (the owner's three-page design, edi ADR-0071).
             'WizardShowPageList': 'false',
