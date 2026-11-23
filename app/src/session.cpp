@@ -2025,26 +2025,26 @@ void Session::untitledWrite(const std::weak_ptr<UntitledOperation>& weak, quint6
                 return;
             }
             receiver->web_writing_ = false;
-            const auto op = weak.lock();
+            const auto live = weak.lock();
             const bool published = answer.ok && answer.outcome == QLatin1String("published");
-            if (!published || !op || op->settled() || !receiver->resumeUntitled(op, id)) {
+            if (!published || !live || live->settled() || !receiver->resumeUntitled(live, id)) {
                 QDir(staged.root).removeRecursively();
-                if (!op || op->settled()) return;  // superseded: a published place stays a saved project
+                if (!live || live->settled()) return;  // superseded: a published place stays a saved project
                 if (answer.ok) {
-                    receiver->settleUntitled(op, UntitledOperation::State::Superseded);  // the revoke won
+                    receiver->settleUntitled(live, UntitledOperation::State::Superseded);  // the revoke won
                 } else {
                     receiver->setLastError(answer.message);
                     emit receiver->webSaveFailed(answer.message);
-                    if (receiver) receiver->settleUntitled(op, UntitledOperation::State::Refused);
+                    if (receiver) receiver->settleUntitled(live, UntitledOperation::State::Refused);
                 }
                 return;
             }
-            receiver->setWebPlace({op->destination.stage, QStringLiteral("browser"), folder});
-            if (!receiver || !receiver->resumeUntitled(op, id)) return;
+            receiver->setWebPlace({live->destination.stage, QStringLiteral("browser"), folder});
+            if (!receiver || !receiver->resumeUntitled(live, id)) return;
             if (!receiver->takeWebSave(staged, revision)) QDir(staged.root).removeRecursively();
-            if (!receiver || !receiver->resumeUntitled(op, id)) return;
+            if (!receiver || !receiver->resumeUntitled(live, id)) return;
             emit receiver->webSaved(QStringLiteral("browser"));
-            if (receiver && receiver->resumeUntitled(op, id)) receiver->untitledSaved(op);
+            if (receiver && receiver->resumeUntitled(live, id)) receiver->untitledSaved(live);
         });
 }
 
