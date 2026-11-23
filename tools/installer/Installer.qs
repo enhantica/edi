@@ -426,7 +426,9 @@ function headerWordmark() {
         // The maintenance tool asks plainly, at the top, and updates unless told otherwise: never a destructive
         // default.
         if (name === "Introduction" && !installer.isInstaller() && captureFolder !== "" && maintenanceWalked) {
-            gui.rejectWithoutPrompt();
+            // Closed as a person would, answering its "quit?" question with Yes.
+            installer.setMessageBoxAutomaticAnswer("cancelInstallation", QMessageBox.Yes);
+            gui.clickButton(buttons.CancelButton, 50);
             return;
         }
         if (name === "Introduction" && !installer.isInstaller()) {
