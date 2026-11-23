@@ -2688,10 +2688,24 @@ QJSValue ApplicationInfo::composerSubmit(const QJSValue& approved) const {
         if (!state.strictlyEquals(QJSValue(QStringLiteral("idle")))) return consentStatus(f, "waiting");
         if (panelUsageTruth(panelUsageRead(f, original, "canCancel"))) return consentStatus(f, "waiting");
     }
+    // An ordinary Send during a fit joins the assistant's queue instead of returning a row.
+    const auto queuedBefore = panelUsageTruth(approved) ? QJSValue() : panelUsageRead(f, panelUsageRead(f, original, "queuedMessages"), "length");
     auto admission = panelUsageTruth(approved) ? panelUsageMemberCall(f, original, "submitDraftAdmission", {text}) : consentNull();
     const auto rowId = panelUsageTruth(approved) ? (panelUsageTruth(admission) ? panelUsageRead(f, admission, "row_id") : QJSValue(QString{}))
                                        : panelUsageMemberCall(f, original, "submitDraft", {text});
     if (!consentOwner(f, component, original)) return {};
+    if (!panelUsageTruth(approved)) {
+        const auto queuedAfter = panelUsageRead(f, panelUsageRead(f, original, "queuedMessages"), "length");
+        if (!panelUsageReady(f)) return {};
+        if (assistantRelation(f, queuedBefore, queuedAfter, 0)) {
+            // The queue holds the text now and shows it, so no submitted row is tracked for it.
+            if (!assistantSameName(f, ownerRevision, "draftOwnerRevision") || !assistantSameName(f, revision, "textRevision")) return {};
+            const auto current = assistantContextField(f, "editor", "text");
+            if (!panelUsageReady(f) || !text.strictlyEquals(current) || !assistantEditorIdle(f)) return {};
+            panelUsageMemberCall(f, panelUsageContextRead(f, "editor"), "clear");
+            return {};
+        }
+    }
     const auto length = panelUsageRead(f, rowId, "length");
     if (panelUsageTruth(length) && assistantSameName(f, ownerRevision, "draftOwnerRevision")) {
         const auto submitted = panelUsageContextRead(f, "submittedDrafts");
@@ -12013,6 +12027,16 @@ void ApplicationInfo::composerSessionDraftRestored(QObject* composer, QObject* e
             composerDraftFieldEqual(*frame, original, "revision", frame->view, "textRevision");
     }
     if (restore && composerDraftEditorIdle(*frame)) composerDraftWrite(*frame, frame->edit, "text", QJSValue(text));
+    if (frame->live()) publishComposerDraft(*frame);
+}
+void ApplicationInfo::composerQueuedMessageReturned(QObject* composer, QObject* editor, const QString& text) const {
+    const auto frame = composerDraftFrame(composer, editor);
+    if (!frame || !composerDraftEditorIdle(*frame)) return;
+    const auto current = composerDraftRead(*frame, frame->edit, "text");
+    if (!frame->live()) return;
+    // Put the waiting message back ahead of anything typed since, so neither is lost.
+    const auto existing = current.toString();
+    composerDraftWrite(*frame, frame->edit, "text", QJSValue(existing.isEmpty() ? text : text + QStringLiteral("\n\n") + existing));
     if (frame->live()) publishComposerDraft(*frame);
 }
 void ApplicationInfo::composerConversationClearRequested(QObject* composer, QObject* editor, const QString& intent) const {

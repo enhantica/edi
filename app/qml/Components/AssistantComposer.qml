@@ -377,6 +377,9 @@ Rectangle {
         function onWorkReportFinished(receipt) {
             composer.finishWorkReport(receipt);
         }
+        function onQueuedMessageReturned(text) {
+            ApplicationInfo.composerQueuedMessageReturned(composer, editor, text);
+        }
     }
     Component.onCompleted: ApplicationInfo.composerRefreshFilePresentation(composer, false)
     implicitHeight: composerContent.implicitHeight + AppSizes.unit * 1.5
@@ -410,6 +413,57 @@ Rectangle {
         y: AppSizes.unit * 0.75
         width: parent.width - AppSizes.unit * 1.5
         spacing: AppSizes.unit * 0.25
+        // Messages sent during a fit or another app action; each is sent when the action has finished.
+        Column {
+            id: queuedMessagesList
+            objectName: "assistant.queued"
+            width: parent.width
+            visible: composer.assistant.queuedMessages.length > 0
+            spacing: 0
+            Repeater {
+                model: composer.assistant.queuedMessages
+                delegate: Row {
+                    id: queuedMessageRow
+                    required property var modelData
+                    objectName: "assistant.queued." + queuedMessageRow.modelData.id
+                    width: queuedMessagesList.width
+                    spacing: AppSizes.unit * 0.25
+                    EaElements.Label {
+                        id: queuedMessageLabel
+                        width: Math.max(0, queuedMessagesList.width - cancelQueuedButton.implicitWidth - parent.spacing)
+                        text: qsTr("Waiting: %1").arg(queuedMessageRow.modelData.text)
+                        textFormat: Text.PlainText
+                        elide: Text.ElideRight
+                        maximumLineCount: 1
+                        color: EaStyle.Colors.themeForegroundMinor
+                        ToolTip.text: qsTr("Sent when the running fit or action has finished")
+                        Accessible.name: qsTr("Waiting message: %1").arg(queuedMessageRow.modelData.text)
+                    }
+                    EaElements.ToolButton {
+                        id: cancelQueuedButton
+                        objectName: "assistant.queued.cancel." + queuedMessageRow.modelData.id
+                        leftPadding: 0
+                        rightPadding: 0
+                        fontIcon: "times"
+                        implicitWidth: composer.actionSize
+                        implicitHeight: queuedMessageLabel.implicitHeight
+                        font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.6
+                        showBackground: false
+                        contentItem: EaElements.Label {
+                            text: cancelQueuedButton.fontIcon
+                            font.family: EaStyle.Fonts.iconsFamily
+                            font.pixelSize: cancelQueuedButton.font.pixelSize * 1.25
+                            color: cancelQueuedButton.foregroundColor()
+                            horizontalAlignment: Text.AlignLeft
+                            verticalAlignment: Text.AlignVCenter
+                        }
+                        ToolTip.text: qsTr("Do not send; return it to the message box")
+                        Accessible.name: ToolTip.text
+                        onClicked: composer.assistant.cancelQueuedMessage(queuedMessageRow.modelData.id)
+                    }
+                }
+            }
+        }
         ScrollView {
             ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
             ScrollBar.vertical: EaElements.ScrollBar {

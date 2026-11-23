@@ -73,6 +73,7 @@ class AssistantViewModel : public QObject {
     Q_PROPERTY(bool draftAdmissionReady READ draftAdmissionReady NOTIFY draftAdmissionReadyChanged)
     Q_PROPERTY(bool contextConsentRequired READ contextConsentRequired NOTIFY contextConsentRequiredChanged)
     Q_PROPERTY(bool contextApprovalBlocked READ contextApprovalBlocked NOTIFY contextApprovalBlockedChanged)
+    Q_PROPERTY(QVariantList queuedMessages READ queuedMessages NOTIFY queuedMessagesChanged)
 
    public:
     explicit AssistantViewModel(QObject* parent = nullptr, AssistantWorkReportOptions options = {});
@@ -156,6 +157,10 @@ class AssistantViewModel : public QObject {
     /// Submit on the owner thread; return its admitted row ID, or empty on refusal. Durable completed status alone acknowledges it.
     Q_INVOKABLE QString submitDraft(const QString& text);
     Q_INVOKABLE edi_app::AssistantDraftAdmission submitDraftAdmission(const QString& text);
+    /// Messages waiting for a running fit or app action, oldest first: [{id, text}].
+    QVariantList queuedMessages() const;
+    /// Take a waiting message back (it returns to the composer); false when it is unknown or already being sent.
+    Q_INVOKABLE bool cancelQueuedMessage(const QString& id);
     Q_INVOKABLE QString workReportDocument();
     /// Display-only intent label for a native action identifier; no action is executed.
     Q_INVOKABLE QString nativeActionLabel(const QString& action) const;
@@ -265,6 +270,8 @@ class AssistantViewModel : public QObject {
     void usageChanged();
     void contextPreviewChanged();
     void draftAdmissionReadyChanged();
+    void queuedMessagesChanged();
+    void queuedMessageReturned(const QString& text);
 
    protected:
     bool eventFilter(QObject* watched, QEvent* event) override;
