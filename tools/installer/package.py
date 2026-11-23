@@ -12,6 +12,7 @@ import plistlib
 import re
 import shutil
 import subprocess
+import sys
 import tarfile
 import tempfile
 import urllib.request
@@ -830,8 +831,6 @@ def build_disk_image(image: Path, app: Path, notice: Path) -> None:
     dmgbuild writes the window's layout (.DS_Store) and .VolumeIcon.icns into the image itself, so
     Finder opens it the same way on every Mac without scripting Finder at build time.
     """
-    import dmgbuild  # noqa: PLC0415 - macOS only (tools/installer/pixi.toml)
-
     settings = {
         'files': [str(app), str(notice)],
         'icon': str(standard_icns(Path(tempfile.mkdtemp()))),
@@ -852,7 +851,12 @@ def build_disk_image(image: Path, app: Path, notice: Path) -> None:
         'grid_spacing': 100,
         'icon_locations': {app.name: (250, 220), notice.name: (510, 220)},
     }
-    dmgbuild.build_dmg(str(image), MACOS_INSTALLER_NAME, settings=settings)
+    # dmgbuild reads its settings as a Python file; it is in the macOS packaging environment only.
+    script = Path(tempfile.mkdtemp()) / 'dmg_settings.py'
+    script.write_text(
+        ''.join(f'{key} = {value!r}\n' for key, value in settings.items()), encoding='utf-8'
+    )
+    run([sys.executable, '-m', 'dmgbuild', '-s', script, MACOS_INSTALLER_NAME, image])
 
 
 # The icns entries of Installer.icns by the iconset name iconutil reads them from.
