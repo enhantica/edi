@@ -285,14 +285,22 @@ function installPageField(name) {
 
 function licenseAccepted() {
     var box = installPageField("LicenseCheckBox");
-    return box ? box.checked : true;
+    return box ? box.checked : false;  // no readable choice is no acceptance
 }
 
 function freeSpace(folder) {
-    // The nearest existing folder's volume: df on macOS and Linux, PowerShell's drive on Windows.
+    // The nearest existing folder's volume: df on macOS and Linux, PowerShell's drive on Windows. Only for a whole
+    // absolute path; the walk up stops when a step no longer shortens it.
+    var absolute = systemInfo.kernelType === "winnt" ? /^[A-Za-z]:[\\/]/.test(folder) : folder.charAt(0) === "/";
+    if (!absolute)
+        return NaN;
     var path = folder;
-    while (path.length > 1 && !installer.fileExists(path))
-        path = path.replace(/[\\/][^\\/]*$/, "") || "/";
+    while (!installer.fileExists(path)) {
+        var shorter = path.replace(/[\\/][^\\/]*[\\/]?$/, "");
+        if (shorter === path || shorter.length < (systemInfo.kernelType === "winnt" ? 2 : 1))
+            return NaN;
+        path = shorter;
+    }
     if (systemInfo.kernelType === "winnt") {
         var drive = path.substring(0, 1);
         var free = installer.execute("powershell", ["-NoProfile", "-Command", "(Get-PSDrive " + drive + ").Free"]);
@@ -354,19 +362,32 @@ function setupInstallPage(page) {
         }
         if (assistantBox)
             assistantBox.toggled.connect(updateSpace);
+        // The folder is probed (its disk, an installation in it) when its editing is done, never per keystroke.
         if (folder)
-            folder.textChanged.connect(updateSpace);
+            folder.editingFinished.connect(refreshInstallPage);
         installPageReady = true;
     }
-    // An installation already in the chosen folder is updated by its maintenance tool, not installed twice.
-    var notice = gui.findChild(page, "NoticeLabel");
+    refreshInstallPage();
+}
+
+// What the chosen folder says: an installation already in it is updated by its maintenance tool, not installed
+// twice. A licence refusal stays said until Install is pressed again.
+var licenseRefused = false;
+
+function refreshInstallPage() {
+    var notice = installPageField("NoticeLabel");
+    var folder = installPageField("TargetDirectoryLineEdit");
     var target = folder ? String(folder.text) : installer.value("TargetDir");
     var tool = target + (systemInfo.kernelType === "darwin" ? "/MaintenanceTool.app"
                          : systemInfo.kernelType === "winnt" ? "/MaintenanceTool.exe" : "/MaintenanceTool");
     if (notice) {
-        notice.text = installer.fileExists(tool)
-            ? "EasyDiffraction is already installed here. To update it, open its Maintenance Tool and choose Update."
-            : "";
+        var lines = [];
+        if (licenseRefused)
+            lines.push("Accept the license to install EasyDiffraction.");
+        if (target !== "" && installer.fileExists(tool))
+            lines.push("EasyDiffraction is already installed here. To update it, open its Maintenance Tool and choose "
+                + "Update.");
+        notice.text = lines.join(" ");
         notice.visible = notice.text !== "";
     }
     updateSpace();
@@ -421,14 +442,11 @@ function headerWordmark() {
         if (name === "ReadyForInstallation" && installer.isInstaller()) {
             applyAssistantChoice();
             // Clicked a moment later, outside the Framework's own page change, which a nested click leaves half done.
-            if (licenseAccepted()) {
+            licenseRefused = !licenseAccepted();
+            if (!licenseRefused) {
                 gui.clickButton(buttons.CommitButton, 50);
             } else {
-                var why = installPageField("NoticeLabel");
-                if (why) {
-                    why.text = "Accept the license to install EasyDiffraction.";
-                    why.visible = true;
-                }
+                refreshInstallPage();
                 gui.clickButton(buttons.BackButton, 50);
             }
             return;
@@ -507,8 +525,14 @@ function headerWordmark() {
         // Done: where to find it, and the program opened directly if wanted. No folder path.
         if (name === "Finished") {
             var done = gui.findChild(page, "MessageLabel");
-            var where = systemInfo.kernelType === "winnt" ? "in the Start menu and on your desktop"
-                : systemInfo.kernelType === "darwin" ? "in your Applications folder" : "in your applications menu";
+            // Where it really is: the shortcuts made, and the folder when it is not the usual one.
+            var shortcut = installer.value("EdiDesktopShortcut") !== "false";
+            var target = String(installer.value("TargetDir"));
+            var where = systemInfo.kernelType === "winnt" ? (shortcut ? "in the Start menu and on your desktop"
+                                                                      : "in the Start menu")
+                : systemInfo.kernelType === "darwin"
+                    ? (/^\/Applications\//.test(target) ? "in your Applications folder" : "in " + target)
+                    : (shortcut ? "in your applications menu and on your desktop" : "in your applications menu");
             if (done && installer.isInstaller() && installer.status === QInstaller.Success) {
                 // A large check in the accent above the sentence (the app's circle-check icon).
                 done.textFormat = 1;  // Qt.RichText
