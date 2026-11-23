@@ -198,6 +198,9 @@ AppDialog {
 
     title: qsTr("Preferences")
     standardButtons: Dialog.Ok
+    // Enter presses OK wherever the focus is, a choice or number box included; a dialog opened from here keeps Enter
+    // for its own OK.
+    enterAccepts: !webSource.visible && !resetConfirm.visible && !diagnostics.visible
 
     // 720 px wide, so the online sources table fits its columns without wide gaps.
     width: 720
