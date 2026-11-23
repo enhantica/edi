@@ -67,7 +67,8 @@ QJsonObject collectionOwner(Session& session, VM* model, const QString& root,
                                            QJsonArray{18.5, 49, 2.5}};
                 authoredTargets.push_back(
                     {held, id, "owned-" + id, QString::fromLatin1(digest), text, expected});
-                model->setCurrentExperimentIndex(model->project_->experiments.size() - 1);
+                model->setCurrentExperimentIndex(
+                    static_cast<int>(model->project_->experiments.size() - 1));
             }
             return admitted;
         };

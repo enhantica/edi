@@ -62,14 +62,14 @@ QJsonObject linkedInventoryContract(const QString& source, const QStringList& sp
         QFile analysis(input + "/analysis/analysis.edi");
         need(analysis.open(QIODevice::ReadOnly),
              "The independent scan setup declares its data directory");
-        auto text = analysis.readAll();
+        auto analysisText = analysis.readAll();
         analysis.close();
-        need(text.contains("experiments/d20_scan"),
+        need(analysisText.contains("experiments/d20_scan"),
              "The retained scan setup names its original source");
-        text.replace("experiments/d20_scan", filesRoot.toUtf8());
+        analysisText.replace("experiments/d20_scan", filesRoot.toUtf8());
         need(analysis.open(QIODevice::WriteOnly | QIODevice::Truncate),
              "The scan setup links the newly authored outside folder");
-        analysis.write(text);
+        analysis.write(analysisText);
         analysis.close();
         if (mixed) {
             QFile experiment(input + "/experiments/d20.edi");

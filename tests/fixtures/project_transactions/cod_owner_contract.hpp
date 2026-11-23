@@ -41,7 +41,7 @@ QJsonObject codOwner(const QStringList& spec) {
         if (meta->method(at).methodType() == QMetaMethod::Signal)
             querySignals.push_back(std::make_unique<QSignalSpy>(&search, meta->method(at)));
     const auto reports = [&] {
-        int n = 0;
+        qsizetype n = 0;
         for (const auto& spy : querySignals) n += spy->size();
         return n;
     };
@@ -112,7 +112,7 @@ QJsonObject codOwner(const QStringList& spec) {
     } else
         need(retirement == "none", "The COD retirement is explicitly enumerated");
     const auto afterRetirement = state();
-    const int beforeReports = reports();
+    const auto beforeReports = reports();
     const auto codFetches = [&] {
         int count = 0;
         for (const auto& fetch : operationFetches)

@@ -29,7 +29,7 @@ QJsonObject heldPublication(const QString& source, const QStringList& spec) {
         }
     }
     auto fieldCount = [&] {
-        int count = 0;
+        qsizetype count = 0;
         for (const auto& spy : fields) count += spy->size();
         return count;
     };
@@ -54,7 +54,7 @@ QJsonObject heldPublication(const QString& source, const QStringList& spec) {
             projectSignals.push_back(std::make_unique<QSignalSpy>(project, method));
     }
     const auto projectCount = [&] {
-        int n = 0;
+        qsizetype n = 0;
         for (const auto& signal : projectSignals) n += signal->size();
         return n;
     };
@@ -75,8 +75,8 @@ QJsonObject heldPublication(const QString& source, const QStringList& spec) {
     project->setAdjusting(false);
     settle(session);
     turn();
-    const int releaseChanges = selected.size(), releaseGeneral = changed.size(),
-              releaseEdits = edited.size();
+    const auto releaseChanges = selected.size(), releaseGeneral = changed.size(),
+               releaseEdits = edited.size();
     const bool finalValue = item->value() == last;
     project->undo();
     settle(session);

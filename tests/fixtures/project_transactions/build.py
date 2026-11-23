@@ -294,14 +294,14 @@ def browser_staging_source(root):
         '    (*browserStage)[QString::fromUtf8(name)] = QByteArray(data, size);\n'
         '}\n'
         'void observe_browser_serialization(const QString& kind, const QString& folder,\n'
-        '    bool recovery, Image& staged, QString& error, bool& ready) {\n'
+        '    bool recovery, Image& staged, QString& failure, bool& ready) {\n'
         '    const int job = 0;\n'
         '    auto* previous = browserStage; browserStage = &staged;\n'
         '    struct Reset { Image* previous; ~Reset() { browserStage = previous; } };\n'
         '    Reset reset{previous};\n'
         '    const auto refusal = [](const QString& message) { return message; };\n'
         '    const auto finish = [&](int, const QString& message) {\n'
-        '        error = message; ready = false; };\n' + stage + '}\n}\n'
+        '        failure = message; ready = false; };\n' + stage + '}\n}\n'
     )
 
 

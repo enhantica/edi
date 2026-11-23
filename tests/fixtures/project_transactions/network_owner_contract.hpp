@@ -140,7 +140,8 @@ QJsonObject networkOwner(const QString& source, const QStringList& spec) {
          entryFenced = false;
     bool ownerPreservedAtRefusal = false;
     QSignalSpy operationRefusals(original, &ProjectViewModel::refused);
-    int reports = 0, writes = 0;
+    qsizetype reports = 0;
+    int writes = 0;
     QStringList paths;
     const auto diskBefore = image(input, true), successorBefore = image(successor, true);
     QObject callbackContext;
@@ -170,7 +171,7 @@ QJsonObject networkOwner(const QString& source, const QStringList& spec) {
                          !operationRefusals.isEmpty() ||
                          (original && !original->lastError().isEmpty());
         alive = !original.isNull();
-        const int before = single.size() + many.size() + messages.size() + details.size() +
+        const auto before = single.size() + many.size() + messages.size() + details.size() +
                            finished.size() + failed.size();
         stale.entered = retired;
         ownerBoundary = &stale;

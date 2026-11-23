@@ -37,7 +37,14 @@
 
 #include "engine_setup.hpp"
 // Set only the boundary's startup capability, never Session/project state.
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wkeyword-macro"
+#endif
 #define private public
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
 #include "session.hpp"
 #include "web_files.hpp"
 #include "web_storage.hpp"
@@ -132,7 +139,7 @@ struct Job {
     QString action, key, kind, root;
     bool recovery;
     WebStorage::Answer answer;
-    Image payload;
+    Image payload{};
 };
 std::vector<Job> jobs;
 QStringList drops;
@@ -1514,7 +1521,8 @@ QJsonObject fitPublication(const QString& source, const QStringList& spec) {
         held = nextWrite(0);
         need(held < jobs.size(), "A fit starts during an actual outstanding browser write");
     }
-    int publicationsAtRequest = -1, stagesAtRequest = -1, jobsAtRequest = -1;
+    qsizetype publicationsAtRequest = -1, stagesAtRequest = -1;
+    qint64 jobsAtRequest = -1;
     auto* fit = session.project()->fit();
     QSignalSpy fitRefused(fit, &FitViewModel::refused);
     if (moment != "success") {
@@ -1529,7 +1537,7 @@ QJsonObject fitPublication(const QString& source, const QStringList& spec) {
             after = state(session);
             publicationsAtRequest = archiveSources.size();
             stagesAtRequest = stageKinds.size();
-            jobsAtRequest = jobs.size();
+            jobsAtRequest = static_cast<qint64>(jobs.size());
         });
         fit->start();
         if (moment == "during" && !runningReached) {
@@ -1538,7 +1546,7 @@ QJsonObject fitPublication(const QString& source, const QStringList& spec) {
             after = state(session);
             publicationsAtRequest = archiveSources.size();
             stagesAtRequest = stageKinds.size();
-            jobsAtRequest = jobs.size();
+            jobsAtRequest = static_cast<qint64>(jobs.size());
         } else {
             need(runningReached,
                  "The observer reaches the actual running fit, never a fabricated flag");
@@ -1557,7 +1565,7 @@ QJsonObject fitPublication(const QString& source, const QStringList& spec) {
         after = state(session);
         publicationsAtRequest = archiveSources.size();
         stagesAtRequest = stageKinds.size();
-        jobsAtRequest = jobs.size();
+        jobsAtRequest = static_cast<qint64>(jobs.size());
     }
     QJsonArray archivedParameters;
     if (moment == "success" && returned) {
@@ -1783,7 +1791,14 @@ QJsonObject tutorialOwnership(const QString& source, const QStringList& spec) {
 }
 }  // namespace
 extern "C" void transaction_real_archive(const std::string&, const std::string&);
-extern "C" std::string transaction_real_directory(const std::string&);
+// Objcopy renames the C++ definitions to fixed symbols in the observed library.
+#ifdef __APPLE__
+#define TRANSACTION_SYMBOL(name) asm("_" #name)
+#else
+#define TRANSACTION_SYMBOL(name) asm(#name)
+#endif
+std::string transaction_real_directory(const std::string&)
+    TRANSACTION_SYMBOL(transaction_real_directory);
 namespace edi {
 void write_project_archive(const std::string& source, const std::string& target) {
     ownerCoreAttempt();
@@ -1800,7 +1815,8 @@ std::string fresh_archive_directory(const std::string& kind) {
 }
 }  // namespace edi
 extern "C" void transaction_real_fresh_archive(const std::string&, const std::string&);
-extern "C" std::string transaction_real_archive_bytes(const std::string&);
+std::string transaction_real_archive_bytes(const std::string&)
+    TRANSACTION_SYMBOL(transaction_real_archive_bytes);
 namespace edi::detail {
 void write_project_archive_fresh(const std::string& source, const std::string& target) {
     ownerCoreAttempt();
@@ -1827,10 +1843,11 @@ void publish_fresh_project_path(const std::string& source, const std::string& ta
     sealCommitted(QString::fromStdString(target));
 }
 }  // namespace edi::detail
-extern "C" edi::Project transaction_real_load_project(const std::string&, const edi::WarningSink&);
-extern "C" edi::Project transaction_real_load_project_mode(const std::string&,
-                                                           edi::ProjectLoadMode,
-                                                           const edi::WarningSink&);
+edi::Project transaction_real_load_project(const std::string&, const edi::WarningSink&)
+    TRANSACTION_SYMBOL(transaction_real_load_project);
+edi::Project transaction_real_load_project_mode(const std::string&, edi::ProjectLoadMode,
+                                               const edi::WarningSink&)
+    TRANSACTION_SYMBOL(transaction_real_load_project_mode);
 extern "C" void transaction_real_save_project(const edi::Project&, const std::string&);
 extern "C" void transaction_real_save_project_as(edi::Project&, const std::string&);
 extern "C" bool transaction_real_adopt_saved_values(edi::Project&, const std::string&);
@@ -1886,9 +1903,10 @@ bool save_report_settings(const Project& p, const std::string& path) {
     return transaction_real_save_report_settings(p, path);
 }
 }  // namespace edi
-extern "C" edi::PdDataBase transaction_real_read_scan_dataset(const std::string&,
-                                                              const std::string&,
-                                                              edi::BeamModeEnum);
+edi::PdDataBase transaction_real_read_scan_dataset(const std::string&, const std::string&,
+                                                 edi::BeamModeEnum)
+    TRANSACTION_SYMBOL(transaction_real_read_scan_dataset);
+#undef TRANSACTION_SYMBOL
 namespace edi {
 PdDataBase read_scan_dataset(const std::string& dir, const std::string& file, BeamModeEnum mode) {
     if (QThread::currentThread() != QCoreApplication::instance()->thread()) {

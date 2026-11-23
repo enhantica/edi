@@ -51,7 +51,7 @@ QJsonObject adoptionBoundary(const QString& source, const QStringList& spec) {
         entered = true;
         std::cerr << "boundary-reached: adoption announcement; real listener reentry\n"
                   << std::flush;
-        const int beforeRefusals = refused.size();
+        const auto beforeRefusals = refused.size();
         const auto priorSessionError = session.lastError();
         const auto priorModelError = original->lastError();
         if (action == "replace") {

@@ -249,7 +249,8 @@ QJsonObject operationFiles(const QString& source, const QStringList& spec) {
     }
     turn();
     holdOperationFetch = false;
-    int oldReports = failures.count(oldRequest), currentReports = failures.count(currentRequest);
+    auto oldReports = failures.count(oldRequest);
+    auto currentReports = failures.count(currentRequest);
     QUrl folder;
     for (const auto& reply : successes) {
         oldReports += reply.id == oldRequest;
