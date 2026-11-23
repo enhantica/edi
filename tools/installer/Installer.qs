@@ -57,6 +57,8 @@ function darkTheme() {
 var captureFolder = installer.environmentVariable("EDI_INSTALLER_CAPTURE");
 var installPageReady = false;
 var progressHooked = false;
+// A maintenance tool that updated its own component restarts at its first page; a captured walk then ends there.
+var maintenanceWalked = false;
 // The maintenance tool's mode in capture mode (EDI_INSTALLER_MAINTENANCE_MODE): add (add or remove components),
 // update, or remove (everything, the default).
 var maintenanceMode = installer.environmentVariable("EDI_INSTALLER_MAINTENANCE_MODE") || "remove";
@@ -105,7 +107,9 @@ function advance(name, page) {
         return;
     }
     // The maintenance tool's last page finishes with its relabelled Cancel button; its commit button restarts it.
-    var finish = installer.isInstaller() ? buttons.FinishButton : buttons.CancelButton;
+    var finish = installer.isInstaller() || installer.isUninstaller() ? buttons.FinishButton : buttons.CancelButton;
+    if (name === "Finished")
+        maintenanceWalked = true;
     gui.clickButton(name === "Finished" ? finish : buttons.NextButton, 2500);
 }
 
@@ -421,6 +425,10 @@ function headerWordmark() {
 
         // The maintenance tool asks plainly, at the top, and updates unless told otherwise: never a destructive
         // default.
+        if (name === "Introduction" && !installer.isInstaller() && captureFolder !== "" && maintenanceWalked) {
+            gui.rejectWithoutPrompt();
+            return;
+        }
         if (name === "Introduction" && !installer.isInstaller()) {
             var ask = gui.findChild(page, "MessageLabel");
             if (ask) {

@@ -73,7 +73,8 @@ echo "a11y-check: installer exit $status after ${waited}s; crash reports: ${new:
 # with 0; the replacement walk script cancels at the last page, 3), the reader completed queries, and every page
 # named in A11Y_EXPECT_PAGES was captured.
 failed=0
-expected_status=$([ "$own" = 1 ] && echo "0" || echo "0 3")
+# A maintenance tool that updated itself restarts and is closed by the walk (3); its Finished page must be captured.
+expected_status=$([ "$own" = 1 ] && echo "${A11Y_EXPECT_STATUS:-0}" || echo "0 3")
 case " $expected_status " in *" $status "*) ;; *) echo "a11y-check: the installer ended with $status"; failed=1 ;; esac
 reads="$(sed -n 's/^a11y-client: \([0-9]*\) multiple-attribute queries$/\1/p' "$logs/client.log")"
 if [ "${reads:-0}" -eq 0 ]; then echo "a11y-check: the reader completed no queries"; failed=1; fi

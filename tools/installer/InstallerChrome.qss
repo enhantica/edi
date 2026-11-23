@@ -102,7 +102,7 @@ QPushButton#qt_wizard_finish {
 /* No frame around the page: its content sits on the window (Qt's Mac style draws a raised box). */
 QWizard > QWidget > QFrame {
     border: none;
-    background: transparent;
+    background-color: palette(window);  /* Qt fills it with the base colour, a white card, otherwise */
     min-width: 560px;  /* the page fills the window; Qt's Mac style leaves it at its own width */
 }
 
@@ -116,4 +116,5 @@ QPushButton#qt_wizard_commit:default:disabled {
     border: none;
     background: transparent;
     color: transparent;
+    qproperty-iconSize: 0px 0px;
 }
