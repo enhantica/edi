@@ -27,7 +27,8 @@ if [ "${1:-}" = "--own-script" ]; then
   mkdir -p "$logs/pages"
   where=(TargetDir="$target")
   case "$process" in MaintenanceTool*) where=() ;; esac
-  EDI_INSTALLER_CAPTURE="$logs/pages" "$binary" "${where[@]}" "$@" --verbose >"$logs/installer.log" 2>&1 &
+  # macOS bash 3.2 counts an empty array as unset under set -u, hence the +-form.
+  EDI_INSTALLER_CAPTURE="$logs/pages" "$binary" ${where[@]+"${where[@]}"} "$@" --verbose >"$logs/installer.log" 2>&1 &
 else
   "$binary" --script "$here/a11y_walk.qs" A11yTarget="$target" "$@" --verbose >"$logs/installer.log" 2>&1 &
 fi
@@ -62,7 +63,8 @@ if [ "$status" -ge 128 ]; then
   done
 fi
 for report in $new; do cp "$report" "$logs/"; done
-trees="$(grep -c "AXOutline" "$logs/client.log" || true)"
+trees="$(grep -c "AXOutline" "$logs/client.log" 2>/dev/null || true)"
+trees="${trees:-0}"
 echo "a11y-check: installer exit $status after ${waited}s; crash reports: ${new:-none}; tree views read: $trees"
 if [ "$trees" -gt 0 ] && [ "${A11Y_ALLOW_TREE:-}" != 1 ]; then
   echo "a11y-check: a tree view is on a page"

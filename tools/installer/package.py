@@ -221,6 +221,9 @@ def installer_stylesheet(theme: str, name: str = 'Installer.qss') -> str:
         'FONT_FAMILY': {'macos': 'Helvetica Neue', 'windows': 'Segoe UI'}.get(
             SYSTEM, 'DejaVu Sans'
         ),
+        # Monospace for the licence, whose headings are centred with spaces (the app's PT Mono is
+        # not available to the installer).
+        'MONO_FAMILY': {'macos': 'Menlo', 'windows': 'Consolas'}.get(SYSTEM, 'DejaVu Sans Mono'),
     }
     for key, value in values.items():
         text = text.replace(f'@{key}@', value)
@@ -229,22 +232,47 @@ def installer_stylesheet(theme: str, name: str = 'Installer.qss') -> str:
     return text
 
 
-def write_translation(config: Path, configuration: ET.ElementTree) -> None:
-    """Build ifw_en.qm into the config and name it, so the Framework's text reads as ours.
+def qt_tool(name: str) -> Path:
+    """A Qt build tool of the packaging environment (conda-forge's qt6-main)."""
+    prefix = Path(sys.prefix)
+    for path in (
+        prefix / 'lib/qt6' / name,
+        prefix / 'Library/lib/qt6' / (name + '.exe'),
+        prefix / 'Library/bin' / (name + '.exe'),
+        prefix / 'bin' / name,
+    ):
+        if path.is_file():
+            return path
+    raise RuntimeError(f'Qt {name} is not in the packaging environment')
 
-    Named translations replace the Framework's built-in ones, and the language follows the first
-    file's name: English everywhere, as the pages are.
+
+def write_resources(config: Path, configuration: ET.ElementTree) -> Path:
+    """The resource file binarycreator adds (-r): our English text and the check box's tick.
+
+    The Framework reads named translations only from its own resources, so ifw_en.qm goes in under
+    translations/; named, it replaces the built-in ones and sets the language from its name:
+    English everywhere, as the pages are. The tick is the check box's image (Installer.qss).
     """
-    lrelease = next(
-        (found for name in ('lrelease6', 'lrelease') if (found := shutil.which(name))), None
+    work = config / 'resources'
+    (work / 'translations').mkdir(parents=True, exist_ok=True)
+    run([
+        qt_tool('lrelease'), ROOT / 'tools/installer/ifw_en.ts',
+        '-qm', work / 'translations/ifw_en.qm',
+    ])  # fmt: skip
+    shutil.copy2(ROOT / 'tools/installer/CheckMark.png', work / 'CheckMark.png')
+    (work / 'resources.qrc').write_text(
+        '<RCC><qresource prefix="/">'
+        '<file>translations/ifw_en.qm</file><file alias="edi/CheckMark.png">CheckMark.png</file>'
+        '</qresource></RCC>\n',
+        encoding='utf-8',
     )
-    if lrelease is None:
-        raise RuntimeError('Qt lrelease is not in the packaging environment')
-    run([lrelease, ROOT / 'tools/installer/ifw_en.ts', '-qm', config / 'ifw_en.qm'])
+    resources = config / 'edi-resources.rcc'
+    run([qt_tool('rcc'), '--binary', '-o', resources, work / 'resources.qrc'])
     translations = ET.SubElement(configuration.getroot(), 'Translations')
-    ET.SubElement(translations, 'Translation').text = 'ifw_en.qm'
+    ET.SubElement(translations, 'Translation').text = 'ifw_en'
     ET.indent(configuration)
     configuration.write(config / 'config.xml', encoding='utf-8', xml_declaration=True)
+    return resources
 
 
 def write_controller(config: Path) -> None:
@@ -310,7 +338,7 @@ def write_metadata(
     )
     style = ROOT / 'tools/installer'
     write_controller(config)
-    write_translation(config, configuration)
+    write_resources(config, configuration)
     # The installer's own icon, the app logo coming out of a box, distinct from the app's.
     if SYSTEM in {'macos', 'windows'}:
         icon = 'Installer.icns' if SYSTEM == 'macos' else 'Installer.ico'
@@ -460,7 +488,7 @@ def build_maintenance_tool(tools: Path, output: Path) -> Path:
         },
     )
     write_controller(config)
-    write_translation(config, configuration)
+    write_resources(config, configuration)
     # --mt writes the tool named by MaintenanceToolName into the working directory.
     template = ['-t', macos_installer_template(tools, work)] if SYSTEM == 'macos' else []
     run(
@@ -469,13 +497,17 @@ def build_maintenance_tool(tools: Path, output: Path) -> Path:
             '--verbose',
             *template,
             '--mt',
+            '-r',
+            config / 'edi-resources.rcc',
             '-c',
             config / 'config.xml',
         ],
         cwd=work,
     )
     bundle = work / maintenance_tool_name()
-    set_bundle_identifier(bundle, 'org.easydiffraction.maintenancetool')
+    set_bundle_identifier(
+        bundle, 'org.easydiffraction.maintenancetool', 'EasyDiffraction Maintenance Tool'
+    )
     if macos_signing():
         notarise_macos(bundle)
     elif windows_signing():
@@ -821,11 +853,14 @@ def linux_installer_runtime(tools: Path, output: Path) -> tuple[Path, Path, dict
     return template, libraries.parent, env
 
 
-def set_bundle_identifier(bundle: Path, identifier: str, name: str = '') -> None:
-    """Replace the Installer Framework's placeholder identifier, before the bundle is signed.
+def set_bundle_identifier(
+    bundle: Path, identifier: str, name: str, *, installer_icon: bool = False
+) -> None:
+    """Our identifier and name in place of the Installer Framework's, before the bundle is signed.
 
-    binarycreator writes com.yourcompany.installerbase into every macOS bundle it makes, and macOS
-    names the app by it in crash reports, privacy settings and the Dock.
+    binarycreator writes com.yourcompany.installerbase into every macOS bundle it makes and names
+    it after its executable, and macOS shows both in crash reports, privacy settings, the menu bar
+    and the Dock. The installer also takes the enlarged icon (standard_icns).
     """
     if SYSTEM != 'macos':
         return
@@ -833,16 +868,13 @@ def set_bundle_identifier(bundle: Path, identifier: str, name: str = '') -> None
     with info.open('rb') as handle:
         values = plistlib.load(handle)
     values['CFBundleIdentifier'] = identifier
-    if name:
-        values['CFBundleName'] = values['CFBundleDisplayName'] = name
-        icon = values.get('CFBundleIconFile')
-        if icon:
-            target = (
-                bundle
-                / 'Contents/Resources'
-                / (icon if icon.endswith('.icns') else icon + '.icns')
-            )
-            shutil.copy2(standard_icns(Path(tempfile.mkdtemp())), target)
+    values['CFBundleName'] = values['CFBundleDisplayName'] = name
+    icon = values.get('CFBundleIconFile')
+    if installer_icon and icon:
+        name_on_disk = icon if icon.endswith('.icns') else icon + '.icns'
+        shutil.copy2(
+            standard_icns(Path(tempfile.mkdtemp())), bundle / 'Contents/Resources' / name_on_disk
+        )
     with info.open('wb') as handle:
         plistlib.dump(values, handle)
 
@@ -873,7 +905,8 @@ def build_disk_image(image: Path, app: Path, notice: Path) -> None:
         'format': 'UDZO',
         'filesystem': 'HFS+',
         'default_view': 'icon-view',
-        'window_rect': ((200, 120), (380, 270)),
+        # Centred on a 1440 by 900 point screen, the common MacBook size.
+        'window_rect': ((530, 315), (380, 270)),
         'show_toolbar': False,
         'show_status_bar': False,
         'show_tab_view': False,
@@ -1100,6 +1133,8 @@ def package_app(
             '--compression',
             '1',
             '--online-only' if repository_url else '--hybrid',
+            '-r',
+            source / 'config/edi-resources.rcc',
             '-c',
             source / 'config/config.xml',
             '-p',
@@ -1109,7 +1144,9 @@ def package_app(
         env=tool_environment,
     )
     # The menu bar and Dock show this name, not the download's file name; the icon is enlarged.
-    set_bundle_identifier(installer, 'org.easydiffraction.installer', MACOS_INSTALLER_NAME)
+    set_bundle_identifier(
+        installer, 'org.easydiffraction.installer', MACOS_INSTALLER_NAME, installer_icon=True
+    )
     download = deliver_installer(installer, runtime)
     (output / 'installer.json').write_text(
         json.dumps(

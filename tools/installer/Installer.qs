@@ -152,13 +152,38 @@ function headerWordmark() {
         if (!page)
             return;
         themePage(page);
-        if (!installer.isInstaller()) {
-            capture(name);
-            advance(name, page);
-            return;
+
+        // The maintenance tool asks plainly, at the top, and updates unless told otherwise: never a destructive
+        // default.
+        if (name === "Introduction" && !installer.isInstaller()) {
+            var ask = gui.findChild(page, "MessageLabel");
+            if (ask) {
+                ask.alignment = 0x0001 | 0x0020;  // Qt.AlignLeft | Qt.AlignTop
+                ask.text = "What would you like to do?";
+            }
+            var update = gui.findChild(page, "UpdaterRadioButton");
+            if (update && captureFolder === "")
+                update.checked = true;
         }
 
-        if (name === "Introduction") {
+        // The summary without the Framework's component trees: a tree view is what macOS accessibility clients
+        // crashed (edi #150), so none may show. One plain sentence says what happens.
+        if (name === "ReadyForInstallation") {
+            ["InstallComponentsWidget", "UninstallComponentsWidget"].forEach(function (container) {
+                var widget = gui.findChild(page, container);
+                if (widget)
+                    widget.visible = false;
+            });
+            var summary = gui.findChild(page, "RemoveAllMsgLabel");
+            if (summary && !installer.isUninstaller()) {
+                summary.text = installer.isInstaller() ? "EasyDiffraction is ready to install."
+                    : installer.isUpdater() ? "EasyDiffraction is ready to update."
+                    : "Your changes to EasyDiffraction are ready to apply.";
+                summary.visible = true;
+            }
+        }
+
+        if (name === "Introduction" && installer.isInstaller()) {
             var welcome = gui.findChild(page, "MessageLabel");
             welcome.openExternalLinks = true;
             // Top-aligned, level with the step list; a label centres its text in its minimum height.
