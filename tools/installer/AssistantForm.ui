@@ -22,8 +22,9 @@
    <property name="leftMargin">
     <number>0</number>
    </property>
+   <!-- One spacing step (16) under the folder field, with the page's own spacing (14 on macOS). -->
    <property name="topMargin">
-    <number>0</number>
+    <number>2</number>
    </property>
    <property name="rightMargin">
     <number>0</number>
@@ -42,6 +43,18 @@
     <layout class="QHBoxLayout" name="LicenseRow">
      <property name="spacing">
       <number>8</number>
+     </property>
+     <property name="leftMargin">
+      <number>0</number>
+     </property>
+     <property name="topMargin">
+      <number>0</number>
+     </property>
+     <property name="rightMargin">
+      <number>0</number>
+     </property>
+     <property name="bottomMargin">
+      <number>0</number>
      </property>
      <item>
       <widget class="QCheckBox" name="LicenseCheckBox">
@@ -84,14 +97,14 @@
     </widget>
    </item>
    <item>
+    <widget class="QLabel" name="SpaceLabel"/>
+   </item>
+   <item>
     <spacer name="AssistantSpacer">
      <property name="orientation">
       <enum>Qt::Vertical</enum>
      </property>
     </spacer>
-   </item>
-   <item>
-    <widget class="QLabel" name="SpaceLabel"/>
    </item>
   </layout>
  </widget>

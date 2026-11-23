@@ -420,22 +420,23 @@ function headerWordmark() {
         // was cleared, which brings the first page back saying why.
         if (name === "ReadyForInstallation" && installer.isInstaller()) {
             applyAssistantChoice();
+            // Clicked a moment later, outside the Framework's own page change, which a nested click leaves half done.
             if (licenseAccepted()) {
-                gui.clickButton(buttons.CommitButton);
+                gui.clickButton(buttons.CommitButton, 50);
             } else {
                 var why = installPageField("NoticeLabel");
                 if (why) {
                     why.text = "Accept the license to install EasyDiffraction.";
                     why.visible = true;
                 }
-                gui.clickButton(buttons.BackButton);
+                gui.clickButton(buttons.BackButton, 50);
             }
             return;
         }
 
         // The welcome page passes by itself (online, it fetches the component list meanwhile).
         if (name === "Introduction" && installer.isInstaller() && captureFolder === "")
-            gui.clickButton(buttons.NextButton);
+            gui.clickButton(buttons.NextButton, 50);
         if (name === "Introduction" && installer.isInstaller()) {
             var welcome = gui.findChild(page, "MessageLabel");
             welcome.openExternalLinks = true;
@@ -483,7 +484,7 @@ function headerWordmark() {
 
         // Installing: the bar and one status line, no details.
         if (name === "PerformInstallation") {
-            ["DetailsButton", "DetailsBrowser"].forEach(function (hidden) {
+            ["DetailsButton", "DetailsBrowser", "DownloadStatus"].forEach(function (hidden) {
                 var widget = gui.findChild(page, hidden);
                 if (widget)
                     widget.visible = false;
