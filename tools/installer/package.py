@@ -231,6 +231,8 @@ def installer_stylesheet(theme: str, name: str = 'Installer.qss') -> str:
         # Qt's macOS style sets a check box in a page's own layout 2 points left of one in a row;
         # the licence box sits in a row with its link, so it takes the same step.
         'NESTED_CHECK_SHIFT': '-2px' if SYSTEM == 'macos' else '0px',
+        # The page's own left inset, which the logo above it (the page title) does not have.
+        'PAGE_INSET': '18px' if SYSTEM == 'macos' else '15px',
     }
     for key, value in values.items():
         text = text.replace(f'@{key}@', value)

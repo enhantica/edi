@@ -193,6 +193,11 @@ QRadioButton {
     padding: @HALF_FONT_PX@px 0;
 }
 
+/* The maintenance tool's choices start at the question's left edge (the Framework indents them). */
+QWizard #IntroductionPage QRadioButton {
+    margin-left: -10px;
+}
+
 QCheckBox:disabled, QRadioButton:disabled {
     color: @FOREGROUND_DISABLED@;
 }
