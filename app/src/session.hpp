@@ -539,6 +539,7 @@ class Session : public QObject {
     void settleUntitled(const std::shared_ptr<UntitledOperation>& op, UntitledOperation::State state);
     // The open operation gives way (a newer request, the project replaced or the session gone).
     void supersedeUntitled();
+    void supersedeUntitled(const std::shared_ptr<UntitledOperation>& op);
     void untitledSave(const std::shared_ptr<UntitledOperation>& op);
     void untitledWrite(const std::weak_ptr<UntitledOperation>& weak, quint64 id, const SaveOperation& operation);
     void untitledSaved(const std::shared_ptr<UntitledOperation>& op);
@@ -570,7 +571,7 @@ class Session : public QObject {
     // `untitled`: an untitled operation's write (ADR-0100), which may replace the folder it approved and leaves naming
     // the project to the operation.
     bool saveProjectAsFreshWith(const SaveOperation& operation, const QUrl& target, bool zip, bool copy, bool notify,
-                                const UntitledOperation::Destination* untitled = nullptr);
+                                const std::shared_ptr<UntitledOperation>& untitled = nullptr);
     void saveWebProjectAsWith(const SaveOperation& operation, const QString& kind, bool copy);
     void downloadWebProjectWith(const SaveOperation& operation);
     // The read-only folder a temporary working copy was made from.

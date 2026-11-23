@@ -1099,6 +1099,8 @@ class ApplicationInfo : public QObject {
     qint64 last_input_ = 0;
     mutable class QNetworkAccessManager* feedback_network_ = nullptr;
     mutable QPointer<QObject> dataset_folder_picker_, dataset_folder_project_, dataset_folder_experiment_;
+    // Counts the unsaved-changes questions: a guard Save on untitled work names its action by the question it answers.
+    mutable quint64 unsaved_question_ = 0;
 
 };
 

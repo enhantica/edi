@@ -24,17 +24,23 @@ could reach a later request or another project.
 2. **States.** `asking` (the Create dialog is open for it), `replanning` (the save asks about linked data, or plans
    again), `writing`, then exactly one of `saved`, `refused`, `rejected` (Cancel) or `superseded`. A settled operation
    never changes again and `untitledSettled(id, state)` is emitted once.
-3. **Supersession.** A newer request of another origin or owner, a replaced project or the session's end settles the
-   open operation `superseded` and writes nothing to the session. The same request again while its dialog asks is the
-   same operation. Every resumed callback checks that the session and the operation still exist, the id is its own,
-   the operation is open and its project is still the open one; otherwise it settles `superseded`.
+3. **Supersession.** A newer request of another origin, action or owner, a replaced project or the session's end
+   settles the open operation `superseded` and writes nothing to the session. The newer operation is the current one
+   before the older one settles, so a request a listener of that settlement makes supersedes the newer one in turn and
+   no operation is ever dropped unsettled. The same request again while its dialog asks is the same operation; a guard
+   Save is the same request only for the same unsaved-changes question. Every resumed callback checks that the session
+   and the operation still exist, the id is its own, the operation is open and still the session's current one, and
+   its project is still the open one; otherwise it settles `superseded`. Ids stay below 2^53, so QML holds them
+   exactly.
 4. **Only `saved` names the project.** The dialog's name, title, authors and description go into the save's snapshot,
    not the open project. `untitled` is cleared, the location published, "project saved" logged and the waiting action
    run only once the write is done, in that order. The waiting action runs only for the same session and project; on
    any other end it is abandoned.
 5. **The data question belongs to the operation.** Its Cancel settles `rejected`; an answer for an operation that gave
    way changes nothing, not even the session's message. An answer given while the question is being asked moves the
-   same operation to `writing`.
+   same operation to `writing`. An answer that cannot go on (the project changed, it cannot be held, the linked data
+   is unavailable) and a replan that is refused settle it `refused`: every refusal is terminal, so nothing waits on
+   it. On the desktop the Create form must name a folder; without one it is refused, and nothing is named.
 6. **Desktop.** A fresh destination stays fresh across the question and any replan. A Replace records the identity
    (device and inode; on Windows the volume and file index) of the folder and of its `project.edi` when the user
    confirms it (`approveUntitledReplace`, for that operation's id). The Create dialog's OK carries the id and the
@@ -56,7 +62,8 @@ could reach a later request or another project.
    still the open ones, checked before each: `Session::restoreProjectSetAside` after `replaceProject` and after each
    state write and signal (a refused restore leaves the project set aside); Save As into an existing folder after
    `takeStaged` and each location signal; Save As to a .zip after `publishArchive` and each location signal; and the
-   untitled operation's own `saved` steps.
+   untitled operation's own write, `saved` steps, error messages and place changes, which also need the operation to
+   be still open and current.
 
 ## Consequences
 

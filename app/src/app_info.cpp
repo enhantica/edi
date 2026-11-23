@@ -3403,6 +3403,7 @@ void ApplicationInfo::projectChangesQuestion(const QJSValue& action, const QJSVa
     QJSValue native = consentNull();
     if (!token.isNull() && consentFieldEquals(frame, token, "action", action)) native = token;
     projectWrite(frame, "unsavedChanges", "nativeCreation", native);
+    ++unsaved_question_;
     projectWrite(frame, "unsavedChanges", "action", action);
     projectInvoke(frame, "unsavedChanges", "open");
 }
@@ -3441,7 +3442,9 @@ void ApplicationInfo::acceptUnsavedProject() const {
     if (panelUsageTruth(assistantContextField(frame, "Session", "untitled"))) {
         const auto abandoned = panelUsageContextRead(frame, "abandoned");
         const auto origin = QJSValue(original.isNull() ? QStringLiteral("guard-save") : QStringLiteral("assistant-create"));
-        const auto id = projectInvoke(frame, "Session", "beginUntitled", {origin});
+        // The operation is bound to this question's action: a Save for another question is another request.
+        const auto question = QJSValue(QStringLiteral("question-%1").arg(unsaved_question_));
+        const auto id = projectInvoke(frame, "Session", "beginUntitled", {origin, question});
         if (id.toNumber() <= 0) {
             panelUsageGlobalCall(frame, "abandonAction", {});
             return;
@@ -3453,7 +3456,7 @@ void ApplicationInfo::acceptUnsavedProject() const {
         panelUsageContextWrite(frame, "untitledAbandoned", abandoned);
         panelUsageContextWrite(frame, "action", consentNull());
         panelUsageContextWrite(frame, "abandoned", consentNull());
-        // The same request asked again replaces the action it carries; the earlier one is abandoned.
+        // The same question answered again carries the same action; an earlier one it replaced is abandoned.
         if (same && previous.isCallable() && !previous.strictlyEquals(abandoned)) projectCall(frame, previous);
         projectInvoke(frame, "AppState", "requestUntitledSave");
         return;
