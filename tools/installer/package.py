@@ -260,10 +260,19 @@ def write_resources(config: Path, configuration: ET.ElementTree) -> Path:
     """
     work = config / 'resources'
     (work / 'translations').mkdir(parents=True, exist_ok=True)
-    run([
-        qt_tool('lrelease'), ROOT / 'tools/installer/ifw_en.ts',
-        '-qm', work / 'translations/ifw_en.qm',
-    ])  # fmt: skip
+    # ifw_en.qm is committed beside its source, so packaging needs no Qt tools; where lrelease is
+    # at hand (the packaging environment), a stale one is refused.
+    compiled = ROOT / 'tools/installer/ifw_en.qm'
+    try:
+        lrelease = qt_tool('lrelease')
+    except RuntimeError:
+        lrelease = None
+    if lrelease is not None:
+        fresh = work / 'ifw_en-fresh.qm'
+        run([lrelease, ROOT / 'tools/installer/ifw_en.ts', '-qm', fresh])
+        if fresh.read_bytes() != compiled.read_bytes():
+            raise RuntimeError('tools/installer/ifw_en.qm is stale: rebuild it from ifw_en.ts')
+    shutil.copy2(compiled, work / 'translations/ifw_en.qm')
     shutil.copy2(ROOT / 'tools/installer/CheckMark.png', work / 'CheckMark.png')
     # The app's own icons (Font Awesome 5 Solid, as gui-components draws them), at twice the size.
     icons = sorted((ROOT / 'tools/installer/icons').glob('*.png'))
