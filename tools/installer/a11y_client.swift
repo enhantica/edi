@@ -109,18 +109,19 @@ func check(window: CGRect, title: String, placed: [Placed]) {
                 && other.frame.maxY > item.frame.minY + 2
         }
     }.sorted { $0.frame.minY < $1.frame.minY }
-    // macOS reports a check box's or radio button's frame 2 points left of what it draws (its layout
-    // rect); edges compare what is drawn.
-    func drawnX(_ item: Placed) -> CGFloat {
-        ["AXCheckBox", "AXRadioButton"].contains(item.role) ? item.frame.minX + 2 : item.frame.minX
+    // macOS reports a text field's frame 2 points larger than what it draws on every side (its focus
+    // ring); edges and gaps compare what is drawn.
+    func drawn(_ item: Placed) -> CGRect {
+        item.role == "AXTextField" ? item.frame.insetBy(dx: 2, dy: 2) : item.frame
     }
+    func drawnX(_ item: Placed) -> CGFloat { drawn(item).minX }
     let edge = firsts.map(drawnX).min() ?? 0
     pageEdges[title, default: []].insert(Int((edge - window.minX).rounded()))
     for item in firsts where abs(drawnX(item) - edge) > 1 {
         problems.append("left edge \(Int(drawnX(item) - edge)) px off: \(item.role) '\(item.text)'")
     }
     for (above, below) in zip(firsts, firsts.dropFirst()) {
-        let gap = below.frame.minY - above.frame.maxY
+        let gap = drawn(below).minY - drawn(above).maxY
         if gap < -1 {
             problems.append("overlap \(Int(-gap)) px between '\(above.text)' and '\(below.text)'")
         } else if !steps.contains(where: { abs($0 - gap) <= 1 }) {

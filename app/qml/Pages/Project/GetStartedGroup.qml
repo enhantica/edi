@@ -465,6 +465,9 @@ SideBarGroup {
             yes.objectName = "createProject.replace.accept";
         }
         onAccepted: {
+            // Untitled work replaces only the folder that is there now, as its operation records it (ADR-0100).
+            if (createDialog.untitledId > 0)
+                Session.approveUntitledReplace(createDialog.untitledId, createDialog.chosenLocation());
             createDialog.replaceExisting = true;
             createDialog.accept();
         }

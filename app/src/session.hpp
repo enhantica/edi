@@ -223,8 +223,8 @@ class Session : public QObject {
     // ("manual-create" or "save") and returns its id, which the Create dialog carries: a second request of the same
     // origin for the same project while one asks is that one (0 when there is no untitled project). Only an answer for
     // the open id counts: `acceptUntitled` names the project and saves it at `location` (empty: the browser),
-    // `replace` once the user confirmed replacing the folder there; `rejectUntitled` is the dialog's Cancel. The result
-    // is `untitledSettled(id, state)`, once per id.
+    // `replace` only over the folder `approveUntitledReplace` recorded for that id when the user confirmed Replace;
+    // `rejectUntitled` is the dialog's Cancel. The result is `untitledSettled(id, state)`, once per id.
     Q_INVOKABLE quint64 beginUntitled(const QString& origin, const QString& action = QString());
     quint64 beginUntitledWith(UntitledOperation::Origin origin, std::function<void()> continuation,
                               const QString& action = QString());
@@ -232,6 +232,9 @@ class Session : public QObject {
                                     const QString& location = QString(), const QString& title = QString(),
                                     const QString& authors = QString(), bool replace = false);
     Q_INVOKABLE void rejectUntitled(quint64 id);
+    // The Replace confirmation for operation `id`: records which folder at `location` the user agreed to replace (its
+    // identity, and its project.edi's). False, with nothing recorded, when that cannot be read.
+    Q_INVOKABLE bool approveUntitledReplace(quint64 id, const QString& location);
     quint64 untitledOperationId() const;
     // The open operation's id while its dialog asks, else 0: a Create dialog opening binds to it.
     Q_INVOKABLE quint64 askingUntitledId() const;
@@ -260,7 +263,8 @@ class Session : public QObject {
                                    const QString& suRule = QStringLiteral("iucr_99"), const QString& title = QString(),
                                    const QString& authors = QString(), bool reportLibraries = false, const QString& assistantIntent = QString(),
                                    bool replace = false);
-    Q_INVOKABLE edi_app::ProjectCreationResult createProjectWithOutcome(const QString&,const QString&,const QString&,const QString&,const QString&,const QString&,bool,const QString&,bool replace = false);
+    // `untitledId`: the untitled operation the Create dialog answered; 0 for a Create that came without one.
+    Q_INVOKABLE edi_app::ProjectCreationResult createProjectWithOutcome(const QString&,const QString&,const QString&,const QString&,const QString&,const QString&,bool,const QString&,bool replace = false,quint64 untitledId = 0);
     Q_INVOKABLE bool creationOutcomeCurrent(const edi_app::ProjectCreationResult&) const;
     Q_INVOKABLE void closeProject();
     // A tutorial's project (edi ADR-0064): the open project, unsaved changes and all, is set aside rather than closed
@@ -459,7 +463,7 @@ class Session : public QObject {
     const AssistantWorkReportOptions work_report_options_;
     void initializeSession();
     struct ProjectCreationOutcome;
-    bool createProjectImpl(const QString&,const QString&,const QString&,const QString&,const QString&,const QString&,bool,const QString&,ProjectCreationOutcome*,bool replace = false);
+    bool createProjectImpl(const QString&,const QString&,const QString&,const QString&,const QString&,const QString&,bool,const QString&,ProjectCreationOutcome*,bool replace = false,quint64 untitledId = 0);
     friend class AssistantViewModel;
     quint64 assistantEpoch() const noexcept { return assistant_epoch_; }
     bool assistantOwner(quint64 epoch,ProjectViewModel* expected) const noexcept;
@@ -535,9 +539,11 @@ class Session : public QObject {
     void settleUntitled(const std::shared_ptr<UntitledOperation>& op, UntitledOperation::State state);
     // The open operation gives way (a newer request, the project replaced or the session gone).
     void supersedeUntitled();
+    void supersedeUntitled(const std::shared_ptr<UntitledOperation>& op);
     void untitledSave(const std::shared_ptr<UntitledOperation>& op);
     void untitledWrite(const std::weak_ptr<UntitledOperation>& weak, quint64 id, const SaveOperation& operation);
-    void untitledSaved(const std::shared_ptr<UntitledOperation>& op);
+    // `adopted` false: the project changed after its snapshot was published, so nothing that waited for it runs.
+    void untitledSaved(const std::shared_ptr<UntitledOperation>& op, bool adopted = true);
     QString next_save_data_;  // setNextSaveData's answer for the next save, then cleared
     int save_questions_ = 0;
     quint64 save_operations_ = 0;
@@ -566,7 +572,7 @@ class Session : public QObject {
     // `untitled`: an untitled operation's write (ADR-0100), which may replace the folder it approved and leaves naming
     // the project to the operation.
     bool saveProjectAsFreshWith(const SaveOperation& operation, const QUrl& target, bool zip, bool copy, bool notify,
-                                const UntitledOperation::Destination* untitled = nullptr);
+                                const std::shared_ptr<UntitledOperation>& untitled = nullptr);
     void saveWebProjectAsWith(const SaveOperation& operation, const QString& kind, bool copy);
     void downloadWebProjectWith(const SaveOperation& operation);
     // The read-only folder a temporary working copy was made from.

@@ -539,6 +539,144 @@ private slots:
         }
         QVERIFY2(warnings.isEmpty(), qPrintable(warnings.join(QLatin1Char('\n'))));
     }
+    // A Replace on untitled work (ADR-0100 point 6) writes over the folder the user confirmed and nothing else: a
+    // dialog's answer for an operation that gave way does nothing, and a folder swapped or removed after the
+    // confirmation is refused with what is there left alone.
+    void untitledReplaceIsTheConfirmedFolder() {
+        QQmlApplicationEngine engine;
+        edi_app::configure_engine(engine);
+        auto* session = engine.singletonInstance<edi_app::Session*>("edi.app", "Session");
+        QVERIFY(session);
+        QTemporaryDir root;
+        QVERIFY(root.isValid());
+        const QString target = root.filePath(QStringLiteral("alpha"));
+        const QString moved = root.filePath(QStringLiteral("alpha-moved"));
+        const auto fileText = [](const QString& path) {
+            QFile file(path);
+            return file.open(QIODevice::ReadOnly) ? QString::fromUtf8(file.readAll()) : QString();
+        };
+        const auto replacedLeft = [&root] {
+            return !QDir(root.path()).entryList({QStringLiteral("alpha.edi-replaced*")}, QDir::AllEntries | QDir::Hidden).isEmpty();
+        };
+        const auto fresh = [session] {
+            if (session->hasProject()) session->closeProject();
+            return !session->hasProject() && session->startUntitledProject() && session->untitled();
+        };
+        QVERIFY(fresh());
+        QVERIFY2(session->createProject(QStringLiteral("alpha"), QStringLiteral("first"), target),
+                 qPrintable(session->lastError()));
+        QVERIFY(QFileInfo::exists(target + QStringLiteral("/project.edi")));
+
+        // An answer for an operation that gave way: nothing written, no message, the newer operation still open.
+        QVERIFY(fresh());
+        const quint64 older = session->beginUntitled(QStringLiteral("manual-create"));
+        const quint64 newer = session->beginUntitled(QStringLiteral("save"));
+        QVERIFY(older > 0 && newer > older);
+        const auto stale = session->createProjectWithOutcome(QStringLiteral("beta"), {}, root.filePath(QStringLiteral("beta")),
+                                                             QStringLiteral("iucr_99"), {}, {}, false, {}, false, older);
+        QVERIFY(!stale.success);
+        QVERIFY(stale.error.isEmpty());
+        QVERIFY(!QFileInfo::exists(root.filePath(QStringLiteral("beta"))));
+        QVERIFY(session->untitled());
+        QCOMPARE(session->untitledOperationId(), newer);
+
+        // Confirmed, then swapped for another folder before the Create goes on: refused, both folders as they were.
+        QVERIFY(session->approveUntitledReplace(newer, target));
+        QVERIFY(QDir().rename(target, moved));
+        QVERIFY(QDir().mkpath(target));
+        {
+            QFile other(target + QStringLiteral("/project.edi"));
+            QVERIFY(other.open(QIODevice::WriteOnly));
+            other.write("someone else's\n");
+        }
+        const auto swapped = session->createProjectWithOutcome(QStringLiteral("alpha"), QStringLiteral("second"), target,
+                                                               QStringLiteral("iucr_99"), {}, {}, false, {}, true, newer);
+        QVERIFY(!swapped.success);
+        QVERIFY2(swapped.error.contains(QStringLiteral("changed after you chose")), qPrintable(swapped.error));
+        QCOMPARE(fileText(target + QStringLiteral("/project.edi")), QStringLiteral("someone else's\n"));
+        QVERIFY(fileText(moved + QStringLiteral("/project.edi")).contains(QStringLiteral("first")));
+        QVERIFY(session->untitled());
+        QVERIFY(!replacedLeft());
+        QVERIFY(QDir(target).removeRecursively());
+        QVERIFY(QDir().rename(moved, target));
+
+        // Confirmed, then removed: refused, and nothing is made in its place.
+        QVERIFY(fresh());
+        quint64 id = session->beginUntitled(QStringLiteral("save"));
+        QVERIFY(session->approveUntitledReplace(id, target));
+        QVERIFY(QDir().rename(target, moved));
+        QVERIFY(!session->createProjectWithOutcome(QStringLiteral("alpha"), {}, target, QStringLiteral("iucr_99"), {}, {},
+                                                   false, {}, true, id).success);
+        QVERIFY(!QFileInfo::exists(target));
+        QVERIFY(session->untitled());
+        QVERIFY(QDir().rename(moved, target));
+
+        // Not confirmed: refused even though a project folder is there.
+        QVERIFY(fresh());
+        id = session->beginUntitled(QStringLiteral("save"));
+        QVERIFY(!session->createProjectWithOutcome(QStringLiteral("alpha"), {}, target, QStringLiteral("iucr_99"), {}, {},
+                                                   false, {}, true, id).success);
+        QVERIFY(fileText(target + QStringLiteral("/project.edi")).contains(QStringLiteral("first")));
+
+        // Confirmed and unchanged: replaced, and the old folder is gone.
+        QVERIFY(fresh());
+        id = session->beginUntitled(QStringLiteral("save"));
+        QVERIFY(session->approveUntitledReplace(id, target));
+        const auto replaced = session->createProjectWithOutcome(QStringLiteral("alpha"), QStringLiteral("second"), target,
+                                                                QStringLiteral("iucr_99"), {}, {}, false, {}, true, id);
+        QVERIFY2(replaced.success, qPrintable(replaced.error));
+        QVERIFY(!session->untitled());
+        QVERIFY(fileText(target + QStringLiteral("/project.edi")).contains(QStringLiteral("second")));
+        QVERIFY(!replacedLeft());
+    }
+    // Each untitled request stays bound to what asked for it (ADR-0100 points 3 and 5): a guard Save for another
+    // question is another request, a request made while an older one settles is never lost, and a desktop Create
+    // without a folder is refused rather than named.
+    void untitledRequestsStayBound() {
+        QQmlApplicationEngine engine;
+        edi_app::configure_engine(engine);
+        auto* session = engine.singletonInstance<edi_app::Session*>("edi.app", "Session");
+        QVERIFY(session);
+        QVERIFY(session->startUntitledProject());
+        QSignalSpy settled(session, &edi_app::Session::untitledSettled);
+        const auto settledAs = [&settled](quint64 id) {
+            QStringList states;
+            for (const auto& arguments : settled)
+                if (arguments.at(0).toULongLong() == id) states << arguments.at(1).toString();
+            return states;
+        };
+        const quint64 first = session->beginUntitled(QStringLiteral("guard-save"), QStringLiteral("question-1"));
+        QVERIFY(first > 0);
+        QCOMPARE(session->beginUntitled(QStringLiteral("guard-save"), QStringLiteral("question-1")), first);
+        QVERIFY(settled.isEmpty());
+        const quint64 second = session->beginUntitled(QStringLiteral("guard-save"), QStringLiteral("question-2"));
+        QVERIFY(second > first);
+        QCOMPARE(settledAs(first), QStringList{QStringLiteral("superseded")});
+
+        // A listener of the settlement asks again: its request supersedes the one being opened, which reports no id.
+        quint64 inner = 0;
+        const auto connection = connect(session, &edi_app::Session::untitledSettled, session,
+                                        [&](quint64 id, const QString&) {
+                                            if (id == second && inner == 0)
+                                                inner = session->beginUntitled(QStringLiteral("save"));
+                                        });
+        const quint64 outer = session->beginUntitled(QStringLiteral("manual-create"));
+        disconnect(connection);
+        QCOMPARE(outer, quint64{0});
+        QVERIFY(inner > second);
+        QCOMPARE(session->untitledOperationId(), inner);
+        QCOMPARE(settledAs(second), QStringList{QStringLiteral("superseded")});
+        QCOMPARE(settledAs(inner - 1), QStringList{QStringLiteral("superseded")});
+        QVERIFY(settledAs(inner).isEmpty());
+
+        // No folder on the desktop: refused, nothing named.
+        const QString name = session->project()->name();
+        QVERIFY(!session->acceptUntitled(inner, QStringLiteral("gamma"), QStringLiteral("described")));
+        QCOMPARE(settledAs(inner), QStringList{QStringLiteral("refused")});
+        QVERIFY(session->untitled());
+        QVERIFY(!session->lastError().isEmpty());
+        QCOMPARE(session->project()->name(), name);
+    }
     // Work before Create (the owner, 2026-11-19): the open Project page holds an untitled project that takes a
     // structure at once, Create names and saves that same project with its structure, and the Create form's fields say
     // what each is for.
@@ -555,10 +693,10 @@ private slots:
         QVERIFY(session && !session->hasProject());
         const auto named = [window](const char* name) {
             const QString wanted = QString::fromLatin1(name);
-            const auto visit = [&](auto&& visit, QQuickItem* item) -> QQuickItem* {
+            const auto visit = [&](auto&& self, QQuickItem* item) -> QQuickItem* {
                 if (item->objectName() == wanted) return item;
                 for (auto* child : item->childItems()) {
-                    if (auto* found = visit(visit, child)) return found;
+                    if (auto* found = self(self, child)) return found;
                 }
                 return nullptr;
             };

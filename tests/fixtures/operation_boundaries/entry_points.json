@@ -149,6 +149,11 @@
           "proof": "tests/unit/app/tst_untitled_work.qml",
           "overloads": 1
         },
+        "approveUntitledReplace": {
+          "domain": "untitled-operation",
+          "proof": "tests/unit/app/tst_untitled_work.qml",
+          "overloads": 1
+        },
         "askingUntitledId": {
           "domain": "read-only query",
           "proof": null,

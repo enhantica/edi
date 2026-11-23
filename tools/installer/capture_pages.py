@@ -246,9 +246,9 @@ def capture(tools: Path, output: Path) -> None:
                 env | {'EDI_INSTALLER_MAINTENANCE_MODE': mode},
                 output / f'maintenance-{mode}-{theme}.log',
                 pages,
-                # A tool that updated itself restarts and the walk closes it (3); require_pages
-                # still demands its pages.
-                allowed=(0, 3),
+                # A tool that updated itself hands over to its restart (1) or the walk closes it
+                # (3); require_pages still demands its pages.
+                allowed=(0, 1, 3),
             )
         if maintenance.exists():  # the captured run removes the installation; this is the backstop
             subprocess.run(

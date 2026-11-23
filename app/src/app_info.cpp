@@ -3403,6 +3403,7 @@ void ApplicationInfo::projectChangesQuestion(const QJSValue& action, const QJSVa
     QJSValue native = consentNull();
     if (!token.isNull() && consentFieldEquals(frame, token, "action", action)) native = token;
     projectWrite(frame, "unsavedChanges", "nativeCreation", native);
+    ++unsaved_question_;
     projectWrite(frame, "unsavedChanges", "action", action);
     projectInvoke(frame, "unsavedChanges", "open");
 }
@@ -3441,7 +3442,9 @@ void ApplicationInfo::acceptUnsavedProject() const {
     if (panelUsageTruth(assistantContextField(frame, "Session", "untitled"))) {
         const auto abandoned = panelUsageContextRead(frame, "abandoned");
         const auto origin = QJSValue(original.isNull() ? QStringLiteral("guard-save") : QStringLiteral("assistant-create"));
-        const auto id = projectInvoke(frame, "Session", "beginUntitled", {origin});
+        // The operation is bound to this question's action: a Save for another question is another request.
+        const auto question = QJSValue(QStringLiteral("question-%1").arg(unsaved_question_));
+        const auto id = projectInvoke(frame, "Session", "beginUntitled", {origin, question});
         if (id.toNumber() <= 0) {
             panelUsageGlobalCall(frame, "abandonAction", {});
             return;
@@ -3453,7 +3456,7 @@ void ApplicationInfo::acceptUnsavedProject() const {
         panelUsageContextWrite(frame, "untitledAbandoned", abandoned);
         panelUsageContextWrite(frame, "action", consentNull());
         panelUsageContextWrite(frame, "abandoned", consentNull());
-        // The same request asked again replaces the action it carries; the earlier one is abandoned.
+        // The same question answered again carries the same action; an earlier one it replaced is abandoned.
         if (same && previous.isCallable() && !previous.strictlyEquals(abandoned)) projectCall(frame, previous);
         projectInvoke(frame, "AppState", "requestUntitledSave");
         return;
@@ -10991,7 +10994,7 @@ QJSValue lifecycleCallback(const PanelUsageFrame& f, uint op,
         if (!createAlive(f, life) || !createGroupField(f, "createOperation").strictlyEquals(original) || !createSameProject(f, original) || (!panelUsageRead(f, original, "assistant").isNull() && panelUsageTruth(panelUsageRead(f, panelUsageRead(f, original, "assistant"), "cancelled")))) return {};
         const auto session = panelUsageContextRead(f, "Session");
         const auto outcome = panelUsageDeferredMemberCall(f, session, "createProjectWithOutcome", [&] {
-            return QJSValueList{saved(2), saved(3), saved(4), assistantContextField(f, "Preferences", "newProjectSuRule"), saved(5), saved(6), QJSValue(assistantContextField(f, "Preferences", "newReportLibraries").strictlyEquals(QJSValue(QStringLiteral("embedded")))), !panelUsageRead(f, original, "assistant").isNull() ? panelUsageRead(f, panelUsageRead(f, original, "assistant"), "id") : QJSValue(QStringLiteral("")), QJSValue(panelUsageTruth(assistantContextField(f, "createDialog", "replaceExisting")))};
+            return QJSValueList{saved(2), saved(3), saved(4), assistantContextField(f, "Preferences", "newProjectSuRule"), saved(5), saved(6), QJSValue(assistantContextField(f, "Preferences", "newReportLibraries").strictlyEquals(QJSValue(QStringLiteral("embedded")))), !panelUsageRead(f, original, "assistant").isNull() ? panelUsageRead(f, panelUsageRead(f, original, "assistant"), "id") : QJSValue(QStringLiteral("")), saved(7), saved(8)};
         });
         if (!panelUsageTruth(panelUsageRead(f, outcome, "success")) && panelUsageTruth(panelUsageRead(f, outcome, "current")) && panelUsageTruth(projectInvoke(f, "Session", "creationOutcomeCurrent", {outcome})) && assistantRelation(f, panelUsageRead(f, panelUsageRead(f, outcome, "error"), "length"), QJSValue(0), 1) && panelUsageRead(f, original, "assistant").isNull()) return projectInvoke(f, "AppState", "createFailed");
     }
@@ -11194,7 +11197,10 @@ void ApplicationInfo::createProjectDialogEvent(int kind) const {
     const auto location = unsaved ? QJSValue(QStringLiteral("")) : assistantContextField(f, "createDialog", "projectLocation");
     const auto title = assistantContextField(f, "createDialog", "projectTitle"), authors = assistantContextField(f, "createDialog", "projectAuthors");
     assistantMemberWrite(f, panelUsageRead(f, panelUsageContextRead(f, "EaGlobals"), "Vars"), "showProjectDescriptionDialog", QJSValue(false));
-    const auto qt = panelUsageContextRead(f, "Qt"); panelUsageMemberCall(f, qt, "callLater", {panelUsageClosure(f, 387, {life, original, name, description, location, title, authors})});
+    // The untitled operation this dialog answered and its Replace confirmation, as they were at its OK (ADR-0100).
+    const auto untitled = assistantContextField(f, "createDialog", "untitledId");
+    const auto replace = QJSValue(panelUsageTruth(assistantContextField(f, "createDialog", "replaceExisting")));
+    const auto qt = panelUsageContextRead(f, "Qt"); panelUsageMemberCall(f, qt, "callLater", {panelUsageClosure(f, 387, {life, original, name, description, location, title, authors, untitled.isNumber() ? untitled : QJSValue(0), replace})});
 }
 void ApplicationInfo::windowSaveChoiceOpened() const {
     const auto f = panelUsageEngine(this); if (panelUsageTruth(panelUsageContextRead(f, "nativeAcceptButton"))) assistantMemberWrite(f, panelUsageContextRead(f, "nativeAcceptButton"), "objectName", QJSValue(QStringLiteral("saveAs.accept")));

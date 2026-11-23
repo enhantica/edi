@@ -75,7 +75,17 @@ echo "a11y-check: installer exit $status after ${waited}s; crash reports: ${new:
 failed=0
 # A maintenance tool that updated itself restarts and is closed by the walk (3); its Finished page must be captured.
 expected_status=$([ "$own" = 1 ] && echo "${A11Y_EXPECT_STATUS:-0}" || echo "0 3")
-case " $expected_status " in *" $status "*) ;; *) echo "a11y-check: the installer ended with $status"; failed=1 ;; esac
+# A maintenance tool that updated its own component hands over to its restarted self with status 1, after the
+# Framework logs the run finished: 1 counts only with that line (and the Finished page, checked below).
+finished_restart=0
+if [ "$status" = 1 ] && [ "${A11Y_RESTART_OK:-}" = 1 ] \
+   && grep -qE "Update finished!|Removal completed successfully" "$logs/installer.log" \
+   && grep -q "Maintenance tool hard restart" "$logs/installer.log"; then
+  finished_restart=1
+fi
+case " $expected_status " in *" $status "*) ;; *)
+  [ "$finished_restart" = 1 ] || { echo "a11y-check: the installer ended with $status"; failed=1; } ;;
+esac
 reads="$(sed -n 's/^a11y-client: \([0-9]*\) multiple-attribute queries$/\1/p' "$logs/client.log")"
 if [ "${reads:-0}" -eq 0 ]; then echo "a11y-check: the reader completed no queries"; failed=1; fi
 for page in ${A11Y_EXPECT_PAGES//,/ }; do

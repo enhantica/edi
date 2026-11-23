@@ -7,6 +7,7 @@
 #include <cstdint>
 #include <functional>
 #include <memory>
+#include <optional>
 
 namespace edi_app {
 
@@ -65,6 +66,10 @@ class UntitledOperation {
     bool settle(State terminal);
     // The waiting action, taken once: empty after the first call.
     std::function<void()> takeContinuation();
+
+    // A file's identity on the disk (device and inode, or volume and file index), which a rename keeps; read from the
+    // entry itself, a link not followed. None when it cannot be read.
+    static std::optional<FileIdentity> identity(const QString& path);
 
     static QString name(State state);
     static QString name(Origin origin);
