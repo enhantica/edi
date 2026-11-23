@@ -1,0 +1,74 @@
+/* SPDX-License-Identifier: BSD-3-Clause */
+/* The installer window around its pages: background, header, step list, wizard buttons and message boxes. The
+   Framework loads this one stylesheet for the whole app before any script runs and offers scripts no way to change
+   it, so it follows the system's light or dark palette, with edi's borders as translucent shades that give the app's
+   colours on both. The pages themselves get edi's exact light or dark theme from Installer.qs (Installer.qss). */
+
+QWizard, QWidget#SideWidget, QListWidget#PageListWidget, QWizard > QWidget > QWidget, QDialog, QMessageBox {
+    background-color: palette(window);
+    color: palette(window-text);
+}
+
+QWizard QWidget, QDialog QWidget {
+    font-size: @FONT_PX@px;
+}
+
+/* The empty subtitle keeps the Modern header visible without adding text height. */
+QWizard > QWidget > QWidget > QLabel[wordWrap="true"] {
+    font-size: 5px;
+}
+
+/* The step list: upcoming steps muted, the current one in bold. */
+QListWidget#PageListWidget {
+    border: none;
+    outline: none;
+}
+
+QListWidget#PageListWidget::item {
+    padding-left: @STEP_LIST_INSET@px;
+    color: palette(window-text);
+    background: transparent;
+    border: none;
+}
+
+QListWidget#PageListWidget::item:disabled {
+    color: palette(mid);
+}
+
+QListWidget#PageListWidget::item:selected {
+    color: palette(window-text);
+    background: transparent;
+    font-weight: bold;
+}
+
+/* Buttons, as the app's side bar buttons: one look for all, no default-button or focus ring. */
+QPushButton {
+    color: palette(window-text);
+    background-color: transparent;
+    border: 1px solid rgba(0, 0, 0, 0.07);
+    border-radius: 2px;
+    min-height: @CONTROL_INNER_PX@px;
+    max-height: @CONTROL_INNER_PX@px;
+    min-width: 70px;
+    padding: 0 @FONT_PX@px;
+    outline: none;
+}
+
+QPushButton:default, QPushButton:focus {
+    border-color: rgba(0, 0, 0, 0.07);
+}
+
+QPushButton:hover, QPushButton:pressed, QPushButton:checked {
+    color: @ACCENT@;
+    background-color: rgba(255, 255, 255, 0.12);
+    border-color: transparent;
+}
+
+QPushButton:disabled {
+    color: palette(mid);
+    border-color: transparent;
+}
+
+QMessageBox QLabel {
+    color: palette(window-text);
+}

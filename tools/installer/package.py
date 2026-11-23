@@ -211,25 +211,33 @@ INSTALLER_THEMES = {
 }
 
 
-def installer_stylesheet(theme: str) -> str:
-    """Installer.qss with one theme's values filled in."""
-    text = (ROOT / 'tools/installer/Installer.qss').read_text(encoding='utf-8')
+def installer_stylesheet(theme: str, name: str = 'Installer.qss') -> str:
+    """An installer stylesheet with one theme's values filled in."""
+    text = (ROOT / 'tools/installer' / name).read_text(encoding='utf-8')
     values = INSTALLER_THEMES[theme] | {'STEP_LIST_INSET': '23' if SYSTEM == 'macos' else '9'}
-    for name, value in values.items():
-        text = text.replace(f'@{name}@', value)
+    for key, value in values.items():
+        text = text.replace(f'@{key}@', value)
     if '@' in re.sub(r'/\*.*?\*/', '', text, flags=re.DOTALL):
         raise RuntimeError('Installer.qss names a value INSTALLER_THEMES does not have')
     return text
 
 
 def write_controller(config: Path) -> None:
-    """Write the light stylesheet and the controller, holding both wordmarks and the dark one."""
+    """Write the window's stylesheet and the controller, holding both wordmarks and page themes.
+
+    The Framework loads one stylesheet for the whole app, before scripts run, so the window around
+    the pages follows the system palette (InstallerChrome.qss); the controller gives each page
+    edi's light or dark theme (Installer.qss).
+    """
     style = ROOT / 'tools/installer'
-    (config / 'Installer.qss').write_text(installer_stylesheet('light'), encoding='utf-8')
-    controller = (style / 'Installer.qs').read_text(encoding='utf-8')
-    controller = controller.replace(
-        '"@DARK_STYLESHEET@"', json.dumps(installer_stylesheet('dark'))
+    (config / 'Installer.qss').write_text(
+        installer_stylesheet('light', 'InstallerChrome.qss'), encoding='utf-8'
     )
+    controller = (style / 'Installer.qs').read_text(encoding='utf-8')
+    for theme in ('light', 'dark'):
+        controller = controller.replace(
+            f'"@{theme.upper()}_STYLESHEET@"', json.dumps(installer_stylesheet(theme))
+        )
     for marker, filename in (
         ('@WORDMARK@', 'InstallerLogo.png'),
         ('@DARK_WORDMARK@', 'InstallerLogoDark.png'),
@@ -257,7 +265,7 @@ def write_metadata(
         {
             'Name': 'EasyDiffraction',
             'Version': version,
-            'Title': 'EasyDiffraction Installer',
+            'Title': 'EasyDiffraction',
             'Publisher': 'EasyScience',
             'ProductUrl': 'https://easydiffraction.org/',
             'TargetDir': {
@@ -416,7 +424,7 @@ def build_maintenance_tool(tools: Path, output: Path) -> Path:
         {
             'Name': 'EasyDiffraction',
             'Version': '1.0.0',
-            'Title': 'EasyDiffraction maintenance tool',
+            'Title': 'EasyDiffraction',
             'Publisher': 'EasyScience',
             'MaintenanceToolName': 'MaintenanceTool',
             'InstallerApplicationIcon': 'App',
