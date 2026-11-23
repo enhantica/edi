@@ -538,7 +538,7 @@ function headerWordmark() {
                     var share = bar.maximum > bar.minimum
                         ? Math.round(100 * (value - bar.minimum) / (bar.maximum - bar.minimum)) : 0;
                     ours.value = share;
-                    percent.text = share + " %";
+                    percent.text = share + "%";
                 });
                 progressHooked = true;
             }

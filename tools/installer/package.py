@@ -363,7 +363,9 @@ def write_metadata(
     shutil.copy2(style / 'NoBackground.png', config / 'NoBackground.png')
     ET.SubElement(configuration.getroot(), 'Background').text = 'NoBackground.png'
     # ...and keeps a 181-point empty column left of the page unless a watermark is set: the same.
-    ET.SubElement(configuration.getroot(), 'Watermark').text = 'NoBackground.png'
+    # (a file of its own: binarycreator copies each named file once)
+    shutil.copy2(style / 'NoWatermark.png', config / 'NoWatermark.png')
+    ET.SubElement(configuration.getroot(), 'Watermark').text = 'NoWatermark.png'
     # The installer's own icon, the app logo coming out of a box, distinct from the app's.
     if SYSTEM in {'macos', 'windows'}:
         icon = 'Installer.icns' if SYSTEM == 'macos' else 'Installer.ico'
