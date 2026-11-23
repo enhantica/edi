@@ -519,16 +519,18 @@ function headerWordmark() {
                 if (widget)
                     widget.visible = false;
             });
-            // The percentage is said beside the bar, at the end of the status line, never drawn over the bar.
+            // Our bar with its percentage beside it (ProgressForm.ui), fed from the Framework's bar, which is
+            // hidden; where our form is missing (no assistant component loaded), the Framework's bar stays.
             var bar = gui.findChild(page, "ProgressBar");
-            var status = gui.findChild(page, "ProgressLabel");
-            if (bar && status && !progressHooked) {
-                bar.textVisible = false;
+            var ours = gui.findChild(page, "EdiProgressBar");
+            var percent = gui.findChild(page, "EdiProgressPercent");
+            if (bar && ours && percent && !progressHooked) {
+                bar.visible = false;
                 bar.valueChanged.connect(function (value) {
-                    var base = String(status.text).replace(/ · \d+ %$/, "");
                     var share = bar.maximum > bar.minimum
                         ? Math.round(100 * (value - bar.minimum) / (bar.maximum - bar.minimum)) : 0;
-                    status.text = base + " · " + share + " %";
+                    ours.value = share;
+                    percent.text = share + " %";
                 });
                 progressHooked = true;
             }

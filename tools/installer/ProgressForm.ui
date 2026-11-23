@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- SPDX-License-Identifier: BSD-3-Clause -->
+<!-- The progress bar the installing page shows, with its percentage beside it (Installer.qs feeds both from the
+     Framework's own bar, which is hidden: the Framework rewrites its own labels on every step). -->
+<ui version="4.0">
+ <class>ProgressForm</class>
+ <widget class="QWidget" name="ProgressForm">
+  <layout class="QHBoxLayout" name="ProgressLayout">
+   <property name="spacing">
+    <number>8</number>
+   </property>
+   <property name="leftMargin">
+    <number>0</number>
+   </property>
+   <property name="topMargin">
+    <number>0</number>
+   </property>
+   <property name="rightMargin">
+    <number>0</number>
+   </property>
+   <property name="bottomMargin">
+    <number>0</number>
+   </property>
+   <item>
+    <widget class="QProgressBar" name="EdiProgressBar">
+     <property name="textVisible">
+      <bool>false</bool>
+     </property>
+     <property name="value">
+      <number>0</number>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QLabel" name="EdiProgressPercent">
+     <property name="minimumSize">
+      <size>
+       <width>44</width>
+       <height>0</height>
+      </size>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignRight|Qt::AlignVCenter</set>
+     </property>
+     <property name="text">
+      <string>0 %</string>
+     </property>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+</ui>

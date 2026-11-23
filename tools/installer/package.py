@@ -443,9 +443,10 @@ def write_assistant_metadata(meta: Path, version: str) -> None:
     # The checkbox that replaces the component tree (edi ADR-0071).
     interfaces = ET.SubElement(root.getroot(), 'UserInterfaces')
     ET.SubElement(interfaces, 'UserInterface').text = 'AssistantForm.ui'
+    ET.SubElement(interfaces, 'UserInterface').text = 'ProgressForm.ui'
     ET.indent(root)
     root.write(meta / 'package.xml', encoding='utf-8', xml_declaration=True)
-    for name in ('assistantscript.qs', 'AssistantForm.ui'):
+    for name in ('assistantscript.qs', 'AssistantForm.ui', 'ProgressForm.ui'):
         shutil.copy2(ROOT / 'tools/installer' / name, meta / name)
 
 

@@ -8,6 +8,8 @@ function Component() {
     // The command line (install and remove by name, the protocol check) has no pages.
     if (installer.isCommandLineInstance())
         return;
+    // The installing page's bar with its percentage beside it (Installer.qs feeds it), in every mode.
+    installer.addWizardPageItem(component, "ProgressForm", QInstaller.PerformInstallation);
     if (installer.isInstaller())
         installer.addWizardPageItem(component, "AssistantForm", QInstaller.TargetDirectory);
     else if (installer.isPackageManager())
