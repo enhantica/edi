@@ -89,11 +89,6 @@ QPushButton:default:hover, QPushButton:default:pressed {
 }
 
 /* The app's icons on the wizard's buttons (Qt names them by their WizardButton number). */
-QPushButton#__qt__passive_wizardbutton0 {
-    qproperty-icon: url(:/metadata/edi/back.png);
-    qproperty-iconSize: 16px 16px;
-}
-
 QPushButton#qt_wizard_finish {
     qproperty-icon: url(:/metadata/edi/finish.png);
     qproperty-iconSize: 16px 16px;

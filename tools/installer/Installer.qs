@@ -524,7 +524,8 @@ function headerWordmark() {
             var detailsButton = gui.findChild(page, "DetailsButton");
             if (detailsBrowser && detailsBrowser.visible && detailsButton)
                 detailsButton.click();
-            ["DetailsButton", "DownloadStatus"].forEach(function (hidden) {
+            // The product-images area is invisible but takes the page's height, which left our bar far below.
+            ["DetailsButton", "DownloadStatus", "ProductImagesScrollArea", "ProductImagesLabel"].forEach(function (hidden) {
                 var widget = gui.findChild(page, hidden);
                 if (widget)
                     widget.visible = false;
