@@ -1,0 +1,51 @@
+# The macOS installer with an accessibility client reading it (edi #150): a released or built installer is walked
+# through its pages by a controller script while System Events reads every window's UI elements, as VoiceOver and
+# other assistive tools do; a crash fails the job and its report is kept.
+name: Installer accessibility
+
+on:
+  push:
+    branches: ['scratch/installer-accessibility']
+  workflow_dispatch:
+    inputs:
+      release:
+        description: 'The edi release whose macOS online installer is checked'
+        required: true
+        default: 'v2026.11.29'
+      asset:
+        description: 'The installer disk image in that release'
+        required: true
+        default: 'EasyDiffraction-2026.11.29-macos-arm64-online.dmg'
+
+permissions:
+  contents: read
+
+jobs:
+  macos:
+    name: installer accessibility · macOS
+    runs-on: macos-15
+    timeout-minutes: 20
+    env:
+      RELEASE: ${{ inputs.release || 'v2026.11.29' }}
+      ASSET: ${{ inputs.asset || 'EasyDiffraction-2026.11.29-macos-arm64-online.dmg' }}
+    steps:
+      - uses: actions/checkout@v5
+      - name: Download and mount the installer
+        id: mount
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download "$RELEASE" -R "$GITHUB_REPOSITORY" -p "$ASSET" -D "$RUNNER_TEMP"
+          hdiutil attach -nobrowse -readonly -mountpoint "$RUNNER_TEMP/installer" "$RUNNER_TEMP/$ASSET"
+          app="$(find "$RUNNER_TEMP/installer" -maxdepth 1 -name '*.app' | head -1)"
+          echo "app=$app" >> "$GITHUB_OUTPUT"
+      - name: Walk the installer with an accessibility client
+        run: bash tools/installer/a11y-check.sh "${{ steps.mount.outputs.app }}" "$RUNNER_TEMP/a11y"
+      - name: Keep the logs and any crash report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: installer-accessibility-macos
+          path: ${{ runner.temp }}/a11y
+          if-no-files-found: ignore
+          retention-days: 7  # read when a check fails
