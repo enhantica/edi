@@ -144,11 +144,13 @@ def probe_screen(pages: Path, output: Path) -> None:
 
 
 def set_macos_theme(theme: str) -> None:
-    """The system appearance, read by each app as it starts."""
-    if theme == 'dark':
-        subprocess.run(['defaults', 'write', '-g', 'AppleInterfaceStyle', 'Dark'], check=True)
-    else:
-        subprocess.run(['defaults', 'delete', '-g', 'AppleInterfaceStyle'], check=False)
+    """The system appearance, switched live as its settings do; Qt follows only a live switch."""
+    dark = 'true' if theme == 'dark' else 'false'
+    script = (
+        'tell application "System Events" to tell appearance preferences'
+        f' to set dark mode to {dark}'
+    )
+    subprocess.run(['osascript', '-e', script], check=True, timeout=60)
 
 
 def marker_installer(tools: Path, work: Path) -> Path:
