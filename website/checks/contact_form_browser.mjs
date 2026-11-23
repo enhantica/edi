@@ -74,7 +74,7 @@ const buttons = () => page.evaluate(() => Array.from(document.querySelectorAll('
   .filter(button => button.getClientRects().length).map(button => button.textContent));
 const first = await page.evaluate(() => ({ text: document.querySelector('dialog.ed-contact-notice p').textContent, message: window.sent[0] }));
 check(first.message.attachments.length === 5 && first.message.attachments[0].data === btoa('AAAA'), 'the files go as the app sends them');
-check(first.text === 'Your message was sent. Thank you! But a.txt, b.txt, c.txt, d.txt, e.txt were not attached. Your name, e-mail and affiliation are kept, so you can send another message.', `unconfirmed files: ${first.text}`);
+check(first.text === 'Your message was sent. Thank you! But a.txt, b.txt, c.txt, d.txt, e.txt were not attached.', `unconfirmed files: ${first.text}`);
 check((await buttons()).join('|') === 'Close', `only Close after a success: ${(await buttons()).join('|')}`);
 const kept = await page.evaluate(() => ['name', 'email', 'subject', 'message'].map(key => document.querySelector(`form.ed-contact-form [name="${key}"]`).value));
 check(kept.join('|') === 'Ada|ada@example.org||', `a sent message keeps name and e-mail, clears subject and text: ${kept.join('|')}`);

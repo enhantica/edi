@@ -70,9 +70,6 @@
     };
   }
 
-  // After a message was sent: the contact details stay, so the next one only needs its text.
-  const another = 'Your name, e-mail and affiliation are kept, so you can send another message.';
-
   // The same notice and words for the website's other form, the survey (assets/survey/survey.js).
   window.edNotice = { answer, noticeFor };
 
@@ -213,14 +210,13 @@
         if (missing.length) detail = (missing.length === 1 ? app.files.notAttached : app.files.notAttachedMany).replace('%1', missing.join(', '));
         // The answer is the one to this request: the fields stayed as sent while it was pending.
         // The answer shows only in the notice, so the line under Send is cleared rather than repeating it.
-        let words = answer(code, detail);
+        const words = answer(code, detail);
         status.textContent = '';
         if (code === 201) {
           // Only the message is cleared: the contact details and the reason stay for the next one.
           for (const key of ['subject', 'message']) if (form.elements[key]) form.elements[key].value = '';
           files.splice(0, files.length);
           if (files.render) files.render([]);
-          if (['name', 'email', 'affiliation'].some(key => form.elements[key] && form.elements[key].value.trim())) words = `${words} ${another}`;
         }
         show(code, words);
         controls.forEach(element => (element.disabled = false));
