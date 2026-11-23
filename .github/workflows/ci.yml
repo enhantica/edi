@@ -435,6 +435,7 @@ jobs:
           path: build/test-durations-${{ matrix.part }}.json
           if-no-files-found: warn
 
+          retention-days: 7  # durations read from recent runs
   # On a main push, each system shard may take at most 1.2 times as long as the same shard in main's previous
   # push run whose system shards all passed. Nightly and manual runs add the nightly-only files, so they are not
   # compared.
@@ -927,6 +928,7 @@ jobs:
             build/app/ui-actual
             build/app/ui-diff
           if-no-files-found: ignore
+          retention-days: 7  # a red UI check is inspected within days
       # Each delivered surface carries the notices of exactly the components it ships, checked on the real outputs this
       # job has built: the desktop install, the Python wheel and the CLI with the notices its build puts beside it
       # (tests/system/py/test_distribution_licences.py, which the system parts leave to this job and app-wasm). On
@@ -1036,6 +1038,7 @@ jobs:
           path: build/wasm/site
           if-no-files-found: error
           # The repository's default retention: the site is downloaded by hand.
+          retention-days: 7  # downloaded to try a build within days
       - name: Retain the browser CLI and its source identity
         if: ${{ !cancelled() && steps.site.outcome == 'success' }}
         uses: actions/upload-artifact@v4
