@@ -125,6 +125,15 @@ message: `POST /feedback` with `kind` (`feedback`, `question`, `problem` or `ide
   and the tooltip "About 10–15 minutes"; About EasyDiffraction). The form itself has no survey link: the survey is on
   Home and in the survey invitation.
 
+**One kind of message (the owner, 2026-11-23, edi-feedback #102).** The app's form and the website's Get in touch form
+have no type list and no subject: the message is the one text field, and its hint asks what the type list and the
+subject asked before ("Feedback, a question, a problem or an idea: tell us what it is about. For a problem, what did you
+do, what happened, and what did you expect?"), the same words in both forms (the site reads them from the app's
+dialog). Both send `kind` `feedback` and no `subject`; the service accepts a message without a kind, so it no longer
+needs one. The type icons of the earlier list go with it. An error popup and the likes popup still open the form, with
+their own text. The service labels every issue it files `[scope] ⚠️ label needed` and `[priority] ⚠️ label needed`
+([ADR-0101](0101-issue-labels.md)) instead of the kind; issues filed before keep their kind label.
+
 ## Consequences
 - A log leaves the user's computer only when they press Send with the box ticked.
 - Turning sending on is one setting once the feedback service is deployed; the app changes nothing else.
