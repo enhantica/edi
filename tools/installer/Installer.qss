@@ -113,6 +113,12 @@ QTextEdit:focus, QPlainTextEdit:focus {
     border-color: @ACCENT@;
 }
 
+/* The summary page is plain text, as the other pages: no frame around it. */
+QScrollArea#ComponentSummaryScrollArea, QScrollArea#ComponentSummaryScrollArea > QWidget > QWidget {
+    border: none;
+    background: transparent;
+}
+
 /* One gap on the 8 px scale between a control and what it belongs to. */
 QCheckBox#AcceptLicenseCheckBox, QRadioButton#AcceptLicenseRadioButton {
     margin-top: 8px;
