@@ -281,26 +281,24 @@ AppDialog {
                         objectName: "feedback.kind"
                         width: parent.width
                         enabled: !dialog.sending
-                        textRole: "text"
+                        textRole: "label"
                         valueRole: "value"
+                        textFormat: Text.RichText
                         // A ListModel, whose roles the base's list items read; they show nothing for a list of JavaScript objects.
+                        // Each kind with its icon in the list and the box; the base draws $ICONS_FAMILY and $ICON_COLOR.
                         model: ListModel {
-                            // General feedback, praise or complaint or both: the first entry and the default.
-                            ListElement {
-                                value: "feedback"
-                                text: qsTr("Share feedback")
-                            }
-                            ListElement {
-                                value: "question"
-                                text: qsTr("Ask a question")
-                            }
-                            ListElement {
-                                value: "problem"
-                                text: qsTr("Report a problem")
-                            }
-                            ListElement {
-                                value: "idea"
-                                text: qsTr("Suggest an idea")
+                            id: kinds
+
+                            Component.onCompleted: {
+                                // General feedback, praise or complaint or both: the first entry and the default.
+                                const entries = [["feedback", "comment-dots", qsTr("Share feedback")], ["question", "question-circle", qsTr("Ask a question")], ["problem", "bug", qsTr("Report a problem")], ["idea", "lightbulb", qsTr("Suggest an idea")]];
+                                for (const [value, icon, text] of entries)
+                                    append({
+                                        value,
+                                        text,
+                                        label: `<font face="$ICONS_FAMILY" color="$ICON_COLOR">${icon}</font>&nbsp;&nbsp;${text}`
+                                    });
+                                kindBox.currentIndex = 0;
                             }
                         }
                     }

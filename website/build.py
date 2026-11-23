@@ -987,7 +987,7 @@ def _feedback_dialog_texts(qml: str) -> dict:
             raise SystemExit(f'FeedbackDialog.qml: could not find {what}')
         return texts
 
-    reasons = re.findall(r'ListElement \{\s*value: "(\w+)"\s*text: qsTr\("([^"]+)"\)', qml)
+    reasons = re.findall(r'\["(\w+)", "[\w-]+", qsTr\("([^"]+)"\)\]', qml)
     if not reasons:
         raise SystemExit('FeedbackDialog.qml: could not find the reasons')
     contact = {
