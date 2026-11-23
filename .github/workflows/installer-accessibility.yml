@@ -64,14 +64,16 @@ jobs:
       - name: Walk this commit's installer with the accessibility client
         if: ${{ !cancelled() && steps.marker.outputs.app != '' }}
         run: |
-          bash tools/installer/a11y-check.sh "${{ steps.marker.outputs.app }}" "$RUNNER_TEMP/a11y-this-commit" --own-script
+          A11Y_EXPECT_PAGES=TargetDirectory,PerformInstallation,Finished \
+            bash tools/installer/a11y-check.sh "${{ steps.marker.outputs.app }}" "$RUNNER_TEMP/a11y-this-commit" --own-script
           # The assistant box is ticked by default and installs the assistant.
           grep -q "perform org.easydiffraction.app.assistant" "$RUNNER_TEMP/a11y-this-commit/installer.log" \
             || { echo "the ticked assistant box did not install the assistant"; exit 1; }
       - name: The same with the assistant box cleared
         if: ${{ !cancelled() && steps.marker.outputs.app != '' }}
         run: |
-          EDI_INSTALLER_ASSISTANT=off bash tools/installer/a11y-check.sh "${{ steps.marker.outputs.app }}" \
+          A11Y_EXPECT_PAGES=TargetDirectory,PerformInstallation,Finished EDI_INSTALLER_ASSISTANT=off \
+            bash tools/installer/a11y-check.sh "${{ steps.marker.outputs.app }}" \
             "$RUNNER_TEMP/a11y-no-assistant" --own-script
           if grep -q "perform org.easydiffraction.app.assistant" "$RUNNER_TEMP/a11y-no-assistant/installer.log"; then
             echo "the cleared assistant box still installed the assistant"; exit 1
@@ -86,7 +88,7 @@ jobs:
           "$installer" --root "$target" --accept-licenses --default-answer --confirm-command install
           rc=0
           for mode in add update remove; do
-            EDI_INSTALLER_MAINTENANCE_MODE=$mode bash tools/installer/a11y-check.sh "$target/MaintenanceTool.app" \
+            A11Y_EXPECT_PAGES=Introduction,Finished EDI_INSTALLER_MAINTENANCE_MODE=$mode bash tools/installer/a11y-check.sh "$target/MaintenanceTool.app" \
               "$RUNNER_TEMP/a11y-maintenance-$mode" --own-script || rc=1
           done
           exit $rc

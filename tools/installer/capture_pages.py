@@ -113,6 +113,8 @@ def _run_wizard(command: list, env: dict, log: Path) -> None:
             env=env, stdout=stream, stderr=subprocess.STDOUT, timeout=240, check=False,
         )  # fmt: skip
         stream.write(f'\nexit {result.returncode}\n')
+    if result.returncode != 0:
+        raise RuntimeError(f'{command[0]} ended with {result.returncode}; its log is {log}')
     # On Windows the wizard can return at once and go on in a process of its own: wait for it.
     deadline = time.monotonic() + 240
     image = Path(command[0]).name
@@ -221,31 +223,28 @@ def capture(tools: Path, output: Path) -> None:
         installer = installer_command(
             installer_from_download(download, work / f'unpacked-{theme}')
         )
-        run_pages([str(installer)], env, output / f'installer-{theme}.log', pages)
+        # A fresh folder of its own: maintenance and cleanup touch only this installation.
         target = home / 'EasyDiffraction'
-        if SYSTEM == 'windows':
-            # Program Files with administrator rights (the runner has them), else the user's.
-            candidates = [
-                Path(os.environ.get('PROGRAMFILES', r'C:\Program Files')) / 'EasyDiffraction',
-                Path(env.get('LOCALAPPDATA', str(home))) / 'Programs/EasyDiffraction',
-            ]
-            target = next((path for path in candidates if path.exists()), candidates[0])
-        elif SYSTEM == 'macos':
-            target = Path('/Applications/EasyDiffraction')
+        if target.exists():
+            raise RuntimeError(f'The capture target already exists: {target}')
+        run_pages(
+            [str(installer), f'TargetDir={target}'], env, output / f'installer-{theme}.log', pages
+        )
         maintenance = target / (
             'MaintenanceTool.app/Contents/MacOS/MaintenanceTool'
             if SYSTEM == 'macos'
             else 'MaintenanceTool' + SUFFIX
         )
+        if not maintenance.exists():
+            raise RuntimeError(f'The installer left no maintenance tool in {target}')
         # Each maintenance mode in turn; removing everything comes last.
         for mode in ('add', 'update', 'remove'):
-            if maintenance.exists():
-                run_pages(
-                    [str(maintenance)],
-                    env | {'EDI_INSTALLER_MAINTENANCE_MODE': mode},
-                    output / f'maintenance-{mode}-{theme}.log',
-                    pages,
-                )
+            run_pages(
+                [str(maintenance)],
+                env | {'EDI_INSTALLER_MAINTENANCE_MODE': mode},
+                output / f'maintenance-{mode}-{theme}.log',
+                pages,
+            )
         if maintenance.exists():  # the captured run removes the installation; this is the backstop
             subprocess.run(
                 [str(maintenance), '--confirm-command', '--default-answer', 'purge'],
@@ -255,7 +254,38 @@ def capture(tools: Path, output: Path) -> None:
             )
     if SYSTEM == 'macos':
         set_macos_theme('light')
+    require_pages(pages)
     print(f'{len(list(pages.glob("*.png")))} page captures in {pages}')
+
+
+# The pages each walk must show: the installer's three, each maintenance mode's first and last.
+EXPECTED_PAGES = [
+    'installer-TargetDirectory',
+    'installer-PerformInstallation',
+    'installer-Finished',
+] + [
+    f'maintenance-{mode}-{page}'
+    for mode in ('add', 'update', 'remove')
+    for page in ('Introduction', 'Finished')
+]
+
+
+def require_pages(pages: Path) -> None:
+    """Fail unless every expected page was captured (on Windows, enough frames for them)."""
+    if SYSTEM == 'windows':
+        frames = len(list(pages.glob('*-[0-9][0-9].png')))
+        if frames < len(EXPECTED_PAGES):
+            raise RuntimeError(
+                f'Only {frames} Windows frames for {len(EXPECTED_PAGES)} expected pages'
+            )
+        return
+    themes = ('light',) if SYSTEM == 'linux' else ('light', 'dark')
+    missing = [
+        f'{page}-{theme}' for page in EXPECTED_PAGES for theme in themes
+        if not (pages / f'{page}-{theme}.png').is_file()
+    ]  # fmt: skip
+    if missing:
+        raise RuntimeError(f'Pages not captured: {", ".join(missing)}')
 
 
 def main() -> None:

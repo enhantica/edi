@@ -265,7 +265,7 @@ def write_resources(config: Path, configuration: ET.ElementTree) -> Path:
         '-qm', work / 'translations/ifw_en.qm',
     ])  # fmt: skip
     shutil.copy2(ROOT / 'tools/installer/CheckMark.png', work / 'CheckMark.png')
-    # The app's own icons (Font Awesome 5 Solid, as gui-components draws them), at twice their size.
+    # The app's own icons (Font Awesome 5 Solid, as gui-components draws them), at twice the size.
     icons = sorted((ROOT / 'tools/installer/icons').glob('*.png'))
     for icon in icons:
         shutil.copy2(icon, work / icon.name)
@@ -337,7 +337,7 @@ def write_metadata(
             'MaintenanceToolName': 'MaintenanceTool',
             'AllowNonAsciiCharacters': 'true',
             'AllowSpaceInPath': 'true',
-            # Qt's Mac wizard style everywhere: no header or footer lines, the logo heads each page.
+            # Qt's Mac wizard style everywhere: no header or footer line; the logo heads each page.
             'WizardStyle': 'Mac',
             'WizardDefaultWidth': '640',
             'WizardDefaultHeight': '460',

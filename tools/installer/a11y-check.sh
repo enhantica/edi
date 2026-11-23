@@ -22,7 +22,9 @@ here="$(cd "$(dirname "$0")" && pwd)"
 swiftc -O -o "$logs/a11y-client" "$here/a11y_client.swift" || { echo "a11y-check: the client did not compile"; exit 2; }
 
 target="$(mktemp -d)/EasyDiffraction"
+own=0
 if [ "${1:-}" = "--own-script" ]; then
+  own=1
   shift
   mkdir -p "$logs/pages"
   where=(TargetDir="$target")
@@ -47,25 +49,38 @@ if kill -0 "$pid" 2>/dev/null; then
 else
   wait "$pid"; status=$?
 fi
+# The reader stops by itself once the installer is gone and prints its counts; it is killed only if it hangs.
+for _ in 1 2 3 4 5 6 7 8 9 10; do kill -0 "$reader" 2>/dev/null || break; sleep 1; done
 kill "$reader" 2>/dev/null
 if grep -q "not permitted" "$logs/client.log"; then
   echo "a11y-check: the accessibility client is not permitted on this machine (grant it once in System Settings)"
   exit 3
 fi
 # The crash reporter writes its report a little after the process ends, in the user's or the system's folder.
+# Searched after every exit, not only a signal: a crash can end in an ordinary exit status too.
 new=""
-if [ "$status" -ge 128 ]; then
-  for _ in $(seq 60); do
-    new="$(find "$HOME/Library/Logs/DiagnosticReports" /Library/Logs/DiagnosticReports -newer "$marker" -type f \
-      2>/dev/null | xargs grep -l "$process" 2>/dev/null || true)"
-    [ -n "$new" ] && break
-    sleep 1
-  done
-fi
+for _ in $(seq "$([ "$status" -ge 128 ] && echo 60 || echo 5)"); do
+  new="$(find "$HOME/Library/Logs/DiagnosticReports" /Library/Logs/DiagnosticReports -newer "$marker" -type f \
+    2>/dev/null | xargs grep -l "$process" 2>/dev/null || true)"
+  [ -n "$new" ] && break
+  sleep 1
+done
 for report in $new; do cp "$report" "$logs/"; done
 trees="$(grep -c "AXOutline" "$logs/client.log" 2>/dev/null || true)"
 trees="${trees:-0}"
 echo "a11y-check: installer exit $status after ${waited}s; crash reports: ${new:-none}; tree views read: $trees"
+# A walk proves something only when it finished and was read: the installer succeeded (the product's own walk ends
+# with 0; the replacement walk script cancels at the last page, 3), the reader completed queries, and every page
+# named in A11Y_EXPECT_PAGES was captured.
+failed=0
+expected_status=$([ "$own" = 1 ] && echo "0" || echo "0 3")
+case " $expected_status " in *" $status "*) ;; *) echo "a11y-check: the installer ended with $status"; failed=1 ;; esac
+reads="$(sed -n 's/^a11y-client: \([0-9]*\) multiple-attribute queries$/\1/p' "$logs/client.log")"
+if [ "${reads:-0}" -eq 0 ]; then echo "a11y-check: the reader completed no queries"; failed=1; fi
+for page in ${A11Y_EXPECT_PAGES//,/ }; do
+  if ! ls "$logs/pages/"*"-$page-"*.png >/dev/null 2>&1; then echo "a11y-check: page $page was not reached"; failed=1; fi
+done
+if grep -q "^layout-pages: 0$" "$logs/client.log"; then echo "a11y-check: no page was laid out to check"; failed=1; fi
 if grep -q "edi resource missing" "$logs/installer.log"; then
   grep "edi resource missing" "$logs/installer.log"
   echo "a11y-check: the installer lacks one of its own resources"
@@ -86,4 +101,5 @@ if [ -n "$new" ] || [ "$status" -ge 128 ]; then
   for report in $new; do grep -m8 -E 'QMacAccessibility|Exception Type|Crashed|_AXXMIG' "$report" || true; done
   exit 1
 fi
+[ "$failed" = 1 ] && exit 1
 exit "${layout_failed:-0}"

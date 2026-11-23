@@ -82,16 +82,23 @@ let steps: [CGFloat] = [0, 4, 8, 12, 16, 24, 32]
 let wizardButtons: Set<String> = ["Back", "Next", "Install", "Cancel", "Finish", "Uninstall", "Update", "Quit"]
 let font = NSFont(name: "Helvetica Neue", size: 14) ?? NSFont.systemFont(ofSize: 14)
 var reported = Set<String>()
+var pagesSeen = 0
+var pagesChecked = 0
 
 func check(window: CGRect, title: String, placed: [Placed]) {
     let buttons = placed.filter { $0.role == "AXButton" && wizardButtons.contains($0.text) }
     let bottom = buttons.map(\.frame.minY).min() ?? window.maxY
+    pagesSeen += 1
     let content = placed.filter {
         $0.frame.minY > window.minY + 140 && $0.frame.maxY < bottom - 2 && $0.frame.width > 1 && $0.frame.height > 1
             && ["AXStaticText", "AXCheckBox", "AXRadioButton", "AXTextField", "AXButton", "AXProgressIndicator",
                 "AXTextArea", "AXScrollArea"].contains($0.role)
     }
-    guard !content.isEmpty else { return }
+    guard !content.isEmpty else {
+        if reported.insert(title + "empty").inserted { print("layout: [\(title)] no content to check on a page") }
+        return
+    }
+    pagesChecked += 1
     var problems: [String] = []
     // The first element of each row (nothing beside it to its left).
     let firsts = content.filter { item in
@@ -106,7 +113,9 @@ func check(window: CGRect, title: String, placed: [Placed]) {
     }
     for (above, below) in zip(firsts, firsts.dropFirst()) {
         let gap = below.frame.minY - above.frame.maxY
-        if gap >= -1, !steps.contains(where: { abs($0 - gap) <= 1 }) {
+        if gap < -1 {
+            problems.append("overlap \(Int(-gap)) px between '\(above.text)' and '\(below.text)'")
+        } else if !steps.contains(where: { abs($0 - gap) <= 1 }) {
             problems.append("gap \(Int(gap)) px between '\(above.text)' and '\(below.text)'")
         }
     }
@@ -145,4 +154,5 @@ while kill(pid, 0) == 0 {
     }
     usleep(200_000)
 }
+print("layout-pages: \(pagesChecked)")
 print("a11y-client: \(queries) multiple-attribute queries")
