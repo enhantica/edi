@@ -124,6 +124,7 @@ in the same change — see `AGENTS.md` §ADRs.
 | [0097](0097-gsas-ii-project-import.md) | Import GSAS-II projects | Proposed | 🟡 | High | The core reads a bounded GPX data grammar or a versioned text bundle, maps supported powder and paired magnetic models once, and saves through the native Edi writer. |
 | [0098](0098-project-import-from-other-programs.md) | Import projects from other programs | Proposed | 🟡 | High | One base lists the importers, finds one by file suffix, names and describes the imported project and refuses parameters without metadata; importers convert to what crysta already has and list every gap. |
 | [0099](0099-cryspy-project-import.md) | Import and export cryspy projects | Proposed | 🟡 | High | The core reads cryspy rcif projects (unpolarised CW neutron powder, isotropic atoms), skips the calculated output, refuses every item it does not convert and lists what crysta lacks. |
+| [0100](0100-untitled-operation.md) | Naming and first saving of untitled work as one operation | Proposed | 🟡 | High | One operation per Create or Save request on untitled work carries its id, origin, form, destination and state; only its saved end names the project, and the browser publishes through a claim checked in one transaction. |
 
 New cross-cutting decisions that should also bind crysta are authored as **(shared)** and, once the
 Copier agent-OS template exists (ADR-0004), live in its shared-ADR range so `copier update`

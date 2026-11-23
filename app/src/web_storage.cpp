@@ -68,6 +68,55 @@ EM_JS(int, edi_storage_install, (), {
         transaction.onabort = () => reject(transaction.error);
     }));
     S.record = key => S.store("readonly", store => store.get(key));
+    // One readwrite transaction whose body resolves a value: it is the answer once the transaction commits.
+    S.transact = body => S.db().then(db => new Promise((resolve, reject) => {
+        const transaction = db.transaction("places", "readwrite");
+        let value;
+        body(transaction.objectStore("places")).then(result => { value = result; });
+        transaction.oncomplete = () => resolve(value);
+        transaction.onerror = () => reject(transaction.error);
+        transaction.onabort = () => reject(transaction.error);
+    }));
+    S.revokeClaim = (claimKey, ours) => S.transact(store => new Promise(resolve => {
+        const read = store.get(claimKey);
+        read.onsuccess = () => {
+            if (ours(read.result) && read.result.state === "live") {
+                read.result.state = "revoked";
+                store.put(read.result);
+            }
+            resolve(true);
+        };
+    }));
+    S.removeEntry = async (parts, name) => {
+        try {
+            await (await S.opfs(parts, false)).removeEntry(name, {recursive : true});
+        } catch (error) {
+            if (!S.missing(error)) throw error;
+        }
+    };
+    S.removeStage = stage => S.removeEntry([ "edi", "projects" ], stage);
+    // A stage nobody publishes any more: no named place, its claim revoked or gone, and no tab writing it (its lock
+    // free). Removed when the places are listed.
+    S.sweep = async records => {
+        const named = new Set(records.map(record => record.key));
+        const live = new Set(records.filter(record => String(record.key).startsWith("claim:") && record.state === "live")
+                                 .map(record => record.stage));
+        let folder;
+        try {
+            folder = await S.opfs([ "edi", "projects" ], false);
+        } catch (error) {
+            return;
+        }
+        for await (const [name] of folder.entries()) {
+            if (!name.startsWith("stage-") || named.has(name) || live.has(name)) continue;
+            const remove = () => S.removeStage(name);
+            if (navigator.locks) {
+                await navigator.locks.request("edi-stage:" + name, {ifAvailable : true}, lock => lock ? remove() : undefined);
+            } else {
+                await remove();
+            }
+        }
+    };
     S.put = record => S.store("readwrite", store => store.put(record));
     S.remove = key => S.store("readwrite", store => store.delete(key));
 
@@ -419,6 +468,88 @@ EM_JS(void, edi_storage_write, (int job, const char* key_utf8, const char* kind_
 });
 
 
+// An untitled project's first save into the browser (ADR-0100). Its files go to a stage of their own (the named
+// place's folder, under the stage key), then one transaction checks the claim on the untitled place and, only if it
+// is still this operation's and live, records the named place, removes the untitled one and marks the claim
+// published. A revoke (edi_storage_revoke) is a transaction on the same record, so whichever commits first decides;
+// a lost publish removes its own stage. Every step compares the claim's operation id and stage key.
+EM_JS(void, edi_storage_publish_untitled, (int job, const char* untitled_utf8, double op, const char* stage_utf8, const char* name_utf8), {
+    const S = globalThis.ediStorage;
+    const untitled = UTF8ToString(untitled_utf8);
+    const stage = UTF8ToString(stage_utf8);
+    const name = UTF8ToString(name_utf8);
+    const files = S.staged.get(job) || [];
+    S.staged.delete(job);
+    const claimKey = "claim:" + untitled;
+    const ours = claim => claim && claim.op === op && claim.stage === stage;
+    S.runs.set(job, async () => {
+        const write = async () => {
+            // The claim, unless this operation was revoked before it got here.
+            const claimed = await S.transact(store => new Promise(resolve => {
+                const read = store.get(claimKey);
+                read.onsuccess = () => {
+                    if (ours(read.result) && read.result.state !== "live") return resolve(false);
+                    store.put({key : claimKey, op : op, stage : stage, state : "live"});
+                    resolve(true);
+                };
+            }));
+            if (!claimed) return {ok : true, outcome : "lost"};
+            try {
+                await S.writeBrowser(S.policy(7, {key : stage, recovery : 0}), files);
+            } catch (error) {
+                await S.revokeClaim(claimKey, ours);
+                await S.removeStage(stage);
+                throw error;
+            }
+            const outcome = await S.transact(store => new Promise(resolve => {
+                const read = store.get(claimKey);
+                read.onsuccess = () => {
+                    const claim = read.result;
+                    if (!ours(claim) || claim.state !== "live") return resolve("lost");
+                    store.put(S.policy(5, {key : stage, kind : "browser", name : name, recovery : 0}));
+                    store.delete(untitled);
+                    claim.state = "published";
+                    store.put(claim);
+                    resolve("published");
+                };
+            }));
+            if (outcome === "published") {
+                for (const part of [ "recovery", "projects" ]) await S.removeEntry([ "edi", part ], untitled);
+            } else {
+                await S.removeStage(stage);
+            }
+            return {ok : true, outcome : outcome};
+        };
+        return navigator.locks ? navigator.locks.request("edi-stage:" + stage, write) : write();
+    });
+});
+
+// Marks this operation's claim revoked, at once and outside the place's queue, so it races the publish; with no
+// claim yet it leaves the revoked mark the claim step respects.
+EM_JS(void, edi_storage_revoke, (int job, const char* untitled_utf8, double op, const char* stage_utf8), {
+    const S = globalThis.ediStorage;
+    const claimKey = "claim:" + UTF8ToString(untitled_utf8);
+    const stage = UTF8ToString(stage_utf8);
+    S.transact(store => new Promise(resolve => {
+        const read = store.get(claimKey);
+        read.onsuccess = () => {
+            const claim = read.result;
+            const ours = claim && claim.op === op && claim.stage === stage;
+            if (ours) {
+                if (claim.state === "live") {
+                    claim.state = "revoked";
+                    store.put(claim);
+                }
+            } else if (!claim || claim.state !== "live") {
+                // Another tab's live claim is never touched; otherwise this operation's mark goes in first.
+                store.put({key : claimKey, op : op, stage : stage, state : "revoked"});
+            }
+            resolve(true);
+        };
+    })).then(() => S.answer(job, {ok : true}), error => S.fail(job, error));
+});
+
+
 EM_JS(void, edi_storage_load, (int job, const char* key_utf8, int recovery, const char* root_utf8), {
     const S = globalThis.ediStorage;
     const key = UTF8ToString(key_utf8);
@@ -449,7 +580,13 @@ EM_JS(void, edi_storage_load, (int job, const char* key_utf8, int recovery, cons
 EM_JS(void, edi_storage_list, (int job), {
     const S = globalThis.ediStorage;
     S.store("readonly", store => store.getAll())
-        .then(records => S.answer(job, {ok : true, places : records.map(record => S.policy(11, {record : record}))}), error => S.fail(job, error));
+        .then(async records => {
+            // A claim is the untitled place's first save in progress, not a place (ADR-0100).
+            await S.sweep(records).catch(() => undefined);
+            const places = records.filter(record => !String(record.key).startsWith("claim:"));
+            return {ok : true, places : places.map(record => S.policy(11, {record : record}))};
+        })
+        .then(value => S.answer(job, value), error => S.fail(job, error));
 });
 
 
@@ -535,6 +672,7 @@ WebStorageAnswer answer_of(const QString& json) {
     answer.kind = object.value(QStringLiteral("kind")).toString();
     answer.name = object.value(QStringLiteral("name")).toString();
     answer.path = object.value(QStringLiteral("path")).toString();
+    answer.outcome = object.value(QStringLiteral("outcome")).toString();
     return answer;
 }
 
@@ -891,6 +1029,51 @@ void WebStorage::load(const QString& key, bool recovery, const QString& root, An
     Q_UNUSED(recovery);
     Q_UNUSED(root);
     answer(refused(QStringLiteral("the browser's storage is the browser build's")));
+#endif
+}
+
+void WebStorage::publishUntitled(const QString& untitledKey, quint64 op, const QString& stage, const QString& name,
+                                 const QString& folder, Answer answer) {  // NOLINT(performance-unnecessary-value-param)
+#if defined(Q_OS_WASM)
+    const int job = begin(Reply([this, answer = std::move(answer)](const QString& json) {
+        refresh();
+        answer(answer_of(json));
+    }));
+    const QDir root(folder);
+    QDirIterator files(folder, QDir::Files | QDir::Hidden, QDirIterator::Subdirectories);
+    while (files.hasNext()) {
+        const QString path = files.next();
+        if (edi::stored_member_excluded(root.relativeFilePath(path).toStdString())) continue;
+        QFile file(path);
+        if (!file.open(QIODevice::ReadOnly)) {
+            finish(job, refusal(QStringLiteral("cannot read %1").arg(root.relativeFilePath(path))));
+            return;
+        }
+        const QByteArray data = file.readAll();
+        edi_storage_stage(job, root.relativeFilePath(path).toUtf8().constData(), data.constData(),
+                          static_cast<int>(data.size()));
+    }
+    edi_storage_publish_untitled(job, untitledKey.toUtf8().constData(), static_cast<double>(op),
+                                 stage.toUtf8().constData(), name.toUtf8().constData());
+    queueSerial(job, untitledKey);
+#else
+    Q_UNUSED(untitledKey);
+    Q_UNUSED(op);
+    Q_UNUSED(stage);
+    Q_UNUSED(name);
+    Q_UNUSED(folder);
+    answer(refused(QStringLiteral("the browser's storage is the browser build's")));
+#endif
+}
+
+void WebStorage::revoke(const QString& untitledKey, quint64 op, const QString& stage) {
+#if defined(Q_OS_WASM)
+    edi_storage_revoke(begin(Reply([](const QString&) {})), untitledKey.toUtf8().constData(), static_cast<double>(op),
+                       stage.toUtf8().constData());
+#else
+    Q_UNUSED(untitledKey);
+    Q_UNUSED(op);
+    Q_UNUSED(stage);
 #endif
 }
 

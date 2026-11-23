@@ -151,6 +151,7 @@ qt_add_qml_module(edi_app_module
         src/report_pdf.hpp src/report_pdf.cpp
         src/project_view_model.hpp src/project_view_model.cpp
         src/session.hpp src/session.cpp
+        src/untitled_operation.hpp src/untitled_operation.cpp
         src/load_attempt.hpp src/load_attempt.cpp
         src/online_sources.hpp src/online_sources.cpp
         src/collection_origin.hpp

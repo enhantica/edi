@@ -26,6 +26,7 @@
 #include "collection_examples.hpp"
 #include "project_view_model.hpp"
 #include "row_table_model.hpp"
+#include "untitled_operation.hpp"
 // The assistant, in a build that carries it (EDI_APP_ASSISTANT, ADR-0023 §6); its reset inputs type is named here
 // so the replacement contract reads the same either way.
 #if EDI_APP_ASSISTANT
@@ -166,6 +167,8 @@ class Session : public QObject {
     // An untitled project (the owner, 2026-11-19): the one the Project page holds in memory before the user names it.
     // Structure and Experiment work on it at once; its first Save opens Create project, which names and saves it.
     Q_PROPERTY(bool untitled READ untitled NOTIFY untitledChanged)
+    // The open untitled operation's id (ADR-0100), 0 when none is open.
+    Q_PROPERTY(quint64 untitledOperationId READ untitledOperationId NOTIFY untitledOperationChanged)
     // The selected figure palette (Preferences): a project created or opened takes its first colour positions in it
     // (ADR-0038), so it opens as it would if the palette had been chosen with it open.
     Q_PROPERTY(QString colourScheme READ colourScheme WRITE setColourScheme NOTIFY colourSchemeChanged)
@@ -216,6 +219,22 @@ class Session : public QObject {
     // Opens an untitled project when none is open (the Project page does, as it opens): false when one is open
     // already or it cannot be made. `suRule` and `reportLibraries` are the new-project preferences.
     Q_INVOKABLE bool startUntitledProject(const QString& suRule = QStringLiteral("iucr_99"), bool reportLibraries = false);
+    // Naming the untitled project as one operation (ADR-0100). `beginUntitled` opens one for `origin`
+    // ("manual-create" or "save") and returns its id, which the Create dialog carries: a second request of the same
+    // origin for the same project while one asks is that one (0 when there is no untitled project). Only an answer for
+    // the open id counts: `acceptUntitled` names the project and saves it at `location` (empty: the browser),
+    // `replace` once the user confirmed replacing the folder there; `rejectUntitled` is the dialog's Cancel. The result
+    // is `untitledSettled(id, state)`, once per id.
+    Q_INVOKABLE quint64 beginUntitled(const QString& origin, const QString& action = QString());
+    quint64 beginUntitledWith(UntitledOperation::Origin origin, std::function<void()> continuation,
+                              const QString& action = QString());
+    Q_INVOKABLE bool acceptUntitled(quint64 id, const QString& name, const QString& description,
+                                    const QString& location = QString(), const QString& title = QString(),
+                                    const QString& authors = QString(), bool replace = false);
+    Q_INVOKABLE void rejectUntitled(quint64 id);
+    quint64 untitledOperationId() const;
+    // The open operation's id while its dialog asks, else 0: a Create dialog opening binds to it.
+    Q_INVOKABLE quint64 askingUntitledId() const;
     QString colourScheme() const { return colour_scheme_; }
     void setColourScheme(const QString& scheme);
 
@@ -371,6 +390,9 @@ class Session : public QObject {
     void projectLocationChanged();
     void needsSaveAsChanged();
     void untitledChanged();
+    void untitledOperationChanged();
+    // An untitled operation ended (ADR-0100): `state` is "saved", "refused", "rejected" or "superseded".
+    void untitledSettled(quint64 id, const QString& state);
     // A save asks first (edi ADR-0069): it writes `bytes` in `files`, `large` says it passes 100 MB and `linked` that a
     // scan reads files outside the project. answerSaveData(`request`, ...) continues it.
     void saveDataChoiceNeeded(int request, qint64 bytes, int files, bool large, bool linked);
@@ -438,10 +460,6 @@ class Session : public QObject {
     void initializeSession();
     struct ProjectCreationOutcome;
     bool createProjectImpl(const QString&,const QString&,const QString&,const QString&,const QString&,const QString&,bool,const QString&,ProjectCreationOutcome*,bool replace = false);
-    // Create on an untitled project: its name, description, title and authors set, then saved at `location` (a web
-    // project into the browser's storage), and no longer untitled. A refused save keeps it untitled and says why.
-    bool adoptUntitled(const QString& name, const QString& description, const QString& location, const QString& title,
-                       const QString& authors, ProjectCreationOutcome* outcome, bool replace);
     friend class AssistantViewModel;
     quint64 assistantEpoch() const noexcept { return assistant_epoch_; }
     bool assistantOwner(quint64 epoch,ProjectViewModel* expected) const noexcept;
@@ -503,8 +521,23 @@ class Session : public QObject {
         int request = 0;
         SaveOperation operation;
         SaveContinuation again;
+        quint64 untitled = 0;  // the untitled operation this save belongs to, if any (ADR-0100)
     };
     std::optional<SaveQuestion> save_question_;
+    // The untitled operation (ADR-0100): at most one, its ids counted per session.
+    std::shared_ptr<UntitledOperation> current_untitled_;
+    quint64 untitled_ids_ = 0;
+    quint64 asking_for_untitled_ = 0;  // the operation whose save beginSave is planning now
+    quint64 replans_queued_ = 0;       // counts queueReplan calls, so a write can tell a replan from a refusal
+    // Whether a callback for `id` may still act: the session and the operation alive, the id its own, the operation
+    // open and its project still the open one. Otherwise the operation (if open) settles superseded.
+    bool resumeUntitled(const std::shared_ptr<UntitledOperation>& op, quint64 id);
+    void settleUntitled(const std::shared_ptr<UntitledOperation>& op, UntitledOperation::State state);
+    // The open operation gives way (a newer request, the project replaced or the session gone).
+    void supersedeUntitled();
+    void untitledSave(const std::shared_ptr<UntitledOperation>& op);
+    void untitledWrite(const std::weak_ptr<UntitledOperation>& weak, quint64 id, const SaveOperation& operation);
+    void untitledSaved(const std::shared_ptr<UntitledOperation>& op);
     QString next_save_data_;  // setNextSaveData's answer for the next save, then cleared
     int save_questions_ = 0;
     quint64 save_operations_ = 0;
@@ -530,7 +563,10 @@ class Session : public QObject {
     bool saveWith(const SaveOperation& operation);
     bool saveAsWith(const SaveOperation& operation, const QUrl& directory);
     bool saveProjectAsWith(const SaveOperation& operation, const QUrl& target, bool zip, bool copy);
-    bool saveProjectAsFreshWith(const SaveOperation& operation, const QUrl& target, bool zip, bool copy, bool notify);
+    // `untitled`: an untitled operation's write (ADR-0100), which may replace the folder it approved and leaves naming
+    // the project to the operation.
+    bool saveProjectAsFreshWith(const SaveOperation& operation, const QUrl& target, bool zip, bool copy, bool notify,
+                                const UntitledOperation::Destination* untitled = nullptr);
     void saveWebProjectAsWith(const SaveOperation& operation, const QString& kind, bool copy);
     void downloadWebProjectWith(const SaveOperation& operation);
     // The read-only folder a temporary working copy was made from.
@@ -598,7 +634,10 @@ class Session : public QObject {
     // Puts the checked stage in place by renaming it, so what was checked is what is published. A fresh destination
     // takes it directly (`replace` false refuses an existing one); an existing folder is moved aside first, and put
     // back if the stage cannot take its place.
-    bool publishStaged(const QString& stage, const QString& destination, bool replace);
+    // With `approved` (an untitled operation's Replace, ADR-0100) the folder moved aside must be the one the user
+    // confirmed, or it is moved back and nothing is replaced; only that folder is removed after.
+    bool publishStaged(const QString& stage, const QString& destination, bool replace,
+                       const UntitledOperation::Destination* approved = nullptr);
     // What a Save writes (round, adopt, recalculate, write), done on a copy in `name` inside a new folder (the folder
     // itself for an empty name), once the project may be saved; the open project is left as it is.
     bool stageCopy(const SaveOperation& operation, const char* purpose, const QString& name, Staged& staged,

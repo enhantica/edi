@@ -377,9 +377,12 @@ SideBarGroup {
     }
 
     // Save on the untitled project opens Create project here: it names the project and saves it, its work kept.
+    // What opens the Create dialog on untitled work: the Project page's Create, or a Save (ADR-0100).
+    property string untitledOrigin: "manual-create"
     Connections {
         target: AppState
         function onUntitledSaveRequested() {
+            group.untitledOrigin = "save";
             group.chooseCreate();
         }
     }
@@ -398,8 +401,19 @@ SideBarGroup {
         // A tutorial's project, made by the user in a tutorial that set theirs aside, is not saved until they keep
         // it (edi ADR-0064).
         showsLocation: !AppState.tutorialRunning || !Session.hasProjectSetAside || Session.project !== null
+        // The untitled operation this dialog answers (ADR-0100): the one already asking (a guard Save opened it), else
+        // a new one for what opened the dialog. Only an answer for this id counts.
+        property var untitledId: 0
+        property bool untitledAccepted: false
         // On an untitled project the form starts from what the Project page already holds for it.
         onAboutToShow: {
+            untitledAccepted = false;
+            untitledId = 0;
+            if (Session.untitled && Session.project !== null && assistantIntentId === "") {
+                const asking = Session.askingUntitledId();
+                untitledId = asking > 0 ? asking : Session.beginUntitled(group.untitledOrigin);
+            }
+            group.untitledOrigin = "manual-create";
             if (Session.untitled && Session.project !== null) {
                 projectTitle = Session.project.title;
                 projectAuthors = Session.project.authors;
@@ -408,7 +422,12 @@ SideBarGroup {
         }
         onOpened: ApplicationInfo.createProjectDialogEvent(0)
         onRejected: ApplicationInfo.createProjectDialogEvent(1)
-        onClosed: ApplicationInfo.createProjectDialogEvent(2)
+        onClosed: {
+            // Closed without its OK (Cancel, Escape or a press outside): its own request is rejected.
+            if (untitledId > 0 && !untitledAccepted)
+                Session.rejectUntitled(untitledId);
+            ApplicationInfo.createProjectDialogEvent(2);
+        }
         // A new project's folder is beside the last project opened, else under the user's documents, unless one was
         // chosen before; it is saved there at once (the owner, 2026-10-08 and 2026-11-02). The browser has no folder to
         // save into: Save As downloads it.
@@ -417,7 +436,10 @@ SideBarGroup {
         // On the next turn: the new project replaces this page, dialog and all (AppState.afterChanges). The flag is
         // reset here, not only when the dialog has closed: this page goes before its closing ends, and the new page's
         // dialog would open again on a flag still set.
-        onAccepted: ApplicationInfo.createProjectDialogEvent(3)
+        onAccepted: {
+            untitledAccepted = true;
+            ApplicationInfo.createProjectDialogEvent(3);
+        }
         onReplaceAsked: (name, folder) => {
             replaceProject.projectName = name;
             replaceProject.folder = folder;

@@ -583,7 +583,7 @@ Saving is active:
 - **Work before Create** (the owner, 2026-11-19). Once the Project page is open the app holds an untitled project
   in memory (`Session.untitled`), so Structure can be used without creating a project first. This is a work buffer,
   not a created project: it has no default Title and writes nothing until the user confirms Create or names it on
-  first Save. Title is optional; leaving it empty stores no title text. The assistant's `create_project` uses the
+  first Save, as one operation ([ADR-0100](0100-untitled-operation.md)). Title is optional; leaving it empty stores no title text. The assistant's `create_project` uses the
   same Create popup and OK with Show actions enabled. Its navigation to Project keeps the original session owner
   until OK, without starting another work buffer or asking about unsaved work when there are no edits.
   The app bar's Clear closes the project and restores the startup Home page and page access, with no project.
