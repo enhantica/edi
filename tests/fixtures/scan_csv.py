@@ -1,4 +1,4 @@
-"""Authored legacy scan fixtures derived from the declared ADR-0053 columns."""
+"""Authored scan CSV fixtures from the ADR-0053 and ADR-0132 columns."""
 
 import csv
 import math
@@ -21,6 +21,17 @@ DERIVED_COLUMNS = [
 ]
 
 
+# ADR-0132: linked phases occur in the input loop order, after the profile factors.
+PROFILE_AGREEMENT_COLUMNS = ['fit_result.r_p', 'fit_result.r_wp', 'fit_result.r_exp']
+COSIO_AGREEMENT_COLUMNS = [*PROFILE_AGREEMENT_COLUMNS, 'fit_result.r_bragg.cosio']
+TWO_PHASE_AGREEMENT_COLUMNS = [
+    *PROFILE_AGREEMENT_COLUMNS,
+    'fit_result.r_bragg.alpha',
+    'fit_result.r_bragg.beta',
+]
+TWO_PHASE_SUFFIX = [*CONDITION_COLUMNS, *DERIVED_COLUMNS, *TWO_PHASE_AGREEMENT_COLUMNS]
+
+
 def legacy_scan(project):
     """Split a fresh combined CSV into the historical results and provenance files."""
     path = project / 'analysis/results.csv'
@@ -30,12 +41,10 @@ def legacy_scan(project):
         reader = csv.DictReader(stream)
         header, rows = reader.fieldnames, list(reader)
     condition_at = header.index(CONDITION_COLUMNS[0])
-    assert header[condition_at : condition_at + 4] == CONDITION_COLUMNS, (
-        'The legacy witness begins with the exact declared combined condition columns'
-    )
-    assert header[condition_at + 4 :] in ([], DERIVED_COLUMNS), (
-        'Only the declared two-phase derived pairs follow this fixture condition block'
-    )
+    assert header[condition_at:] in (
+        [*CONDITION_COLUMNS, *COSIO_AGREEMENT_COLUMNS],
+        TWO_PHASE_SUFFIX,
+    ), 'Legacy migration starts from ordered conditions, derived values and agreement factors'
     old_header = header[:condition_at]
     with path.open('w', newline='') as stream:
         writer = csv.DictWriter(stream, fieldnames=old_header, extrasaction='ignore')
@@ -103,10 +112,12 @@ def assert_migrated_prefix(
         assert retained == historical, 'A reader-only resume retains every original row'
         assert path.read_bytes() == original_bytes, 'A reader-only resume retains every byte'
         return
-    assert header in (
-        [*original_header, *CONDITION_COLUMNS],
-        [*original_header, *CONDITION_COLUMNS, *DERIVED_COLUMNS],
-    ), 'Migration appends conditions and only the declared two-phase derived pairs'
+    assert header == [*original_header, *CONDITION_COLUMNS, *COSIO_AGREEMENT_COLUMNS], (
+        'The migrated Co2SiO4 scan keeps its historical columns before conditions and factors'
+    )
     assert len(retained) >= len(historical), 'Continue retains every historical result row'
     for actual, original in zip(retained[: len(historical)], historical, strict=True):
         assert_reported_legacy(actual, original)
+        assert {actual[name] for name in COSIO_AGREEMENT_COLUMNS} == {''}, (
+            'Migration leaves agreement factors empty for retained historical rows'
+        )

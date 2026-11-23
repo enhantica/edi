@@ -17,7 +17,7 @@ from pathlib import Path
 
 import pytest
 
-from tests.fixtures.scan_csv import CONDITION_COLUMNS, legacy_scan
+from tests.fixtures.scan_csv import CONDITION_COLUMNS, COSIO_AGREEMENT_COLUMNS, legacy_scan
 
 ROOT = Path(__file__).resolve().parents[3]
 CORPUS = Path(
@@ -249,8 +249,8 @@ def test_scan_inner_fits_and_provenance_match_declared_conditions(tmp_path):
     live = run_fit(project)
     header, rows = read_csv(project / 'analysis/results.csv')
     reference_header, _ = read_csv(SCAN / 'diffraction-lib/project/analysis/results.csv')
-    assert header == [*reference_header, *CONDITION_COLUMNS], (
-        ' results.csv must retain the exact diffraction-lib column set and order'
+    assert header == [*reference_header, *CONDITION_COLUMNS, *COSIO_AGREEMENT_COLUMNS], (
+        'Results keep diffraction-lib columns before crysta conditions and agreement factors'
     )
     records = [run_fit(control) for control in controls]
     for row, record in zip(rows, records, strict=True):

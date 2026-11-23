@@ -12,7 +12,11 @@ import pytest
 
 from tests.fixtures.magnetic_pnma import commensurate, reference
 from tests.fixtures.native_process import native_executable
-from tests.fixtures.scan_csv import CONDITION_COLUMNS, assert_reported_legacy
+from tests.fixtures.scan_csv import (
+    CONDITION_COLUMNS,
+    COSIO_AGREEMENT_COLUMNS,
+    assert_reported_legacy,
+)
 
 FIRST = '01_152_054p9730.dat'
 SECOND = '02_153_055p0000.dat'
@@ -156,8 +160,10 @@ def test_converged_nan_moment_su_loads_continues_and_stays_undefined(tmp_path, s
         'Continue keeps the converged first row and appends exactly the remaining frame'
     )
     assert_reported_legacy(actual[0], initial[0])
-    assert list(actual[0]) == [*FIELDS, *CONDITION_COLUMNS, *DERIVED_FIELDS], (
-        'ADR-0133 appends each declared moment and phase-fraction pair after the scan conditions'
+    factors = [*COSIO_AGREEMENT_COLUMNS, 'fit_result.r_mag.cosio']
+    assert list(actual[0]) == [*FIELDS, *CONDITION_COLUMNS, *DERIVED_FIELDS, *factors], (
+        'ADR-0132 places agreement factors after conditions and derived values, with magnetic R '
+        'following Bragg R for the declared magnetic phase'
     )
     assert Path(actual[1]['file_path']).name == SECOND, (
         'The scan continues to the next declared data file'
