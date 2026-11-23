@@ -63,14 +63,16 @@ var maintenanceMode = installer.environmentVariable("EDI_INSTALLER_MAINTENANCE_M
 function capture(name) {
     if (captureFolder === "")
         return;
+    // The progress page is gone within a second for the small marker installer; the first page needs the window up.
+    var delay = name === "PerformInstallation" ? "0.2" : name === "Introduction" ? "2" : "1";
     var mode = installer.isInstaller() ? "installer" : "maintenance-" + maintenanceMode;
     var file = captureFolder + "/" + mode + "-" + name + "-" + (darkTheme() ? "dark" : "light") + ".png";
     if (systemInfo.kernelType === "winnt") {
         // A process started here cannot take a screenshot; capture_pages.py takes them on Windows.
     } else if (systemInfo.kernelType === "darwin") {
-        installer.executeDetached("/bin/sh", ["-c", "sleep 1; /usr/sbin/screencapture -x '" + file + "'"]);
+        installer.executeDetached("/bin/sh", ["-c", "sleep " + delay + "; /usr/sbin/screencapture -x '" + file + "'"]);
     } else {
-        installer.executeDetached("/bin/sh", ["-c", "sleep 1; import -window root '" + file + "'"]);
+        installer.executeDetached("/bin/sh", ["-c", "sleep " + delay + "; import -window root '" + file + "'"]);
     }
 }
 
@@ -106,6 +108,16 @@ function Controller() {
     installer.setDefaultPageVisible(QInstaller.ComponentSelection, false);
     // No Settings button: the system proxy is used by default, and nobody needs to edit repositories here.
     gui.showSettingsButton(false);
+    // The licence was accepted when installing; the maintenance tool does not ask again.
+    if (!installer.isInstaller())
+        installer.setDefaultPageVisible(QInstaller.LicenseCheck, false);
+    // The capture checks prove our resources are in the built installer: the text and the check box's tick.
+    if (captureFolder !== "") {
+        [":/metadata/translations/ifw_en.qm", ":/metadata/edi/CheckMark.png"].forEach(function (path) {
+            if (!installer.fileExists(path))
+                console.log("edi resource missing: " + path);
+        });
+    }
     chooseWindowsTarget();
     installer.installationFinished.connect(clearQuarantine);
     installer.updateFinished.connect(clearQuarantine);
@@ -132,6 +144,43 @@ Controller.prototype.DynamicAssistantFormCallback = function () {
     capture("AssistantForm");
     advance("AssistantForm", page);
 };
+
+// The assistant checkbox on the folder page decides the component, applied when that page is left and again before
+// the summary counts what is installed: a selection made while the component scripts load does not last.
+var assistantComponent = "org.easydiffraction.app.assistant";
+var assistantHooked = false;
+var warningHooked = false;
+
+function assistantChosen() {
+    var page = gui.pageWidgetByObjectName("TargetDirectoryPage");
+    var box = page ? gui.findChild(page, "AssistantCheckBox") : null;
+    return box ? box.checked : false;
+}
+
+function applyAssistantChoice() {
+    if (!installer.isInstaller())
+        return;
+    if (assistantChosen())
+        installer.selectComponent(assistantComponent);
+    else
+        installer.deselectComponent(assistantComponent);
+}
+
+// Removing everything calls its summary step "Ready to remove" (the Framework's "Installation Summary"); the step list
+// takes page titles as the next page opens, so it is set when the first page is left.
+var introductionHooked = false;
+var summaryTitle = "";
+
+function nameSummaryStep() {
+    var intro = gui.pageWidgetByObjectName("IntroductionPage");
+    var remove = intro ? gui.findChild(intro, "UninstallerRadioButton") : null;
+    var summary = gui.pageWidgetByObjectName("ReadyForInstallationPage");
+    if (!summary)
+        return;
+    if (summaryTitle === "")
+        summaryTitle = summary.title;
+    summary.title = remove && remove.checked ? "Ready to remove" : summaryTitle;
+}
 
 var wordmark = "";
 
@@ -164,6 +213,10 @@ function headerWordmark() {
             var update = gui.findChild(page, "UpdaterRadioButton");
             if (update && captureFolder === "")
                 update.checked = true;
+            if (!introductionHooked) {
+                page.left.connect(nameSummaryStep);
+                introductionHooked = true;
+            }
         }
 
         // The summary without the Framework's component trees: a tree view is what macOS accessibility clients
@@ -175,8 +228,14 @@ function headerWordmark() {
                     widget.visible = false;
             });
             var summary = gui.findChild(page, "RemoveAllMsgLabel");
-            if (summary && !installer.isUninstaller()) {
-                summary.text = installer.isInstaller() ? "EasyDiffraction is ready to install."
+            if (summary && installer.isUninstaller()) {
+                // One calm line in the app's warning colour, in place of the Framework's sentence in bright red.
+                summary.text = '<span style="color: ' + (darkTheme() ? "#FFAB91" : "#FF5722") + '">'
+                    + "EasyDiffraction and everything in " + installer.value("TargetDir") + " will be removed.</span>";
+            } else if (summary) {
+                summary.text = installer.isInstaller()
+                    ? (assistantChosen() ? "EasyDiffraction and the AI assistant are ready to install."
+                                         : "EasyDiffraction is ready to install.")
                     : installer.isUpdater() ? "EasyDiffraction is ready to update."
                     : "Your changes to EasyDiffraction are ready to apply.";
                 summary.visible = true;
@@ -206,7 +265,29 @@ function headerWordmark() {
             var question = gui.findChild(page, "MessageLabel");
             if (question)
                 question.text = "Choose where to install EasyDiffraction.";
+            // The warning line takes a line's height even when empty: shown only while it says something.
+            var warning = gui.findChild(page, "WarningLabel");
+            var folder = gui.findChild(page, "TargetDirectoryLineEdit");
+            var showWarning = function () {
+                if (warning)
+                    warning.visible = warning.text !== "";
+            };
+            showWarning();
+            if (folder && !warningHooked) {
+                folder.textChanged.connect(showWarning);
+                warningHooked = true;
+            }
+            var assistantBox = gui.findChild(page, "AssistantCheckBox");
+            // Capture mode can clear it, to check both states (EDI_INSTALLER_ASSISTANT=off).
+            if (assistantBox && captureFolder !== "" && installer.environmentVariable("EDI_INSTALLER_ASSISTANT") === "off")
+                assistantBox.checked = false;
+            if (!assistantHooked) {
+                page.left.connect(applyAssistantChoice);
+                assistantHooked = true;
+            }
         }
+        if (name === "LicenseAgreement" || name === "ReadyForInstallation")
+            applyAssistantChoice();
 
         if (name === "TargetDirectory" && systemInfo.kernelType === "darwin") {
             var directory = gui.findChild(page, "TargetDirectoryLineEdit");

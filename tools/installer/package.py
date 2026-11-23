@@ -255,9 +255,8 @@ def qt_tool(name: str) -> Path:
 def write_resources(config: Path, configuration: ET.ElementTree) -> Path:
     """The resource file binarycreator adds (-r): our English text and the check box's tick.
 
-    The Framework reads named translations only from its own resources, so ifw_en.qm goes in under
-    translations/; named, it replaces the built-in ones and sets the language from its name:
-    English everywhere, as the pages are. The tick is the check box's image (Installer.qss).
+    Named translations replace the Framework's built-in ones, so the text is English everywhere, as
+    the pages are. The tick is the check box's image (Installer.qss).
     """
     work = config / 'resources'
     (work / 'translations').mkdir(parents=True, exist_ok=True)
@@ -275,7 +274,8 @@ def write_resources(config: Path, configuration: ET.ElementTree) -> Path:
     resources = config / 'edi-resources.rcc'
     run([qt_tool('rcc'), '--binary', '-o', resources, work / 'resources.qrc'])
     translations = ET.SubElement(configuration.getroot(), 'Translations')
-    ET.SubElement(translations, 'Translation').text = 'ifw_en'
+    # The Framework maps a -r resource file under :/metadata; a full path is used as it is.
+    ET.SubElement(translations, 'Translation').text = ':/metadata/translations/ifw_en.qm'
     ET.indent(configuration)
     configuration.write(config / 'config.xml', encoding='utf-8', xml_declaration=True)
     return resources
@@ -924,7 +924,8 @@ def build_disk_image(image: Path, app: Path, notice: Path) -> None:
         'text_size': 12,
         'label_pos': 'bottom',
         'grid_spacing': 100,
-        'icon_locations': {app.name: (100, 125), notice.name: (280, 125)},
+        # Centred in the window: the icon with its label below sits a little above the middle.
+        'icon_locations': {app.name: (105, 105), notice.name: (275, 105)},
     }
     # dmgbuild reads its settings as a Python file; it is in the macOS packaging environment only.
     script = Path(tempfile.mkdtemp()) / 'dmg_settings.py'
