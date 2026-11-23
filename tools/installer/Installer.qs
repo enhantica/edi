@@ -99,9 +99,6 @@ function Controller() {
     // No component tree: macOS accessibility clients crash the Framework's Qt on it (edi #150); the one choice it
     // offered, the AI assistant, is a checkbox (assistantscript.qs).
     installer.setDefaultPageVisible(QInstaller.ComponentSelection, false);
-    // The Framework titles the window "<Title> Setup"; the title already says what the window is.
-    if (installer.isInstaller())
-        gui.windowTitle = "EasyDiffraction Installer";
     chooseWindowsTarget();
     installer.installationFinished.connect(clearQuarantine);
     installer.updateFinished.connect(clearQuarantine);
@@ -122,6 +119,9 @@ function headerWordmark() {
     "StartMenuDirectory", "ReadyForInstallation", "PerformInstallation", "Finished"
 ].forEach(function (name) {
     Controller.prototype[name + "PageCallback"] = function () {
+        // The Framework titles the window "<Title> Setup" again on each page; the title already says it all.
+        if (installer.isInstaller())
+            gui.windowTitle = "EasyDiffraction Installer";
         var page = gui.pageWidgetByObjectName(name + "Page");
         if (!page)
             return;

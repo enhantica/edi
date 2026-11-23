@@ -40,11 +40,14 @@ jobs:
           hdiutil attach -nobrowse -readonly -mountpoint "$RUNNER_TEMP/installer" "$RUNNER_TEMP/$ASSET"
           app="$(find "$RUNNER_TEMP/installer" -maxdepth 1 -name '*.app' | head -1)"
           echo "app=$app" >> "$GITHUB_OUTPUT"
+      # The released installer is expected to crash (edi #150); its log and report show the stack to compare.
       - name: Walk the installer with an accessibility client
+        continue-on-error: true
         run: bash tools/installer/a11y-check.sh "${{ steps.mount.outputs.app }}" "$RUNNER_TEMP/a11y"
       # Diagnosis of edi #150 on a released installer: the same walk without the component selection page.
       - name: The same without the component selection page
         if: ${{ !cancelled() }}
+        continue-on-error: true
         run: bash tools/installer/a11y-check.sh "${{ steps.mount.outputs.app }}" "$RUNNER_TEMP/a11y-no-components" A11yHideComponents=true
       - name: Set up the locked packaging environment
         if: ${{ !cancelled() }}
