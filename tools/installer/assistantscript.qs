@@ -18,17 +18,13 @@ function Component() {
     if (!form)
         return;
     var box = form.AssistantCheckBox;
-    var line = "The runtime for the ChatGPT assistant in EasyDiffraction";
-    var size = Number(component.value("CompressedSize"));
-    if (size > 0)
-        line += ", a " + Math.max(1, Math.round(size / 1e6)) + " MB download";
     if (installer.isInstaller()) {
-        box.checked = false;
-        form.AssistantDescription.text = line + ".";
+        // Ticked from the start (owner's choice); the command line still installs it only when named.
+        box.checked = true;
+        installer.selectComponent(component.name);
     } else {
         box.text = "Install the AI assistant";
         box.checked = component.installed;
-        form.AssistantDescription.text = line + (component.installed ? ". Clear the box to remove it." : ".");
     }
     box.toggled.connect(function (checked) {
         if (checked)

@@ -28,7 +28,7 @@ The assistant after it fitted La₀.₅Ba₀.₅CoO₃ on HRPT ([the tutorial](.
 
 ### Install and connect
 
-1. Select **Also install the AI assistant** in the [desktop installer](../../application/desktop.md#download). To add it to
+1. Keep **Also install the AI assistant** ticked in the [desktop installer](../../application/desktop.md#download). To add it to
    an existing installation, open **Preferences → Updates → Open Maintenance Tool**, choose **Add or remove components**,
    select **Install the AI assistant**, then restart the application.
 2. Open a project workflow page and select the robot button in the toolbar.

@@ -104,6 +104,7 @@ QLineEdit, QComboBox, QSpinBox {
 
 QTextEdit, QTextBrowser, QPlainTextEdit {
     padding: @FIELD_PADDING_PX@px;
+    font-family: "@FONT_FAMILY@";
 }
 
 QLineEdit:hover, QLineEdit:focus, QComboBox:hover, QComboBox:focus, QSpinBox:hover, QSpinBox:focus,

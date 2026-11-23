@@ -215,12 +215,36 @@ INSTALLER_THEMES = {
 def installer_stylesheet(theme: str, name: str = 'Installer.qss') -> str:
     """An installer stylesheet with one theme's values filled in."""
     text = (ROOT / 'tools/installer' / name).read_text(encoding='utf-8')
-    values = INSTALLER_THEMES[theme] | {'STEP_LIST_INSET': '23' if SYSTEM == 'macos' else '9'}
+    values = INSTALLER_THEMES[theme] | {
+        'STEP_LIST_INSET': '23' if SYSTEM == 'macos' else '9',
+        # The system's own sans serif: the app's PT Sans is not available to the installer.
+        'FONT_FAMILY': {'macos': 'Helvetica Neue', 'windows': 'Segoe UI'}.get(
+            SYSTEM, 'DejaVu Sans'
+        ),
+    }
     for key, value in values.items():
         text = text.replace(f'@{key}@', value)
     if '@' in re.sub(r'/\*.*?\*/', '', text, flags=re.DOTALL):
         raise RuntimeError('Installer.qss names a value INSTALLER_THEMES does not have')
     return text
+
+
+def write_translation(config: Path, configuration: ET.ElementTree) -> None:
+    """Build ifw_en.qm into the config and name it, so the Framework's text reads as ours.
+
+    Named translations replace the Framework's built-in ones, and the language follows the first
+    file's name: English everywhere, as the pages are.
+    """
+    lrelease = next(
+        (found for name in ('lrelease6', 'lrelease') if (found := shutil.which(name))), None
+    )
+    if lrelease is None:
+        raise RuntimeError('Qt lrelease is not in the packaging environment')
+    run([lrelease, ROOT / 'tools/installer/ifw_en.ts', '-qm', config / 'ifw_en.qm'])
+    translations = ET.SubElement(configuration.getroot(), 'Translations')
+    ET.SubElement(translations, 'Translation').text = 'ifw_en.qm'
+    ET.indent(configuration)
+    configuration.write(config / 'config.xml', encoding='utf-8', xml_declaration=True)
 
 
 def write_controller(config: Path) -> None:
@@ -286,6 +310,7 @@ def write_metadata(
     )
     style = ROOT / 'tools/installer'
     write_controller(config)
+    write_translation(config, configuration)
     # The installer's own icon, the app logo coming out of a box, distinct from the app's.
     if SYSTEM in {'macos', 'windows'}:
         icon = 'Installer.icns' if SYSTEM == 'macos' else 'Installer.ico'
@@ -419,7 +444,7 @@ def build_maintenance_tool(tools: Path, output: Path) -> Path:
     config.mkdir(parents=True)
     icon = 'App.icns'
     shutil.copy2(ROOT / 'app/resources/logo' / icon, config / icon)
-    xml_file(
+    configuration = xml_file(
         config / 'config.xml',
         'Installer',
         {
@@ -435,6 +460,7 @@ def build_maintenance_tool(tools: Path, output: Path) -> Path:
         },
     )
     write_controller(config)
+    write_translation(config, configuration)
     # --mt writes the tool named by MaintenanceToolName into the working directory.
     template = ['-t', macos_installer_template(tools, work)] if SYSTEM == 'macos' else []
     run(
@@ -795,7 +821,7 @@ def linux_installer_runtime(tools: Path, output: Path) -> tuple[Path, Path, dict
     return template, libraries.parent, env
 
 
-def set_bundle_identifier(bundle: Path, identifier: str) -> None:
+def set_bundle_identifier(bundle: Path, identifier: str, name: str = '') -> None:
     """Replace the Installer Framework's placeholder identifier, before the bundle is signed.
 
     binarycreator writes com.yourcompany.installerbase into every macOS bundle it makes, and macOS
@@ -807,6 +833,16 @@ def set_bundle_identifier(bundle: Path, identifier: str) -> None:
     with info.open('rb') as handle:
         values = plistlib.load(handle)
     values['CFBundleIdentifier'] = identifier
+    if name:
+        values['CFBundleName'] = values['CFBundleDisplayName'] = name
+        icon = values.get('CFBundleIconFile')
+        if icon:
+            target = (
+                bundle
+                / 'Contents/Resources'
+                / (icon if icon.endswith('.icns') else icon + '.icns')
+            )
+            shutil.copy2(standard_icns(Path(tempfile.mkdtemp())), target)
     with info.open('wb') as handle:
         plistlib.dump(values, handle)
 
@@ -837,7 +873,7 @@ def build_disk_image(image: Path, app: Path, notice: Path) -> None:
         'format': 'UDZO',
         'filesystem': 'HFS+',
         'default_view': 'icon-view',
-        'window_rect': ((200, 120), (760, 530)),
+        'window_rect': ((200, 120), (380, 270)),
         'show_toolbar': False,
         'show_status_bar': False,
         'show_tab_view': False,
@@ -849,7 +885,7 @@ def build_disk_image(image: Path, app: Path, notice: Path) -> None:
         'text_size': 12,
         'label_pos': 'bottom',
         'grid_spacing': 100,
-        'icon_locations': {app.name: (250, 220), notice.name: (510, 220)},
+        'icon_locations': {app.name: (100, 125), notice.name: (280, 125)},
     }
     # dmgbuild reads its settings as a Python file; it is in the macOS packaging environment only.
     script = Path(tempfile.mkdtemp()) / 'dmg_settings.py'
@@ -859,38 +895,34 @@ def build_disk_image(image: Path, app: Path, notice: Path) -> None:
     run([sys.executable, '-m', 'dmgbuild', '-s', script, MACOS_INSTALLER_NAME, image])
 
 
-# The icns entries of Installer.icns by the iconset name iconutil reads them from.
-ICONSET_NAMES = {
-    b'icp4': 'icon_16x16.png',
-    b'ic11': 'icon_16x16@2x.png',
-    b'icp5': 'icon_32x32.png',
-    b'ic12': 'icon_32x32@2x.png',
-    b'ic07': 'icon_128x128.png',
-    b'ic13': 'icon_128x128@2x.png',
-    b'ic08': 'icon_256x256.png',
-    b'ic14': 'icon_256x256@2x.png',
-    b'ic09': 'icon_512x512.png',
-    b'ic10': 'icon_512x512@2x.png',
-}
+# The installer art's height as a share of its icon: a document icon's in Finder (87 of 96
+# points), so the installer and BRANDING-LICENSE.txt read the same size side by side.
+INSTALLER_ICON_HEIGHT = 0.906
 
 
 def standard_icns(work: Path) -> Path:
-    """Installer.icns rewritten by iconutil, for Finder.
+    """Installer.icns for Finder: the same art, cropped to it and enlarged, written by iconutil.
 
-    Installer.icns keeps its small sizes as PNG, which Finder draws garbled in a window's title
-    bar; iconutil stores them in the formats Finder expects.
+    Installer.icns draws its art inside wide margins and keeps its small sizes as PNG, which Finder
+    draws garbled in a title bar; iconutil stores every size in the formats Finder expects.
     """
     data = (ROOT / 'tools/installer/Installer.icns').read_bytes()
-    iconset = work / 'Installer.iconset'
-    iconset.mkdir(parents=True, exist_ok=True)
-    offset = 8
+    largest, offset = None, 8
     while offset < len(data):
         kind, size = data[offset : offset + 4], int.from_bytes(data[offset + 4 : offset + 8])
-        if kind in ICONSET_NAMES:
-            (iconset / ICONSET_NAMES[kind]).write_bytes(data[offset + 8 : offset + size])
+        if kind == b'ic10':  # 1024 px
+            largest = data[offset + 8 : offset + size]
         offset += size
-    if len(list(iconset.iterdir())) != len(ICONSET_NAMES):
-        raise RuntimeError('Installer.icns lacks an icon size the disk image needs')
+    if largest is None:
+        raise RuntimeError('Installer.icns has no 1024 px image')
+    work.mkdir(parents=True, exist_ok=True)
+    source = work / 'Installer-1024.png'
+    source.write_bytes(largest)
+    iconset = work / 'Installer.iconset'
+    run([
+        'swift', ROOT / 'tools/installer/scale_icon.swift', source, str(INSTALLER_ICON_HEIGHT),
+        iconset,
+    ])  # fmt: skip
     icns = work / 'Installer.icns'
     run(['iconutil', '-c', 'icns', '-o', icns, iconset])
     return icns
@@ -1076,7 +1108,8 @@ def package_app(
         ],
         env=tool_environment,
     )
-    set_bundle_identifier(installer, 'org.easydiffraction.installer')
+    # The menu bar and Dock show this name, not the download's file name; the icon is enlarged.
+    set_bundle_identifier(installer, 'org.easydiffraction.installer', MACOS_INSTALLER_NAME)
     download = deliver_installer(installer, runtime)
     (output / 'installer.json').write_text(
         json.dumps(

@@ -481,13 +481,14 @@ jobs:
   # The pictures are a run artifact for a person to look at; nothing is committed and nothing else runs.
   installer-pages:
     if: github.event_name == 'workflow_dispatch' && inputs.capture_pages
-    name: installer pages · ${{ matrix.runner == 'windows-2022' && 'Windows' || matrix.runner == 'macos-15' && 'macOS' || 'Linux' }}
+    name: installer pages · ${{ matrix.runner == 'windows-2025' && 'Windows' || matrix.runner == 'macos-15' && 'macOS' || 'Linux' }}
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 40
     strategy:
       fail-fast: false
       matrix:
-        runner: [ubuntu-24.04, windows-2022, macos-15]
+        # Windows Server 2025 has Windows 11's dark app mode, which the installer follows; 2022 has none.
+        runner: [ubuntu-24.04, windows-2025, macos-15]
     steps:
       - name: Enable long source paths on Windows
         if: runner.os == 'Windows'
@@ -521,14 +522,19 @@ jobs:
           manifest-path: tools/installer/pixi.toml
       - name: Acquire the pinned Qt Installer Framework
         run: pixi run --manifest-path tools/installer/pixi.toml python "${{ github.workspace }}/tools/installer/package.py" tools --output "${{ github.workspace }}/build/installer/ifw"
-      - name: A virtual display and a screen grabber on Linux
+      - name: A virtual display, a window manager and a screen grabber on Linux
         if: runner.os == 'Linux'
-        run: sudo apt-get install -y xvfb imagemagick
+        run: sudo apt-get install -y xvfb openbox imagemagick
       - name: Capture every page, light and dark
         shell: bash
         run: |
           capture=(pixi run --manifest-path tools/installer/pixi.toml python "${{ github.workspace }}/tools/installer/capture_pages.py" --tools "${{ github.workspace }}/build/installer/ifw/tools" --output "${{ github.workspace }}/build/installer/pages")
-          if [[ "$RUNNER_OS" == Linux ]]; then xvfb-run -a -s "-screen 0 1280x900x24" "${capture[@]}"; else "${capture[@]}"; fi
+          # On Linux a window manager draws the window's frame and title, as on a desktop.
+          if [[ "$RUNNER_OS" == Linux ]]; then
+            xvfb-run -a -s "-screen 0 1280x900x24" bash -c 'openbox & sleep 2; exec "$@"' capture "${capture[@]}"
+          else
+            "${capture[@]}"
+          fi
       - name: Keep the page captures
         if: always()
         uses: actions/upload-artifact@v4

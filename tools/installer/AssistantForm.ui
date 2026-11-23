@@ -35,16 +35,6 @@
     </widget>
    </item>
    <item>
-    <widget class="QLabel" name="AssistantDescription">
-     <property name="wordWrap">
-      <bool>true</bool>
-     </property>
-     <property name="text">
-      <string>The runtime for the ChatGPT assistant in EasyDiffraction.</string>
-     </property>
-    </widget>
-   </item>
-   <item>
     <spacer name="AssistantSpacer">
      <property name="orientation">
       <enum>Qt::Vertical</enum>
