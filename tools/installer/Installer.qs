@@ -99,6 +99,9 @@ function Controller() {
     // No component tree: macOS accessibility clients crash the Framework's Qt on it (edi #150); the one choice it
     // offered, the AI assistant, is a checkbox (assistantscript.qs).
     installer.setDefaultPageVisible(QInstaller.ComponentSelection, false);
+    // The Framework titles the window "<Title> Setup"; the title already says what the window is.
+    if (installer.isInstaller())
+        gui.windowTitle = "EasyDiffraction Installer";
     chooseWindowsTarget();
     installer.installationFinished.connect(clearQuarantine);
     installer.updateFinished.connect(clearQuarantine);
@@ -131,6 +134,8 @@ function headerWordmark() {
         if (name === "Introduction") {
             var welcome = gui.findChild(page, "MessageLabel");
             welcome.openExternalLinks = true;
+            // Top-aligned, level with the step list; a label centres its text in its minimum height.
+            welcome.alignment = 0x0001 | 0x0020;  // Qt.AlignLeft | Qt.AlignTop
             welcome.text = "<p>Welcome to EasyDiffraction Setup.</p>"
                 + "<p>EasyDiffraction calculates diffraction patterns from a structural model "
                 + "and refines its parameters against experimental data.</p>"

@@ -203,7 +203,7 @@ def write_metadata(
         {
             'Name': 'EasyDiffraction',
             'Version': version,
-            'Title': 'EasyDiffraction installer',
+            'Title': 'EasyDiffraction Installer',
             'Publisher': 'EasyScience',
             'ProductUrl': 'https://easydiffraction.org/',
             'TargetDir': {
