@@ -24,7 +24,7 @@ on:
         default: false
         type: boolean
       capture_pages:
-        description: Only capture every installer and maintenance tool page, light and dark, on Linux and Windows
+        description: Only capture every installer and maintenance tool page, light and dark, on Linux, macOS and Windows
         default: false
         type: boolean
   push:
@@ -477,17 +477,17 @@ jobs:
           retention-days: 7  # a failed installation is inspected within days
 
   # Every page of the installer and its maintenance tool, light and dark, from a small marker installer (no app
-  # build): Linux under a virtual display with the theme forced, Windows with its own app theme set. The pictures are a
-  # run artifact for a person to look at; nothing is committed and nothing else runs.
+  # build): Linux under a virtual display with the theme forced, Windows and macOS with the system's own appearance set.
+  # The pictures are a run artifact for a person to look at; nothing is committed and nothing else runs.
   installer-pages:
     if: github.event_name == 'workflow_dispatch' && inputs.capture_pages
-    name: installer pages · ${{ matrix.runner == 'windows-2022' && 'Windows' || 'Linux' }}
+    name: installer pages · ${{ matrix.runner == 'windows-2022' && 'Windows' || matrix.runner == 'macos-15' && 'macOS' || 'Linux' }}
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 40
     strategy:
       fail-fast: false
       matrix:
-        runner: [ubuntu-24.04, windows-2022]
+        runner: [ubuntu-24.04, windows-2022, macos-15]
     steps:
       - name: Enable long source paths on Windows
         if: runner.os == 'Windows'

@@ -2,8 +2,9 @@
 """Capture every page of the installer and its maintenance tool, in light and in dark.
 
 Builds the small marker installer the protocol check uses (no app build), then runs it with the
-pages saving themselves (Installer.qs, EDI_INSTALLER_CAPTURE) and moving on: on Windows once per
-theme with the system's own app theme set in the registry, elsewhere in light only.
+pages saving themselves (Installer.qs, EDI_INSTALLER_CAPTURE) and moving on: on Windows and macOS
+once per theme with the system's own appearance set, on Linux in light only. --marker-only builds
+the marker installer and prints its path, for the macOS accessibility check (a11y-check.sh).
 After each install the installed maintenance tool runs the same way, then the installation is
 removed. The PNGs go to --output for a run artifact; nothing is committed.
 """
@@ -142,6 +143,23 @@ def probe_screen(pages: Path, output: Path) -> None:
     )
 
 
+def set_macos_theme(theme: str) -> None:
+    """The system appearance, read by each app as it starts."""
+    if theme == 'dark':
+        subprocess.run(['defaults', 'write', '-g', 'AppleInterfaceStyle', 'Dark'], check=True)
+    else:
+        subprocess.run(['defaults', 'delete', '-g', 'AppleInterfaceStyle'], check=False)
+
+
+def marker_installer(tools: Path, work: Path) -> Path:
+    """The offline marker installer's download."""
+    repository = (work / 'repository-unused').as_uri() + '/'
+    with patch('package.repository_urls', return_value=(repository,)):
+        package_app(marker_stage(work), tools, work / 'offline', '2026.11.0')
+    metadata = (work / 'offline/installer.json').read_text()
+    return work / 'offline' / json.loads(metadata)['download']
+
+
 def capture(tools: Path, output: Path) -> None:
     output = output.resolve()
     work = output / 'work'
@@ -150,13 +168,9 @@ def capture(tools: Path, output: Path) -> None:
     pages.mkdir()
     if SYSTEM == 'windows':
         probe_screen(pages, output)
-    repository = (work / 'repository-unused').as_uri() + '/'
-    with patch('package.repository_urls', return_value=(repository,)):
-        package_app(marker_stage(work), tools, work / 'offline', '2026.11.0')
-    metadata = (work / 'offline/installer.json').read_text()
-    download = work / 'offline' / json.loads(metadata)['download']
-    # Linux cannot be given a dark palette here, so light only; Windows sets its own app theme.
-    for theme in ('light', 'dark') if SYSTEM == 'windows' else ('light',):
+    download = marker_installer(tools, work)
+    # Linux cannot be given a dark palette here, so light only; Windows and macOS set their own.
+    for theme in ('light',) if SYSTEM == 'linux' else ('light', 'dark'):
         home = work / f'home-{theme}'
         home.mkdir()
         env = clean_environment(home)
@@ -167,6 +181,8 @@ def capture(tools: Path, output: Path) -> None:
             set_windows_theme(theme)
         else:
             env['EDI_INSTALLER_THEME'] = theme
+        if SYSTEM == 'macos':
+            set_macos_theme(theme)
         if 'DISPLAY' in os.environ:
             env['DISPLAY'] = os.environ['DISPLAY']
         installer = installer_command(
@@ -197,6 +213,8 @@ def capture(tools: Path, output: Path) -> None:
                 timeout=240,
                 check=False,
             )
+    if SYSTEM == 'macos':
+        set_macos_theme('light')
     print(f'{len(list(pages.glob("*.png")))} page captures in {pages}')
 
 
@@ -204,8 +222,18 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument('--tools', type=Path, required=True)
     parser.add_argument('--output', type=Path, required=True)
+    parser.add_argument('--marker-only', action='store_true')
     args = parser.parse_args()
     os.environ.pop('EDI_CODESIGN', None)  # the marker installer is never signed
+    if args.marker_only:
+        work = args.output.resolve()
+        work.mkdir(parents=True)
+        print(
+            installer_from_download(
+                marker_installer(args.tools.resolve(), work), work / 'unpacked'
+            )
+        )
+        return
     capture(args.tools.resolve(), args.output)
 
 
