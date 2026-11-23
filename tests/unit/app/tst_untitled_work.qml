@@ -110,9 +110,28 @@ TestCase {
         work();
         Ui.click(test, Probe, app, "appBar.button.save");
         const dialog = creation(), folder = fill(dialog);
-        press(dialog.standardButton(Dialog.Ok));
-        tryVerify(() => Session.project && !Session.needsSaveAs && !Session.project.modified, 5000, "Create after first Save commits the existing untitled work");
-        verify(SettingsProof.fileObservation(folder, "project.edi").exists, "First Save writes into the selected parent and short-name folder");
+        const id = Session.untitledOperationId;
+        verify(id > 0, "The real Save starts a naming operation");
+        compare(dialog.untitledId, id, "First Save opens Create with the same operation");
+        const settlements = [];
+        const settled = (operation, state) => settlements.push({
+            operation, state, written: SettingsProof.fileObservation(folder, "project.edi").exists
+        });
+        Session.untitledSettled.connect(settled);
+        try {
+            compare(Session.beginUntitled("save"), id, "A repeated Save while asking reuses the operation");
+            compare(settlements.length, 0, "Repeated Save does not settle the form that is still asking");
+            verify(!SettingsProof.fileObservation(folder, "project.edi").exists,
+                   "Filling the form does not publish a project early");
+            press(dialog.standardButton(Dialog.Ok));
+            tryVerify(() => Session.project && !Session.needsSaveAs && !Session.project.modified, 5000,
+                      "Create after first Save commits the existing untitled work");
+            Session.rejectUntitled(id);
+            compare(settlements, [{operation: id, state: "saved", written: true}],
+                    "First Save settles once and only after the project files exist");
+        } finally {
+            Session.untitledSettled.disconnect(settled);
+        }
         verify(Session.openProject(folder), "The first saved project reopens through the real loader");
         compare(Session.project.name, "lbco_hrpt-7", "The short name becomes the saved project name");
         compare(Session.project.title, "Neutron work before Save", "First Save retains the entered title");
@@ -126,10 +145,93 @@ TestCase {
         const p = work();
         Ui.click(test, Probe, app, "appBar.button.save");
         const dialog = creation();
-        keyClick(Qt.Key_Escape);
-        tryCompare(dialog, "visible", false, 2000, "Escape cancels first Save through the real dialog");
+        const first = dialog.untitledId;
+        const settlements = [];
+        const settled = (operation, state) => settlements.push([operation, state]);
+        Session.untitledSettled.connect(settled);
+        try {
+            compare(first, Session.untitledOperationId, "The form carries the current Save operation");
+            keyClick(Qt.Key_Escape);
+            tryCompare(dialog, "visible", false, 2000, "Escape cancels first Save through the real dialog");
+            compare(settlements, [[first, "rejected"]], "Escape settles the original Save exactly once");
+            Ui.click(test, Probe, app, "appBar.button.save");
+            const second = creation().untitledId;
+            verify(second > 0 && second !== first, "Retry opens a new operation");
+            const successor = Session.beginUntitled("manual-create");
+            verify(successor > 0 && successor !== second, "A different Create origin supersedes the pending Save");
+            const location = String(SettingsProof.emptyDirectory());
+            verify(!Session.acceptUntitled(second, "stale-save", "", location, "", "", false),
+                   "The replaced Save's late acceptance cannot publish");
+            Session.rejectUntitled(second);
+            compare(Session.untitledOperationId, successor, "A stale close cannot dismiss the successor");
+            Session.rejectUntitled(successor);
+            compare(settlements, [[first, "rejected"], [second, "superseded"], [successor, "rejected"]],
+                    "Rejection and supersession settle only their own operation once");
+        } finally {
+            Session.untitledSettled.disconnect(settled);
+        }
         verify(Session.project === p && p.modified && Session.needsSaveAs, "Cancelling first Save preserves dirty untitled work");
         compare(p.currentStructure.cell.lengthA.value, 7.125, "Cancelling naming loses no scientific edit");
+        linkedPolicy(p);
+    }
+    function linkedPolicy(p) {
+        const file = Probe.repoUrl("tests/fixtures/report_evolution/project/scan/point1.dat");
+        verify(p.loadDatasets(p.currentExperiment, [file], false, false, []),
+               "The original project admits a measured file that remains linked outside it");
+        tryCompare(p, "calculating", false, 5000, "The linked data finishes loading before the Save question");
+        p.includeDataOnSave = "ask";
+        const parent = SettingsProof.emptyDirectory();
+        const folder = SettingsProof.childUrl(parent, "linked-naming");
+        const path = SettingsProof.localPath(folder);
+        const formerName = p.name;
+        const settlements = [];
+        const settled = (operation, state) => settlements.push([operation, state]);
+        const questions = [];
+        let answerImmediately = false;
+        const asked = (request, bytes, files, large, linked) => {
+            questions.push({request, bytes, files, large, linked, operation: Session.untitledOperationId});
+            if (answerImmediately)
+                Session.answerSaveData(request, "linked");
+        };
+        Session.untitledSettled.connect(settled);
+        Session.saveDataChoiceNeeded.connect(asked);
+        try {
+            const cancelled = Session.beginUntitled("save");
+            verify(Session.acceptUntitled(cancelled, "linked-naming", "", path, "", "", false),
+                   "First Save accepts a form for the linked-data question");
+            compare(questions.length, 1, "The owning Save asks exactly one linked-data question");
+            verify(questions[0].linked && questions[0].operation === cancelled,
+                   "The question belongs to the original linked operation");
+            verify(Session.project === p && p.name === formerName && Session.untitled,
+                   "The question leaves the open project untitled");
+            Session.answerSaveData(questions[0].request, "cancel");
+            compare(settlements, [[cancelled, "rejected"]], "Cancelling the question rejects its operation once");
+            verify(!SettingsProof.fileObservation(folder, "project.edi").exists,
+                   "Cancelling the question leaves the destination unwritten");
+
+            const stale = Session.beginUntitled("save");
+            verify(Session.acceptUntitled(stale, "linked-naming", "", path, "", "", false),
+                   "Retry installs its own data question");
+            compare(questions.length, 2, "Retry reaches a distinct data question");
+            const current = Session.beginUntitled("manual-create");
+            const error = Session.lastError;
+            Session.answerSaveData(questions[1].request, "copy");
+            compare(Session.untitledOperationId, current, "The obsolete data answer leaves the successor asking");
+            compare(Session.lastError, error, "The obsolete data answer leaves the successor's error state alone");
+            verify(!SettingsProof.fileObservation(folder, "project.edi").exists,
+                   "An obsolete data answer cannot create a project");
+            answerImmediately = true;
+            verify(Session.acceptUntitled(current, "linked-naming", "", path, "", "", false),
+                   "A synchronous Link answer completes the owning naming request");
+            compare(questions.length, 3, "The succeeded naming has a single linked-data question of its own");
+            compare(settlements, [[cancelled, "rejected"], [stale, "superseded"], [current, "saved"]],
+                    "A reentrant Link answer leaves exactly one terminal result for each operation");
+            verify(SettingsProof.fileObservation(folder, "project.edi").exists,
+                   "The reentrant Link answer writes a complete named project");
+        } finally {
+            Session.saveDataChoiceNeeded.disconnect(asked);
+            Session.untitledSettled.disconnect(settled);
+        }
     }
     function test_d_quit_cancel_and_discard() {
         const p = work();
@@ -152,24 +254,21 @@ TestCase {
         const question = findChild(app, "unsavedChanges");
         tryCompare(question, "opened", true, 2000, "Quit with untitled edits offers its ordinary Save choice");
         press(question.standardButton(Dialog.Save));
-        const choice = findChild(app, "saveAs.choice");
-        tryCompare(choice, "opened", true, 2000, "Quit's Save opens the ordinary Save As choice for work with no destination");
-        const folder = SettingsProof.childUrl(SettingsProof.emptyDirectory(), "lbco_hrpt-quit");
-        press(choice.standardButton(Dialog.Ok));
-        let picker;
-        tryVerify(() => {
-            picker = Probe.objectsWithProperty(app, "selectedFile").find(item => item.visible && item.title === "Save the project as a folder");
-            return !!picker;
-        }, 3000, "The ordinary Save As choice opens its native folder-file picker");
-        // Supply the platform picker's answer through its production acceptance signal.
-        picker.selectedFile = folder;
-        picker.accepted();
-        picker.close();
-        tryVerify(() => Session.project && !Session.project.modified && !Session.needsSaveAs, 5000, "Save As writes and adopts the selected folder");
-        verify(app.visible, "The original Quit is abandoned while selecting a save destination");
+        const dialog = creation(), folder = fill(dialog);
+        const id = Session.untitledOperationId;
+        verify(id > 0, "The Quit guard starts a naming operation");
+        compare(dialog.untitledId, id, "Quit's Save names the work through the same Create form");
+        const settlements = [];
+        const settled = (operation, state) => settlements.push([operation, state, app.visible]);
+        Session.untitledSettled.connect(settled);
+        try {
+            press(dialog.standardButton(Dialog.Ok));
+            tryCompare(app, "visible", false, 5000, "The original Quit resumes automatically after naming saves");
+            compare(settlements, [[id, "saved", true]], "The project settles once before its owning Quit closes");
+        } finally {
+            Session.untitledSettled.disconnect(settled);
+        }
         verify(SettingsProof.fileObservation(folder, "project.edi").exists, "Quit's Save writes the chosen project folder");
-        app.close();
-        tryCompare(app, "visible", false, 5000, "A new Quit closes once the project is saved");
         verify(Session.openProject(folder), "The project saved while quitting reopens normally");
         compare(Session.project.currentStructure.cell.lengthA.value, 7.125, "Quit's Save preserves the nontrivial untitled scientific edit");
     }

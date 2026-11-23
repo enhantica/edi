@@ -29,6 +29,25 @@ def load(relative):
 PACKAGE = load('tools/installer/package.py')
 
 
+def test_three_page_install_choices_gate_components_license_and_sizes():
+    result = subprocess.run(
+        [
+            'node',
+            str(ROOT / 'tests/fixtures/installer/choices.mjs'),
+            str(ROOT / 'tools/installer'),
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=10,
+    )
+    assert result.returncode == 0, (
+        'The real installer callbacks keep the Install choices and summary consistent: '
+        + result.stdout
+        + result.stderr
+    )
+
+
 def parse_metadata(path):
     return ET.parse(path)  # noqa: S314 - only locally generated installer XML
 
