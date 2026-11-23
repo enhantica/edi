@@ -387,6 +387,8 @@ class ApplicationInfo : public QObject {
     Q_INVOKABLE void abandonUnsavedProjectAction() const;
     Q_INVOKABLE void acceptUnsavedProject() const;
     Q_INVOKABLE void projectWebSaveFinished(const QJSValue& saved) const;
+    // The untitled operation `id` ended as `state` (ADR-0100): a guard Save's waiting action runs if it was saved.
+    Q_INVOKABLE void projectUntitledSettled(const QJSValue& id, const QJSValue& state) const;
     Q_INVOKABLE void discardUnsavedProject() const;
     Q_INVOKABLE void prepareProjectSaveChoice() const;
     Q_INVOKABLE void acceptProjectSaveChoice() const;

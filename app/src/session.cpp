@@ -45,6 +45,23 @@
 
 namespace edi_app {
 namespace {
+// A file's identity on the disk (device and inode), which a rename keeps: what a Replace approved is what it moves.
+std::optional<UntitledOperation::FileIdentity> file_identity(const QString& path) {
+#if defined(Q_OS_UNIX)
+    struct stat status {};
+    if (::lstat(QFile::encodeName(path).constData(), &status) != 0) return std::nullopt;
+    return UntitledOperation::FileIdentity{static_cast<std::uint64_t>(status.st_dev),
+                                           static_cast<std::uint64_t>(status.st_ino)};
+#else
+    if (!QFileInfo::exists(path)) return std::nullopt;
+    return UntitledOperation::FileIdentity{};
+#endif
+}
+}  // namespace
+}  // namespace edi_app
+
+namespace edi_app {
+namespace {
 struct ResultDefinition {
     std::string model;
     using Parameter = std::tuple<std::string, std::string, std::uint64_t,
@@ -289,6 +306,14 @@ bool Session::assistantSaveNotified(ProjectViewModel*) const { return false; }
 #endif
 
 Session::~Session() {
+    // An untitled operation still open ends with the session: no continuation, and its browser claim revoked.
+    if (current_untitled_ && !current_untitled_->settled()) {
+        current_untitled_->markSuperseding();
+        if (current_untitled_->state() == UntitledOperation::State::Writing && !current_untitled_->destination.stage.isEmpty())
+            WebStorage::instance()->revoke(current_untitled_->untitledKey, current_untitled_->id(),
+                                           current_untitled_->destination.stage);
+        current_untitled_->settle(UntitledOperation::State::Superseded);
+    }
 #if EDI_APP_ASSISTANT
     delete assistant_;  // a build without the assistant never makes one, and has no complete type to delete
 #endif
@@ -811,7 +836,7 @@ std::optional<Session::SaveOperation> Session::beginSave(bool wholeTree, bool st
             setLastError(tr("This save asks first what to do with the project's data: save from the window to answer."));
             return std::nullopt;
         }
-        save_question_ = SaveQuestion{++save_questions_, operation, std::move(again)};
+        save_question_ = SaveQuestion{++save_questions_, operation, std::move(again), asking_for_untitled_};
         save_question_->operation.hold.reset();  // the user may take their time: the answer holds it again
         const qint64 bytes = plan.value(QStringLiteral("bytes")).toLongLong();
         qCInfo(lcApp, "save asks first: %lld bytes in %d files, linked data %s", static_cast<long long>(bytes),
@@ -839,6 +864,7 @@ void Session::queueReplan(const SaveOperation& operation) {
     // Planned again once the current call has unwound, and only for the project and replacement it was planned for: a
     // project opened or created meanwhile is never saved under the earlier request.
     if (!operation.replan) return;
+    ++replans_queued_;
     QMetaObject::invokeMethod(
         this,
         [receiver = QPointer<Session>(this), project = operation.project, replacement = operation.replacement,
@@ -887,6 +913,18 @@ void Session::answerSaveData(int request, const QString& choice) {
     if (!save_question_ || save_question_->request != request) return;
     SaveQuestion question = std::move(*save_question_);
     save_question_.reset();
+    // A question of an untitled operation (ADR-0100) answers that operation only: Cancel rejects it, and an answer for
+    // an operation that gave way changes nothing, not even the session's message.
+    if (question.untitled != 0) {
+        const auto op = current_untitled_;
+        const bool own = op && op->id() == question.untitled && !op->settled();
+        if (!own) return;
+        if (choice != QLatin1String("copy") && choice != QLatin1String("linked")) {
+            settleUntitled(op, UntitledOperation::State::Rejected);
+            return;
+        }
+        if (!resumeUntitled(op, question.untitled)) return;
+    }
     if (choice != QLatin1String("copy") && choice != QLatin1String("linked")) return;  // cancelled: nothing is saved
     if (!owns(question.operation)) {
         setLastError(tr("The project changed before the save could go on: nothing was saved."));
@@ -1082,7 +1120,7 @@ bool Session::saveProjectAsFresh(const QUrl& destination,bool zip,bool copy,bool
 }
 
 bool Session::saveProjectAsFreshWith(const SaveOperation& operation,const QUrl& destination,bool zip,bool copy,
-                                     bool notify) {
+                                     bool notify,const UntitledOperation::Destination* untitled) {
     if(!owns(operation))return false;
     if(!copy && !planned(operation))return queueReplan(operation),false;
     const QPointer<Session> receiver(this);
@@ -1095,7 +1133,8 @@ bool Session::saveProjectAsFreshWith(const SaveOperation& operation,const QUrl& 
         setLastError(tr("A fresh project destination must be a local file or folder."));return false;
     }
     const QFileInfo requested(QDir::cleanPath(destination.toLocalFile()));
-    if(requested.exists() || requested.isSymLink()) {
+    const bool replacing=untitled && untitled->replace;
+    if((requested.exists() || requested.isSymLink()) && !replacing) {
         setLastError(tr("The fresh project destination already exists; nothing was replaced."));return false;
     }
     if(const auto refusal=target->criticalEditRefusal(false,false,true);!refusal.isEmpty()){setLastError(refusal);return false;}
@@ -1150,7 +1189,7 @@ bool Session::saveProjectAsFreshWith(const SaveOperation& operation,const QUrl& 
                 return false;
             }
             if(!current() || target->revision()!=revision)return false;
-            if(!readyToWrite(operation,staged) || !publishStaged(staged.folder,where,false))return false;
+            if(!readyToWrite(operation,staged) || !publishStaged(staged.folder,where,replacing,replacing?untitled:nullptr))return false;
             staged.project->path=where.toStdString();staged.project->metadata.path=staged.project->path;
             if(staged.scan.listing)staged.scan.listing->relocate(staged.project,staged.folder,where);
         }
@@ -1167,6 +1206,8 @@ bool Session::saveProjectAsFreshWith(const SaveOperation& operation,const QUrl& 
         archive_location_.clear();releaseTemporaryFolder();if(!current())return false;
     }
     setLastError({});if(!current())return false;
+    // An untitled operation names the project itself once this returns (ADR-0100).
+    if(untitled)return current();
     // Saved at a place of its own (an assistant's or a window's Save As): no longer untitled.
     setUntitled(false);if(!current())return false;
     if(notify) {
@@ -1360,7 +1401,8 @@ bool Session::readyToWrite(const SaveOperation& operation, const Staged& staged)
     return true;
 }
 
-bool Session::publishStaged(const QString& stage, const QString& destination, bool replace) {
+bool Session::publishStaged(const QString& stage, const QString& destination, bool replace,
+                            const UntitledOperation::Destination* approved) {
     namespace fs = std::filesystem;
     std::error_code error;
     const fs::path to(destination.toStdString());
@@ -1406,6 +1448,20 @@ bool Session::publishStaged(const QString& stage, const QString& destination, bo
     if (const QString refused = move(to.string(), aside.string()); !refused.isEmpty()) {
         setLastError(tr("%1 could not be replaced: %2").arg(destination, refused));
         return false;
+    }
+    if (approved != nullptr) {
+        // What was moved must be the folder the user confirmed replacing, not one put there since.
+        const QString moved = QString::fromStdString(aside.string());
+        const auto folder = file_identity(moved);
+        const auto file = file_identity(moved + QStringLiteral("/project.edi"));
+        if (!folder || !file || *folder != approved->folder || *file != approved->file) {
+            if (!move(aside.string(), to.string()).isEmpty())
+                setLastError(tr("%1 changed after you chose to replace it, and the folder it held is now %2; nothing was "
+                                "replaced.").arg(destination, moved));
+            else
+                setLastError(tr("%1 changed after you chose to replace it; nothing was replaced.").arg(destination));
+            return false;
+        }
     }
     if (const QString refused = move(stage.toStdString(), to.string()); !refused.isEmpty()) {
         if (!move(aside.string(), to.string()).isEmpty())
@@ -1721,54 +1777,276 @@ bool Session::creationOutcomeCurrent(const edi_app::ProjectCreationResult& outco
     return (!outcome.has_owner || original) && project_ == original &&
         outcome.replacement == QString::number(replacement_generation_);
 }
-bool Session::adoptUntitled(const QString& name, const QString& description, const QString& location,
-                            const QString& title, const QString& authors, ProjectCreationOutcome* outcome, bool replace) {
-    const QPointer<ProjectViewModel> project(project_);
-    if (outcome) { outcome->owner = project_; outcome->has_owner = true; outcome->replacement = replacement_generation_; }
-    project_->setName(name);
-    project_->setDescription(description);
-    project_->setTitle(title);
-    project_->setAuthors(authors);
-    bool saved = false;
+quint64 Session::untitledOperationId() const {
+    return current_untitled_ && !current_untitled_->settled() ? current_untitled_->id() : 0;
+}
+
+quint64 Session::askingUntitledId() const {
+    return current_untitled_ && current_untitled_->state() == UntitledOperation::State::Asking ? current_untitled_->id()
+                                                                                                : 0;
+}
+
+quint64 Session::beginUntitled(const QString& origin, const QString& action) {
+    using Origin = UntitledOperation::Origin;
+    Origin which;
+    if (origin == QLatin1String("manual-create")) which = Origin::ManualCreate;
+    else if (origin == QLatin1String("save")) which = Origin::Save;
+    else if (origin == QLatin1String("guard-save")) which = Origin::GuardSave;
+    else if (origin == QLatin1String("assistant-create")) which = Origin::AssistantCreate;
+    else return 0;
+    return beginUntitledWith(which, {}, action);
+}
+
+quint64 Session::beginUntitledWith(UntitledOperation::Origin origin, std::function<void()> continuation,
+                                   const QString& action) {
+    if (!untitled_ || project_ == nullptr) return 0;
+    const auto& open = current_untitled_;
+    // The same request again while its dialog asks (a double click) is that request.
+    if (open && !open->settled() && open->state() == UntitledOperation::State::Asking && open->origin() == origin &&
+        open->action == action && open->owner() == project_ && open->replacement() == replacement_generation_)
+        return open->id();
+    const QPointer<Session> receiver(this);
+    supersedeUntitled();
+    if (!receiver || !untitled_ || project_ == nullptr) return 0;
+    current_untitled_ = std::make_shared<UntitledOperation>(++untitled_ids_, project_, replacement_generation_, origin,
+                                                            std::move(continuation));
+    current_untitled_->action = action;
+    qCInfo(lcApp, "untitled operation %llu: %s", static_cast<unsigned long long>(current_untitled_->id()),
+           qPrintable(UntitledOperation::name(origin)));
+    emit untitledOperationChanged();
+    return receiver ? untitledOperationId() : 0;
+}
+
+bool Session::resumeUntitled(const std::shared_ptr<UntitledOperation>& op, quint64 id) {
+    if (!op || op->id() != id || op->settled()) return false;
+    if (op->superseding() || op->owner() == nullptr || op->owner() != project_ ||
+        op->replacement() != replacement_generation_) {
+        settleUntitled(op, UntitledOperation::State::Superseded);
+        return false;
+    }
+    return true;
+}
+
+void Session::settleUntitled(const std::shared_ptr<UntitledOperation>& op, UntitledOperation::State state) {
+    if (!op || !op->settle(state)) return;
+    const QPointer<Session> receiver(this);
+    qCInfo(lcApp, "untitled operation %llu %s", static_cast<unsigned long long>(op->id()),
+           qPrintable(UntitledOperation::name(state)));
+    emit untitledSettled(op->id(), UntitledOperation::name(state));
+    if (receiver && op == current_untitled_) emit untitledOperationChanged();
+}
+
+void Session::supersedeUntitled() {
+    const auto op = current_untitled_;
+    if (!op || op->settled()) return;
+    op->markSuperseding();
+    // A browser write in flight loses to the revoke if the revoke commits first; else its named place stays.
+    if (op->state() == UntitledOperation::State::Writing && !op->destination.stage.isEmpty())
+        WebStorage::instance()->revoke(op->untitledKey, op->id(), op->destination.stage);
+    settleUntitled(op, UntitledOperation::State::Superseded);
+}
+
+void Session::rejectUntitled(quint64 id) {
+    const auto op = current_untitled_;
+    // Only the dialog's own request, while it still asks: a dialog that closes after its Accept leaves the write alone.
+    if (!op || op->id() != id || op->settled() || op->state() != UntitledOperation::State::Asking) return;
+    settleUntitled(op, UntitledOperation::State::Rejected);
+}
+
+bool Session::acceptUntitled(quint64 id, const QString& name, const QString& description, const QString& location,
+                             const QString& title, const QString& authors, bool replace) {
+    const auto op = current_untitled_;
+    if (!resumeUntitled(op, id) || op->state() != UntitledOperation::State::Asking) return false;
+    op->form = {name, description, title, authors, location};
+    const auto refuse = [this, &op](const QString& why) {
+        setLastError(why);
+        settleUntitled(op, UntitledOperation::State::Refused);
+        return false;
+    };
+    try {
+        (void)edi::validated_project_name(name.toStdString());
+    } catch (const std::exception& refusal) {
+        return refuse(QString::fromUtf8(refusal.what()));
+    }
     if (location.isEmpty()) {
-        // The web app (or a project shown without a place): a browser place of its own, which Save writes.
-        if (WebFiles::available()) setWebPlace({web_place_.key, QStringLiteral("browser"), folderNameFor(name)});
-        setUntitled(false);
-        saved = !WebFiles::available() || save();
+        if (!WebFiles::available()) {
+            // A project shown without a place of its own: named, and nothing to write.
+            project_->setName(name);
+            project_->setDescription(description);
+            project_->setTitle(title);
+            project_->setAuthors(authors);
+            untitledSaved(op);
+            return true;
+        }
+        if (!WebStorage::instance()->usable()) {
+            setLastError({});
+            emit webStorageUnavailable();
+            settleUntitled(op, UntitledOperation::State::Refused);
+            return false;
+        }
+        // A stage of its own, unique across tabs, never the untitled place's key.
+        op->destination.stage = QStringLiteral("stage-%1-%2")
+                                    .arg(id)
+                                    .arg(QUuid::createUuid().toString(QUuid::WithoutBraces));
+        op->untitledKey = web_place_.key;
     } else {
         const QFileInfo existing(location);
-        if ((existing.exists() || existing.isSymLink()) && !replace) {
-            setLastError(tr("%1 exists already; nothing was saved.").arg(existing.absoluteFilePath()));
-        } else if (existing.exists() && (!existing.isDir() || !QFileInfo::exists(existing.absoluteFilePath() + QStringLiteral("/project.edi")))) {
-            setLastError(tr("%1 exists and is not a project folder; nothing was replaced.").arg(existing.absoluteFilePath()));
-        } else {
-            // Over a project folder, once the user chose Replace: the old one moves aside until the save has worked.
-            QString aside;
-            if (existing.exists()) {
-                aside = existing.absoluteFilePath() + QStringLiteral(".edi-replaced");
-                for (int n = 2; QFileInfo::exists(aside); ++n) aside = existing.absoluteFilePath() + QStringLiteral(".edi-replaced-%1").arg(n);
-                if (!QDir().rename(existing.absoluteFilePath(), aside)) {
-                    setLastError(tr("The project %1 could not be replaced: it could not be moved aside").arg(existing.fileName()));
-                    aside = QStringLiteral("-");
-                }
-            }
-            if (aside != QStringLiteral("-")) {
-                saved = saveProjectAsFresh(QUrl::fromLocalFile(location), false, false, false);
-                if (!aside.isEmpty()) {
-                    if (saved) {
-                        QDir(aside).removeRecursively();
-                    } else {
-                        QDir(location).removeRecursively();
-                        QDir().rename(aside, location);
-                    }
-                }
-            }
+        const bool there = existing.exists() || existing.isSymLink();
+        if (there && !replace) return refuse(tr("%1 exists already; nothing was saved.").arg(existing.absoluteFilePath()));
+        if (there && (!existing.isDir() || existing.isSymLink() ||
+                      !QFileInfo::exists(existing.absoluteFilePath() + QStringLiteral("/project.edi"))))
+            return refuse(tr("%1 exists and is not a project folder; nothing was replaced.").arg(existing.absoluteFilePath()));
+        op->destination.path = existing.absoluteFilePath();
+        op->destination.replace = there;
+        if (there) {
+            // The folder the user confirmed replacing, as it is now: only this object is moved aside later.
+            const auto folder = file_identity(op->destination.path);
+            const auto file = file_identity(op->destination.path + QStringLiteral("/project.edi"));
+            if (!folder || !file)
+                return refuse(tr("%1 could not be read; nothing was replaced.").arg(op->destination.path));
+            op->destination.folder = *folder;
+            op->destination.file = *file;
         }
-        if (saved && project == project_) setUntitled(false);
     }
-    const QString error = saved ? QString{} : last_error_;
-    if (outcome) { outcome->error = error; outcome->saved = saved; outcome->path = project ? project->path() : QString{}; }
-    return saved;
+    const QPointer<Session> receiver(this);
+    untitledSave(op);
+    using State = UntitledOperation::State;
+    return receiver && op->state() != State::Refused && op->state() != State::Rejected &&
+           op->state() != State::Superseded;
+}
+
+void Session::untitledSave(const std::shared_ptr<UntitledOperation>& op) {
+    const quint64 id = op->id();
+    const std::weak_ptr<UntitledOperation> weak = op;
+    const QPointer<Session> receiver(this);
+    const bool browser = !op->destination.stage.isEmpty();
+    asking_for_untitled_ = id;
+    const auto operation = beginSave(
+        true, browser,
+        [receiver, weak, id](const SaveOperation& answered) {
+            if (receiver) receiver->untitledWrite(weak, id, answered);
+        },
+        [receiver, weak, id] {
+            if (!receiver) return false;
+            const auto again = weak.lock();
+            if (!receiver->resumeUntitled(again, id)) return false;
+            receiver->untitledSave(again);
+            return true;
+        });
+    if (!receiver) return;
+    asking_for_untitled_ = 0;
+    if (operation) {
+        untitledWrite(weak, id, *operation);
+        return;
+    }
+    // An answer given inside the question already took the operation on.
+    if (op->settled() || op->state() == UntitledOperation::State::Writing) return;
+    if (save_question_ && save_question_->untitled == id) {
+        op->advance(UntitledOperation::State::Replanning);
+        return;
+    }
+    settleUntitled(op, UntitledOperation::State::Refused);  // beginSave said why
+}
+
+void Session::untitledWrite(const std::weak_ptr<UntitledOperation>& weak, quint64 id, const SaveOperation& operation) {
+    const auto op = weak.lock();
+    if (!resumeUntitled(op, id)) return;
+    op->advance(UntitledOperation::State::Writing);
+    const QPointer<Session> receiver(this);
+    const auto refuse = [&](const QString& why) {
+        if (!receiver) return;
+        if (!why.isEmpty()) setLastError(why);
+        settleUntitled(op, UntitledOperation::State::Refused);
+    };
+    // The dialog's names go into what is written; the open project takes them only once it is saved.
+    SaveOperation named = operation;
+    auto copy = std::make_shared<edi::Project>(*operation.snapshot);
+    try {
+        edi::Edit::project_name(*copy, op->form.name.toStdString())();
+    } catch (const std::exception& refusal) {
+        return refuse(QString::fromUtf8(refusal.what()));
+    }
+    copy->metadata.description = op->form.description.toStdString();
+    copy->metadata.title = op->form.title.toStdString();
+    copy->metadata.authors = op->form.authors.toStdString();
+    named.snapshot = copy;
+    if (op->destination.stage.isEmpty()) {
+        const quint64 replans = replans_queued_;
+        const bool saved = saveProjectAsFreshWith(named, QUrl::fromLocalFile(op->destination.path), false, false, false,
+                                                  &op->destination);
+        if (!receiver || op->settled()) return;
+        if (saved) {
+            if (resumeUntitled(op, id)) untitledSaved(op);
+            return;
+        }
+        // The project changed while the save notified: it is planned again, for this operation, once this unwinds.
+        if (replans_queued_ != replans) return;
+        return refuse({});
+    }
+    if (web_writing_) return refuse(tr("The project is still being saved: save again once it is written."));
+    const QString folder = folderNameFor(op->form.name);
+    Staged staged;
+    if (!stageCopy(named, "web", folder, staged) || !readyToWrite(named, staged)) return refuse({});
+    if (!receiver) return;
+    const quint64 revision = project_->revision();
+    web_writing_ = true;
+    qCInfo(lcApp, "project save queued");
+    WebStorage::instance()->publishUntitled(
+        op->untitledKey, id, op->destination.stage, folder, staged.folder,
+        [receiver, weak, id, staged, revision, folder, held = named.hold](const WebStorageAnswer& answer) {
+            if (!receiver) {
+                QDir(staged.root).removeRecursively();
+                return;
+            }
+            receiver->web_writing_ = false;
+            const auto op = weak.lock();
+            const bool published = answer.ok && answer.outcome == QLatin1String("published");
+            if (!published || !op || op->settled() || !receiver->resumeUntitled(op, id)) {
+                QDir(staged.root).removeRecursively();
+                if (!op || op->settled()) return;  // superseded: a published place stays a saved project
+                if (answer.ok) {
+                    receiver->settleUntitled(op, UntitledOperation::State::Superseded);  // the revoke won
+                } else {
+                    receiver->setLastError(answer.message);
+                    emit receiver->webSaveFailed(answer.message);
+                    if (receiver) receiver->settleUntitled(op, UntitledOperation::State::Refused);
+                }
+                return;
+            }
+            receiver->setWebPlace({op->destination.stage, QStringLiteral("browser"), folder});
+            if (!receiver || !receiver->resumeUntitled(op, id)) return;
+            if (!receiver->takeWebSave(staged, revision)) QDir(staged.root).removeRecursively();
+            if (!receiver || !receiver->resumeUntitled(op, id)) return;
+            emit receiver->webSaved(QStringLiteral("browser"));
+            if (receiver && receiver->resumeUntitled(op, id)) receiver->untitledSaved(op);
+        });
+}
+
+void Session::untitledSaved(const std::shared_ptr<UntitledOperation>& op) {
+    // The one place that names the untitled project: the write is done, so the name, the place and the log follow.
+    const QPointer<Session> receiver(this);
+    const QPointer<ProjectViewModel> owner(project_);
+    const auto replacement = replacement_generation_;
+    const auto current = [&] { return receiver && owner && project_ == owner && replacement_generation_ == replacement; };
+    setUntitled(false);
+    if (!current()) return;
+    setLastError({});
+    if (!current()) return;
+    if (!op->destination.path.isEmpty()) {
+        emit projectLocationChanged();
+        if (!current()) return;
+        emit needsSaveAsChanged();
+        if (!current()) return;
+        emit locationTextChanged();
+        if (!current()) return;
+        emit projectDirectoryUsed(op->destination.path);
+        if (!current()) return;
+    }
+    qCInfo(lcApp, "project saved");
+    settleUntitled(op, UntitledOperation::State::Saved);
+    // What waited for the save runs only for the same session and project.
+    const auto continuation = op->takeContinuation();
+    if (continuation && current()) continuation();
 }
 
 bool Session::createProjectImpl(const QString& name, const QString& description, const QString& location,
@@ -1783,7 +2061,18 @@ bool Session::createProjectImpl(const QString& name, const QString& description,
     }
     // Create while a project is untitled names and saves that project, the work in it kept (the owner, 2026-11-19).
     if (untitled_ && project_ != nullptr && assistantIntent.isEmpty()) {
-        return adoptUntitled(name, description, location, title, authors, outcome, replace);
+        // Through the open untitled operation, the one its dialog carries (ADR-0100): one is opened for a Create that
+        // came without (a script's or a tutorial's).
+        if (outcome) { outcome->owner = project_; outcome->has_owner = true; outcome->replacement = replacement_generation_; }
+        quint64 id = untitledOperationId();
+        if (id == 0) id = beginUntitled(QStringLiteral("manual-create"));
+        if (!receiver) return false;
+        const QPointer<ProjectViewModel> project(project_);
+        const bool accepted = id != 0 && acceptUntitled(id, name, description, location, title, authors, replace);
+        if (!receiver) return false;
+        const bool saved = accepted && !untitled_;
+        if (outcome) { outcome->error = accepted ? QString{} : last_error_; outcome->saved = saved; outcome->path = project ? project->path() : QString{}; }
+        return accepted;
     }
     ProjectViewModel* created = nullptr;
     try {
@@ -2241,6 +2530,8 @@ bool Session::replaceProject(ProjectViewModel* project, const QStringList& warni
     // Keep both original cleanup obligations before any publication can reenter.
     retainTemporaryRoots({temporary_folder_,web_copy_});
     if(replacement_generation_==UINT64_MAX)throw std::length_error("Session replacement identity is exhausted");
+    // The untitled project's naming gives way to whatever replaces it (ADR-0100).
+    supersedeUntitled(); if(!receiver)return false;
     const auto replacement=++replacement_generation_;
     const auto pathBinding=path_generation_;
     auto current=[&]{return receiver && replacement_generation_==replacement && pathBinding!=UINT64_MAX && path_generation_==pathBinding && (!hasTarget || target);};

@@ -3422,6 +3422,28 @@ void ApplicationInfo::acceptUnsavedProject() const {
     }
     const auto original = panelUsageContextRead(frame, "nativeCreation");
     const auto waiting = panelUsageContextRead(frame, "action");
+    // Untitled work is named and saved by an untitled operation (ADR-0100): the waiting action is kept with its id and
+    // runs only once that operation is saved; any other end abandons it.
+    if (panelUsageTruth(assistantContextField(frame, "Session", "untitled"))) {
+        const auto abandoned = panelUsageContextRead(frame, "abandoned");
+        const auto origin = QJSValue(original.isNull() ? QStringLiteral("guard-save") : QStringLiteral("assistant-create"));
+        const auto id = projectInvoke(frame, "Session", "beginUntitled", {origin});
+        if (id.toNumber() <= 0) {
+            panelUsageGlobalCall(frame, "abandonAction", {});
+            return;
+        }
+        const auto previous = panelUsageContextRead(frame, "untitledAbandoned");
+        const bool same = panelUsageContextRead(frame, "untitledId").strictlyEquals(id);
+        panelUsageContextWrite(frame, "untitledId", id);
+        panelUsageContextWrite(frame, "untitledAction", waiting);
+        panelUsageContextWrite(frame, "untitledAbandoned", abandoned);
+        panelUsageContextWrite(frame, "action", consentNull());
+        panelUsageContextWrite(frame, "abandoned", consentNull());
+        // The same request asked again replaces the action it carries; the earlier one is abandoned.
+        if (same && previous.isCallable() && !previous.strictlyEquals(abandoned)) projectCall(frame, previous);
+        projectInvoke(frame, "AppState", "requestUntitledSave");
+        return;
+    }
     if (panelUsageTruth(assistantContextField(frame, "Session", "needsSaveAs"))) {
         panelUsageGlobalCall(frame, "abandonAction", {});
         const auto window = panelUsageContextRead(frame, "window");
@@ -3481,6 +3503,19 @@ void ApplicationInfo::projectWebSaveFinished(const QJSValue& saved) const {
     projectWrite(frame, "unsavedChanges", "afterSaveAbandoned", consentNull());
     if (panelUsageTruth(saved) && !waiting.isNull()) projectInvoke(frame, "AppState", "afterChanges", {waiting, abandoned});
     else if (panelUsageTruth(abandoned)) projectCall(frame, abandoned);
+}
+void ApplicationInfo::projectUntitledSettled(const QJSValue& id, const QJSValue& state) const {
+    const auto frame = panelUsageEngine(this);
+    if (!assistantContextField(frame, "unsavedChanges", "untitledId").strictlyEquals(id)) return;
+    const auto waiting = assistantContextField(frame, "unsavedChanges", "untitledAction");
+    const auto abandoned = assistantContextField(frame, "unsavedChanges", "untitledAbandoned");
+    projectWrite(frame, "unsavedChanges", "untitledId", QJSValue(0));
+    projectWrite(frame, "unsavedChanges", "untitledAction", consentNull());
+    projectWrite(frame, "unsavedChanges", "untitledAbandoned", consentNull());
+    if (state.strictlyEquals(QJSValue(QStringLiteral("saved"))) && !waiting.isNull())
+        projectInvoke(frame, "AppState", "afterChanges", {waiting, abandoned});
+    else if (abandoned.isCallable())
+        projectCall(frame, abandoned);
 }
 void ApplicationInfo::discardUnsavedProject() const {
     const auto frame = panelUsageEngine(this);

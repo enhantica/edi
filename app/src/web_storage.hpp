@@ -38,6 +38,8 @@ struct WebStorageAnswer {
     QString name;
     // The project folder in memory or, for a "zip" place, the archive.
     QString path;
+    // An untitled project's first save: "published" or "lost" (ADR-0100).
+    QString outcome;
 };
 
 // The stored places, most recent first: each its key, kind ("browser", "folder" or "zip") and name, whether it has
@@ -118,6 +120,13 @@ class WebStorage : public QObject {
     // Copies the place `key` (or its kept unsaved state) into `root` in memory; the answer's `path` is the project
     // folder or, for a "zip" place, the archive.
     void load(const QString& key, bool recovery, const QString& root, Answer answer);
+    // An untitled project's first save (ADR-0100): writes `folder` into the stage `stage` and publishes it as the
+    // browser place `stage` named `name`, in place of the untitled place `untitledKey`, only while the claim is still
+    // operation `op`'s. The answer's `outcome` is "published" or "lost"; a failed write revokes the claim.
+    void publishUntitled(const QString& untitledKey, quint64 op, const QString& stage, const QString& name,
+                         const QString& folder, Answer answer);
+    // Revokes operation `op`'s claim on the untitled place (its stage `stage`), racing a publish in flight.
+    void revoke(const QString& untitledKey, quint64 op, const QString& stage);
     // Drops the unsaved state kept for `key`.
     Q_INVOKABLE void dropRecovery(const QString& key);
     // Removes the place `key` from the list; a project kept in the browser is deleted with it.
