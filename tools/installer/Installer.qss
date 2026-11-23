@@ -115,6 +115,11 @@ QScrollArea#ComponentSummaryScrollArea, QScrollArea#ComponentSummaryScrollArea >
     background: transparent;
 }
 
+/* The status line one spacing step (16) under the progress bar. */
+QLabel#ProgressLabel {
+    margin-top: 6px;
+}
+
 /* One gap on the 8 px scale between a control and what it belongs to. */
 QCheckBox#AcceptLicenseCheckBox, QRadioButton#AcceptLicenseRadioButton {
     margin-top: 8px;
