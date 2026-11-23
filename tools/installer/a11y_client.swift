@@ -17,10 +17,22 @@ let attributes = [kAXRoleAttribute, kAXChildrenAttribute, kAXSelectedChildrenAtt
 let app = AXUIElementCreateApplication(pid)
 var queries = 0
 
+// The element's role and title, read one at a time (a single attribute is not the crashing call), printed before
+// the multiple-attribute query so the last line names the element a crash happened on.
+func describe(_ element: AXUIElement) -> String {
+    var role: CFTypeRef?
+    var title: CFTypeRef?
+    AXUIElementCopyAttributeValue(element, kAXRoleAttribute as CFString, &role)
+    AXUIElementCopyAttributeValue(element, kAXTitleAttribute as CFString, &title)
+    return "\((role as? String) ?? "?") \((title as? String) ?? "")"
+}
+
 func visit(_ element: AXUIElement, depth: Int) {
     guard depth < 40 else { return }
     var values: CFArray?
     queries += 1
+    print("\(String(repeating: " ", count: depth))\(describe(element))")
+    fflush(stdout)
     if AXUIElementCopyMultipleAttributeValues(element, attributes, AXCopyMultipleAttributeOptions(rawValue: 0), &values)
         == .success, let list = values as? [AnyObject], list.count > 1, let children = list[1] as? [AXUIElement]
     {
