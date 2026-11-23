@@ -96,10 +96,8 @@ func check(window: CGRect, title: String, placed: [Placed]) {
             && ["AXStaticText", "AXCheckBox", "AXRadioButton", "AXTextField", "AXButton", "AXProgressIndicator",
                 "AXTextArea", "AXScrollArea"].contains($0.role)
     }
-    guard !content.isEmpty else {
-        if reported.insert(title + "empty").inserted { print("layout: [\(title)] no content to check on a page") }
-        return
-    }
+    // A moment between two pages has no content; a run that never checks a page fails (layout-pages: 0).
+    guard !content.isEmpty else { return }
     pagesChecked += 1
     var problems: [String] = []
     // The first element of each row (nothing beside it to its left).
@@ -114,7 +112,10 @@ func check(window: CGRect, title: String, placed: [Placed]) {
     func drawn(_ item: Placed) -> CGRect {
         item.role == "AXTextField" ? item.frame.insetBy(dx: 2, dy: 2) : item.frame
     }
-    func drawnX(_ item: Placed) -> CGFloat { drawn(item).minX }
+    // ...and a check box's or radio button's 2 points left of its drawn box.
+    func drawnX(_ item: Placed) -> CGFloat {
+        ["AXCheckBox", "AXRadioButton", "AXTextField"].contains(item.role) ? item.frame.minX + 2 : item.frame.minX
+    }
     let edge = firsts.map(drawnX).min() ?? 0
     pageEdges[title, default: []].insert(Int((edge - window.minX).rounded()))
     for item in firsts where abs(drawnX(item) - edge) > 1 {

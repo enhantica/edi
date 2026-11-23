@@ -118,3 +118,8 @@ QPushButton#qt_wizard_commit:default:disabled {
     color: transparent;
     qproperty-iconSize: 0px 0px;
 }
+
+/* The logo (the page title) starts where the page's content does. */
+QWizard > QWidget > QLabel {
+    padding-left: @PAGE_INSET@;
+}
