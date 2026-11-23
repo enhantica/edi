@@ -13,7 +13,7 @@ from pathlib import Path
 import edi
 import pytest
 
-from tests.fixtures.scan_csv import CONDITION_COLUMNS
+from tests.fixtures.scan_csv import CONDITION_COLUMNS, COSIO_AGREEMENT_COLUMNS
 
 ROOT = Path(__file__).resolve().parents[3]
 CORPUS_ROOT = Path(
@@ -149,10 +149,11 @@ def test_cli_fit_and_python_resume_share_crysta_results_writer(tmp_path: Path) -
     csv_path = project_dir / 'analysis' / 'results.csv'
     header, rows = _rows(csv_path)
     reference_header, _ = _rows(CASE / 'diffraction-lib' / 'project' / 'analysis' / 'results.csv')
-    assert header == [*reference_header, *CONDITION_COLUMNS], (
-        " requires the edi CLI surface to emit diffraction-lib's exact column set; "
-        f'missing={sorted(set(reference_header) - set(header))!r}, '
-        f'extra={sorted(set(header) - set(reference_header))!r}'
+    expected_header = [*reference_header, *CONDITION_COLUMNS, *COSIO_AGREEMENT_COLUMNS]
+    assert header == expected_header, (
+        'The CLI retains the diffraction-lib column order before its conditions and agreement '
+        f'factors; missing={sorted(set(expected_header) - set(header))!r}, '
+        f'extra={sorted(set(header) - set(expected_header))!r}'
     )
     assert not (FORBIDDEN_BARE_METRICS & set(header)), (
         ' requires bare success/iterations/reduced_chi_square columns to remain absent '
