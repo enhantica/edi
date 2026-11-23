@@ -524,7 +524,8 @@ function headerWordmark() {
             var detailsButton = gui.findChild(page, "DetailsButton");
             if (detailsBrowser && detailsBrowser.visible && detailsButton)
                 detailsButton.click();
-            ["DetailsButton", "DownloadStatus"].forEach(function (hidden) {
+            // The product-images area is invisible but takes the page's height, which left our bar far below.
+            ["DetailsButton", "DownloadStatus", "ProductImagesScrollArea", "ProductImagesLabel"].forEach(function (hidden) {
                 var widget = gui.findChild(page, hidden);
                 if (widget)
                     widget.visible = false;
@@ -554,15 +555,15 @@ function headerWordmark() {
             var target = String(installer.value("TargetDir"));
             var where = systemInfo.kernelType === "winnt" ? (shortcut ? "in the Start menu and on your desktop"
                                                                       : "in the Start menu")
-                : systemInfo.kernelType === "darwin"
-                    ? (/^\/Applications\//.test(target) ? "in your Applications folder" : "in the folder you chose")
+                : systemInfo.kernelType === "darwin" ? "in your Applications folder"
                     : (shortcut ? "in your applications menu and on your desktop" : "in your applications menu");
             if (done && installer.isInstaller() && installer.status === QInstaller.Success) {
                 // A large check in the accent above the sentence (the app's circle-check icon).
                 done.textFormat = 1;  // Qt.RichText
                 done.alignment = 0x0001 | 0x0020;  // Qt.AlignLeft | Qt.AlignTop, as every page
                 done.text = '<p><img src=":/metadata/edi/' + (darkTheme() ? "done-dark" : "done")
-                    + '.png" width="64" height="64"></p><p>EasyDiffraction is installed.</p><p>You find it ' + where + ".</p>";
+                    + '.png" width="64" height="64"></p><p>EasyDiffraction is installed.</p><p>You\'ll find it ' + where
+                    + ".</p>";
             }
             ["LocationLabel", "FinishText"].forEach(function (hidden) {
                 var widget = gui.findChild(page, hidden);

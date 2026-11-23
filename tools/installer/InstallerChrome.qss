@@ -89,11 +89,6 @@ QPushButton:default:hover, QPushButton:default:pressed {
 }
 
 /* The app's icons on the wizard's buttons (Qt names them by their WizardButton number). */
-QPushButton#__qt__passive_wizardbutton0 {
-    qproperty-icon: url(:/metadata/edi/back.png);
-    qproperty-iconSize: 16px 16px;
-}
-
 QPushButton#qt_wizard_finish {
     qproperty-icon: url(:/metadata/edi/finish.png);
     qproperty-iconSize: 16px 16px;
@@ -103,7 +98,9 @@ QPushButton#qt_wizard_finish {
 QWizard > QWidget > QFrame {
     border: none;
     background-color: palette(window);  /* Qt fills it with the base colour, a white card, otherwise */
-    min-width: 560px;  /* the page fills the window; Qt's Mac style leaves it at its own width */
+    /* Qt's Mac style keeps a fixed 181-point column left of the page (it counts no watermark there);
+       the same space on the right centres the page in the window. */
+    padding-right: 160px;
 }
 
 /* A wizard button with nothing to do on a page (Back and Install while installing) takes no room. */

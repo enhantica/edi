@@ -121,6 +121,11 @@ func check(window: CGRect, title: String, placed: [Placed]) {
     for item in firsts where abs(drawnX(item) - edge) > 1 {
         problems.append("left edge \(Int(drawnX(item) - edge)) px off: \(item.role) '\(item.text)'")
     }
+    // The page sits centred: as much space right of its content as left of it.
+    let right = window.maxX - (content.map { drawn($0).maxX }.max() ?? window.maxX)
+    if abs((edge - window.minX) - right) > 24 {
+        problems.append("off centre: \(Int(edge - window.minX)) px on the left, \(Int(right)) px on the right")
+    }
     for (above, below) in zip(firsts, firsts.dropFirst()) {
         let gap = drawn(below).minY - drawn(above).maxY
         if gap < -1 {
