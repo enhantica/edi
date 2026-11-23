@@ -25,10 +25,6 @@ QWizard > QWidget > QWidget > QLabel[wordWrap="true"] {
     font-size: 5px;
 }
 
-QWizard #IntroductionPage QLabel#MessageLabel {
-    min-height: 190px;
-}
-
 /* The step list: upcoming steps muted, the current one in bold. */
 QListWidget#PageListWidget {
     border: none;
