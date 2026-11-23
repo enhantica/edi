@@ -63,6 +63,13 @@ could reach a later request or another project.
    (then revoked first). Without Web Locks only a stage whose claim is revoked is removed. Ordinary named saves keep
    their single write.
 
+   The publishing transaction also asks the app, inside it, whether the operation is still open and current and the
+   staged snapshot still the project's (same revision, nothing refusing a save). If not, nothing is published and
+   the claim is revoked: a changed snapshot settles `refused`, the untitled place and its recovery copy as they were.
+   What that transaction committed is the result the session gets; removing files after it can fail without
+   changing it. A project edited between that commit and the session's turn is named and saved where it was
+   published, its newer edits kept unsaved, and nothing that waited for the save runs on them.
+
 8. **Fenced handoffs.** Publications that can reenter go on only while the session and the project they belong to are
    still the open ones, checked before each: `Session::restoreProjectSetAside` after `replaceProject` and after each
    state write and signal (a refused restore leaves the project set aside); Save As into an existing folder after

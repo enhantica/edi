@@ -542,7 +542,8 @@ class Session : public QObject {
     void supersedeUntitled(const std::shared_ptr<UntitledOperation>& op);
     void untitledSave(const std::shared_ptr<UntitledOperation>& op);
     void untitledWrite(const std::weak_ptr<UntitledOperation>& weak, quint64 id, const SaveOperation& operation);
-    void untitledSaved(const std::shared_ptr<UntitledOperation>& op);
+    // `adopted` false: the project changed after its snapshot was published, so nothing that waited for it runs.
+    void untitledSaved(const std::shared_ptr<UntitledOperation>& op, bool adopted = true);
     QString next_save_data_;  // setNextSaveData's answer for the next save, then cleared
     int save_questions_ = 0;
     quint64 save_operations_ = 0;

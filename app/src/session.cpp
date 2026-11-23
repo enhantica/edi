@@ -2087,38 +2087,59 @@ void Session::untitledWrite(const std::weak_ptr<UntitledOperation>& weak, quint6
     const quint64 revision = project_->revision();
     web_writing_ = true;
     qCInfo(lcApp, "project save queued");
+    // Asked inside the publishing transaction (ADR-0100): it publishes only while this operation is open and current,
+    // and while what was staged is still the project's; otherwise nothing is published and the untitled place stays.
+    const auto check = [receiver, weak, id, revision]() -> WebStorage::PublishVerdict {
+        const auto live = weak.lock();
+        if (!receiver || !live || live->id() != id || live->settled() || live->superseding() ||
+            live != receiver->current_untitled_ || live->owner() == nullptr || live->owner() != receiver->project_ ||
+            live->replacement() != receiver->replacement_generation_)
+            return {QStringLiteral("lost"), {}};
+        if (receiver->project_->revision() != revision)
+            return {QStringLiteral("rejected"),
+                    tr("The project changed while it was saved: nothing was saved. Save again to keep the changes.")};
+        if (const QString refusal = receiver->project_->saveRefusal(); !refusal.isEmpty())
+            return {QStringLiteral("rejected"), tr("The project was not saved: %1").arg(refusal)};
+        return {QStringLiteral("go"), {}};
+    };
     WebStorage::instance()->publishUntitled(
-        op->untitledKey, id, op->destination.stage, folder, staged.folder,
+        op->untitledKey, id, op->destination.stage, folder, staged.folder, check,
         [receiver, weak, id, staged, revision, folder, held = named.hold](const WebStorageAnswer& answer) {
-            if (!receiver) {
-                QDir(staged.root).removeRecursively();
-                return;
-            }
+            const auto drop = [&staged] { QDir(staged.root).removeRecursively(); };
+            if (!receiver) return drop();
             receiver->web_writing_ = false;
             const auto live = weak.lock();
-            const bool published = answer.ok && answer.outcome == QLatin1String("published");
-            if (!published || !live || live->settled() || !receiver->resumeUntitled(live, id)) {
-                QDir(staged.root).removeRecursively();
-                if (!live || live->settled()) return;  // superseded: a published place stays a saved project
-                if (answer.ok) {
-                    receiver->settleUntitled(live, UntitledOperation::State::Superseded);  // the revoke won
-                } else {
-                    receiver->setLastError(answer.message);
-                    emit receiver->webSaveFailed(answer.message);
-                    if (receiver) receiver->settleUntitled(live, UntitledOperation::State::Refused);
+            if (!answer.ok || answer.outcome != QLatin1String("published")) {
+                // Nothing was published: the untitled place and its recovery copy are as they were.
+                drop();
+                if (!live || live->settled() || !receiver->resumeUntitled(live, id)) return;
+                if (answer.ok && answer.outcome == QLatin1String("lost")) {
+                    receiver->settleUntitled(live, UntitledOperation::State::Superseded);  // a revoke or a tab won
+                    return;
                 }
+                const QString why = answer.message;
+                receiver->setLastError(why);
+                if (!receiver || !receiver->resumeUntitled(live, id)) return;
+                emit receiver->webSaveFailed(why);
+                if (receiver && receiver->resumeUntitled(live, id))
+                    receiver->settleUntitled(live, UntitledOperation::State::Refused);
                 return;
             }
+            // Published: the named place is durable now. An operation that gave way since keeps it as a saved project.
+            if (!live || live->settled() || !receiver->resumeUntitled(live, id)) return drop();
             receiver->setWebPlace({live->destination.stage, QStringLiteral("browser"), folder});
+            if (!receiver || !receiver->resumeUntitled(live, id)) return drop();
+            // Changed after the check, the project keeps its newer edits unsaved (takeWebSave says so): it is named and
+            // saved where it was published, but nothing that waited for the save runs on those edits.
+            const bool adopted = receiver->takeWebSave(staged, revision);
+            if (!adopted) drop();
             if (!receiver || !receiver->resumeUntitled(live, id)) return;
-            if (!receiver->takeWebSave(staged, revision)) QDir(staged.root).removeRecursively();
-            if (!receiver || !receiver->resumeUntitled(live, id)) return;
-            emit receiver->webSaved(QStringLiteral("browser"));
-            if (receiver && receiver->resumeUntitled(live, id)) receiver->untitledSaved(live);
+            if (adopted) emit receiver->webSaved(QStringLiteral("browser"));
+            if (receiver && receiver->resumeUntitled(live, id)) receiver->untitledSaved(live, adopted);
         });
 }
 
-void Session::untitledSaved(const std::shared_ptr<UntitledOperation>& op) {
+void Session::untitledSaved(const std::shared_ptr<UntitledOperation>& op, bool adopted) {
     // The one place that names the untitled project: the write is done, so the name, the place and the log follow.
     const QPointer<Session> receiver(this);
     const QPointer<ProjectViewModel> owner(project_);
@@ -2143,9 +2164,10 @@ void Session::untitledSaved(const std::shared_ptr<UntitledOperation>& op) {
         if (!current()) return;
     }
     qCInfo(lcApp, "project saved");
+    // What waited for the save runs only for the same session and project, and only if the project is what was saved.
+    auto continuation = op->takeContinuation();
+    if (!adopted) continuation = nullptr;
     settleUntitled(op, UntitledOperation::State::Saved);
-    // What waited for the save runs only for the same session and project.
-    const auto continuation = op->takeContinuation();
     if (continuation && receiver && owner && project_ == owner && replacement_generation_ == replacement) continuation();
 }
 

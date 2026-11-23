@@ -538,37 +538,46 @@ EM_JS(void, edi_storage_publish_untitled, (int job, const char* untitled_utf8, d
             try {
                 await S.writeBrowser(S.policy(7, {key : stage, recovery : 0}), files);
             } catch (error) {
-                await S.revokeClaim(untitled, op, stage);
-                await S.removeStage(stage);
+                await S.revokeClaim(untitled, op, stage).catch(() => undefined);
+                await S.removeStage(stage).catch(() => undefined);
                 throw error;
             }
             const outcome = await S.transact(store => new Promise(resolve => {
                 const read = store.get(claimKey);
                 read.onsuccess = () => {
                     const claim = read.result;
-                    if (!ours(claim) || claim.state !== "live") return resolve("lost");
+                    if (!ours(claim) || claim.state !== "live") return resolve({outcome : "lost"});
                     const source = store.get(S.sourceKey(untitled));
                     source.onsuccess = () => {
-                        if (source.result) {
+                        // The app's own word, in this transaction: is the operation still open, and is the snapshot
+                        // written still the project's? Refused, nothing is published and the untitled place stays.
+                        const verdict = source.result ? {outcome : "lost"} : S.policy(21, {job : job});
+                        if (verdict.outcome !== "go") {
                             claim.state = "revoked";
                             store.put(claim);
-                            return resolve("lost");
+                            return resolve(verdict);
                         }
                         store.put(S.policy(5, {key : stage, kind : "browser", name : name, recovery : 0}));
                         store.delete(untitled);
                         store.put({key : S.sourceKey(untitled), untitled : untitled, op : op, stage : stage, state : "published"});
                         claim.state = "published";
                         store.put(claim);
-                        resolve("published");
+                        resolve({outcome : "published"});
                     };
                 };
             }));
-            if (outcome === "published") {
-                for (const part of [ "recovery", "projects" ]) await S.removeEntry([ "edi", part ], untitled);
-            } else {
-                await S.removeStage(stage);
+            // What the transaction committed is the answer; removing files after it cannot change that. Anything left
+            // is removed by a later sweep (a stage) or stays as an unlisted recovery folder.
+            try {
+                if (outcome.outcome === "published") {
+                    for (const part of [ "recovery", "projects" ]) await S.removeEntry([ "edi", part ], untitled);
+                } else {
+                    await S.removeStage(stage);
+                }
+            } catch (error) {
+                console.warn("edi: cleanup after the first save failed", error);
             }
-            return {ok : true, outcome : outcome};
+            return {ok : true, outcome : outcome.outcome, message : outcome.message || ""};
         };
         return navigator.locks ? navigator.locks.request("edi-stage:" + stage, write) : write();
     });
@@ -860,6 +869,15 @@ emscripten::val WebStorage::policy(int operation, const emscripten::val& args) {
     if (operation == 16) return val(args["record"]["kind"].strictlyEquals(val("folder")));
     if (operation == 17) return storage_result(args, false);
     if (operation == 18) return storage_result(args, true);
+    if (operation == 21) {
+        // Whether an untitled first save may publish now (ADR-0100): asked inside its publish transaction.
+        const auto check = instance()->checks_.value(args["job"].as<int>());
+        const auto verdict = check ? check() : PublishVerdict{QStringLiteral("lost"), {}};
+        val out = val::object();
+        out.set("outcome", verdict.outcome.toStdString());
+        out.set("message", verdict.message.toStdString());
+        return out;
+    }
     if (operation == 20) {
         val record = args["record"];
         if (!record || !record["recovery"]) return val(false);
@@ -933,6 +951,7 @@ int WebStorage::begin(Answer answer) {
 }
 
 void WebStorage::finish(int job, const QString& json) {
+    checks_.remove(job);
     const Reply done = jobs_.take(job);
     if (done) {
         done(json);
@@ -1066,12 +1085,14 @@ void WebStorage::load(const QString& key, bool recovery, const QString& root, An
 }
 
 void WebStorage::publishUntitled(const QString& untitledKey, quint64 op, const QString& stage, const QString& name,
-                                 const QString& folder, Answer answer) {  // NOLINT(performance-unnecessary-value-param)
+                                 const QString& folder, PublishCheck check,  // NOLINT(performance-unnecessary-value-param)
+                                 Answer answer) {  // NOLINT(performance-unnecessary-value-param)
 #if defined(Q_OS_WASM)
     const int job = begin(Reply([this, answer = std::move(answer)](const QString& json) {
         refresh();
         answer(answer_of(json));
     }));
+    checks_.insert(job, std::move(check));
     const QDir root(folder);
     QDirIterator files(folder, QDir::Files | QDir::Hidden, QDirIterator::Subdirectories);
     while (files.hasNext()) {
@@ -1095,6 +1116,7 @@ void WebStorage::publishUntitled(const QString& untitledKey, quint64 op, const Q
     Q_UNUSED(stage);
     Q_UNUSED(name);
     Q_UNUSED(folder);
+    Q_UNUSED(check);
     answer(refused(QStringLiteral("the browser's storage is the browser build's")));
 #endif
 }
