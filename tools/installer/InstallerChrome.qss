@@ -32,7 +32,7 @@ QListWidget#PageListWidget::item {
 }
 
 QListWidget#PageListWidget::item:disabled {
-    color: palette(mid);
+    color: #999999;  /* between the app's minor greys, #aaa light and #888 dark */
 }
 
 QListWidget#PageListWidget::item:selected {
@@ -65,7 +65,7 @@ QPushButton:hover, QPushButton:pressed, QPushButton:checked {
 }
 
 QPushButton:disabled {
-    color: palette(mid);
+    color: #999999;  /* between the app's minor greys, #aaa light and #888 dark */
     border-color: transparent;
 }
 
