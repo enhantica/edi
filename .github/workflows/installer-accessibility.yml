@@ -1,6 +1,7 @@
 # The macOS installer with an accessibility client reading it (edi #150): a released or built installer is walked
-# through its pages by a controller script while System Events reads every window's UI elements, as VoiceOver and
-# other assistive tools do; a crash fails the job and its report is kept.
+# through its pages by a controller script while a small client asks every element of its windows for several
+# attributes at once, its selected children among them, as some assistive tools do; a crash fails the job and its
+# report is kept.
 name: Installer accessibility
 
 on:

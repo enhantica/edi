@@ -12,39 +12,16 @@ reports="$HOME/Library/Logs/DiagnosticReports"
 mkdir -p "$reports"
 before="$(ls "$reports" 2>/dev/null | sort)"
 
-# The client needs the accessibility permission; without it there is nothing to check.
-if ! osascript -e 'tell application "System Events" to get name of UI elements of process "Finder"' >/dev/null 2>"$logs/permission.txt"; then
-  echo "a11y-check: the accessibility client is not permitted on this machine:"
-  cat "$logs/permission.txt"
-  exit 3
-fi
+here="$(cd "$(dirname "$0")" && pwd)"
+# The client, compiled once: it asks each element for several attributes in one call, selected children among them.
+swiftc -O -o "$logs/a11y-client" "$here/a11y_client.swift" || { echo "a11y-check: the client did not compile"; exit 2; }
 
 target="$(mktemp -d)/EasyDiffraction"
-"$binary" --script "$(cd "$(dirname "$0")" && pwd)/a11y_walk.qs" A11yTarget="$target" --verbose >"$logs/installer.log" 2>&1 &
+"$binary" --script "$here/a11y_walk.qs" A11yTarget="$target" --verbose >"$logs/installer.log" 2>&1 &
 pid=$!
+sleep 2
 
-# The client: every half second, every UI element of the installer's windows and its selected children.
-client() {
-  while kill -0 "$pid" 2>/dev/null; do
-    osascript >>"$logs/client.log" 2>&1 <<EOF
-tell application "System Events"
-  if exists process "$process" then
-    tell process "$process"
-      repeat with w in windows
-        repeat with e in (entire contents of w)
-          try
-            get value of attribute "AXSelectedChildren" of e
-          end try
-        end repeat
-      end repeat
-    end tell
-  end if
-end tell
-EOF
-    sleep 0.5
-  done
-}
-client &
+"$logs/a11y-client" "$pid" >"$logs/client.log" 2>&1 &
 reader=$!
 
 waited=0
@@ -57,6 +34,10 @@ else
   wait "$pid"; status=$?
 fi
 kill "$reader" 2>/dev/null
+if grep -q "not permitted" "$logs/client.log"; then
+  echo "a11y-check: the accessibility client is not permitted on this machine (grant it once in System Settings)"
+  exit 3
+fi
 sleep 3  # the crash reporter writes its report after the process ends
 
 new="$(comm -13 <(echo "$before") <(ls "$reports" 2>/dev/null | sort) | grep -i "$process" || true)"
