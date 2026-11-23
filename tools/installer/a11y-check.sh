@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
 # Runs a macOS installer through its pages while an accessibility client reads every window, as VoiceOver and other
 # assistive tools do, and fails when the installer crashes. Usage: a11y-check.sh <installer .app> <log folder>
+# [installer argument ...]: more arguments for the installer, such as A11yHideComponents=true.
 set -uo pipefail
 app="$1"
 logs="$2"
+shift 2
 mkdir -p "$logs"
 binary="$(find "$app/Contents/MacOS" -maxdepth 1 -type f -perm -u+x | head -1)"
 [ -n "$binary" ] || { echo "a11y-check: no executable in $app"; exit 2; }
@@ -16,7 +18,7 @@ here="$(cd "$(dirname "$0")" && pwd)"
 swiftc -O -o "$logs/a11y-client" "$here/a11y_client.swift" || { echo "a11y-check: the client did not compile"; exit 2; }
 
 target="$(mktemp -d)/EasyDiffraction"
-"$binary" --script "$here/a11y_walk.qs" A11yTarget="$target" --verbose >"$logs/installer.log" 2>&1 &
+"$binary" --script "$here/a11y_walk.qs" A11yTarget="$target" "$@" --verbose >"$logs/installer.log" 2>&1 &
 pid=$!
 sleep 2
 
