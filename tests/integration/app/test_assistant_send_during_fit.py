@@ -13,9 +13,11 @@ MESSAGES = ('First queued fit question.', 'Second queued fit question.')
 def delivered(actor):
     rows = map(json.loads, actor.trace.read_text().splitlines())
     return [
-        (index, row['params']['threadId'], {
-            entry.get('text') for entry in row['params']['input'] if entry.get('type') == 'text'
-        })
+        (
+            index,
+            row['params']['threadId'],
+            {entry.get('text') for entry in row['params']['input'] if entry.get('type') == 'text'},
+        )
         for index, row in enumerate(rows)
         if row.get('method') in {'turn/start', 'turn/steer'}
     ]
@@ -32,7 +34,7 @@ def test_ordinary_send_during_fit_preserves_order_and_conversation(tmp_path, sto
         witness = native.control_expression('fitQueueWitness')
         assert native.qml(
             actor,
-            f'''
+            f"""
             (function() {{
                 const owner = Session.project, fit = owner.fit;
                 const probe = Qt.createQmlObject(
@@ -58,7 +60,7 @@ def test_ordinary_send_during_fit_preserves_order_and_conversation(tmp_path, sto
                 fit.runningChanged.connect(submit);
                 return true;
             }})()
-            ''',
+            """,
         ), 'The original project fit supplies the synchronous observation point'
         actor.request('Run the fit in the current conversation.')
         actor.until(lambda _: native.qml(actor, witness + '.receipt') is not None, seconds=15)
@@ -73,8 +75,10 @@ def test_ordinary_send_during_fit_preserves_order_and_conversation(tmp_path, sto
             follow_up = 'Follow-up after the cancelled wait.'
             actor.request(follow_up)
             actor.until(
-                lambda row: row['ui']['state'] == 'idle'
-                and any(follow_up in body for _, _, body in delivered(actor)),
+                lambda row: (
+                    row['ui']['state'] == 'idle'
+                    and any(follow_up in body for _, _, body in delivered(actor))
+                ),
                 seconds=20,
             )
             assert all(text not in body for _, _, body in delivered(actor) for text in MESSAGES), (
@@ -82,8 +86,10 @@ def test_ordinary_send_during_fit_preserves_order_and_conversation(tmp_path, sto
             )
         else:
             actor.until(
-                lambda row: row['ui']['state'] == 'idle'
-                and any(MESSAGES[1] in body for _, _, body in delivered(actor)),
+                lambda row: (
+                    row['ui']['state'] == 'idle'
+                    and any(MESSAGES[1] in body for _, _, body in delivered(actor))
+                ),
                 seconds=25,
             )
             original, *later = delivered(actor)
