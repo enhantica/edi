@@ -438,6 +438,7 @@ jobs:
           path: build/installer/delivery
           if-no-files-found: error
           compression-level: 0
+          retention-days: 30  # the release publication takes the qualified files
       - name: Upload tested components
         uses: actions/upload-artifact@v4
         with:
@@ -445,6 +446,7 @@ jobs:
           path: build/installer/components
           if-no-files-found: error
           compression-level: 0
+          retention-days: 30  # the release publication takes the tested components
       - name: Remove the KeyLocker client certificate
         if: always() && runner.os == 'Windows'
         shell: bash
@@ -472,6 +474,7 @@ jobs:
             build/installer/protocol/passed.json
             build/installer/package/installer.json
           if-no-files-found: ignore
+          retention-days: 7  # a failed installation is inspected within days
 
   # Every page of the installer and its maintenance tool, light and dark, from a small marker installer (no app
   # build): Linux under a virtual display with the theme forced, Windows with its own app theme set. The pictures are a
@@ -536,6 +539,7 @@ jobs:
             build/installer/pages/*.log
           if-no-files-found: warn
 
+          retention-days: 7  # page captures inspected within days
   qualify-release:
     name: record qualified release inputs
     needs: installers
