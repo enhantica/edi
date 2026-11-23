@@ -243,6 +243,10 @@ def qt_tool(name: str) -> Path:
     ):
         if path.is_file():
             return path
+    # conda-forge's Windows layout has moved between builds: look once under Library.
+    found = sorted((prefix / 'Library').rglob(name + '.exe')) if SYSTEM == 'windows' else []
+    if found:
+        return found[0]
     raise RuntimeError(f'Qt {name} is not in the packaging environment')
 
 
