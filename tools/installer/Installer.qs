@@ -96,8 +96,12 @@ function advance(name, page) {
     if (name === "ReadyForInstallation" && installer.isInstaller())
         return;
     if (name === "PerformInstallation") {
-        // The Framework moves on when it is done, unless its details are open; then this does.
-        var next = function () { gui.clickButton(buttons.NextButton, 1500); };
+        // The Framework moves on when it is done, unless its details are open (always with --verbose); then it
+        // relabels its commit button "Next" and waits, so this presses that button (and Next, where one shows).
+        var next = function () {
+            gui.clickButton(buttons.CommitButton, 1500);
+            gui.clickButton(buttons.NextButton, 1600);
+        };
         installer.installationFinished.connect(next);
         installer.uninstallationFinished.connect(next);
         return;
