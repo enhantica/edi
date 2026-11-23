@@ -69,6 +69,8 @@ SideBarGroup {
                 id: loadMenu
                 objectName: "project.load.menu"
                 y: loadButton.height
+                // Clear of the window's edges when the window is too narrow for it beside its button.
+                margins: EaStyle.Sizes.fontPixelSize * 0.5
                 // Nothing below the last item (the owner, 2026-11-04).
                 bottomPadding: 0
                 // As wide as its widest entry, never narrower than its button.
@@ -188,6 +190,7 @@ SideBarGroup {
                 id: saveMenu
                 objectName: "project.saveAs.menu"
                 y: saveButton.height
+                margins: EaStyle.Sizes.fontPixelSize * 0.5
                 bottomPadding: 0
                 // As wide as its widest entry, never narrower than its button.
                 contentWidth: Math.max(saveButton.width - leftPadding - rightPadding, saveProjectHeader.implicitWidth, exportHeader.implicitWidth, saveasFolderItem.implicitWidth, saveasZipItem.implicitWidth, exportCryspyItem.implicitWidth, exportFullprofItem.implicitWidth, exportGsasItem.implicitWidth, saveCopyBox.implicitWidth)
