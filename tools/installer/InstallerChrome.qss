@@ -45,7 +45,8 @@ QListWidget#PageListWidget::item:selected {
 QPushButton {
     color: palette(window-text);
     background-color: transparent;
-    border: 1px solid rgba(0, 0, 0, 0.07);
+    /* Grey at a quarter: a little darker than a light window, a little lighter than a dark one. */
+    border: 1px solid rgba(128, 128, 128, 0.25);
     border-radius: 2px;
     min-height: @CONTROL_INNER_PX@px;
     max-height: @CONTROL_INNER_PX@px;
@@ -55,7 +56,7 @@ QPushButton {
 }
 
 QPushButton:default, QPushButton:focus {
-    border-color: rgba(0, 0, 0, 0.07);
+    border-color: rgba(128, 128, 128, 0.25);
 }
 
 QPushButton:hover, QPushButton:pressed, QPushButton:checked {

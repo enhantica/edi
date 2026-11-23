@@ -104,7 +104,7 @@ QLineEdit, QComboBox, QSpinBox {
 
 QTextEdit, QTextBrowser, QPlainTextEdit {
     padding: @FIELD_PADDING_PX@px;
-    font-family: "@FONT_FAMILY@";
+    font-family: "@MONO_FAMILY@";
 }
 
 QLineEdit:hover, QLineEdit:focus, QComboBox:hover, QComboBox:focus, QSpinBox:hover, QSpinBox:focus,
@@ -162,6 +162,10 @@ QCheckBox, QRadioButton {
     outline: none;
 }
 
+QRadioButton {
+    padding: @HALF_FONT_PX@px 0;
+}
+
 QCheckBox:disabled, QRadioButton:disabled {
     color: @FOREGROUND_DISABLED@;
 }
@@ -177,6 +181,7 @@ QCheckBox::indicator {
 QCheckBox::indicator:checked {
     background-color: @ACCENT@;
     border-color: @ACCENT@;
+    image: url(:/edi/CheckMark.png);
 }
 
 QRadioButton::indicator {
