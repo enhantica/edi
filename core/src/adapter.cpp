@@ -4326,6 +4326,7 @@ void with_saved_project(const Project& model, const std::function<void(crysta::P
              ++index) {
             built.linked_structures[index].fit_bragg_r_factor = e.linked_structures[index]->fit_bragg_r_factor;
             built.linked_structures[index].fit_f_r_factor = e.linked_structures[index]->fit_f_r_factor;
+            built.linked_structures[index].fit_magnetic_r_factor = e.linked_structures[index]->fit_magnetic_r_factor;
         }
         // Every token of the experiment — the absorption family, the experiment-type axes and the
         // scattering-source selectors — has already crossed, through crysta's converter, in the
@@ -4572,6 +4573,7 @@ void refresh_agreement_records(Project& project) {
                     }
                     (*link)->fit_bragg_r_factor = phase.fit_bragg_r_factor.get();
                     (*link)->fit_f_r_factor = phase.fit_f_r_factor.get();
+                    (*link)->fit_magnetic_r_factor = phase.fit_magnetic_r_factor.get();
                     ++link;
                 }
             }
@@ -7689,6 +7691,8 @@ void record_fit_result(Project& project, FitResultBase& outcome, std::size_t con
                     KeyTraits<Structure>::canonical(phase.structure) == structure) {
                     link->fit_bragg_r_factor = finite_factor(phase.r_bragg);
                     link->fit_f_r_factor = finite_factor(phase.r_f);
+                    link->fit_magnetic_r_factor =
+                        phase.r_magnetic ? finite_factor(*phase.r_magnetic) : std::optional<double>{};
                 }
             }
         }

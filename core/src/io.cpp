@@ -4647,6 +4647,7 @@ static Project load_project_folder(const std::string& directory, const WarningSi
                     }
                     phase->fit_bragg_r_factor = cell(*phases, row, "_fit_result_phase.bragg_r_factor");
                     phase->fit_f_r_factor = cell(*phases, row, "_fit_result_phase.f_r_factor");
+                    phase->fit_magnetic_r_factor = cell(*phases, row, "_fit_result_phase.magnetic_r_factor");
                 }
             }
         }
@@ -5402,10 +5403,12 @@ void copy_fit_share(ExperimentBase& to, const ExperimentBase& from) noexcept {
     for (const auto& link : to.linked_structures) {
         link->fit_bragg_r_factor.reset();
         link->fit_f_r_factor.reset();
+        link->fit_magnetic_r_factor.reset();
         for (const auto& source : from.linked_structures) {
             if (source->structure_id.value() == link->structure_id.value()) {
                 link->fit_bragg_r_factor = source->fit_bragg_r_factor;
                 link->fit_f_r_factor = source->fit_f_r_factor;
+                link->fit_magnetic_r_factor = source->fit_magnetic_r_factor;
             }
         }
     }
@@ -5421,6 +5424,7 @@ void clear_fit_share(ExperimentBase& experiment) {
     for (const auto& link : experiment.linked_structures) {
         link->fit_bragg_r_factor.reset();
         link->fit_f_r_factor.reset();
+        link->fit_magnetic_r_factor.reset();
     }
 }
 
@@ -5645,9 +5649,11 @@ bool adopt_values(Project& project, const Project& saved) {
                 LinkedStructure& link = *experiment->linked_structures[index];
                 const LinkedStructure& held_link = *stored->linked_structures[index];
                 if (link.fit_bragg_r_factor != held_link.fit_bragg_r_factor ||
-                    link.fit_f_r_factor != held_link.fit_f_r_factor) {
+                    link.fit_f_r_factor != held_link.fit_f_r_factor ||
+                    link.fit_magnetic_r_factor != held_link.fit_magnetic_r_factor) {
                     link.fit_bragg_r_factor = held_link.fit_bragg_r_factor;
                     link.fit_f_r_factor = held_link.fit_f_r_factor;
+                    link.fit_magnetic_r_factor = held_link.fit_magnetic_r_factor;
                     changed = true;
                 }
             }
@@ -5698,6 +5704,7 @@ std::vector<std::function<void()>> hold_calculation(Project& project) {
         for (const auto& link : experiment->linked_structures) {
             keep(link->fit_bragg_r_factor);
             keep(link->fit_f_r_factor);
+            keep(link->fit_magnetic_r_factor);
         }
         if (std::optional<PdDataBase>& held = experiment->data; held.has_value()) {
             PdDataBase& data = *held;

@@ -223,9 +223,25 @@ void FitAgreementModel::setRecord(const edi::Project& project) {
             ordered.emplace_back(name, static_cast<int>(i));
         }
     }
+    // A structure with magnetic scattering also has its magnetic R factor (edi #139).
+    std::vector<std::string> magnetic;
+    for (const auto& experiment : project.experiments) {
+        for (const auto& link : experiment->linked_structures) {
+            if (link->fit_magnetic_r_factor.has_value() &&
+                std::find(magnetic.begin(), magnetic.end(), structure_of(*link)) == magnetic.end()) {
+                magnetic.push_back(structure_of(*link));
+            }
+        }
+    }
+    const auto has_magnetic = [&magnetic](const std::string& name) {
+        return std::find(magnetic.begin(), magnetic.end(), name) != magnetic.end();
+    };
     for (const auto& [name, place] : ordered) {
         column(QStringLiteral("R<sub>Bragg</sub>"), QString::fromStdString(name), place);
         column(QStringLiteral("R<sub>F</sub>"), QString::fromStdString(name), place);
+        if (has_magnetic(name)) {
+            column(QStringLiteral("R<sub>mag</sub>"), QString::fromStdString(name), place);
+        }
     }
 
     QList<Row> rows;
@@ -245,7 +261,7 @@ void FitAgreementModel::setRecord(const edi::Project& project) {
     for (std::size_t i = 0; i < project.experiments.size(); ++i) {
         datasets += in_fit(i) ? 1U : 0U;
     }
-    const QStringList blank_structures(static_cast<qsizetype>(2 * ordered.size()));
+    const QStringList blank_structures(static_cast<qsizetype>(2 * ordered.size() + magnetic.size()));
     const QStringList global{percent("fit_result.prof_r_factor", result.prof_r_factor),
                              percent("fit_result.prof_wr_factor", result.prof_wr_factor),
                              percent("fit_result.prof_wr_expected", result.prof_wr_expected),
@@ -269,14 +285,18 @@ void FitAgreementModel::setRecord(const edi::Project& project) {
                                                   percent("fit_result_bank.prof_cwr_factor", experiment.fit_prof_cwr_factor)}
                                     : global;
         for (const auto& [name, place] : ordered) {
-            QString bragg, f;
+            QString bragg, f, mag;
             for (const auto& link : experiment.linked_structures) {
                 if (structure_of(*link) == name) {
                     bragg = percent("fit_result_phase.bragg_r_factor", link->fit_bragg_r_factor);
                     f = percent("fit_result_phase.f_r_factor", link->fit_f_r_factor);
+                    mag = percent("fit_result_phase.magnetic_r_factor", link->fit_magnetic_r_factor);
                 }
             }
             values << bragg << f;
+            if (has_magnetic(name)) {
+                values << mag;
+            }
         }
         row(QString::fromStdString(experiment.name), static_cast<int>(i), values);
     }
