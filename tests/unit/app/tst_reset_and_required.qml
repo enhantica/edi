@@ -24,14 +24,14 @@ TestCase {
         Session.closeProject();
         appWindow.destroy();
     }
-    function test_reset_lands_on_project() {
+    function test_reset_returns_home() {
         verify(Session.openProject(Probe.repoUrl("tests/fixtures/e04_t1/editable-project")), "The reset actor must first open a real project");
         Ui.click(test, Probe, appWindow, "appBar.tab.analysis");
         Ui.click(test, Probe, appWindow, "appBar.button.reset");
         verify(!Session.hasProject, "The reset toolbar action must close its project");
-        const tab = Ui.control(Probe, appWindow, "appBar.tab.project");
-        verify(tab !== null && tab.checked, "The reset toolbar action must land on the Project page");
-        compare(AppState.reached, AppState.Page.Project, "Reset must keep Project reached so its empty workflow remains usable");
+        const tab = Ui.control(Probe, appWindow, "appBar.tab.home");
+        verify(tab !== null && tab.checked, "The reset toolbar action must select Home");
+        compare(AppState.reached, AppState.Page.Home, "Reset must restore the startup workflow reach");
     }
     function test_required_rule_click() {
         verify(Session.openProject(Probe.repoUrl("tests/fixtures/correlations/scan-sequential")), "The required-toggle actor must open independently declared scan rules");

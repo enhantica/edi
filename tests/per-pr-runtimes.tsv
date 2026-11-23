@@ -10,9 +10,9 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-22T20:23:14Z
+# measured_utc = 2026-11-23T01:23:04Z
 #
-# Recorded from: measured test run (1 node(s) measured once, 186743 banked, 0 stale row(s) dropped)
+# Recorded from: measured test run (3 node(s) measured once, 186741 banked, 2 stale row(s) dropped)
 # Collected tests: 266631; with a reported duration: 85714
 # Module-scoped fixture costs recorded: 218
 #
@@ -184015,9 +184015,9 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_report_storage.py::test_
 0.000	tests/integration/py/test_report_temporary_placement.py::test_every_temporary_alias_witness_reaches_the_documented_writer[published-owned-symbolic-experiment]
 0.000	tests/integration/py/test_report_temporary_placement.py::test_every_temporary_alias_witness_reaches_the_documented_writer[published-owned-symbolic-html]
 0.000	tests/integration/py/test_report_temporary_placement.py::test_every_temporary_alias_witness_reaches_the_documented_writer[published-owned-symbolic-settings]
-0.160	tests/integration/py/test_reset_and_required.py::test_reset_closes_the_project_and_lands_on_project
-0.250	tests/integration/py/test_reset_and_required.py::test_reset_observer_detects_wrong_destination_and_unclosed_project[home]
-0.310	tests/integration/py/test_reset_and_required.py::test_reset_observer_detects_wrong_destination_and_unclosed_project[open-project]
+0.640	tests/integration/py/test_reset_and_required.py::test_reset_closes_the_project_and_returns_home
+0.280	tests/integration/py/test_reset_and_required.py::test_reset_observer_detects_wrong_destination_and_unclosed_project[open-project]
+0.290	tests/integration/py/test_reset_and_required.py::test_reset_observer_detects_wrong_destination_and_unclosed_project[project-page]
 0.160	tests/integration/py/test_reset_and_required.py::test_scan_rule_required_is_an_unlabelled_editable_icon_toggle
 0.000	tests/integration/py/test_retired_absorption_bytes.py::test_retired_source_projection_accepts_path_and_string_without_skipping_identity[Path-docs/user/cli/pd-neut-cwl_cosio-d20/project/analysis/analysis.edi]
 0.000	tests/integration/py/test_retired_absorption_bytes.py::test_retired_source_projection_accepts_path_and_string_without_skipping_identity[Path-docs/user/cli/pd-neut-cwl_cosio-d20_2k/project/analysis/analysis.edi]

@@ -14,19 +14,24 @@ from tests.integration.py.test_scan_app_contract import (
 from tests.integration.py.test_status_columns import table_cells
 
 
-def reset_observation(body):
-    return javascript(
-        'let closed=0,reached=4;const Session={hasProject:true,'
+def observe(*expressions):
+    return javascript('console.log(JSON.stringify([' + ','.join(expressions) + ']));')
+
+
+def reset_vector(body):
+    return (
+        '(()=>{let closed=0,reached=4;const Session={hasProject:true,'
         'closeProject:()=>{closed++;Session.hasProject=false;}};'
         'const AppState={Page:{Home:0,Project:1}};const EaGlobals={Vars:{appBarCurrentIndex:4}};'
-        '(' + body + ')();console.log(JSON.stringify([Session.hasProject,'
-        'EaGlobals.Vars.appBarCurrentIndex,reached,closed]));'
+        '(' + body + ')();return [Session.hasProject,'
+        'EaGlobals.Vars.appBarCurrentIndex,reached,closed];})()'
     )
 
 
-def reset_handler_observation(handler, guard, *, pending_text=False, settle_text=True):
-    return javascript(
-        'const observations=[];for(const project of [null,{modified:false},{modified:true}]){'
+def reset_handler_vector(handler, guard, *, pending_text=False, settle_text=True):
+    return (
+        '(()=>{const observations=[];'
+        'for(const project of [null,{modified:false},{modified:true}]){'
         'let resets=0;const queued=[],questions=[];const Session={project};'
         'const Qt={callLater:action=>queued.push(action)};const settlements=[];'
         'let textEdit='
@@ -43,55 +48,64 @@ def reset_handler_observation(handler, guard, *, pending_text=False, settle_text
         'observations.push([...before,resets'
         + (',settlements.length' if pending_text else '')
         + ']);}'
-        'console.log(JSON.stringify(observations));'
+        'return observations;})()'
     )
 
 
-def test_reset_closes_the_project_and_lands_on_project():
+def test_reset_closes_the_project_and_returns_home():
     main = source('qml/Main.qml')
     handler = property_value(item(main, 'appBar.button.reset'), 'onClicked')
     guard = block(source('qml/Globals/AppState.qml'), 'function afterChanges(')
-    expected = [[0, 1, 0, 1], [0, 1, 0, 1], [0, 0, 1, 1]]
-    assert reset_handler_observation(handler, guard) == expected, (
-        'Toolbar reset must wait for the shared unsaved-changes guard, '
-        'then invoke the shared reset once after authorization or the queued turn'
-    )
-    for damaged in (
+    body = block(source('qml/Globals/AppState.qml'), 'function reset(')
+    damaged = (
         'AppState.reset()',
         'AppState.afterChanges(() => {})',
         'AppState.afterChanges(() => {AppState.reset();AppState.reset();})',
-    ):
-        assert reset_handler_observation(damaged, guard) != expected, (
-            'The reset observer must reject guard bypass, a lost reset and duplicate resets'
-        )
-    assert reset_handler_observation(handler, guard, pending_text=True) == [[0, 0, 0, 1, 1]] * 3, (
+    )
+    actual, pending, unsettled, reset, *controls = observe(
+        reset_handler_vector(handler, guard),
+        reset_handler_vector(handler, guard, pending_text=True),
+        reset_handler_vector(handler, guard, pending_text=True, settle_text=False),
+        reset_vector(body),
+        *(reset_handler_vector(control, guard) for control in damaged),
+    )
+    expected = [[0, 1, 0, 1], [0, 1, 0, 1], [0, 0, 1, 1]]
+    assert actual == expected, (
+        'Toolbar reset must wait for the shared unsaved-changes guard, '
+        'then invoke the shared reset once after authorization or the queued turn'
+    )
+    assert all(control != expected for control in controls), (
+        'The reset observer must reject guard bypass, a lost reset and duplicate resets'
+    )
+    assert pending == [[0, 0, 0, 1, 1]] * 3, (
         'Reset waits for each pending Text edit to settle before the project-change guard runs'
     )
-    assert reset_handler_observation(handler, guard, pending_text=True, settle_text=False) == (
-        [[0, 0, 0, 0, 1]] * 3
-    ), 'An unsettled Text edit prevents every queued or immediate Reset'
-    body = block(source('qml/Globals/AppState.qml'), 'function reset(')
-    assert reset_observation(body) == [False, 1, 1, 1], (
-        'Reset must close the current project once and land on the reached Project page'
+    assert unsettled == [[0, 0, 0, 0, 1]] * 3, (
+        'An unsettled Text edit prevents every queued or immediate Reset'
+    )
+    assert reset == [False, 0, 0, 1], (
+        'Reset must close the current project once and restore Home as both the current '
+        'and furthest reached page'
     )
 
 
-@pytest.mark.parametrize('damage', ['home', 'open-project'])
+@pytest.mark.parametrize('damage', ['project-page', 'open-project'])
 def test_reset_observer_detects_wrong_destination_and_unclosed_project(damage):
     good = (
-        'function reset(){Session.closeProject();reached=AppState.Page.Project;'
-        'EaGlobals.Vars.appBarCurrentIndex=AppState.Page.Project;}'
-    )
-    assert reset_observation(good) == [False, 1, 1, 1], (
-        'The closed-form reset control must reach the declared Project state'
+        'function reset(){Session.closeProject();reached=AppState.Page.Home;'
+        'EaGlobals.Vars.appBarCurrentIndex=AppState.Page.Home;}'
     )
     damaged = (
-        good.replace('AppState.Page.Project', 'AppState.Page.Home')
-        if damage == 'home'
+        good.replace('AppState.Page.Home', 'AppState.Page.Project')
+        if damage == 'project-page'
         else good.replace('Session.closeProject();', '')
     )
-    assert reset_observation(damaged) != [False, 1, 1, 1], (
-        'Reset gates must detect both returning Home and retaining an open project'
+    clean_observation, damaged_observation = observe(reset_vector(good), reset_vector(damaged))
+    assert clean_observation == [False, 0, 0, 1], (
+        'The reset control must reach Home with no open project and one close'
+    )
+    assert damaged_observation != [False, 0, 0, 1], (
+        'The reset observer must detect landing on Project or retaining an open project'
     )
 
 
