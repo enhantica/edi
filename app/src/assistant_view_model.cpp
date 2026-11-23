@@ -4733,8 +4733,8 @@ struct AssistantViewModel::State {
             auto edit = assistant_native_edit(*project->assistantProject(), tool, run->fallback_args, before_flags);
             if (!edit) return false;
             if (!original() || !native_call) return true;
-            const auto scope = begin_own_edit();
             native_call->may_have_written = true;
+            const auto scope = begin_own_edit();
             ProjectViewModel::EditOutcome result;
             try { result = project->applyRecordedEdit(*edit, tool == "add_relations"); }
             catch (...) { end_own_edit(scope); throw; }
@@ -4797,8 +4797,8 @@ struct AssistantViewModel::State {
             if (const auto input = std::exchange(run->input, nullptr)) target->finishWidgetInput(input);
             if (const auto scope = std::exchange(run->edit_scope, 0)) end_own_edit(scope);
             if (!original() || !native_call) return true;
-            const auto scope = begin_own_edit();
             native_call->may_have_written = true;
+            const auto scope = begin_own_edit();
             ProjectViewModel::EditOutcome result;
             try { result = target->applyRecordedEdit(*edit, false); }
             catch (...) { if (receiver && receiver->state_.get() == this) end_own_edit(scope); throw; }

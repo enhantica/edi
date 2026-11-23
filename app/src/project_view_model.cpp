@@ -7585,7 +7585,7 @@ void ProjectViewModel::makeTextsLater() {
     const edi::WorkStamps stamps = edi::work_stamps(*project_);
     const std::uint64_t request = ++texts_request_;
     const QPointer<ProjectViewModel> self(this);
-    run_in_background([self, copy, stamps, request] {
+    run_in_background([self, copy, stamps = stamps, request] {
         // A background step must not throw: a failure leaves the shown texts to the next publication.
         try {
         SavedFiles files;
@@ -7600,7 +7600,7 @@ void ProjectViewModel::makeTextsLater() {
         }
         QMetaObject::invokeMethod(
             QCoreApplication::instance(),
-            [self, stamps, request, files = std::move(files), identity = std::move(identity)]() mutable {
+            [self, stamps = stamps, request, files = std::move(files), identity = std::move(identity)]() mutable {
                 try {
                     if (self.isNull() || self->retired_ || request != self->texts_request_ ||
                         !edi::unchanged_since(*self->project_, stamps)) {
@@ -7634,7 +7634,7 @@ void ProjectViewModel::makeSpellingLater() {
     const edi::WorkStamps stamps = edi::work_stamps(*project_);
     const std::uint64_t request = ++spelling_request_;
     const QPointer<ProjectViewModel> self(this);
-    run_in_background([self, copy, stamps, request] {
+    run_in_background([self, copy, stamps = stamps, request] {
         // As above: nothing here may throw; the next publication spells the fields.
         try {
         std::optional<edi::SaveSpelling> spelling;
@@ -7645,7 +7645,7 @@ void ProjectViewModel::makeSpellingLater() {
         }
         QMetaObject::invokeMethod(
             QCoreApplication::instance(),
-            [self, stamps, request, spelling = std::move(spelling)] {
+            [self, stamps = stamps, request, spelling = std::move(spelling)] {
                 try {
                     if (self.isNull() || self->retired_ || !spelling || request != self->spelling_request_ ||
                         !edi::unchanged_since(*self->project_, stamps)) {

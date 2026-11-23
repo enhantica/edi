@@ -632,7 +632,7 @@ private slots:
         edi_app::ProjectViewModel* project = session.project();
         QTRY_VERIFY_WITH_TIMEOUT(!project->calculating(), 60000);
         edi::BraggPdExperiment& experiment = *project->project().experiments[0];
-        QVERIFY(experiment.data && experiment.instrument.calib_twotheta_offset);
+        if (!experiment.data || !experiment.instrument.calib_twotheta_offset) QFAIL("The experiment must have data and a two-theta offset");
         const std::vector<double>& axis = experiment.data->axis();
         const double offset = axis.front() + 1.0;
         const auto below = std::count_if(axis.begin(), axis.end(), [offset](double angle) { return angle - offset <= 0.0; });

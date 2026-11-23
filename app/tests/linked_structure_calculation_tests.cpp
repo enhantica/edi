@@ -120,7 +120,9 @@ private slots:
         QVERIFY(actual <= oneCalculation);
         const auto& calculated = model.project().experiment();
         QVERIFY(calculated.computed_current());
-        const auto& expected = reference.experiment().data->intensity_calc.values();
+        const auto& referenceData = reference.experiment().data;
+        if (!referenceData || !calculated.data) QFAIL("Both experiments must keep their data");
+        const auto& expected = referenceData->intensity_calc.values();
         const auto& observed = calculated.data->intensity_calc.values();
         QCOMPARE(observed.size(), expected.size());
         for (std::size_t row = 0; row < expected.size(); ++row) {
