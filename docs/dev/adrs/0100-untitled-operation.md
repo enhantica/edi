@@ -49,6 +49,12 @@ could reach a later request or another project.
    `edi-stage:<stage>` while writing, and listing the places removes a stage with no named place, no live claim and no
    lock. Ordinary named saves keep their single write.
 
+8. **Fenced handoffs.** Publications that can reenter go on only while the session and the project they belong to are
+   still the open ones, checked before each: `Session::restoreProjectSetAside` after `replaceProject` and after each
+   state write and signal (a refused restore leaves the project set aside); Save As into an existing folder after
+   `takeStaged` and each location signal; Save As to a .zip after `publishArchive` and each location signal; and the
+   untitled operation's own `saved` steps.
+
 ## Consequences
 
 - Save and guard Save on untitled work finish what they started once the project is named.
