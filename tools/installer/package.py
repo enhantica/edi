@@ -253,7 +253,7 @@ def qt_tool(name: str) -> Path:
 
 
 def write_resources(config: Path, configuration: ET.ElementTree) -> Path:
-    """The resource file binarycreator adds (-r): our English text and the check box's tick.
+    """The resource list binarycreator compiles in (-r, a .qrc): our English text and the tick.
 
     Named translations replace the Framework's built-in ones, so the text is English everywhere, as
     the pages are. The tick is the check box's image (Installer.qss).
@@ -271,14 +271,12 @@ def write_resources(config: Path, configuration: ET.ElementTree) -> Path:
         '</qresource></RCC>\n',
         encoding='utf-8',
     )
-    resources = config / 'edi-resources.rcc'
-    run([qt_tool('rcc'), '--binary', '-o', resources, work / 'resources.qrc'])
     translations = ET.SubElement(configuration.getroot(), 'Translations')
     # The Framework maps a -r resource file under :/metadata; a full path is used as it is.
     ET.SubElement(translations, 'Translation').text = ':/metadata/translations/ifw_en.qm'
     ET.indent(configuration)
     configuration.write(config / 'config.xml', encoding='utf-8', xml_declaration=True)
-    return resources
+    return work / 'resources.qrc'
 
 
 def write_controller(config: Path) -> None:
@@ -504,7 +502,7 @@ def build_maintenance_tool(tools: Path, output: Path) -> Path:
             *template,
             '--mt',
             '-r',
-            config / 'edi-resources.rcc',
+            config / 'resources/resources.qrc',
             '-c',
             config / 'config.xml',
         ],
@@ -1141,7 +1139,7 @@ def package_app(
             '1',
             '--online-only' if repository_url else '--hybrid',
             '-r',
-            source / 'config/edi-resources.rcc',
+            source / 'config/resources/resources.qrc',
             '-c',
             source / 'config/config.xml',
             '-p',
