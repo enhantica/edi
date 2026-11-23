@@ -125,7 +125,7 @@ class WebStorage : public QObject {
     // operation `op`'s. The answer's `outcome` is "published" or "lost"; a failed write revokes the claim.
     void publishUntitled(const QString& untitledKey, quint64 op, const QString& stage, const QString& name,
                          const QString& folder, Answer answer);
-    // Revokes operation `op`'s claim on the untitled place (its stage `stage`), racing a publish in flight.
+    // Revokes operation `op`'s claim on its stage `stage`, racing a publish in flight; never another stage's.
     void revoke(const QString& untitledKey, quint64 op, const QString& stage);
     // Drops the unsaved state kept for `key`.
     Q_INVOKABLE void dropRecovery(const QString& key);

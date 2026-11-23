@@ -49,14 +49,19 @@ could reach a later request or another project.
    there, moves it back if it is not the approved one, and removes it only while it still is, after the new folder
    is in place.
 7. **Browser.** The first save writes into a stage of its own, `stage-<id>-<uuid>`, never the untitled place's key.
-   A claim record `claim:<untitled key>` names the operation and its stage. After the stage is written, one
-   IndexedDB transaction checks the claim and, only while it is still this operation's and live, records the named
-   place (the stage's key), removes the untitled place and marks the claim published. Supersession revokes the claim
-   in a transaction on the same record, so whichever commits first decides. A lost publish removes its own stage; a
-   published one removes the untitled place's recovery copy. Every step compares the operation id and the stage key,
-   so two tabs recovering the same untitled place never act on each other's stage. A tab holds the Web Lock
-   `edi-stage:<stage>` while writing, and listing the places removes a stage with no named place, no live claim and no
-   lock. Ordinary named saves keep their single write.
+   Each stage has one claim record, `claim:<stage>`, naming the untitled place, the operation and the stage; no other
+   stage ever writes it. It is taken once, live, before the stage is written; a revoke that came first left it
+   revoked, and then it is never taken. After the stage is written, one IndexedDB transaction checks the claim and,
+   only while it is still this operation's and live and the untitled place was not published from another stage
+   (`claim:source:<untitled key>`), records the named place (the stage's key), removes the untitled place, records the
+   source and marks the claim published. Supersession revokes the claim in a transaction on the same record, so
+   whichever commits first decides; a published or revoked claim never changes again. A lost publish removes its own
+   stage; a published one removes the untitled place's recovery copy. So two tabs recovering the same untitled place,
+   even with the same operation id, never act on each other's stage and publish it once. A tab holds the Web Lock
+   `edi-stage:<stage>` while it claims, writes and publishes. Listing the places removes a stage only under that lock,
+   reading it again there in one transaction: no named place, and its claim revoked, absent, or live with no writer
+   (then revoked first). Without Web Locks only a stage whose claim is revoked is removed. Ordinary named saves keep
+   their single write.
 
 8. **Fenced handoffs.** Publications that can reenter go on only while the session and the project they belong to are
    still the open ones, checked before each: `Session::restoreProjectSetAside` after `replaceProject` and after each

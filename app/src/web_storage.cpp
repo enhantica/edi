@@ -77,12 +77,22 @@ EM_JS(int, edi_storage_install, (), {
         transaction.onerror = () => reject(transaction.error);
         transaction.onabort = () => reject(transaction.error);
     }));
-    S.revokeClaim = (claimKey, ours) => S.transact(store => new Promise(resolve => {
-        const read = store.get(claimKey);
+    // An untitled place's first save (ADR-0100) keeps one claim per stage, "claim:<stage>", written only for that
+    // stage: live while it may still publish, then revoked or published for good. "claim:source:<untitled key>" names
+    // the stage the untitled place was published from, so a second stage of the same place never publishes it again.
+    S.claimKey = stage => "claim:" + stage;
+    S.sourceKey = untitled => "claim:source:" + untitled;
+    // Marks the stage's claim revoked unless it is published; with no claim yet it leaves the revoked mark that
+    // stops the claim from being taken later.
+    S.revokeClaim = (untitled, op, stage) => S.transact(store => new Promise(resolve => {
+        const read = store.get(S.claimKey(stage));
         read.onsuccess = () => {
-            if (ours(read.result) && read.result.state === "live") {
-                read.result.state = "revoked";
-                store.put(read.result);
+            const claim = read.result;
+            if (!claim) {
+                store.put({key : S.claimKey(stage), untitled : untitled, op : op, stage : stage, state : "revoked"});
+            } else if (claim.op === op && claim.stage === stage && claim.state === "live") {
+                claim.state = "revoked";
+                store.put(claim);
             }
             resolve(true);
         };
@@ -95,25 +105,48 @@ EM_JS(int, edi_storage_install, (), {
         }
     };
     S.removeStage = stage => S.removeEntry([ "edi", "projects" ], stage);
-    // A stage nobody publishes any more: no named place, its claim revoked or gone, and no tab writing it (its lock
-    // free). Removed when the places are listed.
-    S.sweep = async records => {
-        const named = new Set(records.map(record => record.key));
-        const live = new Set(records.filter(record => String(record.key).startsWith("claim:") && record.state === "live")
-                                 .map(record => record.stage));
+    // A stage nobody publishes any more is removed when the places are listed. What it is, is read again inside the
+    // same serialization that writing and publishing use: under its Web Lock (no tab writes or publishes it while
+    // the lock is free), in one transaction that also revokes a live claim its dead writer left. Without Web Locks
+    // only a revoked stage is removed: it can never be published.
+    S.sweepStage = async (name, locked) => {
+        const removable = await S.transact(store => new Promise(resolve => {
+            const named = store.get(name);
+            named.onsuccess = () => {
+                if (named.result) return resolve(false);
+                const read = store.get(S.claimKey(name));
+                read.onsuccess = () => {
+                    const claim = read.result;
+                    if (!claim) return resolve(locked);
+                    if (claim.state === "revoked") return resolve(true);
+                    if (claim.state === "live" && locked) {
+                        claim.state = "revoked";
+                        store.put(claim);
+                        return resolve(true);
+                    }
+                    resolve(false);
+                };
+            };
+        }));
+        if (removable) await S.removeStage(name);
+    };
+    S.sweep = async () => {
         let folder;
         try {
             folder = await S.opfs([ "edi", "projects" ], false);
         } catch (error) {
             return;
         }
+        const names = [];
         for await (const [name] of folder.entries()) {
-            if (!name.startsWith("stage-") || named.has(name) || live.has(name)) continue;
-            const remove = () => S.removeStage(name);
+            if (name.startsWith("stage-")) names.push(name);
+        }
+        for (const name of names) {
             if (navigator.locks) {
-                await navigator.locks.request("edi-stage:" + name, {ifAvailable : true}, lock => lock ? remove() : undefined);
+                await navigator.locks.request("edi-stage:" + name, {ifAvailable : true},
+                                              lock => lock ? S.sweepStage(name, true) : undefined);
             } else {
-                await remove();
+                await S.sweepStage(name, false);
             }
         }
     };
@@ -480,24 +513,32 @@ EM_JS(void, edi_storage_publish_untitled, (int job, const char* untitled_utf8, d
     const name = UTF8ToString(name_utf8);
     const files = S.staged.get(job) || [];
     S.staged.delete(job);
-    const claimKey = "claim:" + untitled;
+    const claimKey = S.claimKey(stage);
     const ours = claim => claim && claim.op === op && claim.stage === stage;
     S.runs.set(job, async () => {
         const write = async () => {
-            // The claim, unless this operation was revoked before it got here.
+            // The claim, taken only once: a revoke that came first left its mark, and a place already published
+            // from another stage is not published again.
             const claimed = await S.transact(store => new Promise(resolve => {
                 const read = store.get(claimKey);
                 read.onsuccess = () => {
-                    if (ours(read.result) && read.result.state !== "live") return resolve(false);
-                    store.put({key : claimKey, op : op, stage : stage, state : "live"});
-                    resolve(true);
+                    if (read.result) return resolve(false);
+                    const source = store.get(S.sourceKey(untitled));
+                    source.onsuccess = () => {
+                        if (source.result) {
+                            store.put({key : claimKey, untitled : untitled, op : op, stage : stage, state : "revoked"});
+                            return resolve(false);
+                        }
+                        store.put({key : claimKey, untitled : untitled, op : op, stage : stage, state : "live"});
+                        resolve(true);
+                    };
                 };
             }));
             if (!claimed) return {ok : true, outcome : "lost"};
             try {
                 await S.writeBrowser(S.policy(7, {key : stage, recovery : 0}), files);
             } catch (error) {
-                await S.revokeClaim(claimKey, ours);
+                await S.revokeClaim(untitled, op, stage);
                 await S.removeStage(stage);
                 throw error;
             }
@@ -506,11 +547,20 @@ EM_JS(void, edi_storage_publish_untitled, (int job, const char* untitled_utf8, d
                 read.onsuccess = () => {
                     const claim = read.result;
                     if (!ours(claim) || claim.state !== "live") return resolve("lost");
-                    store.put(S.policy(5, {key : stage, kind : "browser", name : name, recovery : 0}));
-                    store.delete(untitled);
-                    claim.state = "published";
-                    store.put(claim);
-                    resolve("published");
+                    const source = store.get(S.sourceKey(untitled));
+                    source.onsuccess = () => {
+                        if (source.result) {
+                            claim.state = "revoked";
+                            store.put(claim);
+                            return resolve("lost");
+                        }
+                        store.put(S.policy(5, {key : stage, kind : "browser", name : name, recovery : 0}));
+                        store.delete(untitled);
+                        store.put({key : S.sourceKey(untitled), untitled : untitled, op : op, stage : stage, state : "published"});
+                        claim.state = "published";
+                        store.put(claim);
+                        resolve("published");
+                    };
                 };
             }));
             if (outcome === "published") {
@@ -524,29 +574,12 @@ EM_JS(void, edi_storage_publish_untitled, (int job, const char* untitled_utf8, d
     });
 });
 
-// Marks this operation's claim revoked, at once and outside the place's queue, so it races the publish; with no
-// claim yet it leaves the revoked mark the claim step respects.
+// Revokes this operation's claim at once, outside the place's queue, so it races the publish; with no claim yet it
+// leaves the revoked mark the claim step respects. Only this stage's claim is ever touched.
 EM_JS(void, edi_storage_revoke, (int job, const char* untitled_utf8, double op, const char* stage_utf8), {
     const S = globalThis.ediStorage;
-    const claimKey = "claim:" + UTF8ToString(untitled_utf8);
-    const stage = UTF8ToString(stage_utf8);
-    S.transact(store => new Promise(resolve => {
-        const read = store.get(claimKey);
-        read.onsuccess = () => {
-            const claim = read.result;
-            const ours = claim && claim.op === op && claim.stage === stage;
-            if (ours) {
-                if (claim.state === "live") {
-                    claim.state = "revoked";
-                    store.put(claim);
-                }
-            } else if (!claim || claim.state !== "live") {
-                // Another tab's live claim is never touched; otherwise this operation's mark goes in first.
-                store.put({key : claimKey, op : op, stage : stage, state : "revoked"});
-            }
-            resolve(true);
-        };
-    })).then(() => S.answer(job, {ok : true}), error => S.fail(job, error));
+    S.revokeClaim(UTF8ToString(untitled_utf8), op, UTF8ToString(stage_utf8))
+        .then(() => S.answer(job, {ok : true}), error => S.fail(job, error));
 });
 
 
@@ -582,7 +615,7 @@ EM_JS(void, edi_storage_list, (int job), {
     S.store("readonly", store => store.getAll())
         .then(async records => {
             // A claim is the untitled place's first save in progress, not a place (ADR-0100).
-            await S.sweep(records).catch(() => undefined);
+            await S.sweep().catch(() => undefined);
             const places = records.filter(record => !String(record.key).startsWith("claim:"));
             return {ok : true, places : places.map(record => S.policy(11, {record : record}))};
         })
