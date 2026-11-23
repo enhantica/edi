@@ -561,7 +561,9 @@ Item {
         // Centred in the margin, clear of the tick labels, which Qt Graphs lets reach into the plot's left margin.
         x: (chart.sideMargin - width) / 2
         y: plot.y + (plot.height - height) / 2
-        text: chart.evolution ? chart.evolution.yLabel : ""
+        // An agreement factor with its subscript (ADR-0045).
+        textFormat: FactorText.has(chart.evolution ? chart.evolution.yLabel : "") ? Text.RichText : Text.PlainText
+        text: chart.evolution ? (FactorText.has(chart.evolution.yLabel) ? FactorText.rich(chart.evolution.yLabel) : chart.evolution.yLabel) : ""
     }
     EaElements.Label {
         objectName: "evolution.title.x"

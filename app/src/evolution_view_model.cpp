@@ -10,6 +10,7 @@
 #include <exception>
 #include <functional>
 #include <limits>
+#include <optional>
 #include <map>
 
 #include "background.hpp"
@@ -284,6 +285,30 @@ void EvolutionViewModel::addRow(int dataset, const std::vector<std::string>& cel
         return;
     }
     const std::string name = names_[current_].toStdString();
+    // The reduced χ² and the agreement factors have a value and no s.u.
+    std::optional<std::size_t> factor;
+    if (name == "fit_result.reduced_chi_square") factor = session_->index().chi;
+    for (const edi::ScanFactorColumn& column : session_->index().factors) {
+        if (column.name == name) factor = column.value;
+    }
+    if (factor && *factor < cells.size()) {
+        std::vector<std::string> extracted;
+        for (const std::ptrdiff_t column : session_->index().extract) {
+            extracted.push_back(column < 0 ? std::string() : cells[static_cast<std::size_t>(column)]);
+        }
+        Point point;
+        point.dataset = dataset;
+        point.error = std::numeric_limits<double>::quiet_NaN();
+        const std::optional<double> x = xOf(dataset, &extracted);
+        if (!x || cells[session_->index().chi] == "nan" || !edi::parse_scan_number(cells[*factor], point.y) ||
+            !drawable(*x, point.y, point.error)) {
+            return;
+        }
+        point.x = *x;
+        points_.push_back(point);
+        finishRow();
+        return;
+    }
     for (const edi::ScanParameterColumns& parameter : session_->index().parameters) {
         if (parameter.name != name || parameter.uncertainty >= cells.size()) {
             continue;
