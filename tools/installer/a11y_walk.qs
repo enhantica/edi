@@ -7,6 +7,9 @@ var PAUSE = 6000;  // ms on each page, so the client reads it several times
 function Controller() {
     installer.autoRejectMessageBoxes();
     installer.setMessageBoxAutomaticAnswer("cancelInstallation", QMessageBox.Yes);
+    // The candidate fix for edi #150, tried on a released installer: no component selection page.
+    if (installer.value("A11yHideComponents") === "true")
+        installer.setDefaultPageVisible(QInstaller.ComponentSelection, false);
 }
 
 Controller.prototype.WelcomePageCallback = function() {

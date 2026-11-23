@@ -42,11 +42,17 @@ jobs:
           echo "app=$app" >> "$GITHUB_OUTPUT"
       - name: Walk the installer with an accessibility client
         run: bash tools/installer/a11y-check.sh "${{ steps.mount.outputs.app }}" "$RUNNER_TEMP/a11y"
+      # Diagnosis of edi #150 on a released installer: the same walk without the component selection page.
+      - name: The same without the component selection page
+        if: ${{ !cancelled() }}
+        run: bash tools/installer/a11y-check.sh "${{ steps.mount.outputs.app }}" "$RUNNER_TEMP/a11y-no-components" A11yHideComponents=true
       - name: Keep the logs and any crash report
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: installer-accessibility-macos
-          path: ${{ runner.temp }}/a11y
+          path: |
+            ${{ runner.temp }}/a11y
+            ${{ runner.temp }}/a11y-no-components
           if-no-files-found: ignore
           retention-days: 7  # read when a check fails
