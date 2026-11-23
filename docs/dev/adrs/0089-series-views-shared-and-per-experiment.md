@@ -58,10 +58,9 @@ table to draw curves per dataset from. Displayed-resolution reductions are edi's
 7. **The GUI thread.** Reading results rows, building summaries, grouping files and listing folders run on workers.
    The scale run (ADR-0026, "Two results files") also records the longest GUI-thread stall.
 8. **How well each point fits** (edi #140). After the parameters, both sections list the point's χ² (Shared: the
-   reduced χ²; Per experiment: each experiment's χ²) and the agreement factors the results files record:
-   R<sub>p</sub>, R<sub>wp</sub>, R<sub>exp</sub>, and R<sub>Bragg</sub> and R<sub>mag</sub> per structure. They
-   are drawn without error bars, with their subscripts (ADR-0045), and a file written before them lists none until
-   a resume rewrites it. The report's evolution charts follow the same list.
+   reduced χ²; Per experiment: each experiment's χ²) and the agreement factors the results files record: R<sub>p</sub>, R<sub>wp</sub>, R<sub>exp</sub>, and R<sub>Bragg</sub> and R<sub>mag</sub> per
+   structure. They are drawn without error bars, with their subscripts (ADR-0045), and a file written before them
+   lists none until a resume rewrites it. The report's evolution charts follow the same list.
 
 ## Consequences
 
