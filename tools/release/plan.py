@@ -26,14 +26,15 @@ GROUPS = {
 }
 
 
-BOT_LABELS = frozenset({'[bot] release', '[bot] backmerge'})
+# edi has no develop branch, so its only bot pull request is the release one (ADR-0101).
+BOT_LABELS = frozenset({'[bot] release'})
 
 
 def label_problem(labels: set[str]) -> str | None:
     """Why a pull request's labels cannot make its release note, or None when they can.
 
-    One rule for the release notes and the pull-request label check: a bot release or backmerge
-    needs nothing else; any other pull request needs one scope label and an interface label.
+    One rule for the release notes and the pull-request label check: a bot release needs nothing
+    else; any other pull request needs one scope label and an interface label.
     """
     if labels & BOT_LABELS:
         return None
