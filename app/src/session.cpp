@@ -1088,14 +1088,27 @@ bool Session::saveAsWith(const SaveOperation& operation, const QUrl& directory) 
     edi::adopt_save_location(published, folder.toStdString());
     if (staged.scan.listing)
         staged.scan.listing->relocate(std::make_shared<const edi::Project>(published), staged.folder, folder);
+    // Each publication can reenter: the rest goes on only for the project this save wrote (ADR-0100).
+    const QPointer<Session> receiver(this);
+    const QPointer<ProjectViewModel> saved(project_);
+    const auto replacement = replacement_generation_;
+    const auto current = [&] {
+        return receiver && saved && project_ == saved && replacement_generation_ == replacement;
+    };
     project_->takeStaged(folder, published, staged.scan);
+    if (!current()) return false;
     archive_location_.clear();
     leaveTemporaryOrigin();
+    if (!current()) return false;
     releaseTemporaryFolder();
     emit projectLocationChanged();
+    if (!current()) return false;
     emit needsSaveAsChanged();
+    if (!current()) return false;
     emit locationTextChanged();
+    if (!current()) return false;
     emit projectDirectoryUsed(folder);
+    if (!current()) return false;
     qCInfo(lcApp, "project saved");
     return true;
 }
@@ -1256,15 +1269,28 @@ bool Session::saveProjectAsWith(const SaveOperation& operation, const QUrl& targ
     // archive is written from a staged copy before the project moves to it: a refused archive leaves the open project
     // where and as it was.
     Staged staged;
+    const QPointer<Session> receiver(this);
+    const QPointer<ProjectViewModel> saved(project_);
+    const auto replacement = replacement_generation_;
+    const auto current = [&] {
+        return receiver && saved && project_ == saved && replacement_generation_ == replacement;
+    };
     if (!stageCopy(operation, "saved", {}, staged) || !readyToWrite(operation, staged) || !publishArchive(staged, where)) {
         return false;
     }
+    // Each publication can reenter: the rest goes on only for the project this save wrote (ADR-0100).
+    if (!current()) return false;
     leaveTemporaryOrigin();
+    if (!current()) return false;
     archive_location_ = where;
     emit projectLocationChanged();
+    if (!current()) return false;
     emit needsSaveAsChanged();
+    if (!current()) return false;
     emit locationTextChanged();
+    if (!current()) return false;
     emit projectDirectoryUsed(where);
+    if (!current()) return false;
     return logged("project saved");
 }
 
@@ -2233,20 +2259,43 @@ void Session::restoreProjectSetAside() {
     }
     SetAside aside = *std::move(aside_);
     aside_.reset();
-    replaceProject(aside.project.data(), {}, aside.example);
+    const QPointer<Session> receiver(this);
+    const QPointer<ProjectViewModel> wanted(aside.project);
+    const bool replaced = replaceProject(aside.project.data(), {}, aside.example);
+    if (!receiver) return;
+    if (!replaced) {
+        // Refused before it took the project: it stays set aside, as it was.
+        if (wanted && project_ != wanted && !aside_) aside_ = std::move(aside);
+        return;
+    }
+    // Every publication below can reenter: each goes on only while the restored project is still the open one
+    // (ADR-0100), so a project opened meanwhile never takes the set-aside one's places.
+    const QPointer<ProjectViewModel> restored(project_);
+    const auto replacement = replacement_generation_;
+    const auto current = [&] {
+        return receiver && restored && project_ == restored && replacement_generation_ == replacement;
+    };
+    if (!current()) return;
     temporary_folder_ = aside.temporary_folder;
     archive_location_ = aside.archive_location;
     setOpenedArchive(aside.opened_archive);
+    if (!current()) return;
     read_only_source_ = aside.read_only_source;
     read_only_copy_ = aside.read_only_copy;
     web_copy_ = aside.web_copy;
     web_from_file_ = aside.web_from_file;
     setWebPlace(aside.web_place);
+    if (!current()) return;
     emit projectLocationChanged();
+    if (!current()) return;
     emit locationTextChanged();
+    if (!current()) return;
     emit needsSaveAsChanged();
+    if (!current()) return;
     emit projectSetAsideChanged();
+    if (!current()) return;
     emit projectSetAsideNameChanged();
+    if (!current()) return;
     emit projectSetAsideModifiedChanged();
 }
 
