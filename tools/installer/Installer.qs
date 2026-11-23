@@ -99,13 +99,16 @@ function Controller() {
     // No component tree: macOS accessibility clients crash the Framework's Qt on it (edi #150); the one choice it
     // offered, the AI assistant, is a checkbox (assistantscript.qs).
     installer.setDefaultPageVisible(QInstaller.ComponentSelection, false);
-    // The Framework titles the window "<Title> Setup"; the title already says what the window is.
-    if (installer.isInstaller())
-        gui.windowTitle = "EasyDiffraction Installer";
+    if (darkTheme())
+        gui.styleSheet = darkStylesheet;
     chooseWindowsTarget();
     installer.installationFinished.connect(clearQuarantine);
     installer.updateFinished.connect(clearQuarantine);
 }
+
+// The dark stylesheet (Installer.qss filled with the app's dark theme by package.py); the light one is the
+// installer's own.
+var darkStylesheet = "@DARK_STYLESHEET@";
 
 var wordmark = "";
 
@@ -122,6 +125,9 @@ function headerWordmark() {
     "StartMenuDirectory", "ReadyForInstallation", "PerformInstallation", "Finished"
 ].forEach(function (name) {
     Controller.prototype[name + "PageCallback"] = function () {
+        // The Framework titles the window "<Title> Setup" again on each page; the title already says it all.
+        if (installer.isInstaller())
+            gui.windowTitle = "EasyDiffraction Installer";
         var page = gui.pageWidgetByObjectName(name + "Page");
         if (!page)
             return;
@@ -139,7 +145,15 @@ function headerWordmark() {
             welcome.text = "<p>Welcome to EasyDiffraction Setup.</p>"
                 + "<p>EasyDiffraction calculates diffraction patterns from a structural model "
                 + "and refines its parameters against experimental data.</p>"
-                + '<p>Learn more at <a href="https://easydiffraction.org">easydiffraction.org</a>.</p>';
+                + '<p>Learn more at <a style="color: ' + (darkTheme() ? "#4ec1ef" : "#00a3e3")
+                + '; text-decoration: none" href="https://easydiffraction.org">easydiffraction.org</a>.</p>';
+        }
+
+        // The licence is the GPL, which asks for no acceptance: the option starts accepted.
+        if (name === "LicenseAgreement") {
+            var accept = gui.findChild(page, "AcceptLicenseCheckBox") || gui.findChild(page, "AcceptLicenseRadioButton");
+            if (accept)
+                accept.checked = true;
         }
 
         if (name === "TargetDirectory" && systemInfo.kernelType === "darwin") {

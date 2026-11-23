@@ -167,15 +167,68 @@ def payload_manifest(stage: Path) -> dict:
     return result
 
 
+# The app's theme (gui-components' Gui/Style Colors.qml and Sizes.qml, at a 14 px font) for the
+# installer's stylesheet (Installer.qss): Qt darker() written out, #AARRGGBB colours as rgba().
+_SIZES = {
+    'FONT_PX': '14',
+    'HALF_FONT_PX': '7',
+    'CONTROL_INNER_PX': '37',  # sideBarButtonHeight 39, less a 1 px border on each side
+    'FIELD_PADDING_PX': '8',  # TextField padding: fontPixelSize * 0.5 + 1
+    'CHECK_PX': '21',  # CheckIndicator: fontPixelSize * 1.5
+    'RADIO_PX': '14',
+    'RADIO_RADIUS_PX': '9',
+}
+INSTALLER_THEMES = {
+    'light': _SIZES
+    | {
+        'BACKGROUND': '#e9e9e9',
+        'BACKGROUND_HOVERED': '#fefefe',
+        'BACKGROUND_DISABLED': '#e9e9e9',
+        'FOREGROUND': '#333333',
+        'FOREGROUND_MINOR': '#aaaaaa',
+        'FOREGROUND_DISABLED': '#bbbbbb',
+        'ACCENT': '#00a3e3',
+        'ACCENT_TRACK': 'rgba(0, 163, 227, 0.17)',
+        'BORDER': '#dedede',  # appBarComboBoxBorder: darker(themeBackground, 1.05)
+        'FIELD_BACKGROUND': 'rgba(255, 255, 255, 0.44)',  # appBarComboBoxBackground #70ffffff
+        'CHECK_BACKGROUND': '#f7f7f7',
+    },
+    'dark': _SIZES
+    | {
+        'BACKGROUND': '#303030',
+        'BACKGROUND_HOVERED': '#353535',
+        'BACKGROUND_DISABLED': '#333333',
+        'FOREGROUND': '#eeeeee',
+        'FOREGROUND_MINOR': '#888888',
+        'FOREGROUND_DISABLED': '#666666',
+        'ACCENT': '#4ec1ef',
+        'ACCENT_TRACK': 'rgba(78, 193, 239, 0.17)',
+        'BORDER': '#2c2c2c',  # appBarComboBoxBorder: darker(themeBackground, 1.1)
+        'FIELD_BACKGROUND': 'rgba(102, 102, 102, 0.06)',  # appBarComboBoxBackground #10666666
+        'CHECK_BACKGROUND': '#3a3a3a',
+    },
+}
+
+
+def installer_stylesheet(theme: str) -> str:
+    """Installer.qss with one theme's values filled in."""
+    text = (ROOT / 'tools/installer/Installer.qss').read_text(encoding='utf-8')
+    values = INSTALLER_THEMES[theme] | {'STEP_LIST_INSET': '23' if SYSTEM == 'macos' else '9'}
+    for name, value in values.items():
+        text = text.replace(f'@{name}@', value)
+    if '@' in re.sub(r'/\*.*?\*/', '', text, flags=re.DOTALL):
+        raise RuntimeError('Installer.qss names a value INSTALLER_THEMES does not have')
+    return text
+
+
 def write_controller(config: Path) -> None:
-    """Write the stylesheet and the controller, holding both wordmarks."""
+    """Write the light stylesheet and the controller, holding both wordmarks and the dark one."""
     style = ROOT / 'tools/installer'
-    step_list_inset = '23' if SYSTEM == 'macos' else '9'
-    stylesheet = (style / 'Installer.qss').read_text(encoding='utf-8')
-    (config / 'Installer.qss').write_text(
-        stylesheet.replace('@STEP_LIST_INSET@', step_list_inset), encoding='utf-8'
-    )
+    (config / 'Installer.qss').write_text(installer_stylesheet('light'), encoding='utf-8')
     controller = (style / 'Installer.qs').read_text(encoding='utf-8')
+    controller = controller.replace(
+        '"@DARK_STYLESHEET@"', json.dumps(installer_stylesheet('dark'))
+    )
     for marker, filename in (
         ('@WORDMARK@', 'InstallerLogo.png'),
         ('@DARK_WORDMARK@', 'InstallerLogoDark.png'),
