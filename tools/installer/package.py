@@ -538,7 +538,10 @@ def build_maintenance_tool(tools: Path, output: Path) -> Path:
     )
     bundle = work / maintenance_tool_name()
     set_bundle_identifier(
-        bundle, 'org.easydiffraction.maintenancetool', 'EasyDiffraction Maintenance Tool'
+        bundle,
+        'org.easydiffraction.maintenancetool',
+        'EasyDiffraction Maintenance Tool',
+        display_only=True,
     )
     if macos_signing():
         notarise_macos(bundle)
@@ -886,7 +889,12 @@ def linux_installer_runtime(tools: Path, output: Path) -> tuple[Path, Path, dict
 
 
 def set_bundle_identifier(
-    bundle: Path, identifier: str, name: str, *, installer_icon: bool = False
+    bundle: Path,
+    identifier: str,
+    name: str,
+    *,
+    installer_icon: bool = False,
+    display_only: bool = False,
 ) -> None:
     """Our identifier and name in place of the Installer Framework's, before the bundle is signed.
 
@@ -900,7 +908,11 @@ def set_bundle_identifier(
     with info.open('rb') as handle:
         values = plistlib.load(handle)
     values['CFBundleIdentifier'] = identifier
-    values['CFBundleName'] = values['CFBundleDisplayName'] = name
+    # The maintenance tool keeps its bundle name: the Framework names the bundle it rewrites on an
+    # update after it, so only the name shown changes there.
+    values['CFBundleDisplayName'] = name
+    if not display_only:
+        values['CFBundleName'] = name
     icon = values.get('CFBundleIconFile')
     if installer_icon and icon:
         name_on_disk = icon if icon.endswith('.icns') else icon + '.icns'

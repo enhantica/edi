@@ -104,7 +104,9 @@ function advance(name, page) {
         installer.uninstallationFinished.connect(next);
         return;
     }
-    gui.clickButton(name === "Finished" ? buttons.FinishButton : buttons.NextButton, 2500);
+    // The maintenance tool's last page finishes with its relabelled Cancel button; its commit button restarts it.
+    var finish = installer.isInstaller() ? buttons.FinishButton : buttons.CancelButton;
+    gui.clickButton(name === "Finished" ? finish : buttons.NextButton, 2500);
 }
 
 function Controller() {
