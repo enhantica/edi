@@ -12,8 +12,9 @@
    <property name="leftMargin">
     <number>0</number>
    </property>
+   <!-- One spacing step (16) under the status line, with the page's own spacing (14 on macOS). -->
    <property name="topMargin">
-    <number>0</number>
+    <number>2</number>
    </property>
    <property name="rightMargin">
     <number>0</number>
