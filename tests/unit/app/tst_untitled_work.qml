@@ -220,11 +220,28 @@ TestCase {
             compare(Session.lastError, error, "The obsolete data answer leaves the successor's error state alone");
             verify(!SettingsProof.fileObservation(folder, "project.edi").exists,
                    "An obsolete data answer cannot create a project");
+            const occupied = SettingsProof.childUrl(parent, "late-occupant");
+            verify(Session.acceptUntitled(current, "late-occupant", "", SettingsProof.localPath(occupied), "", "", false),
+                   "A new destination can still be empty when the naming operation asks about its data");
+            compare(questions.length, 3, "The pending destination reaches its real linked-data question");
+            const occupant = "Another process owns these files";
+            verify(SettingsProof.write(parent, "late-occupant/sentinel.txt", occupant),
+                   "A separate writer occupies the previously empty destination while the question is open");
+            Session.answerSaveData(questions[2].request, "linked");
+            compare(settlements, [[cancelled, "rejected"], [stale, "superseded"], [current, "refused"]],
+                    "The attempted write refuses the late occupant and settles its own operation once");
+            compare(SettingsProof.text(occupied, "sentinel.txt"), occupant, "The refusal preserves the new occupant");
+            verify(!SettingsProof.fileObservation(occupied, "project.edi").exists,
+                   "The refusal publishes no project over the late occupant");
+            verify(Session.project === p && Session.untitled && p.name === formerName,
+                   "The refused write leaves the original project and name intact");
+
+            const retry = Session.beginUntitled("save");
             answerImmediately = true;
-            verify(Session.acceptUntitled(current, "linked-naming", "", path, "", "", false),
-                   "A synchronous Link answer completes the owning naming request");
-            compare(questions.length, 3, "The succeeded naming has a single linked-data question of its own");
-            compare(settlements, [[cancelled, "rejected"], [stale, "superseded"], [current, "saved"]],
+            verify(Session.acceptUntitled(retry, "linked-naming", "", path, "", "", false),
+                   "A synchronous Link answer completes the owning naming request, error: " + Session.lastError);
+            compare(questions.length, 4, "The succeeded naming has a single linked-data question of its own");
+            compare(settlements, [[cancelled, "rejected"], [stale, "superseded"], [current, "refused"], [retry, "saved"]],
                     "A reentrant Link answer leaves exactly one terminal result for each operation");
             verify(SettingsProof.fileObservation(folder, "project.edi").exists,
                    "The reentrant Link answer writes a complete named project");
