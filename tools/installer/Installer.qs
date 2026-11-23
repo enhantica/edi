@@ -55,6 +55,8 @@ function darkTheme() {
 // The page captures (EDI_INSTALLER_CAPTURE, a folder): each page is saved as <mode>-<page>-<theme>.png and the page
 // moves on by itself, in the installer and in the maintenance tool alike.
 var captureFolder = installer.environmentVariable("EDI_INSTALLER_CAPTURE");
+var installPageReady = false;
+var progressHooked = false;
 // The maintenance tool's mode in capture mode (EDI_INSTALLER_MAINTENANCE_MODE): add (add or remove components),
 // update, or remove (everything, the default).
 var maintenanceMode = installer.environmentVariable("EDI_INSTALLER_MAINTENANCE_MODE") || "remove";
@@ -96,12 +98,8 @@ function advance(name, page) {
     if (name === "ReadyForInstallation" && installer.isInstaller())
         return;
     if (name === "PerformInstallation") {
-        // The Framework moves on when it is done, unless its details are open (always with --verbose); then it
-        // relabels its commit button "Next" and waits, so this presses that button (and Next, where one shows).
-        var next = function () {
-            gui.clickButton(buttons.CommitButton, 1500);
-            gui.clickButton(buttons.NextButton, 1600);
-        };
+        // The Framework moves on when it is done (its details are closed on this page, below); this is the backstop.
+        var next = function () { gui.clickButton(buttons.NextButton, 1500); };
         installer.installationFinished.connect(next);
         installer.uninstallationFinished.connect(next);
         return;
@@ -397,8 +395,7 @@ function refreshInstallPage() {
     updateSpace();
 }
 
-var installPageReady = false;
-var progressHooked = false;
+
 
 var wordmark = "";
 
@@ -506,7 +503,13 @@ function headerWordmark() {
 
         // Installing: the bar and one status line, no details.
         if (name === "PerformInstallation") {
-            ["DetailsButton", "DetailsBrowser", "DownloadStatus"].forEach(function (hidden) {
+            // --verbose opens the details, which stops the Framework moving on by itself when done: they are closed
+            // with their own button, which turns that back on, and the button and download count are hidden.
+            var detailsBrowser = gui.findChild(page, "DetailsBrowser");
+            var detailsButton = gui.findChild(page, "DetailsButton");
+            if (detailsBrowser && detailsBrowser.visible && detailsButton)
+                detailsButton.click();
+            ["DetailsButton", "DownloadStatus"].forEach(function (hidden) {
                 var widget = gui.findChild(page, hidden);
                 if (widget)
                     widget.visible = false;

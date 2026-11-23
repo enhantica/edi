@@ -237,7 +237,7 @@ def test_desktop_refusal_preserves_location_origin_and_unsaved_state_then_retrie
         )
 
 
-def browser_receipt(tmp_path, *, cleanup=None):
+def browser_executables():
     node = shutil.which('node')
     chrome = os.environ.get('CHROME_HEADLESS_SHELL')
     if not chrome:
@@ -248,6 +248,31 @@ def browser_receipt(tmp_path, *, cleanup=None):
             )
         )
     assert node and chrome, 'The storage population gate requires pinned Node and real Chromium'
+    return node, chrome
+
+
+def test_browser_untitled_claims_distinguish_two_tabs_with_the_same_operation_id():
+    node, chrome = browser_executables()
+    result = subprocess.run(
+        [
+            node,
+            str(ROOT / 'tests/fixtures/project_transactions/untitled_claims.mjs'),
+            str(ROOT),
+            chrome,
+        ],
+        capture_output=True,
+        text=True,
+        timeout=30,
+        check=False,
+    )
+    assert result.returncode == 0, (
+        'Two independent browser tabs must preserve the records and bytes of the winning stage: '
+        + result.stderr
+    )
+
+
+def browser_receipt(tmp_path, *, cleanup=None):
+    node, chrome = browser_executables()
     source = ROOT / 'tests/fixtures/loop_parameter_ids/line-segment'
     expected = {
         path.relative_to(source).as_posix(): base64.b64encode(path.read_bytes()).decode()

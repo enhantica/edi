@@ -368,7 +368,7 @@ def write_metadata(
             ET.SubElement(arguments, 'Argument').text = argument
     ET.SubElement(
         configuration.getroot(), 'RunProgramDescription'
-    ).text = 'Open EasyDiffraction now'
+    ).text = 'Open %1 now'  # the Framework fills in the product name
     if SYSTEM == 'windows':
         # Run as administrator, the installer suggests Program Files (Installer.qs, edi ADR-0071).
         ET.SubElement(

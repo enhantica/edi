@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-23T18:57:21Z
+# measured_utc = 2026-11-23T21:13:11Z
 #
-# Recorded from: measured test run (320 node(s) measured once, 186742 banked, 0 stale row(s) dropped)
-# Collected tests: 266936; with a reported duration: 85975
+# Recorded from: measured test run (6 node(s) measured once, 187062 banked, 0 stale row(s) dropped)
+# Collected tests: 266942; with a reported duration: 85976
 # Module-scoped fixture costs recorded: 218
 #
 # Breaches are decided PER TIER against the table
@@ -29,12 +29,12 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 266936
+# inventory_python = 266942
 # inventory_cpp = 0
-# inventory_measured = 187062
-# inventory_unmeasured = 79874
+# inventory_measured = 187063
+# inventory_unmeasured = 79879
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
-# inventory_pr_python = 92031
+# inventory_pr_python = 92036
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -108,6 +108,8 @@ UNMEASURED:failed-in-this-run	tests/integration/app/test_assistant_review_receip
 UNMEASURED:failed-in-this-run	tests/integration/app/test_assistant_review_receipts.py::test_summary_details_only_claim_returned_bins
 UNMEASURED:failed-in-this-run	tests/integration/app/test_assistant_review_receipts.py::test_undo_rejected_fit_restores_the_complete_accepted_record[background]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_assistant_review_receipts.py::test_undo_rejected_fit_restores_the_complete_accepted_record[shown]
+UNMEASURED:failed-in-this-run	tests/integration/app/test_assistant_send_during_fit.py::test_ordinary_send_during_fit_preserves_order_and_conversation[cancel]
+UNMEASURED:failed-in-this-run	tests/integration/app/test_assistant_send_during_fit.py::test_ordinary_send_during_fit_preserves_order_and_conversation[deliver]
 0.000	tests/integration/app/test_assistant_shown_fit_details.py::test_shown_real_fit_keeps_model_facing_details_or_explicit_unavailability
 0.000	tests/integration/app/test_assistant_startup_reopen.py::test_automatic_reopen_handoff_settles_with_its_own_cause[archived-words2]
 0.000	tests/integration/app/test_assistant_startup_reopen.py::test_automatic_reopen_handoff_settles_with_its_own_cause[continuation-words4]
@@ -651,6 +653,7 @@ UNMEASURED:failed-in-this-run	tests/integration/app/test_scan_axis_sync.py::test
 0.004	tests/integration/app/test_scan_view_content.py::test_scan_view_content[test_current_row_tracks_async_coordinates:stacked]
 0.000	tests/integration/app/test_scan_view_content.py::test_scan_view_content[test_every_pattern_is_drawn:map]
 0.000	tests/integration/app/test_scan_view_content.py::test_scan_view_content[test_every_pattern_is_drawn:stacked]
+UNMEASURED:failed-in-this-run	tests/integration/app/test_scan_view_content.py::test_scan_view_content[test_evolution_agreement_percent_and_dimensionless_chi_square]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_scan_view_content.py::test_scan_view_content[test_evolution_error_bars_and_range_survive_reload]
 0.000	tests/integration/app/test_scan_view_content.py::test_scan_view_content[test_independent_axis_type_buttons:map-x]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_scan_view_content.py::test_scan_view_content[test_independent_axis_type_buttons:map-y]
@@ -3401,6 +3404,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_catalogue_fullprof.py::t
 0.000	tests/integration/py/test_catalogue_retention_escapes.py::test_catalogue_projection_refuses_every_retained_input_escape[science-loops]
 0.000	tests/integration/py/test_catalogue_retention_escapes.py::test_catalogue_projection_refuses_every_retained_input_escape[science-native]
 0.490	tests/integration/py/test_catalogue_retention_escapes.py::test_catalogue_projection_refuses_every_retained_input_escape[science-scan]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_cell_length_admission.py::test_cell_length_limits_match_at_python_factory_and_file_boundaries
 0.000	tests/integration/py/test_chart_axis_labels.py::test_data_table_declares_named_component_columns
 UNMEASURED:failed-in-this-run	tests/integration/py/test_chart_axis_labels.py::test_tooltip_and_legend_names_follow_the_axis_vocabulary
 0.000	tests/integration/py/test_cif_import_contract.py::test_chosen_parser_failure_refuses_without_partial_import[cif2-list-experiment-collection-edi-path]
@@ -181759,6 +181763,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_independent_heidi_case.p
 0.000	tests/integration/py/test_installer_identity.py::test_signing_enablement_keeps_pr_builds_unsigned[macos-]
 0.000	tests/integration/py/test_installer_identity.py::test_signing_enablement_keeps_pr_builds_unsigned[windows-1]
 0.000	tests/integration/py/test_installer_identity.py::test_signing_enablement_keeps_pr_builds_unsigned[windows-]
+0.170	tests/integration/py/test_installer_identity.py::test_three_page_install_choices_gate_components_license_and_sizes
 0.000	tests/integration/py/test_installer_identity.py::test_windows_installation_defaults[AdminTargetDir-@ApplicationsDirX64@/EasyDiffraction]
 0.000	tests/integration/py/test_installer_identity.py::test_windows_installation_defaults[StartMenuDir-EasyDiffraction]
 0.000	tests/integration/py/test_installer_identity.py::test_windows_installation_defaults[TargetDir-@ApplicationsDirUser@/EasyDiffraction]
@@ -255819,6 +255824,7 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_project_transactions.py::test
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_project_transactions.py::test_archive_links_keep_lexical_member_identity_or_refuse_with_an_explanation
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_project_transactions.py::test_browser_save_as_replaces_old_entities_and_preserves_unrelated_destination_content
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_project_transactions.py::test_browser_save_waits_for_durable_success_and_preserves_refused_state
+UNMEASURED:failed-in-this-run	tests/system/py/test_project_transactions.py::test_browser_untitled_claims_distinguish_two_tabs_with_the_same_operation_id
 0.470	tests/system/py/test_project_transactions.py::test_dataset_read_uses_the_template_generation_adopted_by_save[desktop-before-write-first]
 0.520	tests/system/py/test_project_transactions.py::test_dataset_read_uses_the_template_generation_adopted_by_save[web-before-read-first]
 0.580	tests/system/py/test_project_transactions.py::test_dataset_read_uses_the_template_generation_adopted_by_save[web-before-write-first]
@@ -267004,7 +267010,7 @@ UNMEASURED:not-completed-in-this-run	tests/unit/py/test_web_science_identity.py:
 # module-cost: 0.258	tests/integration/app/test_phase_scan_state.py
 # module-cost: 34.721	tests/integration/app/test_report_deferred_save.py
 # module-cost: 4.282	tests/integration/app/test_scan_axis_sync.py
-# module-cost: 4.741	tests/integration/app/test_scan_view_content.py
+# module-cost: 3.439	tests/integration/app/test_scan_view_content.py
 # module-cost: 0.426	tests/integration/app/test_selector_callers.py
 # module-cost: 20.078	tests/integration/app/test_sequential_pattern_drawing.py
 # module-cost: 0.789	tests/integration/app/test_shared_controls.py

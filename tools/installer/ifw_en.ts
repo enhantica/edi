@@ -38,7 +38,7 @@
 </context>
 <context>
     <name>QInstaller::FinishedPage</name>
-    <message><source>Select %1 to close the %2 Setup.</source><translation>Select %1 to close.</translation></message>
+    <message><source>Select %1 to close the %2 Setup.</source><translation>Select %1 to close %2.</translation></message>
     <message><source>You find your installation in this location on your computer:</source><translation>EasyDiffraction is installed in:</translation></message>
 </context>
 <context>
