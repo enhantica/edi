@@ -5073,21 +5073,29 @@ static Project load_project_folder(const std::string& directory, const WarningSi
     // every parameter marked, a dependent's free flag cleared with a warning (not for the bracket of a
     // dependent saved with its s.u.). No one file is their warnings' source.
     source.clear();
+    bool relations_hold = true;
     {
         // The declared relations come from the analysis file: a refusal of one is about that file.
         const ReadingScope reading(fs::is_regular_file(analysis_file) ? analysis_file.string() : std::string());
         try {
             refresh_relations(project, warn, true);
-        } catch (const std::exception&) {
-            // The app opens such a project as an edit leaves one: the calculation waits until the relations are
-            // fixed, and the app says why when it opens it.
+        } catch (const std::exception& refusal) {
+            // The app opens such a project as an edit leaves one, saying why at once: the calculation waits until
+            // the relations are fixed. The whole-project load (the CLI, a calculation) still refuses.
             if (whole) {
                 throw;
             }
+            relations_hold = false;
+            warn(std::string("The aliases and constraints do not hold, so the calculation waits until they are "
+                             "fixed: ") +
+                 refusal.what());
         }
     }
-    // A held fit's dependents take their s.u. from their relations and the seeds (crysta's rule).
-    restore_dependent_uncertainties(project);
+    // A held fit's dependents take their s.u. from their relations and the seeds (crysta's rule); relations that do
+    // not hold give none, so the saved values and s.u. stay as written until they are fixed.
+    if (relations_hold) {
+        restore_dependent_uncertainties(project);
+    }
     // A structure whose magnetic operators form no table setting takes no Wyckoff letter; each one a
     // file supplies is said, as crysta says it (edi ADR-0078).
     for (const auto& structure : project.structures) {
