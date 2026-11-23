@@ -172,10 +172,22 @@ def capture_disk_image(image: Path, pages: Path, theme: str) -> None:
 
 
 def marker_installer(tools: Path, work: Path) -> Path:
-    """The offline marker installer's download."""
-    repository = (work / 'repository-unused').as_uri() + '/'
+    """The offline marker installer's download, whose repository holds a newer version.
+
+    The maintenance tool then has components to add and an update to apply, as protocol_check.py
+    sets it up, so every one of its modes shows its pages.
+    """
+    stage = marker_stage(work)
+    repository = (work / 'online/repository').as_uri() + '/'
     with patch('package.repository_urls', return_value=(repository,)):
-        package_app(marker_stage(work), tools, work / 'offline', '2026.11.0')
+        package_app(stage, tools, work / 'offline', '2026.11.0')
+    app = stage / (
+        'EasyDiffraction.app/Contents/MacOS/EasyDiffraction'
+        if SYSTEM == 'macos'
+        else 'bin/EasyDiffraction' + SUFFIX
+    )
+    app.write_text('updated marker\n')
+    package_app(stage, tools, work / 'online', '2026.11.1', repository)
     metadata = (work / 'offline/installer.json').read_text()
     return work / 'offline' / json.loads(metadata)['download']
 
@@ -225,8 +237,15 @@ def capture(tools: Path, output: Path) -> None:
             if SYSTEM == 'macos'
             else 'MaintenanceTool' + SUFFIX
         )
-        if maintenance.exists():
-            run_pages([str(maintenance)], env, output / f'maintenance-{theme}.log', pages)
+        # Each maintenance mode in turn; removing everything comes last.
+        for mode in ('add', 'update', 'remove'):
+            if maintenance.exists():
+                run_pages(
+                    [str(maintenance)],
+                    env | {'EDI_INSTALLER_MAINTENANCE_MODE': mode},
+                    output / f'maintenance-{mode}-{theme}.log',
+                    pages,
+                )
         if maintenance.exists():  # the captured run removes the installation; this is the backstop
             subprocess.run(
                 [str(maintenance), '--confirm-command', '--default-answer', 'purge'],

@@ -3,7 +3,9 @@
 # assistive tools do, and fails when the installer crashes. Usage: a11y-check.sh <installer .app> <log folder>
 # [installer argument ...]: more arguments for the installer, such as A11yHideComponents=true. With --own-script the
 # installer keeps its own control script and walks itself in its capture mode (Installer.qs), installing into a
-# temporary folder: the check then covers what users get, not a replacement script.
+# temporary folder: the check then covers what users get, not a replacement script. A maintenance tool walks the mode
+# EDI_INSTALLER_MAINTENANCE_MODE names (add, update or remove). Any tree view the client meets fails the check too:
+# the component tree is what crashed (edi #150), so none may show.
 set -uo pipefail
 app="$1"
 logs="$2"
@@ -23,7 +25,9 @@ target="$(mktemp -d)/EasyDiffraction"
 if [ "${1:-}" = "--own-script" ]; then
   shift
   mkdir -p "$logs/pages"
-  EDI_INSTALLER_CAPTURE="$logs/pages" "$binary" TargetDir="$target" "$@" --verbose >"$logs/installer.log" 2>&1 &
+  where=(TargetDir="$target")
+  case "$process" in MaintenanceTool*) where=() ;; esac
+  EDI_INSTALLER_CAPTURE="$logs/pages" "$binary" "${where[@]}" "$@" --verbose >"$logs/installer.log" 2>&1 &
 else
   "$binary" --script "$here/a11y_walk.qs" A11yTarget="$target" "$@" --verbose >"$logs/installer.log" 2>&1 &
 fi
@@ -58,7 +62,12 @@ if [ "$status" -ge 128 ]; then
   done
 fi
 for report in $new; do cp "$report" "$logs/"; done
-echo "a11y-check: installer exit $status after ${waited}s; crash reports: ${new:-none}"
+trees="$(grep -c "AXOutline" "$logs/client.log" || true)"
+echo "a11y-check: installer exit $status after ${waited}s; crash reports: ${new:-none}; tree views read: $trees"
+if [ "$trees" -gt 0 ] && [ "${A11Y_ALLOW_TREE:-}" != 1 ]; then
+  echo "a11y-check: a tree view is on a page"
+  exit 1
+fi
 if [ -n "$new" ] || [ "$status" -ge 128 ]; then
   for report in $new; do grep -m8 -E 'QMacAccessibility|Exception Type|Crashed|_AXXMIG' "$report" || true; done
   exit 1
