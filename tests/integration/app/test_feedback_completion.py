@@ -1,5 +1,6 @@
 """ADR-0063: a transport completion owns its submitted draft, not later edits."""
 
+import json
 import os
 import subprocess
 from pathlib import Path
@@ -7,19 +8,18 @@ from pathlib import Path
 import pytest
 
 from tests.integration.app import native_actor
+from tests.integration.py.test_tutorial_docs_presentation import site_module
 
 ROOT = Path(__file__).resolve().parents[3]
-FIELDS = ['message', 'subject', 'name', 'email', 'affiliation', 'reason']
+FIELDS = ['message', 'name', 'email', 'affiliation']
 WEBSITE = [(field, '201') for field in FIELDS] + [
     ('none', status) for status in ['201', '429', '0', '400', 'no-address', 'network-error']
 ]
 APP_CHANGES = [
     'message',
-    'subject',
     'name',
     'email',
     'affiliation',
-    'kind',
     'include',
     'close',
     'closing',
@@ -66,7 +66,7 @@ def streamed_actor(request, tmp_path_factory):
             os.environ.pop('EDI_ONLINE_SOURCES', None)
 
 
-def website_completion(change, outcome, dialog_api='native', repeat='once'):
+def website_completion(change, outcome, dialog_api='native', repeat='once', configuration=None):
     asset = Path(
         os.environ.get(
             'FEEDBACK_WEBSITE_ASSET', ROOT / 'website/surfaces/docs/assets/contact-form.js'
@@ -77,10 +77,12 @@ def website_completion(change, outcome, dialog_api='native', repeat='once'):
             'node',
             str(ROOT / 'tests/fixtures/feedback_completion/website.cjs'),
             str(asset),
+            str(ROOT / 'website/surfaces/docs/about/community.md'),
             change,
             outcome,
             dialog_api,
             repeat,
+            *([str(configuration)] if configuration else []),
         ],
         capture_output=True,
         text=True,
@@ -92,6 +94,7 @@ def website_completion(change, outcome, dialog_api='native', repeat='once'):
         + result.stdout
         + result.stderr
     )
+    return json.loads(result.stdout)
 
 
 @pytest.mark.parametrize(('change', 'outcome'), WEBSITE, ids=[f'{c}-{s}' for c, s in WEBSITE])
@@ -109,5 +112,24 @@ def test_website_confirmation_reopens_for_a_later_result():
 
 
 @pytest.mark.parametrize('case', APP_CASES)
-def test_app_completion_preserves_the_current_draft(case, streamed_actor):
-    streamed_actor.run('FeedbackCompletion::test_' + case)
+def test_app_completion_preserves_the_current_draft(case, streamed_actor, tmp_path, monkeypatch):
+    output = streamed_actor.run('FeedbackCompletion::test_' + case)
+    if case != 'ordinary_completion:201':
+        return
+    marker = 'FEEDBACK_MESSAGE_PROMPT '
+    app_prompt = [
+        json.loads(line.split(marker, 1)[1]) for line in output.splitlines() if marker in line
+    ]
+    assert len(app_prompt) == 1, 'The real app message editor exposes one placeholder'
+    (tmp_path / 'assets').mkdir()
+    site_module('build', monkeypatch)._write_feedback_form(tmp_path)
+    website = website_completion('none', '201', configuration=tmp_path / 'assets/feedback-form.js')
+    assert website['placeholder'] == app_prompt[0], (
+        'The docs editor and the actual app editor show the same message placeholder'
+    )
+    assert app_prompt[0].strip() and app_prompt[0] not in {
+        'What works well for you, and what could be better?',
+        'What would you like to know, and what have you tried?',
+        'What did you do, what happened, and what did you expect?',
+        'What would you like the app to do, and how would it help?',
+    }, 'The shared message placeholder is nonempty and replaces all prior type-specific prompts'

@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-23T01:23:04Z
+# measured_utc = 2026-11-23T17:26:09Z
 #
-# Recorded from: measured test run (3 node(s) measured once, 186741 banked, 2 stale row(s) dropped)
-# Collected tests: 266631; with a reported duration: 85714
+# Recorded from: measured test run (4 node(s) measured once, 186738 banked, 19 stale row(s) dropped)
+# Collected tests: 266616; with a reported duration: 85713
 # Module-scoped fixture costs recorded: 218
 #
 # Breaches are decided PER TIER against the table
@@ -29,12 +29,12 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 266631
+# inventory_python = 266616
 # inventory_cpp = 0
-# inventory_measured = 186744
-# inventory_unmeasured = 79887
+# inventory_measured = 186742
+# inventory_unmeasured = 79874
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
-# inventory_pr_python = 91966
+# inventory_pr_python = 91951
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -434,12 +434,10 @@ UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_ui_compare.py::t
 0.610	tests/integration/app/test_feedback_completion.py::test_app_completion_preserves_the_current_draft[later_draft:closing]
 0.640	tests/integration/app/test_feedback_completion.py::test_app_completion_preserves_the_current_draft[later_draft:email]
 0.610	tests/integration/app/test_feedback_completion.py::test_app_completion_preserves_the_current_draft[later_draft:include]
-0.600	tests/integration/app/test_feedback_completion.py::test_app_completion_preserves_the_current_draft[later_draft:kind]
 0.570	tests/integration/app/test_feedback_completion.py::test_app_completion_preserves_the_current_draft[later_draft:message]
 0.650	tests/integration/app/test_feedback_completion.py::test_app_completion_preserves_the_current_draft[later_draft:name]
 0.480	tests/integration/app/test_feedback_completion.py::test_app_completion_preserves_the_current_draft[later_draft:reopen-identical]
 0.760	tests/integration/app/test_feedback_completion.py::test_app_completion_preserves_the_current_draft[later_draft:reopen]
-0.600	tests/integration/app/test_feedback_completion.py::test_app_completion_preserves_the_current_draft[later_draft:subject]
 0.750	tests/integration/app/test_feedback_completion.py::test_app_completion_preserves_the_current_draft[ordinary_completion:0]
 0.640	tests/integration/app/test_feedback_completion.py::test_app_completion_preserves_the_current_draft[ordinary_completion:201]
 0.670	tests/integration/app/test_feedback_completion.py::test_app_completion_preserves_the_current_draft[ordinary_completion:400]
@@ -468,8 +466,6 @@ UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_ui_compare.py::t
 0.050	tests/integration/app/test_feedback_completion.py::test_website_completion_preserves_the_current_draft[none-429]
 0.070	tests/integration/app/test_feedback_completion.py::test_website_completion_preserves_the_current_draft[none-network-error]
 0.060	tests/integration/app/test_feedback_completion.py::test_website_completion_preserves_the_current_draft[none-no-address]
-0.050	tests/integration/app/test_feedback_completion.py::test_website_completion_preserves_the_current_draft[reason-201]
-0.050	tests/integration/app/test_feedback_completion.py::test_website_completion_preserves_the_current_draft[subject-201]
 0.050	tests/integration/app/test_feedback_completion.py::test_website_confirmation_reopens_for_a_later_result
 0.060	tests/integration/app/test_feedback_completion.py::test_website_confirmation_uses_the_open_attribute_fallback[0]
 0.060	tests/integration/app/test_feedback_completion.py::test_website_confirmation_uses_the_open_attribute_fallback[201]
@@ -251956,10 +251952,10 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_feedback_privacy_representati
 0.010	tests/system/py/test_feedback_privacy_representations.py::test_account_named_after_schema_key_cannot_rename_payload_structure[kind]
 0.020	tests/system/py/test_feedback_privacy_representations.py::test_account_named_after_schema_key_cannot_rename_payload_structure[system]
 0.020	tests/system/py/test_feedback_privacy_representations.py::test_account_named_after_schema_key_cannot_rename_payload_structure[version]
-1.480	tests/system/py/test_feedback_redesign.py::test_crash_report_keeps_the_problem_kind
+3.010	tests/system/py/test_feedback_redesign.py::test_crash_report_keeps_the_actual_crashed_log
 UNMEASURED:failed-in-this-run	tests/system/py/test_feedback_redesign.py::test_optional_contact_is_remembered_between_application_runs
-UNMEASURED:failed-in-this-run	tests/system/py/test_feedback_redesign.py::test_redesigned_feedback_in_the_real_application[checkbox_indicator_aligns_with_kind]
-UNMEASURED:failed-in-this-run	tests/system/py/test_feedback_redesign.py::test_redesigned_feedback_in_the_real_application[contact_fields_follow_the_kind_before_the_message]
+2.830	tests/system/py/test_feedback_redesign.py::test_redesigned_feedback_in_the_real_application[checkbox_indicator_aligns_with_form]
+2.560	tests/system/py/test_feedback_redesign.py::test_redesigned_feedback_in_the_real_application[contact_fields_precede_the_message]
 UNMEASURED:failed-in-this-run	tests/system/py/test_feedback_redesign.py::test_redesigned_feedback_in_the_real_application[contact_payload_has_only_filled_trimmed_keys:0]
 UNMEASURED:failed-in-this-run	tests/system/py/test_feedback_redesign.py::test_redesigned_feedback_in_the_real_application[contact_payload_has_only_filled_trimmed_keys:1]
 UNMEASURED:failed-in-this-run	tests/system/py/test_feedback_redesign.py::test_redesigned_feedback_in_the_real_application[contact_payload_has_only_filled_trimmed_keys:2]
@@ -251973,18 +251969,9 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_feedback_redesign.py::test_re
 1.840	tests/system/py/test_feedback_redesign.py::test_redesigned_feedback_in_the_real_application[empty_message_disables_send:whitespace]
 UNMEASURED:failed-in-this-run	tests/system/py/test_feedback_redesign.py::test_redesigned_feedback_in_the_real_application[failed_submission_preserves_optional_contact:limited]
 UNMEASURED:failed-in-this-run	tests/system/py/test_feedback_redesign.py::test_redesigned_feedback_in_the_real_application[failed_submission_preserves_optional_contact:offline]
-UNMEASURED:failed-in-this-run	tests/system/py/test_feedback_redesign.py::test_redesigned_feedback_in_the_real_application[general_feedback_is_first_and_default]
-UNMEASURED:failed-in-this-run	tests/system/py/test_feedback_redesign.py::test_redesigned_feedback_in_the_real_application[kind_has_no_redundant_question_label]
-UNMEASURED:failed-in-this-run	tests/system/py/test_feedback_redesign.py::test_redesigned_feedback_in_the_real_application[opening_line_is_between_the_title_and_kind]
-UNMEASURED:failed-in-this-run	tests/system/py/test_feedback_redesign.py::test_redesigned_feedback_in_the_real_application[optional_subject_is_trimmed_and_shown_in_the_payload:empty]
-UNMEASURED:failed-in-this-run	tests/system/py/test_feedback_redesign.py::test_redesigned_feedback_in_the_real_application[optional_subject_is_trimmed_and_shown_in_the_payload:filled]
-UNMEASURED:failed-in-this-run	tests/system/py/test_feedback_redesign.py::test_redesigned_feedback_in_the_real_application[optional_subject_is_trimmed_and_shown_in_the_payload:whitespace]
+2.700	tests/system/py/test_feedback_redesign.py::test_redesigned_feedback_in_the_real_application[opening_line_is_between_the_title_and_contacts]
 1.660	tests/system/py/test_feedback_redesign.py::test_redesigned_feedback_in_the_real_application[preview_and_message_share_the_field_border:dark]
 1.320	tests/system/py/test_feedback_redesign.py::test_redesigned_feedback_in_the_real_application[preview_and_message_share_the_field_border:light]
-UNMEASURED:failed-in-this-run	tests/system/py/test_feedback_redesign.py::test_redesigned_feedback_in_the_real_application[subject_and_message_placeholders_follow_the_kind:feedback]
-UNMEASURED:failed-in-this-run	tests/system/py/test_feedback_redesign.py::test_redesigned_feedback_in_the_real_application[subject_and_message_placeholders_follow_the_kind:idea]
-UNMEASURED:failed-in-this-run	tests/system/py/test_feedback_redesign.py::test_redesigned_feedback_in_the_real_application[subject_and_message_placeholders_follow_the_kind:problem]
-UNMEASURED:failed-in-this-run	tests/system/py/test_feedback_redesign.py::test_redesigned_feedback_in_the_real_application[subject_and_message_placeholders_follow_the_kind:question]
 UNMEASURED:failed-in-this-run	tests/system/py/test_feedback_redesign.py::test_redesigned_feedback_in_the_real_application[submission_keeps_text_on_failure_and_thanks_on_success:created-auto]
 UNMEASURED:failed-in-this-run	tests/system/py/test_feedback_redesign.py::test_redesigned_feedback_in_the_real_application[submission_keeps_text_on_failure_and_thanks_on_success:created]
 1.290	tests/system/py/test_feedback_redesign.py::test_redesigned_feedback_in_the_real_application[submission_keeps_text_on_failure_and_thanks_on_success:limited]
@@ -253616,7 +253603,6 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_onboarding_changes_and_choice
 UNMEASURED:failed-in-this-run	tests/system/py/test_onboarding_changes_and_choices.py::test_changes_and_choices_in_the_real_host[tst_onboarding_changes.qml-OnboardingChanges-show_all_changes_stays_in_footer:default]
 UNMEASURED:failed-in-this-run	tests/system/py/test_onboarding_changes_and_choices.py::test_changes_and_choices_in_the_real_host[tst_onboarding_changes.qml-OnboardingChanges-show_all_changes_stays_in_footer:small]
 UNMEASURED:failed-in-this-run	tests/system/py/test_onboarding_changes_and_choices.py::test_changes_and_choices_in_the_real_host[tst_onboarding_changes.qml-OnboardingChanges-update_opens_once_then_restart_remembers_seen_date]
-UNMEASURED:failed-in-this-run	tests/system/py/test_onboarding_changes_and_choices.py::test_changes_and_choices_in_the_real_host[tst_onboarding_choices.qml-OnboardingChoices-opened_choices_are_visible_and_selectable:feedback-kind]
 3.510	tests/system/py/test_onboarding_changes_and_choices.py::test_changes_and_choices_in_the_real_host[tst_onboarding_choices.qml-OnboardingChoices-opened_choices_are_visible_and_selectable:logging-level]
 UNMEASURED:failed-in-this-run	tests/system/py/test_onboarding_changes_and_choices.py::test_each_shipped_changes_entry_has_unique_feature_titles
 UNMEASURED:failed-in-this-run	tests/system/py/test_onboarding_extra_tables.py::test_extra_table_in_the_real_application[every_extra_table_sizes_columns_from_content:analysis]
@@ -263008,7 +262994,6 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_untitled_recovery.py::test_un
 0.000	tests/system/py/test_user_action_logging.py::test_real_user_action_receipts[shared_control_has_one_private_info_receipt:numeric]
 0.000	tests/system/py/test_user_action_logging.py::test_real_user_action_receipts[shared_control_has_one_private_info_receipt:project-description]
 0.000	tests/system/py/test_user_action_logging.py::test_real_user_action_receipts[shared_control_has_one_private_info_receipt:project-title]
-0.000	tests/system/py/test_user_action_logging.py::test_real_user_action_receipts[shared_control_has_one_private_info_receipt:subject]
 0.000	tests/system/py/test_user_action_logging.py::test_real_user_action_receipts[shared_control_has_one_private_info_receipt:tab]
 0.000	tests/system/py/test_user_action_logging.py::test_real_user_action_receipts[workflow_action_has_an_info_receipt:experiment-add]
 0.000	tests/system/py/test_user_action_logging.py::test_real_user_action_receipts[workflow_action_has_an_info_receipt:experiment-remove]

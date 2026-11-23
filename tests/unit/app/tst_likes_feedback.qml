@@ -228,13 +228,11 @@ TestCase {
             {
                 tag: "problem",
                 label: "Not really",
-                kind: "problem",
                 answer: "no"
             },
             {
                 tag: "question",
                 label: "Not sure",
-                kind: "question",
                 answer: "unsure"
             }
         ];
@@ -243,9 +241,9 @@ TestCase {
         press(action(data.label));
         const form = find(app, "feedback.form");
         tryCompare(form, "opened", true, 1000, "ADR-0063: a negative or uncertain answer opens the existing feedback form");
-        compare(find(form, "feedback.kind").currentValue, data.kind, "ADR-0063: Not really selects Problem and Not sure selects Question");
-        compare(sent.length, 1, "ADR-0063: the chosen like answer is submitted once while the problem or question awaits composition");
-        compare(sent[0].kind, "likes", "ADR-0063: the answer is identified for the service's likes label");
+        verify(find(form, "feedback.text").enabled, "A negative or uncertain answer opens the shared message editor");
+        compare(sent.length, 1, "ADR-0063: the chosen like answer is submitted once while the follow-up message awaits composition");
+        compare(sent[0].kind, "likes", "ADR-0063: the answer is identified for the likes submission route");
         compare(sent[0].answer, data.answer, "ADR-0063: the answer matches the actual clicked choice");
         checkAnonymousAnswer(sent[0]);
         press(find(form, "feedback.cancel"));
@@ -269,11 +267,10 @@ TestCase {
         const form = find(app, "feedback.form");
         tryCompare(form, "opened", true, 1000, "ADR-0063: Yes immediately opens the existing Share feedback form");
         compare(sent.length, 1, "ADR-0063: Yes sends its answer once before the user composes feedback");
-        compare(sent[0].kind, "likes", "ADR-0063: the answer carries the service's likes label");
+        compare(sent[0].kind, "likes", "ADR-0063: the answer carries the likes submission route");
         compare(sent[0].answer, "yes", "ADR-0063: the submitted answer retains the clicked Yes choice");
         checkAnonymousAnswer(sent[0]);
-        compare(find(form, "feedback.kind").currentValue, "feedback", "ADR-0063: Yes selects Share feedback");
-        verify(/works well.*could be better/i.test(find(form, "feedback.text").placeholderText), "ADR-0063: Share feedback asks what works well and what could be better");
+        verify(find(form, "feedback.text").enabled, "Yes leaves the shared message editor usable");
         tryCompare(bar, "visible", false, 1000, "ADR-0063: answering closes the question bar without a Yes stage");
         press(find(form, "feedback.cancel"));
         tryCompare(form, "visible", false, 1000, "ADR-0063: the optional follow-up can be cancelled");

@@ -130,6 +130,8 @@ class NativeActor:
             'ADR-0076: the original native row passes its approved ownership assertions: ' + output
         )
 
+        return output
+
     def close(self):
         complete = self.index == len(self.selections)
         try:

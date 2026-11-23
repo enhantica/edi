@@ -38,10 +38,8 @@ TestCase {
         };
         mouseClick(named("crash.report"));
         verify(form.visible, "Reporting a crash opens the same Help and feedback form");
-        compare(named("feedback.kind").currentValue, "problem", "The crash form starts with Report a problem selected");
         mouseClick(named("feedback.preview"));
         const payload = JSON.parse(named("feedback.payload").text);
-        compare(payload.kind, "problem", "A crash preview uses the feedback service's problem kind");
         verify(payload.log.includes("retained-crash-sentinel"), "The crash form attaches the actual flushed log from the process that exited abruptly");
     }
 }

@@ -13,18 +13,8 @@ from tests.integration.app.test_onboarding_views import (
 
 ROOT = Path(__file__).resolve().parents[3]
 CASES = [
-    'opening_line_is_between_the_title_and_kind',
-    'general_feedback_is_first_and_default',
-    *[
-        f'subject_and_message_placeholders_follow_the_kind:{kind}'
-        for kind in ('feedback', 'question', 'problem', 'idea')
-    ],
-    *[
-        f'optional_subject_is_trimmed_and_shown_in_the_payload:{kind}'
-        for kind in ('empty', 'whitespace', 'filled')
-    ],
-    'kind_has_no_redundant_question_label',
-    'contact_fields_follow_the_kind_before_the_message',
+    'opening_line_is_between_the_title_and_contacts',
+    'contact_fields_precede_the_message',
     *[f'contact_payload_has_only_filled_trimmed_keys:{mask}' for mask in range(8)],
     'contact_payload_has_only_filled_trimmed_keys:without-diagnostics',
     *[
@@ -32,7 +22,7 @@ CASES = [
         for status in ('limited', 'offline')
     ],
     *[f'preview_and_message_share_the_field_border:{theme}' for theme in ('light', 'dark')],
-    'checkbox_indicator_aligns_with_kind',
+    'checkbox_indicator_aligns_with_form',
     *[f'empty_message_disables_send:{kind}' for kind in ('empty', 'whitespace')],
     *[
         f'submission_keeps_text_on_failure_and_thanks_on_success:{outcome}'
@@ -93,5 +83,5 @@ def test_optional_contact_is_remembered_between_application_runs(tmp_path):
         )
 
 
-def test_crash_report_keeps_the_problem_kind():
+def test_crash_report_keeps_the_actual_crashed_log():
     run_host('tst_onboarding_crash.qml', 'OnboardingCrash', 'popup_offers_the_actual_crashed_log')

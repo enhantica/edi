@@ -107,118 +107,35 @@ TestCase {
         verify(Ui.rendered(box), "Show what will be sent exposes its actual JSON text");
         return JSON.parse(box.text);
     }
-    function subjectField() {
-        const field = one(form, "feedback.subject");
-        verify(typeof field.selectAll === "function" && typeof field.echoMode === "number", "The optional subject is a real single-line field");
-        return field;
-    }
-    function test_opening_line_is_between_the_title_and_kind() {
+    function test_opening_line_is_between_the_title_and_contacts() {
         const expected = "We'd love to hear from you to make EasyDiffraction better.";
         const lines = Render.texts(form.contentItem).filter(item => item.text === expected);
         compare(lines.length, 1, "The form paints the exact agreed opening line once");
         const titles = Render.texts(form.header).filter(item => item.text === "Help and feedback");
         compare(titles.length, 1, "The actual form title anchors the opening-line placement");
-        const line = lines[0], title = titles[0], kind = one(form, "feedback.kind");
+        const line = lines[0], title = titles[0], firstContact = contacts()[0];
         compare(line.lineCount, 1, "The revised opening text occupies exactly one line");
         const y = line.mapToItem(app.contentItem, 0, 0).y;
-        verify(y >= title.mapToItem(app.contentItem, 0, title.height).y && y + line.height <= kind.mapToItem(app.contentItem, 0, 0).y, "The opening line sits below the title and above the kind combobox");
+        verify(y >= title.mapToItem(app.contentItem, 0, title.height).y && y + line.height <= firstContact.mapToItem(app.contentItem, 0, 0).y, "The opening line sits below the title and above the optional contact row");
         compare(String(line.color), String(Style.Colors.themeForeground), "The opening line uses normal text colour, not the muted privacy-note colour");
     }
-    function test_general_feedback_is_first_and_default() {
-        const combo = one(form, "feedback.kind");
-        compare(combo.indexOfValue("feedback"), 0, "Share feedback is the first kind in the actual chooser");
-        compare(combo.currentIndex, 0, "A newly opened form selects the first kind by default");
-        compare(combo.currentValue, "feedback", "A newly opened form defaults to general feedback");
-        compare(combo.currentText, "Share feedback", "The default kind displays Share feedback verbatim");
-        compare(form.kind, "feedback", "The default form's wire discriminant is feedback");
-    }
-    function test_subject_and_message_placeholders_follow_the_kind_data() {
-        return [
-            {
-                tag: "question",
-                subject: "Your question in a few words (optional)",
-                message: "What would you like to know, and what have you tried?"
-            },
-            {
-                tag: "problem",
-                subject: "What went wrong, in a few words (optional)",
-                message: "What did you do, what happened, and what did you expect?"
-            },
-            {
-                tag: "idea",
-                subject: "Your idea in a few words (optional)",
-                message: "What would you like the app to do, and how would it help?"
-            },
-            {
-                tag: "feedback",
-                subject: "Your feedback in a few words (optional)",
-                message: "What works well for you, and what could be better?"
-            }
-        ];
-    }
-    function test_subject_and_message_placeholders_follow_the_kind(data) {
-        const kind = one(form, "feedback.kind");
-        const index = kind.indexOfValue(data.tag);
-        verify(index >= 0, "The actual chooser contains each supported feedback kind: " + data.tag);
-        kind.currentIndex = index;
-        compare(form.kind, data.tag, "Changing the actual chooser selects its declared wire kind");
-        compare(subjectField().placeholderText, data.subject, "The optional subject shows the kind's exact agreed placeholder");
-        compare(one(form, "feedback.text").placeholderText, data.message, "The message shows the kind's exact agreed placeholder");
-    }
-    function test_optional_subject_is_trimmed_and_shown_in_the_payload_data() {
-        return [
-            {
-                tag: "empty",
-                text: ""
-            },
-            {
-                tag: "whitespace",
-                text: "   "
-            },
-            {
-                tag: "filled",
-                text: "  A short useful title  "
-            }
-        ];
-    }
-    function test_optional_subject_is_trimmed_and_shown_in_the_payload(data) {
-        fill(subjectField(), data.text);
-        one(form, "feedback.text").text = "A complete message with an optional subject";
-        const payload = payloadPreview();
-        if (data.text.trim() === "")
-            verify(!Object.prototype.hasOwnProperty.call(payload, "subject"), "An empty or whitespace-only subject is absent from the actual preview payload");
-        else
-            compare(payload.subject, data.text.trim(), "The preview includes the trimmed optional subject");
-        let sent = null;
-        form.transport = function (url, body, done) {
-            sent = JSON.stringify(body);
-            done(400);
-        };
-        press(one(form, "feedback.send"));
-        compare(sent, JSON.stringify(payload), "The actual submission includes exactly the optional subject shown in the preview");
-    }
-    function test_kind_has_no_redundant_question_label() {
-        const labels = Render.texts(form.contentItem).map(item => item.text);
-        verify(!labels.some(text => /what is this about/i.test(text)), "The kind combobox needs no What is this about question label");
-    }
-    function test_contact_fields_follow_the_kind_before_the_message() {
-        const fields = contacts(), kind = one(form, "feedback.kind"), subject = subjectField(), message = one(form, "feedback.text");
+    function test_contact_fields_precede_the_message() {
+        const fields = contacts(), message = one(form, "feedback.text");
         function rect(item) {
             return item.mapToItem(app.contentItem, 0, 0, item.width, item.height);
         }
-        const kindBox = rect(kind), subjectBox = rect(subject), messageBox = rect(message);
+        const introBox = rect(one(form, "feedback.intro")), messageBox = rect(message);
         const rowY = rect(fields[0]).y;
-        let right = kindBox.x;
+        let right = introBox.x;
         for (const field of fields) {
             verify(Ui.rendered(field), "Every optional contact field is visible in the shared row");
             const box = rect(field);
             verify(Math.abs(box.y - rowY) <= 1, "Name, E-mail and Affiliation share one horizontal row");
-            verify(box.x >= right && box.y >= kindBox.y + kindBox.height, "Contact fields remain ordered and do not overlap each other or the kind row");
-            verify(box.y + box.height <= subjectBox.y, "The optional subject sits below the shared contact row");
+            verify(box.x >= right && box.y >= introBox.y + introBox.height, "Contact fields remain ordered and do not overlap each other or the introduction");
+            verify(box.y + box.height <= messageBox.y, "The message sits below the shared contact row");
             right = box.x + box.width;
         }
-        verify(Math.abs(rect(fields[0]).x - kindBox.x) <= 1 && Math.abs(subjectBox.x - kindBox.x) <= 1, "Contact row and subject align with the combobox's left edge");
-        verify(subjectBox.y + subjectBox.height <= messageBox.y, "The optional subject remains directly above the message field");
+        verify(Math.abs(rect(fields[0]).x - introBox.x) <= 1 && Math.abs(messageBox.x - introBox.x) <= 1, "Contact row and message align with the introduction");
     }
     function test_contact_payload_has_only_filled_trimmed_keys_data() {
         const rows = Array.from({
@@ -297,7 +214,7 @@ TestCase {
             Style.Colors.theme = data.theme === "dark" ? Style.Colors.DarkTheme : Style.Colors.LightTheme;
             payloadPreview();
             const message = one(form, "feedback.text"), preview = one(form, "feedback.payload");
-            one(form, "feedback.kind").forceActiveFocus();
+            contacts()[0].forceActiveFocus();
             mouseMove(app.contentItem, 1, 1);
             OnboardingProbe.advanceClock(1000);
             const a = border(message), b = border(preview);
@@ -309,12 +226,12 @@ TestCase {
             Style.Colors.theme = original;
         }
     }
-    function test_checkbox_indicator_aligns_with_kind() {
-        const check = one(form, "feedback.include"), combo = one(form, "feedback.kind");
+    function test_checkbox_indicator_aligns_with_form() {
+        const check = one(form, "feedback.include");
         verify(check.indicator !== null && Ui.rendered(check.indicator), "The diagnostics checkbox has a painted indicator");
         const indicatorX = check.indicator.mapToItem(app.contentItem, 0, 0).x;
-        const comboX = combo.mapToItem(app.contentItem, 0, 0).x;
-        verify(Math.abs(indicatorX - comboX) <= 1, "The checkbox indicator, not its padded wrapper, shares the combobox's left edge");
+        const formX = one(form, "feedback.intro").mapToItem(app.contentItem, 0, 0).x;
+        verify(Math.abs(indicatorX - formX) <= 1, "The checkbox indicator, not its padded wrapper, shares the form's left edge");
     }
     function test_empty_message_disables_send_data() {
         return [
@@ -361,23 +278,36 @@ TestCase {
         if (data.status === 201) {
             for (let index = 0; index < placeholders.length; ++index)
                 fill(contacts()[index], remembered[index]);
-            fill(subjectField(), "Subject before sending");
         }
-        let completed = null, calls = 0;
+        let completed = null, calls = 0, submitted = null;
         form.transport = function (url, body, done) {
             ++calls;
             completed = done;
+            submitted = body;
         };
         const send = one(form, "feedback.send");
         press(send);
         compare(calls, 1, "One actual Send invokes only the injected transport");
+        compare(submitted.text, text, "Send accepts the multiline message without a type or a subject");
+        const obsolete = Probe.objectsWithProperty(form, "objectName").filter(item =>
+            ["feedback.kind", "feedback.subject"].includes(item.objectName));
+        compare(obsolete.length, 0, "The feedback form has no type chooser or optional subject");
+        const visibleChoosers = Probe.objectsWithProperty(form.contentItem, "popup").filter(item =>
+            typeof item.currentIndex === "number" && Ui.rendered(item));
+        compare(visibleChoosers.length, 0, "Renaming the feedback type chooser cannot keep it in the dialog");
+        const editableLines = Probe.objectsWithProperty(form.contentItem, "echoMode").filter(item =>
+            item.readOnly === false && Ui.rendered(item));
+        compare(editableLines.map(item => item.objectName).sort(),
+            ["feedback.affiliation", "feedback.email", "feedback.name"],
+            "The only editable single-line fields are optional contact details");
+        verify(!Object.prototype.hasOwnProperty.call(submitted, "subject"), "The feedback form sends the message without a separate subject");
         compare(send.enabled, false, "The form prevents duplicate Send while the injected request is pending");
         completed(data.status);
         const status = one(form, "feedback.status");
         verify(Ui.rendered(status) && status.text.trim().length > 0, "The form gives a visible outcome after the transport completes");
         if (data.status === 201) {
             compare(status.text, "Your message was sent. Thank you!", "An accepted submission replaces the form with the exact success confirmation");
-            const inputs = Probe.objectsWithProperty(form, "objectName").filter(item => ["feedback.text", "feedback.subject", "feedback.kind"].includes(item.objectName) && Ui.rendered(item));
+            const inputs = Probe.objectsWithProperty(form, "objectName").filter(item => item.objectName === "feedback.text" && Ui.rendered(item));
             compare(inputs.length, 0, "The confirmation replaces visible input fields instead of showing an empty form");
             const close = Probe.objectsWithProperty(form, "text").filter(item => item.text === "Close" && Ui.rendered(item) && typeof item.clicked === "function");
             compare(close.length, 1, "Success retains an immediate Close action");
@@ -402,7 +332,6 @@ TestCase {
             OnboardingProbe.advanceClock(1000);
             tryCompare(form, "opened", true, 2000, "A subsequent Home action opens a fresh feedback form");
             compare(one(form, "feedback.text").text, "", "Reopening after success starts with an empty message");
-            compare(subjectField().text, "", "Reopening after success starts with an empty subject");
             const retained = contacts();
             for (let index = 0; index < retained.length; ++index)
                 compare(retained[index].text, remembered[index], "Successful sends preserve the optional contact fields for the next message");
@@ -430,14 +359,12 @@ TestCase {
         for (let n = 0; n < fields.length; ++n)
             fill(fields[n], remembered[n]);
         one(form, "feedback.text").text = "Please retain my optional reply details";
-        fill(subjectField(), "Retain this subject too");
         form.transport = function (url, body, done) {
             done(data.status);
         };
         press(one(form, "feedback.send"));
         for (let n = 0; n < fields.length; ++n)
             compare(fields[n].text, remembered[n], "A rate limit or connection failure preserves every optional reply field");
-        compare(subjectField().text, "Retain this subject too", "A failed request keeps the optional subject for retry");
     }
     // The Python witness adds one selected test function to a temporary copy and
     // launches two different host processes. These helpers never seed contact values.
