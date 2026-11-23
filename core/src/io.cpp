@@ -3625,7 +3625,10 @@ BraggPdExperiment simulation_experiment(const std::string& name, const Experimen
     // its own and the user sets it, so an instrument's value is not carried over as a default.
     if (constant_wavelength) {
         text += "_instrument.setup_wavelength 1.\n";
-        text += "_instrument.calib_twotheta_offset 0.\n\n"
+        // The sample's displacement and transparency start at 0, declared so the instrument group lists them to
+        // fit, as it lists the zero offset.
+        text += "_instrument.calib_twotheta_offset 0.\n"
+                "_instrument.calib_sample_displacement 0.\n_instrument.calib_sample_transparency 0.\n\n"
                 "_peak.type cwl-tch-pseudo-voigt\n"
                 "_peak.broad_gauss_u 0.1\n_peak.broad_gauss_v -0.1\n_peak.broad_gauss_w 0.1\n"
                 "_peak.broad_lorentz_x 0.\n_peak.broad_lorentz_y 0.\n_peak.cutoff_fwhm 8.\n\n"
