@@ -3106,6 +3106,10 @@ void check_scan_header(const Project& project, ScanResultIndex& index) {
 
 }  // namespace
 
+double scan_display_value(const std::string& name, double recorded) {
+    return is_scan_factor_column(name) ? recorded * 100.0 : recorded;
+}
+
 bool parse_scan_number(std::string_view token, double& value) {
     // The project loader's rule (number_token.hpp): the whole token, the same value on every platform.
     return edi::detail::read_number(std::string(token), value) == edi::detail::NumberToken::ok;
@@ -4091,10 +4095,11 @@ void evolution_experiment_point(const Project& project, const ScanPlaces& places
             continue;  // an experiment without the parameter has an empty cell
         }
         EvolutionPoint point = base;
-        point.y = value->second;
+        point.y = scan_display_value(parameter, value->second);
         const auto su = found->second.find(parameter + ".uncertainty");
         point.su = su != found->second.end() ? su->second : std::numeric_limits<double>::quiet_NaN();
-        if (std::isfinite(point.x) && std::isfinite(point.y)) {
+        if (std::isfinite(point.x) && std::isfinite(point.y) && std::abs(point.x) <= kScanChartLimit &&
+            std::abs(point.y) <= kScanChartLimit) {
             visit(e, point);
         }
     }
@@ -4170,9 +4175,13 @@ void evolution_series(const Project& project, const ScanPlaces& places, const Sc
             point.dataset = place->second;
             if (factor_columns[i]) {
                 point.su = std::numeric_limits<double>::quiet_NaN();
-                if (parse_scan_number(cells[*factor_columns[i]], point.y) && std::isfinite(point.x) &&
-                    std::isfinite(point.y)) {
-                    visit(i, point);
+                // The same admission as the live route, after the percent conversion.
+                if (parse_scan_number(cells[*factor_columns[i]], point.y)) {
+                    point.y = scan_display_value(parameters[i], point.y);
+                    if (std::isfinite(point.x) && std::isfinite(point.y) && std::abs(point.x) <= kScanChartLimit &&
+                        std::abs(point.y) <= kScanChartLimit) {
+                        visit(i, point);
+                    }
                 }
                 continue;
             }
@@ -4187,7 +4196,7 @@ void evolution_series(const Project& project, const ScanPlaces& places, const Sc
             } else if (!parse_scan_number(su_cell, point.su)) {
                 continue;
             }
-            constexpr double kLimit = 1e300;
+            constexpr double kLimit = kScanChartLimit;
             const bool su_ok = undefined_su || (std::isfinite(point.su) && point.su >= 0.0 &&
                                                 std::abs(point.y - point.su) <= kLimit &&
                                                 std::abs(point.y + point.su) <= kLimit);
