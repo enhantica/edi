@@ -265,10 +265,15 @@ def write_resources(config: Path, configuration: ET.ElementTree) -> Path:
         '-qm', work / 'translations/ifw_en.qm',
     ])  # fmt: skip
     shutil.copy2(ROOT / 'tools/installer/CheckMark.png', work / 'CheckMark.png')
+    # The app's own icons (Font Awesome 5 Solid, as gui-components draws them), at twice their size.
+    icons = sorted((ROOT / 'tools/installer/icons').glob('*.png'))
+    for icon in icons:
+        shutil.copy2(icon, work / icon.name)
+    files = ''.join(f'<file alias="edi/{icon.name}">{icon.name}</file>' for icon in icons)
     (work / 'resources.qrc').write_text(
         '<RCC><qresource prefix="/">'
         '<file>translations/ifw_en.qm</file><file alias="edi/CheckMark.png">CheckMark.png</file>'
-        '</qresource></RCC>\n',
+        f'{files}</qresource></RCC>\n',
         encoding='utf-8',
     )
     translations = ET.SubElement(configuration.getroot(), 'Translations')
@@ -332,9 +337,10 @@ def write_metadata(
             'MaintenanceToolName': 'MaintenanceTool',
             'AllowNonAsciiCharacters': 'true',
             'AllowSpaceInPath': 'true',
-            'WizardStyle': 'Modern',
-            'WizardDefaultWidth': '56em',
-            'WizardDefaultHeight': '29em',
+            # Qt's Mac wizard style everywhere: no header or footer lines, the logo heads each page.
+            'WizardStyle': 'Mac',
+            'WizardDefaultWidth': '640',
+            'WizardDefaultHeight': '460',
             # One centred column, no step list (the owner's three-page design, edi ADR-0071).
             'WizardShowPageList': 'false',
             'ControlScript': 'Installer.qs',
