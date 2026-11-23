@@ -260,10 +260,19 @@ def write_resources(config: Path, configuration: ET.ElementTree) -> Path:
     """
     work = config / 'resources'
     (work / 'translations').mkdir(parents=True, exist_ok=True)
-    run([
-        qt_tool('lrelease'), ROOT / 'tools/installer/ifw_en.ts',
-        '-qm', work / 'translations/ifw_en.qm',
-    ])  # fmt: skip
+    # ifw_en.qm is committed beside its source, so packaging needs no Qt tools; where lrelease is
+    # at hand (the packaging environment), a stale one is refused.
+    compiled = ROOT / 'tools/installer/ifw_en.qm'
+    try:
+        lrelease = qt_tool('lrelease')
+    except RuntimeError:
+        lrelease = None
+    if lrelease is not None:
+        fresh = work / 'ifw_en-fresh.qm'
+        run([lrelease, ROOT / 'tools/installer/ifw_en.ts', '-qm', fresh])
+        if fresh.read_bytes() != compiled.read_bytes():
+            raise RuntimeError('tools/installer/ifw_en.qm is stale: rebuild it from ifw_en.ts')
+    shutil.copy2(compiled, work / 'translations/ifw_en.qm')
     shutil.copy2(ROOT / 'tools/installer/CheckMark.png', work / 'CheckMark.png')
     # The app's own icons (Font Awesome 5 Solid, as gui-components draws them), at twice the size.
     icons = sorted((ROOT / 'tools/installer/icons').glob('*.png'))
@@ -434,9 +443,10 @@ def write_assistant_metadata(meta: Path, version: str) -> None:
     # The checkbox that replaces the component tree (edi ADR-0071).
     interfaces = ET.SubElement(root.getroot(), 'UserInterfaces')
     ET.SubElement(interfaces, 'UserInterface').text = 'AssistantForm.ui'
+    ET.SubElement(interfaces, 'UserInterface').text = 'ProgressForm.ui'
     ET.indent(root)
     root.write(meta / 'package.xml', encoding='utf-8', xml_declaration=True)
-    for name in ('assistantscript.qs', 'AssistantForm.ui'):
+    for name in ('assistantscript.qs', 'AssistantForm.ui', 'ProgressForm.ui'):
         shutil.copy2(ROOT / 'tools/installer' / name, meta / name)
 
 
@@ -529,7 +539,10 @@ def build_maintenance_tool(tools: Path, output: Path) -> Path:
     )
     bundle = work / maintenance_tool_name()
     set_bundle_identifier(
-        bundle, 'org.easydiffraction.maintenancetool', 'EasyDiffraction Maintenance Tool'
+        bundle,
+        'org.easydiffraction.maintenancetool',
+        'EasyDiffraction Maintenance Tool',
+        display_only=True,
     )
     if macos_signing():
         notarise_macos(bundle)
@@ -877,7 +890,12 @@ def linux_installer_runtime(tools: Path, output: Path) -> tuple[Path, Path, dict
 
 
 def set_bundle_identifier(
-    bundle: Path, identifier: str, name: str, *, installer_icon: bool = False
+    bundle: Path,
+    identifier: str,
+    name: str,
+    *,
+    installer_icon: bool = False,
+    display_only: bool = False,
 ) -> None:
     """Our identifier and name in place of the Installer Framework's, before the bundle is signed.
 
@@ -891,7 +909,11 @@ def set_bundle_identifier(
     with info.open('rb') as handle:
         values = plistlib.load(handle)
     values['CFBundleIdentifier'] = identifier
-    values['CFBundleName'] = values['CFBundleDisplayName'] = name
+    # The maintenance tool keeps its bundle name: the Framework names the bundle it rewrites on an
+    # update after it, so only the name shown changes there.
+    values['CFBundleDisplayName'] = name
+    if not display_only:
+        values['CFBundleName'] = name
     icon = values.get('CFBundleIconFile')
     if installer_icon and icon:
         name_on_disk = icon if icon.endswith('.icns') else icon + '.icns'

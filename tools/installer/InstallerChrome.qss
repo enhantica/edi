@@ -103,14 +103,17 @@ QPushButton#qt_wizard_finish {
 QWizard > QWidget > QFrame {
     border: none;
     background: transparent;
+    min-width: 560px;  /* the page fills the window; Qt's Mac style leaves it at its own width */
 }
 
 /* A wizard button with nothing to do on a page (Back and Install while installing) takes no room. */
-QPushButton#__qt__passive_wizardbutton0:disabled, QPushButton#qt_wizard_commit:disabled {
+QPushButton#__qt__passive_wizardbutton0:disabled, QPushButton#qt_wizard_commit:disabled,
+QPushButton#qt_wizard_commit:default:disabled {
     min-width: 0;
     max-width: 0;
     padding: 0;
     margin: 0;
     border: none;
-    qproperty-icon: none;
+    background: transparent;
+    color: transparent;
 }
