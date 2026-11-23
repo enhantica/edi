@@ -75,8 +75,15 @@ if [ "$trees" -gt 0 ] && [ "${A11Y_ALLOW_TREE:-}" != 1 ]; then
   echo "a11y-check: a tree view is on a page"
   exit 1
 fi
+# The layout rules the client checks on every page it reads (a11y_client.swift): one left edge, gaps on the spacing
+# scale, no clipped text, no frame mostly empty.
+if grep -q "^layout:" "$logs/client.log"; then
+  grep "^layout:" "$logs/client.log"
+  echo "a11y-check: a page breaks the layout rules"
+  layout_failed=1
+fi
 if [ -n "$new" ] || [ "$status" -ge 128 ]; then
   for report in $new; do grep -m8 -E 'QMacAccessibility|Exception Type|Crashed|_AXXMIG' "$report" || true; done
   exit 1
 fi
-exit 0
+exit "${layout_failed:-0}"
