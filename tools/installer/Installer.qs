@@ -454,8 +454,11 @@ function headerWordmark() {
         }
 
         // The welcome page passes by itself (online, it fetches the component list meanwhile).
-        if (name === "Introduction" && installer.isInstaller() && captureFolder === "")
+        // The welcome page passes by itself, in captures too: the design has no welcome page.
+        if (name === "Introduction" && installer.isInstaller()) {
             gui.clickButton(buttons.NextButton, 50);
+            return;
+        }
         if (name === "Introduction" && installer.isInstaller()) {
             var welcome = gui.findChild(page, "MessageLabel");
             welcome.openExternalLinks = true;
@@ -538,12 +541,12 @@ function headerWordmark() {
             var where = systemInfo.kernelType === "winnt" ? (shortcut ? "in the Start menu and on your desktop"
                                                                       : "in the Start menu")
                 : systemInfo.kernelType === "darwin"
-                    ? (/^\/Applications\//.test(target) ? "in your Applications folder" : "in " + target)
+                    ? (/^\/Applications\//.test(target) ? "in your Applications folder" : "in the folder you chose")
                     : (shortcut ? "in your applications menu and on your desktop" : "in your applications menu");
             if (done && installer.isInstaller() && installer.status === QInstaller.Success) {
                 // A large check in the accent above the sentence (the app's circle-check icon).
                 done.textFormat = 1;  // Qt.RichText
-                done.alignment = 0x0004 | 0x0020;  // Qt.AlignHCenter | Qt.AlignTop
+                done.alignment = 0x0001 | 0x0020;  // Qt.AlignLeft | Qt.AlignTop, as every page
                 done.text = '<p><img src=":/metadata/edi/' + (darkTheme() ? "done-dark" : "done")
                     + '.png" width="64" height="64"></p><p>EasyDiffraction is installed.</p><p>You find it ' + where + ".</p>";
             }
@@ -552,9 +555,12 @@ function headerWordmark() {
                 if (widget)
                     widget.visible = false;
             });
+            // Ticked; captures keep it ticked and clear what it would open, as the marker installer has no program.
             var run = gui.findChild(page, "RunItCheckBox");
-            if (run && captureFolder !== "")
-                run.checked = false;  // the marker installer has no program to open
+            if (run)
+                run.checked = true;
+            if (captureFolder !== "")
+                installer.setValue("RunProgram", "");
         }
 
         if (name === "TargetDirectory" && systemInfo.kernelType === "darwin") {

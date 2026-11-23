@@ -350,6 +350,9 @@ def write_metadata(
     style = ROOT / 'tools/installer'
     write_controller(config)
     write_resources(config, configuration)
+    # Qt's Mac wizard style paints a default picture beside pages without one: a clear pixel.
+    shutil.copy2(style / 'NoBackground.png', config / 'NoBackground.png')
+    ET.SubElement(configuration.getroot(), 'Background').text = 'NoBackground.png'
     # The installer's own icon, the app logo coming out of a box, distinct from the app's.
     if SYSTEM in {'macos', 'windows'}:
         icon = 'Installer.icns' if SYSTEM == 'macos' else 'Installer.ico'
