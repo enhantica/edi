@@ -23,6 +23,10 @@ Controller.prototype.IntroductionPageCallback = function() {
 Controller.prototype.TargetDirectoryPageCallback = function() {
     var page = gui.currentPageWidget();
     page.TargetDirectoryLineEdit.setText(installer.value("A11yTarget"));
+    // The assistant checkbox where the installer has one: ticked, so the selection changes under the client.
+    var box = gui.findChild(page, "AssistantCheckBox");
+    if (box)
+        box.checked = true;
     gui.clickButton(buttons.NextButton, PAUSE);
 };
 
@@ -31,7 +35,9 @@ Controller.prototype.ComponentSelectionPageCallback = function() {
 };
 
 Controller.prototype.LicenseAgreementPageCallback = function() {
-    gui.currentPageWidget().AcceptLicenseRadioButton.setChecked(true);
+    var page = gui.currentPageWidget();
+    var accept = gui.findChild(page, "AcceptLicenseCheckBox") || gui.findChild(page, "AcceptLicenseRadioButton");
+    accept.checked = true;
     gui.clickButton(buttons.NextButton, PAUSE);
 };
 

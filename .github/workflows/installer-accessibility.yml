@@ -1,7 +1,7 @@
 # The macOS installer with an accessibility client reading it (edi #150): a released or built installer is walked
 # through its pages by a controller script while a small client asks every element of its windows for several
 # attributes at once, its selected children among them, as some assistive tools do; a crash fails the job and its
-# report is kept.
+# report is kept. The released installer shows the crash; the installer built from this commit must not crash.
 name: Installer accessibility
 
 on:
@@ -46,6 +46,21 @@ jobs:
       - name: The same without the component selection page
         if: ${{ !cancelled() }}
         run: bash tools/installer/a11y-check.sh "${{ steps.mount.outputs.app }}" "$RUNNER_TEMP/a11y-no-components" A11yHideComponents=true
+      - name: Set up the locked packaging environment
+        if: ${{ !cancelled() }}
+        uses: ./.github/actions/setup-pixi
+        with:
+          manifest-path: tools/installer/pixi.toml
+      - name: Build the marker installer from this commit
+        if: ${{ !cancelled() }}
+        id: marker
+        run: |
+          pixi run --manifest-path tools/installer/pixi.toml python tools/installer/package.py tools --output build/installer/ifw
+          pixi run --manifest-path tools/installer/pixi.toml python tools/installer/capture_pages.py --tools build/installer/ifw/tools --output "$RUNNER_TEMP/marker" --marker-only | tee "$RUNNER_TEMP/marker.txt"
+          echo "app=$(tail -1 "$RUNNER_TEMP/marker.txt")" >> "$GITHUB_OUTPUT"
+      - name: Walk this commit's installer with the accessibility client
+        if: ${{ !cancelled() && steps.marker.outputs.app != '' }}
+        run: bash tools/installer/a11y-check.sh "${{ steps.marker.outputs.app }}" "$RUNNER_TEMP/a11y-this-commit"
       - name: Keep the logs and any crash report
         if: always()
         uses: actions/upload-artifact@v4
@@ -54,5 +69,6 @@ jobs:
           path: |
             ${{ runner.temp }}/a11y
             ${{ runner.temp }}/a11y-no-components
+            ${{ runner.temp }}/a11y-this-commit
           if-no-files-found: ignore
           retention-days: 7  # read when a check fails
