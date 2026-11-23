@@ -12,6 +12,19 @@ TAG = re.compile(r'v([0-9]{4})\.(0[1-9]|1[0-2])\.(0|[1-9][0-9]*)')
 SUFFIXES = {'macos-arm64': ('.dmg', '.zip'), 'windows-x86_64': ('.exe', '.zip')}
 
 
+INSTALLER_PLATFORMS = {
+    'linux-x86_64': 'Linux-x64',
+    'macos-arm64': 'macOS-arm64',
+    'windows-x86_64': 'Windows-x64',
+}
+
+
+def installer_stem(version: str, platform: str, kind: str) -> str:
+    """An installer download's name without its suffix (promote.py installer_name)."""
+    offline = '-Offline' if kind == 'offline' else ''
+    return f'EasyDiffraction-Installer{offline}-{version}-{INSTALLER_PLATFORMS[platform]}'
+
+
 def asset_url(sizes: dict, tag: str, stem: str, platform: str) -> str | None:
     """The uploaded asset of one download, preferring the platform's current file type."""
     suffixes = SUFFIXES.get(platform, ('.zip',)) if not stem.endswith('-cli') else ('.zip',)
@@ -45,7 +58,10 @@ def render(page: str, pages: list[list[dict]], *, kind: str = 'online') -> str:
         installers = {}
         for each in kinds:
             for platform in PLATFORMS:
+                # Releases before 2026.11.30 used the older names.
                 found = asset_url(
+                    sizes, tag, installer_stem(version, platform, each), platform
+                ) or asset_url(
                     sizes, tag, f'EasyDiffraction-{version}-{platform}-{each}', platform
                 )
                 if found:

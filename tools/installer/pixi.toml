@@ -50,6 +50,10 @@ libgles-devel = "1.7.*"
 libglu = "9.0.*"
 patchelf = "==0.19.3"
 
+# The disk image's Finder window and volume icon, written into the image (deliver_installer).
+[target.osx-arm64.pypi-dependencies]
+dmgbuild = "==1.6.7"
+
 [target.osx-arm64.dependencies]
 tapi = { version = "==1600.0.11.8", build = "hb561403_4" }
 clang_osx-arm64 = "23.*"

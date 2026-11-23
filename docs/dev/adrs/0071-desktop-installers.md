@@ -322,7 +322,20 @@ checkbox gives the same choice without the tree. `tools/installer/a11y-check.sh`
 crash on a released installer and checks the built one, walking every page while a small client
 reads every element (`.github/workflows/installer-accessibility.yml`). The installer and its
 maintenance tool also carry EasyDiffraction's own bundle identifiers on macOS in place of the
-Framework's placeholder, which crash reports and privacy settings showed. The two components have independent
+Framework's placeholder, which crash reports and privacy settings showed.
+
+## Download names and the macOS disk image
+
+Installer downloads are named `EasyDiffraction-Installer-<version>-<platform>` with the platform
+`macOS-arm64`, `Windows-x64` or `Linux-x64`, and `EasyDiffraction-Installer-Offline-...` for the
+offline kind: a `.dmg` on macOS, the `.exe` on Windows, and on Linux a `.zip` holding the `.run`
+beside its runtime libraries. The website still finds the older names on releases made before the
+change. The disk image's volume is `EasyDiffraction Installer` and holds `EasyDiffraction
+Installer.app` and `BRANDING-LICENSE.txt`. `dmgbuild` writes its Finder window into the image: about
+760 by 530 points, 96-point icons with labels below, no toolbar or status bar, each item at a fixed
+place, and the installer's icon as the volume icon. The image file gets the same icon on the build
+machine, but the icon lives in extended attributes that a browser download drops, so a downloaded
+image shows the standard disk image icon. The two components have independent
 payload manifests and share the release version. Publication verifies the archives for both.
 
 At startup, the desktop app uses its existing runtime manifest and executable checks to determine

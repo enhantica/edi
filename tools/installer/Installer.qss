@@ -26,8 +26,10 @@ QWizard QPushButton, QWizard QLineEdit, QWizard QComboBox {
     padding: 3px 9px;
 }
 
+/* One height for every wizard button (Settings beside Next), so they line up. */
 QWizard QPushButton {
     min-width: 70px;
+    max-height: 22px;
 }
 
 QWizard QPushButton:hover {
