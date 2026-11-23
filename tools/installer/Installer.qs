@@ -99,16 +99,25 @@ function Controller() {
     // No component tree: macOS accessibility clients crash the Framework's Qt on it (edi #150); the one choice it
     // offered, the AI assistant, is a checkbox (assistantscript.qs).
     installer.setDefaultPageVisible(QInstaller.ComponentSelection, false);
-    if (darkTheme())
-        gui.styleSheet = darkStylesheet;
     chooseWindowsTarget();
     installer.installationFinished.connect(clearQuarantine);
     installer.updateFinished.connect(clearQuarantine);
 }
 
-// The dark stylesheet (Installer.qss filled with the app's dark theme by package.py); the light one is the
-// installer's own.
+// edi's light and dark themes for the pages (Installer.qss, filled in by package.py). Scripts can reach the pages but
+// not the window around them, which follows the system palette (InstallerChrome.qss).
+var lightStylesheet = "@LIGHT_STYLESHEET@";
 var darkStylesheet = "@DARK_STYLESHEET@";
+
+function themePage(page) {
+    if (page)
+        page.styleSheet = darkTheme() ? darkStylesheet : lightStylesheet;
+}
+
+// The assistant's own page in the maintenance tool (assistantscript.qs).
+Controller.prototype.DynamicAssistantFormCallback = function () {
+    themePage(gui.pageWidgetByObjectName("DynamicAssistantForm"));
+};
 
 var wordmark = "";
 
@@ -125,12 +134,10 @@ function headerWordmark() {
     "StartMenuDirectory", "ReadyForInstallation", "PerformInstallation", "Finished"
 ].forEach(function (name) {
     Controller.prototype[name + "PageCallback"] = function () {
-        // The Framework titles the window "<Title> Setup" again on each page; the title already says it all.
-        if (installer.isInstaller())
-            gui.windowTitle = "EasyDiffraction Installer";
         var page = gui.pageWidgetByObjectName(name + "Page");
         if (!page)
             return;
+        themePage(page);
         if (!installer.isInstaller()) {
             capture(name);
             advance(name, page);
