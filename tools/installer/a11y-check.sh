@@ -66,6 +66,11 @@ for report in $new; do cp "$report" "$logs/"; done
 trees="$(grep -c "AXOutline" "$logs/client.log" 2>/dev/null || true)"
 trees="${trees:-0}"
 echo "a11y-check: installer exit $status after ${waited}s; crash reports: ${new:-none}; tree views read: $trees"
+if grep -q "edi resource missing" "$logs/installer.log"; then
+  grep "edi resource missing" "$logs/installer.log"
+  echo "a11y-check: the installer lacks one of its own resources"
+  exit 1
+fi
 if [ "$trees" -gt 0 ] && [ "${A11Y_ALLOW_TREE:-}" != 1 ]; then
   echo "a11y-check: a tree view is on a page"
   exit 1

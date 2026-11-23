@@ -86,6 +86,13 @@ struct ScanFactorColumn {
     std::size_t value = 0;
 };
 
+/// A recorded `results.csv` value as the Evolution view shows it: an agreement factor is kept as a fraction and shown
+/// in percent (ADR-0089); χ² and parameters stay as recorded.
+double scan_display_value(const std::string& name, double recorded);
+
+/// The largest magnitude a chart point may have, on every route that draws one.
+inline constexpr double kScanChartLimit = 1e300;
+
 /// What `analysis/results.csv` records, checked, with one small entry per dataset: no row's parameter cells are kept
 /// (`read_scan_row` reads one row at its offset). The header must be crysta's: `file_path`,
 /// `fit_result.reduced_chi_square`, `fit_result.success`, `fit_result.iterations`, one column per extract rule's

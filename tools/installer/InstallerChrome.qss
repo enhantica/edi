@@ -35,7 +35,8 @@ QListWidget#PageListWidget::item:disabled {
     color: #888888;  /* the app's dark minor grey, readable on the light window too */
 }
 
-QListWidget#PageListWidget::item:selected {
+QListWidget#PageListWidget::item:selected, QListWidget#PageListWidget::item:selected:active,
+QListWidget#PageListWidget::item:selected:!active, QListWidget#PageListWidget::item:selected:disabled {
     color: palette(window-text);
     background: transparent;
     font-weight: bold;

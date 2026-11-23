@@ -17,6 +17,7 @@
     <message><source>&amp;Update components</source><translation>Update components</translation></message>
     <message><source>&amp;Remove all components</source><translation>Remove all components</translation></message>
     <message><source>&amp;Quit</source><translation>Quit</translation></message>
+    <message><source>Maintenance Actions</source><translation>What to do</translation></message>
 </context>
 <context>
     <name>QInstaller::TargetDirectoryPage</name>
@@ -30,8 +31,15 @@
     <message><source>&amp;Install</source><translation>Install</translation></message>
 </context>
 <context>
+    <name>QInstaller::ReadyForInstallationPagePrivate</name>
+    <message><source>&amp;Install</source><translation>Install</translation></message>
+    <message><source>U&amp;pdate</source><translation>Update</translation></message>
+    <message><source>U&amp;ninstall</source><translation>Uninstall</translation></message>
+</context>
+<context>
     <name>QInstaller::FinishedPage</name>
-    <message><source>Select %1 to close the %2 Setup.</source><translation>Select %1 to close the %2 Installer.</translation></message>
+    <message><source>Select %1 to close the %2 Setup.</source><translation>Select %1 to close.</translation></message>
+    <message><source>You find your installation in this location on your computer:</source><translation>EasyDiffraction is installed in:</translation></message>
 </context>
 <context>
     <name>QWizard</name>

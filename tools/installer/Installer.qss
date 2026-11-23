@@ -107,9 +107,21 @@ QTextEdit, QTextBrowser, QPlainTextEdit {
     font-family: "@MONO_FAMILY@";
 }
 
+/* A field takes the accent while it is used; read-only text (the licence) keeps its border. */
 QLineEdit:hover, QLineEdit:focus, QComboBox:hover, QComboBox:focus, QSpinBox:hover, QSpinBox:focus,
-QTextEdit:focus, QTextBrowser:focus, QPlainTextEdit:focus {
+QTextEdit:focus, QPlainTextEdit:focus {
     border-color: @ACCENT@;
+}
+
+/* One gap on the 8 px scale between a control and what it belongs to. */
+QCheckBox#AcceptLicenseCheckBox, QRadioButton#AcceptLicenseRadioButton {
+    margin-top: 8px;
+}
+
+/* A link, as the welcome page's: the accent, no underline. */
+QLabel#LocationLabel {
+    color: @ACCENT@;
+    text-decoration: none;
 }
 
 QLineEdit:disabled, QComboBox:disabled, QSpinBox:disabled {
@@ -181,7 +193,7 @@ QCheckBox::indicator {
 QCheckBox::indicator:checked {
     background-color: @ACCENT@;
     border-color: @ACCENT@;
-    image: url(:/edi/CheckMark.png);
+    image: url(:/metadata/edi/CheckMark.png);
 }
 
 QRadioButton::indicator {
