@@ -327,9 +327,20 @@ function freeSpace(folder) {
         path = shorter;
     }
     if (systemInfo.kernelType === "winnt") {
-        var drive = path.substring(0, 1);
-        var free = installer.execute("powershell", ["-NoProfile", "-Command", "(Get-PSDrive " + drive + ").Free"]);
-        return free[1] === 0 ? Number(String(free[0]).trim()) : NaN;
+        // PowerShell by its system path (an installer's PATH may lack it); the first number it prints, as its output
+        // can carry a byte-order mark or a carriage return.
+        var shell = installer.value("RootDir", "C:").replace(/[\\/]$/, "")
+            + "\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe";
+        if (!installer.fileExists(shell))
+            shell = "powershell.exe";
+        var free = installer.execute(shell, ["-NoProfile", "-NonInteractive", "-Command",
+            "[System.IO.DriveInfo]::new('" + path.substring(0, 1) + ":\\').AvailableFreeSpace"]);
+        var digits = String(free[0]).match(/\d+/);
+        if (Number(free[1]) !== 0 || !digits) {
+            console.log("edi free space unknown: " + shell + " gave " + free[1] + ": " + String(free[0]).trim());
+            return NaN;
+        }
+        return Number(digits[0]);
     }
     var df = installer.execute("/bin/df", ["-k", path]);
     if (df[1] !== 0)
