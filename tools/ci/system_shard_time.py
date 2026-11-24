@@ -19,17 +19,23 @@ With --nightly the run is a scheduled one and the baseline is the newest earlier
 ci.yml on main that the comparison accepts: every declared shard once and a finished success, and
 the same shards as this run. The current record must be this scheduled ci.yml run on main at the
 given head. The search reads GitHub's whole listing first: every page, each run id once, exactly
-the total GitHub reports, that total unchanged between pages and under GitHub's listing cap. It
-then orders the runs by their parsed created_at, newest first, and reads each candidate's detail,
-which must repeat its listing entry (head, event, path, attempt, timestamps), and its whole job
-list, read the same way. A candidate that does not qualify is skipped with its reason. A fully read
-history with no qualifying run prints "no baseline", writes that record (this run's id, head,
-created_at and shards, and every candidate with its reason) and judges nothing. Any read that
-fails, comes back short, repeats an id or moves while read refuses with exit 2, never "no
-baseline".
+the total GitHub reports, that total unchanged between pages and under GitHub's listing cap. Every
+entry must be a complete record (id, head, branch, event, path, status, conclusion, attempt,
+timestamps) that agrees with the listing's own filter, and this run must be among them. The runs
+are ordered by their parsed created_at, newest first. Each finished earlier run is read again in
+detail, which must repeat its listing entry, and then the whole job list of that attempt: each job
+must name the run, the attempt and the head. The run is read once more after its jobs, so a re-run
+in between is refused.
+
+A run is skipped, with its reason, only when complete records show that it cannot serve: it is not
+earlier, not finished, declares other shards, or lacks a successful shard. A fully read history
+with no qualifying run prints "no baseline", writes that record (this run's id, attempt, head,
+created_at and shards, and every candidate with its reason) and judges nothing. Anything missing,
+mistyped, repeated or contradictory refuses with exit 2, never "no baseline".
 --history replays a recorded listing (a JSON file: `runs` by id, `list` pages, `jobs` pages by
-run id, `shards` by head SHA) instead of asking GitHub; --save writes what a search read in that
-form, and --fetch-only stops after the search, so CI fetches in one step and judges in the next.
+run id, `shards` by head SHA) instead of asking GitHub, under the same checks; --save writes what a
+search read in that form, and --fetch-only stops after the search, so CI fetches in one step and
+judges in the next.
 """
 
 from __future__ import annotations
@@ -51,15 +57,36 @@ LISTING_CAP = 1000
 PAGE = 100
 SHARD = re.compile(r'system · (\S+) · ([1-9]\d*)/([1-9]\d*)')
 SHARD_LIKE = re.compile(r'system · .* · .*/.*')
+SHA = re.compile(r'[0-9a-f]{40}')
 
 
 class RefusedError(Exception):
     """The evidence cannot be compared."""
 
 
+class UnfitError(RefusedError):
+    """The evidence is complete, and shows a run without a successful copy of every shard."""
+
+
+def once(pairs: list[tuple[str, object]]) -> dict:
+    """A JSON object's members; one named twice has no single value."""
+    out = dict(pairs)
+    if len(out) != len(pairs):
+        raise ValueError('a JSON object names a member twice')
+    return out
+
+
+def parse(text: str) -> object:
+    return json.loads(text, object_pairs_hook=once)
+
+
+def whole_number(value: object) -> bool:
+    return isinstance(value, int) and not isinstance(value, bool)
+
+
 def load(path: Path, what: str) -> dict:
     try:
-        run = json.loads(path.read_text(encoding='utf-8'))
+        run = parse(path.read_text(encoding='utf-8'))
     except (OSError, ValueError) as e:
         raise RefusedError(f'cannot read the {what} run {path}: {e}') from e
     if not isinstance(run, dict) or not isinstance(run.get('jobs'), list):
@@ -67,55 +94,111 @@ def load(path: Path, what: str) -> dict:
     return run
 
 
-def stamp(job: dict, field: str) -> datetime:
+def moment(record: dict, field: str, what: str) -> datetime:
+    """The record's timestamp, which must name its time zone."""
+    value = record.get(field)
     try:
-        when = datetime.fromisoformat(str(job[field]))
-    except (KeyError, ValueError) as e:
-        raise RefusedError(f'{job.get("name")!r} has no valid {field}') from e
+        when = datetime.fromisoformat(value) if isinstance(value, str) else None
+    except ValueError:
+        when = None
+    if when is None:
+        raise RefusedError(f'{what} has no valid {field}')
     if when.tzinfo is None:
-        raise RefusedError(f'{job.get("name")!r} has a {field} without a time zone')
+        raise RefusedError(f'{what} has a {field} without a time zone')
     return when
 
 
-def shards(run: dict, what: str) -> dict[str, Fraction]:
-    """Each system shard's wall time in seconds, by job name."""
-    out, parts = {}, {}
-    for job in run['jobs']:
-        name = str(job.get('name', ''))
-        if not SHARD.fullmatch(name):
-            if SHARD_LIKE.fullmatch(name):
-                raise RefusedError(f'the {what} run has a malformed shard name {name!r}')
-            continue
-        platform, part, total = SHARD.fullmatch(name).groups()
-        parts.setdefault(platform, []).append((int(part), int(total)))
-        if name in out:
-            raise RefusedError(f'the {what} run has {name!r} twice')
-        if job.get('status') != 'completed' or job.get('conclusion') != 'success':
-            raise RefusedError(
-                f'{what} {name!r} is {job.get("status")}/{job.get("conclusion")}, '
-                'not a finished success'
-            )
-        took = stamp(job, 'completed_at') - stamp(job, 'started_at')
-        out[name] = Fraction(took.days * 86400 + took.seconds) + Fraction(took.microseconds, 10**6)
-        if out[name] <= 0:
-            raise RefusedError(f'{what} {name!r} has no positive wall time')
-    declared = run.get('expected_system_shards')
+# The values GitHub documents. A status or conclusion outside them cannot be judged, so it is
+# refused instead of being read as "not finished" or "not a success".
+STATUSES = {'queued', 'in_progress', 'completed', 'waiting', 'requested', 'pending'}
+CONCLUSIONS = {
+    'success',
+    'failure',
+    'neutral',
+    'cancelled',
+    'skipped',
+    'timed_out',
+    'action_required',
+    'stale',
+    'startup_failure',
+}
+
+
+def outcome(record: dict, what: str) -> tuple[str, str | None]:
+    """The status and conclusion, which a finished record has and an unfinished one does not."""
+    status, conclusion = record.get('status'), record.get('conclusion')
+    if not isinstance(status, str) or status not in STATUSES:
+        raise RefusedError(f'{what} has no known status: {status!r}')
+    if 'conclusion' not in record:
+        raise RefusedError(f'{what} has no conclusion field')
+    known = isinstance(conclusion, str) and conclusion in CONCLUSIONS
+    if not (known if status == 'completed' else conclusion is None):
+        raise RefusedError(f'{what} is {status} with conclusion {conclusion!r}')
+    return status, conclusion
+
+
+def declared_shards(declared: object, what: str) -> dict:
     if (
         not isinstance(declared, dict)
         or not declared
-        or not all(
-            isinstance(n, int) and not isinstance(n, bool) and n > 0 for n in declared.values()
-        )
+        or not all(isinstance(p, str) and p for p in declared)
+        or not all(whole_number(n) and n > 0 for n in declared.values())
     ):
-        raise RefusedError(f'the {what} run declares no system shards per platform')
+        raise RefusedError(f'{what} declares no system shards per platform')
+    return declared
+
+
+def shards(run: dict, what: str) -> dict[str, Fraction]:
+    """Each system shard's wall time in seconds, by job name.
+
+    UnfitError says the complete job list lacks a successful shard. A record that cannot be read
+    as a job list at all is a plain refusal, whatever else the list shows.
+    """
+    out: dict[str, Fraction] = {}
+    parts: dict[str, list] = {}
+    unfit = []
+    for job in run['jobs']:
+        name = job.get('name') if isinstance(job, dict) else None
+        if not isinstance(name, str) or not name:
+            raise RefusedError(f'the {what} run has a job without a name')
+        shard = SHARD.fullmatch(name)
+        if not shard:
+            if SHARD_LIKE.fullmatch(name):
+                # GitHub keeps the unexpanded name of a matrix job that never started.
+                if '${{' not in name or outcome(job, f'{what} {name!r}')[1] not in {
+                    'cancelled',
+                    'skipped',
+                }:
+                    raise RefusedError(f'the {what} run has a malformed shard name {name!r}')
+                unfit.append(f'{what} {name!r} never started')
+            continue
+        platform, part, total = shard.groups()
+        parts.setdefault(platform, []).append((int(part), int(total)))
+        if parts[platform].count((int(part), int(total))) > 1:
+            raise RefusedError(f'the {what} run has {name!r} twice')
+        status, conclusion = outcome(job, f'{what} {name!r}')
+        if conclusion != 'success':
+            unfit.append(f'{what} {name!r} is {status}/{conclusion}, not a finished success')
+            continue
+        took = moment(job, 'completed_at', repr(name)) - moment(job, 'started_at', repr(name))
+        out[name] = Fraction(took.days * 86400 + took.seconds) + Fraction(took.microseconds, 10**6)
+        if out[name] <= 0:
+            raise RefusedError(f'{what} {name!r} has no positive wall time')
+    declared = declared_shards(run.get('expected_system_shards'), f'the {what} run')
     # every declared platform has each part 1..n once, and no other platform has any
     for platform in sorted(set(declared) | set(parts)):
         total = declared.get(platform, 0)
-        if sorted(parts.get(platform, [])) != [(i, total) for i in range(1, total + 1)]:
-            raise RefusedError(
+        wanted = [(i, total) for i in range(1, total + 1)]
+        found = sorted(parts.get(platform, []))
+        if not set(found) <= set(wanted):
+            raise RefusedError(f'the {what} run has undeclared {platform} shards: {found}')
+        if found != wanted:
+            unfit.append(
                 f'the {what} run does not have each declared {platform} shard 1..{total} once: '
-                f'{sorted(parts.get(platform, []))}'
+                f'{found}'
             )
+    if unfit:
+        raise UnfitError(unfit[0])
     return out
 
 
@@ -126,7 +209,11 @@ def minutes(seconds: Fraction) -> str:
 
 def require_identity(current: dict, run_id: str, head_sha: str) -> None:
     """The current document is this run, at this pull request's source head."""
-    if str(current.get('id')) != run_id or current.get('head_sha') != head_sha:
+    if (
+        not whole_number(current.get('id'))
+        or str(current['id']) != run_id
+        or current.get('head_sha') != head_sha
+    ):
         raise RefusedError(
             f'the current record is run {current.get("id")} at {current.get("head_sha")}, '
             f'not this run {run_id} at the pull request head {head_sha}'
@@ -140,7 +227,7 @@ def compare(current: dict, main: dict, event: str = 'push') -> list[str]:
             f'the baseline must be a {event} run on main, '
             f'not {main.get("event")} on {main.get("head_branch")}'
         )
-    if main.get('status') != 'completed':
+    if outcome(main, 'the baseline main run')[0] != 'completed':
         raise RefusedError('the baseline main run has not finished')
     if current.get('expected_system_shards') != main.get('expected_system_shards'):
         raise RefusedError('this run and main declare different system shards')
@@ -158,41 +245,83 @@ def compare(current: dict, main: dict, event: str = 'push') -> list[str]:
     ]
 
 
-def when(run: dict, what: str) -> datetime:
-    try:
-        created = datetime.fromisoformat(str(run['created_at']))
-    except (KeyError, ValueError) as e:
-        raise RefusedError(f'the {what} has no valid created_at') from e
-    if created.tzinfo is None:
-        raise RefusedError(f'the {what} has a created_at without a time zone')
-    return created
-
-
 WORKFLOW = '.github/workflows/ci.yml'
-# What a run's detail must repeat from its listing entry, so the run judged is the run listed.
-BOUND = (
+# What identifies one attempt of a run, and stays as it is while the attempt goes on.
+IDENTITY = (
     'id',
     'head_sha',
     'head_branch',
     'event',
     'path',
-    'status',
-    'conclusion',
     'run_attempt',
     'created_at',
     'run_started_at',
 )
+# What a finished run's every reading must repeat, so the run judged is the run listed.
+BOUND = (*IDENTITY, 'status', 'conclusion')
 
 
 def workflow(run: dict) -> str:
-    return str(run.get('path', '')).split('@')[0]
+    return run['path'].split('@')[0]
 
 
 def run_id_of(row: object, what: str) -> int:
     rid = row.get('id') if isinstance(row, dict) else None
-    if not isinstance(rid, int) or isinstance(rid, bool):
+    if not whole_number(rid):
         raise RefusedError(f'{what} has an entry without an id: {row!r}')
     return rid
+
+
+def require_run(run: object, what: str) -> dict:
+    """The record, with every field the search decides by present, well typed and consistent."""
+    run_id_of(run, what)
+    for field in ('head_branch', 'event', 'path'):
+        if not isinstance(run.get(field), str) or not run[field]:
+            raise RefusedError(f'{what} has no valid {field}')
+    if not isinstance(run.get('head_sha'), str) or not SHA.fullmatch(run['head_sha']):
+        raise RefusedError(f'{what} has no valid head_sha')
+    if not whole_number(run.get('run_attempt')) or run['run_attempt'] < 1:
+        raise RefusedError(f'{what} has no valid run_attempt')
+    if moment(run, 'run_started_at', what) < moment(run, 'created_at', what):
+        raise RefusedError(f'{what} started before it was created')
+    outcome(run, what)
+    return run
+
+
+def require_same(before: dict, after: dict, fields: tuple[str, ...], what: str) -> None:
+    moved = [f for f in fields if before[f] != after[f]]
+    if moved:
+        raise RefusedError(f'{what}: {moved}')
+
+
+def require_scheduled(run: dict, what: str) -> None:
+    if run['event'] != 'schedule' or run['head_branch'] != 'main' or workflow(run) != WORKFLOW:
+        raise RefusedError(
+            f'{what} is a {run["event"]} run of {run["path"]} on {run["head_branch"]}, '
+            'not a scheduled ci.yml run on main'
+        )
+
+
+def require_jobs(jobs: list[dict], run: dict) -> None:
+    """Every job belongs to this run's attempt and head, and fits the run's own outcome."""
+    what = f'run {run["id"]} attempt {run["run_attempt"]}'
+    for job in jobs:
+        name = f'{what} job {job["id"]}'
+        for field, wanted in (
+            ('run_id', run['id']),
+            ('run_attempt', run['run_attempt']),
+            ('head_sha', run['head_sha']),
+        ):
+            got = job.get(field)
+            if type(got) is not type(wanted) or got != wanted:
+                raise RefusedError(f'{name} has {field} {got!r}, not {wanted!r}')
+        if not isinstance(job.get('name'), str) or not job['name']:
+            raise RefusedError(f'{name} has no name')
+        if outcome(job, name)[0] != 'completed' and run['status'] == 'completed':
+            raise RefusedError(f'{name} is {job["status"]} in a finished run')
+    # A run can be cancelled or fail to start before any job exists, but not succeed or fail.
+    if not jobs and run['conclusion'] in {'success', 'failure', 'timed_out'}:
+        raise RefusedError(f'{what} ended in {run["conclusion"]} without any job')
 
 
 class History:
@@ -205,7 +334,7 @@ class History:
         data = self.fetch(path)
         total = data.get('total_count') if isinstance(data, dict) else None
         items = data.get(field) if isinstance(data, dict) else None
-        if not isinstance(total, int) or isinstance(total, bool) or not isinstance(items, list):
+        if not whole_number(total) or total < 0 or not isinstance(items, list):
             raise RefusedError(f'{path} is not a listing of {field} with a total_count')
         return total, items
 
@@ -239,91 +368,94 @@ class History:
                 raise RefusedError(f'{where} lists {total} {field}, {len(rows)} were read')
             number += 1
 
-    def run(self, run_id: str, listed: dict | None = None) -> dict:
-        """One run with its whole job list and its declared shards.
+    def detail(self, run_id: str) -> dict:
+        run = require_run(self.fetch(f'runs/{run_id}'), f'run {run_id}')
+        if str(run['id']) != str(run_id):
+            raise RefusedError(f'run {run_id} was read as run {run["id"]}')
+        return run
 
-        Given its listing entry, the detail must repeat it, so a run that moved between the two
-        reads (a re-run, another head) is refused rather than judged.
+    def run(self, run_id: str, listed: dict | None = None) -> dict:
+        """One run with the whole job list of its attempt and its declared shards.
+
+        Given its listing entry, the detail must repeat it. The jobs are those of the attempt just
+        read, and the run is read once more after them, so a run that moved between the reads (a
+        re-run, another head) is refused rather than judged.
         """
-        run = self.fetch(f'runs/{run_id}')
-        if not isinstance(run, dict) or str(run.get('id')) != str(run_id):
-            raise RefusedError(f'run {run_id} could not be read')
+        run = self.detail(run_id)
+        fields = IDENTITY if listed is None else BOUND
         if listed is not None:
-            moved = [f for f in BOUND if f in listed and run.get(f) != listed.get(f)]
-            if moved:
-                raise RefusedError(f'run {run_id} reads differently from its listing: {moved}')
-        jobs = self.listing(f'runs/{run_id}/jobs?', 'jobs')
-        return run | {
-            'jobs': jobs,
-            'expected_system_shards': self.declare(str(run.get('head_sha'))),
-        }
+            require_same(listed, run, fields, f'run {run_id} reads differently from its listing')
+        jobs = self.listing(f'runs/{run_id}/attempts/{run["run_attempt"]}/jobs?', 'jobs')
+        require_jobs(jobs, run)
+        again = self.detail(run_id)
+        require_same(run, again, fields, f'run {run_id} changed while its jobs were read')
+        declared = declared_shards(self.declare(run['head_sha']), f'run {run_id}')
+        return run | {'jobs': jobs, 'expected_system_shards': declared}
 
     def candidates(self) -> list[dict]:
         """Every scheduled ci.yml run on main GitHub lists, newest first by its created_at.
 
-        The order comes from the parsed timestamps, not from the listing's order.
+        Each entry is a complete record that agrees with the filter it was listed under. The order
+        comes from the parsed timestamps, not from the listing's order.
         """
         rows = self.listing(
             'workflows/ci.yml/runs?branch=main&event=schedule&', 'workflow_runs', LISTING_CAP
         )
+        for row in rows:
+            what = f'the listing entry of run {row["id"]}'
+            require_scheduled(require_run(row, what), what)
         return sorted(
             rows,
-            key=lambda r: (when(r, f'run {r["id"]}'), r['id']),
+            key=lambda r: (moment(r, 'created_at', f'run {r["id"]}'), r['id']),
             reverse=True,
         )
 
 
 def require_nightly(current: dict, run_id: str, head_sha: str) -> None:
-    """The current record is this scheduled ci.yml run on main, at this head, with a timestamp."""
+    """The current record is this scheduled ci.yml run on main, at this head."""
     require_identity(current, run_id, head_sha)
-    if (
-        current.get('event') != 'schedule'
-        or current.get('head_branch') != 'main'
-        or workflow(current) != WORKFLOW
-    ):
-        raise RefusedError(
-            f'the current record is a {current.get("event")} run of {current.get("path")} on '
-            f'{current.get("head_branch")}, not a scheduled ci.yml run on main'
-        )
-    when(current, 'current run')
+    require_scheduled(current, 'the current record')
 
 
-def unlike(candidate: dict, current: dict, now: dict) -> str | None:
-    """Why the comparison would refuse this candidate, or None if it would accept it."""
-    if candidate.get('expected_system_shards') != current.get('expected_system_shards'):
+def unlike(candidate: dict, current: dict) -> str | None:
+    """Why this complete record cannot serve as the baseline, or None if it can."""
+    if candidate['expected_system_shards'] != current['expected_system_shards']:
         return 'it declares different system shards'
     try:
-        names = set(shards(candidate, f'run {candidate.get("id")}'))
-    except RefusedError as e:
+        shards(candidate, f'run {candidate["id"]}')
+    except UnfitError as e:
         return str(e)
-    return None if names == set(now) else 'its shards differ from this run'
+    return None
 
 
 def baseline(current: dict, history: History) -> tuple[dict | None, list[dict]]:
     """The newest earlier scheduled run the comparison accepts, and every run skipped before it.
 
-    None is returned only after the whole listing was read and every entry was judged.
+    None is returned only after the whole listing was read and every entry was judged. The listing
+    must hold this run too: one that does not cannot be the whole history.
     """
-    now, created = shards(current, 'current'), when(current, 'current run')
+    shards(current, 'current')
+    created = moment(current, 'created_at', 'the current run')
     skipped = []
-    for listed in history.candidates():
-        run_id, reason = listed['id'], None
-        if str(run_id) == str(current.get('id')):
+    rows = history.candidates()
+    mine = [row for row in rows if row['id'] == current['id']]
+    if not mine:
+        raise RefusedError(f'the listing does not have this run {current["id"]}')
+    require_same(mine[0], current, IDENTITY, 'this run reads differently from its listing')
+    for listed in rows:
+        run_id = listed['id']
+        if run_id == current['id']:
             continue
-        if listed.get('event') != 'schedule' or listed.get('head_branch') != 'main':
-            reason = f'{listed.get("event")} on {listed.get("head_branch")}'
-        elif workflow(listed) != WORKFLOW:
-            reason = f'a run of {listed.get("path")}'
-        elif when(listed, f'run {run_id}') >= created:
+        if moment(listed, 'created_at', f'run {run_id}') >= created:
             reason = 'not earlier than this run'
-        elif listed.get('status') != 'completed':
-            reason = f'{listed.get("status")}, not finished'
+        elif listed['status'] != 'completed':
+            reason = f'{listed["status"]}, not finished'
         else:
             candidate = history.run(str(run_id), listed)
-            reason = unlike(candidate, current, now)
+            reason = unlike(candidate, current)
             if reason is None:
                 return candidate, skipped
-        skipped.append({'id': run_id, 'created_at': listed.get('created_at'), 'skipped': reason})
+        skipped.append({'id': run_id, 'created_at': listed['created_at'], 'skipped': reason})
     return None, skipped
 
 
@@ -338,7 +470,7 @@ def gh_fetch(repo: str) -> Callable[[str], object]:
         if done.returncode:
             raise RefusedError(f'reading {path} failed: {done.stderr.strip()}')
         try:
-            return json.loads(done.stdout)
+            return parse(done.stdout)
         except ValueError as e:
             raise RefusedError(f'{path} did not return JSON: {e}') from e
 
@@ -359,34 +491,66 @@ def git_declare(sha: str) -> dict:
         counts: dict = {}
         for row in rows:
             counts[row['platform']] = counts.get(row['platform'], 0) + 1
-    except (KeyError, TypeError, ValueError) as e:
+    except (KeyError, TypeError, ValueError, yaml.YAMLError) as e:
         raise RefusedError(f'the workflow at {sha} declares no system matrix: {e}') from e
     return counts
+
+
+def replayed_page(pages: object, number: int, request: str) -> object:
+    """One saved page of a listing that has exactly the pages its total needs."""
+    first = pages[0] if isinstance(pages, list) and pages else None
+    total = first.get('total_count') if isinstance(first, dict) else None
+    if not whole_number(total) or len(pages) != max(1, -(-total // PAGE)):
+        raise RefusedError(f'the history does not hold the whole listing {request}')
+    if number > len(pages):
+        raise RefusedError(f'reading {request} failed: not in the history')
+    return pages[number - 1]
+
+
+def require_saved(data: object, path: Path) -> dict:
+    """The saved history, with nothing in it that its own run listing does not name."""
+    for name, kind in (('runs', dict), ('list', list), ('jobs', dict), ('shards', dict)):
+        if not isinstance(data, dict) or not isinstance(data.get(name), kind):
+            raise RefusedError(f'the history {path} has no valid {name}')
+    listed, heads = set(), set()
+    for page in data['list']:
+        rows = page.get('workflow_runs') if isinstance(page, dict) else None
+        if not isinstance(rows, list):
+            raise RefusedError(f'the history {path} has a page without a list of runs')
+        for row in rows:
+            listed.add(str(run_id_of(row, f'the history {path}')))
+            heads.add(str(row.get('head_sha')))
+    for name, known in (('runs', listed), ('jobs', set(data['runs'])), ('shards', heads)):
+        extra = sorted(set(data[name]) - known)
+        if extra:
+            raise RefusedError(f'the history {path} has {name} its listing does not name: {extra}')
+    return data
 
 
 def replay(path: Path) -> History:
     """A recorded history: `runs` by id, `list` pages, `jobs` pages by run id, `shards` by head."""
     try:
-        data = json.loads(path.read_text(encoding='utf-8'))
+        data = parse(path.read_text(encoding='utf-8'))
     except (OSError, ValueError) as e:
         raise RefusedError(f'cannot read the history {path}: {e}') from e
+    data = require_saved(data, path)
 
     def fetch(request: str) -> object:
         where, _, query = request.partition('?')
         number = int(dict(p.split('=') for p in query.split('&')).get('page', 1)) if query else 1
         try:
             if where == 'workflows/ci.yml/runs':
-                return data['list'][number - 1]
+                return replayed_page(data['list'], number, where)
             if where.endswith('/jobs'):
-                return data['jobs'][where.split('/')[1]][number - 1]
+                return replayed_page(data['jobs'][where.split('/')[1]], number, where)
             return data['runs'][where.split('/')[1]]
-        except (KeyError, IndexError, TypeError) as e:
+        except KeyError as e:
             raise RefusedError(f'reading {request} failed: not in the history') from e
 
     def declare(sha: str) -> dict:
         try:
             return data['shards'][sha]
-        except (KeyError, TypeError) as e:
+        except KeyError as e:
             raise RefusedError(f'the history declares no shards at {sha}') from e
 
     return History(fetch, declare)
@@ -435,9 +599,10 @@ def judge(args: argparse.Namespace) -> list[str] | None:
     if args.record:
         record = {
             'baseline': None,
-            'run': current.get('id'),
-            'head_sha': current.get('head_sha'),
-            'created_at': current.get('created_at'),
+            'run': current['id'],
+            'run_attempt': current['run_attempt'],
+            'head_sha': current['head_sha'],
+            'created_at': current['created_at'],
             'shards': sorted(shards(current, 'current')),
             'candidates': skipped,
         }
