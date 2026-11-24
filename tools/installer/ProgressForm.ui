@@ -6,9 +6,17 @@
 <ui version="4.0">
  <class>ProgressForm</class>
  <widget class="QWidget" name="ProgressForm">
+  <!-- Takes the page's spare height, with its content at the top like every other page's. -->
+  <property name="sizePolicy">
+   <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
+    <horstretch>0</horstretch>
+    <verstretch>1</verstretch>
+   </sizepolicy>
+  </property>
   <layout class="QVBoxLayout" name="ProgressColumn">
+   <!-- 12, so the thin bar, centred in its row, sits one 16-point step under the status line. -->
    <property name="spacing">
-    <number>16</number>
+    <number>12</number>
    </property>
    <property name="leftMargin">
     <number>0</number>
@@ -60,6 +68,13 @@
       </widget>
      </item>
     </layout>
+   </item>
+   <item>
+    <spacer name="ProgressSpacer">
+     <property name="orientation">
+      <enum>Qt::Vertical</enum>
+     </property>
+    </spacer>
    </item>
   </layout>
  </widget>
