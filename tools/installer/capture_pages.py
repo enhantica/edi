@@ -16,7 +16,10 @@ picture has one: no page missing, none extra. What each maintenance mode did is 
 import argparse
 import json
 import os
+import plistlib
+import re
 import subprocess
+import tempfile
 import threading
 import time
 from pathlib import Path
@@ -172,22 +175,50 @@ def set_macos_theme(theme: str) -> None:
     subprocess.run(['osascript', '-e', script], check=True, timeout=60)
 
 
+# Closes only the Finder windows showing the folder given as the script's argument.
+CLOSE_WINDOW = (
+    'tell application "Finder" to close (every window whose target is '
+    '(POSIX file (item 1 of argv) as alias))'
+)
+
+
 def capture_disk_image(image: Path, pages: Path, theme: str) -> None:
-    """macOS: the disk image's Finder window as users see it once the download opens."""
-    mount = Path('/Volumes/EasyDiffraction Installer')
-    subprocess.run(['hdiutil', 'attach', image], check=True, timeout=120)
+    """macOS: the disk image's Finder window as users see it once the download opens.
+
+    Mounted at a folder of its own, so another volume of the same name is never the one shown,
+    closed or detached.
+    """
+    mount = Path(tempfile.mkdtemp(prefix='edi-disk-image-'))
+    attached = subprocess.run(
+        ['hdiutil', 'attach', str(image), '-mountpoint', str(mount), '-plist'],
+        capture_output=True, check=True, timeout=120,
+    )  # fmt: skip
+    entities = plistlib.loads(attached.stdout)['system-entities']
+    mounted = [e['dev-entry'] for e in entities if e.get('mount-point') == str(mount)]
+    if len(mounted) != 1:
+        raise RuntimeError(f'hdiutil did not mount {image} at {mount}: {entities}')
+    # The whole image's device (/dev/diskN), not only its volume's slice.
+    device = re.match(r'/dev/disk\d+', mounted[0]).group(0)
     try:
-        subprocess.run(['open', mount], check=True, timeout=60)
+        subprocess.run(['open', str(mount)], check=True, timeout=60)
         time.sleep(4)
         subprocess.run(
             ['screencapture', '-x', str(pages / f'disk-image-{theme}.png')], check=True, timeout=60
         )
     finally:
         subprocess.run(
-            ['osascript', '-e', 'tell application "Finder" to close every window'],
+            [
+                'osascript',
+                '-e', 'on run argv',
+                '-e', CLOSE_WINDOW,
+                '-e', 'end run',
+                str(mount),
+            ],
             check=False, timeout=60,
         )  # fmt: skip
-        subprocess.run(['hdiutil', 'detach', mount], check=False, timeout=120)
+        subprocess.run(['hdiutil', 'detach', device], check=False, timeout=120)
+        if mount.exists() and not any(mount.iterdir()):
+            mount.rmdir()
 
 
 def marker_installer(tools: Path, work: Path) -> Path:
