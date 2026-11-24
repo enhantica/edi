@@ -782,11 +782,48 @@ function settleForm(page) {
         var field = gui.findChild(page, "FolderLineEdit");
         var column = install ? firstLayout(install) : null;
         if (form && text && field && field.visible && column && page.objectName === "TargetDirectoryPage")
-            column.spacing = bounded(column.spacing + rowGap - (form.y + field.y - (text.y + text.height)),
-                2 * rowGap);
+            column.spacing = bounded(rowGap - field.y, 2 * rowGap);
         if (captureFolder !== "")
             later(100, function () { logLayout(page, "settled"); });
     });
+}
+
+// The removal's progress, in the Framework's own label: the logo, one line and the bar with its percentage, as the other
+// progress page has them. The Framework's bar comes before its label and cannot be put after it, so the bar is drawn in
+// the text and the real one hidden. The Framework writes the label for every step; ours is put back on each sign of
+// that, so its words can show for a moment.
+var removalHooked = false;
+
+function showRemoval(page, bar, label) {
+    function put() {
+        var share = bar.maximum > bar.minimum
+            ? Math.max(0, Math.min(100, Math.round(100 * (bar.value - bar.minimum) / (bar.maximum - bar.minimum)))) : 0;
+        var cell = function (width, colour) {
+            // A cell is as high as its text (Qt takes no height for it): this size gives the 8 px of the other bar.
+            return width > 0 ? '<td width="' + width + '%" bgcolor="' + colour
+                + '" style="font-size: 6px">&nbsp;</td>' : "";
+        };
+        var text = logo() + PARA + "Removing EasyDiffraction… " + share + "%</p>"
+            + '<table width="100%" cellspacing="0" cellpadding="0" style="margin-top: 8px"><tr>'
+            // The track: the accent at 17 % on the window (ACCENT_TRACK), as a plain colour.
+            + cell(share, accent()) + cell(100 - share, darkTheme() ? "#2e424a" : "#c4e0ea") + "</tr></table>";
+        if (String(label.text) !== text)
+            label.text = text;
+    }
+    bar.visible = false;
+    label.textFormat = 1;  // Qt.RichText
+    label.alignment = 0x0001 | 0x0020;  // Qt.AlignLeft | Qt.AlignTop, as every page
+    label.wordWrap = true;
+    label.visible = true;
+    put();
+    if (removalHooked)
+        return;
+    removalHooked = true;
+    bar.valueChanged.connect(put);
+    var details = gui.findChild(page, "DetailsBrowser");
+    if (details)
+        details.textChanged.connect(function () { put(); Qt.callLater(put); });
+    installer.uninstallationFinished.connect(function () { put(); later(100, put); });
 }
 
 // The done page's box one row gap under its sentence: on macOS a box's frame sits below where its row starts, so the
@@ -1061,10 +1098,9 @@ function headerWordmark() {
             var percent = gui.findChild(page, "EdiProgressPercent");
             var status = gui.findChild(page, "EdiProgressStatus");
             var mark = gui.findChild(page, "EdiProgressLogo");
-            // Removing loads no component, so no form of ours: the Framework's bar stays, without the percentage
-            // drawn over it.
-            if (bar && !ours)
-                bar.textVisible = false;
+            // Removing loads no component, so there is no form of ours to show.
+            if (bar && label && !ours)
+                showRemoval(page, bar, label);
             if (bar && label && ours && percent && status && !progressHooked) {
                 bar.visible = false;
                 label.visible = false;
