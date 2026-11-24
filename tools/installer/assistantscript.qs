@@ -63,7 +63,8 @@ function holdProgress() {
     if (installer.environmentVariable("EDI_INSTALLER_CAPTURE") === "")
         return;
     var wait = systemInfo.kernelType === "winnt"
-        ? ["powershell.exe", "-NoProfile", "-Command", "Start-Sleep -Seconds 4"] : ["/bin/sleep", "4"];
+        // ping waits without reading input; PowerShell and timeout stall or refuse when it is redirected.
+        ? ["cmd.exe", "/c", "ping -n 5 127.0.0.1 > nul"] : ["/bin/sleep", "4"];
     component.addOperation("Execute", wait.concat(["UNDOEXECUTE"], wait));
 }
 
