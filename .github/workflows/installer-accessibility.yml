@@ -122,8 +122,9 @@ jobs:
             || { echo "the default installation is not as expected"; exit 1; }
           rc=0
           for mode in add update remove; do
-            pages="Introduction,ReadyForInstallation,PerformInstallation,Finished"
-            [ "$mode" = add ] && pages="Introduction,AssistantForm,ReadyForInstallation,PerformInstallation,Finished"
+            # Adding and updating show the choice page (EasyDiffraction and the AI assistant); removing does not.
+            pages="Introduction,AssistantForm,ReadyForInstallation,PerformInstallation,Finished"
+            [ "$mode" = remove ] && pages="Introduction,ReadyForInstallation,PerformInstallation,Finished"
             A11Y_EXPECT_PAGES="$(echo "$pages" | sed "s/[^,]*/maintenance-$mode-&/g")" \
               A11Y_EXPECT_STATUS="0 3" A11Y_RESTART_OK=1 EDI_INSTALLER_MAINTENANCE_MODE=$mode \
               bash tools/installer/a11y-check.sh "$target/MaintenanceTool.app" \

@@ -74,7 +74,8 @@ if [ "${1:-}" = "--own-script" ]; then
   where=(TargetDir="$target")
   case "$process" in MaintenanceTool*) where=() ;; esac
   # macOS bash 3.2 counts an empty array as unset under set -u, hence the +-form.
-  EDI_INSTALLER_CAPTURE="$logs/pages" "$binary" ${where[@]+"${where[@]}"} "$@" --verbose >"$logs/installer.log" 2>&1 &
+  # EDI_INSTALLER_ACK: each page waits until the client has read it (Installer.qs, a11y_client.swift).
+  EDI_INSTALLER_ACK=1 EDI_INSTALLER_CAPTURE="$logs/pages" "$binary" ${where[@]+"${where[@]}"} "$@" --verbose >"$logs/installer.log" 2>&1 &
 else
   "$binary" --script "$here/a11y_walk.qs" A11yTarget="$target" "$@" --verbose >"$logs/installer.log" 2>&1 &
 fi
@@ -115,7 +116,8 @@ for _ in $(seq "$([ "$status" -ge 128 ] && echo 60 || echo 5)"); do
 done
 for report in $new; do cp "$report" "$logs/"; done
 echo "$status" >"$logs/exit-status"
-printf '%s\n' $new >"$logs/crash-reports"
+: >"$logs/crash-reports"
+for report in $new; do echo "$report" >>"$logs/crash-reports"; done
 trees="$(sed -n 's/^a11y-client: \([0-9]*\) tree elements$/\1/p' "$logs/client.log")"
 echo "a11y-check: installer exit $status after ${waited}s; crash reports: ${new:-none}; tree elements read: ${trees:-unknown}"
 # A walk proves something only when it finished and was read: the installer succeeded (the product's own walk ends
@@ -124,12 +126,14 @@ echo "a11y-check: installer exit $status after ${waited}s; crash reports: ${new:
 failed=0
 # A maintenance tool that updated itself restarts and is closed by the walk (3); its Finished page must be captured.
 expected_status=$([ "$own" = 1 ] && echo "${A11Y_EXPECT_STATUS:-0}" || echo "0 3")
-# A maintenance tool that updated its own component hands over to its restarted self with status 1, after the
-# Framework logs the run finished: 1 counts only with that line (and the Finished page, checked below).
+# A maintenance tool that added or updated components is left with its last page's relabelled Cancel button, which
+# the Framework counts as cancelled: status 1, after the work is done. 1 counts only when the Framework logged the
+# work finished and the walk's last page was its Finished page.
 finished_restart=0
+last_page="$( { tr -d '\r' <"$logs/pages/pages.log"; } 2>/dev/null | tail -1)"
 if [ "$status" = 1 ] && [ "${A11Y_RESTART_OK:-}" = 1 ] \
    && grep -qE "Update finished!|Removal completed successfully" "$logs/installer.log" \
-   && grep -q "Maintenance tool hard restart" "$logs/installer.log"; then
+   && [[ "$last_page" =~ ^maintenance-[a-z]+-Finished-(light|dark)$ ]]; then
   finished_restart=1
 fi
 case " $expected_status " in *" $status "*) ;; *)
