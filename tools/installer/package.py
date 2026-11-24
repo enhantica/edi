@@ -231,8 +231,6 @@ def installer_stylesheet(theme: str, name: str = 'Installer.qss') -> str:
         # Qt's macOS style sets a check box in a page's own layout 2 points left of one in a row;
         # the licence box sits in a row with its link, so it takes the same step.
         'NESTED_CHECK_SHIFT': '-2px' if SYSTEM == 'macos' else '0px',
-        # The page's own left inset, which the logo above it (the page title) does not have.
-        'PAGE_INSET': '18px' if SYSTEM == 'macos' else '15px',
     }
     for key, value in values.items():
         text = text.replace(f'@{key}@', value)
@@ -355,9 +353,10 @@ def write_metadata(
             'MaintenanceToolName': 'MaintenanceTool',
             'AllowNonAsciiCharacters': 'true',
             'AllowSpaceInPath': 'true',
-            # Qt's Mac wizard style everywhere: no header or footer line; the logo heads each page.
-            'WizardStyle': 'Mac',
-            'WizardDefaultWidth': '800',
+            # Qt's Modern wizard style: no page titles (so no header), its footer line hidden
+            # (InstallerChrome.qss), the logo heading each page's content (Installer.qs).
+            'WizardStyle': 'Modern',
+            'WizardDefaultWidth': '640',
             'WizardDefaultHeight': '460',
             # One centred column, no step list (the owner's three-page design, edi ADR-0071).
             'WizardShowPageList': 'false',
@@ -368,13 +367,6 @@ def write_metadata(
     style = ROOT / 'tools/installer'
     write_controller(config)
     write_resources(config, configuration)
-    # Qt's Mac wizard style paints a default picture beside pages without one: a clear pixel.
-    shutil.copy2(style / 'NoBackground.png', config / 'NoBackground.png')
-    ET.SubElement(configuration.getroot(), 'Background').text = 'NoBackground.png'
-    # ...and keeps a 181-point empty column left of the page unless a watermark is set: the same.
-    # (a file of its own: binarycreator copies each named file once)
-    shutil.copy2(style / 'NoWatermark.png', config / 'NoWatermark.png')
-    ET.SubElement(configuration.getroot(), 'Watermark').text = 'NoWatermark.png'
     # The installer's own icon, the app logo coming out of a box, distinct from the app's.
     if SYSTEM in {'macos', 'windows'}:
         icon = 'Installer.icns' if SYSTEM == 'macos' else 'Installer.ico'

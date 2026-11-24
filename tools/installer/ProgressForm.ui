@@ -1,20 +1,20 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- SPDX-License-Identifier: BSD-3-Clause -->
-<!-- The progress bar the installing page shows, with its percentage beside it (Installer.qs feeds both from the
-     Framework's own bar, which is hidden: the Framework rewrites its own labels on every step). -->
+<!-- The installing page's content: the logo, one status line, and the progress bar with its percentage beside it
+     (Installer.qs feeds them from the Framework's own label and bar, which are hidden: the Framework rewrites its
+     label on every step). -->
 <ui version="4.0">
  <class>ProgressForm</class>
  <widget class="QWidget" name="ProgressForm">
-  <layout class="QHBoxLayout" name="ProgressLayout">
+  <layout class="QVBoxLayout" name="ProgressColumn">
    <property name="spacing">
-    <number>8</number>
+    <number>16</number>
    </property>
    <property name="leftMargin">
     <number>0</number>
    </property>
-   <!-- One spacing step (16) under the status line, with the page's own spacing (14 on macOS). -->
    <property name="topMargin">
-    <number>2</number>
+    <number>0</number>
    </property>
    <property name="rightMargin">
     <number>0</number>
@@ -23,30 +23,43 @@
     <number>0</number>
    </property>
    <item>
-    <widget class="QProgressBar" name="EdiProgressBar">
-     <property name="textVisible">
-      <bool>false</bool>
-     </property>
-     <property name="value">
-      <number>0</number>
-     </property>
-    </widget>
+    <widget class="QLabel" name="EdiProgressLogo"/>
    </item>
    <item>
-    <widget class="QLabel" name="EdiProgressPercent">
-     <property name="minimumSize">
-      <size>
-       <width>44</width>
-       <height>0</height>
-      </size>
+    <widget class="QLabel" name="EdiProgressStatus"/>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="ProgressLayout">
+     <property name="spacing">
+      <number>8</number>
      </property>
-     <property name="alignment">
-      <set>Qt::AlignRight|Qt::AlignVCenter</set>
-     </property>
-     <property name="text">
-      <string>0 %</string>
-     </property>
-    </widget>
+     <item>
+      <widget class="QProgressBar" name="EdiProgressBar">
+       <property name="textVisible">
+        <bool>false</bool>
+       </property>
+       <property name="value">
+        <number>0</number>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLabel" name="EdiProgressPercent">
+       <property name="minimumSize">
+        <size>
+         <width>44</width>
+         <height>0</height>
+        </size>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignRight|Qt::AlignVCenter</set>
+       </property>
+       <property name="text">
+        <string>0%</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
    </item>
   </layout>
  </widget>
