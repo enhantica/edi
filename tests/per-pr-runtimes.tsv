@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-24T13:04:44Z
+# measured_utc = 2026-11-24T15:03:48Z
 #
-# Recorded from: measured test run (1 node(s) measured once, 187126 banked, 0 stale row(s) dropped)
-# Collected tests: 266998; with a reported duration: 86008
+# Recorded from: measured test run (6 node(s) measured once, 187124 banked, 0 stale row(s) dropped)
+# Collected tests: 266998; with a reported duration: 86011
 # Module-scoped fixture costs recorded: 219
 #
 # Breaches are decided PER TIER against the table
@@ -31,8 +31,8 @@
 # measurement nobody took and which passes every tier threshold.
 # inventory_python = 266998
 # inventory_cpp = 0
-# inventory_measured = 187127
-# inventory_unmeasured = 79871
+# inventory_measured = 187130
+# inventory_unmeasured = 79868
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
 # inventory_pr_python = 92087
 
@@ -181744,11 +181744,11 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_independent_heidi_case.p
 0.000	tests/integration/py/test_input_format_oracle_transition.py::test_recorded_input_change_keeps_every_non_identity_byte[tests/fixtures/e04_t1/warning-project/experiments/experiment.edi]
 0.000	tests/integration/py/test_input_format_oracle_transition.py::test_recorded_input_change_keeps_every_non_identity_byte[tests/fixtures/e04_t1/xray-project/experiments/experiment.edi#pre-catalogue]
 0.000	tests/integration/py/test_input_format_oracle_transition.py::test_recorded_input_change_keeps_every_non_identity_byte[tests/fixtures/e04_t1/xray-project/experiments/experiment.edi]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_installer_a11y_completeness.py::test_maintenance_accessibility_requires_complete_tree_free_page_reads[missing-page-reads-add]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_installer_a11y_completeness.py::test_maintenance_accessibility_requires_complete_tree_free_page_reads[missing-page-reads-remove]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_installer_a11y_completeness.py::test_maintenance_accessibility_requires_complete_tree_free_page_reads[missing-page-reads-update]
-0.360	tests/integration/py/test_installer_a11y_completeness.py::test_maintenance_accessibility_requires_complete_tree_free_page_reads[tree-add]
-0.400	tests/integration/py/test_installer_a11y_completeness.py::test_maintenance_accessibility_requires_complete_tree_free_page_reads[tree-remove]
+0.780	tests/integration/py/test_installer_a11y_completeness.py::test_maintenance_accessibility_requires_complete_tree_free_page_reads[missing-page-reads-add]
+0.390	tests/integration/py/test_installer_a11y_completeness.py::test_maintenance_accessibility_requires_complete_tree_free_page_reads[missing-page-reads-remove]
+0.390	tests/integration/py/test_installer_a11y_completeness.py::test_maintenance_accessibility_requires_complete_tree_free_page_reads[missing-page-reads-update]
+0.380	tests/integration/py/test_installer_a11y_completeness.py::test_maintenance_accessibility_requires_complete_tree_free_page_reads[tree-add]
+0.380	tests/integration/py/test_installer_a11y_completeness.py::test_maintenance_accessibility_requires_complete_tree_free_page_reads[tree-remove]
 0.370	tests/integration/py/test_installer_a11y_completeness.py::test_maintenance_accessibility_requires_complete_tree_free_page_reads[tree-update]
 0.000	tests/integration/py/test_installer_identity.py::test_component_identity[APP_COMPONENT-org.easydiffraction.app]
 0.000	tests/integration/py/test_installer_identity.py::test_component_identity[ASSISTANT_COMPONENT-org.easydiffraction.app.assistant]

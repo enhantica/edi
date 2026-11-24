@@ -2,10 +2,11 @@
 
 import os
 import subprocess
-import sys
 from pathlib import Path
 
 import pytest
+
+from tests.fixtures.native_process import fixture_shell
 
 ROOT = Path(__file__).resolve().parents[3]
 PAGES = {
@@ -22,14 +23,10 @@ PAGES = {
 
 
 def executable(path, text):
-    path.write_text('#!/bin/bash\nset -eu\n' + text)
+    path.write_text('#!/bin/bash\nset -eu\n' + text, encoding='utf-8', newline='\n')
     path.chmod(0o755)
 
 
-@pytest.mark.skipif(
-    sys.platform != 'darwin',
-    reason='The installer walk drives a macOS .app and its Swift accessibility client',
-)
 @pytest.mark.parametrize('mode', list(PAGES))
 @pytest.mark.parametrize(
     'evidence', ['aggregate-only', 'tree'], ids=['missing-page-reads', 'tree']
@@ -69,20 +66,19 @@ chmod +x "$3"
     )
     env = {
         **os.environ,
-        'PATH': str(shim) + os.pathsep + os.environ['PATH'],
-        'HOME': str(tmp_path),
-        'TMPDIR': str(tmp_path),
-        'TEST_ROOT': str(tmp_path),
+        'HOME': tmp_path.as_posix(),
+        'TMPDIR': tmp_path.as_posix(),
+        'TEST_ROOT': tmp_path.as_posix(),
         'WALK_EVIDENCE': evidence,
         'A11Y_EXPECT_PAGES': ','.join(PAGES[mode]),
         'EDI_INSTALLER_MAINTENANCE_MODE': mode,
     }
     result = subprocess.run(
-        [
-            'bash',
-            str(ROOT / 'tools/installer/a11y-check.sh'),
-            str(binary.parents[2]),
-            str(tmp_path / 'logs'),
+        fixture_shell(shim, 'exec "$BASH" "$@"')
+        + [
+            (ROOT / 'tools/installer/a11y-check.sh').as_posix(),
+            binary.parents[2].as_posix(),
+            (tmp_path / 'logs').as_posix(),
             '--own-script',
         ],
         env=env,
@@ -92,7 +88,8 @@ chmod +x "$3"
         check=False,
     )
     assert (tmp_path / 'walk-finished').is_file() and (tmp_path / 'client-finished').is_file(), (
-        'The check consumed the completed walk and accessibility ports'
+        'The check consumed the completed walk and accessibility ports\n'
+        f'{result.stdout}{result.stderr}'
     )
     assert result.returncode != 0, (
         f'Maintenance {mode} refuses incomplete or tree-bearing evidence despite the captures'
