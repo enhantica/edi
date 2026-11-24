@@ -51,11 +51,11 @@ each.
 | interface | `🖥️ desktop`, `🌐 web`, `🐍 py`, `⌨️ cli`, `📦 cli-py` | E | release plan, owner | Which interfaces the change reaches: desktop app, web app, Python package, command line, command line through Python. One or more on every pull request and public issue. |
 | interface | `🪟 app` | E | release plan, owner | The desktop and the web app together. The release plan reads it as those two labels. |
 | interface | `🌍 all` | E | release plan, owner | Every interface. The release plan reads it as all five labels. |
-| bot | `🚀 release` | E | release plan | Only the release pull request; no other label is needed with it. |
+| bot | `🚀 release` | E | release plan | Only the release pull request, and alone: the release plan and the label check refuse it beside another label. |
 | source | `🙋 user` | E | owner | Filed from feedback whose origin is `🙋 user`. |
 | source | `🔧 maintainer` | E | owner | Filed from feedback whose origin is `🔧 owner`, or filed by the owner. |
 | source | `🤖 agent` | E | owner | Found by an agent while working on a development task. |
-| source | `🌙 nightly` | E | owner | The one open issue "Nightly CI is red on main" (rule 5). |
+| source | `🌙 nightly` | E | owner | The one open issue "Nightly CI is red on main", kept by hand (rule 5). |
 | status | `🚧 in progress` | E | owner, triage agent | A development task is working on the issue now (rule 4). |
 | none | `🔧 owner`, `🙋 user` | F | triage agent | The origin: the message's contact is the maintainer (or an agent's test), or anyone else. |
 | none | `survey`, `event:<event>` | F | survey tools | Set by the service on survey answers; `tools/survey-summary.mjs` lists issues by `survey`. |
@@ -74,8 +74,9 @@ each.
    task's pull request merges, each of those issues is checked against the merged code and the label is removed, whether
    the issue is done or not; it is also removed when the task stops or drops the issue.
 5. **The nightly run.** There is at most one open issue for a red nightly run on `main`, "Nightly CI is red on main", with
-   `🌙 nightly`, a scope and a priority. It names the failures that are real, is updated instead of filing another, and is
-   closed when a nightly run on `main` passes.
+   `🌙 nightly`, a scope and a priority. A maintainer keeps it by hand: it names the failures that are real, is updated
+   instead of filing another, and is closed when a nightly run on `main` passes. Nothing files, updates or closes it
+   automatically.
 6. **New labels.** An agent chooses only from this list. It never creates, renames, recolours or deletes a label without
    the owner's decision, and a change of the list changes this record.
 7. **Dropped**, each carried by no issue or pull request when it went: `[maintainer] good first issue` and
