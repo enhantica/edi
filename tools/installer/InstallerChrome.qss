@@ -94,11 +94,17 @@ QPushButton#qt_wizard_finish {
     qproperty-iconSize: 16px 16px;
 }
 
-/* No frame around the page: its content sits on the window (Qt's Mac style draws a raised box). */
+/* The page's frame takes the window's colour (Qt may fill it with the base colour, a white card). */
 QWizard > QWidget > QFrame {
     border: none;
-    background-color: palette(window);  /* Qt fills it with the base colour, a white card, otherwise */
-    min-width: 560px;  /* the page fills the window; Qt's Mac style leaves it at its own width */
+    background-color: palette(window);
+}
+
+/* No line above the buttons, and no header (the pages have no titles): Qt draws both in its own private
+   widgets, whose classes a stylesheet sees as exactly QWidget, which ".QWidget" matches and nothing else here. */
+QWizard > QWidget > .QWidget {
+    min-height: 0;
+    max-height: 0;
 }
 
 /* A wizard button with nothing to do on a page (Back and Install while installing) takes no room. */
@@ -112,9 +118,4 @@ QPushButton#qt_wizard_commit:default:disabled {
     background: transparent;
     color: transparent;
     qproperty-iconSize: 0px 0px;
-}
-
-/* The logo (the page title) starts where the page's content does. */
-QWizard > QWidget > QLabel {
-    padding-left: @PAGE_INSET@;
 }

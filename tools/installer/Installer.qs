@@ -154,6 +154,14 @@ function themePage(page) {
 Controller.prototype.DynamicAssistantFormCallback = function () {
     var page = gui.pageWidgetByObjectName("DynamicAssistantForm");
     themePage(page);
+    page.title = "";
+    page.subTitle = "";
+    var mark = gui.findChild(page, "FormLogo");
+    if (mark) {
+        mark.textFormat = 1;  // Qt.RichText
+        mark.text = headerWordmark();
+        mark.visible = true;
+    }
     // Adding components in capture mode adds the assistant, so the mode has something to do.
     var box = captureFolder !== "" ? gui.findChild(page, "AssistantCheckBox") : null;
     if (box)
@@ -242,7 +250,7 @@ function writeSummary(page) {
     var heading = installer.isInstaller() ? "Ready to install" : installer.isUpdater() ? "Ready to update"
         : removing ? "Ready to remove" : "Ready to apply your changes";
     var target = installer.value("TargetDir");
-    var text = "<p><b>" + heading + "</b></p>";
+    var text = logo() + "<p><b>" + heading + "</b></p>";
     var adding = summaryRows(false);
     var dropping = removing ? summaryRows(true) : (installer.isPackageManager() ? summaryRows(true) : "");
     if (adding !== "")
@@ -346,7 +354,7 @@ function setupInstallPage(page) {
     var intro = gui.findChild(page, "MessageLabel");
     if (intro) {
         intro.textFormat = 1;  // Qt.RichText
-        intro.text = "<p>EasyDiffraction calculates diffraction patterns from a structural model and fits its "
+        intro.text = logo() + "<p>EasyDiffraction calculates diffraction patterns from a structural model and fits its "
             + "parameters to experimental data.</p><p>Install to</p>";
     }
     var link = gui.findChild(page, "LicenseLink");
@@ -405,6 +413,11 @@ function refreshInstallPage() {
 
 var wordmark = "";
 
+// The logo heading each page's own content (the pages have no titles, so Qt shows no header).
+function logo() {
+    return "<p>" + headerWordmark() + "</p>";
+}
+
 function headerWordmark() {
     if (wordmark === "") {
         var image = darkTheme() ? "@DARK_WORDMARK@" : "@WORDMARK@";
@@ -435,7 +448,8 @@ function headerWordmark() {
             var ask = gui.findChild(page, "MessageLabel");
             if (ask) {
                 ask.alignment = 0x0001 | 0x0020;  // Qt.AlignLeft | Qt.AlignTop
-                ask.text = "What would you like to do?";
+                ask.textFormat = 1;  // Qt.RichText
+                ask.text = logo() + "<p>What would you like to do?</p>";
             }
             var update = gui.findChild(page, "UpdaterRadioButton");
             if (update && captureFolder === "")
@@ -533,15 +547,25 @@ function headerWordmark() {
             // Our bar with its percentage beside it (ProgressForm.ui), fed from the Framework's bar, which is
             // hidden; where our form is missing (no assistant component loaded), the Framework's bar stays.
             var bar = gui.findChild(page, "ProgressBar");
+            var label = gui.findChild(page, "ProgressLabel");
             var ours = gui.findChild(page, "EdiProgressBar");
             var percent = gui.findChild(page, "EdiProgressPercent");
-            if (bar && ours && percent && !progressHooked) {
+            var status = gui.findChild(page, "EdiProgressStatus");
+            var mark = gui.findChild(page, "EdiProgressLogo");
+            if (bar && label && ours && percent && status && !progressHooked) {
                 bar.visible = false;
+                label.visible = false;
+                if (mark) {
+                    mark.textFormat = 1;  // Qt.RichText
+                    mark.text = headerWordmark();
+                }
+                status.text = label.text;
                 bar.valueChanged.connect(function (value) {
                     var share = bar.maximum > bar.minimum
                         ? Math.round(100 * (value - bar.minimum) / (bar.maximum - bar.minimum)) : 0;
                     ours.value = share;
                     percent.text = share + "%";
+                    status.text = label.text;
                 });
                 progressHooked = true;
             }
@@ -561,9 +585,14 @@ function headerWordmark() {
                 // A large check in the accent above the sentence (the app's circle-check icon).
                 done.textFormat = 1;  // Qt.RichText
                 done.alignment = 0x0001 | 0x0020;  // Qt.AlignLeft | Qt.AlignTop, as every page
-                done.text = '<p><img src=":/metadata/edi/' + (darkTheme() ? "done-dark" : "done")
+                done.text = logo() + '<p><img src=":/metadata/edi/' + (darkTheme() ? "done-dark" : "done")
                     + '.png" width="64" height="64"></p><p>EasyDiffraction is installed.</p><p>You\'ll find it ' + where
                     + ".</p>";
+            }
+            // The maintenance tool keeps the Framework's own sentence (updated, removed), under the logo.
+            if (done && !installer.isInstaller() && String(done.text).indexOf("<img") < 0) {
+                done.textFormat = 1;  // Qt.RichText
+                done.text = logo() + "<p>" + done.text + "</p>";
             }
             ["LocationLabel", "FinishText"].forEach(function (hidden) {
                 var widget = gui.findChild(page, hidden);
@@ -583,18 +612,9 @@ function headerWordmark() {
             directory.styleSheet = "margin-top: 4px;";
         }
 
-        var title = page.title;
-        var subtitle = page.subTitle;
-        function restoreHeading() {
-            page.left.disconnect(restoreHeading);
-            page.title = title;
-            page.subTitle = subtitle;
-        }
-
-        // Preserve the step list's localized titles when navigating.
-        page.left.connect(restoreHeading);
-        page.title = headerWordmark();
-        page.subTitle = " ";
+        // No title, so no header: the logo heads the page's own content.
+        page.title = "";
+        page.subTitle = "";
         capture(name);
         advance(name, page);
     };
