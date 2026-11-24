@@ -155,27 +155,40 @@ func named(_ item: Placed) -> String {
 }
 let wizardButtons: Set<String> = ["Back", "Next", "Install", "Cancel", "Finish", "Uninstall", "Update", "Quit"]
 let font = NSFont(name: "Helvetica Neue", size: 14) ?? NSFont.systemFont(ofSize: 14)
-// What the last full pass over each page found. A page is judged by how it ended up: a pass that caught it still
-// opening is listed (layout-opening) and fails nothing.
-struct PageState {
-    var problems: [String]
-    var gaps: [Int]
-    var top: CGFloat
-    var edge: CGFloat
-    var leader: String
-    var title: String
+// One broken rule: which rule, where on the page (its role and place, so it is known again when its text changes), and
+// what it says.
+struct Problem {
+    let kind: String
+    let place: String
+    let text: String
 }
-var pageStates: [String: PageState] = [:]
-var pageOrder: [String] = []
-var opening = Set<String>()
-var pagesSeen = 0
-var pagesChecked = 0
+
+// One full look at a page, printed for a11y_layout.py, which judges the page over all its looks.
+struct Look {
+    let problems: [Problem]
+    let gaps: [Int]
+    let top: CGFloat
+    let edge: CGFloat
+    let leader: String
+
+    func line(page: String) -> String {
+        let fields: [String: Any] = [
+            "page": page, "top": Double(top), "edge": Double(edge), "leader": leader, "gaps": gaps,
+            "problems": problems.map { ["kind": $0.kind, "place": $0.place, "text": $0.text] },
+        ]
+        guard let data = try? JSONSerialization.data(withJSONObject: fields),
+            let text = String(data: data, encoding: .utf8)
+        else { return "unreadable" }
+        return text
+    }
+}
+var looks = 0
+var gapCounts: [Int: Int] = [:]
 
 // The page's layout, or nil while it has no content to check.
-func check(window: CGRect, title: String, placed: [Placed]) -> PageState? {
+func check(window: CGRect, placed: [Placed]) -> Look? {
     let buttons = placed.filter { $0.role == "AXButton" && wizardButtons.contains($0.text) }
     let bottom = buttons.map(\.frame.minY).min() ?? window.maxY
-    pagesSeen += 1
     // Everything under the title bar: the pages have no header, the logo is the page's first element.
     let content = placed.filter {
         !($0.role == "AXStaticText" && $0.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty) &&
@@ -185,8 +198,7 @@ func check(window: CGRect, title: String, placed: [Placed]) -> PageState? {
     }
     // A moment between two pages has no content; a run that never checks a page fails (layout-pages: 0).
     guard !content.isEmpty else { return nil }
-    pagesChecked += 1
-    var problems: [String] = []
+    var problems: [Problem] = []
     var gaps: [Int] = []
     // The first element of each row (nothing beside it to its left).
     let firsts = content.filter { item in
@@ -203,36 +215,39 @@ func check(window: CGRect, title: String, placed: [Placed]) -> PageState? {
     let edge = firsts.map(drawnX).min() ?? 0
     let leader = firsts.min { drawnX($0) < drawnX($1) }
     // Exactly one edge: frames are in whole points, and a widget the native style moves off its cell is 2 off.
-    for item in firsts where abs(drawnX(item) - edge) > 0.5 {
-        problems.append("left edge \(Int(drawnX(item) - edge)) px off: \(item.role) '\(named(item))'")
+    for (place, item) in firsts.enumerated() where abs(drawnX(item) - edge) > 0.5 {
+        problems.append(Problem(kind: "left edge", place: "\(item.role) \(place)", text: "left edge \(Int(drawnX(item) - edge)) px off: \(item.role) '\(named(item))'"))
     }
     // Boxes of one kind on a page start at one x and are one height: a box moved or cut by its widget's frame starts
     // further right (its indicator is clipped on the left), a box with an inner margin is taller.
     for kind in ["AXCheckBox", "AXRadioButton"] {
         let boxes = content.filter { $0.role == kind }
         guard let first = boxes.first else { continue }
-        for box in boxes.dropFirst() {
+        for (place, box) in boxes.enumerated().dropFirst() {
             if abs(box.frame.minX - first.frame.minX) > 0.5 {
-                problems.append("\(kind) '\(box.text)' starts \(Int(box.frame.minX - first.frame.minX)) px from '\(first.text)'")
+                problems.append(Problem(kind: "box start", place: "\(kind) \(place)", text:
+                    "\(kind) '\(box.text)' starts \(Int(box.frame.minX - first.frame.minX)) px from '\(first.text)'"))
             }
             if abs(box.frame.height - first.frame.height) > 0.5 {
-                problems.append("\(kind) '\(box.text)' is \(Int(box.frame.height)) px high, '\(first.text)' \(Int(first.frame.height))")
+                problems.append(Problem(kind: "box height", place: "\(kind) \(place)", text:
+                    "\(kind) '\(box.text)' is \(Int(box.frame.height)) px high, '\(first.text)' \(Int(first.frame.height))"))
             }
         }
     }
     // Side by side in a row (a box and its link), a visible space between: 4 px at least.
-    for item in content {
+    for (place, item) in content.enumerated() {
         let beside = content.filter { other in
             other.frame.minX >= item.frame.maxX - 2 && other.frame.minY < item.frame.maxY - 2
                 && other.frame.maxY > item.frame.minY + 2
         }.min { $0.frame.minX < $1.frame.minX }
         if let next = beside, next.frame.minX - item.frame.maxX < 4 {
-            problems.append("'\(named(item))' runs into '\(named(next))': \(Int(next.frame.minX - item.frame.maxX)) px apart")
+            problems.append(Problem(kind: "runs into", place: "\(item.role) \(place)", text:
+                "'\(named(item))' runs into '\(named(next))': \(Int(next.frame.minX - item.frame.maxX)) px apart"))
         }
     }
     // Radio buttons draw round: the indicator's corner shows the page, not its ring (radioShape).
     for radio in content where radio.role == "AXRadioButton" {
-        let key = "[\(title)] '\(named(radio))'"
+        let key = "'\(named(radio))'"
         if roundRadios.contains(key) { continue }
         switch radioShape(radio.frame) {
         case .some(true):
@@ -252,7 +267,8 @@ func check(window: CGRect, title: String, placed: [Placed]) -> PageState? {
         }.map { drawn($0).maxX }.max() ?? widest
         let right = window.maxX - max(widest, browse)
         if abs((edge - window.minX) - right) > 24 {
-            problems.append("off centre: \(Int(edge - window.minX)) px on the left, \(Int(right)) px on the right")
+            problems.append(Problem(kind: "off centre", place: "page", text:
+                "off centre: \(Int(edge - window.minX)) px on the left, \(Int(right)) px on the right"))
         }
     }
     // A row is everything beside its first element: the bar and its percentage, a box and its link.
@@ -260,20 +276,23 @@ func check(window: CGRect, title: String, placed: [Placed]) -> PageState? {
         let beside = content.filter { $0.frame.minY < item.frame.maxY - 2 && $0.frame.maxY > item.frame.minY + 2 }
         return ((beside.map(\.frame.minY) + [item.frame.minY]).min()!, (beside.map(\.frame.maxY) + [item.frame.maxY]).max()!)
     }
-    for (above, below) in zip(firsts, firsts.dropFirst()) {
+    for (place, (above, below)) in zip(firsts, firsts.dropFirst()).enumerated() {
         let gap = row(below).top - row(above).bottom
         gaps.append(Int(gap.rounded()))
         // Under a logo standing alone (an image, no text) the template's logo step; everywhere else the row gap.
         let wanted = plain(above.text).isEmpty && above.role == "AXStaticText" ? logoGap : rowGap
         if gap < -0.5 {
-            problems.append("overlap \(Int(-gap)) px between '\(named(above))' and '\(named(below))'")
+            problems.append(Problem(kind: "row gap", place: "row \(place)", text:
+                "overlap \(Int(-gap)) px between '\(named(above))' and '\(named(below))'"))
         } else if abs(gap - wanted) > 0.5 {
-            problems.append("gap \(Int(gap)) px between '\(named(above))' and '\(named(below))', not \(Int(wanted))")
+            problems.append(Problem(kind: "row gap", place: "row \(place)", text:
+                "gap \(Int(gap)) px between '\(named(above))' and '\(named(below))', not \(Int(wanted))"))
         }
     }
     // Every text on the window, wrapped or not: no word wider than its frame, and the wrapped text no taller.
     let lineHeight = font.ascender - font.descender + font.leading
-    for item in placed where ["AXStaticText", "AXCheckBox", "AXRadioButton", "AXButton"].contains(item.role)
+    for (place, item) in placed.enumerated()
+        where ["AXStaticText", "AXCheckBox", "AXRadioButton", "AXButton"].contains(item.role)
         && !item.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         && item.frame.width > 1 && item.frame.height > 1
     {
@@ -288,21 +307,24 @@ func check(window: CGRect, title: String, placed: [Placed]) -> PageState? {
             options: [.usesLineFragmentOrigin, .usesFontLeading], attributes: [.font: font]
         ).height
         if word > available + 2 {
-            problems.append("clipped: \(item.role) '\(text)' has a word \(Int(word)) px wide in \(Int(available))")
+            problems.append(Problem(kind: "clipped", place: "\(item.role) \(place)", text:
+                "clipped: \(item.role) '\(text)' has a word \(Int(word)) px wide in \(Int(available))"))
         } else if needed > item.frame.height + lineHeight / 2 {
             // Half a line of slack for font metrics; a line that does not fit is a whole line short.
-            problems.append("clipped: \(item.role) '\(text)' needs \(Int(needed)) px high, has \(Int(item.frame.height))")
+            problems.append(Problem(kind: "clipped", place: "\(item.role) \(place)", text:
+                "clipped: \(item.role) '\(text)' needs \(Int(needed)) px high, has \(Int(item.frame.height))"))
         }
     }
-    for box in content where box.role == "AXScrollArea" {
+    for (place, box) in content.enumerated() where box.role == "AXScrollArea" {
         let filled = box.children.reduce(CGFloat(0)) { $0 + $1.intersection(box.frame).height }
         if filled < box.frame.height / 2 {
-            problems.append("mostly empty frame: \(Int(filled)) of \(Int(box.frame.height)) px used")
+            problems.append(Problem(kind: "empty frame", place: "\(place)", text:
+                "mostly empty frame: \(Int(filled)) of \(Int(box.frame.height)) px used"))
         }
     }
-    return PageState(
+    return Look(
         problems: problems, gaps: gaps, top: (firsts.first?.frame.minY ?? window.minY) - window.minY,
-        edge: edge - window.minX, leader: "\(leader?.role ?? "") '\(leader.map(named) ?? "")'", title: title)
+        edge: edge - window.minX, leader: "\(leader?.role ?? "") '\(leader.map(named) ?? "")'")
 }
 
 while kill(pid, 0) == 0 {
@@ -310,24 +332,22 @@ while kill(pid, 0) == 0 {
     if AXUIElementCopyAttributeValue(app, kAXWindowsAttribute as CFString, &windows) == .success,
         let list = windows as? [AXUIElement]
     {
-        for window in list {
+        for (number, window) in list.enumerated() {
             // A pass counts for a page only when the page log names the same page before and after it.
             let before = currentPage()
             var placed: [Placed] = []
             var tally = Tally()
             visit(window, depth: 0, into: &placed, tally: &tally)
             if let box = frame(window) {
-                let title = string(window, kAXTitleAttribute)
                 // Without a page log (the released installer) the window is the page.
-                let key = before ?? title
-                if let state = check(window: box, title: title, placed: placed), before == currentPage() {
+                // A second window (a question) is looked at on its own, or the two would never agree in a row.
+                let key = (before ?? string(window, kAXTitleAttribute)) + (number == 0 ? "" : " window \(number + 1)")
+                if let look = check(window: box, placed: placed), before == currentPage() {
                     tally.laidOut = true
-                    if let earlier = pageStates[key] {
-                        for problem in earlier.problems { opening.insert("[\(key)] \(problem)") }
-                    } else {
-                        pageOrder.append(key)
-                    }
-                    pageStates[key] = state
+                    looks += 1
+                    for gap in look.gaps { gapCounts[gap, default: 0] += 1 }
+                    print("pass: \(look.line(page: key))")
+                    fflush(stdout)
                 }
             }
             if let page = before, !page.isEmpty, page == currentPage() {
@@ -349,25 +369,8 @@ for page in witnessOrder {
 for (radio, reason) in radiosNeverRound.sorted(by: { $0.key < $1.key }) {
     print("layout: AXRadioButton \(radio): \(reason)")
 }
-// Every page as it ended up, and its logo's place and left edge against the first page's.
-var ended = Set<String>()
-for key in pageOrder {
-    let state = pageStates[key]!
-    for problem in state.problems {
-        ended.insert("[\(key)] \(problem)")
-        print("layout: [\(key)] \(problem)")
-    }
-    let first = pageStates[pageOrder[0]]!
-    if abs(state.top - first.top) > 0.5 || abs(state.edge - first.edge) > 0.5 {
-        print("layout: not on the page template: [\(key)] starts at (\(Int(state.edge)), \(Int(state.top))) with "
-            + "\(state.leader), [\(pageOrder[0])] at (\(Int(first.edge)), \(Int(first.top)))")
-    }
-}
-for problem in opening.subtracting(ended).sorted() { print("layout-opening: \(problem)") }
-var gapCounts: [Int: Int] = [:]
-for state in pageStates.values { for gap in state.gaps { gapCounts[gap, default: 0] += 1 } }
 let gapList = gapCounts.keys.sorted().map { "\($0) px x\(gapCounts[$0]!)" }.joined(separator: ", ")
 print("row gaps on all pages: \(gapList.isEmpty ? "none" : gapList)")
-print("layout-pages: \(pagesChecked)")
+print("layout-pages: \(looks)")
 print("a11y-client: \(trees) tree elements")
 print("a11y-client: \(queries) multiple-attribute queries")
