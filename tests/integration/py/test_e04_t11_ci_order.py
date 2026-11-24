@@ -10,6 +10,7 @@ import yaml
 from tests.fixtures.e09_t75_workflow import active, require_reporting_step
 from tests.fixtures.native_process import environment_bash
 from tests.integration.py.test_e09_t75_native_workflow import (
+    APP_JOBS,
     public_build_boundary,
     public_profile,
 )
@@ -212,16 +213,27 @@ def assert_core_failure_reporting(core):
 @pytest.mark.parametrize('upstream', ['success', 'failure', 'skipped'])
 def test_later_jobs_report_after_core_and_native_results(event, upstream):
     jobs = yaml.safe_load((ROOT / '.github/workflows/ci.yml').read_text())['jobs']
-    for name in ['audit', 'notebooks', 'cli-python', 'docs', 'app', 'app-wasm', 'system']:
+    desktop = set(APP_JOBS.values())
+    for name in (
+        'audit',
+        'notebooks',
+        'cli-python',
+        'docs',
+        'app-wasm',
+        'system',
+        *APP_JOBS.values(),
+    ):
         states = {'changes': 'success', 'core': upstream, 'app': upstream, 'crysta-sdk': 'success'}
         if name == 'notebooks':
             states['native'] = upstream
+        if name in desktop:
+            states = dict.fromkeys(('changes', 'native', 'crysta-sdk'), 'success')
         expected = not (
             (name == 'system' and event in {'pull_request', 'push'})
             or (name == 'app-wasm' and event == 'pull_request')
         )
         assert active(jobs[name], event, states=states) == expected, (
-            'every event-required later job reports despite failed or skipped core/native/app'
+            'desktop apps run without a core result and later jobs retain their reporting scope'
         )
         assert not jobs[name].get('continue-on-error'), (
             'later reporting must retain each job failure in the overall run conclusion'
