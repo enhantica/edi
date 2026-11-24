@@ -15750,8 +15750,10 @@ struct AssistantViewModel::State {
     bool queue_drain_scheduled = false, queue_delivering = false;
     static constexpr qsizetype queued_message_limit = 20;
     bool native_action_busy() const { return native_call || native_fit || native_creation; }
+    // A fit the user started holds messages as one the assistant started does: the project changes under it.
+    bool action_running() const { return native_action_busy() || (project && project->fit() && project->fit()->running()); }
     bool queue_waits() const {
-        return native_action_busy() || native_worker_admitted() || startup_restore_pending() || !session_selection_target.isEmpty() ||
+        return action_running() || native_worker_admitted() || startup_restore_pending() || !session_selection_target.isEmpty() ||
             account_confirmation_pending || generic_revoke_pending || generic_context_pending || generic_clear_pending ||
             !generic_interrupt_rpc.isEmpty() || generic_connecting || generic_retiring || generic_writing_input ||
             (generic_busy && generic_turn.isEmpty()) || file_selection || file_staging || attachment_clear_requested ||
@@ -15896,7 +15898,7 @@ struct AssistantViewModel::State {
             qsizetype at=-1;
             for(qsizetype n=0;n<queued_messages.size();++n)if(queued_messages[n].id==message.id){at=n;break;}
             if(at<0)return; // Stop or another owner already returned it
-            if(row.isEmpty() && native_action_busy())return; // another action started first; keep waiting
+            if(row.isEmpty() && action_running())return; // another action started first; keep waiting
             if(row.isEmpty()) {
                 // Refused (its reason is in the error): it and the rest of its conversation go back unsent,
                 // since sending the later ones alone would change their order.
@@ -15973,7 +15975,7 @@ struct AssistantViewModel::State {
         if(static_cast<quint64>(contextBytes.size())!=outgoing_bytes)throw std::logic_error("Outgoing encoded identity changed");
 
         const auto context = QString::fromUtf8(contextBytes);
-        if (native_action_busy()) {
+        if (action_running()) {
             // A message sent while a fit or another app action runs waits for it (edi #147). The consent path
             // keeps its own draft and resends it; an ordinary Send joins the queue, sent once the action settles.
             if (accountWaiting) { *accountWaiting = true; return {}; }
@@ -17652,6 +17654,13 @@ struct AssistantViewModel::State {
             QObject::connect(target->fit(), &FitViewModel::iterationsChanged, &owner, [this, receiver, binding, bound_project, active] {
                 if (!receiver || receiver->state_.get() != this || generation != binding || (active && !*active) || !bound_project || project != bound_project) return;
                 if (generic_mode && native_fit && native_call && native_current(native_call->receipt)) agent->activity();
+            });
+#endif
+#ifndef __EMSCRIPTEN__
+            // Messages that waited for this fit go once it is over.
+            QObject::connect(target->fit(), &FitViewModel::runningChanged, &owner, [this, receiver, bound_project, active] {
+                if (!receiver || receiver->state_.get() != this || (active && !*active) || !bound_project || project != bound_project) return;
+                schedule_queue_drain();
             });
 #endif
             QObject::connect(target->fit(), &FitViewModel::finished, &owner, [this, receiver, binding, bound_project, active] {
