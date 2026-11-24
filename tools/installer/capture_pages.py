@@ -342,8 +342,17 @@ def check_maintenance(
         app.exists() and app.read_text(encoding='utf-8') == 'updated marker\n'
     ):
         raise RuntimeError('Updating did not install the newer version')
-    if mode == 'remove' and (app.exists() or assistant.exists() or maintenance.exists()):
-        raise RuntimeError(f'Removing left the installation behind in {target}')
+    if mode != 'remove':
+        return
+    # On Windows the maintenance tool cannot delete its own running executable; a helper it
+    # starts deletes it and the folder after it quits. Give that a minute, then name what is left.
+    deadline = time.monotonic() + 60
+    while target.exists() and time.monotonic() < deadline:
+        time.sleep(2)
+    left = [path for path in (app, assistant, maintenance) if path.exists()]
+    if left:
+        rest = sorted(str(path.relative_to(target)) for path in target.rglob('*'))
+        raise RuntimeError(f'Removing left {left} behind in {target}; all that is left: {rest}')
 
 
 # Every page each walk shows, in order. The installer passes its welcome and summary pages by
