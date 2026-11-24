@@ -67,37 +67,38 @@ extern "C" qint64 operation_file_write_cstring(QIODevice* file, const char* byte
     return file->write(bytes);
 }
 extern "C" void transaction_real_fetch_from(QObject*, QNetworkAccessManager*&, const QStringList&,
-                                            const QString&, edi_app::FetchDone, edi_app::FetchProgress);
+                                            const QString&, const edi_app::FetchDone&,
+                                            const edi_app::FetchProgress&);
 extern "C" void transaction_real_fetch_url(QObject*, QNetworkAccessManager*&, const QUrl&,
-                                           edi_app::FetchDone, edi_app::FetchProgress);
+                                           const edi_app::FetchDone&, const edi_app::FetchProgress&);
 namespace edi_app {
-void fetch_url(QObject* owner, QNetworkAccessManager*& manager, const QUrl& url, FetchDone done,
-               FetchProgress progress) {
+void fetch_url(QObject* owner, QNetworkAccessManager*& manager, const QUrl& url,
+               const FetchDone& done, const FetchProgress& progress) {
     if (holdOperationFetch) {
-        operationFetches.push_back({url, std::move(done)});
+        operationFetches.push_back({url, done});
         return;
     }
     if (url.scheme() == "http" || url.scheme() == "https") {
         done({}, "Offline observer refuses an uninjected HTTP request", false);
         return;
     }
-    transaction_real_fetch_url(owner, manager, url, std::move(done), std::move(progress));
+    transaction_real_fetch_url(owner, manager, url, done, progress);
 }
 void fetch_from(QObject* owner, QNetworkAccessManager*& manager, const QStringList& bases,
-                const QString& path, FetchDone done, FetchProgress progress) {
+                const QString& path, const FetchDone& done, const FetchProgress& progress) {
     const bool remote = std::any_of(bases.begin(), bases.end(), [](const auto& base) {
         return base.startsWith("http:") || base.startsWith("https:");
     });
     if (holdOperationFetch && (path != "index.json" || holdOperationIndex || remote)) {
         need(!bases.isEmpty(), "A held file belongs to an actually indexed collection source");
-        operationFetches.push_back({joined_url(bases.front(), path), std::move(done)});
+        operationFetches.push_back({joined_url(bases.front(), path), done});
         return;
     }
     if (remote) {
         done({}, "Offline observer refuses an uninjected HTTP collection", false);
         return;
     }
-    transaction_real_fetch_from(owner, manager, bases, path, std::move(done), std::move(progress));
+    transaction_real_fetch_from(owner, manager, bases, path, done, progress);
 }
 }  // namespace edi_app
 namespace {

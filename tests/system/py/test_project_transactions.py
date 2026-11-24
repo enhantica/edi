@@ -304,6 +304,31 @@ def browser_receipt(tmp_path, *, cleanup=None):
     return receipt, expected
 
 
+def test_untitled_browser_guard_follows_one_durable_outcome(observer, tmp_path):
+    rows = observe(observer, 'untitled-publication', tmp_path)
+    assert {row['mode'] for row in rows} == {'refused', 'adopted', 'newer-after-commit'}, (
+        'The same app guard reaches successful, refused, and postcommit-edit controls'
+    )
+    for row in rows:
+        assert row['pending'] and row['ids'], (
+            'Nothing settles before the store answers, and only the original request may settle'
+        )
+        committed = row['mode'] != 'refused'
+        assert row['durable'] is committed and row['states'] == [
+            'saved' if committed else 'refused'
+        ], 'Exactly one terminal answer agrees with what actually committed to storage'
+        if committed:
+            assert row['title'] == 'Snapshot at the time of Save', (
+                'The committed bytes preserve the snapshot from before the asynchronous response'
+            )
+        assert row['visible'] is (row['mode'] != 'adopted'), (
+            'Only adopting the durable snapshot releases the real Quit continuation'
+        )
+        assert not row['reopened'], 'A named outcome cannot re-drive the original Quit prompt'
+        if row['mode'] == 'newer-after-commit':
+            assert row['modified'], 'A committed older snapshot keeps the newer edit unsaved'
+
+
 def test_browser_save_as_replaces_old_entities_and_preserves_unrelated_destination_content(
     tmp_path,
 ):

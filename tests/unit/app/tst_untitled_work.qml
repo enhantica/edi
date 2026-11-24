@@ -105,6 +105,26 @@ TestCase {
         Ui.click(test, Probe, app, "appBar.tab.project");
         verify(Session.project === p && Session.needsSaveAs, "Navigating all usable tabs keeps the same untitled work");
         compare(p.currentStructure.cell.lengthA.value, 7.125, "Navigation retains the nontrivial scientific edit");
+        const destination = SettingsProof.copyProject(Probe.repoUrl("tests/fixtures/report_evolution/project"));
+        const naming = Session.beginUntitled("save");
+        let callbackCount = 0;
+        let opened = false;
+        const settle = (operation, state) => {
+            if (operation === naming && state === "superseded") {
+                ++callbackCount;
+                opened = Session.openProject(destination);
+            }
+        };
+        Session.untitledSettled.connect(settle);
+        try {
+            Session.closeProject();
+        } finally {
+            Session.untitledSettled.disconnect(settle);
+        }
+        compare(callbackCount, 1, "Replacing the original owner settles its naming operation once");
+        verify(opened, "A newer replacement is accepted synchronously from the settlement notification");
+        verify(Session.project !== null && Session.project !== p && !Session.untitled,
+               "The older close cannot retire the project a newer replacement just opened");
     }
     function test_b_first_save_names_and_preserves_work() {
         work();
@@ -132,6 +152,15 @@ TestCase {
         } finally {
             Session.untitledSettled.disconnect(settled);
         }
+        const owner = Session.project;
+        const stale = SettingsProof.childUrl(SettingsProof.emptyDirectory(), "stale-create");
+        const outcome = Session.createProjectWithOutcome("stale-create", "", SettingsProof.localPath(stale),
+                                                         "", "", "", false, "", false, id);
+        verify(!outcome.saved, "A delayed Create answer cannot save after its naming operation settles");
+        verify(Session.project === owner && Session.project.name === "lbco_hrpt-7",
+               "The settled request may neither replace nor rename the adopted project");
+        verify(!SettingsProof.fileObservation(stale, "project.edi").exists,
+               "A delayed naming answer writes nothing at its obsolete destination");
         verify(Session.openProject(folder), "The first saved project reopens through the real loader");
         compare(Session.project.name, "lbco_hrpt-7", "The short name becomes the saved project name");
         compare(Session.project.title, "Neutron work before Save", "First Save retains the entered title");

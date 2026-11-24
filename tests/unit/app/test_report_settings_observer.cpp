@@ -61,6 +61,7 @@
 #include <utility>
 #include <vector>
 
+#include "assistant_widget_input.hpp"
 #include "edi/fit_job.hpp"
 #include "edi/structure_scene.hpp"
 #include "engine_setup.hpp"
@@ -750,6 +751,42 @@ public:
         summary.outcome = "success";
         project->fit()->showScan(summary, true);
         return true;
+    }
+    Q_INVOKABLE QVariantMap shownPress(QQuickItem* target, const QString& kind, const QJSValue& cue) const {
+        if (!target || !target->window()) return {{"completed", false}, {"detail", "No window"}};
+        using Input = edi_app::AssistantWidgetInput;
+        const QPointer<QQuickItem> original(target);
+        auto* window = target->window();
+        Input input(*window);
+        Input::Request request;
+        request.target = target;
+        if (kind == QStringLiteral("context")) request.kind = Input::Kind::ContextMenu;
+        else if (kind == QStringLiteral("search")) request.kind = Input::Kind::SearchChoice;
+        else if (kind == QStringLiteral("row")) request.kind = Input::Kind::Choose;
+        else request.kind = Input::Kind::Navigate;
+        if (request.kind == Input::Kind::SearchChoice || request.kind == Input::Kind::Choose) {
+            request.option = 1;
+            request.value = QStringLiteral("Second phase");
+        }
+        request.current = [original, window] { return original && original->window() == window; };
+        request.restoreCurrent = request.current;
+        request.prepareCommit = [] { return true; };
+        request.finishCommit = [] {};
+        QVariantMap receipt{{"completed", false}};
+        request.completed = [&](bool delivered, const QString& detail, edi_app::ControlCause) {
+            receipt = {{"completed", true}, {"delivered", delivered}, {"detail", detail}};
+        };
+        int presses = 0;
+        QObject::connect(&input, &Input::pointerPressed, &input, [cue, &presses] {
+            if (cue.isCallable()) cue.call({QJSValue(++presses)});
+        });
+        input.start(std::move(request));
+        if (!QTest::qWaitFor([&] { return receipt.value("completed").toBool(); }, 6000)) input.cancel();
+        receipt.insert("cues", presses);
+        return receipt;
+    }
+    Q_INVOKABLE void putBeforeInChildList(QQuickItem* covering, QQuickItem* target) const {
+        if (covering && target && covering->parentItem() == target->parentItem()) covering->stackBefore(target);
     }
     Q_INVOKABLE QVariantMap screen() const {
         const auto screen = QGuiApplication::primaryScreen();

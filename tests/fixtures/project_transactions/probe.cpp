@@ -142,6 +142,13 @@ struct Job {
     Image payload{};
 };
 std::vector<Job> jobs;
+struct Publication {
+    quint64 id;
+    QString stage, folder;
+    WebStorage::PublishCheck check;
+    WebStorage::Answer answer;
+};
+std::vector<Publication> publications;
 QStringList drops;
 void need(bool good, const char* why) {
     if (!good) throw std::runtime_error(why);
@@ -1848,6 +1855,9 @@ edi::Project transaction_real_load_project(const std::string&, const edi::Warnin
 edi::Project transaction_real_load_project_mode(const std::string&, edi::ProjectLoadMode,
                                                const edi::WarningSink&)
     TRANSACTION_SYMBOL(transaction_real_load_project_mode);
+edi::Project transaction_real_load_project_sourced_mode(const std::string&, edi::ProjectLoadMode,
+                                                       const edi::SourcedWarningSink&)
+    TRANSACTION_SYMBOL(transaction_real_load_project_sourced_mode);
 extern "C" void transaction_real_save_project(const edi::Project&, const std::string&);
 extern "C" void transaction_real_save_project_as(edi::Project&, const std::string&);
 extern "C" bool transaction_real_adopt_saved_values(edi::Project&, const std::string&);
@@ -1861,6 +1871,10 @@ Project load_project(const std::string& path, const WarningSink& warnings) {
 Project load_project(const std::string& path, ProjectLoadMode mode, const WarningSink& warnings) {
     fallibleBoundary("load_project");
     return transaction_real_load_project_mode(path, mode, warnings);
+}
+Project load_project(const std::string& path, ProjectLoadMode mode, const SourcedWarningSink& warnings) {
+    fallibleBoundary("load_project");
+    return transaction_real_load_project_sourced_mode(path, mode, warnings);
 }
 
 void save_project(const Project& p, const std::string& path) {
@@ -1965,6 +1979,11 @@ void boundary_write(WebStorage*, const QString& key, const QString& kind,
         return;
     }
     jobs.push_back({"write", key, kind, folder, recovery, std::move(answer), payload});
+}
+void boundary_untitled_publish(WebStorage*, const QString&, quint64 id, const QString& stage,
+                                const QString&, const QString& folder, WebStorage::PublishCheck check,
+                                WebStorage::Answer answer) {
+    publications.push_back({id, stage, folder, std::move(check), std::move(answer)});
 }
 void boundary_drop(WebStorage*, const QString& key) { drops.append(key); }
 bool boundary_download(const QByteArray& bytes, const QString&) {
@@ -2091,6 +2110,9 @@ int main(int argc, char** argv) {
                         if (kind != QString("browser") || !moving)
                             rows.append(
                                 browserSave(source, kind, ok, false, moving, false, false));
+        } else if (group == "untitled-publication") {
+            for (const auto& mode : {"refused", "adopted", "newer-after-commit"})
+                rows.append(untitledPublication(mode));
         } else if (group == "newer-recovery")
             for (const auto& kind : {"browser", "folder", "zip"}) {
                 rows.append(browserSave(source, kind, true, true, false, false, false));

@@ -8,6 +8,7 @@ const [root, chrome] = process.argv.slice(2);
 const source = await readFile(join(root, 'app/src/web_storage.cpp'), 'utf8');
 const bodies = Object.fromEntries([
   'edi_storage_install',
+  'edi_storage_write',
   'edi_storage_publish_untitled',
   'edi_storage_revoke',
   'edi_storage_resume',
@@ -29,8 +30,13 @@ async function install(page) {
   await page.goto('http://127.0.0.1:' + server.address().port);
   await page.evaluate(bodies => {
     const jobs = new Map();
+    const answers = new Map();
+    const vetoes = new Map();
     const Module = {
-      _edi_storage_answered: (job, value) => jobs.get(job)(JSON.parse(value)),
+      _edi_storage_answered: (job, value) => {
+        answers.set(job, (answers.get(job) || 0) + 1);
+        jobs.get(job)(JSON.parse(value));
+      },
       _edi_storage_serial_finished: () => {},
     };
     function invoke(name, args = {}) {
@@ -40,7 +46,7 @@ async function install(page) {
     invoke('edi_storage_install');
     const S = globalThis.ediStorage;
     // Only C++ data marshalling is represented here. The production JS owns the real transactions and files.
-    S.policy = (operation, {key, recovery, kind, name, entries, paths}) => {
+    S.policy = (operation, {key, recovery, kind, name, entries, paths, job}) => {
       if (operation === 4) {
         if (entries.some(([path]) => !paths.includes(path))) {
           throw new Error('The claim witness only marshals writes into new destinations');
@@ -49,6 +55,8 @@ async function install(page) {
       }
       if (operation === 7) return ['edi', recovery ? 'recovery' : 'projects', key];
       if (operation === 5) return {key, recovery, kind, name};
+      if (operation === 15) return 'browser';
+      if (operation === 21) return vetoes.get(job) || {outcome: 'go'};
       throw new Error('Unexpected storage marshalling operation ' + operation);
     };
     const files = text => [['project.edi', new TextEncoder().encode(text)]];
@@ -69,33 +77,58 @@ async function install(page) {
       if (staged) S.staged.set(job, staged);
       invoke(name, {job, ...args});
       if (staged) invoke('edi_storage_resume', {job});
-      return answer;
+      return {job, answer};
+    }
+    function hold(key) {
+      let resume, written;
+      const release = new Promise(resolve => { resume = resolve; });
+      const reached = new Promise(resolve => { written = resolve; });
+      const gate = {written, release, resume, reached};
+      controls.set(key, gate);
+      return gate;
+    }
+    async function reached(gate) {
+      await Promise.race([gate.reached, gate.answer.then(value => {
+        throw new Error('Write settled before reaching its hold: ' + JSON.stringify(value));
+      })]);
     }
     globalThis.claimTest = {
       async seed(key, text) {
         await realWrite(['edi', 'recovery', key], files(text));
         await S.put({key, kind: 'browser', name: 'Untitled', recovery: 1});
       },
-      async start(key, stage, text) {
-        let resume;
-        const release = new Promise(resolve => { resume = resolve; });
-        let written;
-        const reached = new Promise(resolve => { written = resolve; });
-        controls.set(stage, {written, release, resume});
-        const answer = run('edi_storage_publish_untitled', {
+      async start(key, stage, text, refuse = false) {
+        const gate = hold(stage);
+        Object.assign(gate, run('edi_storage_publish_untitled', {
           untitled_utf8: key, op: 7, stage_utf8: stage, name_utf8: text,
-        }, files(text));
-        controls.get(stage).answer = answer;
-        await Promise.race([reached, answer.then(value => {
-          throw new Error('Publication settled before creating its stage: ' + JSON.stringify(value));
-        })]);
+        }, files(text)));
+        if (refuse)
+          vetoes.set(gate.job, {outcome: 'rejected', message: 'Independent precommit snapshot veto'});
+        await reached(gate);
       },
-      revoke: (key, stage) => run('edi_storage_revoke', {untitled_utf8: key, op: 7, stage_utf8: stage}),
+      async startRecovery(key, text) {
+        const gate = hold(key);
+        Object.assign(gate, run('edi_storage_write', {
+          key_utf8: key, kind_utf8: 'browser', name_utf8: 'Untitled', recovery: 1,
+        }, files(text)));
+        await reached(gate);
+      },
+      async recover(key, text) {
+        const result = run('edi_storage_write', {
+          key_utf8: key, kind_utf8: 'browser', name_utf8: 'Untitled', recovery: 1,
+        }, files(text));
+        return result.answer;
+      },
+      revoke: (key, stage) => run('edi_storage_revoke', {
+        untitled_utf8: key, op: 7, stage_utf8: stage,
+      }).answer,
       finish(stage, fail) {
         const gate = controls.get(stage);
         gate.resume(fail);
         return gate.answer;
       },
+      count: key => answers.get(controls.get(key).job),
+      claim: stage => S.record(S.claimKey(stage)),
       record: key => S.record(key),
       sweep: async () => S.sweep(await S.store('readonly', store => store.getAll())),
       async bytes(part, key) {
@@ -126,9 +159,11 @@ try {
     const originalRecord = await call(first, 'record', key);
     await call(first, 'start', key, stageA, 'First tabs files');
     await call(second, 'start', key, stageB, 'Second tabs files');
-    assert.deepEqual(await call(first, 'record', 'claim:' + key),
-      {key: 'claim:' + key, op: 7, stage: stageB, state: 'live'},
-      'Two tabs can have the same operation id while only the last stage owns the claim');
+    for (const stage of [stageA, stageB]) {
+      const claim = await call(first, 'claim', stage);
+      assert.equal(claim?.stage, stage, 'Each tab has its own claim despite identical local operation ids');
+      assert.equal(claim?.state, 'live', 'Staging has granted temporary authority to the exact stage');
+    }
     await call(second, 'sweep');
     assert.equal(await call(second, 'bytes', 'projects', stageA), 'First tabs files',
       'Startup sweep preserves an unclaimed stage while the other tab holds its write lock');
@@ -160,13 +195,54 @@ try {
     assert.deepEqual(await call(first, 'record', stageB), published,
       'An old revoke cannot change the published place of the other stage');
     staleClaims.push({
-      observed: await call(first, 'record', 'claim:' + key),
-      expected: {key: 'claim:' + key, op: 7, stage: stageB, state: 'published'},
+      observed: (await call(first, 'claim', stageB))?.state,
+      expected: 'published',
     });
+    assert.equal(await call(first, 'count', stageA), 1, 'The losing or refused write answers once');
+    assert.equal(await call(second, 'count', stageB), 1, 'The committed publication answers once');
     await call(first, 'sweep');
     assert.equal(await call(first, 'bytes', 'projects', stageB), 'Second tabs files',
       'The sweep keeps the published project bytes');
   }
+  {
+    const key = 'refused-untitled', stage = 'stage-7-refused';
+    const original = 'Original recovery after decisional veto';
+    await call(first, 'seed', key, original);
+    const place = await call(first, 'record', key);
+    await call(first, 'start', key, stage, 'Candidate refused at the commit boundary', true);
+    const answer = await call(first, 'finish', stage, false);
+    assert.equal(answer.outcome, 'rejected', 'A snapshot veto produces a terminal refusal');
+    assert.equal(await call(first, 'count', stage), 1, 'The veto receives exactly one publication outcome');
+    assert.equal(await call(second, 'record', stage), undefined, 'A veto leaves no committed named place');
+    assert.equal(await call(second, 'bytes', 'projects', stage), null, 'A veto reclaims its own staged files');
+    assert.deepEqual(await call(second, 'record', key), place, 'A veto preserves the unnamed place record');
+    assert.equal(await call(second, 'bytes', 'recovery', key), original, 'A veto preserves the recovery bytes');
+  }
+  const observedRecovery = [];
+  for (const timing of ['before-commit', 'after-commit']) {
+    const key = 'stale-recovery-' + timing, stage = 'stage-7-published-' + timing;
+    await call(first, 'seed', key, 'Original recovery');
+    if (timing === 'before-commit')
+      await call(first, 'startRecovery', key, 'Older tab has a delayed recovery write');
+    await call(second, 'start', key, stage, 'Named snapshot');
+    assert.equal((await call(second, 'finish', stage, false)).outcome, 'published',
+      'A separately admitted first save has one committed named outcome');
+    await (timing === 'before-commit'
+      ? call(first, 'finish', key, false) : call(first, 'recover', key, 'Older tab writes after naming'));
+    assert.equal(await call(second, 'count', stage), 1, 'Named publication does not report a second outcome');
+    assert.equal(await call(second, 'bytes', 'projects', stage), 'Named snapshot',
+      'The late recovery write cannot change the durable named bytes');
+    observedRecovery.push({
+      timing,
+      placeExists: !!(await call(second, 'record', key)),
+      recovery: await call(second, 'bytes', 'recovery', key),
+    });
+  }
+  assert.deepEqual(observedRecovery, [
+    {timing: 'before-commit', placeExists: false, recovery: null},
+    {timing: 'after-commit', placeExists: false, recovery: null},
+  ], 'Recovery from another tab cannot recreate the retired place before or after naming commits');
+
   const key = 'teardown-untitled', stageA = 'stage-7-torn-down', stageB = 'stage-7-still-live';
   await call(first, 'seed', key, 'Untitled recovery after tab teardown');
   await call(first, 'start', key, stageA, 'Abandoned files');

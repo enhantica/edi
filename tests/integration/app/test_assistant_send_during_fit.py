@@ -62,6 +62,10 @@ def test_ordinary_send_during_fit_preserves_order_and_conversation(tmp_path, sto
             }})()
             """,
         ), 'The original project fit supplies the synchronous observation point'
+        peer = actor.folder / 'peer.json'
+        peer.write_text(
+            json.dumps(json.loads(peer.read_text()) | {'acknowledge_queue_steers': True})
+        )
         actor.request('Run the fit in the current conversation.')
         actor.until(lambda _: native.qml(actor, witness + '.receipt') is not None, seconds=15)
         receipt = native.qml(actor, witness + '.receipt')
@@ -112,5 +116,75 @@ def test_ordinary_send_during_fit_preserves_order_and_conversation(tmp_path, sto
             assert all(settled < index for index, _, _ in later), (
                 'Delivery starts after the running fit settles, even when both drafts arrive early'
             )
+    finally:
+        actor.close()
+
+
+def test_fit_time_send_keeps_the_original_pending_attachment(tmp_path):
+    actor = actor_in(tmp_path / 'attached-fit', [[], []])
+    try:
+        actor.request('Keep this conversation ready for a manual fit.')
+        actor.until(lambda row: row['ui']['state'] == 'idle' and bool(delivered(actor)))
+        attachment = tmp_path / 'fit-queue-original.txt'
+        attachment.write_text('An independent immutable attachment for this queued draft.')
+        token = actor.begin_current_file_selection()
+        assert actor.command('selected_add', token=token, paths=[str(attachment)])['reply'][
+            'added'
+        ], 'The real picker attaches the independent test file to the unsent draft'
+        actor.command('accept_context')
+        actor.until(lambda _: native.qml(actor, 'Session.assistant.draftAdmissionReady'))
+        original = native._attachment_rows(actor)[0]
+        editor = native.control_expression('assistant.composer')
+        send = native.control_expression('assistant.send')
+        witness = native.control_expression('attachedFitWitness')
+        assert native.qml(
+            actor,
+            f"""
+            (function() {{
+                const fit = Session.project.fit;
+                const probe = Qt.createQmlObject(
+                    'import QtQuick; Item {{ objectName: "attachedFitWitness";'
+                    + ' property var receipt: null }}', contentItem);
+                const observe = () => {{
+                    if (!fit.running) return;
+                    fit.runningChanged.disconnect(observe);
+                    const editor = {editor}, send = {send};
+                    editor.text = {json.dumps(MESSAGES[0])};
+                    const enabled = send.visible && send.enabled;
+                    if (enabled) send.clicked();
+                    probe.receipt = {{enabled, running: fit.running,
+                                      queued: Session.assistant.queuedMessages.count}};
+                }};
+                fit.runningChanged.connect(observe);
+                fit.start();
+                return true;
+            }})()
+            """,
+        ), 'The public Fit entry observes the ordinary Send during the real fit'
+        actor.until(lambda _: native.qml(actor, witness + '.receipt') is not None, seconds=15)
+        receipt = native.qml(actor, witness + '.receipt')
+        assert receipt == {'enabled': True, 'running': True, 'queued': 1}, (
+            'An ordinary file-bearing Send waits behind the active fit'
+        )
+        actor.until(
+            lambda row: (
+                row['ui']['state'] == 'idle'
+                and any(MESSAGES[0] in texts for _, _, texts in delivered(actor))
+            ),
+            seconds=20,
+        )
+        history = json.loads(native._rows_history_file(actor).read_bytes())
+        accepted = [
+            item['payload']['files']
+            for item in native.objects(history)
+            if item.get('kind') == 'user'
+            and item.get('text') == MESSAGES[0]
+            and isinstance(item.get('payload'), dict)
+            and item['payload'].get('type') == 'ediInput'
+        ]
+        assert len(accepted) == 1, 'The queued draft is delivered once to the real history'
+        assert [(item['id'], item['name'], item['bytes']) for item in accepted[0]] == [
+            (original['id'], attachment.name, attachment.stat().st_size)
+        ], 'The drained message contains the admitted file identity, label, and original size'
     finally:
         actor.close()

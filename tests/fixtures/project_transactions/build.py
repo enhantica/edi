@@ -89,11 +89,11 @@ def observe_fallible_core(prefix, output, core_observed, probe_defined):
                     'Every fallible observation must delegate one actual core boundary'
                 )
             for symbol in matches:
-                role = (
-                    '_mode'
-                    if spelling == 'load_project' and '15ProjectLoadModeE' in symbol
-                    else ''
-                )
+                role = ''
+                if spelling == 'load_project' and '15ProjectLoadModeE' in symbol:
+                    signature = run([str(prefix / 'bin/llvm-cxxfilt'), symbol]).strip()
+                    callback = signature.partition('std::function<void (')[2]
+                    role = '_sourced_mode' if ' const&, ' in callback else '_mode'
                 alias = (
                     ('_' if sys.platform == 'darwin' else '')
                     + 'transaction_real_'
@@ -377,6 +377,7 @@ def observe_browser_boundaries(prefix, output, observed, observer_object, probe_
                 'load': 'boundary_load',
                 'pickSave': 'boundary_pick',
                 'write': 'boundary_write',
+                'publishUntitled': 'boundary_untitled_publish',
                 'dropRecovery': 'boundary_drop',
             },
         ),

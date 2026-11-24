@@ -251,7 +251,7 @@ def _artifact_routes(workflow, root, event):
 
 
 def timing_route(workflow, root):
-    require_events(workflow, ('pull_request', 'push'))
+    require_events(workflow, ('schedule',))
     jobs = workflow['jobs']
     systems = {
         name
@@ -266,131 +266,118 @@ def timing_route(workflow, root):
         if not steps:
             continue
         assert systems and systems <= dependencies(jobs, name), (
-            'The push comparator must depend on every completed system job'
+            'The nightly comparator must depend on every completed system job'
         )
-        reachable(job, jobs, {})
+        reachable(job, jobs, {}, event='schedule')
         for step in steps:
-            reachable(step, jobs, {})
+            reachable(step, jobs, {}, event='schedule')
             for code in (0, 1, 2):
                 run_boundary(
                     step['run'], root / name, 'timing', code, workflow_shell(workflow, job, step)
                 )
         found = True
-    assert found, 'Push CI must invoke and enforce the same tested shard comparator'
+    assert found, 'The nightly workflow must invoke and enforce the same tested shard comparator'
     for slow in (False, True):
         timing_evidence(workflow, root / ('slow' if slow else 'green'), slow=slow)
 
 
-def timing_evidence(workflow, root, *, slow=False, api_mutation=None):  # noqa: PLR0914, PLR0915 - one collection-to-comparison transport
-    """Carry distinct real evidence from the workflow collector into its real comparator."""
-    import collections  # noqa: PLC0415 - isolated evidence transport
-    import json  # noqa: PLC0415 - isolated evidence transport
-    from pathlib import Path  # noqa: PLC0415 - isolated evidence transport
+def timing_evidence(workflow, root, *, slow=False, api_mutation=None):  # noqa: PLR0914, PLR0915
+    """Run the workflow's actual nightly collector and replay against independent REST pages."""
+    import collections  # noqa: PLC0415
+    import json  # noqa: PLC0415
+    from pathlib import Path  # noqa: PLC0415
 
-    import yaml  # noqa: PLC0415 - serialize the workflow the run actually used
+    import yaml  # noqa: PLC0415
 
-    from tests.fixtures.fast_ci.generate import run_record  # noqa: PLC0415
+    from tests.integration.py.test_nightly_and_branch_artifacts import (  # noqa: PLC0415
+        nightly_history,
+        page,
+    )
 
     root.mkdir(parents=True, exist_ok=True)
     job = workflow['jobs']['system-time']
-    inventory = dict(
-        collections.Counter(
-            row['platform'] for row in workflow['jobs']['system']['strategy']['matrix']['include']
-        )
-    )
-    documents = {}
-    for current in (True, False):
-        document = run_record('feature' if current else 'main', [2400], current=current)
-        document['expected_system_shards'] = inventory
-        if current:
-            document['event'] = 'push'
-            document['head_branch'] = 'main'
-            document['head_sha'] = 'd' * 40
-        template = document['jobs'][0]
-        document['jobs'] = []
-        for platform, count in inventory.items():
-            for part in range(1, count + 1):
-                item = {
-                    **template,
-                    'id': len(document['jobs']) + 1,
-                    'name': f'system · {platform} · {part}/{count}',
-                }
-                item['completed_at'] = (
-                    '2026-10-12T10:50:00+00:00'
-                    if current and slow and not document['jobs']
-                    else '2026-10-12T10:40:00+00:00'
-                )
-                document['jobs'].append(item)
-        documents[str(document['id'])] = document
+    matrix = workflow['jobs']['system']['strategy']['matrix']['include']
+    inventory = collections.Counter(row['platform'] for row in matrix)
+    history = nightly_history()
+    history['shards'] = {sha: dict(inventory) for sha in history['shards']}
+    for rid in history['runs']:
+        template = history['jobs'][rid][0]['jobs'][0]
+        jobs = [
+            {
+                **template,
+                'id': 100 + index,
+                'name': f'system · {row["platform"]} · {row["part"]}/{inventory[row["platform"]]}',
+            }
+            for index, row in enumerate(matrix)
+        ]
+        if rid == '31' and slow:
+            jobs[0]['completed_at'] = '2026-11-24T02:13:00Z'
+        history['jobs'][rid] = [page('jobs', jobs)]
     if api_mutation == 'stale-id':
-        documents['111']['id'] = 110
+        history['runs']['31']['id'] = 32
     if api_mutation == 'wrong-head':
-        documents['111']['head_sha'] = 'a' * 40
-    (root / 'runs.json').write_text(json.dumps(documents))
+        history['runs']['31']['head_sha'] = 'd' * 40
+    if api_mutation == 'partial-history':
+        history['list'][0]['total_count'] += 1
+    if api_mutation == 'moving-candidate':
+        history['runs']['30']['created_at'] = '2026-11-21T01:00:00Z'
+    (root / 'api.json').write_text(json.dumps(history))
     (root / 'workflow.yml').write_text(yaml.safe_dump(workflow))
-    (root / 'event.json').write_text(json.dumps({'pull_request': {'head': {'sha': 'c' * 40}}}))
-    binary = root / 'bin'
-    binary.mkdir(exist_ok=True)
+    (root / 'system-time').mkdir()
     scripts = {
-        'gh': r"""import json,os,re,sys
+        'gh': r"""import json, os, sys
 from pathlib import Path
-args=sys.argv[1:]; endpoint=next(x for x in args if x.startswith('repos/'))
-documents=json.loads(Path(os.environ['EVIDENCE_ROOT']+'/runs.json').read_text())
-if '/workflows/' in endpoint: print('222')
+from urllib.parse import parse_qs, urlsplit
+address = urlsplit(sys.argv[-1].split('/actions/', 1)[1])
+history = json.loads(Path(os.environ['EVIDENCE_ROOT'], 'api.json').read_text())
+page = int(parse_qs(address.query).get('page', ['1'])[0]) - 1
+parts = address.path.split('/')
+if parts[0] == 'workflows':
+    assert address.path == 'workflows/ci.yml/runs', 'The collector requires the primary workflow'
+    item = history['list'][page]
+elif parts[-1] == 'jobs':
+    item = history['jobs'][parts[1]][page]
 else:
- run=re.search(r'/runs/(\d+)',endpoint).group(1); record=documents[run]
- if '/jobs' in endpoint:
-  for job in record['jobs']: print(json.dumps(job))
- else: print(json.dumps({k:v for k,v in record.items() if k!='jobs'}))
+    item = history['runs'][parts[1]]
+print(json.dumps(item))
 """,
         'git': """import os,sys
 from pathlib import Path
-if sys.argv[1]=='show': print(Path(os.environ['EVIDENCE_ROOT']+'/workflow.yml').read_text())
+if sys.argv[1]=='show': print(Path(os.environ['EVIDENCE_ROOT'], 'workflow.yml').read_text())
 elif sys.argv[1]!='fetch': sys.exit(2)
 """,
         'pixi': """import os,sys
-assert sys.argv[1:3]==['run','python'], 'Only the real inventory counter is transported'
+assert sys.argv[1:3] == ['run','python'], 'Only the real timing command is transported'
 os.execv(sys.executable,[sys.executable,*sys.argv[3:]])
 """,
     }
-    for name, body in scripts.items():
+    binary = root / 'bin'
+    binary.mkdir(exist_ok=True)
+    for name, content in scripts.items():
         path = binary / name
-        path.write_text('#!' + sys.executable + '\n' + body)
+        path.write_text('#!' + sys.executable + '\n' + content)
         path.chmod(0o755)
     producer = Path(__file__).resolve().parents[3] / 'tools/ci/system_shard_time.py'
     gate = root / 'tools/ci/system_shard_time.py'
     gate.parent.mkdir(parents=True, exist_ok=True)
-    # Observe the actual compared operands, then call the unchanged production comparator.
-    gate.write_text(
-        'import importlib.util,json,os,pathlib,sys\n'
-        f'spec=importlib.util.spec_from_file_location("actual_time_gate",{str(producer)!r})\n'
-        'module=importlib.util.module_from_spec(spec);sys.modules[spec.name]=module;spec.loader.exec_module(module)\n'
-        'original=module.compare\n'
-        'def observed(current,main):\n'
-        ' output=pathlib.Path(os.environ["EVIDENCE_ROOT"]+"/compared.json")\n'
-        ' output.write_text(json.dumps([current,main]))\n'
-        ' return original(current,main)\n'
-        'module.compare=observed\nsys.exit(module.main())\n'
-    )
+    gate.symlink_to(producer)
     env = {
         **os.environ,
-        'PATH': str(binary) + ':' + os.environ['PATH'],
+        'PATH': str(binary) + os.pathsep + os.environ['PATH'],
         'RUNNER_TEMP': str(root),
         'EVIDENCE_ROOT': str(root),
-        'GITHUB_REPOSITORY': 'enhantica/edi',
-        'GITHUB_RUN_ID': '111',
-        'GITHUB_SHA': 'd' * 40,
-        'GITHUB_EVENT_PATH': str(root / 'event.json'),
+        'GITHUB_REPOSITORY': 'example/edi',
+        'GITHUB_RUN_ID': '31',
+        'GITHUB_SHA': 'a' * 40,
     }
-    steps = [step for step in job['steps'] if 'run' in step]
+    steps = [
+        step for step in job['steps'] if 'tools/ci/system_shard_time.py' in step.get('run', '')
+    ]
+    assert len(steps) == 2, 'Nightly collection and replay have distinct workflow steps'
     completed = []
     for step in steps:
-        reachable(step, workflow['jobs'], {})
-        command = (
-            step['run']
-            .replace('${{ github.event.pull_request.head.sha }}', 'c' * 40)
-            .replace('${{ github.sha }}', 'd' * 40)
-        )
+        reachable(step, workflow['jobs'], {}, event='schedule')
+        command = step['run'].replace('${{ github.sha }}', 'a' * 40)
         shell = workflow_shell(workflow, job, step)
         shell = (
             'bash --noprofile --norc -e -o pipefail {0}'
@@ -412,21 +399,26 @@ os.execv(sys.executable,[sys.executable,*sys.argv[3:]])
         if result.returncode:
             break
     if api_mutation:
-        assert completed[-1].returncode != 0, (
-            'Stale run id or push head evidence must refuse before a green timing verdict'
+        assert len(completed) == 1 and completed[0].returncode == 2, (
+            'An unproved API read fails closed in the collector before comparison'
+        )
+        assert not (root / 'system-time/history.json').exists(), (
+            'The collector never writes replay evidence for a refused history'
         )
         return
-    compared = root / 'compared.json'
-    assert compared.is_file(), (
-        'The actual collection must reach the real comparator with its evidence files'
+    receipt = root / 'system-time/history.json'
+    assert receipt.is_file(), 'The nightly comparator must receive the actual history.json'
+    actual = json.loads(receipt.read_text())
+    assert actual['runs']['31']['head_sha'] == 'a' * 40 and '30' in actual['runs'], (
+        'Live collection records this exact nightly and the independently newest earlier run'
     )
-    current, main = json.loads(compared.read_text())
-    assert (
-        current['id'] == 111 and current['head_sha'] == 'd' * 40 and current['event'] == 'push'
-    ), 'The comparator must consume this push run id and pushed head, not main or stale evidence'
-    assert main['id'] == 222 and main['head_sha'] == 'b' * 40 and main['event'] == 'push', (
-        'The baseline must be the selected main run id and head'
+    assert not (root / 'system-time/record.json').exists(), (
+        'An admitted earlier run never emits a no-baseline verdict'
     )
-    assert (completed[-1].returncode == 0) == (not slow), (
-        'The real comparator must enforce this push versus main after collection'
+    expected = 1 if slow else 0
+    assert len(completed) == 2 and completed[1].returncode == expected, (
+        'The nightly replay enforces the original comparison evidence after live collection'
+    )
+    assert 'baseline is run 30' in completed[1].stdout, (
+        'The workflow compares the most recent earlier baseline by absolute timestamp'
     )
