@@ -70,6 +70,7 @@
     "app/src/demo_driver.cpp",
     "app/src/experiment_models.cpp",
     "app/src/pattern_chart_controller.cpp",
+    "app/src/project_view_model.cpp",
     "core/src/report_html.cpp",
     "core/src/report_model.cpp",
     "core/src/safe_names.cpp"
@@ -376,6 +377,7 @@
     "crysta:data/dictionary/parameters.yaml",
     "app/qml/Components/StatusBar.qml",
     "app/src/analysis_view_model.cpp",
+    "app/src/project_view_model.cpp",
     "core/src/report_model.cpp"
    ],
    "drawn_by": "Noto Sans",

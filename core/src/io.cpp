@@ -3625,7 +3625,10 @@ BraggPdExperiment simulation_experiment(const std::string& name, const Experimen
     // its own and the user sets it, so an instrument's value is not carried over as a default.
     if (constant_wavelength) {
         text += "_instrument.setup_wavelength 1.\n";
-        text += "_instrument.calib_twotheta_offset 0.\n\n"
+        // The sample's displacement and transparency start at 0, declared so the instrument group lists them to
+        // fit, as it lists the zero offset.
+        text += "_instrument.calib_twotheta_offset 0.\n"
+                "_instrument.calib_sample_displacement 0.\n_instrument.calib_sample_transparency 0.\n\n"
                 "_peak.type cwl-tch-pseudo-voigt\n"
                 "_peak.broad_gauss_u 0.1\n_peak.broad_gauss_v -0.1\n_peak.broad_gauss_w 0.1\n"
                 "_peak.broad_lorentz_x 0.\n_peak.broad_lorentz_y 0.\n_peak.cutoff_fwhm 8.\n\n"
@@ -4644,6 +4647,7 @@ static Project load_project_folder(const std::string& directory, const WarningSi
                     }
                     phase->fit_bragg_r_factor = cell(*phases, row, "_fit_result_phase.bragg_r_factor");
                     phase->fit_f_r_factor = cell(*phases, row, "_fit_result_phase.f_r_factor");
+                    phase->fit_magnetic_r_factor = cell(*phases, row, "_fit_result_phase.magnetic_r_factor");
                 }
             }
         }
@@ -5069,13 +5073,29 @@ static Project load_project_folder(const std::string& directory, const WarningSi
     // every parameter marked, a dependent's free flag cleared with a warning (not for the bracket of a
     // dependent saved with its s.u.). No one file is their warnings' source.
     source.clear();
+    bool relations_hold = true;
     {
         // The declared relations come from the analysis file: a refusal of one is about that file.
         const ReadingScope reading(fs::is_regular_file(analysis_file) ? analysis_file.string() : std::string());
-        refresh_relations(project, warn, true);
+        try {
+            refresh_relations(project, warn, true);
+        } catch (const std::exception& refusal) {
+            // The app opens such a project as an edit leaves one, saying why at once: the calculation waits until
+            // the relations are fixed. The whole-project load (the CLI, a calculation) still refuses.
+            if (whole) {
+                throw;
+            }
+            relations_hold = false;
+            warn(std::string("The aliases and constraints do not hold, so the calculation waits until they are "
+                             "fixed: ") +
+                 refusal.what());
+        }
     }
-    // A held fit's dependents take their s.u. from their relations and the seeds (crysta's rule).
-    restore_dependent_uncertainties(project);
+    // A held fit's dependents take their s.u. from their relations and the seeds (crysta's rule); relations that do
+    // not hold give none, so the saved values and s.u. stay as written until they are fixed.
+    if (relations_hold) {
+        restore_dependent_uncertainties(project);
+    }
     // A structure whose magnetic operators form no table setting takes no Wyckoff letter; each one a
     // file supplies is said, as crysta says it (edi ADR-0078).
     for (const auto& structure : project.structures) {
@@ -5399,10 +5419,12 @@ void copy_fit_share(ExperimentBase& to, const ExperimentBase& from) noexcept {
     for (const auto& link : to.linked_structures) {
         link->fit_bragg_r_factor.reset();
         link->fit_f_r_factor.reset();
+        link->fit_magnetic_r_factor.reset();
         for (const auto& source : from.linked_structures) {
             if (source->structure_id.value() == link->structure_id.value()) {
                 link->fit_bragg_r_factor = source->fit_bragg_r_factor;
                 link->fit_f_r_factor = source->fit_f_r_factor;
+                link->fit_magnetic_r_factor = source->fit_magnetic_r_factor;
             }
         }
     }
@@ -5418,6 +5440,7 @@ void clear_fit_share(ExperimentBase& experiment) {
     for (const auto& link : experiment.linked_structures) {
         link->fit_bragg_r_factor.reset();
         link->fit_f_r_factor.reset();
+        link->fit_magnetic_r_factor.reset();
     }
 }
 
@@ -5642,9 +5665,11 @@ bool adopt_values(Project& project, const Project& saved) {
                 LinkedStructure& link = *experiment->linked_structures[index];
                 const LinkedStructure& held_link = *stored->linked_structures[index];
                 if (link.fit_bragg_r_factor != held_link.fit_bragg_r_factor ||
-                    link.fit_f_r_factor != held_link.fit_f_r_factor) {
+                    link.fit_f_r_factor != held_link.fit_f_r_factor ||
+                    link.fit_magnetic_r_factor != held_link.fit_magnetic_r_factor) {
                     link.fit_bragg_r_factor = held_link.fit_bragg_r_factor;
                     link.fit_f_r_factor = held_link.fit_f_r_factor;
+                    link.fit_magnetic_r_factor = held_link.fit_magnetic_r_factor;
                     changed = true;
                 }
             }
@@ -5695,6 +5720,7 @@ std::vector<std::function<void()>> hold_calculation(Project& project) {
         for (const auto& link : experiment->linked_structures) {
             keep(link->fit_bragg_r_factor);
             keep(link->fit_f_r_factor);
+            keep(link->fit_magnetic_r_factor);
         }
         if (std::optional<PdDataBase>& held = experiment->data; held.has_value()) {
             PdDataBase& data = *held;

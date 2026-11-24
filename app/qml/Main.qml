@@ -911,12 +911,21 @@ EaComponents.ApplicationWindow {
         // back and end the tutorial, on the next turn; Cancel leaves the tutorial running.
         property bool setAside: false
         property var afterSaveAbandoned: null
+        // A guard Save on untitled work (ADR-0100): the waiting action runs only when that operation is saved.
+        property var untitledId: 0
+        property var untitledAction: null
+        property var untitledAbandoned: null
+        // The project the guard asked about: the action runs only while it is still the open one.
+        property var untitledProject: null
         onAccepted: ApplicationInfo.acceptUnsavedProject()
 
         Connections {
             target: Session
             function onWebSaveFinished(saved) {
                 ApplicationInfo.projectWebSaveFinished(saved);
+            }
+            function onUntitledSettled(id, state) {
+                ApplicationInfo.projectUntitledSettled(id, state);
             }
         }
         onDiscarded: ApplicationInfo.discardUnsavedProject()

@@ -18,7 +18,7 @@ from pathlib import Path
 import edi
 import pytest
 
-from tests.fixtures.scan_csv import CONDITION_COLUMNS, legacy_scan
+from tests.fixtures.scan_csv import CONDITION_COLUMNS, COSIO_AGREEMENT_COLUMNS, legacy_scan
 
 ROOT = Path(__file__).resolve().parents[3]
 CORPUS_ROOT = Path(
@@ -205,7 +205,7 @@ _RESULT_SOURCE_BY_FIELD = {
     'iterations': 'fit_result.iterations',
     'reduced_chi_square': 'fit_result.reduced_chi_square',
     'result_kind': 'sequential operation invariant',
-    'rwp': 'unavailable: no results.csv column',
+    'rwp': 'unavailable on historical resume',
     'status': 'per-file provenance termination; unavailable only for legacy rows',
     'success': 'fit_result.success',
     'uncertainty': '<parameter>.uncertainty columns',
@@ -405,8 +405,8 @@ def test_completed_resume_recovers_recorded_cause_or_legacy_unknown_on_python(
     fieldnames, _reference_rows = _reference_header_and_ascending_rows()
     with (project_dir / 'analysis' / 'results.csv').open(newline='', encoding='utf-8') as stream:
         reader = csv.DictReader(stream)
-        assert reader.fieldnames == [*fieldnames, *CONDITION_COLUMNS], (
-            ' edi cause honesty must retain the frozen diffraction-lib column identities'
+        assert reader.fieldnames == [*fieldnames, *CONDITION_COLUMNS, *COSIO_AGREEMENT_COLUMNS], (
+            'The live Python ledger retains diffraction-lib columns before conditions and factors'
         )
         assert len(fieldnames) == 83, (
             ' edi cause honesty must retain the frozen diffraction-lib 83-column header'
@@ -489,8 +489,8 @@ def test_completed_resume_cli_recovers_recorded_cause_or_legacy_unknown(
     fieldnames, _reference_rows = _reference_header_and_ascending_rows()
     with (project_dir / 'analysis' / 'results.csv').open(newline='', encoding='utf-8') as stream:
         reader = csv.DictReader(stream)
-        assert reader.fieldnames == [*fieldnames, *CONDITION_COLUMNS], (
-            ' CLI cause honesty must retain frozen diffraction-lib column identities'
+        assert reader.fieldnames == [*fieldnames, *CONDITION_COLUMNS, *COSIO_AGREEMENT_COLUMNS], (
+            'The live CLI ledger retains diffraction-lib columns before conditions and factors'
         )
         assert len(fieldnames) == 83, (
             ' CLI cause honesty must retain the frozen diffraction-lib 83-column header'

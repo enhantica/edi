@@ -144,7 +144,7 @@ def require_public_job(job, name, platform):
                 step for step in job['steps'] if step.get('uses') == './.github/actions/crysta-sdk'
             )
             assert selects_sdk(sdk, platform), 'Every system part acquires the SDK for its OS'
-    elif name == 'core':
+    elif name in {'app', 'core'}:
         expected_needs.add('native')
     elif name == 'notebooks':
         expected_needs |= {'native', 'core'}
@@ -153,6 +153,11 @@ def require_public_job(job, name, platform):
     assert set(needs or []) == expected_needs, (
         'Native consumers wait for the exact SDK and their transitive native producer'
     )
+    if name == 'app':
+        assert active(job, 'pull_request', states=dict.fromkeys(expected_needs, 'success')), (
+            'Each desktop app starts once changes, the native build and the SDK finish '
+            'while core runs'
+        )
     assert job.get('env', {}).get('CRYSTA_SOURCE_SHA') == (
         '${{ needs.changes.outputs.crysta_sha }}'
     ), 'Each native consumer retains the workflow-resolved engine source identity'

@@ -69,6 +69,8 @@ SideBarGroup {
                 id: loadMenu
                 objectName: "project.load.menu"
                 y: loadButton.height
+                // Clear of the window's edges when the window is too narrow for it beside its button.
+                margins: EaStyle.Sizes.fontPixelSize * 0.5
                 // Nothing below the last item (the owner, 2026-11-04).
                 bottomPadding: 0
                 // As wide as its widest entry, never narrower than its button.
@@ -188,6 +190,7 @@ SideBarGroup {
                 id: saveMenu
                 objectName: "project.saveAs.menu"
                 y: saveButton.height
+                margins: EaStyle.Sizes.fontPixelSize * 0.5
                 bottomPadding: 0
                 // As wide as its widest entry, never narrower than its button.
                 contentWidth: Math.max(saveButton.width - leftPadding - rightPadding, saveProjectHeader.implicitWidth, exportHeader.implicitWidth, saveasFolderItem.implicitWidth, saveasZipItem.implicitWidth, exportCryspyItem.implicitWidth, exportFullprofItem.implicitWidth, exportGsasItem.implicitWidth, saveCopyBox.implicitWidth)
@@ -374,9 +377,15 @@ SideBarGroup {
     }
 
     // Save on the untitled project opens Create project here: it names the project and saves it, its work kept.
+    // What opens the Create dialog on untitled work: the Project page's Create, or a Save (ADR-0100).
+    property string untitledOrigin: "manual-create"
+    // The untitled operation the next opening answers (a guard Save's), 0 for one of its own.
+    property real untitledRequest: 0
     Connections {
         target: AppState
-        function onUntitledSaveRequested() {
+        function onUntitledSaveRequested(id) {
+            group.untitledOrigin = "save";
+            group.untitledRequest = id > 0 ? id : 0;
             group.chooseCreate();
         }
     }
@@ -395,17 +404,34 @@ SideBarGroup {
         // A tutorial's project, made by the user in a tutorial that set theirs aside, is not saved until they keep
         // it (edi ADR-0064).
         showsLocation: !AppState.tutorialRunning || !Session.hasProjectSetAside || Session.project !== null
+        // The untitled operation this dialog answers (ADR-0100): the request that opened it, while that one still
+        // asks (a guard Save's), else a new one for what opened the dialog. Never another request's, and only an
+        // answer for this id counts.
+        property var untitledId: 0
+        property bool untitledAccepted: false
         // On an untitled project the form starts from what the Project page already holds for it.
         onAboutToShow: {
+            createDialog.untitledAccepted = false;
+            createDialog.untitledId = 0;
+            const request = group.untitledRequest;
+            group.untitledRequest = 0;
+            if (Session.untitled && Session.project !== null && createDialog.assistantIntentId === "")
+                createDialog.untitledId = request > 0 && Session.askingUntitledId() === request ? request : Session.beginUntitled(group.untitledOrigin);
+            group.untitledOrigin = "manual-create";
             if (Session.untitled && Session.project !== null) {
-                projectTitle = Session.project.title;
-                projectAuthors = Session.project.authors;
-                projectDescription = Session.project.description;
+                createDialog.projectTitle = Session.project.title;
+                createDialog.projectAuthors = Session.project.authors;
+                createDialog.projectDescription = Session.project.description;
             }
         }
         onOpened: ApplicationInfo.createProjectDialogEvent(0)
         onRejected: ApplicationInfo.createProjectDialogEvent(1)
-        onClosed: ApplicationInfo.createProjectDialogEvent(2)
+        onClosed: {
+            // Closed without its OK (Cancel, Escape or a press outside): its own request is rejected.
+            if (createDialog.untitledId > 0 && !createDialog.untitledAccepted)
+                Session.rejectUntitled(createDialog.untitledId);
+            ApplicationInfo.createProjectDialogEvent(2);
+        }
         // A new project's folder is beside the last project opened, else under the user's documents, unless one was
         // chosen before; it is saved there at once (the owner, 2026-10-08 and 2026-11-02). The browser has no folder to
         // save into: Save As downloads it.
@@ -414,10 +440,17 @@ SideBarGroup {
         // On the next turn: the new project replaces this page, dialog and all (AppState.afterChanges). The flag is
         // reset here, not only when the dialog has closed: this page goes before its closing ends, and the new page's
         // dialog would open again on a flag still set.
-        onAccepted: ApplicationInfo.createProjectDialogEvent(3)
+        onAccepted: {
+            // Qualified: the handler also runs where only the dialog's id resolves.
+            createDialog.untitledAccepted = true;
+            ApplicationInfo.createProjectDialogEvent(3);
+        }
         onReplaceAsked: (name, folder) => {
             replaceProject.projectName = name;
             replaceProject.folder = folder;
+            // What it asks about: this location, for this dialog's request.
+            replaceProject.location = createDialog.chosenLocation();
+            replaceProject.untitledId = createDialog.untitledId;
             replaceProject.open();
         }
     }
@@ -429,6 +462,8 @@ SideBarGroup {
         objectName: "createProject.replace"
         property string projectName: ""
         property string folder: ""
+        property string location: ""
+        property var untitledId: 0
         parent: Overlay.overlay
         title: qsTr("Replace project?")
         standardButtons: Dialog.Yes | Dialog.Cancel
@@ -440,6 +475,13 @@ SideBarGroup {
             yes.objectName = "createProject.replace.accept";
         }
         onAccepted: {
+            // Replace confirms the folder it showed, for the request it asked for: once the form names another
+            // location or answers another request, the form stays open as it is.
+            if (createDialog.chosenLocation() !== location || createDialog.untitledId !== untitledId)
+                return;
+            // Untitled work replaces only the folder that is there now, as its operation records it (ADR-0100).
+            if (untitledId > 0)
+                Session.approveUntitledReplace(untitledId, location);
             createDialog.replaceExisting = true;
             createDialog.accept();
         }

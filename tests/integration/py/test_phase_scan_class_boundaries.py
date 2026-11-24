@@ -7,7 +7,7 @@ import pytest
 
 from tests.fixtures import phase_scan
 from tests.fixtures.report_units.iucr_reference import rounded_pair
-from tests.fixtures.scan_csv import DERIVED_COLUMNS
+from tests.fixtures.scan_csv import TWO_PHASE_SUFFIX
 
 
 def rows(path):
@@ -26,21 +26,19 @@ def test_recorded_columns_equal_every_declared_free_category(tmp_path, mode, bac
     project = engine.Project.load(directory)
     fit(project)
     result = rows(directory / 'analysis/results.csv')
-    actual = set(result[0]) - {
+    header = list(result[0])
+    assert header[-len(TWO_PHASE_SUFFIX) :] == TWO_PHASE_SUFFIX, (
+        'ADR-0132 places conditions and derived phase fractions before the agreement factors'
+    )
+    actual = set(header[: -len(TWO_PHASE_SUFFIX)]) - {
         'file_path',
         'fit_result.reduced_chi_square',
         'fit_result.success',
         'fit_result.iterations',
-        'fit_result.descent',
-        'fit_result.max_iterations',
-        'fit_result.chi_square_tolerance',
-        'fit_result.termination',
     }
-    assert actual == expected | {key + '.uncertainty' for key in expected} | set(
-        DERIVED_COLUMNS
-    ), (
+    assert actual == expected | {key + '.uncertainty' for key in expected}, (
         'Every declared active free category, including both texture fields per phase, '
-        'and each derived phase fraction has exactly one qualified value and uncertainty column'
+        'has exactly one qualified value and uncertainty column'
     )
     before = (directory / 'analysis/results.csv').read_bytes()
     first = fit(project)

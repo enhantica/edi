@@ -29,7 +29,7 @@ from tests.integration.app import test_onboarding_views as host
                 'OnboardingChoices',
                 f'opened_choices_are_visible_and_selectable:{case}',
             )
-            for case in ('feedback-kind', 'logging-level')
+            for case in ('logging-level',)
         ],
     ],
     ids=lambda value: value,

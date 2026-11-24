@@ -4,7 +4,7 @@ import QtTest
 
 import edi.app
 
-// Send to developers in an error popup, and the crash dialog's report, open Help and feedback as a problem with the
+// Send to developers in an error popup, and the crash dialog's report, open Help and feedback with the
 // message in its box, the log box ticked and the unreadable file attached, whether the form was closed or open.
 Item {
     id: root
@@ -77,7 +77,7 @@ Item {
         function test_a_send_while_the_form_is_closed() {
             includeBox().checked = false;
             sendFromPopup("not a project directory", root.structure);
-            compare(form.kind, "problem");
+            compare(form.kind, "feedback", "The error report uses the shared feedback route");
             tryCompare(messageBox(), "text", "not a project directory");
             verify(includeBox().checked);
             compare(form.attachedFiles.length, 1);
@@ -87,7 +87,7 @@ Item {
             form.openAs("feedback", "");
             tryVerify(() => form.opened);
             sendFromPopup("not a project directory", root.structure);
-            compare(form.kind, "problem");
+            compare(form.kind, "feedback", "The error report uses the shared feedback route");
             tryCompare(messageBox(), "text", "not a project directory");
             verify(includeBox().checked);
             compare(form.attachedFiles.length, 1);
@@ -95,7 +95,7 @@ Item {
         function test_c_the_crash_report() {
             AppState.crashReported("# EasyDiffraction run log\n", "EasyDiffraction closed unexpectedly.");
             tryVerify(() => form.opened);
-            compare(form.kind, "problem");
+            compare(form.kind, "feedback", "The error report uses the shared feedback route");
             tryCompare(messageBox(), "text", "EasyDiffraction closed unexpectedly.");
             verify(includeBox().checked);
             compare(form.attachedLog, "# EasyDiffraction run log\n");

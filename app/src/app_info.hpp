@@ -319,6 +319,8 @@ class ApplicationInfo : public QObject {
     /// Borrows actual QML-thread controls; no extra account/window policy; JS exceptions remain pending.
     Q_INVOKABLE void composerSessionDraftRestored(QObject* composer, QObject* editor,
                                                  const QString& threadId, const QString& text) const;
+    /// Put a waiting message that was cancelled or not sent back into the idle editor, before any newer text.
+    Q_INVOKABLE void composerTakeReturnedMessages(QObject* composer, QObject* editor) const;
     /// Capture the original Clear text/revision/intent without consuming editor text.
     /// Borrows actual QML-thread controls; data stays in the original view field; errors remain pending.
     Q_INVOKABLE void composerConversationClearRequested(QObject* composer, QObject* editor, const QString& intent) const;
@@ -387,6 +389,8 @@ class ApplicationInfo : public QObject {
     Q_INVOKABLE void abandonUnsavedProjectAction() const;
     Q_INVOKABLE void acceptUnsavedProject() const;
     Q_INVOKABLE void projectWebSaveFinished(const QJSValue& saved) const;
+    // The untitled operation `id` ended as `state` (ADR-0100): a guard Save's waiting action runs if it was saved.
+    Q_INVOKABLE void projectUntitledSettled(const QJSValue& id, const QJSValue& state) const;
     Q_INVOKABLE void discardUnsavedProject() const;
     Q_INVOKABLE void prepareProjectSaveChoice() const;
     Q_INVOKABLE void acceptProjectSaveChoice() const;
@@ -1095,6 +1099,8 @@ class ApplicationInfo : public QObject {
     qint64 last_input_ = 0;
     mutable class QNetworkAccessManager* feedback_network_ = nullptr;
     mutable QPointer<QObject> dataset_folder_picker_, dataset_folder_project_, dataset_folder_experiment_;
+    // Counts the unsaved-changes questions: a guard Save on untitled work names its action by the question it answers.
+    mutable quint64 unsaved_question_ = 0;
 
 };
 

@@ -10,6 +10,7 @@
 #include <exception>
 #include <functional>
 #include <limits>
+#include <optional>
 #include <map>
 
 #include "background.hpp"
@@ -24,7 +25,7 @@ namespace {
 // chart takes between them (its spans, ticks, hit tests and zoom boxes) is finite too. An undefined s.u. (NaN: a
 // direction the data do not determine) draws the value without a bar; an infinite or negative one is not drawn.
 bool drawable(double x, double y, double error) {
-    constexpr double kLimit = 1e300;
+    constexpr double kLimit = edi::kScanChartLimit;
     const double bar = std::isnan(error) ? 0.0 : error;
     return std::isfinite(x) && std::isfinite(y) && std::isfinite(bar) && bar >= 0.0 && std::abs(x) <= kLimit &&
            std::abs(y - bar) <= kLimit && std::abs(y + bar) <= kLimit;
@@ -284,6 +285,33 @@ void EvolutionViewModel::addRow(int dataset, const std::vector<std::string>& cel
         return;
     }
     const std::string name = names_[current_].toStdString();
+    // The reduced χ² and the agreement factors have a value and no s.u.
+    std::optional<std::size_t> factor;
+    if (name == "fit_result.reduced_chi_square") factor = session_->index().chi;
+    for (const edi::ScanFactorColumn& column : session_->index().factors) {
+        if (column.name == name) factor = column.value;
+    }
+    if (factor && *factor < cells.size()) {
+        std::vector<std::string> extracted;
+        for (const std::ptrdiff_t column : session_->index().extract) {
+            extracted.push_back(column < 0 ? std::string() : cells[static_cast<std::size_t>(column)]);
+        }
+        Point point;
+        point.dataset = dataset;
+        point.error = std::numeric_limits<double>::quiet_NaN();
+        const std::optional<double> x = xOf(dataset, &extracted);
+        if (!x || cells[session_->index().chi] == "nan" || !edi::parse_scan_number(cells[*factor], point.y)) {
+            return;
+        }
+        point.y = edi::scan_display_value(name, point.y);  // an agreement factor in percent
+        if (!drawable(*x, point.y, point.error)) {
+            return;
+        }
+        point.x = *x;
+        points_.push_back(point);
+        finishRow();
+        return;
+    }
     for (const edi::ScanParameterColumns& parameter : session_->index().parameters) {
         if (parameter.name != name || parameter.uncertainty >= cells.size()) {
             continue;

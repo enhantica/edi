@@ -200,7 +200,8 @@ QJsonObject fitEndingBoundary(const QString& source, const QStringList& spec) {
     need(reached, "The declared actual fit notification reaches the Save entry");
     const auto afterTerminal = fitEndingParameters(owner->project());
     const bool dirtyAfterTerminal = owner->modified();
-    const int jobsAtTerminal = jobs.size(), stagesAtTerminal = stageKinds.size();
+    const auto jobsAtTerminal = jobs.size();
+    const auto stagesAtTerminal = stageKinds.size();
     const bool explicitRefusal = !error.isEmpty() || !refused.isEmpty() || !saveFailed.isEmpty();
     finishPolicyIo();
     settle(session);
@@ -268,7 +269,7 @@ QJsonObject fitEndingBoundary(const QString& source, const QStringList& spec) {
             {"afterTerminal", afterTerminal},
             {"afterWrite", afterWrite},
             {"dirtyAfterTerminal", dirtyAfterTerminal},
-            {"jobsAtTerminal", jobsAtTerminal},
+            {"jobsAtTerminal", static_cast<qint64>(jobsAtTerminal)},
             {"stagesAtTerminal", stagesAtTerminal},
             {"retry", retry},
             {"final", fitEndingParameters(owner->project())},

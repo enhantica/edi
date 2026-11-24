@@ -43,6 +43,7 @@ jobs:
             build/coverage-unit/coverage-report.txt
             build/py-coverage-report.txt
           if-no-files-found: error
+          retention-days: 7  # read while the report is fresh
       - name: Job summary
         run: |
           {

@@ -37,7 +37,14 @@
 
 #include "engine_setup.hpp"
 // Set only the boundary's startup capability, never Session/project state.
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wkeyword-macro"
+#endif
 #define private public
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
 #include "session.hpp"
 #include "web_files.hpp"
 #include "web_storage.hpp"
@@ -132,9 +139,16 @@ struct Job {
     QString action, key, kind, root;
     bool recovery;
     WebStorage::Answer answer;
-    Image payload;
+    Image payload{};
 };
 std::vector<Job> jobs;
+struct Publication {
+    quint64 id;
+    QString stage, folder;
+    WebStorage::PublishCheck check;
+    WebStorage::Answer answer;
+};
+std::vector<Publication> publications;
 QStringList drops;
 void need(bool good, const char* why) {
     if (!good) throw std::runtime_error(why);
@@ -1514,7 +1528,8 @@ QJsonObject fitPublication(const QString& source, const QStringList& spec) {
         held = nextWrite(0);
         need(held < jobs.size(), "A fit starts during an actual outstanding browser write");
     }
-    int publicationsAtRequest = -1, stagesAtRequest = -1, jobsAtRequest = -1;
+    qsizetype publicationsAtRequest = -1, stagesAtRequest = -1;
+    qint64 jobsAtRequest = -1;
     auto* fit = session.project()->fit();
     QSignalSpy fitRefused(fit, &FitViewModel::refused);
     if (moment != "success") {
@@ -1529,7 +1544,7 @@ QJsonObject fitPublication(const QString& source, const QStringList& spec) {
             after = state(session);
             publicationsAtRequest = archiveSources.size();
             stagesAtRequest = stageKinds.size();
-            jobsAtRequest = jobs.size();
+            jobsAtRequest = static_cast<qint64>(jobs.size());
         });
         fit->start();
         if (moment == "during" && !runningReached) {
@@ -1538,7 +1553,7 @@ QJsonObject fitPublication(const QString& source, const QStringList& spec) {
             after = state(session);
             publicationsAtRequest = archiveSources.size();
             stagesAtRequest = stageKinds.size();
-            jobsAtRequest = jobs.size();
+            jobsAtRequest = static_cast<qint64>(jobs.size());
         } else {
             need(runningReached,
                  "The observer reaches the actual running fit, never a fabricated flag");
@@ -1557,7 +1572,7 @@ QJsonObject fitPublication(const QString& source, const QStringList& spec) {
         after = state(session);
         publicationsAtRequest = archiveSources.size();
         stagesAtRequest = stageKinds.size();
-        jobsAtRequest = jobs.size();
+        jobsAtRequest = static_cast<qint64>(jobs.size());
     }
     QJsonArray archivedParameters;
     if (moment == "success" && returned) {
@@ -1783,7 +1798,14 @@ QJsonObject tutorialOwnership(const QString& source, const QStringList& spec) {
 }
 }  // namespace
 extern "C" void transaction_real_archive(const std::string&, const std::string&);
-extern "C" std::string transaction_real_directory(const std::string&);
+// Objcopy renames the C++ definitions to fixed symbols in the observed library.
+#ifdef __APPLE__
+#define TRANSACTION_SYMBOL(name) asm("_" #name)
+#else
+#define TRANSACTION_SYMBOL(name) asm(#name)
+#endif
+std::string transaction_real_directory(const std::string&)
+    TRANSACTION_SYMBOL(transaction_real_directory);
 namespace edi {
 void write_project_archive(const std::string& source, const std::string& target) {
     ownerCoreAttempt();
@@ -1800,7 +1822,8 @@ std::string fresh_archive_directory(const std::string& kind) {
 }
 }  // namespace edi
 extern "C" void transaction_real_fresh_archive(const std::string&, const std::string&);
-extern "C" std::string transaction_real_archive_bytes(const std::string&);
+std::string transaction_real_archive_bytes(const std::string&)
+    TRANSACTION_SYMBOL(transaction_real_archive_bytes);
 namespace edi::detail {
 void write_project_archive_fresh(const std::string& source, const std::string& target) {
     ownerCoreAttempt();
@@ -1827,10 +1850,14 @@ void publish_fresh_project_path(const std::string& source, const std::string& ta
     sealCommitted(QString::fromStdString(target));
 }
 }  // namespace edi::detail
-extern "C" edi::Project transaction_real_load_project(const std::string&, const edi::WarningSink&);
-extern "C" edi::Project transaction_real_load_project_mode(const std::string&,
-                                                           edi::ProjectLoadMode,
-                                                           const edi::WarningSink&);
+edi::Project transaction_real_load_project(const std::string&, const edi::WarningSink&)
+    TRANSACTION_SYMBOL(transaction_real_load_project);
+edi::Project transaction_real_load_project_mode(const std::string&, edi::ProjectLoadMode,
+                                               const edi::WarningSink&)
+    TRANSACTION_SYMBOL(transaction_real_load_project_mode);
+edi::Project transaction_real_load_project_sourced_mode(const std::string&, edi::ProjectLoadMode,
+                                                       const edi::SourcedWarningSink&)
+    TRANSACTION_SYMBOL(transaction_real_load_project_sourced_mode);
 extern "C" void transaction_real_save_project(const edi::Project&, const std::string&);
 extern "C" void transaction_real_save_project_as(edi::Project&, const std::string&);
 extern "C" bool transaction_real_adopt_saved_values(edi::Project&, const std::string&);
@@ -1844,6 +1871,10 @@ Project load_project(const std::string& path, const WarningSink& warnings) {
 Project load_project(const std::string& path, ProjectLoadMode mode, const WarningSink& warnings) {
     fallibleBoundary("load_project");
     return transaction_real_load_project_mode(path, mode, warnings);
+}
+Project load_project(const std::string& path, ProjectLoadMode mode, const SourcedWarningSink& warnings) {
+    fallibleBoundary("load_project");
+    return transaction_real_load_project_sourced_mode(path, mode, warnings);
 }
 
 void save_project(const Project& p, const std::string& path) {
@@ -1886,9 +1917,10 @@ bool save_report_settings(const Project& p, const std::string& path) {
     return transaction_real_save_report_settings(p, path);
 }
 }  // namespace edi
-extern "C" edi::PdDataBase transaction_real_read_scan_dataset(const std::string&,
-                                                              const std::string&,
-                                                              edi::BeamModeEnum);
+edi::PdDataBase transaction_real_read_scan_dataset(const std::string&, const std::string&,
+                                                 edi::BeamModeEnum)
+    TRANSACTION_SYMBOL(transaction_real_read_scan_dataset);
+#undef TRANSACTION_SYMBOL
 namespace edi {
 PdDataBase read_scan_dataset(const std::string& dir, const std::string& file, BeamModeEnum mode) {
     if (QThread::currentThread() != QCoreApplication::instance()->thread()) {
@@ -1947,6 +1979,11 @@ void boundary_write(WebStorage*, const QString& key, const QString& kind,
         return;
     }
     jobs.push_back({"write", key, kind, folder, recovery, std::move(answer), payload});
+}
+void boundary_untitled_publish(WebStorage*, const QString&, quint64 id, const QString& stage,
+                                const QString&, const QString& folder, WebStorage::PublishCheck check,
+                                WebStorage::Answer answer) {
+    publications.push_back({id, stage, folder, std::move(check), std::move(answer)});
 }
 void boundary_drop(WebStorage*, const QString& key) { drops.append(key); }
 bool boundary_download(const QByteArray& bytes, const QString&) {
@@ -2073,6 +2110,8 @@ int main(int argc, char** argv) {
                         if (kind != QString("browser") || !moving)
                             rows.append(
                                 browserSave(source, kind, ok, false, moving, false, false));
+        } else if (group == "untitled-publication/adopted" || group == "untitled-publication/refused") {
+            rows.append(untitledPublication(group.section('/', 1)));
         } else if (group == "newer-recovery")
             for (const auto& kind : {"browser", "folder", "zip"}) {
                 rows.append(browserSave(source, kind, true, true, false, false, false));

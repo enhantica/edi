@@ -364,6 +364,7 @@ Rectangle {
         }
         function onSessionDraftRestored(threadId, text) {
             ApplicationInfo.composerSessionDraftRestored(composer, editor, threadId, text);
+            ApplicationInfo.composerTakeReturnedMessages(composer, editor);
         }
         function onConversationClearRequested(intent) {
             ApplicationInfo.composerConversationClearRequested(composer, editor, intent);
@@ -376,6 +377,9 @@ Rectangle {
         }
         function onWorkReportFinished(receipt) {
             composer.finishWorkReport(receipt);
+        }
+        function onQueuedMessageReturned() {
+            ApplicationInfo.composerTakeReturnedMessages(composer, editor);
         }
     }
     Component.onCompleted: ApplicationInfo.composerRefreshFilePresentation(composer, false)
@@ -410,6 +414,58 @@ Rectangle {
         y: AppSizes.unit * 0.75
         width: parent.width - AppSizes.unit * 1.5
         spacing: AppSizes.unit * 0.25
+        // Messages sent during a fit or another app action; each is sent when the action has finished.
+        Column {
+            id: queuedMessagesList
+            objectName: "assistant.queued"
+            width: parent.width
+            visible: composer.assistant.queuedMessages.count > 0
+            spacing: 0
+            Repeater {
+                model: composer.assistant.queuedMessages
+                delegate: Row {
+                    id: queuedMessageRow
+                    required property string messageId
+                    required property string text
+                    objectName: "assistant.queued." + queuedMessageRow.messageId
+                    width: queuedMessagesList.width
+                    spacing: AppSizes.unit * 0.25
+                    EaElements.Label {
+                        id: queuedMessageLabel
+                        width: Math.max(0, queuedMessagesList.width - cancelQueuedButton.implicitWidth - parent.spacing)
+                        text: qsTr("Waiting: %1").arg(queuedMessageRow.text)
+                        textFormat: Text.PlainText
+                        elide: Text.ElideRight
+                        maximumLineCount: 1
+                        color: EaStyle.Colors.themeForegroundMinor
+                        ToolTip.text: qsTr("Sent when the running fit or action has finished")
+                        Accessible.name: qsTr("Waiting message: %1").arg(queuedMessageRow.text)
+                    }
+                    EaElements.ToolButton {
+                        id: cancelQueuedButton
+                        objectName: "assistant.queued.cancel." + queuedMessageRow.messageId
+                        leftPadding: 0
+                        rightPadding: 0
+                        fontIcon: "times"
+                        implicitWidth: composer.actionSize
+                        implicitHeight: queuedMessageLabel.implicitHeight
+                        font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.6
+                        showBackground: false
+                        contentItem: EaElements.Label {
+                            text: cancelQueuedButton.fontIcon
+                            font.family: EaStyle.Fonts.iconsFamily
+                            font.pixelSize: cancelQueuedButton.font.pixelSize * 1.25
+                            color: cancelQueuedButton.foregroundColor()
+                            horizontalAlignment: Text.AlignLeft
+                            verticalAlignment: Text.AlignVCenter
+                        }
+                        ToolTip.text: qsTr("Do not send; return it to the message box")
+                        Accessible.name: ToolTip.text
+                        onClicked: composer.assistant.cancelQueuedMessage(queuedMessageRow.messageId)
+                    }
+                }
+            }
+        }
         ScrollView {
             ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
             ScrollBar.vertical: EaElements.ScrollBar {
@@ -432,7 +488,10 @@ Rectangle {
                 KeyNavigation.backtab: composer.previousFocusItem
                 onTextChanged: ApplicationInfo.composerDraftEdited(composer, editor, true)
                 onPreeditTextChanged: ApplicationInfo.composerDraftEdited(composer, editor, false)
-                onInputMethodComposingChanged: ApplicationInfo.composerDraftEdited(composer, editor, false)
+                onInputMethodComposingChanged: {
+                    ApplicationInfo.composerDraftEdited(composer, editor, false);
+                    ApplicationInfo.composerTakeReturnedMessages(composer, editor);
+                }
                 onSelectionStartChanged: composer.rememberSelection()
                 onSelectionEndChanged: composer.rememberSelection()
                 color: EaStyle.Colors.themeForeground

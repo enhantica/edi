@@ -809,6 +809,13 @@ questions starting in its physics section. Bundled skills remain first, current
 build facts remain authoritative for controls, and other primary references remain
 available. Search queries still exclude private inputs and paths.
 
+An equation or physics model is read first from `project-assistance/physics.md`: the
+website's physics pages that hold equations, bundled in one file (about 58 KB) with
+each page's address to cite; searching the website for them took minutes. One file keeps
+the skill sources' shared 32-file count for selected local skills.
+`tools/checks/assistant_physics_pages.py --check`, part of `app-test-skill-targets`,
+refuses a bundle that differs from the pages.
+
 ## Experiment-type clarification
 
 The existing question-card flow collects missing experiment-type choices before

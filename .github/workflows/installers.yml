@@ -24,7 +24,11 @@ on:
         default: false
         type: boolean
       capture_pages:
-        description: Only capture every installer and maintenance tool page, light and dark, on Linux and Windows
+        description: Only capture every installer and maintenance tool page, light and dark, on Linux, macOS and Windows
+        default: false
+        type: boolean
+      capture_linux_only:
+        description: With capture_pages, capture Linux only (a quick look while the pages change)
         default: false
         type: boolean
   push:
@@ -438,6 +442,7 @@ jobs:
           path: build/installer/delivery
           if-no-files-found: error
           compression-level: 0
+          retention-days: 30  # the release publication takes the qualified files
       - name: Upload tested components
         uses: actions/upload-artifact@v4
         with:
@@ -445,6 +450,7 @@ jobs:
           path: build/installer/components
           if-no-files-found: error
           compression-level: 0
+          retention-days: 30  # the release publication takes the tested components
       - name: Remove the KeyLocker client certificate
         if: always() && runner.os == 'Windows'
         shell: bash
@@ -472,19 +478,24 @@ jobs:
             build/installer/protocol/passed.json
             build/installer/package/installer.json
           if-no-files-found: ignore
+          retention-days: 7  # a failed installation is inspected within days
 
   # Every page of the installer and its maintenance tool, light and dark, from a small marker installer (no app
-  # build): Linux under a virtual display with the theme forced, Windows with its own app theme set. The pictures are a
-  # run artifact for a person to look at; nothing is committed and nothing else runs.
+  # build): Linux under a virtual display with the theme forced, Windows and macOS with the system's own appearance set.
+  # The pictures are a run artifact for a person to look at; nothing is committed and nothing else runs.
   installer-pages:
     if: github.event_name == 'workflow_dispatch' && inputs.capture_pages
-    name: installer pages · ${{ matrix.runner == 'windows-2022' && 'Windows' || 'Linux' }}
+    name: installer pages · ${{ matrix.runner == 'windows-2025' && 'Windows' || matrix.runner == 'macos-15' && 'macOS' || 'Linux' }}
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 40
     strategy:
       fail-fast: false
       matrix:
-        runner: [ubuntu-24.04, windows-2022]
+        # Windows Server 2025 has Windows 11's dark app mode, which the installer follows; 2022 has none.
+        runner: [ubuntu-24.04, windows-2025, macos-15]
+        exclude:
+          - runner: ${{ inputs.capture_linux_only && 'windows-2025' || 'none' }}
+          - runner: ${{ inputs.capture_linux_only && 'macos-15' || 'none' }}
     steps:
       - name: Enable long source paths on Windows
         if: runner.os == 'Windows'
@@ -518,14 +529,19 @@ jobs:
           manifest-path: tools/installer/pixi.toml
       - name: Acquire the pinned Qt Installer Framework
         run: pixi run --manifest-path tools/installer/pixi.toml python "${{ github.workspace }}/tools/installer/package.py" tools --output "${{ github.workspace }}/build/installer/ifw"
-      - name: A virtual display and a screen grabber on Linux
+      - name: A virtual display, a window manager and a screen grabber on Linux
         if: runner.os == 'Linux'
-        run: sudo apt-get install -y xvfb imagemagick
+        run: sudo apt-get install -y xvfb openbox imagemagick
       - name: Capture every page, light and dark
         shell: bash
         run: |
           capture=(pixi run --manifest-path tools/installer/pixi.toml python "${{ github.workspace }}/tools/installer/capture_pages.py" --tools "${{ github.workspace }}/build/installer/ifw/tools" --output "${{ github.workspace }}/build/installer/pages")
-          if [[ "$RUNNER_OS" == Linux ]]; then xvfb-run -a -s "-screen 0 1280x900x24" "${capture[@]}"; else "${capture[@]}"; fi
+          # On Linux a window manager draws the window's frame and title, as on a desktop.
+          if [[ "$RUNNER_OS" == Linux ]]; then
+            xvfb-run -a -s "-screen 0 1280x900x24" bash -c 'openbox & sleep 2; exec "$@"' capture "${capture[@]}"
+          else
+            "${capture[@]}"
+          fi
       - name: Keep the page captures
         if: always()
         uses: actions/upload-artifact@v4
@@ -536,6 +552,7 @@ jobs:
             build/installer/pages/*.log
           if-no-files-found: warn
 
+          retention-days: 7  # page captures inspected within days
   qualify-release:
     name: record qualified release inputs
     needs: installers

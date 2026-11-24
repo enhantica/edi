@@ -134,6 +134,8 @@ nav:
           - "ADR-0097 GSAS-II project import": dev/adrs/0097-gsas-ii-project-import.md
           - "ADR-0098 Project import from other programs": dev/adrs/0098-project-import-from-other-programs.md
           - "ADR-0099 cryspy project import and export": dev/adrs/0099-cryspy-project-import.md
+          - "ADR-0100 Untitled work as one operation": dev/adrs/0100-untitled-operation.md
+          - "ADR-0101 Issue labels for the agent flow": dev/adrs/0101-issue-labels.md
           - dev/adrs/template.md
       - Design:
           - dev/design/api-types.md

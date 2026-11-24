@@ -1,7 +1,28 @@
 /* SPDX-License-Identifier: BSD-3-Clause */
-QWizard, QWizardPage, QWidget#SideWidget, QListWidget#PageListWidget,
-QWizard > QWidget > QWidget {
-    background-color: palette(window);
+/* edi's look for the installer and its maintenance tool. The @NAME@ values are the app's theme colours and sizes,
+   filled in for light and for dark by package.py (INSTALLER_THEMES); Installer.qs applies the dark one. */
+
+/* The page is see-through: one window colour behind header, page and buttons. */
+QWizardPage {
+    background: transparent;
+    color: @FOREGROUND@;
+}
+
+QWizard QWidget, QDialog QWidget {
+    font-size: @FONT_PX@px;
+}
+
+/* No inner margin on a text or a box: the frame a layout and an accessibility client see is what is drawn. A rule with
+   a box also stops the native style moving the widget off its layout cell (2 px on macOS), so every row starts at the
+   content's left edge. Gaps come from the layouts. */
+QLabel {
+    color: @FOREGROUND@;
+    margin: 0;
+    padding: 0;
+}
+
+QLabel:disabled {
+    color: @FOREGROUND_DISABLED@;
 }
 
 /* The empty subtitle keeps the Modern header visible without adding text height. */
@@ -9,69 +30,256 @@ QWizard > QWidget > QWidget > QLabel[wordWrap="true"] {
     font-size: 5px;
 }
 
-QWizard #IntroductionPage QLabel#MessageLabel {
-    min-height: 190px;
+/* The step list: upcoming steps muted, the current one in bold. */
+QListWidget#PageListWidget {
+    border: none;
+    outline: none;
 }
 
 QListWidget#PageListWidget::item {
     padding-left: @STEP_LIST_INSET@px;
+    color: @FOREGROUND@;
+    background: transparent;
+    border: none;
 }
 
-QWizard QPushButton, QWizard QLineEdit, QWizard QComboBox {
-    color: palette(window-text);
-    background-color: palette(base);
-    border: 1px solid palette(mid);
-    border-radius: 5px;
-    min-height: 22px;
-    padding: 3px 9px;
+QListWidget#PageListWidget::item:disabled {
+    color: @FOREGROUND_MINOR@;
 }
 
-QWizard QPushButton {
+QListWidget#PageListWidget::item:selected {
+    color: @FOREGROUND@;
+    background: transparent;
+    font-weight: bold;
+}
+
+/* Buttons: one look for all, as the app's side bar buttons; no default-button or focus ring. */
+QPushButton {
+    color: @FOREGROUND@;
+    background-color: @BACKGROUND@;
+    border: 1px solid @BORDER@;
+    border-radius: 2px;
+    min-height: @CONTROL_INNER_PX@px;
+    max-height: @CONTROL_INNER_PX@px;
     min-width: 70px;
+    padding: 0 @FONT_PX@px;
+    outline: none;
 }
 
-QWizard QPushButton:hover {
-    background-color: palette(button);
-    border-color: palette(highlight);
+QPushButton:default, QPushButton:focus {
+    border-color: @BORDER@;
 }
 
-QWizard QPushButton:focus, QWizard QLineEdit:focus, QWizard QComboBox:focus {
-    border-color: palette(highlight);
+QPushButton:hover {
+    color: @ACCENT@;
+    background-color: @BACKGROUND_HOVERED@;
+    border-color: @BACKGROUND@;
 }
 
-QWizard QPushButton:default {
-    background-color: #0079b7;
-    color: white;
-    border-color: #006a9e;
+QPushButton:pressed, QPushButton:checked {
+    color: @ACCENT@;
+    border-color: @BACKGROUND@;
 }
 
-QWizard QPushButton:default:hover, QWizard QPushButton:default:focus {
-    background-color: #006a9e;
-    border-color: palette(highlight);
+QPushButton:disabled {
+    color: @FOREGROUND_DISABLED@;
+    background-color: @BACKGROUND_DISABLED@;
+    border-color: @BACKGROUND_DISABLED@;
 }
 
-QWizard QPushButton:pressed {
-    background-color: palette(midlight);
-    color: palette(window-text);
+/* Text fields, as the app's: a translucent field, the accent border on hover and focus. */
+QLineEdit, QComboBox, QSpinBox, QTextEdit, QTextBrowser, QPlainTextEdit, QTableView, QTreeView, QListView {
+    color: @FOREGROUND@;
+    background-color: @FIELD_BACKGROUND@;
+    border: 1px solid @BORDER@;
+    border-radius: 2px;
+    selection-background-color: @ACCENT@;
+    selection-color: @BACKGROUND@;
 }
 
-QWizard QPushButton:disabled {
-    background-color: palette(window);
-    color: palette(mid);
-    border-color: palette(midlight);
+QLineEdit, QComboBox, QSpinBox {
+    min-height: @CONTROL_INNER_PX@px;
+    max-height: @CONTROL_INNER_PX@px;
+    padding: 0 @FIELD_PADDING_PX@px;
 }
+
+QTextEdit, QTextBrowser, QPlainTextEdit {
+    padding: @FIELD_PADDING_PX@px;
+    font-family: "@MONO_FAMILY@";
+}
+
+/* A field takes the accent while it is used; read-only text (the licence) keeps its border. */
+QLineEdit:hover, QLineEdit:focus, QComboBox:hover, QComboBox:focus, QSpinBox:hover, QSpinBox:focus,
+QTextEdit:focus, QPlainTextEdit:focus {
+    border-color: @ACCENT@;
+}
+
+/* The summary page is plain text, as the other pages: no frame around it. */
+QScrollArea#ComponentSummaryScrollArea, QScrollArea#ComponentSummaryScrollArea > QWidget > QWidget {
+    border: none;
+    background: transparent;
+}
+
+/* A link, as the welcome page's: the accent, no underline. */
+QLabel#LocationLabel {
+    color: @ACCENT@;
+    text-decoration: none;
+}
+
+QLineEdit:disabled, QComboBox:disabled, QSpinBox:disabled {
+    color: @FOREGROUND_DISABLED@;
+}
+
+QComboBox::drop-down {
+    border: none;
+    width: @FONT_PX@px;
+}
+
+QComboBox QAbstractItemView {
+    background-color: @BACKGROUND@;
+    border: 1px solid @BORDER@;
+}
+
+QHeaderView::section {
+    color: @FOREGROUND@;
+    background-color: @BACKGROUND@;
+    border: none;
+    border-bottom: 1px solid @BORDER@;
+    padding: 4px @FIELD_PADDING_PX@px;
+}
+
+QTabWidget::pane {
+    border: 1px solid @BORDER@;
+    border-radius: 2px;
+}
+
+QTabBar::tab {
+    color: @FOREGROUND_MINOR@;
+    background: transparent;
+    border: none;
+    padding: 6px @FONT_PX@px;
+}
+
+QTabBar::tab:selected {
+    color: @FOREGROUND@;
+    border-bottom: 2px solid @ACCENT@;
+}
+
+QTabBar::tab:hover {
+    color: @ACCENT@;
+}
+
+/* Check boxes and radio buttons, as the app's: filled with the accent when on. */
+QCheckBox, QRadioButton {
+    color: @FOREGROUND@;
+    spacing: @HALF_FONT_PX@px;
+    outline: none;
+}
+
+QCheckBox {
+    margin: 0;
+    padding: 0;
+}
+
+/* A radio row is a check box row's size: no padding, an indicator as large as the box (package.py). */
+QRadioButton {
+    margin: 0;
+    padding: 0;
+}
+
+
+
+QCheckBox:disabled, QRadioButton:disabled {
+    color: @FOREGROUND_DISABLED@;
+}
+
+QCheckBox::indicator {
+    width: @CHECK_PX@px;
+    height: @CHECK_PX@px;
+    border: 1px solid @BORDER@;
+    border-radius: 2px;
+    background-color: @CHECK_BACKGROUND@;
+}
+
+QCheckBox::indicator:checked {
+    background-color: @ACCENT@;
+    border-color: @ACCENT@;
+    image: url(:/metadata/edi/CheckMark.png);
+}
+
+QRadioButton::indicator {
+    width: @RADIO_PX@px;
+    height: @RADIO_PX@px;
+    border: 2px solid @FOREGROUND@;
+    border-radius: @RADIO_RADIUS_PX@px;
+    background-color: transparent;
+}
+
+QRadioButton::indicator:checked {
+    border-color: @ACCENT@;
+    background-color: qradialgradient(cx: 0.5, cy: 0.5, radius: 0.5, fx: 0.5, fy: 0.5,
+        stop: 0 @ACCENT@, stop: 0.45 @ACCENT@, stop: 0.5 transparent, stop: 1 transparent);
+}
+
+QCheckBox::indicator:hover, QRadioButton::indicator:hover {
+    border-color: @ACCENT@;
+}
+
+/* Thin scroll bars, as the app's. */
+QScrollBar:vertical {
+    width: 8px;
+    background: transparent;
+    margin: 2px;
+}
+
+QScrollBar:horizontal {
+    height: 8px;
+    background: transparent;
+    margin: 2px;
+}
+
+QScrollBar::handle {
+    background: @FOREGROUND_MINOR@;
+    border-radius: 2px;
+    min-height: 24px;
+    min-width: 24px;
+}
+
+QScrollBar::handle:hover, QScrollBar::handle:pressed {
+    background: @ACCENT@;
+}
+
+QScrollBar::add-line, QScrollBar::sub-line {
+    width: 0;
+    height: 0;
+}
+
+QScrollBar::add-page, QScrollBar::sub-page {
+    background: none;
+}
+
+/* The progress bar, as the app's fit progress: the accent on a faint accent track. */
+QProgressBar {
+    color: @FOREGROUND@;
+    background-color: @ACCENT_TRACK@;
+    border: none;
+    border-radius: 4px;
+    max-height: 8px;
+    text-align: center;
+}
+
+QProgressBar::chunk {
+    background-color: @ACCENT@;
+    border-radius: 4px;
+}
+
+QToolTip {
+    color: @FOREGROUND@;
+    background-color: @BACKGROUND@;
+    border: 1px solid @BORDER@;
+}
+
 
 QWizard QLineEdit#SearchLineEdit {
     min-width: 95px;
-}
-
-QWizard #ComponentSelectionPage #SpaceItem {
-    min-width: 28em;
-}
-
-QWizard QLineEdit#TargetDirectoryLineEdit,
-QWizard QPushButton#BrowseDirectoryButton {
-    min-height: 28px;
-    max-height: 28px;
-    padding: 0 9px;
 }

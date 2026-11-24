@@ -126,7 +126,7 @@ bool CollectionExamples::heldHere(const QString& id, const QString& path) const 
 void CollectionExamples::checkOnline(int generation, const QStringList& online, const edi::online::Index& bundled) {
     ++checking_;
     fetch_from(this, network_, online, QStringLiteral("index.json"),
-               [this, generation, online, bundled](const QByteArray& bytes, const QString& error, bool) {
+               [this, generation, online, bundled = bundled](const QByteArray& bytes, const QString& error, bool) {
         // A network callback must not throw: a failure here only leaves the copy as it was.
         try {
         if (generation != generation_) return;
@@ -161,7 +161,7 @@ void CollectionExamples::checkOnline(int generation, const QStringList& online, 
             if (!heldHere(id, QString::fromStdString(old->files.front().path))) continue;
             const QString name = QString::fromStdString(edi::online::file_name(file));
             fetch_from(this, network_, online, QString::fromStdString(file.path),
-                       [this, generation, id, file, name](const QByteArray& fetched, const QString& fetchError, bool) {
+                       [this, generation, id, file = file, name](const QByteArray& fetched, const QString& fetchError, bool) {
                 try {
                     if (generation != generation_ || !fetchError.isEmpty()) return;
                     if (!content_problem(fetched, file.bytes, QString::fromStdString(file.sha256), name).isEmpty()) return;

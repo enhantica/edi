@@ -53,8 +53,8 @@ QJsonObject heldGuard(const QString& source, const QStringList& spec) {
     value->setValue(10.3);
     settle(session);
     const bool heldDirty = original->modified();
-    const int heldFields = fields.size(), heldModified = dirty.size(), heldEdited = edited.size();
-    int heldProjectSignals = 0;
+    const auto heldFields = fields.size(), heldModified = dirty.size(), heldEdited = edited.size();
+    qsizetype heldProjectSignals = 0;
     for (const auto& signal : projectSignals) heldProjectSignals += signal->size();
     bool settlementDirty = true, readingSettlement = true;
     int settlementPublications = 0;

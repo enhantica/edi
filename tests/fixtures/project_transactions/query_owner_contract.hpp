@@ -31,7 +31,7 @@ QJsonObject queryOwner(const QString& source, const QStringList& spec) {
         if (meta->method(at).methodType() == QMetaMethod::Signal)
             querySignals.push_back(std::make_unique<QSignalSpy>(&search, meta->method(at)));
     const auto reports = [&] {
-        int count = 0;
+        qsizetype count = 0;
         for (const auto& signal : querySignals) count += signal->size();
         return count;
     };
@@ -59,7 +59,7 @@ QJsonObject queryOwner(const QString& source, const QStringList& spec) {
         search.search();
     }
     const auto afterRetirement = state();
-    const int before = reports();
+    const auto before = reports();
     operationWriteCalls = 0;
     observingCanceledWrite = true;
     const auto deliver = [&](std::size_t at, bool success) {

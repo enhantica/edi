@@ -4,7 +4,7 @@ import {writeFile} from 'node:fs/promises';
 import {join} from 'node:path';
 import {restoreCanvasViewport, waitControlGeometry} from './web_control_geometry.mjs';
 
-export async function checkDesktopOnlyAssistant({send, evaluate, frame, click, output, mode}) {
+export async function checkDesktopOnlyAssistant({send, evaluate, frame, click, closePreferences, output, mode}) {
   const facts = [];
   const read = name => evaluate(`window.ediControlGeometry(${JSON.stringify(name)})`);
   const retain = async (stage, value) => {
@@ -53,7 +53,7 @@ export async function checkDesktopOnlyAssistant({send, evaluate, frame, click, o
   assert.equal(after.enabled, false, 'Clicking cannot enable the WASM AI tab');
   assert.equal(after.checked, false, 'Clicking a disabled AI tab cannot select it');
   assert.equal(projects.checked, true, 'The ordinary previously selected preferences page survives');
-  await click(/^OK$/, 'button');
+  await closePreferences();
 
   // Exercise both Home and an ordinary empty Project workflow, without a provider.
   for (const context of ['home', 'project']) {

@@ -2,6 +2,7 @@
 #pragma once
 
 #include <QObject>
+#include <QAbstractListModel>
 #include "assistant_values.hpp"
 #include <QTimer>
 #include <QQuickWindow>
@@ -26,6 +27,42 @@
 namespace edi_app {
 class ProjectViewModel;
 class Session;
+
+/// Messages waiting for a running fit or app action, oldest first. Roles `messageId` and `text`.
+class AssistantQueueModel : public QAbstractListModel {
+    Q_OBJECT
+    QML_ELEMENT
+    QML_UNCREATABLE("Waiting messages belong to the assistant")
+    Q_PROPERTY(int count READ count NOTIFY countChanged)
+
+   public:
+    enum Role { MessageIdRole = Qt::UserRole + 1, TextRole };
+    struct Entry {
+        QString id, text;
+    };
+    using QAbstractListModel::QAbstractListModel;
+    void setEntries(QList<Entry> entries) {
+        const bool counted = entries.size() != entries_.size();
+        beginResetModel();
+        entries_ = std::move(entries);
+        endResetModel();
+        if (counted) emit countChanged();
+    }
+    int count() const { return static_cast<int>(entries_.size()); }
+    int rowCount(const QModelIndex& parent = QModelIndex()) const override { return parent.isValid() ? 0 : count(); }
+    QVariant data(const QModelIndex& index, int role) const override {
+        if (!index.isValid() || index.row() >= entries_.size()) return {};
+        const auto& entry = entries_.at(index.row());
+        return role == MessageIdRole ? QVariant(entry.id) : role == TextRole ? QVariant(entry.text) : QVariant();
+    }
+    QHash<int, QByteArray> roleNames() const override { return {{MessageIdRole, "messageId"}, {TextRole, "text"}}; }
+
+   signals:
+    void countChanged();
+
+   private:
+    QList<Entry> entries_;
+};
 
 /// Native QML presentation of the shared controller. Owned by Session, including while no project is open.
 class AssistantViewModel : public QObject {
@@ -73,6 +110,7 @@ class AssistantViewModel : public QObject {
     Q_PROPERTY(bool draftAdmissionReady READ draftAdmissionReady NOTIFY draftAdmissionReadyChanged)
     Q_PROPERTY(bool contextConsentRequired READ contextConsentRequired NOTIFY contextConsentRequiredChanged)
     Q_PROPERTY(bool contextApprovalBlocked READ contextApprovalBlocked NOTIFY contextApprovalBlockedChanged)
+    Q_PROPERTY(edi_app::AssistantQueueModel* queuedMessages READ queuedMessages CONSTANT)
 
    public:
     explicit AssistantViewModel(QObject* parent = nullptr, AssistantWorkReportOptions options = {});
@@ -156,6 +194,12 @@ class AssistantViewModel : public QObject {
     /// Submit on the owner thread; return its admitted row ID, or empty on refusal. Durable completed status alone acknowledges it.
     Q_INVOKABLE QString submitDraft(const QString& text);
     Q_INVOKABLE edi_app::AssistantDraftAdmission submitDraftAdmission(const QString& text);
+    /// Messages waiting for a running fit or app action, oldest first.
+    AssistantQueueModel* queuedMessages() const;
+    /// Take a waiting message back to its own conversation's draft; false when it is unknown or already being sent.
+    Q_INVOKABLE bool cancelQueuedMessage(const QString& id);
+    /// Text of returned waiting messages for the conversation the composer shows; empty for any other.
+    Q_INVOKABLE QString takeReturnedMessages();
     Q_INVOKABLE QString workReportDocument();
     /// Display-only intent label for a native action identifier; no action is executed.
     Q_INVOKABLE QString nativeActionLabel(const QString& action) const;
@@ -265,11 +309,14 @@ class AssistantViewModel : public QObject {
     void usageChanged();
     void contextPreviewChanged();
     void draftAdmissionReadyChanged();
+    void queuedMessagesChanged();
+    void queuedMessageReturned(const QString& text);
 
    protected:
     bool eventFilter(QObject* watched, QEvent* event) override;
    private:
     friend class Session;
+    mutable AssistantQueueModel* queued_model_ = nullptr;
     QString submitDraftImpl(const QString&,bool* accountWaiting);
     void finishHistoryInitialization() noexcept;
     bool ordinarySaveNotification(ProjectViewModel*) const noexcept;

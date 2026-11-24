@@ -309,8 +309,47 @@ links the real marker in a release build and reads it from the resulting binary.
 The required EasyDiffraction component contains the application, Qt, crysta and the small process
 lifetime guard. The separate AI assistant component contains the complete verified Codex runtime
 under `libexec/edi/codex`, including on macOS where it sits beside the signed application bundle.
-The component is unchecked by default and depends on EasyDiffraction. Users can select it during
-installation or add and remove it with Maintenance Tool. The two components have independent
+The installer ticks it by default (the command line installs it only when named), and it depends on EasyDiffraction. Users can select it during
+installation or add and remove it with Maintenance Tool.
+
+The choice is one checkbox, "Also install the AI assistant", right under the folder on the
+installation folder page; in Maintenance Tool's add or remove flow it is a page
+of its own whose box shows whether the assistant is installed. The Framework's component tree page
+is hidden. With macOS accessibility on, a client asking the tree for its selected children crashed
+the installer (edi #150): the Qt inside Installer Framework 4.11.0, the newest release, frees table
+cells that its accessibility cache still holds, fixed upstream in qtbase after that release. One
+checkbox gives the same choice without the tree. `tools/installer/a11y-check.sh` reproduces the
+crash on a released installer and checks the built one, walking every page while a small client
+reads every element (`.github/workflows/installer-accessibility.yml`). The installer and its
+maintenance tool also carry EasyDiffraction's own bundle identifiers on macOS in place of the
+Framework's placeholder, which crash reports and privacy settings showed.
+
+## Download names and the macOS disk image
+
+Installer downloads are named `EasyDiffraction-Installer-<version>-<platform>` with the platform
+`macOS-arm64`, `Windows-x64` or `Linux-x64`, and `EasyDiffraction-Installer-Offline-...` for the
+offline kind: a `.dmg` on macOS, the `.exe` on Windows, and on Linux a `.zip` holding the `.run`
+beside its runtime libraries. The website still finds the older names on releases made before the
+change. The disk image's volume is `EasyDiffraction Installer` and holds `EasyDiffraction
+Installer.app` and `BRANDING-LICENSE.txt`. `dmgbuild` writes its Finder window into the image: about
+760 by 530 points, 96-point icons with labels below, no toolbar or status bar, each item at a fixed
+place, and the installer's icon as the volume icon. The image file gets the same icon on the build
+machine, but the icon lives in extended attributes that a browser download drops, so a downloaded
+image shows the standard disk image icon.
+
+## Look and wording
+
+The pages follow the app's theme in light and dark: Installer.qss holds the app's colours and sizes
+(gui-components' Colors.qml and Sizes.qml), filled in by package.py and applied to each page by
+Installer.qs, since the Framework lets scripts reach the pages but not the window around them. The
+window's background, header, step list and buttons follow the system palette, with the app's borders
+as translucent shades (InstallerChrome.qss). The Framework's own text is replaced through an English
+translation, ifw_en.ts: the window is "EasyDiffraction Installer" and the maintenance tool
+"EasyDiffraction Maintenance Tool", never "Setup", and buttons read Back, Next and Browse… with no
+arrows or mnemonic underlines. There is no Settings button. Cancel shows on Windows and Linux only:
+Qt's macOS wizard has none and the Framework offers no way to add it; the window's close button
+cancels on every platform. The installer's icon is the same art cropped to its visible pixels and
+enlarged to a document icon's height, so it reads as large as BRANDING-LICENSE.txt beside it. The two components have independent
 payload manifests and share the release version. Publication verifies the archives for both.
 
 At startup, the desktop app uses its existing runtime manifest and executable checks to determine

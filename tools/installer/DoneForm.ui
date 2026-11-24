@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- SPDX-License-Identifier: BSD-3-Clause -->
+<!-- The last page's choice to open the program, in place of the Framework's own box (Installer.qs keeps that one
+     hidden and set from this one). The Framework's box sits straight in its page's column, which on macOS starts it
+     2 px left of the text (AssistantForm.ui says why); here it has a row of its own and starts with the text. -->
+<ui version="4.0">
+ <class>DoneForm</class>
+ <widget class="QWidget" name="DoneForm">
+  <property name="sizePolicy">
+   <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
+    <horstretch>0</horstretch>
+    <verstretch>1</verstretch>
+   </sizepolicy>
+  </property>
+  <layout class="QVBoxLayout" name="DoneLayout">
+   <property name="spacing">
+    <number>8</number>
+   </property>
+   <property name="leftMargin">
+    <number>0</number>
+   </property>
+   <property name="topMargin">
+    <number>0</number>
+   </property>
+   <property name="rightMargin">
+    <number>0</number>
+   </property>
+   <property name="bottomMargin">
+    <number>0</number>
+   </property>
+   <item>
+    <layout class="QHBoxLayout" name="OpenRow">
+     <property name="spacing">
+      <number>8</number>
+     </property>
+     <property name="leftMargin">
+      <number>0</number>
+     </property>
+     <property name="topMargin">
+      <number>0</number>
+     </property>
+     <property name="rightMargin">
+      <number>0</number>
+     </property>
+     <property name="bottomMargin">
+      <number>0</number>
+     </property>
+     <item>
+      <widget class="QCheckBox" name="OpenCheckBox">
+       <property name="text">
+        <string>Open EasyDiffraction now</string>
+       </property>
+       <property name="checked">
+        <bool>true</bool>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <spacer name="DoneSpacer">
+     <property name="orientation">
+      <enum>Qt::Vertical</enum>
+     </property>
+    </spacer>
+   </item>
+  </layout>
+ </widget>
+</ui>

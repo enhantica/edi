@@ -138,7 +138,11 @@ them, and the installed payload is checked against the signed bytes.
    `codesign --options runtime --timestamp`, notarises it the same way, staples the ticket with
    `xcrun stapler staple` and checks it with `codesign --verify` and `spctl --assess`. It then puts the app into
    the download disk image and signs, notarises and staples the image the same way (ADR-0071). This runs for the
-   offline and the online installer.
+   offline and the online installer. Since 2026-11-23 the image is built by `dmgbuild` rather than
+   `hdiutil create`, so its Finder window layout and volume icon are written into it (ADR-0071, "Download names
+   and the macOS disk image"); the app inside is named "EasyDiffraction Installer.app", and signing,
+   notarising and stapling the app and the image are unchanged. The image file's own icon is set after the image
+   is signed, since it lives in extended attributes.
 
 **Windows steps**, in the same job:
 

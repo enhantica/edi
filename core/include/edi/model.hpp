@@ -3816,6 +3816,7 @@ struct LinkedStructure : std::enable_shared_from_this<LinkedStructure> {
     // Absent when the project holds no fit result.
     std::optional<double> fit_bragg_r_factor;
     std::optional<double> fit_f_r_factor;
+    std::optional<double> fit_magnetic_r_factor;  // a phase with magnetic scattering (edi #139)
 
     LinkedStructure() { scale.spec = &spec::linked_structure_scale; }
 
@@ -6122,8 +6123,9 @@ static_assert(detail::one_entry_per_column(FitResultBankCategory::columns, FitRe
 struct FitResultPhaseCategory {
     using Owner = LinkedStructure;
     static constexpr const char* name = "_fit_result_phase";
-    static constexpr auto columns = std::tuple{&LinkedStructure::fit_bragg_r_factor, &LinkedStructure::fit_f_r_factor};
-    static constexpr std::array items{"bragg_r_factor", "f_r_factor"};
+    static constexpr auto columns = std::tuple{&LinkedStructure::fit_bragg_r_factor, &LinkedStructure::fit_f_r_factor,
+                                               &LinkedStructure::fit_magnetic_r_factor};
+    static constexpr std::array items{"bragg_r_factor", "f_r_factor", "magnetic_r_factor"};
 };
 static_assert(detail::one_entry_per_column(FitResultPhaseCategory::columns, FitResultPhaseCategory::items));
 

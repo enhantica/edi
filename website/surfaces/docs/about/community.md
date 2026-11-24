@@ -17,13 +17,11 @@ When you report a problem, it helps to say:
 - a small project or file that shows the problem, if you can share it. Leave out unpublished or confidential data.
 
 <form class="ed-contact-form" action="#" method="post" aria-label="Get in touch">
-<select name="reason" aria-label="Reason"></select>
 <div class="ed-contact-row">
 <input type="text" name="name">
 <input type="email" name="email">
 <input type="text" name="affiliation">
 </div>
-<input type="text" name="subject">
 <textarea name="message" required></textarea>
 <div class="ed-contact-files">
 <button type="button" class="ed-contact-attach"></button>

@@ -17,7 +17,6 @@ CASES = [
             'checkbox',
             'numeric',
             'message',
-            'subject',
             'name',
             'email',
             'affiliation',

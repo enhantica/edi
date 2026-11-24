@@ -122,7 +122,7 @@ QJsonObject exactCollectionOwner(Session& session, VM* model, const QString& roo
                     if (model->project_->experiments[at].get() == target.object.get()) return at;
                 throw std::runtime_error("The observer control reaches its exact current object");
             };
-            const auto selected = mutation == "second-only" ? 1 : 0;
+            const std::size_t selected = mutation == "second-only" ? 1 : 0;
             need(model->fillCollectionData(indexOf(originals[selected]), file),
                  "Only the selected exact observer-control object receives the authored rows");
             if (mutation == "removed" || mutation == "replacement") {
@@ -159,7 +159,7 @@ QJsonObject exactCollectionOwner(Session& session, VM* model, const QString& roo
             if (mutationEntered || mutation == "none" || !owner || session.project() != owner)
                 return;
             mutationEntered = true;
-            const int refusalCount = refusals.size();
+            const auto refusalCount = refusals.size();
             const auto previousError = model->lastError();
             const auto target = targets.front();
             std::size_t index = model->project_->experiments.size();
@@ -252,7 +252,7 @@ QJsonObject exactCollectionOwner(Session& session, VM* model, const QString& roo
         }
         bool admissionRefused = false, reindexed = false, reindexRefused = false;
         if (scenario == "added" || scenario == "different") {
-            const int beforeRefusals = refusals.size();
+            const auto beforeRefusals = refusals.size();
             added =
                 admit("second_target", scenario == "added" ? "owned-X" : "owned-Y",
                       scenario == "added" ? bytesX : bytesY, scenario == "added" ? rowsX : rowsY);
@@ -261,7 +261,7 @@ QJsonObject exactCollectionOwner(Session& session, VM* model, const QString& roo
         }
         if (scenario == "reindex") {
             const auto before = model->project_->experiments.size();
-            const int beforeRefusals = refusals.size();
+            const auto beforeRefusals = refusals.size();
             model->removeExperiment(0);
             reindexed = model->project_->experiments.size() < before;
             reindexRefused =

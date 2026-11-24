@@ -43,37 +43,17 @@ TestCase {
     function test_opened_choices_are_visible_and_selectable_data() {
         return [
             {
-                tag: "feedback-kind",
-                kind: "feedback",
-                labels: ["Share feedback", "Ask a question", "Report a problem", "Suggest an idea"],
-                values: ["feedback", "question", "problem", "idea"]
-            },
-            {
                 tag: "logging-level",
-                kind: "logging",
-                labels: ["Debug", "Info", "Error", "Disabled"],
-                values: ["Debug", "Info", "Error", "Disabled"]
+                labels: ["Debug", "Info", "Warning", "Error"],
+                values: ["Debug", "Info", "Warning", "Error"]
             }
         ];
     }
     function test_opened_choices_are_visible_and_selectable(data) {
-        let combo;
-        if (data.kind === "feedback") {
-            named("feedback.form").endpoint = "https://feedback.example.invalid/feedback";
-            named("feedback.form").transport = function () {
-                fail("Choosing a feedback kind never makes a network request");
-            };
-            const link = Probe.objectsWithProperty(app, "text").find(item => item.visible && item.text === "Help and feedback" && typeof item.clicked === "function");
-            verify(link !== undefined, "The feedback choice is entered through the real Home link");
-            press(link);
-            tryCompare(named("feedback.form"), "opened", true, 2000, "The feedback form finishes opening before choosing its kind");
-            combo = named("feedback.kind");
-        } else {
-            press(named("appBar.button.preferences"));
-            tryCompare(named("preferences"), "opened", true, 2000, "Preferences finishes opening before choosing logging");
-            press(named("preferences.tab.develop"));
-            combo = named("preferences.loggingLevel");
-        }
+        press(named("appBar.button.preferences"));
+        tryCompare(named("preferences"), "opened", true, 2000, "Preferences finishes opening before choosing logging");
+        press(named("preferences.tab.advanced"));
+        const combo = named("preferences.loggingLevel");
         for (let index = 0; index < data.labels.length; ++index) {
             press(combo);
             tryCompare(combo.popup, "opened", true, 2000, "The combo opens its actual popup before inspecting choices");
@@ -84,7 +64,7 @@ TestCase {
             press(delegates[0]);
             tryCompare(combo.popup, "visible", false, 2000, "Choosing a rendered row closes the popup");
             compare(combo.currentValue, data.values[index], "The selected painted row sets the corresponding actual value");
-            compare(data.kind === "feedback" ? named("feedback.form").kind : Preferences.loggingLevel, data.values[index], "The chosen value reaches the feedback payload or logging preference");
+            compare(Preferences.loggingLevel, data.values[index], "The chosen value reaches the logging preference");
         }
     }
 }

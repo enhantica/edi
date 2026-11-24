@@ -7,6 +7,7 @@ import json
 import sys
 from pathlib import Path
 from unittest import mock
+from zipfile import ZipFile
 
 import pytest
 
@@ -137,8 +138,19 @@ def test_delivery_compares_download_and_executed_app_to_prepared_identity(
         + '/'
         + policy['repository_paths']['stable'].format(platform=platform)
     )
-    name = f'EasyDiffraction-2026.11.0-{platform}-online{suffix}'
-    (tmp_path / name).write_bytes(b'qualified installer')
+    platform_name = {
+        'linux-x86_64': 'Linux-x64',
+        'macos-arm64': 'macOS-arm64',
+        'windows-x86_64': 'Windows-x64',
+    }[platform]
+    name = f'EasyDiffraction-Installer-2026.11.0-{platform_name}{suffix}'
+    download = tmp_path / name
+    if platform == 'linux-x86_64':
+        with ZipFile(download, 'w') as archive:
+            archive.writestr(download.with_suffix('.run').name, b'qualified installer')
+            archive.writestr('installer-runtime/lib/libQt6Core.so.6', b'qualified runtime')
+    else:
+        download.write_bytes(b'qualified installer')
     metadata = {
         **release,
         'edi_commit': release['commit'],
@@ -147,7 +159,7 @@ def test_delivery_compares_download_and_executed_app_to_prepared_identity(
         'kind': 'online',
         'repository_url': url,
         'download': name,
-        'download_sha256': hashlib.sha256((tmp_path / name).read_bytes()).hexdigest(),
+        'download_sha256': hashlib.sha256(download.read_bytes()).hexdigest(),
     }
     build = {
         'edi_commit': release['commit'],
@@ -162,6 +174,21 @@ def test_delivery_compares_download_and_executed_app_to_prepared_identity(
             'release_history_sha256': 'b' * 64,
         },
     }
+
+    def write_delivery():
+        for filename, value in [
+            ('installer.json', metadata),
+            ('build-inputs.json', build),
+            ('qualification.json', receipt),
+        ]:
+            (tmp_path / filename).write_text(json.dumps(value))
+
+    write_delivery()
+    assert PROMOTE.validate_delivery(tmp_path, release, 'b' * 64, platform).name == name, (
+        'The intact platform download retains its prepared identity and executed-app evidence.'
+    )
+    if damage == 'none':
+        return
     if damage == 'source':
         build['edi_commit'] = 'c' * 40
     elif damage == 'history':
@@ -171,20 +198,12 @@ def test_delivery_compares_download_and_executed_app_to_prepared_identity(
     elif damage == 'channel':
         metadata['repository_url'] = url.replace('/repository/', '/repository/testing/')
     elif damage == 'bytes':
-        (tmp_path / name).write_bytes(b'rebuilt installer')
-    for filename, value in [
-        ('installer.json', metadata),
-        ('build-inputs.json', build),
-        ('qualification.json', receipt),
-    ]:
-        (tmp_path / filename).write_text(json.dumps(value))
-    if damage == 'none':
-        assert PROMOTE.validate_delivery(tmp_path, release, 'b' * 64, platform).name == name, (
-            'Each platform download retains its prepared identity and executed-app evidence.'
-        )
-    else:
-        with pytest.raises(ValueError, match=r'identity|bytes'):
-            PROMOTE.validate_delivery(tmp_path, release, 'b' * 64, platform)
+        download.write_bytes(b'rebuilt installer')
+    write_delivery()
+    with pytest.raises(
+        ValueError, match='bytes differ' if damage == 'bytes' else 'prepared identity'
+    ):
+        PROMOTE.validate_delivery(tmp_path, release, 'b' * 64, platform)
 
 
 @pytest.mark.parametrize('damage', ['none', 'source', 'notes', 'asset', 'published-missing'])

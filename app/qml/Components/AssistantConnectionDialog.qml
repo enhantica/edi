@@ -73,7 +73,12 @@ AppDialog {
     function updateAcceptButton() {
         ApplicationInfo.connectionUpdateAcceptButton();
     }
-    onAboutToShow: updateAcceptButton()
+    // The disclosure is refreshed before the dialog shows, not only once it has opened: an OK pressed while it
+    // opens must approve what the project holds now, or it would be refused for a stale offer.
+    onAboutToShow: {
+        refreshDisclosedContext();
+        updateAcceptButton();
+    }
     onOpened: ApplicationInfo.connectionPresentationChanged(0)
     Connections {
         target: dialog.assistant

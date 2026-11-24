@@ -140,7 +140,7 @@ TestCase {
         return text.split(/\r?\n/).filter(line => /^\d{2}:\d{2}:\d{2}\.\d{3}  \+(\d\.\d{3}|\d{2}\.\d{2}|\d{3}\.\d|\d{5})  INFO      (app   |qml   |crysta)  .+  \S+$/.test(line));
     }
     function test_shared_control_has_one_private_info_receipt_data() {
-        return ["button", "tab", "combobox", "checkbox", "numeric", "message", "subject", "name", "email", "affiliation", "project-title", "project-description"].map(kind => ({
+        return ["button", "tab", "combobox", "checkbox", "numeric", "message", "name", "email", "affiliation", "project-title", "project-description"].map(kind => ({
                     tag: kind,
                     kind: kind
                 }));
@@ -174,19 +174,19 @@ TestCase {
                 control = named(data.kind === "project-title" ? "project.title" : "project.description");
                 value = secret;
             }
+        } else if (data.kind === "combobox") {
+            press(named("appBar.button.preferences"));
+            tryCompare(named("preferences"), "opened", true, 2000, "Preferences opens before choosing a theme");
+            press(named("preferences.tab.appearance"));
+            control = named("preferences.theme");
         } else {
             openFeedback();
             if (data.kind === "button")
                 control = named("feedback.preview");
-            else if (data.kind === "combobox")
-                control = named("feedback.kind");
             else if (data.kind === "checkbox")
                 control = named("feedback.include");
             else if (data.kind === "message") {
                 control = named("feedback.text");
-                value = secret;
-            } else if (data.kind === "subject") {
-                control = named("feedback.subject");
                 value = secret;
             } else {
                 const labels = {

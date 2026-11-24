@@ -2688,10 +2688,24 @@ QJSValue ApplicationInfo::composerSubmit(const QJSValue& approved) const {
         if (!state.strictlyEquals(QJSValue(QStringLiteral("idle")))) return consentStatus(f, "waiting");
         if (panelUsageTruth(panelUsageRead(f, original, "canCancel"))) return consentStatus(f, "waiting");
     }
+    // An ordinary Send during a fit joins the assistant's queue instead of returning a row.
+    const auto queuedBefore = panelUsageTruth(approved) ? QJSValue() : panelUsageRead(f, panelUsageRead(f, original, "queuedMessages"), "count");
     auto admission = panelUsageTruth(approved) ? panelUsageMemberCall(f, original, "submitDraftAdmission", {text}) : consentNull();
     const auto rowId = panelUsageTruth(approved) ? (panelUsageTruth(admission) ? panelUsageRead(f, admission, "row_id") : QJSValue(QString{}))
                                        : panelUsageMemberCall(f, original, "submitDraft", {text});
     if (!consentOwner(f, component, original)) return {};
+    if (!panelUsageTruth(approved)) {
+        const auto queuedAfter = panelUsageRead(f, panelUsageRead(f, original, "queuedMessages"), "count");
+        if (!panelUsageReady(f)) return {};
+        if (assistantRelation(f, queuedBefore, queuedAfter, 0)) {
+            // The queue holds the text now and shows it, so no submitted row is tracked for it.
+            if (!assistantSameName(f, ownerRevision, "draftOwnerRevision") || !assistantSameName(f, revision, "textRevision")) return {};
+            const auto current = assistantContextField(f, "editor", "text");
+            if (!panelUsageReady(f) || !text.strictlyEquals(current) || !assistantEditorIdle(f)) return {};
+            panelUsageMemberCall(f, panelUsageContextRead(f, "editor"), "clear");
+            return {};
+        }
+    }
     const auto length = panelUsageRead(f, rowId, "length");
     if (panelUsageTruth(length) && assistantSameName(f, ownerRevision, "draftOwnerRevision")) {
         const auto submitted = panelUsageContextRead(f, "submittedDrafts");
@@ -3389,6 +3403,7 @@ void ApplicationInfo::projectChangesQuestion(const QJSValue& action, const QJSVa
     QJSValue native = consentNull();
     if (!token.isNull() && consentFieldEquals(frame, token, "action", action)) native = token;
     projectWrite(frame, "unsavedChanges", "nativeCreation", native);
+    ++unsaved_question_;
     projectWrite(frame, "unsavedChanges", "action", action);
     projectInvoke(frame, "unsavedChanges", "open");
 }
@@ -3422,6 +3437,46 @@ void ApplicationInfo::acceptUnsavedProject() const {
     }
     const auto original = panelUsageContextRead(frame, "nativeCreation");
     const auto waiting = panelUsageContextRead(frame, "action");
+    // Untitled work is named and saved by an untitled operation (ADR-0100): the waiting action is kept with its id and
+    // runs only once that operation is saved; any other end abandons it.
+    if (panelUsageTruth(assistantContextField(frame, "Session", "untitled"))) {
+        const auto abandoned = panelUsageContextRead(frame, "abandoned");
+        const auto origin = QJSValue(original.isNull() ? QStringLiteral("guard-save") : QStringLiteral("assistant-create"));
+        // The operation is bound to this question's action: a Save for another question is another request.
+        const auto question = QJSValue(QStringLiteral("question-%1").arg(unsaved_question_));
+        const auto asked = assistantContextField(frame, "Session", "project");
+        const auto id = projectInvoke(frame, "Session", "beginUntitled", {origin, question});
+        if (id.toNumber() <= 0) {
+            panelUsageGlobalCall(frame, "abandonAction", {});
+            return;
+        }
+        const auto previous = panelUsageContextRead(frame, "untitledAbandoned");
+        const bool same = panelUsageContextRead(frame, "untitledId").strictlyEquals(id);
+        panelUsageContextWrite(frame, "untitledProject", asked);
+        panelUsageContextWrite(frame, "untitledId", id);
+        panelUsageContextWrite(frame, "untitledAction", waiting);
+        panelUsageContextWrite(frame, "untitledAbandoned", abandoned);
+        panelUsageContextWrite(frame, "action", consentNull());
+        panelUsageContextWrite(frame, "abandoned", consentNull());
+        // The same question answered again carries the same action; an earlier one it replaced is abandoned.
+        if (same && previous.isCallable() && !previous.strictlyEquals(abandoned)) projectCall(frame, previous);
+        // Each write above can reenter: the request goes on only while it is still the one asking. If it ended
+        // meanwhile, its settlement may have come before its id was kept, so its action is abandoned here.
+        if (!projectInvoke(frame, "Session", "askingUntitledId").strictlyEquals(id) ||
+            !assistantContextField(frame, "Session", "project").strictlyEquals(asked)) {
+            if (!panelUsageContextRead(frame, "untitledId").strictlyEquals(id)) return;
+            const auto lost = panelUsageContextRead(frame, "untitledAbandoned");
+            panelUsageContextWrite(frame, "untitledProject", consentNull());
+            panelUsageContextWrite(frame, "untitledId", QJSValue(0));
+            panelUsageContextWrite(frame, "untitledAction", consentNull());
+            panelUsageContextWrite(frame, "untitledAbandoned", consentNull());
+            if (lost.isCallable()) projectCall(frame, lost);
+            return;
+        }
+        // The Create dialog answers this request by its id, never whichever request asks when it opens.
+        projectInvoke(frame, "AppState", "requestUntitledSave", {id});
+        return;
+    }
     if (panelUsageTruth(assistantContextField(frame, "Session", "needsSaveAs"))) {
         panelUsageGlobalCall(frame, "abandonAction", {});
         const auto window = panelUsageContextRead(frame, "window");
@@ -3482,6 +3537,26 @@ void ApplicationInfo::projectWebSaveFinished(const QJSValue& saved) const {
     if (panelUsageTruth(saved) && !waiting.isNull()) projectInvoke(frame, "AppState", "afterChanges", {waiting, abandoned});
     else if (panelUsageTruth(abandoned)) projectCall(frame, abandoned);
 }
+void ApplicationInfo::projectUntitledSettled(const QJSValue& id, const QJSValue& state) const {
+    const auto frame = panelUsageEngine(this);
+    if (!assistantContextField(frame, "unsavedChanges", "untitledId").strictlyEquals(id)) return;
+    const auto waiting = assistantContextField(frame, "unsavedChanges", "untitledAction");
+    const auto abandoned = assistantContextField(frame, "unsavedChanges", "untitledAbandoned");
+    const auto owner = assistantContextField(frame, "unsavedChanges", "untitledProject");
+    projectWrite(frame, "unsavedChanges", "untitledProject", consentNull());
+    projectWrite(frame, "unsavedChanges", "untitledId", QJSValue(0));
+    projectWrite(frame, "unsavedChanges", "untitledAction", consentNull());
+    projectWrite(frame, "unsavedChanges", "untitledAbandoned", consentNull());
+    // The id alone proves nothing: after those writes, and whatever listener ran before this one, the action runs only
+    // for the project the guard asked about, still open and named (the session says saved only once it took what was
+    // written).
+    if (state.strictlyEquals(QJSValue(QStringLiteral("saved"))) && !waiting.isNull() && !owner.isNull() &&
+        assistantContextField(frame, "Session", "project").strictlyEquals(owner) &&
+        !panelUsageTruth(assistantContextField(frame, "Session", "untitled")))
+        projectInvoke(frame, "AppState", "afterChanges", {waiting, abandoned});
+    else if (abandoned.isCallable())
+        projectCall(frame, abandoned);
+}
 void ApplicationInfo::discardUnsavedProject() const {
     const auto frame = panelUsageEngine(this);
     const auto waiting = panelUsageContextRead(frame, "action");
@@ -3520,6 +3595,11 @@ void ApplicationInfo::acceptProjectSaveChoice() const {
     if (panelUsageTruth(assistantContextField(frame, "WebFiles", "available"))) {
         const auto zip = panelUsageContextRead(frame, "zip");
         const auto copy = panelUsageContextRead(frame, "copy");
+        // Untitled work moves to a place of its own only by being named (ADR-0100): Create does it in the browser.
+        if (!panelUsageTruth(copy) && panelUsageTruth(assistantContextField(frame, "Session", "untitled"))) {
+            projectInvoke(frame, "AppState", "requestUntitledSave");
+            return;
+        }
         projectInvoke(frame, "Session", "saveWebProjectAs", {QJSValue(panelUsageTruth(zip) ? QStringLiteral("zip") : QStringLiteral("folder")), copy});
         return;
     }
@@ -8872,7 +8952,7 @@ QJSValue ApplicationInfo::legendSegments() const {
 QJSValue ApplicationInfo::factorPresentation(const QJSValue& value, bool rich) const {
     const auto f = panelUsageEngine(this); const auto text = value.isNull() || value.isUndefined() ? QJSValue(QStringLiteral("")) : value;
     if (!rich) {
-        const auto pattern = panelRegex(f, QStringLiteral("\\b(c?)R_?(wp|p|exp|Bragg|F)\\b"));
+        const auto pattern = panelRegex(f, QStringLiteral("\\b(c?)R_?(wp|p|exp|Bragg|F|mag)\\b"));
         return panelUsageMemberCall(f, pattern, "test", {numberString(f, text)});
     }
     const auto escaped = chartEscape(f, numberString(f, text));
@@ -10942,7 +11022,10 @@ QJSValue lifecycleCallback(const PanelUsageFrame& f, uint op,
         if (!createAlive(f, life) || !createGroupField(f, "createOperation").strictlyEquals(original) || !createSameProject(f, original) || (!panelUsageRead(f, original, "assistant").isNull() && panelUsageTruth(panelUsageRead(f, panelUsageRead(f, original, "assistant"), "cancelled")))) return {};
         const auto session = panelUsageContextRead(f, "Session");
         const auto outcome = panelUsageDeferredMemberCall(f, session, "createProjectWithOutcome", [&] {
-            return QJSValueList{saved(2), saved(3), saved(4), assistantContextField(f, "Preferences", "newProjectSuRule"), saved(5), saved(6), QJSValue(assistantContextField(f, "Preferences", "newReportLibraries").strictlyEquals(QJSValue(QStringLiteral("embedded")))), !panelUsageRead(f, original, "assistant").isNull() ? panelUsageRead(f, panelUsageRead(f, original, "assistant"), "id") : QJSValue(QStringLiteral("")), QJSValue(panelUsageTruth(assistantContextField(f, "createDialog", "replaceExisting")))};
+            QJSValueList args{saved(2), saved(3), saved(4), assistantContextField(f, "Preferences", "newProjectSuRule"), saved(5), saved(6), QJSValue(assistantContextField(f, "Preferences", "newReportLibraries").strictlyEquals(QJSValue(QStringLiteral("embedded")))), !panelUsageRead(f, original, "assistant").isNull() ? panelUsageRead(f, panelUsageRead(f, original, "assistant"), "id") : QJSValue(QStringLiteral("")), saved(8)};
+            // Only a dialog that answers an untitled request sends its id: an ordinary Create carries none.
+            if (saved(7).toNumber() > 0) args.append(saved(7));
+            return args;
         });
         if (!panelUsageTruth(panelUsageRead(f, outcome, "success")) && panelUsageTruth(panelUsageRead(f, outcome, "current")) && panelUsageTruth(projectInvoke(f, "Session", "creationOutcomeCurrent", {outcome})) && assistantRelation(f, panelUsageRead(f, panelUsageRead(f, outcome, "error"), "length"), QJSValue(0), 1) && panelUsageRead(f, original, "assistant").isNull()) return projectInvoke(f, "AppState", "createFailed");
     }
@@ -11145,7 +11228,10 @@ void ApplicationInfo::createProjectDialogEvent(int kind) const {
     const auto location = unsaved ? QJSValue(QStringLiteral("")) : assistantContextField(f, "createDialog", "projectLocation");
     const auto title = assistantContextField(f, "createDialog", "projectTitle"), authors = assistantContextField(f, "createDialog", "projectAuthors");
     assistantMemberWrite(f, panelUsageRead(f, panelUsageContextRead(f, "EaGlobals"), "Vars"), "showProjectDescriptionDialog", QJSValue(false));
-    const auto qt = panelUsageContextRead(f, "Qt"); panelUsageMemberCall(f, qt, "callLater", {panelUsageClosure(f, 387, {life, original, name, description, location, title, authors})});
+    // The untitled operation this dialog answered and its Replace confirmation, as they were at its OK (ADR-0100).
+    const auto untitled = assistantContextField(f, "createDialog", "untitledId");
+    const auto replace = QJSValue(panelUsageTruth(assistantContextField(f, "createDialog", "replaceExisting")));
+    const auto qt = panelUsageContextRead(f, "Qt"); panelUsageMemberCall(f, qt, "callLater", {panelUsageClosure(f, 387, {life, original, name, description, location, title, authors, untitled.isNumber() ? untitled : QJSValue(0), replace})});
 }
 void ApplicationInfo::windowSaveChoiceOpened() const {
     const auto f = panelUsageEngine(this); if (panelUsageTruth(panelUsageContextRead(f, "nativeAcceptButton"))) assistantMemberWrite(f, panelUsageContextRead(f, "nativeAcceptButton"), "objectName", QJSValue(QStringLiteral("saveAs.accept")));
@@ -11979,6 +12065,26 @@ void ApplicationInfo::composerSessionDraftRestored(QObject* composer, QObject* e
     }
     if (restore && composerDraftEditorIdle(*frame)) composerDraftWrite(*frame, frame->edit, "text", QJSValue(text));
     if (frame->live()) publishComposerDraft(*frame);
+}
+void ApplicationInfo::composerTakeReturnedMessages(QObject* composer, QObject* editor) const {
+#if EDI_APP_ASSISTANT
+    const auto frame = composerDraftFrame(composer, editor);
+    // While the editor composes, the text stays with the assistant; the composer asks again when composing ends.
+    if (!frame || !composerDraftEditorIdle(*frame)) return;
+    auto* assistant = qobject_cast<edi_app::AssistantViewModel*>(composerDraftRead(*frame, frame->view, "assistant").toQObject());
+    const auto current = composerDraftRead(*frame, frame->edit, "text");
+    if (!frame->live() || !assistant) return;
+    // Only the conversation this composer shows hands over its returned messages.
+    const auto text = assistant->takeReturnedMessages();
+    if (text.isEmpty() || !frame->live()) return;
+    // Put the waiting messages back ahead of anything typed since, so neither is lost.
+    const auto existing = current.toString();
+    composerDraftWrite(*frame, frame->edit, "text", QJSValue(existing.isEmpty() ? text : text + QStringLiteral("\n\n") + existing));
+    if (frame->live()) publishComposerDraft(*frame);
+#else
+    Q_UNUSED(composer)
+    Q_UNUSED(editor)
+#endif
 }
 void ApplicationInfo::composerConversationClearRequested(QObject* composer, QObject* editor, const QString& intent) const {
     const auto frame = composerDraftFrame(composer, editor);

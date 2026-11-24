@@ -975,21 +975,6 @@ def _feedback_dialog_texts(qml: str) -> dict:
             raise SystemExit(f'FeedbackDialog.qml: could not find {what}')
         return found
 
-    def by_kind(anchor: str, what: str) -> dict:
-        start = qml.find(anchor)
-        end = qml.find('})[dialog.kind]', start)
-        texts = (
-            dict(re.findall(r'"(\w+)": qsTr\("([^"]+)"\)', qml[start:end]))
-            if start >= 0 and end > start
-            else {}
-        )
-        if not texts:
-            raise SystemExit(f'FeedbackDialog.qml: could not find {what}')
-        return texts
-
-    reasons = re.findall(r'ListElement \{\s*value: "(\w+)"\s*text: qsTr\("([^"]+)"\)', qml)
-    if not reasons:
-        raise SystemExit('FeedbackDialog.qml: could not find the reasons')
     contact = {
         key: one(
             rf'objectName: "feedback\.{key}"[^}}]*?placeholderText: qsTr\("([^"]+)"\)',
@@ -1049,10 +1034,11 @@ def _feedback_dialog_texts(qml: str) -> dict:
         ),
         'close': close,
         'files': files,
-        'reasons': [{'value': value, 'text': text} for value, text in reasons],
         'contact': contact,
-        'subject': by_kind('objectName: "feedback.subject"', 'the subject prompts'),
-        'message': by_kind('areaObjectName: "feedback.text"', 'the message prompts'),
+        'message': one(
+            r'areaObjectName: "feedback\.text"[^}]*?placeholderText: qsTr\("([^"]+)"\)',
+            'the message prompt',
+        ).group(1),
         'privacy': f'{privacy.group(1)} {privacy.group(2)}',
     }
 

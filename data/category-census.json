@@ -2349,6 +2349,13 @@
           "items": [
             "f_r_factor"
           ]
+        },
+        {
+          "member": "LinkedStructure::fit_magnetic_r_factor",
+          "type": "std::optional<double>",
+          "items": [
+            "magnetic_r_factor"
+          ]
         }
       ],
       "owner": "LinkedStructure"
@@ -4647,6 +4654,11 @@
     },
     {
       "member": "LinkedStructure::fit_f_r_factor",
+      "type": "std::optional<double>",
+      "category": "_fit_result_phase"
+    },
+    {
+      "member": "LinkedStructure::fit_magnetic_r_factor",
       "type": "std::optional<double>",
       "category": "_fit_result_phase"
     },

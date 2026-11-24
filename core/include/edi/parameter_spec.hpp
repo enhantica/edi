@@ -196,9 +196,10 @@ inline constexpr const char* kMarchRandomFractCif[] = {
 
 namespace spec {
 
-inline const ParameterSpec cell_length_a{"cell", "length_a", "angstroms", {0.0, 30.0}, detail::kCellLengthA, {}};
-inline const ParameterSpec cell_length_b{"cell", "length_b", "angstroms", {0.0, 30.0}, detail::kCellLengthB, {}};
-inline const ParameterSpec cell_length_c{"cell", "length_c", "angstroms", {0.0, 30.0}, detail::kCellLengthC, {}};
+// 99 Å admits long-axis cells such as W-type hexaferrites (c about 32 Å).
+inline const ParameterSpec cell_length_a{"cell", "length_a", "angstroms", {0.0, 99.0}, detail::kCellLengthA, {}};
+inline const ParameterSpec cell_length_b{"cell", "length_b", "angstroms", {0.0, 99.0}, detail::kCellLengthB, {}};
+inline const ParameterSpec cell_length_c{"cell", "length_c", "angstroms", {0.0, 99.0}, detail::kCellLengthC, {}};
 inline const ParameterSpec cell_angle_alpha{"cell", "angle_alpha", "degrees", {0.0, 180.0}, detail::kCellAngleAlpha, {}};
 inline const ParameterSpec cell_angle_beta{"cell", "angle_beta", "degrees", {0.0, 180.0}, detail::kCellAngleBeta, {}};
 inline const ParameterSpec cell_angle_gamma{"cell", "angle_gamma", "degrees", {0.0, 180.0}, detail::kCellAngleGamma, {}};

@@ -66,7 +66,15 @@ check(now.error === '' && !now.sendDisabled, 'five files may be sent');
 // A 201 that does not confirm the files says which were not attached, and keeps the contact details.
 await page.fill('input[name="name"]', 'Ada');
 await page.fill('input[name="email"]', 'ada@example.org');
-await page.fill('input[name="subject"]', 'Files');
+// One kind of message (edi-feedback #102): no type list and no subject; the message asks, in the app's words, what it
+// is about.
+const shape = await page.evaluate(() => ({
+  select: document.querySelector('form.ed-contact-form select') !== null,
+  subject: document.querySelector('form.ed-contact-form [name="subject"]') !== null,
+  prompt: document.querySelector('textarea[name="message"]').placeholder,
+}));
+check(!shape.select && !shape.subject, 'the form has no type list and no subject');
+check(shape.prompt.startsWith('Feedback, a question, a problem or an idea: tell us what it is about.'), `the message asks what it is about: ${shape.prompt}`);
 await page.fill('textarea[name="message"]', 'Cannot read my files');
 await page.click('form.ed-contact-form button[type="submit"]');
 await page.waitForSelector('dialog.ed-contact-notice[open]');
@@ -74,10 +82,10 @@ const buttons = () => page.evaluate(() => Array.from(document.querySelectorAll('
   .filter(button => button.getClientRects().length).map(button => button.textContent));
 const first = await page.evaluate(() => ({ text: document.querySelector('dialog.ed-contact-notice p').textContent, message: window.sent[0] }));
 check(first.message.attachments.length === 5 && first.message.attachments[0].data === btoa('AAAA'), 'the files go as the app sends them');
-check(first.text === 'Your message was sent. Thank you! But a.txt, b.txt, c.txt, d.txt, e.txt were not attached. Your name, e-mail and affiliation are kept, so you can send another message.', `unconfirmed files: ${first.text}`);
+check(first.text === 'Your message was sent. Thank you! But a.txt, b.txt, c.txt, d.txt, e.txt were not attached.', `unconfirmed files: ${first.text}`);
 check((await buttons()).join('|') === 'Close', `only Close after a success: ${(await buttons()).join('|')}`);
-const kept = await page.evaluate(() => ['name', 'email', 'subject', 'message'].map(key => document.querySelector(`form.ed-contact-form [name="${key}"]`).value));
-check(kept.join('|') === 'Ada|ada@example.org||', `a sent message keeps name and e-mail, clears subject and text: ${kept.join('|')}`);
+const kept = await page.evaluate(() => ['name', 'email', 'message'].map(key => document.querySelector(`form.ed-contact-form [name="${key}"]`).value));
+check(kept.join('|') === 'Ada|ada@example.org|', `a sent message keeps name and e-mail, clears the text: ${kept.join('|')}`);
 check((await state()).items.length === 0, 'a sent message clears the files');
 await page.click('dialog.ed-contact-notice button:last-child');
 

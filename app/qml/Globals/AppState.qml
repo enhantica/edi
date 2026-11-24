@@ -150,11 +150,12 @@ QtObject {
     }
 
     // The untitled project's first Save (the owner, 2026-11-19): the Project page opens and its Create project dialog
-    // names the project and saves it.
-    signal untitledSaveRequested
-    function requestUntitledSave() {
+    // names the project and saves it. `id`: the untitled operation that asked (a guard Save), which the dialog answers;
+    // without one the dialog opens its own.
+    signal untitledSaveRequested(real id)
+    function requestUntitledSave(id = 0) {
         open(AppState.Page.Project);
-        untitledSaveRequested();
+        untitledSaveRequested(id > 0 ? id : 0);
     }
 
     // Clear returns to Home without a project; opening Project starts untitled work (edi ADR-0017 §13).

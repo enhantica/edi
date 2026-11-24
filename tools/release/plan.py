@@ -14,37 +14,127 @@ INTERFACES = json.loads(
         encoding='utf-8'
     )
 )
-INTERFACE_LABEL_PREFIX = '[interface] '
-INTERFACE_IDS = {short: key for key, (_, _, short) in INTERFACES.items()}
 
+# Every label of ADR-0101, as GitHub stores it, with its group and the colour that marks the group.
+# A name is compared whole, so some emoji keep their variation selector (U+FE0F).
+LABELS = {
+    '🐞 bug': ('scope', 'd73a4a'),
+    '✨ enhancement': ('scope', 'd73a4a'),
+    '📘 documentation': ('scope', 'd73a4a'),
+    '🧹 maintenance': ('scope', 'd73a4a'),
+    '💥 significant': ('scope', 'd73a4a'),
+    '⚠️ scope needed': ('scope', 'd73a4a'),
+    '🔥 highest': ('priority', 'fbca04'),
+    '🔴 high': ('priority', 'fbca04'),
+    '🟠 medium': ('priority', 'fbca04'),
+    '🟡 low': ('priority', 'fbca04'),
+    '⚪ lowest': ('priority', 'fbca04'),
+    '⚠️ priority needed': ('priority', 'fbca04'),
+    '🌍 all': ('interface', '0079b7'),
+    '🪟 app': ('interface', '0079b7'),
+    '🖥️ desktop': ('interface', '0079b7'),
+    '🌐 web': ('interface', '0079b7'),
+    '🐍 py': ('interface', '0079b7'),
+    '⌨️ cli': ('interface', '0079b7'),
+    '📦 cli-py': ('interface', '0079b7'),
+    '🙋 user': ('source', 'c5def5'),
+    '🔧 maintainer': ('source', 'c5def5'),
+    '🤖 agent': ('source', 'c5def5'),
+    '🌙 nightly': ('source', 'c5def5'),
+    '👯 duplicate': ('maintainer', '0e8a16'),
+    '🚫 invalid': ('maintainer', '0e8a16'),
+    '❓ question': ('maintainer', '0e8a16'),
+    '🙅 wontfix': ('maintainer', '0e8a16'),
+    '🤔 needs owner decision': ('status', '9333EA'),
+    '🚧 in progress': ('status', '9333EA'),
+    '🚀 release': ('bot', '5319e7'),
+}
+
+# The section of the notes a scope stands for, and the interfaces an interface label stands for.
+# "app" and "all" are short for several: a note names each interface, so a site built from an older
+# commit can still show it. The emoji belong to the GitHub labels only, not to the notes.
 GROUPS = {
-    '[scope] significant': 'Added',
-    '[scope] enhancement': 'Added',
-    '[scope] bug': 'Fixed',
-    '[scope] maintenance': 'Changed',
-    '[scope] documentation': 'Changed',
+    '💥 significant': 'Added',
+    '✨ enhancement': 'Added',
+    '🐞 bug': 'Fixed',
+    '🧹 maintenance': 'Changed',
+    '📘 documentation': 'Changed',
+}
+INTERFACE_LABELS = {
+    '🌍 all': tuple(INTERFACES),
+    '🪟 app': ('desktop', 'web'),
+    '🖥️ desktop': ('desktop',),
+    '🌐 web': ('web',),
+    '🐍 py': ('python',),
+    '⌨️ cli': ('cli-standalone',),
+    '📦 cli-py': ('cli-python',),
+}
+
+# edi has no develop branch, so its only bot pull request is the release one (ADR-0101).
+BOT_LABELS = frozenset(name for name, (group, _) in LABELS.items() if group == 'bot')
+
+# The names the labels had before. GitHub renames a label on every pull request that has it, merged
+# ones too, so an old name comes only from before the rename: the labels themselves, or a re-run of
+# a check, which repeats the labels it started with. GitHub allows re-runs for 30 days, so this
+# table can go 30 days after the labels are renamed.
+OLD_NAMES = {
+    '[scope] bug': '🐞 bug',
+    '[scope] enhancement': '✨ enhancement',
+    '[scope] documentation': '📘 documentation',
+    '[scope] maintenance': '🧹 maintenance',
+    '[scope] significant': '💥 significant',
+    '[scope] ⚠️ label needed': '⚠️ scope needed',
+    '[priority] highest': '🔥 highest',
+    '[priority] high': '🔴 high',
+    '[priority] medium': '🟠 medium',
+    '[priority] low': '🟡 low',
+    '[priority] lowest': '⚪ lowest',
+    '[priority] ⚠️ label needed': '⚠️ priority needed',
+    '[interface] desktop': '🖥️ desktop',
+    '[interface] web': '🌐 web',
+    '[interface] py': '🐍 py',
+    '[interface] cli': '⌨️ cli',
+    '[interface] cli-py': '📦 cli-py',
+    '[source] user': '🙋 user',
+    '[source] maintainer': '🔧 maintainer',
+    '[source] agent': '🤖 agent',
+    '[source] 🌙 nightly': '🌙 nightly',
+    '[maintainer] duplicate': '👯 duplicate',
+    '[maintainer] invalid': '🚫 invalid',
+    '[maintainer] question': '❓ question',
+    '[maintainer] wontfix': '🙅 wontfix',
+    '[status] needs owner decision': '🤔 needs owner decision',
+    '[status] 🚧 in progress': '🚧 in progress',
+    '[bot] release': '🚀 release',
 }
 
 
-BOT_LABELS = frozenset({'[bot] release', '[bot] backmerge'})
+def current_names(labels: set[str]) -> set[str]:
+    """The labels under their present names, so a name from before the rename still counts."""
+    return {OLD_NAMES.get(label, label) for label in labels}
 
 
 def label_problem(labels: set[str]) -> str | None:
     """Why a pull request's labels cannot make its release note, or None when they can.
 
-    One rule for the release notes and the pull-request label check: a bot release or backmerge
-    needs nothing else; any other pull request needs one scope label and an interface label.
+    One rule for the release notes and the pull-request label check: a bot release has that label
+    alone, so a change in the notes cannot hide behind it; any other pull request needs one scope
+    label and an interface label, and no label that is not listed, so a misspelt interface is not
+    lost from the note.
     """
+    labels = current_names(labels)
     if labels & BOT_LABELS:
-        return None
+        if labels <= BOT_LABELS:
+            return None
+        others = ', '.join(f'`{name}`' for name in sorted(labels - BOT_LABELS))
+        return f'has a release label beside others ({others})'
     if len(labels & GROUPS.keys()) != 1:
         return 'needs exactly one release scope label'
-    if not any(
-        label.removeprefix(INTERFACE_LABEL_PREFIX) in INTERFACE_IDS
-        for label in labels
-        if label.startswith(INTERFACE_LABEL_PREFIX)
-    ):
+    if not labels & INTERFACE_LABELS.keys():
         return 'needs at least one release interface label'
+    if labels - LABELS.keys():
+        names = ', '.join(f'`{name}`' for name in sorted(labels - LABELS.keys()))
+        return f'has an unknown label ({names})'
     return None
 
 
@@ -224,27 +314,25 @@ def release_plan(
         if type(number) is not int or number <= 0 or number in seen:
             raise ValueError('Merged pull request numbers must be positive and unique')
         seen.add(number)
-        labels = {
+        labels = current_names({
             label['name'] if isinstance(label, dict) else label for label in request['labels']
-        }
+        })
+        problem = label_problem(labels)
+        if problem:
+            raise ValueError(f'Pull request {number} {problem}')
         if labels & BOT_LABELS:
             continue
-        scopes = labels.intersection(GROUPS)
-        if len(scopes) != 1:
-            raise ValueError(f'Pull request {number} needs exactly one release scope label')
         entry = {'title': check_title(request['title']), 'pull_request': number}
-        interface_labels = {
-            label.removeprefix(INTERFACE_LABEL_PREFIX)
-            for label in labels
-            if label.startswith(INTERFACE_LABEL_PREFIX)
-        }
         interfaces = note_interfaces({
-            'interfaces': list({INTERFACE_IDS.get(label, label) for label in interface_labels}),
+            'interfaces': list({
+                interface
+                for label in labels & INTERFACE_LABELS.keys()
+                for interface in INTERFACE_LABELS[label]
+            }),
         })
-        if not interfaces:
-            raise ValueError(f'Pull request {number} needs at least one release interface label')
         entry['interfaces'] = interfaces
-        notes[GROUPS[scopes.pop()]].append(entry)
+        (scope,) = labels & GROUPS.keys()
+        notes[GROUPS[scope]].append(entry)
     if not any(notes.values()):
         raise ValueError('No user-facing merged changes are included in this release')
     return {
@@ -301,10 +389,10 @@ def check_labels(names: list[str]) -> int:
     problem = label_problem(set(names))
     if problem:
         scopes = ', '.join(f'`{name}`' for name in GROUPS)
-        interfaces = ', '.join(f'`{INTERFACE_LABEL_PREFIX}{short}`' for short in INTERFACE_IDS)
+        interfaces = ', '.join(f'`{name}`' for name in INTERFACE_LABELS)
         print(
             f'This pull request {problem}: one of {scopes}, and one or more of {interfaces} '
-            '(or `[bot] release`).'
+            f'(or {", ".join(f"`{name}`" for name in sorted(BOT_LABELS))}).'
         )
         return 1
     print('Release labels: ' + ', '.join(sorted(names)))

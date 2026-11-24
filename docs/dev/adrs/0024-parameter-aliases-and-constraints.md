@@ -77,7 +77,10 @@ through crysta (ADR-0019 already reads crysta for the symmetry ties).
 ## Consequences
 
 - One parser and one rule set serve the engine, the CLI, edi's Python surface and the app.
-- The loader now refuses a project whose relations cannot hold, with the same code crysta's own loader gives.
+- The loader now refuses a project whose relations cannot hold, with the same code crysta's own loader gives. The
+  app's open is the exception: it keeps such a project, as an edit can leave one, and its calculation refuses with that
+  reason until the relations are fixed, so a project saved with an alias to a removed parameter can still be opened and
+  repaired.
 - A project file that flags a symmetry follower free loads with a warning and saves the flag bare.
 
 ## Alternatives considered

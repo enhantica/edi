@@ -1,0 +1,34 @@
+# A merged pull request's runs keep no artifacts: they only hold the shared storage quota. Release inputs and the
+# crysta SDK artifacts are kept, and so is anything another open pull request still needs. tools/ci/branch_artifacts.py
+# picks only runs it can show are this pull request's: started by it while it was open, at its own commits, on a branch
+# no other pull request ever used. It reads every listing in full before deleting; a listing it cannot prove whole, or
+# an open pull request it cannot read, deletes nothing. A closed, unmerged pull request can be reopened, so its
+# artifacts stay until GitHub's retention removes them.
+name: Branch artifacts
+
+on:
+  pull_request:
+    types: [closed]
+
+permissions:
+  actions: write
+  contents: read
+  pull-requests: read
+
+jobs:
+  delete:
+    name: delete the branch's run artifacts
+    # A fork's pull request gets a read-only token; its runs are the fork's own.
+    if: github.event.pull_request.merged && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      # The merged base has the script; the pull request's merge ref is gone once it closes.
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.pull_request.base.ref }}
+          sparse-checkout: tools/ci
+      - name: Delete them
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 tools/ci/branch_artifacts.py --repo "$GITHUB_REPOSITORY" --pr '${{ github.event.pull_request.number }}'

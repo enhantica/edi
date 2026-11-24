@@ -267,14 +267,6 @@ try {
       if(!shown)await click(/Get started$/,'button');
       nativeObjectName=projectAction;containerName='group.getStarted';
     }
-    if(regex.source==='^OK$') {
-      // The default shortcut activates only after the dialog's entry transition.
-      await settleRenderedPage();
-      console.log(`browser ${mode}: accept real dialog with default Enter`);
-      for(const type of ['keyDown','keyUp'])
-        await send('Input.dispatchKeyEvent',{type,key:'Enter',code:'Enter',windowsVirtualKeyCode:13});
-      await frame();return;
-    }
     const node = await waitAX(regex, true, role);
     console.log(`browser ${mode}: click ${node.name?.value}`);
     assert(node.backendDOMNodeId, 'UI actions require a real browser-backed accessible control');
@@ -332,6 +324,20 @@ try {
     if (waitReady) await waitReady();
     else if (/^(?:Home|Project|Structure|Experiment|Analysis|Start)$/.test(node.name?.value || '') || /(?:Examples|Get started)$/.test(node.name?.value || '')) await settleRenderedPage();
 
+  };
+  const closePreferences = async () => {
+    await settleRenderedPage();
+    const read = () => evaluate('window.ediDevelopDiagnostics("read")');
+    assert.equal((await read()).preferencesVisible, true,
+      'The actual Preferences dialog must be open before Escape');
+    for (const type of ['keyDown', 'keyUp'])
+      await send('Input.dispatchKeyEvent', {type,key:'Escape',code:'Escape',windowsVirtualKeyCode:27});
+    const deadline = Date.now() + 10000;
+    do {
+      if ((await read()).preferencesVisible === false) return;
+      await frame();
+    } while (Date.now() < deadline);
+    assert.fail('Escape must close the real Preferences dialog after the control interaction');
   };
   const discardUnsavedChanges = async () => {
     await restoreCanvasViewport(evaluate);
@@ -550,22 +556,27 @@ try {
   await send('Runtime.callFunctionOn', { objectId: node.object.objectId,
     functionDeclaration: 'function() { this.click(); }' });
   await waitAX(/Get started|Home/);
-  await checkDesktopOnlyAssistant({send, evaluate, frame, click, output, mode});
+  await checkDesktopOnlyAssistant({send, evaluate, frame, click, closePreferences, output, mode});
   if (process.argv.some(arg=>arg.startsWith('--engine-workers='))) {
     await click(/^Application preferences$/,'button','appBar.button.preferences');
     for (const name of ['preferences.tab.performance','preferences.engineThreads']) {
+      await restoreCanvasViewport(evaluate);
+      await settleRenderedPage();
       const point=await waitNative(name);
-      for(const type of ['mousePressed','mouseReleased'])
+      await send('Input.dispatchMouseEvent',{type:'mouseMoved',...point});
+      for(const type of ['mousePressed','mouseReleased']) {
         await send('Input.dispatchMouseEvent',{type,...point,button:'left',clickCount:1});
-      await frame();
+        await frame();
+      }
     }
+    await settleRenderedPage();
     for(const key of engineWorkers==='1'?['Home','ArrowDown','Enter']:['Home','Enter']) {
       const code=key==='ArrowDown'?40:key==='Home'?36:13;
       for(const type of ['keyDown','keyUp'])
         await send('Input.dispatchKeyEvent',{type,key,code:key,windowsVirtualKeyCode:code});
     }
     await frame();
-    await click(/^OK$/,'button');
+    await closePreferences();
   }
   await inspectDevelopDiagnostics(evaluate, frame, mode,
     snapshot => writeFile(join(output, `${mode}-diagnostics.json`), JSON.stringify(snapshot, null, 2)),

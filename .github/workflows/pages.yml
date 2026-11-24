@@ -108,6 +108,7 @@ jobs:
           include-hidden-files: true
           if-no-files-found: error
 
+          retention-days: 1  # the publish job takes it in this run
   wasm:
     needs: crysta-sdk
     name: build WebAssembly
@@ -149,7 +150,8 @@ jobs:
           path: build/wasm/site
           include-hidden-files: true
           if-no-files-found: error
-
+          # The repository's default retention: a release archives this run's web app, days later
+          # (tools/release/webapp_archive.py).
   # Each publish keeps the other half of the live site from edi-sites (the docs keep the web app and the web app the
   # docs), so the two jobs share one queue.
   publish-docs:

@@ -123,8 +123,9 @@ Math.abs(ratio-.012)<.00001;
                 "[...document.querySelectorAll('.ed-downloads a.md-button')].every(link => "
                 "(link.getAttribute('aria-disabled') === 'true' ? !link.hasAttribute('href') : "
                 "link.href.startsWith('https://github.com/enhantica/edi/releases/download/') && "
-                '/-online\\.(zip|dmg|exe)$/.test(link.href) && '
-                "link.href.includes(link.dataset.downloadPlatform + '-online.')) && "
+                # The online installer, by its name before or after 2026.11.30.
+                '/\\/(EasyDiffraction-[^/]*-online|EasyDiffraction-Installer-[0-9.]+-'
+                '(macOS-arm64|Windows-x64|Linux-x64))\\.(zip|dmg|exe)$/.test(link.href)) && '
                 "link.querySelector('svg[aria-hidden=true] path') && "
                 "link.querySelector('.ed-download-label small').textContent.trim());"
             )

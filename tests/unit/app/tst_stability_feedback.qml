@@ -80,7 +80,7 @@ TestCase {
         verify(Probe.objectsWithProperty(app, "text").some(item => typeof item.text === "string" && Ui.rendered(item) && (message === "" ? /crash|unexpected/i.test(item.text) : item.text.includes(message))), "ADR-0062: the popup displays its diagnostic before Send is pressed");
         press(textControl("Send to developers"));
         tryCompare(form, "opened", true, 2000, "ADR-0062: Send opens the existing feedback form");
-        compare(named("feedback.kind").currentValue, "problem", "ADR-0062: a reported error selects Problem");
+        compare(form.payload.kind, "feedback", "A reported error uses the shared feedback route");
         verify(message === "" ? named("feedback.text").text.length > 0 : named("feedback.text").text.includes(message), "ADR-0062: the actual diagnostic pre-fills the problem text");
         compare(Preferences.feedbackName, "Zoë Example", "ADR-0063: sending an error retains the saved name");
         compare(Preferences.feedbackEmail, "zoe@example.invalid", "ADR-0063: sending an error retains the saved email");
@@ -244,7 +244,6 @@ TestCase {
         };
         form.openAs("problem", log, message, [attachment]);
         tryCompare(form, "opened", true, 1000, "2026-11-17 owner decision: the report-copy witness uses the real feedback form");
-        named("feedback.subject").text = "Failed-send report witness";
         compare(copyReportLinks().length, 0, "2026-11-17 owner decision: Copy report is absent before a send");
         const payload = form.payload;
         form.transport = function (url, sent, done) {
@@ -261,7 +260,6 @@ TestCase {
             message: message,
             log: log,
             file: attachment.name,
-            subject: "Failed-send report witness",
             name: "Zoë Example",
             email: "zoe@example.invalid",
             affiliation: "Example Institute",
@@ -270,7 +268,6 @@ TestCase {
         };
         for (const field of Object.keys(expected))
             verify(expected[field] !== "" && copied.includes(expected[field]), "2026-11-17 owner decision: the copied plain-text report retains its preview field " + field + "=" + JSON.stringify(expected[field]));
-        verify(/problem/i.test(copied), "2026-11-17 owner decision: the copied report identifies its Problem type");
         verify(!copied.includes(attachment.data), "2026-11-17 owner decision: copied attachments are listed by name instead of base64 file bodies");
         form.transport = function (url, sent, done) {
             done(201, "");

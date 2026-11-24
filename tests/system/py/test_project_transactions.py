@@ -237,7 +237,7 @@ def test_desktop_refusal_preserves_location_origin_and_unsaved_state_then_retrie
         )
 
 
-def browser_receipt(tmp_path, *, cleanup=None):
+def browser_executables():
     node = shutil.which('node')
     chrome = os.environ.get('CHROME_HEADLESS_SHELL')
     if not chrome:
@@ -248,6 +248,63 @@ def browser_receipt(tmp_path, *, cleanup=None):
             )
         )
     assert node and chrome, 'The storage population gate requires pinned Node and real Chromium'
+    return node, chrome
+
+
+def run_untitled_stage_control(scenario):
+    node, chrome = browser_executables()
+    result = subprocess.run(
+        [
+            node,
+            str(ROOT / 'tests/fixtures/project_transactions/untitled_stage_controls.mjs'),
+            str(ROOT),
+            chrome,
+            scenario,
+        ],
+        capture_output=True,
+        text=True,
+        timeout=30,
+        check=False,
+    )
+    assert result.returncode == 0, (
+        f'The two browser tabs complete the {scenario} publication control: {result.stderr}'
+    )
+
+
+def test_browser_untitled_stages_keep_independent_claims():
+    run_untitled_stage_control('stages')
+
+
+def test_browser_untitled_teardown_cleans_only_the_orphaned_stage():
+    run_untitled_stage_control('teardown')
+
+
+@pytest.mark.parametrize('mode', ['adopted', 'refused'])
+def test_browser_untitled_publication_binds_outcome_to_bytes(mode):
+    run_untitled_stage_control(mode)
+
+
+@pytest.mark.parametrize('mode', ['adopted', 'refused'])
+def test_untitled_browser_guard_settles_once_for_ordinary_publication(observer, tmp_path, mode):
+    (row,) = observe(observer, f'untitled-publication/{mode}', tmp_path)
+    assert row['mode'] == mode and row['pending'] and row['ids'], (
+        'The original naming request waits for its own storage answer before settling'
+    )
+    committed = mode == 'adopted'
+    assert row['durable'] is committed and row['states'] == [
+        'saved' if committed else 'refused'
+    ], 'Exactly one settlement agrees with the independently observed storage result'
+    assert row['title'] == ('Snapshot at the time of Save' if committed else ''), (
+        'The saved outcome names the actual snapshot and refusal leaves no durable project'
+    )
+    assert row['visible'] is (not committed) and row['modified'] is (not committed), (
+        'Only adopting the durable snapshot releases Quit and clears the unsaved state'
+    )
+    assert not row['reopened'], 'Settlement never reopens the original Quit prompt'
+
+
+def browser_receipt(tmp_path, *, cleanup=None):
+    node, chrome = browser_executables()
     source = ROOT / 'tests/fixtures/loop_parameter_ids/line-segment'
     expected = {
         path.relative_to(source).as_posix(): base64.b64encode(path.read_bytes()).decode()

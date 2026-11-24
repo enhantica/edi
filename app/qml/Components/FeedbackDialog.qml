@@ -49,12 +49,13 @@ AppDialog {
     property real roomWidth: 1000
     property int lastStatus: -1
 
-    readonly property string kind: kindBox.currentValue ?? "feedback"
+    // One kind of message: the form asks what it is about in its text (edi-feedback #102).
+    readonly property string kind: "feedback"
     readonly property var payload: Payload.buildPayload(kind, textArea.text, includeBox.checked, includeBox.checked ? appDetails() : null, includeBox.checked ? (attachedLog !== "" ? attachedLog : logSnapshot) : "", RunLog.homePath, RunLog.userName, {
         "name": Preferences.feedbackName,
         "email": Preferences.feedbackEmail,
         "affiliation": Preferences.feedbackAffiliation
-    }, subjectField.text, attachmentError === "" ? attachedFiles : [])
+    }, "", attachmentError === "" ? attachedFiles : [])
     readonly property string payloadText: Payload.wireText(payload, true)
     // The message as plain text, what Copy report copies after a failed send.
     readonly property string reportText: Payload.reportText(payload)
@@ -72,11 +73,10 @@ AppDialog {
         };
     }
 
-    // Opens the form on `kind`, with `log` attached instead of this run's when it is not empty, `text` in the message
-    // (an error popup's message) and `files` attached.
+    // Opens the form with `log` attached instead of this run's when it is not empty, `text` in the message (an error
+    // popup's message) and `files` attached. `kind` is kept for its callers; the form has one kind.
     function openAs(kind, log, text, files) {
         newDraft();
-        kindBox.currentIndex = Math.max(0, kindBox.indexOfValue(kind));
         attachedLog = log ?? "";
         open();
         if (text) {
@@ -135,7 +135,6 @@ AppDialog {
             "kind": dialog.kind,
             "attachedLog": dialog.attachedLog,
             "text": textArea.text,
-            "subject": subjectField.text,
             "files": dialog.attachmentError === "" ? dialog.attachedFiles.map(file => file.name) : []
         };
         dialog.sending = true;
@@ -158,8 +157,6 @@ AppDialog {
             if (status === 201) {
                 if (textArea.text === request.text)
                     textArea.text = "";
-                if (subjectField.text === request.subject)
-                    subjectField.text = "";
                 const names = dialog.attachedFiles.map(file => file.name);
                 if (names.length === request.files.length && names.every((name, at) => name === request.files[at]))
                     dialog.attachedFiles = [];
@@ -275,35 +272,6 @@ AppDialog {
                         wrapMode: Text.WordWrap
                         text: qsTr("We'd love to hear from you to make EasyDiffraction better.")
                     }
-                    EaElements.ComboBox {
-                        id: kindBox
-
-                        objectName: "feedback.kind"
-                        width: parent.width
-                        enabled: !dialog.sending
-                        textRole: "text"
-                        valueRole: "value"
-                        // A ListModel, whose roles the base's list items read; they show nothing for a list of JavaScript objects.
-                        model: ListModel {
-                            // General feedback, praise or complaint or both: the first entry and the default.
-                            ListElement {
-                                value: "feedback"
-                                text: qsTr("Share feedback")
-                            }
-                            ListElement {
-                                value: "question"
-                                text: qsTr("Ask a question")
-                            }
-                            ListElement {
-                                value: "problem"
-                                text: qsTr("Report a problem")
-                            }
-                            ListElement {
-                                value: "idea"
-                                text: qsTr("Suggest an idea")
-                            }
-                        }
-                    }
                     // Who wrote, on one row, each optional and kept for the next message; sent only when filled in.
                     Row {
                         id: contactRow
@@ -338,20 +306,6 @@ AppDialog {
                             onTextChanged: Preferences.feedbackAffiliation = text
                         }
                     }
-                    EaElements.TextField {
-                        id: subjectField
-
-                        objectName: "feedback.subject"
-                        width: parent.width
-                        enabled: !dialog.sending
-                        horizontalAlignment: TextInput.AlignLeft
-                        placeholderText: ({
-                                "question": qsTr("Your question in a few words (optional)"),
-                                "problem": qsTr("What went wrong, in a few words (optional)"),
-                                "idea": qsTr("Your idea in a few words (optional)"),
-                                "feedback": qsTr("Your feedback in a few words (optional)")
-                            })[dialog.kind] ?? qsTr("Subject (optional)")
-                    }
                     // The app's text field of several lines, five lines tall and scrolling beyond.
                     MultiLineField {
                         id: textArea
@@ -361,12 +315,9 @@ AppDialog {
                         enabled: !dialog.sending
                         minimumLines: 5
                         maximumLines: 5
-                        placeholderText: ({
-                                "question": qsTr("What would you like to know, and what have you tried?"),
-                                "problem": qsTr("What did you do, what happened, and what did you expect?"),
-                                "idea": qsTr("What would you like the app to do, and how would it help?"),
-                                "feedback": qsTr("What works well for you, and what could be better?")
-                            })[dialog.kind] ?? ""
+                        // What the type list and the subject asked before (edi-feedback #102); the site's form says
+                        // the same.
+                        placeholderText: qsTr("Feedback, a question, a problem or an idea: tell us what it is about. For a problem, what did you do, what happened, and what did you expect?")
                     }
                     // The log box, and Attach files at the right of the same row (owner, 2026-11-17), with the AI
                     // work report link left of it (owner, 2026-11-19).

@@ -2128,6 +2128,65 @@ Rectangle {
                 }
             }
         }
+        function test_evolution_agreement_percent_and_dimensionless_chi_square() {
+            const root = SettingsProof.copyProject(Probe.repoUrl("tests/fixtures/report_evolution/project"));
+            const rows = SettingsProof.text(root, "analysis/results.csv").trim().split(/\r?\n/);
+            compare(rows.length, 4, "The edited result table has three separate scan points");
+            const stored = [0.162, 0.281, 1e299];
+            const chi = [1.25, 2.5, 3.75];
+            const column = "fit_result.r_wp";
+            rows[0] += "," + column;
+            for (let i = 0; i < stored.length; ++i) {
+                const cells = rows[i + 1].split(",");
+                cells[1] = chi[i];
+                rows[i + 1] = cells.join(",") + "," + stored[i];
+            }
+            const csv = rows.join("\n") + "\n";
+            verify(SettingsProof.write(root, "analysis/results.csv", csv),
+                   "The saved scan contains independent agreement fractions and chi-square values");
+            verify(Session.openProject(root), "The saved fitted scan opens through the real app");
+            chart = evolutionFactory.createObject(surface, {
+                project: Session.project,
+                width: Math.min(1100, surface.Window.window.width),
+                height: Math.min(760, surface.Window.window.height)
+            });
+            verify(chart !== null, "The production Evolution chart opens");
+            const evolution = Session.project.evolution;
+            evolution.xMode = 0;
+            Session.project.currentExperimentIndex = 0;
+            const layer = findChild(chart, "evolution.points");
+            verify(layer !== null, "The actual Evolution points layer is displayed");
+            function select(name) {
+                let index = -1;
+                tryVerify(() => {
+                    for (let i = 0; i < evolution.parameters.count; ++i) {
+                        if (evolution.parameters.text(i, "name") === name)
+                            index = i;
+                    }
+                    return index >= 0;
+                }, 3000, "Evolution offers the recorded column " + name);
+                evolution.currentParameter = index;
+                tryCompare(evolution, "yTitle", name, 3000, "The requested recorded column is drawn");
+            }
+            select(column);
+            verify(evolution.yLabel.includes("%"), "The agreement axis identifies its percent unit");
+            tryCompare(layer, "count", 2, 3000, "The unplottable agreement value is excluded");
+            for (let i = 0; i < 2; ++i) {
+                const x = evolution.datasetX(i);
+                compare(evolution.datasetAt(x, stored[i] * 100, 0.01, 0.001), i,
+                        "Evolution plots each agreement fraction multiplied by one hundred");
+                compare(evolution.datasetAt(x, stored[i], 0.01, 0.001), -1,
+                        "No marker appears at the unconverted fraction");
+            }
+            select("fit_result.reduced_chi_square");
+            verify(!evolution.yLabel.includes("%"), "The chi-square label is dimensionless");
+            tryCompare(layer, "count", 3, 3000, "All three finite chi-square values are displayed");
+            for (let i = 0; i < chi.length; ++i)
+                compare(evolution.datasetAt(evolution.datasetX(i), chi[i], 0.01, 0.001), i,
+                        "Chi-square keeps its recorded value");
+            compare(SettingsProof.text(root, "analysis/results.csv"), csv,
+                    "Presenting percent never changes the stored agreement fractions");
+        }
         function test_evolution_error_bars_and_range_survive_reload() {
             Style.Colors.theme = Style.Colors.LightTheme;
             const root = SettingsProof.copyProject(Probe.repoUrl("tests/fixtures/report_evolution/project"));

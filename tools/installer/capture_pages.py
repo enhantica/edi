@@ -2,16 +2,24 @@
 """Capture every page of the installer and its maintenance tool, in light and in dark.
 
 Builds the small marker installer the protocol check uses (no app build), then runs it with the
-pages saving themselves (Installer.qs, EDI_INSTALLER_CAPTURE) and moving on: on Windows once per
-theme with the system's own app theme set in the registry, elsewhere in light only.
+pages saving themselves (Installer.qs, EDI_INSTALLER_CAPTURE) and moving on: on Windows and macOS
+once per theme with the system's own appearance set, on Linux in light only. --marker-only builds
+the marker installer and prints its path, for the macOS accessibility check (a11y-check.sh).
 After each install the installed maintenance tool runs the same way, then the installation is
 removed. The PNGs go to --output for a run artifact; nothing is committed.
+
+The walks write every page they show to pages/pages.log, in order (Installer.qs). The run fails
+unless that list is exactly the expected (page, mode, theme) sequence and each page that has a
+picture has one: no page missing, none extra. What each maintenance mode did is checked on disk.
 """
 
 import argparse
 import json
 import os
+import plistlib
+import re
 import subprocess
+import tempfile
 import threading
 import time
 from pathlib import Path
@@ -30,13 +38,17 @@ from protocol_check import installer_command
 PERSONALIZE = r'HKCU\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize'
 
 
+# The marker app's one file, relative to the stage and to the installation.
+APP_MARKER = Path(
+    'EasyDiffraction.app/Contents/MacOS/EasyDiffraction'
+    if SYSTEM == 'macos'
+    else 'bin/EasyDiffraction' + SUFFIX
+)
+
+
 def marker_stage(root: Path) -> Path:
     stage = root / 'marker-stage'
-    app = stage / (
-        'EasyDiffraction.app/Contents/MacOS/EasyDiffraction'
-        if SYSTEM == 'macos'
-        else 'bin/EasyDiffraction' + SUFFIX
-    )
+    app = stage / APP_MARKER
     app.parent.mkdir(parents=True)
     app.write_text('marker\n')
     assistant = stage / ASSISTANT_RUNTIME / 'assistant.txt'
@@ -63,48 +75,59 @@ def running(image: str) -> bool:
     return image.lower() in listed.stdout.lower()
 
 
-class ScreenFrames(threading.Thread):
-    """Windows: a screenshot about every second while a wizard runs, kept when it changed.
+def current_page(pages: Path) -> str:
+    """The page a walk shows now: the last line of its page log, or '' before the first page."""
+    log = pages / 'pages.log'
+    lines = log.read_text(encoding='utf-8').split() if log.exists() else []
+    return lines[-1] if lines else ''
 
-    A process the wizard starts cannot take one there, so the pages are captured from here; each
-    page shows for 2.5 s (Installer.qs) and so appears in at least one frame.
+
+class ScreenFrames(threading.Thread):
+    """Windows: a screenshot about every second while a wizard runs, named after its page.
+
+    A process the wizard starts cannot take one there, so the pages are captured from here. A
+    frame is kept as <page>.png only when the page log names the same page before and after it,
+    and only for a page that has a picture.
     """
 
     def __init__(self, pages: Path, prefix: str) -> None:
         super().__init__(daemon=True)
-        self.pages, self.prefix, self.done, self.count = pages, prefix, threading.Event(), 0
+        self.pages, self.prefix, self.done = pages, prefix, threading.Event()
 
     def run(self) -> None:
-        last = b''
         scratch = self.pages / f'{self.prefix}-scratch.png'
         while not self.done.is_set():
+            before = current_page(self.pages)
             subprocess.run(
                 ['powershell', '-NoProfile', '-Command', SCREEN.format(file=scratch)],
                 capture_output=True, timeout=60, check=False,
             )  # fmt: skip
             if scratch.exists():
-                data = scratch.read_bytes()
-                if data != last:
-                    self.count += 1
-                    (self.pages / f'{self.prefix}-{self.count:02d}.png').write_bytes(data)
-                    last = data
-                scratch.unlink()
+                pictured = before.rsplit('-', 1)[0] not in UNPICTURED
+                if before and pictured and before == current_page(self.pages):
+                    scratch.replace(self.pages / f'{before}.png')
+                else:
+                    scratch.unlink()
 
 
-def run_pages(command: list, env: dict, log: Path, pages: Path | None = None) -> None:
-    """Run a wizard whose pages move on by themselves; it ends at its last page."""
-    frames = ScreenFrames(pages, log.stem) if SYSTEM == 'windows' and pages else None
+def run_pages(
+    command: list, env: dict, log: Path, pages: Path, finished: str, allowed: tuple = (0,)
+) -> None:
+    """Run a wizard whose pages move on by themselves; it ends at its last page, `finished`."""
+    frames = ScreenFrames(pages, log.stem) if SYSTEM == 'windows' else None
     if frames:
         frames.start()
     try:
-        _run_wizard(command, env, log)
+        _run_wizard(command, env, log, pages, finished, allowed)
     finally:
         if frames:
             frames.done.set()
             frames.join(timeout=90)
 
 
-def _run_wizard(command: list, env: dict, log: Path) -> None:
+def _run_wizard(
+    command: list, env: dict, log: Path, pages: Path, finished: str, allowed: tuple
+) -> None:
     with log.open('w', encoding='utf-8') as stream:
         result = subprocess.run(
             # On Windows the wizard stays attached, and logs, only with --verbose.
@@ -112,6 +135,7 @@ def _run_wizard(command: list, env: dict, log: Path) -> None:
             env=env, stdout=stream, stderr=subprocess.STDOUT, timeout=240, check=False,
         )  # fmt: skip
         stream.write(f'\nexit {result.returncode}\n')
+    rc = result.returncode
     # On Windows the wizard can return at once and go on in a process of its own: wait for it.
     deadline = time.monotonic() + 240
     image = Path(command[0]).name
@@ -119,6 +143,14 @@ def _run_wizard(command: list, env: dict, log: Path) -> None:
         if time.monotonic() > deadline:
             raise RuntimeError(f'{image} still runs after 240 s')
         time.sleep(2)
+    walked = current_page(pages) == finished
+    # The Framework on Linux crashes as it quits (SIGSEGV) after the walk is done; that alone
+    # passes, and only once the walk showed its last page.
+    quit_crash = SYSTEM == 'linux' and rc == -11 and walked
+    # A maintenance tool left on its last page's Cancel button ends with 1 after its work
+    # (Installer.qs), so 1 also needs that last page shown.
+    if not quit_crash and (rc not in allowed or (rc == 1 and not walked)):
+        raise RuntimeError(f'{command[0]} ended with {rc}; its log is {log}')
 
 
 SCREEN = (
@@ -142,6 +174,81 @@ def probe_screen(pages: Path, output: Path) -> None:
     )
 
 
+def set_macos_theme(theme: str) -> None:
+    """The system appearance, switched live as its settings do; Qt follows only a live switch."""
+    dark = 'true' if theme == 'dark' else 'false'
+    script = (
+        'tell application "System Events" to tell appearance preferences'
+        f' to set dark mode to {dark}'
+    )
+    subprocess.run(['osascript', '-e', script], check=True, timeout=60)
+
+
+# Closes only the Finder windows showing the folder given as the script's argument.
+CLOSE_WINDOW = (
+    'tell application "Finder" to close (every window whose target is '
+    '(POSIX file (item 1 of argv) as alias))'
+)
+
+
+def capture_disk_image(image: Path, pages: Path, theme: str) -> None:
+    """macOS: the disk image's Finder window as users see it once the download opens.
+
+    Mounted at a folder of its own, so another volume of the same name is never the one shown,
+    closed or detached.
+    """
+    mount = Path(tempfile.mkdtemp(prefix='edi-disk-image-'))
+    attached = subprocess.run(
+        ['hdiutil', 'attach', str(image), '-mountpoint', str(mount), '-plist'],
+        capture_output=True, check=True, timeout=120,
+    )  # fmt: skip
+    entities = plistlib.loads(attached.stdout)['system-entities']
+    # hdiutil names the mount point with its links resolved (/private/var/... for /var/...).
+    mounted = [e['dev-entry'] for e in entities if e.get('mount-point') == os.path.realpath(mount)]
+    if len(mounted) != 1:
+        raise RuntimeError(f'hdiutil did not mount {image} at {mount}: {entities}')
+    # The whole image's device (/dev/diskN), not only its volume's slice.
+    device = re.match(r'/dev/disk\d+', mounted[0]).group(0)
+    try:
+        subprocess.run(['open', str(mount)], check=True, timeout=60)
+        time.sleep(4)
+        subprocess.run(
+            ['screencapture', '-x', str(pages / f'disk-image-{theme}.png')], check=True, timeout=60
+        )
+    finally:
+        subprocess.run(
+            [
+                'osascript',
+                '-e', 'on run argv',
+                '-e', CLOSE_WINDOW,
+                '-e', 'end run',
+                str(mount),
+            ],
+            check=False, timeout=60,
+        )  # fmt: skip
+        subprocess.run(['hdiutil', 'detach', device], check=False, timeout=120)
+        if mount.exists() and not any(mount.iterdir()):
+            mount.rmdir()
+
+
+def marker_installer(tools: Path, work: Path) -> Path:
+    """The offline marker installer's download, whose repository holds a newer version.
+
+    The maintenance tool then has components to add and an update to apply, as protocol_check.py
+    sets it up, so every one of its modes shows its pages.
+    """
+    stage = marker_stage(work)
+    repository = (work / 'online/repository').as_uri() + '/'
+    with patch('package.repository_urls', return_value=(repository,)):
+        package_app(stage, tools, work / 'offline', '2026.11.0')
+    app = stage / APP_MARKER
+    app.write_text('updated marker\n')
+    (stage / ASSISTANT_RUNTIME / 'assistant.txt').write_text('updated assistant marker\n')
+    package_app(stage, tools, work / 'online', '2026.11.1', repository)
+    metadata = (work / 'offline/installer.json').read_text()
+    return work / 'offline' / json.loads(metadata)['download']
+
+
 def capture(tools: Path, output: Path) -> None:
     output = output.resolve()
     work = output / 'work'
@@ -150,13 +257,10 @@ def capture(tools: Path, output: Path) -> None:
     pages.mkdir()
     if SYSTEM == 'windows':
         probe_screen(pages, output)
-    repository = (work / 'repository-unused').as_uri() + '/'
-    with patch('package.repository_urls', return_value=(repository,)):
-        package_app(marker_stage(work), tools, work / 'offline', '2026.11.0')
-    metadata = (work / 'offline/installer.json').read_text()
-    download = work / 'offline' / json.loads(metadata)['download']
-    # Linux cannot be given a dark palette here, so light only; Windows sets its own app theme.
-    for theme in ('light', 'dark') if SYSTEM == 'windows' else ('light',):
+    download = marker_installer(tools, work)
+    # Linux cannot be given a dark palette here, so light only; Windows and macOS set their own.
+    themes = ('light',) if SYSTEM == 'linux' else ('light', 'dark')
+    for theme in themes:
         home = work / f'home-{theme}'
         home.mkdir()
         env = clean_environment(home)
@@ -167,45 +271,196 @@ def capture(tools: Path, output: Path) -> None:
             set_windows_theme(theme)
         else:
             env['EDI_INSTALLER_THEME'] = theme
+        if SYSTEM == 'macos':
+            set_macos_theme(theme)
+            capture_disk_image(download, pages, theme)
         if 'DISPLAY' in os.environ:
             env['DISPLAY'] = os.environ['DISPLAY']
         installer = installer_command(
             installer_from_download(download, work / f'unpacked-{theme}')
         )
-        run_pages([str(installer)], env, output / f'installer-{theme}.log', pages)
+        # A fresh folder of its own: maintenance and cleanup touch only this installation.
         target = home / 'EasyDiffraction'
-        if SYSTEM == 'windows':
-            # Program Files with administrator rights (the runner has them), else the user's.
-            candidates = [
-                Path(os.environ.get('PROGRAMFILES', r'C:\Program Files')) / 'EasyDiffraction',
-                Path(env.get('LOCALAPPDATA', str(home))) / 'Programs/EasyDiffraction',
-            ]
-            target = next((path for path in candidates if path.exists()), candidates[0])
-        elif SYSTEM == 'macos':
-            target = Path('/Applications/EasyDiffraction')
-        maintenance = target / (
-            'MaintenanceTool.app/Contents/MacOS/MaintenanceTool'
-            if SYSTEM == 'macos'
-            else 'MaintenanceTool' + SUFFIX
+        if target.exists():
+            raise RuntimeError(f'The capture target already exists: {target}')
+        run_pages(
+            [str(installer), f'TargetDir={target}'],
+            env,
+            output / f'installer-{theme}.log',
+            pages,
+            f'installer-Finished-{theme}',
         )
-        if maintenance.exists():
-            run_pages([str(maintenance)], env, output / f'maintenance-{theme}.log', pages)
-        if maintenance.exists():  # the captured run removes the installation; this is the backstop
+        # The install page's assistant box starts ticked, so the walk installs the assistant too.
+        check_installation(target, '', 'installing')
+        # Updating both, turning the assistant over (so removing it here), removing everything.
+        for mode in ('update', 'add', 'remove'):
+            walk_maintenance(mode, target, env, output, pages, theme)
+        # Updating with the assistant unticked, and updating where it is not installed: each on an
+        # installation of its own, made from the command line.
+        for mode, components in (
+            ('updatekept', ['org.easydiffraction.app', 'org.easydiffraction.app.assistant']),
+            ('updatewithout', []),
+        ):
+            target = home / mode
             subprocess.run(
-                [str(maintenance), '--confirm-command', '--default-answer', 'purge'],
-                env={k: v for k, v in env.items() if k != 'EDI_INSTALLER_CAPTURE'},
-                timeout=240,
-                check=False,
-            )
+                [
+                    str(installer), '--root', str(target), '--accept-licenses',
+                    '--default-answer', '--confirm-command', 'install', *components,
+                ],
+                # As a captured install, so its progress page is held (holdProgress).
+                env=env | {'EDI_INSTALLER_CAPTURE': str(work / 'headless')},
+                check=True, timeout=240,
+            )  # fmt: skip
+            check_installation(target, '' if components else 'none', 'installing')
+            walk_maintenance(mode, target, env, output, pages, theme)
+            purge(target, env)
+    if SYSTEM == 'macos':
+        set_macos_theme('light')
+    require_pages(pages, themes)
     print(f'{len(list(pages.glob("*.png")))} page captures in {pages}')
+
+
+MAINTENANCE_TOOL = Path(
+    'MaintenanceTool.app/Contents/MacOS/MaintenanceTool'
+    if SYSTEM == 'macos'
+    else 'MaintenanceTool' + SUFFIX
+)
+# What each maintenance mode leaves on disk: the app's and the assistant's text.
+LEFT = {
+    'installing': ('marker', 'optional assistant marker'),
+    'update': ('updated marker', 'updated assistant marker'),
+    'add': ('updated marker', None),
+    'remove': (None, None),
+    'updatekept': ('updated marker', 'optional assistant marker'),
+    'updatewithout': ('updated marker', None),
+}
+
+
+def walk_maintenance(
+    mode: str, target: Path, env: dict, output: Path, pages: Path, theme: str
+) -> None:
+    run_pages(
+        [str(target / MAINTENANCE_TOOL)],
+        env | {'EDI_INSTALLER_MAINTENANCE_MODE': mode},
+        output / f'maintenance-{mode}-{theme}.log',
+        pages,
+        f'maintenance-{mode}-Finished-{theme}',
+        # Left on its Cancel button (1) or closed by the walk (3); require_pages still demands its
+        # pages.
+        allowed=(0, 1, 3),
+    )
+    if mode == 'remove':
+        # On Windows the maintenance tool cannot delete its own running executable; a helper it
+        # starts deletes it and the folder after it quits. Give that a minute, then name the rest.
+        deadline = time.monotonic() + 60
+        while target.exists() and time.monotonic() < deadline:
+            time.sleep(2)
+    check_installation(target, '', mode)
+
+
+def check_installation(target: Path, assistant: str, mode: str) -> None:
+    """What is on disk after a mode, read from there, not from its pages."""
+
+    def text(path: Path) -> str | None:
+        return path.read_text(encoding='utf-8').strip() if path.exists() else None
+
+    wanted = LEFT[mode] if assistant != 'none' else (LEFT[mode][0], None)
+    found = text(target / APP_MARKER), text(target / ASSISTANT_RUNTIME / 'assistant.txt')
+    tool = (target / MAINTENANCE_TOOL).exists()
+    if found != wanted or tool != (mode != 'remove'):
+        rest = sorted(str(path.relative_to(target)) for path in target.rglob('*'))
+        raise RuntimeError(
+            f'After {mode}, {target} holds app and assistant {found}, not {wanted}; maintenance'
+            f' tool {"present" if tool else "absent"}; all that is left: {rest[:40]}'
+        )
+
+
+def purge(target: Path, env: dict) -> None:
+    subprocess.run(
+        [str(target / MAINTENANCE_TOOL), '--confirm-command', '--default-answer', 'purge'],
+        env={k: v for k, v in env.items() if k != 'EDI_INSTALLER_CAPTURE'},
+        timeout=240,
+        check=False,
+    )
+
+
+# Every page each walk shows, in order. The installer passes its welcome and summary pages by
+# itself and takes no picture of them; every other page has one.
+CHANGING = [
+    'Introduction',
+    'AssistantForm',
+    'ReadyForInstallation',
+    'PerformInstallation',
+    'Finished',
+]
+WALKS = {
+    'installer': [
+        'Introduction',
+        'TargetDirectory',
+        'ReadyForInstallation',
+        'PerformInstallation',
+        'Finished',
+    ],
+    'maintenance-update': CHANGING,
+    'maintenance-add': CHANGING,
+    'maintenance-remove': [
+        'Introduction',
+        'ReadyForInstallation',
+        'PerformInstallation',
+        'Finished',
+    ],
+    'maintenance-updatekept': CHANGING,
+    'maintenance-updatewithout': CHANGING,
+}
+UNPICTURED = {'installer-Introduction', 'installer-ReadyForInstallation'}
+
+
+def expected_pages(themes: tuple) -> list:
+    """The (mode, page, theme) sequence the capture run shows, as the page log names it."""
+    return [
+        f'{mode}-{page}-{theme}' for theme in themes for mode, walk in WALKS.items()
+        for page in walk
+    ]  # fmt: skip
+
+
+def require_pages(pages: Path, themes: tuple) -> None:
+    """Fail unless the walks showed exactly the expected pages in order, each with its picture."""
+    log = pages / 'pages.log'
+    shown = log.read_text(encoding='utf-8').split() if log.exists() else []
+    expected = expected_pages(themes)
+    if shown != expected:
+        raise RuntimeError(
+            'The walks did not show the expected pages in order.\n'
+            f'shown:    {", ".join(shown) or "none"}\nexpected: {", ".join(expected)}'
+        )
+    pictured = {f'{page}.png' for page in expected if page.rsplit('-', 1)[0] not in UNPICTURED}
+    if SYSTEM == 'macos':
+        pictured |= {f'disk-image-{theme}.png' for theme in themes}
+    found = {path.name for path in pages.glob('*.png')} - {'probe.png'}
+    missing, extra = sorted(pictured - found), sorted(found - pictured)
+    if missing or extra:
+        raise RuntimeError(
+            f'Page pictures missing: {", ".join(missing) or "none"}; '
+            f'not a page of the walks: {", ".join(extra) or "none"}'
+        )
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument('--tools', type=Path, required=True)
     parser.add_argument('--output', type=Path, required=True)
+    parser.add_argument(
+        '--marker-only', type=Path, help='only build the marker installer; write its path here'
+    )
     args = parser.parse_args()
     os.environ.pop('EDI_CODESIGN', None)  # the marker installer is never signed
+    if args.marker_only:
+        work = args.output.resolve()
+        work.mkdir(parents=True)
+        download = marker_installer(args.tools.resolve(), work)
+        app = installer_from_download(download, work / 'unpacked')
+        args.marker_only.write_text(f'{app}\n', encoding='utf-8')
+        return
     capture(args.tools.resolve(), args.output)
 
 

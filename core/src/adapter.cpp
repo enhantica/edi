@@ -3021,6 +3021,22 @@ bool has_scan_conditions(const std::vector<std::string>& header) {
 // The results header, its columns resolved by name (crysta's order and any other alike): the file, χ², success and
 // iteration columns are required, each extract rule's column is its target's (crysta's name) or its id's, and every
 // other column is a parameter value with its `.uncertainty` beside it somewhere. A name twice is refused.
+bool is_scan_factor_column(const std::string& name) { return name.starts_with("fit_result.r_"); }
+
+// How many agreement-factor columns a results_experiments.csv written before them lacks: the count when `header` is
+// `expected` without its trailing factor columns, else 0. Its rows read with those cells empty.
+std::size_t missing_factor_columns(const std::vector<std::string>& header, const std::vector<std::string>& expected) {
+    std::size_t factors = 0;
+    while (factors < expected.size() && is_scan_factor_column(expected[expected.size() - 1 - factors])) {
+        ++factors;
+    }
+    if (factors == 0 || header.size() + factors != expected.size() ||
+        !std::equal(header.begin(), header.end(), expected.begin())) {
+        return 0;
+    }
+    return factors;
+}
+
 void check_scan_header(const Project& project, ScanResultIndex& index) {
     const auto refuse = [](const std::string& why) {
         throw std::invalid_argument("analysis/results.csv: " + why);
@@ -3061,6 +3077,14 @@ void check_scan_header(const Project& project, ScanResultIndex& index) {
             taken.insert(found->second);
         }
     }
+    // The agreement factors are values without an s.u. column.
+    index.factors.clear();
+    for (std::size_t i = 0; i < header.size(); ++i) {
+        if (!taken.contains(i) && is_scan_factor_column(header[i])) {
+            index.factors.push_back({header[i], i});
+            taken.insert(i);
+        }
+    }
     index.parameters.clear();
     for (std::size_t i = 0; i < header.size(); ++i) {
         if (taken.contains(i) || header[i].ends_with(".uncertainty")) {
@@ -3081,6 +3105,10 @@ void check_scan_header(const Project& project, ScanResultIndex& index) {
 }
 
 }  // namespace
+
+double scan_display_value(const std::string& name, double recorded) {
+    return is_scan_factor_column(name) ? recorded * 100.0 : recorded;
+}
 
 bool parse_scan_number(std::string_view token, double& value) {
     // The project loader's rule (number_token.hpp): the whole token, the same value on every platform.
@@ -3201,6 +3229,14 @@ std::pair<std::size_t, ScanResultIndex::Row> scan_row_facts(const Project& /*pro
         const std::string& su_cell = cells[parameter.uncertainty];
         if (su_cell != "nan" && !su_cell.empty() && (!number(su_cell, uncertainty) || uncertainty < 0.0)) {
             refuse("has no finite, non-negative uncertainty for '" + parameter.name + "'");
+        }
+    }
+    // A factor is a non-negative number, `nan` where the point's fit produced none, or empty (not calculated).
+    for (const ScanFactorColumn& factor : index.factors) {
+        const std::string& cell = cells[factor.value];
+        double value = 0.0;
+        if (cell != "nan" && !cell.empty() && (!number(cell, value) || value < 0.0)) {
+            refuse("has no finite, non-negative value for '" + factor.name + "'");
         }
     }
     return {found->second, std::move(row)};
@@ -3368,12 +3404,15 @@ void check_series_bank_rows(const Project& project, const ScanDatasets& datasets
         }
         return;
     }
-    const std::vector<std::string> header = split_scan_row(line);
+    std::vector<std::string> header = split_scan_row(line);
     // The driver's own rule for this project (crysta's): its header, and each recorded point's rows below.
     const SeriesBankRule rule(project);
-    if (header != rule.header()) {
+    const std::size_t missing = missing_factor_columns(header, rule.header());
+    if (header != rule.header() && missing == 0) {
         refuse("its header is not the one a fit of this project writes");
     }
+    const std::size_t written_width = header.size();
+    header = rule.header();
     std::map<std::string, std::set<std::string>> rows_of;
     std::size_t number = 1;
     while (std::getline(input, line)) {
@@ -3385,12 +3424,13 @@ void check_series_bank_rows(const Project& project, const ScanDatasets& datasets
             }
             break;
         }
-        const std::vector<std::string> cells = split_scan_row(line);
+        std::vector<std::string> cells = split_scan_row(line);
         const std::string where = "row " + std::to_string(number);
-        if (cells.size() != header.size()) {
-            refuse(where + " has " + std::to_string(cells.size()) + " cells for " + std::to_string(header.size()) +
+        if (cells.size() != written_width) {
+            refuse(where + " has " + std::to_string(cells.size()) + " cells for " + std::to_string(written_width) +
                    " columns");
         }
+        cells.resize(header.size());  // an older file's factor cells are empty
         const auto place = places.find(cells[0]);
         if (place == places.end() || place->second >= datasets.point_files.size()) {
             refuse(where + " names " + cells[0] + ", which is not a point of the series");
@@ -3577,6 +3617,13 @@ std::vector<std::string> evolution_parameters(const Project& project, const Scan
         if (columns.insert(parameter.name).second) {
             names.push_back(parameter.name);
         }
+    }
+    // How well each point fits: its reduced χ², then the agreement factors the file records.
+    if (!index.header.empty()) {
+        names.emplace_back("fit_result.reduced_chi_square");
+    }
+    for (const ScanFactorColumn& factor : index.factors) {
+        names.push_back(factor.name);
     }
     return names;
 }
@@ -3786,10 +3833,13 @@ std::map<std::string, std::map<std::string, double>> point_experiment_cells(cons
         refuse("is recorded in results.csv but has rows for " + std::to_string(rows.size()) + " of its " +
                std::to_string(project.experiments.size()) + " experiments");
     }
-    if (header != check.rule.header()) {
+    const std::size_t missing = missing_factor_columns(header, check.rule.header());
+    if (header != check.rule.header() && missing == 0) {
         refuse("cannot be read: the file's header is not the one a fit of this project writes");
     }
-    for (const auto& [experiment, cells] : rows) {
+    header = check.rule.header();
+    for (auto [experiment, cells] : rows) {
+        cells.resize(cells.size() + missing);  // an older file's factor cells are empty
         if (const std::string why = check.rule.refusal(cells, check.files, check.succeeded); !why.empty()) {
             std::string message = "'s row for " + experiment;
             message.append(" ").append(why);
@@ -3981,10 +4031,13 @@ std::vector<std::string> evolution_experiment_parameters(const Project& project)
     }
     const std::vector<std::string> header = split_scan_row(line);
     const std::set<std::string> cells(header.begin(), header.end());
-    // The value columns after the fixed ones, each with its `.uncertainty`.
+    // Each experiment's χ², then the value columns after the fixed ones, each with its `.uncertainty`, and the
+    // agreement factors.
+    names.emplace_back("fit_result.chi_square");
     constexpr std::size_t kFixed = 7;  // point, experiment, file_path, file_size, file_modified, chi_square, n_data_points
     for (std::size_t i = kFixed; i < header.size(); ++i) {
-        if (!header[i].ends_with(".uncertainty") && cells.contains(header[i] + ".uncertainty")) {
+        if ((!header[i].ends_with(".uncertainty") && cells.contains(header[i] + ".uncertainty")) ||
+            is_scan_factor_column(header[i])) {
             names.push_back(header[i]);
         }
     }
@@ -4042,10 +4095,11 @@ void evolution_experiment_point(const Project& project, const ScanPlaces& places
             continue;  // an experiment without the parameter has an empty cell
         }
         EvolutionPoint point = base;
-        point.y = value->second;
+        point.y = scan_display_value(parameter, value->second);
         const auto su = found->second.find(parameter + ".uncertainty");
         point.su = su != found->second.end() ? su->second : std::numeric_limits<double>::quiet_NaN();
-        if (std::isfinite(point.x) && std::isfinite(point.y)) {
+        if (std::isfinite(point.x) && std::isfinite(point.y) && std::abs(point.x) <= kScanChartLimit &&
+            std::abs(point.y) <= kScanChartLimit) {
             visit(e, point);
         }
     }
@@ -4063,6 +4117,8 @@ void evolution_series(const Project& project, const ScanPlaces& places, const Sc
                       const std::function<void(std::size_t, const EvolutionPoint&)>& visit) {
     // Each parameter's value and s.u. columns, by its unique name or its results column; none for one not recorded.
     std::vector<const ScanParameterColumns*> columns(parameters.size(), nullptr);
+    // An agreement factor's value column; it has no s.u.
+    std::vector<std::optional<std::size_t>> factor_columns(parameters.size());
     bool any = false;
     for (std::size_t i = 0; i < parameters.size(); ++i) {
         for (const std::string& name : {parameters[i], scan_results_column(parameters[i])}) {
@@ -4072,6 +4128,16 @@ void evolution_series(const Project& project, const ScanPlaces& places, const Sc
                     any = true;
                 }
             }
+        }
+        for (const ScanFactorColumn& factor : index.factors) {
+            if (factor.name == parameters[i]) {
+                factor_columns[i] = factor.value;
+                any = true;
+            }
+        }
+        if (parameters[i] == "fit_result.reduced_chi_square" && !index.header.empty()) {
+            factor_columns[i] = index.chi;
+            any = true;
         }
     }
     if (!any || !index.error.empty() || !scan_state_present(scan_results_path(project), "analysis/results.csv")) {
@@ -4107,6 +4173,18 @@ void evolution_series(const Project& project, const ScanPlaces& places, const Sc
             EvolutionPoint point;
             point.x = x;
             point.dataset = place->second;
+            if (factor_columns[i]) {
+                point.su = std::numeric_limits<double>::quiet_NaN();
+                // The same admission as the live route, after the percent conversion.
+                if (parse_scan_number(cells[*factor_columns[i]], point.y)) {
+                    point.y = scan_display_value(parameters[i], point.y);
+                    if (std::isfinite(point.x) && std::isfinite(point.y) && std::abs(point.x) <= kScanChartLimit &&
+                        std::abs(point.y) <= kScanChartLimit) {
+                        visit(i, point);
+                    }
+                }
+                continue;
+            }
             if (columns[i] == nullptr || !parse_scan_number(cells[columns[i]->value], point.y)) {
                 continue;
             }
@@ -4118,7 +4196,7 @@ void evolution_series(const Project& project, const ScanPlaces& places, const Sc
             } else if (!parse_scan_number(su_cell, point.su)) {
                 continue;
             }
-            constexpr double kLimit = 1e300;
+            constexpr double kLimit = kScanChartLimit;
             const bool su_ok = undefined_su || (std::isfinite(point.su) && point.su >= 0.0 &&
                                                 std::abs(point.y - point.su) <= kLimit &&
                                                 std::abs(point.y + point.su) <= kLimit);
@@ -4326,6 +4404,7 @@ void with_saved_project(const Project& model, const std::function<void(crysta::P
              ++index) {
             built.linked_structures[index].fit_bragg_r_factor = e.linked_structures[index]->fit_bragg_r_factor;
             built.linked_structures[index].fit_f_r_factor = e.linked_structures[index]->fit_f_r_factor;
+            built.linked_structures[index].fit_magnetic_r_factor = e.linked_structures[index]->fit_magnetic_r_factor;
         }
         // Every token of the experiment — the absorption family, the experiment-type axes and the
         // scattering-source selectors — has already crossed, through crysta's converter, in the
@@ -4572,6 +4651,7 @@ void refresh_agreement_records(Project& project) {
                     }
                     (*link)->fit_bragg_r_factor = phase.fit_bragg_r_factor.get();
                     (*link)->fit_f_r_factor = phase.fit_f_r_factor.get();
+                    (*link)->fit_magnetic_r_factor = phase.fit_magnetic_r_factor.get();
                     ++link;
                 }
             }
@@ -7689,6 +7769,8 @@ void record_fit_result(Project& project, FitResultBase& outcome, std::size_t con
                     KeyTraits<Structure>::canonical(phase.structure) == structure) {
                     link->fit_bragg_r_factor = finite_factor(phase.r_bragg);
                     link->fit_f_r_factor = finite_factor(phase.r_f);
+                    link->fit_magnetic_r_factor =
+                        phase.r_magnetic ? finite_factor(*phase.r_magnetic) : std::optional<double>{};
                 }
             }
         }

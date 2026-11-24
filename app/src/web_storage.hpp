@@ -38,6 +38,8 @@ struct WebStorageAnswer {
     QString name;
     // The project folder in memory or, for a "zip" place, the archive.
     QString path;
+    // An untitled project's first save: "published" or "lost" (ADR-0100).
+    QString outcome;
 };
 
 // The stored places, most recent first: each its key, kind ("browser", "folder" or "zip") and name, whether it has
@@ -118,6 +120,21 @@ class WebStorage : public QObject {
     // Copies the place `key` (or its kept unsaved state) into `root` in memory; the answer's `path` is the project
     // folder or, for a "zip" place, the archive.
     void load(const QString& key, bool recovery, const QString& root, Answer answer);
+    // Whether an untitled first save may publish: `outcome` "go", "lost" (its operation gave way) or "rejected"
+    // (the snapshot is no longer the project's, `message` says why).
+    struct PublishVerdict {
+        QString outcome, message;
+    };
+    using PublishCheck = std::function<PublishVerdict()>;
+    // An untitled project's first save (ADR-0100): writes `folder` into the stage `stage` and publishes it as the
+    // browser place `stage` named `name`, in place of the untitled place `untitledKey`, only while the claim is still
+    // operation `op`'s and `check`, asked inside the publishing transaction, says "go". The answer's `outcome` is
+    // "published", "lost" or "rejected" (with `message`), as that transaction committed; a failed write revokes the
+    // claim and answers a refusal.
+    void publishUntitled(const QString& untitledKey, quint64 op, const QString& stage, const QString& name,
+                         const QString& folder, PublishCheck check, Answer answer);
+    // Revokes operation `op`'s claim on its stage `stage`, racing a publish in flight; never another stage's.
+    void revoke(const QString& untitledKey, quint64 op, const QString& stage);
     // Drops the unsaved state kept for `key`.
     Q_INVOKABLE void dropRecovery(const QString& key);
     // Removes the place `key` from the list; a project kept in the browser is deleted with it.
@@ -152,6 +169,7 @@ class WebStorage : public QObject {
     QHash<QString, QStringList> loaded_files_;
 #endif
     QHash<int, Reply> jobs_;
+    QHash<int, PublishCheck> checks_;
     int last_ = 0;
     WebPlaceListModel* places_;
     bool usable_ = false;

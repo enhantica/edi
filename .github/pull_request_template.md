@@ -6,11 +6,10 @@
 
 The release notes are made from the labels, and the label check refuses a pull request without them:
 
-- one scope: `[scope] significant`, `[scope] enhancement`, `[scope] bug`, `[scope] maintenance` or
-  `[scope] documentation`;
-- one or more interfaces: `[interface] desktop`, `[interface] web`, `[interface] py`, `[interface] cli`,
-  `[interface] cli-py`;
-- or only `[bot] release` for a release pull request.
+- one scope (red): `💥 significant`, `✨ enhancement`, `🐞 bug`, `🧹 maintenance` or `📘 documentation`;
+- one or more interfaces (blue): `🖥️ desktop`, `🌐 web`, `🐍 py`, `⌨️ cli`, `📦 cli-py`, or `🪟 app` for desktop and
+  web together and `🌍 all` for every one;
+- or only `🚀 release` for a release pull request.
 
 ## Checks
 

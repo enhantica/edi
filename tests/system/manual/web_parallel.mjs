@@ -19,8 +19,13 @@ for (const fitCase of ['lbco','ncaf']) {
     const mode=name==='oneworker'?'multithread':name;
     const workers=name==='oneworker'?'1':'auto';
     const dir = join(output, fitCase, name);
-    const run = spawnSync(process.execPath, ['--experimental-websocket',driver,resolve(site),mode,dir,chrome,`--fit-case=${fitCase}`,`--engine-workers=${workers}`,reference], {stdio:'inherit',timeout:300000});
-    assert.equal(run.status,0,'every corpus fit must complete through each shipped browser route');
+    // The one-worker case also opens and calculates several projects during file routing.
+    const timeout = name === 'oneworker' ? 1_200_000 : 300_000;
+    const run = spawnSync(process.execPath, ['--experimental-websocket',driver,resolve(site),mode,dir,chrome,`--fit-case=${fitCase}`,`--engine-workers=${workers}`,reference], {stdio:'inherit',timeout});
+    const label = `${fitCase}/${name}`;
+    if (run.error?.code === 'ETIMEDOUT') throw new Error(`${label} exceeded its ${timeout} ms case deadline`, {cause:run.error});
+    if (run.error) throw run.error;
+    assert.equal(run.status,0,`${label} must complete through its shipped browser route (signal: ${run.signal ?? 'none'})`);
     const measurement = JSON.parse(await readFile(join(dir,`${mode}-${fitCase}-measurement.json`)));
     const route = contract.routes[mode];
     assert.equal(measurement.kit,route.kit,'observed wasm requests must select the shipped route kit');

@@ -5,10 +5,12 @@
 #include <locale>
 #include <map>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 #include <utility>
 #include <vector>
 
+#include "crysta/magnetic.hpp"
 #include "edi/categories.hpp"
 #include "edi/model.hpp"
 #include "edi/parameter_walk.hpp"
@@ -592,8 +594,18 @@ std::vector<ParameterEntry> parameter_entries(Project& project) {
                         detail::resolve_structural_label(*structure, entry.row_label + "." + field.name, root),
                         field.parameter, root + "atom_site_moment[" + entry.row_label + "]." + field.name);
                 } else if (category.id == "magnetic_form_factor") {
-                    // A magnetic atom type's form-factor coefficients, after its moments.
-                    entry.row_label = structure->magnetic_form_factors[i / 3]->id;
+                    // A magnetic atom type's form-factor coefficients, after its moments: only those its approximation
+                    // uses (C2 for dipole, all three beyond it, none for j0), so a coefficient the pattern cannot
+                    // depend on is not listed to edit or fit (edi #110).
+                    const MagneticFormFactor& row = *structure->magnetic_form_factors[i / 3];
+                    std::size_t used = 3;
+                    try {
+                        used = crysta::magnetic_coefficients_used(row.approximation.value());
+                    } catch (const std::invalid_argument&) {
+                        // an approximation crysta refuses is reported where it is used; its coefficients stay listed
+                    }
+                    if (i % 3 >= used) continue;
+                    entry.row_label = row.id;
                     entry.path = path_of(
                         detail::resolve_structural_label(*structure, entry.row_label + "." + field.name, root),
                         field.parameter, root + "magnetic_form_factor[" + entry.row_label + "]." + field.name);

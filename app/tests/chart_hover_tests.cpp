@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: BSD-3-Clause
+#include <memory>
 #include <QGuiApplication>
 #include <QHoverEvent>
 #include <QQmlComponent>
@@ -40,8 +41,10 @@ private slots:
             QVERIFY(view);
             view->setParentItem(window.contentItem());
             QVERIFY(!view->acceptHoverEvents());
-            auto* area = new QAreaSeries(view);
-            QVERIFY(QMetaObject::invokeMethod(view, "addSeries", Q_ARG(QObject*, area)));
+            // Held until the view takes it, so a failed add does not leak it.
+            auto added = std::make_unique<QAreaSeries>(view);
+            QVERIFY(QMetaObject::invokeMethod(view, "addSeries", Q_ARG(QObject*, added.get())));
+            auto* area = added.release();
             for (int index = 0; index < 50; ++index) {
                 auto* upper = new QLineSeries(area);
                 auto* lower = new QLineSeries(area);

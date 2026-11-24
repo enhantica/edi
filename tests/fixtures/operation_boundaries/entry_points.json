@@ -134,6 +134,31 @@
           "proof": "tests/unit/app/tst_untitled_work.qml",
           "overloads": 1
         },
+        "beginUntitled": {
+          "domain": "untitled-operation",
+          "proof": "tests/unit/app/tst_untitled_work.qml",
+          "overloads": 1
+        },
+        "acceptUntitled": {
+          "domain": "untitled-operation",
+          "proof": "tests/unit/app/tst_untitled_work.qml",
+          "overloads": 1
+        },
+        "rejectUntitled": {
+          "domain": "untitled-operation",
+          "proof": "tests/unit/app/tst_untitled_work.qml",
+          "overloads": 1
+        },
+        "approveUntitledReplace": {
+          "domain": "untitled-operation",
+          "proof": "tests/unit/app/tst_untitled_work.qml",
+          "overloads": 1
+        },
+        "askingUntitledId": {
+          "domain": "read-only query",
+          "proof": null,
+          "overloads": 1
+        },
         "openProject": {
           "domain": "project-replacement",
           "proof": "tests/system/py/test_held_edit_loss_guards.py",

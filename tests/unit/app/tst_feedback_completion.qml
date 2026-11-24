@@ -55,7 +55,6 @@ TestCase {
         form.openAs("problem", attachment);
         tryCompare(form, "opened", true, 2000, "ADR-0063 F1: the actual feedback form opens before composing");
         one("feedback.text").text = "Submitted message A";
-        one("feedback.subject").text = "Submitted subject A";
         one("feedback.name").text = "Person A";
         one("feedback.email").text = "a@example.invalid";
         one("feedback.affiliation").text = "Institute A";
@@ -85,18 +84,16 @@ TestCase {
         compare(held.calls, 1, "ADR-0063 F1: actual Send dispatches one request before any later edit");
         compare(form.sending, true, "ADR-0063 F1: the request remains pending until the held callback completes");
         compare(held.body.text, "Submitted message A", "ADR-0063 F1: the wire payload contains the submitted message snapshot");
-        compare(held.body.subject, "Submitted subject A", "ADR-0063 F1: the wire payload contains the submitted subject snapshot");
-        compare(held.body.kind, "problem", "ADR-0063 F1: the wire kind belongs to the submitted request");
+        compare(held.body.kind, "feedback", "The dialog uses the general feedback route for every submitted message");
         return held;
     }
     function draft() {
-        const kind = one("feedback.kind");
-        return [one("feedback.text").text, one("feedback.subject").text,
+        return [one("feedback.text").text,
             one("feedback.name").text, one("feedback.email").text, one("feedback.affiliation").text,
-            kind.currentValue, one("feedback.include").checked, form.attachedLog];
+            one("feedback.include").checked, form.attachedLog];
     }
     function test_later_draft_data() {
-        return ["message", "subject", "name", "email", "affiliation", "kind", "include", "close", "closing", "reopen", "reopen-identical", "attachment-added", "attachment-changed", "attachment-cleared"].map(change => ({tag: change, change}));
+        return ["message", "name", "email", "affiliation", "include", "close", "closing", "reopen", "reopen-identical", "attachment-added", "attachment-changed", "attachment-cleared"].map(change => ({tag: change, change}));
     }
     function test_later_draft(data) {
         const firstAttachment = ["attachment-changed", "attachment-cleared"].includes(data.change) ? "Submitted attachment A" : "";
@@ -104,35 +101,28 @@ TestCase {
         if (data.change === "reopen-identical") one("feedback.include").checked = false;
         const held = dispatch();
         const serialized = JSON.stringify(held.body);
-        const expected = ["Submitted message A", "Submitted subject A", "Person A", "a@example.invalid", "Institute A", "problem", data.change !== "reopen-identical", firstAttachment];
-        const fields = ["message", "subject", "name", "email", "affiliation"];
+        const expected = ["Submitted message A", "Person A", "a@example.invalid", "Institute A", data.change !== "reopen-identical", firstAttachment];
+        const fields = ["message", "name", "email", "affiliation"];
         const index = fields.indexOf(data.change);
-        const fieldAttempt = index >= 0 || data.change === "kind" || data.change === "include";
+        const fieldAttempt = index >= 0 || data.change === "include";
         let acceptedEdit = false;
         if (index >= 0) {
-            const values = ["Later message B\nwith a correction", "Later subject B", "Person B", "b@example.invalid", "Institute B"];
+            const values = ["Later message B\nwith a correction", "Person B", "b@example.invalid", "Institute B"];
             const key = index === 0 ? "text" : data.change;
             if (one("feedback." + key).enabled) {
                 one("feedback." + key).text = values[index];
                 expected[index] = values[index];
                 acceptedEdit = true;
             }
-        } else if (data.change === "kind") {
-            const kind = one("feedback.kind");
-            if (kind.enabled) {
-                kind.currentIndex = kind.indexOfValue("idea");
-                expected[5] = "idea";
-                acceptedEdit = true;
-            }
         } else if (data.change === "include") {
             if (one("feedback.include").enabled) {
                 one("feedback.include").checked = false;
-                expected[6] = false;
+                expected[4] = false;
                 acceptedEdit = true;
             }
         } else if (data.change.startsWith("attachment-")) {
             form.attachedLog = data.change === "attachment-cleared" ? "" : "Later attachment B";
-            expected[7] = form.attachedLog;
+            expected[5] = form.attachedLog;
         } else {
             if (data.change === "closing") form.exit = delayedExit.createObject(form);
             form.close();
@@ -141,7 +131,7 @@ TestCase {
                 verify(form.visible, "ADR-0063 F1: a controlled exit keeps the real close transition pending at completion");
             else
                 tryCompare(form, "visible", false, 2000, "ADR-0063 F1: the closed-form witness reaches the completed close boundary");
-            expected[7] = "";
+            expected[5] = "";
             if (data.change === "reopen" || data.change === "reopen-identical") {
                 const identical = data.change === "reopen-identical";
                 form.openAs(identical ? "problem" : "idea", identical ? "" : "Later attachment B");
@@ -150,11 +140,8 @@ TestCase {
                     compare(JSON.stringify(form.payload), serialized, "ADR-0063 F1: an identical wire payload still belongs to a newly opened form session");
                 } else {
                     one("feedback.text").text = "Later message B\nwith a correction";
-                    one("feedback.subject").text = "Later subject B";
                     expected[0] = "Later message B\nwith a correction";
-                    expected[1] = "Later subject B";
-                    expected[5] = "idea";
-                    expected[7] = "Later attachment B";
+                    expected[5] = "Later attachment B";
                 }
             }
         }
@@ -164,11 +151,10 @@ TestCase {
         wait(0);
         compare(JSON.stringify(held.body), serialized, "ADR-0063 F1: edits and completion never mutate the submitted wire snapshot");
         if (fieldAttempt) {
-            const at = index >= 0 ? index : data.change === "kind" ? 5 : 6;
-            compare(draft()[at], acceptedEdit ? expected[at] : at < 2 ? "" : expected[at], "ADR-0063 F1: later edits remain intact, or the disabled editor prevented the edit before ordinary success");
+            const at = index >= 0 ? index : 4;
+            compare(draft()[at], acceptedEdit ? expected[at] : at === 0 ? "" : expected[at], "ADR-0063 F1: later edits remain intact, or the disabled editor prevented the edit before ordinary success");
             if (!acceptedEdit) {
                 compare(one("feedback.text").text, "", "ADR-0063 F1: a locked unchanged message keeps ordinary successful clearing");
-                compare(one("feedback.subject").text, "", "ADR-0063 F1: a locked unchanged subject keeps ordinary successful clearing");
             }
             return;
         }
@@ -185,6 +171,12 @@ TestCase {
     }
     function test_ordinary_completion(data) {
         openForm();
+        if (data.status === "201") {
+            const removed = Probe.objectsWithProperty(form, "objectName").filter(item =>
+                ["feedback.kind", "feedback.subject"].includes(item.objectName));
+            compare(removed.length, 0, "The feedback dialog needs neither a type chooser nor a subject input");
+            test.warn("FEEDBACK_MESSAGE_PROMPT " + JSON.stringify(one("feedback.text").placeholderText));
+        }
         if (data.status === "no-address") {
             form.endpoint = "";
             compare(one("feedback.send").enabled, false, "ADR-0063: missing address disables Send");
@@ -197,7 +189,6 @@ TestCase {
         }
         const expected = data.status === "201" ? "" : "Submitted message A";
         compare(one("feedback.text").text, expected, "ADR-0063: only ordinary successful completion clears the submitted message");
-        compare(one("feedback.subject").text, data.status === "201" ? "" : "Submitted subject A", "ADR-0063: failure and no-address keep the submitted subject");
         compare(one("feedback.name").text, "Person A", "ADR-0063: all outcomes retain remembered contact details");
     }
     function test_a_unsent_crash_attachment() {
@@ -219,7 +210,7 @@ TestCase {
         const previous = Preferences.loggingLevel;
         Preferences.loggingLevel = "Info";
         try {
-            const marker = "feedback kind ownership boundary";
+            const marker = "feedback completion receipt boundary";
             RunLog.note(marker);
             const held = dispatch();
             form.openAs("idea", "Later attachment B");
@@ -227,8 +218,7 @@ TestCase {
             tryVerify(() => RunLog.logText().includes(marker), 2000, "The current bounded log retains this request's marker");
             const retained = RunLog.logText();
             const text = retained.slice(retained.lastIndexOf(marker));
-            verify(text.includes("feedback sent: problem"), "ADR-0063 F1: completion logs the submitted kind even after the form is reused");
-            verify(!text.includes("feedback sent: idea"), "ADR-0063 F1: completion cannot attribute the old request to the live form kind");
+            compare(text.split("\n").filter(line => line.includes("feedback sent: feedback")).length, 1, "A submitted request logs one success even after the dialog is reused");
         } finally {
             Preferences.loggingLevel = previous;
         }
@@ -261,9 +251,8 @@ TestCase {
             tryCompare(form, "opened", true, 2000, "ADR-0063 F1: the successor opens while the old response is still pending");
         }
         compare(form.sending, false, "ADR-0063 F1: attachment changes and in-place openAs release stale pending state immediately");
-        verify(one("feedback.text").enabled && one("feedback.subject").enabled && one("feedback.send").enabled, "ADR-0063 F1: the successor's editors and Send are usable before the old request finishes");
+        verify(one("feedback.text").enabled && one("feedback.send").enabled, "ADR-0063 F1: the successor's editors and Send are usable before the old request finishes");
         one("feedback.text").text = "Successor message B";
-        one("feedback.subject").text = "Successor subject B";
         const next = {calls: 0, done: null, body: null};
         form.transport = function(url, body, completed) { ++next.calls; next.body = body; next.done = completed; };
         const send = one("feedback.send");
@@ -282,7 +271,6 @@ TestCase {
         }
         compare(form.lastStatus, 429, "ADR-0063 F1: only the successor's response determines its status in either completion order");
         compare(one("feedback.text").text, "Successor message B", "ADR-0063 F1: either response ordering retains the successor's unsent retry text");
-        compare(one("feedback.subject").text, "Successor subject B", "ADR-0063 F1: old success never clears the successor's retry subject");
         verify(!form.sending && !form.sent && one("feedback.send").enabled, "ADR-0063 F1: the latest failed request leaves Send usable for retry after both responses");
     }
 

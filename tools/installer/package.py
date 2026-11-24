@@ -8,10 +8,13 @@ import hashlib
 import json
 import os
 import platform
+import plistlib
 import re
 import shutil
 import subprocess
+import sys
 import tarfile
+import tempfile
 import urllib.request
 import xml.etree.ElementTree as ET  # noqa: S405 - generated XML only, never external XML
 import zipfile
@@ -34,6 +37,18 @@ SUFFIX = '.exe' if SYSTEM == 'windows' else ''
 PLATFORM_ID = {'linux': 'linux-x86_64', 'macos': 'macos-arm64', 'windows': 'windows-x86_64'}[
     SYSTEM
 ]
+# The platform as the download names show it (tools/release/promote.py installer_name).
+INSTALLER_PLATFORM = {'linux': 'Linux-x64', 'macos': 'macOS-arm64', 'windows': 'Windows-x64'}[
+    SYSTEM
+]
+# The installer app's name inside the macOS disk image, and the image's volume name.
+MACOS_INSTALLER_NAME = 'EasyDiffraction Installer'
+
+
+def installer_stem(version: str, kind: str) -> str:
+    """The download's name without its suffix; the online installer is the default one."""
+    offline = '-Offline' if kind == 'offline' else ''
+    return f'EasyDiffraction-Installer{offline}-{version}-{INSTALLER_PLATFORM}'
 
 
 def read_release_plan(directory: Path, source_commit: str | None = None) -> dict:
@@ -154,15 +169,161 @@ def payload_manifest(stage: Path) -> dict:
     return result
 
 
+# The app's theme (gui-components' Gui/Style Colors.qml and Sizes.qml, at a 14 px font) for the
+# installer's stylesheet (Installer.qss): Qt darker() written out, #AARRGGBB colours as rgba().
+_SIZES = {
+    'FONT_PX': '14',
+    'HALF_FONT_PX': '7',
+    'CONTROL_INNER_PX': '37',  # sideBarButtonHeight 39, less a 1 px border on each side
+    'FIELD_PADDING_PX': '8',  # TextField padding: fontPixelSize * 0.5 + 1
+    'CHECK_PX': '21',  # CheckIndicator: fontPixelSize * 1.5
+    # As large as the check box outside (21 and a 1 px border: 23), so a radio row is a check box
+    # row's height: 19 and a 2 px border.
+    'RADIO_PX': '19',
+    # Half the outside size or less: Qt draws a square where the radius is larger.
+    'RADIO_RADIUS_PX': '11',
+}
+INSTALLER_THEMES = {
+    'light': _SIZES
+    | {
+        'BACKGROUND': '#e9e9e9',
+        'BACKGROUND_HOVERED': '#fefefe',
+        'BACKGROUND_DISABLED': '#e9e9e9',
+        'FOREGROUND': '#333333',
+        'FOREGROUND_MINOR': '#aaaaaa',
+        'FOREGROUND_DISABLED': '#bbbbbb',
+        'ACCENT': '#00a3e3',
+        'ACCENT_TRACK': 'rgba(0, 163, 227, 0.17)',
+        'BORDER': '#dedede',  # appBarComboBoxBorder: darker(themeBackground, 1.05)
+        'FIELD_BACKGROUND': 'rgba(255, 255, 255, 0.44)',  # appBarComboBoxBackground #70ffffff
+        'CHECK_BACKGROUND': '#f7f7f7',
+        'SUCCESS': '#7aaa42',  # green, the app's one success colour
+        'WARNING': '#FF5722',  # red, the app's warning orange-red
+    },
+    'dark': _SIZES
+    | {
+        'BACKGROUND': '#303030',
+        'BACKGROUND_HOVERED': '#353535',
+        'BACKGROUND_DISABLED': '#333333',
+        'FOREGROUND': '#eeeeee',
+        'FOREGROUND_MINOR': '#888888',
+        'FOREGROUND_DISABLED': '#666666',
+        'ACCENT': '#4ec1ef',
+        'ACCENT_TRACK': 'rgba(78, 193, 239, 0.17)',
+        'BORDER': '#2c2c2c',  # appBarComboBoxBorder: darker(themeBackground, 1.1)
+        'FIELD_BACKGROUND': 'rgba(102, 102, 102, 0.06)',  # appBarComboBoxBackground #10666666
+        'CHECK_BACKGROUND': '#3a3a3a',
+        'SUCCESS': '#C5E1A5',  # green
+        'WARNING': '#FFAB91',  # red
+    },
+}
+
+
+# The system's own monospace font, for the licence text.
+MONO_FAMILY = {'macos': 'Menlo', 'windows': 'Consolas'}.get(SYSTEM, 'DejaVu Sans Mono')
+
+
+def installer_stylesheet(theme: str, name: str = 'Installer.qss') -> str:
+    """An installer stylesheet with one theme's values filled in."""
+    text = (ROOT / 'tools/installer' / name).read_text(encoding='utf-8')
+    values = INSTALLER_THEMES[theme] | {
+        'STEP_LIST_INSET': '23' if SYSTEM == 'macos' else '9',
+        # The system's own sans serif: the app's PT Sans is not available to the installer.
+        'FONT_FAMILY': {'macos': 'Helvetica Neue', 'windows': 'Segoe UI'}.get(
+            SYSTEM, 'DejaVu Sans'
+        ),
+        # Monospace for the licence, whose headings are centred with spaces (the app's PT Mono is
+        # not available to the installer).
+        'MONO_FAMILY': MONO_FAMILY,
+    }
+    for key, value in values.items():
+        text = text.replace(f'@{key}@', value)
+    if '@' in re.sub(r'/\*.*?\*/', '', text, flags=re.DOTALL):
+        raise RuntimeError('Installer.qss names a value INSTALLER_THEMES does not have')
+    return text
+
+
+def qt_tool(name: str) -> Path:
+    """A Qt build tool of the packaging environment (conda-forge's qt6-main)."""
+    prefix = Path(sys.prefix)
+    for path in (
+        prefix / 'lib/qt6' / name,
+        prefix / 'lib/qt6/bin' / name,
+        prefix / 'bin' / (name + '6'),
+        prefix / 'Library/lib/qt6' / (name + '.exe'),
+        prefix / 'Library/bin' / (name + '.exe'),
+        prefix / 'bin' / name,
+    ):
+        if path.is_file():
+            return path
+    # conda-forge's Windows layout has moved between builds: look once under Library.
+    found = sorted((prefix / 'Library').rglob(name + '.exe')) if SYSTEM == 'windows' else []
+    if found:
+        return found[0]
+    raise RuntimeError(f'Qt {name} is not in the packaging environment')
+
+
+def write_resources(config: Path, configuration: ET.ElementTree) -> Path:
+    """The resource list binarycreator compiles in (-r, a .qrc): our English text and the tick.
+
+    Named translations replace the Framework's built-in ones, so the text is English everywhere, as
+    the pages are. The tick is the check box's image (Installer.qss).
+    """
+    work = config / 'resources'
+    (work / 'translations').mkdir(parents=True, exist_ok=True)
+    # ifw_en.qm is committed beside its source, so packaging needs no Qt tools; where lrelease is
+    # at hand (the packaging environment), a stale one is refused.
+    compiled = ROOT / 'tools/installer/ifw_en.qm'
+    try:
+        lrelease = qt_tool('lrelease')
+    except RuntimeError:
+        lrelease = None
+    if lrelease is not None:
+        fresh = work / 'ifw_en-fresh.qm'
+        run([lrelease, ROOT / 'tools/installer/ifw_en.ts', '-qm', fresh])
+        if fresh.read_bytes() != compiled.read_bytes():
+            raise RuntimeError('tools/installer/ifw_en.qm is stale: rebuild it from ifw_en.ts')
+    shutil.copy2(compiled, work / 'translations/ifw_en.qm')
+    shutil.copy2(ROOT / 'tools/installer/CheckMark.png', work / 'CheckMark.png')
+    # The app's own icons (Font Awesome 5 Solid, as gui-components draws them), at twice the size.
+    icons = sorted((ROOT / 'tools/installer/icons').glob('*.png'))
+    for icon in icons:
+        shutil.copy2(icon, work / icon.name)
+    files = ''.join(f'<file alias="edi/{icon.name}">{icon.name}</file>' for icon in icons)
+    (work / 'resources.qrc').write_text(
+        '<RCC><qresource prefix="/">'
+        '<file>translations/ifw_en.qm</file><file alias="edi/CheckMark.png">CheckMark.png</file>'
+        f'{files}</qresource></RCC>\n',
+        encoding='utf-8',
+    )
+    translations = ET.SubElement(configuration.getroot(), 'Translations')
+    # The Framework maps a -r resource file under :/metadata; a full path is used as it is.
+    ET.SubElement(translations, 'Translation').text = ':/metadata/translations/ifw_en.qm'
+    ET.indent(configuration)
+    configuration.write(config / 'config.xml', encoding='utf-8', xml_declaration=True)
+    return work / 'resources.qrc'
+
+
 def write_controller(config: Path) -> None:
-    """Write the stylesheet and the controller, holding both wordmarks."""
+    """Write the window's stylesheet and the controller, holding both wordmarks and page themes.
+
+    The Framework loads one stylesheet for the whole app, before scripts run, so the window around
+    the pages follows the system palette (InstallerChrome.qss); the controller gives each page
+    edi's light or dark theme (Installer.qss).
+    """
     style = ROOT / 'tools/installer'
-    step_list_inset = '23' if SYSTEM == 'macos' else '9'
-    stylesheet = (style / 'Installer.qss').read_text(encoding='utf-8')
     (config / 'Installer.qss').write_text(
-        stylesheet.replace('@STEP_LIST_INSET@', step_list_inset), encoding='utf-8'
+        installer_stylesheet('light', 'InstallerChrome.qss'), encoding='utf-8'
     )
     controller = (style / 'Installer.qs').read_text(encoding='utf-8')
+    for theme in ('light', 'dark'):
+        controller = controller.replace(
+            f'"@{theme.upper()}_STYLESHEET@"', json.dumps(installer_stylesheet(theme))
+        )
+        for token in ('SUCCESS', 'WARNING'):
+            controller = controller.replace(
+                f'@{theme.upper()}_{token}@', INSTALLER_THEMES[theme][token]
+            )
     for marker, filename in (
         ('@WORDMARK@', 'InstallerLogo.png'),
         ('@DARK_WORDMARK@', 'InstallerLogoDark.png'),
@@ -190,7 +351,7 @@ def write_metadata(
         {
             'Name': 'EasyDiffraction',
             'Version': version,
-            'Title': 'EasyDiffraction installer',
+            'Title': 'EasyDiffraction',
             'Publisher': 'EasyScience',
             'ProductUrl': 'https://easydiffraction.org/',
             'TargetDir': {
@@ -200,22 +361,39 @@ def write_metadata(
             'MaintenanceToolName': 'MaintenanceTool',
             'AllowNonAsciiCharacters': 'true',
             'AllowSpaceInPath': 'true',
+            # Qt's Modern wizard style: no page titles (so no header), its footer line hidden
+            # (InstallerChrome.qss), the logo heading each page's content (Installer.qs).
             'WizardStyle': 'Modern',
-            'WizardDefaultWidth': '56em',
-            'WizardDefaultHeight': '29em',
-            'WizardShowPageList': 'true',
+            'WizardDefaultWidth': '640',
+            'WizardDefaultHeight': '460',
+            # One centred column, no step list (the owner's three-page design, edi ADR-0071).
+            'WizardShowPageList': 'false',
             'ControlScript': 'Installer.qs',
             'StyleSheet': 'Installer.qss',
         },
     )
     style = ROOT / 'tools/installer'
     write_controller(config)
+    write_resources(config, configuration)
     # The installer's own icon, the app logo coming out of a box, distinct from the app's.
     if SYSTEM in {'macos', 'windows'}:
         icon = 'Installer.icns' if SYSTEM == 'macos' else 'Installer.ico'
         shutil.copy2(style / icon, config / icon)
         ET.SubElement(configuration.getroot(), 'InstallerApplicationIcon').text = 'Installer'
         ET.SubElement(configuration.getroot(), 'StartMenuDir').text = 'EasyDiffraction'
+    # "Open EasyDiffraction now" on the last page, ticked: the program itself, not a folder.
+    program = {
+        'macos': ('/usr/bin/open', ['@TargetDir@/EasyDiffraction.app']),
+        'windows': ('@TargetDir@/bin/EasyDiffraction.exe', []),
+    }.get(SYSTEM, ('@TargetDir@/bin/EasyDiffraction', []))
+    ET.SubElement(configuration.getroot(), 'RunProgram').text = program[0]
+    if program[1]:
+        arguments = ET.SubElement(configuration.getroot(), 'RunProgramArguments')
+        for argument in program[1]:
+            ET.SubElement(arguments, 'Argument').text = argument
+    ET.SubElement(
+        configuration.getroot(), 'RunProgramDescription'
+    ).text = 'Open %1 now'  # the Framework fills in the product name
     if SYSTEM == 'windows':
         # Run as administrator, the installer suggests Program Files (Installer.qs, edi ADR-0071).
         ET.SubElement(
@@ -253,18 +431,14 @@ def write_metadata(
         },
     )
     shutil.copy2(ROOT / 'tools/installer/installscript.qs', meta / 'installscript.qs')
-    licenses = ET.SubElement(root.getroot(), 'Licenses')
-    ET.SubElement(
-        licenses,
-        'License',
-        {'name': 'GNU General Public License v3 (application)', 'file': 'COPYING'},
-    )
+    # No <Licenses>: the GPL needs no acceptance page, so the install page has a ticked box and a
+    # link to read it (Installer.qs); the licence text ships with the app.
     ET.indent(root)
     root.write(meta / 'package.xml', encoding='utf-8', xml_declaration=True)
 
 
 def write_assistant_metadata(meta: Path, version: str) -> None:
-    xml_file(
+    root = xml_file(
         meta / 'package.xml',
         'Package',
         {
@@ -276,8 +450,18 @@ def write_assistant_metadata(meta: Path, version: str) -> None:
             'Default': 'false',
             'RequiresAdminRights': 'false',
             'Replaces': REPLACED_COMPONENTS[ASSISTANT_COMPONENT],
+            'Script': 'assistantscript.qs',
         },
     )
+    # The checkbox that replaces the component tree (edi ADR-0071).
+    interfaces = ET.SubElement(root.getroot(), 'UserInterfaces')
+    ET.SubElement(interfaces, 'UserInterface').text = 'AssistantForm.ui'
+    ET.SubElement(interfaces, 'UserInterface').text = 'ProgressForm.ui'
+    ET.SubElement(interfaces, 'UserInterface').text = 'DoneForm.ui'
+    ET.indent(root)
+    root.write(meta / 'package.xml', encoding='utf-8', xml_declaration=True)
+    for name in ('assistantscript.qs', 'AssistantForm.ui', 'ProgressForm.ui', 'DoneForm.ui'):
+        shutil.copy2(ROOT / 'tools/installer' / name, meta / name)
 
 
 def write_maintenance_tool_metadata(meta: Path, version: str) -> None:
@@ -335,13 +519,13 @@ def build_maintenance_tool(tools: Path, output: Path) -> Path:
     config.mkdir(parents=True)
     icon = 'App.icns'
     shutil.copy2(ROOT / 'app/resources/logo' / icon, config / icon)
-    xml_file(
+    configuration = xml_file(
         config / 'config.xml',
         'Installer',
         {
             'Name': 'EasyDiffraction',
             'Version': '1.0.0',
-            'Title': 'EasyDiffraction maintenance tool',
+            'Title': 'EasyDiffraction',
             'Publisher': 'EasyScience',
             'MaintenanceToolName': 'MaintenanceTool',
             'InstallerApplicationIcon': 'App',
@@ -351,6 +535,7 @@ def build_maintenance_tool(tools: Path, output: Path) -> Path:
         },
     )
     write_controller(config)
+    write_resources(config, configuration)
     # --mt writes the tool named by MaintenanceToolName into the working directory.
     template = ['-t', macos_installer_template(tools, work)] if SYSTEM == 'macos' else []
     run(
@@ -359,12 +544,20 @@ def build_maintenance_tool(tools: Path, output: Path) -> Path:
             '--verbose',
             *template,
             '--mt',
+            '-r',
+            config / 'resources/resources.qrc',
             '-c',
             config / 'config.xml',
         ],
         cwd=work,
     )
     bundle = work / maintenance_tool_name()
+    set_bundle_identifier(
+        bundle,
+        'org.easydiffraction.maintenancetool',
+        'EasyDiffraction Maintenance Tool',
+        display_only=True,
+    )
     if macos_signing():
         notarise_macos(bundle)
     elif windows_signing():
@@ -710,6 +903,41 @@ def linux_installer_runtime(tools: Path, output: Path) -> tuple[Path, Path, dict
     return template, libraries.parent, env
 
 
+def set_bundle_identifier(
+    bundle: Path,
+    identifier: str,
+    name: str,
+    *,
+    installer_icon: bool = False,
+    display_only: bool = False,
+) -> None:
+    """Our identifier and name in place of the Installer Framework's, before the bundle is signed.
+
+    binarycreator writes com.yourcompany.installerbase into every macOS bundle it makes and names
+    it after its executable, and macOS shows both in crash reports, privacy settings, the menu bar
+    and the Dock. The installer also takes the enlarged icon (standard_icns).
+    """
+    if SYSTEM != 'macos':
+        return
+    info = bundle / 'Contents/Info.plist'
+    with info.open('rb') as handle:
+        values = plistlib.load(handle)
+    values['CFBundleIdentifier'] = identifier
+    # The maintenance tool keeps its bundle name: the Framework names the bundle it rewrites on an
+    # update after it, so only the name shown changes there.
+    values['CFBundleDisplayName'] = name
+    if not display_only:
+        values['CFBundleName'] = name
+    icon = values.get('CFBundleIconFile')
+    if installer_icon and icon:
+        name_on_disk = icon if icon.endswith('.icns') else icon + '.icns'
+        shutil.copy2(
+            standard_icns(Path(tempfile.mkdtemp())), bundle / 'Contents/Resources' / name_on_disk
+        )
+    with info.open('wb') as handle:
+        plistlib.dump(values, handle)
+
+
 def macos_installer_template(tools: Path, output: Path) -> Path:
     """Select the arm64 installer template before IFW attaches its payload."""
     template = tools / 'bin/installerbase'
@@ -722,6 +950,90 @@ def macos_installer_template(tools: Path, output: Path) -> Path:
     run(['lipo', template, '-thin', 'arm64', '-output', thin])
     thin.chmod(template.stat().st_mode & 0o777)
     return thin
+
+
+def build_disk_image(image: Path, app: Path, notice: Path) -> None:
+    """The disk image with its Finder window laid out and the installer's icon as its volume icon.
+
+    dmgbuild writes the window's layout (.DS_Store) and .VolumeIcon.icns into the image itself, so
+    Finder opens it the same way on every Mac without scripting Finder at build time.
+    """
+    settings = {
+        'files': [str(app), str(notice)],
+        'icon': str(standard_icns(Path(tempfile.mkdtemp()))),
+        'format': 'UDZO',
+        'filesystem': 'HFS+',
+        'default_view': 'icon-view',
+        # Centred on a 1440 by 900 point screen, the common MacBook size.
+        'window_rect': ((530, 315), (380, 270)),
+        'show_toolbar': False,
+        'show_status_bar': False,
+        'show_tab_view': False,
+        'show_pathbar': False,
+        'show_sidebar': False,
+        'show_icon_preview': False,
+        'arrange_by': None,
+        'icon_size': 96,
+        'text_size': 12,
+        'label_pos': 'bottom',
+        'grid_spacing': 100,
+        # Centred in the window: the icon with its label below sits a little above the middle.
+        'icon_locations': {app.name: (105, 105), notice.name: (275, 105)},
+    }
+    # dmgbuild reads its settings as a Python file; it is in the macOS packaging environment only.
+    script = Path(tempfile.mkdtemp()) / 'dmg_settings.py'
+    script.write_text(
+        ''.join(f'{key} = {value!r}\n' for key, value in settings.items()), encoding='utf-8'
+    )
+    run([sys.executable, '-m', 'dmgbuild', '-s', script, MACOS_INSTALLER_NAME, image])
+
+
+# The installer art's height as a share of its icon: a document icon's in Finder (87 of 96
+# points), so the installer and BRANDING-LICENSE.txt read the same size side by side.
+INSTALLER_ICON_HEIGHT = 0.906
+
+
+def standard_icns(work: Path) -> Path:
+    """Installer.icns for Finder: the same art, cropped to it and enlarged, written by iconutil.
+
+    Installer.icns draws its art inside wide margins and keeps its small sizes as PNG, which Finder
+    draws garbled in a title bar; iconutil stores every size in the formats Finder expects.
+    """
+    data = (ROOT / 'tools/installer/Installer.icns').read_bytes()
+    largest, offset = None, 8
+    while offset < len(data):
+        kind, size = data[offset : offset + 4], int.from_bytes(data[offset + 4 : offset + 8])
+        if kind == b'ic10':  # 1024 px
+            largest = data[offset + 8 : offset + size]
+        offset += size
+    if largest is None:
+        raise RuntimeError('Installer.icns has no 1024 px image')
+    work.mkdir(parents=True, exist_ok=True)
+    source = work / 'Installer-1024.png'
+    source.write_bytes(largest)
+    iconset = work / 'Installer.iconset'
+    run([
+        'swift', ROOT / 'tools/installer/scale_icon.swift', source, str(INSTALLER_ICON_HEIGHT),
+        iconset,
+    ])  # fmt: skip
+    icns = work / 'Installer.icns'
+    run(['iconutil', '-c', 'icns', '-o', icns, iconset])
+    return icns
+
+
+def set_file_icon(image: Path) -> None:
+    """The installer's icon on the disk image file itself.
+
+    Kept in the file's extended attributes, which a browser download does not carry, so it shows on
+    the build machine and on Finder copies only. Set after any signing, which refuses them.
+    """
+    icon = json.dumps(str(standard_icns(Path(tempfile.mkdtemp()))))
+    script = (
+        "ObjC.import('AppKit');"
+        f'var icon = $.NSImage.alloc.initWithContentsOfFile({icon});'
+        f'$.NSWorkspace.sharedWorkspace.setIconForFileOptions(icon, {json.dumps(str(image))}, 0);'
+    )
+    run(['osascript', '-l', 'JavaScript', '-e', script])
 
 
 def deliver_installer(installer: Path, runtime: Path | None, *, ad_hoc: bool = True) -> Path:
@@ -742,15 +1054,16 @@ def deliver_installer(installer: Path, runtime: Path | None, *, ad_hoc: bool = T
         if folder.exists():
             shutil.rmtree(folder)
         folder.mkdir()
-        run(['ditto', installer, folder / installer.name])
-        shutil.copy2(ROOT / 'website/BRANDING-LICENSE', folder / 'BRANDING-LICENSE.txt')
+        app = folder / (MACOS_INSTALLER_NAME + '.app')
+        run(['ditto', installer, app])
+        notice = folder / 'BRANDING-LICENSE.txt'
+        shutil.copy2(ROOT / 'website/BRANDING-LICENSE', notice)
         try:
-            run([
-                'hdiutil', 'create', '-volname', 'EasyDiffraction', '-srcfolder', folder,
-                '-fs', 'HFS+', '-format', 'UDZO', '-ov', image,
-            ])  # fmt: skip
+            build_disk_image(image, app, notice)
         finally:
             shutil.rmtree(folder)
+        if ad_hoc:
+            set_file_icon(image)
         return image
     archive = installer.with_suffix('.zip')
     archive.unlink(missing_ok=True)
@@ -868,7 +1181,7 @@ def package_app(
             env=tool_environment,
         )
     kind = 'online' if repository_url else 'offline'
-    name = f'EasyDiffraction-{version}-{PLATFORM_ID}-{kind}'
+    name = installer_stem(version, kind)
     installer = output / (
         name + ('.app' if SYSTEM == 'macos' else '.exe' if SYSTEM == 'windows' else '.run')
     )
@@ -880,6 +1193,8 @@ def package_app(
             '--compression',
             '1',
             '--online-only' if repository_url else '--hybrid',
+            '-r',
+            source / 'config/resources/resources.qrc',
             '-c',
             source / 'config/config.xml',
             '-p',
@@ -887,6 +1202,10 @@ def package_app(
             installer,
         ],
         env=tool_environment,
+    )
+    # The menu bar and Dock show this name, not the download's file name; the icon is enlarged.
+    set_bundle_identifier(
+        installer, 'org.easydiffraction.installer', MACOS_INSTALLER_NAME, installer_icon=True
     )
     download = deliver_installer(installer, runtime)
     (output / 'installer.json').write_text(
@@ -1037,6 +1356,7 @@ def seal_installer(output: Path) -> None:
     download = deliver_installer(installer, None, ad_hoc=False)
     if SYSTEM == 'macos':
         seal_disk_image(download)
+        set_file_icon(download)
     metadata.update({'download': download.name, 'download_sha256': sha256(download)})
     metadata_path.write_text(json.dumps(metadata, indent=2) + '\n')
 

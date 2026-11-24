@@ -1377,6 +1377,8 @@ for line in sys.stdin:
             persist()
         notify('turn/started', {'threadId': thread_id, 'turn': turn('inProgress')})
         advance()
+    elif method == 'turn/steer' and config.get('acknowledge_queue_steers'):
+        reply(request, {'turnId': params['expectedTurnId']})
     elif method == 'turn/interrupt':
         if (
             start_receipts['unacked']

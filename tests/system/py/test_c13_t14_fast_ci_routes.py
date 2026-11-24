@@ -159,24 +159,21 @@ def workflow_control():
             },
             'system-time': {
                 'needs': 'system',
+                'if': "github.event_name == 'schedule'",
                 'steps': [
                     {
-                        'run': next(
-                            step['run']
-                            for step in yaml.safe_load(
-                                (
-                                    Path(__file__).resolve().parents[3]
-                                    / '.github/workflows/ci.yml'
-                                ).read_text()
-                            )['jobs']['system-time']['steps']
-                            if 'record()' in step.get('run', '')
+                        'run': (
+                            'python3 tools/ci/system_shard_time.py --nightly --repo example/edi '
+                            '--run-id "$GITHUB_RUN_ID" --head-sha "$GITHUB_SHA" '
+                            '--save "$RUNNER_TEMP/system-time/history.json" --fetch-only'
                         )
                     },
                     {
                         'run': (
-                            'python3 tools/ci/system_shard_time.py '
-                            '--current current.json --main main.json '
-                            '--run-id 111 --head-sha dddddddddddddddddddddddddddddddddddddddd'
+                            'python3 tools/ci/system_shard_time.py --nightly '
+                            '--history "$RUNNER_TEMP/system-time/history.json" '
+                            '--run-id "$GITHUB_RUN_ID" --head-sha "$GITHUB_SHA" '
+                            '--record "$RUNNER_TEMP/system-time/record.json"'
                         )
                     },
                 ],
@@ -477,28 +474,29 @@ def test_child_python_guard_observes_the_actual_child_compiler_and_normal_proces
     )
 
 
-@pytest.mark.parametrize('mutation', ['current-is-main', 'swap', 'stale-id', 'wrong-head'])
+@pytest.mark.parametrize(
+    'mutation',
+    [
+        'current-is-main',
+        'swap',
+        'stale-id',
+        'wrong-head',
+        'partial-history',
+        'moving-candidate',
+    ],
+)
 def test_actual_timing_collection_refuses_aliased_swapped_or_stale_run_evidence(
     tmp_path, mutation
 ):
     root = Path(__file__).resolve().parents[3]
     workflow = yaml.safe_load((root / '.github/workflows/ci.yml').read_text())
-    if mutation in {'stale-id', 'wrong-head'}:
-        timing_evidence(workflow, tmp_path, api_mutation=mutation)
-        return
-    step = next(
-        step
-        for step in workflow['jobs']['system-time']['steps']
-        if 'tools/ci/system_shard_time.py' in step.get('run', '')
-    )
-    if mutation == 'current-is-main':
-        step['run'] = step['run'].replace('current.json', 'main.json')
-    else:
-        step['run'] = (
-            step['run']
-            .replace('current.json', 'swapped.json')
-            .replace('main.json', 'current.json')
-            .replace('swapped.json', 'main.json')
-        )
-    with pytest.raises(AssertionError, match=r'PR|comparator|evidence'):
-        timing_evidence(workflow, tmp_path, slow=True)
+    timing_evidence(workflow, tmp_path, mutation=mutation)
+
+
+@pytest.mark.parametrize(
+    'slow', [False, True, None], ids=['within-budget', 'over-budget', 'no-baseline']
+)
+def test_actual_nightly_collects_and_replays_the_same_history(tmp_path, slow):
+    root = Path(__file__).resolve().parents[3]
+    workflow = yaml.safe_load((root / '.github/workflows/ci.yml').read_text())
+    timing_evidence(workflow, tmp_path, slow=slow)

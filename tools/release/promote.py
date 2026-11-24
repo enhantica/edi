@@ -21,11 +21,21 @@ PLATFORMS = {'Linux': 'linux-x86_64', 'macOS': 'macos-arm64', 'Windows': 'window
 ROOT = Path(__file__).resolve().parents[2]
 # The one installer file users download (edi ADR-0071); Linux keeps its runtime libraries in a ZIP.
 INSTALLER_SUFFIXES = {'linux-x86_64': '.zip', 'macos-arm64': '.dmg', 'windows-x86_64': '.exe'}
+# The platform as installer names show it (tools/installer/package.py INSTALLER_PLATFORM).
+INSTALLER_PLATFORMS = {
+    'linux-x86_64': 'Linux-x64',
+    'macos-arm64': 'macOS-arm64',
+    'windows-x86_64': 'Windows-x64',
+}
 
 
 def installer_name(version: str, platform: str, kind: str) -> str:
     """The file name of a platform's online or offline installer download."""
-    return f'EasyDiffraction-{version}-{platform}-{kind}{INSTALLER_SUFFIXES[platform]}'
+    offline = '-Offline' if kind == 'offline' else ''
+    return (
+        f'EasyDiffraction-Installer{offline}-{version}-{INSTALLER_PLATFORMS[platform]}'
+        f'{INSTALLER_SUFFIXES[platform]}'
+    )
 
 
 def api(repo: str, suffix: str) -> dict:
