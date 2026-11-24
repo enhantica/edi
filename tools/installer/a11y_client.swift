@@ -112,7 +112,21 @@ func visit(_ element: AXUIElement, depth: Int, into placed: inout [Placed], tall
 
 // The page's layout rules (owner, 2026-11-23): one left edge, gaps on the spacing scale, no clipped text, no frame
 // mostly empty. Content lies between the header (the logo, at the top) and the row of wizard buttons.
-let steps: [CGFloat] = [0, 4, 8, 12, 16, 24, 32]
+// Two gaps on every page of every walk: 8 between rows, 16 (the page's own spacing) between a page's text and what
+// follows it, its field or its own rows. Any other gap is a fault on whichever page shows it.
+let rowGap: CGFloat = 8
+let sectionGap: CGFloat = 16
+var gapsSeen: [Int: Int] = [:]
+
+// Rich text shows each inline image (the logo) as one object replacement character; it is no text to measure.
+func plain(_ text: String) -> String {
+    text.replacingOccurrences(of: "\u{FFFC}", with: "").trimmingCharacters(in: .whitespacesAndNewlines)
+}
+
+func named(_ item: Placed) -> String {
+    let text = plain(item.text)
+    return text.isEmpty ? "(image)" : text
+}
 let wizardButtons: Set<String> = ["Back", "Next", "Install", "Cancel", "Finish", "Uninstall", "Update", "Quit"]
 let font = NSFont(name: "Helvetica Neue", size: 14) ?? NSFont.systemFont(ofSize: 14)
 var reported = Set<String>()
@@ -153,10 +167,10 @@ func check(window: CGRect, title: String, placed: [Placed]) -> Bool {
     func drawnX(_ item: Placed) -> CGFloat { item.frame.minX }
     let edge = firsts.map(drawnX).min() ?? 0
     let leader = firsts.min { drawnX($0) < drawnX($1) }
-    pageEdges[title, default: [:]][Int((edge - window.minX).rounded())] = "\(leader?.role ?? "") '\(leader?.text ?? "")'"
+    pageEdges[title, default: [:]][Int((edge - window.minX).rounded())] = "\(leader?.role ?? "") '\(leader.map(named) ?? "")'"
     // Exactly one edge: frames are in whole points, and a widget the native style moves off its cell is 2 off.
     for item in firsts where abs(drawnX(item) - edge) > 0.5 {
-        problems.append("left edge \(Int(drawnX(item) - edge)) px off: \(item.role) '\(item.text)'")
+        problems.append("left edge \(Int(drawnX(item) - edge)) px off: \(item.role) '\(named(item))'")
     }
     // Boxes of one kind on a page start at one x and are one height: a box moved or cut by its widget's frame starts
     // further right (its indicator is clipped on the left), a box with an inner margin is taller.
@@ -187,10 +201,12 @@ func check(window: CGRect, title: String, placed: [Placed]) -> Bool {
     }
     for (above, below) in zip(firsts, firsts.dropFirst()) {
         let gap = drawn(below).minY - drawn(above).maxY
+        gapsSeen[Int(gap.rounded()), default: 0] += 1
         if gap < -0.5 {
-            problems.append("overlap \(Int(-gap)) px between '\(above.text)' and '\(below.text)'")
-        } else if !steps.contains(where: { abs($0 - gap) <= 0.5 }) {
-            problems.append("gap \(Int(gap)) px between '\(above.text)' and '\(below.text)'")
+            problems.append("overlap \(Int(-gap)) px between '\(named(above))' and '\(named(below))'")
+        } else if abs(gap - rowGap) > 0.5 && abs(gap - sectionGap) > 0.5 {
+            problems.append("gap \(Int(gap)) px between '\(named(above))' and '\(named(below))': "
+                + "neither the row gap \(Int(rowGap)) nor the section gap \(Int(sectionGap))")
         }
     }
     // Every text on the window, wrapped or not: no word wider than its frame, and the wrapped text no taller.
@@ -201,17 +217,19 @@ func check(window: CGRect, title: String, placed: [Placed]) -> Bool {
     {
         let indicator: CGFloat = item.role == "AXCheckBox" || item.role == "AXRadioButton" ? 28 : 0
         let available = max(item.frame.width - indicator, 1)
-        let word = item.text.split(whereSeparator: { $0.isWhitespace })
+        let text = plain(item.text)
+        guard !text.isEmpty else { continue }
+        let word = text.split(whereSeparator: { $0.isWhitespace })
             .map { (String($0) as NSString).size(withAttributes: [.font: font]).width }.max() ?? 0
-        let needed = (item.text as NSString).boundingRect(
+        let needed = (text as NSString).boundingRect(
             with: CGSize(width: available, height: .greatestFiniteMagnitude),
             options: [.usesLineFragmentOrigin, .usesFontLeading], attributes: [.font: font]
         ).height
         if word > available + 2 {
-            problems.append("clipped: \(item.role) '\(item.text)' has a word \(Int(word)) px wide in \(Int(available))")
+            problems.append("clipped: \(item.role) '\(text)' has a word \(Int(word)) px wide in \(Int(available))")
         } else if needed > item.frame.height + lineHeight / 2 {
             // Half a line of slack for font metrics; a line that does not fit is a whole line short.
-            problems.append("clipped: \(item.role) '\(item.text)' needs \(Int(needed)) px high, has \(Int(item.frame.height))")
+            problems.append("clipped: \(item.role) '\(text)' needs \(Int(needed)) px high, has \(Int(item.frame.height))")
         }
     }
     for box in content where box.role == "AXScrollArea" {
@@ -243,6 +261,11 @@ while kill(pid, 0) == 0 {
                 tally.laidOut = check(window: box, title: string(window, kAXTitleAttribute), placed: placed)
             }
             if let page = before, !page.isEmpty, page == currentPage() {
+                // Read in full: the walk may leave the page (Installer.qs waits for this).
+                if tally.reads > 0 && tally.laidOut, let log = pageLog {
+                    let ack = (log as NSString).deletingLastPathComponent + "/ack"
+                    try? page.write(toFile: ack, atomically: true, encoding: .utf8)
+                }
                 if witnessed[page] == nil { witnessOrder.append(page) }
                 var sum = witnessed[page] ?? Tally()
                 sum.reads += tally.reads
@@ -262,6 +285,8 @@ for page in witnessOrder {
     let seen = witnessed[page]!
     print("witness: \(page) reads=\(seen.reads) layout=\(seen.laidOut ? 1 : 0) trees=\(seen.trees)")
 }
+let gapList = gapsSeen.keys.sorted().map { "\($0) px ×\(gapsSeen[$0]!)" }.joined(separator: ", ")
+print("row gaps on all pages: \(gapList.isEmpty ? "none" : gapList)")
 print("layout-pages: \(pagesChecked)")
 print("a11y-client: \(trees) tree elements")
 print("a11y-client: \(queries) multiple-attribute queries")

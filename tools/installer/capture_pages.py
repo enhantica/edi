@@ -111,21 +111,23 @@ class ScreenFrames(threading.Thread):
 
 
 def run_pages(
-    command: list, env: dict, log: Path, pages: Path | None = None, allowed: tuple = (0,)
+    command: list, env: dict, log: Path, pages: Path, finished: str, allowed: tuple = (0,)
 ) -> None:
-    """Run a wizard whose pages move on by themselves; it ends at its last page."""
-    frames = ScreenFrames(pages, log.stem) if SYSTEM == 'windows' and pages else None
+    """Run a wizard whose pages move on by themselves; it ends at its last page, `finished`."""
+    frames = ScreenFrames(pages, log.stem) if SYSTEM == 'windows' else None
     if frames:
         frames.start()
     try:
-        _run_wizard(command, env, log, allowed)
+        _run_wizard(command, env, log, pages, finished, allowed)
     finally:
         if frames:
             frames.done.set()
             frames.join(timeout=90)
 
 
-def _run_wizard(command: list, env: dict, log: Path, allowed: tuple = (0,)) -> None:
+def _run_wizard(
+    command: list, env: dict, log: Path, pages: Path, finished: str, allowed: tuple
+) -> None:
     with log.open('w', encoding='utf-8') as stream:
         result = subprocess.run(
             # On Windows the wizard stays attached, and logs, only with --verbose.
@@ -133,8 +135,7 @@ def _run_wizard(command: list, env: dict, log: Path, allowed: tuple = (0,)) -> N
             env=env, stdout=stream, stderr=subprocess.STDOUT, timeout=240, check=False,
         )  # fmt: skip
         stream.write(f'\nexit {result.returncode}\n')
-    if result.returncode not in allowed:
-        raise RuntimeError(f'{command[0]} ended with {result.returncode}; its log is {log}')
+    rc = result.returncode
     # On Windows the wizard can return at once and go on in a process of its own: wait for it.
     deadline = time.monotonic() + 240
     image = Path(command[0]).name
@@ -142,6 +143,14 @@ def _run_wizard(command: list, env: dict, log: Path, allowed: tuple = (0,)) -> N
         if time.monotonic() > deadline:
             raise RuntimeError(f'{image} still runs after 240 s')
         time.sleep(2)
+    walked = current_page(pages) == finished
+    # The Framework on Linux crashes as it quits (SIGSEGV) after the walk is done; that alone
+    # passes, and only once the walk showed its last page.
+    quit_crash = SYSTEM == 'linux' and rc == -11 and walked
+    # A maintenance tool left on its last page's Cancel button ends with 1 after its work
+    # (Installer.qs), so 1 also needs that last page shown.
+    if not quit_crash and (rc not in allowed or (rc == 1 and not walked)):
+        raise RuntimeError(f'{command[0]} ended with {rc}; its log is {log}')
 
 
 SCREEN = (
@@ -194,7 +203,8 @@ def capture_disk_image(image: Path, pages: Path, theme: str) -> None:
         capture_output=True, check=True, timeout=120,
     )  # fmt: skip
     entities = plistlib.loads(attached.stdout)['system-entities']
-    mounted = [e['dev-entry'] for e in entities if e.get('mount-point') == str(mount)]
+    # hdiutil names the mount point with its links resolved (/private/var/... for /var/...).
+    mounted = [e['dev-entry'] for e in entities if e.get('mount-point') == os.path.realpath(mount)]
     if len(mounted) != 1:
         raise RuntimeError(f'hdiutil did not mount {image} at {mount}: {entities}')
     # The whole image's device (/dev/diskN), not only its volume's slice.
@@ -273,7 +283,11 @@ def capture(tools: Path, output: Path) -> None:
         if target.exists():
             raise RuntimeError(f'The capture target already exists: {target}')
         run_pages(
-            [str(installer), f'TargetDir={target}'], env, output / f'installer-{theme}.log', pages
+            [str(installer), f'TargetDir={target}'],
+            env,
+            output / f'installer-{theme}.log',
+            pages,
+            f'installer-Finished-{theme}',
         )
         maintenance = target / (
             'MaintenanceTool.app/Contents/MacOS/MaintenanceTool'
@@ -284,9 +298,10 @@ def capture(tools: Path, output: Path) -> None:
             raise RuntimeError(f'The installer left no maintenance tool in {target}')
         app = target / APP_MARKER
         assistant = target / ASSISTANT_RUNTIME / 'assistant.txt'
-        if app.read_text(encoding='utf-8') != 'marker\n' or assistant.exists():
+        # The install page's assistant box starts ticked, so the walk installs the assistant too.
+        if app.read_text(encoding='utf-8') != 'marker\n' or not assistant.exists():
             raise RuntimeError(
-                f'The capture installation is not the first version alone: {target}'
+                f'The capture installation is not the first version with the assistant: {target}'
             )
         # Each maintenance mode in turn; removing everything comes last.
         for mode in ('add', 'update', 'remove'):
@@ -295,8 +310,9 @@ def capture(tools: Path, output: Path) -> None:
                 env | {'EDI_INSTALLER_MAINTENANCE_MODE': mode},
                 output / f'maintenance-{mode}-{theme}.log',
                 pages,
-                # A tool that updated itself hands over to its restart (1) or the walk closes it
-                # (3); require_pages still demands its pages.
+                f'maintenance-{mode}-Finished-{theme}',
+                # Left on its Cancel button (1) or closed by the walk (3); require_pages still
+                # demands its pages.
                 allowed=(0, 1, 3),
             )
             check_maintenance(mode, target, app, assistant, maintenance)
@@ -349,6 +365,7 @@ WALKS = {
     ],
     'maintenance-update': [
         'Introduction',
+        'AssistantForm',
         'ReadyForInstallation',
         'PerformInstallation',
         'Finished',
