@@ -55,13 +55,6 @@
        </property>
       </widget>
      </item>
-     <item>
-      <spacer name="OpenRowSpacer">
-       <property name="orientation">
-        <enum>Qt::Horizontal</enum>
-       </property>
-      </spacer>
-     </item>
     </layout>
    </item>
    <item>
