@@ -178,13 +178,25 @@ func check(window: CGRect, title: String, placed: [Placed]) -> Bool {
             problems.append("gap \(Int(gap)) px between '\(above.text)' and '\(below.text)'")
         }
     }
-    for item in content where ["AXStaticText", "AXCheckBox", "AXRadioButton", "AXButton"].contains(item.role) {
-        let lines = item.text.split(separator: "\n")
-        guard lines.count == 1, item.frame.height < 40 else { continue }
+    // Every text on the window, wrapped or not: no word wider than its frame, and the wrapped text no taller.
+    let lineHeight = font.ascender - font.descender + font.leading
+    for item in placed where ["AXStaticText", "AXCheckBox", "AXRadioButton", "AXButton"].contains(item.role)
+        && !item.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        && item.frame.width > 1 && item.frame.height > 1
+    {
         let indicator: CGFloat = item.role == "AXCheckBox" || item.role == "AXRadioButton" ? 28 : 0
-        let width = (String(lines[0]) as NSString).size(withAttributes: [.font: font]).width + indicator
-        if width > item.frame.width + 2 {
-            problems.append("clipped: \(item.role) '\(item.text)' needs \(Int(width)) px, has \(Int(item.frame.width))")
+        let available = max(item.frame.width - indicator, 1)
+        let word = item.text.split(whereSeparator: { $0.isWhitespace })
+            .map { (String($0) as NSString).size(withAttributes: [.font: font]).width }.max() ?? 0
+        let needed = (item.text as NSString).boundingRect(
+            with: CGSize(width: available, height: .greatestFiniteMagnitude),
+            options: [.usesLineFragmentOrigin, .usesFontLeading], attributes: [.font: font]
+        ).height
+        if word > available + 2 {
+            problems.append("clipped: \(item.role) '\(item.text)' has a word \(Int(word)) px wide in \(Int(available))")
+        } else if needed > item.frame.height + lineHeight / 2 {
+            // Half a line of slack for font metrics; a line that does not fit is a whole line short.
+            problems.append("clipped: \(item.role) '\(item.text)' needs \(Int(needed)) px high, has \(Int(item.frame.height))")
         }
     }
     for box in content where box.role == "AXScrollArea" {
