@@ -44,6 +44,8 @@ EaComponents.ContentPage {
     property alias mainTabs: mainContent.tabs
     property alias mainItems: mainContent.items
     property alias basicItem: basicLoader.sourceComponent
+    // The page and its Main sidebar tab are both current: what that tab's groups show is on screen.
+    readonly property bool basicShown: current && basicLoader.SwipeView.isCurrentItem
     property Component extrasItem: null
     property Component textItem: null
     // The page's Settings tab (edi ADR-0031 §2): its view options, kept in the app's settings under the page's name,
@@ -107,17 +109,99 @@ EaComponents.ContentPage {
     function placeSideBar() {
         ApplicationInfo.placeWorkflowSidebar();
         followOwnBorder();
+        placeBelow();
+    }
+    // In a narrow window the sidebar is under the main view, full width, above the status bar, taking what the main
+    // view's minimum leaves (ADR-0103 decision 3).
+    // Both layouts set every anchor they use from the page itself, so switching back needs nothing remembered; the side
+    // layout's left and right anchors are the base's placement (placeWorkflowSidebar).
+    property bool sideBarBelow: false
+    function placeBelow() {
+        const main = mainContent.parent, side = sideBar.parent;
+        if (!main || !side)
+            return;
+        const below = EaStyle.Sizes.sideBarBelow;
+        if (below) {
+            side.anchors.left = undefined;
+            side.anchors.right = undefined;
+            side.anchors.top = undefined;
+            side.anchors.left = page.left;
+            side.anchors.right = page.right;
+            side.anchors.bottom = page.bottom;
+            // Half the window's height (the owner, 2026-11-23), less what the project's pattern needs (2026-11-24).
+            side.height = Qt.binding(() => AppSizes.bottomSideBarHeight(page.height, page.Window.height > 0 ? page.Window.height : page.height, Session.project ? Session.project.patternBraggRows : 0));
+            main.anchors.left = undefined;
+            main.anchors.right = undefined;
+            main.anchors.bottom = undefined;
+            main.anchors.left = page.left;
+            main.anchors.right = page.right;
+            main.anchors.top = page.top;
+            main.anchors.bottom = side.top;
+        } else if (sideBarBelow) {
+            side.anchors.top = undefined;
+            side.anchors.bottom = undefined;
+            side.anchors.left = undefined;
+            side.anchors.right = undefined;
+            main.anchors.top = undefined;
+            main.anchors.bottom = undefined;
+            main.anchors.left = undefined;
+            main.anchors.right = undefined;
+            side.anchors.top = page.top;
+            side.anchors.bottom = page.bottom;
+            main.anchors.top = page.top;
+            main.anchors.bottom = page.bottom;
+            // Anchoring both edges below replaced the base's width binding; it is given back.
+            side.width = Qt.binding(() => EaStyle.Sizes.sideBarWidth);
+            if (Preferences.sideBarOnLeft) {
+                side.anchors.left = page.left;
+                main.anchors.left = side.right;
+                main.anchors.right = page.right;
+            } else {
+                side.anchors.right = page.right;
+                main.anchors.left = page.left;
+                main.anchors.right = side.left;
+            }
+            ApplicationInfo.placeWorkflowSidebar();
+            followOwnBorder();
+        }
+        sideBarBelow = below;
+    }
+    Connections {
+        target: EaStyle.Sizes
+        // Later, once the width and every other binding of the switch have settled.
+        function onSideBarBelowChanged() {
+            Qt.callLater(page.placeSideBar);
+        }
     }
     // Hides the sidebar's own border, the base's thin child beside it, while the one main view draws a fixed one: the
     // page's border would slide with the page and pass under the main view.
     property bool ownBorderHidden: false
+    // The side border's colour, read from the base's border, for the one drawn above the sidebar when it is below.
+    property color borderColour: "transparent"
     function followOwnBorder() {
         const host = sideBar.parent;
         for (let index = 0; host && index < host.children.length; ++index) {
             const child = host.children[index];
-            if (child !== sideBar && child.width === EaStyle.Sizes.borderThickness)
-                child.visible = Qt.binding(() => !page.ownBorderHidden);
+            if (child !== sideBar && child !== belowBorder && child.width === EaStyle.Sizes.borderThickness) {
+                child.visible = Qt.binding(() => !page.ownBorderHidden && !page.sideBarBelow);
+                if (child.color !== undefined)
+                    page.borderColour = Qt.binding(() => child.color);
+            }
         }
+    }
+    // Below the main view the sidebar is parted from it by the same border, run along its top, full width, above its
+    // tab bar (the owner, 2026-11-23).
+    Rectangle {
+        id: belowBorder
+        objectName: "workflow." + page.pageName + ".belowBorder"
+        parent: sideBar.parent
+        visible: page.sideBarBelow
+        z: 10
+        anchors.left: parent ? parent.left : undefined
+        anchors.right: parent ? parent.right : undefined
+        anchors.top: parent ? parent.top : undefined
+        height: EaStyle.Sizes.borderThickness
+        color: page.borderColour
     }
 
     Connections {
@@ -127,13 +211,35 @@ EaComponents.ContentPage {
         }
     }
 
+    // The sidebar's width as asked and as drawn, in the log at start and after each resize of the shown page: a
+    // platform where the two differ shows it there (the owner, 2026-11-21: narrow on macOS, right on Linux).
+    function logSideBar() {
+        if (page.current && sideBar.parent)
+            console.info(`sidebar: page ${page.pageName} window ${page.Window.width} appWidth ${AppSizes.appWidth} sideBarWidth ${EaStyle.Sizes.sideBarWidth} side ${sideBar.parent.width} below ${EaStyle.Sizes.sideBarBelow} switch ${AppSizes.sideBarBelowWidth} tabs ${AppSizes.mainTabsWidth}`);
+    }
+    Connections {
+        target: sideBar.parent
+        function onWidthChanged() {
+            Qt.callLater(page.logSideBar);
+        }
+    }
+    Connections {
+        target: AppSizes
+        function onAppWidthChanged() {
+            Qt.callLater(page.logSideBar);
+        }
+    }
+
     // The Text tab knows whether it is shown and which block the page shows, so leaving an edit not yet applied asks
     // first; kept, the page, the tab and the block come back (edi ADR-0017 §7).
     property int pageIndex: -1
     // The Text tab's edit is not yet applied: its loader stays active until the user discards it. Set from the tab's
     // signal, so the loader's `active` never reads its own item.
     property bool textDirty: false
-    onCurrentChanged: ApplicationInfo.workflowCurrentChanged()
+    onCurrentChanged: {
+        ApplicationInfo.workflowCurrentChanged();
+        Qt.callLater(page.logSideBar);
+    }
     Binding {
         target: textLoader.item
         property: "shown"
@@ -176,6 +282,7 @@ EaComponents.ContentPage {
             visible: page.blockSelectorShown && page.blocks !== null && page.blocks.count > 0
             areaWidth: mainContent.width
             rightInset: page.blockSelectorRightInset
+            current: page.current
             blocks: page.blocks
             blocksTextRole: page.blocksTextRole
             blockKind: page.blockKind
@@ -196,9 +303,43 @@ EaComponents.ContentPage {
         }
     }
 
+    // The sidebar's width choice at the right end of its tab bar, its right edge where the groups' pins end (the owner,
+    // 2026-11-22), and in Manual the sidebar's left edge to drag.
+    SideBarWidthButton {
+        parent: sideBar
+        z: 2
+        visible: !EaStyle.Sizes.sideBarBelow
+        anchors.right: parent ? parent.right : undefined
+        // The groups' pins end at the content's right padding; the icon, as wide as a pin, ends there too.
+        anchors.rightMargin: EaStyle.Sizes.sideBarPadding
+        y: Math.round((EaStyle.Sizes.tabBarHeight - height) / 2)
+    }
+    MouseArea {
+        parent: sideBar
+        z: 2
+        visible: Preferences.sideBarWidthMode === "manual" && !EaStyle.Sizes.sideBarBelow
+        x: -Math.round(EaStyle.Sizes.fontPixelSize * 0.3)
+        width: Math.round(EaStyle.Sizes.fontPixelSize * 0.6)
+        height: parent ? parent.height : 0
+        cursorShape: Qt.SplitHCursor
+        property real startX: 0
+        property int startWidth: 0
+        onPressed: mouse => {
+            startX = mapToItem(null, mouse.x, 0).x;
+            startWidth = EaStyle.Sizes.sideBarWidth;
+        }
+        onPositionChanged: mouse => {
+            if (pressed)
+                Preferences.sideBarManualWidth = Math.round(Math.max(EaStyle.Sizes.fontPixelSize * 20, Math.min(AppSizes.sideBarMaximumFor(AppSizes.appWidth), startWidth - (mapToItem(null, mouse.x, 0).x - startX))));
+        }
+    }
+
     sideBar: EaComponents.SideBar {
         id: sideBar
         objectName: "workflow." + page.pageName + ".manualSidebar"
+        // Laid out only on the shown page: the sidebar's width is one for every page, and a change of it on a page
+        // switch laid every page's sidebar out again (ADR-0102; the owner, 2026-11-23).
+        visible: page.current
         // Remain painted at full theme colors under the sliding sheet. Popup's
         // local input shield and actual strip focus guard own covered input.
 
@@ -222,24 +363,30 @@ EaComponents.ContentPage {
             }
         ]
 
+        // As the main area's pages (MainView): a tab that is not the current one draws nothing, while staying loaded and
+        // visible for everything that reads it.
         items: [
             Loader {
                 id: basicLoader
+                opacity: SwipeView.isCurrentItem ? 1 : 0
             },
             Loader {
                 id: extrasLoader
+                opacity: SwipeView.isCurrentItem ? 1 : 0
                 sourceComponent: page.extrasItem === null ? inviteNote : page.extrasEnabled ? page.extrasItem : waitingNote
             },
             // Text is loaded only while its tab is shown, a block's text can be the whole data loop, or while it
             // holds an edit not yet applied, until the user discards it.
             Loader {
                 id: textLoader
+                opacity: SwipeView.isCurrentItem ? 1 : 0
                 active: SwipeView.isCurrentItem || page.textDirty
                 sourceComponent: page.textItem === null ? inviteNote : page.textEnabled ? page.textItem : waitingNote
                 onItemChanged: ApplicationInfo.workflowTextItemChanged()
             },
             Loader {
                 id: settingsLoader
+                opacity: SwipeView.isCurrentItem ? 1 : 0
                 sourceComponent: page.settingsItem ?? inviteNote
             }
         ]
@@ -258,11 +405,12 @@ EaComponents.ContentPage {
         // On the Text tab the tabs' view reaches the bottom of the sidebar, so the text view can run down to it
         // with Continue kept in its place, drawn over the text with the base's fade (edi ADR-0017 §7). The base
         // anchors the view's bottom a font unit above Continue's top, or above the sidebar's bottom without
-        // Continue; the other tabs keep that.
+        // Continue; with Continue the other tabs keep that, and without it every tab reaches the bottom, so a table can
+        // use that strip (T7).
         Binding {
             target: basicLoader.SwipeView.view ? basicLoader.SwipeView.view.anchors : null
             property: "bottomMargin"
-            when: textLoader.SwipeView.isCurrentItem
+            when: textLoader.SwipeView.isCurrentItem || !page.continueShown
             value: page.continueShown ? -(sideBar.continueButton.height + sideBar.continueButton.anchors.bottomMargin) : 0
         }
     }

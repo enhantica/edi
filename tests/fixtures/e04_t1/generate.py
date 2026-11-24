@@ -717,7 +717,7 @@ def loader_warning(analysis, experiments, metadata, project_id=None):
         if al1['adp_iso']['value'] != -0.13591 or al1['adp_type'] != 'Biso':
             raise ValueError('YAP warning witness must retain the FullProf Al1 Biso')
         warnings.append(
-            'Warning: structures[Al2O3].atom_sites[Al1].adp_iso = -0.13591 '
+            'Warning: Al2O3.atom_site.Al1.adp_iso = -0.13591 '
             'is outside its admissible range [0, 10]; loaded as saved '
             '(a fit may leave a value there)'
         )

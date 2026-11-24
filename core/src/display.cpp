@@ -82,6 +82,16 @@ std::string item_dtype(std::string_view uid) {
 
 std::string label(std::string_view uid, std::string_view variant) { return item(uid).display_name_for(variant); }
 
+// An experiment's agreement row holds its χ², the weighted sum of squared residuals, not the χ² per degree of freedom
+// its dictionary entry names.
+std::string shown_label(std::string_view uid, std::string_view variant) {
+    return uid == "fit_result_bank.chi_square" ? std::string("χ²") : label(uid, variant);
+}
+
+std::string shown_description(std::string_view uid) {
+    return uid == "fit_result_bank.chi_square" ? std::string("The experiment's χ², the weighted sum of its squared residuals.") : description(uid);
+}
+
 std::string units_label(std::string_view uid, std::string_view variant) {
     return item(uid).display_units_for(variant);
 }

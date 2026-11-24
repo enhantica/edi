@@ -103,8 +103,8 @@ the diagnostic, display the effective `crysta` minimizer, and preserve the store
 legacy token in Text. Qt warnings are still fatal.
 If the visible warning is modal, its close control is `warning.dismiss`.
 
-The YAP example's warning expectation changes from empty to exactly:
-`Warning: structures[Al2O3].atom_sites[Al1].adp_iso = -0.13591 is outside its admissible range [0, 10]; loaded as saved (a fit may leave a value there)`.
+The YAP example's warning names the saved block, category, row and item exactly:
+`Warning: Al2O3.atom_site.Al1.adp_iso = -0.13591 is outside its admissible range [0, 10]; loaded as saved (a fit may leave a value there)`.
 The Al1 Biso is retained from `knowledge/fitting/fullprof/pd-neut-cwl_yap-spodi_3k/yap_3k.pcr`
 and `asymmetry-off.inp`, also stored in that CLI project's `structures/Al2O3.edi`.
 The declared ADP range is [0, 10]. `generate.py` requires this exact saved Biso

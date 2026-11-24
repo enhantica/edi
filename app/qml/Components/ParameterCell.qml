@@ -21,13 +21,14 @@ EaComponents.ListViewParameter {
     id: cell
 
     errorTitle: qsTr("s.u.")
-    fitTitle: qsTr("free")
+    fitTitle: qsTr("Free")
 
     property ParameterItem item: null
     // The value shown as usual, free in green bold, with its context menu (free or fixed), but not typed into: an
     // auto-estimated background's points or terms (the owner, 2026-10-20). readOnly would grey it and hide the toggle.
     property bool locked: false
-    activeFocusOnPress: !locked
+    // No inline editing from a mouse press: a click opens the popup (ADR-0103 decision 6).
+    activeFocusOnPress: false
     // A cell locked while it has the focus keeps it until the focus moves: Qt refuses to take it from the focused item.
     activeFocusOnTab: !locked || activeFocus
     // Why the last typed text was refused before reaching the core; the core's own refusal is the item's.
@@ -65,7 +66,9 @@ EaComponents.ListViewParameter {
     // The value as the project file and the Text tab spell it (edi ADR-0051); a parameter the dictionary does not know
     // by the app's rule for numbers.
     readonly property bool written: item !== null && item.fileValue !== ""
-    readonly property string valueText: written ? item.fileValue : item !== null ? NumberText.parameter(item.value, item.hasUncertainty ? item.uncertainty : 0, significantDigits) : ""
+    // As the file writes it, unless that has more significant digits than the cell shows (the owner, 2026-11-22: at most
+    // six): then by the rule for numbers. The full spelling stays in the tooltip and the editor.
+    readonly property string valueText: written && NumberText.significantDigitsOf(item.fileValue) <= significantDigits ? item.fileValue : item !== null ? NumberText.parameter(item.value, item.hasUncertainty ? item.uncertainty : 0, significantDigits) : ""
     // Its scientific form: the written token's own digits, every one of them (NumberText.compact); without one, digits
     // that follow the uncertainty and the project's rule when the plain text does not change (9e5 or 9.0e5 for
     // 900000 ± 200000).
@@ -97,8 +100,10 @@ EaComponents.ListViewParameter {
         font.pixelSize: cell.scaledPixelSize
         font.bold: cell.fit && cell.enabled
     }
-    // Measured at the full size: a width that followed the smaller text would change the room it is made smaller for.
-    implicitWidth: implicitBackgroundWidth + leftInset + rightInset || (fitDigits ? Math.ceil(fullMetrics.advanceWidth(valueText)) : contentWidth) + leftPadding + rightPadding
+    // The value as written, at the full size, and its padding: the column fits its content, never the field's
+    // background (the owner, 2026-11-23). A width that followed a shortened text would change the room it is
+    // shortened for.
+    implicitWidth: Math.ceil(fullMetrics.advanceWidth(valueText)) + leftPadding + rightPadding
     font.pixelSize: fitDigits && scaledPixelSize > 1 && scaledPixelSize < EaStyle.Sizes.fontPixelSize && scaledMetrics.advanceWidth(fullText) > room ? scaledPixelSize - 1 : scaledPixelSize
     readonly property bool overflows: contentWidth > width - leftPadding - rightPadding
     horizontalAlignment: overflows ? Text.AlignLeft : columnAlignment
@@ -107,7 +112,12 @@ EaComponents.ListViewParameter {
     // The value as edited: the same text, so a cell left as it was changes nothing.
     readonly property string editText: written ? item.fileEditValue : item !== null ? NumberText.full(item.value) : value
 
-    onActiveFocusChanged: ApplicationInfo.parameterEditorFocusChanged(ApplicationInfo.ParameterCellEditor)
+    // Fitted again once an edit has settled: the column may have changed while the cell was edited.
+    onActiveFocusChanged: {
+        ApplicationInfo.parameterEditorFocusChanged(ApplicationInfo.ParameterCellEditor);
+        if (!activeFocus)
+            Qt.callLater(refit);
+    }
     onTextChanged: ApplicationInfo.editorTextChanged()
     // A free value is in the status bar's green, the one green token (EaStyle.Colors.green; the owner, 2026-10-22).
     color: warned ? EaStyle.Colors.red : !enabled || readOnly ? EaStyle.Colors.themeForegroundMinor : item && item.free && canFit ? EaStyle.Colors.green : EaStyle.Colors.themeForeground
@@ -220,4 +230,33 @@ EaComponents.ListViewParameter {
         ApplicationInfo.editorCommit(ApplicationInfo.ParameterCellEditor);
     }
     onFitToggled: checked => ApplicationInfo.parameterEditorFitToggled(checked)
+
+    // The parameter's menu (ADR-0103 decision 6): the base cell's own menu (ListViewParameter), opened by a click, a
+    // double click or Enter at the cell as well as by a right click, with the value in a full-width editor (the form
+    // field's, with its units, s.u. and checks) and the range beside it; Escape closes it, the hover tooltip stays.
+    clickOpensMenu: item !== null
+    // The menu's link names the parameter in full (its path), every table alike.
+    fullName: item ? item.fullName : ""
+    minimumText: item ? ApplicationInfo.parameterBound(item.minimum) : ""
+    maximumText: item ? ApplicationInfo.parameterBound(item.maximum) : ""
+    editorComponent: Component {
+        ParameterField {
+            objectName: cell.objectName + ".popup.value"
+            item: cell.item
+            // Typed into here: the popup's own editor opens no popup.
+            opensPopup: false
+            // No name line over the value: the menu's first column names it (the owner, 2026-11-22).
+            label: ""
+            // A locked cell's value (an auto background's) is shown, not typed into, here as in the cell.
+            readOnly: cell.locked
+        }
+    }
+    Keys.onReturnPressed: event => {
+        if (!cell.manualEditing && cell.item !== null) {
+            cell.openContextMenu(cell);
+            event.accepted = true;
+        } else {
+            event.accepted = false;
+        }
+    }
 }

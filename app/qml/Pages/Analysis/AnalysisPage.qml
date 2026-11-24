@@ -85,8 +85,9 @@ WorkflowPage {
                 visible: page.measured
                 project: page.project
             }
+            // Only a scan's fit redraws the pattern as it goes (edi ADR-0029).
             PatternUpdatesGroup {
-                visible: page.measured
+                visible: page.measured && page.scanMode
             }
             PerformanceGroup {
                 visible: page.measured && page.scanMode

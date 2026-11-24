@@ -25,7 +25,9 @@ Column {
         defaultInfoText: qsTr("No preferred orientation")
         sourceModel: group.rows
 
-        columns: [numberColumnWidth, -1, -1, -1, -1, -1, -1, AppSizes.iconColumnWidth]
+        // Its columns by kind (the shared column model, DataTable.columnKinds; ADR-0103 decision 4).
+        columnKinds: ["index", "text", "short", "short", "short", "number", "number", "control"]
+        // Widths from column types, not rows (ADR-0103 rule 4): an id or label, then values.
 
         header: EaComponents.ListViewHeader {
             EaComponents.ListViewLabel {

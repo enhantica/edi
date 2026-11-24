@@ -394,10 +394,12 @@ TestCase {
                   "The real Manual calculation must settle before committing its point edit");
         const cell = Ui.find(enablementGroup, "background.intensity.0", true);
         verify(cell !== null, "The loaded Auto-row control must expose its real height editor on Main");
-        Ui.scrollIntoView(cell);
-        cell.forceActiveFocus();
-        verify(SettingsProof.type(cell, "8.125"), "After selecting Manual the loaded point must receive a real height edit");
-        verify(SettingsProof.key(cell, Qt.Key_Return), "Return must commit the manual background point edit");
+        const popup = Ui.parameterPopup(test, cell);
+        const editor = Ui.parameterValue(test, cell, popup);
+        Ui.focusParameter(test, editor);
+        verify(SettingsProof.type(editor, "8.125"), "After selecting Manual the loaded point must receive a real height edit");
+        verify(SettingsProof.key(editor, Qt.Key_Return), "Return must commit the manual background point edit");
+        popup.close();
         const destination = Probe.scratchProjectUrl();
         verify(Session.saveAs(destination), "The hand-edited automatic background must save");
         compare(savedSettings(destination).mode, "manual", "A real point edit must persist manual estimate mode");

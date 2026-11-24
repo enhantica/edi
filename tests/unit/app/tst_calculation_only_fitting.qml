@@ -210,9 +210,9 @@ TestCase {
             if (data.route.endsWith("signal")) {
                 noFreeChange(() => field.fitToggled(!scale().free), "The parameter menu's free signal cannot bypass the no-measured-data rule");
             } else {
-                input(field, Qt.RightButton);
-                tryVerify(() => field.fitCheckBox !== null, 1000, "The real parameter context menu exposes its free-toggle control");
-                verify(!field.fitCheckBox.visible || !field.fitCheckBox.enabled, "Value-cell and parameter-field menus cannot offer an active free toggle without measured data");
+                const popup = Ui.parameterPopup(test, field);
+                const toggle = Ui.parameterPopupItem(test, field, popup, "free");
+                verify(toggle !== null && (!toggle.visible || !toggle.enabled), "Value-cell and parameter-field menus cannot offer an active free toggle without measured data");
             }
         }
     }
@@ -255,12 +255,12 @@ TestCase {
         tryVerify(() => PatternProof.series(chart, "chart.series.calc").some(line => line.points.some(point => isFinite(point.y))), 3000, "The original calculated pattern reaches its actual chart series before the value edit");
         const drawnBefore = JSON.stringify(PatternProof.series(chart, "chart.series.calc"));
         recalculated.clear();
-        input(cell);
-        appWindow.requestActivate();
-        cell.forceActiveFocus();
-        tryCompare(cell, "activeFocus", true, 1000, "The real calculation-only value editor receives keyboard focus before typing");
-        verify(SettingsProof.type(cell, "2"), "The actual scale value editor accepts real keyboard text");
-        verify(SettingsProof.key(cell, Qt.Key_Return), "The actual scale editor commits through its ordinary Return handler");
+        const popup = Ui.parameterPopup(test, cell);
+        const editor = Ui.parameterValue(test, cell, popup);
+        Ui.focusParameter(test, editor);
+        verify(SettingsProof.type(editor, "2"), "The actual scale value editor accepts real keyboard text");
+        verify(SettingsProof.key(editor, Qt.Key_Return), "The actual scale editor commits through its ordinary Return handler");
+        popup.close();
         compare(scale().value, 2, "The requested nontrivial scale value is retained without enabling fitting");
         tryVerify(() => recalculated.count > 0 && !Session.project.calculating, 10000, "A calculation-only value edit publishes a real later calculation");
         ready();

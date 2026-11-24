@@ -61,13 +61,14 @@ DataTable {
 
     objectName: "singleCrystal.reflections"
     readOnly: true
-    maxRowCountShow: spareHeight > 0 ? Math.max(5, Math.floor((spareHeight - (headerItem ? headerItem.height : 0) - AppSizes.groupContentSpacing) / tableRowHeight - 0.5)) : EaStyle.Sizes.tableMaxRowCountShow
     defaultInfoText: qsTr("No reflections yet")
     sourceModel: experiment ? experiment.singleCrystalReflections : null
 
     // The Miller indices are short integers, so their columns are narrow and the numbers keep their room.
     readonly property real indexColumnWidth: EaStyle.Sizes.fontPixelSize * 2.5
     columns: [numberColumnWidth, indexColumnWidth, indexColumnWidth, indexColumnWidth, -1, -1, -1, -1, -1, -1].concat(timeOfFlight ? [-1] : []).concat([AppSizes.iconOnlyColumnWidth])
+    // Widths from column types, not rows (ADR-0103 rule 4): values after the fixed h, k, l.
+    defaultColumnType: "number"
 
     header: EaComponents.ListViewHeader {
         EaComponents.ListViewLabel {

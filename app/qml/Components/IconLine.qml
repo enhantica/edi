@@ -130,6 +130,9 @@ Item {
                 width: elided ? Math.max(0, Math.min(implicitWidth, line.maximumWidth - line.otherWidth + line.dropped.width)) : line.fixedWidth(modelData)
                 visible: !(isIcon && index < line.dropped.count)
                 elide: elided ? line.elide : Text.ElideNone
+                // Rich text (Rwp's subscript, a factor's superscript) is never elided by Qt: the cut piece is clipped
+                // to its width, so it never draws over the pieces beside it (the owner, 2026-11-22).
+                clip: elided
                 y: isIcon ? line.centreY - inkMiddle : textMetrics.ascent - baselineOffset
 
                 Rectangle {

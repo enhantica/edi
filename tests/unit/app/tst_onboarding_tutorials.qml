@@ -98,6 +98,7 @@ TestCase {
             compare(app.appBarCentralTabs.currentIndex, AppState.Page.Home, "The scientific lesson begins at Home Start");
             Ui.click(test, Probe, app, "home.start");
             tryCompare(panel, "step", createStep, 2000, "The learner's Start action advances to Project creation");
+            Ui.expandGroup(test, Probe, app, "group.getStarted");
             Ui.click(test, Probe, app, "project.create");
             const dialog = SettingsProof.creationDialog(app);
             verify(dialog !== null, "The ownership witness uses the real Create project form");

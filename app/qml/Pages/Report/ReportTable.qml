@@ -19,8 +19,16 @@ Flickable {
 
     property var columns: []
     property var rows: []
+    // A long table's rows stay in the report's C++ store: its key there, its row count, and the report holding it. The
+    // model then carries none of them, so a table of thousands of points costs nothing to convert or copy.
+    property var report: null
+    property string rowsKey: ""
+    property int storedRows: 0
+    readonly property int rowCount: rowsKey ? storedRows : rows.length
+    // The rows the columns are measured on: a stored table's evenly spread sample, else the rows.
+    readonly property var layoutRows: rowsKey && report ? report.sampleRows(rowsKey).map(line => line.split(cellSeparator)) : rows
     readonly property bool keyValue: columns.length === 0
-    readonly property int columnCount: keyValue ? (rows.length > 0 ? rows[0].length : 0) : columns.length
+    readonly property int columnCount: keyValue ? (layoutRows.length > 0 ? layoutRows[0].length : 0) : columns.length
     readonly property real em: EaStyle.Sizes.fontPixelSize
     // The reference's 20.4 pt line and 6 pt column padding for its 10.04 pt body, and its key column's 28 px.
     readonly property real rowHeight: Math.round(em * 20.4 / 10.04)
@@ -29,13 +37,15 @@ Flickable {
     readonly property real border: EaStyle.Sizes.borderThickness
     // A long table (an experiment's thousands of data points) shows a window of rows that scrolls; the list builds each
     // row as it comes into view, so the preview stays responsive.
-    readonly property bool windowed: rows.length > 100
+    readonly property bool windowed: rowCount > 100
     readonly property int windowRows: 20
     // Every width is measured with the cells' own font, and again when it changes: a font that loads after the table
     // is made (macOS) would otherwise leave the columns measured with the fallback one, and clip their text.
     readonly property real dotWidth: ApplicationInfo.reportTableDotWidth()
     // Per column: whether its cells are numbers, the widths of their parts before and after the decimal point, and
     // the column's width.
+    // The width the preview gives the table, which a key and value table's value gives way to (reportTableLayout).
+    readonly property real availableWidth: parent ? parent.width : 0
     readonly property var layout: ApplicationInfo.reportTableLayout()
     // The list's width: the columns, the spacing the rows put between them and the frame, and a windowed table's scroll
     // bar clear of the last column.
@@ -55,7 +65,7 @@ Flickable {
     interactive: contentWidth > width
     boundsBehavior: Flickable.StopAtBounds
     clip: true
-    visible: rows.length > 0
+    visible: rowCount > 0
     ScrollBar.horizontal: EaElements.ScrollBar {
         id: horizontal
         policy: table.contentWidth > table.width ? ScrollBar.AlwaysOn : ScrollBar.AlwaysOff
@@ -67,7 +77,9 @@ Flickable {
         font.pixelSize: table.em
     }
 
-    // One cell: a number on its decimal point, any other text from the left, each piece a ListView label.
+    // One cell: a number on its decimal point, any other text from the left, each piece a ListView label. A cell makes
+    // only the form it shows: making both, one hidden, doubled the items of every table as the Report page first
+    // showed.
     component Cell: Item {
         id: cell
 
@@ -78,43 +90,71 @@ Flickable {
         width: table.layout[column] ? table.layout[column].width : 0
         height: table.rowHeight
 
-        EaComponents.ListViewLabel {
-            visible: !cell.parts
+        // The cell's size, as both forms had when they were the cell's own children (a label takes its parent's
+        // height).
+        Loader {
             width: cell.width
-            leftPadding: table.padding
-            rightPadding: table.padding
-            horizontalAlignment: Text.AlignLeft
-            elide: Text.ElideRight
-            // An agreement factor with its subscript (FactorText).
-            textFormat: FactorText.has(cell.text) ? Text.RichText : Text.PlainText
-            text: FactorText.has(cell.text) ? FactorText.rich(cell.text) : cell.text
-        }
-        Row {
-            visible: cell.parts !== null
-            x: cell.width - table.padding - width
             height: cell.height
+            sourceComponent: cell.parts ? numberForm : textForm
+        }
+        Component {
+            id: textForm
             EaComponents.ListViewLabel {
-                width: table.layout[cell.column] ? table.layout[cell.column].left : 0
-                horizontalAlignment: Text.AlignRight
-                elide: Text.ElideRight
-                textFormat: Text.PlainText
-                text: cell.parts ? cell.parts.left : ""
-            }
-            // A number without a point gives the point's place to what follows its digits (an s.u. or units), so
-            // `611(16)` stays together and its digits still end where the column's points are.
-            EaComponents.ListViewLabel {
-                visible: cell.parts !== null && cell.parts.dot
-                width: table.dotWidth
+                id: textLabel
+
+                readonly property bool factor: FactorText.has(cell.text)
+                width: cell.width
+                leftPadding: table.padding
+                rightPadding: table.padding
                 horizontalAlignment: Text.AlignLeft
                 elide: Text.ElideRight
-                text: "."
+                // An agreement factor with its subscript (FactorText).
+                textFormat: factor ? Text.RichText : Text.PlainText
+                text: factor ? FactorText.rich(cell.text) : cell.text
+                // A value cut at the preview's width shows whole on hover (a narrow window's Experiments row).
+                HoverHandler {
+                    id: textHover
+                }
+                EaElements.ToolTip {
+                    data: true
+                    requested: textHover.hovered && textLabel.truncated
+                    text: cell.text
+                }
             }
-            EaComponents.ListViewLabel {
-                width: (table.layout[cell.column] ? table.layout[cell.column].right : 0) + (cell.parts && cell.parts.dot ? 0 : table.dotWidth)
-                horizontalAlignment: Text.AlignLeft
-                elide: Text.ElideRight
-                textFormat: Text.PlainText
-                text: cell.parts ? cell.parts.right : ""
+        }
+        Component {
+            id: numberForm
+            Item {
+                width: cell.width
+                height: cell.height
+                Row {
+                    x: cell.width - table.padding - width
+                    height: cell.height
+                    EaComponents.ListViewLabel {
+                        width: table.layout[cell.column] ? table.layout[cell.column].left : 0
+                        horizontalAlignment: Text.AlignRight
+                        // A number's parts are never cut: the column fits them (decimal points in line).
+                        elide: Text.ElideNone
+                        textFormat: Text.PlainText
+                        text: cell.parts ? cell.parts.left : ""
+                    }
+                    // A number without a point gives the point's place to what follows its digits (an s.u. or units),
+                    // so `611(16)` stays together and its digits still end where the column's points are.
+                    EaComponents.ListViewLabel {
+                        visible: cell.parts !== null && cell.parts.dot
+                        width: table.dotWidth
+                        horizontalAlignment: Text.AlignLeft
+                        elide: Text.ElideNone
+                        text: "."
+                    }
+                    EaComponents.ListViewLabel {
+                        width: (table.layout[cell.column] ? table.layout[cell.column].right : 0) + (cell.parts && cell.parts.dot ? 0 : table.dotWidth)
+                        horizontalAlignment: Text.AlignLeft
+                        elide: Text.ElideNone
+                        textFormat: Text.PlainText
+                        text: cell.parts ? cell.parts.right : ""
+                    }
+                }
             }
         }
     }
@@ -135,12 +175,12 @@ Flickable {
         width: table.tableWidth
         tableRowHeight: table.rowHeight
         rowPadding: 0
-        maxRowCountShow: table.windowed ? table.windowRows : Math.max(1, rowModel.count)
+        maxRowCountShow: table.windowed ? table.windowRows : Math.max(1, table.rowCount)
         selectable: false
         multiSelection: false
         cacheBuffer: 0
         defaultInfoText: ""
-        model: rowModel
+        model: table.rowsKey && table.report ? table.report.rowsModel(table.rowsKey) : rowModel
         scrollBarPolicy: table.windowed ? ScrollBar.AlwaysOn : ScrollBar.AlwaysOff
 
         // The header: shaded, a number column's title centred over its numbers; none for a key-value table.

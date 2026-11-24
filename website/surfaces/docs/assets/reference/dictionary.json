@@ -281,7 +281,7 @@
             "title": "Absorption"
         },
         {
-            "description": "A single crystal's extinction correction: its type, mosaic distribution and parameters (ADR-0101).",
+            "description": "A single crystal's extinction correction: its type, mosaic distribution and parameters (ADR-0103).",
             "edi_name": "_extinction",
             "icon": "gem",
             "id": "extinction",
@@ -5338,7 +5338,7 @@
                 "_edi_extinction.type",
                 "_easydiffraction_extinction.type"
             ],
-            "description": "The extinction correction of a single crystal (ADR-0101).",
+            "description": "The extinction correction of a single crystal (ADR-0103).",
             "dtype": "enum",
             "edi_aliases": [
             ],
@@ -5388,7 +5388,7 @@
             "cif_names": [
                 "_edi_extinction.mosaic_distribution"
             ],
-            "description": "The shape of a Becker-Coppens crystal's mosaic distribution (ADR-0101).",
+            "description": "The shape of a Becker-Coppens crystal's mosaic distribution (ADR-0103).",
             "dtype": "enum",
             "edi_aliases": [
             ],
@@ -5948,7 +5948,7 @@
                 "_refln.intensity_meas",
                 "_refln_intensity_meas"
             ],
-            "description": "The measured squared structure factor of a single crystal's reflection (ADR-0101).",
+            "description": "The measured squared structure factor of a single crystal's reflection (ADR-0103).",
             "dtype": "float",
             "edi_aliases": [
             ],

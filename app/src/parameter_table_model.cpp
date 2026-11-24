@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "parameter_table_model.hpp"
 
+#include <cmath>
+
 #include <algorithm>
 
 #include "category_list_model.hpp"
@@ -13,6 +15,11 @@ namespace {
 const QStringList kRoles{"parameter", "path",  "blockKind", "blockName", "category", "rowLabel", "name",
                          "displayName", "value", "uncertainty", "hasUncertainty", "free", "minimum",
                          "maximum", "units", "refinable", "fittable", "fitReason", "fitGroup"};
+// The full name the table's tooltip shows (cosio.cell.length_a), which the name filter finds too.
+QString full_name(const QVariant& parameter) {
+    const auto* item = qobject_cast<ParameterItem*>(parameter.value<QObject*>());
+    return item != nullptr ? item->fullName() : QString();
+}
 // One predicate serves menu counts and filtering, so parent groups include all their children.
 bool matches_group(const QString& group, const QString& kind, const QString& category, const QString& name) {
     if (group.isEmpty()) return true;
@@ -43,6 +50,7 @@ void ParameterTableModel::sync() {
     QList<Row> rows;
     int free_count = 0;
     int not_fittable_count = 0;
+    bool any_uncertainty = false;
     QList<int> group_counts{0, 0, 0, 0};
     for (ParameterItem* item : registry_.items()) {
         if (!experiment_scope_.isEmpty() && item->blockKind() == QLatin1String("experiment") &&
@@ -50,6 +58,8 @@ void ParameterTableModel::sync() {
             continue;  // a scan mode fits one experiment at a time: another experiment's parameter
         }
         free_count += item->isFree() ? 1 : 0;
+        // An s.u. the column would show: one read or fitted, above zero (an unset or zero one shows nothing).
+        any_uncertainty = any_uncertainty || (item->hasUncertainty() && std::isfinite(item->uncertainty()) && item->uncertainty() > 0.0);
         not_fittable_count += !item->isFree() && !item->isFittable() ? 1 : 0;
         rows.append({item,
                      {QVariant::fromValue<QObject*>(item), item->path(), item->blockKind(), item->blockName(),
@@ -71,6 +81,10 @@ void ParameterTableModel::sync() {
     if (fixed_count != fixed_count_) {
         fixed_count_ = fixed_count;
         emit fixedCountChanged();
+    }
+    if (any_uncertainty != any_uncertainty_) {
+        any_uncertainty_ = any_uncertainty;
+        emit anyUncertaintyChanged();
     }
     if (not_fittable_count != not_fittable_count_) {
         not_fittable_count_ = not_fittable_count;
@@ -118,7 +132,12 @@ void ParameterFilterModel::setSourceModel(QAbstractItemModel* source) {
         source_connections_.append(connect(source, &QAbstractItemModel::modelReset, this, &ParameterFilterModel::refresh));
         source_connections_.append(connect(source, &QAbstractItemModel::rowsInserted, this, &ParameterFilterModel::refresh));
         source_connections_.append(connect(source, &QAbstractItemModel::rowsRemoved, this, &ParameterFilterModel::refresh));
-        source_connections_.append(connect(source, &QAbstractItemModel::dataChanged, this, &ParameterFilterModel::refresh));
+        // A change of values only (a fit's step, an edit) leaves every picker and count as it is: only the roles the
+        // filters read rebuild them, so a fit no longer scans every row at each change (ADR-0102 rule 2).
+        source_connections_.append(connect(source, &QAbstractItemModel::dataChanged, this,
+                                           [this](const QModelIndex&, const QModelIndex&, const QList<int>& roles) {
+                                               if (affectsFilters(roles)) refresh();
+                                           }));
     }
     refresh();
 }
@@ -133,6 +152,14 @@ bool matches_datablock(const QString& key, const QString& kind, const QString& n
 }
 
 }  // namespace
+
+bool ParameterFilterModel::affectsFilters(const QList<int>& roles) const {
+    if (roles.isEmpty() || sourceModel() == nullptr) return true;  // unnamed roles: any may have changed
+    static const QList<QByteArray> kRead{"free",      "fittable",  "fitGroup", "path",    "displayName",
+                                         "blockKind", "blockName", "category", "name"};
+    const auto names = sourceModel()->roleNames();
+    return std::any_of(roles.cbegin(), roles.cend(), [&](int role) { return kRead.contains(names.value(role)); });
+}
 
 void ParameterFilterModel::refresh() {
     // Only the rows the show-filters leave, so every picker counts what the table can show. A count is of the rows the
@@ -158,6 +185,7 @@ void ParameterFilterModel::refresh() {
                 continue;
             }
             const bool named = name_filter_.isEmpty() ||
+                               full_name(value(row, "parameter")).contains(name_filter_, Qt::CaseInsensitive) ||
                                value(row, "path").toString().contains(name_filter_, Qt::CaseInsensitive) ||
                                value(row, "displayName").toString().contains(name_filter_, Qt::CaseInsensitive);
             const bool kept = variability_ == All || (variability_ == Free && free) ||
@@ -410,7 +438,8 @@ bool ParameterFilterModel::filterAcceptsRow(int source_row, const QModelIndex& s
         (variability_ == NotFittable && (free || fittable))) {
         return false;
     }
-    return name_filter_.isEmpty() || value("path").toString().contains(name_filter_, Qt::CaseInsensitive) ||
+    return name_filter_.isEmpty() || full_name(value("parameter")).contains(name_filter_, Qt::CaseInsensitive) ||
+           value("path").toString().contains(name_filter_, Qt::CaseInsensitive) ||
            value("displayName").toString().contains(name_filter_, Qt::CaseInsensitive);
 }
 

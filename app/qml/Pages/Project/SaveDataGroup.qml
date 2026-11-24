@@ -29,7 +29,7 @@ SideBarGroup {
 
     EaElements.ComboBox {
         objectName: "project.includeDataOnSave"
-        width: EaStyle.Sizes.sideBarContentWidth
+        width: AppSizes.loneControlWidth
         enabled: group.project !== null
         model: [qsTr("Include all data"), qsTr("Keep linked data linked"), qsTr("Ask on every save")]
         currentIndex: group.project ? group.modes.indexOf(group.project.includeDataOnSave) : 0

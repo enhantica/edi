@@ -54,7 +54,9 @@ Item {
     // With the curve count shown, it takes the standard gap under the toolbar and the plot follows a small gap below it
     // (the owner, 2026-11-17); without it the plot is where the pattern chart's is.
     readonly property real captionGap: Math.round(em * 0.3)
-    readonly property real plotTop: toolbarTop + scanToolbar.height + AppSizes.mainAreaMargin + (curveCount.visible ? curveCount.height + captionGap : 0)
+    // The caption's line is kept whether it shows or not (ADR-0102 rule 5, layout before data): the views read only what
+    // they show, so the caption comes and goes with each read, and a plot moving with it asked for other rows each time.
+    readonly property real plotTop: toolbarTop + scanToolbar.height + AppSizes.mainAreaMargin + (scan !== null ? curveCount.height + captionGap : 0)
     // The colours: the Stacked lines take the app's palette (edi ADR-0084), and the Map a colour map, Blue-Red by
     // default, an app setting. The Map's direction is the project's (Auto by default), resolved in the theme the view
     // is drawn in.
@@ -115,8 +117,17 @@ Item {
     readonly property int yTicks: Math.max(2, Math.min(8, Math.floor((height - em * 6) / (em * 2.5))))
     // The stacked view's vertical axis is the plot's height, 0 to 1, which the patterns are placed on (edi ADR-0041 §4);
     // the map's is the rows'.
-    readonly property real yMin: zoomY.length === 2 ? zoomY[0] : mode === "stacked" ? 0 : scan ? scan.rowMin : 0
-    readonly property real yMax: zoomY.length === 2 ? zoomY[1] : mode === "stacked" ? 1 : scan ? scan.rowMax : 1
+    readonly property real yMin: viewRanges.ranges[2]
+    readonly property real yMax: viewRanges.ranges[3]
+    // The ranges shown move to a zoom, a scroll or a reset as the Pattern chart's do (the owner, 2026-11-21): one shared
+    // animation. Each frame is drawn from the patterns read for it (the views read only what they show).
+    RangeAnimation {
+        id: viewRanges
+        zoom: [chart.zoomX.length === 2 ? chart.zoomX[0] : NaN, chart.zoomX.length === 2 ? chart.zoomX[1] : NaN, chart.zoomY.length === 2 ? chart.zoomY[0] : NaN, chart.zoomY.length === 2 ? chart.zoomY[1] : NaN]
+        fitted: [chart.scan ? chart.scan.xMin : 0, chart.scan ? chart.scan.xMax : 1, chart.mode === "stacked" ? 0 : chart.scan ? chart.scan.rowMin : 0, chart.mode === "stacked" ? 1 : chart.scan ? chart.scan.rowMax : 1]
+        duration: EaStyle.Times.chartAnimation
+        active: chart.shown
+    }
 
     objectName: "scanView." + mode
 
@@ -192,7 +203,7 @@ Item {
                 horizontalAlignment: Text.AlignHCenter
                 verticalAlignment: Text.AlignVCenter
                 color: chart.colors.chartLabels
-                text: NumberText.compact(xTick.text)
+                text: chart.xFormat !== null ? NumberText.axisTick(parseFloat(xTick.text), chart.xFormat) : NumberText.compact(xTick.text)
             }
         }
     }
@@ -220,7 +231,7 @@ Item {
                 horizontalAlignment: Text.AlignRight
                 verticalAlignment: Text.AlignVCenter
                 color: chart.colors.chartLabels
-                text: NumberText.compact(tick.text)
+                text: chart.yFormat !== null ? NumberText.axisTick(tick.value, chart.yFormat) : NumberText.compact(tick.text)
             }
         }
     }
@@ -242,12 +253,15 @@ Item {
         id: curveCount
 
         objectName: "scanView." + chart.mode + ".progress"
-        visible: chart.scan !== null && ((chart.scan.wanted && chart.scan.loaded < chart.scan.count) || (chart.mode === "stacked" && layer.drawnDatasetCount < chart.scan.count))
+        visible: chart.scan !== null && ((chart.scan.wanted && chart.scan.pending > 0) || (chart.mode === "stacked" && layer.drawnDatasetCount < chart.scan.count))
         x: view.x + view.plotArea.x + view.plotArea.width - width
         y: chart.toolbarTop + scanToolbar.height + AppSizes.mainAreaMargin
         color: chart.colors.chartLabels
         font.pixelSize: chart.em
-        text: chart.scan ? ((chart.scan.wanted && chart.scan.loaded < chart.scan.count ? qsTr("Reading patterns: %1 of %2").arg(chart.scan.loaded).arg(chart.scan.count) : "") + (chart.mode === "stacked" && layer.drawnDatasetCount < chart.scan.count ? (chart.scan.loaded < chart.scan.count ? " · " : "") + qsTr("Showing %1 of %2 curves").arg(layer.drawnDatasetCount).arg(chart.scan.count) : "")) : ""
+        // The patterns the view shows still being read, counted against all it has asked for (the views read only what
+        // they show, the owner, 2026-11-21).
+        readonly property bool reading: chart.scan !== null && chart.scan.wanted && chart.scan.pending > 0
+        text: chart.scan ? ((curveCount.reading ? qsTr("Reading patterns: %1 of %2").arg(chart.scan.loaded).arg(chart.scan.loaded + chart.scan.pending) : "") + (chart.mode === "stacked" && layer.drawnDatasetCount < chart.scan.count ? (curveCount.reading ? " · " : "") + qsTr("Showing %1 of %2 curves").arg(layer.drawnDatasetCount).arg(chart.scan.count) : "")) : ""
     }
 
     ChartView {
@@ -268,9 +282,14 @@ Item {
         }
         axisX: ValueAxis {
             id: axisX
-            min: chart.zoomX.length === 2 ? chart.zoomX[0] : chart.scan ? chart.scan.xMin : 0
-            max: chart.zoomX.length === 2 ? chart.zoomX[1] : chart.scan ? chart.scan.xMax : 1
-            tickInterval: chart.niceStep(max - min, chart.xTicks)
+            min: viewRanges.ranges[0]
+            max: viewRanges.ranges[1]
+            // The Pattern chart's rule (NumberText.axisStep, about five ticks as its kTicks): round steps whose labels,
+            // in their font, leave a gap between neighbours across the plot's width; one rule for every chart (the
+            // owner, 2026-11-21).
+            // Over the plot's own width: Map's is narrower by its colour bar, so its step can be one coarser than
+            // Stacked's; counting the bar's pixels let labels crowd closer than the rule's gap.
+            tickInterval: NumberText.axisStep(min, max, 5, view.plotArea.width, tickMetrics.font, true)
             tickAnchor: 0
             labelDelegate: xLabel
             lineVisible: false
@@ -477,8 +496,11 @@ Item {
         property: "rowLabelsRoom"
         when: chart.shown
         restoreMode: Binding.RestoreNone
-        // At most a tenth of the chart and about 100 px: a longer name is cut in its middle (the owner, 2026-11-17).
-        value: chart.scan !== null && chart.scan.rowTextsRevision >= 0 ? Math.min(Math.ceil(labelIcon.implicitWidth + chart.em * 0.5 + chart.scan.widestRowText(chart.shownLabelDatasets, labelBold.font)), Math.round(Math.min(chart.width * 0.1, chart.em * 7.5))) : 0
+        // At most a tenth of the chart and about 100 px: a longer name is cut in its middle (the owner, 2026-11-17); but
+        // never less than the icon and about seven characters, still under 100 px, so a cut name still reads ("wish_1_6"
+        // read "wi…_6"; 2026-11-22). A value is never
+        // cut: a number cut in its middle read as a range ("10…36").
+        value: chart.scan !== null && chart.scan.rowTextsRevision >= 0 ? Math.min(Math.ceil(labelIcon.implicitWidth + chart.em * 0.5 + chart.scan.widestRowText(chart.shownLabelDatasets, labelBold.font)), chart.scan.rowsByValue ? Infinity : Math.max(Math.round(Math.min(chart.width * 0.1, chart.em * 7.5)), Math.ceil(labelIcon.implicitWidth + chart.em * 6))) : 0
     }
     // The row label's pieces as IconLine draws them: the icon a label of the icon font, measured by the width it takes
     // (an icon is measured in the font of an item drawing it, never one built from the family alone).
@@ -593,7 +615,8 @@ Item {
             }
         ]
         x: plot.x + chart.rowLabelGap
-        y: plot.y + (axisY.max - at) / (axisY.max - axisY.min) * plot.height - height / 2
+        // Kept inside the plot: the first or last row's label stood over the frame's edge (the owner, 2026-11-21).
+        y: plot.y + Math.max(0, Math.min(plot.height - height, (axisY.max - at) / (axisY.max - axisY.min) * plot.height - height / 2))
     }
 
     // One short tick per dataset at its row, in every y mode, on both views (the owner, 2026-10-22): just right of the
@@ -659,6 +682,14 @@ Item {
     function intensityCounts(value: real): real {
         return ApplicationInfo.scanIntensityCounts(value);
     }
+    // Each axis' ticks in one form, the fewest digits that write them all, as the Pattern chart writes its own
+    // (NumberText.axisFormat): one chart's 5×10⁴ was another's 5.00×10⁴ (the owner, 2026-11-21).
+    // The ends and the step are passed so the binding follows them: the call itself reads the axis unseen.
+    function axisFormatOf(axis: ValueAxis, low: real, high: real, step: real): var {
+        return NumberText.axisFormat(ApplicationInfo.patternTickValues(axis), false);
+    }
+    readonly property var xFormat: axisFormatOf(axisX, axisX.min, axisX.max, axisX.tickInterval)
+    readonly property var yFormat: axisFormatOf(axisY, axisY.min, axisY.max, axisY.tickInterval)
     // The ends in scientific notation with two significant digits, 1.4e4 (the owner, 2026-10-27).
     function intensityText(value: real): string {
         return ApplicationInfo.scanIntensityText(value);

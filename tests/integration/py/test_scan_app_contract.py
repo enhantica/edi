@@ -379,12 +379,16 @@ console.log(JSON.stringify(output));"""
         'const control={inTable:false,contentItemLabel:null,delegateModel:{},searchable:true,'
         'popup:{visible:false,contentItem:{header:null},focus:false}};'
         '(function(){' + completed + '}).call(control);'
-        'console.log(JSON.stringify([control.popup.contentItem.header===searchHeader,'
+        'const header=()=>typeof control.popup.contentItem.header==="function"'
+        '?control.popup.contentItem.header():control.popup.contentItem.header;'
+        'const attached=header()===searchHeader;control.searchable=false;'
+        'const absent=header()===null;control.searchable=true;'
+        'console.log(JSON.stringify([attached,absent,header()===searchHeader,'
         'control.popup.contentItem.headerPositioning===ListView.OverlayHeader]));'
     )
-    assert header_result == [True, True], (
+    assert header_result == [True, True, True, True], (
         'Search wiring: the complete original completion procedure attaches its actual '
-        'search header above the popup list entries'
+        'search header above the popup list entries only while search is available'
     )
     accepted = property_value(field, 'onAccepted')
     # Each interaction has fresh state; execute the complete matrix in one declared Node host.
@@ -518,6 +522,60 @@ def test_view_model_names_each_outcome_from_owner_table(key, word, icon, color):
     )
 
 
+def experiment_column_bindings(table):
+    bindings = []
+    for name in (
+        'sharedRoom',
+        'nameLeast',
+        'fileLeast',
+        'fileNatural',
+        'shares',
+        'nameColumnWidth',
+        'fileColumnWidth',
+    ):
+        expression = property_value(table, name)
+        if expression.startswith('{'):
+            expression = f'(function(){expression})()'
+        bindings.append(f'const {name}=({expression});')
+    return ''.join(bindings)
+
+
+def fitted_number_label():
+    label = source('qml/Components/NumberLabel.qml')
+    assert property_value(label, 'elide') == 'Text.ElideNone', (
+        'The fitted numeric label must leave ellipsis disabled'
+    )
+    assert property_value(label, 'text') == 'shown', (
+        'Numeric labels display their fitted text rather than a disconnected value'
+    )
+    assert property_value(label, 'onNumberChanged') == 'refit()', (
+        'Numeric labels refresh their displayed text whenever their input changes'
+    )
+    return label
+
+
+def number_label_text(cell):
+    label = fitted_number_label()
+    functions = source('qml/Globals/NumberText.qml')
+    context = '\n'.join(
+        block(functions, 'function ' + name + '(') for name in ('compact', 'fitted')
+    )
+    return (
+        '(function(){' + context + ';const NumberText={compact,fitted};'
+        'const number=(' + property_value(cell, 'number') + ');'
+        'let shown=(' + property_value(label, 'shown') + ');'
+        'let sized=(' + property_value(label, 'sized') + ');'
+        'const narrow=(' + property_value(label, 'narrow') + ');'
+        # Exercise the extract header's text wiring at a supplied width.
+        'const width=512,implicitWidth=200,leftPadding=5,rightPadding=5;'
+        'const metrics={advanceWidth:text=>8*text.length};'
+        + block(label, 'function refit(')
+        + ';refit();return ('
+        + property_value(label, 'text')
+        + ');})()'
+    )
+
+
 def assert_outcome_consumers(bar, label, dialog):
     summary = item(bar, 'statusBar.fit.outcome')
     require(
@@ -532,15 +590,19 @@ def assert_outcome_consumers(bar, label, dialog):
     icon_label = object_id(label, 'iconLabel')
     value_label = object_id(label, 'value')
     icon_cell = block(dialog, 'IconCell {')
-    value_cell = item(dialog, 'fit.results.value.${row.index}')
+    value_name = 'fit.results.value.${row.index}'
+    assert control_type(dialog, value_name) == 'NumberLabel', (
+        'Outcomes: results render through the shared fitted value label'
+    )
+    fitted_number_label()
+    value_cell = item(dialog, value_name)
     expressions = [
         property_value(icon_cell, 'icon'),
         property_value(icon_cell, 'iconColor'),
-        property_value(value_cell, 'text'),
+        property_value(value_cell, 'number'),
         property_value(value_cell, 'color'),
     ]
     context += '\nconst keys=' + json.dumps([key for key, *_ in OUTCOMES]) + ';'
-    status_properties = ('keyIcon', 'valueText', 'iconColor', 'valueColor')
     display_expressions = [
         property_value(icon_label, 'text'),
         property_value(value_label, 'text'),
@@ -548,7 +610,8 @@ def assert_outcome_consumers(bar, label, dialog):
         property_value(value_label, 'color'),
     ]
     assignments = ','.join(
-        key + ':(' + property_value(summary, key) + ')' for key in status_properties
+        key + ':(' + property_value(summary, key) + ')'
+        for key in ('keyIcon', 'valueText', 'iconColor', 'valueColor')
     )
     for stale in (False, True):
         rows = evaluate(
@@ -580,9 +643,13 @@ def assert_outcome_consumers(bar, label, dialog):
             assert segments == expected, (
                 'Outcomes: status uses its current outcome or the amber outdated history marker'
             )
-            assert overall == [icon, color, word, text_color], (
-                'Outcomes: results retain their original outcome; neutral text stays readable'
+            assert overall[0] == icon, 'Outcomes: results retain the original outcome icon'
+            assert overall[1] == color, 'Outcomes: results retain the original outcome icon color'
+            # FitTablePolish checks the actual displayed word and geometry.
+            assert overall[2] == word, (
+                'Outcomes: the result receives the complete original outcome word'
             )
+            assert overall[3] == text_color, 'Outcomes: neutral result text stays readable'
     assert not re.search(r'font\.underline:\s*true', bar + label + dialog), (
         'Outcomes: clickable summaries do not underline'
     )
@@ -612,7 +679,7 @@ def test_outcome_gate_rejects_a_different_results_word():
     assert changed != dialog, (
         'Outcomes: the different-word escape must reach the actual results consumer'
     )
-    with pytest.raises(AssertionError):
+    with pytest.raises(AssertionError, match='complete original outcome word'):
         assert_outcome_consumers(bar, label, changed)
 
 
@@ -1179,7 +1246,13 @@ def test_effective_consumers_reject_wrong_branches_and_disconnected_search(chann
             assert mutated != dialog, (
                 'Outcomes: each wrong-branch escape reaches the effective results expression'
             )
-            with pytest.raises(AssertionError):
+            diagnosis = {
+                'outcome-icon': 'Outcomes: results retain the original outcome icon',
+                'outcome-color': 'Outcomes: results retain the original outcome icon color',
+                'outcome-word': 'Outcomes: the result receives the complete original outcome word',
+            }[channel]
+            # Pytest appends the compared values after the assertion's diagnostic line.
+            with pytest.raises(AssertionError, match=rf'\A{re.escape(diagnosis)}(?:\n|\Z)'):
                 assert_outcome_consumers(bar, label, mutated)
     shared = source('qml/Components/SearchableComboBox.qml')
     for old, new in [

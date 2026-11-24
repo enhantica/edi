@@ -411,10 +411,12 @@ TestCase {
         click("appBar.tab." + page);
         let modal = null;
         if (data.scope.startsWith("save-")) {
+            Ui.expandGroup(test, Probe, app, "group.getStarted");
             click("project.saveAs");
             modal = findChild(app, "project.saveAs.menu");
             verify(modal !== null, "The live census includes the actual Save project as menu");
         } else if (data.scope === "web-open") {
+            Ui.expandGroup(test, Probe, app, "group.getStarted");
             click("project.load");
             modal = findChild(app, "project.load.menu");
             verify(modal !== null, "The live census includes the actual web Load project menu");

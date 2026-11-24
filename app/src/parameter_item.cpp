@@ -47,6 +47,7 @@ ParameterItem::ParameterItem(const edi::ParameterEntry& entry, ProjectEditor& ed
     minimum_ = spec != nullptr ? spec->range.min : -std::numeric_limits<double>::infinity();
     maximum_ = spec != nullptr ? spec->range.max : std::numeric_limits<double>::infinity();
     category_icon_ = category_presentation(category_).icon;
+    full_name_ = block_name_ + QLatin1Char('.') + category_ + (row_label_.isEmpty() ? QString() : QLatin1Char('.') + row_label_) + QLatin1Char('.') + name_;
 }
 
 ParameterItem::ParameterItem(const edi::DescriptorEntry& entry, ProjectEditor& editor, QObject* parent)
@@ -74,6 +75,7 @@ ParameterItem::ParameterItem(const edi::DescriptorEntry& entry, ProjectEditor& e
     minimum_ = -std::numeric_limits<double>::infinity();
     maximum_ = std::numeric_limits<double>::infinity();
     category_icon_ = category_presentation(category_).icon;
+    full_name_ = block_name_ + QLatin1Char('.') + category_ + (row_label_.isEmpty() ? QString() : QLatin1Char('.') + row_label_) + QLatin1Char('.') + name_;
 }
 
 void ParameterItem::setFittability(bool fittable, const QString& reason, int group) {

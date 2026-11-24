@@ -411,6 +411,16 @@
           "proof": "tests/system/py/test_operation_contracts.py",
           "overloads": 1
         },
+        "setExperimentListShown": {
+          "domain": "model-publication",
+          "proof": "tests/system/py/test_operation_contracts.py",
+          "overloads": 1
+        },
+        "watchExperimentRow": {
+          "domain": "model-publication",
+          "proof": "tests/system/py/test_operation_contracts.py",
+          "overloads": 1
+        },
         "removeStructure": {
           "domain": "model-publication",
           "proof": "tests/system/py/test_operation_contracts.py",

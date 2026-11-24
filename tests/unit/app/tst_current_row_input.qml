@@ -432,11 +432,19 @@ Item {
                     click(Render.cells(table.itemAtIndex(0))[0]);
                 const container = Render.cells(table.itemAtIndex(target))[column];
                 const cell = Render.descendants(container).find(item => item.popup && item.enabled) || container;
-                click(cell);
-                if (data.mode.startsWith("editable")) {
-                    verify(Render.descendants(cell).some(item => item.activeFocus) || (cell.popup && cell.popup.visible), "The same click also begins editing or opens the real choice popup");
-                    if (cell.popup && cell.popup.visible)
-                        keyClick(Qt.Key_Escape);
+                const number = [cell, ...Render.descendants(cell)].find(item => item.item && item.editText !== undefined);
+                if (data.mode.startsWith("editable") && number) {
+                    const popup = Ui.parameterPopup(this, number);
+                    const editor = Ui.parameterValue(this, number, popup);
+                    verify(!number.activeFocus && Ui.exposed(editor), "The same click grants access to the popup editor without in-place focus");
+                    popup.close();
+                } else {
+                    click(cell);
+                    if (data.mode.startsWith("editable")) {
+                        verify(Render.descendants(cell).some(item => item.activeFocus) || (cell.popup && cell.popup.visible), "The same click also begins editing or opens the real choice popup");
+                        if (cell.popup && cell.popup.visible)
+                            keyClick(Qt.Key_Escape);
+                    }
                 }
                 compare(table.markerRow, target, "Mouse input moves the logical current-row line immediately without Tab or another input");
                 marked(target);

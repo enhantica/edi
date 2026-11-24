@@ -1,0 +1,148 @@
+_minimizer.descent fast_descent
+_minimizer.chi_square_tolerance 0.0001
+
+_fitting_mode.type independent
+
+_sequential_fit.data_dir ../44k_data
+_sequential_fit.file_pattern *.xy
+_sequential_fit.reverse false
+_sequential_fit.template_file scan-0514_pilatus_integrated_0000.xy
+
+_edi.schema_version 3
+
+loop_
+_fit_parameter.id
+_fit_parameter.start_value
+_fit_parameter.start_uncertainty
+_fit_parameter.start_tied
+structure.CaCO3.cell.length_a 4.98769 0.00013 .
+structure.CaCO3.cell.length_c 17.05071 0.00065 .
+structure.ZnO.cell.length_a 3.249642 0.000053 .
+structure.ZnO.cell.length_c 5.2057 0.00014 .
+scan-0514_pilatus_integrated_avg.broad_gauss_w 0.001437 0.000015 .
+scan-0514_pilatus_integrated_avg.ZnO.scale 0.000005626 0.000000043 .
+scan-0514_pilatus_integrated_avg.CaCO3.scale 0.0000003826 0.0000000035 .
+scan-0514_pilatus_integrated_avg.background.1 10.57 0.07 .
+scan-0514_pilatus_integrated_avg.background.2 -9.5 0.12 .
+scan-0514_pilatus_integrated_avg.background.3 3.67 0.12 .
+scan-0514_pilatus_integrated_avg.background.4 -0.598 0.075 .
+scan-0514_pilatus_integrated_avg.background.5 -0.414 0.062 .
+
+_fit_result.result_kind deterministic
+_fit_result.success true
+_fit_result.message done
+_fit_result.iterations 9
+_fit_result.fitting_time 0.376966
+_fit_result.reduced_chi_square 0.122251
+_fit_result.objective_name chi_square
+_fit_result.objective_value 215.651
+_fit_result.n_data_points 1776
+_fit_result.n_parameters 57
+_fit_result.n_free_parameters 12
+_fit_result.degrees_of_freedom 1764
+_fit_result.covariance_available true
+_fit_result.exit_reason done
+_fit_result.prof_r_factor 0.0746536
+_fit_result.prof_wr_factor 0.103708
+_fit_result.prof_wr_expected 0.296611
+_fit_result.prof_cr_factor 0.23798
+_fit_result.prof_cwr_factor 0.220268
+_fit_result.profile_function cwl-tch-pseudo-voigt
+_fit_result.background_function chebyshev
+_fit_result.descent fast_descent
+_fit_result.stopping_rule chi_square_change
+_fit_result.stopping_value 0.000000000674731
+_fit_result.last_shift_su 0.000830514
+
+loop_
+_fit_result_bank.experiment_id
+_fit_result_bank.n_data_points
+_fit_result_bank.prof_wr_factor
+_fit_result_bank.chi_square
+_fit_result_bank.prof_r_factor
+_fit_result_bank.prof_wr_expected
+_fit_result_bank.prof_cr_factor
+_fit_result_bank.prof_cwr_factor
+scan-0514_pilatus_integrated_avg 1776 0.103708 215.651 0.0746536 0.296611 0.23798 0.220268
+
+loop_
+_fit_result_phase.experiment_id
+_fit_result_phase.structure_id
+_fit_result_phase.bragg_r_factor
+_fit_result_phase.f_r_factor
+scan-0514_pilatus_integrated_avg ZnO 0.0363306 0.0188091
+scan-0514_pilatus_integrated_avg CaCO3 0.178152 0.119691
+
+loop_
+_fit_parameter_correlation.id
+_fit_parameter_correlation.source_kind
+_fit_parameter_correlation.parameter_unique_name_i
+_fit_parameter_correlation.parameter_unique_name_j
+_fit_parameter_correlation.correlation
+_fit_parameter_correlation.file_path
+1 deterministic ZnO.cell.length_a ZnO.cell.length_c -0.40 scan-0514_pilatus_integrated_0000.xy
+2 deterministic ZnO.cell.length_a scan-0514_pilatus_integrated_avg.linked_structure.ZnO.scale 0.0071 scan-0514_pilatus_integrated_0000.xy
+3 deterministic ZnO.cell.length_a scan-0514_pilatus_integrated_avg.peak.broad_gauss_w 0.0071 scan-0514_pilatus_integrated_0000.xy
+4 deterministic ZnO.cell.length_a scan-0514_pilatus_integrated_avg.background.1.coef 0.00087 scan-0514_pilatus_integrated_0000.xy
+5 deterministic ZnO.cell.length_a scan-0514_pilatus_integrated_avg.background.2.coef 0.0015 scan-0514_pilatus_integrated_0000.xy
+6 deterministic ZnO.cell.length_a scan-0514_pilatus_integrated_avg.background.3.coef 0.000011 scan-0514_pilatus_integrated_0000.xy
+7 deterministic ZnO.cell.length_a scan-0514_pilatus_integrated_avg.background.4.coef 0.0024 scan-0514_pilatus_integrated_0000.xy
+8 deterministic ZnO.cell.length_a scan-0514_pilatus_integrated_avg.background.5.coef 0.0012 scan-0514_pilatus_integrated_0000.xy
+9 deterministic ZnO.cell.length_a CaCO3.cell.length_a -0.038 scan-0514_pilatus_integrated_0000.xy
+10 deterministic ZnO.cell.length_a CaCO3.cell.length_c 0.041 scan-0514_pilatus_integrated_0000.xy
+11 deterministic ZnO.cell.length_a scan-0514_pilatus_integrated_avg.linked_structure.CaCO3.scale -0.016 scan-0514_pilatus_integrated_0000.xy
+12 deterministic ZnO.cell.length_c scan-0514_pilatus_integrated_avg.linked_structure.ZnO.scale -0.013 scan-0514_pilatus_integrated_0000.xy
+13 deterministic ZnO.cell.length_c scan-0514_pilatus_integrated_avg.peak.broad_gauss_w -0.0099 scan-0514_pilatus_integrated_0000.xy
+14 deterministic ZnO.cell.length_c scan-0514_pilatus_integrated_avg.background.1.coef -0.0080 scan-0514_pilatus_integrated_0000.xy
+15 deterministic ZnO.cell.length_c scan-0514_pilatus_integrated_avg.background.2.coef -0.0029 scan-0514_pilatus_integrated_0000.xy
+16 deterministic ZnO.cell.length_c scan-0514_pilatus_integrated_avg.background.3.coef -0.0057 scan-0514_pilatus_integrated_0000.xy
+17 deterministic ZnO.cell.length_c scan-0514_pilatus_integrated_avg.background.4.coef -0.000043 scan-0514_pilatus_integrated_0000.xy
+18 deterministic ZnO.cell.length_c scan-0514_pilatus_integrated_avg.background.5.coef -0.0054 scan-0514_pilatus_integrated_0000.xy
+19 deterministic ZnO.cell.length_c CaCO3.cell.length_a 0.070 scan-0514_pilatus_integrated_0000.xy
+20 deterministic ZnO.cell.length_c CaCO3.cell.length_c -0.12 scan-0514_pilatus_integrated_0000.xy
+21 deterministic ZnO.cell.length_c scan-0514_pilatus_integrated_avg.linked_structure.CaCO3.scale 0.032 scan-0514_pilatus_integrated_0000.xy
+22 deterministic scan-0514_pilatus_integrated_avg.linked_structure.ZnO.scale scan-0514_pilatus_integrated_avg.peak.broad_gauss_w 0.11 scan-0514_pilatus_integrated_0000.xy
+23 deterministic scan-0514_pilatus_integrated_avg.linked_structure.ZnO.scale scan-0514_pilatus_integrated_avg.background.1.coef -0.025 scan-0514_pilatus_integrated_0000.xy
+24 deterministic scan-0514_pilatus_integrated_avg.linked_structure.ZnO.scale scan-0514_pilatus_integrated_avg.background.2.coef -0.024 scan-0514_pilatus_integrated_0000.xy
+25 deterministic scan-0514_pilatus_integrated_avg.linked_structure.ZnO.scale scan-0514_pilatus_integrated_avg.background.3.coef 0.0088 scan-0514_pilatus_integrated_0000.xy
+26 deterministic scan-0514_pilatus_integrated_avg.linked_structure.ZnO.scale scan-0514_pilatus_integrated_avg.background.4.coef -0.019 scan-0514_pilatus_integrated_0000.xy
+27 deterministic scan-0514_pilatus_integrated_avg.linked_structure.ZnO.scale scan-0514_pilatus_integrated_avg.background.5.coef -0.0075 scan-0514_pilatus_integrated_0000.xy
+28 deterministic scan-0514_pilatus_integrated_avg.linked_structure.ZnO.scale CaCO3.cell.length_a 0.011 scan-0514_pilatus_integrated_0000.xy
+29 deterministic scan-0514_pilatus_integrated_avg.linked_structure.ZnO.scale CaCO3.cell.length_c -0.014 scan-0514_pilatus_integrated_0000.xy
+30 deterministic scan-0514_pilatus_integrated_avg.linked_structure.ZnO.scale scan-0514_pilatus_integrated_avg.linked_structure.CaCO3.scale -0.054 scan-0514_pilatus_integrated_0000.xy
+31 deterministic scan-0514_pilatus_integrated_avg.peak.broad_gauss_w scan-0514_pilatus_integrated_avg.background.1.coef -0.025 scan-0514_pilatus_integrated_0000.xy
+32 deterministic scan-0514_pilatus_integrated_avg.peak.broad_gauss_w scan-0514_pilatus_integrated_avg.background.2.coef -0.029 scan-0514_pilatus_integrated_0000.xy
+33 deterministic scan-0514_pilatus_integrated_avg.peak.broad_gauss_w scan-0514_pilatus_integrated_avg.background.3.coef 0.026 scan-0514_pilatus_integrated_0000.xy
+34 deterministic scan-0514_pilatus_integrated_avg.peak.broad_gauss_w scan-0514_pilatus_integrated_avg.background.4.coef -0.030 scan-0514_pilatus_integrated_0000.xy
+35 deterministic scan-0514_pilatus_integrated_avg.peak.broad_gauss_w scan-0514_pilatus_integrated_avg.background.5.coef -0.0065 scan-0514_pilatus_integrated_0000.xy
+36 deterministic scan-0514_pilatus_integrated_avg.peak.broad_gauss_w CaCO3.cell.length_a 0.028 scan-0514_pilatus_integrated_0000.xy
+37 deterministic scan-0514_pilatus_integrated_avg.peak.broad_gauss_w CaCO3.cell.length_c -0.013 scan-0514_pilatus_integrated_0000.xy
+38 deterministic scan-0514_pilatus_integrated_avg.peak.broad_gauss_w scan-0514_pilatus_integrated_avg.linked_structure.CaCO3.scale 0.15 scan-0514_pilatus_integrated_0000.xy
+39 deterministic scan-0514_pilatus_integrated_avg.background.1.coef scan-0514_pilatus_integrated_avg.background.2.coef -0.84 scan-0514_pilatus_integrated_0000.xy
+40 deterministic scan-0514_pilatus_integrated_avg.background.1.coef scan-0514_pilatus_integrated_avg.background.3.coef 0.92 scan-0514_pilatus_integrated_0000.xy
+41 deterministic scan-0514_pilatus_integrated_avg.background.1.coef scan-0514_pilatus_integrated_avg.background.4.coef -0.74 scan-0514_pilatus_integrated_0000.xy
+42 deterministic scan-0514_pilatus_integrated_avg.background.1.coef scan-0514_pilatus_integrated_avg.background.5.coef 0.75 scan-0514_pilatus_integrated_0000.xy
+43 deterministic scan-0514_pilatus_integrated_avg.background.1.coef CaCO3.cell.length_a 0.0042 scan-0514_pilatus_integrated_0000.xy
+44 deterministic scan-0514_pilatus_integrated_avg.background.1.coef CaCO3.cell.length_c 0.0057 scan-0514_pilatus_integrated_0000.xy
+45 deterministic scan-0514_pilatus_integrated_avg.background.1.coef scan-0514_pilatus_integrated_avg.linked_structure.CaCO3.scale -0.042 scan-0514_pilatus_integrated_0000.xy
+46 deterministic scan-0514_pilatus_integrated_avg.background.2.coef scan-0514_pilatus_integrated_avg.background.3.coef -0.82 scan-0514_pilatus_integrated_0000.xy
+47 deterministic scan-0514_pilatus_integrated_avg.background.2.coef scan-0514_pilatus_integrated_avg.background.4.coef 0.87 scan-0514_pilatus_integrated_0000.xy
+48 deterministic scan-0514_pilatus_integrated_avg.background.2.coef scan-0514_pilatus_integrated_avg.background.5.coef -0.60 scan-0514_pilatus_integrated_0000.xy
+49 deterministic scan-0514_pilatus_integrated_avg.background.2.coef CaCO3.cell.length_a -0.0078 scan-0514_pilatus_integrated_0000.xy
+50 deterministic scan-0514_pilatus_integrated_avg.background.2.coef CaCO3.cell.length_c 0.0030 scan-0514_pilatus_integrated_0000.xy
+51 deterministic scan-0514_pilatus_integrated_avg.background.2.coef scan-0514_pilatus_integrated_avg.linked_structure.CaCO3.scale -0.034 scan-0514_pilatus_integrated_0000.xy
+52 deterministic scan-0514_pilatus_integrated_avg.background.3.coef scan-0514_pilatus_integrated_avg.background.4.coef -0.79 scan-0514_pilatus_integrated_0000.xy
+53 deterministic scan-0514_pilatus_integrated_avg.background.3.coef scan-0514_pilatus_integrated_avg.background.5.coef 0.83 scan-0514_pilatus_integrated_0000.xy
+54 deterministic scan-0514_pilatus_integrated_avg.background.3.coef CaCO3.cell.length_a 0.0071 scan-0514_pilatus_integrated_0000.xy
+55 deterministic scan-0514_pilatus_integrated_avg.background.3.coef CaCO3.cell.length_c 0.0020 scan-0514_pilatus_integrated_0000.xy
+56 deterministic scan-0514_pilatus_integrated_avg.background.3.coef scan-0514_pilatus_integrated_avg.linked_structure.CaCO3.scale 0.017 scan-0514_pilatus_integrated_0000.xy
+57 deterministic scan-0514_pilatus_integrated_avg.background.4.coef scan-0514_pilatus_integrated_avg.background.5.coef -0.66 scan-0514_pilatus_integrated_0000.xy
+58 deterministic scan-0514_pilatus_integrated_avg.background.4.coef CaCO3.cell.length_a -0.010 scan-0514_pilatus_integrated_0000.xy
+59 deterministic scan-0514_pilatus_integrated_avg.background.4.coef CaCO3.cell.length_c -0.00076 scan-0514_pilatus_integrated_0000.xy
+60 deterministic scan-0514_pilatus_integrated_avg.background.4.coef scan-0514_pilatus_integrated_avg.linked_structure.CaCO3.scale -0.014 scan-0514_pilatus_integrated_0000.xy
+61 deterministic scan-0514_pilatus_integrated_avg.background.5.coef CaCO3.cell.length_a 0.0075 scan-0514_pilatus_integrated_0000.xy
+62 deterministic scan-0514_pilatus_integrated_avg.background.5.coef CaCO3.cell.length_c 0.0024 scan-0514_pilatus_integrated_0000.xy
+63 deterministic scan-0514_pilatus_integrated_avg.background.5.coef scan-0514_pilatus_integrated_avg.linked_structure.CaCO3.scale -0.0070 scan-0514_pilatus_integrated_0000.xy
+64 deterministic CaCO3.cell.length_a CaCO3.cell.length_c -0.46 scan-0514_pilatus_integrated_0000.xy
+65 deterministic CaCO3.cell.length_a scan-0514_pilatus_integrated_avg.linked_structure.CaCO3.scale -0.00035 scan-0514_pilatus_integrated_0000.xy
+66 deterministic CaCO3.cell.length_c scan-0514_pilatus_integrated_avg.linked_structure.CaCO3.scale -0.013 scan-0514_pilatus_integrated_0000.xy

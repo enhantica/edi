@@ -21,11 +21,6 @@
    "reason": "the colour bar tick labels (1, 0.5, 0, -0.5, -1), not a value of an item"
   },
   {
-   "file": "app/src/scan_view_model.cpp",
-   "match": "QString::number(values_[i], 'g', 6)",
-   "reason": "a scan row's value read from a dataset title, shown only when its text as the file writes it was not kept; not a value of an item"
-  },
-  {
    "file": "app/tools/chart_bench.cpp",
    "match": "std::printf(\"%s\\t%d\\t%d\\t%.2f\\t%.2f\\t%.2f\\t%s\\t%s\\n\"",
    "reason": "a developer benchmark printing timings, not part of the app"
@@ -93,7 +88,7 @@
   {
    "file": "core/src/report_model.cpp",
    "match": "fixed_text((meas - calc[row]) / su, 2)",
-   "reason": "a single crystal's normalised residual (F\u00b2 meas - F\u00b2 calc)/s.u., no item's value, to two decimals as the app's reflection table shows it"
+   "reason": "a single crystal's normalised residual (F² meas - F² calc)/s.u., no item's value, to two decimals as the app's reflection table shows it"
   },
   {
    "file": "core/src/selectors.cpp",
@@ -242,11 +237,6 @@
   },
   {
    "file": "app/src/app_info.cpp",
-   "match": "return QJSValue(shownNumberText(QString::number(su.toNumber(), 'g', 1)));",
-   "reason": "an uncertainty shown without any usable parameter value, so no item format or paired decimal place is available"
-  },
-  {
-   "file": "app/src/app_info.cpp",
    "match": "QString mantissa = QString::number(value.toNumber() / std::pow(10.0, power), 'f', 3);",
    "reason": "the compatibility axis formatter's logarithmic tick mantissa, not a value of an item"
   },
@@ -304,6 +294,46 @@
    "file": "core/src/fullprof_import.cpp",
    "match": "text << std::setprecision(std::numeric_limits<double>::max_digits10) << value;",
    "reason": "a number read from a FullProf file turned into project text at full precision, so nothing is lost; not a displayed value"
+  },
+  {
+   "file": "app/qml/Pages/Analysis/ParametersGroup.qml",
+   "match": "sidebar steps (px",
+   "reason": "the sidebar steps log, widths in pixels, not a displayed value"
+  },
+  {
+   "file": "app/src/app_info.cpp",
+   "match": "QString::number(value, 'e', static_cast<int>(count - 1))",
+   "reason": "the digits of a number that fits its column, rounded to fewer until it fits; the full value is in the popup"
+  },
+  {
+   "file": "app/src/app_info.cpp",
+   "match": "QString::number(rounded.left(at).toDouble()",
+   "reason": "the plain-decimal form of the digits a number keeps in its column"
+  },
+  {
+   "file": "app/src/demo_driver.cpp",
+   "match": "QString::number(rows, 'f', 2)",
+   "reason": "the layout check, rows shown, in the demo summary, not a displayed value"
+  },
+  {
+   "file": "app/src/demo_driver.cpp",
+   "match": "QString::number(inputs[i]->x()",
+   "reason": "the layout check, pixels, in the demo summary, not a displayed value"
+  },
+  {
+   "file": "app/src/demo_driver.cpp",
+   "match": "QString::number(share * 100, 'f', 1)",
+   "reason": "the layout check, a share of the window, in the demo summary"
+  },
+  {
+   "file": "app/src/demo_driver.cpp",
+   "match": "QString::number(100 * height / pageHeight, 'f', 1)",
+   "reason": "the layout check, a share of the page, in the demo summary"
+  },
+  {
+   "file": "app/src/scan_view_model.cpp",
+   "match": "QString::number(values_[i], 'f', decimals)",
+   "reason": "a scan value at the decimals its spacing needs, which no item holds"
   }
  ],
  "names": [
@@ -361,11 +391,6 @@
    "file": "app/qml/Pages/Experiment/InstrumentGroup.qml",
    "literal": "Instrument",
    "reason": "the instrument that measured the experiment, a selector label, not the instrument category's title"
-  },
-  {
-   "file": "app/qml/Pages/Experiment/LinkedStructureGroup.qml",
-   "literal": "s.u.",
-   "reason": "the base library title of any parameter s.u., not the measured-data s.u. item"
   },
   {
    "file": "app/qml/Pages/Project/ProjectPage.qml",
@@ -514,7 +539,7 @@
   },
   {
    "file": "core/src/assistant.cpp",
-   "literal": "\u00b5s",
+   "literal": "µs",
    "reason": "the axis unit in the assistant's read result for the model, a data field and not a label"
   },
   {
@@ -641,6 +666,51 @@
    "file": "core/src/gpx_project.cpp",
    "literal": "Background",
    "reason": "the name of a GSAS-II project's background record, not a displayed label"
+  },
+  {
+   "file": "app/qml/Components/DerivedCell.qml",
+   "literal": "s.u.",
+   "reason": "the title of a derived value's s.u. in its popup, as the parameter popup's"
+  },
+  {
+   "file": "app/qml/Components/SideBarWidthButton.qml",
+   "literal": "Auto",
+   "reason": "the name of a sidebar width mode, a choice of the window and not an item's option"
+  },
+  {
+   "file": "app/qml/Components/SideBarWidthButton.qml",
+   "literal": "Manual",
+   "reason": "the name of a sidebar width mode, a choice of the window and not an item's option"
+  },
+  {
+   "file": "app/qml/Pages/Experiment/ExperimentTypeGroup.qml",
+   "literal": "TOF",
+   "reason": "the short form of the beam mode option in a selector too narrow for the dictionary's name"
+  },
+  {
+   "file": "app/qml/Pages/Structure/AtomSiteMomentGroup.qml",
+   "literal": "θ",
+   "reason": "the symbol of the polar angle over its column"
+  },
+  {
+   "file": "app/qml/Pages/Structure/AtomSiteMomentGroup.qml",
+   "literal": "φ",
+   "reason": "the symbol of the azimuthal angle over its column"
+  },
+  {
+   "file": "app/src/demo_driver.cpp",
+   "literal": "sin θ/λ",
+   "reason": "the layout check's list of symbols that need no capital"
+  },
+  {
+   "file": "app/src/demo_driver.cpp",
+   "literal": "cRp",
+   "reason": "the layout check's list of symbols that need no capital"
+  },
+  {
+   "file": "app/src/demo_driver.cpp",
+   "literal": "cRwp",
+   "reason": "the layout check's list of symbols that need no capital"
   }
  ]
 }

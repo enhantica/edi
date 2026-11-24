@@ -23,9 +23,23 @@ SideBarGroup {
     property var pickerLife: ({
             alive: true
         })
-    Component.onDestruction: ApplicationInfo.formPickerDestroyed()
 
     property ProjectViewModel project: null
+    // Its page and sidebar tab are current; open, its table is on screen and a scan's rows get their values read
+    // (ProjectViewModel.setExperimentListShown, edi ADR-0102 rule 6).
+    property bool pageShown: false
+    readonly property bool listShown: pageShown && !collapsed
+    function reportListShown(): void {
+        if (project)
+            project.setExperimentListShown(group, listShown);
+    }
+    onListShownChanged: reportListShown()
+    onProjectChanged: reportListShown()
+    Component.onDestruction: {
+        ApplicationInfo.formPickerDestroyed();
+        if (project)
+            project.setExperimentListShown(group, false);
+    }
     // A scan project lists its datasets: No. · Fit · Datablock · File · one column per extract rule, with no
     // colour column and no remove button (one template experiment shows them all).
     readonly property bool scan: project !== null && project.scan
@@ -34,13 +48,10 @@ SideBarGroup {
     // One column per extract rule, with its unit, from the table's own model. The table lays a row's cells out
     // by their place among the header's, so the header and each row repeat over the same list.
     readonly property var scanColumns: project ? project.experiments.columns : []
-    // The Fit column is as wide as its title or its icon, so the Fit icon sits as close to the colour icon as the
-    // Structures table's icon to its name: one margin between them, not each column's own (the owner, 2026-10-11). A
-    // right margin as wide as a table's edge margin then keeps the datablock names off it (the owner, 2026-10-24).
-    // The Start column is as wide as its title.
-    readonly property real startColumnWidth: Math.ceil(startTitle.advanceWidth) + EaStyle.Sizes.tableColumnSpacing * 2
+    // The Start and Fit columns are as wide as their titles or their boxes, with a cell's margin on both sides (T1).
+    readonly property real startColumnWidth: Math.ceil(startTitle.advanceWidth) + AppSizes.tableCellMargin * 2
     // Its header or its check box, whichever is wider (the check box replaced the outcome icon, the owner, 2026-11-17).
-    readonly property real fitColumnWidth: Math.ceil(Math.max(fitTitle.advanceWidth, EaStyle.Sizes.fontPixelSize * 1.6)) + EaStyle.Sizes.tableColumnSpacing
+    readonly property real fitColumnWidth: Math.ceil(Math.max(fitTitle.advanceWidth, EaStyle.Sizes.fontPixelSize * 1.7)) + AppSizes.tableCellMargin * 2
 
     objectName: "group.experiments"
     title: qsTr("Experiments (%1)").arg(project ? project.experiments.count : 0)
@@ -74,22 +85,114 @@ SideBarGroup {
             currentRow: group.project ? group.project.currentExperimentIndex : -1
             onRowActivated: row => ApplicationInfo.activateFormBlock(row, false)
 
-            // Datablock as wide as its header and its widest name: a narrow row cuts the data file, never the datablock
-            // (on a scan's long rows it was squeezed to its first letter, the owner, 2026-11-17).
-            columns: [numberColumnWidth, group.scan && !group.series ? group.startColumnWidth : 0.001, AppSizes.iconOnlyColumnWidth, group.fitColumnWidth, textColumnWidth("name", qsTr("Datablock")), -1, group.scanColumns.length ? group.scanColumns.length * AppSizes.dataColumnWidth * 1.4 : 0.001, group.scan ? 0.001 : AppSizes.iconColumnWidth]
+            // A rename or loaded data measures the names again; a scan's other changes, hundreds of them, do not.
+            property var rowTexts: []
+            function readRow(row: int): string {
+                const rows = group.project.experiments;
+                return rows.text(row, "name") + "\n" + rows.text(row, "file") + (table.empty(row) ? "\n" : "");
+            }
+            onCountChanged: rowTexts = group.project ? Array.from({
+                length: count
+            }, (_, row) => readRow(row)) : []
+            Connections {
+                target: group.project ? group.project.experiments : null
+                function onDataChanged(topLeft, bottomRight) {
+                    let changed = false;
+                    for (let row = topLeft.row; row <= bottomRight.row; ++row) {
+                        const text = table.readRow(row);
+                        changed = changed || table.rowTexts[row] !== text;
+                        table.rowTexts[row] = text;
+                    }
+                    if (changed)
+                        table.remeasure();
+                }
+            }
+            // The row's room beside the columns of one width: what the name, the data file and the scan values share.
+            readonly property real sharedRoom: {
+                const own = [numberColumnWidth, group.scan && !group.series ? group.startColumnWidth : 0, AppSizes.tableControlWidth, group.fitColumnWidth, group.scan ? 0 : controlColumnWidth].filter(column => column > 0);
+                const columns = own.length + 2 + (group.scanColumns.length > 0 ? 1 : 0);
+                return width - 2 * rowPadding - own.reduce((sum, column) => sum + column, 0) - (columns - 1) * EaStyle.Sizes.tableColumnSpacing;
+            }
+            // Whether a row shows the Load data button rather than its file.
+            function empty(row: int): bool {
+                const experiment = group.project && !group.scan ? group.project.experiments.item(row, "experiment") as ExperimentViewModel : null;
+                return experiment !== null && experiment.calculationOnly;
+            }
+            // The widest of the first rows' names or files, each cut in its middle to ten characters (T10), half a dozen at
+            // each end and the ellipsis, or whole.
+            function widestText(role: string, title: string, cut: bool): real {
+                let widest = modelRevision >= 0 ? advance(title) : 0;
+                for (let row = 0; row < Math.min(count, measuredAtOnce); ++row) {
+                    const text = group.project ? group.project.experiments.text(row, role) : "";
+                    const whole = advance(text);
+                    const shown = cut && text.length > 12 ? Math.min(whole, advance(text.slice(0, 6) + "…" + text.slice(-6))) : whole;
+                    // A file's More button after it, less the gap round its box, or the button that loads one.
+                    const tail = role === "name" || group.scan ? 0 : EaStyle.Sizes.fontPixelSize * 0.5 + EaStyle.Sizes.tableRowHeight - 2;
+                    widest = Math.max(widest, role === "file" && table.empty(row) ? advance(qsTr("Load data…")) + EaStyle.Sizes.fontPixelSize * 1.2 : shown + tail);
+                }
+                return Math.ceil(widest) + 2 * AppSizes.tableCellMargin;
+            }
+            readonly property real nameLeast: widestText("name", qsTr("Datablock"), true)
+            // The data file column at its narrowest, and with every file's name whole (T5), a scan's Start word after it too.
+            readonly property real fileLeast: widestText("file", qsTr("Data file"), true)
+            readonly property real fileNatural: widestText("file", qsTr("Data file"), false) + (group.scan ? Math.ceil(EaStyle.Sizes.fontPixelSize * 0.5 + advance(qsTr("Start"))) : 0)
+            // The row's room as the names, the data files and the scan values take it, the values one em apart (T1). Where it
+            // does not hold them all, the values narrow first, their numbers with fewer digits, then the files and then the
+            // names give way down to ten characters (T10). A row narrower than that closes the gaps between the values,
+            // then shortens the files and the names further, since a number is never cut (T8); nothing passes the edge.
+            readonly property var shares: {
+                const values = group.scanColumns.length;
+                let gap = contentGap;
+                const room = () => sharedRoom - (values > 0 ? 2 * AppSizes.tableCellMargin + (values - 1) * gap : 0);
+                const most = Math.ceil(Math.max(...group.scanColumns.concat("0000.000 K").map(text => advance(text))));
+                const names = naturalTextColumnWidth("name", qsTr("Datablock"));
+                let value = values > 0 ? Math.min(most, Math.max(Math.ceil(advance("000 K")), Math.floor((room() - names - fileNatural) / values))) : 0;
+                let file = Math.max(fileLeast, Math.min(fileNatural, room() - values * value - names));
+                let name = Math.max(nameLeast, Math.min(names, room() - values * value - file));
+                const over = () => Math.max(0, name + file + values * value - room());
+                if (values > 1)
+                    gap = Math.max(EaStyle.Sizes.tableColumnSpacing, gap - Math.ceil(over() / (values - 1)));
+                const shortest = EaStyle.Sizes.fontPixelSize * 3;
+                file = Math.max(Math.min(file, shortest), file - over());
+                name = Math.max(Math.min(name, shortest), name - over());
+                if (values > 0)
+                    value = Math.max(0, value - Math.ceil(over() / values));
+                file = Math.max(0, file - over());
+                return {
+                    "name": name,
+                    "file": file,
+                    "value": value,
+                    "gap": gap,
+                    "values": values > 0 ? values * value + (values - 1) * gap + 2 * AppSizes.tableCellMargin : 0
+                };
+            }
+            onSharesChanged: Qt.callLater(combineWidths)
+            readonly property real nameColumnWidth: shares.name
+            readonly property real fileColumnWidth: shares.file
+            readonly property real valueWidth: shares.value
+            readonly property real valuesWidth: shares.values
+            insetButtons: true
+            // The columns above are whole, their margins included.
+            autoColumnPadding: 0
+            // Datablock as wide as its widest name (ADR-0103 T5): a narrow row cuts the data file, never the datablock, and
+            // the room goes to the data file and the scan values.
+            columns: [numberColumnWidth, group.scan && !group.series ? group.startColumnWidth : 0.001, AppSizes.tableControlWidth, group.fitColumnWidth, nameColumnWidth, group.scanColumns.length ? fileColumnWidth : -1, group.scanColumns.length ? -1 : 0.001, group.scan ? 0.001 : controlColumnWidth]
+            // No column is measured from its rows, so a scan's rows changing one by one never measure rows again (ADR-0103
+            // rule 4); the data file's long paths elide.
+            columnTypes: ["", "", "", "", "", "", "", ""]
 
             header: EaComponents.ListViewHeader {
                 EaComponents.ListViewLabel {
                     elide: Text.ElideRight
                     horizontalAlignment: Text.AlignHCenter
                 }
-                // Present whenever its cells are, empty where there is no Start: a header cell and its row's cell are
-                // both shown or both hidden, or the header row would lose or gain a column's gap and stand off its
-                // cells from there on (the owner, 2026-11-17).
+                // Shown with its cells and hidden with them where there is no Start, so neither row places a spacing
+                // for a column of no width (the owner, 2026-11-17).
                 EaComponents.ListViewLabel {
+                    visible: group.scan && !group.series
                     elide: Text.ElideRight
                     horizontalAlignment: Text.AlignLeft
-                    text: group.scan && !group.series ? qsTr("Start") : ""
+                    text: qsTr("Start")
                 }
                 EaComponents.ListViewLabel {
                     elide: Text.ElideRight
@@ -106,17 +209,21 @@ SideBarGroup {
                     text: qsTr("Datablock")
                 }
                 EaComponents.ListViewLabel {
+                    readonly property real reservedWidth: table.fileColumnWidth
                     elide: Text.ElideRight
                     horizontalAlignment: Text.AlignLeft
                     text: qsTr("Data file")
                 }
                 // Keep the scan's repeated cells in one width-controlled column (ADR-0029).
                 Item {
+                    readonly property real reservedWidth: table.valuesWidth
                     property int horizontalAlignment: Text.AlignHCenter
                     visible: group.scanColumns.length > 0
                     height: parent.height
                     Row {
+                        x: AppSizes.tableCellMargin
                         height: parent.height
+                        spacing: table.shares.gap
                         Repeater {
                             property int horizontalAlignment: Text.AlignHCenter
                             model: group.scanColumns
@@ -124,13 +231,13 @@ SideBarGroup {
                                 id: column
                                 required property string modelData
                                 property int horizontalAlignment: Text.AlignHCenter
-                                width: AppSizes.dataColumnWidth * 1.4
+                                width: table.valueWidth
                                 height: EaStyle.Sizes.tableRowHeight
-                                EaComponents.ListViewLabel {
-                                    elide: Text.ElideRight
+                                // A scan value fitted to its column, in full on hover (NumberLabel).
+                                NumberLabel {
                                     anchors.fill: parent
                                     horizontalAlignment: column.horizontalAlignment
-                                    text: column.modelData
+                                    number: column.modelData
                                 }
                             }
                         }
@@ -145,6 +252,32 @@ SideBarGroup {
 
             delegate: TableRow {
                 id: row
+
+                // A row in the table's visible part has its scan values read while the group shows
+                // (watchExperimentRow, rule 6), under its index now, released with the project it was registered with.
+                readonly property ListView ownList: ListView.view
+                readonly property bool inView: ownList !== null && y + height > ownList.contentY && y < ownList.contentY + ownList.height
+                property int watching: -1
+                property var watchedProject: null
+                function rewatch(): void {
+                    if (watchedProject && watching >= 0)
+                        watchedProject.watchExperimentRow(group, watching, false);
+                    watchedProject = inView ? group.project : null;
+                    watching = watchedProject ? row.index : -1;
+                    if (watchedProject)
+                        watchedProject.watchExperimentRow(group, watching, true);
+                }
+                onIndexChanged: rewatch()
+                onInViewChanged: rewatch()
+                Connections {
+                    target: group
+                    function onProjectChanged() {
+                        row.rewatch();
+                    }
+                }
+                Component.onCompleted: rewatch()
+                Component.onDestruction: if (watchedProject && watching >= 0)
+                    watchedProject.watchExperimentRow(group, watching, false)
 
                 required property string name
                 required property ExperimentViewModel experiment
@@ -165,11 +298,13 @@ SideBarGroup {
                 // Left-aligned under its header (the owner, 2026-11-17).
                 Item {
                     property int horizontalAlignment: Text.AlignLeft
+                    visible: group.scan && !group.series
                     height: parent ? parent.height : 0
                     EaElements.RadioButton {
                         id: startButton
                         objectName: `experiments.start.${row.index}`
                         anchors.left: parent.left
+                        anchors.leftMargin: AppSizes.tableCellMargin
                         anchors.verticalCenter: parent.verticalCenter
                         visible: group.scan && !group.series
                         checked: row.isTemplate
@@ -206,6 +341,7 @@ SideBarGroup {
                         id: fitBox
                         objectName: `experiments.fit.${row.index}`
                         anchors.left: parent.left
+                        anchors.leftMargin: AppSizes.tableCellMargin
                         anchors.verticalCenter: parent.verticalCenter
                         padding: 0
                         focusPolicy: Qt.NoFocus
@@ -251,13 +387,14 @@ SideBarGroup {
                     height: parent ? parent.height : 0
 
                     Row {
+                        x: AppSizes.tableCellMargin
                         height: parent.height
                         spacing: EaStyle.Sizes.fontPixelSize * 0.5
                         visible: !fileCell.empty
 
                         EaComponents.ListViewLabel {
                             objectName: `experiments.file.${row.index}`
-                            width: Math.min(implicitWidth, fileCell.width - (templateTag.visible ? templateTag.width + parent.spacing : 0) - (moreButton.visible ? moreButton.width + parent.spacing : 0))
+                            width: Math.min(implicitWidth, fileCell.width - 2 * AppSizes.tableCellMargin - (templateTag.visible ? templateTag.width + parent.spacing : 0) - (moreButton.visible ? moreButton.width + parent.spacing : 0))
                             height: parent.height
                             horizontalAlignment: Text.AlignLeft
                             // A long file name keeps its distinguishing end, its number and extension (the owner, 2026-11-17).
@@ -291,6 +428,7 @@ SideBarGroup {
                         id: loadDataButton
                         objectName: `experiments.loadData.${row.index}`
                         visible: fileCell.empty
+                        x: AppSizes.tableCellMargin
                         anchors.verticalCenter: parent.verticalCenter
                         height: parent.height * 0.85
                         enabled: row.experiment !== null && row.experiment.canLoadData
@@ -317,7 +455,9 @@ SideBarGroup {
                     visible: group.scanColumns.length > 0
                     height: parent.height
                     Row {
+                        x: AppSizes.tableCellMargin
                         height: parent.height
+                        spacing: table.shares.gap
                         Repeater {
                             property int horizontalAlignment: Text.AlignHCenter
                             model: group.scanColumns.length
@@ -325,7 +465,7 @@ SideBarGroup {
                                 id: value
                                 required property int index
                                 property int horizontalAlignment: Text.AlignHCenter
-                                width: AppSizes.dataColumnWidth * 1.4
+                                width: table.valueWidth
                                 height: EaStyle.Sizes.tableRowHeight
                                 NumberLabel {
                                     anchors.fill: parent
@@ -365,6 +505,15 @@ SideBarGroup {
             id: buttons
 
             readonly property real buttonWidth: (EaStyle.Sizes.sideBarContentWidth - 2 * spacing) / 3
+            // Whole labels where the longest fits beside its icon, else the short ones, the same on every button
+            // (the owner, 2026-11-23: no label runs out of its button).
+            readonly property bool wholeLabels: labelMetrics.advanceWidth + EaStyle.Sizes.fontPixelSize * 4 <= buttonWidth
+            TextMetrics {
+                id: labelMetrics
+                font.family: EaStyle.Fonts.fontFamily
+                font.pixelSize: EaStyle.Sizes.fontPixelSize
+                text: qsTr("Duplicate experiment")
+            }
 
             spacing: EaStyle.Sizes.fontPixelSize
 
@@ -373,7 +522,7 @@ SideBarGroup {
                 width: buttons.buttonWidth
                 enabled: group.project !== null && group.project.canCreateExperiment
                 fontIcon: "plus-circle"
-                text: qsTr("Create experiment")
+                text: buttons.wholeLabels ? qsTr("Create experiment") : qsTr("Create")
                 ToolTip.text: enabled ? qsTr("Add an experiment without data, to calculate its pattern or load data into") : qsTr("A scan project fits its one template experiment")
                 onClicked: group.project.createExperiment()
             }
@@ -436,7 +585,7 @@ SideBarGroup {
                 width: buttons.buttonWidth
                 enabled: group.project !== null && group.project.canCreateExperiment && group.project.currentExperiment !== null
                 fontIcon: "clone"
-                text: qsTr("Duplicate experiment")
+                text: buttons.wholeLabels ? qsTr("Duplicate experiment") : qsTr("Duplicate")
                 ToolTip.text: group.scan ? qsTr("A scan project fits its one template experiment") : qsTr("Add a copy of the selected experiment, with its data")
                 onClicked: group.project.duplicateExperiment()
             }

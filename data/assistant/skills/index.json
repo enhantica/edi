@@ -7,7 +7,7 @@
       "title": "Work with the displayed Edi project",
       "summary": "Work with the current native project, genuine CIF/data inputs, Estimate, ordinary saves and public scientific research.",
       "path": "project-assistance/SKILL.md",
-      "sha256": "93fe341bef4d3d248e93b054a1047279ea2b51c13e552fe8e39e260b616e58a3",
+      "sha256": "504aa0e23404561aa39bf3babefc8bb0331ad7f78bcc896d6833fbe9258cc87c",
       "requires": [],
       "capabilities": [
         "inspect_project",
@@ -82,7 +82,7 @@
       "title": "Plan adaptive Rietveld refinement",
       "summary": "Choose evidence-based stages, checkpoints, ADPs and mixed-site relationships.",
       "path": "refinement-strategy/SKILL.md",
-      "sha256": "946f0cea0434f42bc1e391dc91dc93e2921591194869e2bc872e0b7fc0931091",
+      "sha256": "26ed5d649725402274207ecb120b3b3b2113bd5c26661c85501959f5108f6d94",
       "requires": [],
       "capabilities": [
         "inspect_project",

@@ -33,7 +33,20 @@ EaComponents.ListViewDelegate {
         ApplicationInfo.tableRowActivated();
     }
 
-    Component.onCompleted: ApplicationInfo.tableRowCompleted((child, hover) => {
-        child.opacity = Qt.binding(() => hover !== null && hover.enabled && hover.hovered ? 1 : 0);
-    })
+    Component.onCompleted: {
+        ApplicationInfo.tableRowCompleted((child, hover) => {
+            child.opacity = Qt.binding(() => hover !== null && hover.enabled && hover.hovered ? 1 : 0);
+        });
+        anchorContentLeft();
+    }
+    // The base centres a row's cells; a table whose columns leave spare width then showed an empty margin before its
+    // first column (the owner, 2026-11-21): the cells start at the left, as the header's do (DataTable).
+    function anchorContentLeft() {
+        for (const scope of row.children)
+            for (const item of scope.children)
+                if (item instanceof Row) {
+                    item.anchors.horizontalCenter = undefined;
+                    item.anchors.left = scope.left;
+                }
+    }
 }

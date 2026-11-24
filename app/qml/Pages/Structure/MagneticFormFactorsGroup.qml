@@ -19,8 +19,6 @@ Column {
 
     property StructureViewModel structure: null
     readonly property MagneticFormFactorListModel formFactors: structure ? structure.magneticFormFactors : null
-    readonly property real typeWidth: EaStyle.Sizes.fontPixelSize * 4
-    readonly property real coefficientWidth: EaStyle.Sizes.fontPixelSize * 5.5
 
     // The Landé g a C2 stands for, g = 2 / (1 + C2); a dash where it has none.
     function landeText(value) {
@@ -37,7 +35,9 @@ Column {
         defaultInfoText: qsTr("No magnetic atom types yet")
         sourceModel: group.formFactors
 
-        columns: [numberColumnWidth, group.typeWidth, group.typeWidth, -1, group.coefficientWidth, group.coefficientWidth, group.coefficientWidth]
+        // Its columns by kind (the shared column model, DataTable.columnKinds; ADR-0103 decision 4).
+        columnKinds: ["index", "short", "short", "text", "number", "number", "number"]
+        // Widths from column types, not rows (ADR-0103 rule 4): the approximation is a text.
 
         header: EaComponents.ListViewHeader {
             EaComponents.ListViewLabel {

@@ -28,7 +28,9 @@ Column {
         defaultInfoText: group.structure && group.structure.derivedPropagationVector !== "" ? qsTr("k = %1, from the magnetic group (its parent's cell)").arg(group.structure.derivedPropagationVector) : group.structure && group.structure.propagationNotDerived !== "" ? group.structure.propagationNotDerived : qsTr("No propagation vectors yet")
         sourceModel: group.vectors
 
-        columns: [numberColumnWidth, -1, -1, AppSizes.iconColumnWidth]
+        // Its columns by kind (the shared column model, DataTable.columnKinds; ADR-0103 decision 4).
+        columnKinds: ["index", "short", "text", "control"]
+        // Widths from column types, not rows (ADR-0103 rule 4): an id, then the vector.
 
         header: EaComponents.ListViewHeader {
             EaComponents.ListViewLabel {

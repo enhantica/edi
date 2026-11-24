@@ -22,6 +22,8 @@ class ParameterTableModel : public RowTableModel {
     QML_UNCREATABLE("Belongs to a project")
     Q_PROPERTY(int freeCount READ freeCount NOTIFY freeCountChanged)
     Q_PROPERTY(int fixedCount READ fixedCount NOTIFY fixedCountChanged)
+    // Whether any parameter has an s.u.: the s.u. column shows only then (the owner, 2026-11-21).
+    Q_PROPERTY(bool anyUncertainty READ anyUncertainty NOTIFY anyUncertaintyChanged)
     // Rows no fit can vary that are not free; free, fixed and these partition the rows.
     Q_PROPERTY(int notFittableCount READ notFittableCount NOTIFY notFittableCountChanged)
     // The rows each show-filter adds, by ParameterItem::FitGroup from NotMeasured: the group's rows that are not free.
@@ -31,6 +33,7 @@ class ParameterTableModel : public RowTableModel {
     ParameterTableModel(ParameterRegistry& registry, QObject* parent);
     int freeCount() const { return free_count_; }
     int fixedCount() const { return fixed_count_; }
+    bool anyUncertainty() const { return any_uncertainty_; }
     int notFittableCount() const { return not_fittable_count_; }
     QList<int> groupCounts() const { return group_counts_; }
     // The one experiment whose parameters are listed; empty lists every experiment's. Takes effect at
@@ -43,6 +46,7 @@ class ParameterTableModel : public RowTableModel {
    signals:
     void freeCountChanged();
     void fixedCountChanged();
+    void anyUncertaintyChanged();
     void notFittableCountChanged();
     void groupCountsChanged();
 
@@ -55,6 +59,7 @@ class ParameterTableModel : public RowTableModel {
     QString experiment_scope_;
     int free_count_ = 0;
     int fixed_count_ = 0;
+    bool any_uncertainty_ = false;
     int not_fittable_count_ = 0;
     QList<int> group_counts_{0, 0, 0, 0};
 };
@@ -116,6 +121,8 @@ class ParameterFilterModel : public QSortFilterProxyModel {
     Variability variability() const { return variability_; }
     void setVariability(Variability variability);
     void setSourceModel(QAbstractItemModel* source) override;
+    // Whether a change of these source roles can change what the filters show or count.
+    bool affectsFilters(const QList<int>& roles) const;
     QString datablockFilter() const { return datablock_filter_; }
     void setDatablockFilter(const QString& datablock);
     QStringList datablocks() const { return datablocks_; }

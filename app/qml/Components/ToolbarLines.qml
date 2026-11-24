@@ -19,6 +19,24 @@ Item {
     id: lines
 
     property real leftEdge: 0
+    // A main-view chart's toolbar starts after the block selector when the two share a row (AppSizes.selectorRowReserve,
+    // measured from leftEdge, where the selector starts).
+    property bool sharesSelectorRow: true
+    readonly property real reservedLeft: sharesSelectorRow && EaStyle.Sizes.sideBarBelow ? AppSizes.selectorRowReserve : 0
+    // The row's width with every control in it (ToolbarRow.place), and whether its chart is the one shown: the shown
+    // one tells the block selector how much of a shared row it needs.
+    property real naturalWidth: 0
+    readonly property bool chartShown: isShown(lines.parent) && lines.visible
+    function isShown(chart: var): bool {
+        return chart !== null && chart.shown === true;
+    }
+    Binding {
+        target: AppSizes
+        property: "toolbarNaturalWidth"
+        value: lines.naturalWidth
+        when: lines.sharesSelectorRow && lines.chartShown && lines.naturalWidth > 0
+        restoreMode: Binding.RestoreNone
+    }
     property real rightEdge: width
     readonly property real centre: (leftEdge + rightEdge) / 2
     readonly property real spacing: AppSizes.toolbarSpacing
@@ -28,7 +46,7 @@ Item {
     // Every control, in row order: {item, group, movable}; and those in the popup.
     property var units: []
     property var overflow: []
-    readonly property string measure: [leftEdge, rightEdge, visible].concat(units.map(unit => unit.item.visible ? unit.item.width : -1)).join(",")
+    readonly property string measure: [leftEdge, rightEdge, reservedLeft, visible].concat(units.map(unit => unit.item.visible ? unit.item.width : -1)).join(",")
 
     implicitHeight: AppSizes.toolbarControlSize
 

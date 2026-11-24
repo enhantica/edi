@@ -25,6 +25,9 @@ struct ParameterEntry {
     bool refinable = true;   // false: symmetry fixes or ties it (categories.hpp); its value is shown, not typed
 };
 
+// The entry's name in the .edi files, which an alias refers to it by: cosio.atom_site.Co1.adp_iso.
+std::string edi_name_of(const ParameterEntry& entry);
+
 // Every parameter the project's model carries (the union of the categories' shown fields, §2b (iv), I15, and a
 // time-of-flight experiment's coefficients its profile does not use) in page order: structures, then experiments. The app's Analysis table lists every entry, with what keeps a fit from
 // varying it (fittability.hpp, ADR-0053). Paths come from the fit surface's own grammar

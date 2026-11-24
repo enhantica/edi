@@ -162,12 +162,12 @@ Column {
 
             DataTable {
                 objectName: "background.list"
-                // At most four rows, then it scrolls (the owner, 2026-10-04; edi ADR-0017 §3).
-                maxRowCountShow: 4
                 defaultInfoText: qsTr("No background points yet")
                 sourceModel: group.points
 
-                columns: [numberColumnWidth, -1, -1, -1, AppSizes.iconColumnWidth]
+                // Its columns by kind (the shared column model, DataTable.columnKinds; ADR-0103 decision 4).
+                columnKinds: ["index", "short", "number", "number", "control"]
+                // Widths from column types, not rows (ADR-0103 rule 4): an id or label, then values.
 
                 header: EaComponents.ListViewHeader {
                     EaComponents.ListViewLabel {
@@ -179,11 +179,11 @@ Column {
                         uid: "background.id"
                     }
                     HeaderLabel {
-                        horizontalAlignment: Text.AlignHCenter
+                        horizontalAlignment: Text.AlignRight
                         uid: "background.position"
                     }
                     HeaderLabel {
-                        horizontalAlignment: Text.AlignHCenter
+                        horizontalAlignment: Text.AlignRight
                         uid: "background.intensity"
                     }
                     EaComponents.ListViewLabel {
@@ -214,7 +214,7 @@ Column {
                     }
                     TextCell {
                         locked: group.automatic
-                        horizontalAlignment: Text.AlignHCenter
+                        horizontalAlignment: Text.AlignRight
                         objectName: `background.position.${row.index}`
                         uid: "background.position"
                         value: row.position
@@ -223,7 +223,7 @@ Column {
                     }
                     ParameterCell {
                         locked: group.automatic
-                        columnAlignment: Text.AlignHCenter
+                        columnAlignment: Text.AlignRight
                         objectName: `background.intensity.${row.index}`
                         item: row.intensity
                     }
@@ -283,12 +283,12 @@ Column {
 
             DataTable {
                 objectName: "background.terms"
-                // At most four rows, then it scrolls, as the points (edi ADR-0017 §3).
-                maxRowCountShow: 4
                 defaultInfoText: qsTr("No background terms yet")
                 sourceModel: group.terms
 
-                columns: [numberColumnWidth, -1, -1, -1, AppSizes.iconColumnWidth]
+                // Its columns by kind (the shared column model, DataTable.columnKinds; ADR-0103 decision 4).
+                columnKinds: ["index", "short", "number", "number", "control"]
+                // Widths from column types, not rows (ADR-0103 rule 4): an id or label, then values.
 
                 header: EaComponents.ListViewHeader {
                     EaComponents.ListViewLabel {

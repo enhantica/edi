@@ -51,6 +51,20 @@ Item {
     // The zoomed or moved ranges, [xMin, xMax, yMin, yMax]; empty: the whole data. The pointer sets it, and every
     // page's copy follows it (AppState.measCalcZoom).
     property list<real> zoom: AppState.measCalcZoom
+    // The axes move to a zoom or a reset as the Pattern chart's do (the owner, 2026-11-21): one shared animation.
+    FontMetrics {
+        id: tickMetrics
+        font.family: EaStyle.Fonts.fontFamily
+        font.pixelSize: EaStyle.Sizes.fontPixelSize
+    }
+    RangeAnimation {
+        id: viewRanges
+        zoom: chart.zoom
+        fitted: [chart.values.low, chart.values.high, chart.values.low, chart.values.high]
+        duration: EaStyle.Times.chartAnimation
+        active: chart.shown
+        immediate: pointer.pressed && Preferences.patternPointerMode !== "zoom"
+    }
     onZoomChanged: {
         if (String(zoom) !== String(AppState.measCalcZoom))
             AppState.measCalcZoom = zoom;
@@ -203,18 +217,28 @@ Item {
         theme: ChartTheme {
             labelTextColor: chart.colors.chartLabels
         }
+        // As many ticks as their labels leave room for, at round steps, as the Stacked, Map and Evolution charts do:
+        // the default spacing ran the labels together in a narrow view (the owner, 2026-11-21).
         axisX: ValueAxis {
             id: axisX
-            min: chart.zoom.length === 4 ? chart.zoom[0] : chart.values.low
-            max: chart.zoom.length === 4 ? chart.zoom[1] : chart.values.high
+            min: viewRanges.ranges[0]
+            max: viewRanges.ranges[1]
+            // Both axes hold the same quantity: one step for both, the larger the labels need (the owner's sweep,
+            // 2026-11-22: a step of 1000 across and 500 up on one parity plot).
+            readonly property real ownStep: ApplicationInfo.chartNiceStep(max - min, Math.max(2, Math.min(8, Math.floor(Math.max(1, view.plotArea.width) / (tickMetrics.advanceWidth(Math.round(Math.max(Math.abs(min), Math.abs(max))).toString() + ".0") + chart.em * 3)))))
+            tickInterval: Math.max(ownStep, axisY.ownStep)
+            tickAnchor: 0
             lineVisible: false
             gridVisible: false
             subGridVisible: false
         }
         axisY: ValueAxis {
             id: axisY
-            min: chart.zoom.length === 4 ? chart.zoom[2] : chart.values.low
-            max: chart.zoom.length === 4 ? chart.zoom[3] : chart.values.high
+            min: viewRanges.ranges[2]
+            max: viewRanges.ranges[3]
+            readonly property real ownStep: ApplicationInfo.chartNiceStep(max - min, Math.max(2, Math.min(8, Math.floor(Math.max(1, view.plotArea.height) / (chart.em * 2.5)))))
+            tickInterval: Math.max(ownStep, axisX.ownStep)
+            tickAnchor: 0
             lineVisible: false
             gridVisible: false
             subGridVisible: false

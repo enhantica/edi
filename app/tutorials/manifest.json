@@ -2222,10 +2222,10 @@
         },
         {
           "title": "Constrain the two Co sites",
-          "text": "Enter **structure.atom_sites[Co1].adp_iso** as the name filter above the **Parameters** table.",
+          "text": "Enter **cosio.atom_site.Co1.adp_iso** as the name filter above the **Parameters** table.",
           "page": "analysis",
           "target": "parameters.nameFilter",
-          "check": "field:parameters.nameFilter=structure.atom_sites[Co1].adp_iso",
+          "check": "field:parameters.nameFilter=cosio.atom_site.Co1.adp_iso",
           "tab": "basic"
         },
         {

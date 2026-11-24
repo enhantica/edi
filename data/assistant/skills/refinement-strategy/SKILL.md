@@ -43,9 +43,9 @@ finish that category, or explicitly report the structural fit incomplete.
    establishes neutron powder diffraction. If required type choices or calibration
    are missing/conflicting, collect the missing choices together with selectable
    question-card options matching the app, without reasking established facts. Show
-   Assistant before asking and wait for the actual answer. If required facts are
-   missing and no question-card flow is offered, issue a FINAL question and END
-   the turn. Do no creation, import, setup, fitting or Save while awaiting those
+   Assistant before asking and wait for the actual answer. Never ask in plain text:
+   if no question-card flow is offered, say once that questions cannot be asked
+   here and which facts are missing, then stop. Do no creation, import, setup, fitting or Save while awaiting those
    facts. When they are established, proceed without a redundant question.
 
 2. **Find the dominant current mismatch efficiently.** Start broad numerical

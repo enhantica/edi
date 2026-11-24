@@ -220,12 +220,18 @@ Item {
         function test_explicit_digit_caps(data) {
             compare(NumberText.parameter(data.value, 0, data.digits), data.text, "The original no-SU decimal cap rounds the authored sign, scale and carry cases");
         }
-        function test_pixel_room_preserves_all_literal_digits_through_the_actual_fitted_seam() {
-            const text = "999999", narrow = "9.99999e5";
-            const advance = fittedMetrics.advanceWidth(text);
-            verify(advance > 1, "The actual font ink overflows the strictly positive narrow room");
-            compare(NumberText.fitted(text, Math.ceil(advance) + 1, fittedMetrics, narrow), text, "A roomy fitted display preserves the complete original literal");
-            compare(NumberText.fitted(text, 1, fittedMetrics, narrow), narrow, "Positive-room fitting changes notation while preserving every literal significant digit");
+        function test_pixel_room_preserves_the_most_digits_that_fit() {
+            const text = "23456789";
+            const ordinary = fittedMetrics.advanceWidth(text);
+            compare(NumberText.fitted(text, Math.ceil(ordinary) + 1, fittedMetrics),
+                    text, "A roomy fitted number preserves the complete original literal");
+            const candidates = ["2.346×10⁷", "2.35×10⁷", "2.3×10⁷"];
+            const room = fittedMetrics.advanceWidth(candidates[2]) + 0.25;
+            verify(room < ordinary, "Two-digit scientific text fits where the full value does not");
+            const expected = candidates.find(candidate => fittedMetrics.advanceWidth(candidate) <= room);
+            verify(expected !== undefined, "The independent font witness can fit a two-digit scientific number");
+            compare(NumberText.fitted(text, room, fittedMetrics), expected,
+                    "The fitting seam displays the greatest number of scientific digits that fit");
         }
         function test_scientific_uncertainty_editing_and_clipping() {
             verify(Session.openProject(Qt.resolvedUrl("../../fixtures/table_display")), Session.lastError);
@@ -236,16 +242,25 @@ Item {
             verify(waitForPolish(group), "The scientific-number table completes layout");
             const cell = Ui.find(group, "background.intensity.0");
             verify(cell !== null && cell.item.hasUncertainty, "The independent fixture supplies both a value and its s.u.");
-            compare(cell.item.fileValue, "22900000", "The supplied pair has its independently specified written value");
-            compare(cell.item.fileSu, "100000", "The supplied IUCr99 uncertainty has its independent written value");
+            compare(Ui.numericText(cell.item.fileValue), 22900000, "The supplied pair has its independently specified written value");
+            compare(Ui.numericText(cell.item.fileSu), 100000, "The supplied IUCr99 uncertainty has its independent written value");
             compare(cell.error, cell.item.fileSu, "The editable cell's menu retains the canonical written uncertainty");
             numberInk.font = cell.font;
-            numberInk.text = "22900000";
-            const fits = numberInk.advanceWidth <= cell.width - cell.leftPadding - cell.rightPadding;
-            compare(cell.text, fits ? "22900000" : "2.290e7", "The actual table text follows independent ink fit while retaining the written pair's meaningful last digit");
-            cell.forceActiveFocus();
-            tryCompare(cell, "text", "22900000", 2000, "Editing exposes the complete numerical value");
-            cell.focus = false;
+            const candidates = ["2.290×10⁷", "2.29×10⁷", "2.3×10⁷"];
+            const room = cell.width - cell.leftPadding - cell.rightPadding;
+            const expected = candidates.find(text => {
+                numberInk.text = text;
+                return numberInk.advanceWidth <= room + 0.5;
+            });
+            verify(expected !== undefined, "The column fits at least the two-digit scientific spelling");
+            compare(cell.text, expected, "The actual table retains the most digits supported by the measured ink room");
+            verify(cell.contentWidth <= room + 0.5 && !cell.text.includes("…"), "The shown numeric token is fully visible");
+            const popup = Ui.parameterPopup(this, cell);
+            const editor = Ui.parameterValue(this, cell, popup);
+            Ui.focusParameter(this, editor);
+            tryCompare(editor, "text", cell.item.fileEditValue, 2000, "Editing uses the complete canonical value through the popup");
+            compare(Ui.numericText(editor.text), 22900000, "The original full authored value is available for editing");
+            popup.close();
             tryCompare(cell, "cursorPosition", 0, 2000, "An unfocused number is visible from its start");
         }
         function test_analysis_filter_units_heading_and_free_colour() {

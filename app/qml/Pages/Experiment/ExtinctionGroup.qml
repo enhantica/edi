@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 import QtQuick
 
+import EasyApplication.Gui.Style as EaStyle
 import EasyApplication.Gui.Elements as EaElements
 
 import edi.app
@@ -14,10 +15,16 @@ Column {
     property ExperimentViewModel experiment: null
 
     spacing: AppSizes.groupContentSpacing
+    // One grid for the group: the two selectors stand on the fields' columns, each over half of them.
+    readonly property int gridColumns: grid.visible && grid.columns > 0 ? grid.columns : 2
+    readonly property real columnWidth: (EaStyle.Sizes.sideBarContentWidth - (gridColumns - 1) * AppSizes.inputSpacing) / gridColumns
+    readonly property int selectorSpan: Math.max(1, Math.floor(gridColumns / 2))
+    readonly property real selectorWidth: columnWidth * selectorSpan + (selectorSpan - 1) * AppSizes.inputSpacing
 
     EaElements.GroupRow {
         spacing: AppSizes.inputSpacing
         SelectorField {
+            width: group.selectorWidth
             objectName: "extinction.type"
             uid: "extinction.type"
             options: group.experiment ? group.experiment.extinctionTypeOptions : null
@@ -25,6 +32,7 @@ Column {
             onSelected: token => group.experiment.extinctionType = token
         }
         SelectorField {
+            width: group.selectorWidth
             objectName: "extinction.mosaicDistribution"
             visible: group.experiment !== null && group.experiment.mosaicDistribution !== ""
             uid: "extinction.mosaic_distribution"
