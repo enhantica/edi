@@ -112,11 +112,13 @@ func visit(_ element: AXUIElement, depth: Int, into placed: inout [Placed], tall
 
 // The page's layout rules (owner, 2026-11-23): one left edge, gaps on the spacing scale, no clipped text, no frame
 // mostly empty. Content lies between the header (the logo, at the top) and the row of wizard buttons.
-// Two gaps on every page of every walk: 8 between rows, 16 (the page's own spacing) between a page's text and what
-// follows it, its field or its own rows. Any other gap is a fault on whichever page shows it.
+// The one page template (Installer.qs, templatePage): the logo first, 16 under it, then rows 8 apart on one left
+// edge. Every page is held to it: its gaps, and its logo's place and left edge against the first page read.
 let rowGap: CGFloat = 8
-let sectionGap: CGFloat = 16
+let logoGap: CGFloat = 16
 var gapsSeen: [Int: Int] = [:]
+var template: (page: String, top: CGFloat, edge: CGFloat)? = nil
+var templateFaults = Set<String>()
 
 // Rich text shows each inline image (the logo) as one object replacement character; it is no text to measure.
 func plain(_ text: String) -> String {
@@ -138,7 +140,7 @@ var pagesChecked = 0
 
 // Whether the page had content whose layout was checked.
 @discardableResult
-func check(window: CGRect, title: String, placed: [Placed]) -> Bool {
+func check(window: CGRect, title: String, placed: [Placed], page pageName: String) -> Bool {
     let buttons = placed.filter { $0.role == "AXButton" && wizardButtons.contains($0.text) }
     let bottom = buttons.map(\.frame.minY).min() ?? window.maxY
     pagesSeen += 1
@@ -202,11 +204,25 @@ func check(window: CGRect, title: String, placed: [Placed]) -> Bool {
     for (above, below) in zip(firsts, firsts.dropFirst()) {
         let gap = drawn(below).minY - drawn(above).maxY
         gapsSeen[Int(gap.rounded()), default: 0] += 1
+        // Under a logo standing alone (an image, no text) the template's logo step; everywhere else the row gap.
+        let wanted = plain(above.text).isEmpty && above.role == "AXStaticText" ? logoGap : rowGap
         if gap < -0.5 {
             problems.append("overlap \(Int(-gap)) px between '\(named(above))' and '\(named(below))'")
-        } else if abs(gap - rowGap) > 0.5 && abs(gap - sectionGap) > 0.5 {
-            problems.append("gap \(Int(gap)) px between '\(named(above))' and '\(named(below))': "
-                + "neither the row gap \(Int(rowGap)) nor the section gap \(Int(sectionGap))")
+        } else if abs(gap - wanted) > 0.5 {
+            problems.append("gap \(Int(gap)) px between '\(named(above))' and '\(named(below))', not \(Int(wanted))")
+        }
+    }
+    // The logo's place and the left edge, the same on every page as on the first page read.
+    if let logo = firsts.first {
+        let top = logo.frame.minY - window.minY
+        let left = edge - window.minX
+        if let first = template {
+            if abs(top - first.top) > 0.5 || abs(left - first.edge) > 0.5 {
+                templateFaults.insert("[\(pageName)] starts at (\(Int(left)), \(Int(top))), "
+                    + "[\(first.page)] at (\(Int(first.edge)), \(Int(first.top)))")
+            }
+        } else {
+            template = (pageName, top, left)
         }
     }
     // Every text on the window, wrapped or not: no word wider than its frame, and the wrapped text no taller.
@@ -258,14 +274,10 @@ while kill(pid, 0) == 0 {
             var tally = Tally()
             visit(window, depth: 0, into: &placed, tally: &tally)
             if let box = frame(window) {
-                tally.laidOut = check(window: box, title: string(window, kAXTitleAttribute), placed: placed)
+                let title = string(window, kAXTitleAttribute)
+                tally.laidOut = check(window: box, title: title, placed: placed, page: before ?? title)
             }
             if let page = before, !page.isEmpty, page == currentPage() {
-                // Read in full: the walk may leave the page (Installer.qs waits for this).
-                if tally.reads > 0 && tally.laidOut, let log = pageLog {
-                    let ack = (log as NSString).deletingLastPathComponent + "/ack"
-                    try? page.write(toFile: ack, atomically: true, encoding: .utf8)
-                }
                 if witnessed[page] == nil { witnessOrder.append(page) }
                 var sum = witnessed[page] ?? Tally()
                 sum.reads += tally.reads
@@ -284,6 +296,9 @@ for (title, edges) in pageEdges where edges.count > 1 {
 for page in witnessOrder {
     let seen = witnessed[page]!
     print("witness: \(page) reads=\(seen.reads) layout=\(seen.laidOut ? 1 : 0) trees=\(seen.trees)")
+}
+for fault in templateFaults.sorted() {
+    print("layout: not on the page template: \(fault)")
 }
 let gapList = gapsSeen.keys.sorted().map { "\($0) px ×\(gapsSeen[$0]!)" }.joined(separator: ", ")
 print("row gaps on all pages: \(gapList.isEmpty ? "none" : gapList)")
