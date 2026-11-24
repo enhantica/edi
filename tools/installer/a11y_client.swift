@@ -201,8 +201,13 @@ func check(window: CGRect, title: String, placed: [Placed], page pageName: Strin
             problems.append("off centre: \(Int(edge - window.minX)) px on the left, \(Int(right)) px on the right")
         }
     }
+    // A row is everything beside its first element: the bar and its percentage, a box and its link.
+    func row(_ item: Placed) -> (top: CGFloat, bottom: CGFloat) {
+        let beside = content.filter { $0.frame.minY < item.frame.maxY - 2 && $0.frame.maxY > item.frame.minY + 2 }
+        return ((beside.map(\.frame.minY) + [item.frame.minY]).min()!, (beside.map(\.frame.maxY) + [item.frame.maxY]).max()!)
+    }
     for (above, below) in zip(firsts, firsts.dropFirst()) {
-        let gap = drawn(below).minY - drawn(above).maxY
+        let gap = row(below).top - row(above).bottom
         gapsSeen[Int(gap.rounded()), default: 0] += 1
         // Under a logo standing alone (an image, no text) the template's logo step; everywhere else the row gap.
         let wanted = plain(above.text).isEmpty && above.role == "AXStaticText" ? logoGap : rowGap
