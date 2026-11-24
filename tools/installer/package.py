@@ -353,8 +353,8 @@ def write_metadata(
             'MaintenanceToolName': 'MaintenanceTool',
             'AllowNonAsciiCharacters': 'true',
             'AllowSpaceInPath': 'true',
-            # Qt's Modern wizard style, with no page titles (so no header) and its footer line hidden
-            # (InstallerChrome.qss); the logo heads each page's own content (Installer.qs).
+            # Qt's Modern wizard style: no page titles (so no header), its footer line hidden
+            # (InstallerChrome.qss), the logo heading each page's content (Installer.qs).
             'WizardStyle': 'Modern',
             'WizardDefaultWidth': '640',
             'WizardDefaultHeight': '460',
