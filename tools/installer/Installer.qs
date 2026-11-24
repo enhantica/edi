@@ -191,13 +191,60 @@ function themePage(page) {
 // rows, each 8 under the one above and all on one left edge. The Framework's own layouts have no names (ours all
 // have one), so a script finds them as the page's unnamed children; each that has a spacing gets the row gap.
 var rowGap = 8;
-function templatePage(page) {
-    var unnamed = gui.findChildren(page, "");
+//
+// The page's own layout (its first unnamed layout; on the summary and progress pages the Framework names it
+// BaseLayout) gets the window padding every page shares: the Framework's default, read from the last page's layout.
+// Every other unnamed layout of the Framework's is nested and gets no margins: the maintenance choices sit in an
+// inner widget whose layout took the style's margins (10 px in on macOS). Margins are copied from layouts that
+// have them, as a script cannot make the value.
+function isLayout(object) {
+    return object && typeof object.spacing === "number" && object.sizeConstraint !== undefined;
+}
+
+function layoutsOf(page) {
+    var found = [];
+    var unnamed = page ? gui.findChildren(page, "") : [];
     for (var i = 0; i < unnamed.length; ++i) {
-        var layout = unnamed[i];
-        if (layout && typeof layout.spacing === "number" && layout.sizeConstraint !== undefined
-            && layout.spacing !== rowGap)
+        if (isLayout(unnamed[i]))
+            found.push(unnamed[i]);
+    }
+    return found;
+}
+
+function firstLayout(page) {
+    return layoutsOf(page)[0] || null;
+}
+
+// A page the template cannot reach keeps the Framework's layout; the check then says where it differs.
+function templatePage(page) {
+    try {
+        applyTemplate(page);
+    } catch (error) {
+        console.log("edi page template not applied: " + error);
+    }
+}
+
+function applyTemplate(page) {
+    var padded = firstLayout(gui.pageWidgetByObjectName("FinishedPage"));
+    var perform = gui.pageWidgetByObjectName("PerformInstallationPage");
+    var flat = perform ? gui.findChild(perform, "TopLayout") : null;
+    var named = gui.findChild(page, "BaseLayout");
+    var own = isLayout(named) && /^(ReadyForInstallation|PerformInstallation)Page$/.test(page.objectName)
+        ? named : firstLayout(page);
+    var layouts = layoutsOf(page);
+    if (own && layouts.indexOf(own) < 0)
+        layouts.push(own);
+    for (var i = 0; i < layouts.length; ++i) {
+        var layout = layouts[i];
+        if (layout.spacing !== rowGap)
             layout.spacing = rowGap;
+        var source = layout === own ? padded : flat;
+        try {
+            if (source && source !== layout)
+                layout.contentsMargins = source.contentsMargins;
+        } catch (error) {
+            console.log("edi layout margins not set: " + error);
+        }
     }
 }
 
@@ -521,6 +568,28 @@ var wordmark = "";
 // No title and no subtitle, so Qt draws no header. The Framework sets some again as a page opens (the maintenance
 // tool's first page, an inserted page), so they are cleared again once the page says it was entered.
 var untitledPages = [];
+// A script's one timer: the progress page's details button, clicked while another page shows (that page resets it
+// as it opens), runs `then` after `delay` ms.
+var laterThen = null;
+var laterHooked = false;
+function later(delay, then) {
+    var perform = gui.pageWidgetByObjectName("PerformInstallationPage");
+    var details = perform ? gui.findChild(perform, "DetailsButton") : null;
+    if (!details)
+        return;
+    if (!laterHooked) {
+        details.clicked.connect(function () {
+            var run = laterThen;
+            laterThen = null;
+            if (run)
+                run();
+        });
+        laterHooked = true;
+    }
+    laterThen = then;
+    gui.clickButton("DetailsButton", delay);
+}
+
 function keepUntitled(page) {
     function clear() {
         if (page.title !== "")
@@ -558,6 +627,17 @@ function headerWordmark() {
         if (!page)
             return;
         themePage(page);
+        // No title, so no header: the logo heads the page's own content. Cleared first, as some pages leave early.
+        keepUntitled(page);
+        // The first page is shown after its callback, and showing the window gives every page without a subtitle a
+        // one-space one (a header band): cleared again once the window is up.
+        if (name === "Introduction") {
+            try {
+                later(0, function () { keepUntitled(page); });
+            } catch (error) {
+                console.log("edi first page header kept: " + error);
+            }
+        }
 
         // The maintenance tool asks plainly, at the top, and updates unless told otherwise: never a destructive
         // default.

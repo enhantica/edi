@@ -96,13 +96,6 @@
        </property>
       </widget>
      </item>
-     <item>
-      <spacer name="AppRowSpacer">
-       <property name="orientation">
-        <enum>Qt::Horizontal</enum>
-       </property>
-      </spacer>
-     </item>
     </layout>
    </item>
    <item>
@@ -128,13 +121,6 @@
         <string>Also install the AI assistant</string>
        </property>
       </widget>
-     </item>
-     <item>
-      <spacer name="AssistantRowSpacer">
-       <property name="orientation">
-        <enum>Qt::Horizontal</enum>
-       </property>
-      </spacer>
      </item>
     </layout>
    </item>
@@ -164,17 +150,18 @@
      </item>
      <item>
       <widget class="QLabel" name="LicenseLink">
+       <!-- Takes the rest of the row, so the row needs no spacer: a spacer would keep a row whose widgets are
+            hidden (the maintenance tool's) in the column, one gap too many. -->
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+         <horstretch>1</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
        <property name="openExternalLinks">
         <bool>true</bool>
        </property>
       </widget>
-     </item>
-     <item>
-      <spacer name="LicenseSpacer">
-       <property name="orientation">
-        <enum>Qt::Horizontal</enum>
-       </property>
-      </spacer>
      </item>
     </layout>
    </item>
@@ -201,13 +188,6 @@
         <string>Add a desktop shortcut</string>
        </property>
       </widget>
-     </item>
-     <item>
-      <spacer name="ShortcutRowSpacer">
-       <property name="orientation">
-        <enum>Qt::Horizontal</enum>
-       </property>
-      </spacer>
      </item>
     </layout>
    </item>
