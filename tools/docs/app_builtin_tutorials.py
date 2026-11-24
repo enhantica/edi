@@ -619,9 +619,10 @@ def plan_step(  # noqa: PLR0911, PLR0912, PLR0914, PLR0915 - one branch per docs
             if kind == 'data'
             else 'Click **Load ▾**.'
         )
+        label = 'From the web…' if kind == 'data' else 'From web…'
         return [
             step('Open the Load menu', opener, page, button, f'menu:{menu_entry}'),
-            step('From web', 'Choose **From web…**.', page, menu_entry, f'web-dialog:{kind}'),
+            step('From web', f'Choose **{label}**.', page, menu_entry, f'web-dialog:{kind}'),
             step(
                 item['description'],
                 f'With **{source}** as the **Source**, enter '
@@ -899,6 +900,20 @@ def with_reasons(case: str, steps: list[dict]) -> list[dict]:
         if (case, s.get('check', '')) not in NOOPS
         or s.get('check', '').startswith('field:constraint.expression.')
     ]
+    # A background with a point cleared on its own is compared point by point.
+    cleared = set()
+    for s in steps:
+        check = s.get('check', '')
+        if check.startswith('untick:'):
+            cleared.add(check.removeprefix('untick:'))
+        if 'expectWholeBackground' in s:
+            s['expectWholeBackground'] = [
+                prefix
+                for prefix in s['expectWholeBackground']
+                if not any(
+                    path.startswith(prefix.replace('[', '.').replace(']', '')) for path in cleared
+                )
+            ]
     said = set()
     for s in steps:
         why = s.get('why', '')
@@ -934,6 +949,19 @@ def example_relations(case: str) -> list[dict]:
     ]
 
 
+def label_case(name: str) -> str:
+    """A dictionary name as an app label (app/src/label_case.hpp): its first word capitalised.
+
+    A first word whose case is part of its meaning (a symbol, anything but plain letters) stays.
+    """
+    word = re.match(r'[^ (]*', name)[0]
+    if word == 'id':
+        return 'ID' + name[2:]
+    if len(word) < 2 or word == 'sin' or not re.fullmatch(r'[a-z/-]+', word):
+        return name
+    return name[0].upper() + name[1:]
+
+
 def parameter_words(path: str, variant: str = '') -> str:
     """A parameter as its table row names it: its row label, if any, and its short name.
 
@@ -951,7 +979,7 @@ def parameter_words(path: str, variant: str = '') -> str:
     if item is None:
         return f'{row} {name}' if row else name
     variants = item.get('variants') or {}
-    display = (variants.get(variant) or {}).get('display_name') or item['display_name']
+    display = label_case((variants.get(variant) or {}).get('display_name') or item['display_name'])
     return f'{row} {display}' if row else display
 
 
