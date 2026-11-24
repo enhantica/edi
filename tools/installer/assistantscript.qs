@@ -10,9 +10,11 @@ function Component() {
         return;
     // The installing page's bar with its percentage beside it (Installer.qs feeds it), in every mode.
     installer.addWizardPageItem(component, "ProgressForm", QInstaller.PerformInstallation);
+    // The last page's box to open the program, in a row of its own (DoneForm.ui, Installer.qs).
+    installer.addWizardPageItem(component, "DoneForm", QInstaller.InstallationFinished);
     if (installer.isInstaller())
         installer.addWizardPageItem(component, "AssistantForm", QInstaller.TargetDirectory);
-    else if (installer.isPackageManager())
+    else if (installer.isPackageManager() || installer.isUpdater())
         installer.addWizardPage(component, "AssistantForm", QInstaller.ReadyForInstallation);
     else
         return;
@@ -25,8 +27,15 @@ function Component() {
         box.checked = true;
         installer.selectComponent(component.name);
     } else {
-        box.text = "Install the AI assistant";
+        // The choice page, the same when adding or removing and when updating: EasyDiffraction is always kept
+        // (ticked, fixed), the AI assistant is ticked when installed. Updating, its box says whether it is updated;
+        // an assistant that is not installed is not offered there.
+        if (form.AppCheckBox)
+            form.AppCheckBox.visible = true;
+        box.text = "AI assistant";
         box.checked = component.installed;
+        if (installer.isUpdater() && !component.installed)
+            box.visible = false;
         // The licence, shortcut and space belong to installing, not to this choice.
         ["LicenseCheckBox", "LicenseLink", "ShortcutCheckBox", "NoticeLabel", "SpaceLabel"].forEach(function (name) {
             if (form[name])

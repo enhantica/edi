@@ -186,8 +186,10 @@ QCheckBox {
     padding: 0;
 }
 
+/* A radio row is a check box row's size: no padding, an indicator as large as the box (package.py). */
 QRadioButton {
-    padding: @HALF_FONT_PX@px 0;
+    margin: 0;
+    padding: 0;
 }
 
 
