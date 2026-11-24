@@ -153,6 +153,8 @@ if { [ -z "$trees" ] || [ "$trees" -gt 0 ]; } && [ "${A11Y_ALLOW_TREE:-}" != 1 ]
 fi
 # The layout rules the client checks on every page it reads (a11y_client.swift): one left edge, gaps on the spacing
 # scale, no clipped text, no frame mostly empty.
+# A page is judged by how it ended up; what only showed while it opened is listed and fails nothing.
+grep "^layout-opening:" "$logs/client.log" || true
 if grep -q "^layout:" "$logs/client.log"; then
   grep "^layout:" "$logs/client.log"
   echo "a11y-check: a page breaks the layout rules"
