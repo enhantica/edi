@@ -2180,34 +2180,36 @@ void Session::untitledWrite(const std::weak_ptr<UntitledOperation>& weak, quint6
             if (!receiver) return drop();
             receiver->web_writing_ = false;
             const auto live = weak.lock();
+            // Each step below can reenter: the session may be gone, or the operation no longer this one's.
+            const auto holds = [&] { return receiver && live && !live->settled() && receiver->resumeUntitled(live, id); };
             if (!answer.ok || answer.outcome != QLatin1String("published")) {
                 // Nothing was published: the untitled place and its recovery copy are as they were.
                 drop();
-                if (!live || live->settled() || !receiver->resumeUntitled(live, id)) return;
+                if (!holds()) return;
                 if (answer.ok && answer.outcome == QLatin1String("lost")) {
                     receiver->settleUntitled(live, UntitledOperation::State::Superseded);  // a revoke or a tab won
                     return;
                 }
                 const QString why = answer.message;
                 receiver->setLastError(why);
-                if (!receiver || !receiver->resumeUntitled(live, id)) return;
+                if (!holds()) return;
                 emit receiver->webSaveFailed(why);
-                if (receiver && receiver->resumeUntitled(live, id))
+                if (holds())
                     receiver->settleUntitled(live, UntitledOperation::State::Refused);
                 return;
             }
             // Published: the named place is durable now. An operation that gave way since keeps it as a saved project.
-            if (!live || live->settled() || !receiver->resumeUntitled(live, id)) return drop();
+            if (!holds()) return drop();
             receiver->setWebPlace({live->destination.stage, QStringLiteral("browser"), folder});
-            if (!receiver || !receiver->resumeUntitled(live, id)) return drop();
+            if (!holds()) return drop();
             // Changed after the check, the project keeps its newer edits unsaved (takeWebSave says so): it is named and
             // saved where it was published, but nothing that waited for the save runs on those edits.
             const auto take = receiver->takeWebSave(staged, revision);
             if (take == WebTake::Refused) drop();
-            if (take == WebTake::Lost || !receiver || !receiver->resumeUntitled(live, id)) return;
+            if (take == WebTake::Lost || !holds()) return;
             const bool adopted = take == WebTake::Taken;
             if (adopted) emit receiver->webSaved(QStringLiteral("browser"));
-            if (receiver && receiver->resumeUntitled(live, id)) receiver->untitledSaved(live, adopted);
+            if (holds()) receiver->untitledSaved(live, adopted);
         });
 }
 
@@ -2273,8 +2275,7 @@ bool Session::createProjectImpl(const QString& name, const QString& description,
         quint64 id = untitledId;
         if (id == 0) {
             id = beginUntitled(QStringLiteral("manual-create"), QStringLiteral("direct"));
-            if (!receiver) return false;
-            if (id != 0 && replace) approveUntitledReplace(id, QFileInfo(location).absoluteFilePath());
+            if (receiver && id != 0 && replace) approveUntitledReplace(id, QFileInfo(location).absoluteFilePath());
             if (!receiver) return false;
         }
         const bool own = id != 0 && id == untitledOperationId();
