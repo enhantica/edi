@@ -450,6 +450,7 @@ class Session : public QObject {
         bool treeReceipt = true;
         bool stores = false;  // its writer stores what links to files reach (beginSave)
         std::function<bool()> replan;  // the save started again, planned from the project as it is now
+        quint64 untitled = 0;          // the untitled operation this save writes for, if any (ADR-0100)
         // The project held from the plan until every copy of the operation that can still write is gone. A question
         // or a browser picker waiting on the user drops it; the answer takes it again and the save checks its plan.
         std::shared_ptr<ProjectViewModel::OperationHold> hold;
@@ -531,11 +532,19 @@ class Session : public QObject {
     // The untitled operation (ADR-0100): at most one, its ids counted per session.
     std::shared_ptr<UntitledOperation> current_untitled_;
     quint64 untitled_ids_ = 0;
-    quint64 asking_for_untitled_ = 0;  // the operation whose save beginSave is planning now
-    quint64 replans_queued_ = 0;       // counts queueReplan calls, so a write can tell a replan from a refusal
     // Whether a callback for `id` may still act: the session and the operation alive, the id its own, the operation
     // open and its project still the open one. Otherwise the operation (if open) settles superseded.
     bool resumeUntitled(const std::shared_ptr<UntitledOperation>& op, quint64 id);
+    // The same test without settling anything.
+    bool untitledOwns(const std::shared_ptr<UntitledOperation>& op, quint64 id) const;
+    // Whether operation `id` saved the open project and nothing has moved on since: it is still the session's last
+    // operation, settled saved, for the same project and replacement. What waited for it runs only then.
+    bool untitledSaveCurrent(quint64 id) const;
+    // Desktop: names and saves `id` at `location`, as a folder or a .zip (`zip`, never over an existing file).
+    bool acceptUntitledAt(quint64 id, const UntitledOperation::Form& form, bool replace, bool zip);
+    // A Save as of untitled work: the project is named and saved by an untitled operation of its own, never by the
+    // generic Save as handoff.
+    bool saveUntitledAs(const QUrl& target, bool zip);
     void settleUntitled(const std::shared_ptr<UntitledOperation>& op, UntitledOperation::State state);
     // The open operation gives way (a newer request, the project replaced or the session gone).
     void supersedeUntitled();
@@ -551,8 +560,9 @@ class Session : public QObject {
     // `wholeTree` is a save that writes the whole project (another place, a .zip, a browser place).
     // `stores`: its writer stores what links to files reach (a .zip, a browser place, a download) instead of keeping
     // the links, so its plan counts those bytes and its stage is frozen before that writer reads it.
+    // `untitled`: the untitled operation planning this save; it stops here when that operation gave way meanwhile.
     std::optional<SaveOperation> beginSave(bool wholeTree, bool stores, SaveContinuation again,
-                                           std::function<bool()> replan);
+                                           std::function<bool()> replan, quint64 untitled = 0);
 
     // Whether the project is still as `operation` planned it (its revision and linked inputs), and whether at least
     // its linked inputs are.
@@ -565,6 +575,8 @@ class Session : public QObject {
     bool hold(SaveOperation& operation);
     // Why the open project cannot be replaced or closed now (a save holds it), else empty.
     QString replacementRefusal() const;
+    // An untitled operation's save is marked replanning for that operation, so its writer can tell a replan from a
+    // refusal.
     void queueReplan(const SaveOperation& operation);
     bool saveWith(const SaveOperation& operation);
     bool saveAsWith(const SaveOperation& operation, const QUrl& directory);
@@ -651,8 +663,11 @@ class Session : public QObject {
     // Writes the staged snapshot into the .zip `archive`, then the project takes it and works in its folder.
     bool publishArchive(const Staged& staged, const QString& archive);
     // The browser's place holds the staged snapshot: the project takes it and works in its folder, unless it was
-    // edited since `revision` or a fit started. Whether it did.
-    bool takeWebSave(const Staged& staged, quint64 revision);
+    // edited since `revision` or a fit started. `Taken` when it did, `Refused` when it did not (the stage is the
+    // caller's to remove), `Lost` when the session or its project went away while it took it (the stage is no longer
+    // the caller's).
+    enum class WebTake { Refused, Taken, Lost };
+    WebTake takeWebSave(const Staged& staged, quint64 revision);
     // A web open request: its answer replaces the project only if no later request or open came meanwhile, and the
     // project was not edited while it was read.
     std::function<bool(const WebStorageAnswer&)> openRequest(const QString& root);
@@ -667,7 +682,8 @@ class Session : public QObject {
     void keepChanges();
     QTimer* keep_timer_ = nullptr;
     bool untitled_ = false;
-    void setUntitled(bool untitled);
+    // False when the session went away or the value changed again while it was announced.
+    bool setUntitled(bool untitled);
     // The memory folder the browser copied the open project into, released with it.
     QString web_copy_;
     QString web_source_path_; // Current Open/staged input dependency, never a displayed origin.

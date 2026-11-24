@@ -37,6 +37,7 @@ class UntitledOperation {
         QString stage;  // browser
         QString path;   // desktop
         bool replace = false;
+        bool zip = false;  // desktop: a .zip at `path` (a Save as of untitled work), never a Replace
         FileIdentity folder, file;
     };
 
