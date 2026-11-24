@@ -342,22 +342,6 @@
         },
         {
           "title": "Background and excluded regions",
-          "text": "Click **+** under **Background** to add a point.",
-          "page": "experiment",
-          "target": "background.append",
-          "check": "rows:background.append=1",
-          "tab": "basic"
-        },
-        {
-          "title": "Background and excluded regions",
-          "text": "Enter **10** as the position of background point 1.",
-          "page": "experiment",
-          "target": "background.position.0",
-          "check": "field:background.position.0=10",
-          "tab": "basic"
-        },
-        {
-          "title": "Background and excluded regions",
           "text": "Enter **160** as the intensity of background point 1.",
           "page": "experiment",
           "target": "background.intensity.0",
