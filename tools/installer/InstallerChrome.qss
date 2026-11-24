@@ -88,12 +88,6 @@ QPushButton:default:hover, QPushButton:default:pressed {
     border-color: #0091cb;
 }
 
-/* The app's icons on the wizard's buttons (Qt names them by their WizardButton number). */
-QPushButton#qt_wizard_finish {
-    qproperty-icon: url(:/metadata/edi/finish.png);
-    qproperty-iconSize: 16px 16px;
-}
-
 /* The page's frame takes the window's colour (Qt may fill it with the base colour, a white card). */
 QWizard > QWidget > QFrame {
     border: none;
@@ -105,6 +99,7 @@ QWizard > QWidget > QFrame {
 QWizard > QWidget > .QWidget {
     min-height: 0;
     max-height: 0;
+    qproperty-maximumHeight: 0;
 }
 
 /* A wizard button with nothing to do on a page (Back and Install while installing) takes no room. */

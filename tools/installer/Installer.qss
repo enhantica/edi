@@ -285,10 +285,6 @@ QToolTip {
     border: 1px solid @BORDER@;
 }
 
-QPushButton#BrowseDirectoryButton {
-    qproperty-icon: url(:/metadata/edi/browse.png);
-    qproperty-iconSize: 16px 16px;
-}
 
 QWizard QLineEdit#SearchLineEdit {
     min-width: 95px;

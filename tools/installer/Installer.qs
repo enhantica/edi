@@ -614,7 +614,9 @@ function headerWordmark() {
             if (systemInfo.kernelType === "linux" && !installer.fileExists(installer.value("HomeDir") + "/Desktop"))
                 shortcut = false;
             // macOS adds nothing outside the chosen folder, so a folder elsewhere is said to be that folder.
-            var applications = /^(\/Applications|.*\/Users\/[^\/]+\/Applications)(\/|$)/.test(target);
+            // Captures install into a throwaway folder but show what the default installation says.
+            var applications = captureFolder !== ""
+                || /^(\/Applications|.*\/Users\/[^\/]+\/Applications)(\/|$)/.test(target);
             var where = systemInfo.kernelType === "winnt" ? (shortcut ? "in the Start menu and on your desktop"
                                                                       : "in the Start menu")
                 : systemInfo.kernelType === "darwin" ? (applications ? "in your Applications folder" : "in the folder you chose")
