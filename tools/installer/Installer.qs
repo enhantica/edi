@@ -72,9 +72,18 @@ function pageId(name) {
 
 // Every page a captured walk shows, in order, one line each in pages.log: the checks compare it with the pages the
 // walk must show, and the accessibility client reads its last line to know which page it is reading.
+// Written by a detached process: the Framework's own file operation waits in an event loop, which on the
+// progress page let the whole installation run before the line was written.
 function notePage(name) {
-    if (captureFolder !== "")
-        installer.performOperation("AppendFile", [captureFolder + "/pages.log", pageId(name) + "\n"]);
+    if (captureFolder === "")
+        return;
+    var line = pageId(name);
+    if (systemInfo.kernelType === "winnt")
+        installer.executeDetached("cmd.exe", ["/c", "echo " + line + ">>" + captureFolder.replace(/\//g, "\\")
+            + "\\pages.log"]);
+    else
+        installer.executeDetached("/bin/sh", ["-c", 'printf "%s\\n" "$1" >> "$2"', "sh", line,
+            captureFolder + "/pages.log"]);
 }
 
 // Moves a captured walk on from a page with `button` after `delay` ms. Each page stays long enough for its picture
@@ -171,6 +180,14 @@ function Controller() {
         gui.setWizardPageButtonText(QInstaller.TargetDirectory, buttons.NextButton, "Install");
     }
     chooseWindowsTarget();
+    // The progress page titles itself as the work goes (a header band); untitled again each time.
+    installer.titleMessageChanged.connect(function () {
+        var perform = gui.pageWidgetByObjectName("PerformInstallationPage");
+        if (perform) {
+            perform.title = "";
+            perform.subTitle = "";
+        }
+    });
     installer.installationFinished.connect(clearQuarantine);
     installer.updateFinished.connect(clearQuarantine);
 }
@@ -201,12 +218,15 @@ function isLayout(object) {
     return object && typeof object.spacing === "number" && object.sizeConstraint !== undefined;
 }
 
+// Our own layouts (the forms') are named so; every other layout is the Framework's.
+var ownLayout = /^(AssistantLayout|DoneLayout|ProgressColumn|ProgressLayout|[A-Za-z]*Row)$/;
+
 function layoutsOf(page) {
     var found = [];
-    var unnamed = page ? gui.findChildren(page, "") : [];
-    for (var i = 0; i < unnamed.length; ++i) {
-        if (isLayout(unnamed[i]))
-            found.push(unnamed[i]);
+    var all = page ? gui.findChildren(page, null) : [];
+    for (var i = 0; i < all.length; ++i) {
+        if (isLayout(all[i]) && !ownLayout.test(all[i].objectName))
+            found.push(all[i]);
     }
     return found;
 }
@@ -215,12 +235,40 @@ function firstLayout(page) {
     return layoutsOf(page)[0] || null;
 }
 
-// A page the template cannot reach keeps the Framework's layout; the check then says where it differs.
 function templatePage(page) {
+    logLayout(page, "before");
     try {
         applyTemplate(page);
     } catch (error) {
         console.log("edi page template not applied: " + error);
+    }
+    logLayout(page, "after");
+    if (captureFolder !== "")
+        later(400, function () { logLayout(page, "shown"); });
+}
+
+// Captures log each page's layouts and widgets before and after the template, one line each: what the template's
+// writes did (edi-layout lines in the log).
+function logLayout(page, when) {
+    if (captureFolder === "" || !page)
+        return;
+    var all = gui.findChildren(page, null);
+    for (var i = 0; i < all.length; ++i) {
+        var item = all[i];
+        if (!item)
+            continue;
+        var line = "edi-layout " + page.objectName + " " + when + " " + String(item);
+        if (i === 0)
+            console.log("edi-layout " + page.objectName + " " + when + " title='" + page.title + "' subTitle='"
+                + page.subTitle + "' page x=" + page.x + " y=" + page.y + " w=" + page.width + " h=" + page.height);
+        if (isLayout(item))
+            line += " spacing=" + item.spacing + " margins=" + String(item.contentsMargins);
+        else if (typeof item.x === "number" && typeof item.width === "number")
+            line += " x=" + item.x + " y=" + item.y + " w=" + item.width + " h=" + item.height
+                + " visible=" + item.visible;
+        else
+            continue;
+        console.log(line);
     }
 }
 
@@ -228,30 +276,49 @@ function applyTemplate(page) {
     var padded = firstLayout(gui.pageWidgetByObjectName("FinishedPage"));
     var perform = gui.pageWidgetByObjectName("PerformInstallationPage");
     var flat = perform ? gui.findChild(perform, "TopLayout") : null;
-    var named = gui.findChild(page, "BaseLayout");
-    var own = isLayout(named) && /^(ReadyForInstallation|PerformInstallation)Page$/.test(page.objectName)
-        ? named : firstLayout(page);
+    // The page's own layout comes first: the Framework makes it before what it holds.
     var layouts = layoutsOf(page);
-    if (own && layouts.indexOf(own) < 0)
-        layouts.push(own);
     for (var i = 0; i < layouts.length; ++i) {
         var layout = layouts[i];
         if (layout.spacing !== rowGap)
             layout.spacing = rowGap;
-        var source = layout === own ? padded : flat;
-        try {
-            if (source && source !== layout)
-                layout.contentsMargins = source.contentsMargins;
-        } catch (error) {
-            console.log("edi layout margins not set: " + error);
-        }
+        var source = i === 0 ? padded : flat;
+        if (source && source !== layout)
+            layout.contentsMargins = source.contentsMargins;
     }
+    // The installer's page hides the form's own logo (the page's text has it), and the space under it.
+    var logoRow = installer.isInstaller() ? gui.findChild(page, "LogoRow") : null;
+    if (logoRow && flat)
+        logoRow.contentsMargins = flat.contentsMargins;
+    if (page.objectName === "IntroductionPage" && layouts.length > 1)
+        later(100, function () { settleChoices(page, layouts[0], layouts[1]); });
+}
+
+// The maintenance choices are the Framework's radio buttons straight in a column, which on macOS reach past their
+// cells above and below, so their frames stand closer than the column's spacing. Once shown, each spacing is set so
+// the frames are one row gap apart: under the question, and between the choices.
+function settleChoices(page, column, choices) {
+    var question = gui.findChild(page, "MessageLabel");
+    var radios = ["PackageManagerRadioButton", "UpdaterRadioButton", "UninstallerRadioButton"].map(function (name) {
+        return gui.findChild(page, name);
+    }).filter(function (radio) { return radio && radio.visible; });
+    if (radios.length > 1)
+        choices.spacing += rowGap - (radios[1].y - (radios[0].y + radios[0].height));
+    // The choices' widget: the page's one unnamed widget (the radios' places are inside it).
+    var holder = gui.findChildren(page, "").filter(function (item) {
+        return item && !isLayout(item) && typeof item.y === "number" && item.visible;
+    })[0];
+    if (question && holder && radios.length > 0)
+        column.spacing += rowGap - (holder.y + radios[0].y - (question.y + question.height));
+    later(100, function () { logLayout(page, "settled"); });
 }
 
 // The assistant's own page in the maintenance tool (assistantscript.qs).
 Controller.prototype.DynamicAssistantFormCallback = function () {
     var page = gui.pageWidgetByObjectName("DynamicAssistantForm");
     themePage(page);
+    // That is our form; the page around it, whose layout the Framework made without margins, takes the template.
+    templatePage(gui.pageByObjectName("DynamicAssistantForm"));
     page.title = "";
     page.subTitle = "";
     var mark = gui.findChild(page, "FormLogo");
@@ -570,7 +637,10 @@ var wordmark = "";
 var untitledPages = [];
 // A script's one timer: the progress page's details button, clicked while another page shows (that page resets it
 // as it opens), runs `then` after `delay` ms.
-var laterThen = null;
+// Each click runs the waiting call that is due first.
+var laterCalls = [];
+// Set while the progress page closes its own details, a click that is not a timer's.
+var closingDetails = false;
 var laterHooked = false;
 function later(delay, then) {
     var perform = gui.pageWidgetByObjectName("PerformInstallationPage");
@@ -579,14 +649,16 @@ function later(delay, then) {
         return;
     if (!laterHooked) {
         details.clicked.connect(function () {
-            var run = laterThen;
-            laterThen = null;
-            if (run)
-                run();
+            if (closingDetails)
+                return;
+            laterCalls.sort(function (a, b) { return a.due - b.due; });
+            var call = laterCalls.shift();
+            if (call)
+                call.then();
         });
         laterHooked = true;
     }
-    laterThen = then;
+    laterCalls.push({due: Date.now() + delay, then: then});
     gui.clickButton("DetailsButton", delay);
 }
 
@@ -750,8 +822,11 @@ function headerWordmark() {
             // with their own button, which turns that back on, and the button and download count are hidden.
             var detailsBrowser = gui.findChild(page, "DetailsBrowser");
             var detailsButton = gui.findChild(page, "DetailsButton");
-            if (detailsBrowser && detailsBrowser.visible && detailsButton)
+            if (detailsBrowser && detailsBrowser.visible && detailsButton) {
+                closingDetails = true;
                 detailsButton.click();
+                closingDetails = false;
+            }
             // The product-images area is invisible but takes the page's height, which left our bar far below.
             ["DetailsButton", "DownloadStatus", "ProductImagesScrollArea", "ProductImagesLabel"].forEach(function (hidden) {
                 var widget = gui.findChild(page, hidden);
