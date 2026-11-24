@@ -395,6 +395,7 @@ Controller.prototype.DynamicAssistantFormCallback = function () {
 // The assistant checkbox on the folder page decides the component, applied when that page is left and again before
 // the summary counts what is installed: a selection made while the component scripts load does not last.
 var assistantComponent = "org.easydiffraction.app.assistant";
+var appComponent = "org.easydiffraction.app";
 var assistantHooked = false;
 
 function assistantChosen() {
@@ -442,7 +443,16 @@ function sizeText(bytes) {
     return (unit === 0 ? value : value.toFixed(2)) + " " + units[unit];
 }
 
-function summaryRows(removing) {
+// The Framework's size text ("36.26 MB", in steps of 1024) in bytes; 0 where there is none.
+function frameworkBytes(figure) {
+    var parts = /([\d.]+)\s*(bytes|KB|MB|GB|TB)/.exec(String(figure));
+    return parts ? Math.round(Number(parts[1]) * Math.pow(1024, ["bytes", "KB", "MB", "GB", "TB"].indexOf(parts[2]))) : 0;
+}
+
+// `total`, where given, is what the whole change takes by the Framework's count, which includes parts the list does
+// not name (the maintenance tool itself): EasyDiffraction's row carries them, so the rows add up to the line below.
+function summaryRows(removing, total) {
+    var named = total ? summaryBytes(removing) : 0;
     var rows = "";
     var all = installer.components();
     for (var i = 0; i < all.length; ++i) {
@@ -453,7 +463,8 @@ function summaryRows(removing) {
         if (!counted)
             continue;
         rows += '<tr><td style="padding: 2px 0 2px 4px">' + c.value("DisplayName") + '</td><td align="right">'
-            + sizeText(c.value("UncompressedSize") || 0) + '</td></tr>';
+            + sizeText(Number(c.value("UncompressedSize") || 0)
+                       + (c.name === appComponent ? Math.max(0, (total || 0) - named) : 0)) + '</td></tr>';
     }
     return rows;
 }
@@ -494,7 +505,22 @@ function writeSummary(page) {
         : removing ? "Ready to remove" : "Ready to apply your changes";
     var target = installer.value("TargetDir");
     var text = logo() + PARA + "<b>" + heading + "</b></p>";
-    var adding = summaryRows(false);
+    // "Space required: X" and "Space available: Y" from the Framework's space line, the only place that has them.
+    var space = gui.findChild(page, "SpaceItem");
+    var needed = "", available = "", warned = false;
+    var labels = space ? gui.findChildren(space, "") : [];
+    for (var j = 0; j < labels.length; ++j) {
+        var line = String(labels[j].text || "");
+        var figure = line.replace(/^[^:]*:\s*/, "");
+        if (/required/i.test(line))
+            needed = figure;
+        else if (/available/i.test(line) && /\d/.test(figure))
+            available = figure;
+        if (/^Space(Warning|Recommendation)$/.test(labels[j].objectName) && labels[j].visible)
+            warned = true;
+    }
+    var neededBytes = installer.isUpdater() ? frameworkBytes(needed) : 0;
+    var adding = summaryRows(false, neededBytes);
     var dropping = removing ? summaryRows(true) : (installer.isPackageManager() ? summaryRows(true) : "");
     if (adding !== "")
         text += summaryTable(adding);
@@ -506,8 +532,6 @@ function writeSummary(page) {
     } else if (installer.isInstaller()) {
         text += PARA + "Install to " + breakablePath(target) + "</p>";
     }
-    // The space line: "Space required: X" and "Space available: Y", read and said once, plainly.
-    var space = gui.findChild(page, "SpaceItem");
     // Adding or removing components: what the change needs or frees, and nothing when it changes no files.
     if (installer.isPackageManager()) {
         var added = summaryBytes(false);
@@ -519,21 +543,10 @@ function writeSummary(page) {
         if (space)
             space.visible = false;
     } else if (space && !removing) {
-        var needed = "", available = "", warned = false;
-        var labels = gui.findChildren(space, "");
-        for (var j = 0; j < labels.length; ++j) {
-            var line = String(labels[j].text || "");
-            var figure = line.replace(/^[^:]*:\s*/, "");
-            if (/required/i.test(line))
-                needed = figure;
-            else if (/available/i.test(line) && /\d/.test(figure))
-                available = figure;
-            if (/^Space(Warning|Recommendation)$/.test(labels[j].objectName) && labels[j].visible)
-                warned = true;
-        }
         // A change that needs no space (a figure of 0) says nothing about space.
         if (needed !== "" && parseFloat(needed) > 0)
-            text += PARA + needed + " needed · " + available + " available</p>";
+            text += PARA + (neededBytes > 0 ? sizeText(neededBytes) : needed) + " needed · " + available
+                + " available</p>";
         space.visible = warned;  // a shortage stays said as the Framework says it
     }
     summary.textFormat = 1;  // Qt.RichText
