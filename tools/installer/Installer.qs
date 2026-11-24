@@ -59,6 +59,8 @@ var installPageReady = false;
 var progressHooked = false;
 // A maintenance tool that updated its own component restarts at its first page; a captured walk then ends there.
 var maintenanceWalked = false;
+// The installer on Linux shows its first page once more after Finish; that is not a page of the walk.
+var installerWalked = false;
 // The maintenance tool's mode in capture mode (EDI_INSTALLER_MAINTENANCE_MODE): add (add or remove components),
 // update, or remove (everything, the default).
 var maintenanceMode = installer.environmentVariable("EDI_INSTALLER_MAINTENANCE_MODE") || "remove";
@@ -73,6 +75,55 @@ function pageId(name) {
 function notePage(name) {
     if (captureFolder !== "")
         installer.performOperation("AppendFile", [captureFolder + "/pages.log", pageId(name) + "\n"]);
+}
+
+// With the accessibility check (a11y-check.sh sets EDI_INSTALLER_ACK), each page waits until the check has read it:
+// its client writes the page's name to <capture folder>/ack. A page still moves on after a minute, which the check
+// then reports as unread. The wait ticks on the wizard's hidden Help button, the one timer a script can start.
+var ackWanted = installer.environmentVariable("EDI_INSTALLER_ACK") === "1";
+var pending = null;
+var tickerHooked = false;
+
+function acknowledged(id) {
+    try {
+        var file = captureFolder + "/ack";
+        return installer.fileExists(file) && String(installer.readFile(file, "UTF-8")).trim() === id;
+    } catch (error) {
+        console.log("edi ack unreadable: " + error);
+        return true;
+    }
+}
+
+function tick() {
+    if (!pending)
+        return;
+    pending.ticks += 1;
+    if ((pending.ticks >= pending.least && acknowledged(pending.id)) || pending.ticks >= 240) {
+        var act = pending.act;
+        pending = null;
+        act();
+    } else {
+        gui.clickButton(buttons.HelpButton, 250);
+    }
+}
+
+// Moves a captured walk on from a page with `button`, after `delay` ms, and with the check only once it has read
+// the page.
+function proceed(name, button, delay) {
+    if (!ackWanted) {
+        gui.clickButton(button, delay);
+        return;
+    }
+    if (!tickerHooked) {
+        gui.helpRequested.connect(tick);
+        tickerHooked = true;
+    }
+    var waiting = pending !== null;
+    pending = {id: pageId(name), ticks: 0, least: Math.ceil(delay / 250), act: function () {
+        gui.clickButton(button, 0);
+    }};
+    if (!waiting)
+        gui.clickButton(buttons.HelpButton, 250);
 }
 
 // Taken a moment later by a detached process, once the page has painted.
@@ -113,16 +164,22 @@ function advance(name, page) {
         return;
     if (name === "PerformInstallation") {
         // The Framework moves on when it is done (its details are closed on this page, below); this is the backstop.
-        var next = function () { gui.clickButton(buttons.NextButton, 1500); };
+        // With the check it waits instead (automatic switching is off, below), and moves on once the page is read.
+        var next = function () { proceed("PerformInstallation", buttons.NextButton, 1500); };
         installer.installationFinished.connect(next);
         installer.uninstallationFinished.connect(next);
+        installer.updateFinished.connect(next);
         return;
     }
     // The maintenance tool's last page finishes with its relabelled Cancel button; its commit button restarts it.
+    // Leaving it that way ends the tool with status 1 (the Framework counts the Cancel button as cancelled), after
+    // the work was done; a11y-check.sh accepts that only once the Finished page was shown and the log says done.
     var finish = installer.isInstaller() || installer.isUninstaller() ? buttons.FinishButton : buttons.CancelButton;
-    if (name === "Finished")
+    if (name === "Finished") {
         maintenanceWalked = true;
-    gui.clickButton(name === "Finished" ? finish : buttons.NextButton, 2500);
+        installerWalked = true;
+    }
+    proceed(name, name === "Finished" ? finish : buttons.NextButton, 2500);
 }
 
 function Controller() {
@@ -167,8 +224,15 @@ var lightStylesheet = "@LIGHT_STYLESHEET@";
 var darkStylesheet = "@DARK_STYLESHEET@";
 
 function themePage(page) {
-    if (page)
-        page.styleSheet = darkTheme() ? darkStylesheet : lightStylesheet;
+    if (!page)
+        return;
+    page.styleSheet = darkTheme() ? darkStylesheet : lightStylesheet;
+    // The page's column spaces its rows by 16 (the step between a text and its field) on every system; Qt's own
+    // spacing is 14 on macOS. A script reaches the column only as the page's first unnamed child, so only a layout
+    // (it has a spacing) is changed.
+    var column = gui.findChild(page, "");
+    if (column && typeof column.spacing === "number" && column.sizeConstraint !== undefined && column.spacing !== 16)
+        column.spacing = 16;
 }
 
 // The assistant's own page in the maintenance tool (assistantscript.qs).
@@ -252,10 +316,27 @@ function summaryRows(removing) {
         var counted = removing ? c.uninstallationRequested() : c.installationRequested();
         if (!counted)
             continue;
-        rows += '<tr><td>' + c.value("DisplayName") + '</td><td align="right">'
+        rows += '<tr><td style="padding: 2px 0">' + c.value("DisplayName") + '</td><td align="right">'
             + sizeText(c.value("UncompressedSize") || 0) + '</td></tr>';
     }
     return rows;
+}
+
+// The bytes the components to be installed (or removed) take.
+function summaryBytes(removing) {
+    var bytes = 0;
+    var all = installer.components();
+    for (var i = 0; i < all.length; ++i) {
+        var c = all[i];
+        if (c.value("Virtual") !== "true" && (removing ? c.uninstallationRequested() : c.installationRequested()))
+            bytes += Number(c.value("UncompressedSize") || 0);
+    }
+    return bytes;
+}
+
+// A list under its heading, its items 4 px in from the heading's edge.
+function summaryTable(rows) {
+    return '<table width="100%" cellspacing="0" cellpadding="0" style="margin-left: 4px">' + rows + "</table>";
 }
 
 function writeSummary(page) {
@@ -275,18 +356,27 @@ function writeSummary(page) {
     var adding = summaryRows(false);
     var dropping = removing ? summaryRows(true) : (installer.isPackageManager() ? summaryRows(true) : "");
     if (adding !== "")
-        text += '<table width="100%" cellpadding="2">' + adding + "</table>";
+        text += summaryTable(adding);
     if (dropping !== "")
-        text += (removing ? "" : "<p>Removed:</p>") + '<table width="100%" cellpadding="2">' + dropping + "</table>";
+        text += (removing ? "" : "<p>Removed:</p>") + summaryTable(dropping);
     if (removing) {
-        text += '<p style="color: ' + (darkTheme() ? "#FFAB91" : "#FF5722") + '">Everything in ' + target
-            + " will be removed.</p>";
+        text += '<p style="color: ' + warning() + '">Everything in ' + target + " will be removed.</p>";
     } else if (installer.isInstaller()) {
         text += "<p>Install to " + target + "</p>";
     }
     // The space line: "Space required: X" and "Space available: Y", read and said once, plainly.
     var space = gui.findChild(page, "SpaceItem");
-    if (space && !removing) {
+    // Adding or removing components: what the change needs or frees, and nothing when it changes no files.
+    if (installer.isPackageManager()) {
+        var added = summaryBytes(false);
+        var freed = summaryBytes(true);
+        if (added > 0)
+            text += "<p>" + sizeText(added) + " needed</p>";
+        else if (freed > 0)
+            text += "<p>" + sizeText(freed) + " freed</p>";
+        if (space)
+            space.visible = false;
+    } else if (space && !removing) {
         var needed = "", available = "", warned = false;
         var labels = gui.findChildren(space, "");
         for (var j = 0; j < labels.length; ++j) {
@@ -299,7 +389,8 @@ function writeSummary(page) {
             if (/^Space(Warning|Recommendation)$/.test(labels[j].objectName) && labels[j].visible)
                 warned = true;
         }
-        if (needed !== "")
+        // A change that needs no space (a figure of 0) says nothing about space.
+        if (needed !== "" && parseFloat(needed) > 0)
             text += "<p>Space: " + needed + " needed · " + available + " available</p>";
         space.visible = warned;  // a shortage stays said as the Framework says it
     }
@@ -310,6 +401,16 @@ function writeSummary(page) {
 
 // The install page: what EasyDiffraction is, where it goes, the choices, and the space it needs.
 var licenseUrl = "https://www.gnu.org/licenses/gpl-3.0.html";
+
+function warning() {
+    return darkTheme() ? "@DARK_WARNING@" : "@LIGHT_WARNING@";
+}
+
+function success() {
+    return darkTheme() ? "@DARK_SUCCESS@" : "@LIGHT_SUCCESS@";
+}
+
+var openHooked = false;
 
 function accent() {
     return darkTheme() ? "#4ec1ef" : "#00a3e3";
@@ -527,8 +628,10 @@ function headerWordmark() {
             licenseRefused = !licenseAccepted();
             // A captured walk stays a moment, so the accessibility client reads this page too.
             notePage(name);
-            if (!licenseRefused) {
-                gui.clickButton(buttons.CommitButton, captureFolder !== "" ? 1500 : 50);
+            if (!licenseRefused && captureFolder !== "") {
+                proceed(name, buttons.CommitButton, 1500);
+            } else if (!licenseRefused) {
+                gui.clickButton(buttons.CommitButton, 50);
             } else {
                 refreshInstallPage();
                 gui.clickButton(buttons.BackButton, 50);
@@ -539,8 +642,14 @@ function headerWordmark() {
         // The welcome page passes by itself (online, it fetches the component list meanwhile).
         // The welcome page passes by itself, in captures too: the design has no welcome page.
         if (name === "Introduction" && installer.isInstaller()) {
-            notePage(name);
-            gui.clickButton(buttons.NextButton, captureFolder !== "" ? 1500 : 50);
+            if (captureFolder === "")
+                gui.clickButton(buttons.NextButton, 50);
+            else if (installerWalked)
+                gui.clickButton(buttons.NextButton, 50);
+            else {
+                notePage(name);
+                proceed(name, buttons.NextButton, 1500);
+            }
             return;
         }
         if (name === "Introduction" && installer.isInstaller()) {
@@ -596,6 +705,9 @@ function headerWordmark() {
             var detailsButton = gui.findChild(page, "DetailsButton");
             if (detailsBrowser && detailsBrowser.visible && detailsButton)
                 detailsButton.click();
+            // With the check, the page waits to be read (proceed) instead of moving on when the work is done.
+            if (ackWanted && typeof gui.setAutomatedPageSwitchEnabled === "function")
+                gui.setAutomatedPageSwitchEnabled(false);
             // The product-images area is invisible but takes the page's height, which left our bar far below.
             ["DetailsButton", "DownloadStatus", "ProductImagesScrollArea", "ProductImagesLabel"].forEach(function (hidden) {
                 var widget = gui.findChild(page, hidden);
@@ -648,12 +760,11 @@ function headerWordmark() {
                 : systemInfo.kernelType === "darwin" ? (applications ? "in your Applications folder" : "in the folder you chose")
                     : (shortcut ? "in your applications menu and on your desktop" : "in your applications menu");
             if (done && installer.isInstaller() && installer.status === QInstaller.Success) {
-                // A large check in the accent above the sentence (the app's circle-check icon).
+                // A check mark in the app's success green, a character of the text so it has the text's height.
                 done.textFormat = 1;  // Qt.RichText
                 done.alignment = 0x0001 | 0x0020;  // Qt.AlignLeft | Qt.AlignTop, as every page
-                done.text = logo() + '<p><img src=":/metadata/edi/' + (darkTheme() ? "done-dark" : "done")
-                    + '.png" width="64" height="64"></p><p>EasyDiffraction is installed.</p><p>You\'ll find it ' + where
-                    + ".</p>";
+                done.text = logo() + '<p><span style="color: ' + success() + '">\u2713</span> EasyDiffraction is '
+                    + "installed.</p><p>You'll find it " + where + ".</p>";
             }
             // The maintenance tool keeps the Framework's own sentence (updated, removed), under the logo.
             if (done && !installer.isInstaller() && String(done.text).indexOf("<img") < 0) {
@@ -669,6 +780,18 @@ function headerWordmark() {
             var run = gui.findChild(page, "RunItCheckBox");
             if (run)
                 run.checked = true;
+            // Our own box in a row of its own (DoneForm.ui) stands in for the Framework's, which stays hidden and
+            // follows it; shown only where the Framework would show its box.
+            var open = gui.findChild(page, "OpenCheckBox");
+            if (run && open) {
+                open.visible = run.visible;
+                open.checked = run.checked;
+                run.visible = false;
+                if (!openHooked) {
+                    open.toggled.connect(function (on) { run.checked = on; });
+                    openHooked = true;
+                }
+            }
             if (captureFolder !== "")
                 installer.setValue("RunProgram", "");
         }

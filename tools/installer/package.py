@@ -177,8 +177,10 @@ _SIZES = {
     'CONTROL_INNER_PX': '37',  # sideBarButtonHeight 39, less a 1 px border on each side
     'FIELD_PADDING_PX': '8',  # TextField padding: fontPixelSize * 0.5 + 1
     'CHECK_PX': '21',  # CheckIndicator: fontPixelSize * 1.5
-    'RADIO_PX': '14',
-    'RADIO_RADIUS_PX': '9',
+    # As large as the check box outside (21 and a 1 px border: 23), so a radio row is a check box
+    # row's height: 19 and a 2 px border.
+    'RADIO_PX': '19',
+    'RADIO_RADIUS_PX': '12',
 }
 INSTALLER_THEMES = {
     'light': _SIZES
@@ -194,6 +196,8 @@ INSTALLER_THEMES = {
         'BORDER': '#dedede',  # appBarComboBoxBorder: darker(themeBackground, 1.05)
         'FIELD_BACKGROUND': 'rgba(255, 255, 255, 0.44)',  # appBarComboBoxBackground #70ffffff
         'CHECK_BACKGROUND': '#f7f7f7',
+        'SUCCESS': '#7aaa42',  # green, the app's one success colour
+        'WARNING': '#FF5722',  # red, the app's warning orange-red
     },
     'dark': _SIZES
     | {
@@ -208,6 +212,8 @@ INSTALLER_THEMES = {
         'BORDER': '#2c2c2c',  # appBarComboBoxBorder: darker(themeBackground, 1.1)
         'FIELD_BACKGROUND': 'rgba(102, 102, 102, 0.06)',  # appBarComboBoxBackground #10666666
         'CHECK_BACKGROUND': '#3a3a3a',
+        'SUCCESS': '#C5E1A5',  # green
+        'WARNING': '#FFAB91',  # red
     },
 }
 
@@ -313,6 +319,10 @@ def write_controller(config: Path) -> None:
         controller = controller.replace(
             f'"@{theme.upper()}_STYLESHEET@"', json.dumps(installer_stylesheet(theme))
         )
+        for token in ('SUCCESS', 'WARNING'):
+            controller = controller.replace(
+                f'@{theme.upper()}_{token}@', INSTALLER_THEMES[theme][token]
+            )
     for marker, filename in (
         ('@WORDMARK@', 'InstallerLogo.png'),
         ('@DARK_WORDMARK@', 'InstallerLogoDark.png'),
@@ -446,9 +456,10 @@ def write_assistant_metadata(meta: Path, version: str) -> None:
     interfaces = ET.SubElement(root.getroot(), 'UserInterfaces')
     ET.SubElement(interfaces, 'UserInterface').text = 'AssistantForm.ui'
     ET.SubElement(interfaces, 'UserInterface').text = 'ProgressForm.ui'
+    ET.SubElement(interfaces, 'UserInterface').text = 'DoneForm.ui'
     ET.indent(root)
     root.write(meta / 'package.xml', encoding='utf-8', xml_declaration=True)
-    for name in ('assistantscript.qs', 'AssistantForm.ui', 'ProgressForm.ui'):
+    for name in ('assistantscript.qs', 'AssistantForm.ui', 'ProgressForm.ui', 'DoneForm.ui'):
         shutil.copy2(ROOT / 'tools/installer' / name, meta / name)
 
 
