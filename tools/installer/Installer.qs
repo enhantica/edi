@@ -163,7 +163,8 @@ function themePage(page) {
 Controller.prototype.DynamicAssistantFormCallback = function () {
     var page = gui.pageWidgetByObjectName("DynamicAssistantForm");
     themePage(page);
-    keepUntitled(page);
+    page.title = "";
+    page.subTitle = "";
     var mark = gui.findChild(page, "FormLogo");
     if (mark) {
         mark.textFormat = 1;  // Qt.RichText
