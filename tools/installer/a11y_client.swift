@@ -110,15 +110,11 @@ func check(window: CGRect, title: String, placed: [Placed]) {
                 && other.frame.maxY > item.frame.minY + 2
         }
     }.sorted { $0.frame.minY < $1.frame.minY }
-    // macOS reports a text field's frame 2 points larger than what it draws on every side (its focus
-    // ring); edges and gaps compare what is drawn.
-    func drawn(_ item: Placed) -> CGRect {
-        item.role == "AXTextField" ? item.frame.insetBy(dx: 2, dy: 2) : item.frame
-    }
-    // ...and a check box's or radio button's 2 points left of its drawn box.
-    func drawnX(_ item: Placed) -> CGFloat {
-        ["AXCheckBox", "AXRadioButton", "AXTextField"].contains(item.role) ? item.frame.minX + 2 : item.frame.minX
-    }
+    // Every control is drawn by the stylesheet (Qt's Modern wizard style), so each frame is what is drawn: the
+    // allowances the native Mac controls needed (a field's focus ring, a box's offset) are gone, measured on the
+    // 2026-11-24 captures where field, boxes and text line up at the same pixel.
+    func drawn(_ item: Placed) -> CGRect { item.frame }
+    func drawnX(_ item: Placed) -> CGFloat { item.frame.minX }
     let edge = firsts.map(drawnX).min() ?? 0
     let leader = firsts.min { drawnX($0) < drawnX($1) }
     pageEdges[title, default: [:]][Int((edge - window.minX).rounded())] = "\(leader?.role ?? "") '\(leader?.text ?? "")'"

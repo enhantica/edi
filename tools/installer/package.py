@@ -228,9 +228,6 @@ def installer_stylesheet(theme: str, name: str = 'Installer.qss') -> str:
         # Monospace for the licence, whose headings are centred with spaces (the app's PT Mono is
         # not available to the installer).
         'MONO_FAMILY': MONO_FAMILY,
-        # Qt's macOS style sets a check box in a page's own layout 2 points left of one in a row;
-        # the licence box sits in a row with its link, so it takes the same step.
-        'NESTED_CHECK_SHIFT': '-2px' if SYSTEM == 'macos' else '0px',
     }
     for key, value in values.items():
         text = text.replace(f'@{key}@', value)
