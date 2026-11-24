@@ -19,9 +19,12 @@
        its cell (its layout margins), and a column holding one moves all its rows right to make room, so boxes and
        text started 2 px apart. A row's own layout takes up its box's margins, so every row starts at the column's
        edge and each row's frame is its cell: one 8 px gap between all rows. -->
+  <!-- The column has no spacing of its own: above each row a gap widget, 8 high, which Installer.qs (settleForm)
+       sets once the page shows so that the drawn frames stand one row gap apart, the logo one step above the rest.
+       A check box's frame on macOS does not sit where its row starts, so a fixed spacing cannot do it. -->
   <layout class="QVBoxLayout" name="AssistantLayout">
    <property name="spacing">
-    <number>8</number>
+    <number>0</number>
    </property>
    <property name="leftMargin">
     <number>0</number>
@@ -37,7 +40,6 @@
     <number>0</number>
    </property>
    <item>
-    <!-- The logo stands one step (16) above the rows: the row gap and 8 under it. -->
     <layout class="QHBoxLayout" name="LogoRow">
      <property name="spacing">
       <number>8</number>
@@ -52,7 +54,7 @@
       <number>0</number>
      </property>
      <property name="bottomMargin">
-      <number>8</number>
+      <number>0</number>
      </property>
      <item>
       <widget class="QLabel" name="FormLogo">
@@ -62,6 +64,22 @@
       </widget>
      </item>
     </layout>
+   </item>
+   <item>
+    <widget class="QWidget" name="AppRowGap">
+     <property name="minimumSize">
+      <size>
+       <width>0</width>
+       <height>8</height>
+      </size>
+     </property>
+     <property name="maximumSize">
+      <size>
+       <width>16777215</width>
+       <height>8</height>
+      </size>
+     </property>
+    </widget>
    </item>
    <item>
     <layout class="QHBoxLayout" name="AppRow">
@@ -99,6 +117,22 @@
     </layout>
    </item>
    <item>
+    <widget class="QWidget" name="AssistantRowGap">
+     <property name="minimumSize">
+      <size>
+       <width>0</width>
+       <height>8</height>
+      </size>
+     </property>
+     <property name="maximumSize">
+      <size>
+       <width>16777215</width>
+       <height>8</height>
+      </size>
+     </property>
+    </widget>
+   </item>
+   <item>
     <layout class="QHBoxLayout" name="AssistantRow">
      <property name="spacing">
       <number>8</number>
@@ -123,6 +157,22 @@
       </widget>
      </item>
     </layout>
+   </item>
+   <item>
+    <widget class="QWidget" name="LicenseRowGap">
+     <property name="minimumSize">
+      <size>
+       <width>0</width>
+       <height>8</height>
+      </size>
+     </property>
+     <property name="maximumSize">
+      <size>
+       <width>16777215</width>
+       <height>8</height>
+      </size>
+     </property>
+    </widget>
    </item>
    <item>
     <layout class="QHBoxLayout" name="LicenseRow">
@@ -166,6 +216,22 @@
     </layout>
    </item>
    <item>
+    <widget class="QWidget" name="ShortcutRowGap">
+     <property name="minimumSize">
+      <size>
+       <width>0</width>
+       <height>8</height>
+      </size>
+     </property>
+     <property name="maximumSize">
+      <size>
+       <width>16777215</width>
+       <height>8</height>
+      </size>
+     </property>
+    </widget>
+   </item>
+   <item>
     <layout class="QHBoxLayout" name="ShortcutRow">
      <property name="spacing">
       <number>8</number>
@@ -190,6 +256,22 @@
       </widget>
      </item>
     </layout>
+   </item>
+   <item>
+    <widget class="QWidget" name="NoticeRowGap">
+     <property name="minimumSize">
+      <size>
+       <width>0</width>
+       <height>8</height>
+      </size>
+     </property>
+     <property name="maximumSize">
+      <size>
+       <width>16777215</width>
+       <height>8</height>
+      </size>
+     </property>
+    </widget>
    </item>
    <item>
     <layout class="QHBoxLayout" name="NoticeRow">
@@ -219,6 +301,22 @@
       </widget>
      </item>
     </layout>
+   </item>
+   <item>
+    <widget class="QWidget" name="SpaceRowGap">
+     <property name="minimumSize">
+      <size>
+       <width>0</width>
+       <height>8</height>
+      </size>
+     </property>
+     <property name="maximumSize">
+      <size>
+       <width>16777215</width>
+       <height>8</height>
+      </size>
+     </property>
+    </widget>
    </item>
    <item>
     <layout class="QHBoxLayout" name="SpaceRow">

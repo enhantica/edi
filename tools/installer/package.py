@@ -180,7 +180,8 @@ _SIZES = {
     # As large as the check box outside (21 and a 1 px border: 23), so a radio row is a check box
     # row's height: 19 and a 2 px border.
     'RADIO_PX': '19',
-    'RADIO_RADIUS_PX': '12',
+    # Half the outside size or less: Qt draws a square where the radius is larger.
+    'RADIO_RADIUS_PX': '11',
 }
 INSTALLER_THEMES = {
     'light': _SIZES
