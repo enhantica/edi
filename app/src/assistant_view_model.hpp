@@ -196,8 +196,10 @@ class AssistantViewModel : public QObject {
     Q_INVOKABLE edi_app::AssistantDraftAdmission submitDraftAdmission(const QString& text);
     /// Messages waiting for a running fit or app action, oldest first.
     AssistantQueueModel* queuedMessages() const;
-    /// Take a waiting message back (it returns to the composer); false when it is unknown or already being sent.
+    /// Take a waiting message back to its own conversation's draft; false when it is unknown or already being sent.
     Q_INVOKABLE bool cancelQueuedMessage(const QString& id);
+    /// Text of returned waiting messages for the conversation the composer shows; empty for any other.
+    Q_INVOKABLE QString takeReturnedMessages();
     Q_INVOKABLE QString workReportDocument();
     /// Display-only intent label for a native action identifier; no action is executed.
     Q_INVOKABLE QString nativeActionLabel(const QString& action) const;

@@ -320,7 +320,7 @@ class ApplicationInfo : public QObject {
     Q_INVOKABLE void composerSessionDraftRestored(QObject* composer, QObject* editor,
                                                  const QString& threadId, const QString& text) const;
     /// Put a waiting message that was cancelled or not sent back into the idle editor, before any newer text.
-    Q_INVOKABLE void composerQueuedMessageReturned(QObject* composer, QObject* editor, const QString& text) const;
+    Q_INVOKABLE void composerTakeReturnedMessages(QObject* composer, QObject* editor) const;
     /// Capture the original Clear text/revision/intent without consuming editor text.
     /// Borrows actual QML-thread controls; data stays in the original view field; errors remain pending.
     Q_INVOKABLE void composerConversationClearRequested(QObject* composer, QObject* editor, const QString& intent) const;

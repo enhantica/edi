@@ -15733,9 +15733,19 @@ struct AssistantViewModel::State {
         } else { diagnostic.stage = "UNSUPPORTED_REJECT"; agent->reject(id); } // No fabricated result for unsupported callbacks.
     }
     // Messages sent while a fit or another app action runs (edi #147). Each keeps the conversation it was
-    // written for; they are sent in order once nothing is running, and never into another conversation.
-    struct QueuedMessage { QString id, text, thread; std::uint64_t generation = 0; };
+    // written for and the inputs it was accepted with: its own attachments (pending files no earlier waiting
+    // message holds) and the disclosure approved at that moment. It is sent only while those are unchanged;
+    // otherwise it goes back to its own conversation's draft unsent, and so does every later message of that
+    // conversation, so nothing is delivered out of order.
+    struct QueuedMessage {
+        QString id, text, thread;
+        std::uint64_t generation = 0;
+        QStringList files;
+        std::shared_ptr<const DisclosureScope> disclosure;
+    };
     QList<QueuedMessage> queued_messages;
+    // Returned text for a conversation, held until the composer shows that conversation and takes it.
+    QHash<QString, QString> returned_drafts;
     quint64 queued_serial = 0;
     bool queue_drain_scheduled = false, queue_delivering = false;
     static constexpr qsizetype queued_message_limit = 20;
@@ -15747,20 +15757,101 @@ struct AssistantViewModel::State {
             (generic_busy && generic_turn.isEmpty()) || file_selection || file_staging || attachment_clear_requested ||
             attachment_clear_draining;
     }
-    void return_queued_message(const QueuedMessage& message) {
-        // Back into the composer so the text is never lost.
+    QStringList pending_file_ids() const {
+        QStringList ids;
+        for (const auto& value : input_file_payload().value("files").toArray()) ids.append(value.toObject().value("id").toString());
+        return ids;
+    }
+    // The conversation whose draft the composer holds; remember_current_session saves it under the same one.
+    QString draft_thread() const { return viewed_session ? viewed_session->thread : generic_thread; }
+    // A conversation the composer is not showing keeps returned text in its saved draft, ahead of what was there.
+    bool keep_in_saved_draft(const QString& thread, const QString& text) noexcept {
+        try {
+            auto index = session_associations();
+            auto records = index.value("threads").toObject();
+            auto record = records.value(thread).toObject();
+            if (record.value("thread") != thread || record.value("originator") != "edi") return false;
+            const auto existing = record.value("draft").toString();
+            record["draft"] = existing.isEmpty() ? text : text + QStringLiteral("\n\n") + existing;
+            records[thread] = record; index["threads"] = records;
+            store_session_associations(index);
+            return true;
+        } catch (...) { return false; }
+    }
+    void return_queued_messages(const QList<QueuedMessage>& messages) {
+        if (messages.isEmpty()) return;
+        // One block per conversation, oldest first, so returned messages keep their order.
+        QStringList threads;
+        QHash<QString, QString> texts;
+        for (const auto& message : messages) {
+            if (!texts.contains(message.thread)) threads.append(message.thread);
+            auto& text = texts[message.thread];
+            text = text.isEmpty() ? message.text : text + QStringLiteral("\n\n") + message.text;
+        }
+        for (const auto& thread : threads) {
+            const auto text = texts.value(thread);
+            // The composer's own draft is saved over its record, so its text is always handed to the composer.
+            if (thread != draft_thread() && !returned_drafts.contains(thread) && keep_in_saved_draft(thread, text)) continue;
+            auto& held = returned_drafts[thread];
+            held = held.isEmpty() ? text : held + QStringLiteral("\n\n") + text;
+        }
+        const QPointer<AssistantViewModel> receiver(&owner);
         emit owner.queuedMessagesChanged();
-        emit owner.queuedMessageReturned(message.text);
+        for (const auto& message : messages) {
+            if (!receiver || receiver->state_.get() != this) return;
+            emit owner.queuedMessageReturned(message.text);
+        }
+    }
+    // Removes the waiting messages of one conversation from `from` on; the caller returns them.
+    QList<QueuedMessage> take_conversation_queue(qsizetype from, const QString& thread, std::uint64_t owner_generation) {
+        QList<QueuedMessage> taken;
+        for (qsizetype n = from; n < queued_messages.size();) {
+            if (queued_messages[n].thread == thread && queued_messages[n].generation == owner_generation) taken.append(queued_messages.takeAt(n));
+            else ++n;
+        }
+        return taken;
     }
     bool cancel_queued_message(const QString& id) {
         for(qsizetype n=0;n<queued_messages.size();++n) {
             if(queued_messages[n].id!=id)continue;
             if(n==0 && queue_delivering)return false; // already being handed to the agent
-            const auto message=queued_messages.takeAt(n);
-            return_queued_message(message);
+            return_queued_messages({queued_messages.takeAt(n)});
             return true;
         }
         return false;
+    }
+    // Closing: waiting and returned text is kept in each conversation's saved draft rather than dropped.
+    void keep_waiting_text_on_exit() noexcept {
+        try {
+            for (const auto& message : queued_messages) {
+                auto& held = returned_drafts[message.thread];
+                held = held.isEmpty() ? message.text : held + QStringLiteral("\n\n") + message.text;
+            }
+            queued_messages.clear();
+            for (auto it = returned_drafts.cbegin(); it != returned_drafts.cend(); ++it) {
+                if (it.key() == draft_thread()) session_draft = session_draft.isEmpty() ? it.value() : it.value() + QStringLiteral("\n\n") + session_draft;
+                else (void)keep_in_saved_draft(it.key(), it.value());
+            }
+            returned_drafts.clear();
+        } catch (...) {}
+    }
+    // Stop: nothing that waited is sent; every message returns to its own conversation.
+    QList<QueuedMessage> take_all_queued_messages() {
+        // A message already being handed to the agent is past waiting; Stop then interrupts its turn instead.
+        const qsizetype from = queue_delivering ? 1 : 0;
+        if (queued_messages.size() <= from) return {};
+        auto messages = queued_messages.mid(from);
+        queued_messages.resize(from);
+        return messages;
+    }
+    // Whether the front message would go with exactly the attachments and disclosure it was accepted with.
+    bool queued_inputs_current(const QueuedMessage& message) {
+        try {
+            auto proof = file_projection();
+            if (!flush_selected_rows(proof) || !proof.current()) return false;
+            if (pending_file_ids() != message.files) return false;
+            return same_disclosure(message.disclosure, current_disclosure());
+        } catch (...) { return false; }
     }
     void schedule_queue_drain() {
         if(queued_messages.isEmpty() || queue_drain_scheduled || queue_delivering)return;
@@ -15776,16 +15867,25 @@ struct AssistantViewModel::State {
     void drain_queued_messages() {
         const QPointer<AssistantViewModel> receiver(&owner);
         const auto alive=[&] { return receiver && receiver->state_.get()==this; };
+        const auto give_back=[&](const QueuedMessage& front, const QString& reason) {
+            error=input_refusal(reason);
+            return_queued_messages(take_conversation_queue(0,front.thread,front.generation));
+            if(!alive())return false;
+            notify();
+            return alive();
+        };
         while(!queued_messages.isEmpty() && !queue_delivering) {
             if(queue_waits())return;
             const auto message=queued_messages.front();
             if(message.thread!=generic_thread || message.generation!=generation) {
-                queued_messages.removeFirst();
-                error=input_refusal(QObject::tr("The conversation changed before a waiting message was sent. It is back in the composer."));
-                return_queued_message(message);
-                if(!alive())return;
-                notify();
-                if(!alive())return;
+                if(!give_back(message,QObject::tr("The conversation changed before a waiting message was sent. It is back in that conversation's draft.")))return;
+                continue;
+            }
+            const bool inputs_current=queued_inputs_current(message);
+            if(!alive())return;
+            if(queue_waits())return;
+            if(!inputs_current) {
+                if(!give_back(message,QObject::tr("The attachments or the approved context changed while a message was waiting. It was not sent and is back in the draft.")))return;
                 continue;
             }
             queue_delivering=true;
@@ -15793,15 +15893,17 @@ struct AssistantViewModel::State {
             try { row=owner.submitDraftImpl(message.text,nullptr); } catch(...) {}
             if(!alive())return;
             queue_delivering=false;
-            if(row.isEmpty() && native_action_busy())return; // another action started first; keep waiting
             qsizetype at=-1;
             for(qsizetype n=0;n<queued_messages.size();++n)if(queued_messages[n].id==message.id){at=n;break;}
-            if(at>=0)queued_messages.removeAt(at);
+            if(at<0)return; // Stop or another owner already returned it
+            if(row.isEmpty() && native_action_busy())return; // another action started first; keep waiting
             if(row.isEmpty()) {
-                // Refused (its reason is in the error): return it and keep the rest waiting behind it.
-                if(at>=0)return_queued_message(message);
+                // Refused (its reason is in the error): it and the rest of its conversation go back unsent,
+                // since sending the later ones alone would change their order.
+                return_queued_messages(take_conversation_queue(at,message.thread,message.generation));
                 return;
             }
+            queued_messages.removeAt(at);
             emit owner.queuedMessagesChanged();
             if(!alive())return;
         }
@@ -15881,7 +15983,16 @@ struct AssistantViewModel::State {
                 notify(); return {};
             }
             if (queued_serial == UINT64_MAX) throw std::length_error("Queued message capacity is exhausted");
-            queued_messages.append({QStringLiteral("queued-%1").arg(++queued_serial), text, generic_thread, generation});
+            // Its own attachments are the pending files that no earlier waiting message already holds.
+            QSet<QString> held;
+            for (const auto& waiting : queued_messages) for (const auto& file : waiting.files) held.insert(file);
+            QStringList files;
+            for (const auto& file : pending_file_ids()) if (!held.contains(file)) files.append(file);
+            if (text.trimmed().isEmpty() && files.isEmpty()) {
+                error = input_refusal(QObject::tr("These files already go with a waiting message. Your draft is kept."));
+                notify(); return {};
+            }
+            queued_messages.append({QStringLiteral("queued-%1").arg(++queued_serial), text, generic_thread, generation, files, disclosure});
             emit owner.queuedMessagesChanged();
             notify(); return {};
         }
@@ -16825,6 +16936,7 @@ struct AssistantViewModel::State {
     }
     ~State() {
 #ifndef __EMSCRIPTEN__
+        keep_waiting_text_on_exit();
         remember_current_session();remember_session_draft();
 #endif
         work_cancel_failure();work_reports.closeOwner();
@@ -19208,6 +19320,18 @@ AssistantQueueModel* AssistantViewModel::queuedMessages() const {
     }
     return queued_model_;
 }
+QString AssistantViewModel::takeReturnedMessages() {
+#ifndef __EMSCRIPTEN__
+    if (!state_->session_selection_target.isEmpty()) return {};
+    const auto shown = state_->draft_thread();
+    // Text held for a conversation the composer has left moves to that conversation's saved draft.
+    for (const auto& thread : state_->returned_drafts.keys())
+        if (thread != shown && state_->keep_in_saved_draft(thread, state_->returned_drafts.value(thread))) state_->returned_drafts.remove(thread);
+    return shown.isEmpty() ? QString() : state_->returned_drafts.take(shown);
+#else
+    return {};
+#endif
+}
 bool AssistantViewModel::cancelQueuedMessage(const QString& id) {
 #ifndef __EMSCRIPTEN__
     return state_->cancel_queued_message(id);
@@ -19668,6 +19792,12 @@ bool AssistantViewModel::completeManualControlInput(QQuickItem* control, const Q
 void AssistantViewModel::cancel() {
     auto publication = state_->file_projection();
 #ifndef __EMSCRIPTEN__
+    // Stop withdraws every waiting message first, on every way out of here, and hands the text back last: the hand-over
+    // notifies, and must not keep this Stop from interrupting the turn.
+    const auto withdrawn = qScopeGuard([receiver = QPointer<AssistantViewModel>(this), state = state_.get(),
+                                        messages = state_->take_all_queued_messages()] {
+        try { if (receiver && receiver->state_.get() == state) state->return_queued_messages(messages); } catch (...) {}
+    });
     if (!publication.input_current()) return;
     state_->retire_result();
 #endif
@@ -20075,7 +20205,7 @@ QString AssistantViewModel::beginFileSelection(bool requireSignedIn) {
         if (!state_->claim_file_projection(projection)) return {};
         if ((requireSignedIn && !connected()) || !state_->publishing || !state_->controller || state_->file_staging || state_->file_authority_exhausted || state_->file_epoch == UINT64_MAX)
             { refused = true; throw std::runtime_error("The selected-file owner is unavailable"); }
-        if (state_->attachment_clear_requested || state_->attachment_clear_draining || state_->auth_pending || (state_->generic_mode && (state_->generic_busy || state_->generic_connecting || state_->generic_retiring || state_->generic_revoke_pending || state_->generic_context_retention_pending || state_->generic_clear_pending || state_->generic_context_pending)) || (state_->project && state_->project->fit()->running()))
+        if (state_->attachment_clear_requested || state_->attachment_clear_draining || state_->auth_pending || (state_->generic_mode && (state_->generic_busy || state_->generic_connecting || state_->generic_retiring || state_->generic_revoke_pending || state_->generic_context_retention_pending || state_->generic_clear_pending || state_->generic_context_pending)) || (state_->project && state_->project->fit()->running()) || !state_->queued_messages.isEmpty())
             { refused = true; throw std::runtime_error("Finish the active operation before selecting files"); }
         if (!state_->flush_selected_rows(projection)) { if (projection.current()) state_->notify(); return {}; }
         const auto descriptor = state_->file_context();
@@ -20134,6 +20264,7 @@ bool AssistantViewModel::removeSelectedFile(const QString& id) {
         if (state_->attachment_clear_requested || state_->attachment_clear_draining || state_->file_selection || state_->file_staging || state_->auth_pending ||
 #ifndef __EMSCRIPTEN__
             (state_->generic_mode && (state_->generic_busy || state_->generic_connecting || state_->generic_retiring || state_->generic_revoke_pending || state_->generic_context_retention_pending || state_->generic_clear_pending || state_->generic_context_pending)) ||
+            !state_->queued_messages.isEmpty() || // a waiting message holds its attachments
 #endif
             (state_->project && state_->project->fit()->running())) { refused = true; throw std::runtime_error("Finish the active operation before changing files"); }
         if (!state_->flush_selected_rows(projection)) { if (projection.current()) state_->notify(); return false; }

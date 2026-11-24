@@ -364,6 +364,7 @@ Rectangle {
         }
         function onSessionDraftRestored(threadId, text) {
             ApplicationInfo.composerSessionDraftRestored(composer, editor, threadId, text);
+            ApplicationInfo.composerTakeReturnedMessages(composer, editor);
         }
         function onConversationClearRequested(intent) {
             ApplicationInfo.composerConversationClearRequested(composer, editor, intent);
@@ -377,8 +378,8 @@ Rectangle {
         function onWorkReportFinished(receipt) {
             composer.finishWorkReport(receipt);
         }
-        function onQueuedMessageReturned(text) {
-            ApplicationInfo.composerQueuedMessageReturned(composer, editor, text);
+        function onQueuedMessageReturned() {
+            ApplicationInfo.composerTakeReturnedMessages(composer, editor);
         }
     }
     Component.onCompleted: ApplicationInfo.composerRefreshFilePresentation(composer, false)
@@ -487,7 +488,10 @@ Rectangle {
                 KeyNavigation.backtab: composer.previousFocusItem
                 onTextChanged: ApplicationInfo.composerDraftEdited(composer, editor, true)
                 onPreeditTextChanged: ApplicationInfo.composerDraftEdited(composer, editor, false)
-                onInputMethodComposingChanged: ApplicationInfo.composerDraftEdited(composer, editor, false)
+                onInputMethodComposingChanged: {
+                    ApplicationInfo.composerDraftEdited(composer, editor, false);
+                    ApplicationInfo.composerTakeReturnedMessages(composer, editor);
+                }
                 onSelectionStartChanged: composer.rememberSelection()
                 onSelectionEndChanged: composer.rememberSelection()
                 color: EaStyle.Colors.themeForeground

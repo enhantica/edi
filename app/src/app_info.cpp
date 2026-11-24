@@ -12066,12 +12066,17 @@ void ApplicationInfo::composerSessionDraftRestored(QObject* composer, QObject* e
     if (restore && composerDraftEditorIdle(*frame)) composerDraftWrite(*frame, frame->edit, "text", QJSValue(text));
     if (frame->live()) publishComposerDraft(*frame);
 }
-void ApplicationInfo::composerQueuedMessageReturned(QObject* composer, QObject* editor, const QString& text) const {
+void ApplicationInfo::composerTakeReturnedMessages(QObject* composer, QObject* editor) const {
     const auto frame = composerDraftFrame(composer, editor);
+    // While the editor composes, the text stays with the assistant; the composer asks again when composing ends.
     if (!frame || !composerDraftEditorIdle(*frame)) return;
+    auto* assistant = qobject_cast<edi_app::AssistantViewModel*>(composerDraftRead(*frame, frame->view, "assistant").toQObject());
     const auto current = composerDraftRead(*frame, frame->edit, "text");
-    if (!frame->live()) return;
-    // Put the waiting message back ahead of anything typed since, so neither is lost.
+    if (!frame->live() || !assistant) return;
+    // Only the conversation this composer shows hands over its returned messages.
+    const auto text = assistant->takeReturnedMessages();
+    if (text.isEmpty() || !frame->live()) return;
+    // Put the waiting messages back ahead of anything typed since, so neither is lost.
     const auto existing = current.toString();
     composerDraftWrite(*frame, frame->edit, "text", QJSValue(existing.isEmpty() ? text : text + QStringLiteral("\n\n") + existing));
     if (frame->live()) publishComposerDraft(*frame);
