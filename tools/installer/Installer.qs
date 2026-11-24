@@ -63,7 +63,10 @@ var maintenanceWalked = false;
 var installerWalked = false;
 // The maintenance tool's mode in capture mode (EDI_INSTALLER_MAINTENANCE_MODE): add (add or remove components),
 // update, or remove (everything, the default).
+// Updating comes in three: update (as the page opens), updatekept (the assistant unticked) and updatewithout (the
+// assistant not installed); their pages are named after them.
 var maintenanceMode = installer.environmentVariable("EDI_INSTALLER_MAINTENANCE_MODE") || "remove";
+var maintenanceAction = maintenanceMode.indexOf("update") === 0 ? "update" : maintenanceMode;
 
 function pageId(name) {
     var mode = installer.isInstaller() ? "installer" : "maintenance-" + maintenanceMode;
@@ -121,7 +124,7 @@ function advance(name, page) {
     }
     // The maintenance tool takes the mode asked for; removing everything needs no repository.
     if (name === "Introduction" && !installer.isInstaller()) {
-        var choice = maintenanceChoices(page)[maintenanceMode];
+        var choice = maintenanceChoices(page)[maintenanceAction];
         if (choice)
             choice.checked = true;
     }
@@ -384,9 +387,11 @@ Controller.prototype.DynamicAssistantFormCallback = function () {
     }
     // Adding components in capture mode turns the assistant over (added if absent, removed if there), so the mode
     // always has work to do and its progress page shows.
-    var box = captureFolder !== "" && maintenanceMode === "add" ? gui.findChild(page, "AssistantCheckBox") : null;
-    if (box)
+    var box = captureFolder !== "" ? gui.findChild(page, "AssistantCheckBox") : null;
+    if (box && maintenanceMode === "add")
         box.checked = !box.checked;
+    if (box && maintenanceMode === "updatekept")
+        box.checked = false;
     settleSoon(page);
     capture("AssistantForm");
     advance("AssistantForm", page);

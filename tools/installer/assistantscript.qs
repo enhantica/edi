@@ -40,18 +40,23 @@ function Component() {
     } else {
         // The choice page, the same when adding or removing and when updating: EasyDiffraction is always kept
         // (ticked, fixed), the AI assistant is ticked when installed. Updating, its box says whether it is updated;
-        // an assistant that is not installed is not offered there.
+        // an assistant that is not installed cannot be, and a note says where to add it.
         if (form.AppCheckBox)
             form.AppCheckBox.visible = true;
         box.text = "AI assistant";
         box.checked = component.installed;
-        if (installer.isUpdater() && !component.installed)
-            box.visible = false;
         // The licence, shortcut and space belong to installing, not to this choice.
         ["LicenseCheckBox", "LicenseLink", "ShortcutCheckBox", "NoticeLabel", "SpaceLabel"].forEach(function (name) {
             if (form[name])
                 form[name].visible = false;
         });
+        if (installer.isUpdater() && !component.installed) {
+            box.enabled = false;
+            if (form.NoticeLabel) {
+                form.NoticeLabel.text = "The AI assistant is not installed. Choose Change components to add it.";
+                form.NoticeLabel.visible = true;
+            }
+        }
     }
     box.toggled.connect(function (checked) {
         if (checked)
