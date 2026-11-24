@@ -8,6 +8,7 @@ import importlib.util
 import json
 from html.parser import HTMLParser
 from pathlib import Path
+from zipfile import ZipFile
 
 import pytest
 
@@ -256,12 +257,18 @@ def deliveries(tmp_path):
     for platform, filename_tail in [
         ('macos-arm64', 'macOS-arm64.dmg'),
         ('windows-x86_64', 'Windows-x64.exe'),
-        ('linux-x86_64', 'Linux-x64.run'),
+        ('linux-x86_64', 'Linux-x64.zip'),
     ]:
         folder = tmp_path / platform
         folder.mkdir()
         archive = folder / f'EasyDiffraction-Installer-{version}-{filename_tail}'
-        archive.write_bytes(b'qualified installer ' + platform.encode())
+        payload = b'qualified installer ' + platform.encode()
+        if platform == 'linux-x86_64':
+            with ZipFile(archive, 'w') as bundle:
+                bundle.writestr(archive.with_suffix('.run').name, payload)
+                bundle.writestr('installer-runtime/lib/libQt6Core.so.6', b'qualified runtime')
+        else:
+            archive.write_bytes(payload)
         (folder / 'preview-history.json').write_bytes(history)
         metadata = {
             'version': version,
@@ -294,11 +301,11 @@ def test_draft_preparation_retains_qualified_platform_bytes(tmp_path):
     before = {f.name: tree(f) for f in folders}
     actual, notes, assets = draft.prepare(commit, folders)
     assert {path.name for path, _ in assets} == {
-        'EasyDiffraction-Installer-2026.11.17-Linux-x64.run',
+        'EasyDiffraction-Installer-2026.11.17-Linux-x64.zip',
         'EasyDiffraction-Installer-2026.11.17-macOS-arm64.dmg',
         'EasyDiffraction-Installer-2026.11.17-Windows-x64.exe',
         'SHA256SUMS',
-    }, 'A draft publishes the Linux RUN, macOS DMG, Windows EXE and their manifest'
+    }, 'A draft publishes the Linux installer ZIP, macOS DMG, Windows EXE and their manifest'
     assert actual == release and 'Save fitted projects' in notes, (
         'A draft must retain the source identity and user notes qualified by every platform'
     )

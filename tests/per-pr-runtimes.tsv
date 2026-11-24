@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-24T02:38:09Z
+# measured_utc = 2026-11-24T04:19:10Z
 #
-# Recorded from: measured test run (26 node(s) measured once, 187061 banked, 0 stale row(s) dropped)
-# Collected tests: 266942; with a reported duration: 85977
+# Recorded from: measured test run (11 node(s) measured once, 187076 banked, 6 stale row(s) dropped)
+# Collected tests: 266942; with a reported duration: 85978
 # Module-scoped fixture costs recorded: 218
 #
 # Breaches are decided PER TIER against the table
@@ -31,8 +31,8 @@
 # measurement nobody took and which passes every tier threshold.
 # inventory_python = 266942
 # inventory_cpp = 0
-# inventory_measured = 187080
-# inventory_unmeasured = 79862
+# inventory_measured = 187087
+# inventory_unmeasured = 79855
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
 # inventory_pr_python = 92036
 
@@ -183791,7 +183791,7 @@ UNMEASURED:not-completed-in-this-run	tests/integration/py/test_release_reference
 0.000	tests/integration/py/test_release_reference_contracts.py::test_draft_preparation_refuses_identity_drift[history]
 0.000	tests/integration/py/test_release_reference_contracts.py::test_draft_preparation_refuses_identity_drift[missing-platform]
 0.000	tests/integration/py/test_release_reference_contracts.py::test_draft_preparation_refuses_identity_drift[source]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_release_reference_contracts.py::test_draft_preparation_retains_qualified_platform_bytes
+0.010	tests/integration/py/test_release_reference_contracts.py::test_draft_preparation_retains_qualified_platform_bytes
 UNMEASURED:not-completed-in-this-run	tests/integration/py/test_release_reference_contracts.py::test_newer_undeployed_site_is_not_a_publication_reference
 UNMEASURED:not-completed-in-this-run	tests/integration/py/test_release_reference_contracts.py::test_promotion_refuses_incomplete_or_ambiguous_evidence[duplicate]
 UNMEASURED:not-completed-in-this-run	tests/integration/py/test_release_reference_contracts.py::test_promotion_refuses_incomplete_or_ambiguous_evidence[expired]
@@ -266276,12 +266276,12 @@ UNMEASURED:not-completed-in-this-run	tests/unit/py/test_release_promotion.py::te
 UNMEASURED:not-completed-in-this-run	tests/unit/py/test_release_promotion.py::test_component_identity_and_original_checksums_are_verified[missing]
 UNMEASURED:not-completed-in-this-run	tests/unit/py/test_release_promotion.py::test_component_identity_and_original_checksums_are_verified[none]
 UNMEASURED:not-completed-in-this-run	tests/unit/py/test_release_promotion.py::test_component_identity_and_original_checksums_are_verified[version]
-UNMEASURED:failed-in-this-run	tests/unit/py/test_release_promotion.py::test_delivery_compares_download_and_executed_app_to_prepared_identity[linux-x86_64-.run-bytes]
-UNMEASURED:failed-in-this-run	tests/unit/py/test_release_promotion.py::test_delivery_compares_download_and_executed_app_to_prepared_identity[linux-x86_64-.run-channel]
-UNMEASURED:failed-in-this-run	tests/unit/py/test_release_promotion.py::test_delivery_compares_download_and_executed_app_to_prepared_identity[linux-x86_64-.run-history]
-UNMEASURED:failed-in-this-run	tests/unit/py/test_release_promotion.py::test_delivery_compares_download_and_executed_app_to_prepared_identity[linux-x86_64-.run-none]
-UNMEASURED:failed-in-this-run	tests/unit/py/test_release_promotion.py::test_delivery_compares_download_and_executed_app_to_prepared_identity[linux-x86_64-.run-not-executed]
-UNMEASURED:failed-in-this-run	tests/unit/py/test_release_promotion.py::test_delivery_compares_download_and_executed_app_to_prepared_identity[linux-x86_64-.run-source]
+0.000	tests/unit/py/test_release_promotion.py::test_delivery_compares_download_and_executed_app_to_prepared_identity[linux-x86_64-.zip-bytes]
+0.000	tests/unit/py/test_release_promotion.py::test_delivery_compares_download_and_executed_app_to_prepared_identity[linux-x86_64-.zip-channel]
+0.000	tests/unit/py/test_release_promotion.py::test_delivery_compares_download_and_executed_app_to_prepared_identity[linux-x86_64-.zip-history]
+0.000	tests/unit/py/test_release_promotion.py::test_delivery_compares_download_and_executed_app_to_prepared_identity[linux-x86_64-.zip-none]
+0.000	tests/unit/py/test_release_promotion.py::test_delivery_compares_download_and_executed_app_to_prepared_identity[linux-x86_64-.zip-not-executed]
+0.000	tests/unit/py/test_release_promotion.py::test_delivery_compares_download_and_executed_app_to_prepared_identity[linux-x86_64-.zip-source]
 0.000	tests/unit/py/test_release_promotion.py::test_delivery_compares_download_and_executed_app_to_prepared_identity[macos-arm64-.dmg-bytes]
 0.000	tests/unit/py/test_release_promotion.py::test_delivery_compares_download_and_executed_app_to_prepared_identity[macos-arm64-.dmg-channel]
 0.000	tests/unit/py/test_release_promotion.py::test_delivery_compares_download_and_executed_app_to_prepared_identity[macos-arm64-.dmg-history]

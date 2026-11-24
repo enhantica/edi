@@ -7,6 +7,7 @@ import json
 import sys
 from pathlib import Path
 from unittest import mock
+from zipfile import ZipFile
 
 import pytest
 
@@ -125,7 +126,7 @@ def test_promotion_requires_every_platform_from_one_successful_main_attempt(dama
 )
 @pytest.mark.parametrize(
     ('platform', 'suffix'),
-    [('linux-x86_64', '.run'), ('macos-arm64', '.dmg'), ('windows-x86_64', '.exe')],
+    [('linux-x86_64', '.zip'), ('macos-arm64', '.dmg'), ('windows-x86_64', '.exe')],
 )
 def test_delivery_compares_download_and_executed_app_to_prepared_identity(
     tmp_path, damage, platform, suffix
@@ -143,7 +144,13 @@ def test_delivery_compares_download_and_executed_app_to_prepared_identity(
         'windows-x86_64': 'Windows-x64',
     }[platform]
     name = f'EasyDiffraction-Installer-2026.11.0-{platform_name}{suffix}'
-    (tmp_path / name).write_bytes(b'qualified installer')
+    download = tmp_path / name
+    if platform == 'linux-x86_64':
+        with ZipFile(download, 'w') as archive:
+            archive.writestr(download.with_suffix('.run').name, b'qualified installer')
+            archive.writestr('installer-runtime/lib/libQt6Core.so.6', b'qualified runtime')
+    else:
+        download.write_bytes(b'qualified installer')
     metadata = {
         **release,
         'edi_commit': release['commit'],
@@ -152,7 +159,7 @@ def test_delivery_compares_download_and_executed_app_to_prepared_identity(
         'kind': 'online',
         'repository_url': url,
         'download': name,
-        'download_sha256': hashlib.sha256((tmp_path / name).read_bytes()).hexdigest(),
+        'download_sha256': hashlib.sha256(download.read_bytes()).hexdigest(),
     }
     build = {
         'edi_commit': release['commit'],
@@ -191,7 +198,7 @@ def test_delivery_compares_download_and_executed_app_to_prepared_identity(
     elif damage == 'channel':
         metadata['repository_url'] = url.replace('/repository/', '/repository/testing/')
     elif damage == 'bytes':
-        (tmp_path / name).write_bytes(b'rebuilt installer')
+        download.write_bytes(b'rebuilt installer')
     write_delivery()
     with pytest.raises(
         ValueError, match='bytes differ' if damage == 'bytes' else 'prepared identity'
