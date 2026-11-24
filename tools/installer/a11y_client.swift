@@ -1,12 +1,14 @@
 // An accessibility client for the installer check (a11y-check.sh): while the process `pid` runs, it walks every
 // window's element tree and asks each element for several attributes in one call, the selected children among them,
 // as some assistive tools do (AXUIElementCopyMultipleAttributeValues). Usage: swift a11y_client.swift <pid>
+// [pages.log]: with the page log a captured walk writes (Installer.qs), it ends with one witness line per page it read,
+// "witness: <page> reads=<n> layout=<0|1> trees=<n>", which a11y-check.sh requires for every page of the walk.
 import AppKit
 import ApplicationServices
 import Foundation
 
-guard CommandLine.arguments.count == 2, let pid = pid_t(CommandLine.arguments[1]) else {
-    FileHandle.standardError.write("usage: a11y_client.swift <pid>\n".data(using: .utf8)!)
+guard [2, 3].contains(CommandLine.arguments.count), let pid = pid_t(CommandLine.arguments[1]) else {
+    FileHandle.standardError.write("usage: a11y_client.swift <pid> [pages.log]\n".data(using: .utf8)!)
     exit(2)
 }
 if !AXIsProcessTrusted() {
@@ -16,7 +18,27 @@ if !AXIsProcessTrusted() {
 
 let attributes = [kAXRoleAttribute, kAXChildrenAttribute, kAXSelectedChildrenAttribute, kAXTitleAttribute] as CFArray
 let app = AXUIElementCreateApplication(pid)
+let pageLog = CommandLine.arguments.count == 3 ? CommandLine.arguments[2] : nil
+// Queries that returned values; a query that failed proves nothing about the page.
 var queries = 0
+var trees = 0
+// Elements a tree view is made of: an outline or browser, or a row that opens and closes (a disclosure).
+let treeRoles: Set<String> = ["AXOutline", "AXBrowser", "AXDisclosureTriangle"]
+
+// The page the walk shows now: the last line of its page log.
+func currentPage() -> String? {
+    guard let path = pageLog, let text = try? String(contentsOfFile: path, encoding: .utf8) else { return nil }
+    return text.split(whereSeparator: \.isNewline).last.map { $0.trimmingCharacters(in: .whitespaces) }
+}
+
+// What one pass over a page found: successful queries, tree elements, whether its layout was checked.
+struct Tally {
+    var reads = 0
+    var trees = 0
+    var laidOut = false
+}
+var witnessed: [String: Tally] = [:]
+var witnessOrder: [String] = []
 
 // The element's role and title, read one at a time (a single attribute is not the crashing call), printed before
 // the multiple-attribute query so the last line names the element a crash happened on.
@@ -55,25 +77,37 @@ func frame(_ element: AXUIElement) -> CGRect? {
     return CGRect(origin: point, size: extent)
 }
 
-func visit(_ element: AXUIElement, depth: Int, into placed: inout [Placed]) {
+func visit(_ element: AXUIElement, depth: Int, into placed: inout [Placed], tally: inout Tally) {
     guard depth < 40 else { return }
     var values: CFArray?
-    queries += 1
     print("\(String(repeating: " ", count: depth))\(describe(element))")
     fflush(stdout)
     var children: [AXUIElement] = []
-    if AXUIElementCopyMultipleAttributeValues(element, attributes, AXCopyMultipleAttributeOptions(rawValue: 0), &values)
-        == .success, let list = values as? [AnyObject], list.count > 1, let found = list[1] as? [AXUIElement]
-    {
+    let answered = AXUIElementCopyMultipleAttributeValues(
+        element, attributes, AXCopyMultipleAttributeOptions(rawValue: 0), &values) == .success
+    if answered {
+        queries += 1
+        tally.reads += 1
+    }
+    if answered, let list = values as? [AnyObject], list.count > 1, let found = list[1] as? [AXUIElement] {
         children = found
     }
+    let role = string(element, kAXRoleAttribute)
+    var disclosing: CFTypeRef?
+    if treeRoles.contains(role)
+        || AXUIElementCopyAttributeValue(element, "AXDisclosing" as CFString, &disclosing) == .success
+    {
+        trees += 1
+        tally.trees += 1
+        print("tree: \(describe(element))")
+        fflush(stdout)
+    }
     if depth > 0, let box = frame(element) {
-        let role = string(element, kAXRoleAttribute)
         let text = [kAXTitleAttribute, kAXValueAttribute, kAXDescriptionAttribute]
             .map { string(element, $0) }.first { !$0.isEmpty } ?? ""
         placed.append(Placed(role: role, text: text, frame: box, children: children.compactMap(frame)))
     }
-    for child in children { visit(child, depth: depth + 1, into: &placed) }
+    for child in children { visit(child, depth: depth + 1, into: &placed, tally: &tally) }
 }
 
 // The page's layout rules (owner, 2026-11-23): one left edge, gaps on the spacing scale, no clipped text, no frame
@@ -88,7 +122,9 @@ var pagesSeen = 0
 var pageEdges: [String: [Int: String]] = [:]
 var pagesChecked = 0
 
-func check(window: CGRect, title: String, placed: [Placed]) {
+// Whether the page had content whose layout was checked.
+@discardableResult
+func check(window: CGRect, title: String, placed: [Placed]) -> Bool {
     let buttons = placed.filter { $0.role == "AXButton" && wizardButtons.contains($0.text) }
     let bottom = buttons.map(\.frame.minY).min() ?? window.maxY
     pagesSeen += 1
@@ -100,7 +136,7 @@ func check(window: CGRect, title: String, placed: [Placed]) {
                 "AXTextArea", "AXScrollArea"].contains($0.role)
     }
     // A moment between two pages has no content; a run that never checks a page fails (layout-pages: 0).
-    guard !content.isEmpty else { return }
+    guard !content.isEmpty else { return false }
     pagesChecked += 1
     var problems: [String] = []
     // The first element of each row (nothing beside it to its left).
@@ -162,6 +198,7 @@ func check(window: CGRect, title: String, placed: [Placed]) {
         print("layout: [\(title)] \(problem)")
         fflush(stdout)
     }
+    return true
 }
 
 while kill(pid, 0) == 0 {
@@ -170,9 +207,22 @@ while kill(pid, 0) == 0 {
         let list = windows as? [AXUIElement]
     {
         for window in list {
+            // A pass counts for a page only when the page log names the same page before and after it.
+            let before = currentPage()
             var placed: [Placed] = []
-            visit(window, depth: 0, into: &placed)
-            if let box = frame(window) { check(window: box, title: string(window, kAXTitleAttribute), placed: placed) }
+            var tally = Tally()
+            visit(window, depth: 0, into: &placed, tally: &tally)
+            if let box = frame(window) {
+                tally.laidOut = check(window: box, title: string(window, kAXTitleAttribute), placed: placed)
+            }
+            if let page = before, !page.isEmpty, page == currentPage() {
+                if witnessed[page] == nil { witnessOrder.append(page) }
+                var sum = witnessed[page] ?? Tally()
+                sum.reads += tally.reads
+                sum.trees += tally.trees
+                sum.laidOut = sum.laidOut || tally.laidOut
+                witnessed[page] = sum
+            }
         }
     }
     usleep(200_000)
@@ -181,5 +231,10 @@ for (title, edges) in pageEdges where edges.count > 1 {
     let named = edges.keys.sorted().map { "\($0) (\(edges[$0]!))" }.joined(separator: ", ")
     print("layout: [\(title)] pages start at different left edges: \(named)")
 }
+for page in witnessOrder {
+    let seen = witnessed[page]!
+    print("witness: \(page) reads=\(seen.reads) layout=\(seen.laidOut ? 1 : 0) trees=\(seen.trees)")
+}
 print("layout-pages: \(pagesChecked)")
+print("a11y-client: \(trees) tree elements")
 print("a11y-client: \(queries) multiple-attribute queries")

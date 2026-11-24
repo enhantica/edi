@@ -7,6 +7,10 @@ once per theme with the system's own appearance set, on Linux in light only. --m
 the marker installer and prints its path, for the macOS accessibility check (a11y-check.sh).
 After each install the installed maintenance tool runs the same way, then the installation is
 removed. The PNGs go to --output for a run artifact; nothing is committed.
+
+The walks write every page they show to pages/pages.log, in order (Installer.qs). The run fails
+unless that list is exactly the expected (page, mode, theme) sequence and each page that has a
+picture has one: no page missing, none extra. What each maintenance mode did is checked on disk.
 """
 
 import argparse
@@ -31,13 +35,17 @@ from protocol_check import installer_command
 PERSONALIZE = r'HKCU\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize'
 
 
+# The marker app's one file, relative to the stage and to the installation.
+APP_MARKER = Path(
+    'EasyDiffraction.app/Contents/MacOS/EasyDiffraction'
+    if SYSTEM == 'macos'
+    else 'bin/EasyDiffraction' + SUFFIX
+)
+
+
 def marker_stage(root: Path) -> Path:
     stage = root / 'marker-stage'
-    app = stage / (
-        'EasyDiffraction.app/Contents/MacOS/EasyDiffraction'
-        if SYSTEM == 'macos'
-        else 'bin/EasyDiffraction' + SUFFIX
-    )
+    app = stage / APP_MARKER
     app.parent.mkdir(parents=True)
     app.write_text('marker\n')
     assistant = stage / ASSISTANT_RUNTIME / 'assistant.txt'
@@ -64,32 +72,39 @@ def running(image: str) -> bool:
     return image.lower() in listed.stdout.lower()
 
 
-class ScreenFrames(threading.Thread):
-    """Windows: a screenshot about every second while a wizard runs, kept when it changed.
+def current_page(pages: Path) -> str:
+    """The page a walk shows now: the last line of its page log, or '' before the first page."""
+    log = pages / 'pages.log'
+    lines = log.read_text(encoding='utf-8').split() if log.exists() else []
+    return lines[-1] if lines else ''
 
-    A process the wizard starts cannot take one there, so the pages are captured from here; each
-    page shows for 2.5 s (Installer.qs) and so appears in at least one frame.
+
+class ScreenFrames(threading.Thread):
+    """Windows: a screenshot about every second while a wizard runs, named after its page.
+
+    A process the wizard starts cannot take one there, so the pages are captured from here. A
+    frame is kept as <page>.png only when the page log names the same page before and after it,
+    and only for a page that has a picture.
     """
 
     def __init__(self, pages: Path, prefix: str) -> None:
         super().__init__(daemon=True)
-        self.pages, self.prefix, self.done, self.count = pages, prefix, threading.Event(), 0
+        self.pages, self.prefix, self.done = pages, prefix, threading.Event()
 
     def run(self) -> None:
-        last = b''
         scratch = self.pages / f'{self.prefix}-scratch.png'
         while not self.done.is_set():
+            before = current_page(self.pages)
             subprocess.run(
                 ['powershell', '-NoProfile', '-Command', SCREEN.format(file=scratch)],
                 capture_output=True, timeout=60, check=False,
             )  # fmt: skip
             if scratch.exists():
-                data = scratch.read_bytes()
-                if data != last:
-                    self.count += 1
-                    (self.pages / f'{self.prefix}-{self.count:02d}.png').write_bytes(data)
-                    last = data
-                scratch.unlink()
+                pictured = before.rsplit('-', 1)[0] not in UNPICTURED
+                if before and pictured and before == current_page(self.pages):
+                    scratch.replace(self.pages / f'{before}.png')
+                else:
+                    scratch.unlink()
 
 
 def run_pages(
@@ -185,11 +200,7 @@ def marker_installer(tools: Path, work: Path) -> Path:
     repository = (work / 'online/repository').as_uri() + '/'
     with patch('package.repository_urls', return_value=(repository,)):
         package_app(stage, tools, work / 'offline', '2026.11.0')
-    app = stage / (
-        'EasyDiffraction.app/Contents/MacOS/EasyDiffraction'
-        if SYSTEM == 'macos'
-        else 'bin/EasyDiffraction' + SUFFIX
-    )
+    app = stage / APP_MARKER
     app.write_text('updated marker\n')
     package_app(stage, tools, work / 'online', '2026.11.1', repository)
     metadata = (work / 'offline/installer.json').read_text()
@@ -206,7 +217,8 @@ def capture(tools: Path, output: Path) -> None:
         probe_screen(pages, output)
     download = marker_installer(tools, work)
     # Linux cannot be given a dark palette here, so light only; Windows and macOS set their own.
-    for theme in ('light',) if SYSTEM == 'linux' else ('light', 'dark'):
+    themes = ('light',) if SYSTEM == 'linux' else ('light', 'dark')
+    for theme in themes:
         home = work / f'home-{theme}'
         home.mkdir()
         env = clean_environment(home)
@@ -239,6 +251,12 @@ def capture(tools: Path, output: Path) -> None:
         )
         if not maintenance.exists():
             raise RuntimeError(f'The installer left no maintenance tool in {target}')
+        app = target / APP_MARKER
+        assistant = target / ASSISTANT_RUNTIME / 'assistant.txt'
+        if app.read_text(encoding='utf-8') != 'marker\n' or assistant.exists():
+            raise RuntimeError(
+                f'The capture installation is not the first version alone: {target}'
+            )
         # Each maintenance mode in turn; removing everything comes last.
         for mode in ('add', 'update', 'remove'):
             run_pages(
@@ -250,6 +268,7 @@ def capture(tools: Path, output: Path) -> None:
                 # (3); require_pages still demands its pages.
                 allowed=(0, 1, 3),
             )
+            check_maintenance(mode, target, app, assistant, maintenance)
         if maintenance.exists():  # the captured run removes the installation; this is the backstop
             subprocess.run(
                 [str(maintenance), '--confirm-command', '--default-answer', 'purge'],
@@ -259,38 +278,88 @@ def capture(tools: Path, output: Path) -> None:
             )
     if SYSTEM == 'macos':
         set_macos_theme('light')
-    require_pages(pages)
+    require_pages(pages, themes)
     print(f'{len(list(pages.glob("*.png")))} page captures in {pages}')
 
 
-# The pages each walk must show: the installer's three, each maintenance mode's first and last.
-EXPECTED_PAGES = [
-    'installer-TargetDirectory',
-    'installer-PerformInstallation',
-    'installer-Finished',
-] + [
-    f'maintenance-{mode}-{page}'
-    for mode in ('add', 'update', 'remove')
-    for page in ('Introduction', 'Finished')
-]
+def check_maintenance(
+    mode: str, target: Path, app: Path, assistant: Path, maintenance: Path
+) -> None:
+    """What a maintenance mode did to the installation, read from disk, not from its pages."""
+    if mode == 'add' and not (
+        assistant.exists()
+        and assistant.read_text(encoding='utf-8') == 'optional assistant marker\n'
+    ):
+        raise RuntimeError('Adding components did not install the assistant')
+    if mode == 'update' and not (
+        app.exists() and app.read_text(encoding='utf-8') == 'updated marker\n'
+    ):
+        raise RuntimeError('Updating did not install the newer version')
+    if mode == 'remove' and (app.exists() or assistant.exists() or maintenance.exists()):
+        raise RuntimeError(f'Removing left the installation behind in {target}')
 
 
-def require_pages(pages: Path) -> None:
-    """Fail unless every expected page was captured (on Windows, enough frames for them)."""
-    if SYSTEM == 'windows':
-        frames = len(list(pages.glob('*-[0-9][0-9].png')))
-        if frames < len(EXPECTED_PAGES):
-            raise RuntimeError(
-                f'Only {frames} Windows frames for {len(EXPECTED_PAGES)} expected pages'
-            )
-        return
-    themes = ('light',) if SYSTEM == 'linux' else ('light', 'dark')
-    missing = [
-        f'{page}-{theme}' for page in EXPECTED_PAGES for theme in themes
-        if not (pages / f'{page}-{theme}.png').is_file()
+# Every page each walk shows, in order. The installer passes its welcome and summary pages by
+# itself and takes no picture of them; every other page has one.
+WALKS = {
+    'installer': [
+        'Introduction',
+        'TargetDirectory',
+        'ReadyForInstallation',
+        'PerformInstallation',
+        'Finished',
+    ],
+    'maintenance-add': [
+        'Introduction',
+        'AssistantForm',
+        'ReadyForInstallation',
+        'PerformInstallation',
+        'Finished',
+    ],
+    'maintenance-update': [
+        'Introduction',
+        'ReadyForInstallation',
+        'PerformInstallation',
+        'Finished',
+    ],
+    'maintenance-remove': [
+        'Introduction',
+        'ReadyForInstallation',
+        'PerformInstallation',
+        'Finished',
+    ],
+}
+UNPICTURED = {'installer-Introduction', 'installer-ReadyForInstallation'}
+
+
+def expected_pages(themes: tuple) -> list:
+    """The (mode, page, theme) sequence the capture run shows, as the page log names it."""
+    return [
+        f'{mode}-{page}-{theme}' for theme in themes for mode, walk in WALKS.items()
+        for page in walk
     ]  # fmt: skip
-    if missing:
-        raise RuntimeError(f'Pages not captured: {", ".join(missing)}')
+
+
+def require_pages(pages: Path, themes: tuple) -> None:
+    """Fail unless the walks showed exactly the expected pages in order, each with its picture."""
+    log = pages / 'pages.log'
+    shown = log.read_text(encoding='utf-8').split() if log.exists() else []
+    expected = expected_pages(themes)
+    if shown != expected:
+        raise RuntimeError(
+            'The walks did not show the expected pages in order.\n'
+            f'shown:    {", ".join(shown) or "none"}\nexpected: {", ".join(expected)}'
+        )
+    pictured = {f'{page}.png' for page in expected if page.rsplit('-', 1)[0] not in UNPICTURED}
+    if SYSTEM == 'macos':
+        pictured |= {f'disk-image-{theme}.png' for theme in themes}
+    found = {path.name for path in pages.glob('*.png')} - {'probe.png'}
+    missing, extra = sorted(pictured - found), sorted(found - pictured)
+    if missing or extra:
+        raise RuntimeError(
+            f'Page pictures missing: {", ".join(missing) or "none"}; '
+            f'not a page of the walks: {", ".join(extra) or "none"}'
+        )
 
 
 def main() -> None:

@@ -49,6 +49,25 @@ jobs:
         if: ${{ !cancelled() }}
         continue-on-error: true
         run: bash tools/installer/a11y-check.sh "${{ steps.mount.outputs.app }}" "$RUNNER_TEMP/a11y-no-components" A11yHideComponents=true
+      # The two walks above may fail; what they must show is asserted here. The first crashed in the multiple-attribute
+      # query on selected children (its crash report names both); the second, without the component page, finished
+      # its walk (the script cancels at its last page, 3) with no crash report.
+      - name: The released installer shows the crash, and only on the component page
+        if: ${{ !cancelled() }}
+        run: |
+          crashed="$RUNNER_TEMP/a11y"
+          reports=()
+          while IFS= read -r report; do [ -n "$report" ] && reports+=("$crashed/$(basename "$report")"); done \
+            < "$crashed/crash-reports"
+          matching=0
+          for report in ${reports[@]+"${reports[@]}"}; do
+            grep -q "CopyMultipleAttributeValues" "$report" && grep -q "accessibilitySelectedChildren" "$report" \
+              && matching=1
+          done
+          [ "$matching" = 1 ] || { echo "the released installer did not crash in the multiple-attribute query"; exit 1; }
+          clean="$RUNNER_TEMP/a11y-no-components"
+          [ "$(cat "$clean/exit-status")" = 3 ] && [ ! -s "$clean/crash-reports" ] \
+            || { echo "without the component page the released installer did not finish its walk"; exit 1; }
       - name: Set up the locked packaging environment
         if: ${{ !cancelled() }}
         uses: ./.github/actions/setup-pixi
@@ -60,38 +79,63 @@ jobs:
         run: |
           pixi run --manifest-path tools/installer/pixi.toml python tools/installer/package.py tools --output build/installer/ifw
           pixi run --manifest-path tools/installer/pixi.toml python tools/installer/capture_pages.py --tools build/installer/ifw/tools --output "$RUNNER_TEMP/marker" --marker-only "$RUNNER_TEMP/marker-app.txt"
-          echo "app=$(cat "$RUNNER_TEMP/marker-app.txt")" >> "$GITHUB_OUTPUT"
+          app="$(cat "$RUNNER_TEMP/marker-app.txt")"
+          [ -d "$app" ] || { echo "the marker installer was not built: '$app'"; exit 1; }
+          echo "app=$app" >> "$GITHUB_OUTPUT"
+      # Every page each walk shows, in order (the page log's names): Introduction and the summary pass by themselves in
+      # the installer, and are still read.
       - name: Walk this commit's installer with the accessibility client
-        if: ${{ !cancelled() && steps.marker.outputs.app != '' }}
+        if: ${{ !cancelled() }}
+        env:
+          A11Y_EXPECT_PAGES: installer-Introduction,installer-TargetDirectory,installer-ReadyForInstallation,installer-PerformInstallation,installer-Finished
         run: |
-          A11Y_EXPECT_PAGES=TargetDirectory,PerformInstallation,Finished \
-            bash tools/installer/a11y-check.sh "${{ steps.marker.outputs.app }}" "$RUNNER_TEMP/a11y-this-commit" --own-script
+          [ -n "${{ steps.marker.outputs.app }}" ] || { echo "no marker installer to walk"; exit 1; }
+          bash tools/installer/a11y-check.sh "${{ steps.marker.outputs.app }}" "$RUNNER_TEMP/a11y-this-commit" --own-script
           # The assistant box is ticked by default and installs the assistant.
           grep -q "perform org.easydiffraction.app.assistant" "$RUNNER_TEMP/a11y-this-commit/installer.log" \
             || { echo "the ticked assistant box did not install the assistant"; exit 1; }
       - name: The same with the assistant box cleared
-        if: ${{ !cancelled() && steps.marker.outputs.app != '' }}
+        if: ${{ !cancelled() }}
+        env:
+          A11Y_EXPECT_PAGES: installer-Introduction,installer-TargetDirectory,installer-ReadyForInstallation,installer-PerformInstallation,installer-Finished
         run: |
-          A11Y_EXPECT_PAGES=TargetDirectory,PerformInstallation,Finished EDI_INSTALLER_ASSISTANT=off \
+          [ -n "${{ steps.marker.outputs.app }}" ] || { echo "no marker installer to walk"; exit 1; }
+          EDI_INSTALLER_ASSISTANT=off \
             bash tools/installer/a11y-check.sh "${{ steps.marker.outputs.app }}" \
             "$RUNNER_TEMP/a11y-no-assistant" --own-script
           if grep -q "perform org.easydiffraction.app.assistant" "$RUNNER_TEMP/a11y-no-assistant/installer.log"; then
             echo "the cleared assistant box still installed the assistant"; exit 1
           fi
       # The maintenance tool in each mode: add or remove components, update (the repository holds a newer version),
-      # remove everything last.
+      # remove everything last. Each mode's every page is read, and what it did to the installation is checked on disk.
       - name: Walk this commit's maintenance tool in every mode
-        if: ${{ !cancelled() && steps.marker.outputs.app != '' }}
+        if: ${{ !cancelled() }}
         run: |
+          [ -n "${{ steps.marker.outputs.app }}" ] || { echo "no marker installer to walk"; exit 1; }
           target="$RUNNER_TEMP/installed/EasyDiffraction"
+          app="$target/EasyDiffraction.app/Contents/MacOS/EasyDiffraction"
+          assistant="$target/libexec/edi/codex/assistant.txt"
           installer="$(find "${{ steps.marker.outputs.app }}/Contents/MacOS" -maxdepth 1 -type f -perm -u+x | head -1)"
           "$installer" --root "$target" --accept-licenses --default-answer --confirm-command install
+          # The default installation: the first version, no assistant, a maintenance tool.
+          [ "$(cat "$app")" = marker ] && [ ! -e "$assistant" ] && [ -d "$target/MaintenanceTool.app" ] \
+            || { echo "the default installation is not as expected"; exit 1; }
           rc=0
           for mode in add update remove; do
-            A11Y_EXPECT_PAGES=Introduction,Finished A11Y_EXPECT_STATUS="0 3" A11Y_RESTART_OK=1 \
-              EDI_INSTALLER_MAINTENANCE_MODE=$mode \
+            pages="Introduction,ReadyForInstallation,PerformInstallation,Finished"
+            [ "$mode" = add ] && pages="Introduction,AssistantForm,ReadyForInstallation,PerformInstallation,Finished"
+            A11Y_EXPECT_PAGES="$(echo "$pages" | sed "s/[^,]*/maintenance-$mode-&/g")" \
+              A11Y_EXPECT_STATUS="0 3" A11Y_RESTART_OK=1 EDI_INSTALLER_MAINTENANCE_MODE=$mode \
               bash tools/installer/a11y-check.sh "$target/MaintenanceTool.app" \
               "$RUNNER_TEMP/a11y-maintenance-$mode" --own-script || rc=1
+            case $mode in
+              add) [ "$(cat "$assistant" 2>/dev/null)" = "optional assistant marker" ] \
+                     || { echo "adding components did not install the assistant"; rc=1; } ;;
+              update) [ "$(cat "$app" 2>/dev/null)" = "updated marker" ] \
+                        || { echo "updating did not install the newer version"; rc=1; } ;;
+              remove) [ ! -e "$app" ] && [ ! -e "$assistant" ] && [ ! -e "$target/MaintenanceTool.app" ] \
+                        || { echo "removing left the installation behind"; rc=1; } ;;
+            esac
           done
           exit $rc
       - name: Keep the logs and any crash report
