@@ -411,25 +411,25 @@ SideBarGroup {
         property bool untitledAccepted: false
         // On an untitled project the form starts from what the Project page already holds for it.
         onAboutToShow: {
-            untitledAccepted = false;
-            untitledId = 0;
+            createDialog.untitledAccepted = false;
+            createDialog.untitledId = 0;
             const request = group.untitledRequest;
             group.untitledRequest = 0;
-            if (Session.untitled && Session.project !== null && assistantIntentId === "")
-                untitledId = request > 0 && Session.askingUntitledId() === request ? request : Session.beginUntitled(group.untitledOrigin);
+            if (Session.untitled && Session.project !== null && createDialog.assistantIntentId === "")
+                createDialog.untitledId = request > 0 && Session.askingUntitledId() === request ? request : Session.beginUntitled(group.untitledOrigin);
             group.untitledOrigin = "manual-create";
             if (Session.untitled && Session.project !== null) {
-                projectTitle = Session.project.title;
-                projectAuthors = Session.project.authors;
-                projectDescription = Session.project.description;
+                createDialog.projectTitle = Session.project.title;
+                createDialog.projectAuthors = Session.project.authors;
+                createDialog.projectDescription = Session.project.description;
             }
         }
         onOpened: ApplicationInfo.createProjectDialogEvent(0)
         onRejected: ApplicationInfo.createProjectDialogEvent(1)
         onClosed: {
             // Closed without its OK (Cancel, Escape or a press outside): its own request is rejected.
-            if (untitledId > 0 && !untitledAccepted)
-                Session.rejectUntitled(untitledId);
+            if (createDialog.untitledId > 0 && !createDialog.untitledAccepted)
+                Session.rejectUntitled(createDialog.untitledId);
             ApplicationInfo.createProjectDialogEvent(2);
         }
         // A new project's folder is beside the last project opened, else under the user's documents, unless one was
@@ -441,15 +441,16 @@ SideBarGroup {
         // reset here, not only when the dialog has closed: this page goes before its closing ends, and the new page's
         // dialog would open again on a flag still set.
         onAccepted: {
-            untitledAccepted = true;
+            // Qualified: the handler also runs where only the dialog's id resolves.
+            createDialog.untitledAccepted = true;
             ApplicationInfo.createProjectDialogEvent(3);
         }
         onReplaceAsked: (name, folder) => {
             replaceProject.projectName = name;
             replaceProject.folder = folder;
             // What it asks about: this location, for this dialog's request.
-            replaceProject.location = chosenLocation();
-            replaceProject.untitledId = untitledId;
+            replaceProject.location = createDialog.chosenLocation();
+            replaceProject.untitledId = createDialog.untitledId;
             replaceProject.open();
         }
     }
