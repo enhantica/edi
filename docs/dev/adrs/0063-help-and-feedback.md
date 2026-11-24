@@ -131,7 +131,7 @@ subject asked before ("Feedback, a question, a problem or an idea: tell us what 
 do, what happened, and what did you expect?"), the same words in both forms (the site reads them from the app's
 dialog). Both send `kind` `feedback` and no `subject`; the service accepts a message without a kind, so it no longer
 needs one. The type icons of the earlier list go with it. An error popup and the likes popup still open the form, with
-their own text. The service labels every issue it files `[scope] ⚠️ label needed` and `[priority] ⚠️ label needed`
+their own text. The service labels every issue it files `⚠️ scope needed` and `⚠️ priority needed`
 ([ADR-0101](0101-issue-labels.md)) instead of the kind; issues filed before keep their kind label.
 
 ## Consequences
