@@ -117,13 +117,17 @@ def current_names(labels: set[str]) -> set[str]:
 def label_problem(labels: set[str]) -> str | None:
     """Why a pull request's labels cannot make its release note, or None when they can.
 
-    One rule for the release notes and the pull-request label check: a bot release needs nothing
-    else; any other pull request needs one scope label and an interface label, and no label that
-    is not listed, so a misspelt interface is not lost from the note.
+    One rule for the release notes and the pull-request label check: a bot release has that label
+    alone, so a change in the notes cannot hide behind it; any other pull request needs one scope
+    label and an interface label, and no label that is not listed, so a misspelt interface is not
+    lost from the note.
     """
     labels = current_names(labels)
     if labels & BOT_LABELS:
-        return None
+        if labels <= BOT_LABELS:
+            return None
+        others = ', '.join(f'`{name}`' for name in sorted(labels - BOT_LABELS))
+        return f'has a release label beside others ({others})'
     if len(labels & GROUPS.keys()) != 1:
         return 'needs exactly one release scope label'
     if not labels & INTERFACE_LABELS.keys():
@@ -313,11 +317,11 @@ def release_plan(
         labels = current_names({
             label['name'] if isinstance(label, dict) else label for label in request['labels']
         })
-        if labels & BOT_LABELS:
-            continue
         problem = label_problem(labels)
         if problem:
             raise ValueError(f'Pull request {number} {problem}')
+        if labels & BOT_LABELS:
+            continue
         entry = {'title': check_title(request['title']), 'pull_request': number}
         interfaces = note_interfaces({
             'interfaces': list({
