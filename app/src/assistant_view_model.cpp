@@ -15780,12 +15780,12 @@ struct AssistantViewModel::State {
             return true;
         } catch (...) { return false; }
     }
-    void return_queued_messages(const QList<QueuedMessage>& messages) {
-        if (messages.isEmpty()) return;
+    void return_queued_messages(const QList<QueuedMessage>& returned) {
+        if (returned.isEmpty()) return;
         // One block per conversation, oldest first, so returned messages keep their order.
         QStringList threads;
         QHash<QString, QString> texts;
-        for (const auto& message : messages) {
+        for (const auto& message : returned) {
             if (!texts.contains(message.thread)) threads.append(message.thread);
             auto& text = texts[message.thread];
             text = text.isEmpty() ? message.text : text + QStringLiteral("\n\n") + message.text;
@@ -15799,7 +15799,7 @@ struct AssistantViewModel::State {
         }
         const QPointer<AssistantViewModel> receiver(&owner);
         emit owner.queuedMessagesChanged();
-        for (const auto& message : messages) {
+        for (const auto& message : returned) {
             if (!receiver || receiver->state_.get() != this) return;
             emit owner.queuedMessageReturned(message.text);
         }
@@ -15842,9 +15842,9 @@ struct AssistantViewModel::State {
         // A message already being handed to the agent is past waiting; Stop then interrupts its turn instead.
         const qsizetype from = queue_delivering ? 1 : 0;
         if (queued_messages.size() <= from) return {};
-        auto messages = queued_messages.mid(from);
+        auto taken = queued_messages.mid(from);
         queued_messages.resize(from);
-        return messages;
+        return taken;
     }
     // Whether the front message would go with exactly the attachments and disclosure it was accepted with.
     bool queued_inputs_current(const QueuedMessage& message) {
