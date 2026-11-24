@@ -11022,7 +11022,10 @@ QJSValue lifecycleCallback(const PanelUsageFrame& f, uint op,
         if (!createAlive(f, life) || !createGroupField(f, "createOperation").strictlyEquals(original) || !createSameProject(f, original) || (!panelUsageRead(f, original, "assistant").isNull() && panelUsageTruth(panelUsageRead(f, panelUsageRead(f, original, "assistant"), "cancelled")))) return {};
         const auto session = panelUsageContextRead(f, "Session");
         const auto outcome = panelUsageDeferredMemberCall(f, session, "createProjectWithOutcome", [&] {
-            return QJSValueList{saved(2), saved(3), saved(4), assistantContextField(f, "Preferences", "newProjectSuRule"), saved(5), saved(6), QJSValue(assistantContextField(f, "Preferences", "newReportLibraries").strictlyEquals(QJSValue(QStringLiteral("embedded")))), !panelUsageRead(f, original, "assistant").isNull() ? panelUsageRead(f, panelUsageRead(f, original, "assistant"), "id") : QJSValue(QStringLiteral("")), saved(8), saved(7)};
+            QJSValueList args{saved(2), saved(3), saved(4), assistantContextField(f, "Preferences", "newProjectSuRule"), saved(5), saved(6), QJSValue(assistantContextField(f, "Preferences", "newReportLibraries").strictlyEquals(QJSValue(QStringLiteral("embedded")))), !panelUsageRead(f, original, "assistant").isNull() ? panelUsageRead(f, panelUsageRead(f, original, "assistant"), "id") : QJSValue(QStringLiteral("")), saved(8)};
+            // Only a dialog that answers an untitled request sends its id: an ordinary Create carries none.
+            if (saved(7).toNumber() > 0) args.append(saved(7));
+            return args;
         });
         if (!panelUsageTruth(panelUsageRead(f, outcome, "success")) && panelUsageTruth(panelUsageRead(f, outcome, "current")) && panelUsageTruth(projectInvoke(f, "Session", "creationOutcomeCurrent", {outcome})) && assistantRelation(f, panelUsageRead(f, panelUsageRead(f, outcome, "error"), "length"), QJSValue(0), 1) && panelUsageRead(f, original, "assistant").isNull()) return projectInvoke(f, "AppState", "createFailed");
     }
