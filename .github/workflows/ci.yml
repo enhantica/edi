@@ -710,9 +710,9 @@ jobs:
     name: app · Linux
     if: &app-if ${{ !cancelled() && needs.changes.result == 'success' && github.event.pull_request.head.repo.fork == false && inputs.core_only != true }}
     environment: crysta-sdk
-    # After the core tests, which take the runners first. It runs even when core fails, so one round lists
-    # every failure.
-    needs: &app-needs [changes, core, crysta-sdk]
+    # It starts as soon as the native build and the SDK are ready, beside the core tests, so one round lists every
+    # failure sooner.
+    needs: &app-needs [changes, native, crysta-sdk]
     env:
       APP_PLATFORM: Linux
       CRYSTA_SOURCE_SHA: ${{ needs.changes.outputs.crysta_sha }}
