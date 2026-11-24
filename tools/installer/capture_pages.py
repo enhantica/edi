@@ -333,11 +333,10 @@ def check_maintenance(
     mode: str, target: Path, app: Path, assistant: Path, maintenance: Path
 ) -> None:
     """What a maintenance mode did to the installation, read from disk, not from its pages."""
-    if mode == 'add' and not (
-        assistant.exists()
-        and assistant.read_text(encoding='utf-8') == 'optional assistant marker\n'
-    ):
-        raise RuntimeError('Adding components did not install the assistant')
+    # The capture install has the assistant (its box starts ticked); changing components turns
+    # it over (Installer.qs), so here it removes it.
+    if mode == 'add' and assistant.exists():
+        raise RuntimeError('Changing components did not remove the assistant')
     if mode == 'update' and not (
         app.exists() and app.read_text(encoding='utf-8') == 'updated marker\n'
     ):
