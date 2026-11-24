@@ -428,7 +428,7 @@ function refreshInstallPage() {
 var wordmark = "";
 
 // No title and no subtitle, so Qt draws no header. The Framework sets some again as a page opens (the maintenance
-// tool's first page, an inserted page), so they are cleared whenever the page says it was entered or changed.
+// tool's first page, an inserted page), so they are cleared again once the page says it was entered.
 var untitledPages = [];
 function keepUntitled(page) {
     function clear() {
@@ -441,7 +441,6 @@ function keepUntitled(page) {
     if (untitledPages.indexOf(page) < 0) {
         untitledPages.push(page);
         page.entered.connect(clear);
-        page.completeChanged.connect(clear);
     }
 }
 
