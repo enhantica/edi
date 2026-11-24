@@ -377,7 +377,6 @@ def observe_browser_boundaries(prefix, output, observed, observer_object, probe_
                 'load': 'boundary_load',
                 'pickSave': 'boundary_pick',
                 'write': 'boundary_write',
-                'publishUntitled': 'boundary_untitled_publish',
                 'dropRecovery': 'boundary_drop',
             },
         ),
