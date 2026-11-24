@@ -120,7 +120,7 @@ function Controller() {
     // No page titles from the start: Qt decides whether a page has a header as it opens, before its callback runs.
     [QInstaller.Introduction, QInstaller.TargetDirectory, QInstaller.ReadyForInstallation,
      QInstaller.PerformInstallation, QInstaller.InstallationFinished].forEach(function (id) {
-        var start = gui.pageById(id);
+        var start = typeof gui.pageById === "function" ? gui.pageById(id) : null;
         if (start) {
             start.title = "";
             start.subTitle = "";
