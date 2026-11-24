@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-24T12:23:43Z
+# measured_utc = 2026-11-24T12:24:37Z
 #
-# Recorded from: banked rows (nothing added; 4 stale row(s) dropped)
-# Collected tests: 266992; with a reported duration: 86002
+# Recorded from: measured test run (6 node(s) measured once, 187121 banked, 0 stale row(s) dropped)
+# Collected tests: 266998; with a reported duration: 86008
 # Module-scoped fixture costs recorded: 219
 #
 # Breaches are decided PER TIER against the table
@@ -29,9 +29,9 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 266992
+# inventory_python = 266998
 # inventory_cpp = 0
-# inventory_measured = 187121
+# inventory_measured = 187127
 # inventory_unmeasured = 79871
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
 # inventory_pr_python = 92087
@@ -255875,6 +255875,10 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_project_transactions.py::test
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_project_transactions.py::test_archive_links_keep_lexical_member_identity_or_refuse_with_an_explanation
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_project_transactions.py::test_browser_save_as_replaces_old_entities_and_preserves_unrelated_destination_content
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_project_transactions.py::test_browser_save_waits_for_durable_success_and_preserves_refused_state
+1.000	tests/system/py/test_project_transactions.py::test_browser_untitled_publication_binds_outcome_to_bytes[adopted]
+1.000	tests/system/py/test_project_transactions.py::test_browser_untitled_publication_binds_outcome_to_bytes[refused]
+1.400	tests/system/py/test_project_transactions.py::test_browser_untitled_stages_keep_independent_claims
+1.070	tests/system/py/test_project_transactions.py::test_browser_untitled_teardown_cleans_only_the_orphaned_stage
 0.470	tests/system/py/test_project_transactions.py::test_dataset_read_uses_the_template_generation_adopted_by_save[desktop-before-write-first]
 0.520	tests/system/py/test_project_transactions.py::test_dataset_read_uses_the_template_generation_adopted_by_save[web-before-read-first]
 0.580	tests/system/py/test_project_transactions.py::test_dataset_read_uses_the_template_generation_adopted_by_save[web-before-write-first]
@@ -256030,6 +256034,8 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_project_transactions.py::test
 UNMEASURED:failed-in-this-run	tests/system/py/test_project_transactions.py::test_scan_bookkeeping_finishes_before_publication_and_preserves_the_prepared_snapshot[zip-as-folder-dirty]
 0.140	tests/system/py/test_project_transactions.py::test_successful_desktop_zip_publication_uses_exactly_one_staged_snapshot[zip-as]
 0.150	tests/system/py/test_project_transactions.py::test_successful_desktop_zip_publication_uses_exactly_one_staged_snapshot[zip-save]
+2.187	tests/system/py/test_project_transactions.py::test_untitled_browser_guard_settles_once_for_ordinary_publication[adopted]
+3.000	tests/system/py/test_project_transactions.py::test_untitled_browser_guard_settles_once_for_ordinary_publication[refused]
 UNMEASURED:failed-in-this-run	tests/system/py/test_project_transactions.py::test_write_authority_survives_replacement_even_with_distinct_keys_for_one_physical_place[False-False-False-intents0-folder]
 UNMEASURED:failed-in-this-run	tests/system/py/test_project_transactions.py::test_write_authority_survives_replacement_even_with_distinct_keys_for_one_physical_place[False-False-False-intents0-zip]
 UNMEASURED:failed-in-this-run	tests/system/py/test_project_transactions.py::test_write_authority_survives_replacement_even_with_distinct_keys_for_one_physical_place[False-False-False-intents1-folder]
@@ -267181,7 +267187,7 @@ UNMEASURED:not-completed-in-this-run	tests/unit/py/test_web_science_identity.py:
 # module-cost: 21.952	tests/system/py/test_project_dialog_lifecycle.py
 # module-cost: 64.280	tests/system/py/test_project_page_readiness.py
 # module-cost: 138.678	tests/system/py/test_project_tooltip_style.py
-# module-cost: 4.497	tests/system/py/test_project_transactions.py
+# module-cost: 4.653	tests/system/py/test_project_transactions.py
 # module-cost: 2.564	tests/system/py/test_public_save_boundary.py
 # module-cost: 21.241	tests/system/py/test_pytest_child_environment.py
 # module-cost: 2.940	tests/system/py/test_query_operation_ownership.py
