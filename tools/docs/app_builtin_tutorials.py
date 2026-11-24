@@ -899,14 +899,17 @@ def with_reasons(case: str, steps: list[dict]) -> list[dict]:
         elif (case, check) in NOOPS and (
             m := re.fullmatch(r'field:background\.position\.(\d+)=(.+)', check)
         ):
-            s['text'] = f'Check that the position of background point {int(m[1]) + 1} is **{m[2]}**.'
+            s['text'] = (
+                f'Check that the position of background point {int(m[1]) + 1} is **{m[2]}**.'
+            )
     steps = [
         s
         for s in steps
         if (case, s.get('check', '')) not in NOOPS
-        or s.get('check', '').startswith(
-            ('field:constraint.expression.', 'field:background.position.')
-        )
+        or s.get('check', '').startswith((
+            'field:constraint.expression.',
+            'field:background.position.',
+        ))
     ]
     # A background with a point cleared on its own is compared point by point.
     cleared = set()
