@@ -94,6 +94,7 @@ func check(window: CGRect, title: String, placed: [Placed]) {
     pagesSeen += 1
     // Everything under the title bar: the pages have no header, the logo is the page's first element.
     let content = placed.filter {
+        !($0.role == "AXStaticText" && $0.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty) &&
         $0.frame.minY > window.minY + 28 && $0.frame.maxY < bottom - 2 && $0.frame.width > 1 && $0.frame.height > 1
             && ["AXStaticText", "AXCheckBox", "AXRadioButton", "AXTextField", "AXButton", "AXProgressIndicator",
                 "AXTextArea", "AXScrollArea"].contains($0.role)
