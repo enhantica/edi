@@ -6,6 +6,7 @@ function Component() {}
 
 Component.prototype.createOperations = function () {
     component.createOperations();
+    holdProgress();
     var target = installer.value("TargetDir");
     // The install page's "Add a desktop shortcut" box (Installer.qs); the command line keeps it.
     var desktopShortcut = installer.value("EdiDesktopShortcut") !== "false";
@@ -25,3 +26,14 @@ Component.prototype.createOperations = function () {
             component.addOperation("CreateDesktopEntry", desktop + "/EasyDiffraction.desktop", entry);
     }
 };
+
+// Captures (EDI_INSTALLER_CAPTURE) hold the progress page a few seconds when installing and when removing, so its
+// picture and the accessibility check catch it: the marker installer is otherwise done at once and the Framework
+// leaves the page by itself.
+function holdProgress() {
+    if (installer.environmentVariable("EDI_INSTALLER_CAPTURE") === "")
+        return;
+    var wait = systemInfo.kernelType === "winnt"
+        ? ["powershell.exe", "-NoProfile", "-Command", "Start-Sleep -Seconds 4"] : ["/bin/sleep", "4"];
+    component.addOperation("Execute", wait.concat(["UNDOEXECUTE"], wait));
+}

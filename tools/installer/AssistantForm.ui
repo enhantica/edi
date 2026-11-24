@@ -26,7 +26,7 @@
    <property name="leftMargin">
     <number>0</number>
    </property>
-   <!-- The page's own spacing (16, Installer.qs) is the step under the folder field. -->
+   <!-- The page's own row gap (8, Installer.qs) is the step under the folder field. -->
    <property name="topMargin">
     <number>0</number>
    </property>
@@ -37,6 +37,7 @@
     <number>0</number>
    </property>
    <item>
+    <!-- The logo stands one step (16) above the rows: the row gap and 8 under it. -->
     <layout class="QHBoxLayout" name="LogoRow">
      <property name="spacing">
       <number>8</number>
@@ -51,7 +52,7 @@
       <number>0</number>
      </property>
      <property name="bottomMargin">
-      <number>0</number>
+      <number>8</number>
      </property>
      <item>
       <widget class="QLabel" name="FormLogo">
