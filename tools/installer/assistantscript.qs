@@ -31,6 +31,11 @@ function Component() {
     if (installer.isInstaller()) {
         // Ticked from the start (owner's choice); the command line still installs it only when named.
         box.checked = true;
+        // The folder field of our own (Installer.qs keeps the Framework's in step with it).
+        ["FolderLineEdit", "FolderBrowseButton"].forEach(function (name) {
+            if (form[name])
+                form[name].visible = true;
+        });
         installer.selectComponent(component.name);
     } else {
         // The choice page, the same when adding or removing and when updating: EasyDiffraction is always kept

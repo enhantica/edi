@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- SPDX-License-Identifier: BSD-3-Clause -->
-<!-- The choices on the installer's one page, under the folder field (assistantscript.qs, Installer.qs): the AI
+<!-- The folder field and the choices on the installer's one page (assistantscript.qs, Installer.qs): the AI
      assistant, the licence, a desktop shortcut on Windows and Linux, and the space the installation needs. Also the
      maintenance tool's choice page when adding, removing or updating: the logo, EasyDiffraction (always kept, so
      ticked and fixed) and the AI assistant; it has no window title, so that page
@@ -65,8 +65,10 @@
      </item>
     </layout>
    </item>
+   <!-- The folder and Browse, the installer's own (Installer.qs keeps the Framework's field, hidden, the one the
+        installation reads): in this column they start at its edge and stand one row gap above the boxes. -->
    <item>
-    <widget class="QWidget" name="AppRowGap">
+    <widget class="QWidget" name="FolderRowGap">
      <property name="minimumSize">
       <size>
        <width>0</width>
@@ -77,6 +79,61 @@
       <size>
        <width>16777215</width>
        <height>8</height>
+      </size>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="FolderRow">
+     <property name="spacing">
+      <number>8</number>
+     </property>
+     <property name="leftMargin">
+      <number>0</number>
+     </property>
+     <property name="topMargin">
+      <number>0</number>
+     </property>
+     <property name="rightMargin">
+      <number>0</number>
+     </property>
+     <property name="bottomMargin">
+      <number>0</number>
+     </property>
+     <item>
+      <widget class="QLineEdit" name="FolderLineEdit">
+       <property name="visible">
+        <bool>false</bool>
+       </property>
+       <property name="accessibleName">
+        <string>Install to</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="FolderBrowseButton">
+       <property name="visible">
+        <bool>false</bool>
+       </property>
+       <property name="text">
+        <string>Browse…</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <widget class="QWidget" name="AppRowGap">
+     <property name="minimumSize">
+      <size>
+       <width>0</width>
+       <height>16</height>
+      </size>
+     </property>
+     <property name="maximumSize">
+      <size>
+       <width>16777215</width>
+       <height>16</height>
       </size>
      </property>
     </widget>

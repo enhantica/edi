@@ -72,17 +72,18 @@ function pageId(name) {
 
 // Every page a captured walk shows, in order, one line each in pages.log: the checks compare it with the pages the
 // walk must show, and the accessibility client reads its last line to know which page it is reading.
-// Written by a detached process: the Framework's own file operation waits in an event loop, which on the
-// progress page let the whole installation run before the line was written.
+// Written before the page can be looked at: this waits for the write, without the event loop the Framework's own
+// file operation runs (which let the whole installation go by on the progress page), so nothing sees the new page
+// under the old page's name.
 function notePage(name) {
     if (captureFolder === "")
         return;
     var line = pageId(name);
     if (systemInfo.kernelType === "winnt")
-        installer.executeDetached("cmd.exe", ["/c", "echo " + line + ">>" + captureFolder.replace(/\//g, "\\")
+        installer.execute("cmd.exe", ["/c", "echo " + line + ">>" + captureFolder.replace(/\//g, "\\")
             + "\\pages.log"]);
     else
-        installer.executeDetached("/bin/sh", ["-c", 'printf "%s\\n" "$1" >> "$2"', "sh", line,
+        installer.execute("/bin/sh", ["-c", 'printf "%s\\n" "$1" >> "$2"', "sh", line,
             captureFolder + "/pages.log"]);
 }
 
@@ -291,25 +292,35 @@ function applyTemplate(page) {
     if (logoRow && flat)
         logoRow.contentsMargins = flat.contentsMargins;
     if (page.objectName === "IntroductionPage" && layouts.length > 1)
-        later(100, function () { settleChoices(page, layouts[0], layouts[1]); });
+        [0, 150].forEach(function (delay) {
+            later(delay, function () { settleChoices(page, layouts[0], layouts[1]); });
+        });
 }
 
 // The maintenance choices are the Framework's radio buttons straight in a column, which on macOS reach past their
 // cells above and below, so their frames stand closer than the column's spacing. Once shown, each spacing is set so
 // the frames are one row gap apart: under the question, and between the choices.
+function bounded(value, most) {
+    // A window too small for its rows squeezes them over one another; measuring that and adding the difference would
+    // squeeze them further, each time more. A correction therefore never passes a small limit.
+    return Math.max(0, Math.min(most, value));
+}
+
 function settleChoices(page, column, choices) {
     var question = gui.findChild(page, "MessageLabel");
     var radios = ["PackageManagerRadioButton", "UpdaterRadioButton", "UninstallerRadioButton"].map(function (name) {
         return gui.findChild(page, name);
     }).filter(function (radio) { return radio && radio.visible; });
     if (radios.length > 1)
-        choices.spacing += rowGap - (radios[1].y - (radios[0].y + radios[0].height));
+        choices.spacing = bounded(choices.spacing + rowGap - (radios[1].y - (radios[0].y + radios[0].height)),
+            2 * rowGap);
     // The choices' widget: the page's one unnamed widget (the radios' places are inside it).
     var holder = gui.findChildren(page, "").filter(function (item) {
         return item && !isLayout(item) && typeof item.y === "number" && item.visible;
     })[0];
     if (question && holder && radios.length > 0)
-        column.spacing += rowGap - (holder.y + radios[0].y - (question.y + question.height));
+        column.spacing = bounded(column.spacing + rowGap - (holder.y + radios[0].y - (question.y + question.height)),
+            2 * rowGap);
     later(100, function () { logLayout(page, "settled"); });
 }
 
@@ -332,7 +343,7 @@ Controller.prototype.DynamicAssistantFormCallback = function () {
     var box = captureFolder !== "" && maintenanceMode === "add" ? gui.findChild(page, "AssistantCheckBox") : null;
     if (box)
         box.checked = !box.checked;
-    later(100, function () { settleForm(page); });
+    settleSoon(page);
     capture("AssistantForm");
     advance("AssistantForm", page);
 };
@@ -341,7 +352,6 @@ Controller.prototype.DynamicAssistantFormCallback = function () {
 // the summary counts what is installed: a selection made while the component scripts load does not last.
 var assistantComponent = "org.easydiffraction.app.assistant";
 var assistantHooked = false;
-var warningHooked = false;
 
 function assistantChosen() {
     var page = gui.pageWidgetByObjectName("TargetDirectoryPage");
@@ -569,7 +579,7 @@ function neededSpace() {
 
 function updateSpace() {
     var label = installPageField("SpaceLabel");
-    var folder = installPageField("TargetDirectoryLineEdit");
+    var folder = folderField();
     if (!label || !folder)
         return;
     var free = freeSpace(String(folder.text));
@@ -593,7 +603,21 @@ function setupInstallPage(page) {
     var license = gui.findChild(page, "LicenseCheckBox");
     var shortcut = gui.findChild(page, "ShortcutCheckBox");
     var assistantBox = gui.findChild(page, "AssistantCheckBox");
-    var folder = gui.findChild(page, "TargetDirectoryLineEdit");
+    // Our folder field and Browse stand in for the Framework's, which stay hidden and remain what the installation
+    // reads and checks: ours writes it on every change, Browse is its own, and ours reads it back on entering.
+    var theirs = gui.findChild(page, "TargetDirectoryLineEdit");
+    var browse = gui.findChild(page, "FolderBrowseButton");
+    var theirBrowse = gui.findChild(page, "BrowseDirectoryButton");
+    var folder = gui.findChild(page, "FolderLineEdit");
+    var ownField = folder && theirs && browse && theirBrowse;
+    if (!folder)
+        folder = theirs;
+    if (ownField) {
+        theirs.visible = false;
+        theirBrowse.visible = false;
+        if (String(folder.text) !== String(theirs.text))
+            folder.text = theirs.text;
+    }
     if (!installPageReady) {
         if (license)
             license.checked = true;
@@ -613,6 +637,22 @@ function setupInstallPage(page) {
                     refreshInstallPage();
             });
         }
+        if (ownField) {
+            folder.textChanged.connect(function () {
+                if (String(theirs.text) !== String(folder.text))
+                    theirs.text = folder.text;
+                // The Framework judges the folder 200 ms after a change; its refusal is shown under ours then.
+                later(300, showNotice);
+            });
+            // The Framework's own Browse (its dialog and its rules), and the folder it chose read back.
+            browse.clicked.connect(function () {
+                theirBrowse.click();
+                if (String(folder.text) !== String(theirs.text))
+                    folder.text = theirs.text;
+                // The field can keep the keyboard focus through Browse, and then refreshes nothing by itself.
+                refreshInstallPage();
+            });
+        }
         installPageReady = true;
     }
     refreshInstallPage();
@@ -624,9 +664,16 @@ var licenseRefused = false;
 
 // The form's rows stand one row gap apart (the logo one step above them), measured once the page shows: each gap
 // widget above a row (AssistantForm.ui) takes what the drawn frames need. A row with nothing shown has no gap.
-var formRows = [["LogoRow", ["FormLogo"]], ["AppRow", ["AppCheckBox"]], ["AssistantRow", ["AssistantCheckBox"]],
+var formRows = [["LogoRow", ["FormLogo"]], ["FolderRow", ["FolderLineEdit", "FolderBrowseButton"]],
+                ["AppRow", ["AppCheckBox"]], ["AssistantRow", ["AssistantCheckBox"]],
                 ["LicenseRow", ["LicenseCheckBox", "LicenseLink"]], ["ShortcutRow", ["ShortcutCheckBox"]],
                 ["NoticeRow", ["NoticeLabel"]], ["SpaceRow", ["SpaceLabel"]]];
+
+// As soon as the page is laid out, so nobody sees it move, and once more when the styles have reached every widget.
+function settleSoon(page) {
+    later(0, function () { settleForm(page); });
+    later(150, function () { settleForm(page); });
+}
 
 function settleForm(page) {
     // Only a page on screen has frames to measure.
@@ -646,9 +693,10 @@ function settleForm(page) {
     var license = gui.findChild(page, "LicenseCheckBox");
     var link = gui.findChild(page, "LicenseLink");
     var licenseRow = gui.findChild(page, "LicenseRow");
-    later(100, function () {
+    later(0, function () {
         if (license && link && licenseRow && license.visible && link.visible)
-            licenseRow.spacing += rowGap - (link.x - (license.x + license.width));
+            licenseRow.spacing = bounded(licenseRow.spacing + rowGap - (link.x - (license.x + license.width)),
+                2 * rowGap);
         var above = null;
         formRows.forEach(function (row) {
             var shown = row[1].map(function (name) { return gui.findChild(page, name); })
@@ -660,12 +708,22 @@ function settleForm(page) {
             var gap = gui.findChild(page, row[0] + "Gap");
             if (above && gap) {
                 var wanted = above.name === "LogoRow" ? 2 * rowGap : rowGap;
-                var height = Math.max(0, gap.maximumHeight + wanted - (top - above.bottom));
+                var height = bounded(gap.maximumHeight + wanted - (top - above.bottom), wanted);
                 gap.minimumHeight = height;
                 gap.maximumHeight = height;
             }
             above = {name: row[0], bottom: bottom};
         });
+        // On the installer's page the form's first row (our folder) stands one row gap under the page's text: the
+        // page's spacing, that page's only gap, takes up where the row's frame sits.
+        var install = gui.pageWidgetByObjectName("TargetDirectoryPage");
+        var form = install ? gui.findChild(install, "AssistantForm") : null;
+        var text = install ? gui.findChild(install, "MessageLabel") : null;
+        var field = gui.findChild(page, "FolderLineEdit");
+        var column = install ? firstLayout(install) : null;
+        if (form && text && field && field.visible && column && page.objectName === "TargetDirectoryPage")
+            column.spacing = bounded(column.spacing + rowGap - (form.y + field.y - (text.y + text.height)),
+                2 * rowGap);
         if (captureFolder !== "")
             later(100, function () { logLayout(page, "settled"); });
     });
@@ -680,28 +738,45 @@ function settleDone(page) {
     var column = firstLayout(page);
     if (!page.visible || !text || !form || !open || !open.visible || !column)
         return;
-    column.spacing = Math.max(0, column.spacing + rowGap - (form.y + open.y - (text.y + text.height)));
+    column.spacing = bounded(column.spacing + rowGap - (form.y + open.y - (text.y + text.height)), 2 * rowGap);
     if (captureFolder !== "")
         later(100, function () { logLayout(page, "settled"); });
 }
 
-function refreshInstallPage() {
+// The notice line: the licence refusal, the Framework's refusal of the folder (its warning line, which decides
+// whether Install is allowed) and an installation already there. Composed whole each time, so nothing stale stays.
+var installedHere = false;
+
+function showNotice() {
     var notice = installPageField("NoticeLabel");
-    var folder = installPageField("TargetDirectoryLineEdit");
+    if (!notice)
+        return;
+    var refusal = installPageField("WarningLabel");
+    var lines = [];
+    if (licenseRefused)
+        lines.push("Accept the license to install EasyDiffraction.");
+    if (refusal && String(refusal.text) !== "")
+        lines.push(String(refusal.text));
+    if (installedHere)
+        lines.push("EasyDiffraction is already installed here. To update it, open its Maintenance Tool and choose "
+            + "Update.");
+    notice.text = lines.join(" ");
+    notice.visible = notice.text !== "";
+    settleSoon(gui.pageWidgetByObjectName("TargetDirectoryPage"));
+}
+
+// Our folder field, or the Framework's where our form is missing.
+function folderField() {
+    return installPageField("FolderLineEdit") || installPageField("TargetDirectoryLineEdit");
+}
+
+function refreshInstallPage() {
+    var folder = folderField();
     var target = folder ? String(folder.text) : installer.value("TargetDir");
     var tool = target + (systemInfo.kernelType === "darwin" ? "/MaintenanceTool.app"
                          : systemInfo.kernelType === "winnt" ? "/MaintenanceTool.exe" : "/MaintenanceTool");
-    if (notice) {
-        var lines = [];
-        if (licenseRefused)
-            lines.push("Accept the license to install EasyDiffraction.");
-        if (target !== "" && installer.fileExists(tool))
-            lines.push("EasyDiffraction is already installed here. To update it, open its Maintenance Tool and choose "
-                + "Update.");
-        notice.text = lines.join(" ");
-        notice.visible = notice.text !== "";
-        later(0, function () { settleForm(gui.pageWidgetByObjectName("TargetDirectoryPage")); });
-    }
+    installedHere = target !== "" && installer.fileExists(tool);
+    showNotice();
     updateSpace();
 }
 
@@ -884,18 +959,10 @@ function headerWordmark() {
 
         if (name === "TargetDirectory") {
             setupInstallPage(page);
-            // The warning line takes a line's height even when empty: shown only while it says something.
+            // The Framework's warning line stays hidden: what it says shows in our notice line (showNotice).
             var warning = gui.findChild(page, "WarningLabel");
-            var folder = gui.findChild(page, "TargetDirectoryLineEdit");
-            var showWarning = function () {
-                if (warning)
-                    warning.visible = warning.text !== "";
-            };
-            showWarning();
-            if (folder && !warningHooked) {
-                folder.textChanged.connect(showWarning);
-                warningHooked = true;
-            }
+            if (warning)
+                warning.visible = !gui.findChild(page, "FolderLineEdit") && warning.text !== "";
             var assistantBox = gui.findChild(page, "AssistantCheckBox");
             // Capture mode can clear it, to check both states (EDI_INSTALLER_ASSISTANT=off).
             if (assistantBox && captureFolder !== "" && installer.environmentVariable("EDI_INSTALLER_ASSISTANT") === "off")
@@ -1005,6 +1072,7 @@ function headerWordmark() {
             // Our own box in a row of its own (DoneForm.ui) stands in for the Framework's, which stays hidden and
             // follows it; shown only where the Framework would show its box.
             var open = gui.findChild(page, "OpenCheckBox");
+            later(0, function () { settleDone(page); });
             later(150, function () { settleDone(page); });
             if (run && open) {
                 open.visible = run.visible;
