@@ -120,6 +120,39 @@ var gapsSeen: [Int: Int] = [:]
 var template: (page: String, top: CGFloat, edge: CGFloat)? = nil
 var templateFaults = Set<String>()
 
+// Whether a radio button's indicator (at the left of its frame, centred, 23 points: package.py) is round: a
+// screenshot of it, its top-left corner pixel against its left edge's middle pixel. A round ring leaves the corner
+// the page's colour; a square one draws its border there too. nil when no picture could be taken.
+// A round reading is kept; square needs three readings in a row, as a picture taken while the page changes can
+// show anything.
+var shapes: [String: Bool] = [:]
+var squareReadings: [String: Int] = [:]
+func radioShape(_ frame: CGRect) -> Bool? {
+    let size: CGFloat = 23
+    let box = CGRect(x: frame.minX, y: frame.midY - size / 2, width: size, height: size).integral
+    let key = "\(box)"
+    if let known = shapes[key] { return known }
+    let file = NSTemporaryDirectory() + "a11y-radio-\(getpid()).png"
+    let shot = Process()
+    shot.executableURL = URL(fileURLWithPath: "/usr/sbin/screencapture")
+    shot.arguments = ["-x", "-R", "\(Int(box.minX)),\(Int(box.minY)),\(Int(box.width)),\(Int(box.height))", file]
+    guard (try? shot.run()) != nil else { return nil }
+    shot.waitUntilExit()
+    guard let data = FileManager.default.contents(atPath: file), let image = NSBitmapImageRep(data: data),
+        image.pixelsWide > 4, image.pixelsHigh > 4,
+        let corner = image.colorAt(x: 1, y: 1)?.usingColorSpace(.deviceRGB),
+        let edge = image.colorAt(x: 1, y: image.pixelsHigh / 2)?.usingColorSpace(.deviceRGB)
+    else { return nil }
+    let distance = abs(corner.redComponent - edge.redComponent) + abs(corner.greenComponent - edge.greenComponent)
+        + abs(corner.blueComponent - edge.blueComponent)
+    if distance > 0.15 {
+        shapes[key] = true
+        return true
+    }
+    squareReadings[key, default: 0] += 1
+    return squareReadings[key]! >= 3 ? false : true
+}
+
 // Rich text shows each inline image (the logo) as one object replacement character; it is no text to measure.
 func plain(_ text: String) -> String {
     text.replacingOccurrences(of: "\u{FFFC}", with: "").trimmingCharacters(in: .whitespacesAndNewlines)
@@ -186,6 +219,24 @@ func check(window: CGRect, title: String, placed: [Placed], page pageName: Strin
             if abs(box.frame.height - first.frame.height) > 0.5 {
                 problems.append("\(kind) '\(box.text)' is \(Int(box.frame.height)) px high, '\(first.text)' \(Int(first.frame.height))")
             }
+        }
+    }
+    // Side by side in a row (a box and its link), a visible space between: 4 px at least.
+    for item in content {
+        let beside = content.filter { other in
+            other.frame.minX >= item.frame.maxX - 2 && other.frame.minY < item.frame.maxY - 2
+                && other.frame.maxY > item.frame.minY + 2
+        }.min { $0.frame.minX < $1.frame.minX }
+        if let next = beside, next.frame.minX - item.frame.maxX < 4 {
+            problems.append("'\(named(item))' runs into '\(named(next))': \(Int(next.frame.minX - item.frame.maxX)) px apart")
+        }
+    }
+    // Radio buttons draw round: the indicator's corner shows the page, not its ring (radioShape).
+    for radio in content where radio.role == "AXRadioButton" {
+        switch radioShape(radio.frame) {
+        case .some(true): break
+        case .some(false): problems.append("AXRadioButton '\(named(radio))' draws square")
+        case .none: problems.append("AXRadioButton '\(named(radio))': its shape could not be read")
         }
     }
     // The page sits centred: as much space right of its widest stretching element (a field or a bar) as left of
