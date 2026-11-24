@@ -2689,13 +2689,13 @@ QJSValue ApplicationInfo::composerSubmit(const QJSValue& approved) const {
         if (panelUsageTruth(panelUsageRead(f, original, "canCancel"))) return consentStatus(f, "waiting");
     }
     // An ordinary Send during a fit joins the assistant's queue instead of returning a row.
-    const auto queuedBefore = panelUsageTruth(approved) ? QJSValue() : panelUsageRead(f, panelUsageRead(f, original, "queuedMessages"), "length");
+    const auto queuedBefore = panelUsageTruth(approved) ? QJSValue() : panelUsageRead(f, panelUsageRead(f, original, "queuedMessages"), "count");
     auto admission = panelUsageTruth(approved) ? panelUsageMemberCall(f, original, "submitDraftAdmission", {text}) : consentNull();
     const auto rowId = panelUsageTruth(approved) ? (panelUsageTruth(admission) ? panelUsageRead(f, admission, "row_id") : QJSValue(QString{}))
                                        : panelUsageMemberCall(f, original, "submitDraft", {text});
     if (!consentOwner(f, component, original)) return {};
     if (!panelUsageTruth(approved)) {
-        const auto queuedAfter = panelUsageRead(f, panelUsageRead(f, original, "queuedMessages"), "length");
+        const auto queuedAfter = panelUsageRead(f, panelUsageRead(f, original, "queuedMessages"), "count");
         if (!panelUsageReady(f)) return {};
         if (assistantRelation(f, queuedBefore, queuedAfter, 0)) {
             // The queue holds the text now and shows it, so no submitted row is tracked for it.
