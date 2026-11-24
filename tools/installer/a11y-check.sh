@@ -153,13 +153,10 @@ if { [ -z "$trees" ] || [ "$trees" -gt 0 ]; } && [ "${A11Y_ALLOW_TREE:-}" != 1 ]
 fi
 # The layout rules the client checks on every page it reads (a11y_client.swift): one left edge, gaps on the spacing
 # scale, no clipped text, no frame mostly empty.
-# A page is judged by how it ended up; what only showed while it opened is listed and fails nothing.
-grep "^layout-opening:" "$logs/client.log" || true
-if grep -q "^layout:" "$logs/client.log"; then
-  grep "^layout:" "$logs/client.log"
-  echo "a11y-check: a page breaks the layout rules"
-  layout_failed=1
-fi
+# Which of them lasted is a11y_layout.py's to judge; radio shapes are the client's own lines.
+python3 "$here/a11y_layout.py" "$logs/client.log" || layout_failed=1
+if grep "^layout:" "$logs/client.log"; then layout_failed=1; fi
+[ "${layout_failed:-0}" = 0 ] || echo "a11y-check: a page breaks the layout rules"
 if [ -n "$new" ] || [ "$status" -ge 128 ]; then
   for report in $new; do grep -m8 -E 'QMacAccessibility|Exception Type|Crashed|_AXXMIG' "$report" || true; done
   exit 1
