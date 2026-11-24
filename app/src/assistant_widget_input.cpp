@@ -8,6 +8,13 @@
 #include <QMouseEvent>
 #include <QWheelEvent>
 #include <QPointingDevice>
+#include <QtQuick/private/qquickdeliveryagent_p_p.h>
+#include <QtQuick/private/qquickitem_p.h>
+#include <QtQuick/private/qquickmousearea_p.h>
+#include <QtQuick/private/qquickpointerdevicehandler_p.h>
+#include <QtQuick/private/qquickpointerhandler_p.h>
+#include <QtQuick/private/qquicktext_p.h>
+#include <QtQuick/private/qquickwindow_p.h>
 #include <QElapsedTimer>
 #include <array>
 #include <algorithm>
@@ -376,22 +383,101 @@ std::uint64_t AssistantWidgetInput::start(Request request) {
     timer_.start(0);
     return id;
 }
-bool AssistantWidgetInput::ownsHit(QQuickItem& owner) const {
+namespace {
+QQuickItem* grabberItem(QObject* grabber) {
+    auto* item = qobject_cast<QQuickItem*>(grabber);
+    if (!item) if (auto* handler = qobject_cast<QQuickPointerHandler*>(grabber)) item = handler->parentItem();
+    return item;
+}
+bool withinItem(const QQuickItem& owner, QObject* grabber) {
+    auto* item = grabberItem(grabber);
+    return item && (item == &owner || owner.isAncestorOf(item));
+}
+// The last item Qt Quick offers a press to is the one that accepted it, also when its handler gave the grab up again.
+class PressWatch final : public QObject {
+   public:
+    explicit PressWatch(QEvent::Type type) : type_(type) { QCoreApplication::instance()->installEventFilter(this); }
+    QQuickItem* last() const { return last_; }
+
+   protected:
+    bool eventFilter(QObject* receiver, QEvent* event) override {
+        if (event->type() == type_) if (auto* item = qobject_cast<QQuickItem*>(receiver)) last_ = item;
+        return false;
+    }
+
+   private:
+    QEvent::Type type_;
+    QPointer<QQuickItem> last_;
+};
+// After delivery: whether `owner` or an item inside it took the press. A Flickable around the owner may hold the press
+// first and replay it to the item under it. A press anything else took loses its grab, so the release cannot click there.
+bool pressTakenBy(QMouseEvent& event, const QQuickItem& owner, QQuickItem* last) {
+    if (event.points().isEmpty()) return false;
+    const auto& point = event.points().constFirst();
+    QObject* const exclusive = event.exclusiveGrabber(point);
+    const auto passive = event.passiveGrabbers(point);
+    const auto* holder = grabberItem(exclusive);
+    bool owned = false;
+    if (exclusive) owned = withinItem(owner, exclusive) || (holder && holder->filtersChildMouseEvents() && holder->isAncestorOf(&owner));
+    else {
+        owned = event.isAccepted() && withinItem(owner, last);
+        for (const auto& grabber : passive) owned = owned || (grabber && withinItem(owner, grabber.data()));
+    }
+    if (owned) return true;
+    if (exclusive) event.setExclusiveGrabber(point, nullptr);
+    for (const auto& grabber : passive) if (grabber) event.removePassiveGrabber(point, grabber.data());
+    return false;
+}
+// Items Qt Quick offers a press to although they leave it to whatever is under them. Any other item counts as taking it.
+bool passesPressOn(QQuickItem& item, QPointF scene, Qt::MouseButton button) {
+    for (auto* handler : QQuickItemPrivate::get(&item)->extra.isAllocated() ? QQuickItemPrivate::get(&item)->extra->pointerHandlers
+                                                                            : QVector<QQuickPointerHandler*>{}) {
+        // A hover or point handler only watches.
+        if (!handler->enabled() || handler->inherits("QQuickHoverHandler") || handler->inherits("QQuickPointHandler")) continue;
+        const auto* device = qobject_cast<QQuickPointerDeviceHandler*>(handler);
+        if (!device || device->acceptedButtons() == Qt::NoButton || device->acceptedButtons().testFlag(button)) return false;
+    }
+    if (!item.acceptedMouseButtons().testFlag(button)) return true;
+    if (auto* text = qobject_cast<QQuickText*>(&item)) {
+        const auto local = item.mapFromScene(scene);
+        return text->linkAt(local.x(), local.y()).isEmpty();
+    }
+    if (const auto* area = qobject_cast<QQuickMouseArea*>(&item)) return !area->isEnabled();
+    if (item.inherits("QQuickOverlay")) {
+        // The overlay keeps a press outside a modal popup, and passes it on otherwise.
+        for (const auto* child : item.childItems())
+            if (child->isVisible() && child->inherits("QQuickPopupItem") && child->parent() && child->parent()->property("modal").toBool()) return false;
+        return true;
+    }
+    // A handler makes Qt set every button on its item; one without a press handler of its own ignores the press.
+    const auto* meta = item.metaObject();
+    while (meta && !QByteArrayView(meta->className()).startsWith("QQuick")) meta = meta->superClass();
+    while (meta && QByteArrayView(meta->className()).contains("_QML")) meta = meta->superClass();
+    const auto name = meta ? QByteArrayView(meta->className()) : QByteArrayView();
+    return name == "QQuickItem" || name == "QQuickRectangle";
+}
+} // namespace
+// Whether a press at the shown point would reach the owner: walk the items Qt Quick would offer it to, in its own
+// order, past those that leave it alone; the first that takes it must be the owner or inside it.
+bool AssistantWidgetInput::ownsHit(QQuickItem& owner, Qt::MouseButton button) const {
     QPointF now;
-    if (!window_ || !request_ || !visibleCenter(owner, now, false, request_->visualOnlyDisabledTarget) ||
+    if (!window_ || !request_ || !mouse_owner_ || !visibleCenter(owner, now, false, request_->visualOnlyDisabledTarget) ||
         QLineF(now, center_).length() > 1.0) {
         return false;
     }
-    QQuickItem* hit = window_->contentItem();
-    while (hit) {
-        const QPointF local = hit->mapFromScene(center_);
-        QQuickItem* child = hit->childAt(local.x(), local.y());
-        if (!child) break;
-        hit = child;
+    auto* agent = QQuickWindowPrivate::get(window_)->deliveryAgentPrivate();
+    if (!agent || !agent->rootItem) return false;
+    // Only for the target list; never sent.
+    QMouseEvent probe(QEvent::MouseButtonPress, center_, window_->mapToGlobal(center_), button, button, Qt::NoModifier,
+                      &mouse_owner_->device);
+    if (probe.points().isEmpty()) return false;
+    const auto targets = agent->pointerTargets(agent->rootItem, &probe, probe.point(0), true, false);
+    for (QQuickItem* item : targets) {
+        if (!passesPressOn(*item, center_, button)) return item == &owner || owner.isAncestorOf(item);
     }
-    return hit == &owner || owner.isAncestorOf(hit);
+    return false;
 }
-bool AssistantWidgetInput::mouse(QEvent::Type type, Qt::MouseButton button) {
+bool AssistantWidgetInput::mouse(QEvent::Type type, Qt::MouseButton button, QQuickItem* receiver) {
     if (!window_ || !request_ || !mouse_owner_ || (!window_->isActive() && !cleanup_release_)) return false;
     const QPointer<AssistantWidgetInput> self(this);
     const QPointer<QQuickWindow> window(window_);
@@ -404,8 +490,11 @@ bool AssistantWidgetInput::mouse(QEvent::Type type, Qt::MouseButton button) {
     if (type == QEvent::MouseButtonPress) mouse_owner_->held_button = button;
     // cppcheck-suppress nullPointerRedundantCheck ; checked on entry; the later check is for re-entry
     event.setTimestamp(mouse_owner_->eventStamp(type));
+    const QPointer<QQuickItem> expected(receiver);
+    const PressWatch watch(type);
     QCoreApplication::sendEvent(window, &event);
     if (self && mouse_owner_ && type == QEvent::MouseButtonRelease) mouse_owner_->releaseFinished(*this, original_stamp);
+    if (receiver && (!expected || !pressTakenBy(event, *expected, watch.last()))) return false;
     return self && window && serial_ == id && request_ == original;
 }
 bool AssistantWidgetInput::scroll() {
@@ -680,10 +769,10 @@ void AssistantWidgetInput::advance() noexcept {
             { const bool stillValid = self->current(id); if (!self) return;
               if (!stillValid) { if (self && serial_ == id && request_ == request) self->fail(request,id,ControlCause::Superseded, QT_TR_NOOP("Visible action ownership changed"), true); return; } }
             // The cue and hover above can move the layout: press only where the named control still takes the hit.
-            if (!ownsHit(*geometryTarget)) { if (self && serial_ == id && request_ == request) self->fail(request,id,ControlCause::Superseded, QT_TR_NOOP("The target moved or is covered, so nothing was pressed"), false); return; }
+            if (!ownsHit(*geometryTarget, request->kind == Kind::ContextMenu ? Qt::RightButton : Qt::LeftButton)) { if (self && serial_ == id && request_ == request) self->fail(request,id,ControlCause::Superseded, QT_TR_NOOP("The target moved or is covered, so nothing was pressed"), false); return; }
             press_point_ = center_;
             pressed_ = true; // Own a balancing release even if the press reenters retirement.
-            if (!mouse(QEvent::MouseButtonPress, request->kind == Kind::ContextMenu ? Qt::RightButton : Qt::LeftButton)) { if (self && serial_ == id && request_ == request) self->fail(request,id,ControlCause::Delivery, QT_TR_NOOP("The real control did not receive its press"), true); return; }
+            if (!mouse(QEvent::MouseButtonPress, request->kind == Kind::ContextMenu ? Qt::RightButton : Qt::LeftButton, geometryTarget.data())) { if (self && serial_ == id && request_ == request) self->fail(request,id,ControlCause::Delivery, QT_TR_NOOP("The real control did not receive its press"), true); return; }
             // cppcheck-suppress identicalConditionAfterEarlyExit ; a signal or event above can delete this object
             if (!self || serial_ != id || request_ != request) return;
             step_ = Step::Release; pace(press_ms); return;
@@ -754,10 +843,10 @@ void AssistantWidgetInput::advance() noexcept {
             // cppcheck-suppress identicalConditionAfterEarlyExit ; a signal or event above can delete this object
             if(!self || serial_!=id || request_!=request)return;
             if(!current(id) || !searchEditorOwned()){if(self && serial_==id && request_==request)self->fail(request,id,ControlCause::Superseded,QT_TR_NOOP("The original popup search editor changed during its cue"),false);return;}
-            if(!ownsHit(*search_editor_)){if(self && serial_==id && request_==request)self->fail(request,id,ControlCause::Superseded,QT_TR_NOOP("The popup search editor moved or is covered, so nothing was pressed"),false);return;}
+            if(!ownsHit(*search_editor_,Qt::LeftButton)){if(self && serial_==id && request_==request)self->fail(request,id,ControlCause::Superseded,QT_TR_NOOP("The popup search editor moved or is covered, so nothing was pressed"),false);return;}
             press_point_=center_;
             pressed_=true;
-            if(!mouse(QEvent::MouseButtonPress,Qt::LeftButton)){if(self && serial_==id && request_==request)self->fail(request,id,ControlCause::Delivery,QT_TR_NOOP("The original popup search editor did not receive its press"),false);return;}
+            if(!mouse(QEvent::MouseButtonPress,Qt::LeftButton,search_editor_.data())){if(self && serial_==id && request_==request)self->fail(request,id,ControlCause::Delivery,QT_TR_NOOP("The original popup search editor did not receive its press"),false);return;}
             if(self && serial_==id && request_==request){step_=Step::SearchRelease;pace(press_ms);}return;
         }
         case Step::SearchRelease:
@@ -785,10 +874,10 @@ void AssistantWidgetInput::advance() noexcept {
             // cppcheck-suppress identicalConditionAfterEarlyExit ; a signal or event above can delete this object
             if(!self || serial_!=id || request_!=request)return;
             if(!current(id) || !choiceRowOwned()){if(self && serial_==id && request_==request)self->fail(request,id,ControlCause::Superseded,QT_TR_NOOP("The original offered row changed during its cue"),false);return;}
-            if(!ownsHit(*choice_row_)){if(self && serial_==id && request_==request)self->fail(request,id,ControlCause::Superseded,QT_TR_NOOP("The offered row moved or is covered, so nothing was pressed"),false);return;}
+            if(!ownsHit(*choice_row_,Qt::LeftButton)){if(self && serial_==id && request_==request)self->fail(request,id,ControlCause::Superseded,QT_TR_NOOP("The offered row moved or is covered, so nothing was pressed"),false);return;}
             press_point_=center_;
             pressed_=true;
-            if(!mouse(QEvent::MouseButtonPress,Qt::LeftButton)) {if(self && serial_==id && request_==request)self->fail(request,id,ControlCause::Delivery,QT_TR_NOOP("The original popup choice did not receive its press"),false);return;}
+            if(!mouse(QEvent::MouseButtonPress,Qt::LeftButton,choice_row_.data())) {if(self && serial_==id && request_==request)self->fail(request,id,ControlCause::Delivery,QT_TR_NOOP("The original popup choice did not receive its press"),false);return;}
             if(self && serial_==id && request_==request){step_=Step::ChoiceRelease;pace(press_ms);}return;
         case Step::ChoiceRelease:
             commit_prepared_=true;

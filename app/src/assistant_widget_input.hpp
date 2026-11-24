@@ -87,7 +87,8 @@ class AssistantWidgetInput final : public QObject {
 
     bool current(std::uint64_t id) const;
     bool visibleCenter(QQuickItem& item, QPointF& center, bool scrollGutter = false, bool allowDisabledTarget = false) const;
-    bool mouse(QEvent::Type type, Qt::MouseButton button);
+    // A press names the item that must receive it; anything else that took it loses its grab again.
+    bool mouse(QEvent::Type type, Qt::MouseButton button, QQuickItem* receiver = nullptr);
     bool scroll();
     bool key(int code, Qt::KeyboardModifiers modifiers = Qt::NoModifier, const QString& text = {});
     void fail(const std::shared_ptr<Request>& expected, std::uint64_t expectedId, ControlCause cause, const char* diagnostic, bool restoreDraft);
@@ -116,7 +117,7 @@ class AssistantWidgetInput final : public QObject {
     bool coveredByToolTip() const;
     /// Whether a press at center_ now reaches `owner`: the target has not moved since the pointer was shown on it, and
     /// the topmost item under that point is `owner` or inside it (not a sibling, popup or overlay above it).
-    bool ownsHit(QQuickItem& owner) const;
+    bool ownsHit(QQuickItem& owner, Qt::MouseButton button) const;
     bool choiceRowOwned() const;
     bool revealChoice();
     bool revealSearchEditor();
