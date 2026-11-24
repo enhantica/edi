@@ -243,6 +243,7 @@ def marker_installer(tools: Path, work: Path) -> Path:
         package_app(stage, tools, work / 'offline', '2026.11.0')
     app = stage / APP_MARKER
     app.write_text('updated marker\n')
+    (stage / ASSISTANT_RUNTIME / 'assistant.txt').write_text('updated assistant marker\n')
     package_app(stage, tools, work / 'online', '2026.11.1', repository)
     metadata = (work / 'offline/installer.json').read_text()
     return work / 'offline' / json.loads(metadata)['download']
@@ -289,73 +290,109 @@ def capture(tools: Path, output: Path) -> None:
             pages,
             f'installer-Finished-{theme}',
         )
-        maintenance = target / (
-            'MaintenanceTool.app/Contents/MacOS/MaintenanceTool'
-            if SYSTEM == 'macos'
-            else 'MaintenanceTool' + SUFFIX
-        )
-        if not maintenance.exists():
-            raise RuntimeError(f'The installer left no maintenance tool in {target}')
-        app = target / APP_MARKER
-        assistant = target / ASSISTANT_RUNTIME / 'assistant.txt'
         # The install page's assistant box starts ticked, so the walk installs the assistant too.
-        if app.read_text(encoding='utf-8') != 'marker\n' or not assistant.exists():
-            raise RuntimeError(
-                f'The capture installation is not the first version with the assistant: {target}'
-            )
-        # Each maintenance mode in turn; removing everything comes last.
-        for mode in ('add', 'update', 'remove'):
-            run_pages(
-                [str(maintenance)],
-                env | {'EDI_INSTALLER_MAINTENANCE_MODE': mode},
-                output / f'maintenance-{mode}-{theme}.log',
-                pages,
-                f'maintenance-{mode}-Finished-{theme}',
-                # Left on its Cancel button (1) or closed by the walk (3); require_pages still
-                # demands its pages.
-                allowed=(0, 1, 3),
-            )
-            check_maintenance(mode, target, app, assistant, maintenance)
-        if maintenance.exists():  # the captured run removes the installation; this is the backstop
+        check_installation(target, '', 'installing')
+        # Updating both, turning the assistant over (so removing it here), removing everything.
+        for mode in ('update', 'add', 'remove'):
+            walk_maintenance(mode, target, env, output, pages, theme)
+        # Updating with the assistant unticked, and updating where it is not installed: each on an
+        # installation of its own, made from the command line.
+        for mode, components in (
+            ('updatekept', ['org.easydiffraction.app', 'org.easydiffraction.app.assistant']),
+            ('updatewithout', []),
+        ):
+            target = home / mode
             subprocess.run(
-                [str(maintenance), '--confirm-command', '--default-answer', 'purge'],
-                env={k: v for k, v in env.items() if k != 'EDI_INSTALLER_CAPTURE'},
-                timeout=240,
-                check=False,
-            )
+                [
+                    str(installer), '--root', str(target), '--accept-licenses',
+                    '--default-answer', '--confirm-command', 'install', *components,
+                ],
+                # As a captured install, so its progress page is held (holdProgress).
+                env=env | {'EDI_INSTALLER_CAPTURE': str(work / 'headless')},
+                check=True, timeout=240,
+            )  # fmt: skip
+            check_installation(target, '' if components else 'none', 'installing')
+            walk_maintenance(mode, target, env, output, pages, theme)
+            purge(target, env)
     if SYSTEM == 'macos':
         set_macos_theme('light')
     require_pages(pages, themes)
     print(f'{len(list(pages.glob("*.png")))} page captures in {pages}')
 
 
-def check_maintenance(
-    mode: str, target: Path, app: Path, assistant: Path, maintenance: Path
+MAINTENANCE_TOOL = Path(
+    'MaintenanceTool.app/Contents/MacOS/MaintenanceTool'
+    if SYSTEM == 'macos'
+    else 'MaintenanceTool' + SUFFIX
+)
+# What each maintenance mode leaves on disk: the app's and the assistant's text.
+LEFT = {
+    'installing': ('marker', 'optional assistant marker'),
+    'update': ('updated marker', 'updated assistant marker'),
+    'add': ('updated marker', None),
+    'remove': (None, None),
+    'updatekept': ('updated marker', 'optional assistant marker'),
+    'updatewithout': ('updated marker', None),
+}
+
+
+def walk_maintenance(
+    mode: str, target: Path, env: dict, output: Path, pages: Path, theme: str
 ) -> None:
-    """What a maintenance mode did to the installation, read from disk, not from its pages."""
-    # The capture install has the assistant (its box starts ticked); changing components turns
-    # it over (Installer.qs), so here it removes it.
-    if mode == 'add' and assistant.exists():
-        raise RuntimeError('Changing components did not remove the assistant')
-    if mode == 'update' and not (
-        app.exists() and app.read_text(encoding='utf-8') == 'updated marker\n'
-    ):
-        raise RuntimeError('Updating did not install the newer version')
-    if mode != 'remove':
-        return
-    # On Windows the maintenance tool cannot delete its own running executable; a helper it
-    # starts deletes it and the folder after it quits. Give that a minute, then name what is left.
-    deadline = time.monotonic() + 60
-    while target.exists() and time.monotonic() < deadline:
-        time.sleep(2)
-    left = [path for path in (app, assistant, maintenance) if path.exists()]
-    if left:
+    run_pages(
+        [str(target / MAINTENANCE_TOOL)],
+        env | {'EDI_INSTALLER_MAINTENANCE_MODE': mode},
+        output / f'maintenance-{mode}-{theme}.log',
+        pages,
+        f'maintenance-{mode}-Finished-{theme}',
+        # Left on its Cancel button (1) or closed by the walk (3); require_pages still demands its
+        # pages.
+        allowed=(0, 1, 3),
+    )
+    if mode == 'remove':
+        # On Windows the maintenance tool cannot delete its own running executable; a helper it
+        # starts deletes it and the folder after it quits. Give that a minute, then name the rest.
+        deadline = time.monotonic() + 60
+        while target.exists() and time.monotonic() < deadline:
+            time.sleep(2)
+    check_installation(target, '', mode)
+
+
+def check_installation(target: Path, assistant: str, mode: str) -> None:
+    """What is on disk after a mode, read from there, not from its pages."""
+
+    def text(path: Path) -> str | None:
+        return path.read_text(encoding='utf-8').strip() if path.exists() else None
+
+    wanted = LEFT[mode] if assistant != 'none' else (LEFT[mode][0], None)
+    found = text(target / APP_MARKER), text(target / ASSISTANT_RUNTIME / 'assistant.txt')
+    tool = (target / MAINTENANCE_TOOL).exists()
+    if found != wanted or tool != (mode != 'remove'):
         rest = sorted(str(path.relative_to(target)) for path in target.rglob('*'))
-        raise RuntimeError(f'Removing left {left} behind in {target}; all that is left: {rest}')
+        raise RuntimeError(
+            f'After {mode}, {target} holds app and assistant {found}, not {wanted}; maintenance'
+            f' tool {"present" if tool else "absent"}; all that is left: {rest[:40]}'
+        )
+
+
+def purge(target: Path, env: dict) -> None:
+    subprocess.run(
+        [str(target / MAINTENANCE_TOOL), '--confirm-command', '--default-answer', 'purge'],
+        env={k: v for k, v in env.items() if k != 'EDI_INSTALLER_CAPTURE'},
+        timeout=240,
+        check=False,
+    )
 
 
 # Every page each walk shows, in order. The installer passes its welcome and summary pages by
 # itself and takes no picture of them; every other page has one.
+CHANGING = [
+    'Introduction',
+    'AssistantForm',
+    'ReadyForInstallation',
+    'PerformInstallation',
+    'Finished',
+]
 WALKS = {
     'installer': [
         'Introduction',
@@ -364,26 +401,16 @@ WALKS = {
         'PerformInstallation',
         'Finished',
     ],
-    'maintenance-add': [
-        'Introduction',
-        'AssistantForm',
-        'ReadyForInstallation',
-        'PerformInstallation',
-        'Finished',
-    ],
-    'maintenance-update': [
-        'Introduction',
-        'AssistantForm',
-        'ReadyForInstallation',
-        'PerformInstallation',
-        'Finished',
-    ],
+    'maintenance-update': CHANGING,
+    'maintenance-add': CHANGING,
     'maintenance-remove': [
         'Introduction',
         'ReadyForInstallation',
         'PerformInstallation',
         'Finished',
     ],
+    'maintenance-updatekept': CHANGING,
+    'maintenance-updatewithout': CHANGING,
 }
 UNPICTURED = {'installer-Introduction', 'installer-ReadyForInstallation'}
 
