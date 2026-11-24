@@ -116,7 +116,9 @@ jobs:
           app="$target/EasyDiffraction.app/Contents/MacOS/EasyDiffraction"
           assistant="$target/libexec/edi/codex/assistant.txt"
           installer="$(find "${{ steps.marker.outputs.app }}/Contents/MacOS" -maxdepth 1 -type f -perm -u+x | head -1)"
-          "$installer" --root "$target" --accept-licenses --default-answer --confirm-command install
+          # As a captured install, so its progress page is held when removing too (holdProgress, installscript.qs).
+          EDI_INSTALLER_CAPTURE="$RUNNER_TEMP/headless-pages" \
+            "$installer" --root "$target" --accept-licenses --default-answer --confirm-command install
           # The default installation: the first version, no assistant, a maintenance tool.
           [ "$(cat "$app")" = marker ] && [ ! -e "$assistant" ] && [ -d "$target/MaintenanceTool.app" ] \
             || { echo "the default installation is not as expected"; exit 1; }
