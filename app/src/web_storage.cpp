@@ -152,6 +152,22 @@ EM_JS(int, edi_storage_install, (), {
     };
     S.put = record => S.store("readwrite", store => store.put(record));
     S.remove = key => S.store("readwrite", store => store.delete(key));
+    // Every tab's writes, drops and an untitled place's publication for one key take turns under its Web Lock, so
+    // the files of an old untitled place are never removed while another tab writes them.
+    S.placeLock = (key, body) => navigator.locks ? navigator.locks.request("edi-place:" + key, body) : body();
+    // A record goes back for `key` only while no untitled first save has published that place under a name: a second
+    // tab still holding the untitled place never lists it again (ADR-0100). Whether it was put.
+    S.putUnlessPublished = (key, make) => S.transact(store => new Promise(resolve => {
+        const marker = store.get(S.sourceKey(key));
+        marker.onsuccess = () => {
+            if (marker.result) return resolve(false);
+            const read = store.get(key);
+            read.onsuccess = () => {
+                store.put(make(read.result));
+                resolve(true);
+            };
+        };
+    }));
 
     S.opfs = async (parts, create) => {
         let folder = await navigator.storage.getDirectory();
@@ -469,7 +485,9 @@ EM_JS(void, edi_storage_write, (int job, const char* key_utf8, const char* kind_
     const name = UTF8ToString(name_utf8);
     const files = S.staged.get(job) || [];
     S.staged.delete(job);
-    S.runs.set(job, async () => {
+    S.runs.set(job, () => S.placeLock(key, async () => {
+        // An untitled place published under a name is gone for good: nothing is written for its old key.
+        if (await S.record(S.sourceKey(key))) return {ok : true};
         let handle = null;
         const destination = S.policy(15, {kind : kind, recovery : recovery});
         if (destination === "browser") {
@@ -494,10 +512,15 @@ EM_JS(void, edi_storage_write, (int job, const char* key_utf8, const char* kind_
             await writable.write(files.length > 0 ? files[0][1] : new Uint8Array());
             await writable.close();
         }
-        const record = await S.record(key);
-        await S.put(S.policy(5, {record : record, key : key, kind : kind, name : name, handle : handle, recovery : recovery}));
+        // The record is read and put in one transaction that sees whether the place was published meanwhile; if it
+        // was, the files just written go too.
+        const kept = await S.putUnlessPublished(key, record => S.policy(5, {record : record, key : key, kind : kind, name : name, handle : handle, recovery : recovery}));
+        if (!kept && destination === "browser") {
+            const parts = S.policy(7, {key : key, recovery : recovery});
+            await S.removeEntry([ parts[0], parts[1] ], key);
+        }
         return {ok : true};
-    });
+    }));
 });
 
 
@@ -525,12 +548,16 @@ EM_JS(void, edi_storage_publish_untitled, (int job, const char* untitled_utf8, d
                     if (read.result) return resolve(false);
                     const source = store.get(S.sourceKey(untitled));
                     source.onsuccess = () => {
-                        if (source.result) {
-                            store.put({key : claimKey, untitled : untitled, op : op, stage : stage, state : "revoked"});
-                            return resolve(false);
-                        }
-                        store.put({key : claimKey, untitled : untitled, op : op, stage : stage, state : "live"});
-                        resolve(true);
+                        const place = store.get(untitled);
+                        place.onsuccess = () => {
+                            // The untitled place itself: none for new work never kept, else still untitled.
+                            if (source.result || (place.result && place.result.kind !== "untitled")) {
+                                store.put({key : claimKey, untitled : untitled, op : op, stage : stage, state : "revoked"});
+                                return resolve(false);
+                            }
+                            store.put({key : claimKey, untitled : untitled, op : op, stage : stage, state : "live"});
+                            resolve(true);
+                        };
                     };
                 };
             }));
@@ -542,42 +569,49 @@ EM_JS(void, edi_storage_publish_untitled, (int job, const char* untitled_utf8, d
                 await S.removeStage(stage).catch(() => undefined);
                 throw error;
             }
-            const outcome = await S.transact(store => new Promise(resolve => {
-                const read = store.get(claimKey);
-                read.onsuccess = () => {
-                    const claim = read.result;
-                    if (!ours(claim) || claim.state !== "live") return resolve({outcome : "lost"});
-                    const source = store.get(S.sourceKey(untitled));
-                    source.onsuccess = () => {
-                        // The app's own word, in this transaction: is the operation still open, and is the snapshot
-                        // written still the project's? Refused, nothing is published and the untitled place stays.
-                        const verdict = source.result ? {outcome : "lost"} : S.policy(21, {job : job});
-                        if (verdict.outcome !== "go") {
-                            claim.state = "revoked";
+            // The commit and the removal of the untitled place's files hold the place's lock, which every tab's write
+            // and drop for that key also holds: a write either lands before the commit (and goes with the place) or
+            // finds the place published and writes nothing.
+            return S.placeLock(untitled, async () => {
+                const outcome = await S.transact(store => new Promise(resolve => {
+                    const read = store.get(claimKey);
+                    read.onsuccess = () => {
+                        const claim = read.result;
+                        if (!ours(claim) || claim.state !== "live") return resolve({outcome : "lost"});
+                        const source = store.get(S.sourceKey(untitled));
+                        const place = store.get(untitled);
+                        place.onsuccess = () => {
+                            // The app's own word, in this transaction: is the operation still open, and is the snapshot
+                            // written still the project's? Refused, nothing is published and the untitled place stays.
+                            const taken = source.result || (place.result && place.result.kind !== "untitled");
+                            const verdict = taken ? {outcome : "lost"} : S.policy(21, {job : job});
+                            if (verdict.outcome !== "go") {
+                                claim.state = "revoked";
+                                store.put(claim);
+                                return resolve(verdict);
+                            }
+                            store.put(S.policy(5, {key : stage, kind : "browser", name : name, recovery : 0}));
+                            store.delete(untitled);
+                            store.put({key : S.sourceKey(untitled), untitled : untitled, op : op, stage : stage, state : "published"});
+                            claim.state = "published";
                             store.put(claim);
-                            return resolve(verdict);
-                        }
-                        store.put(S.policy(5, {key : stage, kind : "browser", name : name, recovery : 0}));
-                        store.delete(untitled);
-                        store.put({key : S.sourceKey(untitled), untitled : untitled, op : op, stage : stage, state : "published"});
-                        claim.state = "published";
-                        store.put(claim);
-                        resolve({outcome : "published"});
+                            resolve({outcome : "published"});
+                        };
                     };
-                };
-            }));
-            // What the transaction committed is the answer; removing files after it cannot change that. Anything left
-            // is removed by a later sweep (a stage) or stays as an unlisted recovery folder.
-            try {
-                if (outcome.outcome === "published") {
-                    for (const part of [ "recovery", "projects" ]) await S.removeEntry([ "edi", part ], untitled);
-                } else {
-                    await S.removeStage(stage);
+                }));
+                // What the transaction committed is the answer; removing files after it cannot change that.
+                // Anything left is removed by a later sweep (a stage) or stays as an unlisted recovery folder.
+                try {
+                    if (outcome.outcome === "published") {
+                        for (const part of [ "recovery", "projects" ]) await S.removeEntry([ "edi", part ], untitled);
+                    } else {
+                        await S.removeStage(stage);
+                    }
+                } catch (error) {
+                    console.warn("edi: cleanup after the first save failed", error);
                 }
-            } catch (error) {
-                console.warn("edi: cleanup after the first save failed", error);
-            }
-            return {ok : true, outcome : outcome.outcome, message : outcome.message || ""};
+                return {ok : true, outcome : outcome.outcome, message : outcome.message || ""};
+            });
         };
         return navigator.locks ? navigator.locks.request("edi-stage:" + stage, write) : write();
     });
@@ -635,7 +669,7 @@ EM_JS(void, edi_storage_list, (int job), {
 EM_JS(void, edi_storage_drop, (int job, const char* key_utf8, int whole), {
     const S = globalThis.ediStorage;
     const key = UTF8ToString(key_utf8);
-    S.runs.set(job, async () => {
+    S.runs.set(job, () => S.placeLock(key, async () => {
         const record = await S.record(key);
         const removed = [];
         for (const part of S.policy(10, {whole : whole})) {
@@ -645,7 +679,7 @@ EM_JS(void, edi_storage_drop, (int job, const char* key_utf8, int whole), {
                 if (!S.missing(error)) {
                     // Keep the original removal refusal; a proven earlier removal can still update its metadata.
                     try {
-                        if (S.policy(20, {record : record, removed : removed})) await S.put(record);
+                        if (S.policy(20, {record : record, removed : removed})) await S.putUnlessPublished(key, () => record);
                     } finally {
                         throw error;
                     }
@@ -657,11 +691,11 @@ EM_JS(void, edi_storage_drop, (int job, const char* key_utf8, int whole), {
         if (disposition === "remove") {
             await S.remove(key);
         } else if (disposition === "put") {
-            await S.put(record);
+            await S.putUnlessPublished(key, () => record);
         }
         S.handles.delete(key);
         return {ok : true};
-    });
+    }));
 });
 
 
