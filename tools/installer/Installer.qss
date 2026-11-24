@@ -129,10 +129,6 @@ QLabel#LicenseLink {
     margin-left: 8px;
 }
 
-QCheckBox#LicenseCheckBox {
-    margin-left: @NESTED_CHECK_SHIFT@;
-}
-
 /* A link, as the welcome page's: the accent, no underline. */
 QLabel#LocationLabel {
     color: @ACCENT@;
