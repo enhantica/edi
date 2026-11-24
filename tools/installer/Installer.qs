@@ -341,21 +341,30 @@ function bounded(value, most) {
     return Math.max(0, Math.min(most, value));
 }
 
+// A layout's spacing by how far its drawn gap is off, once per laid-out gap: asked again before the page is laid out
+// anew, the gap reads the same and nothing more is done.
+var adjusted = {};
+function adjustOnce(layout, gap) {
+    var done = adjusted[String(layout)];
+    if (done && done.gap === gap && done.spacing === layout.spacing)
+        return;
+    layout.spacing = bounded(layout.spacing + rowGap - gap, 2 * rowGap + 1);
+    adjusted[String(layout)] = {gap: gap, spacing: layout.spacing};
+}
+
 function settleChoices(page, column, choices) {
     var question = gui.findChild(page, "MessageLabel");
     var radios = ["PackageManagerRadioButton", "UpdaterRadioButton", "UninstallerRadioButton"].map(function (name) {
         return gui.findChild(page, name);
     }).filter(function (radio) { return radio && radio.visible; });
     if (radios.length > 1)
-        choices.spacing = bounded(choices.spacing + rowGap - (radios[1].y - (radios[0].y + radios[0].height)),
-            2 * rowGap);
+        adjustOnce(choices, radios[1].y - (radios[0].y + radios[0].height));
     // The choices' widget: the page's one unnamed widget (the radios' places are inside it).
     var holder = gui.findChildren(page, "").filter(function (item) {
         return item && !isLayout(item) && typeof item.y === "number" && item.visible;
     })[0];
     if (question && holder && radios.length > 0)
-        column.spacing = bounded(column.spacing + rowGap - (holder.y + radios[0].y - (question.y + question.height)),
-            2 * rowGap);
+        column.spacing = bounded(rowGap - radios[0].y, 2 * rowGap);
     later(100, function () { logLayout(page, "settled"); });
 }
 
@@ -730,8 +739,7 @@ function settleForm(page) {
     var licenseRow = gui.findChild(page, "LicenseRow");
     later(0, function () {
         if (license && link && licenseRow && license.visible && link.visible)
-            licenseRow.spacing = bounded(licenseRow.spacing + rowGap - (link.x - (license.x + license.width)),
-                2 * rowGap);
+            adjustOnce(licenseRow, link.x - (license.x + license.width));
         var above = null;
         formRows.forEach(function (row) {
             var shown = row[1].map(function (name) { return gui.findChild(page, name); })
@@ -743,7 +751,11 @@ function settleForm(page) {
             var gap = gui.findChild(page, row[0] + "Gap");
             if (above && gap) {
                 var wanted = above.name === "LogoRow" ? 2 * rowGap : rowGap;
-                var height = bounded(gap.maximumHeight + wanted - (top - above.bottom), wanted);
+                // What lies between the rows besides the gap widget, all read from the page as it is laid out. Taking
+                // the difference from the height last set instead would correct twice when asked again before the
+                // page is laid out anew.
+                var besides = (gap.y - above.bottom) + (top - (gap.y + gap.height));
+                var height = bounded(wanted - besides, wanted);
                 gap.minimumHeight = height;
                 gap.maximumHeight = height;
             }
@@ -773,7 +785,7 @@ function settleDone(page) {
     var column = firstLayout(page);
     if (!page.visible || !text || !form || !open || !open.visible || !column)
         return;
-    column.spacing = bounded(column.spacing + rowGap - (form.y + open.y - (text.y + text.height)), 2 * rowGap);
+    column.spacing = bounded(rowGap - open.y, 2 * rowGap);
     if (captureFolder !== "")
         later(100, function () { logLayout(page, "settled"); });
 }
