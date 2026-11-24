@@ -224,30 +224,29 @@ def test_f13_experiment_factory_refuses_nonpositive_wavelength(
 
 @pytest.mark.parametrize('operation', OPERATIONS)
 def test_f13_valid_beyond_edi_editing_ceiling_survives(tmp_path, capfd, operation):
-    # Edi declares a 30 A editing ceiling; crysta declares no scalar ceiling.
-    # This orthogonal cell has V=31.25*1.25*1.25 and finite G*ii=1/li**2.
-    source = _source(tmp_path / 'source', ('31.25', '1.25', '1.25'), ('90', '90', '90'))
+    # This orthogonal cell has V=100.25*1.25*1.25 and finite G*ii=1/li**2.
+    # Its first length is above the 99 Å editing ceiling.
+    length = 100.25
+    source = _source(tmp_path / 'source', (str(length), '1.25', '1.25'), ('90', '90', '90'))
     before = _snapshot(source)
     capfd.readouterr()
     with warnings.catch_warnings(record=True) as received:
         warnings.simplefilter('always')
         project = model.Project.load(source)
     emitted = capfd.readouterr()
-    evidence = '\n'.join(str(w.message) for w in received) + emitted.out + emitted.err
-    if model.__name__ == 'edi':
-        assert 'length_a' in evidence, ' load warning must identify the cell length'
-        assert 'outside' in evidence.lower(), (
-            ' valid beyond-editing-range cell must retain its load warning'
-        )
-    assert project.structure.cell.length_a.value == pytest.approx(31.25, rel=0, abs=0), (
-        ' editing ceiling must never replace physical representability'
+    evidence = '\n'.join([*(str(item.message) for item in received), emitted.err, emitted.out])
+    assert re.search(r'\bcell\.length_a\b[^\n]*\boutside\b', evidence), (
+        'The range warning identifies the specific saved cell length above the editing ceiling'
     )
-    assert _snapshot(source) == before, ' warned load must preserve exact input bytes'
+    assert project.structure.cell.length_a.value == length, (
+        'Loading keeps the exact physically valid length above the editing ceiling'
+    )
+    assert _snapshot(source) == before, 'Warned load preserves the exact input bytes'
     _continue(project, operation, tmp_path / 'output')
     if operation == 'save':
         restored = model.Project.load(tmp_path / 'output')
-        assert restored.structure.cell.length_a.value == pytest.approx(31.25, rel=0, abs=0), (
-            ' save/reload must retain the exact valid beyond-range length'
+        assert restored.structure.cell.length_a.value == length, (
+            'Save and reload retain the exact valid length above the editing ceiling'
         )
 
 

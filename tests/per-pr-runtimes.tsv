@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-23T21:13:11Z
+# measured_utc = 2026-11-24T00:19:48Z
 #
-# Recorded from: measured test run (6 node(s) measured once, 187062 banked, 0 stale row(s) dropped)
-# Collected tests: 266942; with a reported duration: 85976
+# Recorded from: measured test run (5 node(s) measured once, 187059 banked, 0 stale row(s) dropped)
+# Collected tests: 266942; with a reported duration: 85977
 # Module-scoped fixture costs recorded: 218
 #
 # Breaches are decided PER TIER against the table
@@ -31,8 +31,8 @@
 # measurement nobody took and which passes every tier threshold.
 # inventory_python = 266942
 # inventory_cpp = 0
-# inventory_measured = 187063
-# inventory_unmeasured = 79879
+# inventory_measured = 187064
+# inventory_unmeasured = 79878
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
 # inventory_pr_python = 92036
 
@@ -3404,7 +3404,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_catalogue_fullprof.py::t
 0.000	tests/integration/py/test_catalogue_retention_escapes.py::test_catalogue_projection_refuses_every_retained_input_escape[science-loops]
 0.000	tests/integration/py/test_catalogue_retention_escapes.py::test_catalogue_projection_refuses_every_retained_input_escape[science-native]
 0.490	tests/integration/py/test_catalogue_retention_escapes.py::test_catalogue_projection_refuses_every_retained_input_escape[science-scan]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_cell_length_admission.py::test_cell_length_limits_match_at_python_factory_and_file_boundaries
+0.030	tests/integration/py/test_cell_length_admission.py::test_cell_length_limits_match_at_python_factory_and_file_boundaries
 0.000	tests/integration/py/test_chart_axis_labels.py::test_data_table_declares_named_component_columns
 UNMEASURED:failed-in-this-run	tests/integration/py/test_chart_axis_labels.py::test_tooltip_and_legend_names_follow_the_axis_vocabulary
 0.000	tests/integration/py/test_cif_import_contract.py::test_chosen_parser_failure_refuses_without_partial_import[cif2-list-experiment-collection-edi-path]
@@ -180373,10 +180373,10 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_e05_t1_metric_admission.
 UNMEASURED:failed-in-this-run	tests/integration/py/test_e05_t1_metric_admission.py::test_f13_factory_refuses_before_project_continuation[save-text-edi-volume-overflow]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_e05_t1_metric_admission.py::test_f13_factory_refuses_before_project_continuation[save-text-edi-volume-underflow]
 0.010	tests/integration/py/test_e05_t1_metric_admission.py::test_f13_factory_refuses_before_project_continuation[save-text-edi-zero-length]
-0.040	tests/integration/py/test_e05_t1_metric_admission.py::test_f13_valid_beyond_edi_editing_ceiling_survives[calculate]
-0.190	tests/integration/py/test_e05_t1_metric_admission.py::test_f13_valid_beyond_edi_editing_ceiling_survives[fit]
+0.210	tests/integration/py/test_e05_t1_metric_admission.py::test_f13_valid_beyond_edi_editing_ceiling_survives[calculate]
+0.810	tests/integration/py/test_e05_t1_metric_admission.py::test_f13_valid_beyond_edi_editing_ceiling_survives[fit]
 0.020	tests/integration/py/test_e05_t1_metric_admission.py::test_f13_valid_beyond_edi_editing_ceiling_survives[load]
-0.090	tests/integration/py/test_e05_t1_metric_admission.py::test_f13_valid_beyond_edi_editing_ceiling_survives[save]
+0.180	tests/integration/py/test_e05_t1_metric_admission.py::test_f13_valid_beyond_edi_editing_ceiling_survives[save]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_e05_t1_physical_domain.py::test_physical_domain_refuses_at_load_before_any_continuation[angle_alpha=0-calculate]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_e05_t1_physical_domain.py::test_physical_domain_refuses_at_load_before_any_continuation[angle_alpha=0-fit]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_e05_t1_physical_domain.py::test_physical_domain_refuses_at_load_before_any_continuation[angle_alpha=0-load]
