@@ -12067,6 +12067,7 @@ void ApplicationInfo::composerSessionDraftRestored(QObject* composer, QObject* e
     if (frame->live()) publishComposerDraft(*frame);
 }
 void ApplicationInfo::composerTakeReturnedMessages(QObject* composer, QObject* editor) const {
+#if EDI_APP_ASSISTANT
     const auto frame = composerDraftFrame(composer, editor);
     // While the editor composes, the text stays with the assistant; the composer asks again when composing ends.
     if (!frame || !composerDraftEditorIdle(*frame)) return;
@@ -12080,6 +12081,10 @@ void ApplicationInfo::composerTakeReturnedMessages(QObject* composer, QObject* e
     const auto existing = current.toString();
     composerDraftWrite(*frame, frame->edit, "text", QJSValue(existing.isEmpty() ? text : text + QStringLiteral("\n\n") + existing));
     if (frame->live()) publishComposerDraft(*frame);
+#else
+    Q_UNUSED(composer)
+    Q_UNUSED(editor)
+#endif
 }
 void ApplicationInfo::composerConversationClearRequested(QObject* composer, QObject* editor, const QString& intent) const {
     const auto frame = composerDraftFrame(composer, editor);
