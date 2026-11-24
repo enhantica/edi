@@ -117,6 +117,15 @@ function Controller() {
     // No component tree: macOS accessibility clients crash the Framework's Qt on it (edi #150); the one choice it
     // offered, the AI assistant, is a checkbox (assistantscript.qs).
     installer.setDefaultPageVisible(QInstaller.ComponentSelection, false);
+    // No page titles from the start: Qt decides whether a page has a header as it opens, before its callback runs.
+    [QInstaller.Introduction, QInstaller.TargetDirectory, QInstaller.ReadyForInstallation,
+     QInstaller.PerformInstallation, QInstaller.InstallationFinished].forEach(function (id) {
+        var start = gui.pageById(id);
+        if (start) {
+            start.title = "";
+            start.subTitle = "";
+        }
+    });
     // No Settings button: the system proxy is used by default, and nobody needs to edit repositories here.
     gui.showSettingsButton(false);
     // The licence was accepted when installing; the maintenance tool does not ask again.
@@ -559,13 +568,14 @@ function headerWordmark() {
                     mark.textFormat = 1;  // Qt.RichText
                     mark.text = headerWordmark();
                 }
-                status.text = label.text;
+                // One plain status line of our own: the Framework's changes per step and says little.
+                status.text = installer.isInstaller() ? "Installing EasyDiffraction…"
+                    : installer.isUninstaller() ? "Removing EasyDiffraction…" : "Updating EasyDiffraction…";
                 bar.valueChanged.connect(function (value) {
                     var share = bar.maximum > bar.minimum
                         ? Math.round(100 * (value - bar.minimum) / (bar.maximum - bar.minimum)) : 0;
                     ours.value = share;
                     percent.text = share + "%";
-                    status.text = label.text;
                 });
                 progressHooked = true;
             }

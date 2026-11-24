@@ -125,8 +125,10 @@ func check(window: CGRect, title: String, placed: [Placed]) {
     // its content. A page without one (only short lines) is not judged.
     let stretching = content.filter { ["AXTextField", "AXProgressIndicator", "AXTextArea"].contains($0.role) }
     if let widest = stretching.map({ drawn($0).maxX }).max() {
-        let browse = content.filter { $0.role == "AXButton" && drawn($0).minY < stretching[0].frame.maxY
-            && drawn($0).maxY > stretching[0].frame.minY }.map { drawn($0).maxX }.max() ?? widest
+        // ...or whatever ends its row (the Browse button, the percentage).
+        let browse = content.filter { item in
+            stretching.contains { drawn(item).minY < $0.frame.maxY && drawn(item).maxY > $0.frame.minY }
+        }.map { drawn($0).maxX }.max() ?? widest
         let right = window.maxX - max(widest, browse)
         if abs((edge - window.minX) - right) > 24 {
             problems.append("off centre: \(Int(edge - window.minX)) px on the left, \(Int(right)) px on the right")
