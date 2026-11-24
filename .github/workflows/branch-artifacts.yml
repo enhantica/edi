@@ -1,7 +1,8 @@
 # A merged pull request's runs keep no artifacts: they only hold the shared storage quota. Release inputs and the
 # crysta SDK artifacts are kept, and so is anything another open pull request still needs. tools/ci/branch_artifacts.py
-# picks only finished runs of this pull request's own commits on its branch, and reads every listing in full before
-# deleting; a listing it cannot prove whole deletes nothing. A closed, unmerged pull request can be reopened, so its
+# picks only runs it can show are this pull request's: started by it while it was open, at its own commits, on a branch
+# no other pull request ever used. It reads every listing in full before deleting; a listing it cannot prove whole, or
+# an open pull request it cannot read, deletes nothing. A closed, unmerged pull request can be reopened, so its
 # artifacts stay until GitHub's retention removes them.
 name: Branch artifacts
 
