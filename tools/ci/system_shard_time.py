@@ -17,11 +17,16 @@ shard and main's time.
 
 With --nightly the run is a scheduled one and the baseline is the newest earlier scheduled run of
 ci.yml on main that the comparison accepts: every declared shard once and a finished success, and
-the same shards as this run. The search reads GitHub's listing newest first, every page, and each
-candidate's whole job list; a candidate that does not qualify is skipped with its reason. A fully
-read history with no qualifying run prints "no baseline", writes that record (this run's id, head,
+the same shards as this run. The current record must be this scheduled ci.yml run on main at the
+given head. The search reads GitHub's whole listing first: every page, each run id once, exactly
+the total GitHub reports, that total unchanged between pages and under GitHub's listing cap. It
+then orders the runs by their parsed created_at, newest first, and reads each candidate's detail,
+which must repeat its listing entry (head, event, path, attempt, timestamps), and its whole job
+list, read the same way. A candidate that does not qualify is skipped with its reason. A fully read
+history with no qualifying run prints "no baseline", writes that record (this run's id, head,
 created_at and shards, and every candidate with its reason) and judges nothing. Any read that
-fails or comes back short, or a listing GitHub caps before the search ends, refuses with exit 2.
+fails, comes back short, repeats an id or moves while read refuses with exit 2, never "no
+baseline".
 --history replays a recorded listing (a JSON file: `runs` by id, `list` pages, `jobs` pages by
 run id, `shards` by head SHA) instead of asking GitHub; --save writes what a search read in that
 form, and --fetch-only stops after the search, so CI fetches in one step and judges in the next.
@@ -33,7 +38,7 @@ import argparse
 import json
 import re
 import subprocess
-from collections.abc import Callable, Iterator
+from collections.abc import Callable
 from datetime import datetime
 from fractions import Fraction
 from pathlib import Path
@@ -163,6 +168,33 @@ def when(run: dict, what: str) -> datetime:
     return created
 
 
+WORKFLOW = '.github/workflows/ci.yml'
+# What a run's detail must repeat from its listing entry, so the run judged is the run listed.
+BOUND = (
+    'id',
+    'head_sha',
+    'head_branch',
+    'event',
+    'path',
+    'status',
+    'conclusion',
+    'run_attempt',
+    'created_at',
+    'run_started_at',
+)
+
+
+def workflow(run: dict) -> str:
+    return str(run.get('path', '')).split('@')[0]
+
+
+def run_id_of(row: object, what: str) -> int:
+    rid = row.get('id') if isinstance(row, dict) else None
+    if not isinstance(rid, int) or isinstance(rid, bool):
+        raise RefusedError(f'{what} has an entry without an id: {row!r}')
+    return rid
+
+
 class History:
     """GitHub's records of ci.yml runs, read through `fetch` (a REST path to its JSON)."""
 
@@ -177,45 +209,83 @@ class History:
             raise RefusedError(f'{path} is not a listing of {field} with a total_count')
         return total, items
 
-    def run(self, run_id: str) -> dict:
-        """One run with its whole job list and its declared shards."""
+    def listing(self, base: str, field: str, cap: int | None = None) -> list[dict]:
+        """Every entry of a paged listing, each id once, exactly as many as its total says.
+
+        The total must not change between pages, and a page may come back short only once the
+        total is reached. A total at or over GitHub's cap cannot show the listing is whole, so
+        it is refused before it could read as the end of the history.
+        """
+        rows: list[dict] = []
+        ids: set[int] = set()
+        total, number, where = None, 1, base.rstrip('?&')
+        while True:
+            count, items = self.page(f'{base}per_page={PAGE}&page={number}', field)
+            if total is None:
+                total = count
+                if cap is not None and total >= cap:
+                    raise RefusedError(f'GitHub caps {where} at {cap}; it reports {total}')
+            elif count != total:
+                raise RefusedError(f'{where} changed from {total} to {count} {field} while read')
+            for item in items:
+                rid = run_id_of(item, where)
+                if rid in ids:
+                    raise RefusedError(f'{where} lists {field} id {rid} twice')
+                ids.add(rid)
+                rows.append(item)
+            if len(rows) == total:
+                return rows
+            if len(rows) > total or len(items) != PAGE:
+                raise RefusedError(f'{where} lists {total} {field}, {len(rows)} were read')
+            number += 1
+
+    def run(self, run_id: str, listed: dict | None = None) -> dict:
+        """One run with its whole job list and its declared shards.
+
+        Given its listing entry, the detail must repeat it, so a run that moved between the two
+        reads (a re-run, another head) is refused rather than judged.
+        """
         run = self.fetch(f'runs/{run_id}')
         if not isinstance(run, dict) or str(run.get('id')) != str(run_id):
             raise RefusedError(f'run {run_id} could not be read')
-        jobs, number = [], 1
-        while True:
-            total, items = self.page(f'runs/{run_id}/jobs?per_page={PAGE}&page={number}', 'jobs')
-            jobs += items
-            if len(jobs) >= total:
-                break
-            if not items:
-                raise RefusedError(f'run {run_id} lists {total} jobs, only {len(jobs)} were read')
-            number += 1
-        if len(jobs) != total:
-            raise RefusedError(f'run {run_id} lists {total} jobs, {len(jobs)} were read')
+        if listed is not None:
+            moved = [f for f in BOUND if f in listed and run.get(f) != listed.get(f)]
+            if moved:
+                raise RefusedError(f'run {run_id} reads differently from its listing: {moved}')
+        jobs = self.listing(f'runs/{run_id}/jobs?', 'jobs')
         return run | {
             'jobs': jobs,
             'expected_system_shards': self.declare(str(run.get('head_sha'))),
         }
 
-    def candidates(self) -> Iterator[dict]:
-        """Scheduled ci.yml runs on main, newest first, every one GitHub lists."""
-        seen, number = 0, 1
-        while True:
-            query = (
-                f'workflows/ci.yml/runs?branch=main&event=schedule&per_page={PAGE}&page={number}'
-            )
-            total, items = self.page(query, 'workflow_runs')
-            for run in items:
-                seen += 1
-                yield run
-            if seen >= total:
-                return
-            if not items:
-                raise RefusedError(f'the listing has {total} runs, only {seen} were read')
-            if seen >= LISTING_CAP:
-                raise RefusedError(f'GitHub caps the listing at {LISTING_CAP} of its {total} runs')
-            number += 1
+    def candidates(self) -> list[dict]:
+        """Every scheduled ci.yml run on main GitHub lists, newest first by its created_at.
+
+        The order comes from the parsed timestamps, not from the listing's order.
+        """
+        rows = self.listing(
+            'workflows/ci.yml/runs?branch=main&event=schedule&', 'workflow_runs', LISTING_CAP
+        )
+        return sorted(
+            rows,
+            key=lambda r: (when(r, f'run {r["id"]}'), r['id']),
+            reverse=True,
+        )
+
+
+def require_nightly(current: dict, run_id: str, head_sha: str) -> None:
+    """The current record is this scheduled ci.yml run on main, at this head, with a timestamp."""
+    require_identity(current, run_id, head_sha)
+    if (
+        current.get('event') != 'schedule'
+        or current.get('head_branch') != 'main'
+        or workflow(current) != WORKFLOW
+    ):
+        raise RefusedError(
+            f'the current record is a {current.get("event")} run of {current.get("path")} on '
+            f'{current.get("head_branch")}, not a scheduled ci.yml run on main'
+        )
+    when(current, 'current run')
 
 
 def unlike(candidate: dict, current: dict, now: dict) -> str | None:
@@ -230,23 +300,26 @@ def unlike(candidate: dict, current: dict, now: dict) -> str | None:
 
 
 def baseline(current: dict, history: History) -> tuple[dict | None, list[dict]]:
-    """The newest earlier scheduled run the comparison accepts, and every run skipped before it."""
+    """The newest earlier scheduled run the comparison accepts, and every run skipped before it.
+
+    None is returned only after the whole listing was read and every entry was judged.
+    """
     now, created = shards(current, 'current'), when(current, 'current run')
     skipped = []
     for listed in history.candidates():
-        run_id, reason = listed.get('id'), None
+        run_id, reason = listed['id'], None
         if str(run_id) == str(current.get('id')):
             continue
         if listed.get('event') != 'schedule' or listed.get('head_branch') != 'main':
             reason = f'{listed.get("event")} on {listed.get("head_branch")}'
-        elif str(listed.get('path', '')).split('@')[0] != '.github/workflows/ci.yml':
+        elif workflow(listed) != WORKFLOW:
             reason = f'a run of {listed.get("path")}'
         elif when(listed, f'run {run_id}') >= created:
             reason = 'not earlier than this run'
         elif listed.get('status') != 'completed':
             reason = f'{listed.get("status")}, not finished'
         else:
-            candidate = history.run(str(run_id))
+            candidate = history.run(str(run_id), listed)
             reason = unlike(candidate, current, now)
             if reason is None:
                 return candidate, skipped
@@ -347,7 +420,7 @@ def judge(args: argparse.Namespace) -> list[str] | None:
     if args.save:
         history = recorded(history, saved)
     current = history.run(args.run_id)
-    require_identity(current, args.run_id, args.head_sha)
+    require_nightly(current, args.run_id, args.head_sha)
     base, skipped = baseline(current, history)
     if args.save:
         args.save.write_text(json.dumps(saved, indent=1) + '\n', encoding='utf-8')
