@@ -3444,6 +3444,7 @@ void ApplicationInfo::acceptUnsavedProject() const {
         const auto origin = QJSValue(original.isNull() ? QStringLiteral("guard-save") : QStringLiteral("assistant-create"));
         // The operation is bound to this question's action: a Save for another question is another request.
         const auto question = QJSValue(QStringLiteral("question-%1").arg(unsaved_question_));
+        const auto asked = assistantContextField(frame, "Session", "project");
         const auto id = projectInvoke(frame, "Session", "beginUntitled", {origin, question});
         if (id.toNumber() <= 0) {
             panelUsageGlobalCall(frame, "abandonAction", {});
@@ -3451,6 +3452,7 @@ void ApplicationInfo::acceptUnsavedProject() const {
         }
         const auto previous = panelUsageContextRead(frame, "untitledAbandoned");
         const bool same = panelUsageContextRead(frame, "untitledId").strictlyEquals(id);
+        panelUsageContextWrite(frame, "untitledProject", asked);
         panelUsageContextWrite(frame, "untitledId", id);
         panelUsageContextWrite(frame, "untitledAction", waiting);
         panelUsageContextWrite(frame, "untitledAbandoned", abandoned);
@@ -3458,7 +3460,21 @@ void ApplicationInfo::acceptUnsavedProject() const {
         panelUsageContextWrite(frame, "abandoned", consentNull());
         // The same question answered again carries the same action; an earlier one it replaced is abandoned.
         if (same && previous.isCallable() && !previous.strictlyEquals(abandoned)) projectCall(frame, previous);
-        projectInvoke(frame, "AppState", "requestUntitledSave");
+        // Each write above can reenter: the request goes on only while it is still the one asking. If it ended
+        // meanwhile, its settlement may have come before its id was kept, so its action is abandoned here.
+        if (!projectInvoke(frame, "Session", "askingUntitledId").strictlyEquals(id) ||
+            !assistantContextField(frame, "Session", "project").strictlyEquals(asked)) {
+            if (!panelUsageContextRead(frame, "untitledId").strictlyEquals(id)) return;
+            const auto lost = panelUsageContextRead(frame, "untitledAbandoned");
+            panelUsageContextWrite(frame, "untitledProject", consentNull());
+            panelUsageContextWrite(frame, "untitledId", QJSValue(0));
+            panelUsageContextWrite(frame, "untitledAction", consentNull());
+            panelUsageContextWrite(frame, "untitledAbandoned", consentNull());
+            if (lost.isCallable()) projectCall(frame, lost);
+            return;
+        }
+        // The Create dialog answers this request by its id, never whichever request asks when it opens.
+        projectInvoke(frame, "AppState", "requestUntitledSave", {id});
         return;
     }
     if (panelUsageTruth(assistantContextField(frame, "Session", "needsSaveAs"))) {
@@ -3526,10 +3542,17 @@ void ApplicationInfo::projectUntitledSettled(const QJSValue& id, const QJSValue&
     if (!assistantContextField(frame, "unsavedChanges", "untitledId").strictlyEquals(id)) return;
     const auto waiting = assistantContextField(frame, "unsavedChanges", "untitledAction");
     const auto abandoned = assistantContextField(frame, "unsavedChanges", "untitledAbandoned");
+    const auto owner = assistantContextField(frame, "unsavedChanges", "untitledProject");
+    projectWrite(frame, "unsavedChanges", "untitledProject", consentNull());
     projectWrite(frame, "unsavedChanges", "untitledId", QJSValue(0));
     projectWrite(frame, "unsavedChanges", "untitledAction", consentNull());
     projectWrite(frame, "unsavedChanges", "untitledAbandoned", consentNull());
-    if (state.strictlyEquals(QJSValue(QStringLiteral("saved"))) && !waiting.isNull())
+    // The id alone proves nothing: after those writes, and whatever listener ran before this one, the action runs only
+    // for the project the guard asked about, still open and named (the session says saved only once it took what was
+    // written).
+    if (state.strictlyEquals(QJSValue(QStringLiteral("saved"))) && !waiting.isNull() && !owner.isNull() &&
+        assistantContextField(frame, "Session", "project").strictlyEquals(owner) &&
+        !panelUsageTruth(assistantContextField(frame, "Session", "untitled")))
         projectInvoke(frame, "AppState", "afterChanges", {waiting, abandoned});
     else if (abandoned.isCallable())
         projectCall(frame, abandoned);
@@ -3572,6 +3595,11 @@ void ApplicationInfo::acceptProjectSaveChoice() const {
     if (panelUsageTruth(assistantContextField(frame, "WebFiles", "available"))) {
         const auto zip = panelUsageContextRead(frame, "zip");
         const auto copy = panelUsageContextRead(frame, "copy");
+        // Untitled work moves to a place of its own only by being named (ADR-0100): Create does it in the browser.
+        if (!panelUsageTruth(copy) && panelUsageTruth(assistantContextField(frame, "Session", "untitled"))) {
+            projectInvoke(frame, "AppState", "requestUntitledSave");
+            return;
+        }
         projectInvoke(frame, "Session", "saveWebProjectAs", {QJSValue(panelUsageTruth(zip) ? QStringLiteral("zip") : QStringLiteral("folder")), copy});
         return;
     }

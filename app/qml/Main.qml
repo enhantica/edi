@@ -915,6 +915,8 @@ EaComponents.ApplicationWindow {
         property var untitledId: 0
         property var untitledAction: null
         property var untitledAbandoned: null
+        // The project the guard asked about: the action runs only while it is still the open one.
+        property var untitledProject: null
         onAccepted: ApplicationInfo.acceptUnsavedProject()
 
         Connections {

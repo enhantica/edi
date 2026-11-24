@@ -379,10 +379,13 @@ SideBarGroup {
     // Save on the untitled project opens Create project here: it names the project and saves it, its work kept.
     // What opens the Create dialog on untitled work: the Project page's Create, or a Save (ADR-0100).
     property string untitledOrigin: "manual-create"
+    // The untitled operation the next opening answers (a guard Save's), 0 for one of its own.
+    property real untitledRequest: 0
     Connections {
         target: AppState
-        function onUntitledSaveRequested() {
+        function onUntitledSaveRequested(id) {
             group.untitledOrigin = "save";
+            group.untitledRequest = id > 0 ? id : 0;
             group.chooseCreate();
         }
     }
@@ -401,18 +404,19 @@ SideBarGroup {
         // A tutorial's project, made by the user in a tutorial that set theirs aside, is not saved until they keep
         // it (edi ADR-0064).
         showsLocation: !AppState.tutorialRunning || !Session.hasProjectSetAside || Session.project !== null
-        // The untitled operation this dialog answers (ADR-0100): the one already asking (a guard Save opened it), else
-        // a new one for what opened the dialog. Only an answer for this id counts.
+        // The untitled operation this dialog answers (ADR-0100): the request that opened it, while that one still
+        // asks (a guard Save's), else a new one for what opened the dialog. Never another request's, and only an
+        // answer for this id counts.
         property var untitledId: 0
         property bool untitledAccepted: false
         // On an untitled project the form starts from what the Project page already holds for it.
         onAboutToShow: {
             untitledAccepted = false;
             untitledId = 0;
-            if (Session.untitled && Session.project !== null && assistantIntentId === "") {
-                const asking = Session.askingUntitledId();
-                untitledId = asking > 0 ? asking : Session.beginUntitled(group.untitledOrigin);
-            }
+            const request = group.untitledRequest;
+            group.untitledRequest = 0;
+            if (Session.untitled && Session.project !== null && assistantIntentId === "")
+                untitledId = request > 0 && Session.askingUntitledId() === request ? request : Session.beginUntitled(group.untitledOrigin);
             group.untitledOrigin = "manual-create";
             if (Session.untitled && Session.project !== null) {
                 projectTitle = Session.project.title;
@@ -443,6 +447,9 @@ SideBarGroup {
         onReplaceAsked: (name, folder) => {
             replaceProject.projectName = name;
             replaceProject.folder = folder;
+            // What it asks about: this location, for this dialog's request.
+            replaceProject.location = chosenLocation();
+            replaceProject.untitledId = untitledId;
             replaceProject.open();
         }
     }
@@ -454,6 +461,8 @@ SideBarGroup {
         objectName: "createProject.replace"
         property string projectName: ""
         property string folder: ""
+        property string location: ""
+        property var untitledId: 0
         parent: Overlay.overlay
         title: qsTr("Replace project?")
         standardButtons: Dialog.Yes | Dialog.Cancel
@@ -465,9 +474,13 @@ SideBarGroup {
             yes.objectName = "createProject.replace.accept";
         }
         onAccepted: {
+            // Replace confirms the folder it showed, for the request it asked for: once the form names another
+            // location or answers another request, the form stays open as it is.
+            if (createDialog.chosenLocation() !== location || createDialog.untitledId !== untitledId)
+                return;
             // Untitled work replaces only the folder that is there now, as its operation records it (ADR-0100).
-            if (createDialog.untitledId > 0)
-                Session.approveUntitledReplace(createDialog.untitledId, createDialog.chosenLocation());
+            if (untitledId > 0)
+                Session.approveUntitledReplace(untitledId, location);
             createDialog.replaceExisting = true;
             createDialog.accept();
         }
