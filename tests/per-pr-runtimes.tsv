@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-24T11:56:09Z
+# measured_utc = 2026-11-24T11:57:50Z
 #
-# Recorded from: banked rows (nothing added; 2 stale row(s) dropped)
-# Collected tests: 266993; with a reported duration: 86000
+# Recorded from: measured test run (3 node(s) measured once, 187118 banked, 0 stale row(s) dropped)
+# Collected tests: 266996; with a reported duration: 86002
 # Module-scoped fixture costs recorded: 219
 #
 # Breaches are decided PER TIER against the table
@@ -29,12 +29,12 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 266993
+# inventory_python = 266996
 # inventory_cpp = 0
-# inventory_measured = 187118
+# inventory_measured = 187121
 # inventory_unmeasured = 79875
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
-# inventory_pr_python = 92088
+# inventory_pr_python = 92091
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -183326,8 +183326,10 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_newest_project_format.py
 0.000	tests/integration/py/test_nightly_and_branch_artifacts.py::test_artifact_cleanup_admits_only_a_merged_requests_own_runs[duplicate-runs]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_nightly_and_branch_artifacts.py::test_artifact_cleanup_admits_only_a_merged_requests_own_runs[incomplete-open-head]
 0.000	tests/integration/py/test_nightly_and_branch_artifacts.py::test_artifact_cleanup_admits_only_a_merged_requests_own_runs[moving-total]
+0.000	tests/integration/py/test_nightly_and_branch_artifacts.py::test_artifact_cleanup_admits_only_a_merged_requests_own_runs[non-sha-open-head]
 0.000	tests/integration/py/test_nightly_and_branch_artifacts.py::test_artifact_cleanup_admits_only_a_merged_requests_own_runs[none]
 0.000	tests/integration/py/test_nightly_and_branch_artifacts.py::test_artifact_cleanup_admits_only_a_merged_requests_own_runs[open-shared]
+0.010	tests/integration/py/test_nightly_and_branch_artifacts.py::test_artifact_cleanup_admits_only_a_merged_requests_own_runs[reused-branch]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_nightly_and_branch_artifacts.py::test_artifact_cleanup_admits_only_a_merged_requests_own_runs[same-commit-dispatch]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_nightly_and_branch_artifacts.py::test_artifact_cleanup_admits_only_a_merged_requests_own_runs[same-commit-earlier-pr]
 0.000	tests/integration/py/test_nightly_and_branch_artifacts.py::test_artifact_cleanup_admits_only_a_merged_requests_own_runs[short-artifacts]
@@ -188254,6 +188256,7 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_c11_t62_scan_contract.py::tes
 0.080	tests/system/py/test_c13_t14_fast_ci.py::test_the_last_system_shard_cannot_escape_the_timing_gate[16]
 0.070	tests/system/py/test_c13_t14_fast_ci.py::test_the_last_system_shard_cannot_escape_the_timing_gate[3]
 1.820	tests/system/py/test_c13_t14_fast_ci.py::test_timing_gate_is_wired_after_system_shards_on_pull_requests
+0.690	tests/system/py/test_c13_t14_fast_ci_routes.py::test_actual_nightly_collects_and_replays_the_same_history[no-baseline]
 0.870	tests/system/py/test_c13_t14_fast_ci_routes.py::test_actual_nightly_collects_and_replays_the_same_history[over-budget]
 0.870	tests/system/py/test_c13_t14_fast_ci_routes.py::test_actual_nightly_collects_and_replays_the_same_history[within-budget]
 0.870	tests/system/py/test_c13_t14_fast_ci_routes.py::test_actual_timing_collection_refuses_aliased_swapped_or_stale_run_evidence[current-is-main]

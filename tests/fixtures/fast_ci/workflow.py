@@ -281,7 +281,7 @@ def timing_route(workflow, root):
         timing_evidence(workflow, root / ('slow' if slow else 'green'), slow=slow)
 
 
-def timing_evidence(workflow, root, *, slow=False, api_mutation=None):  # noqa: PLR0914, PLR0915
+def timing_evidence(workflow, root, *, slow=False, mutation=None):  # noqa: PLR0912, PLR0914, PLR0915
     """Run the workflow's actual nightly collector and replay against independent REST pages."""
     import collections  # noqa: PLC0415
     import json  # noqa: PLC0415
@@ -300,12 +300,14 @@ def timing_evidence(workflow, root, *, slow=False, api_mutation=None):  # noqa: 
     inventory = collections.Counter(row['platform'] for row in matrix)
     history = nightly_history()
     history['shards'] = {sha: dict(inventory) for sha in history['shards']}
+    if slow is None:
+        history['list'] = [page('workflow_runs', [history['runs']['31']])]
     for rid in history['runs']:
         template = history['jobs'][rid][0]['jobs'][0]
         jobs = [
             {
                 **template,
-                'id': 100 + index,
+                'id': template['id'] * 10 + index,
                 'name': f'system · {row["platform"]} · {row["part"]}/{inventory[row["platform"]]}',
             }
             for index, row in enumerate(matrix)
@@ -313,13 +315,16 @@ def timing_evidence(workflow, root, *, slow=False, api_mutation=None):  # noqa: 
         if rid == '31' and slow:
             jobs[0]['completed_at'] = '2026-11-24T02:13:00Z'
         history['jobs'][rid] = [page('jobs', jobs)]
-    if api_mutation == 'stale-id':
+    if mutation == 'stale-id':
         history['runs']['31']['id'] = 32
-    if api_mutation == 'wrong-head':
+    if mutation == 'wrong-head':
         history['runs']['31']['head_sha'] = 'd' * 40
-    if api_mutation == 'partial-history':
+        history['jobs']['31'][0]['jobs'] = [
+            {**row, 'head_sha': 'd' * 40} for row in history['jobs']['31'][0]['jobs']
+        ]
+    if mutation == 'partial-history':
         history['list'][0]['total_count'] += 1
-    if api_mutation == 'moving-candidate':
+    if mutation == 'moving-candidate':
         history['runs']['30']['created_at'] = '2026-11-21T01:00:00Z'
     (root / 'api.json').write_text(json.dumps(history))
     (root / 'workflow.yml').write_text(yaml.safe_dump(workflow))
@@ -336,6 +341,10 @@ if parts[0] == 'workflows':
     assert address.path == 'workflows/ci.yml/runs', 'The collector requires the primary workflow'
     item = history['list'][page]
 elif parts[-1] == 'jobs':
+    attempt = str(history['runs'][parts[1]]['run_attempt'])
+    assert parts == ['runs', parts[1], 'attempts', attempt, 'jobs'], (
+        'The read chooses the exact attempt'
+    )
     item = history['jobs'][parts[1]][page]
 else:
     item = history['runs'][parts[1]]
@@ -378,6 +387,11 @@ os.execv(sys.executable,[sys.executable,*sys.argv[3:]])
     for step in steps:
         reachable(step, workflow['jobs'], {}, event='schedule')
         command = step['run'].replace('${{ github.sha }}', 'a' * 40)
+        if '--fetch-only' in command:
+            if mutation == 'current-is-main':
+                command = command.replace('$GITHUB_RUN_ID', '30')
+            if mutation == 'swap':
+                command = command.replace('history.json', 'swapped.json')
         shell = workflow_shell(workflow, job, step)
         shell = (
             'bash --noprofile --norc -e -o pipefail {0}'
@@ -398,27 +412,58 @@ os.execv(sys.executable,[sys.executable,*sys.argv[3:]])
         completed.append(result)
         if result.returncode:
             break
-    if api_mutation:
+    receipt = root / 'system-time/history.json'
+    record = root / 'system-time/record.json'
+    if mutation == 'swap':
+        assert [result.returncode for result in completed] == [0, 2], (
+            'A different receipt path is written successfully and the comparator refuses it'
+        )
+        assert (root / 'system-time/swapped.json').is_file() and not receipt.exists(), (
+            'The collector completed and wrote only the deliberately swapped receipt'
+        )
+        assert 'cannot read the history' in completed[1].stdout and not record.exists(), (
+            'A missing selected receipt cannot become a no-baseline verdict'
+        )
+        return
+    if mutation:
+        reason = {
+            'current-is-main': 'not this run 30 at the pull request head',
+            'stale-id': 'run 31 was read as run 32',
+            'wrong-head': 'not this run 31 at the pull request head',
+            'partial-history': 'lists 4 workflow_runs, 3 were read',
+            'moving-candidate': "reads differently from its listing: ['created_at']",
+        }[mutation]
         assert len(completed) == 1 and completed[0].returncode == 2, (
             'An unproved API read fails closed in the collector before comparison'
         )
-        assert not (root / 'system-time/history.json').exists(), (
-            'The collector never writes replay evidence for a refused history'
+        assert reason in completed[0].stdout, (
+            f'The workflow reaches the {mutation} refusal: {completed[0].stdout}'
+        )
+        assert not receipt.exists() and not record.exists(), (
+            'A refused history produces neither replay evidence nor a no-baseline verdict'
         )
         return
-    receipt = root / 'system-time/history.json'
     assert receipt.is_file(), 'The nightly comparator must receive the actual history.json'
     actual = json.loads(receipt.read_text())
-    assert actual['runs']['31']['head_sha'] == 'a' * 40 and '30' in actual['runs'], (
-        'Live collection records this exact nightly and the independently newest earlier run'
-    )
-    assert not (root / 'system-time/record.json').exists(), (
-        'An admitted earlier run never emits a no-baseline verdict'
+    assert actual['runs']['31']['head_sha'] == 'a' * 40, (
+        'Live collection records the exact current nightly'
     )
     expected = 1 if slow else 0
     assert len(completed) == 2 and completed[1].returncode == expected, (
         'The nightly replay enforces the original comparison evidence after live collection'
     )
-    assert 'baseline is run 30' in completed[1].stdout, (
-        'The workflow compares the most recent earlier baseline by absolute timestamp'
-    )
+    if slow is None:
+        assert record.is_file() and set(actual['runs']) == {'31'}, (
+            'A whole history with no earlier run produces a no-baseline receipt'
+        )
+        verdict = json.loads(record.read_text())
+        assert (verdict['baseline'], verdict['run'], verdict['head_sha']) == (
+            None,
+            31,
+            'a' * 40,
+        ), 'The durable no-baseline receipt names the current nightly and exact head'
+    else:
+        assert '30' in actual['runs'] and 'baseline is run 30' in completed[1].stdout, (
+            'The workflow compares the most recent earlier baseline by absolute timestamp'
+        )
+        assert not record.exists(), 'An admitted earlier run never emits a no-baseline verdict'

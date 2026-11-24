@@ -3,6 +3,7 @@
 import copy
 import importlib.util
 import json
+from datetime import datetime, timedelta
 from pathlib import Path
 
 import pytest
@@ -53,16 +54,20 @@ def nightly_history():
                         'id': 100 + int(rid),
                         'run_attempt': 1,
                         'run_id': int(rid),
+                        'head_sha': record['head_sha'],
                         'name': 'system · Linux · 1/1',
                         'status': 'completed',
                         'conclusion': 'success',
-                        'started_at': '2026-11-24T02:00:00Z',
-                        'completed_at': '2026-11-24T02:10:00Z',
+                        'started_at': record['run_started_at'],
+                        'completed_at': (
+                            datetime.fromisoformat(record['run_started_at'])
+                            + timedelta(minutes=10)
+                        ).isoformat(),
                     }
                 ],
             )
         ]
-        for rid in runs
+        for rid, record in runs.items()
     }
     # The first listed earlier run sorts newer as text, but is older as an instant.
     return {
@@ -96,7 +101,13 @@ def test_nightly_baseline_uses_parsed_order_and_complete_no_baseline(tmp_path, c
     assert 'baseline is run 30' in capsys.readouterr().out, (
         'The baseline is the newest earlier instant even when API order and text order differ'
     )
-    history['list'][0] = page('workflow_runs', [history['runs']['31']])
+    current_only = history['runs']['31']
+    history = {
+        'runs': {'31': current_only},
+        'list': [page('workflow_runs', [current_only])],
+        'jobs': {'31': history['jobs']['31']},
+        'shards': {HEAD: history['shards'][HEAD]},
+    }
     assert check_replay(gate, tmp_path, history) == 0, 'A complete empty prior history is allowed'
     receipt = json.loads((tmp_path / 'verdict.json').read_text())
     assert (receipt['baseline'], receipt['run'], receipt['head_sha']) == (None, 31, HEAD), (
@@ -104,33 +115,43 @@ def test_nightly_baseline_uses_parsed_order_and_complete_no_baseline(tmp_path, c
     )
 
 
-@pytest.mark.parametrize(
-    'fault',
-    [
-        'short',
-        'duplicate-run',
-        'missing-run-id',
-        'cap',
-        'moving-total',
-        'duplicate-job',
-        'current-identity',
-        'current-time',
-        'detail-head',
-        'detail-path',
-        'detail-time',
-        'missing-detail',
-        'missing-listed-head',
-        'missing-listed-status',
-        'different-job-attempt',
-    ],
-)
-def test_nightly_never_judges_unobserved_or_inconsistent_history(tmp_path, capsys, fault):
+HISTORY_FAULTS = {
+    'short': 'lists 4 workflow_runs, 3 were read',
+    'duplicate-run': 'workflow_runs id 31 twice',
+    'missing-run-id': 'without an id',
+    'cap': 'it reports 1000',
+    'moving-total': 'changed from 101 to 3',
+    'duplicate-job': 'jobs id 130 twice',
+    'current-identity': 'not a scheduled ci.yml run on main',
+    'current-time': 'has a created_at without a time zone',
+    'detail-head': "reads differently from its listing: ['head_sha']",
+    'detail-path': "reads differently from its listing: ['path']",
+    'detail-time': "reads differently from its listing: ['created_at']",
+    'missing-detail': 'reading runs/30 failed: not in the history',
+    'missing-listed-head': 'listing entry of run 30 has no valid head_sha',
+    'missing-listed-status': 'listing entry of run 30 has no known status',
+    'different-job-attempt': 'job 130 has run_attempt 2, not 1',
+}
+
+
+@pytest.mark.parametrize('fault', HISTORY_FAULTS)
+def test_nightly_never_judges_unobserved_or_inconsistent_history(tmp_path, capsys, fault):  # noqa: PLR0912 - perturb just one REST observation in each case
     history = nightly_history()
     listed = history['list'][0]['workflow_runs']
-    if fault in {'short', 'cap'}:
-        history['list'][0]['total_count'] = 4 if fault == 'short' else 1000
+    if fault == 'short':
+        history['list'][0]['total_count'] = 4
+    elif fault == 'cap':
+        rows = [
+            *listed,
+            *(run(rid, OLD, '2026-11-21T00:00:00Z') for rid in range(100, 1097)),
+        ]
+        history['list'] = [
+            page('workflow_runs', rows[index : index + 100], len(rows))
+            for index in range(0, len(rows), 100)
+        ]
     elif fault == 'duplicate-run':
-        listed[1] = copy.deepcopy(listed[0])
+        listed.append(copy.deepcopy(listed[0]))
+        history['list'][0]['total_count'] += 1
     elif fault == 'missing-run-id':
         del listed[1]['id']
     elif fault == 'moving-total':
@@ -145,8 +166,11 @@ def test_nightly_never_judges_unobserved_or_inconsistent_history(tmp_path, capsy
         history['runs']['31']['created_at'] = '2026-11-24T02:00:00'
     elif fault == 'missing-detail':
         del history['runs']['30']
+        del history['jobs']['30']
     elif fault in {'missing-listed-head', 'missing-listed-status'}:
         del listed[2]['head_sha' if fault.endswith('head') else 'status']
+        if fault == 'missing-listed-head':
+            del history['shards'][NEW]
     elif fault == 'different-job-attempt':
         history['jobs']['30'][0]['jobs'][0]['run_attempt'] = 2
     else:
@@ -159,7 +183,9 @@ def test_nightly_never_judges_unobserved_or_inconsistent_history(tmp_path, capsy
     assert check_replay(tool('system_shard_time'), tmp_path, history) == 2, (
         'Each incomplete or conflicting GitHub history refuses before comparison'
     )
-    assert 'no baseline' not in capsys.readouterr().out, (
+    report = capsys.readouterr().out
+    assert HISTORY_FAULTS[fault] in report, f'The fixture reaches the {fault} refusal: {report}'
+    assert 'no baseline' not in report, (
         'A transport or identity defect cannot masquerade as an exhaustive search'
     )
     assert not (tmp_path / 'verdict.json').exists(), (
@@ -177,6 +203,8 @@ def merged_pr_records():
         'head_sha': HEAD,
         'status': 'completed',
         'event': 'pull_request',
+        'created_at': '2026-11-21T14:00:00Z',
+        'run_started_at': '2026-11-21T14:02:00Z',
         'pull_requests': [{'number': 7, 'head': head}],
     }
     return {
@@ -184,13 +212,17 @@ def merged_pr_records():
             'number': 7,
             'commits': 2,
             'state': 'closed',
-            'merged_at': 'now',
+            'created_at': '2026-11-20T14:00:00Z',
+            'merged_at': '2026-11-22T14:00:00Z',
             'head': head,
         },
         'pulls/7/commits?per_page=100': ([{'sha': HEAD}], 'commits-page-2'),
         'commits-page-2': [{'sha': OLD}],
         'pulls?state=open&per_page=100': [
             {'number': 8, 'head': {**head, 'ref': 'different-branch', 'sha': OLD}}
+        ],
+        'pulls?state=all&head=example:feature%2Freused&per_page=100': [
+            {'number': 7, 'head': head}
         ],
         'actions/runs?branch=feature%2Freused&per_page=100': (
             page(
@@ -217,8 +249,8 @@ def merged_pr_records():
             page(
                 'artifacts',
                 [
-                    {'id': 77, 'name': 'unit-log'},
-                    {'id': 78, 'name': 'release-plan-7'},
+                    artifact(77, 'unit-log', 41, HEAD),
+                    artifact(78, 'release-plan-7', 41, HEAD),
                 ],
                 4,
             ),
@@ -227,14 +259,23 @@ def merged_pr_records():
         'artifacts-page-2': page(
             'artifacts',
             [
-                {'id': 79, 'name': 'crysta-sdk-pinned'},
-                {'id': 80, 'name': 'expired', 'expired': True},
+                artifact(79, 'crysta-sdk-pinned', 41, HEAD),
+                artifact(80, 'expired', 41, HEAD, expired=True),
             ],
             4,
         ),
         'actions/runs/45/artifacts?per_page=100': page(
-            'artifacts', [{'id': 82, 'name': 'active-head-log'}]
+            'artifacts', [artifact(82, 'active-head-log', 45, OLD)]
         ),
+    }
+
+
+def artifact(identity, label, run_id, sha, *, expired=False):
+    return {
+        'id': identity,
+        'name': label,
+        'expired': expired,
+        'workflow_run': {'id': run_id, 'head_sha': sha},
     }
 
 
@@ -244,6 +285,7 @@ def merged_pr_records():
         'none',
         'unmerged',
         'open-shared',
+        'reused-branch',
         'short-commits',
         'short-runs',
         'duplicate-runs',
@@ -253,30 +295,37 @@ def merged_pr_records():
         'same-commit-earlier-pr',
         'same-commit-dispatch',
         'incomplete-open-head',
+        'non-sha-open-head',
         'unnamed-artifact',
     ],
 )
-def test_artifact_cleanup_admits_only_a_merged_requests_own_runs(monkeypatch, fault):
+def test_artifact_cleanup_admits_only_a_merged_requests_own_runs(monkeypatch, capsys, fault):
     gate = tool('branch_artifacts')
     records = merged_pr_records()
-    if fault == 'unmerged':
+    short_pages = {
+        'short-commits': records['commits-page-2'],
+        'short-runs': records['runs-page-2']['workflow_runs'],
+        'short-artifacts': records['artifacts-page-2']['artifacts'],
+    }
+    if fault in short_pages:
+        short_pages[fault].pop()
+    elif fault == 'unmerged':
         records['pulls/7']['merged_at'] = None
     elif fault == 'open-shared':
         records['pulls?state=open&per_page=100'][0]['head']['ref'] = 'feature/reused'
-    elif fault == 'short-commits':
-        records['commits-page-2'].clear()
-    elif fault == 'short-runs':
-        records['runs-page-2']['workflow_runs'].pop()
+    elif fault == 'reused-branch':
+        users = records['pulls?state=all&head=example:feature%2Freused&per_page=100']
+        users.append({'number': 6, 'head': {**users[0]['head'], 'sha': OLD}})
     elif fault == 'duplicate-runs':
         records['runs-page-2']['workflow_runs'][0]['id'] = 41
     elif fault == 'moving-total':
         records['runs-page-2']['total_count'] -= 1
-    elif fault == 'short-artifacts':
-        records['artifacts-page-2']['artifacts'].pop()
     elif fault == 'duplicate-artifacts':
         records['artifacts-page-2']['artifacts'][0]['id'] = 77
     elif fault == 'incomplete-open-head':
         del records['pulls?state=open&per_page=100'][0]['head']['sha']
+    elif fault == 'non-sha-open-head':
+        records['pulls?state=open&per_page=100'][0]['head']['sha'] = 'branch-masquerading-as-a-sha'
     elif fault == 'unnamed-artifact':
         del records['artifacts-page-2']['artifacts'][0]['name']
     elif fault in {'same-commit-earlier-pr', 'same-commit-dispatch'}:
@@ -287,7 +336,7 @@ def test_artifact_cleanup_admits_only_a_merged_requests_own_runs(monkeypatch, fa
             pull_requests=[{'number': 6}] if previous else [],
         )
         records['actions/runs/44/artifacts?per_page=100'] = page(
-            'artifacts', [{'id': 81, 'name': 'other-run-log'}]
+            'artifacts', [artifact(81, 'other-run-log', 44, HEAD)]
         )
 
     def fetch(path):
@@ -305,6 +354,11 @@ def test_artifact_cleanup_admits_only_a_merged_requests_own_runs(monkeypatch, fa
     assert [artifact['id'] for artifact in deleted] == expected, (
         'Only debris owned by the merged request reaches the deletion boundary'
     )
-    assert status == (0 if fault in scoped | {'unmerged', 'open-shared'} else 2), (
-        'Incomplete or duplicate pagination fails closed before any deletion'
-    )
+    assert status == (
+        0 if fault in scoped | {'unmerged', 'open-shared', 'reused-branch'} else 2
+    ), 'Unproved history or an unreadable open head fails closed before deletion'
+    if fault == 'none':
+        assert "at another open pull request's head" in capsys.readouterr().out, (
+            'The live run on a different open head is protected while cleanup deletes '
+            'the owned artifact'
+        )
