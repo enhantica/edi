@@ -1200,12 +1200,20 @@ bool Session::saveProjectAsFreshWith(const SaveOperation& operation,const QUrl& 
         } else {
             // What the stage declares must read the same from the destination, before anything is published: nothing
             // is rewritten after the folder is in place.
-            edi::Project placed=*staged.project;
-            placed.path=staged.folder.toStdString();placed.scan_data_root.clear();
-            edi::adopt_save_location(placed,where.toStdString());
-            bool moved=placed.sequential_fit.data_dir!=staged.project->sequential_fit.data_dir;
-            for(std::size_t i=0;i<placed.experiments.size();++i)
-                moved=moved || placed.experiments[i]->data_path!=staged.project->experiments[i]->data_path;
+            // Each declaration as staged must name the same file read from the destination. Compared as files, not
+            // as text: untitled work has no folder of its own, so its declarations are absolute until written.
+            const auto stage=staged.folder.toStdString(),placedAt=where.toStdString();
+            // Data inside the stage (included) moves with the folder.
+            const auto inside=QDir::cleanPath(staged.folder)+QLatin1Char('/');
+            const auto differs=[&](const std::string& declared) {
+                if(declared.empty())return false;
+                const auto file=edi::linked_data_file(stage,declared);
+                return !QDir::cleanPath(QString::fromStdString(file)).startsWith(inside) &&
+                    file!=edi::linked_data_file(placedAt,declared);
+            };
+            bool moved=differs(staged.project->sequential_fit.data_dir);
+            for(const auto& experiment:staged.project->experiments)
+                moved=moved || differs(experiment->data_path);
             if(moved) {
                 setLastError(tr("The project's linked data could not be declared for %1: nothing was written").arg(where));
                 return false;
