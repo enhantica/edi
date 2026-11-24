@@ -19192,12 +19192,21 @@ void AssistantViewModel::send(const QString& text) {
     (void)submitDraft(text);
 }
 QString AssistantViewModel::submitDraft(const QString& text) {return submitDraftImpl(text,nullptr);}
-QVariantList AssistantViewModel::queuedMessages() const {
-    QVariantList result;
+AssistantQueueModel* AssistantViewModel::queuedMessages() const {
+    if(!queued_model_) {
+        auto* self=const_cast<AssistantViewModel*>(this);
+        queued_model_=new AssistantQueueModel(self);
+        const auto refresh=[self] {
+            QList<AssistantQueueModel::Entry> entries;
 #ifndef __EMSCRIPTEN__
-    for(const auto& message:state_->queued_messages)result.append(QVariantMap{{"id",message.id},{"text",message.text}});
+            for(const auto& message:self->state_->queued_messages)entries.append({message.id,message.text});
 #endif
-    return result;
+            self->queued_model_->setEntries(std::move(entries));
+        };
+        connect(self,&AssistantViewModel::queuedMessagesChanged,queued_model_,refresh);
+        refresh();
+    }
+    return queued_model_;
 }
 bool AssistantViewModel::cancelQueuedMessage(const QString& id) {
 #ifndef __EMSCRIPTEN__

@@ -2,6 +2,7 @@
 #pragma once
 
 #include <QObject>
+#include <QAbstractListModel>
 #include "assistant_values.hpp"
 #include <QTimer>
 #include <QQuickWindow>
@@ -26,6 +27,42 @@
 namespace edi_app {
 class ProjectViewModel;
 class Session;
+
+/// Messages waiting for a running fit or app action, oldest first. Roles `messageId` and `text`.
+class AssistantQueueModel : public QAbstractListModel {
+    Q_OBJECT
+    QML_ELEMENT
+    QML_UNCREATABLE("Waiting messages belong to the assistant")
+    Q_PROPERTY(int count READ count NOTIFY countChanged)
+
+   public:
+    enum Role { MessageIdRole = Qt::UserRole + 1, TextRole };
+    struct Entry {
+        QString id, text;
+    };
+    using QAbstractListModel::QAbstractListModel;
+    void setEntries(QList<Entry> entries) {
+        const bool counted = entries.size() != entries_.size();
+        beginResetModel();
+        entries_ = std::move(entries);
+        endResetModel();
+        if (counted) emit countChanged();
+    }
+    int count() const { return static_cast<int>(entries_.size()); }
+    int rowCount(const QModelIndex& parent = QModelIndex()) const override { return parent.isValid() ? 0 : count(); }
+    QVariant data(const QModelIndex& index, int role) const override {
+        if (!index.isValid() || index.row() >= entries_.size()) return {};
+        const auto& entry = entries_.at(index.row());
+        return role == MessageIdRole ? QVariant(entry.id) : role == TextRole ? QVariant(entry.text) : QVariant();
+    }
+    QHash<int, QByteArray> roleNames() const override { return {{MessageIdRole, "messageId"}, {TextRole, "text"}}; }
+
+   signals:
+    void countChanged();
+
+   private:
+    QList<Entry> entries_;
+};
 
 /// Native QML presentation of the shared controller. Owned by Session, including while no project is open.
 class AssistantViewModel : public QObject {
@@ -73,7 +110,7 @@ class AssistantViewModel : public QObject {
     Q_PROPERTY(bool draftAdmissionReady READ draftAdmissionReady NOTIFY draftAdmissionReadyChanged)
     Q_PROPERTY(bool contextConsentRequired READ contextConsentRequired NOTIFY contextConsentRequiredChanged)
     Q_PROPERTY(bool contextApprovalBlocked READ contextApprovalBlocked NOTIFY contextApprovalBlockedChanged)
-    Q_PROPERTY(QVariantList queuedMessages READ queuedMessages NOTIFY queuedMessagesChanged)
+    Q_PROPERTY(edi_app::AssistantQueueModel* queuedMessages READ queuedMessages CONSTANT)
 
    public:
     explicit AssistantViewModel(QObject* parent = nullptr, AssistantWorkReportOptions options = {});
@@ -157,8 +194,8 @@ class AssistantViewModel : public QObject {
     /// Submit on the owner thread; return its admitted row ID, or empty on refusal. Durable completed status alone acknowledges it.
     Q_INVOKABLE QString submitDraft(const QString& text);
     Q_INVOKABLE edi_app::AssistantDraftAdmission submitDraftAdmission(const QString& text);
-    /// Messages waiting for a running fit or app action, oldest first: [{id, text}].
-    QVariantList queuedMessages() const;
+    /// Messages waiting for a running fit or app action, oldest first.
+    AssistantQueueModel* queuedMessages() const;
     /// Take a waiting message back (it returns to the composer); false when it is unknown or already being sent.
     Q_INVOKABLE bool cancelQueuedMessage(const QString& id);
     Q_INVOKABLE QString workReportDocument();
@@ -277,6 +314,7 @@ class AssistantViewModel : public QObject {
     bool eventFilter(QObject* watched, QEvent* event) override;
    private:
     friend class Session;
+    mutable AssistantQueueModel* queued_model_ = nullptr;
     QString submitDraftImpl(const QString&,bool* accountWaiting);
     void finishHistoryInitialization() noexcept;
     bool ordinarySaveNotification(ProjectViewModel*) const noexcept;

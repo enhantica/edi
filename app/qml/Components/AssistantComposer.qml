@@ -418,30 +418,31 @@ Rectangle {
             id: queuedMessagesList
             objectName: "assistant.queued"
             width: parent.width
-            visible: composer.assistant.queuedMessages.length > 0
+            visible: composer.assistant.queuedMessages.count > 0
             spacing: 0
             Repeater {
                 model: composer.assistant.queuedMessages
                 delegate: Row {
                     id: queuedMessageRow
-                    required property var modelData
-                    objectName: "assistant.queued." + queuedMessageRow.modelData.id
+                    required property string messageId
+                    required property string text
+                    objectName: "assistant.queued." + queuedMessageRow.messageId
                     width: queuedMessagesList.width
                     spacing: AppSizes.unit * 0.25
                     EaElements.Label {
                         id: queuedMessageLabel
                         width: Math.max(0, queuedMessagesList.width - cancelQueuedButton.implicitWidth - parent.spacing)
-                        text: qsTr("Waiting: %1").arg(queuedMessageRow.modelData.text)
+                        text: qsTr("Waiting: %1").arg(queuedMessageRow.text)
                         textFormat: Text.PlainText
                         elide: Text.ElideRight
                         maximumLineCount: 1
                         color: EaStyle.Colors.themeForegroundMinor
                         ToolTip.text: qsTr("Sent when the running fit or action has finished")
-                        Accessible.name: qsTr("Waiting message: %1").arg(queuedMessageRow.modelData.text)
+                        Accessible.name: qsTr("Waiting message: %1").arg(queuedMessageRow.text)
                     }
                     EaElements.ToolButton {
                         id: cancelQueuedButton
-                        objectName: "assistant.queued.cancel." + queuedMessageRow.modelData.id
+                        objectName: "assistant.queued.cancel." + queuedMessageRow.messageId
                         leftPadding: 0
                         rightPadding: 0
                         fontIcon: "times"
@@ -459,7 +460,7 @@ Rectangle {
                         }
                         ToolTip.text: qsTr("Do not send; return it to the message box")
                         Accessible.name: ToolTip.text
-                        onClicked: composer.assistant.cancelQueuedMessage(queuedMessageRow.modelData.id)
+                        onClicked: composer.assistant.cancelQueuedMessage(queuedMessageRow.messageId)
                     }
                 }
             }
