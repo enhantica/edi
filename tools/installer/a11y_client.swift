@@ -154,8 +154,23 @@ func check(window: CGRect, title: String, placed: [Placed]) -> Bool {
     let edge = firsts.map(drawnX).min() ?? 0
     let leader = firsts.min { drawnX($0) < drawnX($1) }
     pageEdges[title, default: [:]][Int((edge - window.minX).rounded())] = "\(leader?.role ?? "") '\(leader?.text ?? "")'"
-    for item in firsts where abs(drawnX(item) - edge) > 1 {
+    // Exactly one edge: frames are in whole points, and a widget the native style moves off its cell is 2 off.
+    for item in firsts where abs(drawnX(item) - edge) > 0.5 {
         problems.append("left edge \(Int(drawnX(item) - edge)) px off: \(item.role) '\(item.text)'")
+    }
+    // Boxes of one kind on a page start at one x and are one height: a box moved or cut by its widget's frame starts
+    // further right (its indicator is clipped on the left), a box with an inner margin is taller.
+    for kind in ["AXCheckBox", "AXRadioButton"] {
+        let boxes = content.filter { $0.role == kind }
+        guard let first = boxes.first else { continue }
+        for box in boxes.dropFirst() {
+            if abs(box.frame.minX - first.frame.minX) > 0.5 {
+                problems.append("\(kind) '\(box.text)' starts \(Int(box.frame.minX - first.frame.minX)) px from '\(first.text)'")
+            }
+            if abs(box.frame.height - first.frame.height) > 0.5 {
+                problems.append("\(kind) '\(box.text)' is \(Int(box.frame.height)) px high, '\(first.text)' \(Int(first.frame.height))")
+            }
+        }
     }
     // The page sits centred: as much space right of its widest stretching element (a field or a bar) as left of
     // its content. A page without one (only short lines) is not judged.
@@ -172,9 +187,9 @@ func check(window: CGRect, title: String, placed: [Placed]) -> Bool {
     }
     for (above, below) in zip(firsts, firsts.dropFirst()) {
         let gap = drawn(below).minY - drawn(above).maxY
-        if gap < -1 {
+        if gap < -0.5 {
             problems.append("overlap \(Int(-gap)) px between '\(above.text)' and '\(below.text)'")
-        } else if !steps.contains(where: { abs($0 - gap) <= 1 }) {
+        } else if !steps.contains(where: { abs($0 - gap) <= 0.5 }) {
             problems.append("gap \(Int(gap)) px between '\(above.text)' and '\(below.text)'")
         }
     }
