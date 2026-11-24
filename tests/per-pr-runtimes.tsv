@@ -10,9 +10,9 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-24T12:24:37Z
+# measured_utc = 2026-11-24T13:04:44Z
 #
-# Recorded from: measured test run (6 node(s) measured once, 187121 banked, 0 stale row(s) dropped)
+# Recorded from: measured test run (1 node(s) measured once, 187126 banked, 0 stale row(s) dropped)
 # Collected tests: 266998; with a reported duration: 86008
 # Module-scoped fixture costs recorded: 219
 #
@@ -181770,7 +181770,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_installer_a11y_completen
 0.000	tests/integration/py/test_installer_identity.py::test_signing_enablement_keeps_pr_builds_unsigned[macos-]
 0.000	tests/integration/py/test_installer_identity.py::test_signing_enablement_keeps_pr_builds_unsigned[windows-1]
 0.000	tests/integration/py/test_installer_identity.py::test_signing_enablement_keeps_pr_builds_unsigned[windows-]
-0.150	tests/integration/py/test_installer_identity.py::test_three_page_install_choices_gate_components_license_and_sizes
+0.680	tests/integration/py/test_installer_identity.py::test_three_page_install_choices_gate_components_license_and_sizes
 0.000	tests/integration/py/test_installer_identity.py::test_windows_installation_defaults[AdminTargetDir-@ApplicationsDirX64@/EasyDiffraction]
 0.000	tests/integration/py/test_installer_identity.py::test_windows_installation_defaults[StartMenuDir-EasyDiffraction]
 0.000	tests/integration/py/test_installer_identity.py::test_windows_installation_defaults[TargetDir-@ApplicationsDirUser@/EasyDiffraction]

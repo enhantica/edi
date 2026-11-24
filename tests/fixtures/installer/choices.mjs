@@ -28,9 +28,12 @@ const appName = 'org.easydiffraction.app';
 const selected = new Set([appName]);
 const fields = {
   AssistantCheckBox: {checked: false, toggled: signal()},
+  FolderBox: {},
   LicenseCheckBox: {checked: false, toggled: signal()},
   LicenseLink: {},
+  ShortcutBox: {},
   ShortcutCheckBox: {toggled: signal()},
+  NoticeBox: {},
   NoticeLabel: {},
   SpaceLabel: {},
   TargetDirectoryLineEdit: {text: '/synthetic-target', textChanged: signal(), editingFinished: signal()},
@@ -44,6 +47,12 @@ const frameworkPages = [
 const pages = Object.fromEntries(frameworkPages.map(name => [name + 'Page', {
   entered: signal(), left: signal(), title: name, subTitle: '', fields: name === 'TargetDirectory' ? fields : {},
 }]));
+pages.DynamicAssistantForm = {
+  fields: {
+    AppBox: {}, AssistantCheckBox: {toggled: signal()}, LicenseBox: {}, ShortcutBox: {},
+    NoticeBox: {}, NoticeLabel: {}, SpaceBox: {},
+  },
+};
 pages.IntroductionPage.fields.MessageLabel = {};
 pages.FinishedPage.fields.MessageLabel = {};
 const summary = pages.ReadyForInstallationPage.fields = {
@@ -69,7 +78,7 @@ const components = records.map(([name, displayName, bytes]) => ({
 }));
 
 const buttons = {
-  NextButton: 'Next', BackButton: 'Back', CommitButton: 'Commit', FinishButton: 'Finish',
+  NextButton: 'Next', BackButton: 'Back', CommitButton: 'Commit', FinishButton: 'Finish', CancelButton: 'Cancel',
 };
 const pageIds = {
   Introduction: 'introduction', TargetDirectory: 'directory', ComponentSelection: 'components',
@@ -86,20 +95,30 @@ const pagesById = new Map([
 const context = createContext({
   buttons, console, systemInfo: {kernelType: 'linux'},
   QInstaller: {...pageIds, Success: 'success'},
-  component: {name: assistantName, userInterface: () => fields},
+  QMessageBox: {Yes: 'Yes'},
+  Qt: {callLater: handler => queueMicrotask(handler)},
+  component: {
+    name: assistantName, installed: true,
+    userInterface: () => mode === 'install' ? pages.TargetDirectoryPage : pages.DynamicAssistantForm,
+  },
   installer: {
     status: 'success', isInstaller: () => mode === 'install',
     isUninstaller: () => mode === 'remove', isUpdater: () => mode === 'update',
     isPackageManager: () => mode === 'maintenance',
     isCommandLineInstance: () => mode === 'cli',
+    hasAdminRights: () => false,
+    setPackageManager() { mode = 'maintenance'; },
+    setUpdater() { mode = 'update'; },
     setDefaultPageVisible(name, value) { visibility.set(name, value); },
+    setMessageBoxAutomaticAnswer() {},
     environmentVariable: () => '',
     fileExists: path => path === fields.TargetDirectoryLineEdit.text,
     execute(command) {
       assert.equal(command, '/bin/df', 'Only an available-space query is required');
       return ['Filesystem 1024-blocks Used Available Capacity Mounted on\n/dev/test 4000000 0 4000000 0% /', 0];
     },
-    value: key => metadata.get(key) || '',
+    executeDetached() {},
+    value: (key, fallback = '') => metadata.get(key) ?? fallback,
     setValue(key, value) { metadata.set(key, value); },
     components: () => components,
     selectComponent: name => selected.add(name),
@@ -107,13 +126,15 @@ const context = createContext({
     addWizardPageItem: (_component, form, page) => embedded.push([form, page]),
     addWizardPage: (_component, form, page) => extraPages.push([form, page]),
     installationFinished: signal(), updateFinished: signal(), uninstallationFinished: signal(),
+    titleMessageChanged: {connect() {}},
   },
   gui: {
     showSettingsButton() {},
     setWizardPageButtonText(page, button, text) { metadata.set(page + button, text); },
-    pageWidgetByObjectName: name => pages[name],
-    pageById: id => pagesById.get(id),
-    findChild: (page, name) => page.fields[name],
+    pageWidgetByObjectName: name => pages[name] ?? null,
+    pageByObjectName: name => pages[name] ?? null,
+    pageById: id => pagesById.get(id) ?? null,
+    findChild: (page, name) => page.fields[name] ?? null,
     findChildren: () => [],
     clickButton: button => buttonClicks.push(button),
   },
@@ -122,8 +143,8 @@ runInContext(source('Installer.qs'), context, {filename: 'Installer.qs'});
 runInContext(source('assistantscript.qs'), context, {filename: 'assistantscript.qs'});
 const wizard = runInContext('new Controller()', context);
 runInContext('new Component()', context);
-assert.deepEqual(embedded.splice(0), [['ProgressForm', 'progress'], ['AssistantForm', 'directory']],
-  'Progress belongs to Installing and the choices belong to Install');
+assert.deepEqual(embedded.splice(0), [['ProgressForm', 'progress'], ['DoneForm', 'done'], ['AssistantForm', 'directory']],
+  'The progress, launch and choice forms belong to Installing, Done and Install');
 assert.equal(pages.PerformInstallationPage.title, '', 'Installing starts without a default page header');
 assert.equal(metadata.get('directoryNext'), 'Install', 'The folder page offers the Install action');
 assert.equal(visibility.get('components'), false, 'The default component tree is never a wizard stop');
@@ -139,7 +160,7 @@ assert.match(fields.LicenseLink.text, /https:\/\/www\.gnu\.org\/licenses\/gpl-3\
 fields.LicenseCheckBox.checked = false;
 wizard.ReadyForInstallationPageCallback();
 assert.deepEqual(buttonClicks.splice(0), ['Back'], 'An unchecked license returns to Install without committing');
-assert.equal(fields.NoticeLabel.visible, true, 'The refusal displays its explanation on the Install page');
+assert.equal(fields.NoticeBox.visible, true, 'The refusal displays its explanation on the Install page');
 assert.match(fields.NoticeLabel.text, /accept.*license/i, 'The refusal names the unmet license choice');
 
 fields.AssistantCheckBox.checked = false;
@@ -167,9 +188,19 @@ wizard.FinishedPageCallback();
 assert.deepEqual(buttonClicks, [], 'The progress and Done pages add no intermediate choice or component tree');
 
 for (mode of ['maintenance', 'update', 'remove', 'cli']) {
+  const controller = mode === 'cli' ? null : runInContext('new Controller()', context);
   runInContext('new Component()', context);
-  assert.deepEqual(embedded.splice(0), mode === 'cli' ? [] : [['ProgressForm', 'progress']],
-    'Every graphical mode embeds the progress form on its progress page');
-  assert.deepEqual(extraPages.splice(0), mode === 'maintenance' ? [['AssistantForm', 'ready']] : [],
-    'Maintenance alone gets a separate assistant choice');
+  assert.deepEqual(embedded.splice(0), mode === 'cli' ? [] : [['ProgressForm', 'progress'], ['DoneForm', 'done']],
+    'Graphical modes embed the progress and launch forms on Installing and Done');
+  const hasAssistantChoice = mode === 'maintenance' || mode === 'update';
+  assert.deepEqual(extraPages.splice(0), hasAssistantChoice ? [['AssistantForm', 'ready']] : [],
+    'Change components and Update offer a separate assistant choice');
+  if (controller) {
+    controller.IntroductionPageCallback();
+    if (hasAssistantChoice)
+      controller.DynamicAssistantFormCallback();
+    controller.ReadyForInstallationPageCallback();
+    controller.PerformInstallationPageCallback();
+    controller.FinishedPageCallback();
+  }
 }
