@@ -121,11 +121,9 @@ function advance(name, page) {
     }
     // The maintenance tool takes the mode asked for; removing everything needs no repository.
     if (name === "Introduction" && !installer.isInstaller()) {
-        var choice = {add: "PackageManagerRadioButton", update: "UpdaterRadioButton"}[maintenanceMode]
-            || "UninstallerRadioButton";
-        var radio = gui.findChild(page, choice);
-        if (radio)
-            radio.checked = true;
+        var choice = maintenanceChoices(page)[maintenanceMode];
+        if (choice)
+            choice.checked = true;
     }
     // The summary page commits by itself (installPage below).
     if (name === "ReadyForInstallation" && installer.isInstaller())
@@ -295,6 +293,43 @@ function applyTemplate(page) {
         [0, 150].forEach(function (delay) {
             later(delay, function () { settleChoices(page, layouts[0], layouts[1]); });
         });
+}
+
+// The choices in the order they read best, Update first. The Framework makes its three radio buttons in an order of its
+// own (change, update, remove) and its layout cannot be reordered from a script, so the first two trade places by
+// meaning: each one's words and the mode it sets are changed together, here, so that a button never says one thing
+// and does another. The Framework sets its own mode when a button is chosen; ours is set right after it.
+var choicesHooked = false;
+
+function maintenanceChoices(page) {
+    return {update: gui.findChild(page, "PackageManagerRadioButton"), add: gui.findChild(page, "UpdaterRadioButton"),
+            remove: gui.findChild(page, "UninstallerRadioButton")};
+}
+
+function setChosenMode(page) {
+    var choices = maintenanceChoices(page);
+    if (choices.update && choices.update.checked)
+        installer.setUpdater();
+    else if (choices.add && choices.add.checked)
+        installer.setPackageManager();
+}
+
+function orderChoices(page) {
+    var choices = maintenanceChoices(page);
+    if (!choices.update || !choices.add)
+        return;
+    if (!choicesHooked) {
+        choices.update.text = "Update EasyDiffraction";
+        choices.add.text = "Change components";
+        [choices.update, choices.add].forEach(function (choice) {
+            choice.toggled.connect(function () { setChosenMode(page); });
+            choice.clicked.connect(function () { setChosenMode(page); });
+        });
+        choicesHooked = true;
+    }
+    choices.update.checked = true;
+    // Shown checked already, it sends nothing: the mode is set here too.
+    setChosenMode(page);
 }
 
 // The maintenance choices are the Framework's radio buttons straight in a column, which on macOS reach past their
@@ -893,9 +928,7 @@ function headerWordmark() {
                 ask.textFormat = 1;  // Qt.RichText
                 ask.text = logo() + PARA + "What would you like to do?</p>";
             }
-            var update = gui.findChild(page, "UpdaterRadioButton");
-            if (update && captureFolder === "")
-                update.checked = true;
+            orderChoices(page);
             if (!introductionHooked) {
                 page.left.connect(nameSummaryStep);
                 introductionHooked = true;
