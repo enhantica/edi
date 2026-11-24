@@ -27,35 +27,30 @@ function Component() {
     var form = component.userInterface("AssistantForm");
     if (!form)
         return;
-    var box = form.AssistantCheckBox;
+    // The form's parts are in row widgets, so they are looked for by name at any depth.
+    function part(name) { return gui.findChild(form, name); }
+    var box = part("AssistantCheckBox");
     if (installer.isInstaller()) {
         // Ticked from the start (owner's choice); the command line still installs it only when named.
         box.checked = true;
         // The folder field of our own (Installer.qs keeps the Framework's in step with it).
-        ["FolderLineEdit", "FolderBrowseButton"].forEach(function (name) {
-            if (form[name])
-                form[name].visible = true;
-        });
+        part("FolderBox").visible = true;
         installer.selectComponent(component.name);
     } else {
         // The choice page, the same when adding or removing and when updating: EasyDiffraction is always kept
         // (ticked, fixed), the AI assistant is ticked when installed. Updating, its box says whether it is updated;
         // an assistant that is not installed cannot be, and a note says where to add it.
-        if (form.AppCheckBox)
-            form.AppCheckBox.visible = true;
+        part("AppBox").visible = true;
         box.text = "AI assistant";
         box.checked = component.installed;
         // The licence, shortcut and space belong to installing, not to this choice.
-        ["LicenseCheckBox", "LicenseLink", "ShortcutCheckBox", "NoticeLabel", "SpaceLabel"].forEach(function (name) {
-            if (form[name])
-                form[name].visible = false;
+        ["LicenseBox", "ShortcutBox", "NoticeBox", "SpaceBox"].forEach(function (name) {
+            part(name).visible = false;
         });
         if (installer.isUpdater() && !component.installed) {
             box.enabled = false;
-            if (form.NoticeLabel) {
-                form.NoticeLabel.text = "The AI assistant is not installed. Choose Change components to add it.";
-                form.NoticeLabel.visible = true;
-            }
+            part("NoticeLabel").text = "The AI assistant is not installed. Choose Change components to add it.";
+            part("NoticeBox").visible = true;
         }
     }
     box.toggled.connect(function (checked) {

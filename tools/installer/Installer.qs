@@ -383,7 +383,7 @@ Controller.prototype.DynamicAssistantFormCallback = function () {
     if (mark) {
         mark.textFormat = 1;  // Qt.RichText
         mark.text = headerWordmark();
-        mark.visible = true;
+        gui.findChild(page, "LogoBox").visible = true;
     }
     // Adding components in capture mode turns the assistant over (added if absent, removed if there), so the mode
     // always has work to do and its progress page shows.
@@ -684,7 +684,7 @@ function setupInstallPage(page) {
         if (license)
             license.checked = true;
         if (shortcut) {
-            shortcut.visible = systemInfo.kernelType !== "darwin";
+            gui.findChild(page, "ShortcutBox").visible = systemInfo.kernelType !== "darwin";
             shortcut.checked = true;
             shortcut.toggled.connect(function (on) { installer.setValue("EdiDesktopShortcut", on ? "true" : "false"); });
         }
@@ -726,10 +726,9 @@ var licenseRefused = false;
 
 // The form's rows stand one row gap apart (the logo one step above them), measured once the page shows: each gap
 // widget above a row (AssistantForm.ui) takes what the drawn frames need. A row with nothing shown has no gap.
-var formRows = [["LogoRow", ["FormLogo"]], ["FolderRow", ["FolderLineEdit", "FolderBrowseButton"]],
-                ["AppRow", ["AppCheckBox"]], ["AssistantRow", ["AssistantCheckBox"]],
-                ["LicenseRow", ["LicenseCheckBox", "LicenseLink"]], ["ShortcutRow", ["ShortcutCheckBox"]],
-                ["NoticeRow", ["NoticeLabel"]], ["SpaceRow", ["SpaceLabel"]]];
+var formRows = [["Logo", ["FormLogo"]], ["Folder", ["FolderLineEdit", "FolderBrowseButton"]], ["App", ["AppCheckBox"]],
+                ["Assistant", ["AssistantCheckBox"]], ["License", ["LicenseCheckBox", "LicenseLink"]],
+                ["Shortcut", ["ShortcutCheckBox"]], ["Notice", ["NoticeLabel"]], ["Space", ["SpaceLabel"]]];
 
 // As soon as the page is laid out, so nobody sees it move, and once more when the styles have reached every widget.
 function settleSoon(page) {
@@ -737,43 +736,50 @@ function settleSoon(page) {
     later(150, function () { settleForm(page); });
 }
 
-function settleForm(page) {
+// Repeated until the page is laid out as last asked for and asks for nothing more (bounded), so the last word is always
+// a reading of the page as it stands. In captures every reading and what it sets is logged (edi-gap).
+function settleForm(page, round) {
     // Only a page on screen has frames to measure.
     if (!page || !page.visible)
         return;
-    var previous = null;
+    var previous = false;
     formRows.forEach(function (row) {
-        var shown = row[1].map(function (name) { return gui.findChild(page, name); })
-            .filter(function (widget) { return widget && widget.visible; });
-        var gap = gui.findChild(page, row[0] + "Gap");
+        var box = gui.findChild(page, row[0] + "Box");
+        var gap = gui.findChild(page, row[0] + "RowGap");
+        var shown = box !== null && box.visible;
         if (gap)
-            gap.visible = shown.length > 0 && previous !== null;
-        if (shown.length > 0)
-            previous = row[0];
+            gap.visible = shown && previous;
+        previous = previous || shown;
     });
-    // The licence and its link: one row gap between the box's frame and the link.
     var license = gui.findChild(page, "LicenseCheckBox");
     var link = gui.findChild(page, "LicenseLink");
     var licenseRow = gui.findChild(page, "LicenseRow");
     later(0, function () {
+        // The licence and its link: one row gap between the box's frame and the link.
         if (license && link && licenseRow && license.visible && link.visible)
             adjustOnce(licenseRow, link.x - (license.x + license.width));
         var above = null;
+        var unsettled = false;
         formRows.forEach(function (row) {
+            var box = gui.findChild(page, row[0] + "Box");
+            if (!box || !box.visible)
+                return;
             var shown = row[1].map(function (name) { return gui.findChild(page, name); })
                 .filter(function (widget) { return widget && widget.visible; });
             if (shown.length === 0)
                 return;
-            var top = Math.min.apply(null, shown.map(function (widget) { return widget.y; }));
-            var bottom = Math.max.apply(null, shown.map(function (widget) { return widget.y + widget.height; }));
-            var gap = gui.findChild(page, row[0] + "Gap");
+            var top = box.y + Math.min.apply(null, shown.map(function (widget) { return widget.y; }));
+            var bottom = box.y + Math.max.apply(null, shown.map(function (widget) { return widget.y + widget.height; }));
+            var gap = gui.findChild(page, row[0] + "RowGap");
             if (above && gap) {
-                var wanted = above.name === "LogoRow" ? 2 * rowGap : rowGap;
-                // What lies between the rows besides the gap widget, all read from the page as it is laid out. Taking
-                // the difference from the height last set instead would correct twice when asked again before the
-                // page is laid out anew.
+                var wanted = above.name === "Logo" ? 2 * rowGap : rowGap;
+                // What lies between the rows besides the gap widget, all read from the page as it is laid out.
                 var besides = (gap.y - above.bottom) + (top - (gap.y + gap.height));
                 var height = bounded(wanted - besides, wanted);
+                if (captureFolder !== "")
+                    console.log("edi-gap " + row[0] + " round " + (round || 0) + " above " + above.bottom + " gap " + gap.y + "+"
+                        + gap.height + " (set " + gap.maximumHeight + ") row " + top + " -> " + height);
+                unsettled = unsettled || gap.height !== gap.maximumHeight || gap.maximumHeight !== height;
                 gap.minimumHeight = height;
                 gap.maximumHeight = height;
             }
@@ -782,12 +788,13 @@ function settleForm(page) {
         // On the installer's page the form's first row (our folder) stands one row gap under the page's text: the
         // page's spacing, that page's only gap, takes up where the row's frame sits.
         var install = gui.pageWidgetByObjectName("TargetDirectoryPage");
-        var form = install ? gui.findChild(install, "AssistantForm") : null;
-        var text = install ? gui.findChild(install, "MessageLabel") : null;
+        var folder = gui.findChild(page, "FolderBox");
         var field = gui.findChild(page, "FolderLineEdit");
         var column = install ? firstLayout(install) : null;
-        if (form && text && field && field.visible && column && page.objectName === "TargetDirectoryPage")
-            column.spacing = bounded(rowGap - field.y, 2 * rowGap);
+        if (folder && field && field.visible && column && page.objectName === "TargetDirectoryPage")
+            column.spacing = bounded(rowGap - (folder.y + field.y), 2 * rowGap);
+        if (unsettled && (round || 0) < 8)
+            later(60, function () { settleForm(page, (round || 0) + 1); });
         if (captureFolder !== "")
             later(100, function () { logLayout(page, "settled"); });
     });
@@ -863,7 +870,7 @@ function showNotice() {
         lines.push("EasyDiffraction is already installed here. To update it, open its Maintenance Tool and choose "
             + "Update.");
     notice.text = lines.join(" ");
-    notice.visible = notice.text !== "";
+    installPageField("NoticeBox").visible = notice.text !== "";
     settleSoon(gui.pageWidgetByObjectName("TargetDirectoryPage"));
 }
 
