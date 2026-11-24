@@ -155,7 +155,8 @@ def require_public_job(job, name, platform):
     )
     if name == 'app':
         assert active(job, 'pull_request', states=dict.fromkeys(expected_needs, 'success')), (
-            'Each desktop app starts once changes, the native build and the SDK finish while core runs'
+            'Each desktop app starts once changes, the native build and the SDK finish '
+            'while core runs'
         )
     assert job.get('env', {}).get('CRYSTA_SOURCE_SHA') == (
         '${{ needs.changes.outputs.crysta_sha }}'
