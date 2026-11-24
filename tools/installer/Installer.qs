@@ -327,10 +327,12 @@ Controller.prototype.DynamicAssistantFormCallback = function () {
         mark.text = headerWordmark();
         mark.visible = true;
     }
-    // Adding components in capture mode adds the assistant, so the mode has something to do.
-    var box = captureFolder !== "" ? gui.findChild(page, "AssistantCheckBox") : null;
+    // Adding components in capture mode turns the assistant over (added if absent, removed if there), so the mode
+    // always has work to do and its progress page shows.
+    var box = captureFolder !== "" && maintenanceMode === "add" ? gui.findChild(page, "AssistantCheckBox") : null;
     if (box)
-        box.checked = true;
+        box.checked = !box.checked;
+    later(100, function () { settleForm(page); });
     capture("AssistantForm");
     advance("AssistantForm", page);
 };
@@ -396,7 +398,7 @@ function summaryRows(removing) {
         var counted = removing ? c.uninstallationRequested() : c.installationRequested();
         if (!counted)
             continue;
-        rows += '<tr><td style="padding: 2px 0">' + c.value("DisplayName") + '</td><td align="right">'
+        rows += '<tr><td style="padding: 2px 0 2px 4px">' + c.value("DisplayName") + '</td><td align="right">'
             + sizeText(c.value("UncompressedSize") || 0) + '</td></tr>';
     }
     return rows;
@@ -414,9 +416,14 @@ function summaryBytes(removing) {
     return bytes;
 }
 
-// A list under its heading, its items 4 px in from the heading's edge.
+// A list under its heading, its items 4 px in from the heading's edge (each name's cell padding).
 function summaryTable(rows) {
-    return '<table width="100%" cellspacing="0" cellpadding="0" style="margin-left: 4px">' + rows + "</table>";
+    return '<table width="100%" cellspacing="0" cellpadding="0">' + rows + "</table>";
+}
+
+// A path that may break at its separators instead of inside a name (a zero-width space after each).
+function breakablePath(path) {
+    return String(path).replace(/([\/\\])/g, "$1\u200b");
 }
 
 function writeSummary(page) {
@@ -432,17 +439,18 @@ function writeSummary(page) {
     var heading = installer.isInstaller() ? "Ready to install" : installer.isUpdater() ? "Ready to update"
         : removing ? "Ready to remove" : "Ready to apply your changes";
     var target = installer.value("TargetDir");
-    var text = logo() + "<p><b>" + heading + "</b></p>";
+    var text = logo() + PARA + "<b>" + heading + "</b></p>";
     var adding = summaryRows(false);
     var dropping = removing ? summaryRows(true) : (installer.isPackageManager() ? summaryRows(true) : "");
     if (adding !== "")
         text += summaryTable(adding);
     if (dropping !== "")
-        text += (removing ? "" : "<p>Removed:</p>") + summaryTable(dropping);
+        text += (removing ? "" : PARA + "Removed:</p>") + summaryTable(dropping);
     if (removing) {
-        text += '<p style="color: ' + warning() + '">Everything in ' + target + " will be removed.</p>";
+        text += '<p style="margin: 8px 0 0 0; color: ' + warning() + '">Everything in ' + breakablePath(target)
+            + " will be removed.</p>";
     } else if (installer.isInstaller()) {
-        text += "<p>Install to " + target + "</p>";
+        text += PARA + "Install to " + breakablePath(target) + "</p>";
     }
     // The space line: "Space required: X" and "Space available: Y", read and said once, plainly.
     var space = gui.findChild(page, "SpaceItem");
@@ -451,9 +459,9 @@ function writeSummary(page) {
         var added = summaryBytes(false);
         var freed = summaryBytes(true);
         if (added > 0)
-            text += "<p>" + sizeText(added) + " needed</p>";
+            text += PARA + sizeText(added) + " needed</p>";
         else if (freed > 0)
-            text += "<p>" + sizeText(freed) + " freed</p>";
+            text += PARA + sizeText(freed) + " freed</p>";
         if (space)
             space.visible = false;
     } else if (space && !removing) {
@@ -471,7 +479,7 @@ function writeSummary(page) {
         }
         // A change that needs no space (a figure of 0) says nothing about space.
         if (needed !== "" && parseFloat(needed) > 0)
-            text += "<p>Space: " + needed + " needed · " + available + " available</p>";
+            text += PARA + needed + " needed · " + available + " available</p>";
         space.visible = warned;  // a shortage stays said as the Framework says it
     }
     summary.textFormat = 1;  // Qt.RichText
@@ -484,6 +492,11 @@ var licenseUrl = "https://www.gnu.org/licenses/gpl-3.0.html";
 
 function warning() {
     return darkTheme() ? "@DARK_WARNING@" : "@LIGHT_WARNING@";
+}
+
+// The small check before a done sentence: a character of the text, in the app's success green.
+function checkMark() {
+    return '<span style="color: ' + success() + '">\u2713</span>';
 }
 
 function success() {
@@ -567,8 +580,8 @@ function setupInstallPage(page) {
     var intro = gui.findChild(page, "MessageLabel");
     if (intro) {
         intro.textFormat = 1;  // Qt.RichText
-        intro.text = logo() + "<p>EasyDiffraction calculates diffraction patterns from a structural model and fits its "
-            + "parameters to experimental data.</p><p>Install to</p>";
+        intro.text = logo() + PARA + "EasyDiffraction calculates diffraction patterns from a structural model and "
+            + "fits its parameters to experimental data.</p>" + PARA + "Install to</p>";
     }
     var link = gui.findChild(page, "LicenseLink");
     if (link) {
@@ -609,6 +622,69 @@ function setupInstallPage(page) {
 // twice. A licence refusal stays said until Install is pressed again.
 var licenseRefused = false;
 
+// The form's rows stand one row gap apart (the logo one step above them), measured once the page shows: each gap
+// widget above a row (AssistantForm.ui) takes what the drawn frames need. A row with nothing shown has no gap.
+var formRows = [["LogoRow", ["FormLogo"]], ["AppRow", ["AppCheckBox"]], ["AssistantRow", ["AssistantCheckBox"]],
+                ["LicenseRow", ["LicenseCheckBox", "LicenseLink"]], ["ShortcutRow", ["ShortcutCheckBox"]],
+                ["NoticeRow", ["NoticeLabel"]], ["SpaceRow", ["SpaceLabel"]]];
+
+function settleForm(page) {
+    // Only a page on screen has frames to measure.
+    if (!page || !page.visible)
+        return;
+    var previous = null;
+    formRows.forEach(function (row) {
+        var shown = row[1].map(function (name) { return gui.findChild(page, name); })
+            .filter(function (widget) { return widget && widget.visible; });
+        var gap = gui.findChild(page, row[0] + "Gap");
+        if (gap)
+            gap.visible = shown.length > 0 && previous !== null;
+        if (shown.length > 0)
+            previous = row[0];
+    });
+    // The licence and its link: one row gap between the box's frame and the link.
+    var license = gui.findChild(page, "LicenseCheckBox");
+    var link = gui.findChild(page, "LicenseLink");
+    var licenseRow = gui.findChild(page, "LicenseRow");
+    later(100, function () {
+        if (license && link && licenseRow && license.visible && link.visible)
+            licenseRow.spacing += rowGap - (link.x - (license.x + license.width));
+        var above = null;
+        formRows.forEach(function (row) {
+            var shown = row[1].map(function (name) { return gui.findChild(page, name); })
+                .filter(function (widget) { return widget && widget.visible; });
+            if (shown.length === 0)
+                return;
+            var top = Math.min.apply(null, shown.map(function (widget) { return widget.y; }));
+            var bottom = Math.max.apply(null, shown.map(function (widget) { return widget.y + widget.height; }));
+            var gap = gui.findChild(page, row[0] + "Gap");
+            if (above && gap) {
+                var wanted = above.name === "LogoRow" ? 2 * rowGap : rowGap;
+                var height = Math.max(0, gap.maximumHeight + wanted - (top - above.bottom));
+                gap.minimumHeight = height;
+                gap.maximumHeight = height;
+            }
+            above = {name: row[0], bottom: bottom};
+        });
+        if (captureFolder !== "")
+            later(100, function () { logLayout(page, "settled"); });
+    });
+}
+
+// The done page's box one row gap under its sentence: on macOS a box's frame sits below where its row starts, so the
+// page's spacing (that page's only gap) takes up the difference once shown.
+function settleDone(page) {
+    var text = gui.findChild(page, "MessageLabel");
+    var form = gui.findChild(page, "DoneForm");
+    var open = gui.findChild(page, "OpenCheckBox");
+    var column = firstLayout(page);
+    if (!page.visible || !text || !form || !open || !open.visible || !column)
+        return;
+    column.spacing = Math.max(0, column.spacing + rowGap - (form.y + open.y - (text.y + text.height)));
+    if (captureFolder !== "")
+        later(100, function () { logLayout(page, "settled"); });
+}
+
 function refreshInstallPage() {
     var notice = installPageField("NoticeLabel");
     var folder = installPageField("TargetDirectoryLineEdit");
@@ -624,6 +700,7 @@ function refreshInstallPage() {
                 + "Update.");
         notice.text = lines.join(" ");
         notice.visible = notice.text !== "";
+        later(0, function () { settleForm(gui.pageWidgetByObjectName("TargetDirectoryPage")); });
     }
     updateSpace();
 }
@@ -651,6 +728,16 @@ function later(delay, then) {
         details.clicked.connect(function () {
             if (closingDetails)
                 return;
+            // On the progress page itself the click opened its details: closed again, and the images area that
+            // closing shows hidden again.
+            if (perform.visible) {
+                closingDetails = true;
+                details.click();
+                closingDetails = false;
+                var images = gui.findChild(perform, "ProductImagesScrollArea");
+                if (images)
+                    images.visible = false;
+            }
             laterCalls.sort(function (a, b) { return a.due - b.due; });
             var call = laterCalls.shift();
             if (call)
@@ -677,6 +764,11 @@ function keepUntitled(page) {
 }
 
 // The logo heading each page's own content (the pages have no titles, so Qt shows no header).
+// A paragraph of a page's text: one row gap above it and none below, so the label ends where its last line does
+// (Qt's own paragraph margins would leave space the frame counts but nobody sees as a gap). Under the logo the logo's
+// step wins: Qt takes the larger of two touching margins.
+var PARA = '<p style="margin: 8px 0 0 0">';
+
 // The logo heading a page's text, one step (16) above what follows it (templatePage).
 function logo() {
     return '<p style="margin-bottom: 16px">' + headerWordmark() + "</p>";
@@ -724,7 +816,7 @@ function headerWordmark() {
             if (ask) {
                 ask.alignment = 0x0001 | 0x0020;  // Qt.AlignLeft | Qt.AlignTop
                 ask.textFormat = 1;  // Qt.RichText
-                ask.text = logo() + "<p>What would you like to do?</p>";
+                ask.text = logo() + PARA + "What would you like to do?</p>";
             }
             var update = gui.findChild(page, "UpdaterRadioButton");
             if (update && captureFolder === "")
@@ -822,11 +914,14 @@ function headerWordmark() {
             // with their own button, which turns that back on, and the button and download count are hidden.
             var detailsBrowser = gui.findChild(page, "DetailsBrowser");
             var detailsButton = gui.findChild(page, "DetailsButton");
-            if (detailsBrowser && detailsBrowser.visible && detailsButton) {
-                closingDetails = true;
-                detailsButton.click();
-                closingDetails = false;
-            }
+            var closeDetails = function () {
+                if (detailsBrowser && detailsBrowser.visible && detailsButton) {
+                    closingDetails = true;
+                    detailsButton.click();
+                    closingDetails = false;
+                }
+            };
+            closeDetails();
             // The product-images area is invisible but takes the page's height, which left our bar far below.
             ["DetailsButton", "DownloadStatus", "ProductImagesScrollArea", "ProductImagesLabel"].forEach(function (hidden) {
                 var widget = gui.findChild(page, hidden);
@@ -841,6 +936,10 @@ function headerWordmark() {
             var percent = gui.findChild(page, "EdiProgressPercent");
             var status = gui.findChild(page, "EdiProgressStatus");
             var mark = gui.findChild(page, "EdiProgressLogo");
+            // Removing loads no component, so no form of ours: the Framework's bar stays, without the percentage
+            // drawn over it.
+            if (bar && !ours)
+                bar.textVisible = false;
             if (bar && label && ours && percent && status && !progressHooked) {
                 bar.visible = false;
                 label.visible = false;
@@ -882,13 +981,17 @@ function headerWordmark() {
                 // A check mark in the app's success green, a character of the text so it has the text's height.
                 done.textFormat = 1;  // Qt.RichText
                 done.alignment = 0x0001 | 0x0020;  // Qt.AlignLeft | Qt.AlignTop, as every page
-                done.text = logo() + '<p><span style="color: ' + success() + '">\u2713</span> EasyDiffraction is '
-                    + "installed.</p><p>You'll find it " + where + ".</p>";
+                done.text = logo() + PARA + checkMark() + " EasyDiffraction is installed. You'll find it " + where
+                    + ".</p>";
             }
-            // The maintenance tool keeps the Framework's own sentence (updated, removed), under the logo.
+            // The maintenance tool says what it did the same way, in one line; a failure keeps the Framework's words.
             if (done && !installer.isInstaller() && String(done.text).indexOf("<img") < 0) {
                 done.textFormat = 1;  // Qt.RichText
-                done.text = logo() + "<p>" + done.text + "</p>";
+                done.alignment = 0x0001 | 0x0020;  // Qt.AlignLeft | Qt.AlignTop
+                var said = installer.isUninstaller() ? "EasyDiffraction is removed."
+                    : installer.isUpdater() ? "EasyDiffraction is updated." : "Your changes are made.";
+                done.text = logo() + PARA + (installer.status === QInstaller.Success ? checkMark() + " " + said
+                    : done.text) + "</p>";
             }
             ["LocationLabel", "FinishText"].forEach(function (hidden) {
                 var widget = gui.findChild(page, hidden);
@@ -902,6 +1005,7 @@ function headerWordmark() {
             // Our own box in a row of its own (DoneForm.ui) stands in for the Framework's, which stays hidden and
             // follows it; shown only where the Framework would show its box.
             var open = gui.findChild(page, "OpenCheckBox");
+            later(150, function () { settleDone(page); });
             if (run && open) {
                 open.visible = run.visible;
                 open.checked = run.checked;
