@@ -82,6 +82,16 @@ def text(value: object) -> bool:
     return isinstance(value, str) and bool(value)
 
 
+def commit_id(value: object) -> bool:
+    """Whether the value is a commit's full name: 40 lowercase hexadecimal digits."""
+    return isinstance(value, str) and re.fullmatch(r'[0-9a-f]{40}', value) is not None
+
+
+def repository(value: object) -> bool:
+    """Whether the value names a repository as GitHub does: owner/name."""
+    return isinstance(value, str) and re.fullmatch(r'[\w.-]+/[\w.-]+', value) is not None
+
+
 def whole_number(value: object) -> bool:
     """Whether the value is an integer, which a JSON true or false is not."""
     return isinstance(value, int) and not isinstance(value, bool)
@@ -146,7 +156,7 @@ def own_commits(fetch: Fetch, repo: str, number: int, count: object) -> set[str]
         fetch,
         f'repos/{repo}/pulls/{number}/commits?per_page=100',
         None,
-        lambda c: c['sha'] if text(c.get('sha')) else None,
+        lambda c: c['sha'] if commit_id(c.get('sha')) else None,
     )
     if len(commits) != count:
         raise RefusedError(f'#{number} has {count} commits, {len(commits)} were read')
@@ -159,8 +169,8 @@ def head_of(pr: dict) -> tuple[str, str, str] | None:
     repo = head.get('repo') if isinstance(head, dict) else None
     if not isinstance(repo, dict):
         return None
-    found = (repo.get('full_name'), head.get('ref'), head.get('sha'))
-    return found if all(text(f) for f in found) else None
+    name, ref, sha = repo.get('full_name'), head.get('ref'), head.get('sha')
+    return (name, ref, sha) if repository(name) and text(ref) and commit_id(sha) else None
 
 
 def merged_pull(fetch: Fetch, repo: str, number: int) -> dict | None:
