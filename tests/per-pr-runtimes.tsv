@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-24T11:57:50Z
+# measured_utc = 2026-11-24T12:23:43Z
 #
-# Recorded from: measured test run (3 node(s) measured once, 187118 banked, 0 stale row(s) dropped)
-# Collected tests: 266996; with a reported duration: 86002
+# Recorded from: banked rows (nothing added; 4 stale row(s) dropped)
+# Collected tests: 266992; with a reported duration: 86002
 # Module-scoped fixture costs recorded: 219
 #
 # Breaches are decided PER TIER against the table
@@ -29,12 +29,12 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 266996
+# inventory_python = 266992
 # inventory_cpp = 0
 # inventory_measured = 187121
-# inventory_unmeasured = 79875
+# inventory_unmeasured = 79871
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
-# inventory_pr_python = 92091
+# inventory_pr_python = 92087
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -177827,10 +177827,6 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_cosio_heidi_collection.p
 0.020	tests/integration/py/test_cosio_heidi_reference.py::test_published_cif_reflection_reader_keeps_exact_rows[300K]
 0.010	tests/integration/py/test_cosio_heidi_reference.py::test_published_cif_reflection_reader_keeps_exact_rows[55K]
 0.000	tests/integration/py/test_cosio_heidi_reference.py::test_published_inputs_remain_byte_identical
-UNMEASURED:failed-in-this-run	tests/integration/py/test_cpp_analysis_shards.py::test_pr_analysis_shards_cover_exactly_the_legacy_files[cpp-cppcheck-linux-64]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_cpp_analysis_shards.py::test_pr_analysis_shards_cover_exactly_the_legacy_files[cpp-cppcheck-osx-arm64]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_cpp_analysis_shards.py::test_pr_analysis_shards_cover_exactly_the_legacy_files[cpp-tidy-linux-64]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_cpp_analysis_shards.py::test_pr_analysis_shards_cover_exactly_the_legacy_files[cpp-tidy-osx-arm64]
 0.040	tests/integration/py/test_cryspy_project_import.py::test_cryspy_import_preserves_instrument_profile_and_observation_values
 0.010	tests/integration/py/test_cryspy_project_import.py::test_cryspy_import_preserves_the_source_cell_sites_and_uncertainties
 0.120	tests/integration/py/test_cryspy_project_import.py::test_cryspy_import_round_trip_retains_source_values_and_leaves_the_source_unchanged
