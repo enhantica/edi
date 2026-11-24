@@ -253,14 +253,14 @@ def deliveries(tmp_path):
         'releases': [release],
     }).encode()
     result = []
-    for platform, suffix in [
-        ('linux-x86_64', '.zip'),
-        ('macos-arm64', '.dmg'),
-        ('windows-x86_64', '.exe'),
+    for platform, filename_tail in [
+        ('macos-arm64', 'macOS-arm64.dmg'),
+        ('windows-x86_64', 'Windows-x64.exe'),
+        ('linux-x86_64', 'Linux-x64.run'),
     ]:
         folder = tmp_path / platform
         folder.mkdir()
-        archive = folder / f'EasyDiffraction-{version}-{platform}-online{suffix}'
+        archive = folder / f'EasyDiffraction-Installer-{version}-{filename_tail}'
         archive.write_bytes(b'qualified installer ' + platform.encode())
         (folder / 'preview-history.json').write_bytes(history)
         metadata = {
@@ -294,11 +294,11 @@ def test_draft_preparation_retains_qualified_platform_bytes(tmp_path):
     before = {f.name: tree(f) for f in folders}
     actual, notes, assets = draft.prepare(commit, folders)
     assert {path.name for path, _ in assets} == {
-        'EasyDiffraction-2026.11.17-linux-x86_64-online.zip',
-        'EasyDiffraction-2026.11.17-macos-arm64-online.dmg',
-        'EasyDiffraction-2026.11.17-windows-x86_64-online.exe',
+        'EasyDiffraction-Installer-2026.11.17-Linux-x64.run',
+        'EasyDiffraction-Installer-2026.11.17-macOS-arm64.dmg',
+        'EasyDiffraction-Installer-2026.11.17-Windows-x64.exe',
         'SHA256SUMS',
-    }, 'A draft publishes the Linux ZIP, macOS DMG, single Windows EXE and their manifest'
+    }, 'A draft publishes the Linux RUN, macOS DMG, Windows EXE and their manifest'
     assert actual == release and 'Save fitted projects' in notes, (
         'A draft must retain the source identity and user notes qualified by every platform'
     )
@@ -331,7 +331,13 @@ def test_draft_preparation_refuses_identity_drift(tmp_path, fault):
         (folders[0] / 'preview-history.json').write_text('{}')
     else:
         folders.pop()
-    with pytest.raises(ValueError, match=r'differ|missing'):
+    refusal = {
+        'bytes': 'checksum differs for macos-arm64',
+        'source': 'identity differs for macos-arm64',
+        'history': 'qualification differs for macos-arm64',
+        'missing-platform': 'qualified platform is missing',
+    }[fault]
+    with pytest.raises(ValueError, match=refusal):
         draft.prepare(commit, folders)
 
 

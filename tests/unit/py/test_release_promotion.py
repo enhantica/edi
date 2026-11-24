@@ -125,7 +125,7 @@ def test_promotion_requires_every_platform_from_one_successful_main_attempt(dama
 )
 @pytest.mark.parametrize(
     ('platform', 'suffix'),
-    [('linux-x86_64', '.zip'), ('macos-arm64', '.dmg'), ('windows-x86_64', '.exe')],
+    [('linux-x86_64', '.run'), ('macos-arm64', '.dmg'), ('windows-x86_64', '.exe')],
 )
 def test_delivery_compares_download_and_executed_app_to_prepared_identity(
     tmp_path, damage, platform, suffix
@@ -137,7 +137,12 @@ def test_delivery_compares_download_and_executed_app_to_prepared_identity(
         + '/'
         + policy['repository_paths']['stable'].format(platform=platform)
     )
-    name = f'EasyDiffraction-2026.11.0-{platform}-online{suffix}'
+    platform_name = {
+        'linux-x86_64': 'Linux-x64',
+        'macos-arm64': 'macOS-arm64',
+        'windows-x86_64': 'Windows-x64',
+    }[platform]
+    name = f'EasyDiffraction-Installer-2026.11.0-{platform_name}{suffix}'
     (tmp_path / name).write_bytes(b'qualified installer')
     metadata = {
         **release,
@@ -162,6 +167,21 @@ def test_delivery_compares_download_and_executed_app_to_prepared_identity(
             'release_history_sha256': 'b' * 64,
         },
     }
+
+    def write_delivery():
+        for filename, value in [
+            ('installer.json', metadata),
+            ('build-inputs.json', build),
+            ('qualification.json', receipt),
+        ]:
+            (tmp_path / filename).write_text(json.dumps(value))
+
+    write_delivery()
+    assert PROMOTE.validate_delivery(tmp_path, release, 'b' * 64, platform).name == name, (
+        'The intact platform download retains its prepared identity and executed-app evidence.'
+    )
+    if damage == 'none':
+        return
     if damage == 'source':
         build['edi_commit'] = 'c' * 40
     elif damage == 'history':
@@ -172,19 +192,11 @@ def test_delivery_compares_download_and_executed_app_to_prepared_identity(
         metadata['repository_url'] = url.replace('/repository/', '/repository/testing/')
     elif damage == 'bytes':
         (tmp_path / name).write_bytes(b'rebuilt installer')
-    for filename, value in [
-        ('installer.json', metadata),
-        ('build-inputs.json', build),
-        ('qualification.json', receipt),
-    ]:
-        (tmp_path / filename).write_text(json.dumps(value))
-    if damage == 'none':
-        assert PROMOTE.validate_delivery(tmp_path, release, 'b' * 64, platform).name == name, (
-            'Each platform download retains its prepared identity and executed-app evidence.'
-        )
-    else:
-        with pytest.raises(ValueError, match=r'identity|bytes'):
-            PROMOTE.validate_delivery(tmp_path, release, 'b' * 64, platform)
+    write_delivery()
+    with pytest.raises(
+        ValueError, match='bytes differ' if damage == 'bytes' else 'prepared identity'
+    ):
+        PROMOTE.validate_delivery(tmp_path, release, 'b' * 64, platform)
 
 
 @pytest.mark.parametrize('damage', ['none', 'source', 'notes', 'asset', 'published-missing'])

@@ -42,7 +42,7 @@ const frameworkPages = [
   'StartMenuDirectory', 'ReadyForInstallation', 'PerformInstallation', 'Finished',
 ];
 const pages = Object.fromEntries(frameworkPages.map(name => [name + 'Page', {
-  left: signal(), title: name, subTitle: '', fields: name === 'TargetDirectory' ? fields : {},
+  entered: signal(), left: signal(), title: name, subTitle: '', fields: name === 'TargetDirectory' ? fields : {},
 }]));
 pages.IntroductionPage.fields.MessageLabel = {};
 pages.FinishedPage.fields.MessageLabel = {};
@@ -55,6 +55,8 @@ const buttonClicks = [];
 const metadata = new Map();
 const visibility = new Map();
 const embedded = [];
+const extraPages = [];
+let mode = 'install';
 const records = [
   [appName, 'EasyDiffraction', 123500000],
   [assistantName, 'AI assistant', 27500000],
@@ -69,15 +71,27 @@ const components = records.map(([name, displayName, bytes]) => ({
 const buttons = {
   NextButton: 'Next', BackButton: 'Back', CommitButton: 'Commit', FinishButton: 'Finish',
 };
+const pageIds = {
+  Introduction: 'introduction', TargetDirectory: 'directory', ComponentSelection: 'components',
+  LicenseCheck: 'license', StartMenuSelection: 'start-menu', ReadyForInstallation: 'ready',
+  PerformInstallation: 'progress', InstallationFinished: 'done',
+};
+const pagesById = new Map([
+  [pageIds.Introduction, pages.IntroductionPage],
+  [pageIds.TargetDirectory, pages.TargetDirectoryPage],
+  [pageIds.ReadyForInstallation, pages.ReadyForInstallationPage],
+  [pageIds.PerformInstallation, pages.PerformInstallationPage],
+  [pageIds.InstallationFinished, pages.FinishedPage],
+]);
 const context = createContext({
   buttons, console, systemInfo: {kernelType: 'linux'},
-  QInstaller: {ComponentSelection: 'components', TargetDirectory: 'directory',
-    LicenseCheck: 'license', StartMenuSelection: 'start-menu', Success: 'success'},
+  QInstaller: {...pageIds, Success: 'success'},
   component: {name: assistantName, userInterface: () => fields},
   installer: {
-    status: 'success', isInstaller: () => true,
-    isUninstaller: () => false, isUpdater: () => false, isPackageManager: () => false,
-    isCommandLineInstance: () => false,
+    status: 'success', isInstaller: () => mode === 'install',
+    isUninstaller: () => mode === 'remove', isUpdater: () => mode === 'update',
+    isPackageManager: () => mode === 'maintenance',
+    isCommandLineInstance: () => mode === 'cli',
     setDefaultPageVisible(name, value) { visibility.set(name, value); },
     environmentVariable: () => '',
     fileExists: path => path === fields.TargetDirectoryLineEdit.text,
@@ -91,12 +105,14 @@ const context = createContext({
     selectComponent: name => selected.add(name),
     deselectComponent: name => selected.delete(name),
     addWizardPageItem: (_component, form, page) => embedded.push([form, page]),
+    addWizardPage: (_component, form, page) => extraPages.push([form, page]),
     installationFinished: signal(), updateFinished: signal(), uninstallationFinished: signal(),
   },
   gui: {
     showSettingsButton() {},
     setWizardPageButtonText(page, button, text) { metadata.set(page + button, text); },
     pageWidgetByObjectName: name => pages[name],
+    pageById: id => pagesById.get(id),
     findChild: (page, name) => page.fields[name],
     findChildren: () => [],
     clickButton: button => buttonClicks.push(button),
@@ -106,7 +122,9 @@ runInContext(source('Installer.qs'), context, {filename: 'Installer.qs'});
 runInContext(source('assistantscript.qs'), context, {filename: 'assistantscript.qs'});
 const wizard = runInContext('new Controller()', context);
 runInContext('new Component()', context);
-assert.deepEqual(embedded, [['AssistantForm', 'directory']], 'The choices belong to the Install page');
+assert.deepEqual(embedded.splice(0), [['ProgressForm', 'progress'], ['AssistantForm', 'directory']],
+  'Progress belongs to Installing and the choices belong to Install');
+assert.equal(pages.PerformInstallationPage.title, '', 'Installing starts without a default page header');
 assert.equal(metadata.get('directoryNext'), 'Install', 'The folder page offers the Install action');
 assert.equal(visibility.get('components'), false, 'The default component tree is never a wizard stop');
 assert.equal(visibility.get('start-menu'), false, 'The Start menu page is absent');
@@ -147,3 +165,11 @@ assert.deepEqual(buttonClicks.splice(0), ['Commit'], 'The summary advances direc
 wizard.PerformInstallationPageCallback();
 wizard.FinishedPageCallback();
 assert.deepEqual(buttonClicks, [], 'The progress and Done pages add no intermediate choice or component tree');
+
+for (mode of ['maintenance', 'update', 'remove', 'cli']) {
+  runInContext('new Component()', context);
+  assert.deepEqual(embedded.splice(0), mode === 'cli' ? [] : [['ProgressForm', 'progress']],
+    'Every graphical mode embeds the progress form on its progress page');
+  assert.deepEqual(extraPages.splice(0), mode === 'maintenance' ? [['AssistantForm', 'ready']] : [],
+    'Maintenance alone gets a separate assistant choice');
+}
