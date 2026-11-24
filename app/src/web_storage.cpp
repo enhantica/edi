@@ -155,6 +155,7 @@ EM_JS(int, edi_storage_install, (), {
     // Every tab's writes, drops and an untitled place's publication for one key take turns under its Web Lock, so
     // the files of an old untitled place are never removed while another tab writes them.
     S.placeLock = (key, body) => navigator.locks ? navigator.locks.request("edi-place:" + key, body) : body();
+    S.publishedElsewhere = () => new Error("this untitled project was already saved under a name in another tab");
     // A record goes back for `key` only while no untitled first save has published that place under a name: a second
     // tab still holding the untitled place never lists it again (ADR-0100). Whether it was put.
     S.putUnlessPublished = (key, make) => S.transact(store => new Promise(resolve => {
@@ -486,8 +487,9 @@ EM_JS(void, edi_storage_write, (int job, const char* key_utf8, const char* kind_
     const files = S.staged.get(job) || [];
     S.staged.delete(job);
     S.runs.set(job, () => S.placeLock(key, async () => {
-        // An untitled place published under a name is gone for good: nothing is written for its old key.
-        if (await S.record(S.sourceKey(key))) return {ok : true};
+        // An untitled place published under a name is gone for good: nothing is written for its old key, and the
+        // answer says so.
+        if (await S.record(S.sourceKey(key))) throw S.publishedElsewhere();
         let handle = null;
         const destination = S.policy(15, {kind : kind, recovery : recovery});
         if (destination === "browser") {
@@ -519,6 +521,7 @@ EM_JS(void, edi_storage_write, (int job, const char* key_utf8, const char* kind_
             const parts = S.policy(7, {key : key, recovery : recovery});
             await S.removeEntry([ parts[0], parts[1] ], key);
         }
+        if (!kept) throw S.publishedElsewhere();
         return {ok : true};
     }));
 });
@@ -542,6 +545,7 @@ EM_JS(void, edi_storage_publish_untitled, (int job, const char* untitled_utf8, d
         const write = async () => {
             // The claim, taken only once: a revoke that came first left its mark, and a place already published
             // from another stage is not published again.
+            let kept = false;  // whether the untitled place had a record when the claim was taken
             const claimed = await S.transact(store => new Promise(resolve => {
                 const read = store.get(claimKey);
                 read.onsuccess = () => {
@@ -550,8 +554,10 @@ EM_JS(void, edi_storage_publish_untitled, (int job, const char* untitled_utf8, d
                     source.onsuccess = () => {
                         const place = store.get(untitled);
                         place.onsuccess = () => {
-                            // The untitled place itself: none for new work never kept, else still untitled.
-                            if (source.result || (place.result && place.result.kind !== "untitled")) {
+                            // The untitled place itself: none for new work never kept, else unsaved work. A saved
+                            // place is never published over.
+                            kept = !!place.result;
+                            if (source.result || (place.result && place.result.saved)) {
                                 store.put({key : claimKey, untitled : untitled, op : op, stage : stage, state : "revoked"});
                                 return resolve(false);
                             }
@@ -583,8 +589,13 @@ EM_JS(void, edi_storage_publish_untitled, (int job, const char* untitled_utf8, d
                         place.onsuccess = () => {
                             // The app's own word, in this transaction: is the operation still open, and is the snapshot
                             // written still the project's? Refused, nothing is published and the untitled place stays.
-                            const taken = source.result || (place.result && place.result.kind !== "untitled");
-                            const verdict = taken ? {outcome : "lost"} : S.policy(21, {job : job});
+                            // Nor is a place saved since the claim; one another tab discarded since is refused, so the
+                            // user hears of it and may save again.
+                            const taken = source.result || (place.result && place.result.saved);
+                            const discarded = kept && !place.result;
+                            const verdict = taken ? {outcome : "lost"} : discarded ? {outcome : "rejected",
+                                message : "The unsaved project was discarded in another tab: nothing was saved."}
+                                : S.policy(21, {job : job});
                             if (verdict.outcome !== "go") {
                                 claim.state = "revoked";
                                 store.put(claim);
