@@ -1,6 +1,8 @@
-# A closed pull request's branch keeps no run artifacts: they only hold the shared storage quota. Release inputs and
-# the crysta SDK the pin needs are kept. Every listing is read before anything is deleted; one that cannot be read
-# deletes nothing.
+# A merged pull request's runs keep no artifacts: they only hold the shared storage quota. Release inputs and the
+# crysta SDK artifacts are kept, and so is anything another open pull request still needs. tools/ci/branch_artifacts.py
+# picks only finished runs of this pull request's own commits on its branch, and reads every listing in full before
+# deleting; a listing it cannot prove whole deletes nothing. A closed, unmerged pull request can be reopened, so its
+# artifacts stay until GitHub's retention removes them.
 name: Branch artifacts
 
 on:
@@ -10,57 +12,22 @@ on:
 permissions:
   actions: write
   contents: read
+  pull-requests: read
 
 jobs:
   delete:
     name: delete the branch's run artifacts
     # A fork's pull request gets a read-only token; its runs are the fork's own.
-    if: github.event.pull_request.head.repo.full_name == github.repository
+    if: github.event.pull_request.merged && github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-24.04
     timeout-minutes: 15
-    env:
-      GH_TOKEN: ${{ github.token }}
-      REPO: ${{ github.repository }}
-      BRANCH: ${{ github.event.pull_request.head.ref }}
     steps:
+      # The merged base has the script; the pull request's merge ref is gone once it closes.
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.pull_request.base.ref }}
+          sparse-checkout: tools/ci
       - name: Delete them
-        shell: python3 {0}
-        run: |
-          import json, os, re, sys, urllib.request
-
-          repo, branch, token = os.environ['REPO'], os.environ['BRANCH'], os.environ['GH_TOKEN']
-          # What a release or a later ship still reads.
-          keep = re.compile(r'^(release-plan-|qualified-release-plan-|offsite-|smartscreen-submission$|installer-)')
-          sdk = re.compile(r'^crysta-sdk-')
-
-          def request(url, method='GET', accept='application/vnd.github+json'):
-              headers = {'Authorization': f'Bearer {token}', 'Accept': accept, 'X-GitHub-Api-Version': '2022-11-28'}
-              with urllib.request.urlopen(urllib.request.Request(url, headers=headers, method=method)) as answer:
-                  return answer.read(), answer.headers.get('Link', '')
-
-          def pages(path, key):
-              # Every page, following GitHub's Link header; a failed read deletes nothing.
-              url, out = f'https://api.github.com/{path}', []
-              while url:
-                  try:
-                      body, link = request(url)
-                  except Exception as error:
-                      sys.exit(f'branch artifacts: cannot read {url}: {error} (nothing deleted)')
-                  out += json.loads(body)[key]
-                  url = next((part.split(';')[0].strip(' <>') for part in link.split(',') if 'rel="next"' in part), None)
-              return out
-
-          def keeps_sdk(run):
-              return True  # edi's crysta SDK is the one its pin builds
-          runs = [r for r in pages(f'repos/{repo}/actions/runs?branch={branch}&per_page=100', 'workflow_runs')
-                  if r['head_branch'] == branch]
-          doomed = []
-          for run in runs:
-              for artifact in pages(f'repos/{repo}/actions/runs/{run["id"]}/artifacts?per_page=100', 'artifacts'):
-                  name = artifact['name']
-                  if artifact['expired'] or keep.match(name) or (sdk.match(name) and keeps_sdk(run)):
-                      continue
-                  doomed.append(artifact)
-          print(f'branch artifacts: {branch}: {len(runs)} run(s), deleting {len(doomed)} artifact(s)')
-          for artifact in doomed:
-              request(f'https://api.github.com/repos/{repo}/actions/artifacts/{artifact["id"]}', method='DELETE')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 tools/ci/branch_artifacts.py --repo "$GITHUB_REPOSITORY" --pr '${{ github.event.pull_request.number }}'
