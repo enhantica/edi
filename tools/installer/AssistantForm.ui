@@ -15,13 +15,14 @@
     <verstretch>1</verstretch>
    </sizepolicy>
   </property>
-  <!-- Every row is a layout of its own, never a widget straight in the column. On macOS a check box reaches 2 px past
+  <!-- Every row is a widget of its own, hidden as a whole: a row whose box is hidden inside it still takes 7 px on
+       macOS (the hidden box's layout margins). Nor is a box ever put straight in the column. On macOS a check box reaches 2 px past
        its cell (its layout margins), and a column holding one moves all its rows right to make room, so boxes and
        text started 2 px apart. A row's own layout takes up its box's margins, so every row starts at the column's
        edge and each row's frame is its cell: one 8 px gap between all rows. -->
   <!-- The column has no spacing of its own: above each row a gap widget, 8 high, which Installer.qs (settleForm)
        sets once the page shows so that the drawn frames stand one row gap apart, the logo one step above the rest.
-       A check box's frame on macOS does not sit where its row starts, so a fixed spacing cannot do it. -->
+       A fixed spacing cannot: a row is not always exactly its drawn frames (on macOS the licence row is 1 px more). -->
   <layout class="QVBoxLayout" name="AssistantLayout">
    <property name="spacing">
     <number>0</number>
@@ -40,30 +41,32 @@
     <number>0</number>
    </property>
    <item>
-    <layout class="QHBoxLayout" name="LogoRow">
-     <property name="spacing">
-      <number>8</number>
+    <widget class="QWidget" name="LogoBox">
+     <property name="visible">
+      <bool>false</bool>
      </property>
-     <property name="leftMargin">
-      <number>0</number>
-     </property>
-     <property name="topMargin">
-      <number>0</number>
-     </property>
-     <property name="rightMargin">
-      <number>0</number>
-     </property>
-     <property name="bottomMargin">
-      <number>0</number>
-     </property>
-     <item>
-      <widget class="QLabel" name="FormLogo">
-       <property name="visible">
-        <bool>false</bool>
-       </property>
-      </widget>
-     </item>
-    </layout>
+     <layout class="QHBoxLayout" name="LogoRow">
+      <property name="spacing">
+       <number>8</number>
+      </property>
+      <property name="leftMargin">
+       <number>0</number>
+      </property>
+      <property name="topMargin">
+       <number>0</number>
+      </property>
+      <property name="rightMargin">
+       <number>0</number>
+      </property>
+      <property name="bottomMargin">
+       <number>0</number>
+      </property>
+      <item>
+       <widget class="QLabel" name="FormLogo">
+       </widget>
+      </item>
+     </layout>
+    </widget>
    </item>
    <!-- The folder and Browse, the installer's own (Installer.qs keeps the Framework's field, hidden, the one the
         installation reads): in this column they start at its edge and stand one row gap above the boxes. -->
@@ -84,43 +87,42 @@
     </widget>
    </item>
    <item>
-    <layout class="QHBoxLayout" name="FolderRow">
-     <property name="spacing">
-      <number>8</number>
+    <widget class="QWidget" name="FolderBox">
+     <property name="visible">
+      <bool>false</bool>
      </property>
-     <property name="leftMargin">
-      <number>0</number>
-     </property>
-     <property name="topMargin">
-      <number>0</number>
-     </property>
-     <property name="rightMargin">
-      <number>0</number>
-     </property>
-     <property name="bottomMargin">
-      <number>0</number>
-     </property>
-     <item>
-      <widget class="QLineEdit" name="FolderLineEdit">
-       <property name="visible">
-        <bool>false</bool>
-       </property>
-       <property name="accessibleName">
-        <string>Install to</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QPushButton" name="FolderBrowseButton">
-       <property name="visible">
-        <bool>false</bool>
-       </property>
-       <property name="text">
-        <string>Browse…</string>
-       </property>
-      </widget>
-     </item>
-    </layout>
+     <layout class="QHBoxLayout" name="FolderRow">
+      <property name="spacing">
+       <number>8</number>
+      </property>
+      <property name="leftMargin">
+       <number>0</number>
+      </property>
+      <property name="topMargin">
+       <number>0</number>
+      </property>
+      <property name="rightMargin">
+       <number>0</number>
+      </property>
+      <property name="bottomMargin">
+       <number>0</number>
+      </property>
+      <item>
+       <widget class="QLineEdit" name="FolderLineEdit">
+        <property name="accessibleName">
+         <string>Install to</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="FolderBrowseButton">
+        <property name="text">
+         <string>Browse…</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
    </item>
    <item>
     <widget class="QWidget" name="AppRowGap">
@@ -139,39 +141,41 @@
     </widget>
    </item>
    <item>
-    <layout class="QHBoxLayout" name="AppRow">
-     <property name="spacing">
-      <number>8</number>
+    <widget class="QWidget" name="AppBox">
+     <property name="visible">
+      <bool>false</bool>
      </property>
-     <property name="leftMargin">
-      <number>0</number>
-     </property>
-     <property name="topMargin">
-      <number>0</number>
-     </property>
-     <property name="rightMargin">
-      <number>0</number>
-     </property>
-     <property name="bottomMargin">
-      <number>0</number>
-     </property>
-     <item>
-      <widget class="QCheckBox" name="AppCheckBox">
-       <property name="visible">
-        <bool>false</bool>
-       </property>
-       <property name="enabled">
-        <bool>false</bool>
-       </property>
-       <property name="checked">
-        <bool>true</bool>
-       </property>
-       <property name="text">
-        <string>EasyDiffraction</string>
-       </property>
-      </widget>
-     </item>
-    </layout>
+     <layout class="QHBoxLayout" name="AppRow">
+      <property name="spacing">
+       <number>8</number>
+      </property>
+      <property name="leftMargin">
+       <number>0</number>
+      </property>
+      <property name="topMargin">
+       <number>0</number>
+      </property>
+      <property name="rightMargin">
+       <number>0</number>
+      </property>
+      <property name="bottomMargin">
+       <number>0</number>
+      </property>
+      <item>
+       <widget class="QCheckBox" name="AppCheckBox">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+        <property name="checked">
+         <bool>true</bool>
+        </property>
+        <property name="text">
+         <string>EasyDiffraction</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
    </item>
    <item>
     <widget class="QWidget" name="AssistantRowGap">
@@ -190,30 +194,32 @@
     </widget>
    </item>
    <item>
-    <layout class="QHBoxLayout" name="AssistantRow">
-     <property name="spacing">
-      <number>8</number>
-     </property>
-     <property name="leftMargin">
-      <number>0</number>
-     </property>
-     <property name="topMargin">
-      <number>0</number>
-     </property>
-     <property name="rightMargin">
-      <number>0</number>
-     </property>
-     <property name="bottomMargin">
-      <number>0</number>
-     </property>
-     <item>
-      <widget class="QCheckBox" name="AssistantCheckBox">
-       <property name="text">
-        <string>Also install the AI assistant</string>
-       </property>
-      </widget>
-     </item>
-    </layout>
+    <widget class="QWidget" name="AssistantBox">
+     <layout class="QHBoxLayout" name="AssistantRow">
+      <property name="spacing">
+       <number>8</number>
+      </property>
+      <property name="leftMargin">
+       <number>0</number>
+      </property>
+      <property name="topMargin">
+       <number>0</number>
+      </property>
+      <property name="rightMargin">
+       <number>0</number>
+      </property>
+      <property name="bottomMargin">
+       <number>0</number>
+      </property>
+      <item>
+       <widget class="QCheckBox" name="AssistantCheckBox">
+        <property name="text">
+         <string>Also install the AI assistant</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
    </item>
    <item>
     <widget class="QWidget" name="LicenseRowGap">
@@ -232,45 +238,47 @@
     </widget>
    </item>
    <item>
-    <layout class="QHBoxLayout" name="LicenseRow">
-     <property name="spacing">
-      <number>8</number>
-     </property>
-     <property name="leftMargin">
-      <number>0</number>
-     </property>
-     <property name="topMargin">
-      <number>0</number>
-     </property>
-     <property name="rightMargin">
-      <number>0</number>
-     </property>
-     <property name="bottomMargin">
-      <number>0</number>
-     </property>
-     <item>
-      <widget class="QCheckBox" name="LicenseCheckBox">
-       <property name="text">
-        <string>I accept the GNU GPL v3 license</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QLabel" name="LicenseLink">
-       <!-- Takes the rest of the row, so the row needs no spacer: a spacer would keep a row whose widgets are
-            hidden (the maintenance tool's) in the column, one gap too many. -->
-       <property name="sizePolicy">
-        <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
-         <horstretch>1</horstretch>
-         <verstretch>0</verstretch>
-        </sizepolicy>
-       </property>
-       <property name="openExternalLinks">
-        <bool>true</bool>
-       </property>
-      </widget>
-     </item>
-    </layout>
+    <widget class="QWidget" name="LicenseBox">
+     <layout class="QHBoxLayout" name="LicenseRow">
+      <property name="spacing">
+       <number>8</number>
+      </property>
+      <property name="leftMargin">
+       <number>0</number>
+      </property>
+      <property name="topMargin">
+       <number>0</number>
+      </property>
+      <property name="rightMargin">
+       <number>0</number>
+      </property>
+      <property name="bottomMargin">
+       <number>0</number>
+      </property>
+      <item>
+       <widget class="QCheckBox" name="LicenseCheckBox">
+        <property name="text">
+         <string>I accept the GNU GPL v3 license</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="LicenseLink">
+        <!-- Takes the rest of the row, so the row needs no spacer: a spacer would keep a row whose widgets are
+             hidden (the maintenance tool's) in the column, one gap too many. -->
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+          <horstretch>1</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="openExternalLinks">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
    </item>
    <item>
     <widget class="QWidget" name="ShortcutRowGap">
@@ -289,30 +297,32 @@
     </widget>
    </item>
    <item>
-    <layout class="QHBoxLayout" name="ShortcutRow">
-     <property name="spacing">
-      <number>8</number>
-     </property>
-     <property name="leftMargin">
-      <number>0</number>
-     </property>
-     <property name="topMargin">
-      <number>0</number>
-     </property>
-     <property name="rightMargin">
-      <number>0</number>
-     </property>
-     <property name="bottomMargin">
-      <number>0</number>
-     </property>
-     <item>
-      <widget class="QCheckBox" name="ShortcutCheckBox">
-       <property name="text">
-        <string>Add a desktop shortcut</string>
-       </property>
-      </widget>
-     </item>
-    </layout>
+    <widget class="QWidget" name="ShortcutBox">
+     <layout class="QHBoxLayout" name="ShortcutRow">
+      <property name="spacing">
+       <number>8</number>
+      </property>
+      <property name="leftMargin">
+       <number>0</number>
+      </property>
+      <property name="topMargin">
+       <number>0</number>
+      </property>
+      <property name="rightMargin">
+       <number>0</number>
+      </property>
+      <property name="bottomMargin">
+       <number>0</number>
+      </property>
+      <item>
+       <widget class="QCheckBox" name="ShortcutCheckBox">
+        <property name="text">
+         <string>Add a desktop shortcut</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
    </item>
    <item>
     <widget class="QWidget" name="NoticeRowGap">
@@ -331,33 +341,35 @@
     </widget>
    </item>
    <item>
-    <layout class="QHBoxLayout" name="NoticeRow">
-     <property name="spacing">
-      <number>8</number>
-     </property>
-     <property name="leftMargin">
-      <number>0</number>
-     </property>
-     <property name="topMargin">
-      <number>0</number>
-     </property>
-     <property name="rightMargin">
-      <number>0</number>
-     </property>
-     <property name="bottomMargin">
-      <number>0</number>
-     </property>
-     <item>
-      <widget class="QLabel" name="NoticeLabel">
-       <property name="wordWrap">
-        <bool>true</bool>
-       </property>
-       <property name="openExternalLinks">
-        <bool>false</bool>
-       </property>
-      </widget>
-     </item>
-    </layout>
+    <widget class="QWidget" name="NoticeBox">
+     <layout class="QHBoxLayout" name="NoticeRow">
+      <property name="spacing">
+       <number>8</number>
+      </property>
+      <property name="leftMargin">
+       <number>0</number>
+      </property>
+      <property name="topMargin">
+       <number>0</number>
+      </property>
+      <property name="rightMargin">
+       <number>0</number>
+      </property>
+      <property name="bottomMargin">
+       <number>0</number>
+      </property>
+      <item>
+       <widget class="QLabel" name="NoticeLabel">
+        <property name="wordWrap">
+         <bool>true</bool>
+        </property>
+        <property name="openExternalLinks">
+         <bool>false</bool>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
    </item>
    <item>
     <widget class="QWidget" name="SpaceRowGap">
@@ -376,27 +388,29 @@
     </widget>
    </item>
    <item>
-    <layout class="QHBoxLayout" name="SpaceRow">
-     <property name="spacing">
-      <number>8</number>
-     </property>
-     <property name="leftMargin">
-      <number>0</number>
-     </property>
-     <property name="topMargin">
-      <number>0</number>
-     </property>
-     <property name="rightMargin">
-      <number>0</number>
-     </property>
-     <property name="bottomMargin">
-      <number>0</number>
-     </property>
-     <item>
-      <widget class="QLabel" name="SpaceLabel">
-      </widget>
-     </item>
-    </layout>
+    <widget class="QWidget" name="SpaceBox">
+     <layout class="QHBoxLayout" name="SpaceRow">
+      <property name="spacing">
+       <number>8</number>
+      </property>
+      <property name="leftMargin">
+       <number>0</number>
+      </property>
+      <property name="topMargin">
+       <number>0</number>
+      </property>
+      <property name="rightMargin">
+       <number>0</number>
+      </property>
+      <property name="bottomMargin">
+       <number>0</number>
+      </property>
+      <item>
+       <widget class="QLabel" name="SpaceLabel">
+       </widget>
+      </item>
+     </layout>
+    </widget>
    </item>
    <item>
     <spacer name="AssistantSpacer">
