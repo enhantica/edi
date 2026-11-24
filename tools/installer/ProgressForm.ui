@@ -14,9 +14,9 @@
    </sizepolicy>
   </property>
   <layout class="QVBoxLayout" name="ProgressColumn">
-   <!-- 12, so the thin bar, centred in its row, sits one 16-point step under the status line. -->
+   <!-- The row gap of every page (Installer.qs). -->
    <property name="spacing">
-    <number>12</number>
+    <number>8</number>
    </property>
    <property name="leftMargin">
     <number>0</number>
@@ -30,8 +30,25 @@
    <property name="bottomMargin">
     <number>0</number>
    </property>
+   <!-- The logo in a row of its own, one step (16) above the rows: the row gap and 8 under it. -->
    <item>
-    <widget class="QLabel" name="EdiProgressLogo"/>
+    <layout class="QHBoxLayout" name="ProgressLogoRow">
+     <property name="leftMargin">
+      <number>0</number>
+     </property>
+     <property name="topMargin">
+      <number>0</number>
+     </property>
+     <property name="rightMargin">
+      <number>0</number>
+     </property>
+     <property name="bottomMargin">
+      <number>8</number>
+     </property>
+     <item>
+      <widget class="QLabel" name="EdiProgressLogo"/>
+     </item>
+    </layout>
    </item>
    <item>
     <widget class="QLabel" name="EdiProgressStatus"/>

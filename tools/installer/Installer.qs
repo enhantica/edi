@@ -77,53 +77,11 @@ function notePage(name) {
         installer.performOperation("AppendFile", [captureFolder + "/pages.log", pageId(name) + "\n"]);
 }
 
-// With the accessibility check (a11y-check.sh sets EDI_INSTALLER_ACK), each page waits until the check has read it:
-// its client writes the page's name to <capture folder>/ack. A page still moves on after a minute, which the check
-// then reports as unread. The wait ticks on the wizard's hidden Help button, the one timer a script can start.
-var ackWanted = installer.environmentVariable("EDI_INSTALLER_ACK") === "1";
-var pending = null;
-var tickerHooked = false;
-
-function acknowledged(id) {
-    try {
-        var file = captureFolder + "/ack";
-        return installer.fileExists(file) && String(installer.readFile(file, "UTF-8")).trim() === id;
-    } catch (error) {
-        console.log("edi ack unreadable: " + error);
-        return true;
-    }
-}
-
-function tick() {
-    if (!pending)
-        return;
-    pending.ticks += 1;
-    if ((pending.ticks >= pending.least && acknowledged(pending.id)) || pending.ticks >= 240) {
-        var act = pending.act;
-        pending = null;
-        act();
-    } else {
-        gui.clickButton(buttons.HelpButton, 250);
-    }
-}
-
-// Moves a captured walk on from a page with `button`, after `delay` ms, and with the check only once it has read
-// the page.
+// Moves a captured walk on from a page with `button` after `delay` ms. Each page stays long enough for its picture
+// and for the accessibility client to read it; the progress page is held by the components (holdProgress in their
+// scripts), as the Framework leaves it by itself.
 function proceed(name, button, delay) {
-    if (!ackWanted) {
-        gui.clickButton(button, delay);
-        return;
-    }
-    if (!tickerHooked) {
-        gui.helpRequested.connect(tick);
-        tickerHooked = true;
-    }
-    var waiting = pending !== null;
-    pending = {id: pageId(name), ticks: 0, least: Math.ceil(delay / 250), act: function () {
-        gui.clickButton(button, 0);
-    }};
-    if (!waiting)
-        gui.clickButton(buttons.HelpButton, 250);
+    gui.clickButton(button, delay);
 }
 
 // Taken a moment later by a detached process, once the page has painted.
@@ -164,7 +122,6 @@ function advance(name, page) {
         return;
     if (name === "PerformInstallation") {
         // The Framework moves on when it is done (its details are closed on this page, below); this is the backstop.
-        // With the check it waits instead (automatic switching is off, below), and moves on once the page is read.
         var next = function () { proceed("PerformInstallation", buttons.NextButton, 1500); };
         installer.installationFinished.connect(next);
         installer.uninstallationFinished.connect(next);
@@ -227,12 +184,21 @@ function themePage(page) {
     if (!page)
         return;
     page.styleSheet = darkTheme() ? darkStylesheet : lightStylesheet;
-    // The page's column spaces its rows by 16 (the step between a text and its field) on every system; Qt's own
-    // spacing is 14 on macOS. A script reaches the column only as the page's first unnamed child, so only a layout
-    // (it has a spacing) is changed.
-    var column = gui.findChild(page, "");
-    if (column && typeof column.spacing === "number" && column.sizeConstraint !== undefined && column.spacing !== 16)
-        column.spacing = 16;
+    templatePage(page);
+}
+
+// The one layout every page follows: the logo first, one step (16) under it (logo()), then the heading, then the
+// rows, each 8 under the one above and all on one left edge. The Framework's own layouts have no names (ours all
+// have one), so a script finds them as the page's unnamed children; each that has a spacing gets the row gap.
+var rowGap = 8;
+function templatePage(page) {
+    var unnamed = gui.findChildren(page, "");
+    for (var i = 0; i < unnamed.length; ++i) {
+        var layout = unnamed[i];
+        if (layout && typeof layout.spacing === "number" && layout.sizeConstraint !== undefined
+            && layout.spacing !== rowGap)
+            layout.spacing = rowGap;
+    }
 }
 
 // The assistant's own page in the maintenance tool (assistantscript.qs).
@@ -570,8 +536,9 @@ function keepUntitled(page) {
 }
 
 // The logo heading each page's own content (the pages have no titles, so Qt shows no header).
+// The logo heading a page's text, one step (16) above what follows it (templatePage).
 function logo() {
-    return "<p>" + headerWordmark() + "</p>";
+    return '<p style="margin-bottom: 16px">' + headerWordmark() + "</p>";
 }
 
 function headerWordmark() {
@@ -648,7 +615,7 @@ function headerWordmark() {
                 gui.clickButton(buttons.NextButton, 50);
             else {
                 notePage(name);
-                proceed(name, buttons.NextButton, 1500);
+                proceed(name, buttons.NextButton, 3000);
             }
             return;
         }
@@ -705,9 +672,6 @@ function headerWordmark() {
             var detailsButton = gui.findChild(page, "DetailsButton");
             if (detailsBrowser && detailsBrowser.visible && detailsButton)
                 detailsButton.click();
-            // With the check, the page waits to be read (proceed) instead of moving on when the work is done.
-            if (ackWanted && typeof gui.setAutomatedPageSwitchEnabled === "function")
-                gui.setAutomatedPageSwitchEnabled(false);
             // The product-images area is invisible but takes the page's height, which left our bar far below.
             ["DetailsButton", "DownloadStatus", "ProductImagesScrollArea", "ProductImagesLabel"].forEach(function (hidden) {
                 var widget = gui.findChild(page, hidden);

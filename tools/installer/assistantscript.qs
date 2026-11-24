@@ -18,6 +18,12 @@ function Component() {
         installer.addWizardPage(component, "AssistantForm", QInstaller.ReadyForInstallation);
     else
         return;
+    // The Framework gives its added page a one-space subtitle, which draws a header band: cleared before it shows.
+    var added = installer.isInstaller() ? null : gui.pageByObjectName("DynamicAssistantForm");
+    if (added) {
+        added.title = "";
+        added.subTitle = "";
+    }
     var form = component.userInterface("AssistantForm");
     if (!form)
         return;
@@ -49,3 +55,19 @@ function Component() {
             installer.deselectComponent(component.name);
     });
 }
+
+// Captures (EDI_INSTALLER_CAPTURE) hold the progress page a few seconds when installing and when removing, so its
+// picture and the accessibility check catch it: the marker installer is otherwise done at once and the Framework
+// leaves the page by itself.
+function holdProgress() {
+    if (installer.environmentVariable("EDI_INSTALLER_CAPTURE") === "")
+        return;
+    var wait = systemInfo.kernelType === "winnt"
+        ? ["powershell.exe", "-NoProfile", "-Command", "Start-Sleep -Seconds 4"] : ["/bin/sleep", "4"];
+    component.addOperation("Execute", wait.concat(["UNDOEXECUTE"], wait));
+}
+
+Component.prototype.createOperations = function () {
+    component.createOperations();
+    holdProgress();
+};
