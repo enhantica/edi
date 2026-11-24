@@ -386,9 +386,15 @@ function setupInstallPage(page) {
         }
         if (assistantBox)
             assistantBox.toggled.connect(updateSpace);
-        // The folder is probed (its disk, an installation in it) when its editing is done, never per keystroke.
-        if (folder)
+        // The folder is probed (its disk, an installation in it) when its editing is done, never per keystroke,
+        // and when Browse sets it (a change while the field has no focus, which ends no editing).
+        if (folder) {
             folder.editingFinished.connect(refreshInstallPage);
+            folder.textChanged.connect(function () {
+                if (!folder.focus)
+                    refreshInstallPage();
+            });
+        }
         installPageReady = true;
     }
     refreshInstallPage();
@@ -604,9 +610,14 @@ function headerWordmark() {
             // Where it really is: the shortcuts made, and the folder when it is not the usual one.
             var shortcut = installer.value("EdiDesktopShortcut") !== "false";
             var target = String(installer.value("TargetDir"));
+            // On Linux the desktop shortcut is made only where the home folder has a Desktop (installscript.qs).
+            if (systemInfo.kernelType === "linux" && !installer.fileExists(installer.value("HomeDir") + "/Desktop"))
+                shortcut = false;
+            // macOS adds nothing outside the chosen folder, so a folder elsewhere is said to be that folder.
+            var applications = /^(\/Applications|.*\/Users\/[^\/]+\/Applications)(\/|$)/.test(target);
             var where = systemInfo.kernelType === "winnt" ? (shortcut ? "in the Start menu and on your desktop"
                                                                       : "in the Start menu")
-                : systemInfo.kernelType === "darwin" ? "in your Applications folder"
+                : systemInfo.kernelType === "darwin" ? (applications ? "in your Applications folder" : "in the folder you chose")
                     : (shortcut ? "in your applications menu and on your desktop" : "in your applications menu");
             if (done && installer.isInstaller() && installer.status === QInstaller.Success) {
                 // A large check in the accent above the sentence (the app's circle-check icon).
