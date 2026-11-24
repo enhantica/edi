@@ -84,7 +84,8 @@ let font = NSFont(name: "Helvetica Neue", size: 14) ?? NSFont.systemFont(ofSize:
 var reported = Set<String>()
 var pagesSeen = 0
 // Each window's content left edge, relative to the window, on every page: one alignment across pages.
-var pageEdges: [String: Set<Int>] = [:]
+// Each window's page left edges, with the element that starts the page at each.
+var pageEdges: [String: [Int: String]] = [:]
 var pagesChecked = 0
 
 func check(window: CGRect, title: String, placed: [Placed]) {
@@ -117,7 +118,8 @@ func check(window: CGRect, title: String, placed: [Placed]) {
         ["AXCheckBox", "AXRadioButton", "AXTextField"].contains(item.role) ? item.frame.minX + 2 : item.frame.minX
     }
     let edge = firsts.map(drawnX).min() ?? 0
-    pageEdges[title, default: []].insert(Int((edge - window.minX).rounded()))
+    let leader = firsts.min { drawnX($0) < drawnX($1) }
+    pageEdges[title, default: [:]][Int((edge - window.minX).rounded())] = "\(leader?.role ?? "") '\(leader?.text ?? "")'"
     for item in firsts where abs(drawnX(item) - edge) > 1 {
         problems.append("left edge \(Int(drawnX(item) - edge)) px off: \(item.role) '\(item.text)'")
     }
@@ -178,7 +180,8 @@ while kill(pid, 0) == 0 {
     usleep(200_000)
 }
 for (title, edges) in pageEdges where edges.count > 1 {
-    print("layout: [\(title)] pages start at different left edges: \(edges.sorted())")
+    let named = edges.keys.sorted().map { "\($0) (\(edges[$0]!))" }.joined(separator: ", ")
+    print("layout: [\(title)] pages start at different left edges: \(named)")
 }
 print("layout-pages: \(pagesChecked)")
 print("a11y-client: \(queries) multiple-attribute queries")

@@ -163,8 +163,7 @@ function themePage(page) {
 Controller.prototype.DynamicAssistantFormCallback = function () {
     var page = gui.pageWidgetByObjectName("DynamicAssistantForm");
     themePage(page);
-    page.title = "";
-    page.subTitle = "";
+    keepUntitled(page);
     var mark = gui.findChild(page, "FormLogo");
     if (mark) {
         mark.textFormat = 1;  // Qt.RichText
@@ -422,6 +421,24 @@ function refreshInstallPage() {
 
 var wordmark = "";
 
+// No title and no subtitle, so Qt draws no header. The Framework sets some again as a page opens (the maintenance
+// tool's first page, an inserted page), so they are cleared whenever the page says it was entered or changed.
+var untitledPages = [];
+function keepUntitled(page) {
+    function clear() {
+        if (page.title !== "")
+            page.title = "";
+        if (page.subTitle !== "")
+            page.subTitle = "";
+    }
+    clear();
+    if (untitledPages.indexOf(page) < 0) {
+        untitledPages.push(page);
+        page.entered.connect(clear);
+        page.completeChanged.connect(clear);
+    }
+}
+
 // The logo heading each page's own content (the pages have no titles, so Qt shows no header).
 function logo() {
     return "<p>" + headerWordmark() + "</p>";
@@ -623,8 +640,7 @@ function headerWordmark() {
         }
 
         // No title, so no header: the logo heads the page's own content.
-        page.title = "";
-        page.subTitle = "";
+        keepUntitled(page);
         capture(name);
         advance(name, page);
     };

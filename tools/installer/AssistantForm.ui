@@ -5,9 +5,6 @@
 <ui version="4.0">
  <class>AssistantForm</class>
  <widget class="QWidget" name="AssistantForm">
-  <property name="windowTitle">
-   <string>AI assistant</string>
-  </property>
   <!-- Takes the page's spare height, so the boxes sit right under the folder field instead of lower down. -->
   <property name="sizePolicy">
    <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
