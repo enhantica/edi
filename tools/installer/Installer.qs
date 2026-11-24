@@ -63,14 +63,26 @@ var maintenanceWalked = false;
 // update, or remove (everything, the default).
 var maintenanceMode = installer.environmentVariable("EDI_INSTALLER_MAINTENANCE_MODE") || "remove";
 
+function pageId(name) {
+    var mode = installer.isInstaller() ? "installer" : "maintenance-" + maintenanceMode;
+    return mode + "-" + name + "-" + (darkTheme() ? "dark" : "light");
+}
+
+// Every page a captured walk shows, in order, one line each in pages.log: the checks compare it with the pages the
+// walk must show, and the accessibility client reads its last line to know which page it is reading.
+function notePage(name) {
+    if (captureFolder !== "")
+        installer.performOperation("AppendFile", [captureFolder + "/pages.log", pageId(name) + "\n"]);
+}
+
 // Taken a moment later by a detached process, once the page has painted.
 function capture(name) {
     if (captureFolder === "")
         return;
+    notePage(name);
     // The progress page is gone within a second for the small marker installer; the first page needs the window up.
     var delay = name === "PerformInstallation" ? "0.2" : name === "Introduction" ? "2" : "1";
-    var mode = installer.isInstaller() ? "installer" : "maintenance-" + maintenanceMode;
-    var file = captureFolder + "/" + mode + "-" + name + "-" + (darkTheme() ? "dark" : "light") + ".png";
+    var file = captureFolder + "/" + pageId(name) + ".png";
     if (systemInfo.kernelType === "winnt") {
         // A process started here cannot take a screenshot; capture_pages.py takes them on Windows.
     } else if (systemInfo.kernelType === "darwin") {
@@ -513,8 +525,10 @@ function headerWordmark() {
             applyAssistantChoice();
             // Clicked a moment later, outside the Framework's own page change, which a nested click leaves half done.
             licenseRefused = !licenseAccepted();
+            // A captured walk stays a moment, so the accessibility client reads this page too.
+            notePage(name);
             if (!licenseRefused) {
-                gui.clickButton(buttons.CommitButton, 50);
+                gui.clickButton(buttons.CommitButton, captureFolder !== "" ? 1500 : 50);
             } else {
                 refreshInstallPage();
                 gui.clickButton(buttons.BackButton, 50);
@@ -525,7 +539,8 @@ function headerWordmark() {
         // The welcome page passes by itself (online, it fetches the component list meanwhile).
         // The welcome page passes by itself, in captures too: the design has no welcome page.
         if (name === "Introduction" && installer.isInstaller()) {
-            gui.clickButton(buttons.NextButton, 50);
+            notePage(name);
+            gui.clickButton(buttons.NextButton, captureFolder !== "" ? 1500 : 50);
             return;
         }
         if (name === "Introduction" && installer.isInstaller()) {

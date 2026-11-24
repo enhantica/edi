@@ -6,11 +6,55 @@
 # temporary folder: the check then covers what users get, not a replacement script. A maintenance tool walks the mode
 # EDI_INSTALLER_MAINTENANCE_MODE names (add, update or remove). Any tree view the client meets fails the check too:
 # the component tree is what crashed (edi #150), so none may show.
+#
+# With --own-script, A11Y_EXPECT_PAGES lists the pages the walk must show, in order, as <mode>-<page> (the page log's
+# names without the theme). Every one needs the client's witness: values read, layout checked, no tree element. Pages
+# shown that are not in the list fail too. a11y-check.sh --judge-pages <log folder> judges an existing folder only.
+# Each run leaves exit-status and crash-reports in the log folder, for the workflow to assert on.
 set -uo pipefail
+
+# The page walk of a log folder against A11Y_EXPECT_PAGES; prints each failure and returns 1 on any.
+judge_pages() {
+  local logs="$1" expected="${A11Y_EXPECT_PAGES:-}" shown page line bad=0
+  if [ -z "$expected" ]; then
+    echo "a11y-check: A11Y_EXPECT_PAGES names no pages for this walk"
+    return 1
+  fi
+  # The pages in the order they were shown, without the theme each line ends with.
+  shown="$( { tr -d '\r' <"$logs/pages/pages.log"; } 2>/dev/null | sed -nE 's/^(.*)-(light|dark)$/\1/p' | paste -sd, -)"
+  if [ "$shown" != "$expected" ]; then
+    echo "a11y-check: the walk showed ${shown:-no page}; expected $expected"
+    bad=1
+  fi
+  for page in ${expected//,/ }; do
+    line="$(grep -E "^witness: $page-(light|dark) " "$logs/client.log" 2>/dev/null | head -1)"
+    if [ -z "$line" ]; then
+      echo "a11y-check: no witness for page $page"
+      bad=1
+    elif ! [[ "$line" =~ \ reads=[1-9][0-9]*\ layout=1\ trees=0$ ]]; then
+      echo "a11y-check: page $page was not read in full: $line"
+      bad=1
+    fi
+  done
+  while read -r _ page _; do
+    case ",$expected," in *",${page%-*},"*) ;; *)
+      echo "a11y-check: a page not in the walk was read: $page"
+      bad=1 ;;
+    esac
+  done < <(grep '^witness: ' "$logs/client.log" 2>/dev/null)
+  return "$bad"
+}
+
+if [ "${1:-}" = "--judge-pages" ]; then
+  judge_pages "$2"
+  exit
+fi
+
 app="$1"
 logs="$2"
 shift 2
 mkdir -p "$logs"
+[ -d "$app" ] || { echo "a11y-check: no installer at '$app'"; exit 2; }
 binary="$(find "$app/Contents/MacOS" -maxdepth 1 -type f -perm -u+x | head -1)"
 [ -n "$binary" ] || { echo "a11y-check: no executable in $app"; exit 2; }
 process="$(basename "$binary")"
@@ -37,7 +81,11 @@ fi
 pid=$!
 sleep 2
 
-"$logs/a11y-client" "$pid" >"$logs/client.log" 2>&1 &
+if [ "$own" = 1 ]; then
+  "$logs/a11y-client" "$pid" "$logs/pages/pages.log" >"$logs/client.log" 2>&1 &
+else
+  "$logs/a11y-client" "$pid" >"$logs/client.log" 2>&1 &
+fi
 reader=$!
 
 waited=0
@@ -66,12 +114,13 @@ for _ in $(seq "$([ "$status" -ge 128 ] && echo 60 || echo 5)"); do
   sleep 1
 done
 for report in $new; do cp "$report" "$logs/"; done
-trees="$(grep -c "AXOutline" "$logs/client.log" 2>/dev/null || true)"
-trees="${trees:-0}"
-echo "a11y-check: installer exit $status after ${waited}s; crash reports: ${new:-none}; tree views read: $trees"
+echo "$status" >"$logs/exit-status"
+printf '%s\n' $new >"$logs/crash-reports"
+trees="$(sed -n 's/^a11y-client: \([0-9]*\) tree elements$/\1/p' "$logs/client.log")"
+echo "a11y-check: installer exit $status after ${waited}s; crash reports: ${new:-none}; tree elements read: ${trees:-unknown}"
 # A walk proves something only when it finished and was read: the installer succeeded (the product's own walk ends
-# with 0; the replacement walk script cancels at the last page, 3), the reader completed queries, and every page
-# named in A11Y_EXPECT_PAGES was captured.
+# with 0; the replacement walk script cancels at the last page, 3), the reader's queries returned values, and with
+# --own-script every page of the walk has its witness (judge_pages).
 failed=0
 # A maintenance tool that updated itself restarts and is closed by the walk (3); its Finished page must be captured.
 expected_status=$([ "$own" = 1 ] && echo "${A11Y_EXPECT_STATUS:-0}" || echo "0 3")
@@ -87,17 +136,15 @@ case " $expected_status " in *" $status "*) ;; *)
   [ "$finished_restart" = 1 ] || { echo "a11y-check: the installer ended with $status"; failed=1; } ;;
 esac
 reads="$(sed -n 's/^a11y-client: \([0-9]*\) multiple-attribute queries$/\1/p' "$logs/client.log")"
-if [ "${reads:-0}" -eq 0 ]; then echo "a11y-check: the reader completed no queries"; failed=1; fi
-for page in ${A11Y_EXPECT_PAGES//,/ }; do
-  if ! ls "$logs/pages/"*"-$page-"*.png >/dev/null 2>&1; then echo "a11y-check: page $page was not reached"; failed=1; fi
-done
-if grep -q "^layout-pages: 0$" "$logs/client.log"; then echo "a11y-check: no page was laid out to check"; failed=1; fi
+if [ "${reads:-0}" -eq 0 ]; then echo "a11y-check: no query of the reader returned values"; failed=1; fi
+if [ "$own" = 1 ]; then judge_pages "$logs" || failed=1; fi
+if ! grep -qE "^layout-pages: [1-9]" "$logs/client.log"; then echo "a11y-check: no page was laid out to check"; failed=1; fi
 if grep -q "edi resource missing" "$logs/installer.log"; then
   grep "edi resource missing" "$logs/installer.log"
   echo "a11y-check: the installer lacks one of its own resources"
   exit 1
 fi
-if [ "$trees" -gt 0 ] && [ "${A11Y_ALLOW_TREE:-}" != 1 ]; then
+if { [ -z "$trees" ] || [ "$trees" -gt 0 ]; } && [ "${A11Y_ALLOW_TREE:-}" != 1 ]; then
   echo "a11y-check: a tree view is on a page"
   exit 1
 fi
