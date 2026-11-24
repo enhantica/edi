@@ -2,6 +2,7 @@
 
 import os
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -25,6 +26,10 @@ def executable(path, text):
     path.chmod(0o755)
 
 
+@pytest.mark.skipif(
+    sys.platform != 'darwin',
+    reason='The installer walk drives a macOS .app and its Swift accessibility client',
+)
 @pytest.mark.parametrize('mode', list(PAGES))
 @pytest.mark.parametrize(
     'evidence', ['aggregate-only', 'tree'], ids=['missing-page-reads', 'tree']
