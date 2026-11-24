@@ -12,8 +12,13 @@ QWizard QWidget, QDialog QWidget {
     font-size: @FONT_PX@px;
 }
 
+/* No inner margin on a text or a box: the frame a layout and an accessibility client see is what is drawn. A rule with
+   a box also stops the native style moving the widget off its layout cell (2 px on macOS), so every row starts at the
+   content's left edge. Gaps come from the layouts. */
 QLabel {
     color: @FOREGROUND@;
+    margin: 0;
+    padding: 0;
 }
 
 QLabel:disabled {
@@ -120,15 +125,6 @@ QLabel#ProgressLabel {
     margin-top: 6px;
 }
 
-/* One gap on the 8 px scale between a control and what it belongs to. */
-QCheckBox#AcceptLicenseCheckBox, QRadioButton#AcceptLicenseRadioButton {
-    margin-top: 8px;
-}
-
-QLabel#LicenseLink {
-    margin-left: 8px;
-}
-
 /* A link, as the welcome page's: the accent, no underline. */
 QLabel#LocationLabel {
     color: @ACCENT@;
@@ -183,6 +179,11 @@ QCheckBox, QRadioButton {
     color: @FOREGROUND@;
     spacing: @HALF_FONT_PX@px;
     outline: none;
+}
+
+QCheckBox {
+    margin: 0;
+    padding: 0;
 }
 
 QRadioButton {

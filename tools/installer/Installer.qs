@@ -673,11 +673,6 @@ function headerWordmark() {
                 installer.setValue("RunProgram", "");
         }
 
-        if (name === "TargetDirectory" && systemInfo.kernelType === "darwin") {
-            var directory = gui.findChild(page, "TargetDirectoryLineEdit");
-            directory.styleSheet = "margin-top: 4px;";
-        }
-
         // No title, so no header: the logo heads the page's own content.
         keepUntitled(page);
         capture(name);
