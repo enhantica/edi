@@ -222,9 +222,11 @@ releases refresh the default branch.
 Draft descriptions are excluded.
 
 Each new note declares at least one affected interface. Set one or more
-`[interface] desktop`, `[interface] web`, `[interface] py`,
-`[interface] cli-py`, and `[interface] cli` labels on its
-PR. A note can carry all five when the change affects every interface.
+`🖥️ desktop`, `🌐 web`, `🐍 py`, `📦 cli-py`, and `⌨️ cli` labels on its
+PR. Two labels stand for several: `🪟 app` for desktop and web, and `🌍 all` for
+all five. They are expanded when the release is planned, so a note, its history
+entry and the website always name the interfaces themselves, and labels that
+overlap (`🪟 app` with `🌐 web`) name each one once.
 This is independent of the scope label that selects Added, Fixed or Changed.
 The release plan copies the interface identifiers to history and renders them
 as short inline-code badges after each note on GitHub. A hidden Markdown marker lets the docs replace

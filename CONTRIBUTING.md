@@ -24,8 +24,8 @@ git config core.hooksPath .githooks   # run the lint checks before every push
 ## Pull requests
 
 - Keep a pull request to one change, with a title that reads as a release note.
-- Add one `[scope]` label and one or more `[interface]` labels; the release notes are made from them and
-  the label check refuses a pull request without them.
+- Add one scope label and one or more interface labels (listed in the pull request template); the release
+  notes are made from them and the label check refuses a pull request without them.
 - Design decisions are recorded as ADRs in [docs/dev/adrs](docs/dev/adrs). A change to a recorded decision
   updates its ADR in the same pull request.
 - Commit subjects are short (at most 72 characters) and say what the change does.
