@@ -134,7 +134,6 @@ qt_add_qml_module(edi_app_module
         src/structure_view_controller.hpp src/structure_view_controller.cpp
         src/experiment_models.hpp src/experiment_models.cpp
         src/pattern_model.hpp src/pattern_model.cpp
-        src/chart_area.hpp src/chart_area.cpp
         src/pattern_chart_controller.hpp src/pattern_chart_controller.cpp
         src/chart_models.hpp src/chart_models.cpp
         src/measured_layer.hpp src/measured_layer.cpp

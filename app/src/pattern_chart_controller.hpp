@@ -430,7 +430,7 @@ class PatternChartController : public QObject {
             emit(this->*changed)();
         }
     }
-    void scaleResidual();
+    bool scaleResidual();  // whether the residual's axis moved
     edi::PatternView view() const;
     // The view moves to these ranges (unset: fitted) over `animationDuration`. Each frame is an ordinary
     // refresh at that frame's ranges — the pattern presented and decimated for them — so no point of a frame's
@@ -515,7 +515,26 @@ class PatternChartController : public QObject {
         bool missing = false;  // a structure curve whose series the chart has not handed over yet
         double bar_width = std::numeric_limits<double>::quiet_NaN();
     };
-    Fills fillsOf(const edi::PatternPresentation& shown, bool held, bool clear_fills) const;
+    Fills fillsOf(const edi::PatternPresentation& shown, bool held, bool keep_measured, bool clear_fills) const;
+    // What the measured series were drawn for: a drag leaves them as drawn only while all of it stands.
+    struct MeasuredDrawing {
+        const void* experiment = nullptr;
+        edi::PatternSource::Column measured;  // compared by its values, as a held range's is
+        QString style;
+        std::string axis;
+        int scale = -1;
+        bool included_only = false;
+        QStringList hidden;
+    };
+    std::optional<MeasuredDrawing> measured_drawn_;
+    // Qt Graphs lays a view out inside the call that changes its height, with the points its areas hold at that moment.
+    // So an area's points are for the axes in force, or there are none: an axis that is about to move empties its areas
+    // first (ADR-0044).
+    void emptyMainAreas(bool measured);
+    void emptyResidualArea();
+    // The residual's area again after its axis moved between two drawings.
+    void fillResidualArea();
+    bool drawing_ = false;  // refresh() is at work, and fills every area at its end
     QString measured_drawing_ = QStringLiteral("band");  // how the measured data are drawn (measuredStyle)
     bool structure_curves_ = false, has_calculated_ = false;
     QList<QColor> structure_curve_colors_, structure_curve_fills_;

@@ -8,11 +8,11 @@
 #include <numbers>
 #include <QCryptographicHash>
 #include <QFontMetricsF>
+#include <QScopeGuard>
 #include <QStringList>
 #include <set>
 #include <utility>
 
-#include "chart_area.hpp"
 #include "ui_probe.hpp"
 
 namespace edi_app {
@@ -274,6 +274,42 @@ std::size_t bragg_place(const std::string& style) {
         std::from_chars(style.data() + 6, style.data() + style.size(), place);
     }
     return place;
+}
+
+// An area's two edges for Qt Graphs from a curve and, per point, its base (NaN: `floor`). The area holds the drawn
+// points only: a gap (an excluded region, or a value the log scale cannot show) is not a point an area can take, so
+// the area closes onto its base at each gap instead of bridging it. The upper edge keeps `lift` above the lower one:
+// where the two met (a curve on its base, or a closed gap) Qt Graphs filled the area as a fan from its first point
+// or not at all.
+struct AreaEdges {
+    QList<QPointF> upper, lower;
+};
+AreaEdges area_edges(const QList<QPointF>& curve, const std::vector<double>& base, double floor, double lift) {
+    AreaEdges area;
+    area.upper.reserve(curve.size() + 2);
+    area.lower.reserve(curve.size() + 2);
+    bool drawing = false;
+    for (qsizetype k = 0; k < curve.size(); ++k) {
+        if (!std::isfinite(curve[k].x()) || !std::isfinite(curve[k].y())) {
+            if (drawing) {
+                area.upper.append(QPointF(area.lower.back().x(), area.lower.back().y() + lift));
+                area.lower.append(area.lower.back());
+                drawing = false;
+            }
+            continue;
+        }
+        const auto at = static_cast<std::size_t>(k);
+        const double low = at < base.size() ? base[at] : std::numeric_limits<double>::quiet_NaN();
+        const QPointF bottom(curve[k].x(), std::isfinite(low) ? low : floor);
+        if (!drawing && !area.upper.isEmpty()) {
+            area.upper.append(QPointF(bottom.x(), bottom.y() + lift));
+            area.lower.append(bottom);
+        }
+        area.upper.append(QPointF(curve[k].x(), std::max(curve[k].y(), bottom.y() + lift)));
+        area.lower.append(bottom);
+        drawing = true;
+    }
+    return area;
 }
 
 }  // namespace
@@ -653,7 +689,7 @@ void PatternChartController::setPlotHeight(qreal height) {
     if (height != plot_height_) {
         plot_height_ = height;
         emit plotHeightChanged();
-        scaleResidual();
+        if (scaleResidual()) fillResidualArea();
         // The y step follows the height, drawn after the binding returns as for the width.
         dirty_ = true;
         QMetaObject::invokeMethod(this, [this] {
@@ -677,7 +713,7 @@ void PatternChartController::setResidualPlotHeight(qreal height) {
     if (height != residual_plot_height_) {
         residual_plot_height_ = height;
         emit residualPlotHeightChanged();
-        scaleResidual();
+        if (scaleResidual()) fillResidualArea();
     }
 }
 
@@ -687,12 +723,14 @@ void PatternChartController::setResidualPlotHeight(qreal height) {
 // the two panes read against each other. On the square-root and log scales the main pane has no one height for
 // an intensity unit, so there is no scale to follow: the range is fitted to the residual in view, the greatest
 // absolute value and a tenth beyond it. That is the range before the panes have a size, too.
-void PatternChartController::scaleResidual() {
+bool PatternChartController::scaleResidual() {
     const bool follows = y_scale_ == Linear && plot_height_ > 0.0 && residual_plot_height_ > 0.0;
     const double greatest = std::max(std::fabs(shown_.y_residual.min), std::fabs(shown_.y_residual.max));
     const double fitted = greatest > 0.0 ? (1.0 + kFitPadding) * greatest : 1.0;
     const double reach =
         follows ? 0.5 * (shown_y_max_ - shown_y_min_) * residual_plot_height_ / plot_height_ : fitted;
+    const bool moves = residual_min_ != -reach || residual_max_ != reach;
+    if (moves) emptyResidualArea();
     publish(residual_min_, -reach, &PatternChartController::residualMinChanged);
     publish(residual_max_, reach, &PatternChartController::residualMaxChanged);
     // A pane lower than three tick labels shows 0 alone: the step past the range leaves no other tick, and three
@@ -700,6 +738,36 @@ void PatternChartController::scaleResidual() {
     const double label = label_font_set_ ? QFontMetricsF(label_font_).height() : 0.0;
     const bool crowded = residual_plot_height_ > 0.0 && residual_plot_height_ < 3.0 * label;
     publish(residual_tick_, crowded ? 4.0 * reach : round_within(reach), &PatternChartController::residualTickIntervalChanged);
+    return moves;
+}
+
+void PatternChartController::emptyMainAreas(bool measured) {
+    for (const BandSeries* target : {&band_series_[0], &band_series_[2]}) {
+        if (target == &band_series_[0] && !measured) continue;
+        replace(target->upper, {});
+        replace(target->lower, {});
+    }
+    for (const StructureSeries& target : structure_series_) {
+        replace(target.upper, {});
+        replace(target.lower, {});
+    }
+}
+
+void PatternChartController::emptyResidualArea() {
+    replace(band_series_[1].upper, {});
+    replace(band_series_[1].lower, {});
+}
+
+void PatternChartController::fillResidualArea() {
+    if (drawing_ || fills_cleared_) return;  // filled at the drawing's end, or on the drag's release
+    if (!active_) {
+        dirty_ = true;
+        return;
+    }
+    const Fills fills = fillsOf(shown_, false, false, false);
+    for (const auto& [series, points] : fills.series) {
+        if (series == band_series_[1].upper || series == band_series_[1].lower) replace(series, points);
+    }
 }
 
 void PatternChartController::setDevicePixelRatio(qreal ratio) {
@@ -907,9 +975,9 @@ void PatternChartController::setHiddenFitsRange(bool on) {
 }
 
 PatternChartController::Fills PatternChartController::fillsOf(const edi::PatternPresentation& shown, bool held,
-                                                              bool clear_fills) const {
+                                                              bool keep_measured, bool clear_fills) const {
     // Every series buffer one drawing of `shown` gives, in the order refresh() gives them (a later one for the same
-    // series replaces an earlier); a buffer held while a value is dragged is left out. refresh() draws with it, and the
+    // series replaces an earlier); a buffer left as drawn during a drag is left out. refresh() draws with it, and the
     // demo's trace compares what the series hold with it for the data it expects (traceMatches).
     Fills out;
     const auto put = [&out](const QPointer<QXYSeries>& series, const QList<QPointF>& points) { out.series.append({series, points}); };
@@ -934,8 +1002,8 @@ PatternChartController::Fills PatternChartController::fillsOf(const edi::Pattern
     const bool line = report_ || measured_drawing_ == QLatin1String("line") || measured_drawing_ == QLatin1String("linePoints");
     const bool marks = report_ || measured_drawing_ == QLatin1String("points") ||
                        measured_drawing_ == QLatin1String("linePoints") || measured_drawing_ == QLatin1String("bars");
-    if (!held) put(measured_series_, measured != nullptr && line ? points_of(*measured) : QList<QPointF>());
-    if (measured_layer_ && !held) {
+    if (!keep_measured) put(measured_series_, measured != nullptr && line ? points_of(*measured) : QList<QPointF>());
+    if (measured_layer_ && !keep_measured) {
         out.marks_set = true;
         if (measured != nullptr && marks) {
             for (std::size_t i = 0; i < measured->points.size(); ++i) {
@@ -953,7 +1021,7 @@ PatternChartController::Fills PatternChartController::fillsOf(const edi::Pattern
     // A band: its area and its two edges, each point's ends (the presentation gives a point without a finite s.u. its
     // ends at the point, so only a finite interval reaching below the log scale's domain takes the pane's bottom).
     const auto fill_band = [&](const edi::PatternSeries* series, std::size_t pane, double floor, double lift) {
-        if (held && pane == 0) return;
+        if (keep_measured && pane == 0) return;
         const BandSeries& target = band_series_[pane];
         QList<QPointF> top, bottom;
         if (band && series != nullptr) {
@@ -971,17 +1039,16 @@ PatternChartController::Fills PatternChartController::fillsOf(const edi::Pattern
                 bottom.append(QPointF(x, std::isfinite(low) ? low : floor));
             }
         }
-        if (clear_fills) {
+        if (clear_fills && pane != 0) {
             put(target.upper, {});
             put(target.lower, {});
-        } else if (!held) {
+        } else if (!held || pane == 0) {
             std::vector<double> base;
             base.reserve(static_cast<std::size_t>(bottom.size()));
             for (const QPointF& point : bottom) {
                 base.push_back(point.y());
             }
-            const double low = pane == 1 ? residual_min_ : shown_y_min_, high = pane == 1 ? residual_max_ : shown_y_max_;
-            const AreaEdges area = area_edges(top, base, floor, lift, {shown_x_min_, shown_x_max_, low, high});
+            const AreaEdges area = area_edges(top, base, floor, lift);
             put(target.upper, area.upper);
             put(target.lower, area.lower);
         }
@@ -1073,8 +1140,7 @@ PatternChartController::Fills PatternChartController::fillsOf(const edi::Pattern
             put(target.upper, {});
             put(target.lower, {});
         } else if (!held) {
-            const AreaEdges area =
-                area_edges(curve, series.bar_low, shown_y_min_, lift, {shown_x_min_, shown_x_max_, shown_y_min_, shown_y_max_});
+            const AreaEdges area = area_edges(curve, series.bar_low, shown_y_min_, lift);
             put(target.upper, area.upper);
             put(target.lower, area.lower);
         }
@@ -1090,6 +1156,8 @@ PatternChartController::Fills PatternChartController::fillsOf(const edi::Pattern
 
 void PatternChartController::refresh() {
     dirty_ = false;
+    const bool was_drawing = std::exchange(drawing_, true);
+    const auto drawn_out = qScopeGuard([this, was_drawing] { drawing_ = was_drawing; });
     // A linear axis' step leaves room for its labels as they are written, once the plot's size and font are known.
     const auto axis_step = [this](double low, double high, bool horizontal) {
         const double pixels = horizontal ? plot_width_ : plot_height_;
@@ -1289,22 +1357,26 @@ void PatternChartController::refresh() {
     } else if (!fitted) {
         held_range_.reset();
     }
-    const double x_step = axis_step(x_low, x_high, true);
-    // Qt Graphs lays a view out at once when its height changes, as the panes below can do: an area still holding the
-    // last drawing's points would be put on the new axes, as far outside the plot as the two drawings differ (Qt's
-    // triangulation of it crashed). So the areas hold no points until their axes are settled. While a value is dragged
-    // they stand as drawn, on the same axes.
+    // The areas whose axes move are emptied before anything is published; the others are valid on the axes they have.
+    // While a value is dragged the costly ones are emptied once and stay so until the release (edi ADR-0070).
+    const bool x_moves = x_low != shown_x_min_ || x_high != shown_x_max_;
+    const bool main_moves = x_moves || y_low != shown_y_min_ || y_high != shown_y_max_;
     const bool held = !report_ && experiment_ && experiment_->adjusting();
-    if (!held) {
-        for (const BandSeries& target : band_series_) {
-            replace(target.upper, {});
-            replace(target.lower, {});
-        }
-        for (const StructureSeries& target : structure_series_) {
-            replace(target.upper, {});
-            replace(target.lower, {});
-        }
-    }
+    const edi::PatternSource* drawn_source = !report_ && experiment_ ? &shownSource() : nullptr;
+    const MeasuredDrawing drawn{experiment_,       drawn_source != nullptr ? drawn_source->meas : nullptr,
+                                measured_drawing_, presented_x_,
+                                y_scale_,          included_only_,
+                                hidden_};
+    const bool keep_measured = held && !main_moves && measured_drawn_ && measured_drawn_->experiment == drawn.experiment &&
+                               measured_drawn_->style == drawn.style && measured_drawn_->axis == drawn.axis &&
+                               measured_drawn_->scale == drawn.scale && measured_drawn_->included_only == drawn.included_only &&
+                               measured_drawn_->hidden == drawn.hidden && same_values(measured_drawn_->measured, drawn.measured);
+    measured_drawn_ = drawn;
+    const bool clear_fills = held && !fills_cleared_;
+    fills_cleared_ = held;
+    if (main_moves || clear_fills) emptyMainAreas(main_moves);
+    if (x_moves || clear_fills) emptyResidualArea();
+    const double x_step = axis_step(x_low, x_high, true);
     publish(shown_x_min_, x_low, &PatternChartController::xMinChanged);
     publish(shown_x_max_, x_high, &PatternChartController::xMaxChanged);
     publish(shown_y_min_, y_low, &PatternChartController::yMinChanged);
@@ -1348,9 +1420,7 @@ void PatternChartController::refresh() {
     keeps_panes_ = true;
     // While a value is dragged the measured series stand as drawn and a filled area waits for the release: Qt Graphs
     // triangulates an area each time it changes, the largest part of a step (edi ADR-0070).
-    const bool clear_fills = held && !fills_cleared_;
-    fills_cleared_ = held;
-    const Fills fills = fillsOf(shown_, held, clear_fills);
+    const Fills fills = fillsOf(shown_, held, keep_measured, clear_fills);
     for (const auto& [series, points] : fills.series) replace(series, points);
     if (fills.marks_set) measured_layer_->setData(fills.marks, fills.marks_low, fills.marks_high);
     if (std::isfinite(fills.bar_width) && fills.bar_width != bar_width_) {
@@ -1512,7 +1582,7 @@ bool PatternChartController::traceMatches(const edi::PatternPresentation& expect
         }
     }
     const bool held = !report_ && experiment_ && experiment_->adjusting();
-    const Fills fills = fillsOf(shown, held, false);
+    const Fills fills = fillsOf(shown, held, held, false);
     if (fills.missing) return false;
     const auto same = [](double a, double b) {
         return (std::isnan(a) && std::isnan(b)) || a == b || std::abs(a - b) <= 1e-9 * std::max(1.0, std::abs(b));
