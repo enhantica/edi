@@ -20,6 +20,7 @@ import pytest
 import yaml
 
 from tests.fixtures.e09_t75_commands import assert_no_swallowed_refusal, checked_program
+from tests.fixtures.e09_t75_workflow import local_action_steps
 from tests.fixtures.native_process import (
     environment_bash,
     fixture_program,
@@ -401,10 +402,22 @@ def test_d3_update_token_and_trigger_are_distinct_from_the_readonly_app():
     assert {'workflow_call', 'workflow_dispatch'} <= set(trigger), (
         'The SDK producer must support ordinary consumers and explicit diagnostic dispatch'
     )
+    source_calls = [
+        (name, step)
+        for name, job in doc['jobs'].items()
+        for step in job.get('steps', [])
+        if step.get('uses') == './.github/actions/crysta-source'
+    ]
+    assert len(source_calls) == 1 and source_calls[0][0] == 'build', (
+        'Only the SDK builder delegates the resolved source read to the local composite'
+    )
+    assert source_calls[0][1]['with']['sha'] == '${{ needs.resolve.outputs.sha }}', (
+        'The SDK source action can only receive the committed resolved pin'
+    )
     tokens = [
         step
         for job in doc['jobs'].values()
-        for step in job.get('steps', [])
+        for step in local_action_steps(job.get('steps', []), ROOT)
         if step.get('uses', '').startswith('actions/create-github-app-token@')
     ]
     assert len(tokens) == 1, 'Only the SDK producer mints one source-read token'

@@ -5,8 +5,10 @@ from __future__ import annotations
 import fnmatch
 import hashlib
 import json
+import os
 import re
 import shlex
+import shutil
 import subprocess
 import tempfile
 from pathlib import Path
@@ -14,6 +16,7 @@ from pathlib import Path
 import pytest
 import yaml
 
+from tests.fixtures.native_process import native_executable
 from tests.integration.py.test_scan_app_contract import (
     APP,
     ROOT,
@@ -708,23 +711,43 @@ def test_user_page_and_scale_adr_document_approved_limits():
 
 def cpp_probe(program, tmp_path):
     file = tmp_path / 'probe.cpp'
-    file.write_text(program)
-    executable = tmp_path / 'probe'
+    file.write_text(program, encoding='utf-8')
+    executable = native_executable(tmp_path / 'probe')
+    if os.name == 'nt':
+        compiler = shutil.which('cl.exe')
+        assert compiler, 'Scan wiring: the Windows probe needs the configured MSVC compiler'
+        # Use the runner's native compiler and keep its C++ runtime inside this standalone probe.
+        command = [
+            compiler,
+            '/nologo',
+            '/std:c++20',
+            '/utf-8',
+            '/EHsc',
+            '/MT',
+            str(file),
+            f'/Fe{executable}',
+        ]
+    else:
+        command = ['c++', '-std=c++20', str(file), '-o', str(executable)]
     built = subprocess.run(
-        ['c++', '-std=c++20', str(file), '-o', str(executable)],
+        command,
+        cwd=tmp_path,
         capture_output=True,
         text=True,
         check=False,
         timeout=10,
     )
     assert built.returncode == 0, (
-        'Scan wiring: the observed production operation must compile: ' + built.stderr
+        'Scan wiring: the observed production operation must compile: '
+        + built.stdout
+        + built.stderr
     )
     run = subprocess.run(
         [str(executable)], capture_output=True, text=True, check=False, timeout=10
     )
     assert run.returncode == 0, (
-        'Scan wiring: the observed production operation must execute: ' + run.stderr
+        f'Scan wiring: the observed production operation must execute '
+        f'(status {run.returncode:#x}): {run.stderr}'
     )
     return run.stdout.splitlines()
 

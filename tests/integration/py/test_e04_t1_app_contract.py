@@ -20,7 +20,7 @@ import pytest
 import yaml
 
 from tests.fixtures.e04_t1.project_actor import is_verification
-from tests.fixtures.e09_t75_workflow import active
+from tests.fixtures.e09_t75_workflow import active, load_workflow
 from tests.fixtures.metadata_transition.source_bytes import read_previous
 from tests.fixtures.stop_defaults import example_inputs
 from tests.integration.py.ci_runner_contract import self_hosted_runners
@@ -616,12 +616,18 @@ def assert_nightly_app_steps(job):
         'owner decision: image upload has the same schedule/manual and cancellation condition; '
         f'actual if={uploads[0].get("if")!r}'
     )
-    assert uploads[0].get('uses') == 'actions/upload-artifact@v4' and set(
+    assert uploads[0].get('uses') == './.github/actions/store' and set(
         uploads[0].get('with', {}).get('path', '').split()
     ) == {'build/app/ui-actual', 'build/app/ui-diff'}, (
         'owner decision: the nightly upload keeps the actual-image and similarity-map inputs; '
         f'actual upload={uploads[0]}'
     )
+    options = uploads[0]['with']
+    assert options.get('artifact') == 'app-ui-${{ env.APP_PLATFORM }}' and (
+        str(options.get('retention-days')) == '7'
+        and options.get('if-no-files-found') == 'ignore'
+        and str(options.get('withhold')).lower() == 'true'
+    ), 'The diagnostic store keeps the platform and expiry and filters only source text'
     groups = [step for step in job['steps'] if step.get('name') == APP_GROUP_TITLE]
     assert len(groups) == 1 and groups[0].get('run') == 'pixi run --skip-deps group-app', (
         'owner decision: keep the group-app command present once before Qt Quick Test; '
@@ -666,8 +672,14 @@ def assert_nightly_app_step_escape_controls():
             {
                 'name': APP_IMAGE_UPLOAD_TITLE,
                 'if': NIGHTLY_APP_CONDITION,
-                'uses': 'actions/upload-artifact@v4',
-                'with': {'path': 'build/app/ui-actual\nbuild/app/ui-diff'},
+                'uses': './.github/actions/store',
+                'with': {
+                    'artifact': 'app-ui-${{ env.APP_PLATFORM }}',
+                    'path': 'build/app/ui-actual\nbuild/app/ui-diff',
+                    'retention-days': 7,
+                    'if-no-files-found': 'ignore',
+                    'withhold': 'true',
+                },
             },
         ]
     }
@@ -758,7 +770,7 @@ def test_app_reachability_observer_rejects_missing_group_or_checker(damage):
 def test_local_and_ci_gates_reach_app_tests():
     manifest = tomllib.loads((ROOT / 'pixi.toml').read_text())
     assert_local_app_checks(manifest)
-    workflow = yaml.safe_load((ROOT / '.github/workflows/ci.yml').read_text())
+    workflow = load_workflow(ROOT / '.github/workflows/ci.yml')
     jobs = {
         name: job
         for name, job in workflow['jobs'].items()

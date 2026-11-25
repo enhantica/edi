@@ -7,6 +7,7 @@ import test_e04_t1_app_contract as app_contract
 import yaml
 from test_e04_t1_app_contract import assert_image_families, assert_numbered_states
 
+from tests.fixtures.e09_t75_workflow import load_workflow
 from tests.integration.py.ci_runner_contract import RUNNERS, self_hosted_runners
 
 
@@ -172,7 +173,7 @@ def windows_job_escapes(workflow):
 )
 def test_live_app_gate_rejects_matrix_damage(tmp_path, monkeypatch, damage):
     """Reject damage to static platform jobs under the frozen matrix gate name."""
-    workflow = yaml.safe_load((app_contract.ROOT / '.github/workflows/ci.yml').read_text())
+    workflow = load_workflow(app_contract.ROOT / '.github/workflows/ci.yml')
     app_contract.test_local_and_ci_gates_reach_app_tests()
     job = workflow['jobs']['app']
     if damage == 'duplicate-platform':
@@ -183,18 +184,20 @@ def test_live_app_gate_rejects_matrix_damage(tmp_path, monkeypatch, damage):
         job['runs-on'] = '${{ matrix.platform }}'
     else:
         job['runs-on'] = RUNNERS['macOS']
-    (tmp_path / '.github/workflows').mkdir(parents=True)
-    (tmp_path / '.github/workflows/ci.yml').write_text(yaml.safe_dump(workflow))
+    workflow_path = tmp_path / '.github/workflows/ci.yml'
+    workflow_path.parent.mkdir(parents=True)
+    dumper = getattr(yaml, 'CSafeDumper', yaml.SafeDumper)
+    workflow_path.write_text(yaml.dump(workflow, Dumper=dumper))
     (tmp_path / 'pixi.toml').write_text((app_contract.ROOT / 'pixi.toml').read_text())
     if damage == 'duplicate-platform':
-        original = yaml.safe_load((app_contract.ROOT / '.github/workflows/ci.yml').read_text())
+        original = load_workflow(app_contract.ROOT / '.github/workflows/ci.yml')
         for changed in windows_job_escapes(original):
-            (tmp_path / '.github/workflows/ci.yml').write_text(yaml.safe_dump(changed))
+            workflow_path.write_text(yaml.dump(changed, Dumper=dumper))
             with monkeypatch.context() as patch:
                 patch.setattr(app_contract, 'ROOT', tmp_path)
                 with pytest.raises(AssertionError, match='gate 7:'):
                     app_contract.test_local_and_ci_gates_reach_app_tests()
-        (tmp_path / '.github/workflows/ci.yml').write_text(yaml.safe_dump(workflow))
+        workflow_path.write_text(yaml.dump(workflow, Dumper=dumper))
     monkeypatch.setattr(app_contract, 'ROOT', tmp_path)
     with pytest.raises(AssertionError, match=r'gate 7:|E01:'):
         app_contract.test_local_and_ci_gates_reach_app_tests()

@@ -22,6 +22,7 @@ import pytest
 import yaml
 
 from tests.fixtures.e04_t11_wasm.cli_domains import domain, historical_bytes, input_bytes
+from tests.fixtures.e09_t75_workflow import STORE_ACTION, artifact_options
 from tests.fixtures.metadata_transition.source_bytes import previous_bytes
 from tests.fixtures.native_process import environment_bash
 from tests.fixtures.web_parallel.numeric import uncertainty_tolerances
@@ -274,11 +275,17 @@ def test_webassembly_ci_builds_uploads_and_runs_the_browser_gate():
         'dedicated CI must execute the task browser checks; disabled '
         'desktop tests are insufficient'
     )
-    assert any(
-        'upload-artifact@' in str(step.get('uses', ''))
+    uploads = [
+        step
         for _, job in jobs
         for step in job.get('steps', [])
-    ), 'CI must publish the combined static-site artifact'
+        if artifact_options(step).get('name') == 'edi-webapp'
+    ]
+    assert (
+        len(uploads) == 1
+        and uploads[0].get('uses') == STORE_ACTION
+        and (artifact_options(uploads[0]).get('path') == 'build/wasm/site')
+    ), 'CI publishes the exact combined static site through the checked store action'
     checker = (ROOT / 'tools/ci/wasm-check.sh').read_text()
     assert all(
         token in checker
