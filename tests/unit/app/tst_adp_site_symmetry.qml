@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 import QtTest
+import "UiInteraction.js" as Ui
 import edi.app
 import EdiAcceptance 1.0
 import "RenderedTable.js" as Render
@@ -68,13 +69,18 @@ Item {
             verify(Session.openProject(Qt.resolvedUrl("../../fixtures/adp_site_symmetry/gui/" + name)), "The independent same-site GUI vehicle opens");
             group = groupComponent.createObject(surface, {structure: Session.project.currentStructure});
             verify(group !== null, "The production ADP group is instantiated");
+            const table = Ui.find(group, "atomSiteAdps.list", true);
+            verify(table !== null, "The editable tensor group exposes its actual table");
+            table.width = group.width;
             const tracked = {};
             for (const label of ["La", "Ba"]) {
                 const atom = Probe.rows(group.adps).findIndex(row => row.label === label);
                 verify(atom >= 0, "The GUI preserves each authored atom identity");
                 group.adps.setType(atom, kind);
                 tryVerify(() => Probe.rows(group.adps)[atom].adpType === kind, 2000, "Each same-site atom converts to its declared tensor type");
-                wait(0);
+                table.positionViewAtIndex(atom, ListView.Contain);
+                table.forceLayout();
+                verify(waitForPolish(group), "The selected site's rendered tensor row settles before input");
                 const expected = Oracle.frozen.sites[name].types[kind].positive.map(value => value*(label === "La" ? 1 : 1.7));
                 const allowed = inspect(name, kind, atom, expected);
                 tracked[label] = expected;
@@ -85,10 +91,19 @@ Item {
                     const edited = values(row);
                     edited[i] = Number((edited[i] + Math.max(Math.abs(edited[i]), 0.0001)*0.17).toFixed(12));
                     const suffix = ["11", "22", "33", "12", "13", "23"][i];
-                    const cell = control("atomSiteAdp.ani" + suffix + "." + atom);
-                    mouseClick(cell); keyClick(Qt.Key_A, Qt.ControlModifier);
+                    let cell;
+                    tryVerify(() => {
+                        cell = control("atomSiteAdp.ani" + suffix + "." + atom);
+                        return Ui.exposed(cell);
+                    }, 2000, "The tensor seed has a real pointer target after the previous edit settles: " + suffix);
+                    const popup = Ui.parameterPopup(this, cell);
+                    const editor = Ui.parameterValue(this, cell, popup);
+                    Ui.focusParameter(this, editor);
+                    keyClick(Qt.Key_A, Qt.ControlModifier);
                     for (const character of String(edited[i])) keyClick(character.charCodeAt(0));
-                    keyClick(Qt.Key_Return); wait(0);
+                    keyClick(Qt.Key_Return);
+                    popup.close();
+                    wait(0);
                     tracked[label] = complete(name, kind, edited, allowed);
                     for (const previous of Object.keys(tracked))
                         inspect(name, kind, Probe.rows(group.adps).findIndex(row => row.label === previous), tracked[previous]);

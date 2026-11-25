@@ -11,6 +11,7 @@ import pytest
 from tests.fixtures.native_ui_script.runner import run_javascript
 from tests.integration.py.test_scan_app_contract import (
     block,
+    experiment_column_bindings,
     item,
     object_id,
     property_value,
@@ -249,22 +250,43 @@ def test_experiment_data_header_and_link_are_declared():
     widths = re.search(r'(?m)^\s*columns:\s*(\[[^\n]+\])', source)
     assert widths, 'The Experiments table must declare each column through the shared width rule'
     common = text('Components/DataTable.qml')
-    filler = re.search(r'(?m)^\s*readonly property int fillerIndex:\s*([^\n]+)', common)
-    assert filler, 'The shared table declares which fitted text column holds the spare width'
+    filler = block(common, 'readonly property int fillerIndex: {').split('{', 1)[1]
+    filler = filler.rsplit('}', 1)[0]
     script = (
-        'const numberColumnWidth=20,group={scan:false,scanColumns:[],fitColumnWidth:35};'
-        'const AppSizes={iconColumnWidth:25,iconOnlyColumnWidth:17,dataColumnWidth:80};'
-        'const qsTr=value=>value;const textColumnWidth=()=>-1;const columns=('
+        'const observations=[[930,[]],[360,[]],[930,["T","P","H"]],'
+        '[520,["T","P","H"]]].map(([width,scanColumns])=>{'
+        'const group={scan:scanColumns.length>0,scanColumns,'
+        'fitColumnWidth:35,startColumnWidth:31};'
+        'const numberColumnWidth=20,controlColumnWidth=25,rowPadding=3,contentGap=14;'
+        'const AppSizes={tableControlWidth:25,tableCellMargin:5};'
+        'const EaStyle={Sizes:{fontPixelSize:14,tableColumnSpacing:4}};'
+        'const advance=text=>8*text.length;'
+        'const widestText=(role,title,cut)=>role==="name"&&title==="Datablock"&&cut?110:'
+        'role==="file"&&title==="Data file"?(cut?90:140):-999;'
+        'const qsTr=value=>value;const naturalTextColumnWidth=(role,title)=>'
+        'role==="name"&&title==="Datablock"?300:-999;'
+        + experiment_column_bindings(block(source, 'DataTable {'))
+        + 'const columns=('
         + widths[1]
-        + ');const equalColumns=false,spreadColumns=[];'
-        'process.stdout.write(JSON.stringify([columns,(' + filler[1] + ')]));'
+        + ');const equalColumns=false,spreadColumns=[],kindModel=false;'
+        'const kindFloors=(' + property_value(common, 'kindFloors') + ');'
+        'const surplusColumn=()=>{' + filler + '};'
+        'return [columns,surplusColumn(),shares.value,shares.values];});'
+        'process.stdout.write(JSON.stringify(observations));'
     )
     result = run_javascript(script, timeout=5)
-    assert result.returncode == 0, 'The production Experiments column declarations must evaluate'
-    actual, filler_index = json.loads(result.stdout)
-    assert actual == [20, 0.001, 17, 35, -1, -1, 0.001, 25] and filler_index == 5, (
-        'Datablock and Data file fit their content through the shared table rule; '
-        'Data file holds the spare width before the fixed action column'
+    assert result.returncode == 0, (
+        'The production Experiments column declarations must evaluate: ' + result.stderr
+    )
+    assert json.loads(result.stdout) == [
+        [[20, 0.001, 25, 35, 300, -1, 0.001, 25], 5, 0, 0],
+        [[20, 0.001, 25, 35, 139, -1, 0.001, 25], 5, 0, 0],
+        [[20, 31, 25, 35, 300, 187, -1, 0.001], 6, 80, 278],
+        [[20, 31, 25, 35, 131, 90, -1, 0.001], 6, 40, 158],
+    ], (
+        'Datablock uses the natural width of its names and title when roomy '
+        'and the space after its neighbours at minimum width. Scan values yield first '
+        'and hold the spare in scans. Data file holds the spare in ordinary lists.'
     )
 
 

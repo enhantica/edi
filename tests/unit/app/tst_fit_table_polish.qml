@@ -55,9 +55,16 @@ TestCase {
             }
         ];
     }
-    function open(data) {
+    function open(data, hitIterationLimit = false) {
         Style.Colors.theme = data.dark ? Style.Colors.DarkTheme : Style.Colors.LightTheme;
         const location = SettingsProof.copyProject(Probe.repoUrl("tests/fixtures/fit_tables/five"));
+        if (hitIterationLimit) {
+            const file = "analysis/analysis.edi";
+            const original = SettingsProof.text(location, file);
+            const limited = original.replace("_fit_result.success true", "_fit_result.success false\n_fit_result.exit_reason max_iter");
+            verify(limited !== original && SettingsProof.write(location, file, limited),
+                "The saved result fixture declares the iteration-limit outcome");
+        }
         verify(Session.openProject(location), "The independent saved five-bank fit opens: " + Session.lastError);
         tryCompare(Session.project, "calculating", false, 10000, "The saved fit finishes calculating before inspection");
         const dialog = findChild(appWindow, "fit.results");
@@ -108,6 +115,52 @@ TestCase {
         const required = widths.reduce((a, b) => a + b, 0) + Style.Sizes.tableColumnSpacing * 3 + summary.rowPadding * 2 + Style.Sizes.borderThickness * 2;
         verify(summary.width <= required + 2, "The summary is no wider than its measured text, icon and ordinary table padding require; actual=" + summary.width + ", required=" + required);
         capture("summary-width-" + data.tag);
+    }
+    function outcomeFits(value, word, advance) {
+        return value.text === word && value.visible && !value.truncated
+            && value.width - value.leftPadding - value.rightPadding + 0.6 >= advance;
+    }
+    function test_outcome_word_fits_the_rendered_dialog() {
+        const dialog = open({dark: false}, true), summary = table(dialog, "list");
+        const word = "Max iterations";
+        const index = Probe.rows(summary.sourceModel).findIndex(row => row.outcome === "maxIterations");
+        verify(index >= 0, "The saved fit materializes its independently declared iteration-limit result");
+        const valueCell = () => Review.find(summary.itemAtIndex(index), "fit.results.value." + index);
+        let advance = 0;
+        for (const width of [AppSizes.minimumAppWidth, 1280]) {
+            appWindow.width = width;
+            tryCompare(appWindow, "width", width, 2000, "The Fit Results actor reaches each supported window width");
+            frame();
+            const value = valueCell();
+            verify(dialog.opened && value !== null, "The live dialog supplies the outcome row at each width");
+            const metrics = createTemporaryObject(measure, test, {font: value.font});
+            verify(metrics !== null, "The outcome's actual font can measure the full independently expected word");
+            advance = metrics.advanceWidth(word);
+            verify(outcomeFits(value, word, advance),
+                "The outcome is drawn in full inside its own actual padded column at window width " + width);
+            const sceneX = value.mapToItem(appWindow.contentItem, value.width, 0).x;
+            verify(value.mapToItem(appWindow.contentItem, 0, 0).x >= -0.6
+                && sceneX <= appWindow.contentItem.width + 0.6
+                && value.mapToItem(summary, value.width, 0).x <= summary.width + 0.6,
+                "The window and the summary viewport both contain the actual outcome cell");
+        }
+
+        const original = valueCell();
+        original.shown = word.slice(0, 3) + "…";
+        compare(original.text, "Max…", "The shortened-word mutation changes the displayed text");
+        verify(!outcomeFits(original, word, advance), "The outcome check rejects a pre-shortened word at the same width");
+        original.refit();
+        verify(outcomeFits(original, word, advance), "Refitting restores the unchanged complete outcome");
+
+        const columns = Array.from(summary.columns);
+        columns[3] = Math.floor(advance / 2);
+        summary.columns = columns;
+        tryVerify(() => {
+            const value = valueCell();
+            return value !== null && Math.abs(value.width - columns[3]) < 0.6;
+        }, 2000, "The narrower reserve reaches the real outcome delegate through the summary columns");
+        verify(!outcomeFits(valueCell(), word, advance),
+            "The outcome check rejects the too-small reserve even with the original outcome input");
     }
     function test_structure_colours_data() {
         return themes();

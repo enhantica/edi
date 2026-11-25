@@ -58,11 +58,14 @@ if (request.consumer === "scan") {
     console.log(JSON.stringify(result));
 } else if (request.consumer === "fraction") {
     const cell = fs.readFileSync(path.resolve(path.dirname(request.source), "../Pages/Experiment/LinkedStructureGroup.qml"), "utf8");
-    const start = cell.indexOf("id: fraction");
-    if (start < 0) throw new Error("The real fraction cell must exist");
-    const body = cell.slice(start);
-    const parameter = /parameter:\s*([\s\S]*?)\n\s*color:/.exec(body);
-    if (!parameter) throw new Error("The real fraction parameter binding must exist");
+    const match = /DerivedCell\s*\{([^{}]*\bobjectName:\s*`linkedStructure\.weightFraction\.\$\{row\.index\}`[^{}]*)\}/.exec(cell);
+    if (!match) throw new Error("The real named fraction DerivedCell must exist");
+    const body = match[1];
+    function binding(name) {
+        const expression = new RegExp("^\\s*(?:readonly property \\w+ )?" + name + ":([^\\n]+)", "m").exec(body);
+        if (!expression) throw new Error("The real fraction binding must exist: " + name);
+        return vm.runInContext(expression[1], context);
+    }
     // Execute the real native core for both bindings; a wrong uid or value
     // reaches that formatter and its independently checked output.
     function nativeFraction(uid, value, su) {
@@ -77,13 +80,9 @@ if (request.consumer === "scan") {
     };
     const result = request.calls.map(call => {
         context.row = {weightFraction: call.args[0] === null ? {} : {value: call.args[0], uncertainty: call.args[1]}};
-        for (const name of ["known", "fractionValue", "fractionError"]) {
-            const expression = new RegExp("readonly property (?:bool|real) " + name + ":([^\\n]+)").exec(body);
-            if (!expression) throw new Error("The real fraction property must exist: " + name);
-            context[name] = vm.runInContext(expression[1], context);
-        }
-        const value = vm.runInContext("(" + parameter[1] + ")", context);
-        return {value: value.value, error: value.error};
+        for (const name of ["known", "fractionValue", "fractionError"])
+            context[name] = binding(name);
+        return {value: binding("shownValue"), error: binding("uncertainty")};
     });
     console.log(JSON.stringify(result));
 } else {

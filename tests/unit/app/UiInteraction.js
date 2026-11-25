@@ -95,7 +95,7 @@ function control(probe, window, name) {
 function moving(root) {
     if (root.moving === true) return true;
     if (String(root).startsWith("SwipeView") && root.currentItem &&
-        Math.abs(root.currentItem.mapToItem(root, 0, 0).x) > 1) return true;
+        Math.abs(root.currentItem.mapToItem(root, 0, 0).x - root.leftPadding) > 1) return true;
     const children = root.children || [];
     return children.some(child => moving(child));
 }
@@ -229,4 +229,54 @@ function itemsWithProperty(root, property) {
     const children = root.children || [];
     children.forEach(child => items = items.concat(itemsWithProperty(child, property)));
     return items;
+}
+
+function parameterPopupName(control) {
+    return control.objectName + (control.opensPopup === true ? ".menu.popup" : ".popup");
+}
+
+function openedParameterPopup(test, control) {
+    let popup = null;
+    test.tryVerify(() => {
+        popup = test.findChild(control, parameterPopupName(control));
+        return popup !== null && popup.opened;
+    }, 2000, "Real pointer input opens the selected parameter's popup");
+    return popup;
+}
+
+function parameterPopupItem(test, control, popup, part) {
+    return test.findChild(popup.contentItem, parameterPopupName(control) + "." + part);
+}
+
+function parameterPopup(test, cell, button) {
+    scrollIntoView(cell);
+    const point = clickPoint(cell);
+    test.verify(point !== null, "The parameter number exposes a real pointer target");
+    let delay = 0;
+    for (let parent = cell.parent; parent; parent = parent.parent)
+        if (typeof parent.pressDelay === "number")
+            delay = Math.max(delay, parent.pressDelay + 1);
+    test.mouseClick(cell, point.x, point.y, button ?? Qt.LeftButton, Qt.NoModifier, delay);
+    return openedParameterPopup(test, cell);
+}
+
+function parameterValue(test, cell, popup) {
+    const editor = parameterPopupItem(test, cell, popup, "value");
+    test.verify(editor !== null && editor.item === cell.item,
+                "The popup value field edits the exact parameter owned by the clicked cell");
+    return editor;
+}
+
+function focusParameter(test, editor) {
+    const point = clickPoint(editor);
+    test.verify(point !== null, "The actual value field is exposed");
+    test.mouseClick(editor, point.x, point.y);
+    test.tryCompare(editor, "activeFocus", true, 2000, "Pointer input focuses the full value editor");
+}
+
+function numericText(text) {
+    const digits = "⁰¹²³⁴⁵⁶⁷⁸⁹";
+    const plain = String(text).trim().replace(/−/g, "-").replace(/\(\d+\)/, "");
+    return plain === "" ? NaN : Number(plain.replace(/×10(⁻?[⁰¹²³⁴⁵⁶⁷⁸⁹]+)/, (_, exponent) =>
+        "e" + [...exponent].map(digit => digit === "⁻" ? "-" : digits.indexOf(digit)).join("")));
 }

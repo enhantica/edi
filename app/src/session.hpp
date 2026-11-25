@@ -8,6 +8,7 @@
 #include <QTemporaryDir>
 #include <QPointer>
 #include <QScopeGuard>
+#include <chrono>
 #include <optional>
 #include <QString>
 #include <QStringList>
@@ -69,8 +70,8 @@ class WarningListModel : public RowTableModel {
     Q_OBJECT
     QML_ELEMENT
     QML_UNCREATABLE("Belongs to the session")
-    // How many of the listed messages have not been viewed yet (the status bar's Messages item; edi
-    // ADR-0017 §14): all of a fresh open's, none once the Messages dialog has shown them, and a message
+    // How many of the listed warnings and errors have not been viewed yet, information notes left out (the status
+    // bar's Messages item; edi ADR-0017 §14): all of a fresh open's, none once the Messages dialog has shown them, and a message
     // raised later again. Each message carries its own viewed state and the count is derived from them, so
     // removing one (a dismissal, a withdrawn refusal) takes away exactly its own share.
     Q_PROPERTY(int unviewedCount READ unviewedCount NOTIFY unviewedCountChanged)
@@ -456,6 +457,8 @@ class Session : public QObject {
         std::shared_ptr<ProjectViewModel::OperationHold> hold;
     };
     using SaveContinuation = std::function<void(const SaveOperation&)>;
+    // Holds the open project, and keeps the assistant's work report out of its folder meanwhile.
+    std::shared_ptr<ProjectViewModel::OperationHold> holdProject();
     // After a Save as: the project is no longer an example's, an archive's or a read-only tree's temporary copy.
     void leaveTemporaryOrigin();
     bool saveCopy(const SaveOperation& operation, const QString& target, bool zip);
@@ -578,6 +581,13 @@ class Session : public QObject {
     // An untitled operation's save is marked replanning for that operation, so its writer can tell a replan from a
     // refusal.
     void queueReplan(const SaveOperation& operation);
+    // The replan queued last, if it has not run yet: whoever takes it runs it, and the queue no longer does. The
+    // assistant's save takes its own, so its answer is the replanned save's. Never an untitled operation's.
+    std::function<bool()> takeReplan();
+    std::shared_ptr<std::function<bool()>> queued_replan_;
+    // What a save may still wait for a report being written (edi ADR-0069), its retry included.
+    std::chrono::milliseconds folder_wait_left_{0};
+    bool replanning_ = false;
     bool saveWith(const SaveOperation& operation);
     bool saveAsWith(const SaveOperation& operation, const QUrl& directory);
     bool saveProjectAsWith(const SaveOperation& operation, const QUrl& target, bool zip, bool copy);

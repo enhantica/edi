@@ -32,6 +32,8 @@ TestCase {
         return app;
     }
     function clickControl(name) {
+        if (["project.create", "project.load", "project.saveAs"].includes(name))
+            Ui.expandGroup(test, Probe, app, "group.getStarted");
         let item;
         tryVerify(() => {
             item = Ui.control(Probe, app, name) || Ui.find(Ui.windowRoot(app), name);
@@ -199,6 +201,7 @@ TestCase {
             group = Ui.control(Probe, app, "group.getStarted");
             return group !== null;
         }, 4000, "The working project exposes its actual Get started group");
+        Ui.expandGroup(test, Probe, app, "group.getStarted");
         const actions = Render.descendants(group).filter(item => item.objectName.startsWith("project.") && typeof item.text === "string");
         const visible = actions.filter(item => item.visible);
         compare(visible.filter(item => item.objectName === "project.load").length, 1, "The Project page has one Load project action for native projects and imports");

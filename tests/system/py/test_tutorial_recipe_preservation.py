@@ -87,6 +87,25 @@ def test_current_published_recipe_translates_without_a_caption_substitute(case, 
         'The complete current published recipe must translate with its actual source captions; '
         'the independent action-mutation fixture cannot conceal a production caption failure'
     )
+    # The frozen docs recipe addresses the Python model. The learner types the
+    # saved name of that same Co1 row in the GUI (2026-11-24 owner decision).
+    source_filter = 'fill:parameters.nameFilter=structure.atom_sites[Co1].adp_iso'
+    if any(source_filter in step['actions'] for step in RECIPES[case]['plan']['steps']):
+        expected = 'cosio.atom_site.Co1.adp_iso'
+        checks = [
+            step
+            for step in baseline
+            if step.get('target') == 'parameters.nameFilter'
+            and step.get('check', '').startswith('field:')
+        ]
+        assert any(
+            step['check'] == f'field:parameters.nameFilter={expected}'
+            and f'**{expected}**' in step['text']
+            for step in checks
+        ), 'The GUI lesson displays and checks the saved name of the independent Co1 parameter'
+        assert all(source_filter[5:] not in step['check'] for step in checks), (
+            'The GUI name filter rejects the frozen Python-path spelling as a lesson instruction'
+        )
 
 
 @pytest.mark.parametrize('case', RECIPES)

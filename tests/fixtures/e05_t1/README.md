@@ -102,6 +102,11 @@ raw selected names alongside the existing model projection. The inventory gate
 requires the registered single/joint set in all three inventories, and refuses
 omissions and duplicate CLI rows. No numerical tolerance changes.
 
+The YAP `cli.json` stderr expectation follows the owner's 2026-11-24
+diagnostic spelling. The Al1 warning uses `Al2O3.atom_site.Al1.adp_iso`.
+The saved input, captured fit record, producer identity and independent
+model-count reference retain their original provenance.
+
 The doublet and absorption extension updates the LiF capture with `generate.py --update pd-xray-cwl_lif_single`
 and adds `pd-xray-cwl_pbso4-lab_round-robin` with `--only`. These are explicitly
 labelled CLI wiring regression pins from an actual private-copy CLI fit, not

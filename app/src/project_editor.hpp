@@ -94,6 +94,8 @@ class ProjectEditor {
     // An edit of a setting of the whole project (its fitting mode, its minimizer settings, its name), applied as
     // `apply` does. In a scan project it changes the template as it is: it never makes a shown dataset the template.
     virtual QString apply_setting(const edi::Edit& change) { return apply(change, false); }
+    // An edit the app makes of itself after another edit (a fitting mode that no longer applies).
+    virtual void apply_follow_up(const std::function<void()>& edit) { edit(); }
     // An edit of a setting no calculation reads (a single crystal's observed threshold, which changes only the
     // observed counts and R(gt)): applied and published as `apply` does, but the published patterns stay current, so
     // nothing is recalculated and no chart is redrawn.

@@ -19,6 +19,10 @@ import edi.app
 Item {
     id: chart
 
+    // One accessible part in the browser, where Qt reads a flat page again for each of its items.
+    Accessible.role: Accessible.Grouping
+    Accessible.ignored: Qt.platform.os !== "wasm"
+
     // What the main view's Save image takes when this is the shown tab: the item, its toolbar (hidden while the image
     // is taken), the file name, and whether the toolbar's band is cut off.
     readonly property Item imageItem: chart
@@ -63,15 +67,18 @@ Item {
     }
 
     readonly property real em: EaStyle.Sizes.fontPixelSize
-    readonly property real sideMargin: em
+    // A report figure has the same padding on all four sides as its control buttons have above its plot (the owner,
+    // 2026-11-24): the main area's margin.
+    // Less what the y title's line keeps beside its letters, so the letters stand at the margin.
+    readonly property real sideMargin: chart.report ? AppSizes.mainAreaMargin - Math.round(em * 0.35) : em
     // The room round the chart, as in easydiffractionbeta: above the toolbar, and between the plot areas' right
     // border and the chart's edge.
     // Every length the panes are laid out by is a whole number of pixels, so the plot areas begin and end on
     // pixels: their 1 px borders and grid lines are sharp, and a pointer position is a position in the plot.
     // One gap (the owner, 2026-10-02): above the toolbar and below the x title.
-    readonly property real toolbarGap: em
+    readonly property real toolbarGap: chart.report ? AppSizes.mainAreaMargin : em
     readonly property real topMargin: toolbarGap
-    readonly property real bottomMargin: toolbarGap
+    readonly property real bottomMargin: chart.report ? toolbarGap - Math.round(em * 0.3) : toolbarGap  // as at the side
     // The main area's margin (owner, 2026-10-05): right of the plot areas, left of the toolbar's drop-downs, and
     // from the toolbar down to the main plot area.
     readonly property real rightMargin: AppSizes.mainAreaMargin
@@ -95,7 +102,7 @@ Item {
     readonly property real topHeight: chart.report && !chart.reportToolbar ? Math.max(sideMargin, rightMargin) + (chart.reliability !== "" ? Math.round(em * 1.5) : 0) : topMargin + toolbarLines.height + belowToolbar + (chart.reliability !== "" ? Math.round(em * 1.5) : 0)
     // A report figure's reliability text (edi::reliability_text), above its main plot at the left; the app's own
     // charts show it in the page's selector line.
-    readonly property string reliability: chart.report && chart.report.model ? chart.report.reliability(chart.reportExperiment) : ""
+    readonly property string reliability: chart.report && chart.report.modelRevision >= 0 ? chart.report.reliability(chart.reportExperiment) : ""
     // The panes' heights, as easydiffractionbeta divides them: of what the toolbar and the x axis leave, the
     // main pane takes 0.7 and the residual 0.3, each less half of what the tick rows take between them. A
     // structure's row is 1.5 em high, in a pane half an em higher.
@@ -104,8 +111,11 @@ Item {
     readonly property real between: controller.braggRows > 0 ? braggPaneHeight + 2 * paneGap : paneGap
     readonly property real shared: Math.max(0, height - topHeight - xLabelsHeight + labelLift - xTitleHeight - bottomMargin)
     // With no residual (nothing measured) the tick rows are directly under the main pane, which takes the rest.
-    readonly property real mainHeight: Math.round(controller.hasResidual ? shared * 0.7 - between / 2 : controller.braggRows > 0 ? shared - paneGap - braggPaneHeight : shared)
-    readonly property real residualHeight: controller.hasResidual ? Math.round(shared * 0.3 - between / 2) : 0
+    // In a low window both panes keep their least height where the room holds them.
+    readonly property real panes: shared - between
+    readonly property real residualShare: shared * 0.3 - between / 2
+    readonly property real mainHeight: Math.round(controller.hasResidual ? (residualHeight === Math.round(residualShare) ? shared * 0.7 - between / 2 : panes - residualHeight) : controller.braggRows > 0 ? shared - paneGap - braggPaneHeight : shared)
+    readonly property real residualHeight: !controller.hasResidual ? 0 : Math.round(!chart.report && panes >= AppSizes.paneMinimum + AppSizes.residualMinimum - em ? Math.min(Math.max(residualShare, AppSizes.residualMinimum), Math.max(AppSizes.residualMinimum - em, panes - AppSizes.paneMinimum)) : residualShare)
     // The pane the x labels and the x title are under: the lowest one shown — the residual, else the tick
     // rows, else the main pane.
     readonly property GraphsView bottomView: controller.hasResidual ? residualView : controller.braggRows > 0 ? braggView : mainView
@@ -160,6 +170,8 @@ Item {
     // An axis label: the app's label, in the app's font and size (easydiffractionbeta's chart labels), placed
     // as Qt Graphs asks. With `original`, it shows the original value of the display value Qt Graphs printed
     // (edi ADR-0021 §5): the main y axis on the square-root and log scales.
+    // The axes take their labels as literals: a delegate named by its id is bound only after Qt Graphs, in a chart made a
+    // slice at a time, may have drawn its own labels, which it then keeps.
     component AxisLabel: Item {
         id: axisLabel
 
@@ -178,11 +190,15 @@ Item {
         implicitWidth: axisText.implicitWidth
         implicitHeight: axisText.implicitHeight
 
+        // As wide as its text at least: Qt Graphs sizes the box from its own text and font, narrower than the app's,
+        // and the label then ran past it (N1). It keeps its aligned edge: a right-aligned y label grows to the left,
+        // into the room the chart keeps for the widest one (yLabelsRoom); a centred one both ways.
         EaElements.Label {
             id: axisText
-            x: axisLabel.moveX
+            readonly property real grown: Math.max(0, implicitWidth - axisLabel.width)
+            x: axisLabel.moveX - (axisLabel.horizontalAlignment === Text.AlignRight ? grown : axisLabel.horizontalAlignment === Text.AlignHCenter ? grown / 2 : 0)
             y: axisLabel.moveY
-            width: axisLabel.width
+            width: Math.max(axisLabel.width, implicitWidth)
             height: axisLabel.height
             horizontalAlignment: axisLabel.horizontalAlignment
             verticalAlignment: axisLabel.verticalAlignment
@@ -272,9 +288,41 @@ Item {
     // A y title, turned, in the gutter beside its pane's plot area.
     component PaneTitle: EaElements.Label {
         required property GraphsView pane
+        // The title in full, and a short form shown instead when the full one does not fit its pane at the standard
+        // axis-title size: never a smaller font, never cut, never a symbol (the owner, 2026-11-23: "resid" when
+        // "meas − calc" does not fit). A title that `shrinks` first takes a smaller font, down to three quarters, and its
+        // short form only where that does not fit either.
+        property string fullText: ""
+        property string shortText: ""
+        property bool shrinks: false
+        readonly property bool fits: Math.max(0, pane.plotArea.height) >= fullTitle.implicitWidth
+        readonly property bool fitsSmall: Math.max(0, pane.plotArea.height) >= fullTitle.implicitWidth * 0.75
+        readonly property bool shortShown: (shrinks ? !fitsSmall : !fits) && shortText !== ""
+        text: shortShown ? shortText : fullText
 
         rotation: -90
         color: chart.colors.chartLabels
+        font.pixelSize: shortText !== "" && !shrinks ? EaStyle.Sizes.fontPixelSize : Math.round(EaStyle.Sizes.fontPixelSize * Math.max(0.75, Math.min(1, Math.max(0, pane.plotArea.height) / Math.max(1, shortShown ? shortTitle.implicitWidth : fullTitle.implicitWidth))))
+        // No longer than its pane is tall, so a short pane's title never runs into the next pane's.
+        width: Math.min(implicitWidth, Math.max(0, pane.plotArea.height))
+        elide: shortText !== "" && !shrinks ? Text.ElideNone : Text.ElideRight
+
+        Text {
+            id: fullTitle
+            visible: false
+            text: parent.fullText
+            textFormat: parent.textFormat
+            font.family: parent.font.family
+            font.pixelSize: EaStyle.Sizes.fontPixelSize
+        }
+        Text {
+            id: shortTitle
+            visible: false
+            text: parent.shortText
+            textFormat: parent.textFormat
+            font.family: parent.font.family
+            font.pixelSize: EaStyle.Sizes.fontPixelSize
+        }
         x: chart.sideMargin + (chart.titleGutter - width) / 2
         y: pane.y + pane.plotArea.y + (pane.plotArea.height - height) / 2
     }
@@ -316,40 +364,6 @@ Item {
         // How the measured pattern is drawn, one app setting for every pattern chart; a report's chart keeps its own.
         // A single crystal without measured reflections draws its calculated ones as bars (the owner, 2026-11-16).
         measuredStyle: !chart.singleCrystal ? Preferences.patternMeasuredStyle : chart.experiment !== null && chart.experiment.singleCrystalReflections.simulated ? "bars" : Preferences.singleCrystalMeasuredStyle
-    }
-
-    // An x label is centred under its tick; a y label ends beside the plot area.
-    Component {
-        id: xLabel
-
-        AxisLabel {
-            moveY: -chart.labelLift
-            axis: mainX
-            format: chart.xFormat
-        }
-    }
-    Component {
-        id: yLabel
-
-        AxisLabel {
-            horizontalAlignment: Text.AlignRight
-            moveX: chart.tickRoom
-            axis: residualY
-            format: chart.residualYFormat
-        }
-    }
-    // The main y axis has one delegate on every scale: Qt Graphs keeps the labels it made when the delegate is
-    // replaced, so a delegate per scale left the square-root axis printing its display values.
-    Component {
-        id: mainYLabel
-
-        AxisLabel {
-            horizontalAlignment: Text.AlignRight
-            moveX: chart.tickRoom
-            axis: mainY
-            format: chart.mainYFormat
-            valueScale: controller.yScale
-        }
     }
 
     // Save image's background (SaveImageButton): none while a transparent image is taken.
@@ -542,7 +556,11 @@ Item {
             subGridVisible: false
             // The x labels are under the lowest pane only.
             labelsVisible: chart.bottomView === mainView
-            labelDelegate: xLabel
+            labelDelegate: AxisLabel {
+                moveY: -chart.labelLift
+                axis: mainX
+                format: chart.xFormat
+            }
         }
         axisY: ValueAxis {
             id: mainY
@@ -554,7 +572,15 @@ Item {
             lineVisible: false
             gridVisible: false
             subGridVisible: false
-            labelDelegate: mainYLabel
+            // One delegate on every scale: Qt Graphs keeps the labels it made when the delegate is replaced, so a delegate
+            // per scale left the square-root axis printing its display values.
+            labelDelegate: AxisLabel {
+                horizontalAlignment: Text.AlignRight
+                moveX: chart.tickRoom
+                axis: mainY
+                format: chart.mainYFormat
+                valueScale: controller.yScale
+            }
         }
 
         // The measured band: measured ± s.u., a soft fill between two thin lines (the band style).
@@ -759,7 +785,11 @@ Item {
             lineVisible: false
             gridVisible: false
             subGridVisible: false
-            labelDelegate: xLabel
+            labelDelegate: AxisLabel {
+                moveY: -chart.labelLift
+                axis: mainX
+                format: chart.xFormat
+            }
         }
         axisY: ValueAxis {
             id: braggY
@@ -824,7 +854,11 @@ Item {
             lineVisible: false
             gridVisible: false
             subGridVisible: false
-            labelDelegate: xLabel
+            labelDelegate: AxisLabel {
+                moveY: -chart.labelLift
+                axis: mainX
+                format: chart.xFormat
+            }
         }
         axisY: ValueAxis {
             id: residualY
@@ -837,7 +871,12 @@ Item {
             lineVisible: false
             gridVisible: false
             subGridVisible: false
-            labelDelegate: yLabel
+            labelDelegate: AxisLabel {
+                horizontalAlignment: Text.AlignRight
+                moveX: chart.tickRoom
+                axis: residualY
+                format: chart.residualYFormat
+            }
         }
 
         LineSeries {
@@ -876,7 +915,10 @@ Item {
     PaneTitle {
         objectName: "chart.title.y"
         pane: mainView
-        text: controller.yTitle
+        fullText: controller.yTitle
+        // Its first two names, never "meas, calc, …".
+        shrinks: true
+        shortText: fullText.split("</font>").length > 3 ? fullText.split("</font>").slice(0, 2).join("</font>") + "</font>" : ""
         visible: controller.hasData
     }
     // Each Bragg row's label at its left (edi::BraggRowLabel): the structure's icon and name in its colour. The widest
@@ -888,6 +930,8 @@ Item {
         id: braggLabelRepeater
         model: controller.braggLabels
         delegate: IconLine {
+            id: braggLabel
+
             required property var modelData
 
             // Disabled with its ticks hidden from the legend, as the legend's entry is.
@@ -897,6 +941,16 @@ Item {
             visible: braggView.visible
             height: AppSizes.legendRowHeight
             textColor: ink
+            // A name longer than 20 characters is cut in its middle to about as many, as the legend's, and the full name
+            // shows on hover (C1); the panes' left edge (alignPanes) follows the label.
+            readonly property string named: modelData.text
+            maximumWidth: named.length > 20 ? otherWidth + Math.ceil(braggMetrics.advanceWidth(named.slice(0, 10) + "…" + named.slice(-9))) : 0
+            FontMetrics {
+                id: braggMetrics
+                font.family: EaStyle.Fonts.fontFamily
+                font.pixelSize: EaStyle.Sizes.fontPixelSize
+            }
+            elide: Text.ElideMiddle
             segments: [
                 {
                     // A magnetic structure's magnetic row: the magnet, as its group's icon (the owner, 2026-11-03).
@@ -904,9 +958,17 @@ Item {
                     "color": ink
                 },
                 {
-                    "text": modelData.text
+                    "text": modelData.text,
+                    "elides": true
                 }
             ]
+            HoverHandler {
+                id: braggLabelHover
+            }
+            EaElements.ToolTip {
+                text: braggLabel.modelData.text
+                visible: braggLabelHover.hovered && braggLabel.fullWidth > braggLabel.width + 0.5
+            }
             x: Math.max(0, braggView.x + braggView.plotArea.x - width - chart.braggLabelGap)
             y: braggView.y + braggView.plotArea.y + (1 - modelData.centre / Math.max(1, controller.braggRows)) * braggView.plotArea.height - height / 2
         }
@@ -914,7 +976,9 @@ Item {
     PaneTitle {
         objectName: "chart.title.residual"
         pane: residualView
-        text: controller.residualTitle
+        fullText: controller.residualTitle
+        // "resid" when "meas − calc" does not fit the pane (the owner, 2026-11-23), in the residual's own colour.
+        shortText: `<font color="${(controller.residualTitle.match(/color="([^"]+)"/) ?? [])[1] ?? chart.colors.chartLabels}">resid</font>`
         visible: controller.hasResidual
     }
     EaElements.Label {

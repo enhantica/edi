@@ -111,8 +111,11 @@ Column {
                 objectName: `generated.${group.categoryId}.list`
                 defaultInfoText: qsTr("No rows")
                 sourceModel: categoryData.loop ? categoryData.rows : null
-                // The cells a Repeater makes come before it, so the Repeater, declared last, takes the last width.
-                columns: ApplicationInfo.nativeListProjection(0)
+                // Its columns by kind (the shared column model, DataTable.columnKinds; ADR-0103 decision 4): a parameter
+                // or a choice is a short text, a number or a real value a number; any other value (a symmetry operation,
+                // a site's label, an ID) is a name: its own text's width, left, never cut while there is room.
+                readonly property var dataKinds: categoryData.cells.map(cell => cell.kind === "number" && !/(^|_)(id|label)$/.test(cell.name) ? "number" : cell.kind === "parameter" || cell.kind === "choice" ? "short" : "name")
+                columnKinds: ["index"].concat(dataKinds)
 
                 header: EaComponents.ListViewHeader {
                     EaComponents.ListViewLabel {
@@ -127,7 +130,8 @@ Column {
                             required property string modelData
                             readonly property string units: categoryData.units[index] ?? ""
                             readonly property string description: categoryData.descriptions[index] ?? ""
-                            horizontalAlignment: Text.AlignHCenter
+                            // Aligned as its column's content: numbers right, text left.
+                            horizontalAlignment: table.dataKinds[index] === "number" ? Text.AlignRight : Text.AlignLeft
                             // The label alone, as every table header; its units and what it holds are its tooltip.
                             text: modelData
                             ToolTip.text: [description, units !== "" ? qsTr("Units: %1").arg(units) : ""].filter(t => t !== "").join(" ")

@@ -40,6 +40,17 @@ T.ToolTip {
     visible: created && requested && text !== "" && (data || EaGlobals.Vars.toolTipAllowed(selfExplanatory, parent !== null && !parent.enabled))
     delay: data ? 0 : EaGlobals.Vars.toolTipDelay
     Component.onCompleted: created = true
+    // A tooltip asked to hold a long text (a log) names its control in the run log: the text is cut to 2000
+    // characters and 12 lines, and the shadow is drawn only under the largest texture.
+    onOpened: {
+        if (text.length <= 2000 && implicitHeight <= (parent ? parent.Window.height : Infinity))
+            return;
+        const names = [];
+        for (let at = parent; at && names.length < 4; at = at.parent)
+            if (at.objectName)
+                names.push(at.objectName);
+        console.warn(`tooltip: ${text.length} characters, ${Math.round(implicitWidth)}x${Math.round(implicitHeight)} px, on ${names.join(" < ") || "an unnamed control"}`);
+    }
 
     property int enterAnimationDuration: 1000
     property int exitAnimationDuration: 500
@@ -111,7 +122,11 @@ T.ToolTip {
 
             width: wraps ? Math.min(control.maxTextWidth, Math.ceil(implicitWidth / lines) + EaStyle.Sizes.fontPixelSize * 2) : implicitWidth
             wrapMode: Text.Wrap
-            text: control.text
+            // A few lines at most, never a whole log: a tooltip of hundreds of lines was taller than the window and its
+            // shadow larger than a texture may be, redrawn at every frame (the owner, 2026-11-23).
+            maximumLineCount: 12
+            elide: Text.ElideRight
+            text: control.text.length > 2000 ? control.text.slice(0, 2000) : control.text
             textFormat: control.textFormat
             horizontalAlignment: wraps ? Text.AlignLeft : Text.AlignHCenter
 
@@ -132,7 +147,8 @@ T.ToolTip {
     background: Item {
         opacity: control.backgroundOpacity
 
-        layer.enabled: true
+        // No shadow for a tooltip too large for one texture (at four device pixels per pixel).
+        layer.enabled: control.width < 2000 && control.height < 2000
         layer.effect: EaElements.ToolTipShadow {
             shadowColor: control.borderColor
         }

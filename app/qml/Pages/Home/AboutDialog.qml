@@ -132,6 +132,9 @@ AppDialog {
 
         objectName: "about.thirdPartyPopup"
         parent: Overlay.overlay
+        // The table's columns are measured once as the popup opens: a binding measured every row again on every
+        // change while the popup was closed, a GUI-thread stall on unrelated pages.
+        onAboutToShow: components.measure()
         title: qsTr("Third-party licences")
         standardButtons: Dialog.Ok
         // The table sets its size, not an implicit one, so the popup is told how large its content is. The width is
@@ -149,7 +152,12 @@ AppDialog {
             id: components
 
             objectName: "about.components"
-            readonly property var naturalWidths: [naturalTextColumnWidth("component", qsTr("Component")), naturalTextColumnWidth("version", qsTr("Version")), naturalTextColumnWidth("licence", qsTr("Licence"))]
+            // Measured from its rows, not sized by column types (ADR-0103 rule 4 is for tables in a panel): the popup takes
+            // its width from these columns, so a type's width left a surplus or cut a licence name.
+            property var naturalWidths: [1, 1, 1]
+            function measure(): void {
+                naturalWidths = [naturalTextColumnWidth("component", qsTr("Component")), naturalTextColumnWidth("version", qsTr("Version")), naturalTextColumnWidth("licence", qsTr("Licence"))];
+            }
 
             width: ApplicationInfo.aboutComponentsWidth()
             // As many rows as fit in the window with the popup's title and OK button, so the popup is never taller than

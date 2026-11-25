@@ -766,6 +766,20 @@ const std::vector<std::string>& source_atom_types(bool xray, const std::string& 
 
 }  // namespace
 
+void warm_atom_types() {
+    // Each table is asked for every element and ion one by one, about two thousand questions the first time; filled off
+    // the GUI thread at start, the Structure page's first build does not wait for them (the owner, 2026-11-23).
+    (void)new_site_elements();
+    for (const bool xray : {false, true}) {
+        const ScatteringSourceItem item = xray ? ScatteringSourceItem::XRAY_FORM_FACTOR : ScatteringSourceItem::NEUTRON_SCATTERING_LENGTH;
+        try {
+            (void)source_atom_types(xray, supported_scattering_sources(item).front());
+        } catch (const std::exception&) {
+            // Asked again, and reported, when a structure needs it.
+        }
+    }
+}
+
 std::vector<std::string> atom_types(const Project& project, const Structure& structure) {
     std::set<std::string> types;
     bool linked = false;
@@ -4681,8 +4695,18 @@ void save_project_via_crysta(const Project& model, const std::string& directory,
             // group is the only identity a reload could find again, so it stays written.
             for (std::size_t at = 0; at < project.structures.size(); ++at) {
                 crysta::Structure& structure = project.structures[at];
-                if (!structure.magnetic_operations->empty() && !structure.magnetic_group->number_bns.empty())
+                if (!structure.magnetic_operations->empty() && !structure.magnetic_group->number_bns.empty()) {
+                    // The change marks the structure's computed categories stale, and the writer leaves stale ones
+                    // out: they are calculated again when they were current (the atoms and moments in the cell).
+                    const bool current = crysta::geometry_state(structure) == crysta::ComputedState::Current;
                     structure.space_group.modify([](crysta::SpaceGroup& group) { group.declared = false; });
+                    if (current) {
+                        try {
+                            crysta::calculate_structure(structure);
+                        } catch (const std::invalid_argument&) {  // NOLINT(bugprone-empty-catch) — uncomputed
+                        }
+                    }
+                }
             }
             try {
                 crysta::save_project(project, directory);

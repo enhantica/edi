@@ -10,13 +10,20 @@
 #include <QStandardPaths>
 #include <QDir>
 #include <QFile>
+#include <QFileInfo>
 #include <QTemporaryDir>
 #include <QJsonDocument>
 #include <QJsonArray>
 #include <QJsonObject>
 #include <QCryptographicHash>
 #include <QGuiApplication>
+#include <QElapsedTimer>
+#include <QMouseEvent>
+#include <QRegularExpression>
+#include <QTimer>
+#include <algorithm>
 #include <iostream>
+#include <memory>
 #ifndef __EMSCRIPTEN__
 #include "codex_agent.hpp"
 #include "assistant_runtime_config.hpp"
@@ -30,7 +37,9 @@
 #include "assistant_test_settings.hpp"
 #include "assistant_widget_input.hpp"
 #include "project_view_model.hpp"
+#include "run_log.hpp"
 #include "online_search.hpp"
+#include "parameter_item.hpp"
 #if defined(Q_OS_UNIX)
 #include "assistant_file_primitives.hpp"
 #include <sys/stat.h>
@@ -57,16 +66,49 @@ static int assistantToolPeer() {
         write({{"method", method}, {"params", params}});
     };
     Object policy, item;
+    const auto sequence = QJsonDocument::fromJson(qgetenv("EDI_UI_TOOL_SEQUENCE")).array();
+    qsizetype step = 0;
+    const auto issue = [&] {
+        const auto specification = sequence.isEmpty() ? Object{} : sequence.at(step).toObject();
+        const auto tool = specification.value("tool").toString(qEnvironmentVariable("EDI_UI_TOOL", "load_data"));
+        const auto arguments = sequence.isEmpty() ? QJsonDocument::fromJson(qgetenv("EDI_UI_LOAD_ARGUMENTS")).object()
+                                                  : specification.value("arguments").toObject();
+        const auto identity = sequence.isEmpty() ? QStringLiteral("load-item") : QStringLiteral("load-item-%1").arg(step);
+        const auto rpc = sequence.isEmpty() ? QStringLiteral("load-call") : QStringLiteral("load-call-%1").arg(step);
+        item = {{"id", identity}, {"type", "dynamicToolCall"}, {"tool", tool},
+            {"arguments", arguments}, {"status", "inProgress"}};
+        event("item/started", {{"threadId", "load-thread"}, {"turnId", "load-turn"}, {"item", item}});
+        if (tool == "request_user_input") {
+            write({{"id", rpc}, {"method", "item/tool/requestUserInput"}, {"params", Object{
+                {"threadId", "load-thread"}, {"turnId", "load-turn"}, {"itemId", identity},
+                {"questions", arguments.value("questions")}, {"isBlocking", true}, {"autoResolutionMs", QJsonValue::Null}}}});
+            return;
+        }
+        write({{"id", rpc}, {"method", "item/tool/call"},
+            {"params", Object{{"threadId", "load-thread"}, {"turnId", "load-turn"}, {"callId", identity},
+                {"tool", tool}, {"arguments", arguments}}}});
+    };
     for (std::string line; std::getline(std::cin, line);) {
         const auto request = QJsonDocument::fromJson(QByteArray::fromStdString(line)).object();
         const auto method = request.value("method").toString();
         const auto params = request.value("params").toObject();
         if (method.isEmpty()) {
-            if (request.value("id") != "load-call") continue;
+            const auto rpc = sequence.isEmpty() ? QStringLiteral("load-call") : QStringLiteral("load-call-%1").arg(step);
+            if (request.value("id") != rpc) continue;
             item["status"] = "completed";
-            item["success"] = request.value("result").toObject().value("success");
-            item["contentItems"] = request.value("result").toObject().value("contentItems");
+            const auto result = request.value("result").toObject();
+            if (item.value("tool") == "request_user_input") {
+                QFile answer(qEnvironmentVariable("EDI_UI_POLICY_RECEIPT") + ".answer");
+                if (!answer.open(QIODevice::WriteOnly | QIODevice::Truncate)) return 1;
+                answer.write(QJsonDocument(result).toJson(QJsonDocument::Compact));
+                item["success"] = result.contains("answers");
+                item["contentItems"] = QJsonArray{};
+            } else {
+                item["success"] = result.value("success");
+                item["contentItems"] = result.value("contentItems");
+            }
             event("item/completed", {{"threadId", "load-thread"}, {"turnId", "load-turn"}, {"item", item}});
+            if (++step < sequence.size()) { issue(); continue; }
             event("turn/completed", {{"threadId", "load-thread"}, {"turn", Object{{"id", "load-turn"}, {"status", "completed"}, {"error", QJsonValue::Null}}}});
             continue;
         }
@@ -89,6 +131,12 @@ static int assistantToolPeer() {
                 result = {{"data", QJsonArray{Object{{"cwd", folder}, {"skills", skills}, {"errors", QJsonArray{}}}}}};
             }
         } else if (method == "thread/start") {
+            const auto receipt = qEnvironmentVariable("EDI_UI_POLICY_RECEIPT");
+            if (!receipt.isEmpty()) {
+                QFile file(receipt);
+                if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate)) return 1;
+                file.write(params.value("developerInstructions").toString().toUtf8());
+            }
             const auto effort = params.value("config").toObject().value("model_reasoning_effort");
             const auto tools = params.value("dynamicTools").toArray();
             QJsonArray advertised;
@@ -114,17 +162,94 @@ static int assistantToolPeer() {
         write({{"id", request.value("id")}, {"result", result}});
         if (method == "turn/start") {
             event("turn/started", {{"threadId", "load-thread"}, {"turn", Object{{"id", "load-turn"}, {"status", "inProgress"}}}});
-            const auto arguments = QJsonDocument::fromJson(qgetenv("EDI_UI_LOAD_ARGUMENTS")).object();
-            const auto tool = qEnvironmentVariable("EDI_UI_TOOL", "load_data");
-            item = {{"id", "load-item"}, {"type", "dynamicToolCall"}, {"tool", tool},
-                {"arguments", arguments}, {"status", "inProgress"}};
-            event("item/started", {{"threadId", "load-thread"}, {"turnId", "load-turn"}, {"item", item}});
-            write({{"id", "load-call"}, {"method", "item/tool/call"}, {"params", Object{{"threadId", "load-thread"},
-                {"turnId", "load-turn"}, {"callId", "load-item"}, {"tool", tool}, {"arguments", arguments}}}});
+            step = 0;
+            issue();
         }
     }
     return 0;
 }
+
+namespace {
+QQuickItem* namedItem(QQuickItem* item, const QString& name) {
+    if (!item || item->objectName() == name) return item;
+    for (auto* child : item->childItems())
+        if (auto* match = namedItem(child, name)) return match;
+    return nullptr;
+}
+
+QRectF sceneBox(const QQuickItem& item) {
+    return item.mapRectToScene(QRectF(0, 0, item.width(), item.height()));
+}
+
+// Owner's limits for a stuck control and all controls of one shown item.
+constexpr int shownControlLimit = 10000;
+constexpr int shownItemLimit = 45000;
+constexpr int shownObservationMargin = 750;
+
+QString fileText(const QString& path) {
+    QFile file(path);
+    return file.open(QIODevice::ReadOnly) ? QString::fromUtf8(file.readAll()) : QString{};
+}
+
+bool copyEditableProject(const QDir& copy) {
+    const QDir fixture(QStringLiteral(EDI_SOURCE_DIR "/tests/fixtures/e04_t1/editable-project"));
+    for (const auto* relative : {"project.edi", "analysis/analysis.edi", "experiments/hrpt.edi", "structures/lbco.edi"}) {
+        const auto name = QString::fromLatin1(relative);
+        const auto path = copy.filePath(name);
+        if (!QDir().mkpath(QFileInfo(path).absolutePath()) || !QFile::copy(fixture.filePath(name), path)) return false;
+    }
+    return true;
+}
+
+QStringList assistantErrors(edi_app::RunLog& log) {
+    QStringList errors;
+    for (const auto& line : log.logText().split('\n'))
+        if (line.contains("ERROR") && line.contains("assistant:")) errors.append(line);
+    return errors;
+}
+
+auto offlinePeer(const QJsonArray& sequence, const QString& receipt = {}) {
+    const QList<QPair<QByteArray, QByteArray>> values{
+        {"EDI_CODEX_DEVELOPMENT_EXECUTABLE", QCoreApplication::applicationFilePath().toUtf8()},
+        {"EDI_UI_TOOL_SEQUENCE", QJsonDocument(sequence).toJson(QJsonDocument::Compact)},
+        {"EDI_UI_POLICY_RECEIPT", receipt.toUtf8()},
+    };
+    QList<QPair<QByteArray, QByteArray>> originals;
+    for (const auto& [name, value] : values) {
+        originals.append(qMakePair(name, qgetenv(name.constData())));
+        qputenv(name.constData(), value);
+    }
+    return qScopeGuard([originals] {
+        for (const auto& [name, value] : originals) {
+            if (value.isNull()) qunsetenv(name.constData());
+            else qputenv(name.constData(), value);
+        }
+    });
+}
+
+// Observe and retain Qt's delivered events, including their original device and timestamp.
+// A later copy with a new device would be a new manual click and prove nothing about retirement.
+class HeldAssistantPress : public QObject {
+public:
+    QPointer<QQuickItem> target;
+    std::unique_ptr<QMouseEvent> press, release;
+    QElapsedTimer sincePress;
+
+    bool eventFilter(QObject*, QEvent* event) override {
+        if (!target || (event->type() != QEvent::MouseButtonPress && event->type() != QEvent::MouseButtonRelease))
+            return false;
+        const auto* mouse = static_cast<const QMouseEvent*>(event);
+        if (mouse->pointingDevice()->name() != QStringLiteral("EDI assistant input") ||
+            !sceneBox(*target).contains(mouse->scenePosition())) return false;
+        if (event->type() == QEvent::MouseButtonPress && !press) {
+            sincePress.start();
+            press.reset(mouse->clone());
+        }
+        if (event->type() == QEvent::MouseButtonRelease && press && !release) release.reset(mouse->clone());
+        return false;
+    }
+};
+}  // namespace
 
 #endif
 
@@ -152,6 +277,564 @@ private slots:
         const auto edb = QUrl::fromLocalFile(root + "/tests/fixtures/online_sources/easydiffraction/").toString();
         qputenv("EDI_ONLINE_SOURCES", ("cod=" + cod + ";easydiffraction=" + edb).toUtf8());
     }
+#ifndef __EMSCRIPTEN__
+    void shownStepFallback_data() {
+        QTest::addColumn<QString>("fault");
+        for (const auto* fault : {"absent", "covered", "disabled", "late", "mute", "working", "unrelated-motion"})
+            QTest::newRow(fault) << QString::fromLatin1(fault);
+    }
+    void shownStepFallback() {
+        QFETCH(QString, fault);
+        // One stuck control gets 10 s and one item gets 45 s. The loaded absent
+        // runs logged up to 10,536 ms of product wait (h6-abs.log). Keep the
+        // 750 ms observation margin and measure the peer's admission separately.
+        const QString control = QStringLiteral("experiments.create");
+        const QString tool = QStringLiteral("create_experiment");
+        const QJsonObject step{{"tool", tool}, {"arguments", QJsonObject{}}};
+        const auto restore = offlinePeer(QJsonArray{step, step});
+        QTemporaryDir storage;
+        QVERIFY2(storage.isValid(), "The actor needs its own real run log");
+        edi_app::RunLog log({storage.path(), {}, 3, 5'000'000, false});
+        auto* previous = edi_app::RunLog::instance();
+        edi_app::RunLog::install(&log);
+        const auto restoreLog = qScopeGuard([&] { edi_app::RunLog::install(previous); });
+        QVERIFY2(log.start({}), "The app's regular logging path must write to disk");
+        log.setLevel("Info");
+
+        QQmlApplicationEngine engine;
+        edi_app::configure_engine(engine);
+        edi_app::test::assistant_defaults();
+        QQmlComponent component(&engine);
+        component.setData("import edi.app\nMain { width: 1400; height: 1000; visible: true }", QUrl());
+        QScopedPointer<QObject> root(component.create());
+        QVERIFY2(root, qPrintable(component.errorString()));
+        auto* window = qobject_cast<QQuickWindow*>(root.data());
+        QVERIFY2(window, "The actor must have a real app window");
+        window->requestActivate();
+        QVERIFY2(QTest::qWaitForWindowActive(window), "Shown input needs the active app window");
+        auto* session = engine.singletonInstance<edi_app::Session*>("edi.app", "Session");
+        QVERIFY2(session && (session->hasProject() || session->startUntitledProject()) && session->untitled(),
+                 "The fallback actor must use untitled work without a saved fixture directory");
+        auto* project = session->project();
+        QVERIFY2(project, "Tool effects are counted on the original project owner");
+        QVERIFY2(project->loadStructure(QUrl::fromLocalFile(QString::fromUtf8(EDI_SOURCE_DIR) + "/tests/fixtures/assistant_save_replay/lbco.cif")),
+                 "The saved independent structure enables the ordinary Experiment page");
+        auto* assistant = session->assistant();
+        assistant->setActionWindow(window);
+        assistant->setShowActions(true);
+        assistant->signIn();
+        QTRY_VERIFY2_WITH_TIMEOUT(assistant->connected() && assistant->draftAdmissionReady(), qPrintable(assistant->lastError()), 10000);
+        const auto find = [window](const QString& name) { return namedItem(window->contentItem(), name); };
+        QQuickItem* tab = nullptr;
+        QTRY_VERIFY2(take(tab, find("appBar.tab.experiment")) && tab->isEnabled(),
+                     "The actual Experiment tab must be reachable before injecting a control fault");
+        QTest::mouseClick(window, Qt::LeftButton, Qt::NoModifier, tab->mapToScene(tab->boundingRect().center()).toPoint());
+        QQuickItem* target = nullptr;
+        QTRY_VERIFY2(take(target, find(control)) && target->isVisible() && target->isEnabled(),
+                     "The original Create experiment control exists before the fault");
+        const QPointer<QQuickItem> original(target);
+        QSignalSpy genuineClicks(target, SIGNAL(clicked()));
+        QVERIFY2(genuineClicks.isValid(), "The actor can observe the real button's click delivery");
+
+        const bool replacement = fault == "mute" || fault == "late";
+        QScopedPointer<QObject> faultItem;
+        QTimer followCoveredButton;
+        HeldAssistantPress held, nextInput;
+        if (replacement || fault == "covered") {
+            QQmlComponent faultComponent(&engine);
+            faultComponent.setData(replacement
+                ? "import QtQuick.Controls\nButton { anchors.fill: parent; property int taken: 0; onClicked: ++taken }"
+                : "import QtQuick\nMouseArea { objectName: \"acceptance.cover\" }", QUrl());
+            faultItem.reset(faultComponent.create());
+            auto* item = qobject_cast<QQuickItem*>(faultItem.data());
+            QVERIFY2(item, qPrintable(faultComponent.errorString()));
+            if (replacement) {
+                // The Create button's parent is a Row. A sibling would take a
+                // new slot. The substitute fills the existing slot instead.
+                item->setParentItem(target);
+                item->setZ(1);
+                original->setObjectName("acceptance.original");
+                item->setObjectName(control);
+                held.target = item;
+                window->installEventFilter(&held);
+            } else {
+                item->setParentItem(window->contentItem());
+                item->setZ(10000);
+                const auto follow = [original, item] {
+                    if (!original) return;
+                    const auto box = original->mapRectToItem(item->parentItem(),
+                        QRectF(0, 0, original->width(), original->height()));
+                    item->setPosition(box.topLeft());
+                    item->setSize(box.size());
+                };
+                follow();
+                connect(&followCoveredButton, &QTimer::timeout, item, follow);
+                followCoveredButton.start(16);
+            }
+            QTRY_VERIFY2(sceneBox(*item).contains(sceneBox(*target).center()),
+                         "The fault item actually covers the real button's hit point");
+        } else if (fault == "absent" || fault == "unrelated-motion") {
+            original->setObjectName("acceptance.original");
+            QVERIFY2(!find(control), "The missing control has no same-name substitute in the app");
+        } else if (fault == "disabled") {
+            original->setEnabled(false);
+            QVERIFY2(!original->isEnabled(), "The original target is effectively disabled");
+        }
+
+        // A separate viewport changes its scroll position while Create stays absent.
+        // It does not cover the control or take focus, so it cannot advance that step.
+        QScopedPointer<QObject> unrelatedViewport;
+        int moved = 0;
+        QTimer unrelatedMotion;
+        if (fault == "unrelated-motion") {
+            QQmlComponent viewportComponent(&engine);
+            viewportComponent.setData("import QtQuick\nFlickable { width: 40; height: 40; contentHeight: 20000; interactive: false }", QUrl());
+            unrelatedViewport.reset(viewportComponent.create());
+            auto* viewport = qobject_cast<QQuickItem*>(unrelatedViewport.data());
+            QVERIFY2(viewport, qPrintable(viewportComponent.errorString()));
+            viewport->setParentItem(window->contentItem());
+            viewport->setPosition(QPointF(window->width() - 50, window->height() - 50));
+            QVERIFY2(viewport->isVisible() && !sceneBox(*viewport).intersects(sceneBox(*original)),
+                     "Unrelated visible scroll motion stays away from the Create hit box");
+            connect(&unrelatedMotion, &QTimer::timeout, viewport, [viewport, &moved] {
+                viewport->setProperty("contentY", viewport->property("contentY").toDouble() + 24);
+                ++moved;
+            });
+            unrelatedMotion.start(100);
+        }
+
+        const auto count = [project] { return project->assistantProject()->experiments.size(); };
+        const auto base = count();
+        QList<decltype(count())> effects;
+        QElapsedTimer elapsed;
+        QList<qint64> effectTimes;
+        qint64 firstRevealAt = -1;
+        int firstPress = 0, secondPress = 0, muteClicks = 0;
+        QPointF pointer;
+        QObject observation;
+        connect(assistant, &edi_app::AssistantViewModel::actionControlsRequested, &observation, [&] {
+            if (elapsed.isValid() && firstRevealAt < 0) firstRevealAt = elapsed.elapsed();
+        });
+        connect(assistant, &edi_app::AssistantViewModel::actionPointerMoved, &observation, [&](const QPointF& point) { pointer = point; });
+        connect(assistant, &edi_app::AssistantViewModel::actionPointerPressed, &observation, [&] {
+            auto* shown = find(control);
+            if (!shown || !sceneBox(*shown).contains(pointer)) return;
+            if (count() == base) ++firstPress;
+            if (count() == base + 1 && shown == original) ++secondPress;
+        });
+        connect(project, &edi_app::ProjectViewModel::edited, &observation, [&] {
+            const auto now = count();
+            if (now == base || (!effects.isEmpty() && effects.back() == now)) return;
+            effects.append(now);
+            effectTimes.append(elapsed.elapsed());
+            if (effects.size() != 1) return;
+            followCoveredButton.stop();
+            unrelatedMotion.stop();
+            if (replacement && faultItem) muteClicks = faultItem->property("taken").toInt();
+            if (original) {
+                original->setObjectName(control);
+                original->setEnabled(true);
+            }
+            if (auto* item = qobject_cast<QQuickItem*>(faultItem.data())) {
+                item->setVisible(false);
+                item->setObjectName("acceptance.retired");
+            }
+            if (fault == "late") {
+                nextInput.target = original;
+                window->installEventFilter(&nextInput);
+            }
+        });
+        if (fault == "unrelated-motion") {
+            QTRY_VERIFY2_WITH_TIMEOUT(moved >= 5, "The unrelated viewport is already scrolling when the tool starts", 1500);
+            QVERIFY2(unrelatedViewport->property("contentY").toDouble() >= 120 && !find(control),
+                     "The observed motion leaves the requested control absent");
+        }
+        const int movesAtSend = moved;
+        elapsed.start();
+        assistant->send("Create two new experiments with two separate ordinary actions.");
+        const int loggedWaitLimit = shownControlLimit + shownObservationMargin;
+        // The watchdog's 500 ms look period can elapse before it notices a stuck control.
+        // The unrelated-motion effect must also reach the observer after ordinary fallback.
+        constexpr int shownLookPeriod = 500;
+        const int firstEffectLimit = fault == "working" ? shownItemLimit + shownObservationMargin
+            : loggedWaitLimit + (fault == "unrelated-motion" ? shownLookPeriod : 0);
+        constexpr int nextLimit = shownItemLimit + shownObservationMargin;
+        QTRY_VERIFY2_WITH_TIMEOUT(firstRevealAt >= 0, "The local peer's first item reaches the app's shown-control route", 10000);
+        QTRY_VERIFY2_WITH_TIMEOUT(!effectTimes.isEmpty(), "The initial effect must arrive within the shown step's limit", firstEffectLimit);
+        const auto firstEffectDelay = effectTimes[0] - firstRevealAt;
+        QVERIFY2(firstEffectDelay >= 0 && firstEffectDelay <= firstEffectLimit,
+                 qPrintable(QStringLiteral("The first effect took %1 ms from control reveal after %2 ms of peer admission. The limit is %3 ms.")
+                     .arg(firstEffectDelay).arg(firstRevealAt).arg(firstEffectLimit)));
+        if (fault == "unrelated-motion" && firstEffectDelay >= 500)
+            QVERIFY2(moved > movesAtSend, "Unrelated scroll motion continues while the stuck control is waiting");
+        QTRY_COMPARE_WITH_TIMEOUT(count(), base + 2, nextLimit);
+        QVERIFY2(effectTimes.size() == 2 && effectTimes[1] - effectTimes[0] <= nextLimit,
+                 "The following shown item settles within its own total limit");
+        QTRY_COMPARE_WITH_TIMEOUT(assistant->state(), QString("idle"), 5000);
+        QVERIFY2(assistant->showActions() && secondPress > 0, "The following tool really shows its genuine Create control");
+        QCOMPARE(genuineClicks.size(), fault == "working" ? 2 : 1);
+        if (fault == "working") QVERIFY2(firstPress > 0, "An ordinary working first step reaches the real pointer press");
+        if (replacement) QVERIFY2(muteClicks == 1, "The mute control receives a genuine click and makes no project edit of its own");
+        if (fault == "late") {
+            QVERIFY2(held.press && held.release, "The late control retained both original device-stamped events");
+            QVERIFY2(nextInput.press && nextInput.release && nextInput.press->pointingDevice() == held.press->pointingDevice() &&
+                         nextInput.press->timestamp() > held.release->timestamp(),
+                     "A later genuine action took a new input frame on the same device before replay");
+            QVERIFY2(original && original->isVisible() && original->isEnabled(), "The late replay addresses a live original action");
+            // The newly added rows moved the button. Preserve the retired
+            // device and stamps at its current hit rectangle on both sides of the backstop.
+            const auto replayRetiredClick = [&] {
+                const auto centre = sceneBox(*original).center();
+                for (const auto* saved : {held.press.get(), held.release.get()}) {
+                    QMouseEvent replay(saved->type(), centre, window->mapToGlobal(centre),
+                                       saved->button(), saved->buttons(), saved->modifiers(), saved->pointingDevice());
+                    replay.setTimestamp(saved->timestamp());
+                    QCoreApplication::sendEvent(window, &replay);
+                }
+                QCoreApplication::processEvents();
+            };
+            QVERIFY2(elapsed.elapsed() < shownItemLimit,
+                     "The first replay follows retirement and precedes the original item's backstop");
+            replayRetiredClick();
+            QCOMPARE(genuineClicks.size(), 1);
+            QCOMPARE(count(), base + 2);
+            QTRY_VERIFY2_WITH_TIMEOUT(held.sincePress.elapsed() >= shownItemLimit,
+                                     "The second replay is past the backstop even when measured from the original press", nextLimit);
+            QVERIFY2(original && original->isVisible() && original->isEnabled(), "The real control still admits ordinary input at the second replay");
+            replayRetiredClick();
+            QCOMPARE(genuineClicks.size(), 1);
+        }
+        QCOMPARE(effects, (QList<decltype(count())>{base + 1, base + 2}));
+        QCOMPARE(count(), base + 2);
+
+        const auto errors = assistantErrors(log);
+        QCOMPARE(errors.size(), fault == "working" ? 0 : 1);
+        if (fault != "working") {
+            const auto& error = errors.front();
+            QVERIFY2(error.contains("tool create_experiment") && error.contains("control experiments.create"), qPrintable(error));
+            QVERIFY2(error.contains("page experiment") && error.contains("group group.experiments"), qPrintable(error));
+            const auto wait = QRegularExpression(R"(waited (\d+) ms)").match(error);
+            QVERIFY2(wait.hasMatch() && wait.captured(1).toLongLong() <= loggedWaitLimit, qPrintable(error));
+            if (fault == "absent" || fault == "unrelated-motion") QVERIFY2(error.contains("not in the window"), qPrintable(error));
+            if (fault == "covered") QVERIFY2(error.contains("covered by") && error.contains("acceptance.cover"), qPrintable(error));
+            if (fault == "disabled") QVERIFY2(error.contains("enabled no"), qPrintable(error));
+        }
+    }
+
+    void saveAndReportSurviveLostCue_data() {
+        QTest::addColumn<QString>("lostTool");
+        QTest::newRow("save") << QStringLiteral("save_project");
+        QTest::newRow("report") << QStringLiteral("show_report");
+    }
+
+    void saveAndReportSurviveLostCue() {
+        QFETCH(QString, lostTool);
+        const auto restore = offlinePeer({
+            QJsonObject{{"tool", "save_project"}, {"arguments", QJsonObject{{"destination", "current"}}}},
+            QJsonObject{{"tool", "show_report"}, {"arguments", QJsonObject{}}},
+        });
+        QTemporaryDir storage;
+        QVERIFY2(storage.isValid(), "Save and Report require their own project and run log directory");
+        const QDir copy(storage.filePath("editable-project"));
+        QVERIFY2(copyEditableProject(copy), "Save operates on an independent, writable copy of a saved project");
+        edi_app::RunLog log({storage.path(), {}, 3, 5'000'000, false});
+        auto* previous = edi_app::RunLog::instance();
+        edi_app::RunLog::install(&log);
+        const auto restoreLog = qScopeGuard([&] { edi_app::RunLog::install(previous); });
+        QVERIFY2(log.start({}), "A lost cue must be diagnosed in the ordinary run log");
+
+        QQmlApplicationEngine engine;
+        edi_app::configure_engine(engine);
+        edi_app::test::assistant_defaults();
+        QQmlComponent component(&engine);
+        component.setData("import edi.app\nMain { width: 1400; height: 1000; visible: true }", QUrl());
+        QScopedPointer<QObject> root(component.create());
+        QVERIFY2(root, qPrintable(component.errorString()));
+        auto* window = qobject_cast<QQuickWindow*>(root.data());
+        QVERIFY2(window, "The standard window exposes the real Save and Report controls");
+        window->requestActivate();
+        QVERIFY2(QTest::qWaitForWindowActive(window), "Shown input uses the active app window");
+        auto* session = engine.singletonInstance<edi_app::Session*>("edi.app", "Session");
+        QVERIFY2(session && session->openProject(QUrl::fromLocalFile(copy.absolutePath())) && !session->needsSaveAs(),
+                 "The ordinary Save route has an owned current directory and requires no human chooser");
+        const QPointer<edi_app::ProjectViewModel> project(session->project());
+        QVERIFY2(project, "Both operations apply to the same original project");
+        const QString title = QStringLiteral("Acceptance edit saved after a lost cue");
+        project->setTitle(title);
+        const auto diskTitle = [&] {
+            const auto saved = edi::load_project(copy.absolutePath().toStdString(), edi::ProjectLoadMode::Construction);
+            return QString::fromStdString(saved.metadata.title);
+        };
+        QVERIFY2(project->modified() && diskTitle() != title, "The unsaved title distinguishes a real disk Save from a cue or reply");
+
+        const auto find = [window](const QString& name) { return namedItem(window->contentItem(), name); };
+        const QString saveName = QStringLiteral("appBar.button.save");
+        const QString reportName = QStringLiteral("appBar.tab.report");
+        QQuickItem* save = nullptr;
+        QQuickItem* report = nullptr;
+        QTRY_VERIFY2(take(save, find(saveName)) && save->isVisible() && save->isEnabled() &&
+                         take(report, find(reportName)) && report->isVisible() && report->isEnabled(),
+                     "Both genuine controls are usable before either cue is lost");
+        QVERIFY2(!report->property("checked").toBool(), "Report starts unopened so its navigation is observable");
+        const bool loseSave = lostTool == "save_project";
+        const QPointer<QQuickItem> lost(loseSave ? save : report);
+        const QPointer<QQuickItem> intact(loseSave ? report : save);
+        auto* assistant = session->assistant();
+        assistant->setActionWindow(window);
+        assistant->setShowActions(true);
+        assistant->signIn();
+        QTRY_VERIFY2_WITH_TIMEOUT(assistant->connected() && assistant->draftAdmissionReady(), qPrintable(assistant->lastError()), 10000);
+        QPointF pointer;
+        int lostCues = 0, lostPresses = 0, intactPresses = 0;
+        QObject observer;
+        connect(assistant, &edi_app::AssistantViewModel::actionPointerMoved, &observer, [&](const QPointF& position) {
+            pointer = position;
+            if (lostCues != 0 || !lost || !sceneBox(*lost).contains(pointer)) return;
+            ++lostCues;
+            // Lose the visual target between movement and press while the underlying Save/Report action remains valid.
+            lost->setOpacity(0);
+        });
+        connect(assistant, &edi_app::AssistantViewModel::actionPointerPressed, &observer, [&] {
+            if (lost && sceneBox(*lost).contains(pointer)) ++lostPresses;
+            if (intact && intact->isVisible() && sceneBox(*intact).contains(pointer)) ++intactPresses;
+        });
+        assistant->send("Save the current project, then open its Report preview.");
+        constexpr int limit = shownItemLimit + shownObservationMargin;
+        QTRY_COMPARE_WITH_TIMEOUT(lostCues, 1, limit);
+        QTRY_COMPARE_WITH_TIMEOUT(assistant->state(), QString("idle"), limit);
+        QVERIFY2(lost && lost->opacity() == 0 && assistant->showActions(), "The cue stays lost without turning off Show actions");
+        QVERIFY2(project && session->project() == project && !project->modified(), "The ordinary Save settles on the original project");
+        QCOMPARE(diskTitle(), title);
+        QCOMPARE(lostPresses, 0);
+        QCOMPARE(intactPresses, 1);
+        QQuickItem* preview = nullptr;
+        QTRY_VERIFY2(report->property("checked").toBool() && take(preview, find("report.preview")) &&
+                         preview->isVisible() && preview->property("drawn").toBool() &&
+                         preview->property("report").value<QObject*>() == project->report(),
+                     "Report opens the original project's live preview");
+        const auto errors = assistantErrors(log);
+        QCOMPARE(errors.size(), 1);
+        QVERIFY2(errors.front().contains("tool " + lostTool) &&
+                     errors.front().contains("control " + (loseSave ? saveName : reportName)),
+                 qPrintable(errors.front()));
+    }
+
+    void questionsRequireCards() {
+        const QString question = QStringLiteral("Which probe did the measurement use?");
+        const QJsonArray choices{QJsonObject{{"label", "Neutrons"}, {"description", "Use the neutron probe."}},
+                                 QJsonObject{{"label", "X-rays"}, {"description", "Use the X-ray probe."}}};
+        const QJsonArray questions{QJsonObject{{"id", "probe"}, {"header", "Probe"}, {"question", question},
+                                             {"isOther", true}, {"isSecret", false}, {"options", choices}}};
+        const QJsonArray sequence{QJsonObject{{"tool", "request_user_input"}, {"arguments", QJsonObject{{"questions", questions}}}}};
+        QTemporaryDir storage;
+        QVERIFY2(storage.isValid(), "The local question peer needs its own runtime instruction receipt");
+        const auto path = storage.filePath("instructions.txt");
+        const auto restore = offlinePeer(sequence, path);
+        QQmlApplicationEngine engine;
+        edi_app::configure_engine(engine);
+        edi_app::test::assistant_defaults();
+        QQmlComponent component(&engine);
+        component.setData("import edi.app\nMain { width: 1400; height: 1000; visible: true }", QUrl());
+        QScopedPointer<QObject> root(component.create());
+        QVERIFY2(root, qPrintable(component.errorString()));
+        auto* window = qobject_cast<QQuickWindow*>(root.data());
+        QVERIFY2(window, "The real question actor runs in the ordinary app window");
+        window->requestActivate();
+        QVERIFY2(QTest::qWaitForWindowActive(window), "The question card must accept ordinary pointer input");
+        auto* session = engine.singletonInstance<edi_app::Session*>("edi.app", "Session");
+        QVERIFY2(session && (session->hasProject() || session->startUntitledProject()) && session->untitled(),
+                 "The question actor must use untitled work without a saved fixture directory");
+        QQuickItem* projectTab = nullptr;
+        QTRY_VERIFY2(take(projectTab, namedItem(window->contentItem(), "appBar.tab.project")) && projectTab->isEnabled(),
+                     "The ordinary Project page can host the Assistant panel");
+        QTest::mouseClick(window, Qt::LeftButton, Qt::NoModifier,
+                          projectTab->mapToScene(projectTab->boundingRect().center()).toPoint());
+        auto* assistant = session->assistant();
+        assistant->signIn();
+        QTRY_VERIFY2_WITH_TIMEOUT(assistant->connected() && assistant->draftAdmissionReady(), qPrintable(assistant->lastError()), 10000);
+        assistant->send("Set up a powder measurement. The radiation probe is unspecified.");
+        QQuickItem* option = nullptr;
+        const auto cardReady = [&] {
+            const auto* popup = window->findChild<QObject*>("assistant.popup");
+            return popup && popup->property("opened").toBool() &&
+                take(option, namedItem(window->contentItem(), "assistant.question.option.0")) &&
+                option->isVisible() && option->isEnabled() &&
+                QRectF(0, 0, window->width(), window->height()).contains(sceneBox(*option).center());
+        };
+        QTRY_VERIFY2_WITH_TIMEOUT(cardReady(), "The question panel rests and option zero is inside the window", 10000);
+        auto* second = namedItem(window->contentItem(), "assistant.question.option.1");
+        auto* free = namedItem(window->contentItem(), "assistant.question.answer");
+        QVERIFY2(second && second->isVisible() && free && free->isVisible(),
+                 "The card offers both choices and a free answer on the same visible surface");
+        const auto hasLabel = [](const QQuickItem* control, const QString& label) {
+            const auto descendants = control->findChildren<QQuickItem*>();
+            return std::any_of(descendants.cbegin(), descendants.cend(), [&](const auto* item) {
+                return item->isVisible() && item->property("text").toString().simplified() == label;
+            });
+        };
+        QVERIFY2(hasLabel(option, "1. Neutrons") && hasLabel(second, "2. X-rays"),
+                 "The rendered choices retain the original local peer's options");
+        QCOMPARE(assistant->pendingQuestion().text, question);
+        QTest::mouseClick(window, Qt::LeftButton, Qt::NoModifier, sceneBox(*option).center().toPoint());
+        QTRY_COMPARE_WITH_TIMEOUT(assistant->state(), QString("idle"), 10000);
+        const auto answer = QJsonDocument::fromJson(fileText(path + ".answer").toUtf8()).object()
+            .value("answers").toObject().value("probe").toObject().value("answers").toArray();
+        QCOMPARE(answer, QJsonArray{"Neutrons"});
+
+        const auto policy = fileText(path);
+        QVERIFY2(policy.contains("Ask every question with the request_user_input tool") &&
+                 policy.contains("never request_user_input_async or plain text") &&
+                 policy.contains("Where that tool is not offered, say so once, name what is missing and stop"),
+                 "The actual runtime contract requires clickable questions and stops when the card tool is unavailable");
+        const auto skill = fileText(QString::fromUtf8(EDI_SOURCE_DIR) + "/data/assistant/skills/project-assistance/SKILL.md");
+        QVERIFY2(skill.contains("A question is always a card with options to click, never plain text") &&
+                 skill.contains("If request_user_input is not offered, say once that questions cannot be asked here and which points are missing, then stop"),
+                 "The shipped project skill must also close the plain-question fallback");
+        QVERIFY2(!policy.contains("plain final question", Qt::CaseInsensitive) &&
+                 !skill.contains("plain final question", Qt::CaseInsensitive),
+                 "Neither instruction source may authorize the old plain question escape");
+    }
+
+    void fallbackReturnsToShownInsideABatchedTool() {
+        constexpr double length = 4.01, adp = 0.65;
+        constexpr int stageDelay = 5500;
+        const QJsonArray values{
+            QJsonObject{{"path", "structure.cell.length_a"}, {"value", length}},
+            QJsonObject{{"path", "structure.atom_sites[La].adp_iso"}, {"value", adp}},
+        };
+        const auto restore = offlinePeer({QJsonObject{{"tool", "set_parameters"}, {"arguments", QJsonObject{{"values", values}}}}});
+        QTemporaryDir storage;
+        QVERIFY2(storage.isValid(), "The batch needs its own project and run log directory");
+        const QDir copy(storage.filePath("editable-project"));
+        QVERIFY2(copyEditableProject(copy), "The batch has a writeable copy of the independent input files");
+        edi_app::RunLog log({storage.path(), {}, 3, 5'000'000, false});
+        auto* previous = edi_app::RunLog::instance();
+        edi_app::RunLog::install(&log);
+        const auto restoreLog = qScopeGuard([&] { edi_app::RunLog::install(previous); });
+        QVERIFY2(log.start({}), "The batch's ordinary run log must be writable");
+        QQmlApplicationEngine engine;
+        edi_app::configure_engine(engine);
+        edi_app::test::assistant_defaults();
+        QQmlComponent component(&engine);
+        component.setData("import edi.app\nMain { width: 1400; height: 1000; visible: true }", QUrl());
+        QScopedPointer<QObject> root(component.create());
+        QVERIFY2(root, qPrintable(component.errorString()));
+        auto* window = qobject_cast<QQuickWindow*>(root.data());
+        QVERIFY2(window, "The batched native edit uses the real app window");
+        window->requestActivate();
+        QVERIFY2(QTest::qWaitForWindowActive(window), "Shown batch input uses the active app window");
+        auto* session = engine.singletonInstance<edi_app::Session*>("edi.app", "Session");
+        QVERIFY2(session && session->openProject(QUrl::fromLocalFile(copy.absolutePath())),
+                 "The isolated copy of the independently saved structure supplies both parameters");
+        auto* project = session->project();
+        QVERIFY2(project, "The batch retains its current original project");
+        auto* a = project->parameterNamed("lbco.cell.length_a");
+        auto* b = project->parameterNamed("lbco.atom_site.La.adp_iso");
+        QVERIFY2(a && b && a->value() != length && b->value() != adp, "Each test edit has an independent original value");
+        auto* assistant = session->assistant();
+        assistant->setActionWindow(window);
+        assistant->setShowActions(true);
+        const auto find = [window](const QString& name) { return namedItem(window->contentItem(), name); };
+        QQuickItem* tab = nullptr;
+        QTRY_VERIFY2(take(tab, find("appBar.tab.structure")) && tab->isEnabled(), "The Structure page exposes the original cell field");
+        QTest::mouseClick(window, Qt::LeftButton, Qt::NoModifier, tab->mapToScene(tab->boundingRect().center()).toPoint());
+        QQuickItem* group = nullptr;
+        QTRY_VERIFY2(take(group, find("group.cell")) && group->isVisible(), "The original cell group is present");
+        QVERIFY2(group->setProperty("collapsed", false), "Opening the cell group materializes its numeric fields");
+        QQuickItem* first = nullptr;
+        QTRY_VERIFY2(take(first, find("cell.length_a")) && first->isVisible(), "The actual first numeric field is available before the fault");
+        first->setEnabled(false);
+        QVERIFY2(!first->isEnabled(), "Only the first editor is disabled for the batched operation");
+        QQuickItem* adpGroup = nullptr;
+        const QString groupName = QStringLiteral("group.atom_site_aniso");
+        QTRY_VERIFY2(take(adpGroup, find(groupName)) && adpGroup->isVisible(),
+                     "The real Atomic displacement group is available for a timed reveal");
+        QVERIFY2(adpGroup->setProperty("collapsed", true) && adpGroup->property("collapsed").toBool(),
+                 "The second item must open the Atomic displacement group itself");
+        const QPointer<QQuickItem> heldGroup(adpGroup);
+        heldGroup->setObjectName("acceptance.heldAdpGroup");
+        assistant->signIn();
+        QTRY_VERIFY2_WITH_TIMEOUT(assistant->connected() && assistant->draftAdmissionReady(), qPrintable(assistant->lastError()), 10000);
+        QPointF point;
+        QElapsedTimer elapsed;
+        qint64 firstEffect = -1, secondEffect = -1, groupShown = -1, cellShown = -1, editorShown = -1;
+        bool editorRestored = false;
+        QObject observer;
+        connect(project, &edi_app::ProjectViewModel::edited, &observer, [&] {
+            if (firstEffect < 0 && a->value() == length) {
+                firstEffect = elapsed.elapsed();
+                QTimer::singleShot(stageDelay, &observer, [heldGroup, groupName] {
+                    if (heldGroup) heldGroup->setObjectName(groupName);
+                });
+            }
+            if (secondEffect < 0 && b->value() == adp) secondEffect = elapsed.elapsed();
+        });
+        connect(assistant, &edi_app::AssistantViewModel::actionPointerMoved, &observer, [&](const QPointF& position) { point = position; });
+        connect(assistant, &edi_app::AssistantViewModel::actionPointerPressed, &observer, [&] {
+            if (firstEffect < 0 || b->value() == adp) return;
+            // The real group reveal and the cell cue must make progress between the two holds.
+            auto* title = heldGroup ? heldGroup->property("titleArea").value<QQuickItem*>() : nullptr;
+            if (groupShown < 0 && title && title->isVisible() && sceneBox(*title).contains(point))
+                groupShown = elapsed.elapsed();
+            QPointer<QQuickItem> cell(find("atomSiteAdp.iso.0"));
+            if (cellShown < 0 && cell && cell->isVisible() && sceneBox(*cell).contains(point)) {
+                const auto editorComponent = cell->property("editorComponent");
+                if (editorComponent.value<QQmlComponent*>() &&
+                    cell->setProperty("editorComponent", QVariant::fromValue(static_cast<QQmlComponent*>(nullptr)))) {
+                    cellShown = elapsed.elapsed();
+                    QTimer::singleShot(stageDelay, &observer, [cell, editorComponent, &editorRestored] {
+                        if (cell) editorRestored = cell->setProperty("editorComponent", editorComponent);
+                    });
+                }
+            }
+            // Shown input cues the actual popup's editor after its own staged availability.
+            if (auto* editor = find("atomSiteAdp.iso.0.popup.value"); editor &&
+                editorRestored && editor->isVisible() && editor->isEnabled() &&
+                sceneBox(*editor).contains(point))
+                editorShown = elapsed.elapsed();
+        });
+        constexpr int itemLimit = shownItemLimit + shownObservationMargin;
+        elapsed.start();
+        assistant->send("Set the two specified independent parameter values.");
+        QTRY_VERIFY2_WITH_TIMEOUT(firstEffect >= 0, "The disabled field falls back within the first item's total limit", itemLimit);
+        QTRY_VERIFY2_WITH_TIMEOUT(secondEffect >= 0, "The next shown edit completes within its own total limit", itemLimit);
+        QVERIFY2(firstEffect <= itemLimit && firstEffect <= secondEffect && secondEffect - firstEffect <= itemLimit,
+                 "Both effects arrive in order within their respective item limits");
+        QCOMPARE(a->value(), length);
+        QCOMPARE(b->value(), adp);
+        QTRY_COMPARE_WITH_TIMEOUT(assistant->state(), QString("idle"), 5000);
+        const auto errors = assistantErrors(log);
+        QCOMPARE(errors.size(), 1);
+        QVERIFY2(errors.front().contains("tool set_parameters control cell.length_a"),
+                 "The batched operation really took the first field's diagnosed fallback");
+        QVERIFY2(firstEffect < groupShown && groupShown <= cellShown && cellShown < editorShown && editorShown <= secondEffect,
+                 "After fallback the genuine group, cell, and popup-editor cues precede the second model effect");
+        QVERIFY2(editorShown - firstEffect > shownControlLimit,
+                 "The working second item genuinely progresses past the stuck-control limit without another fallback");
+    }
+
+    void shippedBinaryExcludesAssistantDemo() {
+        const QDir bin(QCoreApplication::applicationDirPath());
+        QFile product;
+        for (const auto* name : {"edi_app", "edi_app.exe", "EasyDiffraction", "EasyDiffraction.exe",
+                                 "edi_app.app/Contents/MacOS/edi_app", "EasyDiffraction.app/Contents/MacOS/EasyDiffraction"}) {
+            product.setFileName(bin.filePath(QString::fromLatin1(name)));
+            if (product.open(QIODevice::ReadOnly)) break;
+        }
+        QVERIFY2(product.isOpen(), "The boundary gate inspects an actual product binary next to the app test target");
+        auto* mapped = product.map(0, product.size());
+        QVERIFY2(mapped, qPrintable(product.errorString()));
+        const auto unmap = qScopeGuard([&] { product.unmap(mapped); });
+        const QByteArrayView executable(reinterpret_cast<const char*>(mapped), product.size());
+        // Public demo selector, former entry and environment key. The Qt
+        // launcher used QStringLiteral, so scan UTF-16 as well as ordinary symbols.
+        for (const QByteArray token : {"assistant-tools", "start_assistant_demo", "EDI_ASSISTANT_PEER_DIR"}) {
+            QByteArray utf16;
+            for (const char byte : token) { utf16.append(byte); utf16.append('\0'); }
+            QVERIFY2(!executable.contains(token) && !executable.contains(utf16), token.constData());
+        }
+    }
+#endif
     void skillsReplayCurrentLoadMenus() {
         QQmlApplicationEngine engine;
         edi_app::configure_engine(engine);
@@ -326,7 +1009,7 @@ private slots:
                 if (slot.parameter == entry.parameter) uniqueName = QString::fromStdString(slot.unique_name);
         }
         QCOMPARE(path, QString("structure.atom_sites[La].adp_iso"));
-        QVERIFY(!uniqueName.isEmpty());
+        QCOMPARE(uniqueName, QString("lbco.atom_site.La.adp_iso"));
         const QJsonObject arguments = alias
             ? QJsonObject{{"purpose", "Alias the La isotropic displacement"},
                 {"aliases", QJsonArray{QJsonObject{{"id", "la_adp"}, {"path", path}}}}, {"constraints", QJsonArray{}}}
@@ -365,7 +1048,7 @@ private slots:
             auto* content = popup ? popup->property("contentItem").value<QObject*>() : nullptr;
             QQuickItem* entry = nullptr;
             const int option = combo ? static_cast<int>(combo->property("names").toStringList().indexOf(uniqueName)) : -1;
-            if (content && option >= 0 && typed == path &&
+            if (content && option >= 0 && typed == uniqueName &&
                 QMetaObject::invokeMethod(content, "itemAtIndex", Q_RETURN_ARG(QQuickItem*, entry), Q_ARG(int, option)) &&
                 entry && entry->isVisible() && entry->mapRectToScene(entry->boundingRect()).contains(pointer))
                 selectedEntryPressed = true;
@@ -374,14 +1057,14 @@ private slots:
         QTRY_COMPARE_WITH_TIMEOUT(assistant->state(), QString("idle"), 30000);
         searchObserver.stop();
         if (alias) {
-            QCOMPARE(typed, path);
+            QCOMPARE(typed, uniqueName);
             QVERIFY(selectedEntryPressed);
             auto* combo = find("alias.parameter.0");
             QVERIFY(combo);
             const auto option = combo->property("names").toStringList().indexOf(uniqueName);
             QVERIFY(option >= 0);
             QCOMPARE(combo->property("currentIndex").toInt(), option);
-            QCOMPARE(combo->property("model").toStringList()[option].section(" · ", 1), path);
+            QCOMPARE(combo->property("model").toStringList()[option].section(" · ", 1), uniqueName);
             const auto& aliases = project->assistantProject()->aliases;
             QCOMPARE(aliases.size(), std::size_t(1));
             QCOMPARE(QString::fromStdString(aliases[0]->id.value()), QString("la_adp"));

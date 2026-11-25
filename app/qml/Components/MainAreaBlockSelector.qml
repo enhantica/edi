@@ -16,6 +16,8 @@ Item {
     property alias blocks: selector.blocks
     property alias blocksTextRole: selector.blocksTextRole
     property alias blockKind: selector.blockKind
+    property alias rowWatcher: selector.rowWatcher
+    readonly property alias popup: selector.popup
     property alias blockIndex: selector.blockIndex
     property alias outcomeRole: selector.outcomeRole
     property alias currentOutcome: selector.currentOutcome
@@ -27,24 +29,42 @@ Item {
     property real areaWidth: 0
     property real tabBarHeight: EaStyle.Sizes.tabBarHeight
     property real rightInset: margin
+    // Its page is shown: only then does it tell the chart toolbars where it ends.
+    property bool current: false
+    // In the bottom-sidebar layout the selector and the chart toolbar share one row (the owner, 2026-11-22): the
+    // toolbar keeps its whole width and the selector takes the rest, its text cut; when that leaves the selector too
+    // little (under 30 em, about ten characters of a file name beside its number, icons and temperature), the toolbar
+    // goes back to a row of its own.
+    readonly property real rowRoom: areaWidth - leftMargin - rightInset
+    readonly property real sharedWidth: Math.floor(rowRoom - AppSizes.toolbarNaturalWidth - margin)
+    readonly property bool sharesRow: EaStyle.Sizes.sideBarBelow && AppSizes.toolbarNaturalWidth > 0 && sharedWidth >= EaStyle.Sizes.fontPixelSize * 30
 
     // The chart's own margin above its toolbar, here also above the row (PatternChart.topMargin); on the left the
     // main area's margin (owner, 2026-10-05).
     readonly property real margin: EaStyle.Sizes.fontPixelSize
     readonly property real leftMargin: AppSizes.mainAreaMargin
     // The margin above the row and the row; the chart's own margin above its toolbar is the one below it.
-    readonly property real reservedHeight: visible ? margin + height : 0
+    readonly property real reservedHeight: visible && !sharesRow ? margin + height : 0
 
     x: leftMargin
     y: tabBarHeight + margin
-    width: areaWidth - leftMargin - rightInset
+    width: sharesRow ? sharedWidth : rowRoom
+    Binding {
+        target: AppSizes
+        property: "selectorRowReserve"
+        // Measured from the selector's left edge, which the toolbar below knows as its leftEdge.
+        value: placement.visible && placement.sharesRow ? placement.width + placement.margin : 0
+        when: placement.current
+        restoreMode: Binding.RestoreNone
+    }
     height: selector.height
 
     // The row's band, across the main area, in the chart's background.
     Rectangle {
         x: -placement.leftMargin
         y: -placement.margin
-        width: placement.areaWidth
+        // Only its own part of the row when the chart toolbar shares it, so the band never covers the toolbar.
+        width: placement.sharesRow ? placement.leftMargin + placement.width + placement.margin : placement.areaWidth
         height: placement.height + 2 * placement.margin
         color: EaStyle.Colors.chartBackground
     }

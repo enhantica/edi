@@ -38,12 +38,19 @@ def test_data_table_declares_named_component_columns():
     )
     rows = block(qml, 'delegate: TableRow {')
     repeater = block(rows, 'Repeater {')
-    cell = block(repeater, 'delegate: CellLabel {')
+    cell = block(repeater, 'delegate: NumberLabel {')
+    number_label = source('qml/Components/NumberLabel.qml')
+    assert property_value(number_label, 'elide') == 'Text.ElideNone', (
+        'The shared fitted numeric cell never elides a contribution'
+    )
+    assert 'NumberText.fitted(number,' in block(number_label, 'function refit() {'), (
+        'The shared contribution cell fits its actual number to the allotted width'
+    )
     assert property_value(repeater, 'model') == 'ApplicationInfo.nativeListProjection(2)', (
         'Measured rows project the live component role by the ordered structure columns'
     )
     assert (
-        property_value(cell, 'text')
+        property_value(cell, 'number')
         == 'group.shown("pd_calc.component_intensities_net", modelData)'
     ), 'Structure contributions use the same plain numeric display as other calculated columns'
     shown = block(qml, 'function shown(')

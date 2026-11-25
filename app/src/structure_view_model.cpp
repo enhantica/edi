@@ -434,7 +434,10 @@ QStringList AtomSiteAdpListModel::types() const {
 
 void AtomSiteAdpListModel::sync() {
     QList<Row> rows;
+    bool anisotropic = false;
     for (const auto& site : structure_.atom_sites) {
+        const std::string type = site->adp_type.value();
+        anisotropic = anisotropic || type == "Bani" || type == "Uani" || type == "beta";
         QList<QVariant> values{QString::fromStdString(site->id), QString::fromStdString(site->adp_type),
                                parameter_role(registry_, &site->adp_iso)};
         const edi::AtomSiteAniso* tensor = nullptr;
@@ -453,6 +456,10 @@ void AtomSiteAdpListModel::sync() {
         rows.append({site.get(), values});
     }
     setTableRows(rows);
+    if (anisotropic != anisotropic_) {
+        anisotropic_ = anisotropic;
+        emit anisotropicChanged();
+    }
 }
 
 void AtomSiteAdpListModel::setType(int row, const QString& type) {

@@ -3,6 +3,8 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 
+import EasyApplication.Gui.Style as EaStyle
+
 import EasyApplication.Gui.Elements as EaElements
 
 import edi.app
@@ -17,6 +19,9 @@ Column {
     property ExperimentViewModel experiment: null
 
     spacing: AppSizes.groupContentSpacing
+    // One grid for every field row of the group: five columns where five fields fit, else the most even rows of the
+    // widest family; every row takes it, a shorter one leaving its last cells empty.
+    readonly property int gridColumns: AppSizes.fieldColumns(5, 5, EaStyle.Sizes.sideBarContentWidth, AppSizes.inputSpacing, "deg\u00b2")
 
     EaElements.GroupRow {
         spacing: AppSizes.inputSpacing
@@ -34,13 +39,15 @@ Column {
     // CW U V W with TCH's X Y or the pseudo-Voigt's η₀ η₁), the TOF Lorentzian (γ, size, strain), then any
     // other field.
     Repeater {
-        model: group.experiment ? [group.experiment.peakBackToBack, group.experiment.peakGaussian, group.experiment.peakLorentzian, group.experiment.peakOther] : []
+        // Four rows whatever the experiment, so the next one keeps them; each row's fields follow it (ParameterGrid).
+        model: group.experiment ? 4 : 0
         delegate: ParameterGrid {
-            required property ParameterListModel modelData
+            required property int index
 
             visible: fieldCount > 0
-            fields: modelData
+            fields: group.experiment ? [group.experiment.peakBackToBack, group.experiment.peakGaussian, group.experiment.peakLorentzian, group.experiment.peakOther][index] : null
             prefix: "peak"
+            sharedColumns: group.gridColumns
         }
     }
 
@@ -48,5 +55,6 @@ Column {
         visible: fieldCount > 0
         fields: group.experiment ? group.experiment.peakAsymmetry : null
         prefix: "peak"
+        sharedColumns: group.gridColumns
     }
 }

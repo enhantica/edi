@@ -373,29 +373,98 @@ TestCase {
                 return contents[index].parent;
         fail("Every workflow sidebar has its actual rendered container");
     }
-    function alignedSidebar() {
+    function sidebarWidth() {
         const sidebar = sidebarContainer();
-        const experiment = Ui.control(Probe, appWindow, "appBar.tab.experiment");
-        verify(experiment !== null && experiment.visible, "The top bar exposes the actual Experiment button as the sidebar alignment reference");
         const left = sidebar.mapToItem(appWindow.contentItem, 0, 0).x;
-        const centre = experiment.mapToItem(appWindow.contentItem, experiment.width / 2, 0).x;
-        verify(Math.abs(left - centre) <= 1, "The rendered sidebar left edge coincides with the rendered Experiment button centre within one pixel: " + left + " versus " + centre);
+        const right = sidebar.mapToItem(appWindow.contentItem, sidebar.width, 0).x;
+        verify(left > 0 && Math.abs(right - appWindow.contentItem.width) <= 1,
+               "The landscape sidebar uses the real right edge of the application viewport");
+        verify(sidebar.width > 0 && sidebar.width <= appWindow.contentItem.width / 2 + 1,
+               "The landscape sidebar leaves at least half the width for the main tab row and view");
+        return sidebar.width;
     }
     function test_sidebar_alignment_data() {
-        return ["project", "structure", "experiment", "analysis", "report"].map(page => ({
-                    tag: page,
-                    page
-                }));
+        return ["project", "structure", "experiment", "analysis", "report"].map(page => ({tag: page, page}));
     }
     function test_sidebar_alignment(data) {
         open("iucr_19");
         Ui.click(test, Probe, appWindow, "appBar.tab." + data.page);
-        tryVerify(() => Math.abs(Ui.page(appWindow).mapToItem(appWindow.contentItem, 0, 0).x) < 1, 3000, "Each workflow page enters the real viewport before measuring its sidebar");
-        verify(waitForPolish(appWindow.contentItem), "The workflow page completes actual layout before alignment measurement");
-        alignedSidebar();
-        appWindow.width = 1500;
-        verify(waitForPolish(appWindow.contentItem), "A real window resize updates both the top bar and the page layout");
-        alignedSidebar();
+        tryVerify(() => Math.abs(Ui.page(appWindow).mapToItem(appWindow.contentItem, 0, 0).x) < 1,
+                  3000, "Each workflow page enters the real viewport before measuring its sidebar");
+        let previous = 0;
+        for (const width of [1300, 1320, 1500, 1800, 2000]) {
+            settleWindowWidth(width);
+            const next = sidebarWidth();
+            verify(next >= previous, "The Auto sidebar never shrinks as the landscape window grows");
+            if (width === 1320)
+                verify(next - previous <= 11, "Twenty logical pixels cannot add more than ten pixels of sidebar width");
+            if (width === 2000)
+                compare(next, previous, "A large window stops widening the sidebar after the fixed columns and breathing room fit");
+            previous = next;
+        }
+    }
+    function shownColumns(item) {
+        return Render.cells(item).filter(cell => cell.visible && cell.width > 0);
+    }
+    function assertAlignedColumns(target, header) {
+        const row = shownColumns(target.itemAtIndex(0));
+        verify(header.length > 0, "The real table renders its column headings");
+        compare(row.length, header.length, "Every shown heading labels a real visible column");
+        header.forEach((cell, index) => {
+            const x = item => item.mapToItem(target, 0, 0).x;
+            verify(Math.abs(x(cell) - x(row[index])) < 1 && Math.abs(cell.width - row[index].width) < 1,
+                   "Visible cells share the same geometric boundary as their headings");
+        });
+    }
+    function settleWindowWidth(width) {
+        appWindow.width = width;
+        tryCompare(appWindow.contentItem, "width", width, 2000, "The actual window delivers the requested width to its content");
+        wait(0);
+        verify(waitForPolish(appWindow.contentItem), "The resize settles before observing rendered headings and rows");
+    }
+    function test_analysis_adds_each_column_in_priority_order() {
+        open("iucr_19");
+        const order = ["", "Name", "Start", "Value", "s.u.", "Change", "Min", "Max", "Free"];
+        const base = ["Name", "Value", "s.u.", "Free"];
+        const priority = ["", "Start", "Min", "Max", "Change"]; // The row number heading is blank.
+        const smallestLandscape = Math.ceil(AppSizes.sideBarBelowWidth);
+        verify(smallestLandscape > 0 && smallestLandscape < 1800, "The visible Analysis tabs establish a usable landscape transition");
+        let step = 0;
+        for (let width = smallestLandscape; width <= 1800; width += 10) {
+            settleWindowWidth(width);
+            table.forceLayout();
+            const header = shownColumns(table.headerItem);
+            const columns = header.map(item => item.text);
+            let expected = base.concat(priority.slice(0, step));
+            if (width !== smallestLandscape && columns.length > expected.length) {
+                verify(step < priority.length, "There are no columns beyond the full Analysis layout");
+                expected.push(priority[step++]);
+            }
+            expected = order.filter(label => expected.includes(label));
+            compare(columns, expected, "Only the next priority column joins the Analysis base as room grows at " + width);
+            assertAlignedColumns(table, header);
+        }
+        compare(step, priority.length, "The widened Analysis table has added each optional column individually");
+    }
+    function test_atomic_displacement_keeps_every_column() {
+        open("iucr_19");
+        Ui.click(test, Probe, appWindow, "appBar.tab.structure");
+        tryVerify(() => Math.abs(Ui.page(appWindow).mapToItem(appWindow.contentItem, 0, 0).x) < 1,
+                  3000, "Structure is in the actual viewport before inspecting its columns");
+        Ui.expandGroup(test, Probe, appWindow, "group.atom_site_aniso");
+        const adp = Ui.find(Ui.page(appWindow), "atomSiteAdps.list", true);
+        verify(adp !== null && adp.count > 0, "The Structure sidebar hosts its actual Atomic displacement rows");
+        settleWindowWidth(1800);
+        adp.forceLayout();
+        const header = shownColumns(adp.headerItem);
+        const wide = header.map(item => item.text);
+        assertAlignedColumns(adp, header);
+        compare(wide.length, 10, "Atomic displacement shows row number, ID, type, Iso/eq and six tensor components");
+        settleWindowWidth(960);
+        adp.forceLayout();
+        const narrow = shownColumns(adp.headerItem);
+        compare(narrow.map(item => item.text), wide, "Atomic displacement keeps all headings and rows when space shrinks");
+        assertAlignedColumns(adp, narrow);
     }
     function test_free_success_colour_data() {
         return ["Light", "Dark"].map(theme => ({

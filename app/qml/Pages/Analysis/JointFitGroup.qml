@@ -23,7 +23,11 @@ DataTable {
 
     // The common table design (edi ADR-0017 §8): No., the experiment's icon in its colour, its name, then the
     // weight, a number centred at display precision as every table's numbers.
-    columns: [numberColumnWidth, AppSizes.iconOnlyColumnWidth, -1, -1]
+    // The experiment's name a text column and the weight a number beside it, the rest of the row left empty (the
+    // owner, 2026-11-21: the weight was a gap away from its name).
+    // Its columns by kind (the shared column model, DataTable.columnKinds; ADR-0103 decision 4).
+    columnKinds: ["index", "mark", "name", "number"]
+    // Widths from column types, not rows (ADR-0103 rule 4): the experiment, then its weight.
 
     header: EaComponents.ListViewHeader {
         EaComponents.ListViewLabel {

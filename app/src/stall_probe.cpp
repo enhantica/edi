@@ -89,13 +89,17 @@ void install_stacks(QCoreApplication& app) {
     sigaction(SIGPROF, &action, nullptr);
     const pthread_t gui = pthread_self();
     g_heartbeat.store(now_ms());
-    auto* watchdog = new std::thread([gui, out] {
+    // A stack every 50 ms of a stall by default; EDI_STALL_PROBE_SAMPLE_MS (at least 10) samples a short stall
+    // more densely.
+    const long long period = std::max(10, qEnvironmentVariableIntValue("EDI_STALL_PROBE_SAMPLE_MS") > 0
+                                              ? qEnvironmentVariableIntValue("EDI_STALL_PROBE_SAMPLE_MS") : 50);
+    auto* watchdog = new std::thread([gui, out, period] {
         unsigned read = 0;
         long long last = 0;
         while (!g_quit.load()) {
             std::this_thread::sleep_for(std::chrono::milliseconds(10));
             const long long now = now_ms();
-            if (now - g_heartbeat.load() > kStallMs && now - last >= 50) {
+            if (now - g_heartbeat.load() > kStallMs && now - last >= period) {
                 last = now;
                 pthread_kill(gui, SIGPROF);
             }
@@ -117,31 +121,33 @@ void install_stall_probe(QCoreApplication& app) {
     if (!qEnvironmentVariableIsSet("EDI_STALL_PROBE")) {
         return;
     }
-    auto* timer = new QTimer(&app);
-    auto* clock = new QElapsedTimer;
-    auto* longest = new qint64(0);
-    auto* stalls = new qint64(0);
-    auto* ticks = new qint64(0);
-    clock->start();
-    QObject::connect(timer, &QTimer::timeout, &app, [clock, longest, stalls, ticks] {
-        const qint64 gap = clock->restart();
+    // The probe's state belongs to the application, so it outlives every tick: the timer is stopped when the app is
+    // about to quit, and nothing a late tick touches is freed before the app itself.
+    struct State : QObject {
+        using QObject::QObject;
+        QElapsedTimer clock;
+        qint64 longest = 0, stalls = 0, ticks = 0;
+    };
+    auto* state = new State(&app);
+    auto* timer = new QTimer(state);
+    state->clock.start();
+    QObject::connect(timer, &QTimer::timeout, state, [state] {
+        const qint64 gap = state->clock.restart();
 #if defined(EDI_STALL_STACKS)
         g_heartbeat.store(now_ms());
 #endif
-        ++*ticks;
-        *longest = std::max(*longest, gap);
+        ++state->ticks;
+        state->longest = std::max(state->longest, gap);
         if (gap > kStallMs) {
-            ++*stalls;
+            ++state->stalls;
             qWarning("stall-probe: gap %lld ms", static_cast<long long>(gap));
         }
     });
-    QObject::connect(&app, &QCoreApplication::aboutToQuit, &app, [clock, longest, stalls, ticks] {
-        qWarning("stall-probe: %lld gaps over %lld ms, longest %lld ms, %lld ticks", static_cast<long long>(*stalls),
-                 static_cast<long long>(kStallMs), static_cast<long long>(*longest), static_cast<long long>(*ticks));
-        delete clock;
-        delete longest;
-        delete stalls;
-        delete ticks;
+    QObject::connect(&app, &QCoreApplication::aboutToQuit, state, [state, timer] {
+        timer->stop();
+        qWarning("stall-probe: %lld gaps over %lld ms, longest %lld ms, %lld ticks", static_cast<long long>(state->stalls),
+                 static_cast<long long>(kStallMs), static_cast<long long>(state->longest),
+                 static_cast<long long>(state->ticks));
     });
     timer->start(kTickMs);
 #if defined(EDI_STALL_STACKS)

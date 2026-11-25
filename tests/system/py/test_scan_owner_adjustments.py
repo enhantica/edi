@@ -12,6 +12,7 @@ from tests.integration.py.test_scan_app_contract import (
     source,
     spans,
 )
+from tests.integration.py.test_scan_extended_contract import assert_evolution_axis_animation
 
 
 def fit_button_states(text):
@@ -205,39 +206,7 @@ def zoom_consumers(text):
         'Evolution gestures: box drag zooms both axes, right click resets, and mouse/touchpad '
         'wheel zooms around its pointer as the pattern chart does'
     )
-    bindings = []
-    for match in re.finditer(r'(?m)^\s*target:\s*axis[XY]\s*$', text):
-        a, b = min(
-            ((a, b) for a, b in spans(text) if a < match.start() < b),
-            key=lambda span: span[1] - span[0],
-        )
-        bindings.append(text[a:b])
-    assert len(bindings) == 4, (
-        'Evolution zoom: each displayed axis bound receives the gesture range'
-    )
-    for binding in bindings:
-        target, prop = property_value(binding, 'target'), property_value(binding, 'property')
-        index = {
-            ('axisX', '"min"'): 0,
-            ('axisX', '"max"'): 1,
-            ('axisY', '"min"'): 2,
-            ('axisY', '"max"'): 3,
-        }[target, prop]
-        states = evaluate(
-            '[[],[4,10,15,25],[-3,17,-0.5,93]].map(zoom=>{chart.zoom=zoom;return [('
-            + property_value(binding, 'when')
-            + '),('
-            + property_value(binding, 'value')
-            + ')];})',
-            'const chart={zoom:[]};',
-        )
-        assert not states[0][0] and states[1:] == [
-            [True, [4, 10, 15, 25][index]],
-            [True, [-3, 17, -0.5, 93][index]],
-        ], (
-            'Evolution zoom: its effective axis binding follows changing gesture bounds '
-            'and releases the data bounds on reset'
-        )
+    assert_evolution_axis_animation(text)
 
 
 def test_evolution_gestures_change_the_displayed_axes_and_reset():
@@ -356,8 +325,8 @@ def test_owner_observers_reject_live_disconnected_or_constant_consumers(channel)
         'axis': (
             'qml/Components/EvolutionChart.qml',
             zoom_consumers,
-            'value: chart.zoom.length === 4 ? chart.zoom[0] : 0',
-            'value: 4',
+            'min: viewRanges.ranges[0]',
+            'min: 4',
         ),
         'repeat': (
             'qml/Components/BlockSelector.qml',

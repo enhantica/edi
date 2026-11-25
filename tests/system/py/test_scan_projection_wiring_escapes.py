@@ -13,7 +13,7 @@ def test_header_observer_rejects_disconnected_model_and_displayed_labels(monkeyp
     contract.test_scan_explorer_header_has_declared_columns_in_order()
     old, new = {
         'model': ('model: group.scanColumns', 'model: []'),
-        'labels': ('text: column.modelData', 'text: "unused"'),
+        'labels': ('number: column.modelData', 'number: "unused"'),
         'table': (
             'sourceModel: group.project ? group.project.experiments : null',
             'sourceModel: null',
@@ -58,11 +58,20 @@ def test_scene_graph_observer_rejects_disconnected_layer_hit_and_uncertainty(mon
             contract.assert_evolution_bindings(good)
         return
     old, new = {
-        'target': ('target: chart.evolution', 'target: unrelated.evolution'),
+        'target': ('target: chart.evolution', 'target: other.evolution'),
         'layer': ('value: chart.shown ? layer : null', 'value: null'),
-        'coordinates': ('axisY.max - mouse.y / height', 'axisY.min + mouse.y / height'),
-        'selection': ('currentExperimentIndex = dataset', 'currentExperimentIndex = 0'),
-        'axis-bounds': ('chart.evolution ? chart.evolution.xMin : 0', 'chart.evolution ? 2 : 0'),
+        'coordinates': (
+            'ApplicationInfo.evolutionPointer(mouse, 3);',
+            'ApplicationInfo.evolutionPointer({x: mouse.x, y: 100 - mouse.y}, 3);',
+        ),
+        'selection': (
+            'ApplicationInfo.evolutionPointer(mouse, 3);',
+            'ApplicationInfo.evolutionPointer(mouse, 3); chart.project.currentExperimentIndex=0;',
+        ),
+        'axis-bounds': (
+            'min: viewRanges.ranges[0]',
+            'min: chart.evolution ? chart.evolution.xMin : 0',
+        ),
     }[channel]
     changed = good.replace(old, new)
     assert changed != good, (
@@ -96,13 +105,13 @@ def test_scene_graph_observer_accepts_equivalent_model_and_axis_bindings(composi
     good = contract.evolution_component()
     if composition == 'direct-model':
         changed = good
-        for prop, axis in [
+        for index, (prop, axis) in enumerate([
             ('xMin', 'axisX.min'),
             ('xMax', 'axisX.max'),
             ('yMin', 'axisY.min'),
             ('yMax', 'axisY.max'),
-        ]:
-            changed = changed.replace(prop + ': ' + axis, prop + ': chart.evolution.' + prop)
+        ]):
+            changed = changed.replace(prop + ': ' + axis, f'{prop}: viewRanges.ranges[{index}]')
     else:
         changed = good.replace('target: chart.evolution', 'target: chart.project.evolution')
     assert changed != good, (

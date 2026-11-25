@@ -6,6 +6,7 @@ import QtTest
 import EasyApplication.Gui.Style as EaStyle
 import edi.app
 import EdiAcceptance 1.0
+import ReportAcceptance 1.0
 import "UiInteraction.js" as Ui
 import "RenderedTable.js" as Render
 import "TableBoundary.js" as Boundary
@@ -20,6 +21,9 @@ Item {
     }
     TextMetrics {
         id: ink
+    }
+    FontMetrics {
+        id: nameMetrics
     }
     Component {
         id: fractionalViewport
@@ -196,14 +200,8 @@ Item {
         }
         function naturalInk(cell) {
             let needed = 0;
-            if (cell.font) {
-                if (typeof cell.editText === "string")
-                    needed = Math.max(needed, advance(cell.editText, cell.font));
-                if (typeof cell.number === "string" || typeof cell.number === "number")
-                    needed = Math.max(needed, advance(cell.number, cell.font));
-                if (typeof cell.value === "string" || typeof cell.value === "number")
-                    needed = Math.max(needed, advance(cell.value, cell.font));
-            }
+            if (cell.font && typeof cell.number === "number")
+                needed = advance(cell.number, cell.font);
             for (const item of Render.texts(cell))
                 needed = Math.max(needed, advance(Probe.plainText(item.text), item.font));
             return needed;
@@ -239,8 +237,6 @@ Item {
         function chromeErrors(data, record) {
             const errors = [];
             const gap = EaStyle.Sizes.tableColumnSpacing;
-            if (!Number.isFinite(record.margin) || Math.abs(record.margin - 3 * gap) >= 0.6)
-                errors.push("declared three-spacing margin");
             for (let column = 1; column < data.count; ++column) {
                 const kind = data.kinds[column];
                 if (kind !== "text" && kind !== "held-text" && kind !== "number")
@@ -257,13 +253,12 @@ Item {
                             errors.push("source-owned cell chrome");
                         continue;
                     }
-                    const spare = column === data.filler ? Math.max(0, cell.width - record.fillerNeed) : 0;
                     const left = kind === "number" ? 0 : gap;
-                    const right = (kind === "number" ? gap : 0) + spare;
+                    const right = kind === "number" ? gap : 0;
                     if (cell.padding === null || !Number.isFinite(cell.padding.left)
                             || !Number.isFinite(cell.padding.right)
                             || Math.abs(cell.padding.left - left) >= 0.6
-                            || Math.abs(cell.padding.right - right) >= (column === data.filler ? 1 : 0.6))
+                            || Math.abs(cell.padding.right - right) >= 0.6)
                         errors.push("source-owned cell chrome");
                 }
             }
@@ -276,7 +271,7 @@ Item {
                 for (const column of [0, 1])
                     if (Math.abs(record.starts[column] - first.starts[column]) >= 0.6)
                         errors.push("common numbering/ID start");
-                if (Math.abs(record.width - record.need) > 1
+                if (record.width + 0.6 < record.need
                         || Math.abs(record.starts[2] - record.starts[1] - record.width
                             - EaStyle.Sizes.tableColumnSpacing) >= 0.6)
                     errors.push("per-heading ID boundary");
@@ -358,14 +353,12 @@ Item {
             }
             return left < Infinity ? {left, right} : null;
         }
-        function policyRecord(data, table, body, head, fixed, selectors) {
+        function policyRecord(table, body, head, fixed, selectors) {
             const capture = cell => ({width: cell.width, x: cell.mapToItem(table, 0, 0).x,
                 alignment: cell.horizontalAlignment, ink: inkBounds(cell, table),
                 padding: paddingObservation(cell),
                 nestedPadding: Render.texts(cell).map(paddingObservation).filter(pad => pad !== null)});
-            return {width: table.width, margin: table.autoColumnPadding,
-                fillerNeed: data.filler < 0 ? 0 : naturalCellNeed(data, data.filler,
-                    body[data.filler], head[data.filler]) + 3 * EaStyle.Sizes.tableColumnSpacing,
+            return {width: table.width,
                 body: body.map(capture), head: head.map(capture), fixed, selectors};
         }
         function policyErrors(data, record) {
@@ -390,22 +383,14 @@ Item {
                         || record.body[selector.column].width + 0.6 < selector.minimum
                         || record.body[selector.column].width > selector.maximum + 0.6)
                     errors.push("measured selector compactness");
-            if (data.expectedPolicy === "equal") {
-                for (const column of data.flex)
-                    if (Math.abs(record.body[column].width - record.body[data.flex[0]].width) >= 0.6)
-                        errors.push("equal atom scientific columns");
-            } else {
-                for (const owner of ["body", "head"]) {
-                    const ink = record[owner][data.filler].ink;
-                    if (ink === null || !Number.isFinite(ink.left) || !Number.isFinite(ink.right) || ink.right < ink.left)
-                        errors.push("last-data ink witness");
-                }
-                for (const column of data.flex)
-                    if (record.body[column].alignment !== record.head[column].alignment)
-                        errors.push("scientific header/body alignment");
-                for (const action of data.actions)
-                    if (record.body[data.filler].x + record.body[data.filler].width > record.body[action].x + 0.6)
-                        errors.push("filler/button overlap");
+            for (const column of data.flex)
+                if (record.body[column].alignment !== record.head[column].alignment)
+                    errors.push("scientific header/body alignment");
+            for (const action of data.actions) {
+                const cell = record.body[action];
+                if (cell.x + cell.width > record.width + 0.6
+                        || record.width - cell.x - cell.width > EaStyle.Sizes.tableColumnSpacing + 0.6)
+                    errors.push("trailing action leaves the right edge");
             }
             return errors;
         }
@@ -413,24 +398,16 @@ Item {
             const errors = policyErrors(data, first).concat(policyErrors(data, second));
             if (errors.includes("column population") || errors.includes("invalid measured geometry"))
                 return errors;
-            if (data.expectedPolicy === "content") {
+            if (first.roomy && second.roomy) {
                 for (let column = 0; column < data.count; ++column)
-                    if (column !== data.filler && ((first.roomy && second.roomy
+                    if (column !== data.elasticColumn
                             && Math.abs(first.body[column].width - second.body[column].width) >= 0.6)
-                            || second.body[column].width > second.needs[column] + 1))
-                        errors.push("spare width before last data column");
-                if (first.roomy && second.roomy
-                        && Math.abs(second.body[data.filler].width - first.body[data.filler].width - (second.width - first.width)) >= 0.6)
-                    errors.push("last-data spare width");
-                for (const owner of first.roomy && second.roomy ? ["body", "head"] : []) {
-                    const before = first[owner][data.filler].ink;
-                    const after = second[owner][data.filler].ink;
-                    if (before === null || after === null || Math.abs(after.left - before.left) >= 0.6
-                            || Math.abs(after.right - before.right) >= 0.6)
-                        errors.push("last-data ink shifted by spare width");
-                }
-            } else if (second.body[data.flex[0]].width <= first.body[data.flex[0]].width)
-                errors.push("equal columns receive wider viewport");
+                        errors.push("known column absorbs spare width");
+                if (data.elasticColumn >= 0
+                        && Math.abs(second.body[data.elasticColumn].width - first.body[data.elasticColumn].width
+                                    - (second.width - first.width)) >= 0.6)
+                    errors.push("name column does not receive spare width");
+            }
             return errors;
         }
         function armPolicyEscapes(data, first, second) {
@@ -463,9 +440,6 @@ Item {
                 verify(policyErrors(data, broken).includes("measured selector compactness"), "A selector wider than its independently measured vocabulary and chrome is refused");
             }
             broken = copy();
-            broken.margin = 4 * EaStyle.Sizes.tableColumnSpacing;
-            verify(policyErrors(data, broken).includes("declared three-spacing margin"),
-                "The old four-spacing margin cannot be admitted by growing the natural budget");
             for (let column = 1; column < data.count; ++column) {
                 const kind = data.kinds[column];
                 if (kind !== "text" && kind !== "number")
@@ -479,38 +453,26 @@ Item {
                 for (const owner of ["body", "head"]) {
                     const side = kind === "text" ? "left" : "right";
                     broken[owner][column].padding[side] += EaStyle.Sizes.tableColumnSpacing;
-                    if (column !== data.filler)
-                        broken[owner][column].width += EaStyle.Sizes.tableColumnSpacing;
+                    broken[owner][column].width += EaStyle.Sizes.tableColumnSpacing;
                 }
                 verify(policyErrors(data, broken).includes("source-owned cell chrome"),
-                    column === data.filler ? "Filler padding cannot grow without its independently derived spare width"
-                        : "A cell cannot grow both padding and width to manufacture its expected budget");
+                    "A cell cannot grow both padding and width to manufacture its expected budget");
             }
-            if (data.expectedPolicy === "equal") {
+            if (first.roomy && second.roomy) {
+                const fixedData = data.flex.find(column => column !== data.elasticColumn) ?? data.idColumn;
+                verify(fixedData >= 0, "The spare-width control addresses a known-width data column");
                 broken = copy();
-                broken.body[data.flex[0]].width += 2;
-                broken.head[data.flex[0]].width += 2;
-                verify(policyErrors(data, broken).includes("equal atom scientific columns"), "An unequal atom scientific column cannot pass merely because its header agrees");
-            } else {
+                broken.body[fixedData].width += 2;
+                broken.head[fixedData].width += 2;
+                verify(transitionErrors(data, first, broken).includes("known column absorbs spare width"),
+                       "Matching headers cannot conceal spare width added to fixed scientific data");
+            }
+            for (const action of data.actions) {
                 broken = copy();
-                const early = data.flex.find(column => column !== data.filler);
-                // Experiments has only one old scientific flex entry; its ID is earlier data.
-                const column = early === undefined ? data.idColumn : early;
-                verify(column >= 0, "Every ordinary policy escape addresses a genuine earlier data column");
-                const growth = second.needs[column] + 2 - second.body[column].width;
-                broken.body[column].width += growth;
-                broken.head[column].width += growth;
-                broken.body[data.filler].width -= growth;
-                broken.head[data.filler].width -= growth;
-                verify(transitionErrors(data, first, broken).includes("spare width before last data column"), "Equal spreading or early spare width cannot satisfy the last-data-only policy");
-                if (first.roomy && second.roomy) {
-                    broken = copy();
-                    for (const owner of ["body", "head"]) {
-                        broken[owner][data.filler].ink.left += 10;
-                        broken[owner][data.filler].ink.right += 10;
-                    }
-                    verify(transitionErrors(data, first, broken).includes("last-data ink shifted by spare width"), "Centred or trailing filler content cannot move into the newly supplied spare width");
-                }
+                broken.body[action].x -= 3 * EaStyle.Sizes.tableColumnSpacing + 2;
+                broken.head[action].x = broken.body[action].x;
+                verify(policyErrors(data, broken).includes("trailing action leaves the right edge"),
+                       "A synchronized action and header cannot hide a real trailing gap");
             }
         }
         function test_actual_pending_fit_is_not_settled_geometry() {
@@ -540,7 +502,6 @@ Item {
                     tag: "atoms",
                     kinds: ["numbering", "text", "selector", "number", "number", "number", "selector", "number", "icon"],
                     expectedPolicy: "equal",
-                    filler: -1,
                     actions: [8],
                     component: atoms,
                     table: "atomSites.list",
@@ -554,7 +515,6 @@ Item {
                     expandedGroupBoxOwner: true,
                     kinds: ["numbering", "icon", "icon", "text", "held-text", "hidden", "icon"],
                     expectedPolicy: "content",
-                    filler: 4,
                     actions: [6],
                     component: experiments,
                     table: "experiments.list",
@@ -567,7 +527,6 @@ Item {
                     tag: "background",
                     kinds: ["numbering", "text", "number", "number", "icon"],
                     expectedPolicy: "content",
-                    filler: 3,
                     actions: [4],
                     component: background,
                     table: "background.list",
@@ -580,7 +539,6 @@ Item {
                     tag: "exclusions",
                     kinds: ["numbering", "text", "number", "number", "icon"],
                     expectedPolicy: "content",
-                    filler: 3,
                     actions: [4],
                     component: exclusions,
                     table: "excludedRegions.list",
@@ -593,7 +551,6 @@ Item {
                     tag: "orientation",
                     kinds: ["numbering", "text", "text", "text", "text", "number", "number", "icon"],
                     expectedPolicy: "content",
-                    filler: 6,
                     actions: [7],
                     component: orientation,
                     table: "preferredOrientation.list",
@@ -606,7 +563,6 @@ Item {
                     tag: "reflections",
                     kinds: ["numbering", "text", "number", "number", "number"],
                     expectedPolicy: "content",
-                    filler: 4,
                     actions: [],
                     component: reflections,
                     table: "reflections.list",
@@ -621,6 +577,7 @@ Item {
                 for (const count of [12, 112])
                     result.push(Object.assign({}, kind, {
                         tag: kind.tag + "-" + count,
+                        elasticColumn: kind.tag === "experiments" ? 4 : kind.idColumn,
                         rows: count
                     }));
             return result;
@@ -741,14 +698,12 @@ Item {
                 for (let column = 0; column < body.length; ++column) {
                     if (roomy && naturalInkNeeds[column] !== undefined) {
                         verify(body[column].width + 0.6 >= naturalInkNeeds[column], "Roomy columns retain independent complete header/content ink and source-owned chrome");
-                        if (data.expectedPolicy === "content" && column !== data.filler)
-                            verify(body[column].width <= needs[column] + 1, "Earlier ordinary data columns stay compact instead of consuming spare row width");
                     }
                 }
-                const record = policyRecord(data, table, body, head, fixed, selectors);
+                const record = policyRecord(table, body, head, fixed, selectors);
                 record.roomy = roomy;
                 record.needs = needs;
-                console.log("TABLE_POLICY " + JSON.stringify({tag: data.tag, expectedPolicy: data.expectedPolicy, filler: data.filler, record}));
+                console.log("TABLE_POLICY " + JSON.stringify({tag: data.tag, consumer: data.table, record}));
                 compare(policyErrors(data, record).length, 0, "The actual geometry follows the independently declared per-kind policy");
                 records.push(record);
                 for (const column of data.icons) {
@@ -770,17 +725,6 @@ Item {
                     assertCellInkFits(head[data.idColumn]);
                     for (const authored of identifierInputs(data, seenIdentifiers))
                         assertSuppliedTextFits(body[data.idColumn], authored, identityTitle(data));
-                    verify(body[data.idColumn].width <= table.width * 0.25 + 1, "Identifiers leave scientific columns the remaining space");
-                    ink.font = Qt.font({
-                        family: EaStyle.Fonts.fontFamily,
-                        pixelSize: EaStyle.Sizes.fontPixelSize
-                    });
-                    const shortNeed = Math.max(advance(identityTitle(data), ink.font),
-                        data.expectedPolicy === "equal" ? advance("r111", ink.font)
-                            : suppliedIdentifierNeed(seenIdentifiers, ink.font));
-                    const shortAllowance = data.expectedPolicy === "equal" ? ink.font.pixelSize + 2
-                        : declaredChrome(data, data.idColumn, "body") + 3 * EaStyle.Sizes.tableColumnSpacing + 1;
-                    verify(body[data.idColumn].width <= shortNeed + shortAllowance, "Short names and IDs fit their own declared heading, chrome and margin rather than a fixed wide share");
                     compare(body[data.idColumn].horizontalAlignment, Text.AlignLeft, "Identifiers align left across the loop tables");
                 }
                 if (data.tag.startsWith("background") || data.tag.startsWith("exclusions") || data.tag.startsWith("orientation")) {
@@ -791,12 +735,12 @@ Item {
                 }
                 for (const column of data.flex) {
                     const alignment = sourceAlignment(data.kinds[column]);
-                    compare(body[column].horizontalAlignment, alignment, "Scientific alignment follows the authored equal/numeric/text/last-data policy");
+                    compare(body[column].horizontalAlignment, alignment, "Scientific columns retain their declared numeric or text alignment");
                     compare(head[column].horizontalAlignment, alignment, "Scientific headers retain the corresponding independently declared alignment");
                 }
                 widths.push(body.map(item => item.width));
                 const last = body[body.length - 1].mapToItem(table, body[body.length - 1].width, 0).x;
-                verify(last <= table.width + 0.6 && table.width - last <= EaStyle.Sizes.fontPixelSize * 2, "Rendered cells fill the available table width without overflow or unused right-side space");
+                verify(last <= table.width + 0.6, "Rendered columns stay inside the table without clipping its right edge");
                 const next = table.itemAtIndex(4);
                 verify(next !== null, "Each page consumer instantiates its next scrolling row");
                 Boundary.check(test, table, next, surface);
@@ -813,10 +757,10 @@ Item {
                 const longCells = Render.cells(table.itemAtIndex(0));
                 const longWidth = longCells[data.idColumn].width;
                 const longHead = Render.cells(table.headerItem);
-                compare(policyErrors(data, policyRecord(data, table, longCells, longHead, fixedColumns(data, longHead), data.expectedPolicy === "equal" ? selectorBounds(group, longCells, longHead) : [])).length, 0, "Long identifiers preserve all fixed, selector and header/body boundaries");
-                verify(Math.abs(longCells[data.idColumn].width - table.width * 0.25) <= 1, "Long independently supplied IDs expand to the permitted quarter-table cap");
-                verify(longCells[data.idColumn].width > widths[1][data.idColumn], "Long supplied IDs expand the actual ID column beyond its short-content width");
-                verify(longCells[data.idColumn].width <= table.width * 0.25 + 1, "Long IDs cannot consume more than one quarter of the rendered table");
+                compare(policyErrors(data, policyRecord(table, longCells, longHead, fixedColumns(data, longHead), data.expectedPolicy === "equal" ? selectorBounds(group, longCells, longHead) : [])).length, 0, "Long identifiers preserve all fixed, selector and header/body boundaries");
+                compare(longWidth, widths[1][data.idColumn], "A long user identifier cannot move its allocated column");
+                for (let column = 0; column < longCells.length; ++column)
+                    compare(longCells[column].width, widths[1][column], "Changing user text leaves all other column widths fixed");
                 for (const column of data.flex)
                     verify(longCells[column].width > 0, "Long IDs leave every real scientific cell usable");
                 for (const column of data.icons)
@@ -828,17 +772,165 @@ Item {
                 settleGeometry(table, data.expandedGroupBoxOwner ? group : null);
                 const shortCells = Render.cells(table.itemAtIndex(0));
                 const shortHead = Render.cells(table.headerItem);
-                compare(policyErrors(data, policyRecord(data, table, shortCells, shortHead, fixedColumns(data, shortHead), data.expectedPolicy === "equal" ? selectorBounds(group, shortCells, shortHead) : [])).length, 0, "Returning short identifiers preserve every original fixed and header/body boundary");
-                verify(shortCells[data.idColumn].width < longWidth, "The long-to-short resize restores compact actual ID width");
+                compare(policyErrors(data, policyRecord(table, shortCells, shortHead, fixedColumns(data, shortHead), data.expectedPolicy === "equal" ? selectorBounds(group, shortCells, shortHead) : [])).length, 0, "Returning short identifiers preserve every original fixed and header/body boundary");
                 compare(shortCells[data.idColumn].width, widths[1][data.idColumn], "The ID column returns to its original independently supplied short-content width");
                 for (const authored of identifierInputs(data, seenIdentifiers))
                     assertSuppliedTextFits(shortCells[data.idColumn], authored, identityTitle(data));
             }
-            compare(transitionErrors(data, records[0], records[1]).length, 0, "A wider viewport follows the declared equal-atom or last-data-only spare-width rule");
+            compare(transitionErrors(data, records[0], records[1]).length, 0, "A wider roomy viewport gives spare room to the user name alone");
             armPolicyEscapes(data, records[0], records[1]);
             verify(Math.abs(widths[1][0] - widths[0][0]) < 0.6, "Numbering remains content-sized as the sidebar grows");
         }
-        function test_generic_id_width_learns_only_real_shown_rows_and_keeps_visited_maximum() {
+        function test_datablock_names_fit_until_the_table_reaches_its_minimum_data() {
+            return [{tag: "ordinary", scan: false}, {tag: "scan-with-extracts", scan: true}];
+        }
+        function openDatablockScan(name) {
+            const location = SettingsProof.copyProject(Probe.repoUrl("tests/fixtures/correlations/scan-sequential"));
+            const file = "analysis/analysis.edi";
+            const analysis = SettingsProof.text(location, file);
+            const rules = [
+                ["temperature", "diffrn.ambient_temperature", "^# TEMP ([0-9.]+)", true],
+                ["pressure", "diffrn.ambient_pressure", "^# PRESS ([0-9.]+)", false],
+                ["field", "diffrn.ambient_field", "^# FIELD ([0-9.]+)", false]
+            ];
+            const columns = ["id", "target", "pattern", "required"];
+            const extractLoop = ["loop_", ...columns.map(column => "_sequential_fit_extract." + column),
+                ...rules.map(([id, target, pattern, required]) => `${id} ${target} "${pattern}" ${required}`)].join("\n");
+            verify(analysis.length > 0 && SettingsProof.write(location, file, analysis.trim() + "\n\n" + extractLoop + "\n"),
+                "The scratch analysis gets the complete temperature, pressure and field extract loop");
+            const bankFile = "experiments/bank.edi";
+            const bank = SettingsProof.text(location, bankFile);
+            verify(bank.startsWith("data_bank") && SettingsProof.write(location, bankFile, bank.replace("data_bank", "data_" + name)),
+                "The scan's saved datablock has the independently authored long name");
+            for (const dataset of ["01.xy", "02.xy"]) {
+                const path = "experiments/scan/" + dataset;
+                const points = SettingsProof.text(location, path);
+                verify(points.length > 0 && SettingsProof.write(location, path, "# TEMP 295\n# PRESS 12.5\n# FIELD 3.7\n" + points),
+                    "Each real scan file carries its independently supplied extract values");
+            }
+            Session.closeProject();
+            verify(Session.openProject(location), "The scratch project opens as an Experiments scan: " + Session.lastError);
+            const loadedRules = Probe.rows(Session.project.analysis.sequentialExtract)
+                .map(rule => columns.map(column => rule[column]));
+            compare(JSON.stringify(loadedRules), JSON.stringify(rules),
+                "The loaded scratch project retains each extract rule's id, target, pattern and required flag in order");
+        }
+        function assertDatablockRowFits(table, row, header) {
+            const cells = Render.cells(row).filter(cell => cell.visible);
+            verify(cells.length > 0, "The minimum-width observation finds the actual " + header + " cells");
+            let last = 0;
+            for (const cell of cells) {
+                const left = cell.mapToItem(table, 0, 0).x;
+                const right = cell.mapToItem(table, cell.width, 0).x;
+                verify(cell.width > 0 && left >= last - 0.6 && right <= table.width + 0.6,
+                    "Every visible " + header + " cell fits, in order, inside the minimum-width table");
+                last = right;
+            }
+        }
+        function assertExtractCells(table, parent, entries) {
+            const texts = Render.texts(parent);
+            for (const entry of entries) {
+                const cell = texts.find(item => item.text === entry);
+                verify(cell !== undefined && !cell.truncated,
+                    "The real scan list displays the complete extract heading or supplied value " + entry);
+                verify(cell.mapToItem(table, 0, 0).x >= -0.6
+                    && cell.mapToItem(table, cell.width, 0).x <= table.width + 0.6,
+                    "The scan extract cell stays inside the visible table: " + entry);
+            }
+        }
+        function assertDatablockHover(cell, name) {
+            const level = Preferences.toolTipLevel;
+            try {
+                Preferences.toolTipLevel = "All";
+                const point = Ui.clickPoint(cell);
+                verify(point !== null, "The shortened Datablock cell has a reachable hover point");
+                mouseMove(cell, point.x, point.y);
+                tryVerify(() => SettingsProof.tooltipObjects(cell).some(tip =>
+                    SettingsProof.tooltipOwnedBy(tip, cell) && tip.opened && tip.visible
+                    && tip.text === name && tip.contentItem && tip.contentItem.width > 0), 3000,
+                    "Hovering the shortened Datablock opens its own visible tooltip with the full unelided name");
+            } finally {
+                mouseMove(surface, surface.width - 1, surface.height - 1);
+                Preferences.toolTipLevel = level;
+            }
+        }
+        function test_datablock_names_fit_until_the_table_reaches_its_minimum(data) {
+            const longName = "experimentLongCalibrationNameForTheWarmDetectorAndDownstreamMonitor2026";
+            const names = [data.scan ? longName : "experiment1", longName];
+            const headings = ["Temperature", "Pressure", "Field"];
+            const values = ["295 K", "12.5", "3.7"];
+            if (data.scan)
+                openDatablockScan(longName);
+            else
+                for (const name of names)
+                    rows.append({name, experiment: Session.project.currentExperiment,
+                        fitOutcome: "", file: "pattern.dat", extracted: [], isTemplate: false});
+            compare(Session.project.scan, data.scan, "The Datablock actor uses the requested real project mode");
+            const widths = data.scan ? [1150, AppSizes.minimumAppWidth] : [930, 1150, AppSizes.minimumAppWidth];
+            for (const width of widths) {
+                const group = createTemporaryObject(experiments, surface, {width, project: Session.project, pageShown: true});
+                verify(group !== null, "The names appear in the actual Experiments group");
+                const table = Ui.find(group, "experiments.list");
+                verify(table !== null, "The expanded group exposes the production experiments table");
+                compare(Array.from(group.scanColumns), data.scan ? headings : [],
+                    "The production table receives the configured extract columns in order");
+                if (!data.scan)
+                    table.sourceModel = rows;
+                table.width = width;
+                table.maxRowCountShow = names.length;
+                table.forceLayout();
+                tryCompare(table, "count", names.length, 2000, "Both independently supplied names reach the table");
+                if (data.scan)
+                    tryVerify(() => Probe.rows(table.sourceModel).every(row =>
+                        JSON.stringify(row.extracted) === JSON.stringify(values)), 3000,
+                        "The actual visible scan rows have loaded all three independently supplied extracts");
+                settleGeometry(table, group);
+
+                const atMinimum = width === AppSizes.minimumAppWidth;
+                verify(atMinimum ? table.fillerWidth <= 1 : table.fillerWidth > 1,
+                    "The sampled widths distinguish the minimum table from those with actual spare room");
+                if (atMinimum)
+                    assertDatablockRowFits(table, table.headerItem, "header");
+                if (data.scan)
+                    assertExtractCells(table, table.headerItem, headings);
+                for (let index = 0; index < names.length; ++index) {
+                    const name = names[index];
+                    const row = table.itemAtIndex(index);
+                    verify(row !== null && row.visible, "Each Datablock has a real visible experiment row");
+                    if (atMinimum)
+                        assertDatablockRowFits(table, row, "row");
+                    if (data.scan)
+                        assertExtractCells(table, row, values);
+                    const cell = Ui.find(row, "experiments.name." + index);
+                    verify(cell !== null && cell.visible, "The real Datablock name cell is displayed");
+                    verify(cell.mapToItem(table, cell.width, 0).x <= table.width + 0.6,
+                        "The Datablock cell must fit inside the table even at its minimum width");
+                    if (!atMinimum || (!data.scan && index === 0)) {
+                        compare(cell.text, name, "The full name remains in the Datablock cell while it fits");
+                        verify(cell.color.a > 0
+                            && cell.width - cell.leftPadding - cell.rightPadding + 0.6 >= advance(name, cell.font),
+                            "A full Datablock name has visible ink and enough room for both ends");
+                        continue;
+                    }
+                    const renderer = Render.texts(cell).find(item => item.truncated === true && item.color.a > 0);
+                    verify(renderer !== undefined, "The long name visibly elides at the minimum width");
+                    compare(renderer.text, name, "The elider receives the complete authored Datablock name");
+                    compare(renderer.elide, Text.ElideMiddle, "The name elides in the middle");
+                    nameMetrics.font = renderer.font;
+                    const room = renderer.width - renderer.leftPadding - renderer.rightPadding;
+                    const drawn = nameMetrics.elidedText(name, renderer.elide, room);
+                    const ends = drawn.split("…");
+                    verify(ends.length === 2 && ends.every(part => part.length > 0)
+                        && name.startsWith(ends[0]) && name.endsWith(ends[1])
+                        && ends[0].length + ends[1].length >= 10,
+                        "The middle ellipsis preserves both ends and at least ten name characters");
+                    if (index === names.length - 1)
+                        assertDatablockHover(cell, name);
+                }
+                group.destroy();
+            }
+        }
+        function test_generic_id_width_stays_fixed_when_rows_scroll_or_change() {
             const p = parameter(), last = 111, wideText = "model.identifier.111";
             for (let index = 0; index <= last; ++index)
                 rows.append({id: index === last ? wideText : "r" + index,
@@ -866,7 +958,7 @@ Item {
                 "The later identifier really reaches the current viewport, not a hidden cache entry");
             assertSuppliedTextFits(shownCell, wideText, Session.label("background.id"));
             const visited = shownCell.width;
-            compare(visited, before, "Scrolling preserves the width already fitted to the whole model content");
+            compare(visited, before, "Scrolling cannot change the width declared by the column type");
             table.positionViewAtIndex(0, ListView.Contain);
             table.forceLayout();
             tryVerify(() => table.itemAtIndex(0) !== null && table.itemAtIndex(last) === null
@@ -877,10 +969,10 @@ Item {
             rows.setProperty(last, "id", "r" + last);
             table.forceLayout();
             settleGeometry(table);
-            verify(Render.cells(table.itemAtIndex(0))[1].width < before,
-                "Changing unseen model content to short IDs restores a compact column");
+            compare(Render.cells(table.itemAtIndex(0))[1].width, before,
+                "Changing unseen model content leaves the declared width unchanged");
             compare(rows.get(last).id, "r" + last, "Measurement preserves the independently changed source ID");
-            compare(table.count, last + 1, "Fitting whole-model widths never drops unseen model rows");
+            compare(table.count, last + 1, "Fixed column sizing preserves unseen model rows");
         }
         function test_loop_table_boundaries_align_for_identical_identifiers() {
             const p = parameter();
@@ -934,9 +1026,9 @@ Item {
             verify(Math.abs(boundaries[2].need - boundaries[0].need) > 1,
                 "The source-declared Structure and ID headings independently distinguish this boundary exercise");
             const broken = JSON.parse(JSON.stringify(boundaries));
-            broken[2].starts[2] = broken[0].starts[2];
+            broken[2].starts[2] += 2;
             verify(loopStartErrors(broken).includes("per-heading ID boundary"),
-                "Forcing equal scientific starts cannot conceal the different declared Structure heading");
+                "An offset from the declared Structure column cannot satisfy the observed boundary");
         }
         function test_real_overflow_clips_without_ellipsis_data() {
             return [
@@ -961,18 +1053,29 @@ Item {
             verify(input !== null && waitForPolish(input), "Both actual parameter consumers complete the narrow layout");
             input.focus = false;
             ink.font = input.font;
-            ink.text = "2.290e7";
-            input.width = Math.min(data.width, Math.ceil(ink.advanceWidth / 2) + input.leftPadding + input.rightPadding);
-            verify(waitForPolish(input), "The compact token also reaches a genuinely over-room rendered viewport");
-            compare(input.item.fileValue, "22900000", "The supplied IUCr99 pair retains its canonical written value");
-            compare(input.item.fileSu, "100000", "The supplied pair retains its written uncertainty");
-            tryCompare(input, "text", "2.290e7", 2000, "The actual narrow display retains the last place required by SU 1.0e5");
-            verify(input.contentWidth > input.width - input.leftPadding - input.rightPadding, "The test creates actual text overflow");
-            compare(input.cursorPosition, 0, "Inactive overflow starts at the first digit");
-            compare(input.horizontalAlignment, Text.AlignLeft, "A long number clips its end while retaining its beginning");
-            const first = input.positionToRectangle(0);
-            verify(first.x >= 0 && first.x < input.width, "The first digit is inside the inactive text viewport");
-            verify(!String(input.text).includes("…"), "Inactive numbers are clipped without substituting an ellipsis");
+            const widthOf = text => {
+                ink.text = text;
+                return ink.advanceWidth;
+            };
+            const plain = "22900000";
+            const scientific = ["2.290×10⁷", "2.29×10⁷", "2.3×10⁷"];
+            const box = widthOf(scientific[1]) + 0.5;
+            const isCell = data.tag === "table-cell";
+            input.width = (isCell ? box : Math.ceil(widthOf(plain) / 2)) + input.leftPadding + input.rightPadding;
+            verify(waitForPolish(input), "The production narrow number finishes real layout");
+            compare(Ui.numericText(input.item.fileValue), 22900000, "The supplied IUCr99 pair retains its canonical written value");
+            compare(Ui.numericText(input.item.fileSu), 100000, "The supplied pair retains its written uncertainty");
+            const room = input.width - input.leftPadding - input.rightPadding;
+            verify(widthOf(plain) > room, "The allocated width cannot show the complete ordinary token");
+            if (isCell) {
+                const expected = scientific.find(text => widthOf(text) <= room);
+                verify(expected !== undefined, "The table column has room for at least two significant digits in scientific notation");
+                tryCompare(input, "text", expected, 2000, "The table displays the most authored digits that fit without clipping");
+                verify(input.contentWidth <= room + 0.5, "The entire compact number fits the native cell");
+            } else {
+                compare(input.cursorPosition, 0, "The narrow standalone field retains its leading digit");
+            }
+            verify(!String(input.text).includes("…"), "Numeric text does not substitute an ellipsis");
             const ownerWindow = parent.Window.window;
             verify(ownerWindow !== null && ownerWindow === surface.Window.window
                 && ownerWindow === test.Window.window && windowShown && ownerWindow.visible
@@ -984,8 +1087,12 @@ Item {
             for (let x = Math.ceil(input.x + input.width + 2); x < parent.width - 2; ++x)
                 for (let y = Math.ceil(input.y + 8); y < input.y + input.height - 8; ++y)
                     compare(image.pixel(x, y), parent.color, "Numerical glyphs cannot paint beyond the real narrow input boundary");
-            input.forceActiveFocus();
-            tryCompare(input, "text", "22900000", 2000, "Editing the clipped cell or field exposes the complete supplied value");
+            const popup = Ui.parameterPopup(test, input);
+            const editor = Ui.parameterValue(test, input, popup);
+            Ui.focusParameter(test, editor);
+            tryCompare(editor, "text", input.item.fileEditValue, 2000, "The full editing route takes the canonical value");
+            compare(Ui.numericText(editor.text), 22900000, "The full editing route exposes the complete supplied value");
+            popup.close();
         }
     }
 }

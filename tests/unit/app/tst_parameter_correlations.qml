@@ -364,11 +364,8 @@ TestCase {
     }
     function test_background_coefficients_have_editing_parity() {
         open("tests/fixtures/correlations/polynomial-3");
-        appWindow.appBarCentralTabs.currentIndex = AppState.Page.Experiment;
-        tryVerify(() => {
-            const tab = control("appBar.tab.experiment");
-            return tab !== null && tab.checked;
-        }, 500, "Coefficient fixture setup must select the actual production Experiment page");
+        click("appBar.tab.experiment");
+        click("sideBar.tab.basic");
         Ui.expandGroup(test, Probe, appWindow, "group.background");
         const experiment = Session.project.currentExperiment;
         const terms = experiment.backgroundTerms;
@@ -382,9 +379,13 @@ TestCase {
         verify(terms.setOrder(count, 5), "A unique supported order must be editable");
         const coefficient = control("background.coef.0");
         verify(coefficient !== null, "The coefficient value must have a visible editing control");
-        coefficient.forceActiveFocus();
-        verify(SettingsProof.type(coefficient, "6.25"), "The keyboard observer sends real text to the coefficient's own app window and active input, rather than the Quick Test runner window; actual text=" + coefficient.text);
-        verify(SettingsProof.key(coefficient, Qt.Key_Return), "Return reaches the actual coefficient editor's own app window to commit its typed value");
+        const popup = Ui.parameterPopup(test, coefficient);
+        const editor = Ui.parameterValue(test, coefficient, popup);
+        Ui.focusParameter(test, editor);
+        verify(SettingsProof.type(editor, "6.25"), "Actual key input goes to the coefficient popup in its app window");
+        verify(SettingsProof.key(editor, Qt.Key_Return), "Return commits the popup's typed value");
+        popup.close();
+        tryCompare(popup, "opened", false, 2000, "Closing the value popup releases input for coefficient removal");
         compare(Probe.rows(terms)[0].coef.value, 6.25, "Actual keyboard input plus Return commits the independently entered background coefficient; actual first term=" + JSON.stringify(Probe.rows(terms)[0]));
         click("background.removeTerm." + count);
         compare(terms.count, count, "Remove must erase exactly the selected coefficient");
@@ -393,20 +394,21 @@ TestCase {
 
     function test_background_type_popup_append_has_editing_parity() {
         open("tests/fixtures/correlations/polynomial-3");
-        appWindow.appBarCentralTabs.currentIndex = AppState.Page.Experiment;
-        tryVerify(() => {
-            const tab = control("appBar.tab.experiment");
-            return tab !== null && tab.checked;
-        }, 500, "Type-transition fixture setup must select the actual production Experiment page");
+        click("appBar.tab.experiment");
+        click("sideBar.tab.basic");
         Ui.expandGroup(test, Probe, appWindow, "group.background");
         const experiment = Session.project.currentExperiment;
         const terms = experiment.backgroundTerms;
         const count = terms.count;
         const coefficient = control("background.coef.0");
         verify(coefficient !== null, "The type-cancel control must expose its actual coefficient editor");
-        coefficient.forceActiveFocus();
-        verify(SettingsProof.type(coefficient, "6.25"), "Type-cancel must begin with real changed keyboard input");
-        verify(SettingsProof.key(coefficient, Qt.Key_Return), "Return must commit the changed value before type confirmation");
+        const valuePopup = Ui.parameterPopup(test, coefficient);
+        const editor = Ui.parameterValue(test, coefficient, valuePopup);
+        Ui.focusParameter(test, editor);
+        verify(SettingsProof.type(editor, "6.25"), "Type-cancel begins with a real keyboard edit in the popup");
+        verify(SettingsProof.key(editor, Qt.Key_Return), "Return commits the changed value before type confirmation");
+        valuePopup.close();
+        tryCompare(valuePopup, "opened", false, 2000, "Closing the value popup releases input for choosing the background type");
         compare(Probe.rows(terms)[0].coef.value, 6.25, "Type-cancel must witness a real prior numeric edit");
         const selector = control("background.type");
         verify(selector !== null, "Coefficient backgrounds must retain the type selector");

@@ -1,6 +1,7 @@
 import QtQuick
 import QtTest
 import edi.app
+import EasyApplication.Gui.Style as Style
 import EdiAcceptance 1.0
 import ReportAcceptance 1.0
 import "UiInteraction.js" as Ui
@@ -14,6 +15,12 @@ TestCase {
     Component {
         id: application
         Main {}
+    }
+
+    FontMetrics {
+        id: projectLabelInk
+        font.family: Style.Fonts.fontFamily
+        font.pixelSize: Style.Sizes.fontPixelSize
     }
 
     function normalized(text) {
@@ -53,6 +60,7 @@ TestCase {
     }
 
     function projectButtons() {
+        Ui.expandGroup(test, Probe, app, "group.getStarted");
         return Render.descendants(group()).filter(item => String(item).includes("SideBarButton") && typeof item.text === "string" && item.visible);
     }
 
@@ -92,7 +100,14 @@ TestCase {
     function test_three_project_buttons(data) {
         prepareState(data);
         const buttons = projectButtons();
-        compare(JSON.stringify(buttons.map(item => normalized(item.text))), JSON.stringify(["Create a new project", "Load project", "Save project as"]), "Get started shows the three requested actions, without the old import or URL buttons");
+        compare(buttons.map(item => item.objectName), ["project.create", "project.load", "project.saveAs"],
+                "Get started renders exactly three actions in the requested order");
+        const full = projectLabelInk.advanceWidth("Create a new project") + 4 * Style.Sizes.fontPixelSize <= buttons[0].width;
+        compare(buttons.map(item => normalized(item.text)),
+                [full ? "Create a new project" : "Create", full ? "Load project" : "Load", "Save project as"],
+                "Measured title room selects the exact full or compact captions of the same three actions");
+        verify(buttons.every(button => Math.abs(button.width - buttons[0].width) < 1),
+               "The three project actions share the same visible row width");
         for (const button of buttons) {
             Ui.scrollIntoView(button);
             verify(Ui.rendered(button), "Each project entry button is visibly available in its real sidebar");
@@ -105,7 +120,7 @@ TestCase {
 
     function test_load_project_opens_the_ordered_choices(data) {
         prepareState(data);
-        const load = projectButtons().filter(item => normalized(item.text) === "Load project");
+        const load = projectButtons().filter(item => item.objectName === "project.load");
         compare(load.length, 1, "Get started has one actual Load project button");
         Ui.scrollIntoView(load[0]);
         verify(Ui.rendered(load[0]) && load[0].enabled, "Load project accepts real input before a project exists");
@@ -125,6 +140,7 @@ TestCase {
     function test_save_copy_belongs_to_native_choices() {
         verify(Session.openProject(SettingsProof.copyProject(Probe.repoUrl("tests/fixtures/loop_parameter_ids/line-segment"))), "The copy-checkbox check starts from an ordinary open native project");
         Ui.click(test, Probe, app, "appBar.tab.project");
+        Ui.expandGroup(test, Probe, app, "group.getStarted");
         Ui.click(test, Probe, app, "project.saveAs");
         const expected = ["As project folder", "As project zip", "Save a copy", "As cryspy", "As FullProf", "As GSAS-II"];
         function controls() {
@@ -146,6 +162,7 @@ TestCase {
     function test_save_project_as_opens_the_ordered_choices() {
         verify(Session.openProject(SettingsProof.copyProject(Probe.repoUrl("tests/fixtures/loop_parameter_ids/line-segment"))), "Save project as starts with an ordinary open native project");
         Ui.click(test, Probe, app, "appBar.tab.project");
+        Ui.expandGroup(test, Probe, app, "group.getStarted");
         Ui.click(test, Probe, app, "project.saveAs");
         const expected = ["As project folder", "As project zip", "As cryspy", "As FullProf", "As GSAS-II"];
         function choices() {

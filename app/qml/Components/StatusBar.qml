@@ -144,9 +144,10 @@ EaElements.StatusBar {
         shown: bar.project !== null && valueText !== ""
         keyIcon: "th-list"
         keyText: qsTr("Parameters")
-        // What a fit can vary: the free and the fixed; the rows no fit can vary are not counted (edi ADR-0053).
+        // What a fit can vary: the free and the fixed; the rows no fit can vary are not counted (edi ADR-0053), so it says
+        // "in this fit" beside the parameter table's own count of every row (the owner's sweep, 2026-11-22).
         // Free and fixed only mean something with measured data to fit (the owner, 2026-11-02); a simulation shows the count.
-        valueText: !bar.project ? "" : !bar.project.fit.measured ? String(bar.project.parameters.freeCount + bar.project.parameters.fixedCount) : qsTr("%1 (%2 free, %3 fixed)").arg(bar.project.parameters.freeCount + bar.project.parameters.fixedCount).arg(bar.project.parameters.freeCount).arg(bar.project.parameters.fixedCount)
+        valueText: !bar.project ? "" : !bar.project.fit.measured ? String(bar.project.parameters.freeCount + bar.project.parameters.fixedCount) : qsTr("%1 in this fit (%2 free, %3 fixed)").arg(bar.project.parameters.freeCount + bar.project.parameters.fixedCount).arg(bar.project.parameters.freeCount).arg(bar.project.parameters.fixedCount)
         ToolTip.text: bar.project && !bar.project.fit.measured ? qsTr("Number of parameters") : qsTr("Number of parameters: total, free and fixed")
     }
     Item {
@@ -338,6 +339,8 @@ EaElements.StatusBar {
         }
         Row {
             objectName: "statusBar.fit.values"
+            // Below 600 px the fit area keeps its outcome and Fit (ADR-0103 decision 2).
+            visible: !AppSizes.compact
             anchors.verticalCenter: parent.verticalCenter
             spacing: fitArea.spacing
             // The values shown, for what reads them.

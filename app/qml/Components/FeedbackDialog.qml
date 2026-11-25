@@ -170,7 +170,17 @@ AppDialog {
     title: qsTr("Help and feedback")
     // Wide enough for the privacy note to take two lines at the default font size; narrower in a narrower app window.
     // A bit wider than the first 40 units, so the contact fields and the two links fit (owner, 2026-11-19).
-    contentWidth: Math.min(AppSizes.unit * 48, roomWidth - AppSizes.unit * 6)
+    // Once sent, only the thanks and the buttons are left: as wide as they are, at most a message dialog's line
+    // (AppSizes.messagesDialogContentWidth), so it is no wider than the other message dialogs (the owner, 2026-11-23).
+    contentWidth: dialog.sent ? Math.min(AppSizes.messagesDialogContentWidth, Math.max(AppSizes.unit * 20, Math.ceil(statusMetrics.advanceWidth), actions.implicitWidth), roomWidth - AppSizes.unit * 6) : Math.min(AppSizes.unit * 48, roomWidth - AppSizes.unit * 6)
+    TextMetrics {
+        id: statusMetrics
+        font: status.font
+        text: status.text
+    }
+    // As wide as its content and padding only: the default also asks the footer, whose width follows the dialog's, a
+    // binding loop on a window resize.
+    implicitWidth: contentWidth + leftPadding + rightPadding
     contentHeight: column.implicitHeight
     // The window never grows past the app's: what is left once the title, the status, the buttons and a margin around
     // the window are taken.
@@ -460,7 +470,8 @@ AppDialog {
                     fontFamily: EaStyle.Fonts.monoFontFamily
                     minimumLines: 6
                     maximumLines: dialog.bodyFits ? 6 : 100000
-                    text: dialog.payloadText
+                    // Laid out only while shown: a hidden field still lays out its text at every keystroke.
+                    text: previewBox.shown ? dialog.payloadText : ""
 
                     // Delayed until the form has laid out: a passing state while the preview opens left its bar
                     // fully shown for seconds.
@@ -481,6 +492,8 @@ AppDialog {
             }
         }
         EaElements.Label {
+            id: status
+
             objectName: "feedback.status"
             visible: dialog.sending || dialog.lastStatus >= 0
             width: parent.width

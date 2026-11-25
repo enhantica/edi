@@ -5,6 +5,7 @@
    "code": "U+00A0",
    "font": "PT Sans",
    "sites": [
+    "app/qml/Pages/Report/ReportPreview.qml",
     "core/src/report_html.cpp"
    ],
    "drawn_by": "PT Sans",
@@ -26,6 +27,8 @@
    "font": "PT Sans",
    "sites": [
     "crysta:data/dictionary/parameters.yaml",
+    "app/qml/Components/DerivedCell.qml",
+    "app/qml/Pages/Structure/AtomSiteMomentGroup.qml",
     "app/src/session.cpp"
    ],
    "drawn_by": "PT Sans",
@@ -59,18 +62,22 @@
    "font": "PT Sans",
    "sites": [
     "crysta:data/dictionary/parameters.yaml",
+    "app/qml/Components/ParameterGrid.qml",
     "app/qml/Components/PatternChart.qml",
     "app/qml/Components/SingleCrystalChart.qml",
     "app/qml/Components/SingleCrystalTable.qml",
     "app/qml/Components/StatusBar.qml",
     "app/qml/Pages/Experiment/ExperimentsGroup.qml",
+    "app/qml/Pages/Experiment/PeakGroup.qml",
     "app/qml/Pages/Experiment/ReflectionsGroup.qml",
+    "app/qml/Style/AppSizes.qml",
     "app/src/analysis_view_model.cpp",
     "app/src/app_info.cpp",
     "app/src/demo_driver.cpp",
     "app/src/experiment_models.cpp",
     "app/src/pattern_chart_controller.cpp",
     "app/src/project_view_model.cpp",
+    "core/src/display.cpp",
     "core/src/report_html.cpp",
     "core/src/report_model.cpp",
     "core/src/safe_names.cpp"
@@ -203,6 +210,7 @@
     "crysta:data/dictionary/parameters.yaml",
     "app/qml/Pages/Structure/AppearanceGroup.qml",
     "app/qml/Pages/Structure/PolyhedraGroup.qml",
+    "app/src/app_info.cpp",
     "core/src/presentation.cpp"
    ],
    "drawn_by": "PT Sans",
@@ -321,7 +329,8 @@
    "sites": [
     "crysta:data/dictionary/parameters.yaml",
     "app/qml/Components/PatternChart.qml",
-    "app/qml/Components/ScanViewChart.qml"
+    "app/qml/Components/ScanViewChart.qml",
+    "app/src/demo_driver.cpp"
    ],
    "drawn_by": "Noto Sans",
    "weight": 400
@@ -332,7 +341,8 @@
    "font": "PT Sans",
    "sites": [
     "crysta:data/dictionary/parameters.yaml",
-    "app/qml/Pages/Structure/AppearanceGroup.qml"
+    "app/qml/Pages/Structure/AppearanceGroup.qml",
+    "app/src/app_info.cpp"
    ],
    "drawn_by": "PT Sans",
    "weight": 400
@@ -354,7 +364,8 @@
    "font": "PT Sans",
    "sites": [
     "crysta:data/dictionary/parameters.yaml",
-    "app/qml/Pages/Structure/AtomSiteMomentGroup.qml"
+    "app/qml/Pages/Structure/AtomSiteMomentGroup.qml",
+    "app/src/demo_driver.cpp"
    ],
    "drawn_by": "Noto Sans",
    "weight": 400
@@ -377,8 +388,20 @@
     "crysta:data/dictionary/parameters.yaml",
     "app/qml/Components/StatusBar.qml",
     "app/src/analysis_view_model.cpp",
+    "app/src/demo_driver.cpp",
     "app/src/project_view_model.cpp",
+    "core/src/display.cpp",
     "core/src/report_model.cpp"
+   ],
+   "drawn_by": "Noto Sans",
+   "weight": 400
+  },
+  {
+   "char": "ϕ",
+   "code": "U+03D5",
+   "font": "PT Sans",
+   "sites": [
+    "app/src/demo_driver.cpp"
    ],
    "drawn_by": "Noto Sans",
    "weight": 400
@@ -417,6 +440,7 @@
    "code": "U+2014",
    "font": "PT Sans",
    "sites": [
+    "app/qml/Components/DerivedCell.qml",
     "app/qml/Pages/Structure/AtomSiteMomentGroup.qml",
     "app/qml/Pages/Structure/MagneticFormFactorsGroup.qml",
     "app/src/app_info.cpp",
@@ -477,7 +501,9 @@
     "app/qml/Components/AppPreferencesDialog.qml",
     "app/qml/Components/AssistantComposer.qml",
     "app/qml/Components/AssistantPanel.qml",
+    "app/qml/Components/ChartLegend.qml",
     "app/qml/Components/OnlineLoadDialog.qml",
+    "app/qml/Components/PatternChart.qml",
     "app/qml/Components/StatusBar.qml",
     "app/qml/Components/StatusBarFitButton.qml",
     "app/qml/Components/TutorialPanel.qml",
@@ -489,12 +515,23 @@
     "app/qml/Pages/Structure/StructuresGroup.qml",
     "app/src/app_info.cpp",
     "app/src/assistant_view_model.cpp",
+    "app/src/demo_driver.cpp",
     "app/src/desktop_updates.cpp",
     "app/src/online_search.cpp",
     "app/src/project_view_model.cpp",
     "app/src/session.cpp"
    ],
    "drawn_by": "PT Sans",
+   "weight": 400
+  },
+  {
+   "char": "⁠",
+   "code": "U+2060",
+   "font": "PT Sans",
+   "sites": [
+    "app/qml/Pages/Report/ReportPreview.qml"
+   ],
+   "drawn_by": "Noto Sans",
    "weight": 400
   },
   {
@@ -744,6 +781,10 @@
    "code": "U+2191",
    "font": "PT Sans",
    "sites": [
+    "app/qml/Pages/Analysis/ParametersGroup.qml",
+    "app/qml/Style/AppSizes.qml",
+    "app/src/app_info.cpp",
+    "app/src/demo_driver.cpp",
     "core/src/report_html.cpp"
    ],
    "drawn_by": "Noto Sans Mono",
@@ -789,6 +830,7 @@
    "sites": [
     "app/qml/Pages/Structure/MagneticFormFactorsGroup.qml",
     "app/src/app_info.cpp",
+    "app/src/demo_driver.cpp",
     "core/src/presentation.cpp",
     "core/src/report_html.cpp",
     "core/src/report_model.cpp"
@@ -859,10 +901,21 @@
    "weight": 400
   },
   {
+   "char": "",
+   "code": "U+F00C",
+   "font": "Font Awesome",
+   "sites": [
+    "app/qml/Base/Gui/Elements/CheckIndicator.qml"
+   ],
+   "drawn_by": "Font Awesome",
+   "weight": 900
+  },
+  {
    "char": "",
    "code": "U+F0D7",
    "font": "Font Awesome",
    "sites": [
+    "app/qml/Base/Gui/Elements/ComboBox.qml",
     "app/qml/Pages/Analysis/ParametersGroup.qml"
    ],
    "drawn_by": "Font Awesome",

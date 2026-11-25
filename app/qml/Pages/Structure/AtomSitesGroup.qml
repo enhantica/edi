@@ -18,17 +18,6 @@ Column {
 
     property StructureViewModel structure: null
     readonly property AtomSiteListModel sites: structure ? structure.atomSites : null
-    readonly property real typeWidth: EaStyle.Sizes.fontPixelSize * 4.5
-    // The WP column fits the widest position name ("48n") and the box's arrow; its list shows the coordinates too (the
-    // owner, 2026-10-11).
-    readonly property real wyckoffWidth: ApplicationInfo.atomWyckoffWidth()
-
-    FontMetrics {
-        id: wyckoffMetrics
-
-        font.family: EaStyle.Fonts.fontFamily
-        font.pixelSize: EaStyle.Sizes.fontPixelSize
-    }
 
     spacing: AppSizes.groupContentSpacing
 
@@ -38,12 +27,11 @@ Column {
         defaultInfoText: qsTr("No atom sites yet")
         sourceModel: group.sites
 
-        // Equal-width numeric columns, the one exception to the table rule (the owner, 2026-10-24).
-
-        equalColumns: true
-
         // The type's combo box as wide as its widest type, its icon and arrow (the owner, 2026-10-27).
-        columns: [numberColumnWidth, textColumnWidth("label", Session.label("atom_site.id")), Math.max(group.typeWidth, (fittedWidths[2] ?? 0) + autoColumnPadding / 2), -1, -1, -1, group.wyckoffWidth, -1, AppSizes.iconColumnWidth]
+        // Widths from column types, not rows (ADR-0103 rule 4): the label and type are short texts, the
+        // coordinates, occupancy and B numbers.
+        // Its columns by kind (the shared column model, DataTable.columnKinds; ADR-0103 decision 4).
+        columnKinds: ["index", "short", "short", "value", "value", "value", "short", "value", "control"]
 
         header: EaComponents.ListViewHeader {
             EaComponents.ListViewLabel {
@@ -196,8 +184,9 @@ Column {
             // The Wyckoff position, chosen among the space group's: its multiplicity, letter and coordinates
             // (the owner, 2026-10-08). A letter the group does not know is shown as it is.
             ComboCell {
-                // The column is sized to the position names (wyckoffWidth); the list's longer coordinates open in a popup.
-                fills: true
+                // The column is as wide as the position name shown; the list's longer coordinates open in a popup.
+                // The box is as wide as its value and arrow, the arrow right after the value, as every table's combo box
+                // (the owner, 2026-11-22).
                 SearchableComboBox {
                     readonly property int letterIndex: group.sites ? group.sites.wyckoffLetters.indexOf(row.wyckoffLetter) : -1
 
@@ -231,19 +220,32 @@ Column {
     }
 
     Row {
+        id: buttons
+
+        // Whole labels where the longer fits beside its icon, else the short ones, the same on both buttons (no label
+        // runs out of its button).
+        readonly property bool wholeLabels: labelMetrics.advanceWidth + EaStyle.Sizes.fontPixelSize * 4 <= appendButton.width
+        TextMetrics {
+            id: labelMetrics
+            font.family: EaStyle.Fonts.fontFamily
+            font.pixelSize: EaStyle.Sizes.fontPixelSize
+            text: qsTr("Duplicate selected atom site")
+        }
+
         spacing: EaStyle.Sizes.fontPixelSize
 
         EaElements.SideBarButton {
+            id: appendButton
             objectName: "atomSites.append"
             fontIcon: "plus-circle"
-            text: qsTr("Append new atom site")
+            text: buttons.wholeLabels ? qsTr("Append new atom site") : qsTr("Append")
             onClicked: group.sites.append()
         }
         EaElements.SideBarButton {
             objectName: "atomSites.duplicate"
             enabled: table.currentIndex >= 0 || (group.sites && group.sites.count > 0)
             fontIcon: "clone"
-            text: qsTr("Duplicate selected atom site")
+            text: buttons.wholeLabels ? qsTr("Duplicate selected atom site") : qsTr("Duplicate")
             ToolTip.text: enabled ? "" : qsTr("Nothing to duplicate: add an atom site first")
             onClicked: group.sites.duplicate(Math.max(table.currentIndex, 0))
         }

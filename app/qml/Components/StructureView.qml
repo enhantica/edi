@@ -18,6 +18,10 @@ import edi.app
 Rectangle {
     id: view
 
+    // One accessible part in the browser, where Qt reads a flat page again for each of its items.
+    Accessible.role: Accessible.Grouping
+    Accessible.ignored: Qt.platform.os !== "wasm"
+
     // What the main view's Save image takes when this is the shown tab: the item, its toolbar (hidden while the image
     // is taken), the file name, and whether the toolbar's band is cut off.
     readonly property Item imageItem: view
@@ -67,7 +71,8 @@ Rectangle {
     // API is unknown, before the view is in a window, neither the 3D item nor the text exists.
     readonly property bool apiKnown: GraphicsInfo.api !== GraphicsInfo.Unknown
     readonly property bool has3D: [GraphicsInfo.OpenGL, GraphicsInfo.Direct3D11, GraphicsInfo.Direct3D12, GraphicsInfo.Vulkan, GraphicsInfo.Metal].indexOf(GraphicsInfo.api) >= 0
-    readonly property real margin: EaStyle.Sizes.fontPixelSize
+    // The report's structure view has the chart figures' padding (the owner, 2026-11-24).
+    readonly property real margin: view.report ? AppSizes.mainAreaMargin : EaStyle.Sizes.fontPixelSize
     // The main area's margin, left of the legend and right of the toolbar (owner, 2026-10-05).
     readonly property real sideMargin: AppSizes.mainAreaMargin
     // How far the toolbar's right edge is from the view's: the block selector row above ends there too.

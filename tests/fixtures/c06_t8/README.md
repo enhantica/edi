@@ -20,3 +20,9 @@ is reused without importing or executing the engine. Re-running the visible
 migration at its recorded source commit reproduces the projected artifacts.
 Historical engine records, raw timing captures and older frozen goldens retain
 their original schema; they remain references to the measurements they describe.
+
+`capture_later_schema9.py` records the later single-crystal capture and a
+separate warning spelling amendment from `a6f0c1dd`. The amendment changes
+only the parameter name in one CLI stderr warning to its saved `.edi` name.
+The gate reverses that spelling before checking the earlier document hash,
+the retained archive, and the original schema projection.

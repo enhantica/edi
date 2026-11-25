@@ -28,7 +28,9 @@ Column {
         defaultInfoText: qsTr("No constraints")
         sourceModel: group.constraints
 
-        columns: [numberColumnWidth, -1, -1, AppSizes.iconColumnWidth, AppSizes.iconColumnWidth]
+        // Its columns by kind (the shared column model, DataTable.columnKinds; ADR-0103 decision 4).
+        columnKinds: ["index", "short", "name", "control", "control"]
+        // Widths from column types, not rows (ADR-0103 rule 4): the constrained parameter, then its expression.
 
         header: EaComponents.ListViewHeader {
             EaComponents.ListViewLabel {
@@ -100,19 +102,32 @@ Column {
     }
 
     Row {
+        id: buttons
+
+        // Whole labels where the longer fits beside its icon, else the short ones, the same on both buttons (no label
+        // runs out of its button).
+        readonly property bool wholeLabels: labelMetrics.advanceWidth + EaStyle.Sizes.fontPixelSize * 4 <= appendButton.width
+        TextMetrics {
+            id: labelMetrics
+            font.family: EaStyle.Fonts.fontFamily
+            font.pixelSize: EaStyle.Sizes.fontPixelSize
+            text: qsTr("Duplicate selected constraint")
+        }
+
         spacing: EaStyle.Sizes.fontPixelSize
 
         EaElements.SideBarButton {
+            id: appendButton
             objectName: "constraints.append"
             fontIcon: "plus-circle"
-            text: qsTr("Append new constraint")
+            text: buttons.wholeLabels ? qsTr("Append new constraint") : qsTr("Append")
             onClicked: group.constraints.append()
         }
         EaElements.SideBarButton {
             objectName: "constraints.duplicate"
             enabled: table.currentIndex >= 0 || (group.constraints && group.constraints.count > 0)
             fontIcon: "clone"
-            text: qsTr("Duplicate selected constraint")
+            text: buttons.wholeLabels ? qsTr("Duplicate selected constraint") : qsTr("Duplicate")
             ToolTip.text: enabled ? "" : qsTr("Nothing to duplicate: add a constraint first")
             onClicked: group.constraints.duplicate(Math.max(table.currentIndex, 0))
         }

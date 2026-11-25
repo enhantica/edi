@@ -2585,9 +2585,11 @@ def test_actual_manual_text_editor_preserves_composition_escape_and_real_commit(
 
 def test_actual_parameter_cell_clean_publication_and_recycling_keep_original_member(main_actor):
     actor = main_actor([[]])
-    assert actor.command('open', path=str(ROOT / 'tests/fixtures/constraint_expressions/project'))[
-        'reply'
-    ]['opened'], 'E11 F4 actual manual composition, publication and member lifetime remain safe'
+    project = actor.folder / 'project'
+    shutil.copytree(ROOT / 'tests/fixtures/constraint_expressions/project', project)
+    assert actor.command('open', path=str(project))['reply']['opened'], (
+        'E11 F4 actual manual composition, publication and member lifetime remain safe'
+    )
     actor.until(lambda row: not row['ui']['project']['calculating'])
     wait_positive_tab(actor, 'appBar.tab.analysis')
     actor.command('click', name='appBar.tab.analysis')
@@ -2596,10 +2598,17 @@ def test_actual_parameter_cell_clean_publication_and_recycling_keep_original_mem
     actor.until(lambda _value: not _original_toolbar_pane_state(actor)['visible'])
     table = control_expression('parameters.list')
     qml(actor, f'{table}.sourceModel.nameFilter = "length_a"')
-    actor.command('click', name='parameters.value.0')
-    assert actor.command('focused_input')['reply']['name'] == 'parameters.value.0', (
-        'The original physical click reaches the actual uncovered manual editor before typing'
-    )
+
+    def open_value_popup():
+        editor = 'parameters.value.0.popup.value'
+        actor.command('click', name='parameters.value.0')
+        actor.until(lambda row: _unique_input_control(row, editor) is not None)
+        actor.command('click', name=editor)
+        assert actor.command('focused_input')['reply']['name'] == editor, (
+            'Physical pointer input reaches the original parameter through its popup editor'
+        )
+
+    open_value_popup()
     actor.command('manual_key', key='select_all')
     actor.command('manual_text', text='9.125')
     actor.command('manual_ime', preedit='7', commit='')
@@ -2610,6 +2619,8 @@ def test_actual_parameter_cell_clean_publication_and_recycling_keep_original_mem
     )
     actor.command('manual_ime', preedit='', commit='')
     actor.command('manual_key', key='escape')
+    actor.until(lambda row: _unique_input_control(row, 'parameters.value.0.popup.value') is None)
+    open_value_popup()
     assert float(actor.command('focused_input')['reply']['text']) == 5.375, (
         'E11 F4 actual manual composition, publication and member lifetime remain safe'
     )
