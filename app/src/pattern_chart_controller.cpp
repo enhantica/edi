@@ -318,7 +318,7 @@ struct Band {
     QList<QPointF> top, bottom;
     AreaEdges area;
 };
-Band band_of(const edi::PatternSeries& series, double floor, double lift) {
+Band band_of(const edi::PatternSeries& series, double floor, double lift, bool with_area = true) {
     Band out;
     std::vector<double> base;
     base.reserve(series.points.size());
@@ -337,7 +337,7 @@ Band band_of(const edi::PatternSeries& series, double floor, double lift) {
         out.bottom.append(QPointF(x, std::isfinite(low) ? low : floor));
         base.push_back(out.bottom.back().y());
     }
-    out.area = area_edges(out.top, base, floor, lift);
+    if (with_area) out.area = area_edges(out.top, base, floor, lift);
     return out;
 }
 
@@ -1063,12 +1063,13 @@ PatternChartController::Fills PatternChartController::fillsOf(const edi::Pattern
     put(residual_series_, residual != nullptr && !band && !bars ? points_of(*residual) : QList<QPointF>());
     const auto fill_band = [&](const edi::PatternSeries* series, std::size_t pane, double floor, double lift) {
         const BandSeries& target = band_series_[pane];
-        const Band drawn = band && series != nullptr ? band_of(*series, floor, lift) : Band{};
         // While a value is dragged the residual's area waits for the release; the measured one is drawn as ever.
+        const bool with_area = !held || pane == 0;
+        const Band drawn = band && series != nullptr ? band_of(*series, floor, lift, with_area) : Band{};
         if (clear_fills && pane != 0) {
             put(target.upper, {});
             put(target.lower, {});
-        } else if (!held || pane == 0) {
+        } else if (with_area) {
             put(target.upper, drawn.area.upper);
             put(target.lower, drawn.area.lower);
         }
