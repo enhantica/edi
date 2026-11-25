@@ -159,6 +159,9 @@ def copy_bundles(command, **_):
     # Stands in for the subprocess so the macOS tool component gets its copied bundle.
     if command[0] == 'ditto':
         shutil.copytree(command[1], command[2], symlinks=True)
+    # lrelease writes the compiled text, which the packaging compares with the committed file.
+    if '-qm' in command:
+        shutil.copy2(PACKAGE.ROOT / 'tools/installer/ifw_en.qm', command[command.index('-qm') + 1])
 
 
 @pytest.mark.parametrize('channel', ['stable', 'testing'])
