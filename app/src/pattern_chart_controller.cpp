@@ -12,6 +12,7 @@
 #include <set>
 #include <utility>
 
+#include "chart_area.hpp"
 #include "ui_probe.hpp"
 
 namespace edi_app {
@@ -273,42 +274,6 @@ std::size_t bragg_place(const std::string& style) {
         std::from_chars(style.data() + 6, style.data() + style.size(), place);
     }
     return place;
-}
-
-// An area's two edges for Qt Graphs from a curve and, per point, its base (NaN: `floor`). The area holds the drawn
-// points only: a gap (an excluded region, or a value the log scale cannot show) is not a point an area can take, so
-// the area closes onto its base at each gap instead of bridging it. The upper edge keeps `lift` above the lower one:
-// where the two met (a curve on its base, or a closed gap) Qt Graphs filled the area as a fan from its first point
-// or not at all.
-struct AreaEdges {
-    QList<QPointF> upper, lower;
-};
-AreaEdges area_edges(const QList<QPointF>& curve, const std::vector<double>& base, double floor, double lift) {
-    AreaEdges area;
-    area.upper.reserve(curve.size() + 2);
-    area.lower.reserve(curve.size() + 2);
-    bool drawing = false;
-    for (qsizetype k = 0; k < curve.size(); ++k) {
-        if (!std::isfinite(curve[k].x()) || !std::isfinite(curve[k].y())) {
-            if (drawing) {
-                area.upper.append(QPointF(area.lower.back().x(), area.lower.back().y() + lift));
-                area.lower.append(area.lower.back());
-                drawing = false;
-            }
-            continue;
-        }
-        const auto at = static_cast<std::size_t>(k);
-        const double low = at < base.size() ? base[at] : std::numeric_limits<double>::quiet_NaN();
-        const QPointF bottom(curve[k].x(), std::isfinite(low) ? low : floor);
-        if (!drawing && !area.upper.isEmpty()) {
-            area.upper.append(QPointF(bottom.x(), bottom.y() + lift));
-            area.lower.append(bottom);
-        }
-        area.upper.append(QPointF(curve[k].x(), std::max(curve[k].y(), bottom.y() + lift)));
-        area.lower.append(bottom);
-        drawing = true;
-    }
-    return area;
 }
 
 }  // namespace
@@ -1015,7 +980,8 @@ PatternChartController::Fills PatternChartController::fillsOf(const edi::Pattern
             for (const QPointF& point : bottom) {
                 base.push_back(point.y());
             }
-            const AreaEdges area = area_edges(top, base, floor, lift);
+            const double low = pane == 1 ? residual_min_ : shown_y_min_, high = pane == 1 ? residual_max_ : shown_y_max_;
+            const AreaEdges area = area_edges(top, base, floor, lift, {shown_x_min_, shown_x_max_, low, high});
             put(target.upper, area.upper);
             put(target.lower, area.lower);
         }
@@ -1107,7 +1073,8 @@ PatternChartController::Fills PatternChartController::fillsOf(const edi::Pattern
             put(target.upper, {});
             put(target.lower, {});
         } else if (!held) {
-            const AreaEdges area = area_edges(curve, series.bar_low, shown_y_min_, lift);
+            const AreaEdges area =
+                area_edges(curve, series.bar_low, shown_y_min_, lift, {shown_x_min_, shown_x_max_, shown_y_min_, shown_y_max_});
             put(target.upper, area.upper);
             put(target.lower, area.lower);
         }
@@ -1323,6 +1290,21 @@ void PatternChartController::refresh() {
         held_range_.reset();
     }
     const double x_step = axis_step(x_low, x_high, true);
+    // Qt Graphs lays a view out at once when its height changes, as the panes below can do: an area still holding the
+    // last drawing's points would be put on the new axes, as far outside the plot as the two drawings differ (Qt's
+    // triangulation of it crashed). So the areas hold no points until their axes are settled. While a value is dragged
+    // they stand as drawn, on the same axes.
+    const bool held = !report_ && experiment_ && experiment_->adjusting();
+    if (!held) {
+        for (const BandSeries& target : band_series_) {
+            replace(target.upper, {});
+            replace(target.lower, {});
+        }
+        for (const StructureSeries& target : structure_series_) {
+            replace(target.upper, {});
+            replace(target.lower, {});
+        }
+    }
     publish(shown_x_min_, x_low, &PatternChartController::xMinChanged);
     publish(shown_x_max_, x_high, &PatternChartController::xMaxChanged);
     publish(shown_y_min_, y_low, &PatternChartController::yMinChanged);
@@ -1366,7 +1348,6 @@ void PatternChartController::refresh() {
     keeps_panes_ = true;
     // While a value is dragged the measured series stand as drawn and a filled area waits for the release: Qt Graphs
     // triangulates an area each time it changes, the largest part of a step (edi ADR-0070).
-    const bool held = !report_ && experiment_ && experiment_->adjusting();
     const bool clear_fills = held && !fills_cleared_;
     fills_cleared_ = held;
     const Fills fills = fillsOf(shown_, held, clear_fills);

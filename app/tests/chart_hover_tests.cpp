@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
+#include <limits>
 #include <memory>
+#include <vector>
 #include <QGuiApplication>
 #include <QHoverEvent>
 #include <QQmlComponent>
@@ -10,12 +12,37 @@
 #include <QtGraphs/QLineSeries>
 #include <QtTest/QtTest>
 #include <QtQml/qqmlextensionplugin.h>
+#include "chart_area.hpp"
 #include "engine_setup.hpp"
 Q_IMPORT_QML_PLUGIN(edi_appPlugin)
 
 class ChartHoverTests : public QObject {
     Q_OBJECT
 private slots:
+    // Qt fills an area by triangulating all of it: a point far outside the plot crashed that.
+    void areasEndOneRangeOutsideThePlot() {
+        constexpr double inf = std::numeric_limits<double>::infinity(), nan = std::numeric_limits<double>::quiet_NaN();
+        const edi_app::AreaRange range{0.0, 10.0, 0.0, 1.0};
+        const QList<QPointF> curve{{-1e9, 0.5}, {1.0, 0.2}, {2.0, 1e12}, {3.0, 0.4},
+                                   {4.0, inf}, {5.0, nan}, {6.0, 0.3}, {1e9, 0.3}};
+        const std::vector<double> base{0.0, 0.0, 0.0, -1e12, 0.0, 0.0, -inf, 0.0};
+        const edi_app::AreaEdges area = edi_app::area_edges(curve, base, 0.0, 0.01, range);
+        QCOMPARE(area.upper.size(), area.lower.size());
+        for (qsizetype k = 0; k < area.upper.size(); ++k) {
+            const QPointF up = area.upper[k], low = area.lower[k];
+            QCOMPARE(up.x(), low.x());
+            QVERIFY(up.x() >= -10.0 && up.x() <= 20.0 && (k == 0 || up.x() >= area.upper[k - 1].x()));
+            QVERIFY(low.y() >= -1.0 && up.y() <= 2.0 && up.y() >= low.y());
+        }
+        // What is inside the plot is drawn where it was.
+        QVERIFY(area.upper.contains(QPointF(1.0, 0.2)) && area.upper.contains(QPointF(3.0, 0.4)));
+        // No finite range, no area.
+        QVERIFY(edi_app::area_edges(curve, base, 0.0, 0.01, {0.0, 10.0, 0.0, inf}).upper.isEmpty());
+        QVERIFY(edi_app::area_edges(curve, base, 0.0, 0.01, {5.0, 5.0, 0.0, 1.0}).upper.isEmpty());
+        // A curve within its range keeps its points.
+        const QList<QPointF> plain{{0.0, 0.1}, {5.0, 0.9}, {10.0, 0.1}};
+        QCOMPARE(edi_app::area_edges(plain, {}, 0.0, 0.01, range).upper, plain);
+    }
     void removedSeriesNeverReachNativeHover() {
         QQmlEngine engine;
         edi_app::configure_engine(engine);

@@ -167,9 +167,9 @@ std::pair<double, double> full_range(const std::vector<double>& x) {
     return {std::isnan(lo) ? 0.0 : lo, std::isnan(hi) ? 0.0 : hi};
 }
 
-// Widens an axis to what a series presents.
+// Widens an axis to what a series presents; an infinite value has no place on it.
 void cover(AxisDescription& axis, bool& any, double value) {
-    if (std::isnan(value)) {
+    if (!std::isfinite(value)) {
         return;
     }
     axis.min = any ? std::min(axis.min, value) : value;

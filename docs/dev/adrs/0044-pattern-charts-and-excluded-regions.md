@@ -44,6 +44,13 @@ is fitted.
    `edi_chart_hover_tests` repeatedly removes and deletes rendered series and sends hover events before polish,
    and checks the same boundary while replacing entire views.
 
+6. **An area and its axes change together (2026-11-25).** Qt Graphs lays a view out as soon as its height changes,
+   inside the call that changed it, and fills an area by triangulating all of it. Switching a chart to another axis
+   gave it the new ranges and panes first, so the last pattern's areas were laid out on the new axes, up to 10⁷ pixels
+   outside the plot, and Qt's triangulation crashed. A drawing therefore empties its areas before its ranges and
+   panes are published and fills them after. An area's edges also end one range outside the plot (`area_edges`), and
+   an infinite value never widens an axis. `edi_chart_hover_tests` checks the edges.
+
 ## Consequences
 
 - Any reader of a project file sees an excluded region as having no calculated pattern, which is true.
