@@ -11,17 +11,17 @@ SHA="$(cat "$ROOT/build/crysta-prefix/.crysta-sha" 2>/dev/null)" \
   || { echo "ERROR: build/crysta-prefix/.crysta-sha is missing — run tools/ci/build-crysta.sh first" >&2; exit 1; }
 SRC="$ROOT/build/crysta-src"
 MANIFEST="$ROOT/build/crysta-prefix/share/crysta-sdk/manifest.json"
-# An export is kept only while its files are still the SDK's tree; Windows keeps neither modes nor links, so there the
-# recorded commit decides.
-is_sdk_tree() { case "$(uname -s)" in MINGW* | MSYS* | CYGWIN*) return 0 ;; esac
-  python3 "$ROOT/tools/ci/crysta_source_tree.py" check "$SRC" "$MANIFEST"; }
+# An export is kept only while its files are still the SDK's tree. Windows keeps neither modes nor links, so nothing
+# proves one there and it is made again; the export checks each file it writes against the commit.
+case "$(uname -s)" in MINGW* | MSYS* | CYGWIN*) windows=1 ;; *) windows="" ;; esac
+is_sdk_tree() { python3 "$ROOT/tools/ci/crysta_source_tree.py" check "$SRC" "$MANIFEST"; }
 require_sdk_tree() {
-  is_sdk_tree && return 0
+  [ -n "$windows" ] || is_sdk_tree && return 0
   echo "ERROR: the exported crysta source is not the tree the SDK at $SHA was built from" >&2
   rm -rf "$SRC"
   exit 1
 }
-[ "$(cat "$SRC/CRYSTA_SOURCE_SHA" 2>/dev/null)" = "$SHA" ] && is_sdk_tree && exit 0
+[ -z "$windows" ] && [ "$(cat "$SRC/CRYSTA_SOURCE_SHA" 2>/dev/null)" = "$SHA" ] && is_sdk_tree && exit 0
 rm -rf "$SRC"
 if [ -n "${CRYSTA_SRC:-}" ] && git -C "$CRYSTA_SRC" cat-file -e "${SHA}^{commit}" 2>/dev/null; then
   python3 "$ROOT/tools/ci/crysta_source_export.py" "$CRYSTA_SRC" "$SHA" "$SRC"

@@ -39,8 +39,7 @@ if [ -n "${CRYSTA_SDK_DIR:-}" ]; then
     fi
     SRC="$TREE/source"
     rm -rf "$SRC"
-    mkdir -p "$SRC"
-    git -C "$CRYSTA_CONSUMER_SRC" archive "$SHA" | tar -x -C "$SRC"
+    python tools/ci/crysta_source_export.py "$CRYSTA_CONSUMER_SRC" "$SHA" "$SRC"
 else
     bash tools/ci/build-crysta.sh
     bash tools/ci/crysta-src.sh
