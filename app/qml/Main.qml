@@ -462,7 +462,8 @@ EaComponents.ApplicationWindow {
 
             readonly property bool wanted: AppState.projectPageEnabled
             active: wanted && window.pageTurn(projectLoader)
-            asynchronous: true
+            // In the browser built at once: a click on the page was lost while it was being built in the background.
+            asynchronous: Qt.platform.os !== "wasm"
             sourceComponent: Component {
                 ProjectPage {
                     current: projectLoader.SwipeView.isCurrentItem
