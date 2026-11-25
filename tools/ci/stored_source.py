@@ -3,18 +3,20 @@
 
     python3 tools/ci/stored_source.py [--withhold] [--receipt PATH]... PATH...
 
-Run on exactly the paths that are stored, right before they are. Every file, and every member of an
-archive, is compared by its bytes, and a text file by its lines as well. An archive is known by its
-first bytes, not its name. One this check cannot open, an installer and a disk image refuse unless
-a receipt names their bytes, as a folder or file that cannot be read does. The SDK's own members
-are those sdk-members.txt names. `--withhold` replaces a source line in a text file (diagnostics
-only).
+Run on exactly the paths that are stored, right before they are. Every file, and every entry of an
+archive or installer as the container has it, is compared by its bytes, and a text file by its
+lines as well. A container is known by its first bytes, not its name; one this check cannot open
+refuses, as a folder or file that cannot be read does. A disk image refuses unless a receipt names
+its bytes and the source commit it was checked against, and the lists are of that commit too. The
+SDK's own members are those sdk-members.txt names, in an archive of a listed commit. `--withhold`
+replaces a source line in a text file (diagnostics only).
 """
 
 from __future__ import annotations
 
 import argparse
 import bz2
+import fnmatch
 import gzip
 import hashlib
 import io
@@ -28,19 +30,18 @@ import sys
 import tarfile
 import tempfile
 import zipfile
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from pathlib import Path
 
+import installer_content
 import source_lists
 
 ROOT = Path(__file__).resolve().parents[2]
 LOCKS = [
     lock for lock in (ROOT / 'pixi.lock', ROOT / 'tools/installer/pixi.lock') if lock.is_file()
 ]
-MEMBERS = Path(__file__).with_name('sdk-members.txt')
-SDK = re.compile(r'(?:^|/)crysta-sdk-[0-9a-f]{40}-(?:linux-64|osx-arm64|win-64)\.tar\.gz$')
-# The Installer Framework ends an installer's own archives with its marker and one of two numbers.
-INSTALLER = re.compile(rb'[\x32-\x36]\x32\x02\x12\0{4}[\xf8\xf9]\x68\xd6\x99\x1c\x0a\x63\xc2')
+SDK = re.compile(r'(?:^|/)crysta-sdk-([0-9a-f]{40})-(linux-64|osx-arm64|win-64)\.tar\.gz$')
+MANIFEST = 'share/crysta-sdk/manifest.json'
 SEALED = {
     b'Rar!\x1a\x07': 'a RAR archive',
     b'\x04\x22\x4d\x18': 'an LZ4 stream',
@@ -60,13 +61,13 @@ class RefusedError(Exception):
 
 
 def tar_members(data: bytes) -> list[tuple[str, bytes]]:
-    """A tar's files; a link holds no bytes, anything else is not a file an upload makes."""
+    """A tar's entries, each as often as it has it; a link's is what it names."""
     found = []
     with tarfile.open(fileobj=io.BytesIO(data)) as archive:
         for entry in archive:
-            if entry.isreg() or entry.islnk():
+            if entry.isreg():
                 found.append((entry.name, archive.extractfile(entry).read()))
-            elif entry.issym():
+            elif entry.issym() or entry.islnk():
                 found.append((entry.name, entry.linkname.encode()))
             elif not entry.isdir():
                 raise ValueError(entry.name)
@@ -74,28 +75,58 @@ def tar_members(data: bytes) -> list[tuple[str, bytes]]:
 
 
 def seven_members(data: bytes) -> list[tuple[str, bytes]]:
-    """A 7z archive's files, by py7zr (the packaging environment has it) or the 7z program."""
+    """A 7z archive's entries, by py7zr (the packaging environment has it) or the 7z program."""
     try:
         import py7zr  # noqa: PLC0415 - not in every runner's Python
     except ImportError:
-        with tempfile.TemporaryDirectory() as folder:
-            packed, held = Path(folder) / 'packed.7z', Path(folder) / 'held'
-            packed.write_bytes(data)
-            command = ['7z', 'x', '-y', '-bd', f'-o{held}', str(packed)]
-            subprocess.run(command, capture_output=True, check=True)
-            return [
-                (path.relative_to(held).as_posix(), path.read_bytes())
-                for path in sorted(held.rglob('*'))
-                if path.is_file() and not path.is_symlink()
-            ]
+        return seven_program(data)
     factory = py7zr.io.BytesIOFactory(1 << 31)
     with py7zr.SevenZipFile(io.BytesIO(data)) as archive:
+        listed = [entry.filename for entry in archive.list() if not entry.is_directory]
         archive.extractall(factory=factory)  # noqa: S202 - into memory
-    return [(name, held.read()) for name, held in factory.products.items()]
+    found = [(name, held.read()) for name, held in factory.products.items()]
+    if len(listed) != len({alias(name) for name in listed}) or len(found) != len(listed):
+        raise ValueError('an entry is hidden by another')
+    return found
+
+
+def seven_program(data: bytes) -> list[tuple[str, bytes]]:
+    """A 7z archive's entries, by the 7z program."""
+    with tempfile.TemporaryDirectory() as folder:
+        packed, held = Path(folder) / 'packed.7z', Path(folder) / 'held'
+        packed.write_bytes(data)
+        listing = ['7z', 'l', '-slt', '-ba', '-sccUTF-8', str(packed)]
+        text = subprocess.run(listing, capture_output=True, check=True).stdout.decode()
+        entries = [
+            dict(line.split(' = ', 1) for line in entry.splitlines() if ' = ' in line)
+            for entry in re.split(r'\n\s*\n', text)
+            if 'Path = ' in entry
+        ]
+        listed = [e['Path'] for e in entries if not e.get('Attributes', '').startswith('D')]
+        unpack = ['7z', 'x', '-y', '-bd', f'-o{held}', str(packed)]
+        subprocess.run(unpack, capture_output=True, check=True)
+        found = [
+            (path.relative_to(held).as_posix(), link_or_file(path))
+            for path in sorted(held.rglob('*'))
+            if path.is_symlink() or path.is_file()
+        ]
+    if len(listed) != len({alias(name) for name in listed}) or len(found) != len(listed):
+        raise ValueError('an entry is hidden by another')
+    return found
+
+
+def alias(name: str) -> str:
+    """What a name is on the least particular file system."""
+    return name.replace('\\', '/').casefold()
+
+
+def link_or_file(path: Path) -> bytes:
+    """A file's bytes, or what a link names."""
+    return os.fsencode(path.readlink()) if path.is_symlink() else path.read_bytes()
 
 
 def zip_members(data: bytes) -> list[tuple[str, bytes]]:
-    """A zip's files."""
+    """A zip's entries, each as often as it has it."""
     with zipfile.ZipFile(io.BytesIO(data)) as archive:
         entries = [entry for entry in archive.infolist() if not entry.is_dir()]
         return [(entry.filename, archive.read(entry)) for entry in entries]
@@ -111,34 +142,26 @@ def zstandard(data: bytes) -> bytes:
     return zstd.decompress(data)
 
 
-ZSTANDARD = b'\x28\xb5\x2f\xfd'
 STREAMS = {
     b'\x1f\x8b': gzip.decompress,
     b'BZh': bz2.decompress,
     b'\xfd7zXZ\0': lzma.decompress,
-    ZSTANDARD: zstandard,
+    b'\x28\xb5\x2f\xfd': zstandard,
 }
-PACKED = (*STREAMS, b'PK', b"7z\xbc\xaf'\x1c")
 
 
-def unpacked(name: str, data: bytes) -> list[tuple[str, bytes]] | None:
-    """What the file holds, or None when it is not an archive."""
+def container(name: str, data: bytes) -> Callable[[bytes], list[tuple[str, bytes]]] | None:
+    """How to read what a file holds, or None when it is not a container."""
     for start, decompress in STREAMS.items():
         if data.startswith(start):
-            return [('', decompress(data))]
+            return lambda packed: [('', decompress(packed))]
     if data.startswith(b"7z\xbc\xaf'\x1c"):
-        return seven_members(data)
+        return seven_members
     if data[257:262] == b'ustar' or name.lower().endswith('.tar'):
-        return tar_members(data)
-    if zipfile.is_zipfile(io.BytesIO(data)) and not installer(data):
-        return zip_members(data)
-    return None
-
-
-def installer(data: bytes) -> bool:
-    """Whether a file carries archives the Framework appended to it."""
-    tar = data[257:262] == b'ustar'
-    return not tar and not data.startswith(PACKED) and INSTALLER.search(data) is not None
+        return tar_members
+    if installer_content.carries(data) and not data.startswith(b'PK'):
+        return lambda program: installer_content.content(program, zstandard)
+    return zip_members if zipfile.is_zipfile(io.BytesIO(data)) else None
 
 
 def sealed(data: bytes) -> str | None:
@@ -146,9 +169,7 @@ def sealed(data: bytes) -> str | None:
     for start, kind in SEALED.items():
         if data.startswith(start):
             return kind
-    if data[-512:-508] == b'koly':
-        return 'a disk image'
-    return 'an installer' if installer(data) else None
+    return 'a disk image' if data[-512:-508] == b'koly' else None
 
 
 class Check:
@@ -164,10 +185,13 @@ class Check:
             if not named:
                 raise RefusedError(f'{receipt} holds no receipt')
             for file in named:
-                self.approved |= set(json.loads(file.read_text(encoding='utf-8'))['sha256'])
+                held = json.loads(file.read_text(encoding='utf-8'))
+                if held['crysta'] not in self.source.members:
+                    raise RefusedError(f'{file} is of a commit the lists are not of')
+                self.approved |= set(held['sha256'])
         self.found: list[str] = []
 
-    def file(self, name: str, data: bytes, *, sdk: bool = False) -> None:
+    def file(self, name: str, data: bytes) -> None:
         """Judge one file and everything in it."""
         if hashlib.sha256(data).hexdigest() in self.approved or self.source.is_public(data):
             return
@@ -177,33 +201,57 @@ class Check:
         if self.source.is_file(data):
             self.found.append(f'{name} is a source file')
             return
+        if source_lists.is_text(data) and self.source.quoted_in(data):
+            self.found.append(f'{name} quotes a source line')
+            return
         try:
-            held = unpacked(name, data)
+            read = container(name, data)
+            held = read(data) if read else []
         except UNREADABLE:
             self.found.append(f'{name} cannot be read')
             return
-        if held is None:
-            if source_lists.is_text(data) and self.source.quoted_in(data):
-                self.found.append(f'{name} quotes a source line')
-            return
-        names = sdk_members() if sdk or SDK.search(name) else None
         for member, content in held:
-            if not member:
-                self.file(name, content, sdk=names is not None)
-            elif names is None:
-                self.file(f'{name}:{member}', content)
-            else:
-                self.sdk_member(name, member, content, names)
+            self.file(f'{name}:{member}' if member else name, content)
 
-    def sdk_member(self, name: str, member: str, data: bytes, names: dict[str, str]) -> None:
-        """A member of the SDK archive: one the list names, and a copy only where it says so."""
-        for pattern, kind in names.items():
-            if Path(member).match(pattern) and member.count('/') == pattern.count('/'):
-                installed = kind == 'copy' and self.source.is_file(data)
-                if not installed and kind != 'template':
-                    self.file(f'{name}:{member}', data)
-                return
-        self.found.append(f'{name}:{member} is not a member the SDK may have')
+    def sdk(self, name: str, data: bytes, commit: str, platform: str) -> None:
+        """An SDK archive: a listed commit's, that platform's, with members the list names."""
+        try:
+            held = tar_members(gzip.decompress(data))
+            manifests = [json.loads(content) for member, content in held if member == MANIFEST]
+            made = [(m['source_sha'], m['platform']) for m in manifests]
+        except (*UNREADABLE, KeyError, TypeError):
+            made = []
+        if made != [(commit, platform)] or commit not in self.source.members:
+            self.found.append(f'{name} is not the SDK its name says, or not of a listed commit')
+            return
+        kinds = {pattern: kind for kind, pattern, *_ in source_lists.sdk_members()}
+        carried = self.source.members[commit]
+        seen = set()
+        for member, content in held:
+            self.sdk_member(
+                f'{name}:{member}',
+                kinds.get(sdk_pattern(member, kinds)),
+                carried.get(member, set()),
+                content,
+            )
+            if member in seen:
+                self.found.append(f'{name}:{member} is there twice')
+            seen.add(member)
+
+    def sdk_member(self, name: str, kind: str | None, known: set[str], data: bytes) -> None:
+        """One member: a copy is its own source file, a template quotes its own sources only."""
+        if kind is None:
+            self.found.append(f'{name} is not a member the SDK may have')
+        elif kind == 'copy':
+            unix = data.replace(b'\r\n', b'\n')
+            if not {source_lists.blob_id(data), source_lists.blob_id(unix)} & known:
+                self.found.append(f'{name} is not the file it is a copy of')
+        elif kind == 'template':
+            quoted = {hit for line in data.splitlines() for hit in self.source.hits(line)}
+            if self.source.is_file(data) or quoted - known:
+                self.found.append(f'{name} quotes more than it is made from')
+        else:
+            self.file(name, data)
 
     def path(self, path: Path) -> None:
         """Judge a file on disk, withholding its lines where that is asked."""
@@ -216,14 +264,18 @@ class Check:
             if (shown := b''.join(kept)) != data:
                 path.write_bytes(shown)
                 data = shown
-        self.file(str(path), data)
+        if found := SDK.search(path.as_posix()):
+            self.sdk(path.name, data, *found.groups())
+        else:
+            self.file(path.as_posix(), data)
 
 
-def sdk_members() -> dict[str, str]:
-    """The SDK's members and how each is made (sdk-members.txt)."""
-    lines = MEMBERS.read_text(encoding='utf-8').splitlines()
-    entries = [line.split() for line in lines if line and not line.startswith('#')]
-    return {pattern: kind for kind, pattern in entries}
+def sdk_pattern(member: str, kinds: dict[str, str]) -> str | None:
+    """The entry of sdk-members.txt that names a member."""
+    for pattern in kinds:
+        if fnmatch.fnmatchcase(member, pattern) and member.count('/') == pattern.count('/'):
+            return pattern
+    return None
 
 
 def locked() -> set[str]:

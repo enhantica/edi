@@ -22,6 +22,8 @@ BLOBS = 'CRYSTA_SOURCE_BLOB_LIST'
 LINES = 'CRYSTA_SOURCE_LINE_LIST'
 MARKS = 'CRYSTA_SOURCE_MARK_LIST'
 PUBLIC = 'CRYSTA_SOURCE_PUBLIC_LIST'
+# What the SDK of one commit carries of the source on purpose, and the commits the lists are of.
+MEMBERS = 'CRYSTA_SOURCE_MEMBER_LIST'
 # A shorter line, or one without a letter, says nothing about where it came from.
 SHORTEST = 12
 # Part of an output line is source from this length on (a short part is a word or two of anyone's
@@ -32,13 +34,24 @@ LONGEST = 1000
 # longer line, also when a source line holds nothing else.
 WORD = re.compile(rb'\W*[A-Za-z]+\W*')
 NAME = re.compile(rb'\W*[\w.]+\W*')
-# Recorded data (results, logs, locks, structures, measured patterns) and licences, compared as
-# whole files only: single lines of them recur in any tool's output. A person wrote the rest.
+# Recorded data among the tests (results, logs, structures, measured patterns), the lock and the
+# licences are compared as whole files only: single lines of them recur in any tool's output. A
+# person wrote the lines of everything else, whatever its kind.
 RECORDED = {
     *('.ast', '.bac', '.cif', '.csv', '.dat', '.dic', '.edi', '.f64', '.fou', '.gss', '.gz'),
-    *('.hkl', '.int', '.irf', '.json', '.lock', '.log', '.mcif', '.new', '.oracle', '.out'),
-    *('.pcr', '.prf', '.record', '.sum', '.sym', '.symtab', '.tsv', '.xy', '.xye', '.xys', '.zip'),
+    *('.hkl', '.int', '.irf', '.json', '.log', '.mcif', '.new', '.oracle', '.out', '.pcr', '.prf'),
+    *('.record', '.sum', '.sym', '.symtab', '.tsv', '.txt', '.xy', '.xye', '.xys', '.zip'),
 }
+# What a tool puts before a line it quotes: a compiler's gutter, pytest's markers, a diff's sign, a
+# log command, a timestamp.
+QUOTES = (
+    re.compile(rb'^\s*\d+\s*[|:]\s?'),
+    re.compile(rb'^\s*[|>]\s'),
+    re.compile(rb'^E\s+'),
+    re.compile(rb'^[+-]'),
+    re.compile(rb'^::[a-z-]+[^:]*::'),
+    re.compile(rb'^\d{4}-\d\d-\d\dT[\d:.]+Z\s'),
+)
 ANSI = re.compile(rb'\x1b\[[0-?]*[ -/]*[@-~]|\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)')
 ESCAPES = re.compile(rb'\\u([0-9a-fA-F]{4})|\\(.)')
 PLAIN = {b'n': b'\n', b't': b'\t', b'r': b'\r', b'b': b' ', b'f': b' '}
@@ -54,9 +67,10 @@ class UnavailableError(Exception):
 def written(name: str) -> bool:
     """Whether a source file's single lines are listed, and not only the file."""
     path = PurePosixPath(name)
-    recorded = path.suffix.lower() in RECORDED or path.name.endswith('LICENSE')
-    table = path.suffix == '.txt' and path.parts[0] == 'tests' and path.stem != 'CMakeLists'
-    return not recorded and not table
+    if path.name == 'CMakeLists.txt':
+        return True
+    recorded = path.parts[0] == 'tests' and path.suffix.lower() in RECORDED
+    return not (recorded or path.suffix == '.lock' or path.name.endswith('LICENSE'))
 
 
 def line_id(text: bytes) -> str | None:
@@ -100,6 +114,7 @@ def forms(line: bytes) -> Iterator[bytes]:
                 todo.append(plain.encode('utf-8', 'surrogateescape'))
             if b'\\' in part:
                 todo.append(ESCAPES.sub(_escape, part))
+            todo += [bare for quote in QUOTES if (bare := quote.sub(b'', part, count=1)) != part]
 
 
 def spans(text: bytes, marks: dict[int, list[int]] | None) -> Iterator[bytes]:
@@ -116,6 +131,13 @@ def spans(text: bytes, marks: dict[int, list[int]] | None) -> Iterator[bytes]:
             if end > start + LONGEST:
                 break
             yield text[start:end]
+
+
+def sdk_members() -> list[list[str]]:
+    """The SDK's members: how each is made, its name and what from; without the list, none."""
+    listed = Path(__file__).with_name('sdk-members.txt')
+    text = listed.read_text(encoding='utf-8') if listed.is_file() else ''
+    return [line.split() for line in text.splitlines() if line and not line.startswith('#')]
 
 
 class Source:
@@ -142,21 +164,34 @@ class Source:
         there = PUBLIC in os.environ and Path(os.environ[PUBLIC]).read_bytes().strip()
         return _read(PUBLIC, 40) if there else frozenset()
 
-    def quoted_in_line(self, line: bytes) -> bool:
-        """Whether one printed line holds a source line."""
+    def hits(self, line: bytes) -> Iterator[str]:
+        """The id of every source line one printed line holds."""
         for text in forms(line):
             if (whole := line_id(text)) is not None and whole in self.lines:
-                return True
+                yield whole
             for span in spans(text, self.marks):
                 if NAME.fullmatch(span):
                     continue
                 if (part := line_id(span)) is not None and part in self.lines:
-                    return True
-        return False
+                    yield part
+
+    def quoted_in_line(self, line: bytes) -> bool:
+        """Whether one printed line holds a source line."""
+        return next(self.hits(line), None) is not None
 
     def quoted_in(self, text: bytes) -> bool:
         """Whether any line of a text holds a source line."""
         return any(self.quoted_in_line(line) for line in re.split(rb'[\r\n]+', text))
+
+    @functools.cached_property
+    def members(self) -> dict[str, dict[str, set[str]]]:
+        """What each commit's SDK carries: an installed file's name, and its blob or line ids."""
+        found: dict[str, dict[str, set[str]]] = {}
+        if MEMBERS in os.environ:
+            for entry in Path(os.environ[MEMBERS]).read_text(encoding='utf-8').splitlines():
+                commit, known, name = entry.split(' ', 2)
+                found.setdefault(commit, {}).setdefault(name, set()).add(known)
+        return found
 
     def is_public(self, data: bytes) -> bool:
         """Whether these bytes are a file edi publishes itself."""

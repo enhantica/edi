@@ -442,10 +442,10 @@ jobs:
           if preview_history.is_file():
               shutil.copy2(preview_history, delivery / 'preview-history.json')
           PYTHON
-      - name: Check what the installers and components hold
+      # Every store and publisher reads installers itself; only macOS opens its disk images.
+      - name: Check what the disk images hold
         run: |
           pixi run --manifest-path tools/installer/pixi.toml python tools/installer/packed_source.py \
-            --devtool build/installer/ifw/tools/bin/devtool${{ runner.os == 'Windows' && '.exe' || '' }} \
             --receipt build/installer/source-check/receipt.json build/installer/delivery build/installer/components
       - name: Keep the receipt of that check
         uses: ./.github/actions/store
@@ -615,6 +615,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
         with:
+          fetch-depth: 0
           persist-credentials: false
       - if: inputs.preview_run == ''
         uses: actions/download-artifact@v4
@@ -647,11 +648,10 @@ jobs:
           sha: ${{ steps.crysta.outputs.sha }}
           app-id: ${{ vars.ENHANTICA_APP_ID }}
           private-key: ${{ secrets.ENHANTICA_APP_KEY }}
+          history: 'true'
+          receipts: source-checks
       - name: Check every file that is published
-        run: |
-          receipts=()
-          for file in source-checks/*/*.json; do receipts+=(--receipt "$file"); done
-          python3 tools/ci/stored_source.py "${receipts[@]}" preview-delivery
+        run: python3 tools/ci/stored_source.py --receipt source-checks preview-delivery
       - name: Attach qualified online installers to the draft
         if: github.event.pull_request.head.repo.fork == false
         env:
@@ -730,6 +730,8 @@ jobs:
         shell: python3 tools/ci/public_log.py {0}
     steps:
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
       - name: Download tested platform repositories
         if: inputs.preview_run == ''
         uses: actions/download-artifact@v4
@@ -819,11 +821,10 @@ jobs:
           sha: ${{ steps.crysta.outputs.sha }}
           app-id: ${{ vars.ENHANTICA_APP_ID }}
           private-key: ${{ secrets.ENHANTICA_APP_KEY }}
+          history: 'true'
+          receipts: source-checks
       - name: Check every file that is published
-        run: |
-          receipts=()
-          for file in source-checks/*/*.json; do receipts+=(--receipt "$file"); done
-          python3 tools/ci/stored_source.py "${receipts[@]}" site
+        run: python3 tools/ci/stored_source.py --receipt source-checks site
       - name: Update the deploy-docs branch
         env:
           SITES_TOKEN: ${{ steps.sites-token.outputs.token }}

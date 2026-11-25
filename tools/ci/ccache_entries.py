@@ -11,6 +11,7 @@ ccache's own small files with its own content. Exit 1 if that cannot end or ther
 
 from __future__ import annotations
 
+import os
 import re
 import subprocess
 import sys
@@ -28,7 +29,7 @@ TAG = re.compile(
     rb'#\thttps?://[a-z./]+\n'
 )
 COUNTERS = re.compile(rb'(?:\d{1,20}\n)+')
-SETTINGS = re.compile(rb'(?:(?:# [ -~]{0,80}|[a-z_]{3,40} = [\w./:~+-]{0,200})?\n)*')
+SETTINGS = re.compile(rb'(?:(?:[a-z_]{3,40} = [\w./:~+-]{0,200})?\n)*')
 OWN = {
     'CACHEDIR.TAG': ({1, 2}, TAG),
     'stats': ({1, 2, 3}, COUNTERS),
@@ -38,13 +39,15 @@ ENTRY = re.compile(r'[0-9a-f]/(?:[0-9a-f]/)?[0-9a-z]{20,64}[RMW]?')
 PASSES = 3
 
 
-def own(root: Path, path: Path) -> bool:
-    """Whether a file is one of ccache's own, in its place and with its content."""
+def own(root: Path, path: Path, source: source_lists.Source) -> bool:
+    """Whether a file is one of ccache's own, in its place, with its content and none of ours."""
     if path.name not in OWN:
         return False
     depths, content = OWN[path.name]
     inside = len(path.relative_to(root).parts) in depths
-    return inside and path.stat().st_size < 4096 and bool(content.fullmatch(path.read_bytes()))
+    data = path.read_bytes() if inside and path.stat().st_size < 4096 else b''
+    quoted = source.is_file(data) or source.quoted_in(data)
+    return inside and bool(content.fullmatch(data)) and not quoted
 
 
 def safe(entry: Path, source: source_lists.Source) -> bool:
@@ -75,9 +78,39 @@ def keep(root: Path, path: Path, source: source_lists.Source) -> bool:
     """Whether a file stays in the cache."""
     if path.is_symlink():
         return False
-    if own(root, path):
+    if own(root, path, source):
         return True
     return bool(ENTRY.fullmatch(path.relative_to(root).as_posix())) and safe(path, source)
+
+
+def refuse(error: OSError) -> None:
+    """A folder that cannot be listed is not an empty one."""
+    raise error
+
+
+def files(root: Path) -> list[Path]:
+    """Everything in the cache that is not a folder, links to folders too."""
+    found = []
+    for where, folders, names in os.walk(root, onerror=refuse):
+        linked = [name for name in folders if (Path(where) / name).is_symlink()]
+        found += [Path(where) / name for name in names + linked]
+    return sorted(found)
+
+
+def clean(root: Path, source: source_lists.Source) -> tuple[int, int] | None:
+    """How many files stay and how many were removed; None when files keep appearing."""
+    removed = 0
+    for _ in range(PASSES):
+        held = files(root)
+        with ThreadPoolExecutor(8) as pool:
+            kept = pool.map(lambda path: keep(root, path, source), held)
+            bad = [path for path, stays in zip(held, kept, strict=True) if not stays]
+        for path in bad:
+            path.unlink()
+        removed += len(bad)
+        if not bad:
+            return len(held), removed
+    return None
 
 
 def main() -> int:
@@ -88,23 +121,19 @@ def main() -> int:
         return 1
     try:
         source = source_lists.Source()
+        source.blobs  # noqa: B018 - a missing list refuses whatever the cache holds
+        counted = clean(root, source)
     except source_lists.UnavailableError as missing:
         print(f'ccache-entries: REFUSED: the list {missing} is unavailable', file=sys.stderr)
         return 1
-    removed = 0
-    for _ in range(PASSES):
-        held = [path for path in sorted(root.rglob('*')) if path.is_symlink() or not path.is_dir()]
-        with ThreadPoolExecutor(8) as pool:
-            kept = pool.map(lambda path: keep(root, path, source), held)
-            bad = [path for path, stays in zip(held, kept, strict=True) if not stays]
-        for path in bad:
-            path.unlink()
-        removed += len(bad)
-        if not bad:
-            print(f'ccache-entries: {len(held)} files kept, {removed} removed')
-            return 0
-    print('ccache-entries: REFUSED: files kept appearing', file=sys.stderr)
-    return 1
+    except OSError as error:
+        print(f'ccache-entries: REFUSED: {error.filename} cannot be read', file=sys.stderr)
+        return 1
+    if counted is None:
+        print('ccache-entries: REFUSED: files kept appearing', file=sys.stderr)
+        return 1
+    print(f'ccache-entries: {counted[0]} files kept, {counted[1]} removed')
+    return 0
 
 
 if __name__ == '__main__':

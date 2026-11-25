@@ -3,17 +3,20 @@
 
     python3 tools/ci/crysta_source_export.py CHECKOUT SHA DESTINATION
 
-Every file is written under its own name with the commit's bytes, checked after writing. A name or
-link target that could leave the destination by this platform's or Windows' rules refuses.
+The whole commit is judged before anything is written. A name must mean the same file on every
+platform: none that is absolute, climbs, or that Windows reads as another (a drive, a stream, a
+device, a trailing dot, another case). A link must name a file of the commit along its own folders.
+Each file is checked after it is written; a failure removes what was written.
 """
 
 from __future__ import annotations
 
 import os
+import re
 import shutil
 import subprocess
 import sys
-from pathlib import Path, PurePosixPath, PureWindowsPath
+from pathlib import Path, PurePosixPath
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
@@ -34,29 +37,52 @@ def git(checkout: str, *args: str, stdin: bytes | None = None) -> bytes:
     return run.stdout
 
 
-def inside(name: str) -> PurePosixPath:
-    """A name that stays in the destination on every platform."""
-    posix, windows = PurePosixPath(name), PureWindowsPath(name)
-    anchored = posix.is_absolute() or windows.drive or windows.root
-    if anchored or '\\' in name or '..' in posix.parts or not posix.parts:
-        raise RefusedError('a path leaves the destination')
-    return posix
+# What Windows reads as a device, whatever follows the first dot, and the characters it has no name
+# for; a colon starts a drive or a stream.
+DEVICE = re.compile(
+    r'(?:con|prn|aux|nul|conin\$|conout\$|(?:com|lpt)[0-9\u00b9\u00b2\u00b3])\s*(?:\.|$)'
+)
+UNNAMEABLE = re.compile(r'[\x00-\x1f<>:"|?*\\]|[. ]$')
 
 
-def target_of(name: str, target: str) -> PurePosixPath:
-    """What a link names, as a path of the commit."""
-    windows = PureWindowsPath(target)
-    if not target or target.startswith('/') or windows.drive or windows.root or '\\' in target:
+def parts_of(name: str) -> tuple[str, ...]:
+    """The components of a name that every platform reads alike."""
+    parts = tuple(name.split('/'))
+    for part in parts:
+        if not part or part in {'.', '..'} or UNNAMEABLE.search(part):
+            raise RefusedError('a name is another one on some platform')
+        if DEVICE.match(part.casefold()):
+            raise RefusedError('a name is a device on Windows')
+    return parts
+
+
+def folders_of(names: list[str]) -> set[tuple[str, ...]]:
+    """The commit's folders; two spellings of one component refuse, and a file that is a folder."""
+    spelled: dict[tuple[str, ...], tuple[str, ...]] = {}
+    files = {parts_of(name) for name in names}
+    folders = {parts[:depth] for parts in files for depth in range(len(parts))}
+    for path in files | folders:
+        if spelled.setdefault(tuple(part.casefold() for part in path), path) != path:
+            raise RefusedError('two names differ only by case')
+    if files & folders:
+        raise RefusedError('a name is a file and a folder')
+    return folders
+
+
+def target_of(name: str, target: str, folders: set[tuple[str, ...]]) -> str:
+    """The name a link leads to, through folders of the commit only, never another link."""
+    if (
+        not target
+        or target.startswith('/')
+        or UNNAMEABLE.search(target.replace('/', '').rstrip('.'))
+    ):
         raise RefusedError('a link leaves the destination')
-    parts = list(inside(name).parent.parts)
+    here = parts_of(name)[:-1]
     for part in PurePosixPath(target).parts:
-        if part == '..':
-            if not parts:
-                raise RefusedError('a link leaves the destination')
-            parts.pop()
-        else:
-            parts.append(part)
-    return inside('/'.join(parts))
+        if here not in folders or (part == '..' and not here):
+            raise RefusedError('a link leaves the destination')
+        here = here[:-1] if part == '..' else (*here, part)
+    return '/'.join(parts_of('/'.join(here)))
 
 
 def entries(checkout: str, sha: str) -> list[tuple[str, str, str]]:
@@ -84,35 +110,52 @@ def blobs(checkout: str, ids: list[str]) -> dict[str, bytes]:
     return found
 
 
-def export(checkout: str, sha: str, destination: Path) -> None:
-    """Write the commit, links as links where the platform follows them, else as copies."""
+def plan(checkout: str, sha: str) -> list[tuple[str, bytes, str, str]]:
+    """Each file's name, bytes, mode and, for a link, what it names; the bytes are its file's."""
     listed = entries(checkout, sha)
     data = blobs(checkout, sorted({blob for _, blob, _ in listed}))
-    folder = {name.casefold() for _, _, name in listed}
-    if len(folder) != len(listed):
-        raise RefusedError('two names differ only by case')
+    if any(source_lists.blob_id(data[blob]) != blob for _, blob, _ in listed):
+        raise RefusedError('a file differs from the commit')
+    folders = folders_of([name for _, _, name in listed])
+    files = {name: data[blob] for mode, blob, name in listed if mode != '120000'}
+    planned = []
+    for mode, blob, name in listed:
+        if mode != '120000':
+            planned.append((name, data[blob], mode, ''))
+            continue
+        target = data[blob].decode()
+        named = target_of(name, target, folders)
+        if named not in files:
+            raise RefusedError('a link names no file of the commit')
+        planned.append((name, files[named], mode, target))
+    return planned
+
+
+def write(destination: Path, name: str, data: bytes, mode: str, target: str) -> None:
+    """One file or link, read back."""
+    path = destination.joinpath(*name.split('/'))
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if target and os.name != 'nt':
+        path.symlink_to(target)
+    else:
+        path.write_bytes(data)
+        path.chmod(0o755 if mode == '100755' else 0o644)
+    if path.read_bytes() != data:
+        raise RefusedError('a written file differs from the commit')
+
+
+def export(checkout: str, sha: str, destination: Path) -> None:
+    """Write the commit, links where the platform has them, else as copies of their file."""
+    planned = plan(checkout, sha)
     if destination.is_symlink() or (destination.exists() and any(destination.iterdir())):
         raise RefusedError('the destination is not a new folder')
     destination.mkdir(parents=True, exist_ok=True)
-    links = []
-    for mode, blob, name in listed:
-        path = destination.joinpath(*inside(name).parts)
-        path.parent.mkdir(parents=True, exist_ok=True)
-        if mode == '120000':
-            links.append((path, name, data[blob].decode()))
-            continue
-        path.write_bytes(data[blob])
-        path.chmod(0o755 if mode == '100755' else 0o644)
-        if source_lists.blob_id(path.read_bytes()) != blob:
-            raise RefusedError('a written file differs from the commit')
-    for path, name, target in links:
-        named = destination.joinpath(*target_of(name, target).parts)
-        if os.name != 'nt':
-            path.symlink_to(target)
-        elif named.is_file() and not named.is_symlink():
-            shutil.copyfile(named, path)
-        else:
-            raise RefusedError('a link names no file of the commit')
+    try:
+        for entry in sorted(planned, key=lambda entry: bool(entry[3])):
+            write(destination, *entry)
+    except BaseException:
+        shutil.rmtree(destination, ignore_errors=True)
+        raise
 
 
 def main() -> int:

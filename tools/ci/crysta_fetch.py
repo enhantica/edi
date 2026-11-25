@@ -1,17 +1,22 @@
 # SPDX-License-Identifier: BSD-3-Clause
 """Put crysta's source at one commit on a CI runner and list it for the output checks.
 
-    TOKEN=... python3 tools/ci/crysta_fetch.py SHA
+    TOKEN=... python3 tools/ci/crysta_fetch.py SHA [--history] [--receipts FOLDER]
 
 Fetches the commit into $RUNNER_TEMP/crysta, refuses any other, writes the lists source_lists.py
 reads, proves the output filter with them and names the checkout and the lists to the later steps.
-Nothing a child process prints is passed on: it could be the source.
+A job that publishes what another commit of edi made lists every commit edi's history has pinned
+(`--history`) and those its receipts were written against (`--receipts`) as well. Nothing a child
+process prints is passed on: it could be the source.
 """
 
 from __future__ import annotations
 
+import argparse
 import base64
+import dataclasses
 import io
+import json
 import os
 import re
 import shutil
@@ -27,6 +32,7 @@ ROOT = Path(__file__).resolve().parents[2]
 SERVER = os.environ.get('GITHUB_SERVER_URL', 'https://github.com')
 REPOSITORY = 'enhantica/crysta'
 COLLECTION = 'enhantica/edi-data'
+PIN = re.compile(rb'^CRYSTA_COMMIT *= *"([0-9a-f]{40})"', re.MULTILINE)
 
 
 class RefusedError(Exception):
@@ -47,20 +53,16 @@ def git(where: Path, *args: str, stdin: bytes | None = None, **env: str) -> byte
     return run.stdout
 
 
-def fetch(home: Path, sha: str, token: str) -> None:
-    """Fetch ``sha`` alone, the token in this process's environment only."""
+def fetch(home: Path, sha: str, also: set[str], token: str) -> None:
+    """Fetch ``sha`` and check it out, the others beside it; the token stays in this process."""
     shutil.rmtree(home, ignore_errors=True)
     home.mkdir(parents=True)
     git(home, 'init', '-q')
     credential = base64.b64encode(f'x-access-token:{token}'.encode()).decode()
+    wanted = [sha, *sorted(also - {sha})]
     git(
         home,
-        'fetch',
-        '-q',
-        '--depth',
-        '1',
-        f'{SERVER}/{REPOSITORY}',
-        sha,
+        *('fetch', '-q', '--depth', '1', f'{SERVER}/{REPOSITORY}', *wanted),
         GIT_CONFIG_COUNT='1',
         GIT_CONFIG_KEY_0=f'http.{SERVER}/.extraheader',
         GIT_CONFIG_VALUE_0=f'AUTHORIZATION: basic {credential}',
@@ -69,6 +71,27 @@ def fetch(home: Path, sha: str, token: str) -> None:
     git(home, 'checkout', '-q', '--detach', sha)
     if git(home, 'rev-parse', 'HEAD').decode().strip() != sha:
         raise RefusedError('the checkout is another commit')
+
+
+def history(root: Path) -> set[str]:
+    """Every crysta commit edi's history has pinned; a shallow checkout does not know."""
+    if git(root, 'rev-parse', '--is-shallow-repository').strip() != b'false':
+        raise RefusedError('the checkout has no history')
+    found = set()
+    for commit in git(root, 'log', '--format=%H', 'HEAD', '--', 'pixi.toml').decode().split():
+        if pin := PIN.search(git(root, 'show', f'{commit}:pixi.toml')):
+            found.add(pin[1].decode())
+    if not found:
+        raise RefusedError('the history has no pin')
+    return found
+
+
+def receipted(folder: Path) -> set[str]:
+    """The crysta commits these receipts were written against."""
+    found = {json.loads(file.read_bytes())['crysta'] for file in folder.rglob('*.json')}
+    if not all(isinstance(pin, str) and re.fullmatch(r'[0-9a-f]{40}', pin) for pin in found):
+        raise RefusedError('a receipt names no commit')
+    return found
 
 
 def tree(where: Path, commit: str) -> dict[str, str]:
@@ -113,13 +136,41 @@ def opened(files: Iterable[bytes]) -> Iterator[bytes]:
                 yield from (archive.read(name) for name in archive.namelist())
 
 
-def lists(
-    home: Path, sha: str, public: list[tuple[Path, str]]
-) -> tuple[set[str], dict[str, bytes], set[str]]:
-    """The source's blob ids and written lines without what edi publishes, and that one's ids."""
-    files = tree(home, sha)
-    written = [blob for path, blob in files.items() if source_lists.written(path)]
-    lines = set().union(*map(bare, contents(home, set(written))))
+@dataclasses.dataclass
+class Lists:
+    """What the output checks know, before it is written."""
+
+    blobs: set[str]
+    lines: dict[str, bytes]
+    public: set[str]
+    members: set[str]
+
+
+def members(home: Path, sha: str, files: dict[str, str]) -> set[str]:
+    """What this commit's SDK carries of the source: the commit, a blob or line id, its name."""
+    found = set()
+    for kind, name, *sources in source_lists.sdk_members():
+        for source in sources:
+            if source not in files:
+                continue
+            if kind == 'copy':
+                found.add(f'{sha} {files[source]} {name}')
+            else:
+                held = set().union(*map(bare, contents(home, {files[source]})))
+                known = {source_lists.line_id(line) for line in held} - {None}
+                found |= {f'{sha} {entry} {name}' for entry in known}
+    return found
+
+
+def lists(home: Path, pins: set[str], public: list[tuple[Path, str]]) -> Lists:
+    """The source of these commits without what edi publishes, and that one's blob ids."""
+    blobs, written, carried = set(), set(), set()
+    for sha in pins:
+        files = tree(home, sha)
+        blobs |= set(files.values())
+        written |= {blob for path, blob in files.items() if source_lists.written(path)}
+        carried |= members(home, sha, files)
+    lines = set().union(*map(bare, contents(home, written)))
     known: set[str] = set()
     for where, commit in public:
         shown = set(tree(where, commit).values())
@@ -127,27 +178,25 @@ def lists(
         for data in opened(contents(where, shown)):
             known.add(source_lists.blob_id(data))
             lines -= bare(data)
-    blobs = set(files.values()) - known
     listed = {entry: line for line in lines if (entry := source_lists.line_id(line))}
-    if not blobs or not listed:
+    if not blobs - known or not listed:
         raise RefusedError('the source lists are empty')
-    return blobs, listed, known
+    return Lists(blobs - known, listed, known, carried)
 
 
-def write_lists(
-    blobs: set[str], listed: dict[str, bytes], known: set[str], folder: Path
-) -> dict[str, str]:
+def write_lists(made: Lists, folder: Path) -> dict[str, str]:
     """Write the lists beside the checkout and name them."""
-    marks = {source_lists.mark_entry(line) for line in listed.values()}
+    marks = {source_lists.mark_entry(line) for line in made.lines.values()}
     written = {}
     for variable, entries in (
-        (source_lists.BLOBS, blobs),
-        (source_lists.LINES, listed),
+        (source_lists.BLOBS, made.blobs),
+        (source_lists.LINES, made.lines),
         (source_lists.MARKS, marks),
-        (source_lists.PUBLIC, known),
+        (source_lists.PUBLIC, made.public),
+        (source_lists.MEMBERS, made.members),
     ):
         path = folder / variable.lower().replace('_', '-')
-        path.write_text('\n'.join(sorted(entries)) + '\n', encoding='ascii')
+        path.write_text('\n'.join(sorted(entries)) + '\n', encoding='utf-8')
         written[variable] = str(path)
     return written
 
@@ -197,32 +246,45 @@ def collection(home: Path) -> list[tuple[Path, str]]:
     return [(home, 'FETCH_HEAD')]
 
 
-def prepare(temp: Path, sha: str) -> int:
+def prepare(temp: Path, args: argparse.Namespace) -> int:
     """Fetch, list and prove; name the checkout and the lists to the later steps."""
-    if not re.fullmatch(r'[0-9a-f]{40}', sha):
+    if not re.fullmatch(r'[0-9a-f]{40}', args.sha):
         raise RefusedError('the commit is not a full id')
+    pins = {args.sha}
+    if args.history:
+        pins |= history(ROOT)
+    if args.receipts:
+        pins |= receipted(args.receipts)
     home = temp / 'crysta'
-    fetch(home, sha, os.environ['TOKEN'])
-    public = [*checkout(ROOT), *collection(temp / 'edi-data-published')]
-    blobs, listed, known = lists(home, sha, public)
-    environment = {'CRYSTA_SRC': str(home), **write_lists(blobs, listed, known, temp)}
-    prove(home, environment, listed[min(listed)])
+    fetch(home, args.sha, pins, os.environ['TOKEN'])
+    made = lists(home, pins, [*checkout(ROOT), *collection(temp / 'edi-data-published')])
+    environment = {
+        'CRYSTA_SRC': str(home),
+        'CRYSTA_LISTED_SHA': args.sha,
+        **write_lists(made, temp),
+    }
+    prove(home, environment, made.lines[min(made.lines)])
     with Path(os.environ['GITHUB_ENV']).open('a', encoding='utf-8') as output:
         output.writelines(f'{name}={value}\n' for name, value in environment.items())
-    return len(blobs)
+    return len(made.blobs)
 
 
 def main() -> int:
     """Prepare the runner; on any failure the source is removed again."""
-    temp, sha = Path(os.environ['RUNNER_TEMP']), sys.argv[1]
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('sha')
+    parser.add_argument('--history', action='store_true')
+    parser.add_argument('--receipts', type=Path)
+    args = parser.parse_args()
+    temp = Path(os.environ['RUNNER_TEMP'])
     try:
-        count = prepare(temp, sha)
+        count = prepare(temp, args)
     except (RefusedError, OSError, KeyError, ValueError) as error:
         shutil.rmtree(temp / 'crysta', ignore_errors=True)
         reason = str(error) if isinstance(error, RefusedError) else type(error).__name__
         print(f'crysta-fetch: REFUSED: {reason}', file=sys.stderr)
         return 1
-    print(f'crysta-fetch: {sha}, {count} files listed, the output filter is in place')
+    print(f'crysta-fetch: {args.sha}, {count} files listed, the output filter is in place')
     return 0
 
 

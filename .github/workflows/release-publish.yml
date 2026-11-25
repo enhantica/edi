@@ -89,11 +89,10 @@ jobs:
           sha: ${{ steps.crysta.outputs.sha }}
           app-id: ${{ vars.ENHANTICA_APP_ID }}
           private-key: ${{ secrets.ENHANTICA_APP_KEY }}
+          history: 'true'
+          receipts: source-checks
       - name: Check every file that is published
-        run: |
-          receipts=()
-          for file in source-checks/*/*.json; do receipts+=(--receipt "$file"); done
-          python3 tools/ci/stored_source.py "${receipts[@]}" publication copies
+        run: python3 tools/ci/stored_source.py --receipt source-checks publication copies
       - name: Keep the off-GitHub copy for download.easydiffraction.org
         uses: ./.github/actions/store
         with:
@@ -137,12 +136,13 @@ jobs:
           private-key: ${{ secrets.ENHANTICA_APP_KEY }}
           owner: enhantica
           repositories: edi-sites
-      - name: Check the released web app
+      - name: Unpack the released web app
         run: |
           rm -rf released-webapp
           mkdir released-webapp
           unzip -q publication/assets/EasyDiffraction-*-webapp.zip -d released-webapp
-          python3 tools/ci/stored_source.py released-webapp
+      - name: Check the released web app
+        run: python3 tools/ci/stored_source.py released-webapp
       - name: Put the released web app on app.easydiffraction.org
         env:
           SITES_TOKEN: ${{ steps.sites-token.outputs.token }}

@@ -16,7 +16,7 @@ inputs:
     description: Replace a source line in a text file instead of refusing it (diagnostics only)
     default: 'false'
   receipt:
-    description: A receipt naming installers whose content was checked unpacked
+    description: A receipt, or a folder of them, naming disk images whose content was checked
     default: ''
   ccache:
     description: The command that runs Python beside ccache, for a compiler cache

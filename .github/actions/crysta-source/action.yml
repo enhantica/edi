@@ -12,6 +12,12 @@ inputs:
   private-key:
     description: That app's key
     required: true
+  history:
+    description: List every commit edi's history has pinned as well, for a job that publishes what another run made
+    default: 'false'
+  receipts:
+    description: A folder of receipts, whose commits are listed as well
+    default: ''
 runs:
   using: composite
   steps:
@@ -29,4 +35,6 @@ runs:
       env:
         TOKEN: ${{ steps.token.outputs.token }}
         SHA: ${{ inputs.sha }}
-      run: python3 tools/ci/crysta_fetch.py "$SHA"
+        HISTORY: ${{ inputs.history == 'true' && '--history' || '' }}
+        RECEIPTS: ${{ inputs.receipts }}
+      run: python3 tools/ci/crysta_fetch.py "$SHA" $HISTORY ${RECEIPTS:+--receipts "$RECEIPTS"}

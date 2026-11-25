@@ -23,7 +23,7 @@ runs:
       shell: bash
       run: |
         echo "objects=ccache2-wasm-${{ steps.compiler.outputs.key-prefix }}${{ hashFiles('tools/ci/wasm-env.sh') }}-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.job }}" >> "$GITHUB_OUTPUT"
-        echo "toolchain=edi-wasm-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('tools/ci/wasm-env.sh', 'tests/fixtures/web_parallel/package-lock.json') }}" >> "$GITHUB_OUTPUT"
+        echo "toolchain=edi-wasm2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('tools/ci/wasm-env.sh', 'tests/fixtures/web_parallel/package-lock.json') }}" >> "$GITHUB_OUTPUT"
     - uses: actions/cache/restore@v4
       with:
         path: ~/.cache/edi-ccache
