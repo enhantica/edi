@@ -1,19 +1,14 @@
 """The pinned source checkout and local export retain the former archive safety checks."""
 
-import contextlib
 import hashlib
-import io
 import os
 import shutil
 import subprocess
 import sys
-import tarfile
 from pathlib import Path
 
 import pytest
 import yaml
-
-from tools.ci import crysta_source_export
 
 ROOT = Path(__file__).resolve().parents[3]
 PRIVATE = b'private engine source with meaningful text'
@@ -45,21 +40,19 @@ def engine(tmp_path):
     return root, sha
 
 
-def test_local_source_export_uses_pinned_git_bytes_and_excludes_untracked_files(tmp_path, engine):
-    root, sha = engine
-    destination = tmp_path / 'local source export Ω'
-    result = subprocess.run(
-        [
-            sys.executable,
-            str(ROOT / 'tools/ci/crysta_source_export.py'),
-            str(root),
-            sha,
-            str(destination),
-        ],
+def export_source(root, sha, destination):
+    return subprocess.run(
+        [sys.executable, str(ROOT / 'tools/ci/crysta_source_export.py'), root, sha, destination],
         check=False,
         capture_output=True,
         timeout=12,
     )
+
+
+def test_local_source_export_uses_pinned_git_bytes_and_excludes_untracked_files(tmp_path, engine):
+    root, sha = engine
+    destination = tmp_path / 'local source export Ω'
+    result = export_source(root, sha, destination)
     assert result.returncode == 0, (
         'The local export must accept the pinned commit through native paths'
     )
@@ -71,35 +64,112 @@ def test_local_source_export_uses_pinned_git_bytes_and_excludes_untracked_files(
     ).read_bytes() == PRIVATE + b'\n', 'The local export retains exact Git blob bytes'
 
 
-@pytest.mark.parametrize('kind', ['parent', 'absolute', 'symlink'])
-def test_source_extraction_cannot_write_outside_its_destination(tmp_path, kind):
-    archive = tmp_path / 'unsafe.tar'
-    outside = tmp_path / 'outside.txt'
-    outside.write_bytes(b'unrelated existing bytes')
+def git_object(root, command, data, *options):
+    return subprocess.check_output(
+        ['git', '-C', str(root), command, *options], input=data, timeout=8
+    ).strip()
+
+
+def export_commit(root, entries):
+    # Build this commit directly so fixtures can name links and Windows-invalid paths on any host.
+    tree = b'100644 blob ' + git_object(root, 'hash-object', PAYLOAD, '-w', '--stdin')
+    tree += b'\tentry.bin\0'
+    for mode, name, data in entries:
+        command, label, args = (
+            ('mktree', b'tree', ('-z',))
+            if mode == b'040000'
+            else ('hash-object', b'blob', ('-w', '--stdin'))
+        )
+        oid = git_object(root, command, data, *args)
+        tree += b' '.join((mode, label, oid)) + b'\t' + name + b'\0'
+    tree_id = git_object(root, 'mktree', tree, '-z')
+    return git(
+        root,
+        '-c',
+        'user.name=Source fixture',
+        '-c',
+        'user.email=fixture@example.invalid',
+        'commit-tree',
+        tree_id.decode(),
+        '-m',
+        'Export controls',
+    ).decode()
+
+
+@pytest.mark.parametrize(
+    'target_kind',
+    [
+        'absolute',
+        'outside-file',
+        'parent-relative',
+        'untracked-directory',
+        'windows-drive',
+        'windows-unc',
+    ],
+)
+def test_local_source_export_refuses_links_outside_the_committed_tree(
+    tmp_path, engine, target_kind
+):
+    root, _ = engine
     destination = tmp_path / 'destination'
     destination.mkdir()
-    with tarfile.open(archive, 'w') as output:
-        member = tarfile.TarInfo('../outside.txt' if kind == 'parent' else str(outside))
-        if kind == 'symlink':
-            member = tarfile.TarInfo('link')
-            member.type = tarfile.SYMTYPE
-            member.linkname = '../outside.txt'
-            output.addfile(member)
-        else:
-            member.size = 7
-            output.addfile(member, io.BytesIO(b'changed'))
-    if kind == 'absolute':
-        with contextlib.suppress(tarfile.FilterError):
-            crysta_source_export.extract(archive, destination)
-        written = [path for path in destination.rglob('*') if path.is_file()]
-        assert all(
-            path.name == outside.name and path.read_bytes() == b'changed' for path in written
-        ), 'A normalized absolute member retains its name and payload inside the destination'
-    else:
-        with pytest.raises((tarfile.FilterError, ValueError)):
-            crysta_source_export.extract(archive, destination)
-    assert outside.read_bytes() == b'unrelated existing bytes', (
-        'A refused export cannot overwrite a file outside its destination'
+    outside = tmp_path / 'outside.txt'
+    outside.write_bytes(b'unrelated existing bytes')
+    targets = {
+        'absolute': os.fsencode(outside.as_posix()),
+        'outside-file': b'untracked.txt',
+        'parent-relative': b'../outside.txt',
+        'untracked-directory': b'missing/../entry.bin',
+        'windows-drive': rb'C:\outside.txt',
+        'windows-unc': rb'\\server\share\outside.txt',
+    }
+    sha = export_commit(root, [(b'120000', b'link', targets[target_kind])])
+    result = export_source(root, sha, destination)
+    assert result.returncode == 1 and b'source-export: REFUSED:' in result.stderr, (
+        'The exporter CLI must refuse the link through its normal error boundary'
+    )
+    assert (
+        not list(destination.iterdir()) and outside.read_bytes() == b'unrelated existing bytes'
+    ), 'A refused link must leave no partial export and preserve existing outside bytes'
+
+
+@pytest.mark.parametrize(
+    'names',
+    [
+        (b'aux.edi',),
+        (b'C:drive.txt',),
+        (b'file.txt:stream',),
+        (rb'back\slash',),
+        (b'trailing.',),
+        (b'Twin.txt', b'twin.txt'),
+    ],
+    ids=['device', 'drive-relative', 'stream', 'backslash', 'trailing-dot', 'case-alias'],
+)
+def test_local_source_export_refuses_windows_native_path_conflicts(tmp_path, engine, names):
+    root, _ = engine
+    sha = export_commit(root, [(b'100644', name, PRIVATE) for name in names])
+    destination = tmp_path / 'destination'
+    result = export_source(root, sha, destination)
+    assert result.returncode == 1 and b'source-export: REFUSED:' in result.stderr, (
+        'Git entries that become a Windows device, stream, alternate path or alias must refuse'
+    )
+    assert not destination.exists() and PRIVATE not in result.stdout + result.stderr, (
+        'The exporter judges the whole tree before writing and never quotes the refused blob'
+    )
+
+
+def test_parent_relative_link_to_committed_file_preserves_blob_bytes(tmp_path, engine):
+    root, _ = engine
+    link = git_object(root, 'hash-object', b'../entry.bin', '-w', '--stdin')
+    sha = export_commit(root, [(b'040000', b'folder', b'120000 blob ' + link + b'\tlink\0')])
+    destination = tmp_path / 'destination'
+    result = export_source(root, sha, destination)
+    exported_link = destination / 'folder/link'
+    assert result.returncode == 0 and exported_link.read_bytes() == PAYLOAD, (
+        'A parent-relative link through committed directories retains the selected blob bytes'
+    )
+    assert exported_link.is_symlink() == (os.name != 'nt'), (
+        'The native export uses a POSIX symlink or copies the committed blob on Windows'
     )
 
 
@@ -110,7 +180,10 @@ def test_source_bootstrap_checks_out_the_pin_filters_output_and_refuses_missing_
     host = tmp_path / 'edi'
     scripts = host / 'tools/ci'
     scripts.mkdir(parents=True)
-    for name in ('crysta_fetch.py', 'public_log.py', 'source_lists.py'):
+    helpers = ['crysta_fetch.py', 'public_log.py', 'source_lists.py', 'portable_paths.py']
+    for name in helpers:
+        if name == 'portable_paths.py' and not (ROOT / 'tools/ci' / name).exists():
+            continue  # The pre-#158 source transport had no portable-path helper.
         shutil.copyfile(ROOT / 'tools/ci' / name, scripts / name)
     git(host, 'init', '-q')
     git(host, 'add', '--', 'tools/ci')
