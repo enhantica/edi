@@ -115,6 +115,9 @@ EaComponents.ListViewParameter {
     // Fitted again once an edit has settled: the column may have changed while the cell was edited.
     onActiveFocusChanged: {
         ApplicationInfo.parameterEditorFocusChanged(ApplicationInfo.ParameterCellEditor);
+        // Reached by Tab, the whole value is selected, as in the popup.
+        if (activeFocus && (focusReason === Qt.TabFocusReason || focusReason === Qt.BacktabFocusReason))
+            selectAll();
         if (!activeFocus)
             Qt.callLater(refit);
     }

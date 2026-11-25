@@ -78,13 +78,15 @@ EaComponents.ListViewParameter {
         property: "enabled"
         value: false
     }
+    // The menu opens under the cell, where the tooltip would cover it.
+    readonly property bool popupOpen: contextMenu?.visible ?? false
     Loader {
         anchors.fill: parent
-        active: cell.hovered && cell.ToolTip.text !== ""
+        active: cell.hovered && !cell.popupOpen && cell.ToolTip.text !== ""
         sourceComponent: Component {
             EaElements.ToolTip {
                 text: cell.ToolTip.text
-                requested: cell.hovered
+                requested: cell.hovered && !cell.popupOpen
             }
         }
     }
