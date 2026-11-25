@@ -10,9 +10,9 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-25T09:59:21Z
+# measured_utc = 2026-11-25T10:06:10Z
 #
-# Recorded from: measured test run (102 node(s) measured once, 187441 banked, 4 stale row(s) dropped)
+# Recorded from: measured test run (3 node(s) measured once, 187540 banked, 0 stale row(s) dropped)
 # Collected tests: 267489; with a reported duration: 86240
 # Module-scoped fixture costs recorded: 219
 #
@@ -188702,9 +188702,9 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_c11_t62_scan_contract.py::tes
 0.140	tests/system/py/test_c13_t14_fast_ci.py::test_matching_incomplete_or_malformed_partition_evidence_must_refuse[out-of-range]
 0.080	tests/system/py/test_c13_t14_fast_ci.py::test_matching_incomplete_or_malformed_partition_evidence_must_refuse[renamed-platform]
 0.160	tests/system/py/test_c13_t14_fast_ci.py::test_matching_incomplete_or_malformed_partition_evidence_must_refuse[zero-part]
-0.002	tests/system/py/test_c13_t14_fast_ci.py::test_migrated_screen_factory_binds_the_normal_delivered_executable
+0.706	tests/system/py/test_c13_t14_fast_ci.py::test_migrated_screen_factory_binds_the_normal_delivered_executable
 0.000	tests/system/py/test_c13_t14_fast_ci.py::test_migrated_screen_factory_cannot_compile_a_private_app
-0.003	tests/system/py/test_c13_t14_fast_ci.py::test_migrated_screen_factory_executes_its_actual_child_request
+0.720	tests/system/py/test_c13_t14_fast_ci.py::test_migrated_screen_factory_executes_its_actual_child_request
 4.660	tests/system/py/test_c13_t14_fast_ci.py::test_no_pr_fixture_has_an_app_compiler_entry_point
 1.650	tests/system/py/test_c13_t14_fast_ci.py::test_normal_app_cache_reuse_refuses_cross_run_and_unenforced_transfers[consumer-platform]
 1.690	tests/system/py/test_c13_t14_fast_ci.py::test_normal_app_cache_reuse_refuses_cross_run_and_unenforced_transfers[consumer-run]
@@ -267607,7 +267607,7 @@ UNMEASURED:not-completed-in-this-run	tests/unit/py/test_web_science_identity.py:
 # module-cost: 64.108	tests/system/py/test_backlogged_frames.py
 # module-cost: 3.785	tests/system/py/test_c09_t9_output_contract_and_cli.py
 # module-cost: 0.228	tests/system/py/test_c11_t62_native_scan_io.py
-# module-cost: 8.437	tests/system/py/test_c13_t14_fast_ci.py
+# module-cost: 28.624	tests/system/py/test_c13_t14_fast_ci.py
 # module-cost: 4.399	tests/system/py/test_c15_t2_native_family.py
 # module-cost: 3.252	tests/system/py/test_c34_t28_census_binding.py
 # module-cost: 0.011	tests/system/py/test_c34_t28_census_escapes.py
