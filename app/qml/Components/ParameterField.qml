@@ -82,19 +82,26 @@ EaElements.ParamTextField {
 
     // A value too wide uses the same significant-digit scientific spelling as a
     // table cell; the full native token remains the edit/menu/hover value.
-    onActiveFocusChanged: ApplicationInfo.parameterEditorFocusChanged(ApplicationInfo.ParameterFieldEditor)
+    onActiveFocusChanged: {
+        ApplicationInfo.parameterEditorFocusChanged(ApplicationInfo.ParameterFieldEditor);
+        // Reached by Tab, the whole value is selected, as in the popup.
+        if (activeFocus && (focusReason === Qt.TabFocusReason || focusReason === Qt.BacktabFocusReason))
+            selectAll();
+    }
     onTextChanged: ApplicationInfo.editorTextChanged()
     Component.onCompleted: ApplicationInfo.parameterEditorCompleted()
 
     // The base text field owns the popup (edi ADR-0076 point 6): the value in full while shown shorter, then the hint,
     // else the item's label and `.edi` name (edi ADR-0051). A warning steps it aside and shows instead.
     warned: warningText !== ""
-    ToolTip.text: hint !== "" ? hint : item !== null ? item.toolTip : ""
+    // The popup opens under the field, where the tooltips would cover it.
+    readonly property bool popupOpen: (popupCell.item as EaComponents.ListViewParameter)?.contextMenu?.visible ?? false
+    ToolTip.text: popupOpen ? "" : hint !== "" ? hint : item !== null ? item.toolTip : ""
     fullText: valueText
-    shortened: !activeFocus && (shownValue !== valueText || contentWidth > room)
+    shortened: !popupOpen && !activeFocus && (shownValue !== valueText || contentWidth > room)
     WarningToolTip {
         text: field.warningText
-        requested: field.warned && (field.hovered || field.activeFocus)
+        requested: field.warned && !field.popupOpen && (field.hovered || field.activeFocus)
     }
 
     // A click opens the parameter's popup at the field, its value typed into there, as a table cell's does (the owner,

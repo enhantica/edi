@@ -82,6 +82,8 @@ EaElements.TextInput {
     // The menu's fit toggle, once the menu is made.
     property EaElements.CheckBox fitCheckBox: null
     signal fitToggled(bool checked)
+    // Escape in the menu: its editor gives up what was typed before the menu closes, which would commit it.
+    signal editCancelled
 
     // `anchorItem`: where a menu that edits opens, under it; the cell itself unless a field row's field asks.
     function openContextMenu(parentItem, anchorItem) {
@@ -148,14 +150,22 @@ EaElements.TextInput {
                 // Typing goes to the editor as the menu opens; Escape closes it, from the editor too, which handles
                 // Escape itself.
                 // As it starts to show, not after its 220 ms opening animation: typing right after the click lands.
+                // The whole value is selected, so what is typed replaces it.
+                function editValue(): void {
+                    (editorLoader.item as Item).forceActiveFocus();
+                    (editorLoader.item as EaElements.TextField)?.selectAll();
+                }
                 onAboutToShow: if (editorLoader.item)
-                    (editorLoader.item as Item).forceActiveFocus()
+                    editValue()
                 onOpened: if (editorLoader.item && !(editorLoader.item as Item).activeFocus)
-                    (editorLoader.item as Item).forceActiveFocus()
+                    editValue()
                 Shortcut {
                     sequences: [StandardKey.Cancel]
                     enabled: parameterMenu.opened
-                    onActivated: parameterMenu.close()
+                    onActivated: {
+                        control.editCancelled();
+                        parameterMenu.close();
+                    }
                 }
 
                 // Layout
