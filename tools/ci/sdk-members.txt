@@ -1,7 +1,7 @@
 # The members the SDK archive may have (edi ADR-0083), one a line: what it is and its name. `header`: a
 # public header, the listed commit's own file of that name, the one part of the source the SDK may
 # carry as it is. `configured`: built by filling in the files named after it, so every source line in it
-# is one of theirs. `generated`: what sdk_surface.py makes of the file named after it, to the byte.
+# is one of theirs. `generated`: what crysta_sdk.py makes of the file named after it, to the byte.
 # `built`: anything else, checked like any file.
 built bin/crysta
 built bin/crysta.exe

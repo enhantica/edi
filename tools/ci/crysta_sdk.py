@@ -6,6 +6,8 @@
   crysta_sdk.py preflight --source-lock PATH --platform P --lockfile PATH --environment ENV
       compare producer and consumer ABI package locks before compiling a cold SDK
   crysta_sdk.py pins pixi.toml    the pinned commit
+  crysta_sdk.py surface --source CHECKOUT --commit SHA ARCHIVE...
+      put the generated record of the public Python names into a packed SDK, for the tracked one
 
 The pin is `CRYSTA_COMMIT` under `[activation.env]` in pixi.toml. edi's own CI builds that commit's
 SDK once per platform (.github/workflows/crysta-sdk.yml) and hands it to every job as an archive in
@@ -18,11 +20,14 @@ from __future__ import annotations
 
 import argparse
 import contextlib
+import gzip
 import hashlib
+import io
 import json
 import os
 import re
 import shutil
+import subprocess
 import sys
 import tarfile
 import tomllib
@@ -33,6 +38,8 @@ from typing import NoReturn
 ROOT = Path(__file__).resolve().parents[2]
 PLATFORMS = ('linux-64', 'osx-arm64', 'win-64')
 MANIFEST = 'share/crysta-sdk/manifest.json'
+TRACKED_SURFACE = 'data/python-surface.json'
+SURFACE = 'share/crysta/python-surface.json'
 
 
 class RefusedError(Exception):
@@ -368,6 +375,47 @@ def fetch(platform: str) -> Path:
         return home
 
 
+def surface(tracked: bytes) -> bytes:
+    """The record of the public Python names the SDK carries, from crysta's tracked one.
+
+    The tracked record also holds review history. edi's superset gate reads three things of it, and
+    the SDK carries those alone: the schema, the direction of the constraint and the names with
+    their members. The check of what CI stores accepts this form of the listed commit's record and
+    no other (stored_source.py).
+    """
+    record = json.loads(tracked)
+    public = {
+        name: {'members': list(entry['members'])}
+        for name, entry in sorted(record['public'].items())
+    }
+    names = [*public, *(member for entry in public.values() for member in entry['members'])]
+    direction = re.sub(r' \([^()]*\)', '', record['directionality'])
+    if type(record['schema']) is not int or not all(re.fullmatch(r'\w+', name) for name in names):
+        raise ValueError('the record of the public names has another form')
+    made = {'schema': record['schema'], 'directionality': direction, 'public': public}
+    return (json.dumps(made, ensure_ascii=False, indent=1) + '\n').encode()
+
+
+def put_surface(archive: Path, record: bytes) -> None:
+    """Write a packed SDK again with this record, the rest as it is, and its checksum."""
+    with tarfile.open(archive) as held:
+        members = [
+            (entry, held.extractfile(entry).read() if entry.isreg() else b'') for entry in held
+        ]
+    if [entry.name for entry, _ in members].count(SURFACE) != 1:
+        raise ValueError('the archive has no one record of the public names')
+    packed = io.BytesIO()
+    with tarfile.open(fileobj=packed, mode='w') as made:
+        for entry, data in members:
+            content = record if entry.name == SURFACE else data
+            if entry.isreg():
+                entry.size = len(content)
+            made.addfile(entry, io.BytesIO(content) if entry.isreg() else None)
+    archive.write_bytes(gzip.compress(packed.getvalue(), mtime=0))
+    checksum = archive.with_name(archive.name + '.sha256')
+    checksum.write_text(f'{sha256(archive)}  {archive.name}\n', encoding='ascii', newline='\n')
+
+
 def main(argv: list[str]) -> int:
     """Dispatch a subcommand; a refusal exits 1."""
     parser = argparse.ArgumentParser(prog='crysta_sdk.py', description=__doc__)
@@ -381,6 +429,10 @@ def main(argv: list[str]) -> int:
     pre.add_argument('--environment', required=True)
     # The pinned commit
     sub.add_parser('pins').add_argument('pixi_toml', type=Path)
+    put = sub.add_parser('surface')
+    put.add_argument('--source', required=True, type=Path)
+    put.add_argument('--commit', required=True)
+    put.add_argument('archives', nargs='+', type=Path)
     p = sub.add_parser('check')
     p.add_argument('--sdk', required=True, type=Path)
     p.add_argument('--platform', required=True, choices=PLATFORMS)
@@ -390,6 +442,9 @@ def main(argv: list[str]) -> int:
     a = parser.parse_args(argv)
     try:
         run(a)
+    except subprocess.CalledProcessError:
+        print(f'crysta_sdk.py {a.cmd}: REFUSED — git gives no record', file=sys.stderr)
+        return 1
     except (RefusedError, OSError, KeyError, ValueError, tarfile.TarError) as refusal:
         print(f'crysta_sdk.py {a.cmd}: REFUSED — {refusal}', file=sys.stderr)
         return 1
@@ -400,6 +455,13 @@ def run(a: argparse.Namespace) -> None:
     """Run one subcommand; `fetch` and `check` print the provenance line the CI evidence reads."""
     if a.cmd == 'pins':
         print(pinned(a.pixi_toml.read_text(encoding='utf-8')))
+        return
+    if a.cmd == 'surface':
+        show = ['git', '-C', str(a.source), 'show', f'{a.commit}:{TRACKED_SURFACE}']
+        record = surface(subprocess.run(show, check=True, capture_output=True).stdout)
+        for archive in a.archives:
+            put_surface(archive, record)
+        print(f'crysta: {len(a.archives)} SDK archives carry the generated public names')
         return
     if a.cmd == 'preflight':
         preflight(a.source_lock, a.platform, a.lockfile, a.environment)
