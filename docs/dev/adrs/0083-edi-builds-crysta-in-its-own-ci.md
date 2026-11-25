@@ -78,16 +78,19 @@ can restore a cache of main. CI therefore keeps built crysta only.
    it: two entries of one name are both read, a link is what it names, and a container it cannot open refuses. It knows
    a container by its first bytes. A file edi publishes itself passes by its blob id, and a third-party package by the
    SHA-256 that edi's committed pixi locks name. Diagnostic artifacts withhold a quoted line instead (`withhold`).
-4. **The SDK** carries files of crysta's on purpose, its headers and interface record. `tools/ci/sdk-members.txt` names
-   them, and they pass only in an archive whose name, manifest and listed commit agree: a copy must be that commit's
-   own file, and a configured file may hold source lines of the files it is made from and no others.
+4. **The SDK** may carry crysta's public headers, the owner's one exception (2026-11-25): built artifacts include them, no
+   other source. `tools/ci/sdk-members.txt` names the members. A header passes only in an archive whose name, manifest
+   and listed commit agree, and only as that commit's own file of that name under `include/`; every other member is
+   checked like any file.
 5. **Installers** are read from their bytes (`tools/ci/installer_content.py`), on every platform: each resource and
-   archive, with no stretch left over. Only macOS opens its disk images; `tools/installer/packed_source.py` checks them
-   where they are made and writes a receipt of their SHA-256 and the crysta commit. An image without one is refused.
+   archive, with no stretch left over. Only macOS opens its disk images; `tools/installer/packed_source.py` checks their
+   files, links and extended attributes and the lines of text anywhere in the unpacked image where they are made, and
+   writes a receipt of their SHA-256 and the crysta commit. An image without one is refused.
 6. **Publishing** checks the published folder itself, right before, in a step that always runs: the site, the release's
    assets and their copies, the draft's installers and the released web app. What was made by another commit of edi, or
-   kept from an earlier deployment, is compared with every crysta commit edi's history has pinned and with those its
-   receipts name.
+   kept from an earlier deployment, is compared with every crysta commit edi's history has pinned, with those its
+   receipts name, and with those the site itself records (`crysta-commits.json`, written by each of its publishers).
+   A publishing step runs only after a check that passed, and where the check ran.
 7. **Caches.** `tools/ci/ccache_entries.py` reads every file in a compiler cache as it will be saved, restored or new, and
    deletes an entry that quotes a source line or cannot be read and any file that is neither an entry nor ccache's own;
    a folder it cannot list refuses the save. The browser toolchain is installed and kept before the source is on the
@@ -291,10 +294,10 @@ same declared tests. All three legs use Bash; Windows uses Git for Windows Bash 
 qualified MSVC toolset. Unix shell packages remain target-specific in Pixi. Python's minor
 and the Windows CRT/OpenMP package identities match the SDK/installer contract.
 
-The existing installer checkout policy for Windows reserved device filenames also applies to
-native and test consumers. Its sparse selection removes only filenames Windows cannot
-represent; it does not filter the native test inventory. The matrix/checkout gates compare
-all three hosts and the original installer policy, and reject an omitted host or sibling SDK.
+Windows checks the repository out with Git's own protection and without a list of excluded names: the lint
+job refuses a tracked path that some platform reads otherwise (`tools/ci/portable_paths.py`), and the source
+fetch and export hold crysta's paths to the same rule. The matrix and checkout gates compare all three hosts
+and reject an omitted host or sibling SDK.
 Windows executable suffixes and the qualified `.lib` SDK member are resolved explicitly.
 
 Native artifact production validates both shipped CLI version forms: release builds print

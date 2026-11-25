@@ -1,13 +1,15 @@
 # SPDX-License-Identifier: BSD-3-Clause
 """Put crysta's source at one commit on a CI runner and list it for the output checks.
 
-    TOKEN=... python3 tools/ci/crysta_fetch.py SHA [--history] [--receipts FOLDER]
+    TOKEN=... python3 tools/ci/crysta_fetch.py SHA [--history] [--receipts FOLDER] [--site FOLDER]
 
 Fetches the commit into $RUNNER_TEMP/crysta, refuses any other, writes the lists source_lists.py
 reads, proves the output filter with them and names the checkout and the lists to the later steps.
 A job that publishes what another commit of edi made lists every commit edi's history has pinned
-(`--history`) and those its receipts were written against (`--receipts`) as well. Nothing a child
-process prints is passed on: it could be the source.
+(`--history`) and those its receipts were written against (`--receipts`) as well. A site carries
+the list of the commits its content was checked against and is published with it (`--site`), so
+what it keeps is compared with the source that content was made from. Nothing a child process
+prints is passed on: it could be the source.
 """
 
 from __future__ import annotations
@@ -33,6 +35,7 @@ ROOT = Path(__file__).resolve().parents[2]
 SERVER = os.environ.get('GITHUB_SERVER_URL', 'https://github.com')
 REPOSITORY = 'enhantica/crysta'
 COLLECTION = 'enhantica/edi-data'
+SITE_PINS = 'crysta-commits.json'
 PIN = re.compile(rb'^CRYSTA_COMMIT *= *"([0-9a-f]{40})"', re.MULTILINE)
 
 
@@ -91,7 +94,9 @@ def history(root: Path) -> set[str]:
 def receipted(folder: Path) -> set[str]:
     """The crysta commits these receipts were written against."""
     found = {json.loads(file.read_bytes())['crysta'] for file in folder.rglob('*.json')}
-    if not all(isinstance(pin, str) and re.fullmatch(r'[0-9a-f]{40}', pin) for pin in found):
+    if not found or not all(
+        isinstance(pin, str) and re.fullmatch(r'[0-9a-f]{40}', pin) for pin in found
+    ):
         raise RefusedError('a receipt names no commit')
     return found
 
@@ -240,6 +245,15 @@ def collection(home: Path) -> list[tuple[Path, str]]:
     return [(home, 'FETCH_HEAD')]
 
 
+def deployed(folder: Path) -> set[str]:
+    """The crysta commits the site here was checked against; none before the first such record."""
+    record = folder / SITE_PINS
+    found = set(json.loads(record.read_bytes())) if record.is_file() else set()
+    if not all(isinstance(pin, str) and re.fullmatch(r'[0-9a-f]{40}', pin) for pin in found):
+        raise RefusedError('the site names no commit')
+    return found
+
+
 def prepare(temp: Path, args: argparse.Namespace) -> int:
     """Fetch, list and prove; name the checkout and the lists to the later steps."""
     if not re.fullmatch(r'[0-9a-f]{40}', args.sha):
@@ -249,6 +263,9 @@ def prepare(temp: Path, args: argparse.Namespace) -> int:
         pins |= history(ROOT)
     if args.receipts:
         pins |= receipted(args.receipts)
+    if args.site:
+        pins |= deployed(args.site)
+        (args.site / SITE_PINS).write_text(json.dumps(sorted(pins)) + '\n', encoding='utf-8')
     home = temp / 'crysta'
     fetch(home, args.sha, pins, os.environ['TOKEN'])
     made = lists(home, pins, [*checkout(ROOT), *collection(temp / 'edi-data-published')])
@@ -276,6 +293,7 @@ def main() -> int:
     parser.add_argument('sha')
     parser.add_argument('--history', action='store_true')
     parser.add_argument('--receipts', type=Path)
+    parser.add_argument('--site', type=Path)
     args = parser.parse_args()
     temp = Path(os.environ['RUNNER_TEMP'])
     try:

@@ -232,6 +232,7 @@ jobs:
           app-id: ${{ vars.ENHANTICA_APP_ID }}
           private-key: ${{ secrets.ENHANTICA_APP_KEY }}
           history: 'true'
+          site: site
       - name: Check every file that is published
         run: python3 tools/ci/stored_source.py site
       # The site for the host behind easydiffraction.org, which pulls this branch of edi-sites.
@@ -288,6 +289,7 @@ jobs:
           app-id: ${{ vars.ENHANTICA_APP_ID }}
           private-key: ${{ secrets.ENHANTICA_APP_KEY }}
           history: 'true'
+          site: site
       - name: Check every file that is published
         run: python3 tools/ci/stored_source.py site
       # The whole site for easydiffraction.org, its web app a preview of main; app.easydiffraction.org takes only a

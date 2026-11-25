@@ -128,7 +128,7 @@ def link_or_file(path: Path) -> bytes:
 def zip_members(data: bytes) -> list[tuple[str, bytes]]:
     """A zip's entries, each as often as it has it."""
     with zipfile.ZipFile(io.BytesIO(data)) as archive:
-        entries = [entry for entry in archive.infolist() if not entry.is_dir()]
+        entries = [e for e in archive.infolist() if e.file_size or not e.is_dir()]
         return [(entry.filename, archive.read(entry)) for entry in entries]
 
 

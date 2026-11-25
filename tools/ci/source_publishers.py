@@ -27,19 +27,48 @@ SOURCE = './.github/actions/crysta-source'
 STORE = './.github/actions/store'
 # The steps of the actions everything here relies on, as reviewed: `--digests` prints them.
 REVIEWED = {
-    SOURCE: '816fb94ec132e30ded9f0c8fc76c59e2f840ba00dde3a195a691d890395ed656',
+    SOURCE: '09e714c5b055ef90c0ad3a9b059a82284a568ef7938733931d70b4424d3fe364',
     STORE: '05b4c58e0eac79e613bc94a9fbab5a7863d29549d196ff9c6b7206d340eaa11f',
 }
-# What jobs without the source publish: how, and the artifact, cache key or command itself.
+# What jobs without the source publish: how, the artifact or cache key itself, and its path.
 PUBLISHERS = {
-    'ci.yml/system-time': {('artifact', 'system-time')},
-    'ci.yml/system-durations': {('cache', 'test-durations-${{ runner.os }}-${{ github.run_id }}')},
-    'installer-accessibility.yml/macos': {('artifact', 'installer-accessibility-macos')},
-    'installers.yml/installer-pages': {('artifact', 'installer-pages-${{ runner.os }}')},
-    'installers.yml/qualify-release': {
-        ('artifact', 'qualified-release-plan-${{ github.run_attempt }}')
+    'ci.yml/system-time': {('artifact', 'system-time', '${{ runner.temp }}/system-time/')},
+    'ci.yml/system-durations': {
+        (
+            'cache',
+            'test-durations-${{ runner.os }}-${{ github.run_id }}',
+            'build/test-durations.json',
+        )
     },
-    'release-plan.yml/plan': {('artifact', 'release-plan-${{ github.run_attempt }}')},
+    'installer-accessibility.yml/macos': {
+        (
+            'artifact',
+            'installer-accessibility-macos',
+            '\n'.join(
+                f'${{{{ runner.temp }}}}/a11y{part}'
+                for part in (
+                    '',
+                    '-no-components',
+                    '-this-commit',
+                    '-maintenance-*',
+                    '-no-assistant',
+                )
+            ),
+        )
+    },
+    'installers.yml/installer-pages': {
+        (
+            'artifact',
+            'installer-pages-${{ runner.os }}',
+            'build/installer/pages/pages\nbuild/installer/pages/*.log',
+        )
+    },
+    'installers.yml/qualify-release': {
+        ('artifact', 'qualified-release-plan-${{ github.run_attempt }}', 'release-plan')
+    },
+    'release-plan.yml/plan': {
+        ('artifact', 'release-plan-${{ github.run_attempt }}', 'release-plan')
+    },
 }
 # What a job may keep before the source is on its runner: the browser toolchain it just installed.
 BEFORE = {('cache', '${{ steps.wasm-cache.outputs.toolchain }}')}
@@ -250,6 +279,9 @@ def source_job(where: str, job: dict) -> Iterator[str]:
             publishes = {kind for kind, _ in published(step)} & {'site', 'release'}
             if publishes and given(fetched, 'history') != 'true':
                 yield f'{where}: {named(step)!r} publishes what other commits made'
+            tolerant = re.search(r'(?:always|failure|cancelled)\s*\(', str(step.get('if', '')))
+            if publishes and (tolerant or {'continue-on-error', 'working-directory'} & set(step)):
+                yield f'{where}: {named(step)!r} publishes after a refusal or elsewhere'
             if found := checks(step):
                 checked |= found
             elif action(step) not in HARMLESS and not publishes:
@@ -263,9 +295,11 @@ def other_job(where: str, job: dict) -> Iterator[str]:
         if action(step) == STORE:
             yield f'{where}: {named(step)!r} stores, and the job has no source to check against'
             continue
-        made = published(step).union(*(published(nested) for _, nested in inner(step)))
-        for kind, _ in sorted(made - allowed):
-            yield f'{where}: {named(step)!r} publishes ({kind}) beside the table of publishers'
+        for made in [step, *(nested for _, nested in inner(step))]:
+            path = given(made, 'path')
+            for kind, what in sorted(published(made)):
+                if (kind, what, path) not in allowed:
+                    yield f'{where}: {named(step)!r} publishes ({kind}) beside the table: {path!r}'
 
 
 def resolved(key: str, steps: list[dict]) -> str:

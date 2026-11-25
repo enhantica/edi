@@ -103,12 +103,9 @@ def runs(repo: str, since: str | None) -> list[str]:
     return gh('--paginate', query, '--jq', '.workflow_runs[].id').decode().split()
 
 
-def attempts(scanner: Scanner, run: str) -> range:
-    """A run's attempts; one whose record is gone is one that cannot be judged."""
-    try:
-        return range(1, scanner.attempts(run) + 1)
-    except UnjudgedError:
-        return range(1, 2)
+def reason(error: Exception) -> str:
+    """Why an attempt cannot be judged, without anything a log holds."""
+    return str(error) if isinstance(error, UnjudgedError) else type(error).__name__
 
 
 def main() -> int:
@@ -123,17 +120,22 @@ def main() -> int:
     with tempfile.TemporaryDirectory() as scratch:
         scanner = Scanner(args.repo, args.crysta, Path(scratch))
         for run in args.runs or runs(args.repo, args.since):
-            for attempt in attempts(scanner, run):
+            try:
+                attempts = range(1, scanner.attempts(run) + 1)
+            except (UnjudgedError, ValueError, KeyError) as error:
+                # Whatever attempts can still be read, how many there were is not known.
+                unjudged += 1
+                print(f'{run}\t?\tnot judged\t{reason(error)}')
+                continue
+            for attempt in attempts:
                 try:
-                    for line in scanner.hits(run, attempt):
-                        print(line)
-                    judged += 1
+                    lines = scanner.hits(run, attempt)
                 except (UnjudgedError, zipfile.BadZipFile, ValueError, KeyError) as error:
                     unjudged += 1
-                    known = isinstance(error, UnjudgedError)
-                    print(
-                        f'{run}\t{attempt}\tnot judged\t{error if known else type(error).__name__}'
-                    )
+                    print(f'{run}\t{attempt}\tnot judged\t{reason(error)}')
+                    continue
+                judged += 1
+                print(*lines, sep='\n', end='\n' if lines else '')
     print(f'{judged} attempts judged, {unjudged} not judged', file=sys.stderr)
     return 1 if unjudged else 0
 

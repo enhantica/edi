@@ -18,6 +18,9 @@ inputs:
   receipts:
     description: A folder of receipts, whose commits are listed as well
     default: ''
+  site:
+    description: A site that keeps earlier content, whose commits are listed as well and recorded in it
+    default: ''
 runs:
   using: composite
   steps:
@@ -37,4 +40,6 @@ runs:
         SHA: ${{ inputs.sha }}
         HISTORY: ${{ inputs.history == 'true' && '--history' || '' }}
         RECEIPTS: ${{ inputs.receipts }}
-      run: python3 tools/ci/crysta_fetch.py "$SHA" $HISTORY ${RECEIPTS:+--receipts "$RECEIPTS"}
+        SITE: ${{ inputs.site }}
+      run: >-
+        python3 tools/ci/crysta_fetch.py "$SHA" $HISTORY ${RECEIPTS:+--receipts "$RECEIPTS"} ${SITE:+--site "$SITE"}
