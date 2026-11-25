@@ -152,7 +152,6 @@
     panel("guide-experiment-cutoff", "experiment", "extras", "group.peak", "Choose the peak calculation window", ["peak.cutoff_fwhm"]);
     panel("guide-analysis-start-values", "analysis", "extras", "group.fit_parameter", "Inspect the values before the last fit", ["fitStart.list"]);
     panel("guide-analysis-shown-parameters", "analysis", "settings", "group.shownParameters", "Choose which parameter groups appear in the table", ["group.shownParameters"]);
-    panel("guide-analysis-pattern-updates", "analysis", "settings", "group.patternUpdates", "Choose how the displayed pattern updates during a scan", ["group.patternUpdates"]);
     return steps;
     }};
 })();
