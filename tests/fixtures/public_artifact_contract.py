@@ -1,5 +1,7 @@
 """Exact published delivery and shared-SDK producer boundaries."""
 
+from tests.fixtures.e09_t75_workflow import STORE_ACTION, artifact_options
+
 # Calendar routes are the published v2026.11.14 contract (ADRs 0071/0072).
 # Native and SDK transport extend those routes under ADR 0083.
 ROUTES = {
@@ -104,11 +106,20 @@ def enabled(step):
 
 
 def reviewed_delivery(filename, name, job, upload):
-    options = upload.get('with', {})
+    options = artifact_options(upload)
     key = filename, name, options.get('name')
     if key not in ROUTES:
         return False
     paths, proofs = ROUTES[key]
+    if key == ('pages.yml', 'docs', 'pages-docs') and upload.get('uses') == STORE_ACTION:
+        # The checked route prepares explicitly, then runs the same notebooks without deps.
+        index = proofs.index('pixi run notebooks-run')
+        proofs = (
+            *proofs[:index],
+            'pixi run notebook-prepare',
+            'pixi run --skip-deps notebooks-run',
+            *proofs[index + 1 :],
+        )
     if set(options.get('path', '').splitlines()) != paths:
         return False
     ordinary = upload.get('if') in {None, 'success()', '${{ success() }}'}
@@ -118,7 +129,7 @@ def reviewed_delivery(filename, name, job, upload):
         or str(upload.get('continue-on-error', 'false')).lower() == 'true'
     ):
         return False
-    if sum(step.get('with', {}).get('name') == options['name'] for step in job['steps']) != 1:
+    if sum(artifact_options(step).get('name') == options['name'] for step in job['steps']) != 1:
         return False
     before = job['steps'][: job['steps'].index(upload)]
     programs = [
@@ -141,7 +152,9 @@ def job_admission(filename, name, job):
         )
 
         try:
-            producer_boundary(job)
+            producer_boundary(
+                job, checked=any(step.get('uses') == STORE_ACTION for step in job['steps'])
+            )
         except AssertionError:
             return False
     if (filename, name) == ('installers.yml', 'qualify-release'):

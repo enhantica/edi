@@ -7,7 +7,12 @@ from pathlib import Path
 import pytest
 import yaml
 
-from tests.fixtures.e09_t75_workflow import active, require_reporting_step
+from tests.fixtures.e09_t75_workflow import (
+    STORE_ACTION,
+    active,
+    artifact_options,
+    require_reporting_step,
+)
 from tests.fixtures.native_process import environment_bash
 from tests.integration.py.test_e09_t75_native_workflow import (
     APP_JOBS,
@@ -153,11 +158,33 @@ def test_pages_visibility_and_webapp_default_retention_follow_the_public_profile
     uploads = [
         step
         for step in jobs['app-wasm']['steps']
-        if step.get('with', {}).get('name') == 'edi-webapp'
+        if artifact_options(step).get('name') == 'edi-webapp'
     ]
     assert len(uploads) == 1 and 'retention-days' not in uploads[0]['with'], (
-        'every full run uploads the webapp with repository default retention'
+        'Every full run uploads the webapp with repository default retention'
     )
+    if public_profile(jobs):
+        assert uploads[0]['uses'] == STORE_ACTION, 'The CI webapp uses the checked upload'
+        store = yaml.safe_load((ROOT / STORE_ACTION / 'action.yml').read_text())
+        upload = next(
+            step
+            for step in store['runs']['steps']
+            if step.get('uses') == 'actions/upload-artifact@v4'
+        )
+        assert (
+            str(store['inputs']['retention-days']['default']) == '0'
+            and upload['with']['retention-days'] == '${{ inputs.retention-days }}'
+        ), 'The actual checked upload preserves the upstream repository-default retention value'
+        pages_webapp = [
+            step
+            for step in pages['wasm']['steps']
+            if artifact_options(step).get('name') == 'pages-webapp'
+        ]
+        assert (
+            len(pages_webapp) == 1
+            and pages_webapp[0]['uses'] == STORE_ACTION
+            and ('retention-days' not in pages_webapp[0]['with'])
+        ), 'Release Pages can still recover the checked WebAssembly artifact at default retention'
     assert not any('pages' in job.get('needs', []) for job in jobs.values()), (
         'site publication must not block another CI job'
     )

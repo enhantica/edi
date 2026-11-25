@@ -9,7 +9,7 @@ from pathlib import Path
 import pytest
 import yaml
 
-from tests.fixtures.e09_t75_workflow import expanded_jobs
+from tests.fixtures.e09_t75_workflow import expanded_jobs, load_workflow, local_action_steps
 
 ROOT = Path(__file__).resolve().parents[3]
 CONSUMERS = {'audit', 'core', 'notebooks', 'cli-python', 'cli-native', 'docs', 'app'}
@@ -57,11 +57,11 @@ def test_every_ci_consumer_uses_one_shared_crysta_resolution():
     source_edges(document)
 
 
-def crysta_token_permissions(document):
+def crysta_token_permissions(document, root=ROOT):
     """Inspect every App token minted for crysta, including future jobs."""
     found = []
-    for name, job in expanded_jobs(document, ROOT):
-        for step in job.get('steps', []):
+    for name, job in expanded_jobs(document, root):
+        for step in local_action_steps(job.get('steps', []), root):
             if not str(step.get('uses', '')).startswith('actions/create-github-app-token@'):
                 continue
             inputs = step.get('with', {})
@@ -75,6 +75,9 @@ def crysta_token_permissions(document):
             )
             if 'crysta' not in repositories:
                 continue
+            assert repositories == ['crysta'], (
+                f' unit 8: crysta token step {name} must scope access to crysta alone'
+            )
             requested = {
                 key: value for key, value in inputs.items() if key.startswith('permission-')
             }
@@ -88,9 +91,8 @@ def crysta_token_permissions(document):
 
 
 def test_crysta_app_tokens_request_only_contents_read():
-    # Before: the source step requested pull-requests:read for a PR-list lookup.
-    # After : contents:read for refs, actions:read for the tested run artifact.
-    document = yaml.safe_load((ROOT / '.github/workflows/ci.yml').read_text())
+    # The contents-only grant applies to the token inside each actual source-action call.
+    document = load_workflow(ROOT / '.github/workflows/ci.yml')
     crysta_token_permissions(document)
 
 
@@ -104,7 +106,7 @@ def test_crysta_app_tokens_request_only_contents_read():
         {'permission-contents': None},
     ],
 )
-def test_crysta_token_permission_counterfactuals(extra):
+def test_crysta_token_permission_counterfactuals(tmp_path, extra):
     step = {
         'name': 'Select crysta',
         'uses': 'actions/create-github-app-token@v2',
@@ -114,9 +116,13 @@ def test_crysta_token_permission_counterfactuals(extra):
             **extra,
         },
     }
-    document = {'jobs': {'future-source': {'steps': [step]}}}
-    with pytest.raises(AssertionError, match='may request only contents:read'):
-        crysta_token_permissions(document)
+    action = tmp_path / 'actions/source/action.yml'
+    action.parent.mkdir(parents=True)
+    action.write_text(yaml.safe_dump({'runs': {'using': 'composite', 'steps': [step]}}))
+    for entry in (step, {'uses': './actions/source'}):
+        document = {'jobs': {'future-source': {'steps': [entry]}}}
+        with pytest.raises(AssertionError, match='may request only contents:read'):
+            crysta_token_permissions(document, tmp_path)
 
 
 def test_source_sweep_catches_a_new_consumer_bypassing_resolution():

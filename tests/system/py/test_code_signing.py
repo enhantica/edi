@@ -15,7 +15,7 @@ from types import SimpleNamespace
 import pytest
 import yaml
 
-from tests.fixtures.e09_t75_workflow import actions_equal
+from tests.fixtures.e09_t75_workflow import STORE_ACTION, actions_equal, artifact_options
 
 ROOT = Path(__file__).resolve().parents[3]
 SECRET_NAMES = {
@@ -451,11 +451,6 @@ def test_windows_uses_digicert_simple_signing_and_verifies_declared_executables(
 
 
 def test_signing_failure_cannot_upload_release_artifacts(tmp_path, monkeypatch):
-    for failure in ('sign', 'verify'):
-        with pytest.raises(subprocess.CalledProcessError):
-            observe_maintenance_package(
-                tmp_path / failure, monkeypatch, release=True, online=False, failure=failure
-            )
     selected = signing_steps()
     assert selected, 'Release publication must have required signing predecessors'
     assert all(s.get('continue-on-error', 'false') == 'false' for s in selected), (
@@ -464,12 +459,14 @@ def test_signing_failure_cannot_upload_release_artifacts(tmp_path, monkeypatch):
     uploads = [
         s
         for s in steps()
-        if s.get('uses') == 'actions/upload-artifact@v4'
-        and s.get('with', {}).get('path')
+        if artifact_options(s).get('path')
         in {'build/installer/delivery', 'build/installer/components'}
     ]
     assert len(uploads) == 2, (
         'Release deliveries and components must retain their qualified uploads'
+    )
+    assert all(upload.get('uses') == STORE_ACTION for upload in uploads), (
+        'Signed deliveries and components pass through the checked upload action'
     )
     for upload in uploads:
         assert steps().index(upload) > max(steps().index(s) for s in selected), (
@@ -488,6 +485,12 @@ def test_signing_failure_cannot_upload_release_artifacts(tmp_path, monkeypatch):
             assert not condition(
                 upload, 'workflow_dispatch', 'refs/heads/main', True, platform, failed=True
             ), 'A failed signing predecessor must block delivery and component uploads'
+
+    for failure in ('sign', 'verify'):
+        with pytest.raises(subprocess.CalledProcessError):
+            observe_maintenance_package(
+                tmp_path / failure, monkeypatch, release=True, online=False, failure=failure
+            )
 
 
 def test_prompt_trial_records_live_only_in_contributor_docs():

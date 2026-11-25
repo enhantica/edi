@@ -33,7 +33,7 @@ import pytest
 import yaml
 from compression import zstd
 
-from tests.fixtures.e09_t75_workflow import active
+from tests.fixtures.e09_t75_workflow import STORE_ACTION, active, artifact_options
 from tests.fixtures.fast_ci.workflow import run_shell
 from tests.integration.py import test_crysta_source_archive as source_archive
 
@@ -204,30 +204,66 @@ def publication_texts():
     return tuple(tracked_texts())
 
 
-def test_test_and_tool_identity_is_independent_of_checkout_name():
+# A direct attribute base can have closing parentheses, comments or line continuations.
+# Only the AST decides whether a candidate is a checkout-derived attribute.
+CHECKOUT_ATTRIBUTE = re.compile(
+    r'\b(?:ROOT|REPO)(?:[)\s]|\\\n|#[^\n]*)*\.(?:\s|\\\n|#[^\n]*)*(?:name|stem)\b'
+)
+
+
+def checkout_identity_findings(root):
+    # These names contain generated environments or build outputs, never test/tool sources.
+    build_trees = {'.git', '.pixi', '.venv', '__pycache__', '_build', 'build'}
     findings = []
-    listing = run('git', 'ls-files', '-z', '--', 'tests', 'tools')
-    require_success(listing, 'identity checks must enumerate the shipped test and tool sources')
-    for relative in filter(None, listing.stdout.split('\0')):
-        path = ROOT / relative
-        if path.suffix != '.py':
-            continue
-        source = path.read_text(encoding='utf-8')
-        if source.isascii() and 'ROOT' not in source and 'REPO' not in source:
-            continue  # A non-ASCII spelling still needs Python's identifier normalization.
-        tree = ast.parse(source, filename=relative)
-        findings.extend(
-            f'{relative}:{node.lineno}'
-            for node in ast.walk(tree)
-            if isinstance(node, ast.Attribute)
-            and node.attr in {'name', 'stem'}
-            and isinstance(node.value, ast.Name)
-            and node.value.id in {'ROOT', 'REPO'}
-        )
+    for subtree in ('tests', 'tools'):
+        for directory, folders, files in os.walk(root / subtree):
+            folders[:] = sorted(name for name in folders if name not in build_trees)
+            for name in sorted(files):
+                if not name.endswith('.py'):
+                    continue
+                path = Path(directory) / name
+                relative = path.relative_to(root).as_posix()
+                source = path.read_text(encoding='utf-8')
+                if source.isascii() and not CHECKOUT_ATTRIBUTE.search(source):
+                    continue  # A non-ASCII spelling still needs Python identifier normalization.
+                findings.extend(
+                    f'{relative}:{node.lineno}'
+                    for node in ast.walk(ast.parse(source, filename=relative))
+                    if isinstance(node, ast.Attribute)
+                    and node.attr in {'name', 'stem'}
+                    and isinstance(node.value, ast.Name)
+                    and node.value.id in {'ROOT', 'REPO'}
+                )
+    return findings
+
+
+def test_test_and_tool_identity_is_independent_of_checkout_name():
+    findings = checkout_identity_findings(ROOT)
     assert not findings, (
         'Public tests and tools must use declared product identities rather than the '
         'checkout root basename: ' + ', '.join(findings)
     )
+
+
+def test_checkout_identity_includes_generated_sources_and_skips_build_trees(tmp_path):
+    for relative, source in {
+        'tests/generated/test_dynamic.py': 'label = ROOT.name',
+        'tests/generated/test_parenthesized.py': 'label = (ROOT  # comment\n).\\\n    stem\n',
+        'tools/output/generated.py': 'label = REPO.stem',
+        # Fullwidth letters normalize to ROOT in Python identifiers.
+        'tools/output/generated_unicode.py': 'label = \uff32\uff2f\uff2f\uff34.name',
+        'tools/installer/.pixi/vendor.py': 'label = ROOT.name',
+        'tests/build/parser.py': 'lazy from typing import IO',
+    }.items():
+        path = tmp_path / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(source, encoding='utf-8')
+    assert set(checkout_identity_findings(tmp_path)) == {
+        'tests/generated/test_dynamic.py:1',
+        'tests/generated/test_parenthesized.py:1',
+        'tools/output/generated.py:1',
+        'tools/output/generated_unicode.py:1',
+    }, 'On-disk test and tool sources are checked even if generated and outside a Git index'
 
 
 def private_findings(entries):
@@ -537,6 +573,14 @@ def test_public_ci_uses_hosted_runners_and_guards_private_tokens():
     )
 
 
+def private_credential_step(step):
+    return (
+        step.get('uses') == './.github/actions/crysta-source'
+        or 'create-github-app-token' in json.dumps(step)
+        or bool(re.search(r'secrets\.(?!GITHUB_TOKEN\b)\w+', json.dumps(step)))
+    )
+
+
 def public_token_findings(documents):
     findings = []
     for filename, doc in documents:
@@ -562,10 +606,7 @@ def public_token_findings(documents):
             if not hosted and not dispatch:
                 findings.append(filename + ':' + name + ':fork-reachable private runner')
             for step in job.get('steps', []):
-                serialized = json.dumps(step)
-                private = 'create-github-app-token' in serialized or bool(
-                    re.search(r'secrets\.(?!GITHUB_TOKEN\b)\w+', serialized)
-                )
+                private = private_credential_step(step)
                 disabled = job.get('if') is False or job.get('if') == 'false'
                 if private and not (
                     disabled or nonfork(job.get('if', '')) or nonfork(step.get('if', ''))
@@ -631,7 +672,7 @@ def test_private_token_guard_is_required_in_every_job_even_off_pr(event):
         for filename, doc in documents
         for name, job in doc['jobs'].items()
         for index, step in enumerate(job.get('steps', []))
-        if 'create-github-app-token' in str(step.get('uses', ''))
+        if private_credential_step(step)
     ]
     assert sites, 'The credential control must reach the actual token-minting steps'
     for filename, name, index in sites:
@@ -662,7 +703,12 @@ def required_artifact_programs(job):
     resolved = True
     for candidate in job.get('steps', []):
         try:
-            enabled = active(candidate, 'pull_request', outputs=outcomes)
+            enabled = active(
+                candidate,
+                'pull_request',
+                outputs=outcomes,
+                bindings={'steps.wasm-cache.outputs.toolchain-hit': 'false'},
+            )
         except AssertionError:
             resolved = False
             enabled = False
@@ -671,6 +717,17 @@ def required_artifact_programs(job):
         if 'id' in candidate:
             outcomes[candidate['id'], 'outcome'] = 'success' if enabled else 'skipped'
     return '\n'.join(programs), resolved
+
+
+WASM_ARTIFACTS = {
+    'edi-webapp': {'build/wasm/site'},
+    'edi-webapp-checks': {'${{ runner.temp }}/edi-webapp-checks'},
+    'edi-wasm-cli': {
+        'build/wasm/multithread/crysta-prefix/bin/crysta*',
+        'build/wasm/multithread/crysta-prefix/.edi-wasm-key',
+        'build/wasm/multithread/app/app/CRYSTA_SOURCE_SHA',
+    },
+}
 
 
 def public_artifact_findings(documents):
@@ -685,9 +742,9 @@ def public_artifact_findings(documents):
                 if not resolved:
                     findings.append(filename + ':' + name + ':unresolved producer condition')
             for step in job.get('steps', []):
-                if 'upload-artifact' not in step.get('uses', ''):
+                options = artifact_options(step)
+                if not options:
                     continue
-                options = step.get('with', {})
                 artifact, paths = options.get('name', ''), options.get('path', '')
                 reviewed = reviewed_delivery(filename, name, job, step)
                 if 'runner.name' in artifact or ('edi-native' in artifact and not reviewed):
@@ -695,13 +752,8 @@ def public_artifact_findings(documents):
                 webapp = (
                     filename == 'ci.yml'
                     and name == 'app-wasm'
-                    and (
-                        (artifact == 'edi-webapp' and paths == 'build/wasm/site')
-                        or (
-                            artifact == 'edi-webapp-checks'
-                            and paths == '${{ runner.temp }}/edi-webapp-checks'
-                        )
-                    )
+                    and artifact in WASM_ARTIFACTS
+                    and set(paths.splitlines()) == WASM_ARTIFACTS[artifact]
                     and 'wasm-build' in required_programs
                     and 'wasm-check' in required_programs
                     and 'e04_t11_wasm_delivery.py' in required_programs
@@ -736,21 +788,23 @@ def public_artifact_findings(documents):
 def test_webapp_artifact_allowance_refuses_native_object_escapes(defect):
     import copy  # noqa: PLC0415
 
-    doc = yaml.safe_load((ROOT / '.github/workflows/ci.yml').read_text())
+    original = yaml.safe_load((ROOT / '.github/workflows/ci.yml').read_text())
+    doc = {'jobs': {'app-wasm': original['jobs']['app-wasm']}}
     assert not public_artifact_findings([('ci.yml', doc)]), (
-        'the prescribed webapp and evidence uploads must pass before each native escape'
+        'The real dedicated WebAssembly uploads pass before each native escape'
     )
     damaged = copy.deepcopy(doc)
     job = damaged['jobs']['app-wasm']
-    upload = next(s for s in job['steps'] if s.get('with', {}).get('name') == 'edi-webapp')
+    upload = next(s for s in job['steps'] if artifact_options(s).get('name') == 'edi-webapp')
+    assert upload.get('uses') == STORE_ACTION, 'The control targets the checked app artifact'
     if defect == 'native-path':
         upload['with']['path'] = 'build/ci'
     elif defect == 'native-name':
-        upload['with']['name'] = 'edi-native-linux-64'
+        upload['with']['artifact'] = 'edi-native-linux-64'
     elif defect == 'runner-name':
-        upload['with']['name'] = '${{ runner.name }}'
+        upload['with']['artifact'] = '${{ runner.name }}'
     elif defect == 'other-job':
-        damaged['jobs']['native']['steps'].append(copy.deepcopy(upload))
+        damaged['jobs']['other'] = {'steps': [copy.deepcopy(upload)]}
     elif defect in {'disabled-check', 'optional-check'}:
         check = next(s for s in job['steps'] if 'wasm-check' in s.get('run', ''))
         check['if' if defect == 'disabled-check' else 'continue-on-error'] = (
@@ -2185,7 +2239,7 @@ def test_reviewed_delivery_artifacts_reject_identity_and_qualification_escapes(d
     for (filename, producer, artifact), (_paths, proofs) in ROUTES.items():
         job = documents[filename]['jobs'][producer]
         upload = next(
-            step for step in job['steps'] if step.get('with', {}).get('name') == artifact
+            step for step in job['steps'] if artifact_options(step).get('name') == artifact
         )
         assert reviewed_delivery(filename, producer, job, upload), (
             'Each published or shared artifact first proves its exact producer and prerequisites: '
@@ -2195,11 +2249,12 @@ def test_reviewed_delivery_artifacts_reject_identity_and_qualification_escapes(d
         )
         changed = copy.deepcopy(job)
         target = next(
-            step for step in changed['steps'] if step.get('with', {}).get('name') == artifact
+            step for step in changed['steps'] if artifact_options(step).get('name') == artifact
         )
         selected_producer = producer
         if damage in {'name', 'path'}:
-            target['with'][damage] = 'unreviewed-binary-output'
+            key = 'artifact' if damage == 'name' and target.get('uses') == STORE_ACTION else damage
+            target['with'][key] = 'unreviewed-binary-output'
         elif damage == 'producer':
             selected_producer = 'unreviewed-producer'
         elif damage == 'upload-first':

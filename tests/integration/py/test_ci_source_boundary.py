@@ -2,6 +2,7 @@
 """Exercise the CI source boundary with GitHub workflow definitions and synthetic files."""
 
 import os
+import shlex
 import shutil
 import subprocess
 import sys
@@ -9,6 +10,8 @@ from pathlib import Path
 
 import pytest
 import yaml
+
+from tests.fixtures.native_process import fixture_shell
 
 ROOT = Path(__file__).resolve().parents[3]
 
@@ -102,23 +105,34 @@ def test_unavailable_source_list_prevents_the_runner_shell_executing_a_step(tmp_
     'mutation', ['publisher', 'combined-cache', 'implicit-pixi-cache', 'shell-override']
 )
 def test_policy_refuses_a_source_job_with_an_unchecked_output_path(tmp_path, mutation):
-    shutil.copytree(ROOT / '.github', tmp_path / '.github')
-    shutil.copytree(ROOT / 'tools/ci', tmp_path / 'tools/ci')
+    # Preserve the complete SDK workflow and its local action definitions in the fixture.
+    workflow = Path('.github/workflows/crysta-sdk.yml')
+    workflow_path = tmp_path / workflow
+    workflow_path.parent.mkdir(parents=True)
+    shutil.copyfile(ROOT / workflow, workflow_path)
+    shutil.copytree(ROOT / '.github/actions', tmp_path / '.github/actions')
+    scripts = tmp_path / 'tools/ci'
+    scripts.mkdir(parents=True)
+    for name in ('lint.sh', 'portable_paths.py', 'source_publishers.py'):
+        shutil.copyfile(ROOT / 'tools/ci' / name, scripts / name)
     sandbox_bin = tmp_path / 'bin'
     sandbox_bin.mkdir()
-    pixi = sandbox_bin / 'pixi'
-    pixi.write_text('#!/bin/bash\nexit 0\n', encoding='utf-8')
-    pixi.chmod(0o755)
-    env = {**os.environ, 'PATH': f'{sandbox_bin}{os.pathsep}{os.environ["PATH"]}'}
-    command = ['bash', 'tools/ci/lint.sh', 'policy']
+    interpreter = shlex.quote(Path(sys.executable).as_posix())
+    for name, program in {'pixi': 'exit 0', 'python3': f'exec {interpreter} "$@"'}.items():
+        shim = sandbox_bin / name
+        shim.write_text(f'#!/bin/sh\n{program}\n', encoding='utf-8', newline='\n')
+        shim.chmod(0o755)
+    command = fixture_shell(sandbox_bin, 'exec "$BASH" tools/ci/lint.sh policy')
 
     def run_policy():
         return subprocess.run(
-            command, cwd=tmp_path, env=env, capture_output=True, text=True, timeout=10, check=False
+            command, cwd=tmp_path, capture_output=True, text=True, timeout=10, check=False
         )
 
     clean = run_policy()
-    workflow_path = tmp_path / '.github/workflows/crysta-sdk.yml'
+    assert clean.returncode == 0, (
+        'The unmodified workflows pass the source-storage policy: ' + clean.stdout + clean.stderr
+    )
     content = yaml.safe_load(workflow_path.read_text(encoding='utf-8'))
     steps = content['jobs']['build']['steps']
     replacements = {
@@ -140,5 +154,6 @@ def test_policy_refuses_a_source_job_with_an_unchecked_output_path(tmp_path, mut
     steps.append({'name': f'Planted {mutation}', **replacements[mutation]})
     workflow_path.write_text(yaml.safe_dump(content, sort_keys=False), encoding='utf-8')
     changed = run_policy()
-    assert clean.returncode == 0, 'The unmodified workflows pass the source-storage policy'
-    assert changed.returncode != 0, f'The source-storage policy must detect the planted {mutation}'
+    assert changed.returncode == 1 and (
+        f"source-publishers: crysta-sdk.yml/build: 'Planted {mutation}'" in changed.stderr
+    ), f'The source-storage policy must report the planted {mutation}: {changed.stderr}'

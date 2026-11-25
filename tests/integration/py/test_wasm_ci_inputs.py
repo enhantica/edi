@@ -1,5 +1,6 @@
 """Changed WebAssembly build inputs reach the required compile and exclusion check."""
 
+import copy
 import json
 import os
 import shutil
@@ -9,6 +10,8 @@ from pathlib import Path
 
 import pytest
 import yaml
+
+from tests.fixtures.e09_t75_workflow import STORE_ACTION, active, require_reporting_step
 
 ROOT = Path(__file__).resolve().parents[3]
 INPUTS = {
@@ -102,8 +105,6 @@ def dispatch(tmp_path, program, owed):
 
 @pytest.mark.parametrize('owed', ['true', 'false'])
 def test_required_linux_wasm_compile_routes_through_sdk_build_and_exclusion_check(tmp_path, owed):
-    from tests.fixtures.e09_t75_workflow import active  # noqa: PLC0415
-
     job = workflow()['app-wasm']
     assert job['runs-on'] == 'ubuntu-24.04', (
         'Required linux wasm compile routes through sdk build and exclusion check.'
@@ -123,93 +124,178 @@ def test_required_linux_wasm_compile_routes_through_sdk_build_and_exclusion_chec
     steps = job['steps']
     sdk = next(s for s in steps if s.get('uses') == './.github/actions/crysta-sdk')
     native = next(s for s in steps if s.get('uses') == './.github/actions/edi-native')
-    commands = [
-        'pixi run core-build',
-        'pixi run -e app wasm-toolchain',
-        'pixi run -e app --skip-deps wasm-build',
-    ]
-    calls = [next(s for s in steps if s.get('run') == command) for command in commands]
-    assert steps.index(sdk) < steps.index(native) < steps.index(calls[0]), (
-        'Required linux wasm compile routes through sdk build and exclusion check.'
+    source = next(s for s in steps if s.get('uses') == './.github/actions/crysta-source')
+    toolchain = next(s for s in steps if s.get('id') == 'toolchain')
+    core = next(s for s in steps if s.get('run') == 'pixi run core-build')
+    build = next(s for s in steps if s.get('id') == 'site')
+    ordered = [toolchain, sdk, native, source, core, build]
+    assert [steps.index(step) for step in ordered] == sorted(
+        steps.index(step) for step in ordered
+    ), 'Install the public toolchain before fetching source and building the browser kit'
+    assert source['with']['sha'] == '${{ env.CRYSTA_SOURCE_SHA }}', (
+        'The WebAssembly compiler receives exactly the workflow-resolved source pin'
     )
-    assert [steps.index(s) for s in calls] == sorted(steps.index(s) for s in calls), (
-        'Required linux wasm compile routes through sdk build and exclusion check.'
+    assert toolchain.get('shell') == 'bash' and job['defaults']['run']['shell'] == (
+        'python3 tools/ci/public_log.py {0}'
+    ), 'Only commands before the private fetch run under the plain Bash setup shell'
+    assert not any(s.get('if') or s.get('continue-on-error') for s in ordered[:-1]), (
+        'Toolchain, SDK, native restore, exact source and core remain required predecessors'
     )
-    assert not any(s.get('if') or s.get('continue-on-error') for s in [sdk, native, *calls[:2]]), (
-        'Required linux wasm compile routes through sdk build and exclusion check.'
-    )
-    from tests.fixtures.e09_t75_workflow import require_reporting_step  # noqa: PLC0415
-
-    require_reporting_step(calls[2], 'toolchain')
+    require_reporting_step(build, 'toolchain')
     build = (ROOT / 'tools/ci/wasm-build.sh').read_text()
     assert 'bash "$ROOT/tools/ci/wasm-assistant-check.sh" "$out/app"' in build, (
         'The common multithread builder retains the mandatory assistant-exclusion check'
     )
-    expected = [command.split() for command in commands] if selected else []
-    assert dispatch(tmp_path, '\n'.join(commands) if selected else ':', owed) == expected, (
-        'Required linux wasm compile routes through sdk build and exclusion check.'
+    expected = (
+        [
+            ['pixi', 'run', '-e', 'app', 'wasm-toolchain'],
+            ['pixi', 'run', 'core-build'],
+            ['pixi', 'run', '-e', 'app', '--skip-deps', 'wasm-build'],
+        ]
+        if selected
+        else []
+    )
+    program = '\n'.join(step['run'] for step in (toolchain, core, ordered[-1]))
+    assert dispatch(tmp_path, program if selected else ':', owed) == expected, (
+        'The real selected workflow commands execute the early toolchain and late browser build'
     )
 
 
-def shared_cache_routes(ci, pages):
-    from tests.fixtures.e09_t75_workflow import active  # noqa: PLC0415
+def cache_workflows():
+    pages = yaml.safe_load((ROOT / '.github/workflows/pages.yml').read_text())['jobs']
+    return workflow(), pages
 
+
+def save_for(steps, path):
+    saves = [
+        step
+        for step in steps
+        if step.get('uses') in {'actions/cache/save@v4', STORE_ACTION}
+        and step.get('with', {}).get('path') == path
+    ]
+    assert len(saves) == 1, f'Exactly one explicit publisher owns the {path} cache'
+    return saves[0]
+
+
+def verify_wasm_cache_route(job):
+    steps = job['steps']
+    calls = [step for step in steps if step.get('uses') == './.github/actions/wasm-cache']
+    assert len(calls) == 1 and not calls[0].get('with'), (
+        'Every builder uses the one shared restore action without any operation selector'
+    )
+    restore = calls[0]
+    assert restore.get('id') == 'wasm-cache' and not (
+        restore.get('if') or restore.get('continue-on-error')
+    ), 'The shared restore always runs and a restore error remains a job failure'
+    toolchain = next(step for step in steps if step.get('id') == 'toolchain')
+    source = next(step for step in steps if step.get('uses') == './.github/actions/crysta-source')
+    build = next(step for step in steps if 'wasm-build' in step.get('run', ''))
+    tool_save = save_for(steps, '~/.cache/edi-wasm')
+    object_save = save_for(steps, '~/.cache/edi-ccache')
+    assert (
+        tool_save['uses'] == 'actions/cache/save@v4'
+        and tool_save['with']['key'] == '${{ steps.wasm-cache.outputs.toolchain }}'
+        and object_save['uses'] == STORE_ACTION
+        and object_save['with']['key'] == '${{ steps.wasm-cache.outputs.objects }}'
+        and object_save['with'].get('ccache') == 'pixi run --skip-deps python'
+        and not any(step.get('continue-on-error') for step in (tool_save, object_save))
+    ), 'Toolchain and checked objects are saved under the exact restore action outputs'
+    assert (
+        steps.index(restore)
+        < steps.index(toolchain)
+        < steps.index(tool_save)
+        < (steps.index(source))
+        < steps.index(build)
+        < steps.index(object_save)
+    ), 'Public tooling is cached before source admission and compiled objects after the build'
+    for hit in ('true', 'false'):
+        for install in ('success', 'failure'):
+            assert active(
+                tool_save,
+                'push',
+                outputs={('wasm-cache', 'toolchain-hit'): hit},
+                states={'toolchain': install},
+            ) == (hit == 'false' and install == 'success'), (
+                'A toolchain save requires a cold restore and a successful install'
+            )
+    for outcome in ('success', 'failure', 'skipped'):
+        for cancelled in (False, True):
+            assert active(
+                object_save,
+                'push',
+                outputs={('wasm-cache', 'outcome'): outcome},
+                states={'build': 'failure'},
+                cancelled=cancelled,
+            ) == (outcome == 'success' and not cancelled), (
+                'Only successful restores save checked objects after a noncancelled build failure'
+            )
+
+
+def shared_cache_routes(ci, pages):
     assert not any(
         step.get('uses') == './.github/actions/wasm-cache' or 'wasm-build' in step.get('run', '')
         for step in ci['app']['steps']
     ), 'Desktop jobs cannot duplicate the dedicated browser build/cache route'
-    routes = [('app-wasm', ci['app-wasm']), ('pages', pages['wasm'])]
-    for _name, job in routes:
-        calls = [
-            step for step in job['steps'] if step.get('uses') == './.github/actions/wasm-cache'
-        ]
-        restores = [
-            step for step in calls if step.get('with', {}).get('operation', 'restore') == 'restore'
-        ]
-        saves = [step for step in calls if step.get('with', {}).get('operation') == 'save']
-        assert len(calls) == 2 and len(restores) == len(saves) == 1, (
-            'Each wasm host restores and saves through the same shared cache owner'
+    verify_wasm_cache_route(ci['app-wasm'])
+    verify_wasm_cache_route(pages['wasm'])
+
+
+def cache_action_boundary(action):
+    steps = action['runs']['steps']
+    restores = [step for step in steps if step.get('uses') == 'actions/cache/restore@v4']
+    assert not action.get('inputs') and len(restores) == 2, (
+        'The restore-only composite accepts no mode and restores exactly two cache families'
+    )
+    assert not any(
+        step.get('uses', '').startswith(('actions/cache/save@', 'actions/cache@'))
+        or step.get('uses') == STORE_ACTION
+        for step in steps
+    ), 'Cache publication is available only to the two explicit workflow stages'
+    compiler = next(step for step in steps if step.get('id') == 'compiler')
+    key_step = next(step for step in steps if step.get('id') == 'keys')
+    assert compiler.get('uses') == './.github/actions/ccache' and not (
+        compiler.get('if') or compiler.get('continue-on-error')
+    ), 'The common action still configures the declared compiler wrapper'
+    expected = {'~/.cache/edi-ccache': 'objects', '~/.cache/edi-wasm': 'toolchain'}
+    assert {step['with']['path'] for step in restores} == expected.keys(), (
+        'No restore may use a partial or foreign cache directory'
+    )
+    for restore in restores:
+        output = expected[restore['with']['path']]
+        key = '${{ steps.keys.outputs.' + output + ' }}'
+        assert (
+            restore['with']['key'] == action['outputs'][output]['value'] == key
+            and not restore.get('if')
+            and not restore.get('continue-on-error')
+            and steps.index(compiler) < steps.index(key_step) < steps.index(restore)
+        ), 'Each required restore and its public output use the same computed cache identity'
+    toolchain = next(step for step in restores if step.get('id') == 'toolchain')
+    assert toolchain['with']['path'] == '~/.cache/edi-wasm' and (
+        action['outputs']['toolchain-hit']['value'] == '${{ steps.toolchain.outputs.cache-hit }}'
+    ), 'The warmth flag comes from the actual toolchain restore'
+    keys = key_step['run']
+    for dimension in (
+        'steps.compiler.outputs.key-prefix',
+        'github.run_id',
+        'github.run_attempt',
+        'github.job',
+        'runner.os',
+        'runner.arch',
+        "hashFiles('tools/ci/wasm-env.sh')",
+        "hashFiles('tools/ci/wasm-env.sh', 'tests/fixtures/web_parallel/package-lock.json')",
+    ):
+        assert '${{ ' + dimension + ' }}' in keys, (
+            'Cache keys retain platform, lock/tool inputs, run/attempt and job ownership'
         )
-        restore, save = restores[0], saves[0]
-        assert restore.get('id') == 'wasm-cache', (
-            'The save guard binds the actual shared restore result'
-        )
-        assert not restore.get('if'), 'Dedicated wasm builders always restore their shared caches'
-        builds = [i for i, step in enumerate(job['steps']) if 'wasm-build' in step.get('run', '')]
-        assert len(builds) == 1 and job['steps'].index(restore) < builds[0] < job['steps'].index(
-            save
-        ), 'Each wasm route restores before its actual build and saves after that build attempt'
-        for outcome in ['success', 'failure', 'skipped']:
-            for cancelled in [False, True]:
-                assert active(
-                    save,
-                    'push',
-                    outputs={('wasm-cache', 'outcome'): outcome},
-                    states={'build': 'failure'},
-                    cancelled=cancelled,
-                ) == (outcome == 'success' and not cancelled), (
-                    'Only successful restores save after a noncancelled build failure'
-                )
 
 
 def test_every_wasm_route_uses_shared_toolchain_and_compiler_caches_and_rejects_partial_restore():
-    import copy  # noqa: PLC0415 - independent source mutation controls
-
-    ci = workflow()
-    pages = yaml.safe_load((ROOT / '.github/workflows/pages.yml').read_text())['jobs']
+    ci, pages = cache_workflows()
     shared_cache_routes(ci, pages)
-    action = yaml.safe_load((ROOT / '.github/actions/wasm-cache/action.yml').read_text())
-    caches = [
-        step for step in action['runs']['steps'] if step.get('uses') == 'actions/cache/restore@v4'
-    ]
-    assert {step['with']['path'] for step in caches} == {
-        '~/.cache/edi-wasm',
-        '~/.cache/edi-ccache',
-    }, 'The one shared action restores both the pinned toolchain and validated compiler outputs'
-    assert any(
-        step.get('uses') == './.github/actions/ccache' for step in action['runs']['steps']
-    ), 'The shared action activates the original compiler-wrapper configuration owner'
-    for area in ['app-wasm', 'pages']:
+    cache_action_boundary(
+        yaml.safe_load((ROOT / '.github/actions/wasm-cache/action.yml').read_text())
+    )
+    for area in ('app-wasm', 'pages'):
         changed_ci, changed_pages = copy.deepcopy(ci), copy.deepcopy(pages)
         job = changed_pages['wasm'] if area == 'pages' else changed_ci[area]
         step = next(
@@ -221,86 +307,46 @@ def test_every_wasm_route_uses_shared_toolchain_and_compiler_caches_and_rejects_
             shared_cache_routes(changed_ci, changed_pages)
 
 
-def cache_action_boundary(action):
-    steps = action['runs']['steps']
-    assert action['inputs']['operation']['default'] == 'restore', (
-        'The existing restore caller keeps its declared default'
-    )
-    assert steps[0].get('env', {}).get('OPERATION') == '${{ inputs.operation }}', (
-        'Operation validation receives the actual caller input before any cache side effect'
-    )
-    assert not steps[0].get('if') and not steps[0].get('continue-on-error'), (
-        'Unknown operation refusal cannot be conditional or optional'
-    )
-    restores = [step for step in steps if step.get('uses') == 'actions/cache/restore@v4']
-    saves = [step for step in steps if step.get('uses') == 'actions/cache/save@v4']
-    assert len(restores) == len(saves) == 2, (
-        'Both toolchain and object caches have explicit restore/save phases'
-    )
-    for restore in restores:
-        paired = [step for step in saves if step['with']['path'] == restore['with']['path']]
-        assert len(paired) == 1 and paired[0]['with']['key'] == restore['with']['key'], (
-            'Each explicit save names exactly the cache identity its own restore selected'
-        )
-        assert (
-            restore['if'] == "inputs.operation == 'restore'"
-            and paired[0]['if'] == "inputs.operation == 'save'"
-        ), 'An operation cannot execute the opposite cache phase'
-    keys = next(step['run'] for step in steps if step.get('id') == 'keys')
-    for dimension in [
-        'steps.compiler.outputs.key-prefix',
-        'github.run_id',
-        'github.run_attempt',
-        'github.job',
-        'runner.os',
-        'runner.arch',
-        "hashFiles('tools/ci/wasm-env.sh')",
-        "hashFiles('tools/ci/wasm-env.sh', 'tests/fixtures/web_parallel/package-lock.json')",
-    ]:
-        assert '${{ ' + dimension + ' }}' in keys, (
-            'Cache keys retain platform, lock/tool inputs, run/attempt and job ownership'
-        )
-    return steps[0]['run']
-
-
 @pytest.mark.parametrize('operation', ['restore', 'save', '', 'RESTORE', 'upload', 'restore save'])
-def test_shared_cache_action_refuses_unknown_operations_before_any_cache_side_effect(operation):
-    action = yaml.safe_load((ROOT / '.github/actions/wasm-cache/action.yml').read_text())
-    guard = cache_action_boundary(action)
-    result = subprocess.run(
-        [shutil.which('bash'), '-e', '-c', guard],
-        env={**os.environ, 'OPERATION': operation},
-        capture_output=True,
-        check=False,
-        timeout=5,
-    )
-    assert (result.returncode == 0) == (operation in {'restore', 'save'}), (
-        'Only the two declared exact cache operations may reach restore or save'
-    )
+def test_shared_cache_route_cannot_select_any_retired_operation(operation):
+    ci, pages = cache_workflows()
+    shared_cache_routes(ci, pages)
+    for job in (ci['app-wasm'], pages['wasm']):
+        damaged = copy.deepcopy(job)
+        action = next(step for step in damaged['steps'] if step.get('id') == 'wasm-cache')
+        action['with'] = {'operation': operation}
+        with pytest.raises(AssertionError, match='without any operation'):
+            verify_wasm_cache_route(damaged)
 
 
 def test_shared_cache_rejects_missing_save_wrong_identity_and_bypassed_validation():
-    import copy  # noqa: PLC0415 - exercise the source boundary rather than cached availability
-
+    ci, pages = cache_workflows()
+    shared_cache_routes(ci, pages)
+    for job in (ci['app-wasm'], pages['wasm']):
+        for damage in ('missing-save', 'wrong-key', 'wrong-phase', 'optional-restore', 'no-check'):
+            damaged = copy.deepcopy(job)
+            steps = damaged['steps']
+            save = save_for(steps, '~/.cache/edi-ccache')
+            if damage == 'missing-save':
+                steps.remove(save)
+            elif damage == 'wrong-key':
+                save['with']['key'] = 'foreign-objects'
+            elif damage == 'wrong-phase':
+                steps.insert(0, steps.pop(steps.index(save)))
+            elif damage == 'optional-restore':
+                next(step for step in steps if step.get('id') == 'wasm-cache')[
+                    'continue-on-error'
+                ] = True
+            else:
+                save['with'].pop('ccache')
+            with pytest.raises(AssertionError):
+                verify_wasm_cache_route(damaged)
     action = yaml.safe_load((ROOT / '.github/actions/wasm-cache/action.yml').read_text())
     cache_action_boundary(action)
-    for damage in ['missing-save', 'wrong-key', 'wrong-phase', 'optional-guard', 'missing-job']:
-        changed = copy.deepcopy(action)
-        steps = changed['runs']['steps']
-        save = next(step for step in steps if step.get('uses') == 'actions/cache/save@v4')
-        if damage == 'missing-save':
-            steps.remove(save)
-        elif damage == 'wrong-key':
-            save['with']['key'] = 'foreign-objects'
-        elif damage == 'wrong-phase':
-            save['if'] = "inputs.operation == 'restore'"
-        elif damage == 'optional-guard':
-            steps[0]['continue-on-error'] = True
-        else:
-            key = next(step for step in steps if step.get('id') == 'keys')
-            key['run'] = key['run'].replace('${{ github.job }}', 'shared-job')
-        with pytest.raises(AssertionError):
-            cache_action_boundary(changed)
+    key = next(step for step in action['runs']['steps'] if step.get('id') == 'keys')
+    key['run'] = key['run'].replace('${{ github.job }}', 'shared-job')
+    with pytest.raises(AssertionError, match='run/attempt and job ownership'):
+        cache_action_boundary(action)
 
 
 def test_survey_browser_checks_run_after_the_shared_chrome_toolchain_is_installed():
@@ -310,8 +356,6 @@ def test_survey_browser_checks_run_after_the_shared_chrome_toolchain_is_installe
     assert len(surveys) == 1 and steps.index(toolchain) < steps.index(surveys[0]), (
         'Survey browser checks run after the shared chrome toolchain is installed.'
     )
-    from tests.fixtures.e09_t75_workflow import require_reporting_step  # noqa: PLC0415
-
     require_reporting_step(surveys[0], 'toolchain')
     core = workflow()['core']
     assert not any('test_survey_events.py' in step.get('run', '') for step in core['steps']), (
