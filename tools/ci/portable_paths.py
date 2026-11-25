@@ -54,11 +54,18 @@ def folders_of(names: list[str]) -> set[tuple[str, ...]]:
     return folders
 
 
+def tracked() -> list[str]:
+    """The repository's paths; of a copy that is no repository, every file's."""
+    listing = ['git', '-C', str(ROOT), 'ls-files', '-z']
+    run = subprocess.run(listing, capture_output=True, check=False)
+    if run.returncode:
+        return [path.relative_to(ROOT).as_posix() for path in ROOT.rglob('*') if path.is_file()]
+    return [name for name in run.stdout.decode('utf-8', 'surrogateescape').split('\0') if name]
+
+
 def main() -> int:
     """Exit 1 with every tracked path that some platform reads otherwise."""
-    listing = ['git', '-C', str(ROOT), 'ls-files', '-z']
-    listed = subprocess.run(listing, capture_output=True, check=True).stdout
-    names = [name for name in listed.decode('utf-8', 'surrogateescape').split('\0') if name]
+    names = tracked()
     status = 0
     for name in names:
         try:
