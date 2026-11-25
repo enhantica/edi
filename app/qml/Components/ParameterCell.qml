@@ -122,6 +122,8 @@ EaComponents.ListViewParameter {
     // A free value is in the status bar's green, the one green token (EaStyle.Colors.green; the owner, 2026-10-22).
     color: warned ? EaStyle.Colors.red : !enabled || readOnly ? EaStyle.Colors.themeForegroundMinor : item && item.free && canFit ? EaStyle.Colors.green : EaStyle.Colors.themeForeground
 
+    // The menu opens under the cell, where the tooltips would cover it.
+    readonly property bool popupOpen: contextMenu?.visible ?? false
     // The cell's one ordinary popup (edi ADR-0076 point 6), on hover without focus and never while warned: a caller's
     // help where it sets `helpToolTip`, else the value as written when the cell shows it shorter, else the whole text
     // while it overflows, else the item's label and `.edi` name (edi ADR-0051).
@@ -129,11 +131,11 @@ EaComponents.ListViewParameter {
     // third of a row's cost.
     Loader {
         anchors.fill: parent
-        active: cell.hovered && !cell.activeFocus && !cell.warned
+        active: cell.hovered && !cell.activeFocus && !cell.warned && !cell.popupOpen
         sourceComponent: Component {
             EaElements.ToolTip {
                 text: cell.helpToolTip && cell.ToolTip.text !== "" ? cell.ToolTip.text : cell.shownValue !== cell.valueText ? (cell.written ? cell.valueText : NumberText.plainFull(cell.item.value)) : cell.contentWidth > cell.width ? cell.text : cell.item !== null ? cell.item.toolTip : ""
-                requested: cell.hovered && !cell.activeFocus && !cell.warned
+                requested: cell.hovered && !cell.activeFocus && !cell.warned && !cell.popupOpen
                 // The value in full, where the cell shows it shortened or cut short, is data; the help text follows the
                 // tooltip level.
                 data: !(cell.helpToolTip && cell.ToolTip.text !== "") && (cell.shownValue !== cell.valueText || cell.contentWidth > cell.width)
@@ -163,11 +165,11 @@ EaComponents.ListViewParameter {
     ToolTip.text: warningText
     Loader {
         anchors.fill: parent
-        active: cell.warned && (cell.hovered || cell.activeFocus)
+        active: cell.warned && !cell.popupOpen && (cell.hovered || cell.activeFocus)
         sourceComponent: Component {
             WarningToolTip {
                 text: cell.warningText
-                requested: cell.warned && (cell.hovered || cell.activeFocus)
+                requested: cell.warned && !cell.popupOpen && (cell.hovered || cell.activeFocus)
             }
         }
     }
@@ -241,6 +243,7 @@ EaComponents.ListViewParameter {
     maximumText: item ? ApplicationInfo.parameterBound(item.maximum) : ""
     editorComponent: Component {
         ParameterField {
+            id: popupEditor
             objectName: cell.objectName + ".popup.value"
             item: cell.item
             // Typed into here: the popup's own editor opens no popup.
@@ -249,6 +252,12 @@ EaComponents.ListViewParameter {
             label: ""
             // A locked cell's value (an auto background's) is shown, not typed into, here as in the cell.
             readOnly: cell.locked
+            Connections {
+                target: cell
+                function onEditCancelled() {
+                    popupEditor.resetEditorText();
+                }
+            }
         }
     }
     Keys.onReturnPressed: event => {
