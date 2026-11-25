@@ -12,6 +12,12 @@ from tests.fixtures.e09_t75_workflow import active
 from tests.fixtures.native_process import environment_bash
 
 ROOT = Path(__file__).resolve().parents[3]
+STORE = './.github/actions/store'
+OBJECTS = '${{ runner.temp }}/crysta-ccache'
+
+
+def sdk_object_save(step):
+    return step.get('uses') == STORE and step.get('with', {}).get('path') == OBJECTS
 
 
 def producer():
@@ -21,22 +27,22 @@ def producer():
 def object_cache_boundary(job):
     steps = job['steps']
     restores = [step for step in steps if step.get('id') == 'compiler-cache']
-    saves = [
-        step
-        for step in steps
-        if step.get('uses') == 'actions/cache/save@v4'
-        and step.get('with', {}).get('path') == '${{ runner.temp }}/crysta-ccache'
-    ]
+    saves = [step for step in steps if sdk_object_save(step)]
     assert len(restores) == len(saves) == 1, (
         'One explicit restore/save pair owns SDK compiler objects'
     )
     restore, save = restores[0], saves[0]
+    assert not any(
+        step.get('uses', '').startswith(('actions/cache/save@', 'actions/cache@'))
+        and step.get('with', {}).get('path') == OBJECTS
+        for step in steps
+    ), 'The checked save is the only route that can publish these compiler objects'
     assert restore['uses'] == 'actions/cache/restore@v4', (
         'Compiler restore cannot depend on a successful-job post-save'
     )
-    assert save['with']['key'] == restore['with']['key'], (
-        'Saved compiler objects keep their exact restored identity'
-    )
+    assert save['with']['key'] == restore['with']['key'] and save['with'].get('ccache') == (
+        'pixi run --manifest-path "$RUNNER_TEMP/crysta/pixi.toml" -e cpp-ci --skip-deps python'
+    ), 'Saved objects keep their exact restored identity and undergo compiler-cache inspection'
     inputs = next(step for step in steps if step.get('id') == 'compiler-inputs')
     install = next(step for step in steps if step.get('uses') == './.github/actions/setup-pixi')
     build = next(step for step in steps if 'cpp-ci sdk-pack' in step.get('run', ''))
@@ -73,9 +79,30 @@ def object_cache_boundary(job):
             == expected
         ), 'Only valid cold restores save objects after a noncancelled failure'
     archive = next(step for step in steps if step.get('id') == 'cache')
-    assert (
-        archive['uses'] == 'actions/cache@v4' and archive['with']['path'] == 'crysta-sdk-archives'
-    ), 'Qualified SDK archive caching retains its separate successful-job policy'
+    archive_save = next(
+        step
+        for step in steps
+        if step.get('with', {}).get('key') == ('${{ steps.cache.outputs.cache-primary-key }}')
+    )
+    assert archive['uses'] == 'actions/cache/restore@v4' and archive_save.get('uses') == STORE, (
+        'Qualified SDK archives use a separate restore and checked save'
+    )
+    assert archive['with']['path'] == archive_save['with']['path'] == 'crysta-sdk-archives', (
+        'The checked SDK archive save retains the exact restored archive payload'
+    )
+    check = next(step for step in steps if 'SDK checksum does not bind' in step.get('run', ''))
+    assert steps.index(build) < steps.index(check) < steps.index(archive_save), (
+        'Cold archives are checked after the build and before they can be cached'
+    )
+    for hit, qualification in [('true', 'success'), ('false', 'success'), ('false', 'failure')]:
+        assert active(
+            archive_save,
+            'workflow_dispatch',
+            outputs={('cache', 'cache-hit'): hit},
+            states={'qualification': qualification},
+        ) == (hit == 'false' and qualification == 'success'), (
+            'The archive save must not publish a warm restore or a failed qualification'
+        )
     assert install['with'].get('cache') is False, (
         'SDK archives and compiler objects survive without redundant whole builder environments'
     )
@@ -96,9 +123,7 @@ def test_compiler_cache_survives_failed_qualification_and_refuses_missing_or_wro
         'redundant-builder-environment',
     ]:
         changed = copy.deepcopy(job)
-        save = next(
-            step for step in changed['steps'] if step.get('uses') == 'actions/cache/save@v4'
-        )
+        save = next(step for step in changed['steps'] if sdk_object_save(step))
         if damage == 'missing-save':
             changed['steps'].remove(save)
         elif damage == 'wrong-key':
@@ -201,22 +226,30 @@ def test_failed_native_observations_are_retained_without_promoting_an_sdk():
     evidence = next(
         step
         for step in steps
-        if step.get('with', {}).get('name')
+        if step.get('with', {}).get('artifact')
         == 'crysta-sdk-red-${{ matrix.platform }}-${{ needs.resolve.outputs.sha }}'
     )
     artifact = next(
         step
         for step in steps
-        if step.get('with', {}).get('name') == 'crysta-sdk-${{ matrix.platform }}'
+        if step.get('with', {}).get('artifact') == 'crysta-sdk-${{ matrix.platform }}'
     )
-    assert evidence['uses'] == 'actions/upload-artifact@v4', (
-        'Failed native observations are retained without promoting an sdk.'
+    assert evidence['uses'] == artifact['uses'] == STORE, (
+        'Failed observations and qualified SDKs undergo checked publication'
     )
-    assert evidence['with']['path'] == (
-        '${{ runner.temp }}/crysta/build/sdk-pack-red/${{ needs.resolve.outputs.sha }}'
-    ), 'The observer owns retained native logs after the packer removes its scratch checkout'
+    summary = next(step for step in steps if 'tools/ci/sdk_red_summary.py' in step.get('run', ''))
+    assert (
+        steps.index(summary) < steps.index(evidence)
+        and summary['env']['SHA'] == '${{ needs.resolve.outputs.sha }}'
+        and '"$RUNNER_TEMP/crysta/build/sdk-pack-red/$SHA"' in summary['run']
+        and '"$RUNNER_TEMP/sdk-red/summary.json"' in summary['run']
+        and evidence['with']['path'] == '${{ runner.temp }}/sdk-red/summary.json'
+    ), 'The real summary consumes pinned failed observations and only its checked output is kept'
     for state, cancelled in [('success', False), ('failure', False), ('failure', True)]:
         context = {'states': {'qualification': state}, 'cancelled': cancelled}
+        assert active(summary, 'workflow_dispatch', **context) == active(
+            evidence, 'workflow_dispatch', **context
+        ), 'Failure evidence is produced under the same condition that permits its publication'
         assert active(evidence, 'workflow_dispatch', **context) == (
             state == 'failure' and not cancelled
         ), 'Failed native observations are retained without promoting an sdk.'
@@ -237,12 +270,12 @@ def installer_cache_boundary(job):
     assert restore['uses'] == 'actions/cache/restore@v4', (
         'Installer cache identity and failure diagnostics remain unconditional.'
     )
-    assert save['uses'] == 'actions/cache/save@v4', (
-        'Installer cache identity and failure diagnostics remain unconditional.'
-    )
-    assert save['with'] == {key: restore['with'][key] for key in ('path', 'key')}, (
-        'Installer cache identity and failure diagnostics remain unconditional.'
-    )
+    assert save['uses'] == STORE and save['with']['ccache'] == (
+        'pixi run --manifest-path tools/installer/pixi.toml python'
+    ), 'The installer save inspects objects using its locked compiler environment'
+    assert {key: save['with'][key] for key in ('path', 'key')} == {
+        key: restore['with'][key] for key in ('path', 'key')
+    }, 'Installer cache identity and failure diagnostics remain unconditional.'
     assert steps.index(restore) < steps.index(build) < steps.index(save), (
         'Installer cache identity and failure diagnostics remain unconditional.'
     )

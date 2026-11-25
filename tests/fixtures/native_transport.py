@@ -33,23 +33,55 @@ def git(root, *args):
     ).strip()
 
 
-def world(tmp_path, platform, event, *, matching_pin=True):
-    prefix, root, _, _, manifest = make(tmp_path, platform)
-    pin = manifest['source_sha']
-    (root / 'pixi.toml').write_text('[activation.env]\nCRYSTA_COMMIT = "' + pin + '"\n')
-    (root / '.gitignore').write_text('build/\n__pycache__/\n')
-    (root / 'CMakeLists.txt').write_text('cmake_minimum_required(VERSION 3.28)\n')
-    for name in (
+SOURCE_MEMBER = 'tests/reference.bin'
+SOURCE_BYTES = b'independent committed corpus bytes\x00\xe9'
+
+
+def engine_source(root, manifest):
+    root.mkdir()
+    files = {
+        SOURCE_MEMBER: SOURCE_BYTES,
+        'tests/fixtures/web_simd/build.py': f'PATHS = ({SOURCE_MEMBER!r},)\n'.encode(),
+        'tests/fixtures/web_parallel/build.py': f'SOURCE_PATHS = ({SOURCE_MEMBER!r},)\n'.encode(),
+    }
+    for relative, data in files.items():
+        file = root / relative
+        file.parent.mkdir(parents=True, exist_ok=True)
+        file.write_bytes(data)
+    git(root, 'init', '-q')
+    git(root, 'add', '.')
+    git(root, 'commit', '-qm', 'Independent committed engine corpus')
+    pin = git(root, 'rev-parse', 'HEAD')
+    manifest.update(
+        source_sha=pin, source_tree=git(root, 'rev-parse', 'HEAD^{tree}'), identity=f'git:{pin}'
+    )
+    return root
+
+
+def copy_runner_scripts(root, *, export_source):
+    scripts = (
         'edi_native.py',
         'crysta_sdk.py',
         'core-build.sh',
         'build-crysta.sh',
         'crysta-src.sh',
         'producer-lock.sh',
-    ):
+    )
+    if export_source:
+        scripts += (
+            'crysta_source_tree.py',
+            'crysta_source_export.py',
+            'crysta_source_receipt.py',
+            'portable_paths.py',
+            'source_lists.py',
+        )
+    for name in scripts:
         target = root / 'tools/ci' / name
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(ROOT / 'tools/ci' / name, target)
+
+
+def write_probe_package(root):
     package = root / 'lib/edi'
     package.mkdir(parents=True)
     (package / '__init__.py').write_text(
@@ -60,6 +92,17 @@ def world(tmp_path, platform, event, *, matching_pin=True):
         's.loader.exec_module(_edi)\n'
         '__build_commit__=_edi.__build_commit__\n'
     )
+
+
+def world(tmp_path, platform, event, *, matching_pin=True, export_source=False):
+    prefix, root, _, _, manifest = make(tmp_path, platform)
+    source = engine_source(tmp_path / 'engine-source', manifest) if export_source else None
+    pin = manifest['source_sha']
+    (root / 'pixi.toml').write_text('[activation.env]\nCRYSTA_COMMIT = "' + pin + '"\n')
+    (root / '.gitignore').write_text('build/\n__pycache__/\n')
+    (root / 'CMakeLists.txt').write_text('cmake_minimum_required(VERSION 3.28)\n')
+    copy_runner_scripts(root, export_source=export_source)
+    write_probe_package(root)
     git(root, 'init', '-q')
     git(root, 'add', '.')
     git(root, 'commit', '-qm', 'Record independent native transport inputs')
@@ -88,8 +131,9 @@ def world(tmp_path, platform, event, *, matching_pin=True):
     shutil.copytree(prefix, destination)
     (destination / '.crysta-sha').write_text(manifest['source_sha'] + '\n')
     sdk_archive(root, prefix, pin, platform)
-    (root / 'build/crysta-src').mkdir()
-    (root / 'build/crysta-src/CRYSTA_SOURCE_SHA').write_text(pin + '\n')
+    if not export_source:
+        (root / 'build/crysta-src').mkdir()
+        (root / 'build/crysta-src/CRYSTA_SOURCE_SHA').write_text(pin + '\n')
     commands = tmp_path / 'commands'
     binaries = tmp_path / 'bin'
     binaries.mkdir()
@@ -114,6 +158,8 @@ def world(tmp_path, platform, event, *, matching_pin=True):
         'EDI_CORE_BUILD_LOCK_WAIT_S': '0',
         'NATIVE_COMMAND_LOG': str(commands),
     }
+    if source is not None:
+        env['CRYSTA_SRC'] = str(source)
     return SimpleNamespace(
         root=root,
         env=env,
