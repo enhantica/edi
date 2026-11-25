@@ -6,16 +6,17 @@ import copy
 import importlib.util
 import json
 import os
+import shlex
 import shutil
-import subprocess
 import sys
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import pytest
 import yaml
 
 from tests.fixtures.e09_t75_workflow import active
-from tests.fixtures.native_process import environment_bash
+from tests.fixtures.fast_ci.workflow import run_shell, workflow_shell
 
 ROOT = Path(__file__).resolve().parents[3]
 PACKAGES = {
@@ -223,7 +224,8 @@ def test_preflight_cli_refuses_unsupported_platform_before_opening_locks(reader,
 
 
 def workflow_contract(steps):
-    checkout = next(step for step in steps if 'git init -q' in step.get('run', ''))
+    checkout = next(step for step in steps if step.get('uses') == 'actions/checkout@v5')
+    source = next(step for step in steps if step.get('uses') == './.github/actions/crysta-source')
     python = next(step for step in steps if step.get('uses') == 'actions/setup-python@v6')
     preflight = next(step for step in steps if ' preflight ' in step.get('run', ''))
     bootstrap = next(step for step in steps if step.get('uses') == './.github/actions/setup-pixi')
@@ -231,6 +233,7 @@ def workflow_contract(steps):
     assert (
         steps.index(checkout)
         < steps.index(python)
+        < steps.index(source)
         < steps.index(preflight)
         < steps.index(bootstrap)
         < steps.index(package)
@@ -244,11 +247,17 @@ def workflow_contract(steps):
     assert python['with']['python-version'] == '3.14', (
         'ABI metadata parsing must use the declared Python3.14 tool'
     )
-    for step in (python, preflight):
-        for hit in ('true', 'false'):
-            assert active(step, 'pull_request', outputs={('cache', 'cache-hit'): hit}) == (
-                hit == 'false'
-            ), 'Only cold builds run early admission; warm archives retain manifest checks'
+    assert source['with']['sha'] == '${{ needs.resolve.outputs.sha }}', (
+        'ABI admission consumes the exact resolved source commit and its lock'
+    )
+    for hit in ('true', 'false'):
+        outputs = {('cache', 'cache-hit'): hit}
+        assert active(python, 'pull_request', outputs=outputs) and active(
+            source, 'pull_request', outputs=outputs
+        ), 'Warm publication still needs metadata Python and committed source filtering'
+        assert active(preflight, 'pull_request', outputs=outputs) == (hit == 'false'), (
+            'Only cold builds run early ABI admission; warm archives retain manifest checks'
+        )
     return preflight
 
 
@@ -309,101 +318,99 @@ def python_calls(tmp_path):
     )
 
 
+def run_preflight(job, step, script, tmp_path, env):
+    shell = workflow_shell({}, job, step)
+    assert shell == 'python3 tools/ci/public_log.py {0}', (
+        'The ABI step uses the source-aware workflow shell'
+    )
+    path = tmp_path / 'admission.sh'
+    path.write_text(script, encoding='utf-8')
+    # Select the runner's interpreter for the filter; the step's own PATH stays poisoned.
+    runner_shell = shell.replace('python3', shlex.quote(sys.executable), 1)
+    return run_shell(runner_shell, path, tmp_path, env, timeout=5)
+
+
+LOCK_CASES = {
+    'installer': ('tools/installer/pixi.lock', 'default'),
+    'root': ('pixi.lock', 'default'),
+    'app': ('pixi.lock', 'app'),
+}
+
+
+def prepare_abi_case(root, platform, defect):
+    (root / 'tools/ci').mkdir(parents=True)
+    shutil.copy2(ROOT / 'tools/ci/crysta_sdk.py', root / 'tools/ci/crysta_sdk.py')
+    source = write_lock(root / 'runner/crysta/pixi.lock', platform, {'cpp-ci': locked(platform)})
+    locks = {}
+    for name, (path, environment) in LOCK_CASES.items():
+        packages = locked(platform)
+        if name == defect:
+            packages[PACKAGES[platform][0]] = ('9.8.7', 'wrong_9')
+        locks.setdefault(path, {})[environment] = packages
+    for path, environments in locks.items():
+        write_lock(root / path, platform, environments)
+    return source
+
+
+def check_admitted_abi(result, root, records, platform):
+    assert (
+        result.returncode == 0
+        and (root / 'admitted').read_text() == 'bootstrap-admitted'
+        and result.stdout.count('SDK ABI package locks match') == 3
+    ), 'Every platform checks installer, root default and app before admitting a cold build'
+    assert (root / 'environment-after').read_bytes() == (
+        root / 'environment-before'
+    ).read_bytes(), 'Metadata admission preserves the native shell PATH and Python root exactly'
+    assert not (root / 'ambient-called').exists(), (
+        'Metadata checks use the explicit action output rather than ambient Python lookup'
+    )
+    observed = [json.loads(line) for line in records.read_text().splitlines()]
+    assert len(observed) == 3 and all(
+        call[call.index('--platform') + 1] == platform for call in observed
+    ), 'Every real consumer reader gets the matrix platform despite absent or poisoned env'
+
+
 @pytest.mark.parametrize('platform', PACKAGES)
 @pytest.mark.parametrize('ambient', ['absent', 'poisoned'])
 def test_actual_preflight_step_checks_installer_and_only_supported_root_environments(
     tmp_path, platform, ambient
 ):
-    steps = yaml.safe_load((ROOT / '.github/workflows/crysta-sdk.yml').read_text())['jobs'][
-        'build'
-    ]['steps']
-    step = workflow_contract(steps)
+    job = yaml.safe_load((ROOT / '.github/workflows/crysta-sdk.yml').read_text())['jobs']['build']
+    step = workflow_contract(job['steps'])
     assert '${{ matrix.platform }}' in step['run'], (
         'The shell must receive literal matrix identity without step environment delivery'
     )
-    (tmp_path / 'tools/ci').mkdir(parents=True)
-    shutil.copy2(ROOT / 'tools/ci/crysta_sdk.py', tmp_path / 'tools/ci/crysta_sdk.py')
-    source = write_lock(
-        tmp_path / 'runner/crysta/pixi.lock', platform, {'cpp-ci': locked(platform)}
-    )
-    installer = write_lock(
-        tmp_path / 'tools/installer/pixi.lock', platform, {'default': locked(platform)}
-    )
-    root_lock = write_lock(
-        tmp_path / 'pixi.lock', platform, {'default': locked(platform), 'app': locked(platform)}
-    )
-    records, env, interpreter = python_calls(tmp_path)
-    env['RUNNER_TEMP'] = str(tmp_path / 'runner')
-    env.pop('PLATFORM', None)
-    env.pop('sdk_platform', None)
-    if ambient == 'poisoned':
-        env['PLATFORM'] = 'not-the-matrix-platform'
-    script = step['run'].replace('${{ matrix.platform }}', platform)
-    script = script.replace('${{ steps.sdk-python.outputs.python-path }}', str(interpreter))
-    assert '${{' not in script, (
-        'The bounded shell replay must resolve every actual matrix expression'
-    )
-    baseline = 'printf "%s\\n" "$PATH" "${Python_ROOT_DIR-}" > environment-before\n'
-    script = baseline + script
-    script += '\nprintf bootstrap-admitted > admitted\n'
-    script += 'printf "%s\\n" "$PATH" "${Python_ROOT_DIR-}" > environment-after\n'
 
-    def run():
-        return subprocess.run(
-            [environment_bash(), '-e', '-c', script],
-            cwd=tmp_path,
-            env=env,
-            text=True,
-            capture_output=True,
-            check=False,
-            timeout=5,
+    def replay(defect):
+        root = tmp_path / (defect or 'admitted')
+        source = prepare_abi_case(root, platform, defect)
+        records, env, interpreter = python_calls(root)
+        env['RUNNER_TEMP'] = str(root / 'runner')
+        env.pop('PLATFORM', None)
+        env.pop('sdk_platform', None)
+        if ambient == 'poisoned':
+            env['PLATFORM'] = 'not-the-matrix-platform'
+        script = step['run'].replace('${{ matrix.platform }}', platform)
+        script = script.replace('${{ steps.sdk-python.outputs.python-path }}', str(interpreter))
+        assert '${{' not in script, (
+            'The bounded shell replay must resolve every actual matrix expression'
         )
+        snapshot = 'printf "%s\\n" "$PATH" "${Python_ROOT_DIR-}" > environment-'
+        script = snapshot + 'before\n' + script
+        script += '\nprintf bootstrap-admitted > admitted\n' + snapshot + 'after\n'
+        result = run_preflight(job, step, script, root, env)
+        assert source.is_file(), 'Admission keeps the actual pinned producer lock intact'
+        if defect:
+            assert result.returncode != 0 and not (root / 'admitted').exists(), (
+                f'A mismatch in {defect} must stop the actual step before the bootstrap marker'
+            )
+        else:
+            check_admitted_abi(result, root, records, platform)
 
-    good = run()
-    assert good.returncode == 0, (
-        'The actual cold preflight step admits every declared aligned consumer'
-    )
-    assert good.stdout.count('SDK ABI package locks match') == 3, (
-        'Every platform checks installer, root default and app through the same admission step'
-    )
-    assert (tmp_path / 'environment-after').read_text().splitlines() == (
-        tmp_path / 'environment-before'
-    ).read_text().splitlines(), (
-        'Metadata admission preserves the native shell PATH and Python root exactly'
-    )
-    assert not (tmp_path / 'ambient-called').exists(), (
-        'Metadata checks must use the explicit action output rather than ambient Python lookup'
-    )
-    observed = [json.loads(line) for line in records.read_text().splitlines()]
-    assert all(call[call.index('--platform') + 1] == platform for call in observed), (
-        'Every reader call must receive the matrix platform despite absent or poisoned env'
-    )
-    for selected, environment in [
-        (installer, 'default'),
-        (root_lock, 'default'),
-        (root_lock, 'app'),
-    ]:
-        (tmp_path / 'admitted').unlink(missing_ok=True)
-        broken = locked(platform)
-        broken[PACKAGES[platform][0]] = ('9.8.7', 'wrong_9')
-        environments = (
-            {'default': locked(platform), 'app': locked(platform)}
-            if selected == root_lock
-            else {'default': locked(platform)}
-        )
-        environments[environment] = broken
-        write_lock(selected, platform, environments)
-        bad = run()
-        assert bad.returncode != 0, (
-            'A mismatch in any real consumer must stop the actual pre-bootstrap step'
-        )
-        assert not (tmp_path / 'admitted').exists(), (
-            'No bootstrap marker can execute after failed lock admission'
-        )
-        write_lock(selected, platform, {name: locked(platform) for name in environments})
-    assert source.is_file(), (
-        'The actual pinned producer lock remains present throughout the admission controls'
-    )
+    # Each control has its own checkout and runner environment. Run the four real shell
+    # invocations concurrently to stay within the integration-tier limit.
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        list(pool.map(replay, (None, *LOCK_CASES)))
 
 
 @pytest.mark.parametrize('missing', [False, True])
@@ -411,10 +418,8 @@ def test_actual_preflight_step_checks_installer_and_only_supported_root_environm
 def test_preflight_missing_matrix_identity_refuses_before_any_python_call(
     tmp_path, missing, field
 ):
-    steps = yaml.safe_load((ROOT / '.github/workflows/crysta-sdk.yml').read_text())['jobs'][
-        'build'
-    ]['steps']
-    step = workflow_contract(steps)
+    job = yaml.safe_load((ROOT / '.github/workflows/crysta-sdk.yml').read_text())['jobs']['build']
+    step = workflow_contract(job['steps'])
     assert '${{ matrix.platform }}' in step['run'], (
         'The missing-context control must address the real matrix-to-shell assignment'
     )
@@ -429,15 +434,7 @@ def test_preflight_missing_matrix_identity_refuses_before_any_python_call(
         script = '\n'.join(line for line in script.splitlines() if variable + '=' not in line)
     for key in ('PLATFORM', 'sdk_platform', 'metadata_python'):
         env.pop(key, None)
-    result = subprocess.run(
-        [environment_bash(), '-e', '-u', '-c', script],
-        cwd=tmp_path,
-        env=env,
-        text=True,
-        capture_output=True,
-        check=False,
-        timeout=5,
-    )
+    result = run_preflight(job, step, script, tmp_path, env)
     assert result.returncode != 0, (
         'Missing matrix identity or metadata interpreter must refuse immediately'
     )

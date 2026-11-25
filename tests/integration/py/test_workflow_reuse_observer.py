@@ -20,20 +20,33 @@ def test_actual_shared_sdk_exposes_all_platform_runners_and_only_source_read_sco
         ('github-hosted', 'Windows', 'X64'),
     }, 'Actual shared sdk exposes all platform runners and only source read scope.'
     expanded = expanded_jobs({'jobs': {'sdk': job}}, ROOT)
-    tokens = [
+    source_action = './.github/actions/crysta-source'
+    calls = [
         step
         for _, child in expanded
         for step in child.get('steps', [])
-        if 'create-github-app-token' in step.get('uses', '')
+        if step.get('uses') == source_action
     ]
-    assert len(tokens) == 1, (
-        'Actual shared sdk exposes all platform runners and only source read scope.'
-    )
-    assert {
-        key: value for key, value in tokens[0]['with'].items() if key.startswith('permission-')
-    } == {'permission-contents': 'read'}, (
-        'Actual shared sdk exposes all platform runners and only source read scope.'
-    )
+    assert len(calls) == 1 and calls[0]['with'] == {
+        'sha': '${{ needs.resolve.outputs.sha }}',
+        'app-id': '${{ vars.ENHANTICA_APP_ID }}',
+        'private-key': '${{ secrets.ENHANTICA_APP_KEY }}',
+    }, 'The shared SDK delegates the exact pinned read to the local source action'
+    action = yaml.safe_load((ROOT / source_action / 'action.yml').read_text())
+    caller_steps = [step for _, child in expanded for step in child.get('steps', [])]
+    tokens = [
+        step
+        for step in [*caller_steps, *action['runs']['steps']]
+        if step.get('uses', '').startswith('actions/create-github-app-token@')
+    ]
+    assert len(tokens) == 1, 'One narrowly scoped token supplies the private source read'
+    assert tokens[0]['with'] == {
+        'app-id': '${{ inputs.app-id }}',
+        'private-key': '${{ inputs.private-key }}',
+        'owner': 'enhantica',
+        'repositories': 'crysta',
+        'permission-contents': 'read',
+    }, 'The composite token can only read contents of the intended source repository'
 
 
 @pytest.mark.parametrize('damage', ['remote', 'missing', 'cycle', 'malformed'])

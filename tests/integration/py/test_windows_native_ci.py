@@ -1,6 +1,8 @@
 """All native hosts cross the same producer, test and artifact-consumer boundaries."""
 
 import copy
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -22,10 +24,20 @@ def boundary(jobs):
         assert {r['platform']: (r['runner'], r['sdk']) for r in rows} == PLATFORMS, (
             'Windows core uses its own SDK, native shell and completed build.'
         )
-        assert job['defaults']['run']['shell'] == 'bash', (
+        assert job['defaults']['run']['shell'] == 'python3 tools/ci/public_log.py {0}', (
             'Windows core uses its own SDK, native shell and completed build.'
         )
         steps = job['steps']
+        source = next(
+            index
+            for index, step in enumerate(steps)
+            if step.get('uses') == './.github/actions/crysta-source'
+        )
+        assert all(
+            step.get('shell') == 'bash' if index < source else 'shell' not in step
+            for index, step in enumerate(steps)
+            if 'run' in step
+        ), 'All native hosts use Bash before fetch and the checked Bash wrapper after fetch'
         sdk = [s for s in steps if s.get('uses') == './.github/actions/crysta-sdk']
         assert len(sdk) == 1 and sdk[0]['with']['platform'] == '${{ matrix.sdk }}', (
             'Windows core uses its own SDK, native shell and completed build.'
@@ -51,7 +63,11 @@ def boundary(jobs):
     assert any(
         s.get('run') == 'pixi run --skip-deps cli-stream-parity' for s in producer['steps']
     ), 'Windows core uses its own SDK, native shell and completed build.'
-    saves = [s for s in producer['steps'] if s.get('uses') == 'actions/cache/save@v4']
+    saves = [
+        s
+        for s in producer['steps']
+        if s.get('uses') == './.github/actions/store' and s.get('with', {}).get('ccache')
+    ]
     assert len(saves) == 1 and '!cancelled()' in saves[0]['if'], (
         'Windows core uses its own SDK, native shell and completed build.'
     )
@@ -134,20 +150,39 @@ def test_native_platform_omission_or_sibling_sdk_cannot_pass(name, damage):
 
 def test_windows_checkout_uses_the_existing_installer_reserved_path_policy():
     def windows_checkout(steps):
-        return next(
-            s for s in steps if s.get('name') == 'Check out Windows-compatible source paths'
+        index, checkout = next(
+            (i, step) for i, step in enumerate(steps) if step.get('uses') == 'actions/checkout@v5'
         )
+        assert 'if' not in checkout and 'sparse-checkout' not in checkout.get('with', {}), (
+            'The native and installer jobs check out the same full tree with Git protections'
+        )
+        guards = [
+            step
+            for step in steps[:index]
+            if step.get('run', '').strip() == 'git config --global core.longpaths true'
+        ]
+        assert len(guards) == 1 and guards[0].get('if') == "runner.os == 'Windows'", (
+            'The Windows-only long-path setup precedes Git index population'
+        )
+        assert all('core.protectntfs' not in step.get('run', '').casefold() for step in steps), (
+            'The workflow may not disable Windows reserved-name checks'
+        )
+        return checkout.get('with', {}), guards[0]['run']
 
     installer = yaml.safe_load((ROOT / '.github/workflows/installers.yml').read_text())['jobs']
     original = windows_checkout(installer['installers']['steps'])
     for name in ('native', 'core', 'cli-python'):
-        actual = windows_checkout(jobs()[name]['steps'])
-        assert actual['with'] == original['with'], (
-            'Windows checkout uses the existing installer reserved path policy.'
+        assert windows_checkout(jobs()[name]['steps']) == original, (
+            'The native and installer jobs share checkout settings and protected long paths'
         )
-        assert actual['if'] == original['if'], (
-            'Windows checkout uses the existing installer reserved path policy.'
-        )
+    result = subprocess.run(
+        [sys.executable, 'tools/ci/portable_paths.py'],
+        cwd=ROOT,
+        capture_output=True,
+        check=False,
+        timeout=5,
+    )
+    assert result.returncode == 0, 'The real checkout index has no reserved or aliased path'
 
 
 def sdk_include_boundary(relative, source):

@@ -202,17 +202,24 @@ def publication_texts():
 
 def test_test_and_tool_identity_is_independent_of_checkout_name():
     findings = []
-    for directory in ('tests', 'tools'):
-        for path in sorted((ROOT / directory).rglob('*.py')):
-            tree = ast.parse(path.read_text(encoding='utf-8'))
-            findings.extend(
-                f'{path.relative_to(ROOT)}:{node.lineno}'
-                for node in ast.walk(tree)
-                if isinstance(node, ast.Attribute)
-                and node.attr in {'name', 'stem'}
-                and isinstance(node.value, ast.Name)
-                and node.value.id in {'ROOT', 'REPO'}
-            )
+    listing = run('git', 'ls-files', '-z', '--', 'tests', 'tools')
+    require_success(listing, 'identity checks must enumerate the shipped test and tool sources')
+    for relative in filter(None, listing.stdout.split('\0')):
+        path = ROOT / relative
+        if path.suffix != '.py':
+            continue
+        source = path.read_text(encoding='utf-8')
+        if source.isascii() and 'ROOT' not in source and 'REPO' not in source:
+            continue  # A non-ASCII spelling still needs Python's identifier normalization.
+        tree = ast.parse(source, filename=relative)
+        findings.extend(
+            f'{relative}:{node.lineno}'
+            for node in ast.walk(tree)
+            if isinstance(node, ast.Attribute)
+            and node.attr in {'name', 'stem'}
+            and isinstance(node.value, ast.Name)
+            and node.value.id in {'ROOT', 'REPO'}
+        )
     assert not findings, (
         'Public tests and tools must use declared product identities rather than the '
         'checkout root basename: ' + ', '.join(findings)
@@ -773,8 +780,9 @@ def pages_operation(steps, token, *, condition=None):
     return index, step
 
 
-def publication_shell_operation(steps, script):
-    index, step = pages_operation(steps, script)
+def publication_shell_operation(steps, script, *, arguments=()):
+    token = ' '.join((script, *arguments))
+    index, step = pages_operation(steps, token)
     commands = [
         (line, shlex.split(command))
         for line, command in enumerate(step['run'].splitlines())
@@ -786,6 +794,7 @@ def publication_shell_operation(steps, script):
         if len(command) >= 2
         and command[0] in {'bash', 'python', 'python3', 'gh'}
         and command[1] == script
+        and (not arguments or command[2:] == list(arguments))
     ]
     assert len(commands) == 1, (
         'Publication executes its actual helper, not a quoted or missing call'
@@ -804,7 +813,33 @@ def publication_option(command, name):
     return command[command.index(name) + 1]
 
 
-def public_site_boundary(publish, component, incoming, artifact_index):
+def checked_publication_source(job, source_path, *, receipt=None):
+    steps = job['steps']
+    source_index, source = pages_operation(steps, './.github/actions/crysta-source')
+    arguments = (['--receipt', receipt] if receipt else []) + source_path
+    (check_index, _), check, command = publication_shell_operation(
+        steps, 'tools/ci/stored_source.py', arguments=arguments
+    )
+    assert job['defaults']['run']['shell'] == 'python3 tools/ci/public_log.py {0}' and (
+        'shell' not in check
+    ), 'Publication checks execute in the source-aware shell'
+    assert source['with'].get('history') == 'true' and source['with'].get('receipts') == receipt, (
+        'Publication scans admit historical pins and the exact producer receipt directory'
+    )
+    if receipt:
+        assert publication_option(command, '--receipt') == receipt, (
+            'The bytes published consume the producer check receipts'
+        )
+    assert command[2:] == ((['--receipt', receipt] if receipt else []) + source_path), (
+        'The checker consumes exactly the paths that the route publishes'
+    )
+    assert source_index < check_index, (
+        'The private source lists exist before the publication check'
+    )
+    return source_index, check_index, source
+
+
+def public_site_boundary(publish, component, incoming, artifact_index):  # noqa: PLR0914 - ordered publication evidence
     assert (
         publish['concurrency']['group'] == 'pages-publication'
         and str(publish['concurrency']['cancel-in-progress']).lower() == 'false'
@@ -833,13 +868,24 @@ def public_site_boundary(publish, component, incoming, artifact_index):
         and publication_option(assembly_command, '--base') == fetch_command[3]
     ), 'Actual assembly overlays the addressed component onto the fetched public counterpart'
     site = publication_option(assembly_command, '--site')
+    receipt = 'source-checks' if component == 'installers' else None
+    source_index, check_index, source = checked_publication_source(
+        publish, [site], receipt=receipt
+    )
+    assert source['with'].get('site') == site and 'shell' not in push, (
+        'The exact assembled site supplies prior pins and the final push stays under the filter'
+    )
+    assert not active(push, 'push', states={'source-check': 'failure'}), (
+        'A failed content check must prevent publication of the assembled site'
+    )
     assert len(push_command) == 4 and push_command[2:] == [site, 'deploy-docs'], (
         'Publication pushes exactly the assembled site to the intended public documentation branch'
     )
     assert (
         artifact_index < fetch_position[0]
         and token_index < fetch_position[0]
-        and fetch_position < assembly_position < push_position
+        and fetch_position < assembly_position
+        and assembly_position[0] < source_index < check_index < push_position[0]
     ), (
         'Each publisher receives its component, fetches its counterpart, assembles '
         'and publishes in order'
@@ -890,11 +936,22 @@ def pages_component_boundary(doc, component, producer, artifact, incoming):
         else ('wasm-toolchain', 'wasm-build')
     )
     positions = [pages_operation(steps, operation)[0] for operation in operations]
-    upload_index, upload = pages_operation(steps, 'actions/upload-artifact@')
+    uploads = [
+        (index, step)
+        for index, step in enumerate(steps)
+        if step.get('uses') == './.github/actions/store' and step.get('with', {}).get('artifact')
+    ]
+    assert len(uploads) == 1 and not any(
+        step.get('uses', '').startswith('actions/upload-artifact@') for step in steps
+    ), 'The built public component is published through exactly one checked store action'
+    upload_index, upload = uploads[0]
     assert positions == sorted(positions) and positions[-1] < upload_index, (
         'Actual docs or wasm inputs are checked and built before their artifact is uploaded'
     )
-    assert upload['with']['name'] == artifact, (
+    assert active(upload, 'push') and not upload.get('continue-on-error'), (
+        'The artifact step runs on the required route and preserves upload failure'
+    )
+    assert upload['with']['artifact'] == artifact, (
         'Each public component uploads its exact addressed artifact'
     )
     assert upload['with']['path'] == ('site' if component == 'docs' else 'build/wasm/site'), (
@@ -968,19 +1025,30 @@ def installers_publication_boundary(doc):
 def released_publication_boundary(doc):
     publish = doc['jobs']['publish']
     steps = publish['steps']
+    _, check_index, _ = checked_publication_source(
+        publish, ['publication', 'copies'], receipt='source-checks'
+    )
     finalize_index, finalize = pages_operation(steps, '--finalize')
     assert 'tools/release/publish_assets.py' in finalize['run'], (
         'The published tag follows actual verified release finalization'
     )
-    push_position, _push, command = publication_shell_operation(
+    push_position, push, command = publication_shell_operation(
         steps, 'tools/ci/push_deploy_branch.sh'
     )
     assert command[2:] == ['released-webapp/webapp', 'deploy-app'], (
         'The released web app reaches the released-app public branch, separate from main previews'
     )
-    assert finalize_index < push_position[0], (
-        'The released app is published only after the verified release assets are finalized'
+    web_check, _, _ = publication_shell_operation(
+        steps, 'tools/ci/stored_source.py', arguments=('released-webapp',)
     )
+    assert check_index < finalize_index < web_check[0] < push_position[0], (
+        'The reviewed releases and extracted web app are checked before the public app push'
+    )
+    assert all(
+        'shell' not in step
+        and not active(step, 'workflow_dispatch', states={'source-check': 'failure'})
+        for step in (finalize, push)
+    ), 'Release and app publishers stay under the filter and stop if their prior checks fail'
     downloads = doc['jobs']['publish-downloads']
     assert downloads['needs'] in ('publish', ['publish']), (
         'Download repositories are requested only after successful release publication'
@@ -1154,13 +1222,27 @@ def pages_route_boundary(doc, route, tmp_path):
     assert environment == 'public-site', (
         'Stable-tag and configured-preview routes reach the reviewed public-site environment'
     )
-    outcomes = {}
-    for step in [*build['steps'], *publish['steps']]:
-        assert active(step, event, ref, outputs=outcomes, component=component) and not step.get(
-            'continue-on-error'
-        ), 'Build, artifact, token, assembly and push steps execute on the actual publication ref'
-        if 'id' in step:
-            outcomes[step['id'], 'outcome'] = 'success'
+    for toolchain_hit in ('false', 'true') if component == 'wasm' else ('false',):
+        results = {}
+        for step in [*build['steps'], *publish['steps']]:
+            is_toolchain_save = (
+                step.get('uses') == 'actions/cache/save@v4'
+                and step.get('with', {}).get('key') == '${{ steps.wasm-cache.outputs.toolchain }}'
+            )
+            enabled = active(
+                step,
+                event,
+                ref,
+                outputs=results,
+                component=component,
+                bindings={'steps.wasm-cache.outputs.toolchain-hit': toolchain_hit},
+            )
+            expected = not is_toolchain_save or toolchain_hit == 'false'
+            assert enabled == expected and not step.get('continue-on-error'), (
+                'All publication steps execute on the actual ref; only a warm toolchain save skips'
+            )
+            if 'id' in step:
+                results[step['id'], 'outcome'] = 'success'
     pages_component_boundary(
         doc,
         component,

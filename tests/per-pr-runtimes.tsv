@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-25T12:50:54Z
+# measured_utc = 2026-11-25T13:44:09Z
 #
-# Recorded from: measured test run (39 node(s) measured once, 187537 banked, 12 stale row(s) dropped)
-# Collected tests: 267515; with a reported duration: 86275
+# Recorded from: measured test run (107 node(s) measured once, 187491 banked, 0 stale row(s) dropped)
+# Collected tests: 267515; with a reported duration: 86297
 # Module-scoped fixture costs recorded: 219
 #
 # Breaches are decided PER TIER against the table
@@ -31,8 +31,8 @@
 # measurement nobody took and which passes every tier threshold.
 # inventory_python = 267515
 # inventory_cpp = 0
-# inventory_measured = 187576
-# inventory_unmeasured = 79939
+# inventory_measured = 187598
+# inventory_unmeasured = 79917
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
 # inventory_pr_python = 92604
 
@@ -180739,8 +180739,8 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_e05_t1_physical_domain.p
 0.070	tests/integration/py/test_e09_t75_native_workflow.py::test_d6_every_default_native_consumer_waits_downloads_and_selects_artifact_mode[audit]
 0.060	tests/integration/py/test_e09_t75_native_workflow.py::test_d6_every_default_native_consumer_waits_downloads_and_selects_artifact_mode[cli-python]
 0.060	tests/integration/py/test_e09_t75_native_workflow.py::test_d6_every_default_native_consumer_waits_downloads_and_selects_artifact_mode[core]
-0.060	tests/integration/py/test_e09_t75_native_workflow.py::test_d6_every_default_native_consumer_waits_downloads_and_selects_artifact_mode[docs]
-0.060	tests/integration/py/test_e09_t75_native_workflow.py::test_d6_every_default_native_consumer_waits_downloads_and_selects_artifact_mode[notebooks]
+0.080	tests/integration/py/test_e09_t75_native_workflow.py::test_d6_every_default_native_consumer_waits_downloads_and_selects_artifact_mode[docs]
+0.080	tests/integration/py/test_e09_t75_native_workflow.py::test_d6_every_default_native_consumer_waits_downloads_and_selects_artifact_mode[notebooks]
 0.060	tests/integration/py/test_e09_t75_native_workflow.py::test_d6_every_default_native_consumer_waits_downloads_and_selects_artifact_mode[system]
 0.060	tests/integration/py/test_e09_t75_native_workflow.py::test_d6_explicit_restore_runs_between_exact_download_and_first_native_use[app-linux-64]
 0.070	tests/integration/py/test_e09_t75_native_workflow.py::test_d6_explicit_restore_runs_between_exact_download_and_first_native_use[app-osx-arm64]
@@ -180749,11 +180749,11 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_e05_t1_physical_domain.p
 0.050	tests/integration/py/test_e09_t75_native_workflow.py::test_d6_explicit_restore_runs_between_exact_download_and_first_native_use[cli-python-osx-arm64]
 0.060	tests/integration/py/test_e09_t75_native_workflow.py::test_d6_explicit_restore_runs_between_exact_download_and_first_native_use[core-linux-64]
 0.070	tests/integration/py/test_e09_t75_native_workflow.py::test_d6_explicit_restore_runs_between_exact_download_and_first_native_use[core-osx-arm64]
-0.060	tests/integration/py/test_e09_t75_native_workflow.py::test_d6_explicit_restore_runs_between_exact_download_and_first_native_use[docs-linux-64]
-0.050	tests/integration/py/test_e09_t75_native_workflow.py::test_d6_explicit_restore_runs_between_exact_download_and_first_native_use[notebooks-linux-64]
+0.080	tests/integration/py/test_e09_t75_native_workflow.py::test_d6_explicit_restore_runs_between_exact_download_and_first_native_use[docs-linux-64]
+0.070	tests/integration/py/test_e09_t75_native_workflow.py::test_d6_explicit_restore_runs_between_exact_download_and_first_native_use[notebooks-linux-64]
 0.060	tests/integration/py/test_e09_t75_native_workflow.py::test_d6_explicit_restore_runs_between_exact_download_and_first_native_use[system-linux-64]
 0.060	tests/integration/py/test_e09_t75_native_workflow.py::test_d6_explicit_restore_runs_between_exact_download_and_first_native_use[system-osx-arm64]
-0.060	tests/integration/py/test_e09_t75_native_workflow.py::test_d6_one_unfiltered_native_matrix_uploads_the_prescribed_artifacts
+0.080	tests/integration/py/test_e09_t75_native_workflow.py::test_d6_one_unfiltered_native_matrix_uploads_the_prescribed_artifacts
 0.060	tests/integration/py/test_e09_t75_native_workflow.py::test_every_actual_native_artifact_reuser_waits_for_completed_producer
 0.010	tests/integration/py/test_e09_t75_native_workflow.py::test_native_action_refuses_foreign_optional_and_fallback_routes[cache]
 0.010	tests/integration/py/test_e09_t75_native_workflow.py::test_native_action_refuses_foreign_optional_and_fallback_routes[disabled]
@@ -180774,9 +180774,9 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_e05_t1_physical_domain.p
 0.010	tests/integration/py/test_e09_t75_native_workflow.py::test_native_producer_contract_refuses_missing_reordered_or_nonbuilding_work[target]
 0.000	tests/integration/py/test_e09_t75_native_workflow.py::test_native_producer_contract_refuses_missing_reordered_or_nonbuilding_work[upload-first]
 0.070	tests/integration/py/test_e09_t75_native_workflow.py::test_native_reporting_requires_actual_build_and_retains_earlier_reds[implicit-success]
-0.060	tests/integration/py/test_e09_t75_native_workflow.py::test_native_reporting_requires_actual_build_and_retains_earlier_reds[optional]
-0.060	tests/integration/py/test_e09_t75_native_workflow.py::test_native_reporting_requires_actual_build_and_retains_earlier_reds[producer-id]
-0.060	tests/integration/py/test_e09_t75_native_workflow.py::test_native_reporting_requires_actual_build_and_retains_earlier_reds[unguarded]
+0.070	tests/integration/py/test_e09_t75_native_workflow.py::test_native_reporting_requires_actual_build_and_retains_earlier_reds[optional]
+0.070	tests/integration/py/test_e09_t75_native_workflow.py::test_native_reporting_requires_actual_build_and_retains_earlier_reds[producer-id]
+0.070	tests/integration/py/test_e09_t75_native_workflow.py::test_native_reporting_requires_actual_build_and_retains_earlier_reds[unguarded]
 0.070	tests/integration/py/test_e09_t75_native_workflow.py::test_public_sdk_boundary_rejects_guard_and_core_only_escapes[github.event.pull_request.head.repo.fork != false]
 0.060	tests/integration/py/test_e09_t75_native_workflow.py::test_public_sdk_boundary_rejects_guard_and_core_only_escapes[github.event.pull_request.head.repo.fork == false && inputs.core_only == true]
 0.060	tests/integration/py/test_e09_t75_native_workflow.py::test_public_sdk_boundary_rejects_guard_and_core_only_escapes[github.event.pull_request.head.repo.fork == false && inputs.unknown != true]
@@ -183761,11 +183761,11 @@ UNMEASURED:not-completed-in-this-run	tests/integration/py/test_project_save_fina
 0.170	tests/integration/py/test_public_trial_provenance.py::test_exported_trial_provenance_requires_its_real_committed_document[pending]
 0.170	tests/integration/py/test_public_trial_provenance.py::test_exported_trial_provenance_requires_its_real_committed_document[uncommitted]
 0.000	tests/integration/py/test_public_trial_provenance.py::test_production_prompt_links_cite_the_truthful_historical_summary_outside_prompt_text
-0.170	tests/integration/py/test_public_workflow_ownership.py::test_each_component_publication_refuses_a_foreign_or_bypassed_transport[artifact]
-0.160	tests/integration/py/test_public_workflow_ownership.py::test_each_component_publication_refuses_a_foreign_or_bypassed_transport[comment-only]
-0.160	tests/integration/py/test_public_workflow_ownership.py::test_each_component_publication_refuses_a_foreign_or_bypassed_transport[foreign-run]
-0.160	tests/integration/py/test_public_workflow_ownership.py::test_each_component_publication_refuses_a_foreign_or_bypassed_transport[needs]
-0.160	tests/integration/py/test_public_workflow_ownership.py::test_each_component_publication_refuses_a_foreign_or_bypassed_transport[optional]
+0.310	tests/integration/py/test_public_workflow_ownership.py::test_each_component_publication_refuses_a_foreign_or_bypassed_transport[artifact]
+0.240	tests/integration/py/test_public_workflow_ownership.py::test_each_component_publication_refuses_a_foreign_or_bypassed_transport[comment-only]
+0.240	tests/integration/py/test_public_workflow_ownership.py::test_each_component_publication_refuses_a_foreign_or_bypassed_transport[foreign-run]
+0.230	tests/integration/py/test_public_workflow_ownership.py::test_each_component_publication_refuses_a_foreign_or_bypassed_transport[needs]
+0.240	tests/integration/py/test_public_workflow_ownership.py::test_each_component_publication_refuses_a_foreign_or_bypassed_transport[optional]
 0.170	tests/integration/py/test_public_workflow_ownership.py::test_reusable_workflow_allowance_refuses_unknown_or_missing_ownership[missing-producer]
 0.170	tests/integration/py/test_public_workflow_ownership.py::test_reusable_workflow_allowance_refuses_unknown_or_missing_ownership[not-callable]
 0.170	tests/integration/py/test_public_workflow_ownership.py::test_reusable_workflow_allowance_refuses_unknown_or_missing_ownership[other-local]
@@ -185032,12 +185032,12 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_scan_notes_diagnostics.p
 0.000	tests/integration/py/test_scan_undefined_magnetic_su.py::test_user_message_level_never_hides_an_actual_reader_error[warning-module]
 0.000	tests/integration/py/test_scan_undefined_magnetic_su.py::test_user_message_level_never_hides_an_actual_reader_error[warning-python]
 0.000	tests/integration/py/test_scan_undefined_magnetic_su.py::test_user_message_level_never_hides_an_actual_reader_error[warning-standalone]
-0.720	tests/integration/py/test_sdk_abi_preflight.py::test_actual_preflight_step_checks_installer_and_only_supported_root_environments[absent-linux-64]
-0.860	tests/integration/py/test_sdk_abi_preflight.py::test_actual_preflight_step_checks_installer_and_only_supported_root_environments[absent-osx-arm64]
-0.900	tests/integration/py/test_sdk_abi_preflight.py::test_actual_preflight_step_checks_installer_and_only_supported_root_environments[absent-win-64]
-0.840	tests/integration/py/test_sdk_abi_preflight.py::test_actual_preflight_step_checks_installer_and_only_supported_root_environments[poisoned-linux-64]
-0.780	tests/integration/py/test_sdk_abi_preflight.py::test_actual_preflight_step_checks_installer_and_only_supported_root_environments[poisoned-osx-arm64]
-0.790	tests/integration/py/test_sdk_abi_preflight.py::test_actual_preflight_step_checks_installer_and_only_supported_root_environments[poisoned-win-64]
+0.390	tests/integration/py/test_sdk_abi_preflight.py::test_actual_preflight_step_checks_installer_and_only_supported_root_environments[absent-linux-64]
+0.420	tests/integration/py/test_sdk_abi_preflight.py::test_actual_preflight_step_checks_installer_and_only_supported_root_environments[absent-osx-arm64]
+0.400	tests/integration/py/test_sdk_abi_preflight.py::test_actual_preflight_step_checks_installer_and_only_supported_root_environments[absent-win-64]
+0.420	tests/integration/py/test_sdk_abi_preflight.py::test_actual_preflight_step_checks_installer_and_only_supported_root_environments[poisoned-linux-64]
+0.470	tests/integration/py/test_sdk_abi_preflight.py::test_actual_preflight_step_checks_installer_and_only_supported_root_environments[poisoned-osx-arm64]
+0.440	tests/integration/py/test_sdk_abi_preflight.py::test_actual_preflight_step_checks_installer_and_only_supported_root_environments[poisoned-win-64]
 0.020	tests/integration/py/test_sdk_abi_preflight.py::test_actual_windows_compiler_build_39_refuses_installer_42_and_aligned_42_passes
 0.000	tests/integration/py/test_sdk_abi_preflight.py::test_preflight_accepts_exact_required_tuples_in_the_selected_environments[linux-64]
 0.000	tests/integration/py/test_sdk_abi_preflight.py::test_preflight_accepts_exact_required_tuples_in_the_selected_environments[osx-arm64]
@@ -185050,10 +185050,10 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_scan_notes_diagnostics.p
 0.000	tests/integration/py/test_sdk_abi_preflight.py::test_preflight_cli_refuses_unsupported_platform_before_opening_locks[linux]
 0.000	tests/integration/py/test_sdk_abi_preflight.py::test_preflight_cli_refuses_unsupported_platform_before_opening_locks[osx-64]
 0.000	tests/integration/py/test_sdk_abi_preflight.py::test_preflight_cli_refuses_unsupported_platform_before_opening_locks[win-32]
-0.020	tests/integration/py/test_sdk_abi_preflight.py::test_preflight_missing_matrix_identity_refuses_before_any_python_call[platform-False]
-0.020	tests/integration/py/test_sdk_abi_preflight.py::test_preflight_missing_matrix_identity_refuses_before_any_python_call[platform-True]
-0.020	tests/integration/py/test_sdk_abi_preflight.py::test_preflight_missing_matrix_identity_refuses_before_any_python_call[python-False]
-0.020	tests/integration/py/test_sdk_abi_preflight.py::test_preflight_missing_matrix_identity_refuses_before_any_python_call[python-True]
+0.090	tests/integration/py/test_sdk_abi_preflight.py::test_preflight_missing_matrix_identity_refuses_before_any_python_call[platform-False]
+0.090	tests/integration/py/test_sdk_abi_preflight.py::test_preflight_missing_matrix_identity_refuses_before_any_python_call[platform-True]
+0.090	tests/integration/py/test_sdk_abi_preflight.py::test_preflight_missing_matrix_identity_refuses_before_any_python_call[python-False]
+0.090	tests/integration/py/test_sdk_abi_preflight.py::test_preflight_missing_matrix_identity_refuses_before_any_python_call[python-True]
 0.000	tests/integration/py/test_sdk_abi_preflight.py::test_preflight_refuses_a_required_package_missing_from_both_sides[linux-64-eigen]
 0.000	tests/integration/py/test_sdk_abi_preflight.py::test_preflight_refuses_a_required_package_missing_from_both_sides[linux-64-gcc_impl_linux-64]
 0.000	tests/integration/py/test_sdk_abi_preflight.py::test_preflight_refuses_a_required_package_missing_from_both_sides[linux-64-gxx_impl_linux-64]
@@ -185211,11 +185211,11 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_scan_notes_diagnostics.p
 0.000	tests/integration/py/test_sdk_abi_preflight.py::test_preflight_refuses_unavailable_or_unresolvable_lock_inputs[wrong-environment-producer]
 0.000	tests/integration/py/test_sdk_abi_preflight.py::test_preflight_refuses_unavailable_or_unresolvable_lock_inputs[wrong-platform-consumer]
 0.000	tests/integration/py/test_sdk_abi_preflight.py::test_preflight_refuses_unavailable_or_unresolvable_lock_inputs[wrong-platform-producer]
-0.010	tests/integration/py/test_sdk_abi_preflight.py::test_workflow_preflight_orders_cold_build_and_rejects_reordered_or_warm_admission
-0.010	tests/integration/py/test_sdk_compiler_cache.py::test_compiler_cache_survives_failed_qualification_and_refuses_missing_or_wrong_save
-0.010	tests/integration/py/test_sdk_compiler_cache.py::test_failed_native_observations_are_retained_without_promoting_an_sdk
+0.020	tests/integration/py/test_sdk_abi_preflight.py::test_workflow_preflight_orders_cold_build_and_rejects_reordered_or_warm_admission
+0.030	tests/integration/py/test_sdk_compiler_cache.py::test_compiler_cache_survives_failed_qualification_and_refuses_missing_or_wrong_save
+0.020	tests/integration/py/test_sdk_compiler_cache.py::test_failed_native_observations_are_retained_without_promoting_an_sdk
 0.040	tests/integration/py/test_sdk_compiler_cache.py::test_failed_sdk_pack_reports_cache_stats_then_keeps_its_failure
-0.030	tests/integration/py/test_sdk_compiler_cache.py::test_installer_preserves_objects_after_failure_with_the_same_explicit_cache_boundary
+0.060	tests/integration/py/test_sdk_compiler_cache.py::test_installer_preserves_objects_after_failure_with_the_same_explicit_cache_boundary
 0.210	tests/integration/py/test_sdk_compiler_cache.py::test_selected_windows_bootstrap_uses_ninja_and_wrapper_keeps_other_callers_default
 0.130	tests/integration/py/test_sdk_sharing_contract.py::test_actual_sparse_checkout_omits_portable_fixture_and_keeps_producer_inputs
 0.110	tests/integration/py/test_sdk_sharing_contract.py::test_compiler_cache_precedes_install_and_is_keyed_by_actual_engine_lock
@@ -187094,7 +187094,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_weight_fractions.py::tes
 0.000	tests/integration/py/test_weight_fractions.py::test_unity_byte_adaptation_refuses_changed_or_missing_fraction[uncertainty]
 0.000	tests/integration/py/test_weight_fractions.py::test_unity_byte_adaptation_refuses_changed_or_missing_fraction[wrong]
 0.070	tests/integration/py/test_windows_native_ci.py::test_all_product_windows_sdk_imports_use_the_existing_sanitized_boundary
-0.050	tests/integration/py/test_windows_native_ci.py::test_all_three_hosts_share_the_native_qualification_path
+0.140	tests/integration/py/test_windows_native_ci.py::test_all_three_hosts_share_the_native_qualification_path
 0.060	tests/integration/py/test_windows_native_ci.py::test_native_platform_omission_or_sibling_sdk_cannot_pass[foreign-runner-cli-python]
 0.060	tests/integration/py/test_windows_native_ci.py::test_native_platform_omission_or_sibling_sdk_cannot_pass[foreign-runner-core]
 0.050	tests/integration/py/test_windows_native_ci.py::test_native_platform_omission_or_sibling_sdk_cannot_pass[foreign-runner-native]
@@ -187110,7 +187110,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_weight_fractions.py::tes
 0.000	tests/integration/py/test_windows_native_ci.py::test_unsanitized_windows_sdk_import_cannot_bypass_the_boundary[#include <winhttp.h>\n]
 0.000	tests/integration/py/test_windows_native_ci.py::test_unsanitized_windows_sdk_import_cannot_bypass_the_boundary[#include <winsock2.h>\n]
 0.000	tests/integration/py/test_windows_native_ci.py::test_unsanitized_windows_sdk_import_cannot_bypass_the_boundary[// #include "windows_sdk.hpp"\n#include <windows.h>\n]
-0.190	tests/integration/py/test_windows_native_ci.py::test_windows_checkout_uses_the_existing_installer_reserved_path_policy
+0.460	tests/integration/py/test_windows_native_ci.py::test_windows_checkout_uses_the_existing_installer_reserved_path_policy
 0.410	tests/integration/py/test_windows_ninja_packaging.py::test_every_installer_explicit_ninja_boundary_ignores_inherited_vs_defaults[contaminated0-desktop]
 0.390	tests/integration/py/test_windows_ninja_packaging.py::test_every_installer_explicit_ninja_boundary_ignores_inherited_vs_defaults[contaminated0-preflight]
 0.370	tests/integration/py/test_windows_ninja_packaging.py::test_every_installer_explicit_ninja_boundary_ignores_inherited_vs_defaults[contaminated1-desktop]
@@ -187166,7 +187166,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_weight_fractions.py::tes
 0.000	tests/integration/py/test_windows_sdk_consumer.py::test_windows_reader_requires_runtime_and_compiler_independently_of_entry_count[wrong-id-empty]
 0.000	tests/integration/py/test_windows_sdk_consumer.py::test_windows_reader_requires_runtime_and_compiler_independently_of_entry_count[wrong-id-retained]
 0.000	tests/integration/py/test_windows_sdk_consumer.py::test_windows_reader_uses_explicit_installer_lock_and_exact_qualified_layout
-0.020	tests/integration/py/test_workflow_reuse_observer.py::test_actual_shared_sdk_exposes_all_platform_runners_and_only_source_read_scope
+0.030	tests/integration/py/test_workflow_reuse_observer.py::test_actual_shared_sdk_exposes_all_platform_runners_and_only_source_read_scope
 0.000	tests/integration/py/test_workflow_reuse_observer.py::test_unproved_reusable_workflow_cannot_hide_jobs[cycle]
 0.000	tests/integration/py/test_workflow_reuse_observer.py::test_unproved_reusable_workflow_cannot_hide_jobs[malformed]
 0.000	tests/integration/py/test_workflow_reuse_observer.py::test_unproved_reusable_workflow_cannot_hide_jobs[missing]
@@ -189971,28 +189971,28 @@ UNMEASURED:not-completed-in-this-run	tests/system/py/test_c34_t24_cli_variants.p
 1.190	tests/system/py/test_c34_t28_native_pairing.py::test_branch_native_handoff_retains_every_independent_binding[tar-bytes-osx-arm64]
 1.360	tests/system/py/test_c34_t28_native_pairing.py::test_branch_native_handoff_retains_every_independent_binding[workspace-linux-64]
 2.120	tests/system/py/test_c34_t28_native_pairing.py::test_branch_native_handoff_retains_every_independent_binding[workspace-osx-arm64]
-UNMEASURED:failed-in-this-run	tests/system/py/test_c34_t28_native_pairing.py::test_every_native_consumer_restores_the_branch_build_and_rechecks_bytes[pull_request-app-linux-64]
-UNMEASURED:failed-in-this-run	tests/system/py/test_c34_t28_native_pairing.py::test_every_native_consumer_restores_the_branch_build_and_rechecks_bytes[pull_request-app-osx-arm64]
-UNMEASURED:failed-in-this-run	tests/system/py/test_c34_t28_native_pairing.py::test_every_native_consumer_restores_the_branch_build_and_rechecks_bytes[pull_request-audit-linux-64]
-UNMEASURED:failed-in-this-run	tests/system/py/test_c34_t28_native_pairing.py::test_every_native_consumer_restores_the_branch_build_and_rechecks_bytes[pull_request-cli-python-linux-64]
-UNMEASURED:failed-in-this-run	tests/system/py/test_c34_t28_native_pairing.py::test_every_native_consumer_restores_the_branch_build_and_rechecks_bytes[pull_request-cli-python-osx-arm64]
-UNMEASURED:failed-in-this-run	tests/system/py/test_c34_t28_native_pairing.py::test_every_native_consumer_restores_the_branch_build_and_rechecks_bytes[pull_request-core-linux-64]
-UNMEASURED:failed-in-this-run	tests/system/py/test_c34_t28_native_pairing.py::test_every_native_consumer_restores_the_branch_build_and_rechecks_bytes[pull_request-core-osx-arm64]
-UNMEASURED:failed-in-this-run	tests/system/py/test_c34_t28_native_pairing.py::test_every_native_consumer_restores_the_branch_build_and_rechecks_bytes[pull_request-docs-linux-64]
-UNMEASURED:failed-in-this-run	tests/system/py/test_c34_t28_native_pairing.py::test_every_native_consumer_restores_the_branch_build_and_rechecks_bytes[pull_request-notebooks-linux-64]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_c34_t28_native_pairing.py::test_every_native_consumer_restores_the_branch_build_and_rechecks_bytes[pull_request-system-linux-64]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_c34_t28_native_pairing.py::test_every_native_consumer_restores_the_branch_build_and_rechecks_bytes[pull_request-system-osx-arm64]
-UNMEASURED:failed-in-this-run	tests/system/py/test_c34_t28_native_pairing.py::test_every_native_consumer_restores_the_branch_build_and_rechecks_bytes[workflow_dispatch-app-linux-64]
-UNMEASURED:failed-in-this-run	tests/system/py/test_c34_t28_native_pairing.py::test_every_native_consumer_restores_the_branch_build_and_rechecks_bytes[workflow_dispatch-app-osx-arm64]
-UNMEASURED:failed-in-this-run	tests/system/py/test_c34_t28_native_pairing.py::test_every_native_consumer_restores_the_branch_build_and_rechecks_bytes[workflow_dispatch-audit-linux-64]
-UNMEASURED:failed-in-this-run	tests/system/py/test_c34_t28_native_pairing.py::test_every_native_consumer_restores_the_branch_build_and_rechecks_bytes[workflow_dispatch-cli-python-linux-64]
-UNMEASURED:failed-in-this-run	tests/system/py/test_c34_t28_native_pairing.py::test_every_native_consumer_restores_the_branch_build_and_rechecks_bytes[workflow_dispatch-cli-python-osx-arm64]
-UNMEASURED:failed-in-this-run	tests/system/py/test_c34_t28_native_pairing.py::test_every_native_consumer_restores_the_branch_build_and_rechecks_bytes[workflow_dispatch-core-linux-64]
-UNMEASURED:failed-in-this-run	tests/system/py/test_c34_t28_native_pairing.py::test_every_native_consumer_restores_the_branch_build_and_rechecks_bytes[workflow_dispatch-core-osx-arm64]
-UNMEASURED:failed-in-this-run	tests/system/py/test_c34_t28_native_pairing.py::test_every_native_consumer_restores_the_branch_build_and_rechecks_bytes[workflow_dispatch-docs-linux-64]
-UNMEASURED:failed-in-this-run	tests/system/py/test_c34_t28_native_pairing.py::test_every_native_consumer_restores_the_branch_build_and_rechecks_bytes[workflow_dispatch-notebooks-linux-64]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_c34_t28_native_pairing.py::test_every_native_consumer_restores_the_branch_build_and_rechecks_bytes[workflow_dispatch-system-linux-64]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_c34_t28_native_pairing.py::test_every_native_consumer_restores_the_branch_build_and_rechecks_bytes[workflow_dispatch-system-osx-arm64]
+1.440	tests/system/py/test_c34_t28_native_pairing.py::test_every_native_consumer_restores_the_branch_build_and_rechecks_bytes[pull_request-app-linux-64]
+1.270	tests/system/py/test_c34_t28_native_pairing.py::test_every_native_consumer_restores_the_branch_build_and_rechecks_bytes[pull_request-app-osx-arm64]
+1.390	tests/system/py/test_c34_t28_native_pairing.py::test_every_native_consumer_restores_the_branch_build_and_rechecks_bytes[pull_request-audit-linux-64]
+1.340	tests/system/py/test_c34_t28_native_pairing.py::test_every_native_consumer_restores_the_branch_build_and_rechecks_bytes[pull_request-cli-python-linux-64]
+1.340	tests/system/py/test_c34_t28_native_pairing.py::test_every_native_consumer_restores_the_branch_build_and_rechecks_bytes[pull_request-cli-python-osx-arm64]
+1.290	tests/system/py/test_c34_t28_native_pairing.py::test_every_native_consumer_restores_the_branch_build_and_rechecks_bytes[pull_request-core-linux-64]
+1.450	tests/system/py/test_c34_t28_native_pairing.py::test_every_native_consumer_restores_the_branch_build_and_rechecks_bytes[pull_request-core-osx-arm64]
+1.750	tests/system/py/test_c34_t28_native_pairing.py::test_every_native_consumer_restores_the_branch_build_and_rechecks_bytes[pull_request-docs-linux-64]
+1.410	tests/system/py/test_c34_t28_native_pairing.py::test_every_native_consumer_restores_the_branch_build_and_rechecks_bytes[pull_request-notebooks-linux-64]
+1.320	tests/system/py/test_c34_t28_native_pairing.py::test_every_native_consumer_restores_the_branch_build_and_rechecks_bytes[pull_request-system-linux-64]
+1.330	tests/system/py/test_c34_t28_native_pairing.py::test_every_native_consumer_restores_the_branch_build_and_rechecks_bytes[pull_request-system-osx-arm64]
+1.320	tests/system/py/test_c34_t28_native_pairing.py::test_every_native_consumer_restores_the_branch_build_and_rechecks_bytes[workflow_dispatch-app-linux-64]
+1.450	tests/system/py/test_c34_t28_native_pairing.py::test_every_native_consumer_restores_the_branch_build_and_rechecks_bytes[workflow_dispatch-app-osx-arm64]
+1.410	tests/system/py/test_c34_t28_native_pairing.py::test_every_native_consumer_restores_the_branch_build_and_rechecks_bytes[workflow_dispatch-audit-linux-64]
+1.520	tests/system/py/test_c34_t28_native_pairing.py::test_every_native_consumer_restores_the_branch_build_and_rechecks_bytes[workflow_dispatch-cli-python-linux-64]
+1.400	tests/system/py/test_c34_t28_native_pairing.py::test_every_native_consumer_restores_the_branch_build_and_rechecks_bytes[workflow_dispatch-cli-python-osx-arm64]
+1.350	tests/system/py/test_c34_t28_native_pairing.py::test_every_native_consumer_restores_the_branch_build_and_rechecks_bytes[workflow_dispatch-core-linux-64]
+1.240	tests/system/py/test_c34_t28_native_pairing.py::test_every_native_consumer_restores_the_branch_build_and_rechecks_bytes[workflow_dispatch-core-osx-arm64]
+1.420	tests/system/py/test_c34_t28_native_pairing.py::test_every_native_consumer_restores_the_branch_build_and_rechecks_bytes[workflow_dispatch-docs-linux-64]
+1.320	tests/system/py/test_c34_t28_native_pairing.py::test_every_native_consumer_restores_the_branch_build_and_rechecks_bytes[workflow_dispatch-notebooks-linux-64]
+1.570	tests/system/py/test_c34_t28_native_pairing.py::test_every_native_consumer_restores_the_branch_build_and_rechecks_bytes[workflow_dispatch-system-linux-64]
+1.330	tests/system/py/test_c34_t28_native_pairing.py::test_every_native_consumer_restores_the_branch_build_and_rechecks_bytes[workflow_dispatch-system-osx-arm64]
 1.210	tests/system/py/test_c34_t28_native_pairing.py::test_intermediate_native_producer_packs_the_branch_sdk_without_repinning[matching-pull_request-linux-64]
 0.600	tests/system/py/test_c34_t28_native_pairing.py::test_intermediate_native_producer_packs_the_branch_sdk_without_repinning[matching-pull_request-osx-arm64]
 0.580	tests/system/py/test_c34_t28_native_pairing.py::test_intermediate_native_producer_packs_the_branch_sdk_without_repinning[matching-workflow_dispatch-linux-64]
@@ -190906,11 +190906,11 @@ UNMEASURED:current named-title observer browser build and replay pending	tests/s
 2.140	tests/system/py/test_ci_cadence.py::test_shipped_groups_retain_the_frozen_inventory[quick]
 0.010	tests/system/py/test_ci_cadence.py::test_shipped_nightly_cohort_is_explicit_nonempty_and_retained
 0.130	tests/system/py/test_ci_cadence.py::test_shipped_nightly_has_clock_and_manual_triggers_separate_from_pr_requests
-0.430	tests/system/py/test_ci_cadence.py::test_shipped_suite_paths_execute_their_cohort_and_propagate_failures[linux-64-pull_request]
+0.860	tests/system/py/test_ci_cadence.py::test_shipped_suite_paths_execute_their_cohort_and_propagate_failures[linux-64-pull_request]
 0.860	tests/system/py/test_ci_cadence.py::test_shipped_suite_paths_execute_their_cohort_and_propagate_failures[linux-64-push]
 0.870	tests/system/py/test_ci_cadence.py::test_shipped_suite_paths_execute_their_cohort_and_propagate_failures[linux-64-schedule]
 0.870	tests/system/py/test_ci_cadence.py::test_shipped_suite_paths_execute_their_cohort_and_propagate_failures[linux-64-workflow_dispatch]
-0.450	tests/system/py/test_ci_cadence.py::test_shipped_suite_paths_execute_their_cohort_and_propagate_failures[osx-arm64-pull_request]
+0.790	tests/system/py/test_ci_cadence.py::test_shipped_suite_paths_execute_their_cohort_and_propagate_failures[osx-arm64-pull_request]
 0.920	tests/system/py/test_ci_cadence.py::test_shipped_suite_paths_execute_their_cohort_and_propagate_failures[osx-arm64-push]
 1.040	tests/system/py/test_ci_cadence.py::test_shipped_suite_paths_execute_their_cohort_and_propagate_failures[osx-arm64-schedule]
 0.870	tests/system/py/test_ci_cadence.py::test_shipped_suite_paths_execute_their_cohort_and_propagate_failures[osx-arm64-workflow_dispatch]
@@ -251096,31 +251096,31 @@ UNMEASURED:not-completed-in-this-run	tests/system/py/test_e04_t11_wasm_delivery.
 0.000	tests/system/py/test_e04_t12_public_release.py::test_independent_private_pattern_controls
 1.710	tests/system/py/test_e04_t12_public_release.py::test_independent_secret_predicate_checks_every_decoded_member
 0.010	tests/system/py/test_e04_t12_public_release.py::test_live_edi_history_anchors_resolve_in_one_commit_tree
-0.210	tests/system/py/test_e04_t12_public_release.py::test_pages_builds_docs_and_publishes_the_linked_webapp
-0.400	tests/system/py/test_e04_t12_public_release.py::test_pages_publication_rejects_missing_or_bypassed_real_app[developer-pages-docs]
-0.410	tests/system/py/test_e04_t12_public_release.py::test_pages_publication_rejects_missing_or_bypassed_real_app[developer-pages-wasm]
-0.410	tests/system/py/test_e04_t12_public_release.py::test_pages_publication_rejects_missing_or_bypassed_real_app[disabled-placement-docs]
-0.390	tests/system/py/test_e04_t12_public_release.py::test_pages_publication_rejects_missing_or_bypassed_real_app[disabled-placement-wasm]
-0.380	tests/system/py/test_e04_t12_public_release.py::test_pages_publication_rejects_missing_or_bypassed_real_app[foreign-artifact-docs]
-0.390	tests/system/py/test_e04_t12_public_release.py::test_pages_publication_rejects_missing_or_bypassed_real_app[foreign-artifact-wasm]
-0.390	tests/system/py/test_e04_t12_public_release.py::test_pages_publication_rejects_missing_or_bypassed_real_app[foreign-run-docs]
-0.390	tests/system/py/test_e04_t12_public_release.py::test_pages_publication_rejects_missing_or_bypassed_real_app[foreign-run-wasm]
-0.380	tests/system/py/test_e04_t12_public_release.py::test_pages_publication_rejects_missing_or_bypassed_real_app[merged-artifact-docs]
-0.390	tests/system/py/test_e04_t12_public_release.py::test_pages_publication_rejects_missing_or_bypassed_real_app[merged-artifact-wasm]
-0.400	tests/system/py/test_e04_t12_public_release.py::test_pages_publication_rejects_missing_or_bypassed_real_app[missing-build-docs]
-0.380	tests/system/py/test_e04_t12_public_release.py::test_pages_publication_rejects_missing_or_bypassed_real_app[missing-build-wasm]
-0.380	tests/system/py/test_e04_t12_public_release.py::test_pages_publication_rejects_missing_or_bypassed_real_app[optional-publish-docs]
-0.380	tests/system/py/test_e04_t12_public_release.py::test_pages_publication_rejects_missing_or_bypassed_real_app[optional-publish-wasm]
-0.460	tests/system/py/test_e04_t12_public_release.py::test_pages_publication_rejects_missing_or_bypassed_real_app[placement-before-fetch-docs]
-0.380	tests/system/py/test_e04_t12_public_release.py::test_pages_publication_rejects_missing_or_bypassed_real_app[placement-before-fetch-wasm]
-0.400	tests/system/py/test_e04_t12_public_release.py::test_pages_publication_rejects_missing_or_bypassed_real_app[publish-first-docs]
-0.390	tests/system/py/test_e04_t12_public_release.py::test_pages_publication_rejects_missing_or_bypassed_real_app[publish-first-wasm]
-0.380	tests/system/py/test_e04_t12_public_release.py::test_pages_publication_rejects_missing_or_bypassed_real_app[wrong-base-docs]
-0.380	tests/system/py/test_e04_t12_public_release.py::test_pages_publication_rejects_missing_or_bypassed_real_app[wrong-base-wasm]
-0.380	tests/system/py/test_e04_t12_public_release.py::test_pages_publication_rejects_missing_or_bypassed_real_app[wrong-source-branch-docs]
-0.380	tests/system/py/test_e04_t12_public_release.py::test_pages_publication_rejects_missing_or_bypassed_real_app[wrong-source-branch-wasm]
-0.440	tests/system/py/test_e04_t12_public_release.py::test_pages_publication_rejects_missing_or_bypassed_real_app[wrong-target-branch-docs]
-0.410	tests/system/py/test_e04_t12_public_release.py::test_pages_publication_rejects_missing_or_bypassed_real_app[wrong-target-branch-wasm]
+0.330	tests/system/py/test_e04_t12_public_release.py::test_pages_builds_docs_and_publishes_the_linked_webapp
+0.610	tests/system/py/test_e04_t12_public_release.py::test_pages_publication_rejects_missing_or_bypassed_real_app[developer-pages-docs]
+0.610	tests/system/py/test_e04_t12_public_release.py::test_pages_publication_rejects_missing_or_bypassed_real_app[developer-pages-wasm]
+0.610	tests/system/py/test_e04_t12_public_release.py::test_pages_publication_rejects_missing_or_bypassed_real_app[disabled-placement-docs]
+0.500	tests/system/py/test_e04_t12_public_release.py::test_pages_publication_rejects_missing_or_bypassed_real_app[disabled-placement-wasm]
+0.480	tests/system/py/test_e04_t12_public_release.py::test_pages_publication_rejects_missing_or_bypassed_real_app[foreign-artifact-docs]
+0.540	tests/system/py/test_e04_t12_public_release.py::test_pages_publication_rejects_missing_or_bypassed_real_app[foreign-artifact-wasm]
+0.480	tests/system/py/test_e04_t12_public_release.py::test_pages_publication_rejects_missing_or_bypassed_real_app[foreign-run-docs]
+0.480	tests/system/py/test_e04_t12_public_release.py::test_pages_publication_rejects_missing_or_bypassed_real_app[foreign-run-wasm]
+0.480	tests/system/py/test_e04_t12_public_release.py::test_pages_publication_rejects_missing_or_bypassed_real_app[merged-artifact-docs]
+0.490	tests/system/py/test_e04_t12_public_release.py::test_pages_publication_rejects_missing_or_bypassed_real_app[merged-artifact-wasm]
+0.490	tests/system/py/test_e04_t12_public_release.py::test_pages_publication_rejects_missing_or_bypassed_real_app[missing-build-docs]
+0.490	tests/system/py/test_e04_t12_public_release.py::test_pages_publication_rejects_missing_or_bypassed_real_app[missing-build-wasm]
+0.480	tests/system/py/test_e04_t12_public_release.py::test_pages_publication_rejects_missing_or_bypassed_real_app[optional-publish-docs]
+0.490	tests/system/py/test_e04_t12_public_release.py::test_pages_publication_rejects_missing_or_bypassed_real_app[optional-publish-wasm]
+0.550	tests/system/py/test_e04_t12_public_release.py::test_pages_publication_rejects_missing_or_bypassed_real_app[placement-before-fetch-docs]
+0.480	tests/system/py/test_e04_t12_public_release.py::test_pages_publication_rejects_missing_or_bypassed_real_app[placement-before-fetch-wasm]
+0.490	tests/system/py/test_e04_t12_public_release.py::test_pages_publication_rejects_missing_or_bypassed_real_app[publish-first-docs]
+0.490	tests/system/py/test_e04_t12_public_release.py::test_pages_publication_rejects_missing_or_bypassed_real_app[publish-first-wasm]
+0.480	tests/system/py/test_e04_t12_public_release.py::test_pages_publication_rejects_missing_or_bypassed_real_app[wrong-base-docs]
+0.490	tests/system/py/test_e04_t12_public_release.py::test_pages_publication_rejects_missing_or_bypassed_real_app[wrong-base-wasm]
+0.490	tests/system/py/test_e04_t12_public_release.py::test_pages_publication_rejects_missing_or_bypassed_real_app[wrong-source-branch-docs]
+0.490	tests/system/py/test_e04_t12_public_release.py::test_pages_publication_rejects_missing_or_bypassed_real_app[wrong-source-branch-wasm]
+0.490	tests/system/py/test_e04_t12_public_release.py::test_pages_publication_rejects_missing_or_bypassed_real_app[wrong-target-branch-docs]
+0.480	tests/system/py/test_e04_t12_public_release.py::test_pages_publication_rejects_missing_or_bypassed_real_app[wrong-target-branch-wasm]
 0.230	tests/system/py/test_e04_t12_public_release.py::test_private_token_guard_is_required_in_every_job_even_off_pr[pull_request]
 0.220	tests/system/py/test_e04_t12_public_release.py::test_private_token_guard_is_required_in_every_job_even_off_pr[push]
 0.230	tests/system/py/test_e04_t12_public_release.py::test_private_token_guard_is_required_in_every_job_even_off_pr[schedule]
@@ -251134,12 +251134,12 @@ UNMEASURED:not-completed-in-this-run	tests/system/py/test_e04_t11_wasm_delivery.
 0.000	tests/system/py/test_e04_t12_public_release.py::test_production_sources_carry_bsd_spdx
 UNMEASURED:failed-in-this-run	tests/system/py/test_e04_t12_public_release.py::test_public_artifacts_exclude_engine_object_code_and_runner_names
 0.250	tests/system/py/test_e04_t12_public_release.py::test_public_ci_uses_hosted_runners_and_guards_private_tokens
-0.380	tests/system/py/test_e04_t12_public_release.py::test_public_installer_destination_rejects_bypasses[developer-pages]
-0.400	tests/system/py/test_e04_t12_public_release.py::test_public_installer_destination_rejects_bypasses[foreign-run]
-0.390	tests/system/py/test_e04_t12_public_release.py::test_public_installer_destination_rejects_bypasses[missing-components]
-0.390	tests/system/py/test_e04_t12_public_release.py::test_public_installer_destination_rejects_bypasses[missing-recovery]
-0.380	tests/system/py/test_e04_t12_public_release.py::test_public_installer_destination_rejects_bypasses[wrong-base]
-0.390	tests/system/py/test_e04_t12_public_release.py::test_public_installer_destination_rejects_bypasses[wrong-target-branch]
+0.550	tests/system/py/test_e04_t12_public_release.py::test_public_installer_destination_rejects_bypasses[developer-pages]
+0.490	tests/system/py/test_e04_t12_public_release.py::test_public_installer_destination_rejects_bypasses[foreign-run]
+0.480	tests/system/py/test_e04_t12_public_release.py::test_public_installer_destination_rejects_bypasses[missing-components]
+0.480	tests/system/py/test_e04_t12_public_release.py::test_public_installer_destination_rejects_bypasses[missing-recovery]
+0.490	tests/system/py/test_e04_t12_public_release.py::test_public_installer_destination_rejects_bypasses[wrong-base]
+0.490	tests/system/py/test_e04_t12_public_release.py::test_public_installer_destination_rejects_bypasses[wrong-target-branch]
 0.190	tests/system/py/test_e04_t12_public_release.py::test_public_site_preview_dispatch_builds_without_publication[refs/heads/dev-docs]
 0.180	tests/system/py/test_e04_t12_public_release.py::test_public_site_preview_dispatch_builds_without_publication[refs/heads/dev-wasm]
 0.190	tests/system/py/test_e04_t12_public_release.py::test_public_site_preview_dispatch_builds_without_publication[refs/tags/v2026.11.21-docs]
@@ -251147,7 +251147,7 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_e04_t12_public_release.py::te
 0.180	tests/system/py/test_e04_t12_public_release.py::test_public_site_publication_routes_reach_reviewed_environment[preview-main]
 0.180	tests/system/py/test_e04_t12_public_release.py::test_public_site_publication_routes_reach_reviewed_environment[preview-ref]
 0.190	tests/system/py/test_e04_t12_public_release.py::test_public_site_publication_routes_reach_reviewed_environment[stable-notes]
-0.180	tests/system/py/test_e04_t12_public_release.py::test_public_site_publication_routes_reach_reviewed_environment[stable-tag]
+0.230	tests/system/py/test_e04_t12_public_release.py::test_public_site_publication_routes_reach_reviewed_environment[stable-tag]
 0.200	tests/system/py/test_e04_t12_public_release.py::test_public_site_publication_routes_reject_ref_bypasses[preview-ref-disabled-refresh]
 0.180	tests/system/py/test_e04_t12_public_release.py::test_public_site_publication_routes_reject_ref_bypasses[preview-ref-missing-dispatch-trigger]
 0.190	tests/system/py/test_e04_t12_public_release.py::test_public_site_publication_routes_reject_ref_bypasses[preview-ref-publish-preview-only]
@@ -251155,14 +251155,14 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_e04_t12_public_release.py::te
 0.200	tests/system/py/test_e04_t12_public_release.py::test_public_site_publication_routes_reject_ref_bypasses[preview-ref-wrong-component]
 0.180	tests/system/py/test_e04_t12_public_release.py::test_public_site_publication_routes_reject_ref_bypasses[preview-ref-wrong-dispatch-ref]
 0.250	tests/system/py/test_e04_t12_public_release.py::test_public_site_publication_routes_reject_ref_bypasses[preview-ref-wrong-environment]
-0.180	tests/system/py/test_e04_t12_public_release.py::test_public_site_publication_routes_reject_ref_bypasses[stable-tag-build-main-only]
-0.180	tests/system/py/test_e04_t12_public_release.py::test_public_site_publication_routes_reject_ref_bypasses[stable-tag-build-step-main-only]
-0.180	tests/system/py/test_e04_t12_public_release.py::test_public_site_publication_routes_reject_ref_bypasses[stable-tag-missing-release-trigger]
-0.190	tests/system/py/test_e04_t12_public_release.py::test_public_site_publication_routes_reject_ref_bypasses[stable-tag-missing-sdk-dependency]
-0.180	tests/system/py/test_e04_t12_public_release.py::test_public_site_publication_routes_reject_ref_bypasses[stable-tag-publish-main-only]
-0.190	tests/system/py/test_e04_t12_public_release.py::test_public_site_publication_routes_reject_ref_bypasses[stable-tag-sdk-main-only]
-0.180	tests/system/py/test_e04_t12_public_release.py::test_public_site_publication_routes_reject_ref_bypasses[stable-tag-step-main-only]
-0.190	tests/system/py/test_e04_t12_public_release.py::test_public_site_publication_routes_reject_ref_bypasses[stable-tag-wrong-environment]
+0.230	tests/system/py/test_e04_t12_public_release.py::test_public_site_publication_routes_reject_ref_bypasses[stable-tag-build-main-only]
+0.230	tests/system/py/test_e04_t12_public_release.py::test_public_site_publication_routes_reject_ref_bypasses[stable-tag-build-step-main-only]
+0.240	tests/system/py/test_e04_t12_public_release.py::test_public_site_publication_routes_reject_ref_bypasses[stable-tag-missing-release-trigger]
+0.230	tests/system/py/test_e04_t12_public_release.py::test_public_site_publication_routes_reject_ref_bypasses[stable-tag-missing-sdk-dependency]
+0.240	tests/system/py/test_e04_t12_public_release.py::test_public_site_publication_routes_reject_ref_bypasses[stable-tag-publish-main-only]
+0.290	tests/system/py/test_e04_t12_public_release.py::test_public_site_publication_routes_reject_ref_bypasses[stable-tag-sdk-main-only]
+0.240	tests/system/py/test_e04_t12_public_release.py::test_public_site_publication_routes_reject_ref_bypasses[stable-tag-step-main-only]
+0.230	tests/system/py/test_e04_t12_public_release.py::test_public_site_publication_routes_reject_ref_bypasses[stable-tag-wrong-environment]
 0.190	tests/system/py/test_e04_t12_public_release.py::test_public_site_tokens_require_the_reviewed_environment[missing-installers.yml-publish-installers]
 0.190	tests/system/py/test_e04_t12_public_release.py::test_public_site_tokens_require_the_reviewed_environment[missing-pages.yml-publish-docs]
 0.190	tests/system/py/test_e04_t12_public_release.py::test_public_site_tokens_require_the_reviewed_environment[missing-pages.yml-publish-wasm]
@@ -251172,14 +251172,14 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_e04_t12_public_release.py::te
 0.200	tests/system/py/test_e04_t12_public_release.py::test_public_site_tokens_require_the_reviewed_environment[other-pages.yml-publish-wasm]
 0.190	tests/system/py/test_e04_t12_public_release.py::test_public_site_tokens_require_the_reviewed_environment[other-release-publish.yml-publish-downloads]
 0.000	tests/system/py/test_e04_t12_public_release.py::test_python_distribution_includes_binding_licences
-0.380	tests/system/py/test_e04_t12_public_release.py::test_released_public_destinations_reject_bypasses[developer-pages]
-0.380	tests/system/py/test_e04_t12_public_release.py::test_released_public_destinations_reject_bypasses[disabled-dispatch]
-0.420	tests/system/py/test_e04_t12_public_release.py::test_released_public_destinations_reject_bypasses[dispatch-first]
-0.450	tests/system/py/test_e04_t12_public_release.py::test_released_public_destinations_reject_bypasses[no-dependency]
-0.400	tests/system/py/test_e04_t12_public_release.py::test_released_public_destinations_reject_bypasses[wrong-app-branch]
-0.380	tests/system/py/test_e04_t12_public_release.py::test_released_public_destinations_reject_bypasses[wrong-dispatch-repository]
-0.380	tests/system/py/test_e04_t12_public_release.py::test_released_public_destinations_reject_bypasses[wrong-tag]
-0.390	tests/system/py/test_e04_t12_public_release.py::test_released_public_destinations_reject_bypasses[wrong-token-repository]
+0.490	tests/system/py/test_e04_t12_public_release.py::test_released_public_destinations_reject_bypasses[developer-pages]
+0.480	tests/system/py/test_e04_t12_public_release.py::test_released_public_destinations_reject_bypasses[disabled-dispatch]
+0.480	tests/system/py/test_e04_t12_public_release.py::test_released_public_destinations_reject_bypasses[dispatch-first]
+0.480	tests/system/py/test_e04_t12_public_release.py::test_released_public_destinations_reject_bypasses[no-dependency]
+0.480	tests/system/py/test_e04_t12_public_release.py::test_released_public_destinations_reject_bypasses[wrong-app-branch]
+0.480	tests/system/py/test_e04_t12_public_release.py::test_released_public_destinations_reject_bypasses[wrong-dispatch-repository]
+0.490	tests/system/py/test_e04_t12_public_release.py::test_released_public_destinations_reject_bypasses[wrong-tag]
+0.480	tests/system/py/test_e04_t12_public_release.py::test_released_public_destinations_reject_bypasses[wrong-token-repository]
 0.190	tests/system/py/test_e04_t12_public_release.py::test_reviewed_delivery_artifacts_reject_identity_and_qualification_escapes[comment-only]
 0.170	tests/system/py/test_e04_t12_public_release.py::test_reviewed_delivery_artifacts_reject_identity_and_qualification_escapes[disabled-proof]
 0.170	tests/system/py/test_e04_t12_public_release.py::test_reviewed_delivery_artifacts_reject_identity_and_qualification_escapes[missing-proof]
@@ -251245,7 +251245,7 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_e04_t12_public_release.py::te
 0.000	tests/system/py/test_e04_t12_public_release.py::test_synthetic_privacy_input_allowance_binds_exact_declared_reference_bytes[changed-home]
 0.000	tests/system/py/test_e04_t12_public_release.py::test_synthetic_privacy_input_allowance_binds_exact_declared_reference_bytes[other-path]
 0.000	tests/system/py/test_e04_t12_public_release.py::test_synthetic_privacy_input_allowance_binds_exact_declared_reference_bytes[private-citation]
-0.720	tests/system/py/test_e04_t12_public_release.py::test_test_and_tool_identity_is_independent_of_checkout_name
+2.890	tests/system/py/test_e04_t12_public_release.py::test_test_and_tool_identity_is_independent_of_checkout_name
 1.580	tests/system/py/test_e04_t12_public_release.py::test_tree_has_no_personal_paths_or_private_citations
 UNMEASURED:failed-in-this-run	tests/system/py/test_e04_t12_public_release.py::test_unreadable_containers_refuse_publication[7z]
 0.080	tests/system/py/test_e04_t12_public_release.py::test_unreadable_containers_refuse_publication[bz2]
@@ -251449,9 +251449,9 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_e04_t12_public_release.py::te
 0.280	tests/system/py/test_e09_t74_ci_source_consumption.py::test_actual_workflow_consumes_its_common_output_at_fetch_or_build[audit]
 0.500	tests/system/py/test_e09_t74_ci_source_consumption.py::test_actual_workflow_consumes_its_common_output_at_fetch_or_build[cli-python]
 0.510	tests/system/py/test_e09_t74_ci_source_consumption.py::test_actual_workflow_consumes_its_common_output_at_fetch_or_build[core]
-0.280	tests/system/py/test_e09_t74_ci_source_consumption.py::test_actual_workflow_consumes_its_common_output_at_fetch_or_build[docs]
+0.330	tests/system/py/test_e09_t74_ci_source_consumption.py::test_actual_workflow_consumes_its_common_output_at_fetch_or_build[docs]
 0.520	tests/system/py/test_e09_t74_ci_source_consumption.py::test_actual_workflow_consumes_its_common_output_at_fetch_or_build[native]
-0.290	tests/system/py/test_e09_t74_ci_source_consumption.py::test_actual_workflow_consumes_its_common_output_at_fetch_or_build[notebooks]
+0.370	tests/system/py/test_e09_t74_ci_source_consumption.py::test_actual_workflow_consumes_its_common_output_at_fetch_or_build[notebooks]
 1.640	tests/system/py/test_e09_t74_ci_source_consumption.py::test_actual_workflow_consumes_its_common_output_at_fetch_or_build[system]
 0.100	tests/system/py/test_e09_t74_ci_source_consumption.py::test_new_consumers_really_consuming_the_shared_sha_are_admitted[checkout]
 0.220	tests/system/py/test_e09_t74_ci_source_consumption.py::test_new_consumers_really_consuming_the_shared_sha_are_admitted[composite]

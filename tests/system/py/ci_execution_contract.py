@@ -14,9 +14,11 @@ import shlex
 import subprocess
 import tempfile
 import tomllib
+from pathlib import Path
 
 import yaml
 
+from tests.fixtures.fast_ci.workflow import run_shell
 from tests.fixtures.native_process import environment_bash
 
 
@@ -450,7 +452,7 @@ def run_settings(workflow, job, step, ctx):
         **job.get('defaults', {}).get('run', {}),
     }
     shell = step.get('shell', defaults.get('shell'))
-    if shell not in {None, 'bash'}:
+    if shell not in {None, 'bash', 'python3 tools/ci/public_log.py {0}'}:
         message = 'unsupported workflow shell: ' + str(shell)
         raise ValueError(message)
     directory = step.get('working-directory', defaults.get('working-directory', '.'))
@@ -616,25 +618,32 @@ pytest() { return 0; }
     # Never execute them from the checkout or its shared build directory.
     with tempfile.TemporaryDirectory(prefix='ci-cadence-trace-') as scratch:
         env['GITHUB_WORKSPACE'] = scratch
-        result = subprocess.run(
-            [
-                environment_bash(),
-                *(
-                    ['--noprofile', '--norc', '-e', '-o', 'pipefail']
-                    if shell == 'bash'
-                    else ['-e']
-                ),
-                '-c',
-                '\n'.join(functions) + '\n' + stub + '\n' + render(script, ctx),
-            ],
-            cwd=scratch,
-            env=env,
-            text=True,
-            capture_output=True,
-            # Scheduling contention must not masquerade as an invalid invocation.
-            timeout=10,
-            check=False,
-        )
+        source = '\n'.join(functions) + '\n' + stub + '\n' + render(script, ctx)
+        if shell == 'python3 tools/ci/public_log.py {0}':
+            workspace = Path(scratch)
+            step = workspace / 'trace.sh'
+            step.write_text(source, encoding='utf-8')
+            result = run_shell(shell, step, workspace, env, timeout=10)
+        else:
+            result = subprocess.run(
+                [
+                    environment_bash(),
+                    *(
+                        ['--noprofile', '--norc', '-e', '-o', 'pipefail']
+                        if shell == 'bash'
+                        else ['-e']
+                    ),
+                    '-c',
+                    source,
+                ],
+                cwd=scratch,
+                env=env,
+                text=True,
+                capture_output=True,
+                # Scheduling contention must not masquerade as an invalid invocation.
+                timeout=10,
+                check=False,
+            )
     lines = result.stdout.splitlines()
     observations = [
         (line.removeprefix('E09TRACE '), shlex.split(lines[i + 1]))

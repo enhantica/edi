@@ -185,7 +185,7 @@ def require_public_steps(job, name, platform):
         'The native build or restore follows the declared protected execution scope'
     )
     if name == 'native':
-        producer_boundary(job)
+        producer_boundary(job, checked=True)
         first_use = 'cpp-test'
     else:
         public_native_transfer(steps, index, name)
@@ -213,8 +213,10 @@ def require_nightly_work(job, marker_name):
     markers = [step for step in job['steps'] if step.get('name') == marker_name]
     assert len(markers) == 1, 'A single skip receipt keeps the required check name'
     marker = markers[0]
-    assert set(marker) == {'name', 'if', 'run'} and marker['run'] == (
-        f'echo "{marker_name}; this $GITHUB_EVENT_NAME run does not."'
+    assert (
+        set(marker) == {'name', 'if', 'run', 'shell'}
+        and marker['shell'] == 'bash'
+        and marker['run'] == (f'echo "{marker_name}; this $GITHUB_EVENT_NAME run does not."')
     ), 'The skip receipt only reports the cadence'
     outcomes = {('build', 'outcome'): 'success', ('tutorials', 'outcome'): 'success'}
     for event in ('pull_request', 'push', 'schedule', 'workflow_dispatch'):
@@ -548,7 +550,7 @@ def test_d6_explicit_restore_runs_between_exact_download_and_first_native_use(co
     consumer_boundary(job, platform)
 
 
-def producer_boundary(job):
+def producer_boundary(job, *, checked=False):
     steps = job['steps']
     builds = [
         (i, step)
@@ -563,7 +565,11 @@ def producer_boundary(job):
     uploads = [
         (i, step)
         for i, step in enumerate(steps)
-        if step.get('uses', '').startswith('actions/upload-artifact@')
+        if (
+            step.get('uses') == './.github/actions/store' and 'artifact' in step.get('with', {})
+            if checked
+            else step.get('uses', '').startswith('actions/upload-artifact@')
+        )
     ]
     assert len(builds) == len(packs) == len(uploads) == 1, (
         ' I34 producer requires one actual native build, pack and upload'
@@ -572,13 +578,21 @@ def producer_boundary(job):
     pi, pack = packs[0]
     ui, upload = uploads[0]
     assert bi < pi < ui, ' I34 actual workflow must build before packing before uploading'
-    assert upload.get('with', {}).get('name') == 'edi-native-${{ matrix.sdk }}', (
-        'The producer artifact name matches the platform-addressed native consumer'
-    )
+    assert (
+        upload.get('with', {}).get('artifact' if checked else 'name')
+        == 'edi-native-${{ matrix.sdk }}'
+    ), 'The producer artifact name matches the platform-addressed native consumer'
     assert upload.get('with', {}).get('path') == 'build/edi-native-artifact', (
         'The producer uploads only its validated tar and binding manifest directory'
     )
 
+    if checked:
+        assert upload['with'].get('if-no-files-found') == 'error', (
+            'The checked handoff must fail when the validated native artifact is missing'
+        )
+        assert not any(
+            step.get('uses', '').startswith('actions/upload-artifact@') for step in steps
+        ), 'The native build must publish only through its source-aware store action'
     for step in (build, pack, upload):
         for event in ('pull_request', 'push', 'workflow_dispatch'):
             reached(job, event)
@@ -663,9 +677,10 @@ def require_public_producer_escapes(defect):
             },
             {'run': 'pixi run python tools/ci/edi_native.py pack --out native-objects'},
             {
-                'uses': 'actions/upload-artifact@v4',
+                'uses': './.github/actions/store',
                 'with': {
-                    'name': 'edi-native-${{ matrix.sdk }}',
+                    'artifact': 'edi-native-${{ matrix.sdk }}',
+                    'if-no-files-found': 'error',
                     'path': 'build/edi-native-artifact',
                 },
             },
