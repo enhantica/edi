@@ -42,6 +42,15 @@ class RefusedError(Exception):
     """The source cannot be fetched, proven or listed."""
 
 
+def remove(folder: Path) -> None:
+    """Remove a checkout; Git's own files are read-only, which Windows does not delete."""
+    for path in folder.rglob('*') if folder.exists() else ():
+        if not path.is_symlink():
+            path.chmod(0o700)
+    if folder.exists():
+        shutil.rmtree(folder)
+
+
 def git(where: Path, *args: str, stdin: bytes | None = None, **env: str) -> bytes:
     """Run git quietly; a failure names the command, never its output."""
     run = subprocess.run(
@@ -58,7 +67,7 @@ def git(where: Path, *args: str, stdin: bytes | None = None, **env: str) -> byte
 
 def fetch(home: Path, sha: str, also: set[str], token: str) -> None:
     """Fetch ``sha`` and check it out, the others beside it; the token stays in this process."""
-    shutil.rmtree(home, ignore_errors=True)
+    remove(home)
     home.mkdir(parents=True)
     git(home, 'init', '-q')
     credential = base64.b64encode(f'x-access-token:{token}'.encode()).decode()
@@ -245,7 +254,7 @@ def checkout(root: Path) -> list[tuple[Path, str]]:
 
 def collection(home: Path) -> list[tuple[Path, str]]:
     """The public sample collection edi ships; without it the lists only hold more."""
-    shutil.rmtree(home, ignore_errors=True)
+    remove(home)
     home.mkdir(parents=True)
     try:
         git(home, 'init', '-q')
@@ -293,7 +302,7 @@ def prepare(temp: Path, args: argparse.Namespace) -> int:
 
 def refused(temp: Path, reason: str) -> int:
     """Remove the source and say why, without a word of it."""
-    shutil.rmtree(temp / 'crysta', ignore_errors=True)
+    remove(temp / 'crysta')
     print(f'crysta-fetch: REFUSED: {reason}', file=sys.stderr)
     return 1
 

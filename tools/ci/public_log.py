@@ -10,7 +10,6 @@ error and the step summary pass through line by line. Without readable lists the
 from __future__ import annotations
 
 import os
-import shutil
 import subprocess
 import sys
 import tempfile
@@ -24,12 +23,19 @@ UNAVAILABLE = 97
 
 
 def bash() -> str:
-    """The shell GitHub's own `shell: bash` uses; on Windows Git's, never the Linux subsystem's."""
-    if os.name == 'nt' and (git := shutil.which('git')):
-        for home in Path(git).resolve().parents:
-            if (found := home / 'bin/bash.exe').is_file():
-                return str(found)
-    return 'bash'
+    """The shell GitHub's own `shell: bash` uses: the first on PATH but the Linux subsystem's."""
+    if os.name != 'nt':
+        return 'bash'
+    system = os.environ.get('SYSTEMROOT', r'C:\Windows').lower()
+    for folder in os.environ['PATH'].split(os.pathsep):
+        found = Path(folder) / 'bash.exe'
+        if (
+            found.is_file()
+            and not folder.lower().startswith(system)
+            and 'windowsapps' not in folder.lower()
+        ):
+            return str(found)
+    raise FileNotFoundError('bash')
 
 
 def passed(line: bytes, known: source_lists.Source) -> bytes:
