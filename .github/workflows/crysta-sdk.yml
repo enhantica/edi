@@ -32,7 +32,7 @@ jobs:
           import hashlib, os
           from pathlib import Path
           digest = hashlib.sha256()
-          for name in ['.github/workflows/crysta-sdk.yml', 'tools/ci/crysta_sdk.py', '.github/actions/setup-pixi/action.yml']:
+          for name in ['.github/workflows/crysta-sdk.yml', 'tools/ci/crysta_sdk.py', 'tools/ci/sdk_surface.py', '.github/actions/setup-pixi/action.yml']:
               digest.update(name.encode() + b'\0' + Path(name).read_bytes() + b'\0')
           with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
               output.write(f'sha={digest.hexdigest()}\n')
@@ -169,6 +169,12 @@ jobs:
           (cd "$RUNNER_TEMP/crysta" && pixi run -e cpp-ci --skip-deps ccache --show-stats)
           [ "$sdk_status" -eq 0 ] || exit "$sdk_status"
           ls -l "$out"
+      # crysta's tracked record holds its review history too; the SDK carries the public names alone.
+      - name: Put the generated interface record into the SDK
+        if: steps.cache.outputs.cache-hit != 'true'
+        env:
+          SHA: ${{ needs.resolve.outputs.sha }}
+        run: python3 tools/ci/sdk_surface.py "$CRYSTA_SRC" "$SHA" "crysta-sdk-archives/crysta-sdk-$SHA-${{ matrix.platform }}.tar.gz"
       - name: Save the SDK compiler cache
         if: ${{ !cancelled() && steps.compiler-inputs.outcome == 'success' && steps.compiler-cache.outcome == 'success' && steps.cache.outputs.cache-hit != 'true' }}
         uses: ./.github/actions/store

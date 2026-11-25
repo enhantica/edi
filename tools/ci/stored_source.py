@@ -236,6 +236,9 @@ class Check:
                 made = {source_lists.blob_id(content), source_lists.blob_id(unix)}
                 if not carried.get(member, set()) & made:
                     self.found.append(f'{name}:{member} is not the public header it is named')
+            elif kind == 'generated':
+                if source_lists.blob_id(content) not in carried.get(member, set()):
+                    self.found.append(f'{name}:{member} is not the form generated for it')
             elif kind == 'configured':
                 quoted = {hit for line in content.splitlines() for hit in self.source.hits(line)}
                 if self.source.is_file(content) or quoted - carried.get(member, set()):

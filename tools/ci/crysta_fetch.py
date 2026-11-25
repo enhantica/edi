@@ -157,6 +157,12 @@ def members(home: Path, sha: str, files: dict[str, str]) -> set[str]:
     for kind, name, *sources in source_lists.sdk_members():
         if kind == 'header' and name in files and re.fullmatch(r'include/.+\.hpp', name):
             found.add(f'{sha} {files[name]} {name}')
+        elif kind == 'generated' and sources[0] in files:
+            import sdk_surface  # noqa: PLC0415 - the one member it is for
+
+            (tracked,) = contents(home, {files[sources[0]]})
+            made = source_lists.blob_id(sdk_surface.generated(tracked))
+            found.add(f'{sha} {made} {name}')
         elif kind == 'configured':
             held = {files[source] for source in sources if source in files}
             lines = set().union(*map(bare, contents(home, held)))

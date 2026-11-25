@@ -82,8 +82,10 @@ can restore a cache of main. CI therefore keeps built crysta only.
 4. **The SDK** may carry crysta's public headers, the owner's one exception (2026-11-25): built artifacts include them, no
    other source. `tools/ci/sdk-members.txt` names the members. A header passes only in an archive whose name, manifest
    and listed commit agree, and only as that commit's own file of that name under `include/`. The CMake configuration file
-   is built from two files of that commit and may hold source lines of theirs; every other member is checked like any
-   file.
+   is built from two files of that commit and may hold source lines of theirs. The record of the public
+   Python names is generated (`tools/ci/sdk_surface.py`): the schema, the direction and the names with their members,
+   which is what the superset gate reads, and it passes only as made from that commit's own record. Every other member
+   is checked like any file.
 5. **Installers** are read from their bytes (`tools/ci/installer_content.py`), on every platform: each resource and
    archive, with no stretch left over. Only macOS opens its disk images; `tools/installer/packed_source.py` checks their
    files, links and extended attributes and the lines of text anywhere in the unpacked image where they are made, and
