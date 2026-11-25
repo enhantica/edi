@@ -29,24 +29,34 @@ SideBarGroup {
     readonly property bool measured: project !== null && project.fit.measured
     onMeasuredChanged: ApplicationInfo.parameterMeasuredChanged(false)
     // The selected parameter's row, kept as the filters and the rows change; -1 when it is not shown.
+    // The pickers' row with each picker wide enough for its default text whole ("All categories (58)", W6), with the
+    // project's own count, as the boxes draw it: the text 0.75 em in with 1 em after it, and the box's own room for its arrow.
+    // Its paddings are not read: they count the arrow only while it is shown.
+    readonly property real pickerRowNeed: {
+        // Two digits at least, so the width is the same before the parameters are listed.
+        const count = Math.max(10, parameterFilter.datablockGroups.length > 0 ? parameterFilter.datablockGroups[0].count : 0);
+        const widest = Math.max(...[qsTr("All datablocks (%1)"), qsTr("All categories (%1)"), qsTr("All parameters (%1)")].map(text => filterMetrics.advanceWidth(text.arg(count))));
+        return 3 * Math.ceil(widest + EaStyle.Sizes.fontPixelSize * 1.75 + 2 * categoryPicker.padding + categoryPicker.spacing + categoryPicker.indicator.width) + 2 * AppSizes.inputSpacing + (filters.below ? AppSizes.inputSpacing + filters.resetWidth : 0);
+    }
     property int selectedRow: -1
     property real tableViewportHeight: 0
     // The free column fits its title and the arrow after it, with a table column's padding (the owner, 2026-10-11). Its
     // title and check boxes stand at the table's right edge, and the gap before it is the table's spacing between any two
     // columns, as between Change and Max (the owner, 2026-11-17).
     readonly property real freeGap: 0.25 * EaStyle.Sizes.fontPixelSize
-    // The arrow ends where the right-aligned check boxes do: a check box's own padding and the table's spacing before
-    // the column's edge (DataTable.padForFiller).
-    readonly property real freeInset: 0.5 * EaStyle.Sizes.fontPixelSize + EaStyle.Sizes.tableColumnSpacing
+    // The arrow ends where the right-aligned check boxes do: a check box's own padding before the column's edge, the
+    // last column adding no spacing after it (DataTable.padForFiller; the owner, 2026-11-21).
+    readonly property real freeInset: 0.5 * EaStyle.Sizes.fontPixelSize
     // The free title's word and arrow share one colour, each with the labels' own colour transition.
     property bool freeTitleHovered: false
     readonly property color freeTitleColor: !measured ? EaStyle.Colors.themeForegroundMinor : freeTitleHovered ? EaStyle.Colors.themeAccent : EaStyle.Colors.themeForeground
-    readonly property real freeColumnWidth: Math.ceil(freeTitleText.advanceWidth + freeGap + freeArrowText.advanceWidth + freeInset)
+    // A cell's margin on the left, so "Max" and "Free" are an em apart (T1).
+    readonly property real freeColumnWidth: Math.ceil(AppSizes.tableCellMargin + freeTitleText.advanceWidth + freeGap + freeArrowText.advanceWidth + freeInset)
     // "Same for all" (edi ADR-0087 point 3): a switch on each experiment parameter tying it in every other experiment of
     // its set to the template's, through alias and constraint rows. Not shown for now: the parametric fit will offer it
     // through the Free box (ADR-0087, amended 2026-11-17).
     readonly property bool sameShown: false
-    readonly property real sameColumnWidth: sameShown ? Math.ceil(sameTitleText.advanceWidth) + AppSizes.fieldSpacing * 2 + EaStyle.Sizes.fontPixelSize : 0
+    readonly property real sameColumnWidth: sameShown ? Math.ceil(sameTitleText.advanceWidth) + AppSizes.tableCellMargin * 2 + EaStyle.Sizes.fontPixelSize : 0
     // Read again whenever the relation rows change.
     readonly property int relationRows: project && project.analysis ? project.analysis.constraints.count + project.analysis.aliases.count : 0
 
@@ -124,6 +134,34 @@ SideBarGroup {
     function categorySegments(entry) {
         return ApplicationInfo.parameterSegments(entry, true);
     }
+    // A picker's closed line where its whole one does not fit: without its icon, then in its short form: one word with the
+    // count, which a cut would lose first (the owner, 2026-11-22), then the word alone. "All datablocks (259)" has the
+    // given word, "Atomic displacement (12)" its last one; a name the user gave stays as it is.
+    function shortLine(segments, room, word, named) {
+        const last = segments && segments.length > 0 ? segments[segments.length - 1] : null;
+        if (!last || last.text === undefined)
+            return segments ?? [];
+        const advance = text => Math.ceil(filterMetrics.advanceWidth(text));
+        const whole = String(last.text);
+        if (advance(whole) + (segments.length - 1) * EaStyle.Sizes.fontPixelSize * 1.75 <= room)
+            return segments;
+        const match = whole.match(/^(.*) (\(\d+\))$/);
+        const title = match ? match[1] : whole;
+        const ending = title.slice(title.lastIndexOf(" ") + 1);
+        const short = word !== "" ? word : named ? title : ending.charAt(0).toUpperCase() + ending.slice(1);
+        const forms = [whole, match ? `${short} ${match[2]}` : short, short];
+        return [Object.assign({}, last, {
+                "text": forms.find(text => advance(text) <= room) ?? short
+            })];
+    }
+    function shortened(segments, whole) {
+        return segments.length > 0 && segments[segments.length - 1].text !== whole;
+    }
+    FontMetrics {
+        id: filterMetrics
+        font.family: EaStyle.Fonts.fontFamily
+        font.pixelSize: EaStyle.Sizes.fontPixelSize
+    }
 
     // A datablock's colour, as its icon has it elsewhere: a structure's or an experiment's by its place in the
     // project's list.
@@ -151,7 +189,11 @@ SideBarGroup {
             id: filters
 
             // Shown with or without measured data: a calculation-only project filters its parameters too.
-            readonly property real third: (EaStyle.Sizes.sideBarContentWidth - 2 * AppSizes.inputSpacing) / 3
+            // In the bottom layout there is no name filter, and the reset sits at the end of the pickers' row (the
+            // owner, 2026-11-23).
+            readonly property bool below: EaStyle.Sizes.sideBarBelow
+            readonly property real resetWidth: below ? datablockPicker.height : 0
+            readonly property real third: (EaStyle.Sizes.sideBarContentWidth - 2 * AppSizes.inputSpacing - (below ? AppSizes.inputSpacing + resetWidth : 0)) / 3
 
             spacing: AppSizes.groupContentSpacing
 
@@ -172,7 +214,7 @@ SideBarGroup {
                     // Shown disabled until an experiment has measured data, as the free/fixed picker and the Free
                     // column are (the owner, 2026-11-15).
                     enabled: group.measured
-                    ToolTip.text: enabled ? "" : qsTr("The parameter pickers apply once an experiment has measured data")
+                    ToolTip.text: !enabled ? qsTr("The parameter pickers apply once an experiment has measured data") : group.shortened(datablockClosed.segments, displayText) ? displayText : ""
                     width: filters.third
                     model: parameterFilter.datablockGroups
                     textRole: "title"
@@ -185,11 +227,13 @@ SideBarGroup {
                     contentItem: Item {
                         clip: true
                         IconLine {
+                            id: datablockClosed
                             x: EaStyle.Sizes.fontPixelSize * 0.75
                             anchors.verticalCenter: parent.verticalCenter
-                            maximumWidth: Math.max(1, parent.width - x)
+                            maximumWidth: Math.max(1, parent.width - x - EaStyle.Sizes.fontPixelSize)  // a gap before the arrow
+                            elide: Text.ElideMiddle
                             textColor: EaStyle.Colors.themeForeground
-                            segments: group.datablockSegments(datablockPicker.selected)
+                            segments: group.shortLine(group.datablockSegments(datablockPicker.selected), maximumWidth, datablockPicker.selectedIndex === 0 ? qsTr("Blocks") : "", true)
                         }
                     }
                     delegate: EaElements.MenuItem {
@@ -221,7 +265,7 @@ SideBarGroup {
                     }
                     objectName: "parameters.category"
                     enabled: group.measured
-                    ToolTip.text: enabled ? "" : qsTr("The parameter pickers apply once an experiment has measured data")
+                    ToolTip.text: !enabled ? qsTr("The parameter pickers apply once an experiment has measured data") : group.shortened(categoryClosed.segments, displayText) ? displayText : ""
                     width: filters.third
                     model: parameterFilter.categoryGroups
                     textRole: "title"
@@ -234,11 +278,12 @@ SideBarGroup {
                     contentItem: Item {
                         clip: true
                         IconLine {
+                            id: categoryClosed
                             x: EaStyle.Sizes.fontPixelSize * 0.75
                             anchors.verticalCenter: parent.verticalCenter
-                            maximumWidth: Math.max(1, parent.width - x)
+                            maximumWidth: Math.max(1, parent.width - x - EaStyle.Sizes.fontPixelSize)  // a gap before the arrow
                             textColor: EaStyle.Colors.themeForeground
-                            segments: group.categorySegments(categoryPicker.selected)
+                            segments: group.shortLine(group.categorySegments(categoryPicker.selected), maximumWidth, categoryPicker.selectedIndex === 0 ? qsTr("Categories") : "", false)
                         }
                     }
                     delegate: EaElements.MenuItem {
@@ -276,17 +321,53 @@ SideBarGroup {
                         // Free and fixed mean nothing before there are measured data to fit (edi ADR-0046). The reason is
                         // the picker's own tooltip text, which the combo box shows disabled too.
                         enabled: group.measured
-                        ToolTip.text: enabled ? "" : qsTr("Free and fixed parameters apply once an experiment has measured data")
+                        ToolTip.text: !enabled ? qsTr("Free and fixed parameters apply once an experiment has measured data") : variabilityText.text !== displayText ? displayText : ""
                         width: filters.third
                         model: titles
                         currentIndex: parameterFilter.variability
                         displayText: titles[parameterFilter.variability]
+                        // The same choices without the word "parameters", for a box too narrow for the full title: the
+                        // count is what a cut would lose first (the owner's sweep, 2026-11-22).
+                        // And then the word alone.
+                        readonly property var words: [qsTr("Params"), qsTr("Free"), qsTr("Fixed"), qsTr("Not fittable")]
+                        readonly property var forms: {
+                            const at = parameterFilter.variability;
+                            return [displayText, `${words[at]} (${parameterFilter.variabilityCounts[at]})`, words[at]];
+                        }
+                        // As the other two pickers: the text cut a gap before the arrow, not under it.
+                        contentItem: Item {
+                            clip: true
+                            EaElements.Label {
+                                id: variabilityText
+                                x: EaStyle.Sizes.fontPixelSize * 0.75
+                                anchors.verticalCenter: parent.verticalCenter
+                                width: Math.max(1, parent.width - x - EaStyle.Sizes.fontPixelSize)
+                                elide: Text.ElideRight
+                                color: variabilityPicker.enabled ? EaStyle.Colors.themeForeground : EaStyle.Colors.themeForegroundDisabled
+                                text: variabilityPicker.forms.find(form => Math.ceil(variabilityMetrics.advanceWidth(form)) <= width) ?? variabilityPicker.forms[2]
+                            }
+                            FontMetrics {
+                                id: variabilityMetrics
+                                font: variabilityText.font
+                            }
+                        }
                         onModelChanged: ApplicationInfo.parameterPickerChanged(2, false, undefined)
                         onActivated: index => ApplicationInfo.parameterPickerChanged(2, true, index)
                     }
                 }
+                EaElements.SideBarButton {
+                    objectName: "parameters.clearFiltersBelow"
+                    visible: filters.below
+                    width: filters.resetWidth
+                    height: datablockPicker.height
+                    fontIcon: "eraser"
+                    text: ""
+                    ToolTip.text: qsTr("Clear all filters")
+                    onClicked: parameterFilter.clearFilters()
+                }
             }
             Row {
+                visible: !filters.below
                 spacing: AppSizes.inputSpacing
 
                 EaElements.TextField {
@@ -295,7 +376,13 @@ SideBarGroup {
                     width: EaStyle.Sizes.sideBarContentWidth - AppSizes.inputSpacing - clearButton.width
                     placeholderText: qsTr("Filter by name")
                     text: parameterFilter.nameFilter
-                    onTextEdited: parameterFilter.nameFilter = text
+                    // Applied once typing pauses: filtering the table at every key took 131 ms a key (R3: at most 16).
+                    onTextEdited: nameApply.restart()
+                    Timer {
+                        id: nameApply
+                        interval: 200
+                        onTriggered: parameterFilter.nameFilter = nameField.text
+                    }
                 }
                 EaElements.SideBarButton {
                     id: clearButton
@@ -314,8 +401,7 @@ SideBarGroup {
         DataTable {
             id: table
             objectName: "parameters.list"
-            // Reserve the controls below and half a row as a scroll cue (ADR-0029).
-            maxRowCountShow: Math.max(1, Math.floor((group.tableViewportHeight - group.topPadding - group.bottomPadding - (filters.visible ? filters.height + AppSizes.groupContentSpacing : 0) - sliderRow.height - AppSizes.groupContentSpacing) / tableRowHeight - 1.5))
+            kindFloors: false
             defaultInfoText: qsTr("No parameters")
             sourceModel: ParameterFilterModel {
                 id: parameterFilter
@@ -330,44 +416,262 @@ SideBarGroup {
             }
             marksCurrentRow: true
             currentRow: group.selectedRow
+            // Widths from column types, not rows (ADR-0103 rule 4): the name, start, value, units, s.u., change, and the
+            // bounds, which are short (0, 1, inf). A fitted run changes values, never a column, so a fit measures no row.
+            // Its columns by kind, measured from their content (DataTable.columnKinds); the widths are this table's
+            // own rule below, which drops columns in a narrow sidebar.
+            columnKinds: ["index", "name", "value", "value", "unit", "uncertainty", "change", "number", "number"].concat(group.measured ? ["control", "control"] : []).concat(group.sameShown ? ["control"] : [])
             onRowActivated: row => group.selected = parameterFilter.parameterAt(row)
 
-            // A layout of its own (the owner, 2026-10-27): the name a little wider than its longest shown name, icons
-            // and text; the units, min and max as their text; start, value, s.u. and change each fit their widest
-            // text and share what is left; free at the right with a wider gap before it. Start and change are the
-            // report's fit table columns, empty before a fit (owner record 2026-11-10).
-            // Every number column is as wide as its widest text and its header, so no number loses digits or its
-            // exponent; the name takes what is left. In a narrow sidebar the margins go first, then the min and max
-            // columns, then the name down to a few characters; a row still too wide scrolls sideways (DataTable).
+            // A layout of its own (the owner, 2026-10-27): every column as wide as its type (ADR-0103 decision 4), the
+            // name taking what is left, free at the right with a wider gap before it. Start and change are the report's
+            // fit table columns, empty before a fit (owner record 2026-11-10). In a narrow sidebar the margins go
+            // first, then whole columns by priority, so the name keeps its minimum width.
             readonly property var fittedColumns: [2, 3, 4, 5, 6, 7, 8]
-            readonly property var rangeColumns: [7, 8]
+            // Set by its own rule (applyColumns), never by the kind model's default.
+            columns: []
+            // Columns drop one at a time while the rest do not fit beside the name's minimum width (ADR-0103 decision 3):
+            // Change, Max, Min, Start, then the unit (a width mode narrower than the base). The row number, Name, Value,
+            // s.u. and Free stay at every width (the owner, 2026-11-22 and 2026-11-23, "Compact with s.u."). The header
+            // and the rows show the same columns.
+            readonly property var dropOrder: [[6], [8], [7], [2], [4]]
             readonly property real freeWidth: group.freeColumnWidth
-            readonly property real nameMinimum: Math.min((fittedWidths[1] ?? 0) + EaStyle.Sizes.fontPixelSize, EaStyle.Sizes.fontPixelSize * 8)
-            readonly property real fittedRoom: width - rowPadding * 2 - EaStyle.Sizes.borderThickness * 2 - EaStyle.Sizes.tableColumnSpacing * ((group.measured ? 9 : 8) + (group.sameShown ? 1 : 0)) - numberColumnWidth - freeWidth - group.sameColumnWidth - nameMinimum
-            readonly property real fittedSum: fittedColumns.reduce((sum, column) => sum + (fittedWidths[column] ?? 0), 0)
-            readonly property bool rangeShown: fittedRoom >= fittedSum
-            readonly property var shownColumns: rangeShown ? fittedColumns : fittedColumns.filter(column => !rangeColumns.includes(column))
-            readonly property real shownSum: shownColumns.reduce((sum, column) => sum + (fittedWidths[column] ?? 0), 0)
-            readonly property real columnMargin: Math.max(0, Math.min(autoColumnPadding, Math.floor((fittedRoom - shownSum) / shownColumns.length)))
+            // The name's room before a column drops: its icons (about 5 em) and an ordinary label (Na1 B iso, about
+            // 7 em). At the full sidebar width every column shows and only a longer name is cut, in its middle (the
+            // owner, 2026-11-22).
+            // Never more than the widest name: a short-named project keeps its columns at a narrower width.
+            // The name budget, never the measured names: which columns fit is known before any row is measured (T6;
+            // a minimum read from the names moved the columns once the names were measured).
+            readonly property real nameMinimum: AppSizes.nameBudget
+            // The name's content width: the widest name (its minimum until measured).
+            // Before the names are measured, the name budget (AppSizes.nameBudget, the widest bundled name): measured,
+            // a name that fits it changes nothing (T6).
+            readonly property real nameContent: widestName > 0 ? Math.max(nameMinimum, widestName) : Math.max(nameMinimum, AppSizes.nameBudget)
+            // Each column's measured content (its header or widest value): the table's raw measure, as this table sets
+            // its columns itself and the combined widths keep a set column's own width.
+            // Each column's width by its kind alone, the reserve the Auto width is made of (AppSizes), never the values
+            // shown: a longer value or a fit moves no column (T5, T6); a value wider than its column shows fewer digits.
+            function contentOf(column: int): real {
+                if (column === 2 || column === 3)
+                    return AppSizes.autoValueColumn;
+                if (column === 5)
+                    return AppSizes.autoUncertaintyColumn;
+                if (column === 6)
+                    return AppSizes.autoChangeColumn;
+                if (column === 7 || column === 8)
+                    return AppSizes.autoBoundColumn;
+                return Math.max(contentWidths[column] ?? 0, fittedWidths[column] ?? 0);
+            }
+            // With a cell's standard padding, never one read from the cells: those come and go as columns drop, and a
+            // width that followed them moved the sidebar back and forth (the owner's sweep, 2026-11-23).
+            readonly property real typicalValue: Math.ceil(boldMetrics.advanceWidth("-0.00000")) + 2 * AppSizes.tableCellMargin
+            readonly property real typicalUncertainty: Math.ceil(unitMetrics.advanceWidth("0.00000")) + 2 * AppSizes.tableCellMargin
+            readonly property real typicalChange: Math.ceil(unitMetrics.advanceWidth("100.0% \u2191")) + 2 * AppSizes.tableCellMargin
+            FontMetrics {
+                id: boldMetrics
+                font.family: EaStyle.Fonts.fontFamily
+                font.pixelSize: EaStyle.Sizes.fontPixelSize
+                font.bold: true
+            }
+            readonly property real fittedSum: fittedColumns.reduce((sum, column) => sum + contentOf(column), 0)
+            // The one rule for which columns a table width drops: the table shown and the sidebar widths named below
+            // both ask it, so a named width shows what its name says.
+            // The room left for the fitted columns beside the name's minimum at a table width.
+            // A dropped column takes no width and no spacing: only the shown columns' gaps are counted, so their
+            // width goes to the name rather than to empty space (the owner, 2026-11-22).
+            function roomAt(tableWidth: real, dropped: var): real {
+                const shown = (dropped.includes(0) ? 0 : 1) + 1 + fittedColumns.filter(column => !dropped.includes(column)).length + (group.measured ? 1 : 0) + (group.sameShown ? 1 : 0);
+                return tableWidth - rowPadding * 2 - EaStyle.Sizes.borderThickness * 2 - EaStyle.Sizes.tableColumnSpacing * (shown - 1) - (dropped.includes(0) ? 0 : numberColumnWidth) - freeWidth - group.sameColumnWidth - nameMinimum;
+            }
+            readonly property real fittedRoom: roomAt(width, droppedColumns)
+            function droppedAt(tableWidth: real): var {
+
+                // Every column shows while there is room, empty or not (the owner, 2026-11-22). The columns' widths are
+                // their kinds' (T5), known before any row is measured, so the first frame already shows them (T6: the
+                // base alone, then every column, moved the table on its first show).
+                let dropped = [];
+                for (let step = 0; step < dropOrder.length; ++step) {
+                    const kept = fittedColumns.filter(column => !dropped.includes(column));
+                    // The name never gives way below its minimum: columns drop first, so no name is cut to dots.
+                    const room = roomAt(tableWidth, dropped);
+                    // Every column at its fixed content width; a column that does not fit drops, never narrows.
+                    if (kept.reduce((total, column) => total + columnWidth(column), 0) <= room)
+                        break;
+                    dropped = dropped.concat(dropOrder[step].filter(column => !dropped.includes(column)));
+                }
+                return dropped;
+            }
+            // A named width mode shows exactly its columns, whatever room is left (W6: Compact is Name, Value, s.u. and
+            // Free; the owner, 2026-11-23); Auto, Full and Manual drop by the room.
+            readonly property var modeDrops: ({
+                    "bounds": [6],
+                    "values": [6, 8, 7],
+                    "compact": [6, 8, 7, 2, 4]
+                })
+            readonly property var droppedColumns: !EaStyle.Sizes.sideBarBelow && modeDrops[Preferences.sideBarWidthMode] !== undefined ? modeDrops[Preferences.sideBarWidthMode] : droppedAt(width)
+            // Each data column at a minimal estimate from its content type plus one cell padding, the same for every
+            // project; a value wider than that is written to fit (fewer digits, then ×10ⁿ; ADR-0051), and the name takes
+            // everything left (the owner, 2026-11-22). The estimates are logged once (sweep reports).
+            // Value at its own estimate; the units column as wide as the widest unit the shown rows have, less the pull
+            // that draws it one space after the value (unitPull).
+            function columnWidth(column: int): real {
+                // The unit at its widest, deg², whatever the rows show (T5).
+                if (column === 4)
+                    return AppSizes.autoUnitColumn;
+                return contentOf(column);
+            }
+            readonly property real unitGap: Math.ceil(unitMetrics.advanceWidth(" "))
+            // How far the unit is drawn left of its column: the value's right padding and the column spacing, less one
+            // space.
+            // The value cells' right padding, as they report it (one value for every row).
+            property real valuePadding: 0
+            readonly property real unitPull: Math.max(0, valuePadding + EaStyle.Sizes.tableColumnSpacing - unitGap)
+            // The widest unit among the shown rows, measured as the rows change (a short, known set; never in a width
+            // binding).
+            property real widestUnit: 0
+            function measureUnits(): void {
+                let widest = 0;
+                for (let row = 0; row < parameterFilter.rowCount(); ++row) {
+                    const p = parameterFilter.parameterAt(row);
+                    if (p && p.displayUnits !== "")
+                        widest = Math.max(widest, unitMetrics.advanceWidth(p.displayUnits));
+                }
+                widestUnit = Math.ceil(widest);
+            }
+            // The widest name among the shown rows, icons included: the name column's measured content (the owner,
+            // 2026-11-23).
+            readonly property real widestName: contentOf(1)
+            Connections {
+                target: parameterFilter
+                function onModelReset() {
+                    Qt.callLater(table.measureUnits);
+                }
+                function onRowsInserted() {
+                    Qt.callLater(table.measureUnits);
+                }
+                function onRowsRemoved() {
+                    Qt.callLater(table.measureUnits);
+                }
+                function onLayoutChanged() {
+                    Qt.callLater(table.measureUnits);
+                }
+            }
+            FontMetrics {
+                id: unitMetrics
+                font.family: EaStyle.Fonts.fontFamily
+                font.pixelSize: EaStyle.Sizes.fontPixelSize
+            }
+            property string columnReport: ""
+            function reportColumns(): void {
+                const titles = ["", "Name", "Start", "Value", "units", "s.u.", "Change", "Min", "Max"];
+                const report = fittedColumns.map(column => `${titles[column]} ${Math.round(columnWidth(column))}`).join(", ");
+                if (report !== columnReport) {
+                    columnReport = report;
+                    console.info("parameters column estimates (px, padding included): " + report);
+                }
+            }
+            onFittedWidthsChanged: Qt.callLater(reportColumns)
+            // Start, Value, s.u. and Change: the columns that narrow when the row is too wide.
+            readonly property var numberColumns: [2, 3, 5, 6]
+            function shows(column: int): bool {
+                return !droppedColumns.includes(column);
+            }
+            // Every column after a fit at its type's width with the columns' spacing between them, the name whole: the width
+            // the sidebar takes from about 1280 px up (AppSizes.sideBarFullWidth; the owner, 2026-11-22), noted with the
+            // sidebar's own insets. (With the table's full margin on every column it came to about 950 px, leaving the
+            // main view less than its tab bar at 1280.)
+            readonly property real allColumnsWidth: rowPadding * 2 + EaStyle.Sizes.borderThickness * 2 + EaStyle.Sizes.tableColumnSpacing * (9 + (group.sameShown ? 1 : 0)) + numberColumnWidth + freeWidth + group.sameColumnWidth + nameContent + fittedColumns.reduce((sum, column) => sum + contentOf(column), 0)
+            // The sidebar's own insets around this table.
+            readonly property real sideBarInsets: EaStyle.Sizes.groupBoxSpacing + EaStyle.Sizes.sideBarPadding
+            // The table width that shows exactly the columns left after `dropped` (each at its fixed width, the name at
+            // its minimum): each step of the rule, from all columns to the base and narrower.
+            // With every column shown, the name at its content width: the full width stops there (the owner,
+            // 2026-11-23); narrower steps keep the name's minimum.
+            function needFor(dropped: var): real {
+                const all = dropped;
+                return -roomAt(0, all) + fittedColumns.filter(column => !all.includes(column)).reduce((sum, column) => sum + columnWidth(column), 0) + (all.length === 0 ? nameContent - nameMinimum : 0);
+            }
+            // The steps, noted for the sidebar (AppSizes.noteSideBarSteps): all columns ("full"), one less each time to
+            // the base (Name, Value, s.u., Free); the width modes are steps of the rule: No change, Fit values, Compact.
+            function noteWidths(): void {
+                // From the columns' kinds alone (T5), so neither its page shown nor its rows measured: a measure that a
+                // page switch broke off left every named mode at Auto's width. A project's rows set the row number's width.
+                if (!(count > 0))
+                    return;
+                const steps = [];
+                let dropped = [];
+                steps.push(Math.ceil(needFor(dropped) + sideBarInsets));
+                for (let step = 0; step < dropOrder.length - 1; ++step) {
+                    dropped = dropped.concat(dropOrder[step]);
+                    steps.push(Math.ceil(needFor(dropped) + sideBarInsets));
+                }
+                console.info(`sidebar steps (px, all columns to the base): ${steps.join(", ")}; insets ${Math.round(sideBarInsets)}; widest name ${Math.ceil(widestName)} px (${(widestName / EaStyle.Sizes.fontPixelSize).toFixed(2)} em)`);
+                AppSizes.noteSideBarSteps({
+                    "steps": steps,
+                    "bounds": Math.ceil(needFor([6]) + sideBarInsets),
+                    "values": Math.ceil(needFor([6, 8, 7]) + sideBarInsets),
+                    // Never narrower than the pickers' row with each picker showing its text whole (W6).
+                    "compact": Math.ceil(Math.max(needFor([6, 8, 7, 2, 4]) + sideBarInsets, group.pickerRowNeed + EaStyle.Sizes.sideBarWidth - EaStyle.Sizes.sideBarContentWidth))
+                });
+            }
+            // What the named widths are made of.
+            readonly property var stepInputs: [needFor([6, 8, 7, 2, 4]), needFor([]), group.pickerRowNeed, count > 0]
+            onStepInputsChanged: Qt.callLater(noteWidths)
+            readonly property var shownColumns: fittedColumns.filter(column => shows(column))
+            readonly property real shownSum: shownColumns.reduce((sum, column) => sum + columnWidth(column), 0)
             function fittedColumn(column: int): real {
-                return shownColumns.includes(column) ? Math.floor((fittedWidths[column] ?? 0) + columnMargin) : 0;
+                return shownColumns.includes(column) ? Math.ceil(columnWidth(column)) : 0;
             }
             // The name takes the rest, set here rather than by the table's rule, so it follows only the table's width
             // and the measured texts, never the rows in view.
-            readonly property real nameWidth: Math.max(EaStyle.Sizes.fontPixelSize * 4, Math.floor(fittedRoom + nameMinimum - shownColumns.reduce((sum, column) => sum + fittedColumn(column), 0)))
-            readonly property var wantedColumns: [numberColumnWidth, nameWidth].concat(fittedColumns.map(column => fittedColumn(column))).concat(group.measured ? [freeWidth] : []).concat(group.sameShown ? [group.sameColumnWidth] : [])
+            // At least its minimum where the columns allow it (they drop first); below that, when nothing else can give
+            // (a narrow width mode), the name is cut in its middle rather than the row overrunning the table: the
+            // columns add up to the table's width.
+            // The name at its content width; what is left past it is empty space before Free (the owner, 2026-11-23),
+            // or the name's when that is less than one column spacing.
+            readonly property real nameRoom: Math.max(EaStyle.Sizes.fontPixelSize * 4, Math.floor(fittedRoom + nameMinimum - shownColumns.reduce((sum, column) => sum + fittedColumn(column), 0)))
+            // Past one column spacing the spare is an empty column before Free (or the row's right end without it);
+            // up to one spacing the name holds it (the owner, 2026-11-23: at most one spacing past the widest name).
+            // The row without the spare: the name at the smaller of its content and its room.
+            readonly property var baseColumns: [shows(0) ? numberColumnWidth : 0, Math.min(nameRoom, Math.ceil(nameContent))].concat(fittedColumns.map(column => fittedColumn(column))).concat(group.measured ? [freeWidth] : []).concat(group.sameShown ? [group.sameColumnWidth] : [])
+            // What the row leaves of the table's inner width, its spacings counted between the columns that take width.
+            readonly property real leftOver: {
+                const taking = baseColumns.filter(column => column > 0.5);
+                const used = taking.reduce((sum, column) => sum + column, 0) + EaStyle.Sizes.tableColumnSpacing * Math.max(0, taking.length - 1);
+                return Math.floor(width - rowPadding * 2 - EaStyle.Sizes.borderThickness * 2 - used);
+            }
+            // Nothing shared out before the columns are measured: a leftover of columns of nothing overran the row.
+            readonly property bool measuredColumns: (contentWidths[3] ?? 0) > 0
+            // The name takes what is left up to the name budget (the widest bundled example's name), so at the Auto stop
+            // the space before Free is at most one column gap for every example (W5); more is spare before Free (T4).
+            readonly property real nameGrow: Math.min(Math.max(0, leftOver), Math.max(0, AppSizes.nameBudget - baseColumns[1]))
+            readonly property real afterName: leftOver - nameGrow
+            readonly property bool spares: afterName > EaStyle.Sizes.tableColumnSpacing + 1
+            readonly property real spareWidth: group.measured && spares ? afterName - EaStyle.Sizes.tableColumnSpacing : 0
+            readonly property real nameWidth: baseColumns[1] + nameGrow + (spares ? 0 : Math.max(0, afterName))
+            readonly property var wantedColumns: [shows(0) ? numberColumnWidth : 0, nameWidth].concat(fittedColumns.map(column => fittedColumn(column))).concat(group.measured ? [spareWidth, freeWidth] : []).concat(group.sameShown ? [group.sameColumnWidth] : [])
             // Applied a moment later: new widths remake rows and measure them again, which would otherwise feed back
             // into the widths while they are being worked out.
             function applyColumns() {
-                if (!ApplicationInfo.sameColumnWidths(columns, wantedColumns))
-                    columns = wantedColumns;
+                if (ApplicationInfo.sameColumnWidths(columns, wantedColumns))
+                    return;
+                const recount = columns.length !== wantedColumns.length;
+                columns = wantedColumns;
+                // A new set of columns is measured afresh: a measure made before them had nothing to fill.
+                if (recount)
+                    Qt.callLater(refit);
             }
             onWantedColumnsChanged: Qt.callLater(applyColumns)
-            Component.onCompleted: columns = wantedColumns
+            Component.onCompleted: {
+                columns = wantedColumns;
+                Qt.callLater(measureUnits);
+                Qt.callLater(refit);
+            }
 
             header: EaComponents.ListViewHeader {
                 EaComponents.ListViewLabel {
                     elide: Text.ElideRight
+                    visible: table.shows(0)
                     horizontalAlignment: Text.AlignHCenter
                 }
                 EaComponents.ListViewLabel {
@@ -377,6 +681,7 @@ SideBarGroup {
                 }
                 EaComponents.ListViewLabel {
                     elide: Text.ElideRight
+                    visible: table.shows(2)
                     horizontalAlignment: Text.AlignRight
                     text: qsTr("Start")
                 }
@@ -385,35 +690,47 @@ SideBarGroup {
                     horizontalAlignment: Text.AlignRight
                     text: qsTr("Value")
                 }
+                // Pulled left with its cells, so the header and the cells keep one geometry.
                 EaComponents.ListViewLabel {
-                    elide: Text.ElideRight
+                    readonly property bool keepsAlignment: true
+                    visible: table.shows(4)
                     horizontalAlignment: Text.AlignLeft
                     text: ""
+                    transform: Translate {
+                        x: -table.unitPull
+                    }
                 }
                 EaComponents.ListViewLabel {
                     elide: Text.ElideRight
+                    visible: table.shows(5)
                     horizontalAlignment: Text.AlignRight
                     text: qsTr("s.u.")
                 }
-                // Right-aligned on the arrows' right edge, as the change cells end there without the table's padding.
+                // Right-aligned on the arrows' right edge, a cell margin before the column's, as the change cells end.
                 EaComponents.ListViewLabel {
                     elide: Text.ElideRight
                     readonly property bool keepsAlignment: true
+                    visible: table.shows(6)
                     horizontalAlignment: Text.AlignRight
-                    rightPadding: 0
+                    rightPadding: AppSizes.tableCellMargin
                     text: qsTr("Change")
                 }
                 EaComponents.ListViewLabel {
                     elide: Text.ElideRight
-                    visible: table.rangeShown
+                    visible: table.shows(7)
                     horizontalAlignment: Text.AlignRight
                     text: qsTr("Min")
                 }
                 EaComponents.ListViewLabel {
                     elide: Text.ElideRight
-                    visible: table.rangeShown
+                    visible: table.shows(8)
                     horizontalAlignment: Text.AlignRight
                     text: qsTr("Max")
+                }
+                // The spare width, empty, before Free.
+                Item {
+                    visible: group.measured && table.spareWidth > 0
+                    height: 1
                 }
                 // The title is a button, marked by the combo boxes' arrow: a click frees or fixes every row the
                 // filters show, as one Undo step (the owner, 2026-10-11). The arrow ends where the right-aligned check
@@ -432,6 +749,8 @@ SideBarGroup {
                     // Whether the click area that takes the header's input is enabled: it is reparented over the
                     // header, so the title's own `enabled` does not follow it.
                     readonly property bool interactionEnabled: freeArea.enabled
+                    // The item a press on the header lands on.
+                    readonly property Item pressArea: freeArea
                     // Its menu, whose Free and Fixed a tutorial's Next chooses as the user would (edi ADR-0064).
                     readonly property FreeHeaderMenu menu: freeMenu
 
@@ -486,6 +805,7 @@ SideBarGroup {
                 objectName: `parameters.row.${index}`
                 EaComponents.ListViewLabel {
                     elide: Text.ElideRight
+                    visible: table.shows(0)
                     horizontalAlignment: Text.AlignHCenter
                     marksCurrentRow: true
                     text: row.index + 1
@@ -495,19 +815,22 @@ SideBarGroup {
                 Item {
                     property int horizontalAlignment: Text.AlignLeft
                     objectName: `parameters.name.${row.index}`
-                    // As wide as its icons and text, which the table fits the column to; a narrower column ends the name
-                    // with an ellipsis, its full name in the tooltip.
-                    implicitWidth: nameLine.fullWidth
+                    // As wide as its icons and text with the cell's margins, which the table fits the column to; a narrower
+                    // column ends the name with an ellipsis, its full name in the tooltip.
+                    readonly property real cellMargin: AppSizes.tableCellMargin
+                    implicitWidth: nameLine.fullWidth + 2 * cellMargin
                     height: parent.height
                     clip: true
 
                     IconLine {
                         id: nameLine
+                        x: AppSizes.tableCellMargin
                         anchors.verticalCenter: parent.verticalCenter
-                        maximumWidth: Math.max(1, parent.width)
-                        // Every row keeps its icons, so their columns line up: a name too long for the column ends
-                        // with an ellipsis instead (the owner, 2026-11-17).
+                        maximumWidth: Math.max(1, parent.width - 2 * AppSizes.tableCellMargin)
+                        // Every row keeps its icons, so their columns line up: a name too long for the column is cut in
+                        // its middle (the owner, 2026-11-17, 2026-11-22), so both its ends show.
                         minimumTextWidth: 0
+                        elide: Text.ElideMiddle
                         segments: ParameterNames.segments(row.parameter)
                     }
                     TapHandler {
@@ -518,12 +841,13 @@ SideBarGroup {
                         id: nameHover
                     }
                     EaElements.ToolTip {
-                        text: row.path
+                        text: ParameterNames.fullName(row.parameter)
                         requested: nameHover.hovered
                     }
                 }
                 NumberLabel {
                     objectName: `parameters.start.${row.index}`
+                    visible: table.shows(2)
                     horizontalAlignment: Text.AlignRight
                     color: EaStyle.Colors.themeForegroundMinor
                     number: row.parameter ? row.parameter.startText : ""
@@ -532,19 +856,39 @@ SideBarGroup {
                     id: valueCell
                     columnAlignment: Text.AlignRight
                     objectName: `parameters.value.${row.index}`
+                    onRightPaddingChanged: table.valuePadding = rightPadding
+                    Component.onCompleted: table.valuePadding = rightPadding
                     item: row.parameter
                     // An auto-mode background's values are the estimate's, as in the Experiment page's table.
                     locked: row.parameter ? row.parameter.estimated : false
                     onActiveFocusChanged: ApplicationInfo.finishUiEvent(11, undefined)
                 }
+                // The unit in its own column right after Value, drawn one space after the value (the owner, 2026-11-22):
+                // shifted left over the value's padding and the column spacing, its column as much narrower.
                 EaComponents.ListViewLabel {
-                    elide: Text.ElideRight
+                    objectName: `parameters.units.${row.index}`
+                    visible: table.shows(4)
                     color: EaStyle.Colors.themeForegroundMinor
+                    // The value's family and size, one space after it, but never bold, whatever the value's weight (the
+                    // owner, 2026-11-23).
+                    font.family: EaStyle.Fonts.fontFamily
+                    font.pixelSize: valueCell.font.pixelSize
+                    font.bold: false
                     horizontalAlignment: Text.AlignLeft
+                    readonly property bool keepsAlignment: true
+                    leftPadding: 0
+                    rightPadding: 0
+                    // The column is narrower than the unit by the pull: the text runs on into the spacing it was pulled
+                    // across, never cut.
+                    elide: Text.ElideNone
+                    transform: Translate {
+                        x: -table.unitPull
+                    }
                     text: row.units
                 }
                 NumberLabel {
                     objectName: `parameters.su.${row.index}`
+                    visible: table.shows(5)
                     horizontalAlignment: Text.AlignRight
                     number: row.parameter ? (row.parameter.fileValue !== "" ? row.parameter.fileSu : row.parameter.hasUncertainty ? NumberText.error(row.parameter.uncertainty, 0, row.parameter.value) : "") : ""
                     narrow: row.parameter && row.parameter.hasUncertainty ? NumberText.ownUncertainty(row.parameter.uncertainty, row.parameter.value) : ""
@@ -565,16 +909,18 @@ SideBarGroup {
                 // width, as the report and notebook tables draw it.
                 Item {
                     objectName: `parameters.change.${row.index}`
+                    visible: table.shows(6)
                     property int horizontalAlignment: Text.AlignRight
                     readonly property bool keepsAlignment: true
                     readonly property real gap: EaStyle.Sizes.fontPixelSize * 0.25
-                    implicitWidth: changePercent.implicitWidth + gap + changeArrow.width
+                    implicitWidth: changePercent.implicitWidth + gap + changeArrow.width + AppSizes.tableCellMargin
                     height: parent.height
                     clip: true
 
                     EaElements.Label {
                         id: changeArrow
                         anchors.right: parent.right
+                        anchors.rightMargin: AppSizes.tableCellMargin
                         anchors.verticalCenter: parent.verticalCenter
                         width: EaStyle.Sizes.fontPixelSize * 0.75
                         horizontalAlignment: Text.AlignHCenter
@@ -582,27 +928,36 @@ SideBarGroup {
                         font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.85
                         text: !row.parameter || row.parameter.changeDirection === 0 ? "" : row.parameter.changeDirection > 0 ? "arrow-up" : "arrow-down"
                     }
-                    EaElements.Label {
+                    // The room left of the arrow, so a change too long for the column is fitted, in full on hover.
+                    NumberLabel {
                         id: changePercent
                         anchors.right: changeArrow.left
                         anchors.rightMargin: parent.gap
                         anchors.verticalCenter: parent.verticalCenter
-                        text: row.parameter ? row.parameter.changeText : ""
+                        width: Math.max(0, parent.width - AppSizes.tableCellMargin - parent.gap - changeArrow.width)
+                        horizontalAlignment: Text.AlignRight
+                        number: row.parameter ? row.parameter.changeText : ""
                     }
                 }
+                // Right-aligned like its header, an infinite bound included.
                 NumberLabel {
-                    visible: table.rangeShown
+                    visible: table.shows(7)
                     horizontalAlignment: Text.AlignRight
                     color: EaStyle.Colors.themeForegroundMinor
                     number: group.bound(row.minimum)
                     full: NumberText.plainFull(row.minimum)
                 }
+                // Right-aligned like its header, an infinite bound included.
                 NumberLabel {
-                    visible: table.rangeShown
+                    visible: table.shows(8)
                     horizontalAlignment: Text.AlignRight
                     color: EaStyle.Colors.themeForegroundMinor
                     number: group.bound(row.maximum)
                     full: NumberText.plainFull(row.maximum)
+                }
+                Item {
+                    visible: group.measured && table.spareWidth > 0
+                    height: 1
                 }
                 // Enabled where a fit can vary the value, or while it is free so a flag set before a change can be
                 // cleared; otherwise disabled, its tooltip naming why (edi ADR-0053). Without measured data every box

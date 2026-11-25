@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "experiment_view_model.hpp"
 #include <QPointer>
+#include <QMetaMethod>
 #include <QScopeGuard>
 #include <string_view>
 
@@ -411,7 +412,7 @@ void ExperimentViewModel::setInstrument(const QString& instrument) {
         false));
 }
 // The declared model, now that edi computes more than one.
-ExperimentViewModel::EstimateSettings ExperimentViewModel::read_estimate_settings() const {
+ExperimentViewModel::EstimateSettings ExperimentViewModel::read_estimate_settings(bool counts) const {
     EstimateSettings out;
     out.mode = QString::fromStdString(edi::background_estimate_mode(experiment_));
     out.method = QString::fromStdString(experiment_.background_estimate_method.value_or("auto"));
@@ -430,7 +431,8 @@ ExperimentViewModel::EstimateSettings ExperimentViewModel::read_estimate_setting
         out.model_choice = QString::fromStdString(defaults.model_choice);
         out.model_reason = QString::fromStdString(defaults.model_reason);
         // A blank most points or most terms has no value to derive, so the field shows how many Estimate places.
-        if (experiment_.background_type == "line-segment") {
+        if (!counts) {
+        } else if (experiment_.background_type == "line-segment") {
             if (!options.n_points) {
                 out.derived_points = static_cast<int>(edi::estimate_background(experiment_, options).points.size());
             }
@@ -709,9 +711,31 @@ void ExperimentViewModel::setLastError(const QString& error) {
     }
 }
 
+void ExperimentViewModel::settle_estimate_counts() const {
+    if (!std::exchange(estimate_counts_owed_, false)) return;
+    const EstimateSettings full = read_estimate_settings();
+    estimate_.derived_points = full.derived_points;
+    estimate_.derived_terms = full.derived_terms;
+    estimate_.note = full.note;
+}
+
 void ExperimentViewModel::syncEstimate() {
-    // Every value is stored before any signal, so a handler reads the new settings throughout.
-    const EstimateSettings before = std::exchange(estimate_, read_estimate_settings());
+    const auto listened = [this](void (ExperimentViewModel::*signal)()) {
+        return isSignalConnected(QMetaMethod::fromSignal(signal));
+    };
+    const bool counts = listened(&ExperimentViewModel::estimatePointsChanged) ||
+                        listened(&ExperimentViewModel::estimateTermsChanged) ||
+                        listened(&ExperimentViewModel::estimateNoteChanged);
+    // Every value is stored before any signal, so a handler reads the new settings throughout. Unread counts keep
+    // what was last worked out until read, so no change of theirs is announced to no one.
+    EstimateSettings next = read_estimate_settings(counts);
+    if (!counts) {
+        next.derived_points = estimate_.derived_points;
+        next.derived_terms = estimate_.derived_terms;
+        next.note = estimate_.note;
+    }
+    const EstimateSettings before = std::exchange(estimate_, next);
+    estimate_counts_owed_ = !counts;
     const auto notify = [this](bool changed, void (ExperimentViewModel::*signal)()) {
         if (changed) {
             emit(this->*signal)();
@@ -806,7 +830,7 @@ void ExperimentViewModel::sync() {
     update(scale_, one_link ? registry_.find(&experiment_.linked_structure().scale) : nullptr,
            &ExperimentViewModel::scaleChanged);
     measured_range_->sync();
-    syncCategories();
+    if (!values_only_ || listed_points_ != measured_range_->points()) syncCategories();
     instrument_->sync();
     peak_->sync();
     peak_asymmetry_->sync();
@@ -825,6 +849,12 @@ void ExperimentViewModel::sync() {
     scattering_source_->sync();
 }
 
+void ExperimentViewModel::syncValues() {
+    values_only_ = true;
+    const auto restore = qScopeGuard([this] { values_only_ = false; });
+    sync();
+}
+
 std::size_t ExperimentViewModel::place() const {
     std::size_t place = 0;
     for (std::size_t i = 0; i < project_.experiments.size(); ++i) {
@@ -839,6 +869,7 @@ void ExperimentViewModel::syncCategories() {
     // `data` is a loop in `.edi` — its points — though the core's category list counts no rows for it; the
     // sidebar titles it as a loop, with the number of measured points (edi ADR-0017 §3).
     std::vector<edi::Category> categories = edi::experiment_categories(experiment_);
+    listed_points_ = measured_range_->points();
     for (edi::Category& category : categories) {
         if (category.id == "data") {
             category.is_loop = true;

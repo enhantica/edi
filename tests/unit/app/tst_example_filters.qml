@@ -369,6 +369,8 @@ Item {
             Session.examples.searchText = expected;
             sameIds(ids(), [expected]);
             verify(waitForPolish(group));
+            const list = Ui.find(group, "examples.list");
+            verify(list !== null, "The isolated example must own a visible catalogue list");
             let row = null;
             tryVerify(() => {
                 row = Ui.find(group, "examples.open." + expected);
@@ -398,6 +400,10 @@ Item {
             for (const code of ["xray", "cwl"])
                 compare(labelWithText(row, code).color, EaStyle.Colors.themeForeground, "Grey technique code: " + code);
             compare(labelWithText(row, "pd").color, EaStyle.Colors.themeAccent, "Powder technique uses the selected blue ink");
+            const rect = row.mapToItem(list, 0, 0, row.width, row.height);
+            verify(rect.x >= 0 && rect.y >= 0 && rect.x + rect.width <= list.width && rect.y + rect.height <= list.height,
+                   "The isolated catalogue row must be wholly inside its visible list before pointer input. " +
+                   `Row is ${rect.width} × ${rect.height} at (${rect.x}, ${rect.y}). List is ${list.width} × ${list.height}.`);
             const point = Ui.clickPoint(row);
             let delay = 0;
             for (let item = row.parent; item; item = item.parent) {

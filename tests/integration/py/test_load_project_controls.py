@@ -37,13 +37,25 @@ def labels(tokens):
 
 def test_get_started_declares_exactly_the_three_project_actions():
     buttons = [
-        labels(body)[0]
+        body
         for kind, body in objects(SOURCE.read_text(encoding='utf-8'))
-        if kind.endswith('SideBarButton') and labels(body)
+        if kind.endswith('SideBarButton')
     ]
-    assert buttons == ['Create a new project', 'Load project', 'Save project as'], (
-        'Get started offers exactly Create a new project, Load project and Save project as '
-        'in that order; program imports belong in the Load project popup'
+    assert [
+        tuple(body[body.index('objectName') : body.index('objectName') + 3]) for body in buttons
+    ] == [
+        ('objectName', ':', '"project.create"'),
+        ('objectName', ':', '"project.load"'),
+        ('objectName', ':', '"project.saveAs"'),
+    ], 'Get started owns exactly the ordered Create, Load and Save actions'
+    for button, full, short in zip(
+        buttons[:2], ['Create a new project', 'Load project'], ['Create', 'Load'], strict=True
+    ):
+        assert contains(button, f'text: buttons.wholeLabels ? qsTr("{full}") : qsTr("{short}")'), (
+            'Each project action selects its own full or compact caption from the common row'
+        )
+    assert contains(buttons[2], 'text: qsTr("Save project as")'), (
+        'Save retains its full requested caption in the same button row'
     )
 
 

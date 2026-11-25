@@ -69,20 +69,18 @@ TestCase {
         }, 500, "The keyboard target must edit the selected actual background ParameterItem");
         const target = before + 0.125;
         if (route === "cell") {
-            Ui.scrollIntoView(cell);
-            const hit = Ui.clickPoint(cell);
-            verify(hit !== null, "The actual Analysis value cell must expose a visible pointer target");
-            mouseClick(cell, hit.x, hit.y);
-            cell.forceActiveFocus();
-            verify(cell.activeFocus, "The actual Analysis value cell must receive keyboard focus before the edit attempt");
+            const popup = Ui.parameterPopup(this, cell);
+            const editor = Ui.parameterValue(this, cell, popup);
+            Ui.focusParameter(this, editor);
             if (automatic) {
                 verify(before !== 9, "The typed Auto negative control must differ from the original value");
-                cell.selectAll();
-                verify(SettingsProof.key(cell, Qt.Key_9), "The Auto Analysis cell must receive an actual attempted numeric key");
+                editor.selectAll();
+                verify(SettingsProof.key(editor, Qt.Key_9), "The Auto Analysis popup receives an actual attempted numeric key");
             } else {
-                verify(SettingsProof.type(cell, String(target)), "The Manual Analysis editor must receive real numeric keyboard input");
+                verify(SettingsProof.type(editor, String(target)), "The Manual Analysis editor receives real numeric keyboard input");
             }
-            verify(SettingsProof.key(cell, Qt.Key_Return), "Return must exercise the production Analysis commit path");
+            verify(SettingsProof.key(editor, Qt.Key_Return), "Return exercises the production Analysis popup commit path");
+            popup.close();
         } else if (route === "slider") {
             const slider = Ui.find(group, "parameters.slider", true);
             verify(slider !== null, "The selected Analysis row must expose its real parameters.slider input");

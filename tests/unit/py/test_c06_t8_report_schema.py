@@ -15,6 +15,23 @@ ROOT = Path(__file__).resolve().parents[3]
 UNKNOWN = 'stopping_rule=none\nstopping_value=nan\nlast_shift_su=nan\n'
 
 
+def _restore_warning_spelling(name, data, change):
+    assert change['source_commit'] == 'a6f0c1dd' and name == 'tests/fixtures/e05_t1/cli.json', (
+        'The saved-name warning amendment has one committed authority and document'
+    )
+    assert hashlib.sha256(data).hexdigest() == change['after_sha256'], (
+        'The warning epoch binds the complete current CLI fixture'
+    )
+    saved = b'Warning: Al2O3.atom_site.Al1.adp_iso = -0.13591'
+    older = b'Warning: structures[Al2O3].atom_sites[Al1].adp_iso = -0.13591'
+    assert data.count(saved) == 1, 'Exactly one original warning uses the saved parameter name'
+    reverted = data.replace(saved, older, 1)
+    assert hashlib.sha256(reverted).hexdigest() == change['before_sha256'], (
+        'Undoing only the warning name recovers every byte of the prior capture document'
+    )
+    return reverted
+
+
 def _restore_capture(text):
     assert text.startswith('schema=9\n'), 'Current fixture projections must declare schema nine'
     if text.splitlines()[1] == 'record=fit':
@@ -55,6 +72,8 @@ def test_c06_t8_report_projection_preserves_all_captured_bytes():
     }, 'The version projection must cover every current native and CLI capture exactly'
     for name, hashes in receipt['records'].items():
         actual = (ROOT / name).read_bytes()
+        if name == later['warning_spelling']['file']:
+            actual = _restore_warning_spelling(name, actual, later['warning_spelling'])
         if name in later['files']:
             entry = later['files'][name]
             assert hashlib.sha256(actual).hexdigest() == entry['after_sha256'], (

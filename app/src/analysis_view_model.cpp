@@ -429,7 +429,7 @@ void AnalysisViewModel::sync() {
                     // Single when it applies: a scan stays a single fit until the user switches (the owner,
                     // 2026-11-04); otherwise the one mode that does.
                     const bool single = std::find(now.begin(), now.end(), "single") != now.end();
-                    setFittingMode(QString::fromStdString(single ? std::string("single") : now.front()));
+                    editor_.apply_follow_up([this, mode = QString::fromStdString(single ? std::string("single") : now.front())] { setFittingMode(mode); });
                 }
             },
             Qt::QueuedConnection);

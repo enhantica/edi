@@ -267,10 +267,13 @@ def estimate(args: str) -> list[str]:
     ]
 
 
-def value_path(expression: str, named: dict[str, str], roots: dict[str, str]) -> str:
-    """`structure.atom_sites['Co1'].adp_iso` as its path, `structure.atom_sites[Co1].adp_iso`."""
+def value_path(expression: str, named: dict[str, str]) -> str:
+    """`structure.atom_sites['Co1'].adp_iso` as the app names it, `cosio.atom_site.Co1.adp_iso`."""
     var, rest = expression.split('.', 1)
-    return roots[named[var]] + re.sub(r"\['([^']+)'\]", r'[\1]', rest)
+    match = re.fullmatch(r"(\w+?)(?:s\['([^']+)'\])?\.(\w+)", rest)
+    if not match:
+        raise SystemExit(f'{expression}: not a parameter the app tutorial can name')
+    return '.'.join(part for part in (named[var], match[1], match[2], match[3]) if part)
 
 
 def by_hand(source: str) -> bool:
@@ -959,7 +962,7 @@ def plan(case: str) -> dict:  # noqa: PLR0912, PLR0914, PLR0915 - one plan, step
         ):
             actions += [
                 'reveal:parameters.nameFilter',
-                'fill:parameters.nameFilter=' + value_path(expression, named, roots),
+                'fill:parameters.nameFilter=' + value_path(expression, named),
                 'fill:parameters.value.0=' + value,
                 'key:Return',
                 'parameters.clearFilters',

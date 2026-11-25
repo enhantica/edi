@@ -99,8 +99,9 @@ The decisions it rests on, unchanged here:
   main view, so it stays put while the pages slide. The block selector above the views lists the structures on the
   Structure tab and the experiments on the others. Project and Report keep their own main views. Each view exists
   once, so a structure edited on the Analysis page's slider redraws in the Structure tab beside it.
-- **The supported minimum app size** (the owner, 2026-10-25) is 1024 × 640 logical pixels, `AppSizes.minimumAppWidth`
-  and `minimumAppHeight`, one value for both of its uses. It was checked on every page at that size (`edi_app --demo
+- **The supported minimum app size** (the owner, 2026-10-25) was 1024 × 640 logical pixels, `AppSizes.minimumAppWidth`
+  and `minimumAppHeight`, one value for both of its uses. **Amended 2026-11-21 (ADR-0103 decision 3):** 360 px wide,
+  640 px high below 800 px and 600 px high from 800 px; the rest of this point still holds. It was checked on every page at that size (`edi_app --demo
   <dir> --demo-only minimum-`): every page's sidebar reaches each input by scrolling, a group's fields stay on one row,
   and every chart toolbar keeps whole groups (§15). The desktop window cannot be made smaller (its `minimumWidth` and
   `minimumHeight`). The browser's page can: below either dimension the app shows only the empty view's background, as
@@ -808,7 +809,9 @@ code (`QtCharts1dTab.qml` and the base's `QtCharts1dBase.qml`; the owner, 2026-1
   does. A box zoom, a wheel zoom and a reset move the ranges over easydiffractionbeta's chart animation time (EaStyle.Times.chartAnimation, 250
   ms) with Qt Charts' series-animation easing (OutQuart); each frame is an ordinary refresh, the pattern presented and decimated for that frame's
   ranges, so no point of a frame's range is missing; a pan or a scale change first ends a running one at its end, a wheel notch continues from it,
-  and a chart that is hidden draws no frame: its animation ends at its target, drawn when the chart is shown again (the owner, 2026-10-02). With
+  and a chart that is hidden draws no frame: its animation ends at its target, drawn when the chart is shown again (the owner, 2026-10-02). Every
+  other chart that zooms (Meas vs calc, Stacked, Map, Evolution, single crystal) moves the same way through the same `RangeAnimation`: a zoom,
+  a scroll or a reset moves, a pan and new data jump (the owner, 2026-11-21). With
   hover coordinates on, the pointer shows diffraction-lib's read-out of a point within plotly's default hover distance, 20 px (a Bragg tick by its
   x alone), beside that point, and nothing elsewhere (the owner, 2026-10-02): over the data or the residual, `x`, `meas`, `bkg`, `calc` and
   `meas − calc` at that row, each value in its series' colour, `meas − calc` named and coloured as the residual pane's title (the owner, 2026-10-21); over a Bragg tick, the structure's name, `x` and `Miller indices: (h k l)`, the Miller

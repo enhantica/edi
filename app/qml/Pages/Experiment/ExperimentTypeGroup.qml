@@ -53,6 +53,10 @@ Grid {
         objectName: "experimentType.beamMode"
         width: row.cellWidth
         uid: "experiment_type.beam_mode"
+        shortForms: ({
+                "constant wavelength": qsTr("CWL"),
+                "time-of-flight": qsTr("TOF")
+            })
         options: row.experiment ? row.experiment.beamModeOptions : null
         token: row.experiment ? row.experiment.beamModeToken : ""
         enabled: row.editable
@@ -99,7 +103,14 @@ Grid {
         objectName: "experimentType.polarisation"
         visible: row.experiment !== null && row.experiment.radiationProbeToken !== "xray"
         width: row.cellWidth
-        label: qsTr("Neutron polarisation")
+        // "Polarisation" where the whole title does not fit beside its two neighbours (the owner, 2026-11-23).
+        label: titleMetrics.advanceWidth + EaStyle.Sizes.fontPixelSize * 2 <= width ? qsTr("Neutron polarisation") : qsTr("Polarisation")
+        TextMetrics {
+            id: titleMetrics
+            font.family: EaStyle.Fonts.fontFamily
+            font.pixelSize: EaStyle.Sizes.fontPixelSize
+            text: qsTr("Neutron polarisation")
+        }
         uid: "experiment_type.polarisation"
         options: row.experiment ? row.experiment.polarisationOptions : null
         token: row.experiment ? row.experiment.polarisationToken : ""

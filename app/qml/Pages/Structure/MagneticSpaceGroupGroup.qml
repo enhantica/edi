@@ -28,7 +28,14 @@ Column {
         ValueField {
             objectName: "magneticSpaceGroup.crystalSystem"
             width: group.fieldWidth
-            label: qsTr("Crystal system")
+            // "System" where the whole title does not fit its field: a title is never cut (N1).
+            label: crystalTitle.advanceWidth + EaStyle.Sizes.fontPixelSize <= width ? qsTr("Crystal system") : qsTr("System")
+            TextMetrics {
+                id: crystalTitle
+                font.family: EaStyle.Fonts.fontFamily
+                font.pixelSize: EaStyle.Sizes.fontPixelSize
+                text: qsTr("Crystal system")
+            }
             editable: false
             fieldValue: group.structure && group.structure.spaceGroup ? group.structure.spaceGroup.crystalSystem : ""
         }

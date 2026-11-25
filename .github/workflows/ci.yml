@@ -427,6 +427,13 @@ jobs:
       - name: Seeded series (slow cadence)
         if: ${{ !cancelled() && matrix.part == 1 && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.core_only != true)) }}
         run: pixi run slow-seeded-series
+      - name: Keep the nightly project-opening frame report
+        if: ${{ !cancelled() && github.event_name == 'schedule' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: project-opening-${{ matrix.platform }}-${{ matrix.part }}
+          path: build/project-opening/*.json
+          if-no-files-found: ignore
       - name: Keep the part's durations
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v4
@@ -888,6 +895,24 @@ jobs:
         id: onboarding
         if: ${{ runner.os != 'Windows' && (!cancelled() && github.event_name != 'pull_request' && steps.apphost.outcome == 'success') }}
         run: pixi run -e app --skip-deps onboarding-probes && pixi run -e app --skip-deps onboarding-capture
+      # The Linux app contract consumes real traces on the runs that execute group-app.
+      - name: Prepare the Linux app contract traces
+        if: ${{ runner.os != 'Windows' && !cancelled() && env.APP_PLATFORM == 'Linux' && github.event_name != 'pull_request' && github.event_name != 'schedule' && steps.onboarding.outcome == 'success' }}
+        run: pixi run -e app --skip-deps app-watchdog --prepare-only
+      # R1 reports GUI pauses on the nightly schedule and still verifies the injected controls.
+      - name: Report the nightly GUI watchdog scenarios
+        if: ${{ runner.os != 'Windows' && !cancelled() && env.APP_PLATFORM == 'Linux' && github.event_name == 'schedule' && steps.apphost.outcome == 'success' }}
+        run: pixi run -e app --skip-deps app-watchdog
+      - name: Upload the GUI watchdog's records
+        if: ${{ runner.os != 'Windows' && !cancelled() && env.APP_PLATFORM == 'Linux' && github.event_name != 'pull_request' && steps.apphost.outcome == 'success' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-watchdog-${{ env.APP_PLATFORM }}
+          path: |
+            build/app/watchdog/runs/*/trace.jsonl
+            build/app/watchdog/runs/*/app.log
+            build/app/watchdog/runs/manifest.json
+          if-no-files-found: ignore
       # About 9 minutes on each platform, so main pushes, the nightly and manual runs only.
       - name: The app group's Python tests (tests/integration/app)
         if: ${{ runner.os != 'Windows' && (!cancelled() && github.event_name != 'pull_request' && steps.onboarding.outcome == 'success') }}
@@ -895,6 +920,8 @@ jobs:
         env:
           # Name every test over a second, so a slow one shows in the log.
           PYTEST_ADDOPTS: --durations=0 --durations-min=1
+          # The watchdog's fresh observations of this build, for the UI acceptance tests (Linux, where they are made).
+          EDI_UI_EVIDENCE: ${{ github.workspace }}/build/app/watchdog/runs
       # The app's own tests run only at night and on a manual run.
       - name: The app's Qt Quick Test tier
         if: ${{ runner.os != 'Windows' && (!cancelled() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && steps.apphost.outcome == 'success') }}

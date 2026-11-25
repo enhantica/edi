@@ -46,7 +46,10 @@ load several files at once and to keep large data where it is. crysta now lets a
    folder or a .zip, Save a copy, the browser's Save, Save as and Download): it carries this decision, the plan it
    was made from and the state it read (the model, its revision, and a receipt of every input file's content), and a
    save started meanwhile makes its own. A moving save of a changed project is planned again; bytes copied that differ
-   from the receipt refuse the save.
+   from the receipt refuse the save. The assistant's save, unless it names untitled work, runs that second save once
+   before it answers, so it reports what was saved. The app writes the assistant's work report into the project's
+   folder itself: that write waits while a save holds the project, and a save waits for one already started, at most
+   one second in all, its retry included; a write that takes longer is found as any other change is (ADR-0057).
    A save holds its project from before its plan until its publication and every notification of it are done.
    Meanwhile edits, Undo, the assistant's changes, a fit start, another save, and opening, creating or closing a
    project refuse, saying the project is being saved. A question or a browser picker waiting on the user lets go of

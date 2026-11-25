@@ -1,0 +1,72 @@
+pragma ComponentBehavior: Bound
+import QtQuick
+import QtQuick.Templates as T
+
+import EasyApplication.Gui.Style as EaStyle
+import EasyApplication.Gui.Globals as EaGlobals
+import EasyApplication.Gui.Animations as EaAnimations
+import EasyApplication.Gui.Elements as EaElements
+
+T.CheckBox {
+    id: control
+
+    property color color: EaStyle.Colors.themeAccent
+
+    implicitWidth: Math.max(implicitBackgroundWidth + leftInset + rightInset, implicitContentWidth + leftPadding + rightPadding)
+    implicitHeight: Math.max(implicitBackgroundHeight + topInset + bottomInset, implicitContentHeight + topPadding + bottomPadding, implicitIndicatorHeight + topPadding + bottomPadding)
+
+    spacing: EaStyle.Sizes.fontPixelSize * 0.5
+    padding: EaStyle.Sizes.fontPixelSize * 0.5
+    verticalPadding: 0//padding + EaStyle.Sizes.fontPixelSize * 0.5
+
+    tristate: false
+
+    font.family: EaStyle.Fonts.fontFamily
+    font.pixelSize: EaStyle.Sizes.fontPixelSize
+
+    indicator: EaElements.CheckIndicator {
+        x: control.text ? (control.mirrored ? control.width - width - control.rightPadding : control.leftPadding) : control.leftPadding + (control.availableWidth - width) / 2
+        y: control.topPadding + (control.availableHeight - height) / 2
+        control: control
+    }
+
+    contentItem: Text {
+        leftPadding: control.indicator && !control.mirrored ? control.indicator.width + control.spacing : 0
+        rightPadding: control.indicator && control.mirrored ? control.indicator.width + control.spacing : 0
+
+        text: control.text
+        font: control.font
+        elide: Text.ElideRight
+        verticalAlignment: Text.AlignVCenter
+
+        color: control.enabled ? EaStyle.Colors.themeForeground : EaStyle.Colors.themeForegroundDisabled
+        Behavior on color {
+            EaAnimations.ThemeChange {}
+        }
+    }
+
+    // ToolTip
+    // Made only while it can show: a tooltip per check box, most never shown, was thousands of objects made with the
+    // pages and the rows the tables measure (edi: ADR-0102 R1).
+    Loader {
+        active: mouseHoverHandler.hovered && control.ToolTip.text !== ""
+        sourceComponent: EaElements.ToolTip {
+            parent: control
+            text: control.ToolTip.text
+            requested: mouseHoverHandler.hovered  // reported on a disabled control too, whose tooltip says why
+        }
+    }
+
+    // HoverHandler to react on hover events
+    HoverHandler {
+        id: mouseHoverHandler
+        acceptedDevices: PointerDevice.AllDevices
+        blocking: false
+        cursorShape: !enabled ? Qt.ArrowCursor : Qt.PointingHandCursor
+        onHoveredChanged: {
+            if (hovered) {
+                //console.error(`${control} [TextInput.qml] hovered`)
+            }
+        }
+    }
+}

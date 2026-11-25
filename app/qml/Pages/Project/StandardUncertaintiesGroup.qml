@@ -28,7 +28,7 @@ SideBarGroup {
 
     EaElements.ComboBox {
         objectName: "project.suRule"
-        width: EaStyle.Sizes.sideBarContentWidth
+        width: AppSizes.loneControlWidth
         enabled: group.project !== null
         ToolTip.text: enabled ? "" : qsTr("Open or create a project first")
         // The order is `rules`, each by its dictionary name.

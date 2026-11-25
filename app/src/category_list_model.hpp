@@ -3,6 +3,7 @@
 #define EDI_APP_CATEGORY_LIST_MODEL_HPP
 
 #include <QAbstractListModel>
+#include <QPointer>
 #include <QString>
 #include <QtQml/qqmlregistration.h>
 #include <functional>
@@ -52,7 +53,19 @@ class CategoryListModel : public QAbstractListModel {
     // The same list against the block's text and calculation as they are now: after a calculation, which adds
     // computed categories, or an edit no core category shows.
     void refresh();
-    int count() const { return static_cast<int>(rows_.size()); }
+    // The same rows as `other`, brought in by the same diff, so a view keeps the delegates of the ids both lists have.
+    void mirror(const CategoryListModel& other) {
+        // The other list's rows as they are, applied by the same diff: its text is not read and parsed again.
+        other.settle();
+        categories_ = other.categories_;
+        text_ = other.text_;
+        calculated_ = other.calculated_;
+        applyRows(other.rows_);
+    }
+    int count() const {
+        settle();
+        return static_cast<int>(rows_.size());
+    }
     Q_INVOKABLE bool contains(const QString& categoryId) const;
     Q_INVOKABLE int itemCount(const QString& categoryId) const;
 
@@ -64,6 +77,15 @@ class CategoryListModel : public QAbstractListModel {
     void countChanged();
 
    private:
+    // A list nothing shows or follows (no view, mirror or binding on its signals) is not brought up to date at each
+    // change: the change is owed, and settled without signals when the list is next read (ADR-0102 rule 1), since the
+    // block's text it reads is made and parsed for it.
+    bool observed() const;
+    void settle() const;
+    mutable bool owed_ = false, quiet_ = false;
+    struct Row;
+    // Brings the rows to `target`: rows inserted, removed and moved by id, counts updated in place.
+    void applyRows(const std::vector<Row>& target);
     struct Row {
         QString id;
         int items = 0;
@@ -74,6 +96,28 @@ class CategoryListModel : public QAbstractListModel {
     std::vector<edi::Category> categories_;
     std::function<std::string()> text_;
     std::function<std::vector<edi::Category>()> calculated_;
+};
+
+// One list that follows another block's categories: a page binds its groups to it, so changing the block (the next
+// experiment) updates the rows by id and keeps the groups both blocks have, instead of making every group again for
+// the new block's own model (ADR-0102 rule 2).
+class CategoryListMirror : public CategoryListModel {
+    Q_OBJECT
+    QML_ELEMENT
+    Q_PROPERTY(edi_app::CategoryListModel* source READ source WRITE setSource NOTIFY sourceChanged)
+
+   public:
+    explicit CategoryListMirror(QObject* parent = nullptr) : CategoryListModel(parent) {}
+    CategoryListModel* source() const { return source_; }
+    void setSource(CategoryListModel* source);
+
+   signals:
+    void sourceChanged();
+
+   private:
+    void follow();
+    QPointer<CategoryListModel> source_;
+    QMetaObject::Connection reset_, inserted_, removed_, changed_;
 };
 
 // The app's presentation of a category id: which sidebar tab shows it, its title and its icon

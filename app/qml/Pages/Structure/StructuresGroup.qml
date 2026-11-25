@@ -44,7 +44,10 @@ SideBarGroup {
             readonly property string atomBased: qsTr("Atom-based")
             // After Type, Crystal or Magnetic for an atom-based structure (edi ADR-0078; the owner, 2026-11-18).
             readonly property var kinds: [qsTr("Crystal"), qsTr("Magnetic")]
-            columns: [numberColumnWidth, AppSizes.iconOnlyColumnWidth, textColumnWidth("name", qsTr("Name")), -1, -1, AppSizes.iconColumnWidth]
+            // Its columns by kind (the shared column model, DataTable.columnKinds; ADR-0103 decision 4).
+            columnKinds: ["index", "mark", "name", "text", "text", "control"]
+            // Widths from column types, not rows (ADR-0103 rule 4): the name, the type and the
+            // kind, all texts.
 
             header: EaComponents.ListViewHeader {
                 EaComponents.ListViewLabel {
@@ -182,6 +185,15 @@ SideBarGroup {
             id: buttons
 
             readonly property real buttonWidth: (EaStyle.Sizes.sideBarContentWidth - 2 * spacing) / 3
+            // Whole labels where the longest fits beside its icon, else the short ones, the same on every button
+            // (the owner, 2026-11-23: no label runs out of its button).
+            readonly property bool wholeLabels: labelMetrics.advanceWidth + EaStyle.Sizes.fontPixelSize * 4 <= buttonWidth
+            TextMetrics {
+                id: labelMetrics
+                font.family: EaStyle.Fonts.fontFamily
+                font.pixelSize: EaStyle.Sizes.fontPixelSize
+                text: qsTr("Duplicate structure")
+            }
 
             spacing: EaStyle.Sizes.fontPixelSize
 
@@ -190,7 +202,7 @@ SideBarGroup {
                 width: buttons.buttonWidth
                 enabled: group.project !== null
                 fontIcon: "plus-circle"
-                text: qsTr("Create structure")
+                text: buttons.wholeLabels ? qsTr("Create structure") : qsTr("Create")
                 ToolTip.text: qsTr("Add a structure with one atom site, to edit into the one you need")
                 onClicked: group.project.createStructure()
             }
@@ -251,7 +263,7 @@ SideBarGroup {
                 width: buttons.buttonWidth
                 enabled: group.project !== null && group.project.currentStructure !== null
                 fontIcon: "clone"
-                text: qsTr("Duplicate structure")
+                text: buttons.wholeLabels ? qsTr("Duplicate structure") : qsTr("Duplicate")
                 ToolTip.text: qsTr("Add a copy of the selected structure, linked to no experiment")
                 onClicked: group.project.duplicateStructure()
             }

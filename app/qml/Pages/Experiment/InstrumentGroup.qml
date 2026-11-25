@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: BSD-3-Clause
 import QtQuick
 
+import EasyApplication.Gui.Style as EaStyle
+
 import EasyApplication.Gui.Elements as EaElements
 
 import edi.app
@@ -26,10 +28,14 @@ Column {
     }
 
     spacing: AppSizes.groupContentSpacing
+    // One grid for the group: the selectors take the field grid's column width, one column each from the left.
+    readonly property int gridColumns: grid.visible && grid.columns > 0 ? grid.columns : 2
+    readonly property real fieldWidth: (EaStyle.Sizes.sideBarContentWidth - (gridColumns - 1) * AppSizes.inputSpacing) / gridColumns
 
     EaElements.GroupRow {
         spacing: AppSizes.inputSpacing
         SelectorField {
+            width: group.fieldWidth
             objectName: "instrument.facility"
             label: qsTr("Facility")
             options: group.experiment ? group.experiment.facilityOptions : null
@@ -38,6 +44,7 @@ Column {
             onSelected: token => group.experiment.facilityToken = token
         }
         SelectorField {
+            width: group.fieldWidth
             objectName: "instrument.name"
             label: qsTr("Instrument")
             options: group.experiment ? group.experiment.instrumentOptions : null
@@ -58,6 +65,7 @@ Column {
         visible: group.singleCrystalTimeOfFlight
         spacing: AppSizes.inputSpacing
         ValueField {
+            width: group.fieldWidth
             objectName: "instrument.wavelengthBand"
             editable: false
             label: qsTr("Wavelength band")

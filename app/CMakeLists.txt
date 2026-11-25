@@ -105,6 +105,7 @@ qt_add_qml_module(edi_app_module
         src/demo_driver.hpp src/demo_driver.cpp src/demo_documentation.cpp
         src/run_log.hpp src/run_log.cpp
         src/stall_probe.hpp src/stall_probe.cpp
+        src/ui_probe.hpp src/ui_probe.cpp
         src/item_locator.hpp src/item_locator.cpp
         src/view_rows.hpp src/view_rows.cpp
         src/toolbar_row.hpp src/toolbar_row.cpp
@@ -123,6 +124,7 @@ qt_add_qml_module(edi_app_module
         src/edi_text_highlighter.hpp src/edi_text_highlighter.cpp
         src/generated_category.hpp src/generated_category.cpp
         src/category_list_model.hpp src/category_list_model.cpp
+        src/list_model_mirror.hpp src/list_model_mirror.cpp
         src/structure_view_model.hpp src/structure_view_model.cpp
         src/structure_view_options.hpp src/structure_view_options.cpp
         src/structure_instances.hpp src/structure_instances.cpp
@@ -139,6 +141,7 @@ qt_add_qml_module(edi_app_module
         src/scan_view_model.hpp src/scan_view_model.cpp
         src/scan_draw_rows.hpp
         src/scan_layer.hpp src/scan_layer.cpp
+        src/range_animation.hpp src/range_animation.cpp
         src/scan_lines.hpp src/scan_lines.cpp
         src/rendering_info.hpp src/rendering_info.cpp
         src/correlation_view_model.hpp src/correlation_view_model.cpp
@@ -179,6 +182,7 @@ qt_add_qml_module(edi_app_module
         qml/Components/ChoiceRadioButton.qml
         qml/Components/CategoryGroup.qml
         qml/Components/SideBarGroup.qml
+        qml/Components/SideBarWidthButton.qml
         qml/Components/PerformanceGroup.qml
         qml/Components/ComboCell.qml
         qml/Components/CrashDialog.qml
@@ -211,6 +215,7 @@ qt_add_qml_module(edi_app_module
         qml/Components/MainView.qml
         qml/Components/MeasCalcChart.qml
         qml/Components/NumberLabel.qml
+        qml/Components/DerivedCell.qml
         qml/Components/ParameterCell.qml
         qml/Components/ParameterField.qml
         qml/Components/ParameterGrid.qml
@@ -349,6 +354,13 @@ add_dependencies(edi_app_module edi_app_build_version)
 qt_add_shaders(edi_app_module "edi_scan_shaders" PREFIX "/edi" FILES shaders/scan_line.vert shaders/scan_line.frag)
 target_include_directories(edi_app_module PUBLIC src ${CMAKE_CURRENT_BINARY_DIR})
 target_compile_definitions(edi_app_module PUBLIC QT_MESSAGELOGCONTEXT)  # file and line in the run log (ADR-0062)
+# The UI observation trace (ADR-0102, app/src/ui_probe.hpp): built into development, test, CI and demo builds, and
+# compiled out of release builds and installed apps, so users carry none of it.
+option(EDI_UI_INSTRUMENTATION "Build the UI observation trace the GUI watchdog reads" ON)
+if(EDI_RELEASE_VERSION OR EDI_DEPLOY_APP)
+    set(EDI_UI_INSTRUMENTATION OFF CACHE BOOL "Build the UI observation trace the GUI watchdog reads" FORCE)
+endif()
+target_compile_definitions(edi_app_module PUBLIC EDI_UI_INSTRUMENTATION=$<IF:$<BOOL:${EDI_UI_INSTRUMENTATION}>,1,0>)
 target_link_libraries(edi_app_module
     PUBLIC Qt6::Quick Qt6::QuickControls2 Qt6::Graphs Qt6::Quick3D Qt6::Concurrent Qt6::Network edi::core
     PRIVATE ${EDI_GUI_BASE_TARGETS} Qt6::CorePrivate Qt6::QuickPrivate Qt6::QmlModelsPrivate)
@@ -759,6 +771,15 @@ endif()
 if(EDI_DEPLOY_APP)
     file(GENERATE OUTPUT "${CMAKE_BINARY_DIR}/edi-trial-lock-executable.txt"
         CONTENT "$<TARGET_FILE:edi_trial_lock_tests>\n")
+endif()
+
+# The assistant's tools called by a local peer (tools/dev/assistant-tools.sh): test tooling, never part of the host.
+if(TARGET edi_assistant_native AND EDI_APP_ASSISTANT AND NOT EMSCRIPTEN)
+    qt_add_executable(edi_app_assistant_demo EXCLUDE_FROM_ALL tools/assistant_demo.cpp "${EDI_APP_BUILD_COMMIT_CPP}")
+    target_link_libraries(edi_app_assistant_demo PRIVATE edi_app_module edi_app_moduleplugin ${EDI_GUI_BASE_TARGETS}
+                                                         edi_assistant_native Qt6::Svg)
+    add_dependencies(edi_app_assistant_demo edi_app_build_commit)
+    set_target_properties(edi_app_assistant_demo PROPERTIES WIN32_EXECUTABLE FALSE MACOSX_BUNDLE FALSE)
 endif()
 
 if(NOT EMSCRIPTEN)

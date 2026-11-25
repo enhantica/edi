@@ -2,6 +2,7 @@
 #include "session.hpp"
 #include "load_attempt.hpp"
 #include "label_case.hpp"
+#include "project_folder_lock.hpp"
 #include "assistant_result.hpp"
 #include "../../core/src/canonical_encoding.hpp"
 #include <limits>
@@ -218,8 +219,11 @@ void WarningListModel::publish() {
 }
 
 void WarningListModel::recount() {
-    const int unviewed = static_cast<int>(
-        std::count_if(messages_.begin(), messages_.end(), [](const Message& message) { return !message.viewed; }));
+    // An information note (a data point the 2θ offset puts out of range) is listed but not counted: the status bar's
+    // count is of warnings and errors (the owner, 2026-11-22).
+    const int unviewed = static_cast<int>(std::count_if(messages_.begin(), messages_.end(), [](const Message& message) {
+        return !message.viewed && message.severity != QLatin1String("information");
+    }));
     if (unviewed != unviewed_) {
         unviewed_ = unviewed;
         emit unviewedCountChanged();
@@ -797,11 +801,12 @@ std::optional<Session::SaveOperation> Session::beginSave(bool wholeTree, bool st
         setLastError(refusal);
         return std::nullopt;
     }
+    if (!replanning_) folder_wait_left_ = folder_wait_per_save;
     SaveOperation operation;
     operation.id = ++save_operations_;
     operation.project = project_;
     operation.replacement = replacement_generation_;
-    operation.hold = std::make_shared<ProjectViewModel::OperationHold>(*project_);
+    operation.hold = holdProject();
     // One snapshot the decision, the plan and the writer all read (edi ADR-0069): a drag held back is settled first,
     // the project kept alive through what that announces, and the save goes on only for the project it began for.
     {
@@ -877,20 +882,42 @@ void Session::queueReplan(const SaveOperation& operation) {
     // The untitled operation it writes for waits for this replan, and only that operation is marked.
     if (operation.untitled != 0 && untitledOwns(current_untitled_, operation.untitled))
         current_untitled_->advance(UntitledOperation::State::Replanning);
-    QMetaObject::invokeMethod(
-        this,
+    const auto queued = std::make_shared<std::function<bool()>>(
         [receiver = QPointer<Session>(this), project = operation.project, replacement = operation.replacement,
          replan = operation.replan] {
-            if (!receiver || project.isNull() || receiver->project_ != project ||
-                receiver->replacement_generation_ != replacement)
-                return;
-            replan();
+            if (!receiver || project.isNull() || receiver->project_ != project || receiver->replacement_generation_ != replacement) return false;
+            receiver->replanning_ = true;  // the same save: it waits for the report no longer in all
+            const auto replanned = qScopeGuard([receiver] {
+                if (receiver) receiver->replanning_ = false;
+            });
+            return replan();
+        });
+    if (operation.untitled == 0) queued_replan_ = queued;
+    QMetaObject::invokeMethod(
+        this,
+        [queued] {
+            if (const auto replan = std::exchange(*queued, nullptr)) replan();
         },
         Qt::QueuedConnection);
 }
 
+std::function<bool()> Session::takeReplan() {
+    const auto queued = std::exchange(queued_replan_, nullptr);
+    return queued ? std::exchange(*queued, nullptr) : nullptr;
+}
+
 bool Session::owns(const SaveOperation& operation) const {
     return !operation.project.isNull() && operation.project == project_ && operation.replacement == replacement_generation_;
+}
+
+std::shared_ptr<ProjectViewModel::OperationHold> Session::holdProject() {
+    struct Held {
+        std::unique_lock<std::recursive_timed_mutex> folder;
+        ProjectViewModel::OperationHold project;
+        Held(ProjectViewModel& model, std::chrono::milliseconds& left) : folder(lock_project_folder_for_save(left)), project(model) {}
+    };
+    const auto held = std::make_shared<Held>(*project_, folder_wait_left_);
+    return {held, &held->project};
 }
 
 bool Session::hold(SaveOperation& operation) {
@@ -903,7 +930,7 @@ bool Session::hold(SaveOperation& operation) {
         setLastError(refusal);
         return false;
     }
-    operation.hold = std::make_shared<ProjectViewModel::OperationHold>(*project_);
+    operation.hold = holdProject();
     return true;
 }
 
@@ -972,7 +999,8 @@ QString Session::writeBackReports() {
     if (const QString refusal = project_->criticalEditRefusal(); !refusal.isEmpty())
         return failed.arg(archive_location_, refusal);
     if (const QString refusal = project_->saveRefusal(); !refusal.isEmpty()) return failed.arg(archive_location_, refusal);
-    const auto hold = std::make_shared<ProjectViewModel::OperationHold>(*project_);
+    folder_wait_left_ = folder_wait_per_save;
+    const auto hold = holdProject();
     const QString receipt = project_->linkedInputsKey(true);
     QString root;
     const auto release = qScopeGuard([&root] {
@@ -3322,7 +3350,7 @@ QString from_bridge(Call&& call, const QString& fallback = QString()) {
 }  // namespace
 
 QString Session::label(const QString& uid, const QString& variant) const {
-    return label_case(from_bridge([&] { return edi::label(uid.toStdString(), variant.toStdString()); }));
+    return label_case(from_bridge([&] { return edi::shown_label(uid.toStdString(), variant.toStdString()); }));
 }
 
 QString Session::units(const QString& uid, const QString& variant) const {
@@ -3330,7 +3358,7 @@ QString Session::units(const QString& uid, const QString& variant) const {
 }
 
 QString Session::tooltip(const QString& uid, const QString& variant) const {
-    return from_bridge([&] { return edi::tooltip(uid.toStdString(), variant.toStdString()); });
+    return from_bridge([&] { return edi::shown_label(uid.toStdString(), variant.toStdString()) + ": " + edi::edi_name(uid.toStdString()); });
 }
 
 QString Session::optionLabel(const QString& uid, const QString& token) const {

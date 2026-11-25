@@ -555,18 +555,17 @@ requiring extra confirmation merely for a headerless file. A genuine load failur
 or unresolved interpretation ambiguity can require a question; already supplied
 facts do not. Missing/conflicting essential probe or wavelength/TOF calibration
 is established through current context and small read-only inspection, then asked
-promptly in the Assistant sidebar as a final response, not progress commentary.
-Use the existing structured-question flow when offered. The clarification ends
-that turn: no subsequent Create, structure/data
+promptly in the Assistant sidebar as question cards with options to click. No
+subsequent Create, structure/data
 import, setup, refinement or Save is treated as independent preparation while
 awaiting the answer. This is generic assistant guidance, not a new parser rule,
 backend mutation veto, fixed scientific recipe or model-adherence guarantee.
 Actual clarification/continuation behavior still requires independent model runs.
 
-The question guidance selects the actually offered structured flow first and
-waits for its real answer; only an unavailable structured flow uses a final
-clarification response and ends the turn. This does not claim that arbitrary
-progress prose is a typed pause or that the model always chooses the right flow.
+A question is never plain text: the guidance asks with the structured flow and
+waits for its real answer; where that flow is not offered, the assistant says once
+that questions cannot be asked and what is missing, and stops. This does not claim
+that arbitrary progress prose is a typed pause or that the model always chooses the right flow.
 
 ## Diagnostic feedback and current native profile conventions
 
@@ -824,7 +823,8 @@ probe, beam mode and calibration, and check the remaining type axes against app
 capabilities. Questions offer supported choices together and retain supplied facts;
 NPD already establishes neutron powder diffraction. Defaults and filenames do not
 confirm a radiation type. Single-choice capability limits do not justify applying
-that model to incompatible data. Numeric calibration remains an open question.
+that model to incompatible data. A numeric value is asked the same way, its usual values as options beside a free answer.
+No option is marked as recommended: these are facts of the measurement (the owner, 2026-11-24).
 This extends the existing prerequisite and question-card contract without a new
 selector widget or a second source of experiment-type options.
 

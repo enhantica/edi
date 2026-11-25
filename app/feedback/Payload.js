@@ -52,7 +52,15 @@ function characterForms(character, isPath) {
     forms.sort(function (a, b) {
         return b.length - a.length;
     });
-    return "(?:" + forms.map(escapeRegExp).join("|") + ")";
+    // A class of the forms' first characters goes first: most of a text's positions fail on it at once.
+    var firsts = forms.map(function (form) {
+        return form.charAt(0);
+    }).filter(function (first, index, all) {
+        return all.indexOf(first) === index;
+    });
+    return {"first": "[" + firsts.map(function (first) {
+            return first.replace(/[\]\\^-]/g, "\\$&");
+        }).join("") + "]", "forms": forms.map(escapeRegExp).join("|")};
 }
 
 function layered(forms, depth) {
@@ -71,10 +79,28 @@ function layered(forms, depth) {
     }
     return all;
 }
+// Each character's forms as an atomic group, (?=(forms))\N: once a form has matched, a later failure never retries
+// the shorter forms of the characters before it. The forms overlap (a backslash, two, an escaped slash), so plain
+// groups backtracked through every combination of them, and scrubbing a long log took a minute.
+// Built once per value: the forms of every character take many array passes, and the form scrubs dozens of strings
+// at each keystroke. A global pattern is safe to share, as replace starts each search from the beginning.
+var patterns = {};
 function valuePattern(value, isPath) {
-    return new RegExp(Array.from(value).map(function (character) {
-        return characterForms(character, isPath);
+    var key = (isPath ? "p:" : "u:") + value;
+    if (!patterns.hasOwnProperty(key))
+        patterns[key] = buildValuePattern(value, isPath);
+    return patterns[key];
+}
+function buildValuePattern(value, isPath) {
+    return new RegExp(Array.from(value).map(function (character, index) {
+        var forms = characterForms(character, isPath);
+        return "(?=" + forms.first + ")(?=(" + forms.forms + "))\\" + (index + 1);
     }).join(""), "gi");
+}
+
+// A replace callback's match offset and whole text: its last two arguments, after the pattern's groups.
+function matchPlace(args) {
+    return {"offset": args[args.length - 2], "whole": args[args.length - 1]};
 }
 
 function unicodeEscaped(text) {
@@ -105,20 +131,51 @@ function redact(value, home, user) {
     var trimmed = home ? home.replace(/[\/\\]+$/, "") : "";
     if (trimmed !== "") {
         // A home folder starting at the root keeps a file URL's own root slash: file:///home/name becomes file:///~.
-        result = result.replace(valuePattern(trimmed, true), function (match, offset, whole) {
+        result = result.replace(valuePattern(trimmed, true), function (match) {
+            var offset = matchPlace(arguments).offset, whole = matchPlace(arguments).whole;
             var fileUrl = match.charAt(0) === "/" && whole.slice(Math.max(0, offset - 7), offset).toLowerCase() === "file://";
             return fileUrl ? "/~" : "~";
         });
     }
     if (user) {
         var letter = /[A-Za-z0-9]/;
-        result = result.replace(valuePattern(user, false), function (match, offset, whole) {
+        result = result.replace(valuePattern(user, false), function (match) {
+            var offset = matchPlace(arguments).offset, whole = matchPlace(arguments).whole;
             var inWord = letter.test(lastCharacter(whole.slice(0, offset)))
                     || letter.test(firstCharacter(whole.slice(offset + match.length)));
             return inWord ? match : "~";
         });
     }
     return result;
+}
+
+// Long texts scrubbed, kept: the form rebuilds what it sends at each letter of the message, and its log and attached
+// texts do not change. Scrubbing a long session's log at every keystroke froze the window.
+var scrubbedTexts = [];
+function redactedLog(text, home, user) {
+    if (typeof text !== "string" || text.length < 4096)
+        return redact(text, home, user);
+    for (var i = 0; i < scrubbedTexts.length; ++i) {
+        var kept = scrubbedTexts[i];
+        if (kept.text === text && kept.home === home && kept.user === user)
+            return kept.scrubbed;
+    }
+    var entry = {"text": text, "home": home, "user": user, "scrubbed": redact(text, home, user)};
+    scrubbedTexts = [entry].concat(scrubbedTexts).slice(0, 8);
+    return entry.scrubbed;
+}
+
+// The log's two shortened forms, kept with the last log: they are cut from the whole scrubbed log.
+var lastParts = {"log": null, "home": null, "user": null, "parts": null};
+function logParts(log, home, user) {
+    if (lastParts.log !== log || lastParts.home !== home || lastParts.user !== user) {
+        var scrubbed = redactedLog(log, home, user);
+        var parts = {"log": shortenLog(scrubbed)};
+        if (parts.log !== scrubbed)
+            parts.fullLog = shortenLog(scrubbed, maxFullLogCharacters);
+        lastParts = {"log": log, "home": home, "user": user, "parts": parts};
+    }
+    return lastParts.parts;
 }
 
 function redactAll(value, home, user) {
@@ -298,7 +355,7 @@ function encodeAttachments(files, home, user) {
     return files.map(function (file, index) {
         var bytes = decoded[index];
         if (isTextFile(file))
-            bytes = textUtf8(redact(utf8Text(bytes), home, user));
+            bytes = textUtf8(redactedLog(utf8Text(bytes), home, user));
         return {
             "name": file.name,
             "type": file.type || (isTextFile(file) ? "text/plain" : "application/octet-stream"),
@@ -336,11 +393,11 @@ function buildPayload(kind, text, include, app, log, home, user, contact, subjec
         if (app !== undefined && app !== null)
             payload.app = redactAll(app, home, user);
         if (typeof log === "string" && log !== "") {
-            var scrubbed = redact(log, home, user);
-            payload.log = shortenLog(scrubbed);
+            var parts = logParts(log, home, user);
+            payload.log = parts.log;
             // The whole log, for the service to attach as a file, when the body's preview is cut.
-            if (payload.log !== scrubbed)
-                payload.fullLog = shortenLog(scrubbed, maxFullLogCharacters);
+            if (parts.fullLog !== undefined)
+                payload.fullLog = parts.fullLog;
         }
     }
     if (files !== undefined && files !== null && files.length > 0)

@@ -29,6 +29,17 @@ EaComponents.MainContent {
     function shows(key) {
         return tabKeys.indexOf(key) >= 0;
     }
+    // Whether the tab is in the bar: in the page's set and relevant to the project (Stacked and Map with several
+    // datasets, Map not for single crystals, Evolution for a scan). The buttons and the bar's width both read it.
+    function listed(key) {
+        if (key === "stacked")
+            return shows(key) && (patternViews || singleCrystals);
+        if (key === "map")
+            return shows(key) && patternViews && !singleCrystals;
+        if (key === "evolution")
+            return shows(key) && project !== null && project.scan;
+        return shows(key);
+    }
     function tabOf(key) {
         return Math.max(0, allKeys.indexOf(key));
     }
@@ -87,6 +98,24 @@ EaComponents.MainContent {
     // The tab bar, reached from its first tab (the base names it nowhere).
     readonly property var bar: structureTab.TabBar.tabBar
     readonly property int tabIndex: bar ? bar.currentIndex : 0
+    // The tab bar on one line, its listed buttons' own widths summed, each as the button sizes itself (its list reports none
+    // until laid out, and a button reads as hidden, of no width, while its page is), which the
+    // switch to the bottom sidebar keeps room for (AppSizes.sideBarBelowWidth; the owner, 2026-11-21).
+    readonly property real tabsWidth: {
+        if (!bar)
+            return 0;
+        let sum = 0, shown = 0;
+        for (let i = 0; i < bar.count; ++i) {
+            const button = bar.itemAt(i);
+            if (button && view.listed(view.allKeys[i])) {
+                sum += Math.max(button.implicitBackgroundWidth + button.leftInset + button.rightInset, button.implicitContentWidth + button.leftPadding + button.rightPadding);
+                ++shown;
+            }
+        }
+        return sum + bar.leftPadding + bar.rightPadding + bar.spacing * Math.max(0, shown - 1);
+    }
+    onTabsWidthChanged: AppSizes.noteMainTabs(view.pageKey, view.tabsWidth)
+    Component.onCompleted: AppSizes.noteMainTabs(view.pageKey, view.tabsWidth)
     readonly property bool structureShown: currentKey === "structure"
     // The structure view's controller, for the Structure page's Appearance group.
     readonly property var structureController: structureView.controller
@@ -137,6 +166,16 @@ EaComponents.MainContent {
     onTabIndexChanged: {
         if (!view.shown)
             Qt.callLater(showCurrentPage);
+        else
+            settle.restart();
+    }
+    // A shown view's slide can end off its page: the pages of hidden tabs take no width, so the list's offsets and its
+    // index part (the bottom-sidebar layout showed Pattern under the Stacked tab). Once the slide has had its time, the
+    // list is put on the tab's page, as after a resize.
+    Timer {
+        id: settle
+        interval: 400
+        onTriggered: view.showCurrentPage()
     }
     // Only a click on a tab is the user's pick: the bar also moves by itself while a project closes and opens, and
     // that move used to overwrite the pick with the first tab.
@@ -149,8 +188,15 @@ EaComponents.MainContent {
     // The pages' list keeps its old position when the tab changes while the view is hidden (a scan project opened
     // straight onto Analysis showed the previous project's structure under the Pattern tab): put it on the current
     // tab's page whenever the view shows, or the tab changes while it is hidden.
+    // A resize keeps the pages' list at its old offset in pixels, another page at the new width, and a relayout through
+    // a zero width (the sidebar moving under the main view) can move the pages' own index: the tab bar holds the
+    // user's choice, and the list is put back on its page once the size has settled.
+    onWidthChanged: Qt.callLater(showCurrentPage)
+    onHeightChanged: Qt.callLater(showCurrentPage)
     function showCurrentPage() {
         const pages = view.children.length > 1 ? view.children[1] : null;
+        if (pages && view.tabIndex >= 0 && pages.currentIndex !== view.tabIndex)
+            pages.currentIndex = view.tabIndex;
         if (pages && pages.contentItem && pages.contentItem.positionViewAtIndex !== undefined && pages.currentIndex >= 0)
             pages.contentItem.positionViewAtIndex(pages.currentIndex, ListView.Beginning);
     }
@@ -172,7 +218,7 @@ EaComponents.MainContent {
 
             onClicked: view.keepPick()
             text: qsTr("Structure")
-            visible: view.shows("structure")
+            visible: view.listed("structure")
             width: visible ? Math.max(implicitBackgroundWidth + leftInset + rightInset, implicitContentWidth + leftPadding + rightPadding) : 0
             enabled: view.hasStructures
         },
@@ -180,7 +226,7 @@ EaComponents.MainContent {
             objectName: "mainArea.tab.pattern"
             onClicked: view.keepPick()
             text: qsTr("Pattern")
-            visible: view.shows("pattern")
+            visible: view.listed("pattern")
             width: visible ? Math.max(implicitBackgroundWidth + leftInset + rightInset, implicitContentWidth + leftPadding + rightPadding) : 0
             enabled: view.hasExperiments
         },
@@ -190,7 +236,7 @@ EaComponents.MainContent {
             objectName: "mainArea.tab.measCalc"
             onClicked: view.keepPick()
             text: qsTr("Meas vs calc")
-            visible: view.shows("meascalc")
+            visible: view.listed("meascalc")
             width: visible ? Math.max(implicitBackgroundWidth + leftInset + rightInset, implicitContentWidth + leftPadding + rightPadding) : 0
             enabled: measCalcTab.available
         },
@@ -199,7 +245,7 @@ EaComponents.MainContent {
             objectName: "mainArea.tab.correlations"
             onClicked: view.keepPick()
             text: qsTr("Correlations")
-            visible: view.shows("correlations")
+            visible: view.listed("correlations")
             width: visible ? Math.max(implicitBackgroundWidth + leftInset + rightInset, implicitContentWidth + leftPadding + rightPadding) : 0
             enabled: view.correlationsShown
         },
@@ -208,14 +254,14 @@ EaComponents.MainContent {
             objectName: "mainArea.tab.stacked"
             onClicked: view.keepPick()
             text: qsTr("Stacked")
-            visible: view.shows("stacked") && (view.patternViews || view.singleCrystals)
+            visible: view.listed("stacked")
             width: visible ? Math.max(implicitBackgroundWidth + leftInset + rightInset, implicitContentWidth + leftPadding + rightPadding) : 0
         },
         IconTabButton {
             objectName: "mainArea.tab.map"
             onClicked: view.keepPick()
             text: qsTr("Map")
-            visible: view.shows("map") && view.patternViews && !view.singleCrystals
+            visible: view.listed("map")
             width: visible ? Math.max(implicitBackgroundWidth + leftInset + rightInset, implicitContentWidth + leftPadding + rightPadding) : 0
         },
         // A fitted parameter across a scan's datasets (edi ADR-0017 §19), in a scan project (edi ADR-0046).
@@ -223,13 +269,17 @@ EaComponents.MainContent {
             objectName: "mainArea.tab.evolution"
             onClicked: view.keepPick()
             text: qsTr("Evolution")
-            visible: view.shows("evolution") && view.project !== null && view.project.scan
+            visible: view.listed("evolution")
             width: visible ? Math.max(implicitBackgroundWidth + leftInset + rightInset, implicitContentWidth + leftPadding + rightPadding) : 0
         }
     ]
+    // A page that is not the current one draws nothing (opacity 0, which the renderer skips): the pages stay loaded side
+    // by side and visible for everything that reads them, but the render thread no longer draws the off-screen charts
+    // (the scan's Stacked lines, the map) at every frame, which the GUI thread waited for at each sync.
     items: [
         Item {
             id: structureFirst
+            opacity: SwipeView.isCurrentItem ? 1 : 0
 
             StructureView {
                 id: structureView
@@ -244,6 +294,7 @@ EaComponents.MainContent {
         },
         ProjectPatternChart {
             id: chartView
+            opacity: SwipeView.isCurrentItem ? 1 : 0
 
             experiment: view.project ? view.project.currentExperiment : null
             axisProject: view.project
@@ -253,6 +304,7 @@ EaComponents.MainContent {
         },
         Item {
             id: measCalcTab
+            opacity: SwipeView.isCurrentItem ? 1 : 0
 
             readonly property bool shown: view.shown && SwipeView.isCurrentItem
             readonly property ExperimentViewModel experiment: view.project ? view.project.currentExperiment : null
@@ -284,12 +336,14 @@ EaComponents.MainContent {
         },
         CorrelationChart {
             id: correlationChart
+            opacity: SwipeView.isCurrentItem ? 1 : 0
 
             project: view.project
             shown: view.shown && SwipeView.isCurrentItem
         },
         Item {
             id: stackedTab
+            opacity: SwipeView.isCurrentItem ? 1 : 0
 
             readonly property bool shown: view.shown && SwipeView.isCurrentItem
 
@@ -315,6 +369,7 @@ EaComponents.MainContent {
         },
         ScanViewChart {
             id: mapChart
+            opacity: SwipeView.isCurrentItem ? 1 : 0
 
             project: view.project
             mode: "map"
@@ -322,6 +377,7 @@ EaComponents.MainContent {
         },
         EvolutionChart {
             id: evolutionChart
+            opacity: SwipeView.isCurrentItem ? 1 : 0
 
             project: view.project
             shown: view.shown && SwipeView.isCurrentItem
@@ -333,9 +389,71 @@ EaComponents.MainContent {
         id: blockSelector
 
         readonly property bool experiments: !view.structureShown
+        // Shown over the experiments, the rows it shows have their scan values read: the shown experiment's and the
+        // open list's (ProjectViewModel.setExperimentListShown, watchExperimentRow).
+        readonly property bool listShown: view.shown && experiments && visible
+        // The open list's rows under an owner of their own, shown only while the list is open; the shown experiment
+        // under the selector's.
+        // Every registration is bound to the project it was made with, released there (a delegate saves its watcher,
+        // so a new project's watcher never releases the old one's rows), as the Experiments table's rows do.
+        function watcherFor(project: ProjectViewModel): var {
+            return (index, on) => project.watchExperimentRow(popupOwner, index, on);
+        }
+        rowWatcher: experiments && view.project ? watcherFor(view.project) : null
+        readonly property bool popupShown: listShown && popup.opened
+        QtObject {
+            id: popupOwner
+        }
+        readonly property int watchedRow: experiments && view.project ? view.project.currentExperimentIndex : -1
+        // The project the shown flags and the selected row's watch are registered with, and that row.
+        property ProjectViewModel registered: null
+        property int watching: -1
+        function release(): void {
+            if (registered === null)
+                return;
+            registered.setExperimentListShown(blockSelector, false);
+            registered.setExperimentListShown(popupOwner, false);
+            if (watching >= 0)
+                registered.watchExperimentRow(blockSelector, watching, false);
+            registered = null;
+            watching = -1;
+        }
+        function register(): void {
+            release();
+            registered = view.project;
+            if (registered === null)
+                return;
+            registered.setExperimentListShown(blockSelector, listShown);
+            registered.setExperimentListShown(popupOwner, popupShown);
+            watching = watchedRow;
+            if (watching >= 0)
+                registered.watchExperimentRow(blockSelector, watching, true);
+        }
+        onWatchedRowChanged: {
+            if (registered === null || registered !== view.project)
+                return register();
+            if (watching >= 0)
+                registered.watchExperimentRow(blockSelector, watching, false);
+            watching = watchedRow;
+            if (watching >= 0)
+                registered.watchExperimentRow(blockSelector, watching, true);
+        }
+        onListShownChanged: if (registered)
+            registered.setExperimentListShown(blockSelector, listShown)
+        onPopupShownChanged: if (registered)
+            registered.setExperimentListShown(popupOwner, popupShown)
+        Connections {
+            target: view
+            function onProjectChanged() {
+                blockSelector.register();
+            }
+        }
+        Component.onCompleted: register()
+        Component.onDestruction: release()
 
         visible: blocks !== null && blocks.count > 0
         areaWidth: view.width
+        current: view.shown
         // The whole width with the standard padding on every view, the structure view's included; only the controls
         // row below is centred (the owner, 2026-11-17).
         blocks: view.project ? (experiments ? view.project.experiments : view.project.structures) : null

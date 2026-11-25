@@ -24,7 +24,7 @@ SideBarGroup {
 
     EaElements.ComboBox {
         objectName: "analysis.patternUpdates"
-        width: EaStyle.Sizes.sideBarContentWidth
+        width: AppSizes.loneControlWidth
         // The order the owner chose (2026-10-24); `values` holds each entry's FitViewModel.patternUpdates, so saved
         // choices keep their meaning: a saved 0, the earlier "Every pattern", is "fit waits".
         readonly property list<int> values: [2, 1, 0, 4, 3]

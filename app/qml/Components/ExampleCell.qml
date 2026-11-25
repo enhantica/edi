@@ -10,7 +10,7 @@ import EasyApplication.Gui.Elements as EaElements
 import edi.app
 
 // A table cell of three lines, as the Examples list draws an example: the title, its tag chips in their tones
-// (app/examples/tags.json) and a grey one-line description, each cut short with a tooltip giving it whole. The
+// (app/examples/tags.json) and a grey description, each on as many lines as it needs. The
 // Tutorials list draws its rows with the same cell.
 Item {
     id: cell
@@ -21,10 +21,15 @@ Item {
     property list<string> tagColors: []
     property list<string> tagDarkColors: []
     property string detail: ""
-    // The description on as many lines as it needs instead of one cut short (the Tutorials dialog at its widest).
-    property bool wrapDetail: false
+    // The description on as many lines as it needs, never cut short: a fixed text is not cut (N1, the owner's contract,
+    // 2026-11-23); the row grows with it.
+    property bool wrapDetail: true
+
+    // Its lines' height, tags wrapped included, for a row sized by its content.
+    implicitHeight: content.implicitHeight
 
     Column {
+        id: content
         anchors.verticalCenter: parent.verticalCenter
         width: parent.width
         spacing: EaStyle.Sizes.fontPixelSize * 0.25
@@ -32,7 +37,7 @@ Item {
             id: identityLabel
             width: parent.width
             horizontalAlignment: Text.AlignLeft
-            elide: Text.ElideRight
+            wrapMode: Text.WordWrap
             textFormat: Text.PlainText
             // PT Sans lacks several subscript digits; one bundled face keeps formula weights uniform. Regular
             // weight: only Noto Sans Regular is bundled, and a synthesised bold showed in the browser and on

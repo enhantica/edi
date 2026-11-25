@@ -55,6 +55,9 @@ Item {
             inTable: true
         }
     }
+    Component { id: parametersGroup; ParametersGroup { tableViewportHeight: 160 } }
+    Component { id: atomSitesGroup; AtomSitesGroup {} }
+    Component { id: adpGroup; AtomSiteAdpGroup {} }
     TestCase {
         name: "TableInteractions"
         when: windowShown
@@ -156,6 +159,82 @@ Item {
             tryCompare(group, "experiment", null);
             tryCompare(table, "count", 0);
         }
+        function test_parameter_number_opens_full_popup_data() {
+            return [
+                {tag: "parameters", group: parametersGroup, table: "parameters.list",
+                 prefix: "parameters.value.", value: 4.0267, uid: "cell.length_a", fileName: "structure.cell.length_a"},
+                {tag: "atom-sites", group: atomSitesGroup, table: "atomSites.list",
+                 prefix: "atomSite.occupancy.", value: 0.987654, fileName: "structure.atom_site.Li1.occupancy"},
+                {tag: "atomic-displacement", group: adpGroup, table: "atomSiteAdps.list",
+                 prefix: "atomSiteAdp.iso.", value: 1.234567, fileName: "structure.atom_site.Li1.adp_iso"}
+            ];
+        }
+        function test_parameter_number_opens_full_popup(data) {
+            const directory = SettingsProof.copyProject(Qt.resolvedUrl("../../fixtures/table_display"));
+            const file = "structures/structure.edi";
+            const original = SettingsProof.text(directory, file);
+            const token = "Li1 a Li Biso 0 0 0 1 1.2";
+            verify(original.includes(token), "The authored popup values address the same independent atom");
+            verify(SettingsProof.write(directory, file,
+                    original.replace(token, "Li1 a Li Biso 0 0 0 0.987654 1.234567")),
+                   "The loader receives nontrivial occupancy and displacement digits");
+            verify(Session.openProject(directory), "The actual tables open the authored parameter project");
+            const owner = data.tag === "parameters" ? {project: Session.project}
+                                                    : {structure: Session.project.currentStructure};
+            const width = data.tag === "atom-sites" ? 960 : 640;
+            const group = createTemporaryObject(data.group, surface, Object.assign({width}, owner));
+            verify(group !== null, "The production table group instantiates for the popup witness");
+            verify(waitForPolish(group), "The production group lays out its number columns before input");
+            const table = Ui.find(group, data.table, true);
+            verify(table !== null && table.count > 0, "The selected production table contains number cells");
+            let index = 0;
+            if (data.tag === "parameters") {
+                table.sourceModel.categoryFilter = "cell";
+                index = Probe.rows(table.model).findIndex(row => row.parameter.uid === data.uid);
+                verify(index >= 0, "The Analysis table includes the independently named lattice parameter");
+            }
+            table.positionViewAtIndex(index, ListView.Contain);
+            table.forceLayout();
+            let cell = null;
+            tryVerify(() => {
+                const row = table.itemAtIndex(index);
+                if (row)
+                    cell = findChild(row, data.prefix + index);
+                return cell !== null && cell.item;
+            }, 2000, "The requested number is a rendered delegate of the actual table and parameter");
+            compare(cell.item.value, data.value, "The clicked parameter has the complete independently authored numeric value");
+            surface.forceActiveFocus();
+            verify(!cell.activeFocus, "The number cell starts without keyboard focus before the click");
+            const popup = Ui.parameterPopup(this, cell);
+            const mouseFocusedCell = cell.activeFocus || cell.manualEditing;
+            const editor = Ui.parameterValue(this, cell, popup);
+            const docs = findChild(popup.contentItem, cell.objectName + ".popup.docs");
+            verify(docs !== null && docs.enabled && Ui.exposed(docs),
+                   "The full parameter popup exposes its enabled documentation link");
+            compare(docs.text, data.fileName, "The popup link names the complete independently authored .edi parameter");
+            const words = Ui.text(popup.contentItem).split(/\s+/);
+            verify(words.includes("Min") && words.includes("Max"), "The popup contains both parameter bounds");
+            const free = findChild(popup.contentItem, cell.objectName + ".popup.free");
+            verify(free !== null && Ui.exposed(free), "An applicable parameter exposes its actual Free checkbox");
+            Ui.focusParameter(this, editor);
+            tryCompare(editor, "text", cell.item.fileEditValue, 2000, "The opened editor exposes the complete native value spelling");
+            compare(Ui.numericText(editor.text), data.value, "The popup restores every independently supplied value digit");
+            verify(editor.contentWidth <= editor.width - editor.leftPadding - editor.rightPadding + 1,
+                   "The dedicated Value input visibly fits the complete editable number");
+            const valuePreserved = cell.item.value === data.value;
+            verify(SettingsProof.key(editor, Qt.Key_Escape), "Escape reaches the actual popup editing window");
+            // Let the overlay's ordinary exit transition finish before classifying Escape.
+            wait(250);
+            const faults = [];
+            if (mouseFocusedCell) faults.push("the number cell took in-place focus from the mouse");
+            if (popup.opened) {
+                faults.push("Escape left the parameter popup open");
+                popup.close();
+            }
+            if (!valuePreserved || cell.item.value !== data.value) faults.push("inspection changed the authored value");
+            compare(faults, [], "The pointer route and Escape preserve the full popup contract");
+        }
+
         function test_parameter_menus_data() {
             return [
                 {
@@ -207,7 +286,7 @@ Item {
             }
         }
         function test_parameter_menus(data) {
-            const directory = SettingsProof.copyProject(Probe.repoUrl("tests/fixtures/table_display"));
+            const directory = SettingsProof.copyProject(Qt.resolvedUrl("../../fixtures/table_display"));
             const file = "structures/structure.edi";
             const original = SettingsProof.text(directory, file);
             verify(original.includes("_cell.length_a 4.026700"), "The menu input addresses the declared physical lattice parameter");
@@ -225,32 +304,43 @@ Item {
             verify(control !== null && control.item === parameter, "The app-owned cell or field retains the genuine typed item");
             verify(waitForPolish(control), "The supported menu consumer finishes layout before real input");
             compare(control.canFit, parameter.fittable || parameter.free, "The menu follows the native fittability or existing free flag");
-            const overlay = control.Overlay.overlay;
-            verify(overlay !== null, "The supported parameter menu has its real window overlay");
+            verify(control.Overlay.overlay !== null, "The supported parameter popup has its real window overlay");
+            function inspect(popup) {
+                const docs = Ui.parameterPopupItem(test, control, popup, "docs");
+                verify(docs && docs.enabled && Ui.exposed(docs), "The popup exposes its live documentation link");
+                compare(docs.text, "structure.cell.length_a", "The popup names the same saved lattice parameter");
+                const editor = Ui.parameterValue(test, control, popup);
+                compare(editor.parameter.units, "Å", "The shared Value input retains the actual lattice unit");
+                const su = Ui.parameterPopupItem(test, control, popup, "su");
+                verify(su && Ui.exposed(su) && !su.enabled, "The popup displays s.u. in its dedicated disabled input");
+                compare(su.text, parameter.fileSu, "The s.u. input preserves the independently supplied uncertainty");
+                const words = Ui.text(popup.contentItem).split(/\s+/);
+                verify(words.includes("Å"), "The lattice unit is visibly rendered inside its Value field");
+                for (const title of ["Value", "s.u.", "Min", "Max"])
+                    verify(words.includes(title), "The shared parameter popup exposes its scientific heading " + title);
+                verify(!words.includes("units") && !words.includes("error") && !words.includes("vary"),
+                       "Value includes its unit and the shared popup uses the declared scientific headings");
+                return Ui.parameterPopupItem(test, control, popup, "free");
+            }
             control.readOnly = true;
-            click(control, Qt.RightButton);
-            tryVerify(() => Ui.text(overlay).includes("cell.length_a"), 2000, "Read-only inspection retains the supported parameter menu");
-            const readOnlyWords = Ui.text(overlay).split(/\s+/).filter(word => word.length > 0);
-            verify(readOnlyWords.includes("s.u.") && readOnlyWords.includes("units") && readOnlyWords.includes("Å"), "Read-only inspection retains uncertainty and units");
-            verify(!Ui.exposed(control.fitCheckBox), "Read-only inspection cannot expose an editable free toggle");
-            compare(parameter.free, true, "Read-only inspection cannot change the parameter's free flag");
+            const inspection = Ui.parameterPopup(this, control);
+            const hiddenFree = inspect(inspection);
+            verify(hiddenFree && !Ui.exposed(hiddenFree), "Read-only inspection cannot expose an editable Free toggle");
+            compare(parameter.free, true, "Read-only inspection cannot change the parameter's Free flag");
             mouseClick(surface, surface.width - 10, surface.height - 10);
-            tryVerify(() => !Ui.text(overlay).includes("cell.length_a"), 2000, "The read-only parameter menu closes through ordinary input");
+            tryCompare(inspection, "opened", false, 2000, "Ordinary outside input closes the read-only popup");
+
             control.readOnly = false;
-            click(control, Qt.RightButton);
-            tryVerify(() => Ui.text(overlay).includes("cell.length_a"), 2000, "A real right click opens the parameter's own menu");
-            const words = Ui.text(overlay).split(/\s+/).filter(word => word.length > 0);
-            verify(words.includes("s.u."), "The uncertainty heading uses s.u.");
-            verify(words.includes("free"), "The fit toggle heading uses free");
-            verify(words.includes("units") && words.includes("Å"), "The popup displays the parameter units");
-            verify(!words.includes("error") && !words.includes("vary"), "The supported menu retains the app's scientific headings");
-            verify(Ui.exposed(control.fitCheckBox), "An applicable free parameter exposes its real menu toggle");
-            compare(control.fitCheckBox.checked, true, "The real free flag is initially checked");
-            click(control.fitCheckBox);
-            compare(control.fitCheckBox.checked, false, "A real menu click clears the toggle");
-            compare(parameter.free, false, "The actual supported menu commits to the original typed parameter");
+            const popup = Ui.parameterPopup(this, control, data.tag === "table-cell" ? Qt.RightButton : Qt.LeftButton);
+            const fit = inspect(popup);
+            verify(Ui.text(popup.contentItem).split(/\s+/).includes("Free"), "The applicable toggle has its Free heading");
+            verify(fit && Ui.exposed(fit) && fit.enabled, "An applicable free parameter exposes its editable popup toggle");
+            compare(fit.checked, true, "The real Free flag is initially checked");
+            click(fit);
+            compare(fit.checked, false, "A real popup click clears the Free toggle");
+            compare(parameter.free, false, "The popup commits to the original typed parameter");
             mouseClick(surface, surface.width - 10, surface.height - 10);
-            tryVerify(() => !Ui.text(overlay).includes("cell.length_a"), 2000, "Clicking outside closes the original parameter menu");
+            tryCompare(popup, "opened", false, 2000, "Clicking outside closes the original parameter popup");
 
         }
     }

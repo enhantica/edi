@@ -24,6 +24,9 @@ Row {
     property string blocksTextRole: ""
     property string blockKind: ""
     property int blockIndex: 0
+    // Told of each row the list draws and stops drawing (the experiments' scan values are read for those, edi ADR-0102
+    // rule 6); null for blocks that need nothing.
+    property var rowWatcher: null
     signal blockActivated(int index)
     // The box's state, as a caller of the box itself reads it.
     readonly property alias currentIndex: selector.currentIndex
@@ -58,6 +61,12 @@ Row {
     // The gap between buttons in a chart toolbar group, between the box and each button (owner, 2026-10-05).
     spacing: AppSizes.toolbarSpacing
 
+    FontMetrics {
+        id: lineMetrics
+        font.family: EaStyle.Fonts.fontFamily
+        font.pixelSize: EaStyle.Sizes.fontPixelSize
+    }
+
     SearchableComboBox {
         id: selector
 
@@ -68,10 +77,36 @@ Row {
 
         // A block's line, in the Experiments table's column order: its number, its icon in its colour, its fit
         // outcome, its name and a scan's template mark, on one centre line (IconLine, §10).
-        function segments(index, name, nameColor, outcome, isTemplate) {
+        function segments(index, name, nameColor, outcome, isTemplate, room) {
             if (row.lineFor)
                 return row.lineFor(index, name);
             const line = ApplicationInfo.blockSegments(index, name, nameColor, outcome, isTemplate);
+            // A name of parts ("d20 · file · Rwp 4.69 % · 497.379 K") cuts its file only: a cut through a number dropped
+            // its digits (the owner's sweep, 2026-11-22). A value with no room is left out whole, the last one kept longest.
+            const at = line.findIndex(piece => piece.elides === true);
+            const parts = at >= 0 ? String(line[at].text).split(" · ") : [];
+            if (parts.length >= 3) {
+                const piece = line[at];
+                const gap = EaStyle.Sizes.fontPixelSize * 0.5;
+                const advance = text => lineMetrics.advanceWidth(text);
+                const others = line.reduce((sum, each) => sum + (each === piece ? 0 : gap + (each.icon !== undefined ? EaStyle.Sizes.fontPixelSize * 1.25 : advance(each.text ?? ""))), 0);
+                const need = () => others + Math.min(advance(parts[1]), EaStyle.Sizes.fontPixelSize * 4) + (parts.length - 1) * (2 * gap + advance("·")) + parts.reduce((sum, part, n) => sum + (n === 1 ? 0 : advance(part)), 0);
+                while (parts.length > 2 && need() > room)
+                    parts.splice(Math.max(2, parts.length - 2), 1);
+                // Each dot a piece, so the line's one spacing stands on both its sides, as a space does. The file is plain
+                // text, which Qt can shorten.
+                const dot = Object.assign({}, piece, {
+                    "text": "·",
+                    "elides": false
+                });
+                const pieces = [];
+                parts.forEach((part, n) => pieces.push(...(n > 0 ? [dot] : []), Object.assign({}, piece, {
+                        "text": part,
+                        "elides": n === 1,
+                        "factors": n > 1
+                    })));
+                line.splice(at, 1, ...pieces);
+            }
             // The scan's starting dataset reads "Start" in the accent, as the Experiments table's file cell
             // names it (the owner, 2026-11-16).
             if (isTemplate && line.length > 0) {
@@ -113,7 +148,7 @@ Row {
                 id: shownLine
                 x: EaStyle.Sizes.fontPixelSize * 0.75
                 anchors.verticalCenter: parent.verticalCenter
-                segments: selector.segments(selector.currentIndex, selector.currentText, selector.foregroundColor, row.currentOutcome, row.currentTemplate)
+                segments: selector.segments(selector.currentIndex, selector.currentText, selector.foregroundColor, row.currentOutcome, row.currentTemplate, maximumWidth)
                 // Keep the arrow's hit area clear even when the label and its marks are too wide.
                 width: Math.max(0, Math.min(parent.width - x, selector.indicator && selector.indicator.visible && !selector.mirrored ? selector.indicator.x - parent.x - x - EaStyle.Sizes.fontPixelSize * 0.5 : parent.width - x))
                 maximumWidth: Math.max(1, width)
@@ -125,6 +160,34 @@ Row {
         // The base's delegate, with the block's line for its content.
         delegate: EaElements.MenuItem {
             id: entry
+
+            // Watched while it passes the search (a filtered entry is folded away) and lies in the list's visible part
+            // (a delegate kept outside it is not drawn), under its index now; released through the watcher it was
+            // registered with, so a new project's watcher never releases the old one's row.
+            readonly property ListView ownList: ListView.view
+            readonly property bool inView: ownList !== null && height > 0 && y + height > ownList.contentY && y < ownList.contentY + ownList.height
+            readonly property bool watched: row.rowWatcher !== null && matching && inView
+            property int watching: -1
+            property var watcher: null
+            function rewatch(): void {
+                if (watching >= 0 && watcher)
+                    watcher(watching, false);
+                watching = watched ? entry.index : -1;
+                watcher = watched ? row.rowWatcher : null;
+                if (watching >= 0)
+                    watcher(watching, true);
+            }
+            onWatchedChanged: rewatch()
+            onIndexChanged: rewatch()
+            Connections {
+                target: row
+                function onRowWatcherChanged() {
+                    entry.rewatch();
+                }
+            }
+            Component.onCompleted: rewatch()
+            Component.onDestruction: if (watching >= 0 && watcher)
+                watcher(watching, false)
 
             required property int index
             required property var model
@@ -150,7 +213,7 @@ Row {
 
                 IconLine {
                     anchors.verticalCenter: parent.verticalCenter
-                    segments: selector.segments(entry.index, entry.text, EaStyle.Colors.themeForeground, row.outcomeRole !== "" ? entry.model[row.outcomeRole] : "", row.templateRole !== "" && entry.model[row.templateRole] === true)
+                    segments: selector.segments(entry.index, entry.text, EaStyle.Colors.themeForeground, row.outcomeRole !== "" ? entry.model[row.outcomeRole] : "", row.templateRole !== "" && entry.model[row.templateRole] === true, maximumWidth)
                     maximumWidth: Math.max(1, parent.width)
                     elide: row.lineFor ? Text.ElideRight : Text.ElideMiddle
                 }

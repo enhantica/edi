@@ -100,7 +100,7 @@ std::string shared_variant(const std::vector<std::string>& variants) {
 // A table's column header for item `uid`: its dictionary label, with its units in brackets.
 std::string header(std::string_view uid, std::string_view variant = {}) {
     const std::string units = units_label(uid, variant);
-    return units.empty() ? label(uid, variant) : label(uid, variant) + " (" + units + ")";
+    return units.empty() ? shown_label(uid, variant) : shown_label(uid, variant) + " (" + units + ")";
 }
 
 // A number of item `uid`, by its dictionary format for `variant` and the rule for numbers (shown_text); an empty cell
@@ -515,7 +515,7 @@ ReportCategory category(const std::string& id) { return {id, category_label(id),
 // Where an experiment's data lie on its own axis, as a row label and units from the dictionary.
 std::pair<std::string, std::string> axis_of(const PdDataBase& data) {
     const char* uid = data.two_theta.has_value() ? "data.two_theta" : "data.time_of_flight";
-    return {label(uid), units_label(uid)};
+    return {shown_label(uid), units_label(uid)};
 }
 
 // A structure's categories in its page's order, filled as the page shows them; a loop without rows is left out. The
@@ -889,7 +889,8 @@ std::vector<ReportCategory> analysis_of(const Project& project, const std::optio
     software.rows = {{"Framework", "edi " + core_version(), ""}, {category_label("calculator"), "crysta", ""}};
     ReportCategory minimizer = category("minimizer");
     const std::string descent = current_descent_id(project.descent);
-    minimizer.rows = {{label("minimizer.type"), descent.empty() ? "crysta" : "crysta (" + descent + ")", ""},
+    // "Type" under the Minimizer heading: the item's label repeats the heading.
+    minimizer.rows = {{"Type", descent.empty() ? "crysta" : "crysta (" + descent + ")", ""},
                       {label("minimizer.max_iterations"),
                        std::to_string(project.minimizer_max_iterations > 0 ? project.minimizer_max_iterations : 50), ""}};
     // The stop rules, declared or crysta's default set (both), and the tolerance each selected rule reads.
@@ -986,6 +987,10 @@ std::vector<ReportCategory> analysis_of(const Project& project, const std::optio
     } else {
         result.rows = {{"Overall status", "Not fitted yet", ""}};
     }
+    // Every key starts with a capital, as every label does: the minimizer's type read "minimizer".
+    for (ReportCategory* each : {&software, &minimizer, &mode, &result})
+        for (ReportRow& row : each->rows)
+            if (!row.label.empty() && row.label[0] >= 'a' && row.label[0] <= 'z') row.label[0] = static_cast<char>(row.label[0] - 'a' + 'A');
     return {software, minimizer, mode, result};
 }
 

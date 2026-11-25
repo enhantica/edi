@@ -479,7 +479,7 @@ bool DemoDriver::saveDocumentationFrame(const QString& path, QString* error) {
         return items;
     };
     const auto items = collect();
-    const auto frame = window_.grabWindow();
+    const auto frame = grab();
     if (items != collect() || frame != previous_frame_)
         return refuse("the scene changed between its settled image and layout capture");
     for (const auto& target : step.highlights) {

@@ -33,7 +33,11 @@ Column {
         defaultInfoText: qsTr("No linked structure yet")
         sourceModel: group.rows
 
-        columns: [numberColumnWidth, AppSizes.iconOnlyColumnWidth, -1, -1, -1, AppSizes.iconColumnWidth, AppSizes.iconColumnWidth]
+        // Widths from column types, not rows (ADR-0103 rule 4): the structure is a short id in a combo box (its arrow
+        // beside it), scale and weight fraction numbers; the rest of the row is left empty, so the remove button always
+        // shows (the owner, 2026-11-21).
+        // Its columns by kind (the shared column model, DataTable.columnKinds; ADR-0103 decision 4).
+        columnKinds: ["index", "mark", "short", "number", "number", "control", "control"]
 
         header: EaComponents.ListViewHeader {
             EaComponents.ListViewLabel {
@@ -49,11 +53,11 @@ Column {
                 uid: "linked_structure.structure_id"
             }
             HeaderLabel {
-                horizontalAlignment: Text.AlignHCenter
+                horizontalAlignment: Text.AlignRight
                 uid: "linked_structure.scale"
             }
             HeaderLabel {
-                horizontalAlignment: Text.AlignHCenter
+                horizontalAlignment: Text.AlignRight
                 uid: "linked_structure.weight_fraction"
             }
             EaComponents.ListViewLabel {
@@ -111,39 +115,27 @@ Column {
                         })
                 }
             }
+            // Numbers right-aligned under their right-aligned headers (ADR-0029; the owner, 2026-11-21).
             ParameterCell {
-                columnAlignment: Text.AlignHCenter
+                columnAlignment: Text.AlignRight
                 objectName: `linkedStructure.scale.${row.index}`
                 enabled: row.model.enabled && refinable
                 item: row.model.scale
             }
-            // Read-only, as a parameter the scales imply: the dictionary's weight fraction, rounded by its s.u. under the
-            // project's rule, else by its display format, the s.u. in the value's menu, never edited or fitted.
-            EaComponents.ListViewParameter {
-                id: fraction
-
-                errorTitle: qsTr("s.u.")
-                fitTitle: qsTr("free")
+            // Derived from the scales: the dictionary's weight fraction, rounded by its s.u. under the project's rule, else
+            // by its display format; never edited or fitted.
+            DerivedCell {
                 readonly property bool known: row.weightFraction !== undefined && row.weightFraction.value !== undefined
                 readonly property real fractionValue: known ? row.weightFraction.value : 0
                 readonly property real fractionError: known ? row.weightFraction.uncertainty : 0
 
-                horizontalAlignment: Text.AlignHCenter
                 objectName: `linkedStructure.weightFraction.${row.index}`
                 enabled: row.model.enabled
-                readOnly: true
-                // One map whose values depend on `known`: a choice between two maps, compiled ahead of time, is
-                // undefined while the cell is made, and the base component's bindings warn on it.
-                parameter: ({
-                        "value": known ? Session.valueText("linked_structure.weight_fraction", fractionValue, fractionError) : "",
-                        "error": known ? Session.suText("linked_structure.weight_fraction", fractionValue, fractionError) : "",
-                        "enabled": true,
-                        "fittable": false,
-                        "fit": false,
-                        "category": "linked_structure",
-                        "name": "weight_fraction",
-                        "units": ""
-                    })
+                shownValue: known ? Session.valueText("linked_structure.weight_fraction", fractionValue, fractionError) : ""
+                fullValue: known ? NumberText.plainFull(fractionValue) : ""
+                uncertainty: known ? Session.suText("linked_structure.weight_fraction", fractionValue, fractionError) : ""
+                uid: "linked_structure.weight_fraction"
+                derivedName: row.model.scale ? row.model.scale.fullName.slice(0, row.model.scale.fullName.lastIndexOf(".") + 1) + "weight_fraction" : ""
                 color: EaStyle.Colors.themeForegroundMinor
                 ToolTip.text: Session.tooltip("linked_structure.weight_fraction")
             }

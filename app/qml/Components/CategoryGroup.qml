@@ -43,7 +43,11 @@ SideBarGroup {
     // Folded at first, as every foldable group (the base's default), then as the user left it, also when the
     // page shows another block; the tab's last shown one has no bottom border (edi ADR-0017 §3; SideBarGroups).
     collapsed: !SideBarGroups.isOpen(openKey, group)
-    onCollapsedChanged: SideBarGroups.setOpen(openKey, !collapsed, group)
+    onCollapsedChanged: {
+        SideBarGroups.setOpen(openKey, !collapsed, group);
+        if (!collapsed)
+            made = true;
+    }
     last: SideBarGroups.isLast(group)
     title: extrasPart && model.extrasTitle !== "" ? model.extrasTitle : model.isLoop ? `${model.title} (${model.itemCount})` : model.title
     icon: model.icon
@@ -56,9 +60,17 @@ SideBarGroup {
         selfExplanatory: true
     }
 
+    // Made the first time the group is open, then kept: a page's folded groups are not made or bound to its block on
+    // the page's first visit, which held the switch for half a second (the owner, 2026-11-23). Made at once: made
+    // while the group opened, a table waited for its rows before it could measure itself, and stayed hidden for up to
+    // ten seconds (the owner, 2026-11-24: tables opening empty). A tutorial finds its controls in folded groups, so they
+    // are made while one runs; a group its tab does not show is not, or the tutorial finds that hidden copy.
+    property bool made: false
     Loader {
+        active: group.made || (AppState.tutorialRunning && group.shown)
         sourceComponent: group.contents[group.categoryId] ?? group.fallback
     }
+    Component.onCompleted: made = !collapsed
     Component {
         id: generatedContent
         GeneratedGroup {

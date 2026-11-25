@@ -20,11 +20,11 @@ DataTable {
     objectName: "sequentialExtract.list"
     readOnly: true
     defaultInfoText: qsTr("No extraction rules")
-    // These text-only columns can share more room than numeric parameter tables.
-    maximumTextColumnShare: 0.4
     sourceModel: analysis ? analysis.sequentialExtract : null
 
-    columns: [numberColumnWidth, -1, -1, -1, AppSizes.iconOnlyColumnWidth]
+    // Its columns by kind (the shared column model, DataTable.columnKinds; ADR-0103 decision 4).
+    // The Required toggle under its own header, as wide as that header.
+    columnKinds: ["index", "text", "name", "text", typeColumnWidth("short", qsTr("Required"))]
 
     header: EaComponents.ListViewHeader {
         EaComponents.ListViewLabel {
@@ -46,6 +46,7 @@ DataTable {
         EaComponents.ListViewLabel {
             elide: Text.ElideRight
             horizontalAlignment: Text.AlignHCenter
+            text: qsTr("Required")
         }
     }
 

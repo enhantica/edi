@@ -161,21 +161,26 @@ EaComponents.SideBarColumn {
             }
         }
 
+        // The controls float over the text's top right corner; no row is kept for them (the owner, 2026-11-22).
         Flickable {
+            id: textView
             anchors.fill: parent
             anchors.topMargin: AppSizes.textViewPadding
             anchors.bottomMargin: AppSizes.textViewPadding
             anchors.leftMargin: AppSizes.textViewPadding
             contentWidth: textEdit.contentWidth
             contentHeight: textEdit.contentHeight
-            bottomMargin: tab.underContinue ? AppSizes.textViewContinueClearance : 0
+            // Under a line wider than the view the sideways scroll bar shows: the last line stays above it.
+            bottomMargin: (tab.underContinue ? AppSizes.textViewContinueClearance : 0) + (contentWidth > width ? EaStyle.Sizes.fontPixelSize : 0)
             clip: true
             ScrollBar.vertical: EaElements.ScrollBar {
                 policy: ScrollBar.AsNeeded
                 interactive: false
             }
+            // Always shown while a line is wider than the view: the cue that the text goes on to the right.
             ScrollBar.horizontal: EaElements.ScrollBar {
-                policy: ScrollBar.AsNeeded
+                // Off while the text fits: the style draws the track for AsNeeded too.
+                policy: textView.contentWidth > textView.width ? ScrollBar.AlwaysOn : ScrollBar.AlwaysOff
                 interactive: false
             }
 

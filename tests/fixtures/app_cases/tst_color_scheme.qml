@@ -5,7 +5,7 @@ import QtTest
 import edi.app
 
 // edi's Theme and Qt's colour scheme: Light and Dark override; System follows the browser's prefers-color-scheme in
-// the web app (edi-feedback #63) and the platform on the desktop.
+// the web app (edi #123) and the platform on the desktop.
 TestCase {
     name: "ColorScheme"
 

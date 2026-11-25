@@ -144,7 +144,9 @@ EaComponents.ApplicationWindow {
 
     // The supported minimum (AppSizes): the window cannot be made smaller than every page is made for.
     minimumWidth: AppSizes.minimumAppWidth
-    minimumHeight: AppSizes.minimumAppHeight
+    minimumHeight: AppSizes.minimumAppHeight(width)
+    // Below 600 px the app bar keeps Save, Undo, the pages as icons, the assistant and Preferences (ADR-0103 decision 2).
+    readonly property bool compactAppBar: AppSizes.compact
 
     // A leading "•" while the open project has unsaved changes (edi ADR-0017 §13).
     title: (Session.project && Session.project.modified ? "• " : "") + ApplicationInfo.name
@@ -180,6 +182,7 @@ EaComponents.ApplicationWindow {
         },
         EaElements.ToolButton {
             objectName: "appBar.button.redo"
+            visible: !window.compactAppBar
             enabled: false
             fontIcon: "redo"
             ToolTip.text: qsTr("Redo is not available yet")
@@ -187,6 +190,7 @@ EaComponents.ApplicationWindow {
         },
         EaElements.ToolButton {
             objectName: "appBar.button.reset"
+            visible: !window.compactAppBar
             fontIcon: "backspace"
             ToolTip.text: qsTr("Clear: close the project and start again")
             Accessible.name: ToolTip.text
@@ -304,6 +308,7 @@ EaComponents.ApplicationWindow {
             readonly property bool on: Preferences.toolTipLevel !== "Off"
 
             objectName: "appBar.button.toolTips"
+            visible: !window.compactAppBar
             fontIcon: on ? "comment" : "comment-slash"
             ToolTip.text: on ? qsTr("Turn tooltips off; right-click for their level and delay") : qsTr("Turn tooltips on; right-click for their level and delay")
             Accessible.name: on ? qsTr("Turn tooltips off") : qsTr("Turn tooltips on")
@@ -763,7 +768,7 @@ EaComponents.ApplicationWindow {
         parent: Overlay.overlay
         anchors.fill: parent
         z: 1000000
-        visible: window.width < AppSizes.minimumAppWidth || window.height < AppSizes.minimumAppHeight
+        visible: window.width < AppSizes.minimumAppWidth || window.height < AppSizes.minimumAppHeight(window.width)
         color: EaStyle.Colors.contentBackground
 
         // The content beneath takes no pointer input while it is hidden.
@@ -805,12 +810,49 @@ EaComponents.ApplicationWindow {
         }
     }
 
-    // The sidebar reaches from the window's edge to the Experiment button's centre in the top bar (the owner,
-    // 2026-10-22), read from where the centred tabs are, so it follows the window and any change to the buttons.
+    // The sidebar's width follows the window smoothly (AppSizes.sideBarWidthFor; ADR-0103 decision 3); below
+    // AppSizes.sideBarBelowWidth it sits under the main view at the window's full width (WorkflowPage).
+    Binding {
+        target: AppSizes
+        property: "appWidth"
+        value: window.width
+    }
+    Binding {
+        target: EaStyle.Sizes
+        property: "sideBarBelow"
+        value: AppSizes.appWidth < AppSizes.sideBarBelowWidth
+    }
+    // The width steps as last measured, so a chosen width mode holds before any project's table is laid out, and kept
+    // whenever a table notes them again (the owner, 2026-11-22).
+    function restoreSideBarSteps(): void {
+        if (Preferences.sideBarStepBounds > 0 && AppSizes.sideBarSteps.bounds === undefined)
+            AppSizes.sideBarSteps = {
+                "bounds": Preferences.sideBarStepBounds,
+                "values": Preferences.sideBarStepValues,
+                "compact": Preferences.sideBarStepCompact
+            };
+    }
+    Connections {
+        target: AppSizes
+        function onSideBarStepsChanged() {
+            const steps = AppSizes.sideBarSteps;
+            if (steps.bounds === undefined)
+                return;
+            Preferences.sideBarStepBounds = steps.bounds;
+            Preferences.sideBarStepValues = steps.values;
+            Preferences.sideBarStepCompact = steps.compact;
+        }
+    }
+    // Full's fixed width, edi main's rule: from the window's edge to the Experiment button's centre in the top bar.
+    Binding {
+        target: AppSizes
+        property: "sideBarMainWidth"
+        value: Math.round(window.width - (window.appBarCentralTabs.x + window.appBarCentralTabs.leftPadding + experimentTab.x + experimentTab.width / 2))
+    }
     Binding {
         target: EaStyle.Sizes
         property: "sideBarWidth"
-        value: Math.round(window.width - (window.appBarCentralTabs.x + window.appBarCentralTabs.leftPadding + experimentTab.x + experimentTab.width / 2))
+        value: EaStyle.Sizes.sideBarBelow ? Math.round(AppSizes.appWidth) : AppSizes.sideBarWidthChosen(AppSizes.appWidth, Preferences.sideBarWidthMode, Preferences.sideBarManualWidth)
     }
 
     Shortcut {
@@ -1449,6 +1491,7 @@ EaComponents.ApplicationWindow {
     // preferences go to the base once everything, the base's hidden dialog and its settings included, is complete
     // (Preferences.apply).
     Component.onCompleted: {
+        restoreSideBarSteps();
         setUpMergedTitleBar();
         ApplicationInfo.applyColorScheme(EaStyle.Colors.theme);
         ApplicationInfo.windowCompleted();

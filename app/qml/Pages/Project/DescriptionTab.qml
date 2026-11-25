@@ -21,12 +21,15 @@ Rectangle {
     onProjectChanged: nameInput.refusal = ""
 
     Flickable {
+        id: descriptionView
         anchors.fill: parent
         contentHeight: column.height + 2 * column.y
         clip: true
         flickableDirection: Flickable.VerticalFlick
+        // Shown only while the page is taller than the view, the cue that it goes on below (the owner, 2026-11-21);
+        // off while it fits: AsNeeded showed a bar for seconds after the project opened (the owner, 2026-11-22).
         ScrollBar.vertical: EaElements.ScrollBar {
-            policy: ScrollBar.AsNeeded
+            policy: descriptionView.contentHeight > descriptionView.height + 1 ? ScrollBar.AlwaysOn : ScrollBar.AlwaysOff
             interactive: false
         }
 
@@ -55,11 +58,23 @@ Rectangle {
                 property string refusal: ""
 
                 objectName: "project.name"
+                // The column's width, not its text's: the font shrinks to fit this width, which would otherwise follow
+                // the text it sizes (a binding loop).
+                width: column.width
                 // The large light text is Noto Sans Light, by its own loader's family and its style, never by
                 // a weight (ADR-0015 §10).
                 font.family: EaStyle.Fonts.notoSansLight.name
-                font.pixelSize: AppSizes.descriptionTitleFontPixelSize
+                // Smaller where the name is wider than the view, down to one and a half times the text size: a
+                // text input cannot elide, and the name was cut at the view's edge (the owner, 2026-11-21).
+                font.pixelSize: Math.max(Math.round(EaStyle.Sizes.fontPixelSize * 1.5), Math.min(AppSizes.descriptionTitleFontPixelSize, Math.floor(AppSizes.descriptionTitleFontPixelSize * (nameInput.width - nameInput.leftPadding - nameInput.rightPadding) / Math.max(1, nameMetrics.advanceWidth))))
                 font.styleName: "Light"
+                TextMetrics {
+                    id: nameMetrics
+                    font.family: EaStyle.Fonts.notoSansLight.name
+                    font.pixelSize: AppSizes.descriptionTitleFontPixelSize
+                    font.styleName: "Light"
+                    text: nameInput.text
+                }
                 placeholderText: qsTr("Enter project name here")
                 text: tab.project ? tab.project.name : ""
                 warned: refusal !== ""

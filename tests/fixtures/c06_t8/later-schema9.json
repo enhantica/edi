@@ -10,6 +10,12 @@
       "after_sha256": "b70a908bd88687f2006995be80c055dbd140a62502fdbac948d4020fb831c76c"
     }
   },
+  "warning_spelling": {
+    "source_commit": "a6f0c1dd",
+    "file": "tests/fixtures/e05_t1/cli.json",
+    "before_sha256": "5dc460672a76c0703e67ff627fbd064c60395c32ec8486b2ebf487f4a2ea7301",
+    "after_sha256": "c82453d654aa037901ab169fb460ae3d06f865af259ddfc3362e0dbae8ecfe43"
+  },
   "native_records": {
     "tests/fixtures/e05_t1/sc-neut-cwl_tb2ti2o7-heidi_exclusions.record": "daf70f19a9d7c8a9c518b188ddaea6fc0e103a5f753167c0454ef827c5eedb9a"
   }

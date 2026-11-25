@@ -4,6 +4,7 @@ import QtQuick.Controls
 
 import EasyApplication.Gui.Style as EaStyle
 import EasyApplication.Gui.Elements as EaElements
+import EasyApplication.Gui.Components as EaComponents
 
 import edi.app
 
@@ -94,6 +95,41 @@ EaElements.ParamTextField {
     WarningToolTip {
         text: field.warningText
         requested: field.warned && (field.hovered || field.activeFocus)
+    }
+
+    // A click opens the parameter's popup at the field, its value typed into there, as a table cell's does (the owner,
+    // 2026-11-22, "a click on a parameter cell opens the full parameter popup, in every table"; 2026-11-23 for field
+    // rows). The popup's own editor sets this false.
+    property bool opensPopup: true
+    activeFocusOnPress: !opensPopup
+    // Loaded by its file, not its type: the cell's popup edits in a ParameterField, and naming each other's types
+    // is a cycle the engine refuses.
+    Loader {
+        id: popupCell
+        active: false
+        onLoaded: {
+            item.visible = false;
+            item.width = 0;
+            item.height = 0;
+            item.objectName = field.objectName + ".menu";
+            item.item = Qt.binding(() => field.item);
+            item.locked = Qt.binding(() => field.readOnly);
+        }
+    }
+    function openPopup(): void {
+        if (!popupCell.active) {
+            popupCell.setSource(Qt.resolvedUrl("ParameterCell.qml"));
+            popupCell.active = true;
+        }
+        if (popupCell.item !== null)
+            (popupCell.item as EaComponents.ListViewParameter).openContextMenu(field, field);
+    }
+    // Over the text input, which would otherwise take the press itself.
+    MouseArea {
+        anchors.fill: parent
+        enabled: field.opensPopup && field.item !== null && field.enabled
+        cursorShape: Qt.PointingHandCursor
+        onClicked: field.openPopup()
     }
 
     readonly property var editOwner: Session.project

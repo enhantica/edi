@@ -93,6 +93,14 @@ TestCase {
         settle();
     }
     function click(name) {
+        if (["project.create", "project.load", "project.saveAs"].includes(name)) {
+            const group = Ui.find(Ui.page(app), "group.getStarted", true);
+            verify(group !== null, "The project logging witness reaches the active Get started group");
+            if (group.collapsed)
+                press(group.titleArea);
+            tryVerify(() => Ui.control(Probe, app, name) !== null, 2000,
+                      "The open group materializes the project action before receiving input");
+        }
         const found = Ui.control(Probe, app, name) || Ui.find(Ui.windowRoot(app), name) || named(name);
         press(Ui.target(found));
     }
@@ -166,7 +174,7 @@ TestCase {
                 compare(group.collapsed, false, "The injected clock completes the cell group expansion");
                 const wrapper = Ui.control(Probe, app, "cell.length_a");
                 verify(wrapper !== null, "The numeric witness reaches the actual cell-length control");
-                control = typeof wrapper.selectAll === "function" ? wrapper : Render.descendants(wrapper).find(item => typeof item.selectAll === "function");
+                control = wrapper;
                 value = "4.125";
             } else {
                 AppState.open(AppState.Page.Project);
@@ -204,7 +212,7 @@ TestCase {
         while (owner && !owner.objectName)
             owner = owner.parent;
         verify(owner && owner.objectName.length > 0, "Each logged interaction has a stable objectName");
-        const name = data.kind === "numeric" ? "cell.length_a" : owner.objectName;
+        let name = owner.objectName;
         begin();
         if (data.kind === "combobox") {
             press(control);
@@ -221,7 +229,18 @@ TestCase {
             compare(control.checked, !before, "The checkbox receipt follows an actual state change");
             action = /\b(set|toggle|check|change)\b/i;
         } else if (value) {
-            type(control, value);
+            if (data.kind === "numeric") {
+                press(control);
+                const popup = Ui.openedParameterPopup(test, control);
+                const editor = Ui.parameterValue(test, control, popup);
+                name = "cell.length_a.menu.popup.value";
+                compare(editor.objectName, name, "The real popup owns the original Cell a commit receipt");
+                type(editor, value);
+                compare(control.item.value, Number(value), "The popup edit reaches the original typed model parameter");
+                popup.close();
+            } else {
+                type(control, value);
+            }
             action = /\b(set|edit|commit|change)\b/i;
         } else
             press(control);

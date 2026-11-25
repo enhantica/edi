@@ -649,7 +649,7 @@ Popup {
         case "menu":
             {
                 // "structures.load.web": the Load ▾ menu holding that entry, opened by its button.
-                const button = panel.locate(argument.split(".").slice(0, 2).join(".")) as T.AbstractButton;
+                const button = panel.menuButton(argument);
                 if (button !== null && button.enabled)
                     button.click();
                 return;
@@ -664,7 +664,7 @@ Popup {
                     entry.click();
                     return;
                 }
-                const button = panel.locate(name.split(".").slice(0, 2).join(".")) as T.AbstractButton;
+                const button = panel.menuButton(name);
                 if (button !== null && button.enabled) {
                     button.click();
                     Qt.callLater(() => {
@@ -1497,9 +1497,9 @@ Popup {
         if (name.includes("@")) {
             const parameter = panel.parameterNamed(panel.dotted(name.split("@")[1]));
             const table = ItemLocator.findAnywhere(window, "parameters.list");
-            if (table === null || parameter === null || !table.model || table.model.rowOf === undefined)
+            if (table === null || parameter === null || !table.sourceModel || table.sourceModel.rowOf === undefined)
                 return false;
-            const row = table.model.rowOf(parameter);
+            const row = table.sourceModel.rowOf(parameter);
             return row >= 0 && table.revealRow !== undefined && table.revealRow(row);
         }
         const match = /^(\w+)\.\w+\.(\d+)$/.exec(name);
@@ -1533,6 +1533,15 @@ Popup {
             experiment: "experiments.load.experimentWeb",
             data: "experiments.load.dataWeb"
         })
+    // The button whose menu holds `entry`: the group's Load ▾ ("structures.load" of "structures.load.web"); measured
+    // data loads from the selected experiment's Data file cell, its Load data… ▾ while empty, else its three-dots button.
+    function menuButton(entry) {
+        if (!entry.startsWith("experiments.load.data"))
+            return panel.locate(entry.split(".").slice(0, 2).join(".")) as T.AbstractButton;
+        const row = Session.project ? Session.project.currentExperimentIndex : -1;
+        const load = panel.locate(`experiments.loadData.${row}`) as T.AbstractButton;
+        return load !== null && load.visible ? load : panel.locate(`experiments.dataMore.${row}`) as T.AbstractButton;
+    }
     // The sidebar's tabs, in their order.
     readonly property var sidebarTabs: ["sideBar.tab.basic", "sideBar.tab.extras", "sideBar.tab.text", "sideBar.tab.settings"]
     // Whether `view` is a page's sidebar (inside its `workflow.<page>.sidebarHost`).
@@ -2075,12 +2084,11 @@ Popup {
                 tries = 0;
                 return;
             }
-            const opener = [panel.webEntries[job.kind].split(".").slice(0, 2).join("."), panel.webEntries[job.kind]];
             const dialog = panel.onlineDialog();
             if (job.stage === 0) {
                 // The page, then its Load ▾ menu once the page has built it and it can load.
                 AppState.open(panel.pages[job.kind === "structure" ? "structure" : "experiment"]);
-                const load = panel.locate(opener[0]) as T.AbstractButton;
+                const load = panel.menuButton(panel.webEntries[job.kind]);
                 if (load !== null && load.enabled && ItemLocator.shown(load)) {
                     load.click();
                     RunLog.note(`tutorial download ${job.kind} ${job.entry}: Load menu opened`);
@@ -2089,7 +2097,7 @@ Popup {
                 }
             } else if (job.stage === 1) {
                 // Its From web… entry, once the menu has opened; the menu again if it did not.
-                const entry = panel.locate(opener[1]) as T.AbstractButton;
+                const entry = panel.locate(panel.webEntries[job.kind]) as T.AbstractButton;
                 if (entry !== null && entry.visible) {
                     entry.click();
                     RunLog.note(`tutorial download ${job.kind} ${job.entry}: From web chosen`);

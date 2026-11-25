@@ -422,6 +422,21 @@ Rectangle {
         function choose(control, index) {
             if (control === preferencesSelector)
                 openPreferences();
+            const original = control;
+            let morePopup = null;
+            if (control.x < -1000) {
+                const row = control.parent, more = findChild(row, row.objectName + ".more");
+                verify(more !== null && more.enabled && Ui.clickPoint(more) !== null, "An overflow scan selector retains an exposed More entrance");
+                const point = Ui.clickPoint(more);
+                mouseClick(more, point.x, point.y);
+                morePopup = findChild(row, row.objectName + ".more.popup");
+                verify(morePopup !== null, "The scan selector's More entrance owns its popup");
+                tryCompare(morePopup, "opened", true, 1000, "Real pointer input opens the scan selector's overflow popup");
+                tryVerify(() => {
+                    control = Render.descendants(morePopup.contentItem).find(item => item.objectName === original.objectName + ".overflow" && item.visible && item.enabled);
+                    return control !== undefined;
+                }, 1000, "The real More popup exposes the requested scan selector");
+            }
             Ui.scrollIntoView(control);
             verify(waitForPolish(control.Window.window.contentItem), "The selector is laid out after scrolling its real viewport" + "; step=polish selector=" + control.objectName + " targetIndex=" + index);
             control.Window.window.update();
@@ -447,7 +462,12 @@ Rectangle {
             verify(SettingsProof.key(control, Qt.Key_Return), "Return commits the actual scan selector choice" + "; step=Return selector=" + control.objectName + " targetIndex=" + index + " readIndex=" + control.currentIndex + " highlightedIndex=" + control.highlightedIndex);
             tryCompare(control, "currentIndex", index, 1000, "Real input chooses the requested scan axis or palette type" + "; step=commit selector=" + control.objectName + " expectedIndex=" + index + " expectedText=" + control.textAt(index) + " readTextAtPollStart=" + control.displayText + " popupOpened=" + control.popup.opened + " highlightedIndex=" + control.highlightedIndex);
             tryCompare(control.popup, "visible", false, 1000, "The real popup finishes closing before another scan input" + "; step=close selector=" + control.objectName + " targetIndex=" + index);
-            if (control === preferencesSelector) {
+            tryCompare(original, "currentIndex", index, 1000, "Real scan selection updates the retained original control as well as its overflow copy");
+            if (morePopup) {
+                verify(SettingsProof.key(control, Qt.Key_Escape), "Real Escape closes More after the scan choice");
+                tryCompare(morePopup, "visible", false, 1000, "More closes before observing the changed scan pixels");
+            }
+            if (original === preferencesSelector) {
                 verify(SettingsProof.key(control, Qt.Key_Escape), "Actual Escape input closes Preferences after the colour choice");
                 tryCompare(preferencesDialog, "visible", false, 1000, "The Preferences overlay closes before observing actual scan pixels");
             }
@@ -1036,6 +1056,22 @@ Rectangle {
             return test_current_row_tracks_async_coordinates_data();
         }
         function test_scan_toolbar_and_top_margin(data) {
+            const units = ["hover", "legend", "structureCurves", "reset"].map((name, index) => ({width: 40, group: index < 3 ? "display" : "navigation", name: "chart.toolbar." + name, movable: true}));
+            for (const [room, count] of [[50, 1], [90, 1], [130, 3], [150, 3], [160, 4]]) {
+                const packed = ToolbarRow.layout(units, 0, room, 0, 0, 10);
+                compare(packed.shown.filter(Boolean).length, count, "Toolbar packing refills available room before reserving More, respecting the three-button group");
+                verify(packed.shown.slice(0, 3).filter(Boolean).length !== 1, "A three-button group never leaves a lone member in the toolbar");
+                compare(packed.more, count !== 4, "More appears exactly while a control remains outside the toolbar");
+            }
+            const axes = ["a", "b", "c", "reset"].map((name, index) => ({width: 40, group: index < 3 ? "viewAlong" : "navigation", name: "structure.toolbar." + name, movable: true}));
+            for (const room of [50, 90, 130, 150, 160]) {
+                const packed = ToolbarRow.layout(axes, 0, room, 0, 0, 10);
+                const shownAxes = packed.shown.slice(0, 3).filter(Boolean).length;
+                verify(shownAxes === 0 || shownAxes === 3, "Structure view-along a, b and c move to More together and return together");
+                compare(packed.shown[3], true, "The higher-priority reset remains available while the axis unit moves to More");
+                compare(shownAxes, room < 160 ? 0 : 3, "The complete axis unit returns exactly when it fits beside reset");
+                compare(packed.more, room < 160, "The axis unit leaves More only when all controls fit");
+            }
             const scan = open(data.mode);
             ready(scan);
             const controls = Render.descendants(chart).filter(item => item.visible && typeof item.count === "number" && typeof item.currentIndex === "number" && typeof item.textAt === "function");

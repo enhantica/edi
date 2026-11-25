@@ -58,7 +58,18 @@ class ScanSession : public QObject {
     // Indexes the results again (after a run or an undo); the refusal, if any.
     QString reindex(const edi::Project& project, bool writing = false);
     const edi::ScanDatasets& datasets() const { return datasets_; }
-    const edi::ScanResultIndex& index() const { return index_; }
+    // The same listing, shared and read-only, for work off the GUI thread: a capture of it copies no file names.
+    std::shared_ptr<const edi::ScanDatasets> sharedDatasets() const {
+        if (!shared_datasets_ || shared_revision_ != datasets_revision_) {
+            shared_datasets_ = std::make_shared<const edi::ScanDatasets>(datasets_);
+            shared_revision_ = datasets_revision_;
+        }
+        return shared_datasets_;
+    }
+    const edi::ScanResultIndex& index() const { return *index_; }
+    // The index as one unchanging copy, shared with readers on other threads: the session's next change to the index
+    // makes its own copy first (writableIndex), so a reader never sees it change and the index is not copied per read.
+    std::shared_ptr<const edi::ScanResultIndex> indexSnapshot() const { return index_; }
     int place(const std::string& file) const;
     const edi::ScanPlaces& places() const { return places_; }
     // A series' rule for its per-experiment rows, made from `project` the first time it is asked for in a load.
@@ -110,10 +121,19 @@ class ScanSession : public QObject {
     // The extracted values of a dataset: its row's, or those read in the background; nullptr while unknown or
     // when the read failed (`metadataError` says why).
     const std::vector<std::string>* extracted(int dataset) const;
+    // Only what this session's own reads extracted, under the rules it was listed with (source()), never a results row.
+    const std::vector<std::string>* listExtracted(int dataset) const;
+    const edi::Project* source() const { return source_.get(); }
     QString metadataError(int dataset) const;
     // A dataset a view shows: its extracted values are read in the background if it has none yet, with the others
-    // asked for in the same turn, one read per file; `metadataLoaded` reports them. Only what is shown is read.
-    void want(int dataset);
+    // asked for in the same turn, one read per file; `metadataLoaded` reports them. Only what is shown is read: a
+    // list's rows only while a list shows them (setListShown), a pause that resumes when one shows again; the
+    // template's values (`forTemplate`) whatever is shown, as a fit starts from them.
+    void want(int dataset, bool forTemplate = false);
+    void setListShown(bool shown);
+    // Whether a list's row is in the current demand (a shown list watches it): asked again at each batch, so a row
+    // scrolled away or left on a hidden list is dropped, not read (edi ADR-0102 rule 6).
+    void setRowDemanded(std::function<bool(int)> demanded) { row_demanded_ = std::move(demanded); }
     void stopMetadata();
 
    signals:
@@ -124,15 +144,25 @@ class ScanSession : public QObject {
     void refuseIndex(const std::string& why);
 
     edi::ScanDatasets datasets_;
+    // Raised at every change of datasets_, so sharedDatasets() copies it once per listing.
+    std::uint64_t datasets_revision_ = 0;
+    mutable std::shared_ptr<const edi::ScanDatasets> shared_datasets_;
+    mutable std::uint64_t shared_revision_ = ~std::uint64_t{0};
     edi::ScanPlaces places_;
-    edi::ScanResultIndex index_;
+    // Every change goes through writableIndex.
+    edi::ScanResultIndex& writableIndex();
+    std::shared_ptr<edi::ScanResultIndex> index_ = std::make_shared<edi::ScanResultIndex>();
     // A series' rule for its results_experiments.csv rows (edi::SeriesBankRule), made once per load when first asked.
     mutable edi::SeriesBankRule bank_rule_;
     Run run_;
     std::vector<std::optional<std::vector<std::string>>> metadata_;
     std::unordered_map<int, QString> metadata_errors_;
     std::vector<bool> asked_;
-    std::vector<int> wanted_;
+    std::vector<bool> in_flight_;  // a row a batch is reading now: one operation per row, a want meanwhile waits for it
+    std::vector<int> wanted_;           // a list's rows, read only while a list shows
+    std::vector<int> template_wanted_;  // the template's, read whatever is shown
+    bool list_shown_ = false;
+    std::function<bool(int)> row_demanded_;
     std::deque<int> loaded_;  // the datasets holding read values, oldest first (the cache is bounded)
     bool reading_ = false;    // one background read at a time
     std::uint64_t metadata_generation_ = 0;  // bumped by every listing; a read delivers only to its own

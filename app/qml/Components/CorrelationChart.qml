@@ -23,6 +23,10 @@ import edi.app
 Item {
     id: chart
 
+    // One accessible part in the browser, where Qt reads a flat page again for each of its items.
+    Accessible.role: Accessible.Grouping
+    Accessible.ignored: Qt.platform.os !== "wasm"
+
     // What the main view's Save image takes when this is the shown tab: the item, its toolbar (hidden while the image
     // is taken), the file name, and whether the toolbar's band is cut off.
     readonly property Item imageItem: chart

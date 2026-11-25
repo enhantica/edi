@@ -41,7 +41,9 @@ export async function controlPointer(evaluate, objectName, containerName) {
     assert(item.x >= container.x && item.y >= container.y &&
       item.x + item.width <= container.x + container.width &&
       item.y + item.height <= container.y + container.height,
-      'The actual catalogue row must be wholly inside its visible list before trusted pointer input');
+      'The actual catalogue row must be wholly inside its visible list before trusted pointer input. ' +
+      `${objectName} at (${item.x}, ${item.y}) is ${item.width} × ${item.height}. ` +
+      `${containerName} at (${container.x}, ${container.y}) is ${container.width} × ${container.height}.`);
   }
   return {x:item.x + item.width/2,y:item.y + item.height/2};
 }

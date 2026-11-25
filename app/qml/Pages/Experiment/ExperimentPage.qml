@@ -71,9 +71,14 @@ WorkflowPage {
             ExperimentsGroup {
                 id: experimentsGroup
                 project: page.project
+                pageShown: page.basicShown
             }
             Repeater {
-                model: page.experiment ? page.experiment.categories : null
+                // One list following the current experiment's categories, so a next experiment keeps the groups
+                // (ADR-0102 rule 2).
+                model: CategoryListMirror {
+                    source: page.experiment ? page.experiment.categories : null
+                }
                 delegate: CategoryGroup {
                     textSource: page.experiment ? page.experiment.text : null
                     shownTier: "Basic"
@@ -92,7 +97,11 @@ WorkflowPage {
                 value: extrasColumn
             }
             Repeater {
-                model: page.experiment ? page.experiment.categories : null
+                // One list following the current experiment's categories, so a next experiment keeps the groups
+                // (ADR-0102 rule 2).
+                model: CategoryListMirror {
+                    source: page.experiment ? page.experiment.categories : null
+                }
                 delegate: CategoryGroup {
                     textSource: page.experiment ? page.experiment.text : null
                     shownTier: "Extras"

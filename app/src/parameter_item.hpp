@@ -43,6 +43,7 @@ class ParameterItem : public QObject {
     Q_PROPERTY(QString domainWarning READ domainWarning NOTIFY domainWarningChanged)
     Q_PROPERTY(QString lastError READ lastError NOTIFY lastErrorChanged)
     Q_PROPERTY(QString path READ path CONSTANT)
+    Q_PROPERTY(QString fullName READ fullName NOTIFY fullNameChanged)
     Q_PROPERTY(QString uid READ uid CONSTANT)
     Q_PROPERTY(QString blockKind READ blockKind CONSTANT)
     Q_PROPERTY(QString blockName READ blockName CONSTANT)
@@ -125,6 +126,16 @@ class ParameterItem : public QObject {
     void setDomainWarning(const QString& warning);
     QString lastError() const { return last_error_; }
     QString path() const { return path_; }
+    // A parameter's full name, as the .edi files name it and an alias refers to it: the datablock's own name, the
+    // category, the row's id in a loop and the item (d20.peak.broad_gauss_v, lbco.atom_site.La.fract_x; the owner,
+    // 2026-11-24). The core's own name for a parameter (setFullName); a descriptor's is made of its parts. Never the
+    // path (structure.atom_sites[La].fract_x), which the Python API reads.
+    QString fullName() const { return full_name_; }
+    void setFullName(const QString& name) {
+        if (full_name_ == name) return;
+        full_name_ = name;
+        emit fullNameChanged();
+    }
     QString uid() const { return uid_; }
     QString blockKind() const { return block_kind_; }
     QString blockName() const { return block_name_; }
@@ -186,6 +197,7 @@ class ParameterItem : public QObject {
     int publish(bool formatted = true);
 
    signals:
+    void fullNameChanged();
     void valueChanged();
     void outsideRangeChanged();
     void uncertaintyChanged();
@@ -232,7 +244,7 @@ class ParameterItem : public QObject {
     bool estimated_ = false;
     QString domain_warning_;
     QString last_error_;
-    QString path_, uid_, block_kind_, block_name_, category_, row_label_, name_, display_name_, display_units_,
+    QString path_, full_name_, uid_, block_kind_, block_name_, category_, row_label_, name_, display_name_, display_units_,
         short_name_, category_icon_, element_symbol_, variant_, file_value_, file_su_, file_edit_value_,
         start_text_, change_text_, su_reason_;
     std::string su_rule_;

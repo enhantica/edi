@@ -10,6 +10,7 @@
 #include <QList>
 #include <QStringList>
 #include <QObject>
+#include <array>
 #include <QPointer>
 #include <QTemporaryDir>
 #include <QTimer>
@@ -154,10 +155,6 @@ class ExperimentListModel : public RowTableModel {
     }
     QStringList columns() const { return columns_; }
     void setColumns(const QStringList& columns);
-    // Called with each row a view reads (a scan's datasets): the owner loads what the row still lacks, so only shown
-    // rows are read.
-    void setShownHook(std::function<void(int)> shown) { shown_ = std::move(shown); }
-    QVariant data(const QModelIndex& index, int role) const override;
 
    signals:
     void columnsChanged();
@@ -167,7 +164,7 @@ class ExperimentListModel : public RowTableModel {
 
    private:
     QStringList columns_;
-    std::function<void(int)> shown_;
+    void showDatasetsOf(ExperimentViewModel* experiment);
     std::function<Dataset(int)> dataset_row_;  // set while the rows are a scan's datasets
     QPointer<ExperimentViewModel> dataset_experiment_;
 };
@@ -226,6 +223,8 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     Q_PROPERTY(int currentExperimentIndex READ currentExperimentIndex WRITE setCurrentExperimentIndex NOTIFY currentExperimentIndexChanged)
     Q_PROPERTY(edi_app::StructureViewModel* currentStructure READ currentStructure NOTIFY currentStructureChanged)
     Q_PROPERTY(edi_app::ExperimentViewModel* currentExperiment READ currentExperiment NOTIFY currentExperimentChanged)
+    // The most rows of Bragg ticks a pattern of the project's has: one per linked structure, two for a magnetic one.
+    Q_PROPERTY(int patternBraggRows READ patternBraggRows NOTIFY patternBraggRowsChanged)
     Q_PROPERTY(bool canLoadStructure READ canLoadStructure NOTIFY canLoadStructureChanged)
     // Create experiment adds an experiment without data, beside experiments with data too: a fit skips it, a
     // calculation covers it. A scan project keeps its one template experiment.
@@ -395,6 +394,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     void setCurrentExperimentIndex(int index);
     StructureViewModel* currentStructure() const { return structure_models_.value(current_structure_); }
     ExperimentViewModel* currentExperiment() const { return experiment_models_.value(current_experiment_); }
+    int patternBraggRows() const { return pattern_bragg_rows_; }
     // A project holds any number of structures (phases); loading one is always possible.
     bool canLoadStructure() const { return true; }
     bool canCreateExperiment() const;
@@ -475,11 +475,34 @@ class ProjectViewModel : public QObject, public ProjectEditor {
         edi::WorkStamps stamps;
         std::string identity;
     };
-    mutable std::optional<IdentityMemo> identity_memo_;
+    // One per project the identity is asked of, the model's and the scan template's: the model's, made in the
+    // background (makeTextsLater), never evicts the template's, which a run's end asks for (syncOutOfDate).
+    mutable std::array<std::optional<IdentityMemo>, 2> identity_memos_;
+    std::optional<IdentityMemo>& identityMemoFor(const edi::Project* project) const;
+    // The scan template made as a copy of the model, which has the model's identity while the model's is current.
+    void copyModelToTemplate();
     // A shared copy of the scan's template, made again only when the template changes: the workers that calculate or
     // read a shown point take it instead of a copy made per point on the GUI thread.
     std::shared_ptr<const edi::Project> templateSnapshot() const;
+    // A shared copy of the model, made again only after a publication that changed it: the workers that read the whole
+    // model (the report, the texts) share it instead of each copying the model on the GUI thread.
+    std::shared_ptr<const edi::Project> modelSnapshot() const;
+    // What the report is built from, shared: a scan's template, else the model.
+    // Made again at most once per publication, as modelSnapshot: a scan's results reach the template outside its edit
+    // stamps, so templateSnapshot (made again only when its inputs change) can lack the newest results.
+    std::shared_ptr<const edi::Project> reportSnapshot() const;
+    // Both copies are made again after any change the texts or the report are told of (invalidateTexts,
+    // ReportViewModel::refresh): a settings edit, a template fit or its undo, a save, as well as a publication.
+    void invalidateSnapshots() { ++snapshot_epoch_; }
     mutable std::shared_ptr<const edi::Project> template_snapshot_;
+    mutable std::shared_ptr<const edi::Project> model_snapshot_;
+    mutable std::uint64_t model_snapshot_revision_ = 0;
+    mutable std::shared_ptr<const edi::Project> report_template_snapshot_;
+    mutable std::uint64_t report_template_revision_ = 0;
+    mutable edi::WorkStamps model_snapshot_stamps_;
+    std::uint64_t model_revision_ = 1;  // counts publications (publish)
+    std::uint64_t snapshot_epoch_ = 1;  // counts invalidations (invalidateSnapshots)
+    mutable std::uint64_t model_snapshot_epoch_ = 0, report_template_epoch_ = 0;
     mutable edi::WorkStamps template_snapshot_stamps_;
     void refreshSpellingLater();
     // While a fit runs every followed point publishes: the texts and the spelling, each made from a copy of the
@@ -498,6 +521,11 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // A Stacked view or Map says whether it is on screen: with every pattern waited for, a followed scan shows each
     // file on it as the current dataset (edi ADR-0029, 8).
     Q_INVOKABLE void setScanViewShown(QObject* view, bool shown);
+    // A view listing the experiments (the Experiments table, a page's block selector) shown or not: a scan's rows get
+    // their extract values read only while one is shown (edi ADR-0102 rule 6).
+    Q_INVOKABLE void setExperimentListShown(QObject* view, bool shown);
+    // A row a list's delegate shows, or no longer shows: its scan values are read while a shown list watches it.
+    Q_INVOKABLE void watchExperimentRow(QObject* view, int row, bool on);
     // D12: add blocks from `.edi` files; on a refusal nothing changes and `refused` names the reason.
     Q_INVOKABLE bool loadStructure(const QUrl& file);
     Q_INVOKABLE bool loadExperiments(const QList<QUrl>& files);
@@ -760,6 +788,11 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     bool scanViewShown() const { return !scan_views_shown_.empty(); }
     // No dataset read is in flight or waits to be applied.
     bool viewSettled() const { return !view_reading_ && view_applied_ == view_request_; }
+#if EDI_UI_INSTRUMENTATION
+    // The UI trace (ui_probe.hpp): the scan dataset whose data the project holds now, and the count of applied views.
+    int traceAppliedDataset() const { return trace_applied_dataset_; }
+    std::uint64_t traceViewApplied() const { return view_applied_; }
+#endif
     // Drops a followed file's pending receipt without counting it (Follow off, a new scan).
     void releaseFollow() { followRendered(false); }
     // A followed scan's newest finished file becomes the current dataset at once (the evolution's line, the list,
@@ -788,6 +821,9 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // Why the scan modes cannot run here (no single template experiment, no datasets), or empty.
     QString scanRefusal() const;
     QString apply_setting(const edi::Edit& change) override;
+    void apply_follow_up(const std::function<void()>& edit) override;
+    // Whether the edit being made is one the app makes of itself after another.
+    bool followUpEdit() const { return follow_up_; }
     QString apply_unread(const edi::Edit& change) override;
     QString value_refusal(const edi::Parameter& parameter) const override;
     QString free_refusal() const override;
@@ -819,6 +855,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     void currentStructureChanged();
     void currentExperimentIndexChanged();
     void currentExperimentChanged();
+    void patternBraggRowsChanged();
     void canLoadStructureChanged();
     void canCreateExperimentChanged();
     void newExperimentSampleFormTokenChanged();
@@ -886,6 +923,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // ADR-0031 §1: the structure id, the experiment id and a scan's dataset file last selected in this project, in
     // the app's settings keyed by the project's folder; stored only once restored.
     QStringList storedSelection() const;
+    std::uint64_t noteSelection() const;
     void storeSelection() const;
     QString selectionKey() const;
     bool selection_restored_ = false;
@@ -1057,6 +1095,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
         AssistantEditScope& operator=(const AssistantEditScope&) = delete;
     };
     bool edit_notification_ = false;
+    bool follow_up_ = false;
     QString applyUndo(const edi::Edit& change, bool structural);
     void holdPublicationFailure(const QString& warning) noexcept;
     void setModified(bool modified);
@@ -1192,6 +1231,8 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     ReportViewModel* report_;
     StructureViewOptions* structure_view_options_;
     int current_structure_ = -1;
+    int pattern_bragg_rows_ = 0;
+    void syncPatternBraggRows();
     int current_experiment_ = -1;
     int series_revision_ = 0;
     // Each run's profile factors as its record arrived this session, by its file or point key (the summary's ranges).
@@ -1234,6 +1275,9 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     bool applying_setting_ = false;
     // The newest dataset view asked for: a projection read off the GUI thread applies only while it is the newest.
     std::uint64_t view_request_ = 0, view_applied_ = 0;
+#if EDI_UI_INSTRUMENTATION
+    int trace_applied_dataset_ = -1;
+#endif
     int view_wanted_ = -1;       // the dataset of the newest request
     int projected_dataset_ = -1;  // the dataset the model holds now (a failed read leaves the one before)
     bool listing_dataset_folder_ = false;
@@ -1253,6 +1297,10 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     bool follow_issuing_ = false;  // the followed file's own view request is being made
     bool follow_selection_ = false;  // the followed file is presented as the current dataset (followScanSelection)
     std::set<const QObject*> scan_views_shown_;
+    std::set<const QObject*> experiment_lists_shown_;
+    std::map<const QObject*, std::multiset<int>> experiment_rows_watched_;
+    bool experimentRowDemanded(int row) const;
+    void wantWatchedRows();
     int render_swaps_ = -1;  // 1 while a followed file waits for its frame, -1 while nothing waits for one
     // Set while a followed file waits for its frame; cleared at the start of the next frame (QQuickWindow::afterAnimating).
     std::atomic<bool> render_armed_{false};
@@ -1340,6 +1388,9 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     void syncOutOfDate();
     void markTemplateChanged();
     mutable std::optional<SavedFiles> saved_files_;
+    // A structure's file as a save of the calculated project writes it, by name, with the geometry it was made from:
+    // a view's texts take it (makeTextsLater).
+    std::map<std::string, std::pair<const void*, std::string>> structure_texts_;
     mutable std::optional<SavedFiles> discovered_files_;  // a save of a copy: nothing calculated (discoveredFile)
     // ADR-0020: the calculation runs on the worker; every edit goes through the preview, which publishes a
     // result only if no newer request exists. Deliveries arrive here by a queued call, so every model write
@@ -1373,6 +1424,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     bool adjusted_ = false;  // a drag step left the full publish for the release
     edi::PreviewResult adjust_result_;  // the newest drag step's calculation, published in full on release
     bool template_change_held_ = false;
+    bool out_of_date_held_ = false;  // a check deferred while a fit runs, done once it ends
     bool modified_held_ = false;  // a drag step changed the project: modified and `edited` are announced on release  // a drag step changed a scan's template: its identity is hashed on release
     bool template_promotion_held_ = false;  // a drag step changed a shown dataset: the template takes it on release
     void promoteShownToTemplate();
