@@ -62,19 +62,21 @@ can restore a cache of main. CI therefore keeps built crysta only.
 
 1. **One way in.** `.github/actions/crysta-source` fetches one commit into the runner's temporary folder with a token that
    reads crysta's contents and nothing else, refuses another commit, passes on nothing a child process prints, and
-   writes three lists beside the checkout: the Git blob id of each source file, the SHA-256 of each line a person wrote
-   in it, and a short mark of how each line begins. Recorded data is listed as whole files only: its lines are numbers
-   and names that a report of edi's own tests also prints. A line edi itself publishes is not in the lists; edi's files
-   are read from its commit, not from the working folder.
+   writes four lists beside the checkout: the Git blob id of each source file, the SHA-256 of each line a person wrote
+   in it, the mark and length of each such line, and the blob ids of what edi publishes itself. Recorded data, named by
+   its kinds, is listed as whole files only: its lines are numbers and names that a report of edi's own tests also
+   prints. What edi publishes is its commit, not the working folder, and the public sample collection `edi-data`; their
+   files and lines are not source.
 2. **Two phases.** Before the fetch each script of the job names `shell: bash`; no crysta file exists yet. After it every
    script runs under `tools/ci/public_log.py`, a local action's scripts too. It withholds a source line from standard
    output, standard error and the step summary and runs nothing when the lists cannot be read. A line is found alone,
    after a compiler's gutter, pytest's markers or a timestamp, inside a quoted or escaped value (JSON, XML, HTML), and
-   as a part of 24 characters or more within a longer one. The fetch proves the filter before any later step.
+   as a part of 24 characters or more within a longer one, unless the part is a single name. The fetch proves the filter before any later step.
 3. **One way out.** A job with the source stores only through `.github/actions/store`, which checks the path it stores and
    nothing else. `tools/ci/stored_source.py` compares every file and every member of an archive, which it knows by its
    first bytes. It refuses a source file, also with Windows line ends, a text file that quotes a source line, and
-   anything it cannot read or open. Diagnostic artifacts withhold a quoted line instead (`withhold`). The SDK carries
+   anything it cannot read or open. A file edi publishes itself passes by its blob id, and a third-party package by the
+   SHA-256 that edi's committed pixi locks name. Diagnostic artifacts withhold a quoted line instead (`withhold`). The SDK carries
    files of crysta's on purpose, its headers and interface record: `tools/ci/sdk-members.txt` names them, and they are
    allowed only in an archive named as an SDK and only where they belong.
 4. **Installers** are opened down to their members by `tools/installer/packed_source.py`, and its receipt names the

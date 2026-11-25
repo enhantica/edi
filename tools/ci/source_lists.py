@@ -21,12 +21,15 @@ from pathlib import Path, PurePosixPath
 BLOBS = 'CRYSTA_SOURCE_BLOB_LIST'
 LINES = 'CRYSTA_SOURCE_LINE_LIST'
 MARKS = 'CRYSTA_SOURCE_MARK_LIST'
+PUBLIC = 'CRYSTA_SOURCE_PUBLIC_LIST'
 # A shorter line, or one without a letter, says nothing about where it came from.
 SHORTEST = 12
 # Part of an output line is source from this length on (a short part is a word or two of anyone's
 # code); a part longer than the longest is not looked up.
 PART = 24
 LONGEST = 1000
+# A name inside a longer line is not a line of source, also when one holds nothing else.
+NAME = re.compile(rb'[\w.]+')
 # Recorded data (results, logs, locks, structures, measured patterns) and licences, compared as
 # whole files only: single lines of them recur in any tool's output. A person wrote the rest.
 RECORDED = {
@@ -102,7 +105,7 @@ def spans(text: bytes, marks: dict[int, list[int]] | None) -> Iterator[bytes]:
         start = begin.start()
         if marks is not None:
             for length in marks.get(zlib.crc32(text[start : start + SHORTEST]), ()):
-                if start + length <= len(text):
+                if start + length <= len(text) and ENDS.match(text, start + length):
                     yield text[start : start + length]
             continue
         for end in ends[bisect.bisect_left(ends, start + PART) :]:
@@ -129,12 +132,20 @@ class Source:
         """The source files' ids; the output filter needs the lines alone."""
         return _read(BLOBS, 40)
 
+    @functools.cached_property
+    def public(self) -> frozenset[str]:
+        """The files edi publishes itself; without the list none is known."""
+        there = PUBLIC in os.environ and Path(os.environ[PUBLIC]).read_bytes().strip()
+        return _read(PUBLIC, 40) if there else frozenset()
+
     def quoted_in_line(self, line: bytes) -> bool:
         """Whether one printed line holds a source line."""
         for text in forms(line):
             if (whole := line_id(text)) is not None and whole in self.lines:
                 return True
             for span in spans(text, self.marks):
+                if NAME.fullmatch(span):
+                    continue
                 if (part := line_id(span)) is not None and part in self.lines:
                     return True
         return False
@@ -142,6 +153,10 @@ class Source:
     def quoted_in(self, text: bytes) -> bool:
         """Whether any line of a text holds a source line."""
         return any(self.quoted_in_line(line) for line in re.split(rb'[\r\n]+', text))
+
+    def is_public(self, data: bytes) -> bool:
+        """Whether these bytes are a file edi publishes itself."""
+        return blob_id(data) in self.public
 
     def is_file(self, data: bytes) -> bool:
         """Whether these bytes are a source file, checked out with either line ending."""

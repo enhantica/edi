@@ -32,6 +32,10 @@ from pathlib import Path
 
 import source_lists
 
+ROOT = Path(__file__).resolve().parents[2]
+LOCKS = [
+    lock for lock in (ROOT / 'pixi.lock', ROOT / 'tools/installer/pixi.lock') if lock.is_file()
+]
 MEMBERS = Path(__file__).with_name('sdk-members.txt')
 SDK = re.compile(r'(?:^|/)crysta-sdk-[0-9a-f]{40}-(?:linux-64|osx-arm64|win-64)\.tar\.gz$')
 # The Installer Framework ends an installer's own archives with its marker and one of two numbers.
@@ -142,7 +146,7 @@ class Check:
         self.source = source_lists.Source()
         self.source.blobs  # noqa: B018 - a missing list refuses even when nothing is stored
         self.withhold = withhold
-        self.approved = set()
+        self.approved = locked()
         for receipt in receipts:
             named = sorted(receipt.rglob('*.json')) if receipt.is_dir() else [receipt]
             if not named:
@@ -153,7 +157,7 @@ class Check:
 
     def file(self, name: str, data: bytes, *, sdk: bool = False) -> None:
         """Judge one file and everything in it."""
-        if hashlib.sha256(data).hexdigest() in self.approved:
+        if hashlib.sha256(data).hexdigest() in self.approved or self.source.is_public(data):
             return
         if kind := sealed(data):
             self.found.append(f'{name} is {kind} no receipt names')
@@ -208,6 +212,14 @@ def sdk_members() -> dict[str, str]:
     lines = MEMBERS.read_text(encoding='utf-8').splitlines()
     entries = [line.split() for line in lines if line and not line.startswith('#')]
     return {pattern: kind for kind, pattern in entries}
+
+
+def locked() -> set[str]:
+    """The third-party packages edi's committed locks name, by their bytes."""
+    found = set()
+    for lock in LOCKS:
+        found |= set(re.findall(r'sha256: ([0-9a-f]{64})', lock.read_text(encoding='utf-8')))
+    return found
 
 
 def matched(pattern: str) -> list[Path]:

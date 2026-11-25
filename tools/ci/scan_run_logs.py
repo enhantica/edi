@@ -67,10 +67,10 @@ class Scanner:
             folder = self.scratch / pin
             folder.mkdir()
             try:
-                blobs, listed = crysta_fetch.lists(self.crysta, pin, ROOT)
+                found = crysta_fetch.lists(self.crysta, pin, crysta_fetch.checkout(ROOT))
             except crysta_fetch.RefusedError as error:
                 raise UnjudgedError(f'the clone lacks {pin[:12]}') from error
-            os.environ.update(crysta_fetch.write_lists(blobs, listed, folder))
+            os.environ.update(crysta_fetch.write_lists(*found, folder))
             self.sources[pin] = source_lists.Source()
         return self.sources[pin]
 

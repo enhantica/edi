@@ -11,11 +11,13 @@ Nothing a child process prints is passed on: it could be the source.
 from __future__ import annotations
 
 import base64
+import io
 import os
 import re
 import shutil
 import subprocess
 import sys
+import zipfile
 from collections.abc import Iterable, Iterator
 from pathlib import Path
 
@@ -95,33 +97,46 @@ def contents(where: Path, ids: set[str]) -> Iterator[bytes]:
             at += int(head[2]) + 1
 
 
-def lines_of(where: Path, files: Iterable[str]) -> Iterator[set[bytes]]:
-    """The bare lines of each text file."""
-    for data in contents(where, set(files)):
-        if source_lists.is_text(data):
-            yield {line.strip() for line in data.splitlines()}
+def bare(data: bytes) -> set[bytes]:
+    """The bare lines of a text file."""
+    if not source_lists.is_text(data):
+        return set()
+    return {line.strip() for line in data.splitlines()}
+
+
+def opened(files: Iterable[bytes]) -> Iterator[bytes]:
+    """Files, and those in a zip: the collection keeps its projects so."""
+    for data in files:
+        yield data
+        if data.startswith(b'PK') and zipfile.is_zipfile(io.BytesIO(data)):
+            with zipfile.ZipFile(io.BytesIO(data)) as archive:
+                yield from (archive.read(name) for name in archive.namelist())
 
 
 def lists(
     home: Path, sha: str, public: list[tuple[Path, str]]
-) -> tuple[set[str], dict[str, bytes]]:
-    """The source's blob ids and the lines a person wrote, without what edi publishes itself."""
+) -> tuple[set[str], dict[str, bytes], set[str]]:
+    """The source's blob ids and written lines without what edi publishes, and that one's ids."""
     files = tree(home, sha)
     written = [blob for path, blob in files.items() if source_lists.written(path)]
-    lines = set().union(*lines_of(home, written))
-    blobs = set(files.values())
+    lines = set().union(*map(bare, contents(home, set(written))))
+    known: set[str] = set()
     for where, commit in public:
         shown = set(tree(where, commit).values())
-        blobs -= shown
-        for those in lines_of(where, shown):
-            lines -= those
-    listed = {known: line for line in lines if (known := source_lists.line_id(line))}
+        known |= shown
+        for data in opened(contents(where, shown)):
+            known.add(source_lists.blob_id(data))
+            lines -= bare(data)
+    blobs = set(files.values()) - known
+    listed = {entry: line for line in lines if (entry := source_lists.line_id(line))}
     if not blobs or not listed:
         raise RefusedError('the source lists are empty')
-    return blobs, listed
+    return blobs, listed, known
 
 
-def write_lists(blobs: set[str], listed: dict[str, bytes], folder: Path) -> dict[str, str]:
+def write_lists(
+    blobs: set[str], listed: dict[str, bytes], known: set[str], folder: Path
+) -> dict[str, str]:
     """Write the lists beside the checkout and name them."""
     marks = {source_lists.mark_entry(line) for line in listed.values()}
     written = {}
@@ -129,6 +144,7 @@ def write_lists(blobs: set[str], listed: dict[str, bytes], folder: Path) -> dict
         (source_lists.BLOBS, blobs),
         (source_lists.LINES, listed),
         (source_lists.MARKS, marks),
+        (source_lists.PUBLIC, known),
     ):
         path = folder / variable.lower().replace('_', '-')
         path.write_text('\n'.join(sorted(entries)) + '\n', encoding='ascii')
@@ -172,11 +188,10 @@ def collection(home: Path) -> list[tuple[Path, str]]:
     """The public sample collection edi ships; without it the lists only hold more."""
     shutil.rmtree(home, ignore_errors=True)
     home.mkdir(parents=True)
-    small = '--filter=blob:limit=100k'  # the larger files are measured data
     try:
         git(home, 'init', '-q')
         git(home, 'remote', 'add', 'origin', f'{SERVER}/{COLLECTION}')
-        git(home, 'fetch', '-q', '--depth', '1', small, 'origin', 'main', GIT_TERMINAL_PROMPT='0')
+        git(home, 'fetch', '-q', '--depth', '1', 'origin', 'main', GIT_TERMINAL_PROMPT='0')
     except RefusedError:
         return []
     return [(home, 'FETCH_HEAD')]
@@ -189,8 +204,8 @@ def prepare(temp: Path, sha: str) -> int:
     home = temp / 'crysta'
     fetch(home, sha, os.environ['TOKEN'])
     public = [*checkout(ROOT), *collection(temp / 'edi-data-published')]
-    blobs, listed = lists(home, sha, public)
-    environment = {'CRYSTA_SRC': str(home), **write_lists(blobs, listed, temp)}
+    blobs, listed, known = lists(home, sha, public)
+    environment = {'CRYSTA_SRC': str(home), **write_lists(blobs, listed, known, temp)}
     prove(home, environment, listed[min(listed)])
     with Path(os.environ['GITHUB_ENV']).open('a', encoding='utf-8') as output:
         output.writelines(f'{name}={value}\n' for name, value in environment.items())
