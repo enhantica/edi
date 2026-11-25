@@ -155,6 +155,10 @@ LABELS.update({
         'Pattern updates during a scan',
         'Choose how often the display updates while a scan is fitted.',
     ),
+    'analysis.patternUpdates': (
+        'Pattern updates during a scan',
+        'Choose how often the display updates while a scan is fitted.',
+    ),
     'peak.cutoff_fwhm': (
         'Peak cutoff',
         'Set the peak calculation window in multiples of the full width at half maximum.',
