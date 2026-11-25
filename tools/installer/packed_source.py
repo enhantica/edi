@@ -1,13 +1,12 @@
 # SPDX-License-Identifier: BSD-3-Clause
 """Check what the delivered installers and component archives really hold, and write a receipt.
 
-    python packed_source.py --devtool IFW/bin/devtool --known DIR... --receipt FILE PATH...
+    python packed_source.py --devtool IFW/bin/devtool --receipt FILE PATH...
 
 Opens each delivered file down to its members: a zip, a 7z archive, a disk image (mounted
 read-only) and an installer (its own archives, taken out by the Framework's devtool). Every member
 is checked as tools/ci/stored_source.py checks a file. The receipt names the SHA-256 of each
-delivered file whose members all passed; only those may be published. A program of the Framework
-that carries no archives of its own (--known) is an ordinary file.
+delivered file whose members all passed; only those may be published.
 """
 
 from __future__ import annotations
@@ -70,18 +69,14 @@ def mounted(image: Path, scratch: Path) -> Iterator[Path]:
 class Packed:
     """One run over the delivered files."""
 
-    def __init__(self, devtool: Path, known: list[Path]) -> None:
+    def __init__(self, devtool: Path) -> None:
         self.devtool = devtool
-        self.known = {digest(path.read_bytes()) for folder in known for path in walk(folder)}
         self.check = stored_source.Check([], withhold=False)
-        self.check.approved |= self.known
 
     def open(self, path: Path) -> None:
         """Check a file, or what it holds when it is an installer or a disk image."""
         data = path.read_bytes()
         kind = stored_source.sealed(data)
-        if digest(data) in self.known:
-            return
         if kind is None:
             self.members(path, data)
             return
@@ -126,13 +121,12 @@ def main() -> int:
     """Check the delivered files; write the receipt only when all of them passed."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--devtool', required=True, type=Path)
-    parser.add_argument('--known', action='append', default=[], type=Path)
     parser.add_argument('--receipt', required=True, type=Path)
     parser.add_argument('paths', nargs='+', type=Path)
     args = parser.parse_args()
     passed, problems = {}, []
     try:
-        packed = Packed(args.devtool, args.known)
+        packed = Packed(args.devtool)
         for root in args.paths:
             for path in [root] if root.is_file() else walk(root):
                 packed.open(path)

@@ -446,7 +446,6 @@ jobs:
         run: |
           pixi run --manifest-path tools/installer/pixi.toml python tools/installer/packed_source.py \
             --devtool build/installer/ifw/tools/bin/devtool${{ runner.os == 'Windows' && '.exe' || '' }} \
-            --known build/installer/ifw/tools --known build/installer/maintenance \
             --receipt build/installer/source-check/receipt.json build/installer/delivery build/installer/components
       - name: Keep the receipt of that check
         uses: ./.github/actions/store

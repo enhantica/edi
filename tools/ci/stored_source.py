@@ -23,6 +23,7 @@ import json
 import lzma
 import os
 import re
+import subprocess
 import sys
 import tarfile
 import zipfile
@@ -33,14 +34,10 @@ import source_lists
 
 MEMBERS = Path(__file__).with_name('sdk-members.txt')
 SDK = re.compile(r'(?:^|/)crysta-sdk-[0-9a-f]{40}-(?:linux-64|osx-arm64|win-64)\.tar\.gz$')
-# The Installer Framework writes one of these numbers after an installer's own archives.
-INSTALLER = tuple(
-    number.to_bytes(8, 'little') for number in (0xC2630A1C99D668F8, 0xC2630A1C99D668F9)
-)
-MACH = {b'\xcf\xfa\xed\xfe', b'\xca\xfe\xba\xbe'}
+# The Installer Framework ends an installer's own archives with its marker and one of two numbers.
+INSTALLER = re.compile(rb'[\x32-\x36]\x32\x02\x12\0{4}[\xf8\xf9]\x68\xd6\x99\x1c\x0a\x63\xc2')
 SEALED = {
     b'Rar!\x1a\x07': 'a RAR archive',
-    b'\x28\xb5\x2f\xfd': 'a Zstandard stream',
     b'\x04\x22\x4d\x18': 'an LZ4 stream',
     b'MSCF': 'a cabinet',
     b'xar!': 'a macOS package',
@@ -49,7 +46,7 @@ SEALED = {
 }
 UNREADABLE = (
     *(OSError, EOFError, RuntimeError, ValueError, zipfile.BadZipFile, lzma.LZMAError),
-    *(tarfile.TarError, ImportError),
+    *(tarfile.TarError, ImportError, subprocess.SubprocessError),
 )
 
 
@@ -88,7 +85,24 @@ def zip_members(data: bytes) -> list[tuple[str, bytes]]:
         return [(entry.filename, archive.read(entry)) for entry in entries]
 
 
-STREAMS = {b'\x1f\x8b': gzip.decompress, b'BZh': bz2.decompress, b'\xfd7zXZ\0': lzma.decompress}
+def zstandard(data: bytes) -> bytes:
+    """A Zstandard stream's bytes, by the standard library (3.14) or the zstd program."""
+    try:
+        from compression import zstd  # noqa: PLC0415 - not in every runner's Python
+    except ImportError:
+        command = ['zstd', '-dcq', '--long=31']
+        return subprocess.run(command, input=data, capture_output=True, check=True).stdout
+    return zstd.decompress(data)
+
+
+ZSTANDARD = b'\x28\xb5\x2f\xfd'
+STREAMS = {
+    b'\x1f\x8b': gzip.decompress,
+    b'BZh': bz2.decompress,
+    b'\xfd7zXZ\0': lzma.decompress,
+    ZSTANDARD: zstandard,
+}
+PACKED = (*STREAMS, b'PK', b"7z\xbc\xaf'\x1c")
 
 
 def unpacked(name: str, data: bytes) -> list[tuple[str, bytes]] | None:
@@ -106,11 +120,9 @@ def unpacked(name: str, data: bytes) -> list[tuple[str, bytes]] | None:
 
 
 def installer(data: bytes) -> bool:
-    """Whether a program carries the Framework's mark of archives of its own."""
-    program = (
-        data[:4] == b'\x7fELF' or data[:2] == b'MZ' or data[:4] in MACH or len(data) > 1 << 20
-    )
-    return program and data[:2] != b'PK' and any(mark in data for mark in INSTALLER)
+    """Whether a file carries archives the Framework appended to it."""
+    tar = data[257:262] == b'ustar'
+    return not tar and not data.startswith(PACKED) and INSTALLER.search(data) is not None
 
 
 def sealed(data: bytes) -> str | None:
@@ -128,6 +140,7 @@ class Check:
 
     def __init__(self, receipts: list[Path], *, withhold: bool) -> None:
         self.source = source_lists.Source()
+        self.source.blobs  # noqa: B018 - a missing list refuses even when nothing is stored
         self.withhold = withhold
         self.approved = set()
         for receipt in receipts:
@@ -217,6 +230,9 @@ def files(pattern: str) -> Iterator[Path]:
     for root in matched(pattern):
         if root.is_file():
             yield root
+            continue
+        # What is not there is not stored; a folder that cannot be listed refuses below.
+        if not root.exists():
             continue
         seen = set()
         for folder, names, entries in os.walk(root, followlinks=True, onerror=refuse):

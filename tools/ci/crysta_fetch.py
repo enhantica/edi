@@ -24,6 +24,7 @@ import source_lists
 ROOT = Path(__file__).resolve().parents[2]
 SERVER = os.environ.get('GITHUB_SERVER_URL', 'https://github.com')
 REPOSITORY = 'enhantica/crysta'
+COLLECTION = 'enhantica/edi-data'
 
 
 class RefusedError(Exception):
@@ -101,15 +102,20 @@ def lines_of(where: Path, files: Iterable[str]) -> Iterator[set[bytes]]:
             yield {line.strip() for line in data.splitlines()}
 
 
-def lists(home: Path, sha: str, own: Path) -> tuple[set[str], dict[str, bytes]]:
-    """The source's blob ids and the lines a person wrote, without what edi's commit publishes."""
-    files, public = tree(home, sha), tree(own, 'HEAD')
+def lists(
+    home: Path, sha: str, public: list[tuple[Path, str]]
+) -> tuple[set[str], dict[str, bytes]]:
+    """The source's blob ids and the lines a person wrote, without what edi publishes itself."""
+    files = tree(home, sha)
     written = [blob for path, blob in files.items() if source_lists.written(path)]
     lines = set().union(*lines_of(home, written))
-    for shown in lines_of(own, public.values()):
-        lines -= shown
+    blobs = set(files.values())
+    for where, commit in public:
+        shown = set(tree(where, commit).values())
+        blobs -= shown
+        for those in lines_of(where, shown):
+            lines -= those
     listed = {known: line for line in lines if (known := source_lists.line_id(line))}
-    blobs = set(files.values()) - set(public.values())
     if not blobs or not listed:
         raise RefusedError('the source lists are empty')
     return blobs, listed
@@ -117,7 +123,7 @@ def lists(home: Path, sha: str, own: Path) -> tuple[set[str], dict[str, bytes]]:
 
 def write_lists(blobs: set[str], listed: dict[str, bytes], folder: Path) -> dict[str, str]:
     """Write the lists beside the checkout and name them."""
-    marks = {f'{source_lists.mark(line):08x}' for line in listed.values()}
+    marks = {source_lists.mark_entry(line) for line in listed.values()}
     written = {}
     for variable, entries in (
         (source_lists.BLOBS, blobs),
@@ -153,13 +159,37 @@ def prove(home: Path, environment: dict[str, str], sample: bytes) -> None:
         raise RefusedError('the output filter does not withhold a source line')
 
 
+def checkout(root: Path) -> list[tuple[Path, str]]:
+    """The commit of edi itself; without one the lists only hold more."""
+    try:
+        git(root, 'rev-parse', '--verify', 'HEAD^{commit}')
+    except RefusedError:
+        return []
+    return [(root, 'HEAD')]
+
+
+def collection(home: Path) -> list[tuple[Path, str]]:
+    """The public sample collection edi ships; without it the lists only hold more."""
+    shutil.rmtree(home, ignore_errors=True)
+    home.mkdir(parents=True)
+    small = '--filter=blob:limit=100k'  # the larger files are measured data
+    try:
+        git(home, 'init', '-q')
+        git(home, 'remote', 'add', 'origin', f'{SERVER}/{COLLECTION}')
+        git(home, 'fetch', '-q', '--depth', '1', small, 'origin', 'main', GIT_TERMINAL_PROMPT='0')
+    except RefusedError:
+        return []
+    return [(home, 'FETCH_HEAD')]
+
+
 def prepare(temp: Path, sha: str) -> int:
     """Fetch, list and prove; name the checkout and the lists to the later steps."""
     if not re.fullmatch(r'[0-9a-f]{40}', sha):
         raise RefusedError('the commit is not a full id')
     home = temp / 'crysta'
     fetch(home, sha, os.environ['TOKEN'])
-    blobs, listed = lists(home, sha, ROOT)
+    public = [*checkout(ROOT), *collection(temp / 'edi-data-published')]
+    blobs, listed = lists(home, sha, public)
     environment = {'CRYSTA_SRC': str(home), **write_lists(blobs, listed, temp)}
     prove(home, environment, listed[min(listed)])
     with Path(os.environ['GITHUB_ENV']).open('a', encoding='utf-8') as output:

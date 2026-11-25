@@ -9,6 +9,7 @@ here and never stored or printed.
 from __future__ import annotations
 
 import bisect
+import functools
 import hashlib
 import html
 import os
@@ -26,13 +27,13 @@ SHORTEST = 12
 # code); a part longer than the longest is not looked up.
 PART = 24
 LONGEST = 1000
-# The kinds of file whose lines a person wrote. Recorded data (results, logs, locks, measured
-# patterns) is compared as whole files only: single lines of it recur in any tool's output.
-WRITTEN = {
-    *('.c', '.cc', '.cmake', '.cpp', '.css', '.h', '.hpp', '.html', '.in', '.js', '.md', '.mjs'),
-    *('.py', '.sh', '.toml', '.ts', '.yaml', '.yml', '.bat', '.ps1', '.cfg', '.ini'),
+# Recorded data (results, logs, locks, structures, measured patterns) and licences, compared as
+# whole files only: single lines of them recur in any tool's output. A person wrote the rest.
+RECORDED = {
+    *('.ast', '.bac', '.cif', '.csv', '.dat', '.dic', '.edi', '.f64', '.fou', '.gss', '.gz'),
+    *('.hkl', '.int', '.irf', '.json', '.lock', '.log', '.mcif', '.new', '.oracle', '.out'),
+    *('.pcr', '.prf', '.record', '.sum', '.sym', '.symtab', '.tsv', '.xy', '.xye', '.xys', '.zip'),
 }
-WRITTEN_NAMES = {'CMakeLists.txt', 'Doxyfile', '.clang-format', '.clang-tidy', '.gitignore'}
 ANSI = re.compile(rb'\x1b\[[0-?]*[ -/]*[@-~]|\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)')
 ESCAPES = re.compile(rb'\\u([0-9a-fA-F]{4})|\\(.)')
 PLAIN = {b'n': b'\n', b't': b'\t', b'r': b'\r', b'b': b' ', b'f': b' '}
@@ -48,7 +49,9 @@ class UnavailableError(Exception):
 def written(name: str) -> bool:
     """Whether a source file's single lines are listed, and not only the file."""
     path = PurePosixPath(name)
-    return path.suffix.lower() in WRITTEN or path.name in WRITTEN_NAMES
+    recorded = path.suffix.lower() in RECORDED or path.name.endswith('LICENSE')
+    table = path.suffix == '.txt' and path.parts[0] == 'tests' and path.stem != 'CMakeLists'
+    return not recorded and not table
 
 
 def line_id(text: bytes) -> str | None:
@@ -62,6 +65,11 @@ def line_id(text: bytes) -> str | None:
 def mark(text: bytes) -> int:
     """The short mark of how a line begins."""
     return zlib.crc32(text[:SHORTEST])
+
+
+def mark_entry(line: bytes) -> str:
+    """A listed line's mark and length, as the list of marks holds them."""
+    return f'{mark(line):08x}{min(len(line), 0xFFFF):04x}'
 
 
 def _escape(match: re.Match[bytes]) -> bytes:
@@ -87,30 +95,39 @@ def forms(line: bytes) -> Iterator[bytes]:
                 todo.append(ESCAPES.sub(_escape, part))
 
 
-def spans(text: bytes, marks: frozenset[int] | None) -> Iterator[bytes]:
+def spans(text: bytes, marks: dict[int, list[int]] | None) -> Iterator[bytes]:
     """Every part of the line that could be a whole source line."""
-    ends = None
+    ends = [] if marks is not None else sorted({e.start() for e in ENDS.finditer(text)})
     for begin in BEGINS.finditer(text):
         start = begin.start()
-        if marks is not None and mark(text[start : start + SHORTEST]) not in marks:
+        if marks is not None:
+            for length in marks.get(zlib.crc32(text[start : start + SHORTEST]), ()):
+                if start + length <= len(text):
+                    yield text[start : start + length]
             continue
-        if ends is None:
-            ends = sorted({end.start() for end in ENDS.finditer(text)} | {len(text)})
-        for place in range(bisect.bisect_left(ends, start + PART), len(ends)):
-            if ends[place] > start + LONGEST:
+        for end in ends[bisect.bisect_left(ends, start + PART) :]:
+            if end > start + LONGEST:
                 break
-            yield text[start : ends[place]]
+            yield text[start:end]
 
 
 class Source:
     """The lists, read once."""
 
+    marks: dict[int, list[int]] | None = None
+
     def __init__(self) -> None:
-        self.blobs = _read(BLOBS, 40)
         self.lines = _read(LINES, 64)
-        self.marks = None
         if MARKS in os.environ:
-            self.marks = frozenset(int(entry, 16) for entry in _read(MARKS, 8))
+            self.marks = {}
+            for entry in _read(MARKS, 12):
+                if PART <= (length := int(entry[8:], 16)) <= LONGEST:
+                    self.marks.setdefault(int(entry[:8], 16), []).append(length)
+
+    @functools.cached_property
+    def blobs(self) -> frozenset[str]:
+        """The source files' ids; the output filter needs the lines alone."""
+        return _read(BLOBS, 40)
 
     def quoted_in_line(self, line: bytes) -> bool:
         """Whether one printed line holds a source line."""
