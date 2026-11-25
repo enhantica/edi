@@ -1,6 +1,7 @@
 """CI app reuse, opt-in observer isolation and measured shard-time boundaries."""
 
 import copy
+import hashlib
 import importlib
 import json
 import os
@@ -12,6 +13,7 @@ import pytest
 import yaml
 
 from tests.fixtures.e09_t75_workflow import active
+from tests.fixtures.fast_chart_redraws.rendering import native_arguments
 from tests.fixtures.fast_ci.generate import run_record
 from tests.fixtures.fast_ci.policy import app_build_sites
 from tests.fixtures.fast_ci.processes import process_guard, stop_observer_tree
@@ -172,6 +174,20 @@ def test_normal_app_observer_switch_is_off_by_default_and_requires_test_context(
         )
 
 
+def qualified_screen_executable(receipt, normal):
+    executable = Path(receipt.get('executable', '')).resolve()
+    delivered = Path(receipt.get('delivered_executable', '')).resolve()
+    snapshot = Path(native_arguments([normal])[0]).resolve()
+    if delivered != normal or executable not in {normal, snapshot}:
+        raise RuntimeError('The factory attempted to run a cached private app executable')
+    if (
+        hashlib.sha256(executable.read_bytes()).digest()
+        != hashlib.sha256(normal.read_bytes()).digest()
+    ):
+        raise RuntimeError('The factory app snapshot bytes differ from the delivered build')
+    return executable
+
+
 def observe_factory(family, scratch, normal, monkeypatch):
     if family == 'scan-app':
         harness = importlib.import_module('tests.fixtures.scan_app.harness').Harness(scratch)
@@ -181,7 +197,9 @@ def observe_factory(family, scratch, normal, monkeypatch):
 
     def qualified_capture(receipt, *args, **kwargs):
         executable = Path(receipt.get('executable', '')).resolve()
-        if executable != normal:
+        if family == 'scan-screen':
+            executable = qualified_screen_executable(receipt, normal)
+        elif executable != normal:
             raise RuntimeError('The factory attempted to run a cached private app executable')
         try:
             return original(receipt, *args, **kwargs)
@@ -193,7 +211,7 @@ def observe_factory(family, scratch, normal, monkeypatch):
             assert completed['returncode'] == 0, (
                 'The bounded reuse request must finish in the real native app'
             )
-            assert Path(completed['argv'][0]).resolve() == normal, (
+            assert Path(completed['argv'][0]).resolve() == executable, (
                 'The completed child request must bind the delivered app identity'
             )
             assert completed['argv'][1:] == ['--test-observer', 'scan-screen'], (
@@ -576,20 +594,20 @@ def migrated_screen_reuse(tmp_path_factory):
 
 def test_migrated_screen_factory_binds_the_normal_delivered_executable(migrated_screen_reuse):
     record, normal, _ = migrated_screen_reuse
-    assert Path(record['executable']).resolve() == normal, (
-        'The migrated desktop factory must bind the delivered app, '
-        'independently of nightly companion placement'
+    assert qualified_screen_executable(record, normal) == Path(record['executable']).resolve(), (
+        'The migrated desktop factory binds the delivered binary or its verified native snapshot'
     )
 
 
 def test_migrated_screen_factory_executes_its_actual_child_request(migrated_screen_reuse):
     record, normal, state = migrated_screen_reuse
+    executable = qualified_screen_executable(record, normal)
     assert record['reuse_completed']['returncode'] == 0, (
         'The real migrated request must complete successfully'
     )
     assert any(
         bool(words)
-        and Path(words[0]).resolve() == normal
+        and Path(words[0]).resolve() == executable
         and '--test-observer' in words
         and 'scan-screen' in words
         for words in state['launched']
