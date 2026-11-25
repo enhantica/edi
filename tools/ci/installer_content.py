@@ -18,6 +18,10 @@ from collections.abc import Callable
 END = re.compile(rb'[\x32-\x36]\x32\x02\x12\0{4}[\xf8\xf9]\x68\xd6\x99\x1c\x0a\x63\xc2')
 
 
+# The content of a maintenance tool that has none yet: no operations, no resources, then the end.
+EMPTY = bytes(24) + struct.pack('<q', 32) + bytes(16)
+
+
 class UnreadableError(ValueError):
     """The content does not have the Framework's form."""
 
@@ -69,6 +73,8 @@ def content(data: bytes, zstandard: Callable[[bytes], bytes]) -> list[tuple[str,
     ends = [match.end() for match in END.finditer(data)]
     need(len(ends) == 1, 'the content has more than one end')
     end = ends[0]
+    if len(data) == len(EMPTY) and data[:32] == EMPTY[:32]:
+        return []
     size, count = (struct.unpack('<q', data[end - back : end - back + 8])[0] for back in (24, 32))
     index = end - 32 - 16 * (count + 2)
     need(0 < size <= end and 0 <= count < 1000 and index >= end - size, 'the index is cut short')

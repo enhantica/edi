@@ -33,7 +33,8 @@ LONGEST = 1000
 # One plain word is not a line of anyone's. Inside a longer line neither is one name or web address
 # with its punctuation, nor command-line options alone, also when a source line holds nothing else.
 WORD = re.compile(rb'\W*[A-Za-z]+\W*')
-NAME = re.compile(rb'\W*(?:[\w.]+|https?://[^\s<>"\']+|(?:-[\w-]+(?:=[\w.+/-]*)?\s*)+)\W*')
+NAME = re.compile(rb'\W*(?:[\w.]+|https?://[^\s<>"\']+)\W*')
+OPTION = re.compile(rb'-[A-Za-z][\w-]*(?:=[\w.+/-]*)?')
 # Recorded data among the tests (results, logs, structures, measured patterns), the lock and the
 # licences are compared as whole files only: single lines of them recur in any tool's output. A
 # person wrote the lines of everything else, whatever its kind.
@@ -170,7 +171,7 @@ class Source:
             if (whole := line_id(text)) is not None and whole in self.lines:
                 yield whole
             for span in spans(text, self.marks):
-                if NAME.fullmatch(span):
+                if NAME.fullmatch(span) or all(map(OPTION.fullmatch, span.split())):
                     continue
                 if (part := line_id(span)) is not None and part in self.lines:
                     yield part
