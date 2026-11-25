@@ -38,6 +38,9 @@
         ["structures.list", "workflow.structure.mainContent"]);
     tabs("08-structure", "structure", "Crystal structure");
     function setValue(id, value) { return ["reveal:" + id, "fill:" + id + "=" + value, "key:Return"]; }
+    function setParameter(id, value) {
+        return ["reveal:" + id, id, "fill:" + id + ".menu.popup.value=" + value, "key:Return", "key:Escape"];
+    }
     function select(id, token) { return [id, "choose-token:" + id + "=" + token]; }
     shot("09-experiment-import", "experiment", "Create an experiment for the measurement",
         ["appBar.tab.experiment", "sideBar.tab.basic", "expand:group.experiments"],
@@ -52,17 +55,18 @@
     shot("09-experiment-data", "experiment", "Load the measured angle, intensity and uncertainty columns",
         ["reveal:group.experiments", "expand:group.experiments", "import-data:" + capture.dataFile], ["experiments.load", "workflow.experiment.mainContent"]);
     shot("09-wavelength", "experiment", "Set the wavelength used for this measurement",
-        ["reveal:group.instrument", "expand:group.instrument"].concat(setValue("instrument.setup_wavelength", capture.wavelength)),
+        ["reveal:group.instrument", "expand:group.instrument"].concat(setParameter("instrument.setup_wavelength", capture.wavelength)),
         ["instrument.setup_wavelength"]);
     shot("09-profile", "experiment", "Choose the peak profile and starting coefficients",
         ["reveal:group.peak", "expand:group.peak"].concat(select("peak.type", capture.profileType)), ["peak.type", "group.peak"]);
     Object.keys(capture.profileStart).forEach(function (name) {
         shot("09-profile-" + name.replace(/_/g,"-"), "experiment", "Set a starting profile coefficient",
-            setValue("peak." + name, capture.profileStart[name]), ["peak." + name]);
+            setParameter("peak." + name, capture.profileStart[name]), ["peak." + name]);
     });
     capture.excludedRegions.forEach(function (region, index) {
         shot("09-exclusion-" + index, "experiment", "Exclude the measured regions outside the fitting range",
-            ["reveal:group.excluded_region", "expand:group.excluded_region", "excludedRegions.append"].concat(
+            ["reveal:group.excluded_region", "expand:group.excluded_region", "reveal:excludedRegions.append",
+             "excludedRegions.append", "wait-settled"].concat(
               setValue("excludedRegion.start." + index, region.start), setValue("excludedRegion.end." + index, region.end)),
             ["excludedRegions.list"]);
     });
@@ -106,13 +110,13 @@
             "reveal:" + group, "expand:" + group, "reveal:" + targets[0]];
         shot(id, page, description, actions, targets);
     }
-    shot("guide-project-actions", "project", "Open or save the current project",
+    shot("guide-project-actions", "project", "Create, load or save a project",
         ["appBar.tab.project", "sideBar.tab.basic", "reveal:group.getStarted", "expand:group.getStarted"],
-        ["project.open", "project.saveAs"]);
-    shot("guide-project-open", "project", "Choose a project folder or archive",
-        ["save-as:docs-saved-project", "project.open"], ["project.openChoice"]);
-    shot("guide-project-save", "project", "Choose a save format or save a copy",
-        ["key:Escape", "project.saveAs"], ["project.saveChoice"]);
+        ["project.create", "project.load", "project.saveAs"]);
+    shot("guide-project-open", "project", "Open a project folder or archive, or import one from another program",
+        ["save-as:docs-saved-project", "project.load"], ["project.load.menu"]);
+    shot("guide-project-save", "project", "Save as an EasyDiffraction folder or .zip, or export a copy",
+        ["key:Escape", "project.saveAs"], ["project.saveAs.menu"]);
     shot("guide-project-recent", "project", "Find recent projects",
         ["key:Escape", "reveal:group.recentProjects", "expand:group.recentProjects"], ["group.recentProjects"]);
     panel("guide-structure-symmetry", "structure", "basic", "group.space_group", "Choose the crystal symmetry and setting", ["spaceGroup.itNumber", "spaceGroup.nameHM"]);
@@ -148,7 +152,6 @@
     panel("guide-experiment-cutoff", "experiment", "extras", "group.peak", "Choose the peak calculation window", ["peak.cutoff_fwhm"]);
     panel("guide-analysis-start-values", "analysis", "extras", "group.fit_parameter", "Inspect the values before the last fit", ["fitStart.list"]);
     panel("guide-analysis-shown-parameters", "analysis", "settings", "group.shownParameters", "Choose which parameter groups appear in the table", ["group.shownParameters"]);
-    panel("guide-analysis-pattern-updates", "analysis", "settings", "group.patternUpdates", "Choose how the displayed pattern updates during a scan", ["group.patternUpdates"]);
     return steps;
     }};
 })();

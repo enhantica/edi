@@ -9,7 +9,7 @@
     ],
     "id": "01-home",
     "image": "01-home.webp",
-    "image_sha256": "e6e2391ed0f70d7ada77de6416028cb6c6a6d5c1150051be330a0fc3fa0f47b9",
+    "image_sha256": "8b4bd0a771f25b63aea7e14c20824d20dfb4ea3a4ad4c57304696c9022188231",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -448,18 +448,18 @@
         },
         "home.start": {
             "bounds": [
-                573,
+                580,
                 387,
-                334,
+                319.5,
                 39
             ],
             "enabled": true,
             "icon": "rocket",
             "label": "Start",
             "visible_bounds": [
-                573,
+                580,
                 387,
-                334,
+                319.5,
                 39
             ]
         },
@@ -550,17 +550,17 @@
         },
         "workflow.home.sidebarHost": {
             "bounds": [
-                770,
+                799,
                 77,
-                710,
+                681,
                 681
             ],
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                770,
+                799,
                 77,
-                710,
+                681,
                 681
             ]
         }
@@ -575,8 +575,8 @@
     ],
     "qt_version": "6.11.2",
     "schema": 1,
-    "script_sha256": "a0cd8f7d599e386e3db4cf752e3ae7050f99ce60356dedf20f4c9a1fbb3ecee3",
-    "source_revision": "66250b0826244790ae402c00384ea8fca62ae552",
+    "script_sha256": "3a344097f44704ca246ad665209bd5da89b1884c7e896cbd5981e2dcf5ec2bba",
+    "source_revision": "1bbb542a5be8bc99e889b80989c28c7404fbc7e3",
     "state": {
         "experiments": 0,
         "fit_outcome": "",

@@ -8,7 +8,7 @@
     ],
     "id": "06-structure-import",
     "image": "06-structure-import.webp",
-    "image_sha256": "21a52dbc8320315dc72a7f8fe78a1dd9074ee7cd5e7417513c41100ba9c6e67a",
+    "image_sha256": "1c080d0f4e990a1f669d0cba8b95469c1b0374db54e1e770adb57dfe5ae0d3d9",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -60,17 +60,17 @@
         },
         "SideBarGroup": {
             "bounds": [
-                784,
+                813,
                 168,
-                682,
+                653,
                 131
             ],
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                784,
+                813,
                 168,
-                682,
+                653,
                 131
             ]
         },
@@ -329,18 +329,18 @@
         },
         "group.structures": {
             "bounds": [
-                770,
+                799,
                 119,
-                710,
+                681,
                 194
             ],
             "enabled": true,
             "icon": "layer-group",
             "label": "Structures (0)",
             "visible_bounds": [
-                770,
+                799,
                 119,
-                710,
+                681,
                 194
             ]
         },
@@ -365,7 +365,7 @@
         },
         "mainArea.emptyState": {
             "bounds": [
-                231,
+                246,
                 389,
                 308,
                 58
@@ -373,7 +373,7 @@
             "enabled": false,
             "label": "No structure yet",
             "visible_bounds": [
-                231,
+                246,
                 389,
                 308,
                 58
@@ -413,7 +413,7 @@
         },
         "sideBar.tab.basic": {
             "bounds": [
-                770,
+                799,
                 77,
                 43.515625,
                 42
@@ -421,7 +421,7 @@
             "enabled": true,
             "label": "Main",
             "visible_bounds": [
-                770,
+                799,
                 77,
                 43.515625,
                 42
@@ -429,7 +429,7 @@
         },
         "sideBar.tab.extras": {
             "bounds": [
-                813.515625,
+                842.515625,
                 77,
                 45.125,
                 42
@@ -437,7 +437,7 @@
             "enabled": true,
             "label": "Extra",
             "visible_bounds": [
-                813.515625,
+                842.515625,
                 77,
                 45.125,
                 42
@@ -445,7 +445,7 @@
         },
         "sideBar.tab.settings": {
             "bounds": [
-                897.328125,
+                926.328125,
                 77,
                 62.8125,
                 42
@@ -453,7 +453,7 @@
             "enabled": true,
             "label": "Settings",
             "visible_bounds": [
-                897.328125,
+                926.328125,
                 77,
                 62.8125,
                 42
@@ -461,7 +461,7 @@
         },
         "sideBar.tab.text": {
             "bounds": [
-                858.640625,
+                887.640625,
                 77,
                 38.6875,
                 42
@@ -469,10 +469,26 @@
             "enabled": true,
             "label": "Text",
             "visible_bounds": [
-                858.640625,
+                887.640625,
                 77,
                 38.6875,
                 42
+            ]
+        },
+        "sideBar.width": {
+            "bounds": [
+                1445,
+                84,
+                21,
+                28
+            ],
+            "enabled": true,
+            "label": "arrows-alt-h",
+            "visible_bounds": [
+                1445,
+                84,
+                21,
+                28
             ]
         },
         "statusBar": {
@@ -615,68 +631,68 @@
         },
         "structures.create": {
             "bounds": [
-                784,
+                813,
                 260,
-                218,
+                208.33333333333334,
                 39
             ],
             "enabled": true,
             "icon": "plus-circle",
             "label": "Create structure",
             "visible_bounds": [
-                784,
+                813,
                 260,
-                218,
+                208.33333333333337,
                 39
             ]
         },
         "structures.duplicate": {
             "bounds": [
-                1248,
+                1257.6666666666667,
                 260,
-                218,
+                208.33333333333334,
                 39
             ],
             "enabled": false,
             "icon": "clone",
             "label": "Duplicate structure",
             "visible_bounds": [
-                1248,
+                1257.6666666666667,
                 260,
-                218,
+                208.33333333333326,
                 39
             ]
         },
         "structures.list": {
             "bounds": [
-                784,
+                813,
                 168,
-                682,
+                653,
                 78
             ],
             "enabled": false,
             "label": "",
             "visible_bounds": [
-                784,
+                813,
                 168,
-                682,
+                653,
                 78
             ]
         },
         "structures.load": {
             "bounds": [
-                1016,
+                1035.3333333333333,
                 260,
-                218,
+                208.33333333333334,
                 39
             ],
             "enabled": true,
             "icon": "upload",
             "label": "Load",
             "visible_bounds": [
-                1016,
+                1035.3333333333333,
                 260,
-                218,
+                208.33333333333326,
                 39
             ]
         },
@@ -698,17 +714,17 @@
         },
         "workflow.home.sidebarHost": {
             "bounds": [
-                770,
+                799,
                 77,
-                710,
+                681,
                 681
             ],
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                770,
+                799,
                 77,
-                710,
+                681,
                 681
             ]
         },
@@ -716,7 +732,7 @@
             "bounds": [
                 0,
                 77,
-                770,
+                799,
                 681
             ],
             "enabled": true,
@@ -724,39 +740,39 @@
             "visible_bounds": [
                 0,
                 77,
-                770,
+                799,
                 681
             ]
         },
         "workflow.structure.manualSidebar": {
             "bounds": [
-                770,
+                799,
                 77,
-                710,
+                681,
                 681
             ],
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                770,
+                799,
                 77,
-                710,
+                681,
                 681
             ]
         },
         "workflow.structure.sidebarHost": {
             "bounds": [
-                770,
+                799,
                 77,
-                710,
+                681,
                 681
             ],
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                770,
+                799,
                 77,
-                710,
+                681,
                 681
             ]
         }
@@ -771,8 +787,8 @@
     ],
     "qt_version": "6.11.2",
     "schema": 1,
-    "script_sha256": "a0cd8f7d599e386e3db4cf752e3ae7050f99ce60356dedf20f4c9a1fbb3ecee3",
-    "source_revision": "66250b0826244790ae402c00384ea8fca62ae552",
+    "script_sha256": "3a344097f44704ca246ad665209bd5da89b1884c7e896cbd5981e2dcf5ec2bba",
+    "source_revision": "1bbb542a5be8bc99e889b80989c28c7404fbc7e3",
     "state": {
         "experiments": 0,
         "fit_outcome": "",

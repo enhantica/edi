@@ -7,7 +7,7 @@
     ],
     "id": "guide-report-contents",
     "image": "guide-report-contents.webp",
-    "image_sha256": "f21821a3aa5cacdb731d54f77cc6c9e0bfb3a113b195a22f9927a5a604227d64",
+    "image_sha256": "0e655bd514e8af71e185b45a6eb26f1ac96c56c97b52f6090e4ead0e5b4ee152",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -59,17 +59,17 @@
         },
         "SideBarGroup": {
             "bounds": [
-                784,
+                813,
                 210,
-                682,
+                653,
                 126
             ],
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                784,
+                813,
                 210,
-                682,
+                653,
                 126
             ]
         },
@@ -328,18 +328,18 @@
         },
         "group.reportContents": {
             "bounds": [
-                770,
+                799,
                 161,
-                710,
+                681,
                 189
             ],
             "enabled": true,
             "icon": "list",
             "label": "Contents",
             "visible_bounds": [
-                770,
+                799,
                 161,
-                710,
+                681,
                 189
             ]
         },
@@ -361,18 +361,18 @@
         },
         "group.reportExport": {
             "bounds": [
-                770,
+                799,
                 119,
-                710,
+                681,
                 42
             ],
             "enabled": true,
             "icon": "download",
             "label": "Export",
             "visible_bounds": [
-                770,
+                799,
                 119,
-                710,
+                681,
                 42
             ]
         },
@@ -413,65 +413,65 @@
         },
         "report.contents.charts": {
             "bounds": [
-                784,
+                813,
                 210,
-                682,
+                653,
                 21
             ],
             "enabled": true,
             "label": "Charts",
             "visible_bounds": [
-                784,
+                813,
                 210,
-                682,
+                653,
                 21
             ]
         },
         "report.contents.correlations": {
             "bounds": [
-                784,
+                813,
                 245,
-                682,
+                653,
                 21
             ],
             "enabled": true,
             "label": "Correlations",
             "visible_bounds": [
-                784,
+                813,
                 245,
-                682,
+                653,
                 21
             ]
         },
         "report.contents.data": {
             "bounds": [
-                784,
+                813,
                 315,
-                682,
+                653,
                 21
             ],
             "enabled": true,
             "label": "Data",
             "visible_bounds": [
-                784,
+                813,
                 315,
-                682,
+                653,
                 21
             ]
         },
         "report.contents.reflections": {
             "bounds": [
-                784,
+                813,
                 280,
-                682,
+                653,
                 21
             ],
             "enabled": true,
             "label": "Reflections",
             "visible_bounds": [
-                784,
+                813,
                 280,
-                682,
+                653,
                 21
             ]
         },
@@ -479,7 +479,7 @@
             "bounds": [
                 0,
                 119,
-                770,
+                799,
                 639
             ],
             "enabled": true,
@@ -487,7 +487,7 @@
             "visible_bounds": [
                 0,
                 119,
-                770,
+                799,
                 639
             ]
         },
@@ -495,21 +495,21 @@
             "bounds": [
                 35,
                 199.5219123505976,
-                700,
-                32
+                729,
+                33
             ],
             "enabled": true,
-            "label": "Y₂O₃ [Ia-3] - SPODI @ FRM II",
+            "label": "Y₂O₃ [Ia-⁠3] -⁠ SPODI @ FRM II",
             "visible_bounds": [
                 35,
                 199.5219123505976,
-                700,
-                32
+                729,
+                33
             ]
         },
         "sideBar.tab.basic": {
             "bounds": [
-                770,
+                799,
                 77,
                 43.515625,
                 42
@@ -517,7 +517,7 @@
             "enabled": true,
             "label": "Main",
             "visible_bounds": [
-                770,
+                799,
                 77,
                 43.515625,
                 42
@@ -525,7 +525,7 @@
         },
         "sideBar.tab.extras": {
             "bounds": [
-                813.515625,
+                842.515625,
                 77,
                 45.125,
                 42
@@ -533,7 +533,7 @@
             "enabled": true,
             "label": "Extra",
             "visible_bounds": [
-                813.515625,
+                842.515625,
                 77,
                 45.125,
                 42
@@ -541,7 +541,7 @@
         },
         "sideBar.tab.settings": {
             "bounds": [
-                897.328125,
+                926.328125,
                 77,
                 62.8125,
                 42
@@ -549,7 +549,7 @@
             "enabled": true,
             "label": "Settings",
             "visible_bounds": [
-                897.328125,
+                926.328125,
                 77,
                 62.8125,
                 42
@@ -557,7 +557,7 @@
         },
         "sideBar.tab.text": {
             "bounds": [
-                858.640625,
+                887.640625,
                 77,
                 38.6875,
                 42
@@ -565,10 +565,26 @@
             "enabled": true,
             "label": "Text",
             "visible_bounds": [
-                858.640625,
+                887.640625,
                 77,
                 38.6875,
                 42
+            ]
+        },
+        "sideBar.width": {
+            "bounds": [
+                1445,
+                84,
+                21,
+                28
+            ],
+            "enabled": true,
+            "label": "arrows-alt-h",
+            "visible_bounds": [
+                1445,
+                84,
+                21,
+                28
             ]
         },
         "statusBar": {
@@ -698,7 +714,7 @@
                 18.109375
             ],
             "enabled": true,
-            "label": "1 0.088s 2.46→1.34",
+            "label": "1 0.099s 2.46→1.34",
             "visible_bounds": [
                 1185,
                 770,
@@ -727,7 +743,7 @@
             "bounds": [
                 479.34687500000007,
                 772,
-                144.859375,
+                201.78125,
                 14
             ],
             "enabled": true,
@@ -736,7 +752,7 @@
             "visible_bounds": [
                 479.34687500000007,
                 772,
-                144.859375,
+                201.78125,
                 14
             ]
         },
@@ -812,17 +828,17 @@
         },
         "workflow.home.sidebarHost": {
             "bounds": [
-                770,
+                799,
                 77,
-                710,
+                681,
                 681
             ],
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                770,
+                799,
                 77,
-                710,
+                681,
                 681
             ]
         },
@@ -830,7 +846,7 @@
             "bounds": [
                 0,
                 77,
-                770,
+                799,
                 681
             ],
             "enabled": true,
@@ -838,39 +854,39 @@
             "visible_bounds": [
                 0,
                 77,
-                770,
+                799,
                 681
             ]
         },
         "workflow.report.manualSidebar": {
             "bounds": [
-                770,
+                799,
                 77,
-                710,
+                681,
                 681
             ],
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                770,
+                799,
                 77,
-                710,
+                681,
                 681
             ]
         },
         "workflow.report.sidebarHost": {
             "bounds": [
-                770,
+                799,
                 77,
-                710,
+                681,
                 681
             ],
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                770,
+                799,
                 77,
-                710,
+                681,
                 681
             ]
         }
@@ -885,8 +901,8 @@
     ],
     "qt_version": "6.11.2",
     "schema": 1,
-    "script_sha256": "a0cd8f7d599e386e3db4cf752e3ae7050f99ce60356dedf20f4c9a1fbb3ecee3",
-    "source_revision": "66250b0826244790ae402c00384ea8fca62ae552",
+    "script_sha256": "3a344097f44704ca246ad665209bd5da89b1884c7e896cbd5981e2dcf5ec2bba",
+    "source_revision": "1bbb542a5be8bc99e889b80989c28c7404fbc7e3",
     "state": {
         "experiments": 1,
         "fit_outcome": "success",

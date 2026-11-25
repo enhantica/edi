@@ -8,7 +8,7 @@
     ],
     "id": "scan-project-basic",
     "image": "scan-project-basic.webp",
-    "image_sha256": "f22a2a922dcf18b4dc1f22ef4e2e33986f23f61c568c6ed108c49cce4c4fcd5c",
+    "image_sha256": "f387ecbd2411134c4e0bf150c0b721eb5ebafc3ee4c81aee0d833398ed0fea60",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -60,18 +60,18 @@
         },
         "SideBarGroup": {
             "bounds": [
-                784,
+                813,
                 168,
-                682,
-                92
+                653,
+                39
             ],
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                784,
+                813,
                 168,
-                682,
-                92
+                653,
+                39
             ]
         },
         "appBar": {
@@ -329,25 +329,25 @@
         },
         "group.examples": {
             "bounds": [
-                770,
-                274,
-                710,
+                799,
+                221,
+                681,
                 42
             ],
             "enabled": true,
             "icon": "database",
             "label": "Examples",
             "visible_bounds": [
-                770,
-                274,
-                710,
+                799,
+                221,
+                681,
                 42
             ]
         },
         "group.examples.pin": {
             "bounds": [
                 1433.2261363926236,
-                272.72613639262374,
+                219.72613639262374,
                 44.54772721475251,
                 44.54772721475251
             ],
@@ -355,26 +355,26 @@
             "label": "thumbtack",
             "visible_bounds": [
                 1433.2261363926236,
-                274,
+                221,
                 44.54772721475251,
                 42
             ]
         },
         "group.getStarted": {
             "bounds": [
-                770,
+                799,
                 119,
-                710,
-                155
+                681,
+                102
             ],
             "enabled": true,
             "icon": "rocket",
             "label": "Get started",
             "visible_bounds": [
-                770,
+                799,
                 119,
-                710,
-                155
+                681,
+                102
             ]
         },
         "group.getStarted.pin": {
@@ -395,25 +395,25 @@
         },
         "group.recentProjects": {
             "bounds": [
-                770,
-                316,
-                710,
+                799,
+                263,
+                681,
                 42
             ],
             "enabled": true,
             "icon": "archive",
             "label": "Recent projects",
             "visible_bounds": [
-                770,
-                316,
-                710,
+                799,
+                263,
+                681,
                 42
             ]
         },
         "group.recentProjects.pin": {
             "bounds": [
                 1433.2261363926236,
-                314.72613639262374,
+                261.72613639262374,
                 44.54772721475251,
                 44.54772721475251
             ],
@@ -421,7 +421,7 @@
             "label": "thumbtack",
             "visible_bounds": [
                 1433.2261363926236,
-                316,
+                263,
                 44.54772721475251,
                 42
             ]
@@ -449,7 +449,7 @@
             "bounds": [
                 183.4,
                 253.70000000000002,
-                567,
+                596,
                 19
             ],
             "enabled": true,
@@ -457,24 +457,24 @@
             "visible_bounds": [
                 183.4,
                 253.70000000000002,
-                567,
+                596,
                 19.00000000000003
             ]
         },
         "project.create": {
             "bounds": [
-                784,
+                813,
                 168,
-                334,
+                208.33333333333334,
                 39
             ],
             "enabled": true,
             "icon": "plus-circle",
             "label": "Create a new project",
             "visible_bounds": [
-                784,
+                813,
                 168,
-                334,
+                208.33333333333337,
                 39
             ]
         },
@@ -482,47 +482,64 @@
             "bounds": [
                 183.4,
                 284.6,
-                567,
-                38
+                596,
+                20
             ],
             "enabled": true,
             "label": "Cooling scan · 213 patterns from 497.4 to 2.3 K, fitted from 2.3 K up with the magnetic structure",
             "visible_bounds": [
                 183.4,
                 284.6,
-                567,
-                38
+                596,
+                20
             ]
         },
         "project.experiments": {
             "bounds": [
                 183.4,
-                409.20000000000005,
-                567,
+                391.20000000000005,
+                596,
                 234.203125
             ],
             "enabled": true,
             "label": "",
             "visible_bounds": [
                 183.4,
-                409.20000000000005,
-                567,
+                391.20000000000005,
+                596,
                 234.203125
+            ]
+        },
+        "project.load": {
+            "bounds": [
+                1035.3333333333333,
+                168,
+                208.33333333333334,
+                39
+            ],
+            "enabled": true,
+            "icon": "upload",
+            "label": "Load project",
+            "visible_bounds": [
+                1035.3333333333333,
+                168,
+                208.33333333333326,
+                39
             ]
         },
         "project.location": {
             "bounds": [
                 183.4,
-                347.40000000000003,
-                567,
+                329.40000000000003,
+                596,
                 19
             ],
             "enabled": true,
-            "label": "/tmp/EasyDiffraction-NIgjLP/pd-neut-cwl_cosio-d20_scan-213f/project",
+            "label": "/tmp/EasyDiffraction-Sfgsvi/pd-neut-cwl_cosio-d20_scan-213f/project",
             "visible_bounds": [
                 183.4,
-                347.40000000000003,
-                567,
+                329.40000000000003,
+                596,
                 19
             ]
         },
@@ -530,7 +547,7 @@
             "bounds": [
                 31.5,
                 140,
-                634.796875,
+                736,
                 58
             ],
             "enabled": true,
@@ -538,74 +555,40 @@
             "visible_bounds": [
                 31.5,
                 140,
-                634.796875,
+                736,
                 58
-            ]
-        },
-        "project.open": {
-            "bounds": [
-                1132,
-                168,
-                334,
-                39
-            ],
-            "enabled": true,
-            "icon": "upload",
-            "label": "Open project…",
-            "visible_bounds": [
-                1132,
-                168,
-                334,
-                39
-            ]
-        },
-        "project.openUrl": {
-            "bounds": [
-                1132,
-                221,
-                334,
-                39
-            ],
-            "enabled": false,
-            "icon": "link",
-            "label": "Open project from URL…",
-            "visible_bounds": [
-                1132,
-                221,
-                334,
-                39
             ]
         },
         "project.saveAs": {
             "bounds": [
-                784,
-                221,
-                334,
+                1257.6666666666667,
+                168,
+                208.33333333333334,
                 39
             ],
             "enabled": true,
             "icon": "file-export",
-            "label": "Save project as…",
+            "label": "Save project as",
             "visible_bounds": [
-                784,
-                221,
-                334,
+                1257.6666666666667,
+                168,
+                208.33333333333326,
                 39
             ]
         },
         "project.structures": {
             "bounds": [
                 183.4,
-                378.30000000000007,
-                567,
+                360.30000000000007,
+                596,
                 18.109375
             ],
             "enabled": true,
             "label": "",
             "visible_bounds": [
                 183.4,
-                378.30000000000007,
-                567,
+                360.30000000000007,
+                596,
                 18.109375
             ]
         },
@@ -613,7 +596,7 @@
             "bounds": [
                 183.4,
                 222.8,
-                567,
+                596,
                 19
             ],
             "enabled": true,
@@ -621,13 +604,13 @@
             "visible_bounds": [
                 183.4,
                 222.8,
-                567,
+                596,
                 19
             ]
         },
         "sideBar.tab.basic": {
             "bounds": [
-                770,
+                799,
                 77,
                 43.515625,
                 42
@@ -635,7 +618,7 @@
             "enabled": true,
             "label": "Main",
             "visible_bounds": [
-                770,
+                799,
                 77,
                 43.515625,
                 42
@@ -643,7 +626,7 @@
         },
         "sideBar.tab.extras": {
             "bounds": [
-                813.515625,
+                842.515625,
                 77,
                 45.125,
                 42
@@ -651,7 +634,7 @@
             "enabled": true,
             "label": "Extra",
             "visible_bounds": [
-                813.515625,
+                842.515625,
                 77,
                 45.125,
                 42
@@ -659,7 +642,7 @@
         },
         "sideBar.tab.settings": {
             "bounds": [
-                897.328125,
+                926.328125,
                 77,
                 62.8125,
                 42
@@ -667,7 +650,7 @@
             "enabled": true,
             "label": "Settings",
             "visible_bounds": [
-                897.328125,
+                926.328125,
                 77,
                 62.8125,
                 42
@@ -675,7 +658,7 @@
         },
         "sideBar.tab.text": {
             "bounds": [
-                858.640625,
+                887.640625,
                 77,
                 38.6875,
                 42
@@ -683,10 +666,26 @@
             "enabled": true,
             "label": "Text",
             "visible_bounds": [
-                858.640625,
+                887.640625,
                 77,
                 38.6875,
                 42
+            ]
+        },
+        "sideBar.width": {
+            "bounds": [
+                1445,
+                84,
+                21,
+                28
+            ],
+            "enabled": true,
+            "label": "arrows-alt-h",
+            "visible_bounds": [
+                1445,
+                84,
+                21,
+                28
             ]
         },
         "statusBar": {
@@ -741,17 +740,17 @@
         },
         "statusBar.fit": {
             "bounds": [
-                859,
+                867,
                 769,
-                607,
+                599,
                 19
             ],
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                859,
+                867,
                 769,
-                607,
+                599,
                 19
             ]
         },
@@ -807,7 +806,7 @@
         },
         "statusBar.fit.outcome": {
             "bounds": [
-                877,
+                885,
                 769,
                 82,
                 19
@@ -816,7 +815,7 @@
             "icon": "check-circle",
             "label": "",
             "visible_bounds": [
-                877,
+                885,
                 769,
                 82,
                 19
@@ -844,17 +843,17 @@
         },
         "statusBar.fit.values": {
             "bounds": [
-                976,
+                984,
                 770,
-                350,
+                342,
                 18.109375
             ],
             "enabled": true,
-            "label": "213/213 213 0 173s 4.40–6.30",
+            "label": "213/213 213 0 50s 4.40–6.30",
             "visible_bounds": [
-                976,
+                984,
                 770,
-                350,
+                342,
                 18.109375
             ]
         },
@@ -879,7 +878,7 @@
             "bounds": [
                 552.3625,
                 772,
-                144.109375,
+                201.03125,
                 14
             ],
             "enabled": true,
@@ -888,7 +887,7 @@
             "visible_bounds": [
                 552.3625,
                 772,
-                144.109375,
+                201.03125,
                 14
             ]
         },
@@ -964,17 +963,17 @@
         },
         "workflow.home.sidebarHost": {
             "bounds": [
-                770,
+                799,
                 77,
-                710,
+                681,
                 681
             ],
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                770,
+                799,
                 77,
-                710,
+                681,
                 681
             ]
         },
@@ -982,7 +981,7 @@
             "bounds": [
                 0,
                 77,
-                770,
+                799,
                 681
             ],
             "enabled": true,
@@ -990,39 +989,39 @@
             "visible_bounds": [
                 0,
                 77,
-                770,
+                799,
                 681
             ]
         },
         "workflow.project.manualSidebar": {
             "bounds": [
-                770,
+                799,
                 77,
-                710,
+                681,
                 681
             ],
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                770,
+                799,
                 77,
-                710,
+                681,
                 681
             ]
         },
         "workflow.project.sidebarHost": {
             "bounds": [
-                770,
+                799,
                 77,
-                710,
+                681,
                 681
             ],
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                770,
+                799,
                 77,
-                710,
+                681,
                 681
             ]
         }
@@ -1037,8 +1036,8 @@
     ],
     "qt_version": "6.11.2",
     "schema": 1,
-    "script_sha256": "db1af167615f4344703ac808b4364deaf281536e8d9bb793c3e81bda9f74db6e",
-    "source_revision": "66250b0826244790ae402c00384ea8fca62ae552",
+    "script_sha256": "0984222721ffee5ab23e9878777f7efbd1fc07a01d59a317060da6177c0d6102",
+    "source_revision": "1bbb542a5be8bc99e889b80989c28c7404fbc7e3",
     "state": {
         "experiments": 1,
         "fit_outcome": "success",

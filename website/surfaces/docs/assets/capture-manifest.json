@@ -659,14 +659,6 @@
   },
   {
    "theme": "light",
-   "path": "assets/gui/y2o3/guide-analysis-pattern-updates.webp"
-  },
-  {
-   "theme": "dark",
-   "path": "assets/gui/y2o3/dark/guide-analysis-pattern-updates.webp"
-  },
-  {
-   "theme": "light",
    "path": "assets/gui/scan/scan-experiment-before.webp"
   },
   {
@@ -848,6 +840,14 @@
   {
    "theme": "dark",
    "path": "assets/gui/scan/dark/scan-performance-analysis.webp"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/scan/guide-analysis-pattern-updates.webp"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/scan/dark/guide-analysis-pattern-updates.webp"
   },
   {
    "theme": "light",

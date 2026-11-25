@@ -326,6 +326,26 @@
         },
         {
             "action": "appBar.tab.analysis",
+            "scene": "guide-analysis-pattern-updates"
+        },
+        {
+            "action": "sideBar.tab.settings",
+            "scene": "guide-analysis-pattern-updates"
+        },
+        {
+            "action": "reveal:group.patternUpdates",
+            "scene": "guide-analysis-pattern-updates"
+        },
+        {
+            "action": "expand:group.patternUpdates",
+            "scene": "guide-analysis-pattern-updates"
+        },
+        {
+            "action": "reveal:analysis.patternUpdates",
+            "scene": "guide-analysis-pattern-updates"
+        },
+        {
+            "action": "appBar.tab.analysis",
             "scene": "scan-declaration"
         },
         {
@@ -445,7 +465,7 @@
             "scene": "scan-correlations"
         }
     ],
-    "binary_sha256": "6b270a81225af60207e9664a9d77ce7e7a96c47e78c931c73331f97a7c9b9ce5",
+    "binary_sha256": "a250bce468ec68a1d78e84ea5b0a49a606cb059703aa3518df88badd1da0e3c3",
     "dependencies": [
         {
             "file": "inputs/analysis/analysis.edi",
@@ -1585,6 +1605,15 @@
             "status": "captured"
         },
         {
+            "description": "Choose how the displayed pattern updates during a scan",
+            "id": "guide-analysis-pattern-updates",
+            "image": "guide-analysis-pattern-updates.webp",
+            "metadata": "guide-analysis-pattern-updates.json",
+            "page": "analysis",
+            "sidebar": "",
+            "status": "captured"
+        },
+        {
             "description": "Inspect the scan's data directory, file pattern and order",
             "id": "scan-declaration",
             "image": "scan-declaration.webp",
@@ -1667,8 +1696,8 @@
         }
     ],
     "schema": 1,
-    "script_sha256": "db1af167615f4344703ac808b4364deaf281536e8d9bb793c3e81bda9f74db6e",
-    "source_revision": "66250b0826244790ae402c00384ea8fca62ae552",
+    "script_sha256": "0984222721ffee5ab23e9878777f7efbd1fc07a01d59a317060da6177c0d6102",
+    "source_revision": "1bbb542a5be8bc99e889b80989c28c7404fbc7e3",
     "status": "complete",
     "workflow": "reference"
 }

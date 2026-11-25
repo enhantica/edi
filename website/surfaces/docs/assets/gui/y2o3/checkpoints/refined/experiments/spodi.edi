@@ -37,6 +37,8 @@ _background_estimate.n_points 21
 
 _instrument.setup_wavelength 1.54822
 _instrument.calib_twotheta_offset -0.04427(78)
+_instrument.calib_sample_displacement 0
+_instrument.calib_sample_transparency 0
 
 _peak.broad_gauss_u 0.0340(20)
 _peak.broad_gauss_v -0.0740(46)

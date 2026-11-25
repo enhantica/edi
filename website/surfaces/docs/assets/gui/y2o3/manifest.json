@@ -33,7 +33,7 @@
             "scene": "03-project-details"
         },
         {
-            "action": "fill:createProject.location=/tmp/EasyDiffraction-OOcPva/pd-neut-cwl_y2o3-spodi",
+            "action": "fill:createProject.location=/tmp/EasyDiffraction-oJHgIq/pd-neut-cwl_y2o3-spodi",
             "scene": "03-project-details"
         },
         {
@@ -105,7 +105,7 @@
             "scene": "06-structure-import"
         },
         {
-            "action": "import-structure:/captures/y2o3-light/inputs/structures/y2o3.cif",
+            "action": "import-structure:/var/tmp/captures/y2o3-light/inputs/structures/y2o3.cif",
             "scene": "07-structure-loaded"
         },
         {
@@ -213,7 +213,7 @@
             "scene": "09-experiment-data"
         },
         {
-            "action": "import-data:/captures/y2o3-light/inputs/spodi.xye",
+            "action": "import-data:/var/tmp/captures/y2o3-light/inputs/spodi.xye",
             "scene": "09-experiment-data"
         },
         {
@@ -229,11 +229,19 @@
             "scene": "09-wavelength"
         },
         {
-            "action": "fill:instrument.setup_wavelength=1.54822",
+            "action": "instrument.setup_wavelength",
+            "scene": "09-wavelength"
+        },
+        {
+            "action": "fill:instrument.setup_wavelength.menu.popup.value=1.54822",
             "scene": "09-wavelength"
         },
         {
             "action": "key:Return",
+            "scene": "09-wavelength"
+        },
+        {
+            "action": "key:Escape",
             "scene": "09-wavelength"
         },
         {
@@ -257,11 +265,19 @@
             "scene": "09-profile-broad-gauss-u"
         },
         {
-            "action": "fill:peak.broad_gauss_u=0.04",
+            "action": "peak.broad_gauss_u",
+            "scene": "09-profile-broad-gauss-u"
+        },
+        {
+            "action": "fill:peak.broad_gauss_u.menu.popup.value=0.04",
             "scene": "09-profile-broad-gauss-u"
         },
         {
             "action": "key:Return",
+            "scene": "09-profile-broad-gauss-u"
+        },
+        {
+            "action": "key:Escape",
             "scene": "09-profile-broad-gauss-u"
         },
         {
@@ -269,11 +285,19 @@
             "scene": "09-profile-broad-gauss-v"
         },
         {
-            "action": "fill:peak.broad_gauss_v=-0.07",
+            "action": "peak.broad_gauss_v",
+            "scene": "09-profile-broad-gauss-v"
+        },
+        {
+            "action": "fill:peak.broad_gauss_v.menu.popup.value=-0.07",
             "scene": "09-profile-broad-gauss-v"
         },
         {
             "action": "key:Return",
+            "scene": "09-profile-broad-gauss-v"
+        },
+        {
+            "action": "key:Escape",
             "scene": "09-profile-broad-gauss-v"
         },
         {
@@ -281,11 +305,19 @@
             "scene": "09-profile-broad-gauss-w"
         },
         {
-            "action": "fill:peak.broad_gauss_w=0.1",
+            "action": "peak.broad_gauss_w",
+            "scene": "09-profile-broad-gauss-w"
+        },
+        {
+            "action": "fill:peak.broad_gauss_w.menu.popup.value=0.1",
             "scene": "09-profile-broad-gauss-w"
         },
         {
             "action": "key:Return",
+            "scene": "09-profile-broad-gauss-w"
+        },
+        {
+            "action": "key:Escape",
             "scene": "09-profile-broad-gauss-w"
         },
         {
@@ -297,7 +329,15 @@
             "scene": "09-exclusion-0"
         },
         {
+            "action": "reveal:excludedRegions.append",
+            "scene": "09-exclusion-0"
+        },
+        {
             "action": "excludedRegions.append",
+            "scene": "09-exclusion-0"
+        },
+        {
+            "action": "wait-settled",
             "scene": "09-exclusion-0"
         },
         {
@@ -333,7 +373,15 @@
             "scene": "09-exclusion-1"
         },
         {
+            "action": "reveal:excludedRegions.append",
+            "scene": "09-exclusion-1"
+        },
+        {
             "action": "excludedRegions.append",
+            "scene": "09-exclusion-1"
+        },
+        {
+            "action": "wait-settled",
             "scene": "09-exclusion-1"
         },
         {
@@ -513,7 +561,7 @@
             "scene": "12-analysis-choose"
         },
         {
-            "action": "save-as:/captures/y2o3-light/checkpoints/starting",
+            "action": "save-as:/var/tmp/captures/y2o3-light/checkpoints/starting",
             "scene": "12-save-start"
         },
         {
@@ -633,7 +681,7 @@
             "scene": "12-run-refinement"
         },
         {
-            "action": "save-as:/captures/y2o3-light/checkpoints/refined",
+            "action": "save-as:/var/tmp/captures/y2o3-light/checkpoints/refined",
             "scene": "12-save-refined"
         },
         {
@@ -777,7 +825,7 @@
             "scene": "guide-project-open"
         },
         {
-            "action": "project.open",
+            "action": "project.load",
             "scene": "guide-project-open"
         },
         {
@@ -1415,29 +1463,9 @@
         {
             "action": "reveal:group.shownParameters",
             "scene": "guide-analysis-shown-parameters"
-        },
-        {
-            "action": "appBar.tab.analysis",
-            "scene": "guide-analysis-pattern-updates"
-        },
-        {
-            "action": "sideBar.tab.settings",
-            "scene": "guide-analysis-pattern-updates"
-        },
-        {
-            "action": "reveal:group.patternUpdates",
-            "scene": "guide-analysis-pattern-updates"
-        },
-        {
-            "action": "expand:group.patternUpdates",
-            "scene": "guide-analysis-pattern-updates"
-        },
-        {
-            "action": "reveal:group.patternUpdates",
-            "scene": "guide-analysis-pattern-updates"
         }
     ],
-    "binary_sha256": "6b270a81225af60207e9664a9d77ce7e7a96c47e78c931c73331f97a7c9b9ce5",
+    "binary_sha256": "a250bce468ec68a1d78e84ea5b0a49a606cb059703aa3518df88badd1da0e3c3",
     "dependencies": [
         {
             "file": "inputs/analysis/analysis.edi",
@@ -1930,7 +1958,7 @@
             "status": "captured"
         },
         {
-            "description": "Open or save the current project",
+            "description": "Create, load or save a project",
             "id": "guide-project-actions",
             "image": "guide-project-actions.webp",
             "metadata": "guide-project-actions.json",
@@ -1939,7 +1967,7 @@
             "status": "captured"
         },
         {
-            "description": "Choose a project folder or archive",
+            "description": "Open a project folder or archive, or import one from another program",
             "id": "guide-project-open",
             "image": "guide-project-open.webp",
             "metadata": "guide-project-open.json",
@@ -1948,7 +1976,7 @@
             "status": "captured"
         },
         {
-            "description": "Choose a save format or save a copy",
+            "description": "Save as an EasyDiffraction folder or .zip, or export a copy",
             "id": "guide-project-save",
             "image": "guide-project-save.webp",
             "metadata": "guide-project-save.json",
@@ -2252,20 +2280,11 @@
             "page": "analysis",
             "sidebar": "",
             "status": "captured"
-        },
-        {
-            "description": "Choose how the displayed pattern updates during a scan",
-            "id": "guide-analysis-pattern-updates",
-            "image": "guide-analysis-pattern-updates.webp",
-            "metadata": "guide-analysis-pattern-updates.json",
-            "page": "analysis",
-            "sidebar": "",
-            "status": "captured"
         }
     ],
     "schema": 1,
-    "script_sha256": "a0cd8f7d599e386e3db4cf752e3ae7050f99ce60356dedf20f4c9a1fbb3ecee3",
-    "source_revision": "66250b0826244790ae402c00384ea8fca62ae552",
+    "script_sha256": "3a344097f44704ca246ad665209bd5da89b1884c7e896cbd5981e2dcf5ec2bba",
+    "source_revision": "1bbb542a5be8bc99e889b80989c28c7404fbc7e3",
     "status": "complete",
     "workflow": "creation"
 }
