@@ -120,9 +120,9 @@ QJsonObject untitledPublication(const QString& mode) {
     const bool commit = mode != QLatin1String("refused");
     const QString durable = temp.filePath("committed");
     if (commit) copy(publication.folder, durable);
-    const bool file = QFileInfo::exists(durable + "/project.edi");
+    const bool durableProjectExists = QFileInfo::exists(durable + "/project.edi");
     QString title;
-    if (file)
+    if (durableProjectExists)
         title = QString::fromStdString(
             edi::load_project(durable.toStdString(), edi::ProjectLoadMode::Construction).metadata.title);
     WebStorageAnswer answer;
@@ -144,6 +144,6 @@ QJsonObject untitledPublication(const QString& mode) {
     publications.clear();
     browser = false;
     return {{"mode", mode}, {"pending", pending}, {"ids", ids}, {"states", states},
-            {"durable", file}, {"title", title}, {"visible", visible}, {"modified", modified},
+            {"durable", durableProjectExists}, {"title", title}, {"visible", visible}, {"modified", modified},
             {"reopened", !reopened.isEmpty()}};
 }
