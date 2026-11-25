@@ -15,6 +15,9 @@ from operator import itemgetter
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
+# The crysta commits a site's content was checked against (edi ADR-0083). What a publisher keeps
+# is checked against them again, so no component owns the record and none may drop it.
+CHECKED = 'crysta-commits.json'
 
 
 def _ever_deployed(repo: str) -> bool:
@@ -68,6 +71,17 @@ def deployed_base(artifacts, read_jobs) -> dict:
 
 
 def overlay_component(site: Path, incoming: Path, component: str, *, first: bool = False) -> None:
+    """Replace only the built component; the record of what the rest was checked against stays."""
+    record = site / CHECKED
+    checked = record.read_bytes() if record.is_file() else None
+    if (incoming / CHECKED).exists():
+        raise RuntimeError(f'A component must not own /{CHECKED}')
+    _overlay(site, incoming, component, first=first)
+    if (record.read_bytes() if record.is_file() else None) != checked:
+        raise RuntimeError(f'The assembled site lost /{CHECKED} of the content it keeps')
+
+
+def _overlay(site: Path, incoming: Path, component: str, *, first: bool) -> None:
     """Replace only the built component in a disposable copy of the deployed site.
 
     The very first deployment starts from an empty site with the documentation, and the web app
@@ -87,7 +101,10 @@ def overlay_component(site: Path, incoming: Path, component: str, *, first: bool
                 '/webapp/, /repository/, /third-party/, /releases/ or /SHA256SUMS'
             )
         for child in site.iterdir():
-            if child.name in {'webapp', 'repository', 'third-party', 'releases', 'SHA256SUMS'}:
+            if child.name in {
+                *('webapp', 'repository', 'third-party', 'releases', 'SHA256SUMS'),
+                CHECKED,
+            }:
                 continue
             if child.is_dir() and not child.is_symlink():
                 shutil.rmtree(child)

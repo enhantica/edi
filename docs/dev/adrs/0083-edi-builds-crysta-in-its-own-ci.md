@@ -93,7 +93,8 @@ can restore a cache of main. CI therefore keeps built crysta only.
 6. **Publishing** checks the published folder itself, right before, in a step that always runs: the site, the release's
    assets and their copies, the draft's installers and the released web app. What was made by another commit of edi, or
    kept from an earlier deployment, is compared with every crysta commit edi's history has pinned, with those its
-   receipts name, and with those the site itself records (`crysta-commits.json`, written by each of its publishers).
+   receipts name, and with those the site itself records (`crysta-commits.json`, written by each of its publishers;
+   no component owns it, and an assembly that loses it refuses).
    A publishing step runs only after a check that passed, and where the check ran.
 7. **Caches.** `tools/ci/ccache_entries.py` reads every file in a compiler cache as it will be saved, restored or new, and
    deletes an entry that quotes a source line or cannot be read and any file that is neither an entry nor ccache's own;
