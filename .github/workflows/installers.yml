@@ -159,36 +159,13 @@ jobs:
         run: |
           echo "Windows diagnostics cannot publish or qualify a release."
           exit 1
-      - name: Enable long source paths on Windows
+      - name: Enable long paths on Windows
         if: runner.os == 'Windows'
         shell: bash
-        run: |
-          git config --global core.longpaths true
-          git config --global core.protectNTFS false
+        run: git config --global core.longpaths true
       - uses: actions/checkout@v5
-        if: runner.os != 'Windows'
         with:
           fetch-depth: 0
-      - name: Check out Windows-compatible source paths
-        if: runner.os == 'Windows'
-        uses: actions/checkout@v5
-        with:
-          fetch-depth: 0
-          sparse-checkout-cone-mode: false
-          sparse-checkout: |
-            /*
-            !**/[aA][uU][xX]
-            !**/[aA][uU][xX].*
-            !**/[cC][oO][nN]
-            !**/[cC][oO][nN].*
-            !**/[pP][rR][nN]
-            !**/[pP][rR][nN].*
-            !**/[nN][uU][lL]
-            !**/[nN][uU][lL].*
-            !**/[cC][oO][mM][1-9]
-            !**/[cC][oO][mM][1-9].*
-            !**/[lL][pP][tT][1-9]
-            !**/[lL][pP][tT][1-9].*
       - name: Set up the locked packaging environment
         uses: ./.github/actions/setup-pixi
         with:
@@ -518,32 +495,10 @@ jobs:
           - runner: ${{ inputs.capture_linux_only && 'windows-2025' || 'none' }}
           - runner: ${{ inputs.capture_linux_only && 'macos-15' || 'none' }}
     steps:
-      - name: Enable long source paths on Windows
+      - name: Enable long paths on Windows
         if: runner.os == 'Windows'
-        run: |
-          git config --global core.longpaths true
-          git config --global core.protectNTFS false
+        run: git config --global core.longpaths true
       - uses: actions/checkout@v5
-        if: runner.os != 'Windows'
-      - name: Check out Windows-compatible source paths
-        if: runner.os == 'Windows'
-        uses: actions/checkout@v5
-        with:
-          sparse-checkout-cone-mode: false
-          sparse-checkout: |
-            /*
-            !**/[aA][uU][xX]
-            !**/[aA][uU][xX].*
-            !**/[cC][oO][nN]
-            !**/[cC][oO][nN].*
-            !**/[pP][rR][nN]
-            !**/[pP][rR][nN].*
-            !**/[nN][uU][lL]
-            !**/[nN][uU][lL].*
-            !**/[cC][oO][mM][1-9]
-            !**/[cC][oO][mM][1-9].*
-            !**/[lL][pP][tT][1-9]
-            !**/[lL][pP][tT][1-9].*
       - name: Set up the locked packaging environment
         uses: ./.github/actions/setup-pixi
         with:
@@ -822,6 +777,7 @@ jobs:
           app-id: ${{ vars.ENHANTICA_APP_ID }}
           private-key: ${{ secrets.ENHANTICA_APP_KEY }}
           history: 'true'
+          site: site
           receipts: source-checks
       - name: Check every file that is published
         run: python3 tools/ci/stored_source.py --receipt source-checks site
