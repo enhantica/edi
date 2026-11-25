@@ -28,8 +28,10 @@ SHORTEST = 12
 # code); a part longer than the longest is not looked up.
 PART = 24
 LONGEST = 1000
-# A name inside a longer line is not a line of source, also when one holds nothing else.
-NAME = re.compile(rb'[\w.]+')
+# One plain word is not a line of anyone's, and neither is one name with its punctuation inside a
+# longer line, also when a source line holds nothing else.
+WORD = re.compile(rb'\W*[A-Za-z]+\W*')
+NAME = re.compile(rb'\W*[\w.]+\W*')
 # Recorded data (results, logs, locks, structures, measured patterns) and licences, compared as
 # whole files only: single lines of them recur in any tool's output. A person wrote the rest.
 RECORDED = {
@@ -61,6 +63,8 @@ def line_id(text: bytes) -> str | None:
     """The id of a line as the list has it, or None for one too short to judge."""
     bare = text.strip()
     if len(b''.join(bare.split())) < SHORTEST or not re.search(rb'[A-Za-z]', bare):
+        return None
+    if WORD.fullmatch(bare):
         return None
     return hashlib.sha256(bare).hexdigest()
 
