@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-25T10:06:10Z
+# measured_utc = 2026-11-25T12:50:54Z
 #
-# Recorded from: measured test run (3 node(s) measured once, 187540 banked, 0 stale row(s) dropped)
-# Collected tests: 267489; with a reported duration: 86240
+# Recorded from: measured test run (39 node(s) measured once, 187537 banked, 12 stale row(s) dropped)
+# Collected tests: 267515; with a reported duration: 86275
 # Module-scoped fixture costs recorded: 219
 #
 # Breaches are decided PER TIER against the table
@@ -29,12 +29,12 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 267489
+# inventory_python = 267515
 # inventory_cpp = 0
-# inventory_measured = 187543
-# inventory_unmeasured = 79946
+# inventory_measured = 187576
+# inventory_unmeasured = 79939
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
-# inventory_pr_python = 92578
+# inventory_pr_python = 92604
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -202,6 +202,7 @@ UNMEASURED:failed-in-this-run	tests/integration/app/test_assistant_trial_retirem
 0.000	tests/integration/app/test_collection_downloads.py::test_a_link_at_a_staging_or_final_name_is_never_written_through[hardlink]
 0.000	tests/integration/app/test_collection_downloads.py::test_a_link_at_a_staging_or_final_name_is_never_written_through[symlink]
 0.000	tests/integration/app/test_collection_downloads.py::test_a_link_named_x_in_the_destination_does_not_move_it
+0.000	tests/integration/app/test_collection_downloads.py::test_a_project_archive_accepts_the_renamed_second_experiment
 0.000	tests/integration/app/test_collection_downloads.py::test_a_project_archive_is_unpacked_into_a_folder_named_by_its_digest
 0.000	tests/integration/app/test_collection_downloads.py::test_a_project_is_reused_only_with_its_completion_marker
 0.000	tests/integration/app/test_collection_downloads.py::test_a_published_project_keeps_owner_access_and_the_destinations_sharing[750]
@@ -3426,13 +3427,6 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_ci_source_boundary.py::t
 0.010	tests/integration/py/test_ci_source_boundary.py::test_sdk_archive_handoff_carries_no_source_archive[pages]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_ci_source_boundary.py::test_unavailable_source_list_prevents_the_runner_shell_executing_a_step
 UNMEASURED:failed-in-this-run	tests/integration/py/test_ci_source_runtime.py::test_filtered_shell_preserves_public_output_and_child_exit
-UNMEASURED:failed-in-this-run	tests/integration/py/test_ci_source_runtime.py::test_full_cache_save_omits_source_diagnostics_in_new_and_untouched_restored_entries[app-windows]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_ci_source_runtime.py::test_full_cache_save_omits_source_diagnostics_in_new_and_untouched_restored_entries[app]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_ci_source_runtime.py::test_full_cache_save_omits_source_diagnostics_in_new_and_untouched_restored_entries[core]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_ci_source_runtime.py::test_full_cache_save_omits_source_diagnostics_in_new_and_untouched_restored_entries[crysta-sdk]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_ci_source_runtime.py::test_full_cache_save_omits_source_diagnostics_in_new_and_untouched_restored_entries[installer]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_ci_source_runtime.py::test_full_cache_save_omits_source_diagnostics_in_new_and_untouched_restored_entries[new]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_ci_source_runtime.py::test_full_cache_save_omits_source_diagnostics_in_new_and_untouched_restored_entries[wasm]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_ci_source_runtime.py::test_storage_check_reads_members_of_the_bytes_it_will_publish[.tar.gz]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_ci_source_runtime.py::test_storage_check_reads_members_of_the_bytes_it_will_publish[.tar]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_ci_source_runtime.py::test_storage_check_reads_members_of_the_bytes_it_will_publish[.whl]
@@ -177863,12 +177857,22 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_cosio_heidi_collection.p
 0.010	tests/integration/py/test_cryspy_project_import.py::test_cryspy_refuses_constraint_marks_instead_of_discarding_the_relation[8.479343(100)A+]
 0.010	tests/integration/py/test_cryspy_project_import.py::test_cryspy_refuses_unconverted_scalar_and_loop_items[_unsupported_model_value 0.37-_unsupported_model_value]
 0.010	tests/integration/py/test_cryspy_project_import.py::test_cryspy_refuses_unconverted_scalar_and_loop_items[loop_\n_unsupported_model_label\n_unsupported_model_value\none 0.37-_unsupported_model_label]
+0.150	tests/integration/py/test_crysta_source_archive.py::test_local_source_export_refuses_links_outside_the_committed_tree[absolute]
+0.160	tests/integration/py/test_crysta_source_archive.py::test_local_source_export_refuses_links_outside_the_committed_tree[outside-file]
+0.160	tests/integration/py/test_crysta_source_archive.py::test_local_source_export_refuses_links_outside_the_committed_tree[parent-relative]
+0.160	tests/integration/py/test_crysta_source_archive.py::test_local_source_export_refuses_links_outside_the_committed_tree[untracked-directory]
+0.160	tests/integration/py/test_crysta_source_archive.py::test_local_source_export_refuses_links_outside_the_committed_tree[windows-drive]
+0.160	tests/integration/py/test_crysta_source_archive.py::test_local_source_export_refuses_links_outside_the_committed_tree[windows-unc]
+0.140	tests/integration/py/test_crysta_source_archive.py::test_local_source_export_refuses_windows_native_path_conflicts[backslash]
+0.150	tests/integration/py/test_crysta_source_archive.py::test_local_source_export_refuses_windows_native_path_conflicts[case-alias]
+0.150	tests/integration/py/test_crysta_source_archive.py::test_local_source_export_refuses_windows_native_path_conflicts[device]
+0.160	tests/integration/py/test_crysta_source_archive.py::test_local_source_export_refuses_windows_native_path_conflicts[drive-relative]
+0.150	tests/integration/py/test_crysta_source_archive.py::test_local_source_export_refuses_windows_native_path_conflicts[stream]
+0.150	tests/integration/py/test_crysta_source_archive.py::test_local_source_export_refuses_windows_native_path_conflicts[trailing-dot]
 0.110	tests/integration/py/test_crysta_source_archive.py::test_local_source_export_uses_pinned_git_bytes_and_excludes_untracked_files
-0.430	tests/integration/py/test_crysta_source_archive.py::test_source_bootstrap_checks_out_the_pin_filters_output_and_refuses_missing_commit
+0.150	tests/integration/py/test_crysta_source_archive.py::test_parent_relative_link_to_committed_file_preserves_blob_bytes
+0.490	tests/integration/py/test_crysta_source_archive.py::test_source_bootstrap_checks_out_the_pin_filters_output_and_refuses_missing_commit
 0.070	tests/integration/py/test_crysta_source_archive.py::test_source_consumers_use_local_git_checkout_and_producer_stores_only_the_sdk
-0.000	tests/integration/py/test_crysta_source_archive.py::test_source_extraction_cannot_write_outside_its_destination[absolute]
-0.000	tests/integration/py/test_crysta_source_archive.py::test_source_extraction_cannot_write_outside_its_destination[parent]
-0.000	tests/integration/py/test_crysta_source_archive.py::test_source_extraction_cannot_write_outside_its_destination[symlink]
 0.010	tests/integration/py/test_current_bragg_reference.py::test_changed_release_reference_cannot_silently_regenerate_expectations[colour]
 0.010	tests/integration/py/test_current_bragg_reference.py::test_changed_release_reference_cannot_silently_regenerate_expectations[provenance]
 0.080	tests/integration/py/test_current_bragg_reference.py::test_current_and_historical_bragg_fixtures_reproduce_their_own_approved_sources
@@ -185213,7 +185217,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_scan_notes_diagnostics.p
 0.040	tests/integration/py/test_sdk_compiler_cache.py::test_failed_sdk_pack_reports_cache_stats_then_keeps_its_failure
 0.030	tests/integration/py/test_sdk_compiler_cache.py::test_installer_preserves_objects_after_failure_with_the_same_explicit_cache_boundary
 0.210	tests/integration/py/test_sdk_compiler_cache.py::test_selected_windows_bootstrap_uses_ninja_and_wrapper_keeps_other_callers_default
-0.120	tests/integration/py/test_sdk_sharing_contract.py::test_actual_sparse_checkout_omits_reserved_fixture_and_keeps_producer_inputs
+0.130	tests/integration/py/test_sdk_sharing_contract.py::test_actual_sparse_checkout_omits_portable_fixture_and_keeps_producer_inputs
 0.110	tests/integration/py/test_sdk_sharing_contract.py::test_compiler_cache_precedes_install_and_is_keyed_by_actual_engine_lock
 0.010	tests/integration/py/test_sdk_sharing_contract.py::test_compiler_cache_preserves_absolute_fixture_paths_and_rejects_unsafe_rewrites
 0.010	tests/integration/py/test_sdk_sharing_contract.py::test_compiler_objects_cross_lock_fallback_never_escapes_platform_or_qualified_archive
@@ -185267,7 +185271,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_scan_notes_diagnostics.p
 0.110	tests/integration/py/test_sdk_sharing_contract.py::test_sdk_recipe_invalidates_every_local_producer_build_input[.github/actions/setup-pixi/action.yml]
 0.260	tests/integration/py/test_sdk_sharing_contract.py::test_sdk_recipe_invalidates_every_local_producer_build_input[.github/workflows/crysta-sdk.yml]
 0.110	tests/integration/py/test_sdk_sharing_contract.py::test_sdk_recipe_invalidates_every_local_producer_build_input[tools/ci/crysta_sdk.py]
-0.040	tests/integration/py/test_sdk_sharing_contract.py::test_windows_checkout_configures_index_admission_before_sparse_materialization
+0.030	tests/integration/py/test_sdk_sharing_contract.py::test_windows_checkout_enables_long_paths_with_ntfs_protection
 0.030	tests/integration/py/test_sdk_sharing_contract.py::test_windows_sdk_workflows_refuse_case_ambiguous_platform_environment_routes[.github/workflows/crysta-sdk.yml]
 0.060	tests/integration/py/test_sdk_sharing_contract.py::test_windows_sdk_workflows_refuse_case_ambiguous_platform_environment_routes[.github/workflows/installers.yml]
 0.180	tests/integration/py/test_sdk_untested_opt_in.py::test_a_fully_qualified_sdk_remains_accepted_without_an_override[linux-64]
@@ -191560,6 +191564,28 @@ UNMEASURED:current named-title observer browser build and replay pending	tests/s
 0.110	tests/system/py/test_ci_execution_receipts.py::test_shipped_driver_executes_exact_selection_and_preserves_exit[passed-pr-deferral-3]
 0.167	tests/system/py/test_ci_native_modes.py::test_selected_sdk_executes_scalar_and_simd_values[scalar]
 0.000	tests/system/py/test_ci_native_modes.py::test_selected_sdk_executes_scalar_and_simd_values[simd]
+3.710	tests/system/py/test_ci_source_workflows.py::test_actual_compiler_restore_rejects_foreign_cache_family[app-linux]
+3.760	tests/system/py/test_ci_source_workflows.py::test_actual_compiler_restore_rejects_foreign_cache_family[app-macos]
+3.720	tests/system/py/test_ci_source_workflows.py::test_actual_compiler_restore_rejects_foreign_cache_family[app-windows]
+3.540	tests/system/py/test_ci_source_workflows.py::test_actual_compiler_restore_rejects_foreign_cache_family[ci-wasm]
+3.550	tests/system/py/test_ci_source_workflows.py::test_actual_compiler_restore_rejects_foreign_cache_family[installer]
+3.690	tests/system/py/test_ci_source_workflows.py::test_actual_compiler_restore_rejects_foreign_cache_family[native]
+3.520	tests/system/py/test_ci_source_workflows.py::test_actual_compiler_restore_rejects_foreign_cache_family[pages-wasm]
+3.600	tests/system/py/test_ci_source_workflows.py::test_actual_compiler_restore_rejects_foreign_cache_family[sdk]
+3.580	tests/system/py/test_ci_source_workflows.py::test_existing_publisher_rejects_an_unchecked_path[accessibility]
+3.680	tests/system/py/test_ci_source_workflows.py::test_existing_publisher_rejects_an_unchecked_path[durations]
+3.650	tests/system/py/test_ci_source_workflows.py::test_existing_publisher_rejects_an_unchecked_path[installer-pages]
+3.640	tests/system/py/test_ci_source_workflows.py::test_existing_publisher_rejects_an_unchecked_path[plan]
+3.580	tests/system/py/test_ci_source_workflows.py::test_existing_publisher_rejects_an_unchecked_path[qualified-plan]
+3.610	tests/system/py/test_ci_source_workflows.py::test_existing_publisher_rejects_an_unchecked_path[system-time]
+1.170	tests/system/py/test_ci_source_workflows.py::test_full_cache_save_omits_source_diagnostics_in_new_and_untouched_restored_entries[app-linux]
+1.300	tests/system/py/test_ci_source_workflows.py::test_full_cache_save_omits_source_diagnostics_in_new_and_untouched_restored_entries[app-macos]
+1.130	tests/system/py/test_ci_source_workflows.py::test_full_cache_save_omits_source_diagnostics_in_new_and_untouched_restored_entries[app-windows]
+1.290	tests/system/py/test_ci_source_workflows.py::test_full_cache_save_omits_source_diagnostics_in_new_and_untouched_restored_entries[ci-wasm]
+1.210	tests/system/py/test_ci_source_workflows.py::test_full_cache_save_omits_source_diagnostics_in_new_and_untouched_restored_entries[installer]
+1.190	tests/system/py/test_ci_source_workflows.py::test_full_cache_save_omits_source_diagnostics_in_new_and_untouched_restored_entries[native]
+1.100	tests/system/py/test_ci_source_workflows.py::test_full_cache_save_omits_source_diagnostics_in_new_and_untouched_restored_entries[pages-wasm]
+1.130	tests/system/py/test_ci_source_workflows.py::test_full_cache_save_omits_source_diagnostics_in_new_and_untouched_restored_entries[sdk]
 UNMEASURED:failed-in-this-run	tests/system/py/test_cif_app_import.py::test_app_load_structure_accepts_and_loads_the_published_cif
 UNMEASURED:failed-in-this-run	tests/system/py/test_cif_project_cli.py::test_cli_project_loads_a_published_cif_and_reports_its_cell_atoms_and_symmetry
 4.360	tests/system/py/test_cif_public_entrances.py::test_public_entrances_account_for_every_alias_and_loop_cell[_absorption.*:_absorption.*:s0:v0-column-experiment-app]

@@ -486,26 +486,25 @@ def test_compiler_cache_preserves_absolute_fixture_paths_and_rejects_unsafe_rewr
 
 def windows_checkout_guard(steps):
     checkout = next(step for step in steps if step.get('uses') == 'actions/checkout@v5')
-    guards = [step for step in steps if 'core.protectNTFS' in step.get('run', '')]
-    assert len(guards) == 1, 'One explicit Windows index-admission guard precedes checkout'
+    guards = [step for step in steps if 'core.longpaths' in step.get('run', '')]
+    assert len(guards) == 1, 'One explicit long-path setup precedes checkout'
     guard = guards[0]
     assert steps.index(guard) < steps.index(checkout), (
-        'Windows Git path admission must be configured before index validation in checkout'
+        'Git needs long-path support before checkout populates its index'
     )
     assert guard.get('if') == "runner.os == 'Windows'", (
-        'The NTFS compatibility boundary applies only on the Windows host'
+        'Long-path configuration applies only to the Windows runner'
     )
-    commands = [line.split() for line in guard['run'].splitlines() if line.strip()]
-    assert ['git', 'config', '--global', 'core.longpaths', 'true'] in commands, (
-        'The checkout process inherits long-path support before its index is populated'
+    assert guard['run'].split() == ['git', 'config', '--global', 'core.longpaths', 'true'], (
+        'The Windows setup enables long paths without changing other Git settings'
     )
-    assert ['git', 'config', '--global', 'core.protectNTFS', 'false'] in commands, (
-        'Sparse checkout still validates excluded historical reserved fixture paths'
+    assert all('core.protectntfs' not in step.get('run', '').casefold() for step in steps), (
+        'SDK checkout preserves Git protection against Windows device names'
     )
     return guard
 
 
-def test_windows_checkout_configures_index_admission_before_sparse_materialization(tmp_path):
+def test_windows_checkout_enables_long_paths_with_ntfs_protection(tmp_path):
     steps = document(PRODUCER)['jobs']['build']['steps']
     guard = windows_checkout_guard(steps)
     isolated = {**os.environ, 'GIT_CONFIG_GLOBAL': str(tmp_path / 'global-git-config')}
@@ -517,71 +516,52 @@ def test_windows_checkout_configures_index_admission_before_sparse_materializati
         timeout=5,
     )
     assert result.returncode == 0, 'The actual pre-checkout commands must execute independently'
-    for key, expected in [('core.longpaths', 'true'), ('core.protectNTFS', 'false')]:
-        value = subprocess.check_output(
-            ['git', 'config', '--global', key], env=isolated, text=True
-        )
-        assert value.strip() == expected, (
-            'The child checkout inherits the exact Git admission setting'
-        )
-    for mutation in ('late', 'no-windows', 'longpaths', 'protectNTFS', 'false'):
+    value = subprocess.check_output(
+        ['git', 'config', '--global', 'core.longpaths'], env=isolated, text=True
+    )
+    assert value.strip() == 'true', 'The checkout process inherits Windows long-path support'
+    for mutation in ('late', 'no-windows', 'disabled', 'disable-protection'):
         changed = copy.deepcopy(steps)
-        index = next(
-            i for i, step in enumerate(changed) if 'core.protectNTFS' in step.get('run', '')
-        )
+        index = steps.index(guard)
         if mutation == 'late':
             changed.append(changed.pop(index))
         elif mutation == 'no-windows':
             changed[index]['if'] = "runner.os != 'Windows'"
+        elif mutation == 'disabled':
+            changed[index]['run'] = changed[index]['run'].replace('true', 'false')
         else:
-            changed[index]['run'] = changed[index]['run'].replace(mutation, 'invalid')
+            changed.insert(index, {'run': 'git config --global core.protectNTFS false'})
         with pytest.raises(AssertionError):
             windows_checkout_guard(changed)
 
 
-def test_actual_sparse_checkout_omits_reserved_fixture_and_keeps_producer_inputs(tmp_path):
+def test_actual_sparse_checkout_omits_portable_fixture_and_keeps_producer_inputs(tmp_path):
     source, target = tmp_path / 'source', tmp_path / 'target'
     source.mkdir()
+    experiment = 'tests/fixtures/fit_quality/gui/experiments/second.edi'
     files = {
-        'tests/fixtures/reserved/aux.edi': b'historical reserved fixture',
+        experiment: (ROOT / experiment).read_bytes(),
         'docs/index.md': b'documentation',
         'website/index.html': b'website',
         'pixi.toml': b'locked producer manifest',
         'tools/ci/crysta-source.sh': b'producer identity script',
         '.github/actions/setup-pixi/action.yml': b'producer setup action',
     }
-    reserved = 'tests/fixtures/reserved/aux.edi'
     for name, data in files.items():
-        if name == reserved:
-            continue  # Author this Git entry without asking the host to open a device filename.
         path = source / name
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(data)
     env = {**os.environ, 'GIT_CONFIG_GLOBAL': str(tmp_path / 'global-git-config')}
 
     def git(directory, *arguments):
-        subprocess.run(
-            ['git', '-C', str(directory), *arguments],
-            env=env,
-            check=True,
-            capture_output=True,
-            timeout=5,
-        )
+        return subprocess.check_output(
+            ['git', '-C', str(directory), *arguments], env=env, timeout=5
+        ).strip()
 
-    git(source, 'init', '-q')
-    git(source, 'config', 'core.protectNTFS', 'false')
+    git(source, 'init', '-q', '--object-format=sha1')
+    # Exercise the protection even when the test host is POSIX.
+    git(source, 'config', '--global', 'core.protectNTFS', 'true')
     git(source, 'add', '.')
-    blob = (
-        subprocess
-        .check_output(
-            ['git', '-C', str(source), 'hash-object', '-w', '--stdin'],
-            input=files[reserved],
-            env=env,
-        )
-        .decode()
-        .strip()
-    )
-    git(source, 'update-index', '--add', '--cacheinfo', '100644', blob, reserved)
     git(
         source,
         '-c',
@@ -591,21 +571,18 @@ def test_actual_sparse_checkout_omits_reserved_fixture_and_keeps_producer_inputs
         'commit',
         '-qm',
         'independent sparse transport',
+        '--no-gpg-sign',
     )
     assert (
-        subprocess.check_output(
-            ['git', '-C', str(source), 'show', 'HEAD:' + reserved],
-            env=env,
+        git(source, 'rev-parse', f'HEAD:{experiment}')
+        == hashlib
+        .sha1(
+            f'blob {len(files[experiment])}\0'.encode() + files[experiment], usedforsecurity=False
         )
-        == files[reserved]
-    ), 'The actual source commit must contain every reserved-name byte before sparse checkout'
-    subprocess.run(
-        ['git', 'clone', '-q', '--no-checkout', str(source), str(target)],
-        env=env,
-        check=True,
-        capture_output=True,
-        timeout=5,
-    )
+        .hexdigest()
+        .encode()
+    ), 'The real renamed fixture participates in protected index admission'
+    git(source, 'clone', '-q', '--no-checkout', str(source), str(target))
     steps = document(PRODUCER)['jobs']['build']['steps']
     guard = windows_checkout_guard(steps)
     subprocess.run(
@@ -615,15 +592,16 @@ def test_actual_sparse_checkout_omits_reserved_fixture_and_keeps_producer_inputs
         capture_output=True,
         timeout=5,
     )
+    assert git(target, 'config', '--bool', 'core.protectNTFS') == b'true', (
+        'The actual Windows setup leaves Git protection enabled for sparse checkout'
+    )
     checkout = next(step for step in steps if step.get('uses') == 'actions/checkout@v5')
     git(target, 'config', 'core.sparseCheckout', 'true')
     (target / '.git/info/sparse-checkout').write_text(checkout['with']['sparse-checkout'])
     git(target, 'read-tree', '-mu', 'HEAD')
     for name, data in files.items():
         if name.split('/')[0] in {'tests', 'docs', 'website'}:
-            assert not (target / name).exists(), (
-                'Excluded historical fixtures are not materialized'
-            )
+            assert not (target / name).exists(), 'Excluded project fixtures are not materialized'
         else:
             assert (target / name).read_bytes() == data, 'Producer configuration remains complete'
 
