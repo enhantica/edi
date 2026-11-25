@@ -67,6 +67,22 @@ edi::Project fixtureProject(const QString& fixture) {
     return project;
 }
 
+// The angle pattern with one structure and the time-of-flight pattern with two, so their panes' heights differ.
+edi::Project twoPatterns() {
+    edi::Project project = fixtureProject(QStringLiteral("cw"));
+    const edi::Project other = fixtureProject(QStringLiteral("tof"));
+    auto second = *project.structures.front();
+    second.name = "phase2";
+    project.structures.push_back(second);
+    auto flight = *other.experiments.front();
+    flight.name = "flight";
+    edi::LinkedStructure link;
+    link.structure_id = "phase2";
+    flight.linked_structures.push_back(link);
+    project.experiments.push_back(flight);
+    return project;
+}
+
 struct AxisRange {
     double xMin = 0, xMax = 0, yMin = 0, yMax = 0;
     double height = 1;  // the plot's, in pixels
@@ -119,7 +135,7 @@ struct Shown {
             if (!close(display(calculated[found->second]), point.y(), 1e-5)) return false;
             ++usable;
         }
-        return usable > 1;
+        return usable > 2;
     }
     bool sameLine(const Shown& other) const {
         return x == other.x && calculated == other.calculated && squareRoot == other.squareRoot;
@@ -154,6 +170,7 @@ struct Shown {
             const auto wrong = [&](const char* edge, double is, double should) {
                 return QStringLiteral("has its %1 edge at %2 at x %3, expected %4").arg(QLatin1String(edge)).arg(is).arg(up.x()).arg(should);
             };
+            if (up.y() < low.y()) return QStringLiteral("has its upper edge at %1 below its lower edge at %2 at x %3").arg(up.y()).arg(low.y()).arg(up.x());
             if (area == kMeasured) {
                 const double top = display(measured[row] + su[row]), bottom = display(measured[row] - su[row]);
                 if (!close(low.y(), bottom)) return wrong("lower", low.y(), bottom);
@@ -250,6 +267,9 @@ class WatchedChart : public QObject {
         double beyond = 0;  // how far outside the plot it was laid out, in pixels
         bool mainMoved = false;  // one of the main pane's ranges had changed by then
         QList<QPointF> line;     // the calculated line then
+        int phase = 0;
+        const QAreaSeries* series = nullptr;  // which area of that name it was, only to compare
+        bool outgoing = false;                // another area of that name had taken its place
     };
 
     explicit WatchedChart(edi_app::ProjectViewModel& project) {
@@ -368,11 +388,26 @@ class WatchedChart : public QObject {
     void start() {
         watchPaths();
         records_.clear();
+        ends_.clear();
         main_moved_ = false;
+        phase_ = 0;
         taken_early_ = taken_late_ = 0;
+        known_.clear();
+        newest_.clear();
+        noteAreas();
         recording_ = true;
     }
-    void stop() { recording_ = false; }
+    // Another change begins before the last one has settled.
+    void next() {
+        ends_.append({rangeOf(main_), rangeOf(residual_)});
+        main_moved_ = false;
+        ++phase_;
+    }
+    void stop() {
+        if (recording_) ends_.append({rangeOf(main_), rangeOf(residual_)});
+        recording_ = false;
+    }
+    int phase() const { return phase_; }
     qsizetype seen(bool layout) const {
         return std::count_if(records_.begin(), records_.end(), [layout](const Record& record) { return record.layout == layout; });
     }
@@ -381,14 +416,17 @@ class WatchedChart : public QObject {
     // one state to the other when the main pane's ranges move or the calculated line does, whichever is first: a layout
     // after that has the later state's areas, one before it the earlier's. Two states with the same line (a fill left
     // out or put back) have no such moment. An area on an axis that is changing must already be the later state's.
-    QStringList problems(const Shown& before, const Shown& after) const {
+    // `phase` counts the changes made one after the other without settling (next()).
+    QStringList problems(const Shown& before, const Shown& after, int phase = 0) const {
         QStringList out;
         std::map<QString, int> layouts, changes;
         std::map<QString, double> distances;
         for (const Record& record : records_) {
-            if (record.edges.empty()) continue;
+            if (record.phase != phase || record.edges.empty()) continue;
             QString problem;
-            if (record.layout) {
+            if (!record.layout && record.outgoing) {
+                problem = QStringLiteral("was replaced by another area and is still drawable");
+            } else if (record.layout) {
                 QList<const Shown*> states{&after};
                 if (before.sameLine(after)) states.append(&before);
                 else if (!record.mainMoved && before.hasLine(record.line)) states = {&before};
@@ -402,13 +440,14 @@ class WatchedChart : public QObject {
                 // An axis published end by end holds neither range in between: the points are judged on their own.
                 if (problem.contains(QLatin1String("in view")) || problem.contains(QLatin1String("the view"))) {
                     AxisRange whole = record.axis;
-                    const AxisRange now = rangeOf(record.area == kResidual ? residual_ : main_);
+                    const AxisRange now = record.area == kResidual ? ends_[phase].second : ends_[phase].first;
                     whole.xMin = now.xMin;
                     whole.xMax = now.xMax;
                     problem = after.problem(record.area, record.edges, whole);
                 }
             }
             if (problem.isEmpty()) continue;
+            if (record.layout && record.outgoing) problem.prepend(QStringLiteral("(the replaced one) "));
             int& count = record.layout ? layouts[record.area] : changes[record.area];
             if (record.layout) distances[record.area] = std::max(distances[record.area], record.beyond);
             if (++count == 1)
@@ -419,16 +458,20 @@ class WatchedChart : public QObject {
         return out;
     }
 
-    // New paths watched from before their first layout on.
-    int newPaths() const { return taken_late_ == 0 ? taken_early_ : 0; }
+    // Paths new since the start: how many Qt makes for the same areas is its own business.
+    int newPaths() const { return taken_early_ + taken_late_; }
 
     // What should have been observed and was not: a filled layout of every area shown afterwards, an empty one of every
     // area no longer shown, and each area on every axis named ("main axisX, residual axisY") as the axis changed.
-    QStringList unseen(const Shown& before, const Shown& after, const QString& axes) const {
+    // The areas laid out have to be the very ones the chart then has.
+    QStringList unseen(const Shown& before, const Shown& after, const QString& axes, int phase = 0) const {
         QStringList out;
-        const auto seenLayout = [this](const QString& area, bool empty) {
+        const QList<Area> now = areas();
+        const auto seenLayout = [this, &now, phase](const QString& name, bool empty) {
+            const auto area = std::find_if(now.begin(), now.end(), [&name](const Area& each) { return each.name == name; });
             return std::any_of(records_.begin(), records_.end(), [&](const Record& record) {
-                return record.layout && record.area == area && record.edges.empty() == empty;
+                return record.layout && record.phase == phase && record.area == name && record.edges.empty() == empty &&
+                       (area == now.end() || record.series == area->series);
             });
         };
         if (taken_late_ > 0) out.append(QStringLiteral("%1 paths were laid out before they were watched").arg(taken_late_));
@@ -442,7 +485,7 @@ class WatchedChart : public QObject {
                 const QStringList words = axis.split(u' ');
                 if ((words.first() == QLatin1String("residual")) != (area == kResidual)) continue;
                 if (std::none_of(records_.begin(), records_.end(), [&](const Record& record) {
-                        return !record.layout && record.area == area && record.event == words.last();
+                        return !record.layout && record.phase == phase && record.area == area && record.event == words.last();
                     }))
                     out.append(QStringLiteral("%1 was not seen on the changing %2").arg(area, axis));
             }
@@ -561,6 +604,7 @@ class WatchedChart : public QObject {
     }
     void laidOut(QQuickItem* view, QQuickPath* path) {
         if (!recording_) return;
+        noteAreas();
         const qsizetype place = pathsOf(view).indexOf(path);
         qsizetype at = 0;
         for (const Area& area : areas()) {
@@ -569,14 +613,27 @@ class WatchedChart : public QObject {
             const QRectF bounds = path->path().boundingRect();
             const double beyond = std::max({0.0, -bounds.left(), -bounds.top(), bounds.right() - shape->parentItem()->width(),
                                             bounds.bottom() - shape->parentItem()->height()});
-            records_.append({true, area.name, QStringLiteral("layout"), edgesOf(path, rangeOf(view)), rangeOf(view), beyond, main_moved_, line_->points()});
+            records_.append({true, area.name, QStringLiteral("layout"), edgesOf(path, rangeOf(view)), rangeOf(view), beyond, main_moved_, line_->points(), phase_, area.series, outgoing(area)});
         }
+    }
+    // Of two areas with one name the one seen later has taken the other's place.
+    void noteAreas() {
+        for (const Area& area : areas()) {
+            if (std::any_of(known_.begin(), known_.end(), [&area](const QPointer<QAreaSeries>& each) { return each == area.series; })) continue;
+            known_.append(area.series);
+            newest_[area.name] = area.series;
+        }
+    }
+    bool outgoing(const Area& area) const {
+        const auto newest = newest_.find(area.name);
+        return newest != newest_.end() && newest->second && newest->second != area.series;
     }
     void attached(QQuickItem* view, const char* axis) {
         if (!recording_) return;
         main_moved_ = main_moved_ || view == main_;
+        noteAreas();
         for (const Area& area : areas())
-            if (area.view == view) records_.append({false, area.name, QLatin1String(axis), edgesOf(area), rangeOf(view), 0, main_moved_, line_->points()});
+            if (area.view == view) records_.append({false, area.name, QLatin1String(axis), edgesOf(area), rangeOf(view), 0, main_moved_, line_->points(), phase_, area.series, outgoing(area)});
     }
 
     QQmlEngine engine_;
@@ -588,6 +645,10 @@ class WatchedChart : public QObject {
     QString error_;
     QPointer<QLineSeries> line_;
     bool recording_ = false, main_moved_ = false;
+    int phase_ = 0;
+    QList<std::pair<AxisRange, AxisRange>> ends_;  // each phase's last ranges, the main pane's and the residual's
+    QList<QPointer<QAreaSeries>> known_;
+    std::map<QString, QPointer<QAreaSeries>> newest_;
     int taken_early_ = 0, taken_late_ = 0;  // paths watched before their first layout, and after it
     QList<Record> records_;
     QSet<QQuickPath*> watched_;
@@ -612,8 +673,8 @@ edi_app::ParameterItem* parameterEnding(edi_app::ProjectViewModel& model, const 
         (chart).stop();                                                                                                \
         qInfo("%s: %lld layouts and %lld areas on changing axes seen", step, static_cast<long long>((chart).seen(true)), \
               static_cast<long long>((chart).seen(false)));                                                            \
-        for (const QString& found : (chart).problems((before), (after)) +                                              \
-                                        (chart).unseen((before), (after), QStringLiteral(axes)) +                      \
+        for (const QString& found : (chart).problems((before), (after), (chart).phase()) +                             \
+                                        (chart).unseen((before), (after), QStringLiteral(axes), (chart).phase()) +     \
                                         (chart).settledProblems(after))                                                \
             wrong.append(QLatin1String(step) + QStringLiteral(": ") + found);                                          \
     } while (false)
@@ -661,19 +722,7 @@ class ChartAreaTests : public QObject {
     }
 
     void experimentChoice() {
-        edi::Project project = fixtureProject(QStringLiteral("cw"));
-        const edi::Project other = fixtureProject(QStringLiteral("tof"));
-        auto second = *project.structures.front();
-        second.name = "phase2";
-        project.structures.push_back(second);
-        auto flightExperiment = *other.experiments.front();
-        flightExperiment.name = "flight";
-        // Two rows of Bragg ticks beside one: the panes' heights change with the axes.
-        edi::LinkedStructure link;
-        link.structure_id = "phase2";
-        flightExperiment.linked_structures.push_back(link);
-        project.experiments.push_back(flightExperiment);
-        edi_app::ProjectViewModel model(std::move(project), nullptr);
+        edi_app::ProjectViewModel model(twoPatterns(), nullptr);
         WatchedChart chart(model);
         QVERIFY2(chart.error().isEmpty(), qPrintable(chart.error()));
         const Shown angle = shownOf(*model.project().experiments[0], measuredRows(QStringLiteral("cw")));
@@ -688,12 +737,78 @@ class ChartAreaTests : public QObject {
             QVERIFY(chart.settle());
             flight = shownOf(*model.project().experiments[1], measuredRows(QStringLiteral("tof")));
             QCOMPARE(flight.structures.size(), std::size_t(2));
-            QVERIFY(round > 0 || chart.newPaths() > 0);
+            qInfo("round %d: %d new paths", round, chart.newPaths());
             CHECK_CHANGE("to time of flight", chart, angle, flight, "main axisX, main axisY, residual axisX, residual axisY");
             chart.start();
             model.setCurrentExperimentIndex(0);
             CHECK_CHANGE("to 2 theta", chart, flight, angle, "main axisX, main axisY, residual axisX, residual axisY");
         }
+        VERIFY_NOTHING_WRONG();
+    }
+
+    // The second structure's area is made, and the axes move on before anything else happens.
+    void axesMoveAsAreasAreMade_data() {
+        QTest::addColumn<bool>("back");
+        QTest::newRow("back to the other experiment") << true;
+        QTest::newRow("zoomed") << false;
+    }
+    void axesMoveAsAreasAreMade() {
+        QFETCH(bool, back);
+        edi_app::ProjectViewModel model(twoPatterns(), nullptr);
+        WatchedChart chart(model);
+        QVERIFY2(chart.error().isEmpty(), qPrintable(chart.error()));
+        const Shown angle = shownOf(*model.project().experiments[0], measuredRows(QStringLiteral("cw")));
+        const Shown flight = shownOf(*model.project().experiments[1], measuredRows(QStringLiteral("tof")));
+        QCOMPARE(flight.structures.size(), std::size_t(2));
+        QVERIFY(flight.calculated.size() == flight.x.size());
+        QCOMPARE(chart.settledProblems(angle), QStringList());
+        QVERIFY(!chart.hasArea(structureArea(1)));
+        const QSizeF plot = chart.mainView()->property("plotArea").toRectF().size();
+        QStringList wrong;
+        chart.start();
+        model.setCurrentExperimentIndex(1);
+        QVERIFY(chart.hasArea(structureArea(1)));
+        chart.next();
+        if (back) model.setCurrentExperimentIndex(0);
+        else chart.controller()->zoomTo(0.4 * plot.width(), 0.45 * plot.width(), 0, plot.height());
+        QVERIFY(chart.settle());
+        chart.stop();
+        for (const QString& found : chart.problems(angle, flight, 0)) wrong.append(QStringLiteral("to time of flight: ") + found);
+        CHECK_CHANGE("moved on", chart, flight, back ? angle : flight, "main axisX, residual axisX");
+        VERIFY_NOTHING_WRONG();
+    }
+
+    void structureLinked() {
+        edi::Project project = fixtureProject(QStringLiteral("cw"));
+        auto second = *project.structures.front();
+        second.name = "phase2";
+        project.structures.push_back(second);
+        edi_app::ProjectViewModel model(std::move(project), nullptr);
+        WatchedChart chart(model);
+        QVERIFY2(chart.error().isEmpty(), qPrintable(chart.error()));
+        const auto rows = measuredRows(QStringLiteral("cw"));
+        const Shown one = shownOf(model.project().experiment(), rows);
+        QCOMPARE(chart.settledProblems(one), QStringList());
+        QVERIFY(!chart.hasArea(structureArea(1)));
+        const QSizeF plot = chart.mainView()->property("plotArea").toRectF().size();
+        // The drawing that makes the new area is the calculation's, so the zoom follows it at once.
+        bool zoomed = false;
+        connect(chart.controller(), &edi_app::PatternChartController::revisionChanged, &chart, [&] {
+            if (zoomed || !chart.hasArea(structureArea(1))) return;
+            zoomed = true;
+            chart.next();
+            chart.controller()->zoomTo(0.4 * plot.width(), 0.45 * plot.width(), 0, plot.height());
+        });
+        chart.start();
+        model.currentExperiment()->linkedStructures()->append();
+        QVERIFY(chart.settle());
+        QVERIFY(zoomed);
+        chart.stop();
+        const Shown both = shownOf(model.project().experiment(), rows);
+        QCOMPARE(both.structures.size(), std::size_t(2));
+        QStringList wrong;
+        for (const QString& found : chart.problems(one, both, 0)) wrong.append(QStringLiteral("linked: ") + found);
+        CHECK_CHANGE("moved on", chart, both, both, "main axisX, residual axisX");
         VERIFY_NOTHING_WRONG();
     }
 
@@ -881,6 +996,7 @@ class ChartAreaTests : public QObject {
             QVERIFY(now.xMin == zoomed.xMin && now.xMax == zoomed.xMax && now.yMin == zoomed.yMin && now.yMax == zoomed.yMax);
             const Shown full = onDSpacing(shownOf(model.project().experiment(), rows), value);
             // The step was drawn: the calculated line is already at the new wavelength.
+            QVERIFY(chart.calculatedLine()->points().size() > 2);
             QVERIFY(full.hasLine(chart.calculatedLine()->points()) && !before.hasLine(chart.calculatedLine()->points()));
             const Shown during = held(full);
             CHECK_CHANGE("held", chart, before, during, "");
