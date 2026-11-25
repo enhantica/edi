@@ -25500,7 +25500,7 @@
         "param.mixing_eta_0.value": "0.1247091329",
         "param.mixing_eta_0.uncertainty": "0.005012815072"
       },
-      "stderr": "Warning: structures[Al2O3].atom_sites[Al1].adp_iso = -0.13591 is outside its admissible range [0, 10]; loaded as saved (a fit may leave a value there)\n",
+      "stderr": "Warning: Al2O3.atom_site.Al1.adp_iso = -0.13591 is outside its admissible range [0, 10]; loaded as saved (a fit may leave a value there)\n",
       "parameters": [
         {
           "value": 4.7583943391685635,

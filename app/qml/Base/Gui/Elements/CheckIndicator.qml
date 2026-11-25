@@ -1,0 +1,137 @@
+// SPDX-License-Identifier: BSD-3-Clause
+// Pinned gui-components copy; upstream animates every change of the check state. Here only a press animates it: a row
+// made or reused while a table scrolls, or a state set by the program, shows the box as it is at once (the owner,
+// 2026-11-23: every Free box shrank and grew back after a fast scroll).
+import QtQuick
+
+import EasyApplication.Gui.Style as EaStyle
+import EasyApplication.Gui.Globals as EaGlobals
+import EasyApplication.Gui.Animations as EaAnimations
+import EasyApplication.Gui.Elements as EaElements
+
+Rectangle {
+    id: indicatorItem
+
+    property Item control
+    property int checkState: box().checkState
+
+    // The control as a check box or a menu item: an Item has none of their properties.
+    function box(): var {
+        return indicatorItem.control;
+    }
+
+    // True for a moment after a press (a click or the space key), while the toggle it makes animates.
+    property bool animates: false
+    Connections {
+        target: indicatorItem.control
+        function onPressedChanged() {
+            if (indicatorItem.box().pressed) {
+                indicatorItem.animates = true;
+                settle.restart();
+            }
+        }
+    }
+    Timer {
+        id: settle
+        interval: 600
+        onTriggered: indicatorItem.animates = false
+    }
+
+    implicitWidth: EaStyle.Sizes.fontPixelSize * 1.5
+    implicitHeight: EaStyle.Sizes.fontPixelSize * 1.5
+
+    radius: 2
+
+    color: EaStyle.Colors.themeBackgroundHovered2
+    Behavior on color {
+        EaAnimations.ThemeChange {}
+    }
+
+    border.color: !control.enabled ? EaStyle.Colors.checkBoxBorderDisabled : box().checked ? box().color : box().hovered ? EaStyle.Colors.themeForegroundHovered : EaStyle.Colors.checkBoxBorder
+    Behavior on border.color {
+        EaAnimations.ThemeChange {}
+    }
+
+    // A checked box is filled while enabled; a disabled one keeps its border and shows the mark in the border colour.
+    border.width: control.enabled && checkState !== Qt.Unchecked ? width / 2 : 1
+    Behavior on border.width {
+        enabled: indicatorItem.animates
+        NumberAnimation {
+            duration: 100
+            easing.type: Easing.OutCubic
+        }
+    }
+
+    EaElements.Label {
+        id: checkSymbol
+
+        x: (parent.width - width) / 2
+        y: (parent.height - height) / 2
+
+        text: "\uf00c"
+
+        font.family: EaStyle.Fonts.iconsFamily
+        font.pixelSize: EaStyle.Sizes.fontPixelSize
+
+        scale: indicatorItem.checkState === Qt.Checked ? 1 : 0
+        Behavior on scale {
+            enabled: indicatorItem.animates
+            NumberAnimation {
+                duration: 100
+            }
+        }
+
+        color: indicatorItem.control.enabled ? "white" ://EaStyle.Colors.checkSymbol :
+        EaStyle.Colors.checkBoxBorderDisabled
+        Behavior on color {
+            EaAnimations.ThemeChange {}
+        }
+    }
+
+    Rectangle {
+        x: (parent.width - width) / 2
+        y: (parent.height - height) / 2
+        width: 12
+        height: 3
+
+        color: indicatorItem.control.enabled ? "white" : EaStyle.Colors.checkBoxBorderDisabled
+
+        scale: indicatorItem.checkState === Qt.PartiallyChecked ? 1 : 0
+        Behavior on scale {
+            enabled: indicatorItem.animates
+            NumberAnimation {
+                duration: 100
+            }
+        }
+    }
+
+    states: [
+        State {
+            name: "checked"
+            when: indicatorItem.checkState === Qt.Checked
+        },
+        State {
+            name: "partiallychecked"
+            when: indicatorItem.checkState === Qt.PartiallyChecked
+        }
+    ]
+
+    transitions: Transition {
+        enabled: indicatorItem.animates
+        SequentialAnimation {
+            NumberAnimation {
+                target: indicatorItem
+                property: "scale"
+                // Go down 2 pixels in size.
+                to: 1 - 2 / indicatorItem.width
+                duration: 120
+            }
+            NumberAnimation {
+                target: indicatorItem
+                property: "scale"
+                to: 1
+                duration: 120
+            }
+        }
+    }
+}

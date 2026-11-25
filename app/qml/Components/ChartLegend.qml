@@ -30,7 +30,18 @@ Rectangle {
     // A click on a row hides its curve or shows it again (the owner, 2026-10-25, as plotly's legend): `toggled` gives
     // the row's key, and a hidden row is drawn in the disabled colour. A legend without curves to hide leaves it off.
     // The widest an entry may be (0: as wide as it reads); a longer one is cut in its middle, its whole text in a tooltip.
+    // The legend is as wide as its entries read (the owner, 2026-11-23): only a datablock's name longer than this many
+    // characters is cut, in its middle, its full name in the entry's tooltip; a series' own label (Measured, Total
+    // calculated, Background, Residual) never is.
+    property int nameBudget: 20
+    // A chart's own limit on every entry (0: none), as the Evolution chart's parameter names have.
     property real maximumLabelWidth: 0
+    readonly property var fixedSeries: ["meas", "calc", "bkg", "resid"]
+    FontMetrics {
+        id: nameMetrics
+        font.family: EaStyle.Fonts.fontFamily
+        font.pixelSize: EaStyle.Sizes.fontPixelSize
+    }
     property bool toggles: false
 
     signal toggled(string key)
@@ -87,7 +98,10 @@ Rectangle {
 
                 objectName: "chart.legend.entry"
                 height: legend.rowHeight
-                maximumWidth: legend.maximumLabelWidth
+                // The name the row carries (its last text), unless the row is a series' own label.
+                readonly property string named: legend.fixedSeries.includes(key) ? "" : labelTexts.length > 0 ? labelTexts[labelTexts.length - 1] : label
+                readonly property real nameLimit: named.length > legend.nameBudget ? otherWidth + Math.ceil(nameMetrics.advanceWidth(named.slice(0, legend.nameBudget / 2) + "…" + named.slice(-(legend.nameBudget / 2 - 1)))) : 0
+                maximumWidth: legend.maximumLabelWidth > 0 && nameLimit > 0 ? Math.min(nameLimit, legend.maximumLabelWidth) : Math.max(nameLimit, legend.maximumLabelWidth)
                 elide: Text.ElideMiddle
                 textColor: hidden ? legend.colors.themeForegroundDisabled : color
                 // A hidden entry keeps its own pieces, its mark or icon included, each in the disabled colour (the
@@ -107,8 +121,17 @@ Rectangle {
 
                     EaElements.ToolTip {
                         requested: entryHover.containsMouse
-                        text: entry.hidden ? qsTr("Click to show") : qsTr("Click to hide")
+                        text: (entry.fullWidth > entry.width + 0.5 ? entry.label + "\n" : "") + (entry.hidden ? qsTr("Click to show") : qsTr("Click to hide"))
                     }
+                }
+                // A cut name shows in full on hover whether or not the legend toggles (a report's legend does not).
+                HoverHandler {
+                    id: nameHover
+                    enabled: !legend.toggles
+                }
+                EaElements.ToolTip {
+                    requested: nameHover.hovered && entry.fullWidth > entry.width + 0.5
+                    text: entry.label
                 }
             }
         }

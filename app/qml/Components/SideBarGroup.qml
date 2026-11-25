@@ -4,6 +4,7 @@ import QtQuick.Controls
 
 import EasyApplication.Gui.Style as EaStyle
 import EasyApplication.Gui.Elements as EaElements
+import EasyApplication.Gui.Components as EaComponents
 
 import edi.app
 
@@ -17,6 +18,19 @@ import edi.app
 EaElements.GroupBox {
     id: group
 
+    // The sidebar column's scroll bar shows whenever the column is taller than the panel, the cue that a cut group goes
+    // on below (the owner, 2026-11-22); set from here, as every sidebar holds groups.
+    Component.onCompleted: {
+        for (let item = parent; item; item = item.parent) {
+            if (item instanceof EaComponents.SideBarColumn) {
+                const column = item;
+                if (column.ScrollBar.vertical)
+                    column.ScrollBar.vertical.policy = Qt.binding(() => column.contentHeight > column.height + 1 ? ScrollBar.AlwaysOn : ScrollBar.AlwaysOff);
+                break;
+            }
+        }
+    }
+
     // The name a pin is remembered by, between sessions.
     property string pinKey: objectName
     readonly property bool pinned: pinKey !== "" && Preferences.pinnedGroups.split(",").includes(pinKey)
@@ -28,11 +42,13 @@ EaElements.GroupBox {
     }
 
     // The height the base animates towards (its implicitHeight without the animation).
-    readonly property real restingHeight: collapsed ? titleArea.height : titleArea.height + spacing + contentHeight + bottomPadding
+    readonly property real openHeight: titleArea.height + spacing + contentHeight + bottomPadding
+    readonly property real restingHeight: collapsed ? titleArea.height : openHeight
     property bool folding: false
 
     height: folding ? implicitHeight : restingHeight
     onCollapsedChanged: {
+        AppSizes.sideBarFoldedAt = Date.now();
         if (!collapsed && Preferences.autoCollapse) {
             for (const other of parent.children) {
                 if (other !== group && other.pinned === false && other.collapsible && !other.collapsed)
@@ -59,7 +75,7 @@ EaElements.GroupBox {
     // The base's fold animation takes 500 ms.
     Timer {
         id: foldEnd
-        interval: 550
+        interval: AppSizes.sideBarFoldMs
         onTriggered: group.folding = false
     }
 
@@ -76,9 +92,10 @@ EaElements.GroupBox {
         horizontalAlignment: Text.AlignHCenter
         verticalAlignment: Text.AlignVCenter
         font.family: EaStyle.Fonts.iconsFamily
-        font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.85
+        // In the text colour at a title icon's size: faded, it read as disabled (the owner, 2026-11-23).
+        font.pixelSize: EaStyle.Sizes.fontPixelSize
         rotation: group.pinned ? 0 : 45
-        color: group.pinned ? EaStyle.Colors.themeAccent : pinHover.hovered ? EaStyle.Colors.themeForegroundHovered : EaStyle.Colors.themeForegroundDisabled
+        color: group.pinned ? EaStyle.Colors.themeAccent : pinHover.hovered ? EaStyle.Colors.themeForegroundHovered : EaStyle.Colors.themeForeground
         text: "thumbtack"
 
         HoverHandler {

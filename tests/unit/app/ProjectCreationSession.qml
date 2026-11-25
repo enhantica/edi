@@ -47,6 +47,7 @@ CollectionBoundarySession {
         Session.closeProject();
         AppState.open(AppState.Page.Project);
         settle();
+        Ui.expandGroup(this, Probe, app, "group.getStarted");
         Ui.click(this, Probe, app, "project.create");
         const dialog = Probe.objectsWithProperty(app, "projectName").find(item => item.visible && item.objectName === "createProject.dialog");
         verify(dialog !== undefined, "Project creation uses the visible production form");

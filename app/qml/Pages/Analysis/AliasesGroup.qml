@@ -30,7 +30,9 @@ Column {
         defaultInfoText: qsTr("No aliases")
         sourceModel: group.aliases
 
-        columns: [numberColumnWidth, -1, -1, AppSizes.iconColumnWidth]
+        // Its columns by kind (the shared column model, DataTable.columnKinds; ADR-0103 decision 4).
+        columnKinds: ["index", "short", "name", "control"]
+        // Widths from column types, not rows (ADR-0103 rule 4): the alias, then its parameter.
 
         header: EaComponents.ListViewHeader {
             EaComponents.ListViewLabel {
@@ -77,7 +79,6 @@ Column {
             // The whole Parameter column, and a list as wide as its widest entry with its icons, within the window (the
             // owner, 2026-11-17).
             ComboCell {
-                fills: true
 
                 SearchableComboBox {
                     id: parameterBox
@@ -87,7 +88,7 @@ Column {
                     }
                     readonly property var names: group.aliases ? group.aliases.parameterNames : []
                     // Search the full name shown after the separator, including every loop key.
-                    readonly property var searchNames: parameterBox.names.map(name => parameterBox.itemOf(name)?.path ?? name)
+                    readonly property var searchNames: parameterBox.names.map(name => parameterBox.itemOf(name)?.fullName ?? name)
 
                     inTable: true
                     horizontalAlignment: Text.AlignLeft
@@ -102,12 +103,22 @@ Column {
                     onActivated: index => group.aliases.setText(row.index, "parameter", parameterBox.names[index])
 
                     contentItem: Item {
+                        // The room the arrow takes at the right: the box's own label keeps it, this line must too.
+                        readonly property real arrowRoom: parameterBox.indicator ? parameterBox.indicator.width : 0
                         clip: true
+                        // The closed line's own width (icons, short name, separator and full name): what the box fits,
+                        // so its arrow follows the line; the popup keeps its own width.
+                        implicitWidth: closedLine.fullWidth + arrowRoom
 
+                        // Cut in its middle when the column is narrow, never under the arrow (the owner, 2026-11-22).
                         IconLine {
+                            id: closedLine
                             anchors.verticalCenter: parent.verticalCenter
-                            width: parent.width
-                            maximumWidth: Math.max(1, parent.width)
+                            width: Math.max(1, parent.width - parent.arrowRoom)
+                            maximumWidth: Math.max(1, parent.width - parent.arrowRoom)
+                            elide: Text.ElideMiddle
+                            // The leading icons give way before the name is cut to its ellipsis.
+                            minimumTextWidth: EaStyle.Sizes.fontPixelSize * 3
                             segments: ParameterNames.pickerLine(parameterBox.itemOf(row.model.parameter), row.model.parameter)
                         }
                     }
@@ -153,21 +164,34 @@ Column {
     }
 
     Row {
+        id: buttons
+
+        // Whole labels where the longer fits beside its icon, else the short ones, the same on both buttons (no label
+        // runs out of its button).
+        readonly property bool wholeLabels: labelMetrics.advanceWidth + EaStyle.Sizes.fontPixelSize * 4 <= appendButton.width
+        TextMetrics {
+            id: labelMetrics
+            font.family: EaStyle.Fonts.fontFamily
+            font.pixelSize: EaStyle.Sizes.fontPixelSize
+            text: qsTr("Duplicate selected alias")
+        }
+
         spacing: EaStyle.Sizes.fontPixelSize
 
         EaElements.SideBarButton {
+            id: appendButton
             objectName: "aliases.append"
             enabled: group.aliases !== null && group.aliases.parameterNames.length > 0
             ToolTip.text: enabled ? qsTr("Append an alias for an offered parameter") : qsTr("No parameter is available for an alias")
             fontIcon: "plus-circle"
-            text: qsTr("Append new alias")
+            text: buttons.wholeLabels ? qsTr("Append new alias") : qsTr("Append")
             onClicked: group.aliases.append()
         }
         EaElements.SideBarButton {
             objectName: "aliases.duplicate"
             enabled: table.currentIndex >= 0 || (group.aliases && group.aliases.count > 0)
             fontIcon: "clone"
-            text: qsTr("Duplicate selected alias")
+            text: buttons.wholeLabels ? qsTr("Duplicate selected alias") : qsTr("Duplicate")
             ToolTip.text: enabled ? "" : qsTr("Nothing to duplicate: add an alias first")
             onClicked: group.aliases.duplicate(Math.max(table.currentIndex, 0))
         }

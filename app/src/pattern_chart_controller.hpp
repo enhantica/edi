@@ -10,13 +10,13 @@
 #include <QPointer>
 #include <QString>
 #include <QStringList>
-#include <QVariantAnimation>
 #include <QtGraphs/QXYSeries>
 #include <QtQml/qqmlregistration.h>
 #include <array>
 #include <optional>
 #include <vector>
 
+#include "range_animation.hpp"
 #include "chart_models.hpp"
 #include "edi/presentation.hpp"
 #include "experiment_view_model.hpp"
@@ -261,6 +261,30 @@ class PatternChartController : public QObject {
     double braggHeight() const { return bragg_height_; }
     bool hasResidual() const { return has_residual_; }
     bool hasData() const { return has_data_; }
+#if EDI_UI_INSTRUMENTATION
+    // The UI trace's view of an upload (ui_probe.hpp): how many times the series were filled, the content identity of
+    // the measured data they were filled from, and whether the series objects the scene draws still hold that fill.
+    qint64 traceGeneration() const { return trace_generation_; }
+    QString traceIdentity() const { return trace_identity_; }
+    // The identity of the points this upload put into the series objects, read back from them right after the fill,
+    // and the same identity read from the series objects now: equal while the scene holds that upload. Empty when no
+    // series holds a finite point (no fill).
+    QString traceUploadIdentity() const { return trace_upload_identity_; }
+    QString traceBufferIdentity() const;
+    // The measured data as the scene draws them, read from the scene objects, for a check against the selected data
+    // that does not go through this controller: the line's and the markers' points, and the band's edges at each x
+    // (x, lower, upper).
+    QList<QPointF> traceMeasuredLine() const;
+    QList<QPointF> traceMeasuredMarks() const;
+    QList<std::array<double, 3>> traceMeasuredBand() const;
+    QList<std::array<double, 3>> traceBand(int pane) const;
+    // Whether every series the chart draws holds what the given presentation draws (refresh's own fills, compared).
+    bool traceMatches(const edi::PatternPresentation& expected) const;
+    // What the chart presents its data with, so the trace can present the selected data itself and compare.
+    edi::PatternView traceView() const { return view(); }
+    edi::PatternAxis traceAxis() const { return axis_; }
+    int traceExperimentPlace() const;
+#endif
     bool current() const { return current_; }
     QString xTitle() const { return x_title_; }
     QString yTitle() const { return y_title_; }
@@ -418,7 +442,7 @@ class PatternChartController : public QObject {
     void finishAnimation();
     // The same without drawing, for a caller that draws next.
     void stopAnimation();
-    void animationFrame(double progress);
+    void animationFrame();
     // The presented point nearest the pointer in `pane` and no farther than `within` pixels, or none.
     struct Nearest {
         const edi::PatternSeries* series = nullptr;
@@ -466,11 +490,10 @@ class PatternChartController : public QObject {
     const edi::PatternSource& shownSource() const;
     // The view: unset means the data's full x range, and y ranges fitted to what is presented.
     std::optional<double> x_min_, x_max_, y_min_, y_max_;
-    // The animation: its ranges at the start and the end, as shown, and the view it ends in.
-    QVariantAnimation animation_;
+    // The animation (the one every zooming chart moves with) and the view it ends in.
+    RangeAnimation animation_;
     int animation_duration_ = 250;
     bool animating_ = false;
-    double from_[4] = {}, to_[4] = {};
     std::optional<double> target_[4];
     QPointer<QXYSeries> measured_series_, calculated_series_, background_series_, residual_series_;
     QList<QPointer<QXYSeries>> bragg_series_;
@@ -482,6 +505,17 @@ class PatternChartController : public QObject {
         QPointer<QXYSeries> upper, lower, top, bottom;
     };
     std::array<BandSeries, 3> band_series_;  // the measured band, the residual band, the calculated bars
+    // What one drawing of a presentation puts in each series (fillsOf).
+    struct Fills {
+        QList<QPair<QPointer<QXYSeries>, QList<QPointF>>> series;
+        bool marks_set = false;
+        QList<QPointF> marks;
+        QList<double> marks_low, marks_high;
+        bool component_bars = false;
+        bool missing = false;  // a structure curve whose series the chart has not handed over yet
+        double bar_width = std::numeric_limits<double>::quiet_NaN();
+    };
+    Fills fillsOf(const edi::PatternPresentation& shown, bool held, bool clear_fills) const;
     QString measured_drawing_ = QStringLiteral("band");  // how the measured data are drawn (measuredStyle)
     bool structure_curves_ = false, has_calculated_ = false;
     QList<QColor> structure_curve_colors_, structure_curve_fills_;
@@ -510,6 +544,15 @@ class PatternChartController : public QObject {
     double x_tick_ = 0.0, x_anchor_ = 0.0, y_tick_ = 0.0, y_anchor_ = 0.0, residual_tick_ = 0.0;
     int bragg_rows_ = 0, revision_ = 0;
     bool has_residual_ = false, has_data_ = false, current_ = false;
+    // Whether the panes shown may stay while a dataset's calculation is to come: false until the first refresh of an
+    // experiment (ADR-0102 rule 5).
+    bool keeps_panes_ = false;
+#if EDI_UI_INSTRUMENTATION
+    qint64 trace_generation_ = 0;
+    QString trace_identity_;
+    QList<QPointer<QXYSeries>> trace_series_;  // the series this upload filled, in a fixed order
+    QString trace_upload_identity_;
+#endif
     QString x_title_, y_title_, residual_title_;
     QColor measured_color_, calculated_color_, background_color_, residual_color_, excluded_color_;
     QList<QColor> bragg_colors_;

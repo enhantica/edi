@@ -11,7 +11,13 @@ import pytest
 
 from tests.fixtures.native_process import native_executable, native_static_library
 from tests.fixtures.table_display import gui_base
-from tests.integration.py.test_scan_app_contract import javascript, property_value
+from tests.integration.py.test_scan_app_contract import (
+    block,
+    control_type,
+    item,
+    javascript,
+    property_value,
+)
 from tests.integration.py.test_table_display import run_functions
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -22,68 +28,89 @@ def source(path):
 
 
 def fraction_cell(text):
-    start = text.index('EaComponents.ListViewParameter {')
-    depth = 0
-    for index in range(text.index('{', start), len(text)):
-        if text[index] == '{':
-            depth += 1
-        elif text[index] == '}':
-            depth -= 1
-            if depth == 0:
-                return text[start : index + 1]
-    pytest.fail('The weight-fraction parameter cell must have a complete QML body')
-
-
-def check_cell(cell):
-    for role in ('value', 'uncertainty'):
-        assert re.search(r'row\.weightFraction\.' + role + r'\b', cell), (
-            'The parameter cell must consume the live weight-fraction value and uncertainty'
-        )
-    assert re.search(r'\breadOnly\s*:\s*true\b', cell), (
-        'The derived weight-fraction parameter cell must be explicitly read-only'
+    name = 'linkedStructure.weightFraction.${row.index}'
+    assert control_type(text, name) == 'DerivedCell', (
+        'Linked structures must display the fraction through the shared derived cell'
     )
-    for flag in ('fittable', 'fit'):
-        assert re.search('"' + flag + r'"\s*:\s*false\b', cell), (
-            'The derived weight-fraction cell must never enable fitting'
+    return item(text, name)
+
+
+def check_cell(cell, derived):
+    for binding, role in (('fractionValue', 'value'), ('fractionError', 'uncertainty')):
+        assert property_value(cell, binding) == f'known ? row.weightFraction.{role} : 0', (
+            'The derived cell reads its own weight-fraction value and uncertainty roles'
         )
-    assert not re.search(
-        r'on(?:Edited|Accepted|ValueChanged|EditingFinished|FitToggled)\s*:', cell
-    ), 'Derived weight fractions must have no editing or fitting handler'
+    assert property_value(cell, 'shownValue') == (
+        'known ? Session.valueText("linked_structure.weight_fraction", fractionValue, '
+        'fractionError) : ""'
+    ), 'The table shows the common value-only presentation for the live fraction'
     assert (
-        'Session.valueText("linked_structure.weight_fraction", fractionValue, fractionError)'
-        in cell
-    ), 'The derived fraction must use the common parameter value display rule'
+        property_value(cell, 'fullValue') == 'known ? NumberText.plainFull(fractionValue) : ""'
+    ), 'The popup receives the complete fraction independently of the fitted table text'
     assert (
-        'Session.suText("linked_structure.weight_fraction", fractionValue, fractionError)' in cell
-    ), 'The derived fraction must supply its uncertainty separately for the value menu'
+        property_value(cell, 'uid') == '"linked_structure.weight_fraction"'
+        and 'row.model.scale.fullName' in property_value(cell, 'derivedName')
+        and property_value(cell, 'derivedName').endswith('+ "weight_fraction" : ""')
+    ), 'The popup retains the saved linked-structure identity and dictionary UID'
+    assert property_value(cell, 'uncertainty') == (
+        'known ? Session.suText("linked_structure.weight_fraction", fractionValue, '
+        'fractionError) : ""'
+    ), 'The popup receives the separately formatted uncertainty'
+    assert (
+        property_value(derived, 'readOnly') == 'true'
+        and re.search(r'(?m)^\s*property bool editable:\s*false\s*$', derived)
+        and not re.search(r'(?m)^\s*(editable|onCommitted):', cell)
+    ), 'The linked fraction grants neither inline editing nor popup writes'
+    assert property_value(derived, 'menuValue') == 'fullValue !== "" ? fullValue : shownValue', (
+        'The shared popup selects the full value whenever it is available'
+    )
+    assert 'shownValue !== ""' in property_value(derived, 'clickOpensMenu'), (
+        'A known read-only fraction opens the shared popup and an empty fraction does not'
+    )
+    parameter = property_value(derived, 'parameter')
+    assert all(
+        f'"{field}": {value}' in parameter
+        for field, value in {
+            'value': 'cell.fittedValue',
+            'error': 'cell.uncertainty',
+            'fittable': 'true',
+            'fit': 'false',
+        }.items()
+    ), 'The ordinary shared popup receives the separate s.u. and a clear Free box'
+    free = block(derived, 'Binding {')
+    editor = block(block(derived, 'editorComponent: Component {'), 'EaElements.TextField {')
+    assert (
+        property_value(free, 'target') == 'cell.fitCheckBox'
+        and property_value(free, 'property') == '"enabled"'
+        and property_value(free, 'value') == 'false'
+        and property_value(editor, 'readOnly') == '!cell.editable'
+    ), 'The real popup leaves Free disabled and its derived fraction value read-only'
 
 
-def check_empty_cell_text(cell):
-    # Execute the actual cell map and upstream rendered-text bindings. This is
-    # source-binding behavior, not a Qt pixel capture or a copied empty-value rule.
-    parameter = re.search(r'parameter:\s*([\s\S]*?)\n\s*color:', cell)
-    assert parameter, 'The fraction witness must execute the actual parameter map'
+def check_empty_cell_text(cell, derived):
     bindings = ''.join(
         f'const {name}=({property_value(cell, name)});'
-        for name in ('known', 'fractionValue', 'fractionError')
+        for name in (
+            'known',
+            'fractionValue',
+            'fractionError',
+            'shownValue',
+            'fullValue',
+            'uncertainty',
+        )
     )
-    control = (ROOT / 'tests/fixtures/table_display/ListViewParameter.qml').read_text()
     observed = javascript(
-        'const Session={valueText:()=>{throw Error("Missing value was formatted")},'
-        'suText:()=>{throw Error("Missing uncertainty was formatted")}};'
+        'const unexpected=()=>{throw Error("Missing fraction was formatted")};'
+        'const Session={valueText:unexpected,suText:unexpected};'
+        'const NumberText={plainFull:unexpected}; const editable=false;'
         'const result=[undefined,{}].map(weightFraction=>{const row={weightFraction};'
         + bindings
-        + 'const parameter=('
-        + parameter[1]
-        + ');const control={value:(function()'
-        + property_value(control, 'value')
-        + ')()};return {text:('
-        + property_value(control, 'text')
-        + '),error:parameter.error};});console.log(JSON.stringify(result));'
+        + 'return [shownValue,fullValue,uncertainty,('
+        + property_value(derived, 'clickOpensMenu')
+        + ')];});console.log(JSON.stringify(result));'
     )
-    assert observed == [{'text': '', 'error': ''}] * 2, (
-        'Unavailable and disabled empty fractions render empty text and uncertainty, '
-        'never an undefined value or numeric zero'
+    assert observed == [['', '', '', False]] * 2, (
+        'Unavailable and disabled empty fractions have no value, s.u., or active popup'
     )
 
 
@@ -93,12 +120,13 @@ def test_linked_structure_table_displays_weight_fraction_without_an_editor(fract
         'Linked structures must display a weight fraction column'
     )
     cell = fraction_cell(text)
-    check_cell(cell)
-    check_empty_cell_text(cell)
+    derived = source('app/qml/Components/DerivedCell.qml')
+    check_cell(cell, derived)
+    check_empty_cell_text(cell, derived)
     broken = cell.replace(': ""', ': "missing"')
     assert broken != cell, 'The empty-value escape reaches the actual unknown-fraction binding'
     with pytest.raises(AssertionError):
-        check_empty_cell_text(broken)
+        check_empty_cell_text(broken, derived)
     value = subprocess.check_output(
         [str(fraction_bridge), 'linked_structure.weight_fraction', '1', '0'], text=True
     )
@@ -106,13 +134,20 @@ def test_linked_structure_table_displays_weight_fraction_without_an_editor(fract
     for old, new in (
         ('row.weightFraction.value', '0'),
         ('row.weightFraction.uncertainty', '0'),
-        ('readOnly: true', 'readOnly: false'),
-        ('"fittable": false', '"fittable": true'),
-        ('"fit": false', '"fit": true'),
+        ('Session.valueText(', 'Session.suText('),
+        ('NumberText.plainFull(fractionValue)', 'shownValue'),
     ):
         assert old in cell, 'The app escape must reach its real bound role or read-only flag'
         with pytest.raises(AssertionError):
-            check_cell(cell.replace(old, new))
+            check_cell(cell.replace(old, new), derived)
+    for old, new in (
+        ('readOnly: true', 'readOnly: false'),
+        ('"fit": false', '"fit": true'),
+        ('value: false', 'value: true'),
+    ):
+        assert old in derived, 'Each escape reaches the shared popup or cell declaration'
+        with pytest.raises(AssertionError):
+            check_cell(cell, derived.replace(old, new, 1))
 
 
 def check_fraction_routing(model):

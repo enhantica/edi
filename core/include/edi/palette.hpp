@@ -3,6 +3,7 @@
 
 #include <cstddef>
 #include <optional>
+#include <cstdint>
 #include <span>
 #include <string>
 #include <string_view>
@@ -88,6 +89,9 @@ std::vector<std::size_t> free_positions(ColourScheme scheme, FigureKind kind, st
 /// t = place / (count - 1).
 std::string pattern_set_colour(ColourScheme scheme, std::size_t place, std::size_t count,
                                std::span<const std::size_t> taken, bool dark);
+// The colours pattern_set_colour gives every place of a set, as 0xRRGGBB, worked out at once: the positions and the two
+// ends once, no text written and parsed again for a scan's thousands of datasets.
+std::vector<std::uint32_t> pattern_set_rgb(ColourScheme scheme, std::size_t count, std::span<const std::size_t> taken, bool dark);
 
 /// The positions of a project's experiments and structures when none holds one yet: the experiments in their order,
 /// then the structures in theirs. The first `experiments` values are the experiments', the rest the structures'.

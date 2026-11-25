@@ -18,7 +18,10 @@ EaElements.GroupRow {
     property ExperimentViewModel experiment: null
 
     Repeater {
-        model: row.experiment ? row.experiment.scatteringSource : null
+        // Through a mirror, so the next experiment keeps the selectors (ADR-0102 rule 2).
+        model: ListModelMirror {
+            source: row.experiment ? row.experiment.scatteringSource : null
+        }
         delegate: Item {
             id: item
 

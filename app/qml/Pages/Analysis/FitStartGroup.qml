@@ -29,7 +29,9 @@ DataTable {
     defaultInfoText: qsTr("No fit start state")
     sourceModel: analysis ? analysis.fitStart : null
 
-    columns: [numberColumnWidth, -1, -1, -1]
+    // Its columns by kind (the shared column model, DataTable.columnKinds; ADR-0103 decision 4).
+    columnKinds: ["index", "name", "number", "uncertainty"]
+    // Widths from column types, not rows (ADR-0103 rule 4): the parameter, then its start and its value.
 
     header: EaComponents.ListViewHeader {
         EaComponents.ListViewLabel {

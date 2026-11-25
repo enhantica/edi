@@ -10,6 +10,7 @@
 #include <QQuickWindow>
 #include <QStyleHints>
 #include <QSurfaceFormat>
+#include <QThreadPool>
 #include <QtQml/qqmlextensionplugin.h>
 #include <cstdio>
 #include <cstdlib>
@@ -20,11 +21,13 @@
 #endif
 
 #include "app_info.hpp"
+#include "edi/symmetry.hpp"
 #include "demo_driver.hpp"
 #include "web_page_hooks.hpp"
 #include "engine_setup.hpp"
 #include "run_log.hpp"
 #include "stall_probe.hpp"
+#include "ui_probe.hpp"
 #include "test_observer.hpp"
 #ifndef __EMSCRIPTEN__
 void start_installer_smoke(QQuickWindow&, const QString&);
@@ -167,6 +170,13 @@ int main(int argc, char* argv[]) {
     }
     // Off unless EDI_STALL_PROBE is set; its summary is written before the log finishes.
     edi_app::install_stall_probe(app);
+#if QT_CONFIG(thread) && !defined(__EMSCRIPTEN__)
+    // The scattering tables' type lists, asked for once per element and ion, filled before the Structure page first
+    // needs them.
+    QThreadPool::globalInstance()->start([] { edi::warm_atom_types(); });
+#endif
+    // Off unless EDI_UI_TRACE=1 (ADR-0102): the observation trace the GUI watchdog reads.
+    edi_app::install_ui_probe(app);
     QObject::connect(&app, &QCoreApplication::aboutToQuit, &run_log, &edi_app::RunLog::finish);
     edi_app::quit_on_termination_signals();
     QQmlApplicationEngine engine;
@@ -225,5 +235,10 @@ int main(int argc, char* argv[]) {
         }
         driver->start();
     }
-    return QGuiApplication::exec();
+    const int code = QGuiApplication::exec();
+    // Work on the shared thread pool (a scan's file reads, a report build) must not outlive the objects it reports to:
+    // queued work is dropped and running work finishes before the engine and its view models are destroyed.
+    QThreadPool::globalInstance()->clear();
+    QThreadPool::globalInstance()->waitForDone();
+    return code;
 }

@@ -281,6 +281,15 @@ QtObject {
     // A curve hidden by a click on a pattern chart's legend (the owner, 2026-10-25): "keep" the y range as it is, every
     // fit counting the hidden curve, or "fit" it once to the curves still shown, later fits counting only those.
     property string chartHiddenRange: "keep"
+    // The sidebar's width (the owner, 2026-11-22; SideBarWidthButton): "auto" by the window's width, "full", a named
+    // narrower width ("bounds", "values", "compact"), or "manual" at the width the user dragged its edge to.
+    property string sideBarWidthMode: "auto"
+    property int sideBarManualWidth: 0
+    // The parameter table's width steps as last measured (from column types, the same for every
+    // project): a chosen mode keeps its width before any project is open (the owner, 2026-11-22).
+    property real sideBarStepBounds: 0
+    property real sideBarStepValues: 0
+    property real sideBarStepCompact: 0
 
     // What every page's Text tab shows (the owner, 2026-10-27): "editable", the categories the user sets, or
     // "everything", the measured data and the program's output too, read-only. One setting for every Text tab.
@@ -304,6 +313,16 @@ QtObject {
         property alias singleCrystalMeasuredStyle: preferences.singleCrystalMeasuredStyle
         property alias highlightSelected: preferences.chartHighlightSelected
         property alias hiddenRange: preferences.chartHiddenRange
+    }
+
+    property Settings layoutSettings: Settings {
+        location: EaGlobals.Vars.settingsFile
+        category: "Layout"
+        property alias sideBarWidthMode: preferences.sideBarWidthMode
+        property alias sideBarManualWidth: preferences.sideBarManualWidth
+        property alias sideBarStepBounds: preferences.sideBarStepBounds
+        property alias sideBarStepValues: preferences.sideBarStepValues
+        property alias sideBarStepCompact: preferences.sideBarStepCompact
     }
 
     property Settings analysisSettings: Settings {

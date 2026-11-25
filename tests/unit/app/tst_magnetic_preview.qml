@@ -794,21 +794,23 @@ TestCase {
             verify(cell?.item.fittable, "The active coefficient is fittable: C" + order);
             Ui.scrollIntoView(cell);
             tryVerify(() => Ui.exposed(cell), 2000, "The coefficient editor is reachable: C" + order);
-            press(cell);
-            cell.selectAll();
+            const popup = Ui.parameterPopup(test, cell);
+            const editor = Ui.parameterValue(test, cell, popup);
+            Ui.focusParameter(test, editor);
+            editor.selectAll();
             keyClick(Qt.Key_1);
             keyClick(Qt.Key_Return);
-            tryCompare(cell.item, "value", 1, 3000, "A real edit updates the model coefficient: C" + order);
-            press(cell, Qt.RightButton);
-            tryVerify(() => cell.contextMenu !== null && cell.contextMenu.opened, 2000,
-                      "A real right click opens the coefficient's lazy parameter menu: C" + order);
-            const fit = cell.fitCheckBox;
+            tryCompare(cell.item, "value", 1, 3000, "A real popup edit updates the model coefficient: C" + order);
+            popup.close();
+            tryCompare(popup, "opened", false, 2000, "The value popup closes before exercising the right-click route");
+            const context = Ui.parameterPopup(test, cell, Qt.RightButton);
+            const fit = findChild(context.contentItem, cell.objectName + ".popup.free");
             verify(fit && fit.enabled && fit.visible, "The active coefficient has a usable Free control: C" + order);
             if (!cell.item.free)
                 press(fit);
             tryCompare(cell.item, "free", true, 3000, "The Free control publishes the fitting state: C" + order);
             keyClick(Qt.Key_Escape);
-            tryCompare(cell.contextMenu, "opened", false, 2000,
+            tryCompare(context, "opened", false, 2000,
                        "The coefficient context menu closes before editing the next column");
         }
     }

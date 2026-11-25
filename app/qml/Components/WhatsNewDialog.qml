@@ -127,7 +127,7 @@ AppDialog {
         // The app's scroll bar, as the feedback form's: shown while the list is taller than the window once it has
         // opened, and while scrolling.
         ScrollBar.vertical: EaElements.ScrollBar {
-            policy: dialog.opened && changesView.contentHeight > changesView.height + 1 ? ScrollBar.AlwaysOn : ScrollBar.AsNeeded
+            policy: dialog.opened && changesView.contentHeight > changesView.height + 1 ? ScrollBar.AlwaysOn : ScrollBar.AlwaysOff
         }
 
         Column {

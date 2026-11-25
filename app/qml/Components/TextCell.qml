@@ -5,6 +5,7 @@ import QtQuick
 import QtQuick.Controls
 
 import EasyApplication.Gui.Style as EaStyle
+import EasyApplication.Gui.Elements as EaElements
 import EasyApplication.Gui.Components as EaComponents
 
 import edi.app
@@ -110,7 +111,27 @@ EaComponents.ListViewTextInput {
     // A cell locked while it has the focus keeps it until the focus moves: Qt refuses to take it from the focused item.
     activeFocusOnTab: !locked || activeFocus
     // The base's colours, with a locked cell kept in the normal colour rather than the read-only grey.
-    color: enterFlash ? EaStyle.Colors.themeForeground : warned ? EaStyle.Colors.red : !enabled || (readOnly && !locked) || minored ? EaStyle.Colors.themeForegroundMinor : activeFocus || selected || hovered ? EaStyle.Colors.themeForegroundHovered : EaStyle.Colors.themeForeground
+    readonly property color inkColor: enterFlash ? EaStyle.Colors.themeForeground : warned ? EaStyle.Colors.red : !enabled || (readOnly && !locked) || minored ? EaStyle.Colors.themeForegroundMinor : activeFocus || selected || hovered ? EaStyle.Colors.themeForegroundHovered : EaStyle.Colors.themeForeground
+    // A text too long for its cell (a name in a narrow table) keeps both its ends and a middle ellipsis while it is not
+    // edited; the input, which can only cut it, then shows nothing.
+    readonly property bool cut: !numeric && !activeFocus && shown !== "" && metrics.advanceWidth(shown) > room + 0.5
+    color: cut ? "transparent" : inkColor
+    Loader {
+        anchors.fill: parent
+        active: cell.cut
+        sourceComponent: Component {
+            EaElements.Label {
+                leftPadding: cell.leftPadding
+                rightPadding: cell.rightPadding
+                verticalAlignment: Text.AlignVCenter
+                horizontalAlignment: cell.horizontalAlignment
+                elide: Text.ElideMiddle
+                font: cell.font
+                color: cell.inkColor
+                text: cell.shown
+            }
+        }
+    }
 
     // RestoreNone removes the clean binding without assigning text. This is
     // essential for IME preedit, which must survive even before textEdited.

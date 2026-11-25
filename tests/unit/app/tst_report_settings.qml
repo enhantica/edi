@@ -11,6 +11,7 @@ import ReportAcceptance 1.0
 import EasyApplication.Gui.Style as EaStyle
 import EasyApplication.Gui.Globals as Globals
 import "RenderedTable.js" as Render
+import "UiInteraction.js" as Ui
 import EdiAcceptance 1.0
 
 Item {
@@ -577,8 +578,15 @@ import EasyApplication.Gui.Globals as Globals; QtObject { property Settings sett
                 height: 800
             });
             verify(page !== null && waitForPolish(page), "The real Project page lays out its creation workflow");
-            const create = findChild(page, "project.create");
-            verify(create !== null, "Get started exposes project.create; actual " + create);
+            const started = findChild(page, "group.getStarted");
+            verify(started !== null, "The production Project page exposes Get started");
+            if (started.collapsed)
+                mouseClick(started.titleArea, started.titleArea.width / 2, started.titleArea.height / 2);
+            let create = null;
+            tryVerify(() => {
+                create = findChild(started, "project.create");
+                return create !== null && Ui.exposed(create);
+            }, 2000, "The open Get started group materializes its real Create button");
             mouseClick(create, create.width / 2, create.height / 2);
             const dialog = SettingsProof.creationDialog(page);
             verify(dialog !== null, "project.create opens the real dialog with projectName and projectParentDirectory");

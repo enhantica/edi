@@ -41,13 +41,21 @@ SideBarGroup {
         DataTable {
             id: table
             objectName: "examples.list"
-            // One line more when the widest tag row does not fit the sidebar's cell: the tags wrap, never cut short.
-            readonly property bool tagsWrap: tagWidths.widest > table.width - table.numberColumnWidth - EaStyle.Sizes.fontPixelSize * 2
+            // One line more when the widest tag row does not fit the sidebar's cell: the tags wrap, never cut short. The
+            // cell is the row less its number, the column margin, the row's padding and borders, and the cell's own insets.
+            readonly property bool tagsWrap: tagWidths.widest > table.width - table.numberColumnWidth - table.autoColumnPadding - table.rowPadding * 2 - EaStyle.Sizes.borderThickness * 2 - EaStyle.Sizes.fontPixelSize * 2
+            // The rows' least height; a row whose tags wrap grows to its own lines (the delegate's height).
             tableRowHeight: Math.ceil(EaStyle.Sizes.fontPixelSize * (table.tagsWrap ? 7.4 : 5.5))
-            maxRowCountShow: 6
+            // Every row kept once made, so scrolling up and down again makes none anew (the owner, 2026-11-21: "not
+            // smooth when scrolling - even if scroll up and down multiple times"). The list is short and shows before
+            // any project, so the rows made ahead hold no page's layout back. In the browser the rows in view only, as each
+            // row made there also makes its accessible elements, all of them at once when the group opens.
+            cacheBuffer: Qt.platform.os === "wasm" ? 0 : Math.max(0, table.count * table.tableRowHeight)
             defaultInfoText: qsTr("No matching examples")
             sourceModel: Session.examples
-            columns: [numberColumnWidth, -1]
+            // Its columns by kind (the shared column model, DataTable.columnKinds; ADR-0103 decision 4).
+            columnKinds: ["index", "name"]
+            // Widths from column types, not rows (ADR-0103 rule 4): the name and description.
             header: EaComponents.ListViewHeader {
                 visible: false
                 implicitHeight: 0
@@ -72,6 +80,11 @@ SideBarGroup {
                 required property list<string> tagColors
                 required property list<string> tagDarkColors
                 objectName: `examples.open.${exampleId}`
+                // As tall as its own lines, at least the table's row: a row whose tags wrap to a second line overlapped
+                // the next one when every row took the first row's height (the owner, 2026-11-22).
+                height: Math.max(table.tableRowHeight, Math.ceil(exampleCell.implicitHeight + EaStyle.Sizes.fontPixelSize))
+                onHeightChanged: table.noteRowHeight(index, height)
+                onIndexChanged: table.noteRowHeight(index, height)
                 // Screen readers and browser checks find a row by its id and title, which the three lines show
                 // only in part. The row itself carries them, as the list moves the row.
                 Accessible.role: Accessible.Button
@@ -91,6 +104,7 @@ SideBarGroup {
                     text: row.index + 1
                 }
                 ExampleCell {
+                    id: exampleCell
                     height: row.height
                     title: row.sample + " · " + row.origin
                     tagLabels: row.tagLabels

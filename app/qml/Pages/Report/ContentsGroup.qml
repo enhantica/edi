@@ -19,7 +19,8 @@ SideBarGroup {
     property ReportViewModel report: null
     // Whether the group is on screen; reading the model builds the report, so a hidden group reads nothing.
     property bool shown: true
-    readonly property var items: report && shown && report.model.contents ? report.model.contents : []
+    readonly property var reportModel: report && shown ? report.model : null
+    readonly property var items: reportModel && reportModel.contents ? reportModel.contents : []
     readonly property var hidden: report ? report.hidden : []
 
     objectName: "group.reportContents"

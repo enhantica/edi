@@ -800,7 +800,10 @@ std::vector<PatternSource::Component> structure_components(std::span<const std::
 }
 
 std::string bragg_series_id(const PatternSource::Phase& phase) {
-    return "bragg/" + phase.structure_id + (phase.magnetic ? "/magnetic" : "");
+    // A magnetic phase's key already ends in "/magnetic" (group_reflections): suffixed again, its legend entry named a
+    // series no curve has, and hiding it left the magnetic contribution drawn (the owner, 2026-11-23).
+    const bool suffixed = phase.structure_id.ends_with("/magnetic");
+    return "bragg/" + phase.structure_id + (phase.magnetic && !suffixed ? "/magnetic" : "");
 }
 
 std::vector<PatternSource::Phase> group_reflections(std::span<const std::string> structure_id,

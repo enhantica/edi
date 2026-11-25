@@ -214,9 +214,15 @@ void GeneratedCategory::read() {
         const std::string uid = item != nullptr ? item->uid : std::string(id).append(".").append(name);
         const bool known = edi::has_item(uid);
         names_.append(QString::fromStdString(name));
-        labels_.append(label_case(QString::fromStdString(known ? edi::label(uid) : name)));
+        // A name the dictionary does not hold (a loop's key, `experiment_id`) reads as words: "Experiment".
+        QString shown = QString::fromStdString(known ? edi::shown_label(uid) : name);
+        if (!known) {
+            shown.replace(u'_', u' ');
+            if (shown.endsWith(QStringLiteral(" id"))) shown.chop(3);
+        }
+        labels_.append(label_case(shown));
         units_.append(QString::fromStdString(known ? edi::units_label(uid) : std::string()));
-        descriptions_.append(QString::fromStdString(known ? edi::description(uid) : std::string()));
+        descriptions_.append(QString::fromStdString(known ? edi::shown_description(uid) : std::string()));
         // The control the dictionary's type asks for: a selector shows its options, as every designed selector does.
         const std::string dtype = edi::item_dtype(uid);
         OptionListModel* options = nullptr;

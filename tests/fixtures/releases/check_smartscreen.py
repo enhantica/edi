@@ -31,7 +31,7 @@ def publication(tmp_path, *, zipped):
     assets = folder / 'assets'
     assets.mkdir(parents=True)
     (folder / 'release.json').write_text(json.dumps({'version': '2026.11.23'}))
-    name = 'EasyDiffraction-2026.11.23-windows-x86_64-online'
+    name = 'EasyDiffraction-Installer-2026.11.23-Windows-x64'
     if zipped:
         with zipfile.ZipFile(assets / f'{name}.zip', 'w') as archive:
             archive.writestr(f'{name}.exe', b'MZ installer')
@@ -50,7 +50,7 @@ def test_the_online_installer_and_the_steps_are_prepared(tmp_path, monkeypatch, 
     arguments = ['--publication', str(folder), '--repo', 'enhantica/edi', '--output', str(output)]
     monkeypatch.setattr('sys.argv', ['smartscreen.py', *arguments])
     SMARTSCREEN.main()
-    installer = output / 'EasyDiffraction-2026.11.23-windows-x86_64-online.exe'
+    installer = output / 'EasyDiffraction-Installer-2026.11.23-Windows-x64.exe'
     assert installer.read_bytes() == b'MZ installer'
     text = (output / 'additional-information.txt').read_text()
     assert 'European Spallation Source ERIC (Lund, Sweden)' in text
@@ -72,5 +72,5 @@ def test_the_online_installer_and_the_steps_are_prepared(tmp_path, monkeypatch, 
 def test_a_release_without_the_installer_is_refused_by_name(tmp_path):
     folder = tmp_path / 'publication'
     (folder / 'assets').mkdir(parents=True)
-    with pytest.raises(RuntimeError, match='windows-x86_64-online'):
+    with pytest.raises(RuntimeError, match='Windows-x64'):
         SMARTSCREEN.find_installer(folder / 'assets', '2026.11.23', tmp_path / 'out')

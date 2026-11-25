@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "scan_session.hpp"
+#include "scan_view_model.hpp"
 
 #include <QCoreApplication>
 #include <QCryptographicHash>
@@ -120,24 +121,33 @@ ScanSession::~ScanSession() { stopMetadata(); }
 QString ScanSession::load(const edi::Project& project) {
     stopMetadata();
     bank_rule_ = {};
+    // Every listing, a refused one included, ends the previous one's demand: its queues, the rows in flight and the
+    // generation a read still under way delivers to, so nothing runs against the index this load replaces.
+    wanted_.clear();
+    template_wanted_.clear();
+    metadata_errors_.clear();
+    loaded_.clear();
+    ++metadata_generation_;
+    reading_ = false;
     try {
         datasets_ = edi::scan_datasets(project);
+        ++datasets_revision_;
     } catch (const std::exception& refusal) {
         datasets_ = {};
+        ++datasets_revision_;
         places_.clear();
-        index_ = {};
+        metadata_.clear();
+        asked_.clear();
+        in_flight_.clear();
+        source_.reset();
+        index_ = std::make_shared<edi::ScanResultIndex>();
         return QString::fromUtf8(refusal.what());
     }
     places_ = edi::scan_places(datasets_);
     metadata_.assign(datasets_.files.size(), std::nullopt);
     asked_.assign(datasets_.files.size(), false);
-    wanted_.clear();
+    in_flight_.assign(datasets_.files.size(), false);
     source_ = std::make_shared<const edi::Project>(project);
-    metadata_errors_.clear();
-    loaded_.clear();
-    // A new generation: a read still in flight from before delivers nothing, and does not hold up this one's queue.
-    ++metadata_generation_;
-    reading_ = false;
     readRun(project);
     return reindex(project);
 }
@@ -148,21 +158,27 @@ void ScanSession::relocate(std::shared_ptr<const edi::Project> snapshot,const QS
     const auto directory=fs::path(datasets_.directory).lexically_normal();
     const auto relative=directory.lexically_relative(root);
     if(!relative.empty() && !relative.is_absolute() && *relative.begin()!="..")
+    {
         datasets_.directory=(fs::path(to.toStdString())/relative).lexically_normal().string();
+        ++datasets_revision_;
+    }
     source_=std::move(snapshot);
 }
 
 void ScanSession::take(ScanSession& listing) {
     stopMetadata();
     datasets_ = std::move(listing.datasets_);
+    ++datasets_revision_;
     places_ = std::move(listing.places_);
-    index_ = std::move(listing.index_);
+    index_ = std::exchange(listing.index_, std::make_shared<edi::ScanResultIndex>());
     bank_rule_ = std::move(listing.bank_rule_);
     run_ = std::move(listing.run_);
     source_ = std::move(listing.source_);
     metadata_.assign(datasets_.files.size(), std::nullopt);
     asked_.assign(datasets_.files.size(), false);
+    in_flight_.assign(datasets_.files.size(), false);
     wanted_.clear();
+    template_wanted_.clear();
     metadata_errors_.clear();
     loaded_.clear();
     // A new generation, as a listing is: a read still in flight from before delivers nothing.
@@ -232,10 +248,10 @@ QString ScanSession::decodeRun(const std::optional<std::string>& bytes, Run& run
 
 QString ScanSession::reindex(const edi::Project& project, bool writing) {
     // The old index goes first: a scan's two indexes at once would double what it holds at the end of a run.
-    index_ = {};
+    index_ = std::make_shared<edi::ScanResultIndex>();
     bank_rule_ = {};  // made again from the project as it is now, when first asked
-    index_ = edi::index_scan_results(project, datasets_, places_, writing);
-    return QString::fromStdString(index_.error);
+    index_ = std::make_shared<edi::ScanResultIndex>(edi::index_scan_results(project, datasets_, places_, writing));
+    return QString::fromStdString(index().error);
 }
 
 void ScanSession::refuseIndex(const std::string& why) {
@@ -243,7 +259,7 @@ void ScanSession::refuseIndex(const std::string& why) {
     edi::ScanResultIndex refused;
     refused.error = why;
     refused.rows.resize(datasets_.files.size());
-    index_ = std::move(refused);
+    index_ = std::make_shared<edi::ScanResultIndex>(std::move(refused));
 }
 
 int ScanSession::place(const std::string& file) const {
@@ -253,25 +269,25 @@ int ScanSession::place(const std::string& file) const {
 
 int ScanSession::addRow(const edi::Project& project, const std::vector<std::string>& cells,
                         const std::string& termination, QString& error) {
-    if (!index_.error.empty()) {
-        error = QString::fromStdString(index_.error);
+    if (!index().error.empty()) {
+        error = QString::fromStdString(index().error);
         return -1;
     }
-    if (index_.header.empty()) {
+    if (index().header.empty()) {
         // The run's first row: the header is on disk now, before it (the run is still writing).
         reindex(project, true);
-        const int dataset = cells.size() == index_.header.size() ? place(edi::scan_row_file(index_, cells)) : -1;
-        if (!index_.error.empty() || dataset < 0 || index_.rows[static_cast<std::size_t>(dataset)].offset < 0) {
-            refuseIndex(index_.error.empty() ? "analysis/results.csv does not hold the row just written"
-                                             : index_.error);
-            error = QString::fromStdString(index_.error);
+        const int dataset = cells.size() == index().header.size() ? place(edi::scan_row_file(index(), cells)) : -1;
+        if (!index().error.empty() || dataset < 0 || index().rows[static_cast<std::size_t>(dataset)].offset < 0) {
+            refuseIndex(index().error.empty() ? "analysis/results.csv does not hold the row just written"
+                                             : index().error);
+            error = QString::fromStdString(index().error);
             return -1;
         }
         return dataset;
     }
     try {
-        auto [dataset, row] = edi::scan_row_facts(project, places_, index_, cells);
-        if (index_.rows[dataset].offset >= 0) {
+        auto [dataset, row] = edi::scan_row_facts(project, places_, index(), cells);
+        if (index().rows[dataset].offset >= 0) {
             return static_cast<int>(dataset);  // indexed already, when the run's first row caught up with the file
         }
         // A series point's experiment rows are written before its results row: checked here as a full read checks
@@ -284,30 +300,31 @@ int ScanSession::addRow(const edi::Project& project, const std::vector<std::stri
         }
         // The notes the run appended since the last row come first (files skipped before this one, its own note):
         // crysta notes a file before appending its row. A refusal there refuses the index below.
-        index_.notes_end = edi::read_scan_notes(project, places_, index_, index_.notes_end, true);
+        edi::ScanResultIndex& noting = writableIndex();
+        noting.notes_end = edi::read_scan_notes(project, places_, noting, noting.notes_end, true);
         // crysta appends the cells joined by commas and a line break: the row starts where the file ended.
         std::int64_t length = 1;
         for (const std::string& cell : cells) {
             length += static_cast<std::int64_t>(cell.size()) + 1;
         }
-        row.offset = index_.end;
+        row.offset = index().end;
         row.termination = termination;
         // What the notes say about the file stays; a file with a row is fitted, whatever an earlier run noted (the
         // full index's rule), so it leaves the skipped count.
-        const edi::ScanResultIndex::Row& noted = index_.rows[dataset];
+        const edi::ScanResultIndex::Row& noted = index().rows[dataset];
         row.noted = noted.noted;
         row.negative_points = noted.negative_points;
         row.refusal = noted.refusal;
         if (noted.skipped) {
-            --index_.skipped;
+            --writableIndex().skipped;
         }
-        index_.end += length - 1;
-        index_.rows[dataset] = std::move(row);
-        ++index_.fitted;
+        writableIndex().end += length - 1;
+        writableIndex().rows[dataset] = std::move(row);
+        ++writableIndex().fitted;
         return static_cast<int>(dataset);
     } catch (const std::exception& refusal) {
         refuseIndex(refusal.what());
-        error = QString::fromStdString(index_.error);
+        error = QString::fromStdString(index().error);
         return -1;
     }
 }
@@ -323,11 +340,11 @@ edi::SeriesPointCheck ScanSession::pointCheck(const edi::Project& project, int p
     if (place < 0 || !datasets_.joint()) {
         return {};
     }
-    return edi::series_point_check(bankRule(project), datasets_, index_, static_cast<std::size_t>(place));
+    return edi::series_point_check(bankRule(project), datasets_, index(), static_cast<std::size_t>(place));
 }
 
 std::vector<std::string> ScanSession::row(const edi::Project& project, int dataset) const {
-    if (dataset < 0 || dataset >= static_cast<int>(index_.rows.size()) || index_.rows[static_cast<std::size_t>(dataset)].offset < 0) {
+    if (dataset < 0 || dataset >= static_cast<int>(index().rows.size()) || index().rows[static_cast<std::size_t>(dataset)].offset < 0) {
         return {};
     }
     if (!edi::scan_state_present(analysis_dir(project) / "results.csv", "analysis/results.csv")) {
@@ -336,19 +353,19 @@ std::vector<std::string> ScanSession::row(const edi::Project& project, int datas
     {
         std::ifstream input(analysis_dir(project) / "results.csv", std::ios::binary);
         std::string header;
-        if (!std::getline(input, header) || split(header) != index_.header) {
+        if (!std::getline(input, header) || split(header) != index().header) {
             throw std::invalid_argument("analysis/results.csv changed under the app: its header is not the one read "
                                         "before");
         }
     }
-    std::vector<std::string> cells = edi::read_scan_row(project, index_.rows[static_cast<std::size_t>(dataset)].offset);
+    std::vector<std::string> cells = edi::read_scan_row(project, index().rows[static_cast<std::size_t>(dataset)].offset);
     const std::string& expected = datasets_.files[static_cast<std::size_t>(dataset)];
-    if (cells.size() != index_.header.size() || edi::scan_row_file(index_, cells) != expected) {
+    if (cells.size() != index().header.size() || edi::scan_row_file(index(), cells) != expected) {
         throw std::invalid_argument("analysis/results.csv changed under the app: the row for '" + expected +
                                     "' is no longer where it was");
     }
     // Checked again as it was when indexed: a row edited since is refused, never shown in part.
-    if (edi::scan_row_facts(project, places_, index_, cells).first != static_cast<std::size_t>(dataset)) {
+    if (edi::scan_row_facts(project, places_, index(), cells).first != static_cast<std::size_t>(dataset)) {
         throw std::invalid_argument("analysis/results.csv changed under the app: the row for '" + expected +
                                     "' names another file");
     }
@@ -356,15 +373,15 @@ std::vector<std::string> ScanSession::row(const edi::Project& project, int datas
 }
 
 QString ScanSession::outcome(int dataset) const {
-    if (dataset >= 0 && dataset < static_cast<int>(index_.rows.size()) && index_.rows[static_cast<std::size_t>(dataset)].skipped) {
+    if (dataset >= 0 && dataset < static_cast<int>(index().rows.size()) && index().rows[static_cast<std::size_t>(dataset)].skipped) {
         return QStringLiteral("skipped");
     }
-    if (dataset < 0 || dataset >= static_cast<int>(index_.rows.size()) || index_.rows[static_cast<std::size_t>(dataset)].offset < 0) {
+    if (dataset < 0 || dataset >= static_cast<int>(index().rows.size()) || index().rows[static_cast<std::size_t>(dataset)].offset < 0) {
         return {};
     }
     // From the row's own facts: converged, else the reason crysta's ledger recorded when the file was fitted; a row
     // fitted before the ledger recorded reasons did not converge for a reason no one knows now.
-    const edi::ScanResultIndex::Row& row = index_.rows[static_cast<std::size_t>(dataset)];
+    const edi::ScanResultIndex::Row& row = index().rows[static_cast<std::size_t>(dataset)];
     if (row.converged) {
         return QStringLiteral("success");
     }
@@ -741,9 +758,15 @@ const std::vector<std::string>* ScanSession::extracted(int dataset) const {
     if (dataset < 0 || dataset >= static_cast<int>(datasets_.files.size())) {
         return nullptr;
     }
-    if (index_.rows[static_cast<std::size_t>(dataset)].offset >= 0) {
-        return &index_.rows[static_cast<std::size_t>(dataset)].extracted;
+    if (index().rows[static_cast<std::size_t>(dataset)].offset >= 0) {
+        return &index().rows[static_cast<std::size_t>(dataset)].extracted;
     }
+    const auto& metadata = metadata_[static_cast<std::size_t>(dataset)];
+    return metadata.has_value() ? &*metadata : nullptr;
+}
+
+const std::vector<std::string>* ScanSession::listExtracted(int dataset) const {
+    if (dataset < 0 || dataset >= static_cast<int>(metadata_.size())) return nullptr;
     const auto& metadata = metadata_[static_cast<std::size_t>(dataset)];
     return metadata.has_value() ? &*metadata : nullptr;
 }
@@ -759,14 +782,29 @@ constexpr std::size_t kMetadataQueue = 256;    // requests waiting; older ones a
 constexpr std::size_t kMetadataCache = 4096;   // datasets holding read values; the oldest are dropped first
 }  // namespace
 
-void ScanSession::want(int dataset) {
-    if (dataset < 0 || dataset >= static_cast<int>(asked_.size()) || asked_[static_cast<std::size_t>(dataset)] ||
-        index_.rows[static_cast<std::size_t>(dataset)].offset >= 0 || source_ == nullptr ||
+void ScanSession::want(int dataset, bool forTemplate) {
+    if (dataset < 0 || dataset >= static_cast<int>(asked_.size()) ||
+        index().rows[static_cast<std::size_t>(dataset)].offset >= 0 || source_ == nullptr ||
         source_->sequential_fit.extract.empty()) {
         return;
     }
+    // A row being read now arrives by that read (metadataLoaded), whoever asked: never a second read.
+    if (in_flight_[static_cast<std::size_t>(dataset)]) return;
+    // The template's values are read whatever is shown: a row a list asked for first is promoted, unless it is read.
+    if (asked_[static_cast<std::size_t>(dataset)] &&
+        (!forTemplate || metadata_[static_cast<std::size_t>(dataset)].has_value() ||
+         std::find(template_wanted_.begin(), template_wanted_.end(), dataset) != template_wanted_.end())) {
+        return;
+    }
     asked_[static_cast<std::size_t>(dataset)] = true;
-    if (wanted_.empty() && !reading_) {
+    if (forTemplate) {
+        // Promoted out of the list's queue, so it is read once.
+        wanted_.erase(std::remove(wanted_.begin(), wanted_.end(), dataset), wanted_.end());
+        template_wanted_.push_back(dataset);
+        if (!reading_) QMetaObject::invokeMethod(this, &ScanSession::readWanted, Qt::QueuedConnection);
+        return;
+    }
+    if (wanted_.empty() && !reading_ && list_shown_) {
         QMetaObject::invokeMethod(this, &ScanSession::readWanted, Qt::QueuedConnection);
     }
     wanted_.push_back(dataset);
@@ -780,8 +818,18 @@ void ScanSession::want(int dataset) {
     }
 }
 
+void ScanSession::setListShown(bool shown) {
+    if (shown == list_shown_) return;
+    list_shown_ = shown;
+    if (list_shown_ && !wanted_.empty() && !reading_) {
+        QMetaObject::invokeMethod(this, &ScanSession::readWanted, Qt::QueuedConnection);
+    }
+}
+
 void ScanSession::readWanted() {
-    if (wanted_.empty() || reading_) {
+    // The template's first, whatever is shown; a list's rows only while a list shows them, checked at each batch.
+    std::vector<int>& queue = !template_wanted_.empty() ? template_wanted_ : wanted_;
+    if (queue.empty() || reading_ || (&queue == &wanted_ && !list_shown_)) {
         return;
     }
     if (!metadata_stop_) {
@@ -792,17 +840,42 @@ void ScanSession::readWanted() {
     const std::string directory = datasets_.directory;
     const std::uint64_t generation = metadata_generation_;
     // The newest batch first: the rows on screen now.
-    const std::size_t take = std::min(kMetadataBatch, wanted_.size());
-    std::vector<std::pair<int, std::string>> batch;
-    for (std::size_t i = wanted_.size() - take; i < wanted_.size(); ++i) {
-        batch.emplace_back(wanted_[i], datasets_.files[static_cast<std::size_t>(wanted_[i])]);
+    // A list's rows only while still in the current demand: the others are forgotten until a list shows them again.
+    if (&queue == &wanted_ && row_demanded_) {
+        std::vector<int> kept;
+        for (const int row : wanted_) {
+            if (row_demanded_(row)) {
+                kept.push_back(row);
+            } else if (std::find(template_wanted_.begin(), template_wanted_.end(), row) == template_wanted_.end()) {
+                asked_[static_cast<std::size_t>(row)] = false;
+            }
+        }
+        wanted_ = std::move(kept);
+        if (wanted_.empty()) return;
     }
-    wanted_.resize(wanted_.size() - take);
+    const std::size_t take = std::min(kMetadataBatch, queue.size());
+    std::vector<std::pair<int, std::string>> batch;
+    for (std::size_t i = queue.size() - take; i < queue.size(); ++i) {
+        const auto row = static_cast<std::size_t>(queue[i]);
+        // Read already, or by a batch under way: nothing more to read for it.
+        if (metadata_[row].has_value() || in_flight_[row]) continue;
+        in_flight_[row] = true;
+        // A series' row is a point key; its values come from its first experiment's file, as the charts read them.
+        batch.emplace_back(queue[i], datasets_.joint() ? datasets_.point_files.at(row).front() : datasets_.files[row]);
+    }
+    queue.resize(queue.size() - take);
+    if (batch.empty()) {
+        QMetaObject::invokeMethod(this, &ScanSession::readWanted, Qt::QueuedConnection);
+        return;
+    }
     reading_ = true;
+    std::vector<int> rows;
+    rows.reserve(batch.size());
+    for (const auto& entry : batch) rows.push_back(entry.first);
     // Each file is read once, for its extract rules only; the values reach this session only while it exists.
     const QPointer<ScanSession> self(this);
     // NOLINTNEXTLINE(bugprone-exception-escape): only libc++'s container growth past max_size() raises length_error here
-    run_in_background([self, stop, source, directory, generation, batch = std::move(batch)] {
+    run_in_background([self, stop, source, directory, generation, rows = std::move(rows), batch = std::move(batch)] {
         struct Read {
             int dataset{};
             std::vector<std::string> values;
@@ -813,6 +886,7 @@ void ScanSession::readWanted() {
             if (stop->load()) {
                 break;
             }
+            ++listFileReads();
             try {
                 done.push_back({dataset, edi::scan_extract_values(*source, directory, file), {}});
             } catch (const std::exception& refusal) {
@@ -821,11 +895,13 @@ void ScanSession::readWanted() {
         }
         QMetaObject::invokeMethod(
             QCoreApplication::instance(),
-            [self, stop, generation, done = std::move(done)]() mutable {
+            [self, stop, generation, rows, done = std::move(done)]() mutable {
                 if (self.isNull() || generation != self->metadata_generation_) {
                     return;  // a read of an earlier listing: its results and its running state are not this one's
                 }
                 self->reading_ = false;
+                // Every row of the batch, the ones a stop never reached included.
+                for (const int row : rows) self->in_flight_[static_cast<std::size_t>(row)] = false;
                 if (stop->load()) {
                     self->readWanted();
                     return;
@@ -863,6 +939,14 @@ void ScanSession::stopMetadata() {
         metadata_stop_->store(true);
         metadata_stop_.reset();
     }
+}
+
+edi::ScanResultIndex& ScanSession::writableIndex() {
+    // A change in place while a reader holds the current copy (indexSnapshot) goes into a copy of its own, made at
+    // most once per copy handed out: the writes after it change that copy in place. A replacement of the whole index
+    // (load, reindex, a refusal) takes a new one and copies nothing.
+    if (index_.use_count() > 1) index_ = std::make_shared<edi::ScanResultIndex>(*index_);
+    return *index_;
 }
 
 }  // namespace edi_app

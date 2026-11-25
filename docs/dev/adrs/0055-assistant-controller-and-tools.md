@@ -2669,3 +2669,21 @@ libc++; the outstanding-completion trial lock must become false before invoking 
 The real follow-up/free/fit/Save test checks both callback ownership and the released trial. This
 preserves the original presentation ordering and does not grant observers write authority.
 The contract follows [the function move constructor](https://eel.is/c++draft/func.wrap.func.con).
+
+## Where a control lives
+
+`app/src/assistant_control_routes.hpp` holds one entry for each control the assistant reaches: its page, sidebar tab,
+group and table. Every way a control is shown reads that entry: the native parameter path, relations, background, the
+project and experiment steps, and the page Show actions off follows. A step's navigation is planned from the entry of
+the control it leads to, so no tool names a page or a tab itself. Absorption parameters are shown in their own group on
+Extra, as the other categories' parameters are in theirs. The checks of an operation's owner after navigation stay.
+
+`tools/checks/assistant_control_routes.py` reads each control's place from the QML that declares it, through the page,
+its tab and the group it is in, and fails on an entry that says another. A page, tab or tier written in the view model
+fails too.
+
+## The assistant demo is not part of the app
+
+`edi_app_assistant_demo` (`app/tools/assistant_demo.cpp`) calls the tools through a local peer, without a person. It is
+a target of its own; `tools/checks/assistant_demo_absent.py` fails when the app's sources, its build or its program
+hold any of it.

@@ -19,8 +19,10 @@ from tests.integration.py.test_scan_app_contract import (
     ROOT,
     block,
     evaluate,
+    experiment_column_bindings,
     item,
     javascript,
+    number_label_text,
     property_value,
     require,
     source,
@@ -200,13 +202,37 @@ def test_selector_moves_to_main_tab_bar_once():
     assert_structure_selector(main)
 
 
+def assert_scan_start_header(qml, header):
+    labels = re.findall(r'text:\s*qsTr\("([^\"]+)"\)', header)
+    assert labels == ['Start', 'Fit', 'Datablock', 'Data file'], (
+        'The dataset list declares Start immediately before the other named headers'
+    )
+    start_headers = [
+        header[a:b]
+        for a, b in spans(header)
+        if 'text: qsTr("Start")' in header[a:b] and header[a:b].count('text:') == 1
+    ]
+    assert len(start_headers) == 1, 'One declared header owns the Start label'
+    start_header = start_headers[0]
+    start_label = property_value(start_header, 'visible')
+    start_radio = property_value(item(qml, 'experiments.start.${row.index}'), 'visible')
+    observed_start = javascript(
+        'const states=[{scan:false,series:false},{scan:true,series:false},'
+        '{scan:true,series:true}];console.log(JSON.stringify(states.map(group=>['
+        + start_label
+        + ','
+        + start_radio
+        + '])));'
+    )
+    assert observed_start == [[False, False], [True, True], [False, False]], (
+        'Start headers and row radio controls appear together only for a scan template'
+    )
+
+
 def test_scan_explorer_header_has_declared_columns_in_order():
     qml = source('qml/Pages/Experiment/ExperimentsGroup.qml')
     header = block(qml, 'header:')
-    labels = re.findall(r'text:\s*qsTr\("([^\"]+)"\)', header)
-    assert labels[:3] == ['Fit', 'Datablock', 'Data file'], (
-        'Dataset list labels: the unlabelled number column precedes fit, datablock and file'
-    )
+    assert_scan_start_header(qml, header)
     number_column = block(header, 'EaComponents.ListViewLabel {')
     assert 'text:' not in number_column, (
         'Dataset list labels: the first number column stays present with an empty header'
@@ -217,39 +243,43 @@ def test_scan_explorer_header_has_declared_columns_in_order():
     table_id = property_value(table, 'id')
     context = (
         'const project={experiments:{columns:["temperature (K)","field '
-        '(T)"],extractColumns:["temperature (K)","field (T)"]}};const group={project};const '
+        '(T)"],rowCount:()=>29,extractColumns:["temperature (K)","field (T)"]}};'
+        'const group={project};const '
         + table_id
         + '={sourceModel:('
         + property_value(table, 'sourceModel')
         + ')};const sourceModel='
         + table_id
-        + '.sourceModel;'
+        + '.sourceModel;const mirrorsRows=('
+        + property_value(common, 'mirrorsRows')
+        + ');table.mirrorsRows=mirrorsRows;const rowsMirror={source:('
+        + property_value(block(common, 'ListModelMirror {'), 'source')
+        + ')};'
         + table_id
         + '.model=('
         + property_value(common, 'model')
         + ');'
     )
     model = property_value(repeater, 'model')
-    refresh = (
-        'group.scanColumns=(' + property_value(qml, 'scanColumns') + ');'
-        if model == 'group.scanColumns'
-        else ''
-    )
-    label = block(repeater, 'EaComponents.ListViewLabel {')
+    refresh = 'group.scanColumns=(' + property_value(qml, 'scanColumns') + ');'
+    label = block(repeater, 'NumberLabel {')
     program = (
-        context + 'group.scan=true;'
-        'const AppSizes={fieldSpacing:4,iconColumnWidth:16,'
-        'iconOnlyColumnWidth:12,dataColumnWidth:32};'
+        context
+        + 'Object.assign(group,{scan:true,series:false,startColumnWidth:31,fitColumnWidth:24});'
+        'const AppSizes={tableControlWidth:25,tableCellMargin:5};'
+        'const EaStyle={Sizes:{fontPixelSize:14,tableColumnSpacing:4}};const width=930;'
         'const count=29,modelRevision=0;const boldMetrics={advanceWidth:s=>s==="29"?12.25:99};'
         'const numberColumnWidth=(' + property_value(common, 'numberColumnWidth') + ');'
-        'const textColumnWidth=()=>30;const qsTr=s=>s;'
+        'const naturalTextColumnWidth=()=>90,widestText=()=>90,qsTr=s=>s;'
+        'const rowPadding=3,contentGap=14,controlColumnWidth=25,advance=s=>8*s.length;'
         'const column={modelData:"field (T)"};const modelData=column.modelData;'
         + refresh
+        + experiment_column_bindings(table)
         + 'const observed={connected:('
         + table_id
-        + '.model===project.experiments),'
+        + '.model===rowsMirror && rowsMirror.source===project.experiments),'
         'width:(' + property_value(table, 'columns') + ')[0],'
-        'columns:(' + model + '),label:(' + property_value(label, 'text') + ')};'
+        'columns:(' + model + '),label:(' + number_label_text(label) + ')};'
         'project.experiments.columns=["pressure (bar)"];'
         'project.experiments.extractColumns=["pressure (bar)"];'
         + refresh
@@ -260,10 +290,11 @@ def test_scan_explorer_header_has_declared_columns_in_order():
     )
     observed = javascript(program)
     assert observed['connected'], (
-        'Dataset list wiring: displayed extract headers belong to the dataset table actually shown'
+        'Dataset list wiring: displayed extract headers belong to the dataset '
+        'source actually mirrored'
     )
-    assert observed['width'] == 21, (
-        'The empty number header retains the measured row-number width and both field spacings'
+    assert observed['width'] == 23, (
+        'The empty number header retains the measured row-number width and both shared margins'
     )
     assert observed['columns'] == ['temperature (K)', 'field (T)'], (
         'Dataset list wiring: the displayed header uses every extract rule '
@@ -291,6 +322,69 @@ def evolution_component():
     return source(paths[0].relative_to(APP))
 
 
+def assert_evolution_axis_animation(qml):
+    layer = item(qml, 'evolution.points')
+    ranges = block(qml, 'RangeAnimation {')
+    assert property_value(ranges, 'id') == 'viewRanges', (
+        'Evolution wiring: the ranges consumed by both axes belong to the shared animation'
+    )
+    axis_context = (
+        'const evolution={};const chart={};'
+        'const viewRanges={};const EaStyle={Times:{chartAnimation:250}};'
+        'chart.reportRange=[-9,20,11,70];'
+    )
+    for name in ('axisX', 'axisY'):
+        axis = block(qml, name + ': ValueAxis {')
+        axis_context += (
+            'const ' + name + '={get min(){return (' + property_value(axis, 'min') + ');},'
+            'get max(){return (' + property_value(axis, 'max') + ');}};'
+        )
+    axis_outputs = ['axisX.min', 'axisX.max', 'axisY.min', 'axisY.max'] + [
+        property_value(layer, prop) for prop in ('xMin', 'xMax', 'yMin', 'yMax')
+    ]
+    animation_inputs = [
+        property_value(ranges, prop) for prop in ('fitted', 'zoom', 'duration', 'active')
+    ]
+    # Feed distinct rendered frames at the animation's output boundary.
+    axes = evaluate(
+        '['
+        '[true,false,true,[2,12,10,30],[],[2,12,10,30]],'
+        '[true,false,true,[-3,17,-0.5,93],[1,7,12,20],[0,8,11,23]],'
+        '[true,false,true,[-3,17,-0.5,93],[],[-2,13,2,75]],'
+        '[false,true,true,[2,12,10,30],[],[-9,20,11,70]],'
+        '[false,false,false,[2,12,10,30],[],[0,1,0,1]]'
+        '].map(([hasModel,fromReport,shown,[xMin,xMax,yMin,yMax],zoom,frame])=>{'
+        'Object.assign(evolution,{xMin,xMax,yMin,yMax});'
+        'Object.assign(chart,{evolution:hasModel?evolution:null,fromReport,shown,zoom});'
+        'viewRanges.ranges=frame;return [['
+        + ','.join(animation_inputs)
+        + '],['
+        + ','.join(axis_outputs)
+        + ']];})',
+        axis_context,
+    )
+    assert [inputs for inputs, _ in axes] == [
+        [[2, 12, 10, 30], [], 250, True],
+        [[-3, 17, -0.5, 93], [1, 7, 12, 20], 250, True],
+        [[-3, 17, -0.5, 93], [], 250, True],
+        [[-9, 20, 11, 70], [], 250, True],
+        [[0, 1, 0, 1], [], 250, False],
+    ], (
+        'Evolution wiring: the shared animation receives each fitted bounds source, '
+        'zoom or reset, and the shared chart duration and visibility'
+    )
+    assert [outputs for _, outputs in axes] == [
+        [2, 12, 10, 30] * 2,
+        [0, 8, 11, 23] * 2,
+        [-2, 13, 2, 75] * 2,
+        [-9, 20, 11, 70] * 2,
+        [0, 1, 0, 1] * 2,
+    ], (
+        'Evolution wiring: the displayed axes and rendered points follow the same frame, '
+        'including intermediate zoom and reset ranges distinct from fitted bounds'
+    )
+
+
 def assert_scene_evolution(qml):
     layer = item(qml, 'evolution.points')
     layer_id = property_value(layer, 'id')
@@ -308,22 +402,11 @@ def assert_scene_evolution(qml):
     click_context = (
         'let picked=[],hit=17;const width=200,height=100;'
         'const axisX={min:2,max:12},axisY={min:10,max:30};'
+        'const Qt={LeftButton:1};const bankLegend={visible:false};const pointer={};'
         'const chart={em:10,evolution:{datasetAt:(...args)=>{picked.push(args);return hit;}},'
         'project:{currentExperimentIndex:3}};'
     )
-    axis_context = model_context
-    for name in ('axisX', 'axisY'):
-        axis = block(qml, name + ': ValueAxis {')
-        axis_context += (
-            'const ' + name + '={get min(){return (' + property_value(axis, 'min') + ');},'
-            'get max(){return (' + property_value(axis, 'max') + ');}};'
-        )
-    expressions = ['axisX.min', 'axisX.max', 'axisY.min', 'axisY.max'] + [
-        property_value(layer, prop) for prop in ('xMin', 'xMax', 'yMin', 'yMax')
-    ]
-    # One runtime invocation observes all effective consumers; each scope retains
-    # its distinct state so a correct but unused binding cannot satisfy another.
-    bindings, values, axes = evaluate(
+    bindings, values = evaluate(
         '[(()=>{'
         + model_context
         + 'const layer={tag:17};return [('
@@ -335,13 +418,9 @@ def assert_scene_evolution(qml):
         + 'return [17,-1].map(dataset=>{picked=[];hit=dataset;'
         'chart.project.currentExperimentIndex=3;('
         + handler
-        + ')({x:40,y:25});return [picked,chart.project.currentExperimentIndex];});'
-        '})(),(()=>{'
-        + axis_context
-        + 'return [[2,12,10,30],[-3,17,-0.5,93]].map(([xMin,xMax,yMin,yMax])=>{'
-        'Object.assign(evolution,{xMin,xMax,yMin,yMax});return ['
-        + ','.join(expressions)
-        + '];});})()]'
+        + ')({x:40,y:25,button:Qt.LeftButton});'
+        'return [picked,chart.project.currentExperimentIndex];});'
+        '})()]'
     )
     assert bindings[0], 'Evolution wiring: the results model fills the visible chart layer'
     assert bindings[1] == {'tag': 17}, (
@@ -355,10 +434,7 @@ def assert_scene_evolution(qml):
         'Evolution wiring: a plotted point click passes data coordinates and pixel tolerance '
         'to hit testing, then selects that dataset; empty space keeps the selection'
     )
-    assert axes == [[2, 12, 10, 30] * 2, [-3, 17, -0.5, 93] * 2], (
-        'Evolution wiring: the displayed axes and rendered points '
-        'follow changing result-model bounds'
-    )
+    assert_evolution_axis_animation(qml)
     draw = block(source('src/evolution_view_model.cpp'), 'void EvolutionViewModel::draw(')
     with tempfile.TemporaryDirectory() as scratch:
         actual = cpp_probe(

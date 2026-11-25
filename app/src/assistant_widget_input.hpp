@@ -60,6 +60,7 @@ class AssistantWidgetInput final : public QObject {
     // nullopt means genuine other-device input; true consumes stale own input.
     static std::optional<bool> rejectOwnedPoint(QObject* receiver, const QEventPoint& point) noexcept;
     bool active() const noexcept { return static_cast<bool>(request_); }
+    std::uint64_t serial() const noexcept { return serial_; }  // of the last request
     bool usableTarget(QQuickItem& item, bool visualOnlySave = false) const; // Same actual window/clip check used immediately before input.
     bool manualDraftPresent() const; // App-private current-focus preflight, never a provider selector.
  signals:

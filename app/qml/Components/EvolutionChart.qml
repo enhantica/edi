@@ -21,6 +21,10 @@ import edi.app
 Item {
     id: chart
 
+    // One accessible part in the browser, where Qt reads a flat page again for each of its items.
+    Accessible.role: Accessible.Grouping
+    Accessible.ignored: Qt.platform.os !== "wasm"
+
     // What the main view's Save image takes when this is the shown tab: the item, its toolbar (hidden while the image
     // is taken), the file name, and whether the toolbar's band is cut off.
     readonly property Item imageItem: chart
@@ -48,13 +52,18 @@ Item {
     // The banks whose curves the legend hid, by name; all shown again with a new series.
     property var hiddenBanks: []
     readonly property real em: EaStyle.Sizes.fontPixelSize
-    // The main area's margin (AppSizes.mainAreaMargin), as the pattern chart's.
-    readonly property real sideMargin: fromReport ? em : AppSizes.mainAreaMargin
+    // The main area's margin (AppSizes.mainAreaMargin), as the pattern chart's; a report figure has it on all four sides,
+    // to the letters of its titles, whose lines reach past them (the owner, 2026-11-24).
+    readonly property real sideMargin: AppSizes.mainAreaMargin
+    readonly property real bottomMargin: fromReport ? sideMargin - Math.round(em * 0.3) : em
     // About one tick per six ems across the chart and two up its plot (the chart less its toolbar row, its x labels and
     // its x title), at most the tab's eight and six, so a report's small chart keeps its labels apart.
     readonly property int xTicks: Math.max(2, Math.min(8, Math.round(width / (em * 6))))
     readonly property int yTicks: Math.max(2, Math.min(6, Math.floor((height - em * 7 - xTitleHeight) / (em * 2.5))))
-    readonly property real toolbarRightInset: sideMargin
+    // The selector row above ends a font size from the main area's edge (MainAreaBlockSelector.margin); the toolbar's
+    // row ends where it does (the owner, 2026-11-24).
+    property real toolbarOthers: 0
+    readonly property real toolbarRightInset: fromReport ? sideMargin : em
     readonly property real titleGutter: Math.round(em * 1.6)
     readonly property real xTitleHeight: Math.round(em * 1.7)
     // The zoomed ranges, [xMin, xMax, yMin, yMax]; empty: the whole data.
@@ -64,52 +73,26 @@ Item {
     // A report's ranges, with the margins the view model gives the tab's: [xMin, xMax, yMin, yMax].
     readonly property var reportRange: ApplicationInfo.evolutionReportRange()
 
-    // The tick labels in the app's label font and size, as the pattern chart's axes (the owner, 2026-10-22).
-    Component {
-        id: xTickLabel
-
-        Item {
-            id: xTick
-
-            property string text: ""
-
-            implicitWidth: xTickText.implicitWidth
-            implicitHeight: xTickText.implicitHeight
-
-            EaElements.Label {
-                id: xTickText
-
-                anchors.fill: parent
-                horizontalAlignment: Text.AlignHCenter
-                verticalAlignment: Text.AlignVCenter
-                color: chart.colors.chartLabels
-                text: NumberText.compact(xTick.text)
+    // A report figure's plot starts where its widest y label, which Qt Graphs lets reach into the view's margin, ends the
+    // margin: the widest label, the gap after it, and what the view keeps for its axis itself.
+    property real widestTick: 0
+    property real axisRoom: 0
+    // What Qt Graphs keeps between a label and the plot: its tick marks' room, which this chart does not draw, and a gap.
+    readonly property real tickGap: 20
+    function measureTicks() {
+        if (!fromReport)
+            return;
+        let widest = 0;
+        const walk = item => {
+            for (const child of item.children) {
+                if (child.objectName === "evolution.yTick" && child.visible && child.text !== "")
+                    widest = Math.max(widest, child.implicitWidth);
+                walk(child);
             }
-        }
+        };
+        walk(view);
+        widestTick = widest;
     }
-    Component {
-        id: yTickLabel
-
-        Item {
-            id: yTick
-
-            property string text: ""
-
-            implicitWidth: yTickText.implicitWidth
-            implicitHeight: yTickText.implicitHeight
-
-            EaElements.Label {
-                id: yTickText
-
-                anchors.fill: parent
-                horizontalAlignment: Text.AlignRight
-                verticalAlignment: Text.AlignVCenter
-                color: chart.colors.chartLabels
-                text: NumberText.compact(yTick.text)
-            }
-        }
-    }
-
     // A round step giving about `count` ticks over a span: 1, 2 or 5 times a power of ten.
     function niceStep(span, count) {
         return ApplicationInfo.chartNiceStep(span, count);
@@ -135,6 +118,9 @@ Item {
         visible: !chart.fromReport
         leftEdge: chart.sideMargin
         rightEdge: chart.width - chart.toolbarRightInset
+        // The row's other controls and its gaps, as the toolbar laid them out: the picker takes the rest of the row.
+        onNaturalWidthChanged: if (naturalWidth > 0)
+            chart.toolbarOthers = Math.max(0, naturalWidth - parameterSelector.width)
 
         // x: the extracted value or the file index; the closed box names its axis, as the pattern chart's do.
         ToolbarComboBox {
@@ -158,8 +144,7 @@ Item {
             id: scopeBox
 
             objectName: "evolution.toolbar.scope"
-            // As wide as the text it shows, as the chart's other boxes (the owner, 2026-11-16).
-            fitShown: true
+            // As wide as its widest entry, so the row stays where it is as the scope changes (the owner, 2026-11-24).
             toolbarGroup: "series"
             visible: !chart.fromReport && chart.evolution !== null && chart.evolution.series
             toolTip: qsTr("Parameters shared by the banks, or each bank's own")
@@ -203,11 +188,15 @@ Item {
         // The parameter drawn, one of those results.csv records, with the previous and next buttons.
         // At a fixed width in the row, which shows a parameter's name as the parameter table does.
         BlockSelector {
+            id: parameterSelector
             objectName: "evolution.parameters"
             visible: !chart.fromReport
             // The chosen parameter's whole line when the row has room; on a narrow chart it gives way, cutting only the
-            // end of the full name, before any control moves into More (the owner, 2026-11-17).
-            width: Math.max(chart.em * 18, Math.min(contentWidth, chart.width - chart.em * 34))
+            // end of the full name, before any control moves into More (the owner, 2026-11-17). The room is what the
+            // row's other controls leave, as they are, rather than a fixed reserve that cut the name with room beside it
+            // (2026-11-21); its own width is not counted, so it cannot feed back.
+            width: Math.max(chart.em * 18, room)
+            readonly property real room: evolutionToolbar.rightEdge - evolutionToolbar.leftEdge - chart.toolbarOthers
             backgroundColor: chart.colors.chartBackground
             blocks: chart.evolution ? chart.evolution.parameters : null
             blocksTextRole: "label"
@@ -256,14 +245,20 @@ Item {
 
     // A report's chart is titled with its parameter's name and units, where the tab has its selectors.
     EaElements.Label {
+        id: reportTitle
         objectName: chart.fromReport ? "report.evolution.title" : ""
         x: chart.sideMargin
-        y: evolutionToolbar.y + (AppSizes.toolbarControlSize - height) / 2
+        y: chart.sideMargin - baselineOffset - titleInk.tightBoundingRect.y
         width: chart.width - 2 * chart.sideMargin
         visible: chart.fromReport
         elide: Text.ElideRight
         color: chart.colors.chartLabels
         text: chart.fromReport ? chart.reportSeries.name + (chart.reportSeries.units ? ` (${chart.reportSeries.units})` : "") : ""
+        TextMetrics {
+            id: titleInk
+            font: reportTitle.font
+            text: reportTitle.text
+        }
     }
 
     ChartView {
@@ -271,10 +266,12 @@ Item {
 
         objectName: "evolution.view"
         visible: chart.fitted
-        y: evolutionToolbar.y + evolutionToolbar.height + chart.sideMargin
+        y: chart.fromReport ? reportTitle.y + Math.ceil(reportTitle.height) + Math.round(chart.em * 0.5) : evolutionToolbar.y + evolutionToolbar.height + chart.sideMargin
         width: parent.width
-        height: parent.height - y - chart.xTitleHeight - chart.em
-        marginLeft: chart.sideMargin + chart.titleGutter
+        height: parent.height - y - chart.xTitleHeight - chart.bottomMargin
+        marginLeft: chart.sideMargin + (!chart.fromReport ? chart.titleGutter : chart.widestTick > 0 && chart.axisRoom > 0 ? chart.widestTick + chart.tickGap - chart.axisRoom : 0)
+        onPlotAreaChanged: if (chart.fromReport)
+            chart.axisRoom = plotArea.x - marginLeft
         marginRight: chart.sideMargin
         marginTop: 0
         marginBottom: 0
@@ -283,23 +280,60 @@ Item {
         }
         axisX: ValueAxis {
             id: axisX
-            min: chart.fromReport ? chart.reportRange[0] : chart.evolution ? chart.evolution.xMin : 0
-            max: chart.fromReport ? chart.reportRange[1] : chart.evolution ? chart.evolution.xMax : 1
+            min: viewRanges.ranges[0]
+            max: viewRanges.ranges[1]
             tickInterval: chart.niceStep(max - min, chart.xTicks)
             tickAnchor: 0
             lineVisible: false
-            labelDelegate: xTickLabel
+            labelDelegate: Item {
+                id: xTick
+
+                property string text: ""
+
+                implicitWidth: xTickText.implicitWidth
+                implicitHeight: xTickText.implicitHeight
+
+                EaElements.Label {
+                    id: xTickText
+
+                    anchors.fill: parent
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                    color: chart.colors.chartLabels
+                    text: NumberText.compact(xTick.text)
+                }
+            }
             gridVisible: false
             subGridVisible: false
         }
         axisY: ValueAxis {
             id: axisY
-            min: chart.fromReport ? chart.reportRange[2] : chart.evolution ? chart.evolution.yMin : 0
-            max: chart.fromReport ? chart.reportRange[3] : chart.evolution ? chart.evolution.yMax : 1
+            min: viewRanges.ranges[2]
+            max: viewRanges.ranges[3]
             tickInterval: chart.niceStep(max - min, chart.yTicks)
             tickAnchor: 0
             lineVisible: false
-            labelDelegate: yTickLabel
+            labelDelegate: Item {
+                id: yTick
+
+                property string text: ""
+
+                objectName: "evolution.yTick"
+                onVisibleChanged: Qt.callLater(chart.measureTicks)
+                onImplicitWidthChanged: Qt.callLater(chart.measureTicks)
+                implicitWidth: yTickText.implicitWidth
+                implicitHeight: yTickText.implicitHeight
+
+                EaElements.Label {
+                    id: yTickText
+
+                    anchors.fill: parent
+                    horizontalAlignment: Text.AlignRight
+                    verticalAlignment: Text.AlignVCenter
+                    color: chart.colors.chartLabels
+                    text: NumberText.compact(yTick.text)
+                }
+            }
             gridVisible: false
             subGridVisible: false
         }
@@ -386,8 +420,6 @@ Item {
 
             objectName: "evolution.bankLegend"
             z: 1
-            // A bank's name at most a tenth of the chart and about 100 px, cut in its middle (the owner, 2026-11-17).
-            maximumLabelWidth: Math.round(Math.min(chart.width * 0.1, chart.em * 7.5))
             x: chart.em
             y: chart.em
             colors: chart.colors
@@ -501,30 +533,14 @@ Item {
         }
     }
 
-    // A zoom holds the axes at its box until it is reset; the axes then follow the data's ranges again.
-    Binding {
-        target: axisX
-        property: "min"
-        value: chart.zoom.length === 4 ? chart.zoom[0] : 0
-        when: chart.zoom.length === 4
-    }
-    Binding {
-        target: axisX
-        property: "max"
-        value: chart.zoom.length === 4 ? chart.zoom[1] : 1
-        when: chart.zoom.length === 4
-    }
-    Binding {
-        target: axisY
-        property: "min"
-        value: chart.zoom.length === 4 ? chart.zoom[2] : 0
-        when: chart.zoom.length === 4
-    }
-    Binding {
-        target: axisY
-        property: "max"
-        value: chart.zoom.length === 4 ? chart.zoom[3] : 1
-        when: chart.zoom.length === 4
+    // A zoom holds the axes at its box until it is reset; the axes then follow the data's ranges again. Both move as the
+    // Pattern chart's do (the owner, 2026-11-21): one shared animation.
+    RangeAnimation {
+        id: viewRanges
+        zoom: chart.zoom
+        fitted: chart.fromReport ? chart.reportRange : chart.evolution ? [chart.evolution.xMin, chart.evolution.xMax, chart.evolution.yMin, chart.evolution.yMax] : [0, 1, 0, 1]
+        duration: EaStyle.Times.chartAnimation
+        active: chart.shown
     }
 
     // Another parameter or x axis is drawn at its whole range.
@@ -569,7 +585,7 @@ Item {
         objectName: "evolution.title.x"
         visible: chart.fitted
         x: plot.x + (plot.width - width) / 2
-        y: chart.height - chart.em - chart.xTitleHeight + (chart.xTitleHeight - height) / 2
+        y: chart.height - chart.bottomMargin - chart.xTitleHeight + (chart.xTitleHeight - height) / 2
         color: chart.colors.chartLabels
         text: chart.fromReport ? chart.reportSeries.x_title : chart.evolution ? chart.evolution.xTitle : ""
     }

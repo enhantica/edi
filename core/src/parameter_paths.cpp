@@ -763,6 +763,10 @@ bool copy_parameter_states(Project& to, Project& from) {
     return true;
 }
 
+std::string edi_name_of(const ParameterEntry& entry) {
+    return entry.block_name + "." + entry.category + (entry.row_label.empty() ? "" : "." + entry.row_label) + "." + entry.name;
+}
+
 std::vector<std::string> standing_warnings(Project& project, bool ranges) {
     std::vector<std::string> out;
     for (const ParameterEntry& entry : ranges ? parameter_entries(project) : std::vector<ParameterEntry>{}) {
@@ -774,7 +778,7 @@ std::vector<std::string> standing_warnings(Project& project, bool ranges) {
         if (value < parameter->spec->range.min || value > parameter->spec->range.max) {
             std::ostringstream message;
             message.imbue(std::locale::classic());
-            message << entry.path << " = " << value << " is outside its admissible range ["
+            message << edi_name_of(entry) << " = " << value << " is outside its admissible range ["
                     << parameter->spec->range.min << ", " << parameter->spec->range.max << "]; "
                     << (parameter->dependence == Dependence::Independent ? "it is kept"
                                                                          : "a constraint derives it, and it is kept");

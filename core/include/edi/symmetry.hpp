@@ -114,6 +114,8 @@ AtomSite new_atom_site(const Structure& structure, const std::function<double()>
 // each experiment linking it (isotopes with neutrons, ions with X-rays), sorted and without repeats. With no
 // experiment linking it, the elements a new atom may take.
 std::vector<std::string> atom_types(const Project& project, const Structure& structure);
+// Fills the tables' type lists atom_types reads, for the default sources: called once off the GUI thread at start.
+void warm_atom_types();
 
 // Sets a site's ADP type and converts its values, through crysta's conversion (ADR-0027):
 // to an isotropic type the site keeps its equivalent isotropic value; to an anisotropic one it

@@ -69,7 +69,7 @@ def test_labels_group_notes_without_changing_the_version_rule():
 
 @pytest.mark.parametrize(
     'changes',
-    [{'merged_at': None}, {'merge_commit_sha': 'c' * 40}, {'labels': ['[bot] backmerge']}],
+    [{'merged_at': None}, {'merge_commit_sha': 'c' * 40}, {'labels': ['🚀 release']}],
 )
 def test_unmerged_unincluded_and_bot_requests_are_not_release_changes(changes):
     with pytest.raises(ValueError, match='No user-facing merged changes'):

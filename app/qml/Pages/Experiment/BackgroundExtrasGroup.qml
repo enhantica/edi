@@ -36,6 +36,20 @@ Column {
         return ApplicationInfo.derivedBackgroundValue(value);
     }
 
+    // The counts and the note the estimate derives run it over the whole pattern: read only once the group has been
+    // opened, not when the page is built (about half a second on a page switch; the owner, 2026-11-23).
+    readonly property bool opened: {
+        for (let at = parent; at; at = at.parent)
+            if (at instanceof EaElements.GroupBox)
+                return !(at as EaElements.GroupBox).collapsed;
+        return true;
+    }
+    property bool counted: false
+    onOpenedChanged: if (opened)
+        counted = true
+    Component.onCompleted: if (opened)
+        counted = true
+
     spacing: AppSizes.groupContentSpacing
 
     Grid {
@@ -64,7 +78,7 @@ Column {
             label: qsTr("Anchor points")
             // Blank: as many as the tolerance needs, which the placeholder counts.
             fieldValue: group.experiment && group.experiment.backgroundEstimatePoints > 0 ? group.experiment.backgroundEstimatePoints : ""
-            placeholderText: group.derived(group.experiment ? group.experiment.estimatePoints : NaN)
+            placeholderText: group.derived(group.experiment && group.counted ? group.experiment.estimatePoints : NaN)
             accepts: "integer"
             clearable: true
             onCommitted: text => group.experiment.backgroundEstimatePoints = text === "" ? 0 : Number(text)
@@ -76,7 +90,7 @@ Column {
             uid: "background_estimate.max_terms"
             // Blank: at most 12, as many as the tolerance needs, which the placeholder counts.
             fieldValue: group.experiment && group.experiment.backgroundEstimateMaxTerms > 0 ? group.experiment.backgroundEstimateMaxTerms : ""
-            placeholderText: group.derived(group.experiment ? group.experiment.estimateTerms : NaN)
+            placeholderText: group.derived(group.experiment && group.counted ? group.experiment.estimateTerms : NaN)
             accepts: "integer"
             clearable: true
             onCommitted: text => group.experiment.backgroundEstimateMaxTerms = text === "" ? 0 : Number(text)
@@ -130,6 +144,6 @@ Column {
         width: EaStyle.Sizes.sideBarContentWidth
         wrapMode: Text.Wrap
         visible: text !== ""
-        text: group.experiment ? group.experiment.estimateNote : ""
+        text: group.experiment && group.counted ? group.experiment.estimateNote : ""
     }
 }

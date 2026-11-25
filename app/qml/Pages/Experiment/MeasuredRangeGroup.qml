@@ -85,10 +85,10 @@ Column {
         // Each structure's curve, one column per structure at the end of the row. A Repeater places its cells before
         // itself, so the Repeater, declared last, takes the last width, kept narrow.
         readonly property var componentNames: group.experiment ? group.experiment.pattern.componentNames : []
-        columns: ApplicationInfo.nativeListProjection(1)
-        // A layout of its own (the owner, 2026-10-27): the count, the status and the structures' columns fit their
-        // content, and the other numeric columns share the rest equally after their own widths.
-        spreadColumns: [1, 2, 3, 4, 5, 6, 7]
+        // Its columns by kind (the shared column model, DataTable.columnKinds; ADR-0103 decision 4): the position, the
+        // intensities, d, the background and the residual are numbers, the status a short text, then one number per
+        // structure; each as wide as its content, the spare at the right end.
+        columnKinds: ["index", "number", "number", "number", "number", "number", "number", "number", "short"].concat(componentNames.map(() => "number"))
 
         header: EaComponents.ListViewHeader {
             EaComponents.ListViewLabel {
@@ -185,7 +185,7 @@ Column {
             }
             // The point's calculation status as an icon, the word in its tooltip, as the experiments' fit column.
             IconCell {
-                readonly property string status: !table.model ? "" : table.model.stale ? "pending" : table.model.calculationError ? "failed" : row.model.calcStatus ?? ""
+                readonly property string status: !table.sourceModel ? "" : table.sourceModel.stale ? "pending" : table.sourceModel.calculationError ? "failed" : row.model.calcStatus ?? ""
 
                 horizontalAlignment: Text.AlignHCenter
                 objectName: `data.status.${row.index}`
@@ -199,11 +199,11 @@ Column {
             // header.
             Repeater {
                 model: ApplicationInfo.nativeListProjection(2)
-                delegate: CellLabel {
-                    elide: Text.ElideRight
+                // A number fitted to its typed column, in full on hover (NumberLabel).
+                delegate: NumberLabel {
                     required property var modelData
                     horizontalAlignment: Text.AlignHCenter
-                    text: group.shown("pd_calc.component_intensities_net", modelData)
+                    number: group.shown("pd_calc.component_intensities_net", modelData)
                 }
             }
         }

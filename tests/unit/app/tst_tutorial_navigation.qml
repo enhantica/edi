@@ -1301,6 +1301,7 @@ TestCase {
         start(lesson);
         Ui.click(test, Probe, app, "home.start");
         settleTour();
+        Ui.expandGroup(test, Probe, app, "group.getStarted");
         Ui.click(test, Probe, app, "project.create");
         settleTour();
         const dialog = SettingsProof.creationDialog(app);
@@ -1528,6 +1529,7 @@ TestCase {
     function createLessonProject(name) {
         finishPages();
         compare(Session.project, null, "A scientific lesson waits for user creation instead of silently creating a project");
+        Ui.expandGroup(test, Probe, app, "group.getStarted");
         Ui.click(test, Probe, app, "project.create");
         settleTour();
         const dialog = SettingsProof.creationDialog(app);

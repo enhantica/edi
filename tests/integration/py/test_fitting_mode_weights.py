@@ -83,9 +83,20 @@ def test_gui_fitting_modes_use_the_owner_descriptions():
         'single ? std::string("single") : modes.front())' in source
     ), 'The dictionary selector must prefer Single whenever Single is an applicable mode'
     assert (
-        'setFittingMode(QString::fromStdString(single ? std::string("single") : now.front()))'
+        'const std::vector<std::string> now = edi::applicable_fitting_modes(project_);' in source
+        and 'if (std::find(now.begin(), now.end(), edi::effective_fitting_mode(project_)) '
+        '== now.end())'
         in source
-    ), 'Replacing an inapplicable mode must use the same Single-first default as the selector'
+        and 'const bool single = std::find(now.begin(), now.end(), "single") != now.end();'
+        in source
+        and 'editor_.apply_follow_up([this, mode = '
+        'QString::fromStdString(single ? std::string("single") : now.front())] '
+        '{ setFittingMode(mode); });'
+        in source
+    ), (
+        'Replacing an inapplicable mode rechecks the live choices, uses the same '
+        'Single-first default, and retains the original edit through its follow-up'
+    )
     assert 'uid: "fitting_mode.type"' in source and 'row.analysis.fittingModeOptions' in source, (
         'The real selector consumes the fitting-mode dictionary and its guarded options'
     )

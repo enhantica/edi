@@ -203,18 +203,25 @@ class AtomSiteAdpListModel : public RowTableModel {
     QML_UNCREATABLE("Belongs to a structure")
     // The types the group offers, in diffraction-lib's AdpTypeEnum order as the owner listed them.
     Q_PROPERTY(QStringList types READ types CONSTANT)
+    // Whether any site is anisotropic: the six component columns show only then (the owner, 2026-11-21).
+    Q_PROPERTY(bool anisotropic READ anisotropic NOTIFY anisotropicChanged)
 
    public:
     AtomSiteAdpListModel(edi::Structure& structure, ProjectEditor& editor, ParameterRegistry& registry, QObject* parent);
     QStringList types() const;
+    bool anisotropic() const { return anisotropic_; }
     void sync();
     // A new type converts the site's values (edi::change_adp_type).
     Q_INVOKABLE void setType(int row, const QString& type);
+
+   signals:
+    void anisotropicChanged();
 
    private:
     edi::Structure& structure_;
     ProjectEditor& editor_;
     ParameterRegistry& registry_;
+    bool anisotropic_ = false;
 };
 
 // The Magnetic moments group (edi ADR-0078; the owner, 2026-11-03): one row per atom site, in the sites' order, as the

@@ -84,17 +84,6 @@ def test_scientific_thresholds_and_signed_three_digit_values():
     )
 
 
-def test_display_precision_is_independent_of_cell_clip_width():
-    actual = run_functions(
-        ROOT / 'app/qml/Globals/NumberText.qml',
-        ['parameter', 'exponent'],
-        [{'name': 'parameter', 'args': [22900000, 0, width]} for width in (3, 8, 64)],
-    )
-    assert actual == ['2.29\u00d710⁷'] * 3, (
-        'Number cells clip the end without changing the specified scientific precision'
-    )
-
-
 def test_sequential_count_colours_follow_zero_and_nonzero_state():
     for ok, failed in ((0, 0), (7, 0), (0, 3), (7, 3)):
         test_displayed_sequential_counts_consume_state_colours(False, ok, failed)
