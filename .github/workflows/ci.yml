@@ -842,8 +842,9 @@ jobs:
         run: pixi run -e app --skip-deps tutorial-transactions
       # The system jobs run this app and its test runner rather than building their own. They go through this run's
       # cache, not an artifact: anyone can download a public repository's artifacts, and these are binaries.
+      # A failed observer does not cost them the app: the tests that need it then say so themselves.
       - name: Keep the app and its test runner for the system jobs
-        if: ${{ runner.os != 'Windows' && (steps.inputs.outputs.run == 'true') }}
+        if: ${{ runner.os != 'Windows' && (!cancelled() && steps.inputs.outputs.run == 'true') }}
         uses: actions/cache/save@v4
         with:
           path: |
