@@ -133,17 +133,6 @@ def _check_inputs(root: Path, manifest: dict) -> bool:
     return raw_inputs
 
 
-def _wavelength_actions(actions: list[str]) -> list[str]:
-    """How the walkthrough sets the wavelength: opened, typed and committed in the app's editor.
-
-    The parameter's popup is the editor; a bundle captured before it typed into the cell itself.
-    """
-    popup = 'fill:instrument.setup_wavelength.menu.popup.value='
-    if any(action.startswith(popup) for action in actions):
-        return ['instrument.setup_wavelength', popup, 'key:Return']
-    return ['fill:instrument.setup_wavelength=', 'key:Return']
-
-
 def _check_actions(
     manifest: dict,
     workflow: str,
@@ -189,7 +178,7 @@ def _check_actions(
             'import-structure:',
             'experiments.create',
             'import-data:',
-            *_wavelength_actions(actions),
+            'fill:instrument.setup_wavelength=',
             'excludedRegions.append',
             'background.estimate',
             'parameters.freeHeader.fixed',

@@ -5,10 +5,9 @@
     pixi run -e app python tools/docs/capture_all.py OUTPUT   # capture, import, write the manifest
     pixi run python tools/docs/capture_all.py --check           # what is missing or stale
 
-The plans of `y2o3` and `scan` are the app's own, in `app/docs`; that of every other set is the
-walkthrough its last capture executed (`website/surfaces/docs/assets/gui/<set>/walkthrough.js`).
-Each runs once as committed in the light theme and once in the dark theme. Every run goes
-through `tools/docs/capture-gui.sh`, the native
+The plan is what is already committed: each capture set's executed walkthrough
+(`website/surfaces/docs/assets/gui/<set>/walkthrough.js`), run once as committed in the light
+theme and once in the dark theme. Every run goes through `tools/docs/capture-gui.sh`, the native
 capture route (an isolated OpenGL display on Linux, since offscreen rendering skips shader
 effects). The manifest, `assets/capture-manifest.json`, lists every image the command produces
 with its theme; captures are not byte-reproducible, so the check compares presence and pixel
@@ -30,11 +29,6 @@ DOCS = ROOT / 'website/surfaces/docs'
 GUI = DOCS / 'assets/gui'
 MANIFEST = DOCS / 'assets/capture-manifest.json'
 SETS = ('y2o3', 'scan', 'joint', 'sc', 'magnetic')  # the importer's capture sets, in its order
-# The plan a set runs when it is not the one its last capture executed.
-PLANS = {
-    'y2o3': ROOT / 'app/docs/y2o3-spodi.js',
-    'scan': ROOT / 'app/docs/workflow-reference.js',
-}
 THEMES = ('light', 'dark')
 # Content images that are not app captures. Each one's dark twin sits in `dark/` beside it when
 # it has one; the concept figures are published illustrations and stay one image in both schemes.
@@ -44,8 +38,8 @@ LOCK = os.environ.get('EDI_LOCAL_BUILD_LOCK', str(Path.home() / 'runs/.local-bui
 
 
 def walkthrough(folder: str, theme: str) -> str:
-    """A set's walkthrough, switched to `theme`."""
-    script = PLANS.get(folder, GUI / folder / 'walkthrough.js').read_text(encoding='utf-8')
+    """A set's committed walkthrough, switched to `theme`."""
+    script = (GUI / folder / 'walkthrough.js').read_text(encoding='utf-8')
     if theme == 'light':
         return script
     if '"theme:light"' not in script:
