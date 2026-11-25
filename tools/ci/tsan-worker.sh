@@ -37,8 +37,12 @@ if [ -n "${CRYSTA_SDK_DIR:-}" ]; then
         echo "tsan-worker: the candidate SDK requires CRYSTA_CONSUMER_SRC, a crysta repository holding $SHA" >&2
         exit 1
     fi
-    SRC="$TREE/source"
-    rm -rf "$SRC"
+    # Exported beside the earlier one, which a refused candidate leaves as it is.
+    mkdir -p "$ROOT/build"
+    SRC="$(mktemp -d "$ROOT/build/tsan-source.XXXXXX")"
+    chmod 755 "$SRC"
+    EXPORTED="$SRC"
+    trap 'rm -rf "$EXPORTED"' EXIT
     python tools/ci/crysta_source_export.py "$CRYSTA_CONSUMER_SRC" "$SHA" "$SRC"
 else
     bash tools/ci/build-crysta.sh
@@ -50,6 +54,12 @@ fi
 if ! python tools/ci/crysta_source_tree.py check "$SRC" "$MANIFEST"; then
     echo "tsan-worker: the source is not the tree the selected SDK ($SHA) was built from" >&2
     exit 1
+fi
+if [ -n "${CRYSTA_SDK_DIR:-}" ]; then
+    rm -rf "$TREE/source"
+    mkdir -p "$TREE"
+    mv "$SRC" "$TREE/source"
+    SRC="$TREE/source"
 fi
 FLAGS="-fsanitize=thread -fno-omit-frame-pointer -g"
 
