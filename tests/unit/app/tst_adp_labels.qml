@@ -155,7 +155,7 @@ Item {
                     amplitude: 2.10
                 },
                 {
-                    bank: "aux",
+                    bank: "second",
                     rwp: 31.23,
                     rp: 21.54,
                     rexp: 9.87,
