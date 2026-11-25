@@ -14,14 +14,13 @@ import pytest
 import yaml
 
 from tests.fixtures.e09_t75_workflow import active
+from tests.fixtures.fast_ci.workflow import run_shell, workflow_shell
 from tests.fixtures.native_process import environment_bash
 
 ROOT = Path(__file__).resolve().parents[3]
 PRODUCER = '.github/workflows/crysta-sdk.yml'
 INPUTS = (
     PRODUCER,
-    'tools/ci/crysta_source_receipt.py',
-    'tools/ci/crysta_source_archive.py',
     '.github/actions/setup-pixi/action.yml',
     'tools/ci/crysta_sdk.py',
 )
@@ -112,11 +111,16 @@ def test_sdk_cold_and_warm_producers_publish_required_artifacts_only_after_succe
     build = document(PRODUCER)['jobs']['build']
     steps = build['steps']
     package = next(step for step in steps if 'sdk-pack' in step.get('run', ''))
-    upload = next(step for step in steps if step.get('uses') == 'actions/upload-artifact@v4')
+    upload = next(
+        step
+        for step in steps
+        if step.get('uses') == './.github/actions/store'
+        and step.get('with', {}).get('artifact') == 'crysta-sdk-${{ matrix.platform }}'
+    )
     assert steps.index(package) < steps.index(upload), (
         'SDK packaging finishes before its artifacts are uploaded'
     )
-    assert upload['with']['name'] == 'crysta-sdk-${{ matrix.platform }}', (
+    assert upload['with']['artifact'] == 'crysta-sdk-${{ matrix.platform }}', (
         'Producers publish the artifact for their exact matrix platform'
     )
     assert upload['with']['path'] == 'crysta-sdk-archives', (
@@ -125,6 +129,12 @@ def test_sdk_cold_and_warm_producers_publish_required_artifacts_only_after_succe
     assert upload['with'].get('if-no-files-found') == 'error', (
         'A producer with missing archives must fail rather than report artifact delivery'
     )
+    store = document('.github/actions/store/action.yml')['runs']['steps']
+    check = next(step for step in store if 'tools/ci/stored_source.py' in step.get('run', ''))
+    action = next(step for step in store if step.get('uses') == 'actions/upload-artifact@v4')
+    assert (
+        store.index(check) < store.index(action) and action['with']['path'] == '${{ inputs.path }}'
+    ), 'Cold and warm SDK publishers check the files delivered by the store action'
     for hit, packed in [('false', True), ('true', False)]:
         outputs = {('cache', 'cache-hit'): hit}
         assert active(package, 'workflow_dispatch', outputs=outputs) is packed, (
@@ -140,17 +150,24 @@ def test_sdk_cold_and_warm_producers_publish_required_artifacts_only_after_succe
 
 @pytest.mark.parametrize('platform', ['linux-64', 'osx-arm64', 'win-64'])
 @pytest.mark.parametrize('index', range(13))
-def test_sdk_producer_rejects_missing_empty_changed_and_misdirected_outputs(
+def test_sdk_producer_rejects_missing_empty_changed_and_misdirected_outputs(  # noqa: PLR0914 - independent payload and runner evidence
     tmp_path, platform, index
 ):
-    steps = document(PRODUCER)['jobs']['build']['steps']
+    workflow = document(PRODUCER)
+    job = workflow['jobs']['build']
+    steps = job['steps']
     guard = next(
         step
         for step in steps
         if step.get('env', {}).get('CRYSTA_SDK_PLATFORM') == '${{ matrix.platform }}'
         and 'crysta-sdk-archives' in step.get('run', '')
     )
-    upload = next(step for step in steps if step.get('uses') == 'actions/upload-artifact@v4')
+    upload = next(
+        step
+        for step in steps
+        if step.get('uses') == './.github/actions/store'
+        and step.get('with', {}).get('artifact') == 'crysta-sdk-${{ matrix.platform }}'
+    )
     assert steps.index(guard) < steps.index(upload), (
         'Complete output validation precedes every SDK artifact upload'
     )
@@ -167,18 +184,18 @@ def test_sdk_producer_rejects_missing_empty_changed_and_misdirected_outputs(
     pin = 'a7' * 20
     archive = f'crysta-sdk-{pin}-{platform}.tar.gz'
     checksum = archive + '.sha256'
-    source = f'crysta-src-{pin}.tar.gz'
     authored = b'independent opaque archive transport, not a scientific SDK'
     files = {
         archive: authored,
         checksum: (hashlib.sha256(authored).hexdigest() + '  ' + archive + '\n').encode(),
-        source: b'independent source transport',
     }
     mutations = [
         (None, None),
         *[(name, None) for name in files],
         *[(name, b'') for name in files],
         (archive, b'changed archive'),
+        (archive, b'foreign-sdk-only'),
+        (checksum, b'foreign-checksum-only'),
         (checksum, b'0' * 64 + b'  ' + archive.encode() + b'\n'),
         (checksum, files[checksum] * 2),
         (checksum, files[checksum] + b'extra record\n'),
@@ -199,18 +216,18 @@ def test_sdk_producer_rejects_missing_empty_changed_and_misdirected_outputs(
     if name == checksum and b'other-archive' in (replacement or b''):
         (destination / 'other-archive.tar.gz').write_bytes(authored)
         (destination / archive).write_bytes(b'unverified replacement')
-    result = subprocess.run(
-        [environment_bash(), '-e', '-c', guard['run']],
-        cwd=world,
-        env={
+    script = world / 'qualify.sh'
+    script.write_text(guard['run'], encoding='utf-8')
+    result = run_shell(
+        workflow_shell(workflow, job, guard),
+        script,
+        world,
+        {
             **{key: value for key, value in os.environ.items() if key.casefold() != 'platform'},
             'SHA': pin,
             'Platform': 'x64',
             'CRYSTA_SDK_PLATFORM': platform,
         },
-        capture_output=True,
-        text=True,
-        check=False,
         timeout=5,
     )
     assert (result.returncode == 0) == (name is None), (
@@ -342,12 +359,13 @@ def test_minimal_producer_checkout_does_not_remove_engine_qualification_inputs()
     assert set(sparse) == {'/*', '!/tests/', '!/docs/', '!/website/'}, (
         'Only unrelated Edi render/test trees are omitted from the local producer checkout'
     )
-    engine = next(step for step in steps if 'git init -q' in step.get('run', ''))
-    assert '--depth 1' in engine['run'] and '"$SHA"' in engine['run'], (
-        'The engine qualification source is the exact resolved commit rather than a branch tip'
+    engine = next(step for step in steps if step.get('uses') == './.github/actions/crysta-source')
+    assert engine['with']['sha'] == '${{ needs.resolve.outputs.sha }}', (
+        'The independent engine checkout binds the exact resolved pin'
     )
-    assert 'sparse' not in engine['run'], (
-        'The complete engine CPP/corpus inputs remain in the independently checked-out source'
+    bootstrap = document('.github/actions/crysta-source/action.yml')['runs']['steps']
+    assert any('crysta_fetch.py "$SHA"' in step.get('run', '') for step in bootstrap), (
+        'The source action calls the full-tree pin fetch and verifies it before packaging'
     )
     pack = next(step for step in steps if 'sdk-pack' in step.get('run', ''))
     assert '"$RUNNER_TEMP/crysta"' in pack['run'] and 'cpp-ci sdk-pack' in pack['run'], (
@@ -615,8 +633,8 @@ def compiler_restore_scope(object_cache, archive_cache):
         line.strip() for line in object_cache['with']['restore-keys'].splitlines() if line.strip()
     ]
     assert prefixes == [
-        'crysta-objects-v1-${{ matrix.platform }}-${{ steps.compiler-inputs.outputs.lock }}-',
-        'crysta-objects-v1-${{ matrix.platform }}-',
+        'ccache2-crysta-sdk-${{ matrix.platform }}-${{ steps.compiler-inputs.outputs.lock }}-',
+        'ccache2-crysta-sdk-${{ matrix.platform }}-',
     ], 'Compiler objects restore exact lock first, then the same platform with content validation'
     assert not archive_cache['with'].get('restore-keys'), (
         'A qualified SDK archive must never use the broader compiler-object fallback'
@@ -632,13 +650,13 @@ def test_compiler_objects_cross_lock_fallback_never_escapes_platform_or_qualifie
         bad_objects, bad_archive = copy.deepcopy(objects), copy.deepcopy(archive)
         prefixes = bad_objects['with']['restore-keys'].splitlines()
         if escape == 'cross-platform':
-            prefixes[-1] = 'crysta-objects-v1-linux-64-'
+            prefixes[-1] = 'ccache2-crysta-sdk-linux-64-'
         elif escape == 'broad':
-            prefixes.append('crysta-objects-v1-')
+            prefixes.append('ccache2-crysta-sdk-')
         elif escape == 'reordered':
             prefixes.reverse()
         else:
-            bad_archive['with']['restore-keys'] = 'crysta-sdk-v3-${{ matrix.platform }}-'
+            bad_archive['with']['restore-keys'] = 'crysta-sdk-v4-${{ matrix.platform }}-'
         bad_objects['with']['restore-keys'] = '\n'.join(prefixes)
         with pytest.raises(AssertionError):
             compiler_restore_scope(bad_objects, bad_archive)

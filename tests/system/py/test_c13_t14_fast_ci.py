@@ -11,10 +11,16 @@ from pathlib import Path
 import pytest
 import yaml
 
+from tests.fixtures.e09_t75_workflow import active
 from tests.fixtures.fast_ci.generate import run_record
 from tests.fixtures.fast_ci.policy import app_build_sites
 from tests.fixtures.fast_ci.processes import process_guard, stop_observer_tree
-from tests.fixtures.fast_ci.workflow import APP_CACHE_PATHS, artifact_routes, timing_route
+from tests.fixtures.fast_ci.workflow import (
+    APP_CACHE_PATHS,
+    artifact_routes,
+    cache_save,
+    timing_route,
+)
 from tests.system.py.test_latest_fit_uncertainty import vehicle
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -263,7 +269,7 @@ def test_normal_app_cache_reuse_refuses_cross_run_and_unenforced_transfers(tmp_p
     producer = next(
         s
         for s in damaged['jobs']['app']['steps']
-        if 'cache/save' in s.get('uses', '') and 'edi_app' in str(s.get('with', {}))
+        if cache_save(s) and s.get('with', {}).get('key', '').startswith('edi-app-')
     )
     consumer = next(
         s
@@ -288,13 +294,13 @@ def test_normal_app_cache_reuse_refuses_cross_run_and_unenforced_transfers(tmp_p
         artifact_routes(damaged, tmp_path / 'damaged')
 
 
-def app_cache_step(workflow, role):
-    job, action = ('app', 'cache/save') if role == 'producer' else ('system', 'cache/restore')
+def app_cache_step(workflow, role, family='edi-app'):
+    job = 'app' if role == 'producer' else 'system'
     return next(
         step
         for step in workflow['jobs'][job]['steps']
-        if action in step.get('uses', '')
-        and 'edi-app-' in str(step.get('with', {}).get('key', ''))
+        if (cache_save(step) if role == 'producer' else 'cache/restore' in step.get('uses', ''))
+        and step.get('with', {}).get('key', '').startswith(family + '-')
     )
 
 
@@ -323,9 +329,7 @@ def test_app_cache_payload_rejects_missing_duplicate_extra_or_malformed_paths(
         'missing-runner': [
             '\n'.join(path for path in paths if path != 'build/app/app/edi_app_tests')
         ],
-        'missing-observer': [
-            '\n'.join(path for path in paths if path != 'build/tutorial-transactions')
-        ],
+        'missing-observer': [''],
         'extra-file': ['\n'.join([*paths, 'build/app/app/edi_imgdiff'])],
         'duplicate': ['\n'.join([*paths, path]) for path in paths],
         'empty': [''],
@@ -334,7 +338,8 @@ def test_app_cache_payload_rejects_missing_duplicate_extra_or_malformed_paths(
     }[defect]
     for index, payload in enumerate(payloads):
         damaged = copy.deepcopy(workflow)
-        options = app_cache_step(damaged, role)['with']
+        family = 'edi-observer' if defect == 'missing-observer' else 'edi-app'
+        options = app_cache_step(damaged, role, family)['with']
         if payload is None:
             options.pop('path')
         else:
@@ -486,14 +491,17 @@ def test_shard_time_gate_refuses_unprovable_evidence(tmp_path, mutation):
 
 
 def test_timing_gate_is_wired_after_system_shards_on_pull_requests(tmp_path):
-    """Keep the timing job off and replay the shipped push route offline."""
+    """Nightly comparison stays advisory and does not run on PR or push."""
     workflow = yaml.safe_load((ROOT / '.github/workflows/ci.yml').read_text())
     job = workflow['jobs']['system-time']
-    assert job.get('if') is False, (
-        'The advisory timing job stays disabled while system shards run off push'
+    for event in ('pull_request', 'push'):
+        assert not active(job, event, states={'system': 'success'}), (
+            'The comparison never runs on a pull request or push'
+        )
+    assert not active(job, 'schedule', states={'system': 'failure'}), (
+        'An incomplete nightly shard result cannot produce a comparison'
     )
-    job['if'] = "github.event_name == 'push'"
-    timing_route(workflow, tmp_path)
+    timing_route(workflow, tmp_path, advisory=True)
 
 
 @pytest.mark.parametrize(

@@ -1,9 +1,10 @@
-"""Real source archive operations preserve bytes and refuse unsafe extraction."""
+"""The pinned source checkout and local export retain the former archive safety checks."""
 
 import contextlib
-import gzip
+import hashlib
 import io
-import json
+import os
+import shutil
 import subprocess
 import sys
 import tarfile
@@ -12,66 +13,62 @@ from pathlib import Path
 import pytest
 import yaml
 
-from tools.ci import crysta_source_archive
+from tools.ci import crysta_source_export
 
 ROOT = Path(__file__).resolve().parents[3]
-TOOL = ROOT / 'tools/ci/crysta_source_archive.py'
+PRIVATE = b'private engine source with meaningful text'
+PAYLOAD = b'independent binary source payload\x00\r\n'
 
 
-def original_archive(path):
-    with tarfile.open(path, 'w') as output:
-        data = b'independent source payload\x00\r\n'
-        entry = tarfile.TarInfo('src/payload.txt')
-        entry.size = len(data)
-        output.addfile(entry, io.BytesIO(data))
-    return data
+def git(root, *args):
+    return subprocess.check_output(
+        ['git', '-C', str(root), '-c', 'core.hooksPath=/dev/null', *args],
+        timeout=8,
+    ).strip()
 
 
-def test_real_append_and_extract_keep_source_and_receipt_bytes_under_native_paths(tmp_path):
-    folder = tmp_path / 'source archive Ω with spaces'
-    folder.mkdir()
-    archive = folder / 'source.tar'
-    payload = original_archive(archive)
-    receipt = folder / 'receipt.json'
-    receipt.write_text(json.dumps({'src/payload.txt': 'a7' * 20}) + '\n', encoding='utf-8')
-    run = subprocess.run(
-        [sys.executable, str(TOOL), 'append', str(archive), str(receipt)],
-        capture_output=True,
-        text=True,
+@pytest.fixture
+def engine(tmp_path):
+    root = tmp_path / 'local remote' / 'enhantica' / 'crysta'
+    root.mkdir(parents=True)
+    git(root, 'init', '-q', '--object-format=sha1')
+    (root / 'entry.bin').write_bytes(PAYLOAD)
+    (root / 'private.txt').write_bytes(PRIVATE + b'\n')
+    git(root, 'add', '--', 'entry.bin', 'private.txt')
+    identity = ['-c', 'user.name=Source fixture', '-c', 'user.email=fixture@example.invalid']
+    git(root, *identity, 'commit', '-qm', 'Pinned content', '--no-gpg-sign')
+    sha = git(root, 'rev-parse', 'HEAD').decode()
+    (root / 'private.txt').write_text('Later checkout content\n', encoding='utf-8')
+    git(root, 'add', '--', 'private.txt')
+    git(root, *identity, 'commit', '-qm', 'Advance checkout', '--no-gpg-sign')
+    (root / 'untracked.txt').touch()
+    return root, sha
+
+
+def test_local_source_export_uses_pinned_git_bytes_and_excludes_untracked_files(tmp_path, engine):
+    root, sha = engine
+    destination = tmp_path / 'local source export Ω'
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(ROOT / 'tools/ci/crysta_source_export.py'),
+            str(root),
+            sha,
+            str(destination),
+        ],
         check=False,
-        timeout=10,
-    )
-    assert run.returncode == 0, (
-        'Real append and extract keep source and receipt bytes under native paths. Observed: '
-        + str(run.stderr)
-    )
-    compressed = folder / 'source.tar.gz'
-    with gzip.open(compressed, 'wb') as stream:
-        stream.write(archive.read_bytes())
-    destination = tmp_path / 'extracted Ω with spaces'
-    run = subprocess.run(
-        [sys.executable, str(TOOL), 'extract', str(compressed), str(destination)],
         capture_output=True,
-        text=True,
-        check=False,
-        timeout=10,
+        timeout=12,
     )
-    assert run.returncode == 0, (
-        'Real append and extract keep source and receipt bytes under native paths. Observed: '
-        + str(run.stderr)
+    assert result.returncode == 0, (
+        'The local export must accept the pinned commit through native paths'
     )
-    assert (destination / 'src/payload.txt').read_bytes() == payload, (
-        'Real append and extract keep source and receipt bytes under native paths.'
+    assert {p.name for p in destination.iterdir()} == {'entry.bin', 'private.txt'}, (
+        'Only files selected by the source commit belong to the export'
     )
-    assert (destination / crysta_source_archive.RECEIPT).read_bytes() == receipt.read_bytes(), (
-        'Real append and extract keep source and receipt bytes under native paths.'
-    )
-    with tarfile.open(archive) as source:
-        assert source.getnames() == ['src/payload.txt', crysta_source_archive.RECEIPT], (
-            'Real append and extract keep source and receipt bytes under native paths.'
-        )
-    with pytest.raises(ValueError, match='already contains'):
-        crysta_source_archive.append_receipt(archive, receipt)
+    assert (destination / 'entry.bin').read_bytes() == PAYLOAD and (
+        destination / 'private.txt'
+    ).read_bytes() == PRIVATE + b'\n', 'The local export retains exact Git blob bytes'
 
 
 @pytest.mark.parametrize('kind', ['parent', 'absolute', 'symlink'])
@@ -79,49 +76,111 @@ def test_source_extraction_cannot_write_outside_its_destination(tmp_path, kind):
     archive = tmp_path / 'unsafe.tar'
     outside = tmp_path / 'outside.txt'
     outside.write_bytes(b'unrelated existing bytes')
+    destination = tmp_path / 'destination'
+    destination.mkdir()
     with tarfile.open(archive, 'w') as output:
         member = tarfile.TarInfo('../outside.txt' if kind == 'parent' else str(outside))
         if kind == 'symlink':
             member = tarfile.TarInfo('link')
             member.type = tarfile.SYMTYPE
-            member.linkname = str(outside)
+            member.linkname = '../outside.txt'
             output.addfile(member)
         else:
             member.size = 7
             output.addfile(member, io.BytesIO(b'changed'))
-    with contextlib.suppress(tarfile.FilterError):
-        crysta_source_archive.extract(archive, tmp_path / 'destination')
+    if kind == 'absolute':
+        with contextlib.suppress(tarfile.FilterError):
+            crysta_source_export.extract(archive, destination)
+        written = [path for path in destination.rglob('*') if path.is_file()]
+        assert all(
+            path.name == outside.name and path.read_bytes() == b'changed' for path in written
+        ), 'A normalized absolute member retains its name and payload inside the destination'
+    else:
+        with pytest.raises((tarfile.FilterError, ValueError)):
+            crysta_source_export.extract(archive, destination)
     assert outside.read_bytes() == b'unrelated existing bytes', (
-        'Source extraction cannot write outside its destination.'
+        'A refused export cannot overwrite a file outside its destination'
     )
 
 
-def test_source_producer_and_both_consumers_share_python_archive_operations():
+def test_source_bootstrap_checks_out_the_pin_filters_output_and_refuses_missing_commit(
+    tmp_path, engine
+):
+    root, pin = engine
+    host = tmp_path / 'edi'
+    scripts = host / 'tools/ci'
+    scripts.mkdir(parents=True)
+    for name in ('crysta_fetch.py', 'public_log.py', 'source_lists.py'):
+        shutil.copyfile(ROOT / 'tools/ci' / name, scripts / name)
+    git(host, 'init', '-q')
+    git(host, 'add', '--', 'tools/ci')
+    runner = tmp_path / 'runner'
+    runner.mkdir()
+    environment_file = runner / 'environment'
+    placeholder = 'fake-local-source-token'
+    env = {
+        **os.environ,
+        'GITHUB_SERVER_URL': root.parents[1].as_uri(),
+        'RUNNER_TEMP': str(runner),
+        'GITHUB_ENV': str(environment_file),
+        'TOKEN': placeholder,
+    }
+
+    def fetch(sha):
+        return subprocess.run(
+            [sys.executable, str(scripts / 'crysta_fetch.py'), sha],
+            cwd=host,
+            env=env,
+            capture_output=True,
+            check=False,
+            timeout=12,
+        )
+
+    result = fetch(pin)
+    assert result.returncode == 0, (
+        'A fresh runner can establish the declared Git source and filter'
+    )
+    fields = dict(
+        line.split('=', 1) for line in environment_file.read_text(encoding='utf-8').splitlines()
+    )
+    source = Path(fields['CRYSTA_SRC'])
+    assert git(source, 'rev-parse', 'HEAD').decode() == pin, (
+        'The runner selects the requested commit even when its remote HEAD has moved'
+    )
+    assert (source / 'entry.bin').read_bytes() == PAYLOAD, 'The runner retains exact source bytes'
+    assert (
+        git(root, 'rev-parse', f'{pin}:entry.bin').decode()
+        in Path(fields['CRYSTA_SOURCE_BLOB_LIST']).read_text(encoding='ascii').splitlines()
+    ), 'The blob list contains the independent object id'
+    assert (
+        hashlib.sha256(PRIVATE).hexdigest()
+        in Path(fields['CRYSTA_SOURCE_LINE_LIST']).read_text(encoding='ascii').splitlines()
+    ), 'The independently hashed private line is covered by the public-log filter'
+    assert PRIVATE not in result.stdout + result.stderr and placeholder not in (
+        source / '.git/config'
+    ).read_text(encoding='utf-8'), 'Source and credentials may not escape checkout setup'
+
+    before = environment_file.read_bytes()
+    result = fetch('f' * 40)
+    assert result.returncode and not source.exists() and environment_file.read_bytes() == before, (
+        'A refused pin cleans the checkout and never exports a new source environment'
+    )
+    assert b'git fetch exited' in result.stderr and b'not our ref' not in result.stderr, (
+        'A failing Git child is identified without forwarding its raw diagnostic'
+    )
+
+
+def test_source_consumers_use_local_git_checkout_and_producer_stores_only_the_sdk():
     producer = yaml.safe_load((ROOT / '.github/workflows/crysta-sdk.yml').read_text())
     installer = yaml.safe_load((ROOT / '.github/workflows/installers.yml').read_text())
-    pack = next(
-        step['run']
-        for step in producer['jobs']['build']['steps']
-        if 'cpp-ci sdk-pack' in step.get('run', '')
+    for steps in (producer['jobs']['build']['steps'], installer['jobs']['installers']['steps']):
+        assert any(step.get('uses') == './.github/actions/crysta-source' for step in steps), (
+            'The producer and installer fetch the exact source themselves'
+        )
+        assert all('crysta_source_archive.py' not in step.get('run', '') for step in steps), (
+            'No producer or consumer invokes the former source archive transport'
+        )
+    core = (ROOT / 'tools/ci/crysta-src.sh').read_text(encoding='utf-8')
+    assert 'CRYSTA_SRC' in core and 'crysta_source_export.py' in core, (
+        'The native source consumer exports its commit from the runner checkout'
     )
-    unpack = next(
-        step['run']
-        for step in installer['jobs']['installers']['steps']
-        if step.get('name') == 'Unpack the pinned crysta source'
-    )
-    core = (ROOT / 'tools/ci/crysta-src.sh').read_text()
-    assert 'python3 tools/ci/crysta_source_archive.py append' in pack, (
-        'Source producer and both consumers share python archive operations.'
-    )
-    assert 'python tools/ci/crysta_source_archive.py extract' in unpack, (
-        'Source producer and both consumers share python archive operations.'
-    )
-    assert 'python3 "$ROOT/tools/ci/crysta_source_archive.py" extract' in core, (
-        'Source producer and both consumers share python archive operations.'
-    )
-    assert 'tar -rf' not in pack and 'tar -xzf' not in unpack + core, (
-        'Source producer and both consumers share python archive operations.'
-    )
-    assert (
-        "'tools/ci/crysta_source_archive.py'" in producer['jobs']['resolve']['steps'][-1]['run']
-    ), 'Source producer and both consumers share python archive operations.'

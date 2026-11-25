@@ -2,11 +2,14 @@
 
 import copy
 import fnmatch
+import hashlib
 import os
 import re
 import shlex
+import shutil
 import subprocess
 import sys
+from pathlib import Path
 
 from tests.fixtures.e09_t75_workflow import active
 
@@ -28,11 +31,13 @@ APP_CACHE_PATHS = (
     'build/app/app/edi_app',
     'build/app/app/edi_app_tests',
     'build/app/app/edi_assistant_guard',
-    'build/tutorial-transactions',
 )
+OBSERVER_CACHE_PATHS = ('build/tutorial-transactions',)
+CACHE_PATHS = {'edi-app': APP_CACHE_PATHS, 'edi-observer': OBSERVER_CACHE_PATHS}
+ROOT = Path(__file__).resolve().parents[3]
 
 
-def reachable(node, jobs, matrix, event='push'):
+def reachable(node, jobs, matrix, event='push', *, advisory=False):
     node = copy.deepcopy(node)
     if 'if' in node:
         condition = str(node['if']) if not isinstance(node['if'], bool) else node['if']
@@ -44,13 +49,15 @@ def reachable(node, jobs, matrix, event='push'):
         node,
         event,
         states=dict.fromkeys(jobs, 'success'),
-        outputs={('inputs', 'run'): 'true'},
+        outputs={('inputs', 'run'): 'true', ('observer', 'outcome'): 'success'},
         bindings={'runner.os': matrix.get('platform')},
     ), f'The required workflow artifact or time-gate path must execute on {event}'
     continuation = node.get('continue-on-error', False)
     if isinstance(continuation, str):
         continuation = active({'if': continuation}, event, states=dict.fromkeys(jobs, 'success'))
-    assert not continuation, 'A required artifact or time-gate failure must fail its workflow job'
+    assert bool(continuation) is advisory, (
+        'The workflow continuation matches the required artifact or advisory timing contract'
+    )
 
 
 def needs(job):
@@ -89,6 +96,8 @@ def run_boundary(command, root, kind, code, shell='bash'):
     pixi = binary / 'pixi'
     pixi.write_text(
         '#!' + sys.executable + '\nimport os, pathlib, sys\n'
+        'if sys.argv[1:3] == ["run", "python"]:\n'
+        '    os.execv(sys.executable, [sys.executable, *sys.argv[3:]])\n'
         'assert "app-build" in sys.argv, "unsupported workflow task transport"\n'
         'pathlib.Path(os.environ["BOUNDARY_MARKER"]).write_text("app")\n'
         'sys.exit(int(os.environ["BOUNDARY_EXIT"]))\n'
@@ -103,19 +112,59 @@ def run_boundary(command, root, kind, code, shell='bash'):
     }
     script = root / 'step.sh'
     script.write_text(command)
-    shell = 'bash -e {0}' if shell is None else shell
-    shell = 'bash --noprofile --norc -e -o pipefail {0}' if shell == 'bash' else shell
-    assert '{0}' in shell, 'A critical workflow shell must have an executable script boundary'
-    argv = [str(script) if word == '{0}' else word for word in shlex.split(shell)]
-    result = subprocess.run(
-        argv, cwd=root, env=env, capture_output=True, text=True, timeout=2, check=False
-    )
+    result = run_shell(shell, script, root, env, timeout=2)
     assert marker.is_file() and marker.read_text() == kind, (
         'The real workflow command must execute its required process, not echo or comment it'
     )
     assert (result.returncode == 0) == (code == 0), (
         'The critical workflow command must propagate the actual process verdict'
     )
+
+
+def run_shell(shell, script, root, environment, *, timeout):
+    shell = 'bash -e {0}' if shell is None else shell
+    shell = 'bash --noprofile --norc -e -o pipefail {0}' if shell == 'bash' else shell
+    assert '{0}' in shell, 'A critical workflow shell must have an executable script boundary'
+    if 'tools/ci/public_log.py' in shlex.split(shell):
+        tools = root / 'tools/ci'
+        tools.mkdir(parents=True, exist_ok=True)
+        for filename in ('public_log.py', 'source_lists.py'):
+            shutil.copyfile(ROOT / 'tools/ci' / filename, tools / filename)
+        lines = root / 'source-lines'
+        lines.write_text(
+            hashlib.sha256(b'synthetic private engine line').hexdigest() + '\n', encoding='ascii'
+        )
+        environment = {**environment, 'CRYSTA_SOURCE_LINE_LIST': str(lines)}
+    return subprocess.run(
+        [str(script) if word == '{0}' else word for word in shlex.split(shell)],
+        cwd=root,
+        env=environment,
+        capture_output=True,
+        text=True,
+        timeout=timeout,
+        check=False,
+    )
+
+
+def cache_family(step):
+    key = step.get('with', {}).get('key', '')
+    return next((family for family in CACHE_PATHS if key.startswith(family + '-')), None)
+
+
+def cache_payload(options, family):
+    path = options.get('path')
+    assert isinstance(path, str) and tuple(sorted(path.splitlines())) == CACHE_PATHS[family], (
+        f'The {family} cache transfers exactly its declared app or observer payload'
+    )
+
+
+def cache_save(step):
+    uses = step.get('uses', '')
+    return 'cache/save' in uses or (uses == './.github/actions/store' and cache_family(step))
+
+
+def requires_observer(app):
+    return any('tutorial-transactions' in step.get('run', '') for step in app['steps'])
 
 
 def workflow_shell(workflow, job, step):
@@ -130,7 +179,7 @@ def artifact_routes(workflow, root):
         _artifact_routes(workflow, root / event, event)
 
 
-def app_uploads(workflow, root, event):
+def app_uploads(workflow, root, event):  # noqa: PLR0914 - declared workflow and cache bindings
     jobs = workflow['jobs']
     producers = {
         name: job
@@ -157,34 +206,46 @@ def app_uploads(workflow, root, event):
                     workflow_shell(workflow, job, build_step),
                 )
             artifacts = [
-                s
-                for s in job['steps']
-                if any(route in s.get('uses', '') for route in ('upload-artifact', 'cache/save'))
-                and 'edi_app' in str(s.get('with', {}).get('path', ''))
+                step
+                for step in job['steps']
+                if (
+                    cache_save(step)
+                    and (
+                        cache_family(step)
+                        or 'edi_app' in str(step.get('with', {}).get('path', ''))
+                    )
+                )
+                or (
+                    'upload-artifact' in step.get('uses', '')
+                    and 'edi_app' in str(step.get('with', {}).get('path', ''))
+                )
             ]
             assert artifacts, 'The normal app must be uploaded beyond screenshot outputs'
+            families = set()
             for step in artifacts:
                 reachable(step, jobs, matrix, event)
                 options = step['with']
-                cached = 'cache/save' in step.get('uses', '')
+                cached = bool(cache_save(step))
                 if cached:
-                    assert (
-                        isinstance(options.get('path'), str)
-                        and tuple(sorted(options['path'].splitlines())) == APP_CACHE_PATHS
-                    ), (
-                        'The app cache must transfer exactly the app, native test runner '
-                        'assistant guard and tutorial observer package'
-                    )
+                    family = cache_family(step)
+                    assert family, 'Every app cache belongs to a declared workflow handoff'
+                    cache_payload(options, family)
                     binding = 'env.APP_PLATFORM' if static_platform else 'matrix.platform'
-                    assert (
-                        options.get('key') == 'edi-app-${{ ' + binding + ' }}-${{ github.run_id }}'
-                    ), 'The app cache identity must bind the platform and this exact workflow run'
+                    expected = family + '-${{ ' + binding + ' }}-${{ github.run_id }}'
+                    assert options.get('key') == expected, (
+                        'The app handoff must bind the platform and this exact workflow run'
+                    )
+                    families.add(family)
                 identity = options['key' if cached else 'name']
                 if static_platform:
                     identity = identity.replace('${{ env.APP_PLATFORM }}', static_platform)
                 resource = cached, resolve(identity, matrix)
                 assert resource not in uploads, 'An app resource has only one workflow producer'
                 uploads[resource] = name
+            if requires_observer(job):
+                assert families == set(CACHE_PATHS), (
+                    'The normal app and the tutorial observer must have separate publishers'
+                )
     return uploads
 
 
@@ -204,29 +265,22 @@ def _artifact_routes(workflow, root, event):
                 s
                 for s in job['steps']
                 if 'download-artifact' in s.get('uses', '')
-                or (
-                    'cache/restore' in s.get('uses', '')
-                    and 'edi-app-' in str(s.get('with', {}).get('key', ''))
-                )
+                or ('cache/restore' in s.get('uses', '') and cache_family(s))
             ]
-            matched = False
+            matched = set()
             for step in downloads:
                 cached = 'cache/restore' in step.get('uses', '')
                 options = step.get('with', {})
+                family = cache_family(step)
                 if cached:
                     assert (
-                        options.get('key') == 'edi-app-${{ matrix.platform }}-${{ github.run_id }}'
-                    ), 'The restored app must bind the platform and this exact workflow run'
-                    assert options.get('fail-on-cache-miss') is True and not options.get(
-                        'restore-keys'
-                    ), 'The app cache must fail closed without falling back to another run'
-                    assert (
-                        isinstance(options.get('path'), str)
-                        and tuple(sorted(options['path'].splitlines())) == APP_CACHE_PATHS
-                    ), (
-                        'System reuse must restore exactly the app, native test runner '
-                        'assistant guard and tutorial observer package'
-                    )
+                        options.get('key')
+                        == family + '-${{ matrix.platform }}-${{ github.run_id }}'
+                    ), 'The restored app handoff binds the platform and this exact workflow run'
+                    assert not options.get('restore-keys') and (
+                        options.get('fail-on-cache-miss', False) is (family == 'edi-app')
+                    ), 'The app is required and the observer may be absent, with no fallback'
+                    cache_payload(options, family)
                 pattern = resolve(
                     options.get('key' if cached else 'name', options.get('pattern', '')), matrix
                 )
@@ -240,8 +294,18 @@ def _artifact_routes(workflow, root, event):
                     assert len(compatible) == 1 and compatible[0] in dependencies(jobs, name), (
                         'Each system consumer must wait for its unique platform artifact producer'
                     )
-                    matched = True
-            assert matched, 'Every system matrix case must restore the producer app artifact'
+                    matched.add(family or 'artifact')
+            assert matched & {'edi-app', 'artifact'}, (
+                'Every system matrix case must restore the producer app artifact'
+            )
+            if any(
+                requires_observer(jobs[producer])
+                for producer in uploads.values()
+                if producer in dependencies(jobs, name)
+            ):
+                assert 'edi-observer' in matched, (
+                    'System shards restore the optional observer for this platform and run'
+                )
             for step in job['steps']:
                 if 'system-tests' in step.get('run', ''):
                     reachable(step, jobs, matrix, event)
@@ -250,7 +314,7 @@ def _artifact_routes(workflow, root, event):
                 )
 
 
-def timing_route(workflow, root):
+def timing_route(workflow, root, *, advisory=False):
     require_events(workflow, ('schedule',))
     jobs = workflow['jobs']
     systems = {
@@ -268,7 +332,7 @@ def timing_route(workflow, root):
         assert systems and systems <= dependencies(jobs, name), (
             'The nightly comparator must depend on every completed system job'
         )
-        reachable(job, jobs, {}, event='schedule')
+        reachable(job, jobs, {}, event='schedule', advisory=advisory)
         for step in steps:
             reachable(step, jobs, {}, event='schedule')
             for code in (0, 1, 2):
@@ -285,7 +349,6 @@ def timing_evidence(workflow, root, *, slow=False, mutation=None):  # noqa: PLR0
     """Run the workflow's actual nightly collector and replay against independent REST pages."""
     import collections  # noqa: PLC0415
     import json  # noqa: PLC0415
-    from pathlib import Path  # noqa: PLC0415
 
     import yaml  # noqa: PLC0415
 
@@ -392,23 +455,9 @@ os.execv(sys.executable,[sys.executable,*sys.argv[3:]])
                 command = command.replace('$GITHUB_RUN_ID', '30')
             if mutation == 'swap':
                 command = command.replace('history.json', 'swapped.json')
-        shell = workflow_shell(workflow, job, step)
-        shell = (
-            'bash --noprofile --norc -e -o pipefail {0}'
-            if shell == 'bash'
-            else shell or 'bash -e {0}'
-        )
         script = root / f'step-{len(completed)}.sh'
         script.write_text(command)
-        result = subprocess.run(
-            [str(script) if word == '{0}' else word for word in shlex.split(shell)],
-            cwd=root,
-            env=env,
-            capture_output=True,
-            text=True,
-            check=False,
-            timeout=3,
-        )
+        result = run_shell(workflow_shell(workflow, job, step), script, root, env, timeout=3)
         completed.append(result)
         if result.returncode:
             break

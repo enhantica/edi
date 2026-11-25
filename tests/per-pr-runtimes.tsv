@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-25T08:56:22Z
+# measured_utc = 2026-11-25T09:59:21Z
 #
-# Recorded from: measured test run (41 node(s) measured once, 187532 banked, 45 stale row(s) dropped)
-# Collected tests: 267490; with a reported duration: 86241
+# Recorded from: measured test run (102 node(s) measured once, 187441 banked, 4 stale row(s) dropped)
+# Collected tests: 267489; with a reported duration: 86240
 # Module-scoped fixture costs recorded: 219
 #
 # Breaches are decided PER TIER against the table
@@ -29,12 +29,12 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 267490
+# inventory_python = 267489
 # inventory_cpp = 0
-# inventory_measured = 187544
+# inventory_measured = 187543
 # inventory_unmeasured = 79946
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
-# inventory_pr_python = 92579
+# inventory_pr_python = 92578
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -177863,11 +177863,12 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_cosio_heidi_collection.p
 0.010	tests/integration/py/test_cryspy_project_import.py::test_cryspy_refuses_constraint_marks_instead_of_discarding_the_relation[8.479343(100)A+]
 0.010	tests/integration/py/test_cryspy_project_import.py::test_cryspy_refuses_unconverted_scalar_and_loop_items[_unsupported_model_value 0.37-_unsupported_model_value]
 0.010	tests/integration/py/test_cryspy_project_import.py::test_cryspy_refuses_unconverted_scalar_and_loop_items[loop_\n_unsupported_model_label\n_unsupported_model_value\none 0.37-_unsupported_model_label]
-0.140	tests/integration/py/test_crysta_source_archive.py::test_real_append_and_extract_keep_source_and_receipt_bytes_under_native_paths
+0.110	tests/integration/py/test_crysta_source_archive.py::test_local_source_export_uses_pinned_git_bytes_and_excludes_untracked_files
+0.430	tests/integration/py/test_crysta_source_archive.py::test_source_bootstrap_checks_out_the_pin_filters_output_and_refuses_missing_commit
+0.070	tests/integration/py/test_crysta_source_archive.py::test_source_consumers_use_local_git_checkout_and_producer_stores_only_the_sdk
 0.000	tests/integration/py/test_crysta_source_archive.py::test_source_extraction_cannot_write_outside_its_destination[absolute]
 0.000	tests/integration/py/test_crysta_source_archive.py::test_source_extraction_cannot_write_outside_its_destination[parent]
 0.000	tests/integration/py/test_crysta_source_archive.py::test_source_extraction_cannot_write_outside_its_destination[symlink]
-0.040	tests/integration/py/test_crysta_source_archive.py::test_source_producer_and_both_consumers_share_python_archive_operations
 0.010	tests/integration/py/test_current_bragg_reference.py::test_changed_release_reference_cannot_silently_regenerate_expectations[colour]
 0.010	tests/integration/py/test_current_bragg_reference.py::test_changed_release_reference_cannot_silently_regenerate_expectations[provenance]
 0.080	tests/integration/py/test_current_bragg_reference.py::test_current_and_historical_bragg_fixtures_reproduce_their_own_approved_sources
@@ -185217,57 +185218,55 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_scan_notes_diagnostics.p
 0.010	tests/integration/py/test_sdk_sharing_contract.py::test_compiler_cache_preserves_absolute_fixture_paths_and_rejects_unsafe_rewrites
 0.010	tests/integration/py/test_sdk_sharing_contract.py::test_compiler_objects_cross_lock_fallback_never_escapes_platform_or_qualified_archive
 0.010	tests/integration/py/test_sdk_sharing_contract.py::test_future_sdk_publication_retains_all_promoted_platform_artifacts
-0.010	tests/integration/py/test_sdk_sharing_contract.py::test_minimal_producer_checkout_does_not_remove_engine_qualification_inputs
+0.020	tests/integration/py/test_sdk_sharing_contract.py::test_minimal_producer_checkout_does_not_remove_engine_qualification_inputs
 0.010	tests/integration/py/test_sdk_sharing_contract.py::test_native_sdk_matrix_and_windows_compiler_match_the_declared_platform_contract
 0.010	tests/integration/py/test_sdk_sharing_contract.py::test_release_sdk_download_uses_the_exact_qualified_installer_run
 0.120	tests/integration/py/test_sdk_sharing_contract.py::test_runtime_audit_fetches_the_immutable_source_history_its_collection_reads
-0.010	tests/integration/py/test_sdk_sharing_contract.py::test_sdk_cold_and_warm_producers_publish_required_artifacts_only_after_success
+0.020	tests/integration/py/test_sdk_sharing_contract.py::test_sdk_cold_and_warm_producers_publish_required_artifacts_only_after_success
 0.000	tests/integration/py/test_sdk_sharing_contract.py::test_sdk_consumers_bind_same_run_artifacts_and_refuse_foreign_transport
-0.050	tests/integration/py/test_sdk_sharing_contract.py::test_sdk_producer_rejects_missing_empty_changed_and_misdirected_outputs[0-linux-64]
-0.060	tests/integration/py/test_sdk_sharing_contract.py::test_sdk_producer_rejects_missing_empty_changed_and_misdirected_outputs[0-osx-arm64]
-0.060	tests/integration/py/test_sdk_sharing_contract.py::test_sdk_producer_rejects_missing_empty_changed_and_misdirected_outputs[0-win-64]
-0.020	tests/integration/py/test_sdk_sharing_contract.py::test_sdk_producer_rejects_missing_empty_changed_and_misdirected_outputs[1-linux-64]
-0.020	tests/integration/py/test_sdk_sharing_contract.py::test_sdk_producer_rejects_missing_empty_changed_and_misdirected_outputs[1-osx-arm64]
-0.020	tests/integration/py/test_sdk_sharing_contract.py::test_sdk_producer_rejects_missing_empty_changed_and_misdirected_outputs[1-win-64]
-0.120	tests/integration/py/test_sdk_sharing_contract.py::test_sdk_producer_rejects_missing_empty_changed_and_misdirected_outputs[10-linux-64]
-0.140	tests/integration/py/test_sdk_sharing_contract.py::test_sdk_producer_rejects_missing_empty_changed_and_misdirected_outputs[10-osx-arm64]
-0.200	tests/integration/py/test_sdk_sharing_contract.py::test_sdk_producer_rejects_missing_empty_changed_and_misdirected_outputs[10-win-64]
-0.130	tests/integration/py/test_sdk_sharing_contract.py::test_sdk_producer_rejects_missing_empty_changed_and_misdirected_outputs[11-linux-64]
-0.120	tests/integration/py/test_sdk_sharing_contract.py::test_sdk_producer_rejects_missing_empty_changed_and_misdirected_outputs[11-osx-arm64]
-0.120	tests/integration/py/test_sdk_sharing_contract.py::test_sdk_producer_rejects_missing_empty_changed_and_misdirected_outputs[11-win-64]
-0.120	tests/integration/py/test_sdk_sharing_contract.py::test_sdk_producer_rejects_missing_empty_changed_and_misdirected_outputs[12-linux-64]
-0.130	tests/integration/py/test_sdk_sharing_contract.py::test_sdk_producer_rejects_missing_empty_changed_and_misdirected_outputs[12-osx-arm64]
-0.190	tests/integration/py/test_sdk_sharing_contract.py::test_sdk_producer_rejects_missing_empty_changed_and_misdirected_outputs[12-win-64]
-0.020	tests/integration/py/test_sdk_sharing_contract.py::test_sdk_producer_rejects_missing_empty_changed_and_misdirected_outputs[2-linux-64]
-0.020	tests/integration/py/test_sdk_sharing_contract.py::test_sdk_producer_rejects_missing_empty_changed_and_misdirected_outputs[2-osx-arm64]
-0.020	tests/integration/py/test_sdk_sharing_contract.py::test_sdk_producer_rejects_missing_empty_changed_and_misdirected_outputs[2-win-64]
-0.010	tests/integration/py/test_sdk_sharing_contract.py::test_sdk_producer_rejects_missing_empty_changed_and_misdirected_outputs[3-linux-64]
-0.020	tests/integration/py/test_sdk_sharing_contract.py::test_sdk_producer_rejects_missing_empty_changed_and_misdirected_outputs[3-osx-arm64]
-0.010	tests/integration/py/test_sdk_sharing_contract.py::test_sdk_producer_rejects_missing_empty_changed_and_misdirected_outputs[3-win-64]
-0.020	tests/integration/py/test_sdk_sharing_contract.py::test_sdk_producer_rejects_missing_empty_changed_and_misdirected_outputs[4-linux-64]
-0.020	tests/integration/py/test_sdk_sharing_contract.py::test_sdk_producer_rejects_missing_empty_changed_and_misdirected_outputs[4-osx-arm64]
-0.020	tests/integration/py/test_sdk_sharing_contract.py::test_sdk_producer_rejects_missing_empty_changed_and_misdirected_outputs[4-win-64]
-0.020	tests/integration/py/test_sdk_sharing_contract.py::test_sdk_producer_rejects_missing_empty_changed_and_misdirected_outputs[5-linux-64]
-0.020	tests/integration/py/test_sdk_sharing_contract.py::test_sdk_producer_rejects_missing_empty_changed_and_misdirected_outputs[5-osx-arm64]
-0.020	tests/integration/py/test_sdk_sharing_contract.py::test_sdk_producer_rejects_missing_empty_changed_and_misdirected_outputs[5-win-64]
-0.020	tests/integration/py/test_sdk_sharing_contract.py::test_sdk_producer_rejects_missing_empty_changed_and_misdirected_outputs[6-linux-64]
-0.020	tests/integration/py/test_sdk_sharing_contract.py::test_sdk_producer_rejects_missing_empty_changed_and_misdirected_outputs[6-osx-arm64]
-0.020	tests/integration/py/test_sdk_sharing_contract.py::test_sdk_producer_rejects_missing_empty_changed_and_misdirected_outputs[6-win-64]
-0.110	tests/integration/py/test_sdk_sharing_contract.py::test_sdk_producer_rejects_missing_empty_changed_and_misdirected_outputs[7-linux-64]
-0.140	tests/integration/py/test_sdk_sharing_contract.py::test_sdk_producer_rejects_missing_empty_changed_and_misdirected_outputs[7-osx-arm64]
-0.110	tests/integration/py/test_sdk_sharing_contract.py::test_sdk_producer_rejects_missing_empty_changed_and_misdirected_outputs[7-win-64]
-0.180	tests/integration/py/test_sdk_sharing_contract.py::test_sdk_producer_rejects_missing_empty_changed_and_misdirected_outputs[8-linux-64]
-0.120	tests/integration/py/test_sdk_sharing_contract.py::test_sdk_producer_rejects_missing_empty_changed_and_misdirected_outputs[8-osx-arm64]
-0.160	tests/integration/py/test_sdk_sharing_contract.py::test_sdk_producer_rejects_missing_empty_changed_and_misdirected_outputs[8-win-64]
-0.120	tests/integration/py/test_sdk_sharing_contract.py::test_sdk_producer_rejects_missing_empty_changed_and_misdirected_outputs[9-linux-64]
-0.120	tests/integration/py/test_sdk_sharing_contract.py::test_sdk_producer_rejects_missing_empty_changed_and_misdirected_outputs[9-osx-arm64]
-0.130	tests/integration/py/test_sdk_sharing_contract.py::test_sdk_producer_rejects_missing_empty_changed_and_misdirected_outputs[9-win-64]
+0.130	tests/integration/py/test_sdk_sharing_contract.py::test_sdk_producer_rejects_missing_empty_changed_and_misdirected_outputs[0-linux-64]
+0.150	tests/integration/py/test_sdk_sharing_contract.py::test_sdk_producer_rejects_missing_empty_changed_and_misdirected_outputs[0-osx-arm64]
+0.140	tests/integration/py/test_sdk_sharing_contract.py::test_sdk_producer_rejects_missing_empty_changed_and_misdirected_outputs[0-win-64]
+0.110	tests/integration/py/test_sdk_sharing_contract.py::test_sdk_producer_rejects_missing_empty_changed_and_misdirected_outputs[1-linux-64]
+0.100	tests/integration/py/test_sdk_sharing_contract.py::test_sdk_producer_rejects_missing_empty_changed_and_misdirected_outputs[1-osx-arm64]
+0.100	tests/integration/py/test_sdk_sharing_contract.py::test_sdk_producer_rejects_missing_empty_changed_and_misdirected_outputs[1-win-64]
+0.170	tests/integration/py/test_sdk_sharing_contract.py::test_sdk_producer_rejects_missing_empty_changed_and_misdirected_outputs[10-linux-64]
+0.170	tests/integration/py/test_sdk_sharing_contract.py::test_sdk_producer_rejects_missing_empty_changed_and_misdirected_outputs[10-osx-arm64]
+0.170	tests/integration/py/test_sdk_sharing_contract.py::test_sdk_producer_rejects_missing_empty_changed_and_misdirected_outputs[10-win-64]
+0.170	tests/integration/py/test_sdk_sharing_contract.py::test_sdk_producer_rejects_missing_empty_changed_and_misdirected_outputs[11-linux-64]
+0.150	tests/integration/py/test_sdk_sharing_contract.py::test_sdk_producer_rejects_missing_empty_changed_and_misdirected_outputs[11-osx-arm64]
+0.150	tests/integration/py/test_sdk_sharing_contract.py::test_sdk_producer_rejects_missing_empty_changed_and_misdirected_outputs[11-win-64]
+0.160	tests/integration/py/test_sdk_sharing_contract.py::test_sdk_producer_rejects_missing_empty_changed_and_misdirected_outputs[12-linux-64]
+0.160	tests/integration/py/test_sdk_sharing_contract.py::test_sdk_producer_rejects_missing_empty_changed_and_misdirected_outputs[12-osx-arm64]
+0.160	tests/integration/py/test_sdk_sharing_contract.py::test_sdk_producer_rejects_missing_empty_changed_and_misdirected_outputs[12-win-64]
+0.100	tests/integration/py/test_sdk_sharing_contract.py::test_sdk_producer_rejects_missing_empty_changed_and_misdirected_outputs[2-linux-64]
+0.110	tests/integration/py/test_sdk_sharing_contract.py::test_sdk_producer_rejects_missing_empty_changed_and_misdirected_outputs[2-osx-arm64]
+0.170	tests/integration/py/test_sdk_sharing_contract.py::test_sdk_producer_rejects_missing_empty_changed_and_misdirected_outputs[2-win-64]
+0.090	tests/integration/py/test_sdk_sharing_contract.py::test_sdk_producer_rejects_missing_empty_changed_and_misdirected_outputs[3-linux-64]
+0.110	tests/integration/py/test_sdk_sharing_contract.py::test_sdk_producer_rejects_missing_empty_changed_and_misdirected_outputs[3-osx-arm64]
+0.090	tests/integration/py/test_sdk_sharing_contract.py::test_sdk_producer_rejects_missing_empty_changed_and_misdirected_outputs[3-win-64]
+0.100	tests/integration/py/test_sdk_sharing_contract.py::test_sdk_producer_rejects_missing_empty_changed_and_misdirected_outputs[4-linux-64]
+0.120	tests/integration/py/test_sdk_sharing_contract.py::test_sdk_producer_rejects_missing_empty_changed_and_misdirected_outputs[4-osx-arm64]
+0.100	tests/integration/py/test_sdk_sharing_contract.py::test_sdk_producer_rejects_missing_empty_changed_and_misdirected_outputs[4-win-64]
+0.240	tests/integration/py/test_sdk_sharing_contract.py::test_sdk_producer_rejects_missing_empty_changed_and_misdirected_outputs[5-linux-64]
+0.180	tests/integration/py/test_sdk_sharing_contract.py::test_sdk_producer_rejects_missing_empty_changed_and_misdirected_outputs[5-osx-arm64]
+0.200	tests/integration/py/test_sdk_sharing_contract.py::test_sdk_producer_rejects_missing_empty_changed_and_misdirected_outputs[5-win-64]
+0.240	tests/integration/py/test_sdk_sharing_contract.py::test_sdk_producer_rejects_missing_empty_changed_and_misdirected_outputs[6-linux-64]
+0.160	tests/integration/py/test_sdk_sharing_contract.py::test_sdk_producer_rejects_missing_empty_changed_and_misdirected_outputs[6-osx-arm64]
+0.180	tests/integration/py/test_sdk_sharing_contract.py::test_sdk_producer_rejects_missing_empty_changed_and_misdirected_outputs[6-win-64]
+0.140	tests/integration/py/test_sdk_sharing_contract.py::test_sdk_producer_rejects_missing_empty_changed_and_misdirected_outputs[7-linux-64]
+0.160	tests/integration/py/test_sdk_sharing_contract.py::test_sdk_producer_rejects_missing_empty_changed_and_misdirected_outputs[7-osx-arm64]
+0.150	tests/integration/py/test_sdk_sharing_contract.py::test_sdk_producer_rejects_missing_empty_changed_and_misdirected_outputs[7-win-64]
+0.160	tests/integration/py/test_sdk_sharing_contract.py::test_sdk_producer_rejects_missing_empty_changed_and_misdirected_outputs[8-linux-64]
+0.150	tests/integration/py/test_sdk_sharing_contract.py::test_sdk_producer_rejects_missing_empty_changed_and_misdirected_outputs[8-osx-arm64]
+0.230	tests/integration/py/test_sdk_sharing_contract.py::test_sdk_producer_rejects_missing_empty_changed_and_misdirected_outputs[8-win-64]
+0.160	tests/integration/py/test_sdk_sharing_contract.py::test_sdk_producer_rejects_missing_empty_changed_and_misdirected_outputs[9-linux-64]
+0.160	tests/integration/py/test_sdk_sharing_contract.py::test_sdk_producer_rejects_missing_empty_changed_and_misdirected_outputs[9-osx-arm64]
+0.150	tests/integration/py/test_sdk_sharing_contract.py::test_sdk_producer_rejects_missing_empty_changed_and_misdirected_outputs[9-win-64]
 0.020	tests/integration/py/test_sdk_sharing_contract.py::test_sdk_producer_serializes_platform_pin_and_recipe_without_cancelling_waiters
-0.090	tests/integration/py/test_sdk_sharing_contract.py::test_sdk_recipe_invalidates_every_local_producer_build_input[.github/actions/setup-pixi/action.yml]
-0.100	tests/integration/py/test_sdk_sharing_contract.py::test_sdk_recipe_invalidates_every_local_producer_build_input[.github/workflows/crysta-sdk.yml]
-0.120	tests/integration/py/test_sdk_sharing_contract.py::test_sdk_recipe_invalidates_every_local_producer_build_input[tools/ci/crysta_sdk.py]
-0.110	tests/integration/py/test_sdk_sharing_contract.py::test_sdk_recipe_invalidates_every_local_producer_build_input[tools/ci/crysta_source_archive.py]
-0.120	tests/integration/py/test_sdk_sharing_contract.py::test_sdk_recipe_invalidates_every_local_producer_build_input[tools/ci/crysta_source_receipt.py]
+0.110	tests/integration/py/test_sdk_sharing_contract.py::test_sdk_recipe_invalidates_every_local_producer_build_input[.github/actions/setup-pixi/action.yml]
+0.260	tests/integration/py/test_sdk_sharing_contract.py::test_sdk_recipe_invalidates_every_local_producer_build_input[.github/workflows/crysta-sdk.yml]
+0.110	tests/integration/py/test_sdk_sharing_contract.py::test_sdk_recipe_invalidates_every_local_producer_build_input[tools/ci/crysta_sdk.py]
 0.040	tests/integration/py/test_sdk_sharing_contract.py::test_windows_checkout_configures_index_admission_before_sparse_materialization
 0.030	tests/integration/py/test_sdk_sharing_contract.py::test_windows_sdk_workflows_refuse_case_ambiguous_platform_environment_routes[.github/workflows/crysta-sdk.yml]
 0.060	tests/integration/py/test_sdk_sharing_contract.py::test_windows_sdk_workflows_refuse_case_ambiguous_platform_environment_routes[.github/workflows/installers.yml]
@@ -188676,23 +188675,23 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_c11_t62_scan_contract.py::tes
 0.000	tests/system/py/test_c13_t14_fast_ci.py::test_app_build_policy_reaches_each_launcher_escape[shell]
 0.010	tests/system/py/test_c13_t14_fast_ci.py::test_app_build_policy_reaches_each_launcher_escape[tool-helper]
 0.000	tests/system/py/test_c13_t14_fast_ci.py::test_app_build_policy_reaches_each_launcher_escape[wrapper]
-0.680	tests/system/py/test_c13_t14_fast_ci.py::test_app_cache_payload_order_does_not_change_the_transferred_executables
-1.000	tests/system/py/test_c13_t14_fast_ci.py::test_app_cache_payload_rejects_missing_duplicate_extra_or_malformed_paths[duplicate-consumer]
-0.820	tests/system/py/test_c13_t14_fast_ci.py::test_app_cache_payload_rejects_missing_duplicate_extra_or_malformed_paths[duplicate-producer]
-0.850	tests/system/py/test_c13_t14_fast_ci.py::test_app_cache_payload_rejects_missing_duplicate_extra_or_malformed_paths[empty-consumer]
-0.760	tests/system/py/test_c13_t14_fast_ci.py::test_app_cache_payload_rejects_missing_duplicate_extra_or_malformed_paths[empty-producer]
-0.820	tests/system/py/test_c13_t14_fast_ci.py::test_app_cache_payload_rejects_missing_duplicate_extra_or_malformed_paths[extra-file-consumer]
-0.710	tests/system/py/test_c13_t14_fast_ci.py::test_app_cache_payload_rejects_missing_duplicate_extra_or_malformed_paths[extra-file-producer]
-0.810	tests/system/py/test_c13_t14_fast_ci.py::test_app_cache_payload_rejects_missing_duplicate_extra_or_malformed_paths[missing-app-consumer]
-0.750	tests/system/py/test_c13_t14_fast_ci.py::test_app_cache_payload_rejects_missing_duplicate_extra_or_malformed_paths[missing-app-producer]
-0.810	tests/system/py/test_c13_t14_fast_ci.py::test_app_cache_payload_rejects_missing_duplicate_extra_or_malformed_paths[missing-observer-consumer]
-0.740	tests/system/py/test_c13_t14_fast_ci.py::test_app_cache_payload_rejects_missing_duplicate_extra_or_malformed_paths[missing-observer-producer]
-0.830	tests/system/py/test_c13_t14_fast_ci.py::test_app_cache_payload_rejects_missing_duplicate_extra_or_malformed_paths[missing-path-consumer]
-0.760	tests/system/py/test_c13_t14_fast_ci.py::test_app_cache_payload_rejects_missing_duplicate_extra_or_malformed_paths[missing-path-producer]
-0.780	tests/system/py/test_c13_t14_fast_ci.py::test_app_cache_payload_rejects_missing_duplicate_extra_or_malformed_paths[missing-runner-consumer]
-0.740	tests/system/py/test_c13_t14_fast_ci.py::test_app_cache_payload_rejects_missing_duplicate_extra_or_malformed_paths[missing-runner-producer]
-0.820	tests/system/py/test_c13_t14_fast_ci.py::test_app_cache_payload_rejects_missing_duplicate_extra_or_malformed_paths[non-text-consumer]
-0.820	tests/system/py/test_c13_t14_fast_ci.py::test_app_cache_payload_rejects_missing_duplicate_extra_or_malformed_paths[non-text-producer]
+1.020	tests/system/py/test_c13_t14_fast_ci.py::test_app_cache_payload_order_does_not_change_the_transferred_executables
+2.440	tests/system/py/test_c13_t14_fast_ci.py::test_app_cache_payload_rejects_missing_duplicate_extra_or_malformed_paths[duplicate-consumer]
+1.890	tests/system/py/test_c13_t14_fast_ci.py::test_app_cache_payload_rejects_missing_duplicate_extra_or_malformed_paths[duplicate-producer]
+1.520	tests/system/py/test_c13_t14_fast_ci.py::test_app_cache_payload_rejects_missing_duplicate_extra_or_malformed_paths[empty-consumer]
+1.350	tests/system/py/test_c13_t14_fast_ci.py::test_app_cache_payload_rejects_missing_duplicate_extra_or_malformed_paths[empty-producer]
+1.880	tests/system/py/test_c13_t14_fast_ci.py::test_app_cache_payload_rejects_missing_duplicate_extra_or_malformed_paths[extra-file-consumer]
+1.300	tests/system/py/test_c13_t14_fast_ci.py::test_app_cache_payload_rejects_missing_duplicate_extra_or_malformed_paths[extra-file-producer]
+1.650	tests/system/py/test_c13_t14_fast_ci.py::test_app_cache_payload_rejects_missing_duplicate_extra_or_malformed_paths[missing-app-consumer]
+1.450	tests/system/py/test_c13_t14_fast_ci.py::test_app_cache_payload_rejects_missing_duplicate_extra_or_malformed_paths[missing-app-producer]
+1.620	tests/system/py/test_c13_t14_fast_ci.py::test_app_cache_payload_rejects_missing_duplicate_extra_or_malformed_paths[missing-observer-consumer]
+1.350	tests/system/py/test_c13_t14_fast_ci.py::test_app_cache_payload_rejects_missing_duplicate_extra_or_malformed_paths[missing-observer-producer]
+1.700	tests/system/py/test_c13_t14_fast_ci.py::test_app_cache_payload_rejects_missing_duplicate_extra_or_malformed_paths[missing-path-consumer]
+1.270	tests/system/py/test_c13_t14_fast_ci.py::test_app_cache_payload_rejects_missing_duplicate_extra_or_malformed_paths[missing-path-producer]
+1.520	tests/system/py/test_c13_t14_fast_ci.py::test_app_cache_payload_rejects_missing_duplicate_extra_or_malformed_paths[missing-runner-consumer]
+1.510	tests/system/py/test_c13_t14_fast_ci.py::test_app_cache_payload_rejects_missing_duplicate_extra_or_malformed_paths[missing-runner-producer]
+1.710	tests/system/py/test_c13_t14_fast_ci.py::test_app_cache_payload_rejects_missing_duplicate_extra_or_malformed_paths[non-text-consumer]
+1.270	tests/system/py/test_c13_t14_fast_ci.py::test_app_cache_payload_rejects_missing_duplicate_extra_or_malformed_paths[non-text-producer]
 0.000	tests/system/py/test_c13_t14_fast_ci.py::test_each_pr_observer_factory_uses_the_normal_app_without_a_private_build[scan-app]
 0.000	tests/system/py/test_c13_t14_fast_ci.py::test_each_pr_observer_factory_uses_the_normal_app_without_a_private_build[thread-selector]
 0.100	tests/system/py/test_c13_t14_fast_ci.py::test_matching_incomplete_or_malformed_partition_evidence_must_refuse[empty-declaration]
@@ -188707,14 +188706,14 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_c11_t62_scan_contract.py::tes
 0.000	tests/system/py/test_c13_t14_fast_ci.py::test_migrated_screen_factory_cannot_compile_a_private_app
 0.003	tests/system/py/test_c13_t14_fast_ci.py::test_migrated_screen_factory_executes_its_actual_child_request
 4.660	tests/system/py/test_c13_t14_fast_ci.py::test_no_pr_fixture_has_an_app_compiler_entry_point
-0.800	tests/system/py/test_c13_t14_fast_ci.py::test_normal_app_cache_reuse_refuses_cross_run_and_unenforced_transfers[consumer-platform]
-0.520	tests/system/py/test_c13_t14_fast_ci.py::test_normal_app_cache_reuse_refuses_cross_run_and_unenforced_transfers[consumer-run]
-0.530	tests/system/py/test_c13_t14_fast_ci.py::test_normal_app_cache_reuse_refuses_cross_run_and_unenforced_transfers[fallback]
-0.540	tests/system/py/test_c13_t14_fast_ci.py::test_normal_app_cache_reuse_refuses_cross_run_and_unenforced_transfers[miss]
-0.580	tests/system/py/test_c13_t14_fast_ci.py::test_normal_app_cache_reuse_refuses_cross_run_and_unenforced_transfers[optional]
-0.410	tests/system/py/test_c13_t14_fast_ci.py::test_normal_app_cache_reuse_refuses_cross_run_and_unenforced_transfers[payload]
-0.730	tests/system/py/test_c13_t14_fast_ci.py::test_normal_app_cache_reuse_refuses_cross_run_and_unenforced_transfers[producer-platform]
-0.430	tests/system/py/test_c13_t14_fast_ci.py::test_normal_app_cache_reuse_refuses_cross_run_and_unenforced_transfers[producer-run]
+1.650	tests/system/py/test_c13_t14_fast_ci.py::test_normal_app_cache_reuse_refuses_cross_run_and_unenforced_transfers[consumer-platform]
+1.690	tests/system/py/test_c13_t14_fast_ci.py::test_normal_app_cache_reuse_refuses_cross_run_and_unenforced_transfers[consumer-run]
+1.560	tests/system/py/test_c13_t14_fast_ci.py::test_normal_app_cache_reuse_refuses_cross_run_and_unenforced_transfers[fallback]
+1.600	tests/system/py/test_c13_t14_fast_ci.py::test_normal_app_cache_reuse_refuses_cross_run_and_unenforced_transfers[miss]
+1.450	tests/system/py/test_c13_t14_fast_ci.py::test_normal_app_cache_reuse_refuses_cross_run_and_unenforced_transfers[optional]
+1.330	tests/system/py/test_c13_t14_fast_ci.py::test_normal_app_cache_reuse_refuses_cross_run_and_unenforced_transfers[payload]
+1.240	tests/system/py/test_c13_t14_fast_ci.py::test_normal_app_cache_reuse_refuses_cross_run_and_unenforced_transfers[producer-platform]
+1.410	tests/system/py/test_c13_t14_fast_ci.py::test_normal_app_cache_reuse_refuses_cross_run_and_unenforced_transfers[producer-run]
 0.310	tests/system/py/test_c13_t14_fast_ci.py::test_normal_app_observer_switch_is_off_by_default_and_requires_test_context[1-False]
 0.370	tests/system/py/test_c13_t14_fast_ci.py::test_normal_app_observer_switch_is_off_by_default_and_requires_test_context[1-True]
 0.280	tests/system/py/test_c13_t14_fast_ci.py::test_normal_app_observer_switch_is_off_by_default_and_requires_test_context[None-True]
@@ -188734,10 +188733,10 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_c11_t62_scan_contract.py::tes
 0.070	tests/system/py/test_c13_t14_fast_ci.py::test_shard_time_gate_refuses_unprovable_evidence[wrong-main-branch]
 0.100	tests/system/py/test_c13_t14_fast_ci.py::test_shard_time_gate_refuses_unprovable_evidence[wrong-main-event]
 0.100	tests/system/py/test_c13_t14_fast_ci.py::test_shard_time_gate_refuses_unprovable_evidence[zero-baseline]
-0.570	tests/system/py/test_c13_t14_fast_ci.py::test_system_jobs_restore_the_app_artifact_instead_of_building_it
+1.140	tests/system/py/test_c13_t14_fast_ci.py::test_system_jobs_restore_the_app_artifact_instead_of_building_it
 0.080	tests/system/py/test_c13_t14_fast_ci.py::test_the_last_system_shard_cannot_escape_the_timing_gate[16]
 0.070	tests/system/py/test_c13_t14_fast_ci.py::test_the_last_system_shard_cannot_escape_the_timing_gate[3]
-1.820	tests/system/py/test_c13_t14_fast_ci.py::test_timing_gate_is_wired_after_system_shards_on_pull_requests
+2.380	tests/system/py/test_c13_t14_fast_ci.py::test_timing_gate_is_wired_after_system_shards_on_pull_requests
 0.690	tests/system/py/test_c13_t14_fast_ci_routes.py::test_actual_nightly_collects_and_replays_the_same_history[no-baseline]
 0.870	tests/system/py/test_c13_t14_fast_ci_routes.py::test_actual_nightly_collects_and_replays_the_same_history[over-budget]
 0.870	tests/system/py/test_c13_t14_fast_ci_routes.py::test_actual_nightly_collects_and_replays_the_same_history[within-budget]
@@ -188748,19 +188747,19 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_c11_t62_scan_contract.py::tes
 0.800	tests/system/py/test_c13_t14_fast_ci_routes.py::test_actual_timing_collection_refuses_aliased_swapped_or_stale_run_evidence[swap]
 0.780	tests/system/py/test_c13_t14_fast_ci_routes.py::test_actual_timing_collection_refuses_aliased_swapped_or_stale_run_evidence[wrong-head]
 0.000	tests/system/py/test_c13_t14_fast_ci_routes.py::test_an_imported_harmless_function_does_not_execute_an_unused_build_function
-0.400	tests/system/py/test_c13_t14_fast_ci_routes.py::test_artifact_route_oracle_rejects_each_exercised_pr_bypass[consumer-job-disabled]
-0.380	tests/system/py/test_c13_t14_fast_ci_routes.py::test_artifact_route_oracle_rejects_each_exercised_pr_bypass[consumer-step-disabled]
-0.360	tests/system/py/test_c13_t14_fast_ci_routes.py::test_artifact_route_oracle_rejects_each_exercised_pr_bypass[download-continue]
-0.400	tests/system/py/test_c13_t14_fast_ci_routes.py::test_artifact_route_oracle_rejects_each_exercised_pr_bypass[download-disabled]
-0.310	tests/system/py/test_c13_t14_fast_ci_routes.py::test_artifact_route_oracle_rejects_each_exercised_pr_bypass[missing-pr-trigger]
-0.410	tests/system/py/test_c13_t14_fast_ci_routes.py::test_artifact_route_oracle_rejects_each_exercised_pr_bypass[missing-producer-dependency]
-0.310	tests/system/py/test_c13_t14_fast_ci_routes.py::test_artifact_route_oracle_rejects_each_exercised_pr_bypass[producer-continue]
-0.320	tests/system/py/test_c13_t14_fast_ci_routes.py::test_artifact_route_oracle_rejects_each_exercised_pr_bypass[producer-echo]
-0.290	tests/system/py/test_c13_t14_fast_ci_routes.py::test_artifact_route_oracle_rejects_each_exercised_pr_bypass[producer-job-disabled]
-0.390	tests/system/py/test_c13_t14_fast_ci_routes.py::test_artifact_route_oracle_rejects_each_exercised_pr_bypass[producer-or-true]
-0.310	tests/system/py/test_c13_t14_fast_ci_routes.py::test_artifact_route_oracle_rejects_each_exercised_pr_bypass[producer-step-disabled]
-0.420	tests/system/py/test_c13_t14_fast_ci_routes.py::test_artifact_route_oracle_rejects_each_exercised_pr_bypass[upload-continue]
-0.400	tests/system/py/test_c13_t14_fast_ci_routes.py::test_artifact_route_oracle_rejects_each_exercised_pr_bypass[upload-disabled]
+0.270	tests/system/py/test_c13_t14_fast_ci_routes.py::test_artifact_route_oracle_rejects_each_exercised_pr_bypass[consumer-job-disabled]
+0.250	tests/system/py/test_c13_t14_fast_ci_routes.py::test_artifact_route_oracle_rejects_each_exercised_pr_bypass[consumer-step-disabled]
+0.270	tests/system/py/test_c13_t14_fast_ci_routes.py::test_artifact_route_oracle_rejects_each_exercised_pr_bypass[download-continue]
+0.250	tests/system/py/test_c13_t14_fast_ci_routes.py::test_artifact_route_oracle_rejects_each_exercised_pr_bypass[download-disabled]
+0.180	tests/system/py/test_c13_t14_fast_ci_routes.py::test_artifact_route_oracle_rejects_each_exercised_pr_bypass[missing-pr-trigger]
+0.280	tests/system/py/test_c13_t14_fast_ci_routes.py::test_artifact_route_oracle_rejects_each_exercised_pr_bypass[missing-producer-dependency]
+0.170	tests/system/py/test_c13_t14_fast_ci_routes.py::test_artifact_route_oracle_rejects_each_exercised_pr_bypass[producer-continue]
+0.190	tests/system/py/test_c13_t14_fast_ci_routes.py::test_artifact_route_oracle_rejects_each_exercised_pr_bypass[producer-echo]
+0.180	tests/system/py/test_c13_t14_fast_ci_routes.py::test_artifact_route_oracle_rejects_each_exercised_pr_bypass[producer-job-disabled]
+0.240	tests/system/py/test_c13_t14_fast_ci_routes.py::test_artifact_route_oracle_rejects_each_exercised_pr_bypass[producer-or-true]
+0.170	tests/system/py/test_c13_t14_fast_ci_routes.py::test_artifact_route_oracle_rejects_each_exercised_pr_bypass[producer-step-disabled]
+0.260	tests/system/py/test_c13_t14_fast_ci_routes.py::test_artifact_route_oracle_rejects_each_exercised_pr_bypass[upload-continue]
+0.270	tests/system/py/test_c13_t14_fast_ci_routes.py::test_artifact_route_oracle_rejects_each_exercised_pr_bypass[upload-disabled]
 0.120	tests/system/py/test_c13_t14_fast_ci_routes.py::test_child_python_guard_observes_the_actual_child_compiler_and_normal_process
 0.000	tests/system/py/test_c13_t14_fast_ci_routes.py::test_harmless_compiler_commands_in_an_app_related_module_remain_allowed[["c++","probe.cpp","-o","core-probe"]]
 0.000	tests/system/py/test_c13_t14_fast_ci_routes.py::test_harmless_compiler_commands_in_an_app_related_module_remain_allowed[["clang++","-fsyntax-only","app/src/project_view_model.hpp"]]
@@ -188805,17 +188804,17 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_c11_t62_scan_contract.py::tes
 0.050	tests/system/py/test_c13_t14_fast_ci_routes.py::test_real_process_guard_refuses_each_app_compiler_entry_before_execution[run]
 0.050	tests/system/py/test_c13_t14_fast_ci_routes.py::test_real_process_guard_refuses_each_app_compiler_entry_before_execution[spawn]
 0.050	tests/system/py/test_c13_t14_fast_ci_routes.py::test_real_process_guard_refuses_each_app_compiler_entry_before_execution[system]
-1.580	tests/system/py/test_c13_t14_fast_ci_routes.py::test_timing_route_oracle_executes_and_enforces_each_exercised_pr_boundary[custom-shell-swallows]
-1.450	tests/system/py/test_c13_t14_fast_ci_routes.py::test_timing_route_oracle_executes_and_enforces_each_exercised_pr_boundary[echo]
-1.460	tests/system/py/test_c13_t14_fast_ci_routes.py::test_timing_route_oracle_executes_and_enforces_each_exercised_pr_boundary[job-continue]
-1.560	tests/system/py/test_c13_t14_fast_ci_routes.py::test_timing_route_oracle_executes_and_enforces_each_exercised_pr_boundary[job-excludes-pr]
-1.490	tests/system/py/test_c13_t14_fast_ci_routes.py::test_timing_route_oracle_executes_and_enforces_each_exercised_pr_boundary[missing-system-dependency]
-1.630	tests/system/py/test_c13_t14_fast_ci_routes.py::test_timing_route_oracle_executes_and_enforces_each_exercised_pr_boundary[or-true]
-1.640	tests/system/py/test_c13_t14_fast_ci_routes.py::test_timing_route_oracle_executes_and_enforces_each_exercised_pr_boundary[pipeline-without-pipefail]
-1.500	tests/system/py/test_c13_t14_fast_ci_routes.py::test_timing_route_oracle_executes_and_enforces_each_exercised_pr_boundary[shell-branch-disabled]
-1.500	tests/system/py/test_c13_t14_fast_ci_routes.py::test_timing_route_oracle_executes_and_enforces_each_exercised_pr_boundary[step-continue]
-1.450	tests/system/py/test_c13_t14_fast_ci_routes.py::test_timing_route_oracle_executes_and_enforces_each_exercised_pr_boundary[step-disabled]
-1.540	tests/system/py/test_c13_t14_fast_ci_routes.py::test_timing_route_oracle_executes_and_enforces_each_exercised_pr_boundary[trailing-success]
+1.710	tests/system/py/test_c13_t14_fast_ci_routes.py::test_timing_route_oracle_executes_and_enforces_each_exercised_pr_boundary[custom-shell-swallows]
+1.750	tests/system/py/test_c13_t14_fast_ci_routes.py::test_timing_route_oracle_executes_and_enforces_each_exercised_pr_boundary[echo]
+1.660	tests/system/py/test_c13_t14_fast_ci_routes.py::test_timing_route_oracle_executes_and_enforces_each_exercised_pr_boundary[job-continue]
+1.630	tests/system/py/test_c13_t14_fast_ci_routes.py::test_timing_route_oracle_executes_and_enforces_each_exercised_pr_boundary[job-excludes-pr]
+1.660	tests/system/py/test_c13_t14_fast_ci_routes.py::test_timing_route_oracle_executes_and_enforces_each_exercised_pr_boundary[missing-system-dependency]
+1.790	tests/system/py/test_c13_t14_fast_ci_routes.py::test_timing_route_oracle_executes_and_enforces_each_exercised_pr_boundary[or-true]
+1.870	tests/system/py/test_c13_t14_fast_ci_routes.py::test_timing_route_oracle_executes_and_enforces_each_exercised_pr_boundary[pipeline-without-pipefail]
+1.770	tests/system/py/test_c13_t14_fast_ci_routes.py::test_timing_route_oracle_executes_and_enforces_each_exercised_pr_boundary[shell-branch-disabled]
+1.730	tests/system/py/test_c13_t14_fast_ci_routes.py::test_timing_route_oracle_executes_and_enforces_each_exercised_pr_boundary[step-continue]
+1.720	tests/system/py/test_c13_t14_fast_ci_routes.py::test_timing_route_oracle_executes_and_enforces_each_exercised_pr_boundary[step-disabled]
+1.780	tests/system/py/test_c13_t14_fast_ci_routes.py::test_timing_route_oracle_executes_and_enforces_each_exercised_pr_boundary[trailing-success]
 0.070	tests/system/py/test_c13_t4_page.py::test_cli_extension_consumes_free_march_ratio
 0.300	tests/system/py/test_c13_t4_page.py::test_lbco_page_and_actual_kernel_disable[disabled]
 0.340	tests/system/py/test_c13_t4_page.py::test_lbco_page_and_actual_kernel_disable[normal]
