@@ -71,7 +71,7 @@ can restore a cache of main. CI therefore keeps built crysta only.
    script runs under `tools/ci/public_log.py`, a local action's scripts too. It withholds a source line from standard
    output, standard error and the step summary and runs nothing when the lists cannot be read. A line is found alone,
    after a compiler's gutter, pytest's markers, a diff's sign or a timestamp, inside a quoted or escaped value (JSON,
-   XML, HTML), and as a part of 24 characters or more within a longer one, unless the part is a single name. One plain
+   XML, HTML), and as a part of 24 characters or more within a longer one, unless the part is a single name or web address. One plain
    word alone is not listed. The fetch proves the filter before any later step.
 3. **One way out.** A job with the source stores only through `.github/actions/store`, which checks the path it stores and
    nothing else. `tools/ci/stored_source.py` compares every file and every entry of a container as the container has

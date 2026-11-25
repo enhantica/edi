@@ -30,10 +30,10 @@ SHORTEST = 12
 # code); a part longer than the longest is not looked up.
 PART = 24
 LONGEST = 1000
-# One plain word is not a line of anyone's, and neither is one name with its punctuation inside a
-# longer line, also when a source line holds nothing else.
+# One plain word is not a line of anyone's, and neither is one name or web address with its
+# punctuation inside a longer line, also when a source line holds nothing else.
 WORD = re.compile(rb'\W*[A-Za-z]+\W*')
-NAME = re.compile(rb'\W*[\w.]+\W*')
+NAME = re.compile(rb'\W*(?:[\w.]+|https?://[^\s<>"\']+)\W*')
 # Recorded data among the tests (results, logs, structures, measured patterns), the lock and the
 # licences are compared as whole files only: single lines of them recur in any tool's output. A
 # person wrote the lines of everything else, whatever its kind.
